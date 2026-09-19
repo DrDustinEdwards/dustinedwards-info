@@ -3,51 +3,24 @@ import { listPostSourcesForCitations } from "~/db";
 import type { MediaCitation, ReferenceResolver } from "../resolvers.server";
 
 /**
- * The POSTS resolver. The one registered content type today.
+ * The POSTS resolver. The one registered content type today. It scans every post's markdown out of
+ * D1, drafts included, for each key.
  *
- * It reads every post's markdown out of D1, drafts included, then scans each
- * body for each key. `posts.body` is the markdown both writers converge to,
- * so this is the corpus scan; the committed artifact it used to fetch from
- * GitHub is gone.
- *
- * ## Coverage, stated rather than assumed (ruling 5)
- *
- * The scan looks for the literal `/media/<key>` substring, then classifies each
- * hit by looking at the text around it. Detection is by SUBSTRING and
- * classification is by pattern, which is the right way round: a form this
- * module has never heard of is still detected, and merely lands in the `other`
- * bucket. The alternative, parsing only known syntaxes, would report an
- * unrecognised citation as no citation, and an "unused" label that is wrong is
- * worse than no label at all.
- *
- * **Detected and classified:**
- *   - `markdown-image`   `![alt](/media/posts/2026/x-1234.png)`
- *   - `figure-directive` `:::figure{src="/media/..." alt="..."}`
- *   - `frontmatter-cover` the post's `cover.src`, from the row's cover column
- *   - `link`             `[the chart](/media/...)`
- *   - `html`             `<img src="/media/...">` written raw in a post
- *   - `other`            any other text containing the URL, counted as a
- *                        citation even though the form is unrecognised
- *
- * Absolute URLs are caught too, because `https://host/media/<key>` contains
- * `/media/<key>`.
+ * **Coverage, stated rather than assumed.** Detection is by SUBSTRING and classification is by
+ * pattern, which is the right way round: a form this module has never heard of is still detected and
+ * merely lands in `other`. Parsing only known syntaxes would report an unrecognised citation as NO
+ * citation, and an "unused" label that is wrong is worse than no label.
  *
  * **What it would MISS**, which is the part that matters for a delete:
- *   - a reference assembled at runtime from pieces. Nothing in this corpus does
- *     that and the markdown pipeline could not render it, but it is not
- *     detectable in principle
- *   - a citation from OUTSIDE the post corpus: another site, an already
- *     scraped social card, an email, a printed link. Nothing in this repo can
- *     know about those. That is precisely why deletion is a considered act
- *     rather than hygiene, and why ruling 2 exists
- *   - a citation COMMITTED FROM A CLONE and not yet synced: D1 lags the
- *     repository until the next sync, save, or content-drift repair, a window
- *     the scheduled health check bounds at its poll interval. The artifact
- *     read this replaces had the mirror-image window: it led D1 and trailed
- *     nothing, at a 600KB GitHub round trip per scan
- *   - the `og/` social cards, which are not scanned because they are not
- *     listed: they are build output keyed by a content hash and no post cites
- *     them by name, so a usage scan would call every one unused
+ *
+ *   - a reference assembled at runtime from pieces, which is not detectable in principle
+ *   - a citation from OUTSIDE the post corpus: another site, a scraped social card, an email, a
+ *     printed link. That is why deletion is a considered act rather than hygiene, and why ruling 2
+ *     exists
+ *   - a citation committed from a clone and not yet synced, a window the scheduled health check
+ *     bounds at its poll interval
+ *   - the `og/` social cards, which are not listed: no post cites them by name, so a usage scan
+ *     would call every one unused
  */
 export const postsResolver: ReferenceResolver = async (env, keys) => {
   const out = new Map<string, MediaCitation[]>(keys.map((key) => [key, []]));

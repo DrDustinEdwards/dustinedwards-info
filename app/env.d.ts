@@ -1,12 +1,11 @@
 /**
- * Secrets set with `wrangler secret put` are not part of wrangler.jsonc, so they do
- * not appear in the generated Env type. Declare them here. Values never reach the
- * client bundle: they are only read inside .server modules and loaders/actions.
+ * Secrets set with `wrangler secret put` are not part of wrangler.jsonc, so they do not appear in
+ * the generated Env type. Declare them here. Values never reach the client bundle: they are read
+ * only inside `.server` modules and loaders.
  *
- * **THIS BLOCK IS NOW GATED.** `check:secrets` asserts, in both directions, that
- * every secret the ruling names is declared here and that everything declared
- * here is ratified. Adding a secret means editing this block, the SECRETS list
- * in `scripts/check-secrets.mjs`, and `dustinedwards/core.md`, in one commit.
+ * THIS BLOCK IS GATED. `check:secrets` asserts in both directions that every ratified secret is
+ * declared here and that everything here is ratified, so adding one means editing this block, the
+ * gate's list and `dustinedwards/core.md` in one commit.
  */
 declare global {
   interface Env {
@@ -18,90 +17,52 @@ declare global {
     /** Fine-grained PAT, Contents read/write. Used only by the admin editor. */
     GITHUB_TOKEN: string;
     /**
-     * Bearer token for the operator API. OPTIONAL, and that is the contract
-     * rather than an oversight: `POST /api/operator` returns 503 when it is
-     * absent or under 32 characters, because not configured means not open.
-     *
-     * Added 2026-08-09. It was the ONLY one of the seven missing from this
-     * block, read by `operator/auth.server.ts` through a local widening, so the
-     * shared type never carried it and nothing showed the set in one place.
-     * That omission is the defect `check:secrets` was written for, and the gate
-     * found it on its first run, before any plant.
+     * Bearer token for the operator API. OPTIONAL, and that is the contract rather than an oversight:
+     * `POST /api/operator` returns 503 when it is absent or too short, because not configured means not
+     * open.
      */
     OPERATOR_TOKEN?: string;
     /**
-     * Cloudflare API token for READING Analytics Engine over the SQL API, scoped
-     * to Account, Account Analytics, Read. The cockpit's origin-requests panel is
-     * its only reader.
+     * Cloudflare API token for READING Analytics Engine over the SQL API, scoped to Account Analytics
+     * Read. The cockpit's origin-requests panel is its only reader.
      *
-     * OPTIONAL BY CONTRACT, on the OPERATOR_TOKEN precedent above rather than as
-     * an oversight. It is deliberately not provisioned yet, and a local dev
-     * machine will never have it, so the panel must treat absence as an ordinary
-     * state: the loader returns its error state and the rest of the cockpit
-     * renders untouched. Not configured means not readable, never a thrown
-     * loader.
+     * OPTIONAL BY CONTRACT, on the `OPERATOR_TOKEN` precedent. A development machine will never have it,
+     * so absence is an ordinary state: the loader returns its error state and the rest of the cockpit
+     * renders untouched. Not configured means not readable, never a thrown loader.
      *
-     * The WRITE path needs nothing here. `env.ANALYTICS.writeDataPoint` is a
-     * binding and carries its own authorization; only the read path is HTTPS to
-     * api.cloudflare.com and only the read path needs a credential.
+     * The WRITE path needs nothing here: `writeDataPoint` is a binding and carries its own
+     * authorization.
      */
     ANALYTICS_READ_TOKEN?: string;
     /**
-     * Bearer token for the READ-ONLY smoke credential that lets `check:browser`
-     * drive the real admin plane without the single admin's session cookie.
+     * Bearer token for the READ-ONLY smoke credential that lets `check:browser` drive the real admin
+     * plane without the single admin's session cookie.
      *
-     * OPTIONAL BY CONTRACT, the third on the `OPERATOR_TOKEN` precedent. Absent
-     * or under 32 characters means NOT CONFIGURED, and the middleware refuses a
-     * presented token with 503 rather than serving. A deployment without it is
-     * an ordinary deployment: the admin plane still answers Dustin's session and
-     * nothing else changes.
-     *
-     * Read in exactly one place, `app/lib/smoke.server.ts`. The full contract,
-     * the least-privilege argument and the stated residue are there and on the
-     * `smoke` row of `WRITE_CAPABILITIES`.
+     * OPTIONAL BY CONTRACT, the third on the `OPERATOR_TOKEN` precedent. Absent or too short means NOT
+     * CONFIGURED, and the middleware refuses a presented token with 503 rather than serving. Read in
+     * exactly one place, `app/lib/smoke.server.ts`, where the least-privilege argument lives.
      */
     SMOKE_TOKEN?: string;
     /**
-     * API key for OpenAlex, which is where the per-paper citation counts on
-     * `/publications` come from.
+     * API key for OpenAlex, which is where the per-paper citation counts come from.
      *
-     * OPTIONAL BY CONTRACT, the fourth on the `OPERATOR_TOKEN` precedent, and
-     * the degradation is the gentlest of the four: `citations.server.ts` serves
-     * whatever APP_KV already holds and simply does not schedule a refresh, so
-     * an unset key means counts stop ageing forward rather than disappearing.
-     * Nothing 503s and nothing renders a zero.
+     * OPTIONAL BY CONTRACT, and the gentlest of the four degradations: `citations.server.ts` serves
+     * whatever APP_KV already holds and does not schedule a refresh, so an unset key means counts stop
+     * ageing forward rather than disappearing. Nothing 503s and nothing renders a zero.
      *
-     * It became REQUIRED-to-fetch on 2026-02-13, when OpenAlex made keys
-     * mandatory and removed the `mailto` polite pool in the same release. Before
-     * that date a keyless request worked, which is why the July code treated the
-     * key as a nicety; a keyless request now spends a shared allowance of about
-     * 100 credits and is refused after it.
+     * TWO HOLDERS, ONE CREDENTIAL: the Worker secret, and the gitignored `.dev.vars` the build reads
+     * through `scripts/lib/dev-vars.mjs`. Rotate both or neither.
      *
-     * Set with `wrangler secret put OPENALEX_API_KEY`. The BUILD side reads the
-     * same credential from the gitignored `.dev.vars`, through
-     * `scripts/lib/dev-vars.mjs`, because `pubs-pipeline` and the build-time
-     * cited-by fetch run on a machine rather than in the Worker. Two holders,
-     * one credential: rotate both or neither.
+     * WHY THIS ONE IS NOT MARKED OPTIONAL, WHEN ITS CONTRACT IS. Because `.dev.vars` is also where the
+     * build reads it, `wrangler types` SEES IT and generates it as required. Declaring it `?: string`
+     * here widens the merged `Env` so it stops being assignable to `Cloudflare.Env`. THE OPTIONALITY IS
+     * ENFORCED IN CODE INSTEAD: `citations.server.ts` checks the value before spending a request,
+     * because an unset secret is `undefined` at runtime whatever the type says. The type is not the
+     * contract here; this comment is.
      *
-     * ## WHY THIS ONE IS NOT MARKED OPTIONAL, WHEN ITS CONTRACT IS
-     *
-     * Because `.dev.vars` is also where the build reads it, `wrangler types`
-     * SEES IT and generates `OPENALEX_API_KEY: string` into
-     * `__BaseEnv_Env`, required. Declaring it `?: string` here widens the
-     * merged `Env` and it stops being assignable to `Cloudflare.Env`, which
-     * broke `workers/ask-budget.ts` on the first attempt. The three other
-     * optional secrets above are never in `.dev.vars`, so none of them collides.
-     *
-     * The declaration is therefore the one the generator forces, and the
-     * OPTIONALITY IS ENFORCED IN CODE INSTEAD: `citations.server.ts` reads the
-     * value and checks it for truthiness before spending a request, because an
-     * unset secret is `undefined` at runtime whatever the type says. The type is
-     * not the contract here; that comment is.
-     *
-     * On a clean CI checkout there is no `.dev.vars`, wrangler generates
-     * nothing, and this line is the only declaration. Same shape either way,
-     * which is what stops the two environments disagreeing about whether the
-     * Worker compiles.
+     * WHY THE DECLARATION EXISTS AT ALL: on a clean CI checkout there is no `.dev.vars`, wrangler
+     * generates nothing, and this line is the only declaration. Removing it compiles locally and fails
+     * on a fresh clone.
      */
     OPENALEX_API_KEY: string;
 
@@ -109,22 +70,12 @@ declare global {
 }
 
 /*
- * WHY THERE IS NO VARS BLOCK HERE, and why adding one would be a defect.
+ * WHY THERE IS NO VARS BLOCK HERE, and why adding one would be a defect. A plain var in
+ * wrangler.jsonc is already generated into the base Env by `wrangler types`, carrying its value, so
+ * declaring it again would put that value in a second place.
  *
- * `CLOUDFLARE_ACCOUNT_ID` is a plain var in wrangler.jsonc, not a secret, so
- * `wrangler types` already generates it into `__BaseEnv_Env` in
- * worker-configuration.d.ts, AS A STRING LITERAL carrying the id itself.
- * Declaring it again in this file would put the value in a second place and
- * hand a future edit two copies to keep in step, which is the drift the
- * config gate exists to prevent.
- *
- * Measured 2026-08-14 rather than assumed: the generated interface was read
- * back after `wrangler types` and it carries the binding.
- *
- * The rule this file enforces is about SECRETS, which wrangler cannot see
- * because they are set with `wrangler secret put` and are absent from the
- * config. Vars are the opposite case: wrangler owns them, so this file stays
- * out of the way.
+ * The rule this file enforces is about SECRETS, which wrangler cannot see because they are set with
+ * `wrangler secret put`. Vars are the opposite case: wrangler owns them.
  */
 
 /**
@@ -146,16 +97,11 @@ declare module "*.wasm" {
 export {};
 
 /**
- * A value that differs for every build, injected by `define` in vite.config.ts.
+ * A value that differs for every build, injected by `define` in vite.config.ts. It namespaces the
+ * Worker's own HTML cache and has no other reader; the grounds are on `BUILD_ID` in that file.
  *
- * It namespaces the Worker's own HTML cache and has no other reader. The
- * grounds, and the measurement that made it necessary, are on `BUILD_ID` in
- * that file.
- *
- * Inside `declare global` because this file carries `export {}` and is
- * therefore a module: a bare `declare const` here would be scoped to the
- * module and invisible to workers/app.ts, which is exactly what happened on
- * the first attempt.
+ * Inside `declare global` because this file carries `export {}` and is therefore a module: a bare
+ * `declare const` here would be scoped to the module and invisible to `workers/app.ts`.
  */
 declare global {
   const __BUILD_ID__: string;

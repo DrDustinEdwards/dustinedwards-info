@@ -10,12 +10,11 @@ import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { commentBlocks } from "./code-blocks.mjs";
-import { WAVE2 } from "./code-wave2.mjs";
+import { FILES, BEFORE, DECISIONS, flat } from "./wave.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const DIR = join(HERE, "code-decisions-wave2");
+const DIR = DECISIONS;
 const TICK = String.fromCharCode(96);
-const flat = (s) => s.replace(/\//g, "__");
 
 const JSDOC_HEAD =
   /@(?:param|returns?|type|typedef|template|property|prop|callback|satisfies|import|enum|throws|see|deprecated|this|overload|extends|implements)\b(?:\s*\{[^\n]*\})?(?:\s+\[?[\w.$]+(?:=[^\]\s]*)?\]?)?/g;
@@ -24,7 +23,17 @@ const DIRECTIVE = /oxlint-|eslint-|@ts-|#__PURE__|@vite-ignore|<reference|pretti
 const MARKERS = ["JUSTIFIED SUBSTITUTION"];
 const WIDE = [String.fromCharCode(0x2013), String.fromCharCode(0x2014)];
 const heads = (t) => (t.match(JSDOC_HEAD) ?? []).map((h) => h.replace(/\s+/g, " ").trim()).sort().join("|");
-const cites = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).sort().join(",");
+// FLATTENED, so a citation an inherited line break split still counts as the rule it names.
+// Counting the raw text makes repairing that wrap read as an INVENTED citation, which refuses the
+// one edit the wrap needs. liveCites is the other half: the replacement's own citations must all
+// be on one line, so nothing re-wraps one.
+const flatProse = (t) =>
+  t
+    .split("\n")
+    .map((l) => l.replace(/^\s*(?:\/\/|\*\/|\/\*\*?|\*)\s?/, ""))
+    .join(" ");
+const cites = (t) => [...flatProse(t).matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).sort().join(",");
+const liveCites = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).length;
 
 const names = readdirSync(DIR).filter((n) => n.endsWith(".mjs")).sort();
 const owner = {};
@@ -36,8 +45,8 @@ for (const n of names) {
 }
 
 const blocks = {};
-for (const file of WAVE2) {
-  const src = readFileSync(join(HERE, "code-history-before-wave2", flat(file)), "utf8");
+for (const file of FILES) {
+  const src = readFileSync(join(BEFORE, flat(file)), "utf8");
   commentBlocks(src).forEach((b, id) => {
     const ls = src.lastIndexOf("\n", b.start - 1) + 1;
     blocks[`${file}#${id}`] = { ...b, lead: src.slice(ls, b.start).match(/^[ \t]*/)[0] };
@@ -71,7 +80,9 @@ for (const [key, value] of Object.entries(edits)) {
     if (WIDE.some((c) => repl.includes(c))) problems.push(`${key}: wide dash`);
     if (repl.includes("*/")) problems.push(`${key}: closes the comment`);
     if (!b.ownLine && b.kind === "line" && repl.includes("\n")) problems.push(`${key}: trailing // comment must stay one line`);
-    if (/\bhard\s*\n\s*rules?\s+\d+/i.test(repl)) problems.push(`${key}: citation wrapped across a line break`);
+    if (liveCites(repl) !== cites(repl).split(",").filter(Boolean).length) {
+      problems.push(`${key}: citation split by a line break, so it resolves to nothing`);
+    }
     if (repl.trim() === "") problems.push(`${key}: empty; use null`);
     for (const l of repl.split("\n")) {
       if (b.lead.length + 3 + l.length > 110) problems.push(`${key}: over 110 columns: ${l.slice(0, 40)}...`);

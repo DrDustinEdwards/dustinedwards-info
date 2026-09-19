@@ -1,26 +1,16 @@
 /**
  * THE RESOLVER SEAM. Shape 2 of media-module-architecture.md.
  *
- * The media core asks "who cites this key?" and content types answer. This is
- * the ONLY part that varies per content type, which is why it is the only
- * pluggable part: everything else about an object is true regardless of what
- * links to it.
+ * The media core asks "who cites this key?" and content types answer. This is the ONLY part that
+ * varies per content type.
  *
- * **What adding a second content type costs, stated so the seam can be judged
- * rather than trusted.** To add albums:
+ * **What a second content type costs, stated so the seam can be judged rather than trusted:** one
+ * `resolvers/<type>.server.ts` and one line in `RESOLVERS`. Nothing else, because the core, the
+ * media page, the delete action and the refusal message are each written against `MediaCitation`.
+ * If a future type needed more, the seam is wrong and should be fixed rather than worked around.
  *
- *   1. write `resolvers/albums.server.ts` exporting one `ReferenceResolver`
- *   2. add one line to `RESOLVERS` below
- *
- * That is the whole list. The core does not change, the media page does not
- * change, the delete action does not change, and the refusal message does not
- * change, because every one of them is written against `MediaCitation` and
- * never against posts. If a future type needed more than those two steps, the
- * seam would be wrong and should be fixed rather than worked around.
- *
- * Ruling 1: resolvers return STRUCTURED results, never booleans. A boolean
- * would have to be widened at every call site the first time a refusal needed
- * to say which post and which reference form; a structure never does.
+ * Resolvers return STRUCTURED results, never booleans: a boolean would be widened at every call site
+ * the first time a refusal needed to name a post and a reference form.
  */
 
 /** Where a citation came from, in a form a refusal can name. */

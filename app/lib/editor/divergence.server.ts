@@ -1,28 +1,16 @@
 /**
  * Where a recorded D1 divergence lives, and how the status surface reads it.
  *
- * ## IT IS KV, AND THAT IS THE WHOLE DESIGN DECISION
+ * **IT IS KV.** The record says "D1 could not be written", so putting it in D1 would make it absent
+ * in exactly the circumstance it exists to describe.
  *
- * The record says "D1 could not be written". Putting it in D1 would make it
- * absent in exactly the circumstance it exists to describe. KV is the only
- * other durable store this Worker binds that is independent of the failure.
+ * **ONE KEY PER SLUG, not one list.** A single key holding an array is a read-modify-write, and two
+ * saves failing at once would lose one record to the race.
  *
- * ## ONE KEY PER SLUG, not one list
- *
- * A single key holding an array would be a read-modify-write, and two saves
- * failing at once would lose one of the records to the race. A key per slug has
- * no race, is naturally idempotent (a second failure on the same post overwrites
- * its own entry rather than appending a duplicate), and is cleared by the repair
- * touching that slug.
- *
- * ## OBSERVATION BOUNDARY
- *
- * `listDivergences` uses KV `list`, which is EVENTUALLY CONSISTENT. A record
- * written moments ago may not appear in the next listing, so an empty result is
- * "none visible", not "none exist". That is acceptable here because the
- * operator has already been told about the divergence directly, in the error
- * that raised it; this surface is the second reader, not the first. It would
- * NOT be acceptable as the only alarm, and nothing treats it as one.
+ * **OBSERVATION BOUNDARY.** `listDivergences` uses KV `list`, which is EVENTUALLY CONSISTENT, so an
+ * empty result is "none visible", not "none exist". Acceptable because the operator was already told
+ * directly, in the error that raised it. It would NOT be acceptable as the only alarm, and nothing
+ * treats it as one.
  */
 
 const PREFIX = "publish:divergence:";

@@ -4,22 +4,15 @@ import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 import type { Route } from "./+types/llms-full[.txt]";
 
 /**
- * The full-text companion to llms.txt: every published post's markdown source in
- * one document, so a model can read the whole blog in a single fetch instead of
- * crawling it a page at a time.
+ * The full-text companion to llms.txt: every published post's markdown in one document, so a model
+ * can read the whole blog in a single fetch.
  *
- * Composed from D1 at request time rather than emitted as an artifact, for
- * one concrete reason: this document depends on the clock. A post scheduled
- * with a future publish_at must be absent today and present next week. A
- * generated document cannot express that. It would either carry a timestamp,
- * in which case its byte gate would start failing the moment a scheduled post
- * went live, or it would ignore publish_at, in which case it leaks
- * unpublished writing. (The post corpus reached the same conclusion later,
- * for its own reasons: D1 is the only rendered copy site-wide now.)
- *
- * Composing here removes the drift rather than gating it: there is no second
- * copy that can disagree. The markdown itself is still gated, because it comes
- * from the same `posts.body` the generator wrote.
+ * COMPOSED FROM D1 AT REQUEST TIME rather than emitted as an artifact, because THIS DOCUMENT DEPENDS
+ * ON THE CLOCK: a post scheduled with a future publish_at must be absent today and present next week.
+ * A generated document would either carry a timestamp, whose byte gate fails the moment a scheduled
+ * post goes live, or ignore publish_at and leak unpublished writing. Composing here removes the
+ * drift rather than gating it: there is no second copy that can disagree. The markdown itself is
+ * still gated, because it comes from the same `posts.body` the generator wrote.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const posts = await listBlogPostsFullText(getEnv(context));
