@@ -32,27 +32,38 @@ Numbering collision, named so a citation is not silently retargeted: Capsid vols
 
 ### CI reds, 30 days, by class
 
-125 failed runs. Unique samples 47. Of those: 41 failed the Gates step, 3 Lint (not a `check:*`), 2 Slop, 1 Install.
+125 failed `ci.yml` runs. Failed-step histogram: Gates 84, Install 33, Lint 6, Slop 2. Eight cancelled runs are concurrency cancels.
 
-Real reds that were not the gate's own bug, counted from unique samples plus known repeats:
+A second pass read job steps for every CI failure and logs per cluster. Real reds below are that reading. Renovate re-runs of the same defect are included in the run count; unique defects are in parentheses.
 
-| Gate | Real reds (30d) | Not counted | What the real ones were |
+| Gate / step | Real CI runs (unique defects) | Not counted | What the real ones were |
 |---|---|---|---|
-| check:types | 2+ (better-auth 1.7.5; likely react-router 8.3.1) | | Ruling 42 working: a minor of better-auth is a security change. |
-| check:stack | several (Renovate pin PRs #19-#21 before 39a) | | Committed `stack.json` lagged package.json. Fixed by making it a build product. |
-| check:invariants | 1 (PR #30 merge 34536097937) | floor-only | The merge CLAUDE.md names: red on main, made green by the next unrelated commit. |
-| check:policy | 1 (same PR #30) | floor remeasure 34332086808 | |
-| check:floors | many (c9f50877, 87c16de7, 84513948, 3bcf858, 308ff08, post updates 2026-08-23) | | Almost all are unremeasured floors after legitimate work, not visitor defects. |
-| check:features | some (title restatement c9f50877 class; post updates) | | Digit/title drift. |
-| check:content | some (post updates 2026-08-23) | | Corpus vs markdown. |
-| check:admin-ui | some (mockup corpus 308ff08) | | Baseline drift after a draft was removed. |
-| check:slop | 0 real | 2 (35164286488, 35164030929) | Gate-own: security engine on a pre-existing Dependabot alert; shallow `origin/main`. Ruling 114. |
-| check:tests | 0 real in 30d | 1 hung 139.8 s (89ce4fd) | Gate-own/flake. |
-| check:worker | 0 real in 30d | historical flake family closed 1748513 | |
-| Lint (oxlint) | n/a | 3 scorer-sync pushes | Not a `check:*` gate. |
-| Install | n/a | 1 renovate/react-router-dev | Lock/peer, not a gate. |
+| check:floors | 14 (4 floor-remeasure events) | inherited Renovate copies of a red main | Stale floor, not a runtime bug. Gate doing its job. |
+| check:types | 14 (4) | | `improve-report.mjs` implicit any (5 incl. isolation PR); better-auth 1.7.5 KV session store (6); two missing-module commits. |
+| check:content | 13 (2) | | 12 runs: `template-refs.json` not rebuilt after post/CSS edits (08-23 to 08-25). 1: missing `artifact.mjs` / `records.mjs` (76e52e2). |
+| check:invariants | 8 (2) | | Missing modules (1). Hardcoded post-count tile / `publiclyVisible()` on PR **#30** plus inherited (8451394, 53eabf4). |
+| check:policy | 7 (1) | | Ruling 48: ship must name content-drift as the deferred check after D1 sync (PR #30 + inherited). |
+| check:features | 6 (1) | | Projects card title != corpus title for `ten-years-on-cloudflare` (e7d4f49, b67abce, 308ff08 + inherited). |
+| check:tests (the suite) | 1 (1) | plant left in at 89ce4fd (139.8 s, "FAIL no test failed") | Missing `ask-origin.mjs` (8d73356). |
+| lint (CI step, not `check:`) | 6 (2) | | Unused `params` in `blog.tags.$tag.tsx`; spread in `improve-report.mjs`. |
+| npm ci / Install | 33 (1) | | `@react-router/dev` 8.3.1 ERESOLVE. Not a named gate. |
+| check:stack | 0 | 30 Renovate pin PRs | Committed `stack.json` byte-gated; Renovate cannot run `build:stack`. Fixed `f7a089a` (39a) by deriving it in CI. |
+| check:slop | 0 | 2 | Shallow clone missing `origin/main`; then security-engine false positive. Ruling 114. |
+| check:worker | 0 | 4 on 08-29 | Unparseable vitest summary / `null` cases executed. |
+| check:contrast, check:headers | 0 product | floors only | The gate passed; only its floor was stale. |
 
-Gates with **zero real 30-day reds** (and not in the table above): publications, config (CI-excluded), llms, backup (CI-excluded), browser (CI-excluded), media, image-weight, diagrams, search, contrast, fonts, design-sheets, guidelines, logo, charts, urls, volumes, media-axes, page-payload (CI-excluded), destructive, hook-matchers, hook-scope, hook-syntax, headers, secrets, uptime, mail, restore, head (CI-excluded), migrations, microformats, d1-address.
+Product defects `check:ci` actually stopped from shipping, unique: (1) `template-refs.json` not rebuilt, (2) missing modules, (3) `improve-report.mjs` untyped, (4) better-auth 1.7.5 session-store types, (5) projects evidence card title drift, (6) hardcoded post-count tile, (7) ship.mjs ruling 48 deferred content-drift assertions, (8) unused param / spread (lint). Plus four floor-remeasure events.
+
+Gates in the `check:ci` set with **zero real 30-day catches**: publications, search, contrast (gate, not floor), fonts, design-sheets, slop, logo, charts, diagrams, admin-ui, d1-address, microformats, urls, media-axes, destructive, hook-scope, hook-syntax, hook-matchers, stack, headers (gate, not floor), secrets, migrations, worker, llms.
+
+`CI_EXCLUDED` cannot catch on `ci.yml` by construction: config, backup, head, browser, page-payload.
+
+Other workflows, same window:
+
+- **Browser** (`check:browser`): 31 runs, 20 failure. 12 real from 09-09 through 09-19 (privacy link not keeping footer place; later `/playground/ui` theme bytes and `/publications` identity). 4 worker-reporter-class env/flake (Chromium launch, per-colo cache miss). Matches `fix/check-browser-nightly`.
+- **Health**: 258 runs, 19 failure. Sampled real: `ask-index-drift` (08-23, 09-03), `content-drift` 16 vs 14 with `sync_posts` 422 (09-09).
+- **Restore drill** (`check:restore`): 2 red then 1 green on 09-09. Real or config: D1 export against the zero placeholder id.
+- **Deploy** (`npm run ship`): 7 failure then 3 success, all 08-25 `workflow_dispatch`. One red is `check:backup` on a clean runner, which is why backup is CI-excluded.
 
 Zero reds is not proof of uselessness. The job's RETIRE test is zero real catches **and** no plant-proven refusal. Several of those still have plants. They are marked below.
 
@@ -233,12 +244,12 @@ Times are a typical ubuntu CI Gates step. Local on this host is not a usable mea
 
 | id | statement | class | evidence | cost | rec |
 |---|---|---|---|---|---|
-| G:types | Typecheck (wrangler types, react-router typegen, tsc -b). | BREAKAGE | 4fe03d7 Stop hook hid red tsc; better-auth 1.7.5; 2b5877d implicit any | 19 s | KEEP |
-| G:content | Markdown, generated corpus, gitignore tripwire. | DRIFT | fcc1f0f, fd4447f, e6e869e | 2.3 s | KEEP |
+| G:types | Typecheck (wrangler types, react-router typegen, tsc -b). | BREAKAGE | 14 real CI runs, 4 unique: improve-report, better-auth 1.7.5, two missing modules | 19 s | KEEP |
+| G:content | Markdown, generated corpus, gitignore tripwire. | DRIFT | 13 real CI runs: 12 `template-refs.json` (08-23 to 08-25), 1 missing `artifact.mjs` | 2.3 s | KEEP |
 | G:publications | Corpus, twins, unlicensed-PDF list, redirects. | DRIFT | none found later | ~1 s | KEEP |
 | G:config | wrangler.jsonc vs example, both directions; `--remote` adds schedules. | DRIFT | e6e869e email in mockups; **CI-X** (bootstrap makes them equal) | offline + remote | KEEP |
 | G:search | Parser/fusion floors. | DRIFT | floor caught a run that executed nothing | 0.1 s | KEEP |
-| G:policy | Money-path order by position, comments stripped. | BREAKAGE | fba561f; d6e1730; floor sat 60 vs 96 | 0.3 s | KEEP |
+| G:policy | Money-path order by position, comments stripped. | BREAKAGE | 7 real CI runs, 1 unique: ruling 48 deferred content-drift (PR #30) | 0.3 s | KEEP |
 | G:contrast | Token contrast matrix. | DRIFT | plants; 30d reds are floor arithmetic | 0.8 s | KEEP |
 | G:fonts | Font binaries vs `@font-face`. | DRIFT | none found later | ~1 s | KEEP |
 | G:design-sheets | SHEETS vs root.tsx and non-admin imports, both directions, cascade order. | DRIFT | shell.css missed; first green fec78c9 | ~1 s | KEEP |
@@ -247,7 +258,7 @@ Times are a typical ubuntu CI Gates step. Local on this host is not a usable mea
 | G:logo | Header mark fill bindings. | BREAKAGE | a build replaced the mark with a wordmark; R101 | 1.7 s | KEEP |
 | G:charts | Plot accessibility contract. | DRIFT | plant (`role=img` on figure); 0 later | 6.2 s | KEEP |
 | G:diagrams | Mermaid/asset pairing. | DRIFT | none found | 0.8 s | RETIRE |
-| G:admin-ui | Admin render harness vs baseline. | DRIFT | ee7d8b7 "Top NaN"; 308ff08 mockup corpus | 2.7 s | KEEP |
+| G:admin-ui | Admin render harness vs baseline. | DRIFT | ee7d8b7 "Top NaN" (earlier); 0 real in this 30d window | 2.7 s | KEEP |
 | G:urls | Protocol allowlist, slug pattern, redirects both ways. | BREAKAGE | 2026-08-07 javascript: cover | 1.0 s | KEEP |
 | G:volumes | Active Capsid decisions volume vs its own freeze point. | DRIFT | none found; vol 18 ran to 36.7 KB ungated for 4 days | network | RETIRE |
 | G:media-axes | Media query axes present. | DRIFT | plant; 0 later | 0.2 s | RETIRE |
@@ -257,22 +268,22 @@ Times are a typical ubuntu CI Gates step. Local on this host is not a usable mea
 | G:hook-scope | Deploy door and d1 arms; effective directory. | BREAKAGE | 0cfab43; a67df0b `.exe` suffix | 0.8 s | KEEP |
 | G:hook-syntax | `bash -n` plus Python compile of embedded checkers. | DRIFT | plant: apostrophe ended a quoted string; 0 later | 0.4 s | KEEP |
 | G:floors | Floor lines vs executed counts. | DRIFT | 34e62f1; 6c578bd; most 30d reds | 0.1 s | KEEP |
-| G:stack | Colophon stack.json freshness, example config, drizzle. | DRIFT | fd4447f missing migration; Renovate #19-#21 | 0.2 s | KEEP |
-| G:features | enhancements.json both ways; no digit in a feature sentence. | DRIFT | 6202508; e6e869e | 1.4 s | KEEP |
+| G:stack | Colophon stack.json freshness, example config, drizzle. | DRIFT | 0 real in 30d after 39a; 30 Renovate false reds before `f7a089a` derived it in CI | 0.2 s | KEEP |
+| G:features | enhancements.json both ways; no digit in a feature sentence. | DRIFT | 6 real CI runs, 1 unique: projects card title vs corpus (`ten-years-on-cloudflare`) | 1.4 s | KEEP |
 | G:headers | Source Cache-Control / CSP declarations. | BREAKAGE | csp.mjs admin `.data` arm | 0.2 s | KEEP |
 | G:secrets | No secret in client chunks; per-root floors. | BREAKAGE | first run on own allowlist; 0 later leak | 0.5 s | KEEP |
 | G:migrations | Manifest hashes both ways; never edit applied files. | DRIFT | plants only | 0.2 s | KEEP |
-| G:tests | `node --test` over test/. | BREAKAGE | 0 real 30d; 1 hung 139 s | 20 s | KEEP |
-| G:worker | workerd module tests, outbound fetch throws. | BREAKAGE | CI first-run stdout miss; flake family 1748513 | 59 s | KEEP |
-| G:invariants | Visibility, schema, FTS, helper signatures, bindings list, ... | BREAKAGE | 7f51f7b, a5008c0, PR #30 | 1.8 s | KEEP |
+| G:tests | `node --test` over test/. | BREAKAGE | 1 real (missing `ask-origin.mjs`); 1 plant left in (89ce4fd) | 20 s | KEEP |
+| G:worker | workerd module tests, outbound fetch throws. | BREAKAGE | 0 real in 30d; 4 reporter bugs 08-29 (unparseable vitest summary) | 59 s | KEEP |
+| G:invariants | Visibility, schema, FTS, helper signatures, bindings list, ... | BREAKAGE | 8 real CI runs: missing modules; PR #30 hardcoded post-count tile | 1.8 s | KEEP |
 | G:llms | llms.txt vs corpus; `--remote` adds D1. | DRIFT | Cloudflare 10000 transients; 0 content mismatch | 0.1 s | KEEP |
 | G:backup | Per-table export vs schema; **CI-X**. | DRIFT | first run omitted a table; SQLITE_CANTOPEN later | local/remote | KEEP |
-| G:browser | Layout, theme, cache pairing; **CI-X** from ship; daily schedule. | BREAKAGE | 2026-08-20 eight layout defects; fb51152 stale HTML; 26 unread prod failures | network, minutes | KEEP, after the 26 are read |
+| G:browser | Layout, theme, cache pairing; **CI-X** from ship; daily schedule. | BREAKAGE | 12 real nightly reds 09-09 to 09-19 (privacy-link order); 4 env/flake | network, minutes | KEEP |
 | G:media | R2 index vs table; network only. | DRIFT | plant deleted a live key; later R2 list timeout | network | KEEP |
 | G:image-weight | Images quality on rebuild placeholders. | DRIFT | replay of pre-fix bytes; 0 later | network | RETIRE |
 | G:uptime | UptimeRobot monitors vs manifest. | DRIFT | f2c30b9 floor 4 under 22 | network | KEEP |
-| G:mail | SPF/DKIM/DMARC; red by design until cutover. | DRIFT | none found | network | RETIRE until cutover |
-| G:restore | Weekly fresh-export round trip. | DRIFT | first run found three restore-path bugs | weekly, slow | KEEP |
+| G:mail | SPF/DKIM/DMARC; red by design until cutover. | DRIFT | none found | network | RETIRE |
+| G:restore | Weekly fresh-export round trip. | DRIFT | 2 red then 1 green 09-09: export against the zero placeholder D1 id | weekly, slow | KEEP |
 | G:head | Disk vs HEAD; **CI-X** (vacuous on a checkout). | DRIFT | b1668fb NUL in own docblock | local, nested, minutes | KEEP |
 | G:microformats | h-card/h-entry/h-feed; no rel=me. | DRIFT | 4d6b17e gate bug (asserted absent `updated`) | 3.0 s | KEEP |
 | G:d1-address | No `wrangler d1 <cmd> dustinedwards` by name except `--local`. | BREAKAGE | 2ad4727 name desync; 9 sites | 0.3 s | KEEP |
