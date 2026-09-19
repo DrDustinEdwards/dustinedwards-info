@@ -1506,3 +1506,20 @@
 .pgui-scroll-room {
   block-size: 120vh;
 }
+
+/* An icon-only control is square: the label is gone, so the inline padding that
+   sized it around text would leave a lopsided box. */
+.pgui .btn-icon {
+  inline-size: var(--control-min);
+  padding-inline: 0;
+}
+
+/* The accessible name, printed. It is the whole reason an icon-only control is
+   allowed, and it is the half a capture of this page cannot record. */
+.pgui-aname {
+  display: block;
+  margin-block-start: var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-small-size);
+  color: var(--text-secondary);
+}
