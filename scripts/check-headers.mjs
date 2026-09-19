@@ -1103,6 +1103,10 @@ console.log("  public HTML routes share one headers()");
     "colophon.tsx",
     "phage-discovery.tsx",
     "playground.tsx",
+    // The UI inventory. Every byte on it is a function of the stylesheet and a
+    // committed token list, so it shares the cache on the same terms as the
+    // pages above.
+    "playground.ui.tsx",
     "projects.tsx",
     /*
      * The publication index: its QUERY STRING is part of the key rather than a reason to refuse,
