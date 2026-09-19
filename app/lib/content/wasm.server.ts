@@ -16,7 +16,7 @@ import { setWasmLoader } from "./pipeline.mjs";
  * Typed loosely on purpose: the Worker tsconfig does not carry DOM's WebAssembly value
  * declarations.
  */
-const wasm = (globalThis as unknown as {
+const wasm = (globalThis as typeof globalThis & {
   WebAssembly: { instantiate: (m: unknown, i: unknown) => Promise<unknown> };
 }).WebAssembly;
 

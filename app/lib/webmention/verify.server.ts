@@ -4,6 +4,10 @@ import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
 import { readCapped } from "~/lib/read-capped.mjs";
 import { collapseExcerpt, sameDocument } from "~/lib/webmention/urls.mjs";
 
+// What `parseHTML` hands back, which is linkedom's document and NOT the DOM's. Naming the real
+// type is what stops the two being asserted equal.
+type ParsedDocument = ReturnType<typeof parseHTML>["document"];
+
 /**
  * Does the source page really link to the target?
  *
@@ -65,7 +69,7 @@ const UNREADABLE = "(unreadable)";
  * hard rule 6 asks: validate where the value enters.
  */
 function readAuthor(
-  document: Document,
+  document: ParsedDocument,
   sourceUrl: string,
 ): { authorName: string | null; authorUrl: string | null } {
   const hostname = (() => {
@@ -178,7 +182,7 @@ export async function inspectSource(
     return { status: "failed", failureReason: FAILURE_REASONS.noLink };
   }
 
-  const { authorName, authorUrl } = readAuthor(document as unknown as Document, sourceUrl);
+  const { authorName, authorUrl } = readAuthor(document, sourceUrl);
 
   /*
    * THE EXCERPT IS THE CONTAINING ELEMENT'S TEXT, not the whole page and not the anchor's label. The

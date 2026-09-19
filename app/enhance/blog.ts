@@ -20,9 +20,13 @@
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 function onIdle(fn: () => void) {
-  if ("requestIdleCallback" in window) {
-    (window as unknown as { requestIdleCallback: (cb: () => void) => void })
-      .requestIdleCallback(fn);
+  // Not in this tsconfig's DOM lib, so it is named as an optional extra on the same object
+  // rather than asserted through unknown. The `in` guard is still what decides.
+  const idle = window as typeof window & {
+    requestIdleCallback?: (cb: () => void) => void;
+  };
+  if ("requestIdleCallback" in window && idle.requestIdleCallback) {
+    idle.requestIdleCallback(fn);
   } else {
     setTimeout(fn, 1);
   }
