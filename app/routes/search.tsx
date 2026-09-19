@@ -8,6 +8,7 @@ import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
 import {
+  parseSort,
   search,
   zeroState,
   type MatchReason,
@@ -43,6 +44,11 @@ function readParams(url: URL) {
     type: url.searchParams.get("type"),
     tag: url.searchParams.get("tag"),
     year: url.searchParams.get("year"),
+    /*
+     * Parsed to the union HERE, at the edge, so an arbitrary `?sort=` never travels further than
+     * this function. Unknown and absent both resolve to relevance, which is what the page ships.
+     */
+    sort: parseSort(url.searchParams.get("sort")),
     page: Number.isFinite(page) && page > 0 ? page : 1,
   };
 }
@@ -191,6 +197,9 @@ function facetHref(
   for (const [k, v] of Object.entries(current)) {
     if (v) next.set(k, v);
   }
+  // A filter change keeps the reader's ordering. Losing it here would silently
+  // return a date-sorted list to relevance on the next chip click.
+  if (params.sort === "date") next.set("sort", "date");
   // Changing a filter always returns to the first page. Staying on page 4 of a
   // narrower result set is how a filter appears to return nothing.
   return `/search?${next.toString()}`;
@@ -202,7 +211,24 @@ function pageHref(params: ReturnType<typeof readParams>, page: number) {
   if (params.type) next.set("type", params.type);
   if (params.tag) next.set("tag", params.tag);
   if (params.year) next.set("year", params.year);
+  if (params.sort === "date") next.set("sort", "date");
   if (page > 1) next.set("page", String(page));
+  return `/search?${next.toString()}`;
+}
+
+/**
+ * The same URL under the other ordering, page 1. Changing the sort returns to the first page for
+ * the reason a filter change does: page 4 of one ordering is not page 4 of the other.
+ */
+function sortHref(params: ReturnType<typeof readParams>, sort: "relevance" | "date") {
+  const next = new URLSearchParams();
+  if (params.q) next.set("q", params.q);
+  if (params.type) next.set("type", params.type);
+  if (params.tag) next.set("tag", params.tag);
+  if (params.year) next.set("year", params.year);
+  // Relevance is the default, so it is the ABSENT value rather than `sort=relevance`.
+  // One state, one URL: two spellings of the default would be two cache entries of one page.
+  if (sort === "date") next.set("sort", "date");
   return `/search?${next.toString()}`;
 }
 
@@ -312,6 +338,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           {params.type ? <input type="hidden" name="type" value={params.type} /> : null}
           {params.tag ? <input type="hidden" name="tag" value={params.tag} /> : null}
           {params.year ? <input type="hidden" name="year" value={params.year} /> : null}
+          {/* A new query from a date-sorted page stays date-sorted. */}
+          {params.sort === "date" ? <input type="hidden" name="sort" value="date" /> : null}
           <p className="search-hint">
             Operators: <code>tag:</code>, <code>type:</code>, a bare year, and
             &quot;quoted phrases&quot;.
@@ -373,6 +401,43 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
          */}
         {askAvailable && (params.q ?? "").trim().length > 0 ? (
           <AskMount question={params.q ?? ""} />
+        ) : null}
+
+        {/*
+         * TWO LINKS, NOT A SELECT, for the reason the facets are links: a select needs script to
+         * do anything, and this page's contract is that the HTML which arrives is the answer.
+         *
+         * ONLY ON THE TEXT PATH. `result.parsed.isEmpty` means nothing to match on, which is the
+         * browse path, and that path is date-ordered in SQL because a filter carries no relevance
+         * signal. Offering "relevance" there would be a control with nothing behind it, and a
+         * disabled one would be a control that has to explain itself.
+         */}
+        {hasQuery && result.total > 1 && !result.parsed.isEmpty ? (
+          <nav className="search-sort" aria-label="Sort results">
+            <span className="search-sort-label" id="search-sort-label">
+              Sort
+            </span>
+            <ul aria-labelledby="search-sort-label">
+              <li>
+                <Link
+                  to={sortHref(params, "relevance")}
+                  className="search-chip"
+                  aria-current={params.sort === "relevance" ? "true" : undefined}
+                >
+                  Relevance
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to={sortHref(params, "date")}
+                  className="search-chip"
+                  aria-current={params.sort === "date" ? "true" : undefined}
+                >
+                  Newest
+                </Link>
+              </li>
+            </ul>
+          </nav>
         ) : null}
 
         {hasQuery && result.total > 0 ? (
