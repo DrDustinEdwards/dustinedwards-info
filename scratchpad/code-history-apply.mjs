@@ -45,6 +45,10 @@ const CHUNKS = waveModule.CHUNKS;
 const KEEP_SHARE = waveModule.KEEP_SHARE;
 if (!Array.isArray(FILES) || !CHUNKS) throw new Error(`code-wave${WAVE}.mjs must export WAVE${WAVE} and CHUNKS`);
 const SUFFIX = WAVE === 1 ? "" : `-wave${WAVE}`;
+// The history header's wave sentence and base sha. Waves 1 and 2 predate these exports and
+// keep the literals they were committed with, so their documents still reproduce.
+const BASE_SHA = waveModule.BASE ?? "cdb4300";
+const SCOPE = waveModule.SCOPE ?? `the remaining ${FILES.length} files under scripts/`;
 const BEFORE = join(HERE, `code-history-before${SUFFIX}`);
 const DECISIONS = join(HERE, `code-decisions${SUFFIX}`);
 const TAGS_TSV = join(HERE, WAVE === 1 ? "code-history-tags.tsv" : `code-history-tags-wave${WAVE}.tsv`);
@@ -333,10 +337,9 @@ if (mode === "apply") {
   const history = [
     `# Code comment history, 2026-09, wave ${WAVE}`,
     "",
-    `Extracted under ruling 115, from cdb4300. Every comment block this wave`,
+    `Extracted under ruling 115, from ${BASE_SHA}. Every comment block this wave`,
     `deleted or shortened is here VERBATIM, with the file and line it had at`,
-    `cdb4300, its tag, and why it moved. Wave 1 took app/ and the ten heaviest`,
-    `code files; wave ${WAVE} takes the remaining ${FILES.length} files under scripts/.`,
+    `${BASE_SHA}, its tag, and why it moved. Wave ${WAVE} takes ${SCOPE}.`,
     "The files keep only the short why and the contract; this is where the",
     "measurements, dates and the story went.",
     "",
