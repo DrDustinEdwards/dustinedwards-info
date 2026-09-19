@@ -1,3 +1,4 @@
+import type { RootContent } from "hast";
 import { Form, Link } from "react-router";
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
@@ -215,8 +216,10 @@ export function headers() {
   return publicHtmlHeaders();
 }
 
-const serialize = (children: any[]) =>
-  unified().use(rehypeStringify).stringify({ type: "root", children } as any);
+/* The hast types, so neither side of this is an escape: check:slop makes a type
+   assertion an error, and an assertion here would hide a wrong tree shape. */
+const serialize = (children: RootContent[]) =>
+  unified().use(rehypeStringify).stringify({ type: "root", children });
 
 export async function loader({ context, request }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -597,6 +600,10 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
         <div className="page-inner">
           <h1 className="page-title">{PLAYGROUND_TITLE}</h1>
           <p className="page-intro">{PLAYGROUND_INTRO}</p>
+          <p className="page-intro">
+            The <a href="/playground/ui">UI inventory</a> is the companion page: every component
+            and every palette token, in both themes.
+          </p>
 
           {/* ------------------------------------------------ contrast --- */}
           <section id={demoAnchor("contrast")} className="playground-demo">
