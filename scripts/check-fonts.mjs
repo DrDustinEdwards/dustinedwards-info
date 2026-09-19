@@ -456,7 +456,7 @@ if (update) {
  * the gate already knows. MEASURED ON A PLAIN RUN, and that distinction cost a wrong floor once:
  * `--update` SKIPS the per-binary baseline comparisons.
  */
-const MINIMUM_CHECKS = 220;
+const MINIMUM_CHECKS = 240;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 
