@@ -17,6 +17,7 @@
     "preview": "npm run build && vite preview",
     "cf-typegen": "wrangler types",
     "build:content": "node scripts/build-content.mjs",
+    "build:tokens": "node scripts/build-tokens.mjs",
     "build:publications": "node scripts/build-publications.mjs",
     "build:publication-twins": "node scripts/build-publication-twins.mjs",
     "build:enhance": "node scripts/build-enhance.mjs",
