@@ -18,22 +18,13 @@ import type { RouterContextProvider } from "react-router";
 
 const TTL_SECONDS = 7 * 24 * 60 * 60;
 /*
- * THE CALLER'S NAME, AND DELIBERATELY NOT AN ADDRESS.
+ * THE CALLER'S NAME, AND DELIBERATELY NOT AN ADDRESS. OpenAlex removed the `mailto` polite pool, so
+ * an address buys nothing from the vendor, and `check:config` refuses a real configured value
+ * appearing in a tracked file, which that address is: it is also the watchdog's ALERT_EMAIL.
  *
- * This carried a `mailto:` with a real address until 2026-09-12, on the old
- * convention that a scholarly API caller identifies itself by email. TWO things
- * made that wrong here. OpenAlex removed the `mailto` polite pool on
- * 2026-02-13, so the address bought nothing from the vendor: the API key is the
- * identification now. And `check:config` refuses a real configured value
- * appearing in a tracked file, which that address was, because it is also the
- * watchdog's ALERT_EMAIL. The gate found it on the restore.
- *
- * The address is not written out here either, for the reason it was removed:
- * that gate reads the WHOLE file and does not strip comments, which is correct.
- * A value quoted in a comment is still the value, sitting in git.
- *
- * A URL identifies the caller at least as well, is already public, and is not a
- * value any config holds.
+ * The address is not written out here either, for the reason it was removed: that gate reads the
+ * WHOLE file and does not strip comments, which is correct. A value quoted in a comment is still the
+ * value, sitting in git.
  */
 const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
@@ -62,36 +53,21 @@ async function readOne(kv: KVNamespace, doi: string): Promise<CitationEntry | nu
 }
 
 /**
- * ONE WORK BY DOI, WITH THE KEY, AND THE KEY IS NOW MANDATORY.
+ * ONE WORK BY DOI, WITH THE KEY, AND THE KEY IS MANDATORY.
  *
- * ## What changed on 2026-02-13, and what it broke here
- *
- * OpenAlex made an API key required and removed the `mailto` polite-pool
- * parameter in the same release. This function was written in July 2026 against
- * the old contract: it SET `mailto` and treated the key as optional, "sent only
- * when configured, so adding a key later is config and not code". Both halves
- * inverted. `mailto` is now ignored, and a keyless request draws on a shared
- * budget of about 100 credits before every later one is refused, so the
- * optional path is no longer a polite fallback, it is a guaranteed failure with
- * a `4xx` that this function converts to `null` and the page renders as silence.
- *
- * So the key is read and sent, `mailto` is gone from the query, and a missing
- * key SHORT CIRCUITS rather than firing a request that cannot succeed. The
- * User-Agent stays: it identifies the caller, which is still good manners and
+ * A keyless request draws on a shared budget of about 100 credits before every later one is refused,
+ * so the optional path is not a polite fallback, it is a guaranteed failure with a `4xx` that this
+ * function converts to `null` and the page renders as silence. A missing key SHORT CIRCUITS rather
+ * than firing a request that cannot succeed. The User-Agent stays: it identifies the caller, which
  * costs nothing.
  *
- * ## `env`, NOT `globalThis`
+ * **`env`, NOT `globalThis`.** Secrets and bindings arrive on `env`, per request; a
+ * `globalThis` read is a no-op that looks like a feature flag and stays a no-op after the key is
+ * set, which is the worst version of this bug. Portfolio rule and this repo's binding rule: read off
+ * the request context, never a global.
  *
- * The July version read `(globalThis as {OPENALEX_API_KEY?}).OPENALEX_API_KEY`,
- * which is never populated on Workers: secrets and bindings arrive on `env`,
- * per request. It was a no-op that looked like a feature flag, and it would
- * have stayed a no-op after the key was set, which is the worst version of
- * this bug: the credential exists, the code claims to use it, and the value
- * read is `undefined` every time. Portfolio rule, and this repo's binding rule:
- * read off the request context, never a global.
- *
- * Singleton lookup, 1 credit. Never the author endpoint, which has seven works
- * by other people merged into it, and never a filter query from here.
+ * Singleton lookup, 1 credit. Never the author endpoint, which has works by other people merged into
+ * it, and never a filter query from here.
  */
 async function fetchOne(apiKey: string, doi: string): Promise<CitationEntry | null> {
   const url = new URL(`https://api.openalex.org/works/doi:${encodeURIComponent(doi)}`);

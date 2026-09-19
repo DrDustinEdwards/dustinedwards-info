@@ -9,10 +9,9 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { commentBlocks } from "./code-blocks.mjs";
-import { WAVE2 } from "./code-wave2.mjs";
+import { FILES, BEFORE, DECISIONS, flat } from "./wave.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const flat = (s) => s.replace(/\//g, "__");
 const JSDOC_HEAD =
   /@(?:param|returns?|type|typedef|template|property|prop|callback|satisfies|import|enum|throws|see|deprecated|this|overload|extends|implements)\b(?:\s*\{[^\n]*\})?(?:\s+\[?[\w.$]+(?:=[^\]\s]*)?\]?)?/g;
 const CITATION = /hard rules? ((?:\d+)(?:\s*(?:,|and)\s*\d+)*)/gi;
@@ -20,17 +19,17 @@ const heads = (t) => (t.match(JSDOC_HEAD) ?? []).map((h) => h.replace(/\s+/g, " 
 const cites = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean));
 
 const d = {};
-for (const n of readdirSync(join(HERE, "code-decisions-wave2")).filter((x) => x.endsWith(".mjs")).sort()) {
-  Object.assign(d, (await import(pathToFileURL(join(HERE, "code-decisions-wave2", n)).href)).default);
+for (const n of readdirSync(DECISIONS).filter((x) => x.endsWith(".mjs")).sort()) {
+  Object.assign(d, (await import(pathToFileURL(join(DECISIONS, n)).href)).default);
 }
 
 const from = Number(process.argv[2] ?? 0);
 const count = Number(process.argv[3] ?? 999);
-const keys = WAVE2.map((f) => `${f}#0`).filter((k) => d[k]?.length === 3 && typeof d[k][2] === "string");
+const keys = FILES.map((f) => `${f}#0`).filter((k) => d[k]?.length === 3 && typeof d[k][2] === "string");
 let total = 0;
 for (const key of keys.slice(from, from + count)) {
   const file = key.slice(0, -2);
-  const src = readFileSync(join(HERE, "code-history-before-wave2", flat(file)), "utf8");
+  const src = readFileSync(join(BEFORE, flat(file)), "utf8");
   const block = commentBlocks(src)[0];
   const must = [...heads(block.text).map((h) => `HEAD ${h}`), ...cites(block.text).map((c) => `CITE ${c}`)];
   const bytes = Buffer.byteLength(d[key][2]);

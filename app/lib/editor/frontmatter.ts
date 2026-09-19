@@ -4,13 +4,10 @@ import { readIntent } from "./intent.mjs";
 import { draftForIntent } from "./publish-transition.mjs";
 
 /**
- * Turns editor form fields into a markdown file, and back.
- *
- * The file is the artifact of record, so this has to produce something a person
- * would be content to see in a diff and that the build pipeline parses without
- * special cases. Scalars that can carry punctuation (titles, descriptions, alt
- * text) are emitted as JSON strings, which are valid YAML double-quoted scalars
- * and escape quotes and colons correctly without a YAML serializer.
+ * Turns editor form fields into a markdown file, and back. The file is the artifact of record, so
+ * this has to produce something a person would be content to see in a diff. Scalars that can carry
+ * punctuation are emitted as JSON strings, which are valid YAML double-quoted scalars and escape
+ * quotes and colons correctly without a YAML serializer.
  */
 
 export type PostFields = {
@@ -25,34 +22,20 @@ export type PostFields = {
   coverAlt: string;
   body: string;
   /**
-   * Server-owned, carried through the editor untouched.
-   *
-   * The editor never offers this as a field and never sets it. It is here only
-   * so a browser save PRESERVES it: serializePost writes exactly the keys it
-   * knows about, so a value it did not carry would be silently dropped on the
-   * next edit, and a published post would read as never published.
+   * Server-owned, carried through the editor untouched. The editor never offers it and never sets
+   * it: `serializePost` writes exactly the keys it knows about, so a value it did not carry would be
+   * silently dropped on the next save and a published post would read as never published.
    */
   firstPublished: string;
   /**
-   * CARRIED, NOT EDITED. Finding B004.
+   * CARRIED, NOT EDITED. Every key here is a real `frontmatterSchema` key the pair did not know
+   * about, and `serializePost` writes exactly what it is handed, so a post committed by hand or by
+   * the operator API had those keys ERASED by the next browser save. Nothing warned: the file simply
+   * came back smaller.
    *
-   * Everything below is a real key in `frontmatterSchema` that this pair did
-   * not know about, and the consequence was silent data loss: `serializePost`
-   * writes exactly the keys it is handed, so a post committed by hand or by the
-   * operator API with `featured`, `series`/`part`, `further_reading`, an OG
-   * override or an explicit `updated` had those keys ERASED by the next browser
-   * save. Nothing warned, because the save was valid: the file simply came back
-   * smaller. Revision restore lost them the same way, since it loads a
-   * historical file through `parsePost`.
-   *
-   * They are preserved rather than exposed as form controls, which is the same
-   * treatment `firstPublished` gets and the smallest change that makes the round
-   * trip lossless. Giving them editors is a feature and can be decided on its
-   * own; losing them is a bug either way.
-   *
-   * `furtherReading` is the one that cannot be a scalar. It travels as JSON in a
-   * hidden input and is re-emitted as a YAML block, so the editor never has to
-   * understand its shape to avoid destroying it.
+   * They are preserved rather than exposed as form controls, which is the smallest change that makes
+   * the round trip lossless. `furtherReading` is the one that cannot be a scalar: it travels as JSON
+   * in a hidden input, so the editor never has to understand its shape to avoid destroying it.
    */
   featured: boolean;
   series: string;
@@ -93,40 +76,25 @@ export function parseTags(input: string) {
 }
 
 /**
- * The body, exactly as it will be stored.
+ * The body, exactly as it will be stored: CRLF to LF, then trimmed.
  *
- * CRLF to LF, then trimmed. Extracted from `serializePost`, where it was
- * inline, because a SECOND caller needs the identical transform and the two
- * silently disagreeing is not hypothetical: it shipped.
+ * Extracted because a SECOND caller needs the identical transform, and the two silently disagreeing
+ * is not hypothetical. The admin preview posts its body as multipart, which normalizes every newline
+ * to CRLF, so the save path and the preview once produced different bytes from one source.
  *
- * The admin preview posts its body with `fetch` and a `FormData`, which encodes
- * as multipart, and multipart serialization normalizes every newline to CRLF.
- * The save path stripped them here and the preview route did not, so the
- * preview rendered CRLF inside paragraph text where the published artifact had
- * LF. Same source, different bytes, which is precisely the claim ruling 3
- * exists to make true. Found on the live deploy 2026-08-01, invisible to the
- * offline parity check because that feeds the renderer straight from the
- * artifact and never crosses a form encoding.
- *
- * Both callers now use this. There is no third way to prepare a body.
+ * Both callers use this. THERE IS NO THIRD WAY TO PREPARE A BODY.
  */
 export function normalizeBody(body: string) {
   return body.replace(/\r\n/g, "\n").trim();
 }
 
 /**
- * The `further_reading` list a hidden input is carrying, as objects.
+ * The `further_reading` list a hidden input is carrying, as objects. Tolerant on purpose: this
+ * value crosses a form round trip, and the schema is what judges the CONTENT, so parsing loosely
+ * here and validating strictly there keeps one authority over the rule rather than two.
  *
- * Tolerant on purpose. This value crosses a form round trip, so the honest
- * failure mode is "the input was empty or malformed", and the schema is what
- * judges the CONTENT: `frontmatterSchema` rejects a bad url with the protocol
- * allowlist, and it runs on the serialized file server side either way. Parsing
- * loosely here and validating strictly there keeps one authority over the rule
- * rather than two that can disagree.
- *
- * Entries missing a title or url are dropped rather than emitted half-formed,
- * because a `- title:` with no `url` is a schema failure that would block the
- * save on data the author never typed.
+ * Entries missing a title or url are dropped rather than emitted half-formed, because a `- title:`
+ * with no `url` is a schema failure that would block the save on data the author never typed.
  */
 function parseFurtherReading(raw: string) {
   if (!raw.trim()) return [] as { title: string; url: string }[];
@@ -173,10 +141,8 @@ export function serializePost(fields: PostFields) {
   }
 
   /*
-   * The B004 keys. Each is emitted only when it has a value, so a post that
-   * never set one is byte-identical to what it was before this existed: adding
-   * `featured: false` to twelve files would have churned the artifact for a
-   * default nobody wrote.
+   * The carried keys. Each is emitted only when it has a value, so a post that never set one is
+   * byte-identical to what it was before this existed.
    */
   if (fields.featured) lines.push("featured: true");
   if (fields.series.trim()) {
@@ -249,14 +215,9 @@ export function parsePost(raw: string): PostFields {
 }
 
 /**
- * THE FIELD NAMES THE FURTHER-READING CONTROLS SUBMIT, stated once.
- *
- * The component renders them and the parser below reads them, so a second
- * spelling would be a control that silently submits into nothing. Rule 17 on a
- * set of names rather than on a number.
- *
- * `FR_CONTROL` is the MARKER, and it is the load-bearing one. See
- * `furtherReadingFromForm`.
+ * THE FIELD NAMES THE FURTHER-READING CONTROLS SUBMIT, stated once. The component renders them and
+ * the parser reads them, so a second spelling would be a control that submits into nothing.
+ * `FR_CONTROL` is the MARKER and the load-bearing one; see `furtherReadingFromForm`.
  */
 export const FR_CONTROL = "frControl";
 export const FR_TITLE = "frTitle";
@@ -298,38 +259,17 @@ export function splitReading(raw: string) {
 /**
  * REBUILDS `further_reading` FROM THE CONTROLS, or leaves it exactly as it came.
  *
- * ## The marker, and why an absent field cannot mean cleared
+ * A list control has a genuinely ambiguous empty state: "the author removed every row" and "this
+ * form never rendered the control" both arrive as no fields at all. So the control renders a hidden
+ * MARKER. Present means an empty result is the author's emptiness and is honoured; absent means
+ * nothing was offered, so the carried JSON is passed through untouched.
  *
- * A list control has a genuinely ambiguous empty state: "the author removed
- * every row" and "this form never rendered the control" both arrive as no
- * fields at all. Collapsing them is the B004 data-loss class the hidden inputs
- * exist to prevent, and it is worse here than for a scalar, because the value
- * being destroyed is a list the author curated.
+ * The marker is a hidden input rather than an inference from the row fields, because inferring it is
+ * the same ambiguity one level down.
  *
- * So the control renders a hidden marker alongside itself. The marker present
- * means the control was on the page, so an empty result is the author's
- * emptiness and is honoured. The marker absent means nothing here was offered,
- * so the carried `furtherReading` JSON is passed through untouched, which is
- * exactly what the hidden input did before any of this existed.
- *
- * The marker is a hidden input rather than an inference from the row fields,
- * because inferring it from the rows is the same ambiguity one level down: a
- * control with every row cleared submits empty strings, and a control that was
- * never rendered submits nothing, and both would have to be told apart by a
- * rule that cannot see the difference.
- *
- * ## Ordering
- *
- * External rows in document order, then internal picks in the order the picker
- * renders them. A list mixing the two therefore NORMALISES to externals-first
- * on its first save and is stable after that. Stated because it is a real
- * effect on the author's file: it is a grouping, nothing is dropped or
- * reordered within a group, and the alternative (threading original positions
- * through two separate controls) buys an ordering nobody asked for.
- *
- * Rows with neither a title nor a url are dropped, which is how the spare blank
- * row costs nothing. A row with only one of the two is KEPT, so the schema
- * refuses it by name rather than this silently discarding what the author typed.
+ * ORDERING: external rows in document order, then internal picks. A mixed list NORMALISES to
+ * externals-first on its first save and is stable after that. A row with neither title nor url is
+ * dropped; a row with one of the two is KEPT, so the schema refuses it by name.
  */
 export function furtherReadingFromForm(form: FormData, carried: string): string {
   if (form.get(FR_CONTROL) === null) return carried;
@@ -346,20 +286,13 @@ export function furtherReadingFromForm(form: FormData, carried: string): string 
   }
 
   /*
-   * The picker submits ONE checked box per chosen post, and the box's VALUE
-   * carries both the slug and the title as JSON.
+   * The picker submits ONE checked box per chosen post, and the box's VALUE carries the slug and the
+   * title as JSON. A parallel hidden title field per post would put one field NAME per corpus post
+   * into the submission tuple `check:admin-ui` pins, so the fixture would grow with the blog.
    *
-   * A parallel hidden `title` field per post was the obvious alternative and it
-   * is worse in a way that matters here: it puts one field NAME per corpus post
-   * into the submission tuple `check:admin-ui` pins, so the fixture would grow
-   * with the blog and a new post would read as an editor payload change. One
-   * name, carrying a compound value, keeps the tuple a property of the editor
-   * rather than of how much has been written.
-   *
-   * The title is a SNAPSHOT taken when the box was ticked, exactly as an
-   * external link's title is typed once. Retitling the target does not rewrite
-   * links that already point at it; `check:content` guards the link resolving,
-   * which is the half that can break silently.
+   * The title is a SNAPSHOT taken when the box was ticked. Retitling the target does not rewrite links
+   * that already point at it; `check:content` guards the link resolving, which is the half that can
+   * break silently.
    */
   for (const value of form.getAll(FR_INTERNAL)) {
     let slug = "";
@@ -393,15 +326,9 @@ export function fieldsFromForm(form: FormData): PostFields {
     date: get("date"),
     tags: parseTags(get("tags")),
     /*
-     * FROM THE BUTTON THAT WAS PRESSED, not from a field.
-     *
-     * This read `form.get("draft") === "on"`, against a hidden input that each
-     * transition button flipped in its own `onClick`. That made every
-     * publication transition script-dependent: with scripting off no handler
-     * ran, the input submitted whatever the server rendered, and the request
-     * described the post's CURRENT state rather than the one the author asked
-     * for. `publish-transition.mjs` carries the three defects that produced and
-     * the argument for the submitter.
+     * FROM THE BUTTON THAT WAS PRESSED, not from a field. Reading a hidden input each button flipped in
+     * its own handler made every publication transition script-dependent: with scripting off the request
+     * described the post's CURRENT state rather than the one the author asked for.
      *
      * Fails closed on an intent this table does not know: unknown means draft.
      */
@@ -412,33 +339,17 @@ export function fieldsFromForm(form: FormData): PostFields {
     body: get("body"),
     // Round-tripped through a hidden input so a browser save preserves it.
     firstPublished: get("firstPublished"),
-    // The B004 keys, all through hidden inputs for the same reason. A checkbox
-    // is absent from a FormData when unchecked, so `featured` is carried as an
-    // explicit "true"/"false" string rather than by presence: the editor is not
-    // offering a control here, it is relaying a committed value, and presence
-    // semantics would turn "the form did not carry it" into "the author cleared
-    // it", which is the exact class of loss this finding is about.
+    // The carried keys, all through hidden inputs. A checkbox is absent from a FormData when unchecked,
+    // so `featured` is carried as an explicit "true"/"false" rather than by presence: presence semantics
+    // would turn "the form did not carry it" into "the author cleared it".
     /*
-     * THE LAST `featured` WINS, and that is what makes a checkbox safe here.
+     * THE LAST `featured` WINS, and that is what makes a checkbox safe here. The field is submitted
+     * TWICE when the box is ticked: a hidden "false" the form always carries, then the checkbox's own
+     * "true". An unticked box submits nothing, so the hidden value stands alone.
      *
-     * The field is submitted TWICE when the box is ticked: a hidden "false"
-     * that the form always carries, and the checkbox's own "true" after it. An
-     * unticked checkbox submits nothing, so the hidden value stands alone and
-     * the answer is "false". That is the standard pairing, and it is used
-     * instead of a bare checkbox for the reason the hidden input was introduced
-     * for: a bare checkbox makes "the form did not carry it" and "the author
-     * cleared it" the same request, which is the B004 class.
-     *
-     * Reading the LAST value rather than the first is the whole of the change,
-     * and it changes nothing for any payload that predates the checkbox: with
-     * one value present, first and last are the same value. `form.get()`
-     * returns the FIRST, so keeping it would have made the hidden "false"
-     * permanently win and the control silently do nothing.
-     *
-     * Absent entirely still reads false, exactly as before. This parser has one
-     * caller and the editor always renders the hidden input, so absence is not
-     * reachable from the product; the behaviour is preserved rather than
-     * improved because changing it would change an existing field's meaning.
+     * Reading the LAST value is the whole of it, and it changes nothing for a payload with one value
+     * present. `form.get()` returns the FIRST, so keeping it would make the hidden "false" permanently
+     * win and the control silently do nothing. Absent entirely still reads false, exactly as before.
      */
     featured: (() => {
       const all = form.getAll("featured").map((v) => String(v));

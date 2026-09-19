@@ -1,31 +1,16 @@
 /**
  * `/api/health`: confirms the `/api/*` plane is wired and the Worker is live.
  *
- * ## WHY THIS FILE HAS A CACHE-CONTROL AND DID NOT
+ * THE CACHE-CONTROL IS LOAD BEARING. Under hard rule 8 a 200 carrying neither `Cache-Control` nor
+ * `Expires` is CACHED under RFC 9111 heuristic freshness, and A HEALTH CHECK THAT CAN BE SERVED
+ * FROM CACHE IS NOT A HEALTH CHECK: it manufactures the reassuring silence a monitor exists to break.
  *
- * It returned `Response.json({ ok: true })` with no `Cache-Control` at all.
- * Under hard rule 8 that is not "uncached", it is CACHED: Workers Cache sits in
- * front of this Worker, `cache.enabled` is on in `wrangler.jsonc`, and
- * Cloudflare applies RFC 9111 heuristic freshness to a 200 carrying neither
- * `Cache-Control` nor `Expires`, which stores it for two hours.
+ * The transport's default in `workers/app.ts` applies here today and relying on it is still wrong:
+ * it exists to make a FORGOTTEN header safe, so the next person to add a `headers` export would
+ * remove the protection without knowing it was load bearing.
  *
- * So the endpoint could answer "healthy" from a cache entry written up to two
- * hours earlier, and it would answer that identically whether the Worker was
- * fine or on fire. **A health check that can be served from cache is not a
- * health check**, and it is worse than none: it manufactures the reassuring
- * silence that a monitor exists to break.
- *
- * The transport's own default in `workers/app.ts` would NOT have saved this.
- * That default is `if (!headers.has("cache-control"))`, so it does apply here
- * today. Relying on it is still wrong for this route: the default exists to
- * make a FORGOTTEN header safe, and a route whose correctness depends on the
- * header is a route that must state it, or the next person who adds a
- * `headers` export to it removes the protection without knowing it was load
- * bearing. `check:headers` asserts this file's own declaration for that reason.
- *
- * `no-store` rather than the repo's usual `private, no-store`: `private` bounds
- * WHO may store, `no-store` says nobody may, and only the second is what this
- * route needs. Stated as one value so the gate compares one string.
+ * `no-store` rather than `private, no-store`: `private` bounds WHO may store, `no-store` says nobody
+ * may, and only the second is what this route needs.
  */
 
 import { clientIp } from "~/lib/client-ip";
@@ -37,22 +22,17 @@ import { writeHealthSnapshot } from "~/lib/health/snapshot.server";
 import type { Route } from "./+types/api.health";
 
 /**
- * The per-IP allowance, and the window it is measured over. The only copies.
- *
- * Deliberately NOT exported. Nothing outside this route needs the numbers, and
- * the refusal is asserted over the wire by verify-live rather than by a gate
- * reading them back, so exporting them would create a second reader with no
- * caller.
+ * The per-IP allowance, and the window it is measured over. The only copies, and deliberately NOT
+ * exported: nothing outside this route needs the numbers, and the refusal is asserted over the wire
+ * by `verify-live` rather than by a gate reading them back.
  */
 const HEALTH_RATE_LIMIT = 20;
 const HEALTH_RATE_PERIOD_SECONDS = 60;
 
 /**
- * The headers on EVERY health response, success and failure alike.
- *
- * One constant, one application site. A 503 that was cacheable would be worse
- * than a cacheable 200: it would keep reporting a failure after the site
- * recovered, and the workflow watching it would keep alerting.
+ * The headers on EVERY health response, success and failure alike. A 503 that was cacheable would
+ * be worse than a cacheable 200: it would keep reporting a failure after the site recovered, and the
+ * workflow watching it would keep alerting.
  */
 const HEALTH_HEADERS = {
   "Cache-Control": "no-store",
@@ -60,26 +40,18 @@ const HEALTH_HEADERS = {
 };
 
 /**
- * THE ONLY PLACE THIS ROUTE CONSTRUCTS A RESPONSE.
- *
- * That is the property `check:headers` asserts, and it is asserted structurally
- * rather than by looking for the header near each `new Response`. A window
- * around an anchor reads its neighbour's compliance, which this repo has
- * already been bitten by; "exactly one construction, and it is inside this
- * helper" cannot be satisfied by a neighbour.
+ * THE ONLY PLACE THIS ROUTE CONSTRUCTS A RESPONSE. That is the property `check:headers` asserts,
+ * and it is asserted structurally rather than by looking for the header near each `new Response`,
+ * because a window around an anchor reads its neighbour's compliance.
  */
 function healthJson(body: unknown, status: number, extra: HeadersInit = {}): Response {
   /*
-   * SEEDED FROM THE CONSTANT, then overlaid. The rate-limit refusal needs a
-   * `Retry-After` that no other response wants, and the alternative shapes
-   * both break the property above: a second `new Response` at the refusal site
-   * is a second exit, and spreading the constant into an object literal at
-   * each call site is the copy this helper exists to prevent.
+   * SEEDED FROM THE CONSTANT, then overlaid. The rate-limit refusal needs a `Retry-After` no other
+   * response wants, and both alternatives break the property above: a second `new Response` is a
+   * second exit, and spreading the constant at each call site is the copy this helper prevents.
    *
-   * `Headers` rather than a spread so a caller cannot accidentally shadow
-   * `Cache-Control` with a different case. Overlay order is deliberate: the
-   * constant goes in first and `extra` may only ADD to it in practice, because
-   * nothing passes a name the constant already declares.
+   * `Headers` rather than a spread, so a caller cannot accidentally shadow `Cache-Control` with a
+   * different case.
    */
   const headers = new Headers(HEALTH_HEADERS);
   for (const [name, value] of new Headers(extra)) headers.set(name, value);
@@ -89,59 +61,31 @@ function healthJson(body: unknown, status: number, extra: HeadersInit = {}): Res
 /**
  * Runs every health check and answers 200 only if all of them passed.
  *
- * ## THE STATUS CODE IS THE ALERT
+ * THE STATUS CODE IS THE ALERT: a 200 carrying `{"ok": false}` is read by `curl --fail` as health
+ * and the mail is never sent. 503 rather than 500, because the site is serving and a stated
+ * invariant is not holding.
  *
- * `.github/workflows/health.yml` polls this and fails its run on any non-200,
- * and a failed scheduled run is what emails the repository owner. So anything
- * this endpoint wants a human to know it must say in the STATUS LINE. A 200
- * carrying `{"ok": false}` is read by `curl --fail` as health and the alert is
- * never sent. That is why the body is not the contract and the code is.
+ * FAIL CLOSED. `runHealthChecks` already turns a throwing CHECK into a failing check, so reaching
+ * the outer catch means the run could not be assembled, and an endpoint that cannot run its checks
+ * reports unhealthy rather than nothing.
  *
- * 503 rather than 500: the site is serving, a stated invariant is not holding.
- *
- * ## FAIL CLOSED, and the outer catch is the point
- *
- * `runHealthChecks` already turns a throwing or hanging CHECK into a failing
- * check, each under its own timeout, so one wedged binding cannot hang this
- * response or silence the other two. Reaching the catch below therefore means
- * the run itself could not be assembled. An endpoint that cannot run its checks
- * reports unhealthy; it does not report nothing, and it does not report health.
- *
- * The body carries names and booleans only. Every `detail` string is dropped by
- * `publicHealthBody`, because they carry row counts and an R2 object key and
- * this route is unauthenticated. The why lives in Workers Logs.
+ * The body carries names and booleans only: `publicHealthBody` drops every `detail`, because they
+ * carry row counts and an R2 object key and this route is unauthenticated.
  */
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
 
   /*
-   * GATE 0, AND IT IS FIRST BECAUSE EVERYTHING BELOW IT COSTS.
+   * GATE 0, AND IT IS FIRST BECAUSE EVERYTHING BELOW IT COSTS. Five checks against D1, R2 and AI
+   * Search, unauthenticated, which made this the most expensive thing an anonymous caller could ask of
+   * the site. Same instrument as `/api/csp-report` and the operator path: one `AskBudget` instance
+   * named `health:<ip>`.
    *
-   * This endpoint runs five checks against D1, R2 and AI Search. MEASURED
-   * 2026-08-26 over four samples: 0.98, 1.18, 1.18 and 2.01 seconds. It was
-   * unauthenticated and unrated, which made it the most expensive thing an
-   * anonymous caller could ask this site to do, by a wide margin, and it sat
-   * next to `/api/csp-report`, an endpoint that only writes a log line and
-   * carries THREE limits. The cheap path was guarded and the expensive one
-   * was not.
+   * WHY THE ALLOWANCE IS LOW: the deliverable here is a verdict still true thirty seconds later, where
+   * `/api/csp-report` sits higher because its deliverable is the report and eating one loses data.
    *
-   * Same instrument as that route and as the operator path: one `AskBudget`
-   * Durable Object instance, named `health:<ip>`. No new class, no migration.
-   *
-   * WHY 20 AND NOT 60. Every legitimate caller is far under it. The scheduled
-   * workflow polls once every fifteen minutes; ship reads it once per deploy;
-   * `check:browser` reads it twice per run; a person refreshing the page reads
-   * it a handful of times. Twenty is roughly ten times the busiest of those
-   * and it bounds one address to about twenty six seconds of backend work per
-   * minute. `/api/csp-report` sits at sixty because its deliverable is the
-   * report itself and eating one loses data; here the deliverable is a verdict
-   * that is still true thirty seconds later.
-   *
-   * WITHOUT THE LIMITER THIS DOES NOT SERVE, the stance the Ask guards and the
-   * operator path take. It costs nothing here and buys something extra: a
-   * missing `ASK_BUDGET` is itself a broken deployment, and answering 503 is
-   * exactly how this endpoint reports one, so the monitor alerts rather than
-   * quietly losing its guard.
+   * WITHOUT THE LIMITER THIS DOES NOT SERVE. A missing `ASK_BUDGET` is itself a broken deployment, and
+   * answering 503 is how this endpoint reports one rather than quietly losing its guard.
    */
   if (!env.ASK_BUDGET) {
     return healthJson(
@@ -150,47 +94,24 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     );
   }
   /*
-   * THE LIMITER CALL IS INSIDE A TRY, AND IT WAS NOT. Fixed 2026-09-07.
+   * THE LIMITER CALL IS INSIDE A TRY: a Durable Object call is a network call and can fail.
    *
-   * MEASURED ON PRODUCTION over the seven days to 2026-09-07: 283 invocations
-   * of this route ended in `scriptThrewException`, every one of them carrying
-   * NO log line. That is the tell. The `try` below logs `health-run-threw` on
-   * anything that fails inside it, so a throw with no message escaped BEFORE
-   * that block, and the only awaited work above it was these two lines. A
-   * Durable Object call is a network call and can fail; `idFromName` and `hit`
-   * were both outside every guard on the route.
+   * WHY 503 AND A NAMED CHECK rather than letting it through: a limiter that THREW is not a limiter
+   * that said yes, and treating a failed guard as a pass is the fail-open shape.
    *
-   * REPRODUCED BOTH WAYS before this landed, by planting a throw in
-   * `AskBudget.hit` and driving the route locally. Before: `HTTP 500`,
-   * `content-type: text/plain`, the body `Unexpected Server Error`, and the
-   * gateway's `private, no-store` rather than this route's own header, because
-   * the route never constructed a response at all. After: the 503 below.
+   * A SEPARATE NAME FROM `rate-limiter-unavailable`, because absent and BROKEN are different answers
+   * and collapsing them costs the reader the triage.
    *
-   * WHY 503 AND A NAMED CHECK rather than letting it through to the checks.
-   * Hard rule: without the limiter this does not serve. A limiter that THREW
-   * is not a limiter that said yes, and treating a failed guard as a pass is
-   * the fail-open shape this repo keeps writing down. It is the same stance
-   * the `!env.ASK_BUDGET` branch above takes, one line up.
-   *
-   * A SEPARATE NAME FROM `rate-limiter-unavailable`, deliberately. Absent and
-   * BROKEN are different answers and collapsing them costs the reader the
-   * triage: one is a deployment missing a binding, the other is a Durable
-   * Object failing under load. `workers/watchdog.ts` draws the identical
-   * distinction in `readState` and for the identical reason.
-   *
-   * NEITHER NAME IS IN `REPAIRABLE`, which is correct rather than an omission.
-   * `repairPlan` returns alert-only for an unknown class, so a broken limiter
-   * wakes somebody instead of firing a corpus rebuild at a site whose failure
-   * nobody has classified.
+   * NEITHER NAME IS IN `REPAIRABLE`: `repairPlan` returns alert-only for an unknown class, so a broken
+   * limiter wakes somebody instead of firing a rebuild.
    */
   let withinRate: boolean;
   try {
     const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${clientIp(request)}`));
     ({ ok: withinRate } = await limiter.hit(HEALTH_RATE_LIMIT, HEALTH_RATE_PERIOD_SECONDS));
   } catch (error) {
-    // LOGGED BY NAME. The wire body carries names and booleans only, so this
-    // console line is the entire record of WHY the limiter failed, and it is
-    // the thing that was missing for 283 invocations.
+    // LOGGED BY NAME. The wire body carries names and booleans only, so this console line is the
+    // entire record of WHY the limiter failed.
     console.error(
       JSON.stringify({
         alert: "health-rate-limiter-threw",
@@ -202,10 +123,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   if (!withinRate) {
     /*
-     * THE SAME BODY SHAPE AS EVERY OTHER ANSWER, so the workflow's parse
-     * succeeds and reports a named cause rather than falling into its "body
-     * did not parse" branch. The status line is still the alert: a 429 is a
-     * non-200 and `curl --fail` treats it as one, which is correct. A rate
+     * THE SAME BODY SHAPE AS EVERY OTHER ANSWER, so the workflow's parse reports a named cause rather
+     * than falling into its "body did not parse" branch. The status line is still the alert: a rate
      * limited monitor IS a condition worth a human seeing.
      */
     return healthJson(
@@ -220,11 +139,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     const body = publicHealthBody(run);
 
     if (!body.ok) {
-      // Logged as well as returned. Workers Logs keeps custom logs for 7 days
-      // with observability enabled, and `invocation_logs: false` does not touch
-      // them: that setting drops the automatic per-request record, which is a
-      // privacy decision, not this. So the DETAIL the wire deliberately omits
-      // is still recoverable by the operator.
+      // Logged as well as returned. `invocation_logs: false` drops the automatic per-request record and
+      // does not touch custom logs, so the DETAIL the wire deliberately omits is still recoverable by the
+      // operator.
       console.error(
         JSON.stringify({
           alert: "health-check-failed",
@@ -235,19 +152,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     }
 
     /*
-     * THE SNAPSHOT, WRITTEN ON THE WAY OUT. It is a byproduct of a run that
-     * happened anyway, never a reason to run.
+     * THE SNAPSHOT, WRITTEN ON THE WAY OUT. It is a byproduct of a run that happened anyway, never a
+     * reason to run.
      *
-     * Written for BOTH verdicts, pass and fail. A snapshot that recorded only
-     * healthy runs would let the home tile keep showing the last good answer
-     * while the site was failing, which is the exact lie the tile's timestamp
-     * exists to prevent.
-     *
-     * `body` rather than `run`, so what is stored is what was answered with.
-     * The failure path below deliberately writes NOTHING: reaching it means
-     * the run could not be assembled, so there is no verdict to record, and
-     * the home tile ages into `stale` rather than being handed a fabricated
-     * one. Grounds in `app/lib/health/snapshot.mjs`.
+     * Written for BOTH verdicts. One that recorded only healthy runs would let the home tile keep
+     * showing the last good answer while the site was failing, which is the lie its timestamp exists to
+     * prevent. The failure path below deliberately writes NOTHING: reaching it means there is no verdict
+     * to record, so the tile ages into `stale` rather than being handed a fabricated one.
      */
     await writeHealthSnapshot(env, body, new Date().toISOString());
 
@@ -267,38 +178,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 /**
- * Every method that is not GET, answered as a METHOD error rather than as a
- * framework crash.
+ * Every method that is not GET, answered as a METHOD error rather than a framework crash. React
+ * Router's default here is a 405 whose body says the server broke, with no `Allow` header RFC 9110
+ * requires and a shape that sends the health workflow into its "body did not parse" branch.
  *
- * MEASURED ON THE LIVE HOST 2026-09-11: `curl -X POST /api/health` returned
- * `405 Method Not Allowed` with `Content-Type: application/json` and the body
- * `{"message":"Unexpected Server Error"}`, and no `Allow` header. Every part
- * of that is React Router's default for a route with a loader and no action,
- * and every part of it is wrong for this endpoint:
+ * THE SHAPE IS THE SAME ONE EVERY OTHER ANSWER HERE USES, through `healthJson` and therefore the
+ * same `no-store`.
  *
- *   - "Unexpected Server Error" on a 405 says the server broke. It did not.
- *     The caller used the wrong verb, which is the one error a monitor can fix
- *     by itself, and the body is what a person reads first.
- *   - No `Allow` header, which RFC 9110 requires on a 405. A client has to
- *     guess which method to retry with.
- *   - A body shape nothing else on this route produces, so the health
- *     workflow's parse falls into its "body did not parse" branch and reports
- *     a failure whose cause it cannot name.
+ * NO RATE LIMIT, deliberately: this allocates one object and returns, so metering it would cost a
+ * round trip to refuse a request cheaper than the refusal, and a broken limiter would turn a 405
+ * into a 503.
  *
- * **THE SHAPE IS THE SAME ONE EVERY OTHER ANSWER HERE USES**, through the same
- * `healthJson` helper and therefore the same `no-store`. That is the whole
- * point: a caller that POSTs by mistake gets a parseable verdict naming
- * `method-not-allowed`, not a different contract.
- *
- * NO RATE LIMIT, and that is deliberate rather than an omission. The loader's
- * limiter guards five checks against D1, R2 and AI Search; this function
- * allocates one object and returns. Metering it would mean a Durable Object
- * round trip to refuse a request that costs less than the refusal, and it
- * would make a broken limiter turn a 405 into a 503.
- *
- * `Allow: GET` and not `GET, HEAD`: the platform answers HEAD by running the
- * loader and dropping the body, so HEAD never reaches here, and advertising a
- * method this function does not see is a claim about someone else's behaviour.
+ * `Allow: GET` and not `GET, HEAD`: the platform answers HEAD by running the loader, so HEAD never
+ * reaches here and advertising it would be a claim about someone else's behaviour.
  */
 export async function action() {
   return healthJson(

@@ -1,42 +1,20 @@
 /**
- * THE RUNTIME SECRETS AUDIT. PRESENCE ONLY, and that is a hard property rather
- * than a habit.
+ * THE RUNTIME SECRETS AUDIT. PRESENCE ONLY, and that is a hard property rather than a habit.
  *
- * `check:secrets` proves secrets are only READ inside the server boundary. It
- * cannot prove they are SET, because it never runs in the Worker. This answers
- * the other half, at runtime, in the one place the bindings actually exist:
- * which of the ratified secrets does this deployment hold.
+ * `check:secrets` proves secrets are only READ inside the server boundary; it cannot prove they are
+ * SET, because it never runs in the Worker. This answers the other half, where the bindings exist.
  *
- * ## WHAT IT MAY RETURN, AND WHY THE SHAPE IS THE GUARANTEE
+ * **WHAT IT MAY RETURN IS A NAME AND A BOOLEAN. Nothing else, ever:** never a VALUE; never a PARTIAL
+ * value, since a masked one still leaks its shape and four characters of an OAuth secret is four an
+ * attacker no longer has to guess; never a LENGTH, which narrows a guess for free and is the leak
+ * people forget, because it does not look like the secret. The boolean is computed and the value
+ * goes out of scope in the same expression, so there is no intermediate object for a later edit to
+ * spread into the payload. `test/secrets-audit.test.mjs` asserts all three refusals.
  *
- * A name and a boolean. Nothing else, ever:
- *
- *   - never a VALUE, which would publish the credential to whoever opens the
- *     page and to any log that captures the loader payload
- *   - never a PARTIAL value, no prefix, no suffix, no masked middle. A masked
- *     value still leaks its shape, and four characters of an OAuth secret is
- *     four characters an attacker no longer has to guess
- *   - never a LENGTH, which narrows a guess for free and is the leak people
- *     forget, because it does not look like the secret
- *
- * The boolean is computed and the value goes out of scope in the same
- * expression. There is no intermediate object holding it, so there is nothing
- * for a later edit to accidentally spread into the payload.
- *
- * `test/secrets-audit.test.mjs` asserts both halves: that a missing secret
- * cannot report present, and that a distinctive value handed in never appears
- * in the serialised result, in whole or in any run of four characters, and that
- * every entry carries exactly the two permitted keys.
- *
- * ## ONE THING check:secrets CANNOT SEE HERE
- *
- * That gate finds reads by matching `env.NAME` for each ratified name. This
- * module reads `env[name]` dynamically, so the scan does not count these as
- * reads. That is not a hole in the boundary: this file is a `.server` module,
- * which is what the boundary rule requires, and the dynamic form is what lets
- * the list be derived rather than restated. It is recorded because a future
- * reader comparing the gate's read count against the code will come up short
- * here and should know why.
+ * **ONE THING `check:secrets` CANNOT SEE HERE.** That gate finds reads by matching `env.NAME`; this
+ * module reads `env[name]` dynamically, so the scan does not count these. Not a hole in the
+ * boundary, because this is a `.server` module. Recorded because a reader comparing the gate's read
+ * count against the code will come up short.
  */
 
 /*

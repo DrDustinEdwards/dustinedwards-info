@@ -6,9 +6,11 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const file = process.argv[2];
 const chunk = process.argv[3];
 const flat = (s) => s.replace(/\//g, "__");
-const src = readFileSync(join(HERE, "code-history-before-wave2", flat(file)), "utf8");
+const WAVE = Number(process.env.WAVE ?? 2);
+const SUFFIX = WAVE === 1 ? "" : `-wave${WAVE}`;
+const src = readFileSync(join(HERE, `code-history-before${SUFFIX}`, flat(file)), "utf8");
 const blocks = commentBlocks(src).map((b, id) => ({ ...b, id }));
-const mod = await import(pathToFileURL(join(HERE, "code-decisions-wave2", `${chunk}.mjs`)).href);
+const mod = await import(pathToFileURL(join(HERE, `code-decisions${SUFFIX}`, `${chunk}.mjs`)).href);
 const d = mod.default;
 const leadOf = (b) => { const ls = src.lastIndexOf("\n", b.start - 1) + 1; return src.slice(ls, b.start).match(/^[ \t]*/)[0]; };
 function render(b, repl) {

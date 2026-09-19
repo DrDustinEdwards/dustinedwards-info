@@ -1,0 +1,1018 @@
+file	line	bytes	tag	action	reason
+workers/app.ts	15	295	CONTRACT	rewrite	why the import sits here; the grounds stay on the predicate
+workers/app.ts	33	212	CONTRACT	rewrite	why it is re-exported; the measurement goes to the history document
+workers/app.ts	43	1394	WHY	rewrite	the prohibition and what it guards; the binding's history and the measured cache behaviour go to the history document
+workers/app.ts	69	3358	CONTRACT	rewrite	what the key carries and the one prohibition; the deleted layer, its measurements, the rulings and the dates go to the history document
+workers/app.ts	132	864	CONTRACT	rewrite	what it returns, why pure, and where the dimension is added; the outlived detail goes to the history document
+workers/app.ts	166	4996	WHY	rewrite	the five prohibitions, each in one line; the ratification dates, the sweep and the copied-snippet story go to the history document
+workers/app.ts	257	381	WHY	rewrite	the prohibition and what it would do; the sibling gate's instance goes to the history document
+workers/app.ts	267	725	HISTORY	delete	a deleted function's obituary; the principle it carries is stated where the downgrade now lives
+workers/app.ts	282	76	CONTRACT	keep	the parameter note; type annotation only
+workers/app.ts	289	9321	WHY	rewrite	what is enforced, the live exposure, the two prohibitions and where the builder lives; the eighteen-route walk, the three resolved questions, the falsified option and every date go to the history document
+workers/app.ts	444	2058	CONTRACT	rewrite	what it writes and the structural claim, with the correction that claim already needed; the dates and the guard reasoning go to the history document
+workers/app.ts	482	135	CONTRACT	rewrite	what is counted; one line already
+workers/app.ts	486	38	CONTRACT	keep	what is not a read; one line already
+workers/app.ts	488	271	WHY	rewrite	the rule and why at write time; one line
+workers/app.ts	507	1047	WHY	rewrite	what the redaction is and that the old rows cannot be fixed; the date, the token length and the ruling go to the history document
+workers/app.ts	531	430	WHY	rewrite	why path, and why the redacted one; the fragmentation measurement goes to the history document
+workers/app.ts	541	52	WHY	rewrite	the rule; one line already
+workers/app.ts	545	1631	CONTRACT	rewrite	the export summary, the split, and what it must not do; the ruling, the date and the previous arrangement go to the history document
+workers/app.ts	581	205	CONTRACT	rewrite	parsed once and who reads it; the deleted lookup goes to the history document
+workers/app.ts	591	902	WHY	rewrite	why it is generated here and the failure that looks like success; the grounds pointer stays
+workers/app.ts	610	1628	WHY	rewrite	why here and not in a loader; the production samples, the route names and the date go to the history document
+workers/app.ts	641	674	WHY	rewrite	what the mark is for and what it is not; the twelve-sample residual goes to the history document
+workers/app.ts	657	1477	HISTORY	delete	a deleted rule's obituary; the surviving downgrade states its own reason where it now lives
+workers/app.ts	680	844	WHY	rewrite	the property and why the rebuild is the catch branch
+workers/app.ts	697	385	CONTRACT	rewrite	why absolute and why derived; the parse-once detail goes to the history document
+workers/app.ts	703	290	CONTRACT	rewrite	which plane gets the style nonce; the grounds stay on the predicate
+workers/app.ts	711	850	HISTORY	delete	an obituary for a call that moved; the gateway states why it lives there now
+workers/app.ts	727	1804	CONTRACT	rewrite	what the platform now answers and the one rule that survives; the deleted block's three conditions and the date go to the history document
+workers/app.ts	787	1366	CONTRACT	rewrite	the export summary, the four steps and why the order is load bearing; the ruling, the date and the billing argument go to the history document
+workers/app.ts	817	1091	WHY	rewrite	the rule, why no-store is load bearing and why the header stays; the live measurement and its date go to the history document
+workers/app.ts	847	866	WHY	rewrite	the position and why; the ruling and the D1-query detail go to the history document. The source's hard rule 8 citation was split across a line break and is restored to one line here
+workers/app.ts	868	104	CONTRACT	rewrite	what the resolution prevents; one line already
+workers/app.ts	876	845	WHY	rewrite	the ordering rule between the two maps and why neither fires on a live file
+workers/app.ts	903	369	CONTRACT	rewrite	which spelling is canonical and why; one line
+workers/app.ts	922	201	CONTRACT	rewrite	what is read and where the grounds are; one line already
+workers/app.ts	930	682	CONTRACT	rewrite	what the loopback is and what it does on a hit; the compatibility date and the preview measurement go to the history document
+workers/app.ts	947	1333	WHY	rewrite	why it cannot live in the Renderer, what it is for now, and the fail-closed key; the ruling goes to the history document
+workers/app.ts	987	441	CONTRACT	rewrite	what it counts and that the refusals are unchanged; the ruling goes to the history document
+workers/app.ts	1001	492	CONTRACT	rewrite	what it consumes and why it is on this entrypoint; the idempotency pointer stays
+app/lib/search/ask.server.ts	1	781	CONTRACT	rewrite	the off switch and the one-derivation rule; the ruling pointer stays
+app/lib/search/ask.server.ts	36	284	CONTRACT	rewrite	why re-exported rather than re-implemented; one line
+app/lib/search/ask.server.ts	53	82	CONTRACT	keep	what it names; one line already
+app/lib/search/ask.server.ts	56	1142	NUMBER	rewrite	why the bound is the answer and not the corpus; the stale basis, the date and the rot go to the history document
+app/lib/search/ask.server.ts	80	268	WHY	rewrite	why a property check and not a catch; one line
+app/lib/search/ask.server.ts	94	77	CONTRACT	keep	what the flag means; one line already
+app/lib/search/ask.server.ts	99	370	CONTRACT	rewrite	why the stream is untouched; one line
+app/lib/search/ask.server.ts	109	247	WHY	rewrite	why composition lives elsewhere; the measurement stays on that function
+app/lib/search/ask.server.ts	123	513	CONTRACT	rewrite	what the tee buys and what null means
+app/lib/search/ask.server.ts	143	247	WHY	rewrite	why the frame handling is shared; one line
+app/lib/search/ask.server.ts	197	400	CONTRACT	rewrite	why a replay is indistinguishable and why one delta
+app/lib/search/ask.server.ts	222	76	CONTRACT	keep	what the field counts; one line already
+app/lib/search/ask.server.ts	226	744	WHY	rewrite	the paging rule and the failure it removes; the date and the measured prune go to the history document
+app/lib/search/ask.server.ts	241	20	CONTRACT	keep	type annotation only; kept
+app/lib/search/ask.server.ts	243	109	NUMBER	rewrite	the API maximum, measured; the rejection message goes to the history document
+app/lib/search/ask.server.ts	247	772	WHY	rewrite	why a mark per page and why entries not a map; the arithmetic-not-a-reading argument goes to the history document
+app/lib/search/ask.server.ts	269	55	CONTRACT	keep	what it guards against; one line already
+app/lib/search/ask.server.ts	275	953	WHY	rewrite	the public-surface rule and why the filter is at upload; the leak, its date and the count go to the history document
+app/lib/search/ask.server.ts	297	588	WHY	rewrite	why composed rather than restated; the dates and the hand-rolled copy go to the history document
+app/lib/search/ask.server.ts	314	55	CONTRACT	keep	what it answers; one line already
+app/lib/search/ask.server.ts	319	707	CONTRACT	rewrite	why built-in storage and the upsert property; the crawler's schedule details go to the history document
+app/lib/search/ask.server.ts	334	385	CONTRACT	rewrite	where the corpus comes from and the one-owner reason; the arc goes to the history document
+app/lib/search/ask.server.ts	345	217	WHY	rewrite	the fail-closed rule; one line
+app/lib/search/ask.server.ts	355	148	CONTRACT	rewrite	why the heading is included; one line already
+app/lib/search/ask.server.ts	362	887	CONTRACT	rewrite	the split and why uploading both would be worse; the ruling number and the corpus size go to the history document
+app/lib/search/ask.server.ts	381	318	WHY	rewrite	why invalidation happens here; one line
+app/lib/search/ask.server.ts	386	146	WHY	rewrite	why a delete and not a write; one line already
+app/lib/search/ask.server.ts	393	609	WHY	rewrite	why the module and not D1; the rule citations stay
+app/lib/search/ask.server.ts	408	1355	CONTRACT	rewrite	why the assets binding and why a missing twin is reported; the size trade and hard rule 7's shape stay
+app/lib/search/ask.server.ts	457	805	CONTRACT	rewrite	why incremental is sound and what the scoped prune is for
+app/lib/search/ask.server.ts	476	372	WHY	rewrite	why a draft actively removes; one line
+app/lib/search/ask.server.ts	484	1816	WHY	rewrite	the isolation rule and why a failed key still joins live; the measured incident, its date and the count go to the history document
+app/lib/search/ask.server.ts	522	222	WHY	rewrite	why this one is not caught; one line
+app/lib/search/ask.server.ts	545	263	WHY	rewrite	what is matched and the trap avoided; one line
+app/lib/search/ask.server.ts	562	142	WHY	rewrite	why a delete and not a write; one line already
+app/lib/search/ask.server.ts	565	269	WHY	rewrite	why the subtraction; the nine-record example goes to the history document
+app/lib/search/ask.server.ts	579	635	CONTRACT	rewrite	why drift is made visible and the both-directions rule
+app/lib/search/ask.server.ts	592	731	CONTRACT	rewrite	where the expected set comes from and the binding that keeps the two filters in step; the fetch size goes to the history document
+app/lib/search/ask.server.ts	606	623	WHY	rewrite	why concurrent and where it matters; the median and the mark attribution go to the history document
+app/lib/search/ask.server.ts	623	577	WHY	rewrite	why the papers are expected and what their absence would cause
+app/lib/search/ask.server.ts	645	1137	CONTRACT	rewrite	why the value moves rather than the loader, and why a getter; the gate fixture reasoning goes to the history document
+app/lib/search/ask.server.ts	669	238	CONTRACT	rewrite	why null rather than throwing; one line
+app/lib/search/ask.server.ts	675	80	CONTRACT	keep	what the memo buys; one line already
+app/lib/search/ask.server.ts	691	4035	CONTRACT	rewrite	what the cache hides, the structural early return, the two failure choices and why waitUntil; the samples, the dates and the loop's four steps go to the history document
+app/lib/search/ask.server.ts	771	128	CONTRACT	rewrite	what the early return guarantees; one line already
+app/lib/search/ask.server.ts	775	198	WHY	rewrite	why the rejection is folded here; one line
+app/lib/search/ask.server.ts	783	148	WHY	rewrite	why it resolves rather than rejects; one line
+app/lib/search/ask.server.ts	792	632	WHY	rewrite	why waitUntil and why the catch stays; the before measurement stays on the doc comment
+app/lib/search/ask.server.ts	820	238	NUMBER	rewrite	where the number came from; the sample spread goes to the history document
+app/lib/search/ask.server.ts	828	77	CONTRACT	keep	what it removes; one line already
+app/lib/search/ask.server.ts	841	142	WHY	rewrite	why a delete and not a write; one line already
+app/lib/search/ask.server.ts	847	326	CONTRACT	rewrite	what it removes and why; one line
+app/lib/search/ask.server.ts	865	390	WHY	rewrite	why only on an actual removal; the pre-cache history goes to the history document
+app/lib/editor/publish.server.ts	1	662	CONTRACT	rewrite	the order and why the gates are here; the ruling date goes to the history document
+app/lib/editor/publish.server.ts	31	79	CONTRACT	keep	what the side-effect import does; one line already
+app/lib/editor/publish.server.ts	52	883	CONTRACT	rewrite	one statement of the rule; the seven restatements and the measurement go to the history document
+app/lib/editor/publish.server.ts	72	370	CONTRACT	rewrite	why it is re-exported; the date goes to the history document
+app/lib/editor/publish.server.ts	80	83	CONTRACT	keep	what it carries; one line already
+app/lib/editor/publish.server.ts	93	751	CONTRACT	rewrite	why it is not an error and why thrown from here
+app/lib/editor/publish.server.ts	116	85	CONTRACT	keep	the half this module reads; one line already
+app/lib/editor/publish.server.ts	119	2006	WHY	rewrite	the both-writers rule and the three things it forces; the finding keeps its letter, the arc goes to the history document
+app/lib/editor/publish.server.ts	155	65	CONTRACT	keep	what it caches; one line already
+app/lib/editor/publish.server.ts	159	379	WHY	rewrite	why it does not fail the save and why it is logged
+app/lib/editor/publish.server.ts	205	228	CONTRACT	rewrite	absent is a real answer; one line already
+app/lib/editor/publish.server.ts	213	210	CONTRACT	rewrite	what runs and when; one line already
+app/lib/editor/publish.server.ts	225	147	WHY	rewrite	why by value; one line already
+app/lib/editor/publish.server.ts	252	488	CONTRACT	rewrite	what is computed and what is not; the old path's equivalence goes to the history document
+app/lib/editor/publish.server.ts	272	137	CONTRACT	rewrite	why ISO strings; one line already
+app/lib/editor/publish.server.ts	276	225	WHY	rewrite	why last, and the rule it avoids; one line
+app/lib/editor/publish.server.ts	293	970	CONTRACT	rewrite	the one-door rule and what the sha proves
+app/lib/editor/publish.server.ts	317	174	CONTRACT	rewrite	why the widening; one line already
+app/lib/editor/publish.server.ts	334	1654	WHY	rewrite	why at the door, why drafts too, and that it cannot fail the write; the ruling and the rate-limit note go to the history document
+app/lib/editor/publish.server.ts	369	79	CONTRACT	keep	what it records; one line already
+app/lib/editor/publish.server.ts	374	671	WHY	rewrite	why the render runs twice
+app/lib/editor/publish.server.ts	393	1174	WHY	rewrite	why required and why there is no safe default; the four call sites and the date go to the history document
+app/lib/editor/publish.server.ts	415	888	WHY	rewrite	why three-valued and why the check is an identity test
+app/lib/editor/publish.server.ts	436	229	WHY	rewrite	why the read comes first; one line
+app/lib/editor/publish.server.ts	448	125	CONTRACT	keep	what it throws and what it stamps; one line already
+app/lib/editor/publish.server.ts	457	557	WHY	rewrite	why here and why after the policy call
+app/lib/editor/publish.server.ts	472	217	CONTRACT	rewrite	why the result is discarded; one line
+app/lib/editor/publish.server.ts	483	1031	WHY	rewrite	the prohibition on compensating reverts and where a failure is recorded; the audit date goes to the history document
+app/lib/editor/publish.server.ts	518	361	WHY	rewrite	why clearing matters and why it cannot throw
+app/lib/editor/publish.server.ts	531	1084	WHY	rewrite	when it fires, why after the sync, and why a survivor is inert
+app/lib/editor/publish.server.ts	555	72	WHY	rewrite	why a distinct value; one line already
+app/lib/editor/publish.server.ts	561	377	WHY	rewrite	the asymmetry; one line
+app/lib/editor/publish.server.ts	572	280	CONTRACT	rewrite	why the flag exists; one line
+app/lib/editor/publish.server.ts	579	359	CONTRACT	rewrite	why three states and not a count
+app/lib/editor/publish.server.ts	589	218	CONTRACT	rewrite	why the policy module names it; one line
+app/lib/editor/publish.server.ts	596	328	WHY	rewrite	why the marker names the operator; one line
+app/lib/editor/publish.server.ts	609	204	CONTRACT	rewrite	what it returns and when null; one line already
+app/lib/editor/publish.server.ts	619	302	WHY	rewrite	why a partial upload is not ok; one line
+app/lib/editor/publish.server.ts	641	67	CONTRACT	keep	what it does; one line already
+app/lib/editor/publish.server.ts	644	190	WHY	rewrite	why required here too; the grounds stay on savePost
+app/lib/editor/publish.server.ts	651	726	WHY	rewrite	the least-privilege rule and why it is the first statement; the date goes to the history document
+app/lib/editor/publish.server.ts	680	223	WHY	rewrite	the asymmetry and what matters here; one line
+app/lib/editor/publish.server.ts	695	281	CONTRACT	rewrite	why batch and why the rebuild; one line
+app/lib/editor/publish.server.ts	777	751	WHY	rewrite	the scope difference and why it shares the batch
+app/lib/editor/publish.server.ts	799	1414	WHY	rewrite	the separator argument, which is the correctness claim; the date and the dead-function history go to the history document
+app/lib/editor/publish.server.ts	842	531	CONTRACT	rewrite	why per-post replacement is safe here and not for related
+app/lib/editor/publish.server.ts	886	1318	WHY	rewrite	what the delete prevents; the finding keeps its letter, the repair history goes to the history document
+app/lib/editor/publish.server.ts	909	441	WHY	rewrite	why both tags and why before the delete
+app/lib/editor/publish.server.ts	932	638	CONTRACT	rewrite	what the door is and the rule it follows
+app/lib/editor/publish.server.ts	949	221	WHY	rewrite	the scope assertion and the destructive reading it refuses
+app/lib/operator/api.server.ts	1	725	CONTRACT	rewrite	the one-implementation rule; the ruling date and the refactor note go to the history document
+app/lib/operator/api.server.ts	60	835	WHY	rewrite	the traversal it refuses and why the pattern is imported; the audit date goes to the history document
+app/lib/operator/api.server.ts	82	278	WHY	rewrite	why the bound is applied here too; one line
+app/lib/operator/api.server.ts	126	793	CONTRACT	rewrite	the typecheck idiom and why it moved; the drifted copy goes to the history document
+app/lib/operator/api.server.ts	257	1080	CONTRACT	rewrite	why the operator has it and why unfiltered; the proof-by-clicking anecdote goes to the history document
+app/lib/operator/api.server.ts	286	365	WHY	rewrite	why a bad status is a 400; one line
+app/lib/operator/api.server.ts	327	690	CONTRACT	rewrite	the one-door rule and where the capability check lives
+app/lib/operator/api.server.ts	367	377	WHY	rewrite	why changed:false is an answer; one line
+app/lib/operator/api.server.ts	386	371	CONTRACT	rewrite	why translation is the contract; one line
+app/lib/operator/api.server.ts	441	120	CONTRACT	rewrite	what it returns and why named; one line already
+app/lib/operator/api.server.ts	452	58	CONTRACT	keep	what is useful; one line already
+app/lib/operator/api.server.ts	462	75	CONTRACT	keep	what a conflict means; one line already
+app/lib/operator/api.server.ts	463	973	WHY	rewrite	why its own branch, why matched on name, and why 500
+app/lib/operator/api.server.ts	508	424	CONTRACT	rewrite	why D1 and what the field names mean; the arc goes to the history document
+app/lib/operator/api.server.ts	545	75	CONTRACT	keep	where the rendered half comes from; one line already
+app/lib/operator/api.server.ts	553	65	CONTRACT	keep	why the full file; one line already
+app/lib/operator/api.server.ts	557	181	WHY	rewrite	why it is answered from the file; one line
+app/lib/operator/api.server.ts	585	309	WHY	rewrite	why unconditional is deliberate for this caller
+app/lib/operator/api.server.ts	608	144	CONTRACT	rewrite	why reported not raised; one line already
+app/lib/operator/api.server.ts	640	1465	CONTRACT	rewrite	why it exists, why idempotent and why the counts are read back; the measurement and its date go to the history document
+app/lib/operator/api.server.ts	671	120	CONTRACT	rewrite	the stance on an absent binding; one line already
+app/lib/operator/api.server.ts	679	289	WHY	rewrite	why a drift read here can be a moment behind; one line
+app/lib/operator/api.server.ts	699	2261	CONTRACT	rewrite	the rule-18 shape, why the button stays and why no poll; the ruling, the directive and the OFL row go to the history document
+app/lib/operator/api.server.ts	740	1087	CONTRACT	rewrite	why it is safe unattended and why the verdict is read back
+app/lib/operator/api.server.ts	769	146	CONTRACT	rewrite	why it is not an error; one line already
+app/lib/operator/api.server.ts	799	439	WHY	rewrite	why parsed and why base64 only
+app/lib/operator/api.server.ts	815	61	CONTRACT	keep	what it returns; one line already
+app/lib/operator/api.server.ts	817	120	WHY	rewrite	why whitespace is stripped; one line already
+app/lib/operator/api.server.ts	830	366	WHY	rewrite	why chunked and abandoned rather than buffered
+app/lib/operator/api.server.ts	863	290	CONTRACT	rewrite	the order and why; one line already
+app/lib/operator/api.server.ts	876	212	CONTRACT	rewrite	why caught anyway; one line already
+app/lib/operator/api.server.ts	882	222	WHY	rewrite	why this is not a substituted default; one line
+app/lib/operator/api.server.ts	888	2140	CONTRACT	rewrite	the adapter rule, the two ways in, the three guards and why the declared type wins; the ruling number stays
+app/lib/operator/api.server.ts	938	278	WHY	rewrite	why both is refused rather than resolved
+app/lib/operator/api.server.ts	976	127	WHY	rewrite	why the explicit argument wins; one line already
+app/lib/operator/api.server.ts	980	385	WHY	rewrite	why the encoded length and why it is generous
+app/lib/operator/api.server.ts	1028	527	WHY	rewrite	why the protocol is re-checked after redirects
+app/lib/operator/api.server.ts	1078	223	WHY	rewrite	why the split; one line already
+app/lib/operator/api.server.ts	1086	632	WHY	rewrite	the two reasons, and which one would have hurt
+app/lib/operator/api.server.ts	1113	216	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1120	399	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1132	1266	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1195	146	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1214	225	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1220	466	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1231	331	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1243	716	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1271	144	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/operator/api.server.ts	1276	590	CONTRACT	rewrite	placeholder, replaced by f3
+app/lib/seo.ts	1	672	WHY	rewrite	why a leaf file has an import; the rejected move of publicationsJsonLd goes to the history document
+app/lib/seo.ts	14	355	CONTRACT	rewrite	the boundary: which project compiles this file and what that forbids
+app/lib/seo.ts	23	835	CONTRACT	rewrite	what it is, why it is fixed, and the cutover item; the prerendering measurement goes to history
+app/lib/seo.ts	42	388	WHY	rewrite	why it is derived rather than written out; one line
+app/lib/seo.ts	52	521	CONTRACT	rewrite	which fields are structured data and which are copy; the split's date goes to history
+app/lib/seo.ts	72	894	CONTRACT	rewrite	the one-owner rule and the ratified precedence; the extraction date goes to history
+app/lib/seo.ts	106	40	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	112	244	WHY	rewrite	why the editor shows this rather than a placeholder; one line
+app/lib/seo.ts	121	569	NUMBER	rewrite	why the limits are approximations; the pixel widths stay because they are what the number approximates
+app/lib/seo.ts	132	1641	CONTRACT	rewrite	the invocation, the one-builder rule and the card pairing; the five-page audit goes to history
+app/lib/seo.ts	170	831	CONTRACT	rewrite	what the two values mean and the prohibition on a hand-assembled set
+app/lib/seo.ts	205	215	CONTRACT	rewrite	what it does and what the caller can infer; already near the calibration
+app/lib/seo.ts	217	44	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	233	2143	CONTRACT	rewrite	what the string permits and why HTML needs no Vary; the rename and the seven-route audit go to history
+app/lib/seo.ts	273	1153	NUMBER	rewrite	why the number is declared here and the prohibition on parsing it back out
+app/lib/seo.ts	299	369	CONTRACT	rewrite	why it is exported rather than computed by its reader; one line
+app/lib/seo.ts	309	1228	WHY	rewrite	the prohibition on re-adding Vary; the 2026-08-02 variant measurement goes to the history document
+app/lib/seo.ts	332	1620	CONTRACT	rewrite	the vocabulary a caller needs and the prohibition behind one owner; the ruling pointer stays
+app/lib/seo.ts	366	73	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	369	915	CONTRACT	rewrite	the pairing and what dropping half of it costs; the /projects defect goes to history
+app/lib/seo.ts	391	445	CONTRACT	rewrite	why Accept stays and Cookie went; the measured wire bytes go to the history document
+app/lib/seo.ts	402	872	CONTRACT	rewrite	what it refuses and the two mechanisms that set it; the rename goes to history. The hard rule citation stays
+app/lib/seo.ts	428	69	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	433	1031	CONTRACT	rewrite	why both vocabularies read one derivation; the 2026-09-03 gap goes to history
+app/lib/seo.ts	455	85	CONTRACT	keep	what the fallback means; one line already
+app/lib/seo.ts	463	679	CONTRACT	rewrite	why it returns a list and what an absent value must not become
+app/lib/seo.ts	492	39	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	502	695	CONTRACT	rewrite	why it asks postSocial rather than restating the chain; the two-statement defect goes to history
+app/lib/seo.ts	522	213	CONTRACT	rewrite	why the two vocabularies spell one array differently; trimmed to two lines
+app/lib/seo.ts	532	67	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	546	41	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	557	242	CONTRACT	rewrite	separator keeps its label and the ruling pointer; the dashes and the restoration commit go
+app/lib/seo.ts	563	73	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	569	290	CONTRACT	rewrite	what they are; the deletion and restoration go to the history document
+app/lib/seo.ts	582	82	CONTRACT	keep	what it is; one line already
+app/lib/seo.ts	587	740	WHY	rewrite	why the sameAs array exists and why the two Person nodes are not one; the merge count goes to history
+app/lib/seo.ts	617	247	WHY	rewrite	why it matches loosely; the author positions go to the history document
+app/lib/seo.ts	631	450	CONTRACT	rewrite	what the shape is and what collapsing it would misstate
+app/lib/seo.ts	659	761	CONTRACT	rewrite	why the decode is here and why it does not break the escaping invariant
+workers/watchdog.ts	1	430	CONTRACT	rewrite	the boundary: which builder reads the path mapping and what that forbids
+workers/watchdog.ts	24	344	CONTRACT	rewrite	which Worker it names and why it is not derived; the gate binding stays
+workers/watchdog.ts	34	5980	CONTRACT	rewrite	the four boundary statements and the two prohibitions; the 1042 probe table, the schedule counts and the throttle burst go to the history document
+workers/watchdog.ts	140	617	CONTRACT	rewrite	why it is a var, why it is still out of git, and the gate that reconciles it
+workers/watchdog.ts	152	81	CONTRACT	keep	what it is and where the reason lives; one line already
+workers/watchdog.ts	157	80	CONTRACT	keep	what it carries; one line already
+workers/watchdog.ts	159	710	CONTRACT	rewrite	which is a credential and what absence means; the precedent pointer stays
+workers/watchdog.ts	176	269	WHY	rewrite	why the key is namespaced; one line
+workers/watchdog.ts	185	428	CONTRACT	rewrite	the two answers the signature exists to keep apart
+workers/watchdog.ts	208	297	WHY	rewrite	which failure is the cheap one; one line
+workers/watchdog.ts	232	495	CONTRACT	rewrite	why the sender is not derived; the onboarding measurement goes to history
+workers/watchdog.ts	244	42	CONTRACT	keep	what it is; one line already
+workers/watchdog.ts	247	1554	CONTRACT	rewrite	never throws, keeps the cause, and why it is exported; the old catch goes to history
+workers/watchdog.ts	291	500	CONTRACT	rewrite	the verdict rule and what the token may not touch
+workers/watchdog.ts	327	183	CONTRACT	rewrite	where the decision lives; trimmed to two lines
+workers/watchdog.ts	348	854	WHY	rewrite	what the body must carry and why there is no escalation; the 2026-08-23 flap goes to history
+workers/watchdog.ts	386	1651	CONTRACT	rewrite	why it is not a health check, the fail-closed rule, and what not-configured means; the latency figures go to history
+workers/watchdog.ts	467	294	WHY	rewrite	the trap the API's shape sets; one line
+workers/watchdog.ts	489	88	CONTRACT	keep	what it renders; one line already
+workers/watchdog.ts	494	71	WHY	keep	why a status 0 reading prints its cause; one line already
+workers/watchdog.ts	495	69	WHY	keep	the second half of the line above; one line already
+workers/watchdog.ts	500	403	WHY	rewrite	why the catch exists and why it rethrows
+workers/watchdog.ts	515	480	CONTRACT	rewrite	what is deduplicated and what is not
+workers/watchdog.ts	541	443	CONTRACT	rewrite	the order and where it comes from; the plant note goes to the history document
+workers/watchdog.ts	551	360	WHY	rewrite	why a refusal stops the walk
+workers/watchdog.ts	615	1150	WHY	rewrite	read every firing, joins failing, and is not repairable; the flap counts go to history
+workers/watchdog.ts	646	68	CONTRACT	keep	why it owns the subject; one line already
+workers/watchdog.ts	650	203	WHY	rewrite	why both are reported; trimmed to two lines
+workers/watchdog.ts	659	210	CONTRACT	rewrite	where the decision lives and what this file does not decide
+app/lib/search/search.server.ts	1	474	CONTRACT	rewrite	what it is, why raw SQL, and the one-dependency rule
+app/lib/search/search.server.ts	21	36	CONTRACT	keep	a pointer; one line already
+app/lib/search/search.server.ts	24	335	NUMBER	rewrite	what the bound governs and what a truncated set must say
+app/lib/search/search.server.ts	34	74	CONTRACT	keep	what the weights mean; one line already
+app/lib/search/search.server.ts	37	481	WHY	rewrite	the escaping prohibition and why the corpus is not trusted to be markup-free
+app/lib/search/search.server.ts	47	145	WHY	keep	why the bytes are built rather than written; two lines already
+app/lib/search/search.server.ts	51	104	CONTRACT	keep	what they are; one line already
+app/lib/search/search.server.ts	56	160	CONTRACT	keep	what the fourth value means; already short
+app/lib/search/search.server.ts	72	69	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	74	62	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	85	458	CONTRACT	rewrite	why there is no score field
+app/lib/search/search.server.ts	97	233	WHY	rewrite	why the parent title is carried; one line
+app/lib/search/search.server.ts	104	75	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	107	78	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	110	72	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	116	59	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	130	79	CONTRACT	keep	what the flag means; one line already
+app/lib/search/search.server.ts	132	43	CONTRACT	keep	what it holds; one line already
+app/lib/search/search.server.ts	134	170	CONTRACT	keep	when it is present; already short
+app/lib/search/search.server.ts	162	79	CONTRACT	keep	the order of the two steps; one line already
+app/lib/search/search.server.ts	175	75	CONTRACT	keep	what it does; one line already
+app/lib/search/search.server.ts	183	1391	CONTRACT	rewrite	the twin rule, why it cannot be collapsed, and the alias parameter; the four-statements measurement goes to the history document
+app/lib/search/search.server.ts	214	714	CONTRACT	rewrite	what the extractor assumes and the prohibition on inlining; the two failed attempts go to history
+app/lib/search/search.server.ts	244	72	CONTRACT	keep	what the AND means; one line already
+app/lib/search/search.server.ts	286	1228	CONTRACT	rewrite	what the path is for, the document-records rule and the ordering; the retired count goes to history
+app/lib/search/search.server.ts	324	319	WHY	rewrite	why it is computed here rather than asked of fts5
+app/lib/search/search.server.ts	340	199	WHY	keep	why a fallback label is given; already short
+app/lib/search/search.server.ts	354	68	CONTRACT	keep	what the flag does; one line already
+app/lib/search/search.server.ts	357	436	CONTRACT	rewrite	what the flag changes and the guarantee that it changes nothing else
+app/lib/search/search.server.ts	375	203	CONTRACT	keep	why one parse; already short
+app/lib/search/search.server.ts	395	72	CONTRACT	keep	what empty means; one line already
+app/lib/search/search.server.ts	414	199	WHY	rewrite	why nothing is marked here; trimmed to two lines
+app/lib/search/search.server.ts	419	67	CONTRACT	keep	what the value is; one line already
+app/lib/search/search.server.ts	434	203	WHY	rewrite	why the two reads are concurrent; trimmed to two lines
+app/lib/search/search.server.ts	466	152	WHY	keep	which snippet wins; two lines already
+app/lib/search/search.server.ts	486	214	CONTRACT	rewrite	nothing is recomputed; trimmed to one line
+app/lib/search/search.server.ts	500	384	WHY	rewrite	what the ?? null folds together; trimmed
+app/lib/search/search.server.ts	526	386	CONTRACT	rewrite	what the counts promise and what truncation obliges the caller to say
+app/lib/search/search.server.ts	555	250	WHY	rewrite	why a zero state offers something; one line
+app/lib/search/search.server.ts	562	2440	CONTRACT	rewrite	not a second indexer, what the D1 baseline costs, and the composed predicate; the 600KB fetch, the verification counts and the latencies go to the history document. The hard rule citation stays
+app/lib/search/search.server.ts	605	630	CONTRACT	rewrite	what it returns, why it takes no posts argument, and the composed predicate
+app/lib/search/search.server.ts	623	69	CONTRACT	keep	a pointer to the rule; one line already
+app/lib/search/search.server.ts	635	145	CONTRACT	keep	the same pointer with its reason; two lines already
+app/lib/search/search.server.ts	649	522	CONTRACT	rewrite	the composition rule and the concatenation rule; the first attempt's misreport goes to history
+app/lib/search/search.server.ts	668	262	WHY	rewrite	why not a fuzzy distance; trimmed
+app/enhance/blog.ts	1	1205	CONTRACT	rewrite	the law and the inventory of what degrades to what; the corrected image claim goes to the history document
+app/enhance/blog.ts	37	85	CONTRACT	keep	what it is and why it is script-only; one line already
+app/enhance/blog.ts	68	63	CONTRACT	keep	what it does; one line already
+app/enhance/blog.ts	94	718	CONTRACT	rewrite	what the guard tests and why, and what the attribute is for
+app/enhance/blog.ts	108	1657	CONTRACT	rewrite	why one shared region, why polite, and what stays; the three broken controls go to history
+app/enhance/blog.ts	151	312	WHY	rewrite	why the region is emptied first
+app/enhance/blog.ts	196	73	CONTRACT	keep	why it is last; one line already
+app/enhance/blog.ts	200	1459	CONTRACT	rewrite	why the observer is kept and why it terminates; the measured hydration race goes to the history document
+app/enhance/blog.ts	238	74	CONTRACT	keep	what it does; one line already
+app/enhance/blog.ts	244	1220	WHY	rewrite	both behaviours happen, and why focus rather than scroll; the false boundary note goes to history
+app/enhance/blog.ts	275	146	WHY	keep	why it is removed on blur; two lines already
+app/enhance/blog.ts	289	120	WHY	keep	what a refused clipboard must not cost; two lines already
+app/enhance/blog.ts	298	56	CONTRACT	keep	what it does; one line already
+app/enhance/blog.ts	317	709	WHY	rewrite	the hoverable half of 1.4.13 and why the grace period exists
+app/enhance/blog.ts	350	210	CONTRACT	keep	why the bubble is part of the target; already short
+app/enhance/blog.ts	367	291	WHY	rewrite	the dismissible half of 1.4.13
+app/enhance/blog.ts	380	445	WHY	rewrite	the persistent half of 1.4.13 and why nothing replaces the scroll listener
+app/enhance/blog.ts	392	383	CONTRACT	rewrite	what it does and why src is passed in
+app/enhance/blog.ts	401	957	CONTRACT	rewrite	what the platform gives and why restoreFocus is still kept; the old div goes to history
+app/enhance/blog.ts	420	317	WHY	rewrite	why the label is generic when the alt is empty
+app/enhance/blog.ts	434	273	WHY	rewrite	why a visible close button is required
+app/enhance/blog.ts	449	285	CONTRACT	rewrite	what the target check gives
+app/enhance/blog.ts	459	281	CONTRACT	rewrite	one teardown and why the element is not reused
+app/enhance/blog.ts	475	1138	CONTRACT	rewrite	the anchor is the subject, the keyboard path, and the diagram exception
+app/enhance/blog.ts	521	81	CONTRACT	keep	what it upgrades; one line already
+app/enhance/blog.ts	535	55	CONTRACT	keep	what the fallback is; one line already
+app/enhance/blog.ts	555	65	CONTRACT	keep	why the export exists; one line already
+app/routes/api.health.ts	1	1648	CONTRACT	rewrite	why the header is load bearing and why no-store rather than private; the heuristic-freshness measurement goes to the history document. The hard rule citation stays
+app/routes/api.health.ts	39	334	NUMBER	rewrite	what the two values are and why they are not exported
+app/routes/api.health.ts	50	295	CONTRACT	rewrite	why the failure path takes the same headers
+app/routes/api.health.ts	62	416	CONTRACT	rewrite	the structural property the gate asserts
+app/routes/api.health.ts	72	675	CONTRACT	rewrite	why it seeds and overlays, and why Headers rather than a spread
+app/routes/api.health.ts	89	1271	CONTRACT	rewrite	the status line is the contract, fail closed, and what the body may not carry
+app/routes/api.health.ts	117	1658	CONTRACT	rewrite	why the gate is first, which instrument, and the without-the-limiter rule; the measured seconds go to history
+app/routes/api.health.ts	152	1998	CONTRACT	rewrite	why the call is guarded, why 503, why a separate name, and why neither is repairable; the 283 invocations and the reproduction go to the history document
+app/routes/api.health.ts	191	206	CONTRACT	rewrite	why the log line is the whole record; trimmed
+app/routes/api.health.ts	204	374	CONTRACT	rewrite	why the refusal keeps the shape and why a 429 is still an alert
+app/routes/api.health.ts	223	358	CONTRACT	rewrite	where the detail the wire omits is recoverable; trimmed
+app/routes/api.health.ts	237	773	CONTRACT	rewrite	byproduct not a reason, both verdicts, and why the failure path writes nothing
+app/routes/api.health.ts	262	184	CONTRACT	keep	why the shape is kept; already short
+app/routes/api.health.ts	269	1889	CONTRACT	rewrite	what the framework default gets wrong, the shared shape, no rate limit, and the Allow value; the live measurement goes to history
+app/lib/search/ask-guard.server.ts	1	1483	CONTRACT	rewrite	the three gates, their order, and why they are Durable Objects; the four binding measurements go to the history document
+app/lib/search/ask-guard.server.ts	32	304	NUMBER	rewrite	why this rate, and where the mechanism choice is argued
+app/lib/search/ask-guard.server.ts	43	214	NUMBER	rewrite	what the ceiling is for; already short
+app/lib/search/ask-guard.server.ts	51	736	NUMBER	rewrite	why a burst exists at all and what it costs; the observed demand goes to history
+app/lib/search/ask-guard.server.ts	67	75	CONTRACT	keep	what it bounds; one line already
+app/lib/search/ask-guard.server.ts	72	2519	NUMBER	rewrite	that it is a cache over a slow path, and the freshness constraint that set the value; the samples and the cost arithmetic go to the history document
+app/lib/search/ask-guard.server.ts	119	76	CONTRACT	keep	where else the value is stated; one line already
+app/lib/search/ask-guard.server.ts	123	74	CONTRACT	keep	what it holds; one line already
+app/lib/search/ask-guard.server.ts	125	71	CONTRACT	keep	what it holds; one line already
+app/lib/search/ask-guard.server.ts	129	422	WHY	rewrite	what it collapses and the prohibition on collapsing more
+app/lib/search/ask-guard.server.ts	146	74	CONTRACT	keep	what the key is; one line already
+app/lib/search/ask-guard.server.ts	161	57	CONTRACT	keep	what it carries; one line already
+app/lib/search/ask-guard.server.ts	163	63	CONTRACT	keep	what it carries; one line already
+app/lib/search/ask-guard.server.ts	167	689	CONTRACT	rewrite	why it runs first and what an absent binding does
+app/lib/search/ask-guard.server.ts	186	283	CONTRACT	rewrite	what the instance is keyed by; trimmed to two lines
+app/lib/search/ask-guard.server.ts	198	678	CONTRACT	rewrite	when it is called, why reserve-then-generate, and why a failure is not refunded
+app/lib/search/ask-guard.server.ts	215	804	CONTRACT	rewrite	what the split buys and what pacing fixes
+app/lib/search/ask-guard.server.ts	233	298	WHY	rewrite	which value the retry is and why the other one is wrong now
+app/lib/search/ask-guard.server.ts	244	60	CONTRACT	keep	what it does not do; one line already
+app/lib/search/ask-guard.server.ts	251	262	WHY	rewrite	why a reset exists at all
+app/lib/search/ask-guard.server.ts	274	403	CONTRACT	rewrite	what it is for and why a delete is safe here
+app/lib/search/ask-guard.server.ts	292	144	WHY	keep	why an empty answer is not cached; two lines already
+app/lib/search/ask-guard.server.ts	300	447	CONTRACT	rewrite	null is not zero, and why unparseable is a miss
+app/lib/search/ask-guard.server.ts	317	275	CONTRACT	rewrite	why the stored value is an object
+app/lib/search/ask-guard.server.ts	330	322	CONTRACT	rewrite	who calls it and why a delete rather than a write
+app/lib/search/ask-guard.server.ts	342	753	CONTRACT	rewrite	why invalidation rather than a generation key, and the bounded staleness
+app/db/schema.ts	13	167	CONTRACT	keep	what the table holds; already short
+app/db/schema.ts	34	72	CONTRACT	keep	what the column holds; one line already
+app/db/schema.ts	40	61	CONTRACT	keep	what the column holds; one line already
+app/db/schema.ts	42	75	CONTRACT	keep	the stored shape; one line already
+app/db/schema.ts	47	36	CONTRACT	keep	the stored shape; one line already
+app/db/schema.ts	51	77	CONTRACT	keep	the stored shape; one line already
+app/db/schema.ts	53	73	CONTRACT	keep	who writes it; one line already
+app/db/schema.ts	55	238	CONTRACT	keep	what it is and who compares it; already short
+app/db/schema.ts	61	73	CONTRACT	keep	what it is; one line already
+app/db/schema.ts	67	706	CONTRACT	rewrite	why the indexes are modelled here and what the gate compares; the hard rule citation stays
+app/db/schema.ts	81	68	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	83	68	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	85	49	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	87	40	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	92	75	CONTRACT	keep	what the table holds; one line already
+app/db/schema.ts	99	48	CONTRACT	keep	what the table holds; one line already
+app/db/schema.ts	116	88	CONTRACT	keep	what the table holds; already short
+app/db/schema.ts	124	628	CONTRACT	rewrite	derived, the conflict rule, and what it does not describe
+app/db/schema.ts	140	77	CONTRACT	keep	what the column holds; one line already
+app/db/schema.ts	142	80	CONTRACT	keep	the values and their deriver; one line already
+app/db/schema.ts	144	63	CONTRACT	keep	the values and their deriver; one line already
+app/db/schema.ts	146	241	CONTRACT	keep	the values and what the picker takes; already short
+app/db/schema.ts	155	74	CONTRACT	keep	what NULL means; one line already
+app/db/schema.ts	158	65	CONTRACT	keep	what it is for; one line already
+app/db/schema.ts	161	228	CONTRACT	keep	which columns are authored and why that matters; already short
+app/db/schema.ts	169	480	CONTRACT	rewrite	the stored form, why it is wrapped, and the one owner of it
+app/db/schema.ts	180	757	CONTRACT	rewrite	library state not object state, one column not two, and what reconciliation does with it
+app/db/schema.ts	198	79	CONTRACT	keep	what it holds and why it renders scriptless; one line already
+app/db/schema.ts	209	381	CONTRACT	rewrite	the partial predicate and the boundary: the gate cannot see it
+app/db/schema.ts	218	448	CONTRACT	rewrite	who writes it, that usage stays derived, and what writing at render time closes
+app/db/schema.ts	231	67	CONTRACT	keep	the values and the seam; one line already
+app/db/schema.ts	234	82	CONTRACT	keep	the values; one line already
+app/db/schema.ts	236	64	CONTRACT	keep	what it holds; one line already
+app/db/schema.ts	248	1669	CONTRACT	rewrite	why it is modelled, why every read stays raw, and what section 4a asserts; the printed gate line goes to history. Both hard rule citations stay
+app/db/schema.ts	282	68	CONTRACT	keep	what it is; one line already
+app/db/schema.ts	288	69	CONTRACT	keep	which index it feeds; one line already
+app/db/schema.ts	290	75	CONTRACT	keep	what it feeds and its form; one line already
+app/db/schema.ts	292	78	CONTRACT	keep	what it groups; one line already
+app/db/schema.ts	298	302	CONTRACT	rewrite	why visibility is carried rather than joined
+app/db/schema.ts	311	73	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	313	43	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	315	70	CONTRACT	keep	what it covers; one line already
+app/db/schema.ts	320	1516	CONTRACT	rewrite	neither authored nor derived, no IP column ever, and every string plain text; the hard rule citation stays
+app/db/schema.ts	353	57	CONTRACT	keep	what it holds; one line already
+app/db/schema.ts	355	470	CONTRACT	rewrite	why a slug and not a URL
+app/db/schema.ts	365	383	CONTRACT	rewrite	the state machine and what is inert
+app/db/schema.ts	378	56	CONTRACT	keep	the stored form; one line already
+app/db/schema.ts	380	71	CONTRACT	keep	where the values come from; one line already
+app/db/schema.ts	393	453	CONTRACT	rewrite	what the unique index bounds
+app/db/schema.ts	403	79	CONTRACT	keep	what it covers; one line already
+app/lib/editor/frontmatter.ts	6	461	CONTRACT	rewrite	what it produces and why scalars are JSON strings
+app/lib/editor/frontmatter.ts	27	376	CONTRACT	rewrite	why a server-owned field is carried through the form
+app/lib/editor/frontmatter.ts	36	1151	CONTRACT	rewrite	why these keys are carried and not edited; the finding's audit goes to the history document
+app/lib/editor/frontmatter.ts	87	70	CONTRACT	keep	what it does; one line already
+app/lib/editor/frontmatter.ts	95	926	CONTRACT	rewrite	the one transform and the prohibition on a second; the CRLF defect goes to history
+app/lib/editor/frontmatter.ts	117	713	CONTRACT	rewrite	why parsing is loose here and strict in the schema
+app/lib/editor/frontmatter.ts	175	269	WHY	rewrite	why each key is conditional
+app/lib/editor/frontmatter.ts	185	78	CONTRACT	keep	why it is unquoted; one line already
+app/lib/editor/frontmatter.ts	206	147	CONTRACT	keep	the stored shape; two lines already
+app/lib/editor/frontmatter.ts	211	62	CONTRACT	keep	what it does; one line already
+app/lib/editor/frontmatter.ts	240	144	CONTRACT	keep	why it is re-serialized; two lines already
+app/lib/editor/frontmatter.ts	251	374	CONTRACT	rewrite	one owner of the names and which one is load bearing
+app/lib/editor/frontmatter.ts	266	81	CONTRACT	keep	what it is; one line already
+app/lib/editor/frontmatter.ts	269	59	CONTRACT	keep	what it is; one line already
+app/lib/editor/frontmatter.ts	272	78	CONTRACT	keep	what it returns; one line already
+app/lib/editor/frontmatter.ts	289	71	CONTRACT	keep	what it does; one line already
+app/lib/editor/frontmatter.ts	298	1968	CONTRACT	rewrite	the marker, why absence cannot mean cleared, and the ordering effect
+app/lib/editor/frontmatter.ts	348	873	CONTRACT	rewrite	why one compound value, and that the title is a snapshot
+app/lib/editor/frontmatter.ts	375	149	WHY	keep	why an unreadable value is dropped; two lines already
+app/lib/editor/frontmatter.ts	386	67	CONTRACT	keep	what it does; one line already
+app/lib/editor/frontmatter.ts	395	669	CONTRACT	rewrite	why the intent comes from the submitter, and the fail-closed default
+app/lib/editor/frontmatter.ts	413	71	CONTRACT	keep	why it round-trips; one line already
+app/lib/editor/frontmatter.ts	415	464	CONTRACT	rewrite	why the carried keys use explicit values rather than presence
+app/lib/editor/frontmatter.ts	421	1322	CONTRACT	rewrite	the last-wins rule and why it changes nothing for older payloads
+app/lib/editor/frontmatter.ts	449	148	CONTRACT	keep	what the marker decides; two lines already
+app/routes/media.$.ts	7	1147	CONTRACT	rewrite	what it serves, that nothing is written back, why the binding, and why the transform is cached; the 1042 measurement goes to the history document
+app/routes/media.$.ts	31	1861	CONTRACT	rewrite	the prohibition, why it does not lean on the CSP, and why by stored type; the Report-Only history goes to the history document
+app/routes/media.$.ts	70	113	CONTRACT	keep	why nosniff as well; two lines already
+app/routes/media.$.ts	84	221	CONTRACT	rewrite	why both width sets are closed
+app/routes/media.$.ts	110	205	CONTRACT	rewrite	where the helper went and what stops it coming back
+app/routes/media.$.ts	115	2169	CONTRACT	rewrite	the key carries everything the body depends on, and there is no purge door; the per-colo readings and the byte table go to the history document. The hard rule citation stays
+app/routes/media.$.ts	164	352	CONTRACT	rewrite	why a missing binding is named rather than inferred
+app/routes/media.$.ts	174	143	CONTRACT	keep	why the fallback needs the same treatment; two lines already
+app/routes/media.$.ts	180	731	CONTRACT	rewrite	which shapes crop and the roster exemption
+app/routes/media.$.ts	195	2727	CONTRACT	rewrite	one format and why negotiation may not come back; the poisoning incident, the docs audit and the byte comparison go to the history document
+app/routes/media.$.ts	249	285	CONTRACT	rewrite	why the fallback is safe here and the prohibition on generalising it
+app/routes/media.$.ts	264	445	CONTRACT	rewrite	why no Vary, and what the header is for
+app/routes/media.$.ts	273	156	CONTRACT	keep	why the clone is required; two lines already
+app/enhance/theme.ts	1	1462	CONTRACT	rewrite	the law, the no-flash rule and why the palette loader lives here; the bundle arithmetic goes to the history document
+app/enhance/theme.ts	32	281	CONTRACT	rewrite	why there is no re-run guard and why the listener is on the document
+app/enhance/theme.ts	41	154	CONTRACT	keep	why the submitter is read; two lines already
+app/enhance/theme.ts	47	296	CONTRACT	rewrite	one predicate for both halves of the control
+app/enhance/theme.ts	63	908	CONTRACT	rewrite	why an event rather than an import, and why no nonce is needed; the measured helper bytes go to history
+app/enhance/theme.ts	82	79	CONTRACT	keep	what the flag guards; one line already
+app/enhance/theme.ts	85	668	CONTRACT	rewrite	the fallback rule and why the first gesture waits for load
+app/enhance/theme.ts	101	262	CONTRACT	rewrite	why the URL is read off the element and what its absence means
+app/enhance/theme.ts	114	968	CONTRACT	rewrite	why the stylesheets travel with the bundle, why awaited, and why a failed sheet resolves
+app/enhance/theme.ts	168	265	WHY	rewrite	why the helper went with its caller
+app/enhance/theme.ts	175	950	CONTRACT	rewrite	the honesty contract on the hint; the surface change goes to the history document
+app/enhance/theme.ts	192	1141	CONTRACT	rewrite	one spelling of the chord, and why the detection may be best-effort; the measured divergence goes to history
+app/enhance/theme.ts	222	359	CONTRACT	rewrite	the order of the two writes
+app/enhance/theme.ts	235	232	CONTRACT	rewrite	why the tooltip is not server-rendered
+app/enhance/theme.ts	243	65	CONTRACT	keep	why a modified click is left alone; one line already
+app/enhance/theme.ts	257	454	WHY	rewrite	why the slash is gone and why the chord stays
+app/enhance/theme.ts	271	497	CONTRACT	rewrite	why the attribute is always written and why returning to the default needs no line
+app/enhance/theme.ts	285	1127	CONTRACT	rewrite	the cascade owns the redraw, and why focus has to move anyway
+workers/media-events.ts	6	2646	CONTRACT	rewrite	notification not dual write, who the authoritative writer is, idempotence, and why the object is re-read; the cost arithmetic goes to the history document
+workers/media-events.ts	49	547	CONTRACT	rewrite	why the message is narrowed rather than typed
+workers/media-events.ts	67	1334	CONTRACT	rewrite	the prohibition on a second copy and what the wrong bucket does; the A004 defect goes to the history document
+workers/media-events.ts	96	152	CONTRACT	keep	why a malformed message is acked; two lines already
+workers/media-events.ts	107	225	CONTRACT	rewrite	why a transient failure is not acked
+workers/media-events.ts	119	812	CONTRACT	rewrite	why it does not branch on the action, and what a static key would mean
+workers/media-events.ts	138	520	CONTRACT	rewrite	R2 wins, and why the branch is logged
+workers/media-events.ts	167	264	CONTRACT	rewrite	why an unreadable image still gets a row
+workers/media-events.ts	173	1513	CONTRACT	rewrite	why it is derived here, why a second get, and that null is a real answer; the deferral defect goes to the history document
+workers/media-events.ts	212	376	CONTRACT	rewrite	why the name comes off the object, and what null means downstream
+workers/media-events.ts	218	207	CONTRACT	rewrite	what null means here; trimmed to two lines
+workers/media-events.ts	226	1545	CONTRACT	rewrite	same read, MEDIA only, nothing deletes a twin, and why failure is swallowed
+app/routes/webmention.ts	11	3296	CONTRACT	rewrite	the four bounds, the without-the-limiter rule, what it does not do, and the no-IP claim; the argument's provenance goes to the history document
+app/routes/webmention.ts	71	161	NUMBER	keep	why the cap is generous; already short
+app/routes/webmention.ts	80	791	NUMBER	rewrite	why the cap is small and why a 503; the corpus size goes to history
+app/routes/webmention.ts	97	83	CONTRACT	keep	why every answer carries it; one line already
+app/routes/webmention.ts	100	458	CONTRACT	rewrite	one message for four problems, and the oracle it prevents; the hard rule citation stays
+app/routes/webmention.ts	114	510	CONTRACT	rewrite	why two origins rather than one
+app/routes/webmention.ts	128	67	CONTRACT	keep	why the fallback narrows; one line already
+app/routes/webmention.ts	133	84	CONTRACT	keep	one construction site; one line already
+app/routes/webmention.ts	144	28	CONTRACT	keep	the first gate; one line already
+app/routes/webmention.ts	149	394	CONTRACT	rewrite	why the header check refuses but never permits
+app/routes/webmention.ts	163	65	CONTRACT	keep	what an absent limiter means; one line already
+app/routes/webmention.ts	167	726	CONTRACT	rewrite	why the limiter precedes the body read; the hard rule citation stays
+app/routes/webmention.ts	187	300	CONTRACT	rewrite	why one encoding only
+app/routes/webmention.ts	210	196	CONTRACT	keep	the order of the two target checks; already short
+app/routes/webmention.ts	221	131	CONTRACT	keep	why the source is refused before the write; two lines already
+app/routes/webmention.ts	228	374	CONTRACT	rewrite	why the visibility read is last among the refusals
+app/routes/webmention.ts	240	465	CONTRACT	rewrite	what the cap is and the race it accepts
+app/routes/webmention.ts	257	66	CONTRACT	keep	what the row means at this point; one line already
+app/routes/webmention.ts	260	401	CONTRACT	rewrite	why the answer precedes verification and why waitUntil
+app/routes/webmention.ts	272	341	CONTRACT	rewrite	why a GET answers, and that it reveals nothing
+app/routes/search.ask.ts	1	826	CONTRACT	rewrite	resource route, nothing waits on it, and the cheapest-first order
+app/routes/search.ask.ts	43	81	NUMBER	keep	what the bound balances; one line already
+app/routes/search.ask.ts	46	346	CONTRACT	rewrite	what passes and what must not be replayed
+app/routes/search.ask.ts	55	154	CONTRACT	keep	one reading of the chunk shape; two lines already
+app/routes/search.ask.ts	63	77	CONTRACT	keep	what the headers are and why never cached; one line already
+app/routes/search.ask.ts	67	145	CONTRACT	keep	why no edge caching; two lines already
+app/routes/search.ask.ts	70	70	CONTRACT	keep	what the header defeats; one line already
+app/routes/search.ask.ts	72	116	CONTRACT	keep	what the header makes testable; two lines already
+app/routes/search.ask.ts	78	77	CONTRACT	keep	what it is and when 503; one line already
+app/routes/search.ask.ts	95	539	CONTRACT	rewrite	why GET is refused and why 405 rather than 404
+app/routes/search.ask.ts	115	895	CONTRACT	rewrite	why origin is gate 0, what the per-IP limiter cannot see, and why absent is allowed
+app/routes/search.ask.ts	142	227	CONTRACT	rewrite	why 404 rather than 503
+app/routes/search.ask.ts	149	377	CONTRACT	rewrite	why the body is form-encoded
+app/routes/search.ask.ts	168	99	CONTRACT	keep	one statement of the read; two lines already
+app/routes/search.ask.ts	172	208	CONTRACT	rewrite	why the limiter is in front of the cache
+app/routes/search.ask.ts	182	1043	CONTRACT	rewrite	the replay must prove its citations, and why it is checked on replay; the leak's provenance goes to history
+app/routes/search.ask.ts	203	155	CONTRACT	keep	what a stale hit does; two lines already
+app/routes/search.ask.ts	208	1637	CONTRACT	rewrite	there is no single-flight and why the ceiling is the real bound; the generation timings go to the history document
+app/routes/search.ask.ts	241	393	CONTRACT	rewrite	the order of the guard and the tee
+app/routes/search.ask.ts	253	108	CONTRACT	keep	why caching happens after the reader; two lines already
+app/routes/search.ask.ts	260	790	CONTRACT	rewrite	the two refusals and what each one bounds; the audit's measurement goes to history
+app/routes/search.ask.ts	286	200	CONTRACT	rewrite	why a stream failure is not a 500
+app/lib/media/core.server.ts	6	638	CONTRACT	rewrite	content-agnostic by construction and what that buys
+app/lib/media/core.server.ts	20	76	CONTRACT	keep	what the page size is for; one line already
+app/lib/media/core.server.ts	23	357	CONTRACT	rewrite	what the constant was for and why it is gone
+app/lib/media/core.server.ts	29	336	CONTRACT	rewrite	why the set is closed
+app/lib/media/core.server.ts	46	59	CONTRACT	keep	what it holds; one line already
+app/lib/media/core.server.ts	54	82	CONTRACT	keep	the stored form; one line already
+app/lib/media/core.server.ts	57	80	CONTRACT	keep	what false means; one line already
+app/lib/media/core.server.ts	67	271	CONTRACT	rewrite	URL-derived, and nothing written back
+app/lib/media/core.server.ts	75	737	CONTRACT	rewrite	why a static key is returned untouched and what that costs; the 58 broken rows go to history
+app/lib/media/core.server.ts	90	74	CONTRACT	keep	what it answers; one line already
+app/lib/media/core.server.ts	95	909	CONTRACT	rewrite	why the type is derived and what the gate asserts; the twelve-axis defect goes to the history document
+app/lib/media/core.server.ts	113	787	CONTRACT	rewrite	why it reads D1 and why reading a derived copy is legitimate here
+app/lib/media/core.server.ts	132	158	CONTRACT	keep	why a spread and not a key list; two lines already
+app/lib/media/core.server.ts	142	205	CONTRACT	keep	why a static asset is not routed; already short
+app/lib/media/core.server.ts	166	409	CONTRACT	rewrite	why the measurement comes before the key
+app/lib/media/core.server.ts	181	153	CONTRACT	keep	why an SVG records nothing; two lines already
+app/lib/media/core.server.ts	192	88	NUMBER	keep	what it is and who measures its cost; one line already
+app/lib/media/core.server.ts	195	1804	CONTRACT	rewrite	why LQIP, why null is allowed, why the quality is not optional, and why it lives here; the VP8L audit goes to the history document. The rule pointer stays
+app/lib/media/core.server.ts	244	435	CONTRACT	rewrite	mechanics only, and where the safety belongs
+app/lib/media/core.server.ts	257	787	CONTRACT	rewrite	it delegates, and what the shape test refuses; the stale regex goes to history
+app/enhance/palette.ts	1	1127	CONTRACT	rewrite	the law, why a native dialog, the focus rule and where results come from
+app/enhance/palette.ts	42	166	CONTRACT	keep	what it is and the naming collision; already short
+app/enhance/palette.ts	47	80	CONTRACT	keep	what it cancels; one line already
+app/enhance/palette.ts	53	136	CONTRACT	keep	the naming collision; two lines already
+app/enhance/palette.ts	56	505	CONTRACT	rewrite	what the handle is for; the two-answers defect goes to the history document
+app/enhance/palette.ts	79	155	CONTRACT	keep	why a storage failure is silent; two lines already
+app/enhance/palette.ts	92	21	CONTRACT	keep	a pointer; one line already
+app/enhance/palette.ts	148	198	CONTRACT	rewrite	why Ask is never automatic
+app/enhance/palette.ts	155	159	CONTRACT	keep	why the target is checked; two lines already
+app/enhance/palette.ts	161	452	CONTRACT	rewrite	why the reset is also synchronous; the observed missing event goes to history
+app/enhance/palette.ts	180	117	CONTRACT	keep	the guard; two lines already
+app/enhance/palette.ts	193	158	CONTRACT	keep	why the label is presentational; already short
+app/enhance/palette.ts	249	82	CONTRACT	keep	what it avoids; one line already
+app/enhance/palette.ts	261	304	CONTRACT	rewrite	why expanded is set before the early return
+app/enhance/palette.ts	306	59	CONTRACT	keep	the sequence guard; one line already
+app/enhance/palette.ts	308	212	CONTRACT	rewrite	why availability comes from the response
+app/enhance/palette.ts	318	226	CONTRACT	rewrite	when it is offered and why even on zero results
+app/enhance/palette.ts	327	141	CONTRACT	keep	why a failure is surfaced; two lines already
+app/enhance/palette.ts	334	256	CONTRACT	rewrite	why the streaming client is a separate import
+app/enhance/palette.ts	351	78	CONTRACT	keep	when it is called; one line already
+app/enhance/palette.ts	365	142	CONTRACT	keep	what the link carries; two lines already
+app/enhance/palette.ts	371	66	CONTRACT	keep	why a retype clears the answer; one line already
+app/enhance/palette.ts	386	64	CONTRACT	keep	what it does; one line already
+app/enhance/palette.ts	395	441	CONTRACT	rewrite	why Escape is handled here and must come first; the browser measurement goes to history
+app/enhance/palette.ts	412	118	CONTRACT	keep	why the default is prevented; two lines already
+app/enhance/palette.ts	442	153	CONTRACT	keep	why showModal and not show; two lines already
+app/enhance/palette.ts	453	425	CONTRACT	rewrite	why the sequence bump is not optional; the observed race goes to the history document
+app/enhance/palette.ts	467	231	CONTRACT	rewrite	why the answer is aborted too
+app/enhance/palette.ts	480	135	CONTRACT	keep	the order and why; two lines already
+app/enhance/palette.ts	486	1899	CONTRACT	rewrite	one binding, the event rather than an export, and the trigger's own fallback; the helper bytes go to the history document
+app/enhance/palette.ts	519	70	CONTRACT	keep	why the export exists; one line already
+app/lib/health/checks.server.ts	1	2973	CONTRACT	rewrite	what it watches, the named scope, which are repairable, and the gate boundary; the 2026-07-31 incident goes to the history document
+app/lib/health/checks.server.ts	71	68	CONTRACT	keep	what it is; one line already
+app/lib/health/checks.server.ts	75	66	CONTRACT	keep	who reads it; one line already
+app/lib/health/checks.server.ts	77	312	CONTRACT	rewrite	what reaches the wire and why
+app/lib/health/checks.server.ts	92	354	CONTRACT	rewrite	why a throwing check is a failing check
+app/lib/health/checks.server.ts	107	394	CONTRACT	rewrite	why this one is placed here; the addition date goes to history
+app/lib/health/checks.server.ts	120	942	CONTRACT	rewrite	what question it answers and why both listings are full; the replaced check goes to the history document
+app/lib/health/checks.server.ts	143	984	CONTRACT	rewrite	what the check makes possible and what its absence surfaces as
+app/lib/health/checks.server.ts	172	404	CONTRACT	rewrite	why the counts are taken on the shadows
+app/lib/health/checks.server.ts	187	154	CONTRACT	keep	why a null row is a verdict; two lines already
+app/lib/health/checks.server.ts	196	379	CONTRACT	rewrite	what the wrapper adds and what it does not duplicate
+app/lib/health/checks.server.ts	208	222	CONTRACT	rewrite	what the extra wrapper catches
+app/routes.ts	4	9	CONTRACT	keep	the section marker; one line already
+app/routes.ts	7	74	CONTRACT	keep	the ordering rule; one line already
+app/routes.ts	10	294	CONTRACT	rewrite	what it is and the ordering rule
+app/routes.ts	17	496	CONTRACT	rewrite	why they are grouped and why the feeds come first
+app/routes.ts	30	303	CONTRACT	rewrite	the same grouping and ordering rule
+app/routes.ts	41	469	CONTRACT	rewrite	the placement is the security design
+app/routes.ts	51	372	CONTRACT	rewrite	why the legacy URL and why the asset prefix differs
+app/routes.ts	57	230	CONTRACT	rewrite	why the URL was restored; the dates go to the history document
+app/routes.ts	61	672	CONTRACT	rewrite	the trailing slash rule and the ordering
+app/routes.ts	74	757	CONTRACT	rewrite	why the exports precede the pages and what that keeps true
+app/routes.ts	94	374	CONTRACT	rewrite	why it is first; the audit's finding goes to the history document
+app/routes.ts	100	227	CONTRACT	keep	the naming ruling; already short
+app/routes.ts	104	147	CONTRACT	keep	what it is and where it is linked; two lines already
+app/routes.ts	107	224	CONTRACT	keep	the naming ruling; already short
+app/routes.ts	111	179	CONTRACT	keep	what it is; already short
+app/routes.ts	115	148	CONTRACT	keep	the ordering rule; two lines already
+app/routes.ts	124	128	CONTRACT	keep	what it is; two lines already
+app/routes.ts	127	419	CONTRACT	rewrite	why it is public and why it sits at the root
+app/routes.ts	135	7	CONTRACT	keep	the section marker; one line already
+app/routes.ts	138	62	CONTRACT	keep	how the subtree is gated; one line already
+app/routes.ts	141	303	CONTRACT	rewrite	why the path makes the narrower claim
+app/routes.ts	146	227	CONTRACT	keep	the naming ruling; already short
+app/routes.ts	152	129	CONTRACT	keep	what keeps one media surface; two lines already
+app/routes.ts	155	125	CONTRACT	keep	what it carries; two lines already
+app/routes.ts	158	157	CONTRACT	keep	why POST; two lines already
+app/routes.ts	165	195	CONTRACT	keep	how the shape enforces the ruling; already short
+app/routes.ts	171	6	CONTRACT	keep	the section marker; one line already
+app/routes.ts	173	152	CONTRACT	keep	why it is public; two lines already
+app/routes.ts	176	137	CONTRACT	keep	why it sits outside the gated subtree; two lines already
+app/lib/webmention/verify.server.ts	7	2555	CONTRACT	rewrite	the claim is the sender's, what waitUntil costs, every bound on the fetch, and the no-markup rule
+app/lib/webmention/verify.server.ts	54	75	NUMBER	keep	what it bounds; one line already
+app/lib/webmention/verify.server.ts	57	57	NUMBER	keep	what it bounds; one line already
+app/lib/webmention/verify.server.ts	60	513	CONTRACT	rewrite	why a fixed set rather than a message
+app/lib/webmention/verify.server.ts	78	64	CONTRACT	keep	what the sentinel means; one line already
+app/lib/webmention/verify.server.ts	81	803	CONTRACT	rewrite	the named fallback and where validation happens; both hard rule citations stay
+app/lib/webmention/verify.server.ts	132	246	CONTRACT	rewrite	why the decision is split from the write
+app/lib/webmention/verify.server.ts	142	646	CONTRACT	rewrite	why the signal separates the two reasons
+app/lib/webmention/verify.server.ts	175	341	CONTRACT	rewrite	why the type is checked first and why absent means not-HTML
+app/lib/webmention/verify.server.ts	200	517	CONTRACT	rewrite	how anchors are compared and which match wins
+app/lib/webmention/verify.server.ts	227	584	CONTRACT	rewrite	what the excerpt is taken from and why it is text
+app/lib/webmention/verify.server.ts	249	375	CONTRACT	rewrite	never throws, and what an unexpected failure becomes
+app/lib/webmention/verify.server.ts	280	225	CONTRACT	rewrite	a failed write reverts nothing; the hard rule citation stays
+app/env.d.ts	1	579	CONTRACT	rewrite	why the block exists and what editing it obliges
+app/env.d.ts	18	76	CONTRACT	keep	what it is and who reads it; one line already
+app/env.d.ts	20	616	CONTRACT	rewrite	the optional contract; the omission that motivated the gate goes to the history document
+app/env.d.ts	32	851	CONTRACT	rewrite	optional by contract, and that only the read path needs a credential
+app/env.d.ts	49	740	CONTRACT	rewrite	optional by contract and where the full contract lives
+app/env.d.ts	64	2383	CONTRACT	rewrite	the two holders, and why the type is required while the contract is optional; the policy change date goes to the history document
+app/env.d.ts	111	873	CONTRACT	rewrite	why vars are not declared here
+app/env.d.ts	130	249	CONTRACT	keep	why unknown; already short
+app/env.d.ts	135	70	CONTRACT	keep	what Vite resolves; one line already
+app/env.d.ts	148	504	CONTRACT	rewrite	what it namespaces and why it is inside declare global
+app/lib/admin/traffic.server.ts	1	1595	CONTRACT	rewrite	server only, what the number is and is not, the weighting rule, and fails closed
+app/lib/admin/traffic.server.ts	32	64	CONTRACT	keep	where the dataset is written; one line already
+app/lib/admin/traffic.server.ts	35	438	CONTRACT	rewrite	why it is exported and the quoted-interval law
+app/lib/admin/traffic.server.ts	60	292	CONTRACT	rewrite	why a second statement
+app/lib/admin/traffic.server.ts	77	51	CONTRACT	keep	what it is; one line already
+app/lib/admin/traffic.server.ts	89	144	CONTRACT	keep	why the body is not carried; two lines already
+app/lib/admin/traffic.server.ts	102	99	CONTRACT	keep	what it returns; already short
+app/lib/admin/traffic.server.ts	153	2652	CONTRACT	rewrite	one derivation, one read for the list, what completeness means, and why a cache but no budget; the samples go to the history document
+app/lib/admin/traffic.server.ts	204	82	CONTRACT	keep	a pointer to the reason; one line already
+app/lib/admin/traffic.server.ts	212	229	CONTRACT	rewrite	why a stored shape is checked
+app/lib/admin/traffic.server.ts	221	69	CONTRACT	keep	what a KV outage costs; one line already
+app/lib/admin/traffic.server.ts	226	121	CONTRACT	keep	what it returns; already short
+app/lib/admin/traffic.server.ts	264	425	CONTRACT	rewrite	why both halves are needed
+app/lib/admin/traffic.server.ts	280	66	CONTRACT	keep	why a cache failure is not a read failure; one line already
+app/lib/media/rebuild.server.ts	7	1242	CONTRACT	rewrite	which columns are recoverable, the one-direction conflict rule, and why enumeration precedes writing
+app/lib/media/rebuild.server.ts	34	72	CONTRACT	keep	what it holds; one line already
+app/lib/media/rebuild.server.ts	38	83	CONTRACT	keep	where the values come from; one line already
+app/lib/media/rebuild.server.ts	42	152	CONTRACT	keep	why an SVG records nothing; two lines already
+app/lib/media/rebuild.server.ts	51	68	CONTRACT	keep	what it is; one line already
+app/lib/media/rebuild.server.ts	54	1799	CONTRACT	rewrite	one enumeration for both readers, exhaustive, the two buckets, and why static comes from a manifest; the hard rule citation stays
+app/lib/media/rebuild.server.ts	121	1121	CONTRACT	rewrite	why the verdict is read back and why drift is a sum
+app/lib/media/rebuild.server.ts	164	23	CONTRACT	keep	type annotation only; kept
+app/lib/media/rebuild.server.ts	167	126	CONTRACT	keep	where the enumeration comes from; two lines already
+app/lib/media/rebuild.server.ts	173	76	CONTRACT	keep	the step marker; one line already
+app/lib/media/rebuild.server.ts	177	214	CONTRACT	rewrite	why the read follows the key
+app/lib/media/rebuild.server.ts	181	130	CONTRACT	keep	why two reads; two lines already
+app/lib/media/rebuild.server.ts	191	344	CONTRACT	rewrite	why the name is re-derived
+app/lib/media/rebuild.server.ts	217	76	CONTRACT	keep	the step marker; one line already
+app/lib/media/rebuild.server.ts	221	199	CONTRACT	rewrite	what is matched; the verification date goes to history
+app/lib/media/rebuild.server.ts	249	194	CONTRACT	rewrite	why null is the honest value
+app/lib/media/rebuild.server.ts	260	315	CONTRACT	rewrite	why removal is last and computed from the same enumeration
+app/lib/theme.ts	1	758	CONTRACT	rewrite	the cookie rule and the absent-attribute rule; the flash mechanics go to history
+app/lib/theme.ts	18	62	NUMBER	keep	why this max-age beside the constant; one line already
+app/lib/theme.ts	21	622	CONTRACT	rewrite	the three states and the not-writable rule; the dated addendum and its grep go to history
+app/lib/theme.ts	41	368	WHY	keep	the refusal and why; already at the header budget
+app/lib/theme.ts	57	1305	CONTRACT	rewrite	the legacy-cookie rule and the convergence guarantee; the checking narrative goes to history
+app/lib/theme.ts	85	961	WHY	rewrite	the throw and where it lands; the finding test and its date go to history
+app/lib/theme.ts	109	287	CONTRACT	rewrite	the keying rule, one sentence shorter
+app/lib/theme.ts	120	141	CONTRACT	keep	what it returns and what omitting means; already short
+app/lib/theme.ts	128	1519	CONTRACT	rewrite	what the meta is for and why 'light dark'; the frame capture goes to history
+app/lib/theme.ts	162	191	CONTRACT	keep	the Path and SameSite rules; three lines already
+app/lib/media/upload.server.ts	6	1511	CONTRACT	rewrite	the one-door law, the two callers and what it does not own; the ruling and finding go to history
+app/lib/media/upload.server.ts	36	437	CONTRACT	rewrite	the asserted-type rule; the three sources go to history
+app/lib/media/upload.server.ts	48	75	CONTRACT	keep	the only surviving copy; one line already
+app/lib/media/upload.server.ts	59	77	CONTRACT	keep	what false means; one line already
+app/lib/media/upload.server.ts	64	346	WHY	keep	refuses before it measures, and where the control sits; at the header budget
+app/lib/media/upload.server.ts	76	470	WHY	rewrite	the unreachable fallback written as a throw, and the rule that forbids the default
+app/lib/media/upload.server.ts	92	689	CONTRACT	rewrite	the key carries the measurement, and null is a real answer; finding B002 goes to history
+app/lib/media/upload.server.ts	112	301	CONTRACT	rewrite	idempotent by construction and no existence check
+app/lib/media/upload.server.ts	121	670	CONTRACT	rewrite	the filename belongs to the object; the audit that found it goes to history
+app/lib/media/upload.server.ts	135	1192	CONTRACT	rewrite	non-fatal and reported; the backfill's history goes to the document
+app/lib/media/upload.server.ts	158	227	CONTRACT	rewrite	one measurement so the row and the key cannot disagree
+app/lib/media/upload.server.ts	170	140	CONTRACT	keep	the only surviving copy; two lines already
+app/routes/sitemap.ts	10	1249	CONTRACT	rewrite	the derived-by-gate ruling; the rejected derivation and the found-by story go to history
+app/routes/sitemap.ts	49	881	CONTRACT	rewrite	why the second read is gone and what keeps it gone; the live count goes to history
+app/routes/sitemap.ts	67	836	CONTRACT	rewrite	the inherited predicate and the no-lastmod rule
+app/routes/sitemap.ts	90	1170	CONTRACT	rewrite	three rules: the committed corpus, no lastmod, and no showcase filter
+app/routes/sitemap.ts	123	427	CONTRACT	keep	the archives' terms, inherited; already at the header budget
+app/routes/sitemap.ts	154	1264	CONTRACT	rewrite	the shared constant and the no-Vary rule; the stale-post measurement goes to history
+app/lib/smoke.server.ts	1	2166	CONTRACT	rewrite	the three properties, the storage law and the residue pointer; the ruling goes to history
+app/lib/smoke.server.ts	42	991	NUMBER	rewrite	why its own prefix and why the ceiling is high; the number's grounds stay beside it
+app/lib/smoke.server.ts	63	88	NUMBER	keep	why this floor beside the constant; one line already
+app/lib/smoke.server.ts	66	437	CONTRACT	keep	absent is its own state and why; at the header budget
+app/lib/smoke.server.ts	80	299	WHY	keep	the ordering rule and what it prevents; at the header budget
+app/lib/smoke.server.ts	91	150	CONTRACT	keep	the fall-through and what it must not touch; two lines already
+app/lib/smoke.server.ts	97	304	WHY	keep	not configured means not open; already short
+app/lib/smoke.server.ts	114	135	WHY	keep	constant time for both shapes; two lines already
+app/lib/smoke.server.ts	123	152	WHY	keep	a privileged endpoint without its limiter does not serve; two lines already
+app/lib/smoke.server.ts	143	1087	CONTRACT	rewrite	the path rule that forces the placement, and the empty string; the gate's finding goes to history
+app/lib/preview-links.server.ts	16	1935	CONTRACT	rewrite	the thin split, the two keys and the ordering rule; the test pointer goes to history
+app/lib/preview-links.server.ts	52	62	CONTRACT	keep	what it is; one line already
+app/lib/preview-links.server.ts	54	78	CONTRACT	keep	where the token may reach; one line already
+app/lib/preview-links.server.ts	56	48	CONTRACT	keep	what is printed; one line already
+app/lib/preview-links.server.ts	58	71	CONTRACT	keep	the shape and the empty case; one line already
+app/lib/preview-links.server.ts	60	79	CONTRACT	keep	advisory, and what actually expires; one line already
+app/lib/preview-links.server.ts	66	81	CONTRACT	keep	why it is narrower than Env; one line already
+app/lib/preview-links.server.ts	69	367	CONTRACT	keep	store, not policy, and why a stale token is inert; at the header budget
+app/lib/preview-links.server.ts	89	154	CONTRACT	keep	both keys carry the same TTL; two lines already
+app/lib/preview-links.server.ts	98	269	CONTRACT	keep	idempotent and why; already short
+app/lib/preview-links.server.ts	114	262	CONTRACT	keep	why an orphan is skipped; already short
+app/lib/preview-links.server.ts	136	142	CONTRACT	keep	why an empty date sorts last; two lines already
+app/lib/preview-links.server.ts	141	359	CONTRACT	keep	why it enumerates, and why the count is returned; already short
+app/lib/preview-links.server.ts	159	212	CONTRACT	keep	why a malformed index key is still deleted; three lines already
+app/lib/preview-links.server.ts	171	202	CONTRACT	keep	refuses without touching KV, and why that matters on a public path
+app/lib/preview-links.server.ts	185	406	NUMBER	rewrite	why 30 and what it is not for; the grounds stay beside the constant
+app/lib/preview-links.server.ts	195	44	CONTRACT	keep	what the window is; one line already
+app/lib/preview-links.server.ts	198	635	WHY	rewrite	fails closed on an absent binding; the three past catches go to history
+app/lib/preview-links.server.ts	218	211	CONTRACT	keep	two limits on two surfaces; three lines already
+app/lib/preview-links.server.ts	226	33	CONTRACT	keep	type annotation only; kept
+app/lib/editor/github.server.ts	1	766	CONTRACT	rewrite	one commit, one file, why the Git Data API shape stays, and the token prohibition
+app/lib/editor/github.server.ts	24	82	CONTRACT	keep	what it carries; one line already
+app/lib/editor/github.server.ts	37	86	CONTRACT	keep	why the type widens Env; one line already
+app/lib/editor/github.server.ts	62	39	CONTRACT	keep	why the header is there; one line already
+app/lib/editor/github.server.ts	86	70	CONTRACT	keep	what it returns; one line already
+app/lib/editor/github.server.ts	99	667	CONTRACT	rewrite	absent versus failed, and the 1 MB cap guard; the would-have-surfaced story goes to history
+app/lib/editor/github.server.ts	139	775	CONTRACT	rewrite	one call for shas, and the not-recursive rule with its cap
+app/lib/editor/github.server.ts	161	75	CONTRACT	keep	refuse rather than iterate; one line already
+app/lib/editor/github.server.ts	175	1051	CONTRACT	rewrite	why raw bytes, what the pinned ref measures, and the cap; finding B002 goes to history
+app/lib/editor/github.server.ts	217	33	CONTRACT	keep	what it does; one line already
+app/lib/editor/github.server.ts	219	35	CONTRACT	keep	what it does; one line already
+app/lib/editor/github.server.ts	222	502	CONTRACT	rewrite	the conflict gate and why it is checked up front
+app/lib/editor/github.server.ts	251	129	CONTRACT	keep	the delete shape and the ordering; two lines already
+app/lib/editor/github.server.ts	294	154	WHY	keep	never force, and what losing the race must not cost; two lines already
+app/lib/editor/github.server.ts	299	331	CONTRACT	keep	what the shas are and what asserts against them; already short
+app/lib/editor/github.server.ts	319	259	CONTRACT	keep	read only, and where a restore goes instead; already short
+app/lib/editor/github.server.ts	344	144	WHY	keep	the unreachable fallback and what it deserves; two lines already
+app/lib/editor/github.server.ts	352	314	CONTRACT	keep	why the commit and not two blobs; already short
+app/lib/media/backup.server.ts	1	2014	CONTRACT	rewrite	the mirror law, what it does not cover, the never-delete prohibition and the never-dual-write rule
+app/lib/media/backup.server.ts	43	64	CONTRACT	keep	what Env must carry; one line already
+app/lib/media/backup.server.ts	46	78	CONTRACT	keep	one row, so identity is not re-derived; one line already
+app/lib/media/backup.server.ts	51	36	CONTRACT	keep	what present means; one line already
+app/lib/media/backup.server.ts	53	47	CONTRACT	keep	what identical means; one line already
+app/lib/media/backup.server.ts	62	78	CONTRACT	keep	why mismatched is reported separately; one line already
+app/lib/media/backup.server.ts	66	286	WHY	keep	the truncation defect class and why the loop is explicit; at the header budget
+app/lib/media/backup.server.ts	84	1046	CONTRACT	rewrite	the comparison rule and the multipart escape hatch; the rejected full hash goes to history
+app/lib/media/backup.server.ts	131	155	WHY	keep	impossible is how a silent corruption gets waved past; two lines already
+app/lib/media/backup.server.ts	143	317	CONTRACT	keep	why objects is reported beside twins, and the vacuous case; at the header budget
+app/lib/media/backup.server.ts	169	597	CONTRACT	rewrite	whole-object copy, idempotent by construction, and a gone source is not an error
+app/lib/media/backup.server.ts	193	482	WHY	keep	the only write, and the one-way prohibition; at the header budget
+app/lib/media/backup.server.ts	218	140	CONTRACT	keep	the verdict describes the store after the writes; two lines already
+app/lib/cache-purge.server.ts	5	2973	CONTRACT	rewrite	the import form, the never-blocks rule, the success read, and the two boundary statements; the reversal goes to history
+app/lib/cache-purge.server.ts	60	85	CONTRACT	keep	why it is narrowed; one line already
+app/lib/cache-purge.server.ts	63	191	CONTRACT	keep	what it does, with its params; already short
+app/lib/cache-purge.server.ts	70	218	WHY	keep	checked rather than assumed, and what a TypeError would reach; already short
+app/lib/cache-purge.server.ts	108	425	CONTRACT	rewrite	what it purges and why not the corpus
+app/lib/cache-purge.server.ts	122	602	CONTRACT	rewrite	one vocabulary, and the refusal of purgeEverything
+app/lib/cache-purge.server.ts	139	549	CONTRACT	rewrite	why an uncalled export exists, and the standing instruction to delete it
+app/lib/markdown-twin.ts	4	343	CONTRACT	keep	the two representations and why one module; at the header budget
+app/lib/markdown-twin.ts	13	79	CONTRACT	keep	what the header points at; one line already
+app/lib/markdown-twin.ts	18	79	CONTRACT	keep	what the header points at; one line already
+app/lib/markdown-twin.ts	23	385	CONTRACT	keep	one parser, two callers, and why a drift would be silent; at the budget
+app/lib/markdown-twin.ts	35	3636	CONTRACT	rewrite	the never-stored rule, the per-caller policy and the Vary rule; the measurement and the reversed paragraph go to history
+app/lib/markdown-twin.ts	106	303	CONTRACT	keep	keyed off the policy, and why not a second flag; already short
+app/routes/api.csp-report.ts	7	2562	CONTRACT	rewrite	the unauthenticated-sink argument, the three limits and the refusal; the window date goes to history
+app/routes/api.csp-report.ts	55	78	NUMBER	keep	why 8 KB beside the constant; one line already
+app/routes/api.csp-report.ts	70	595	WHY	rewrite	the header refuses early and never permits; the Number(?? '0') defect goes to history
+app/routes/api.csp-report.ts	91	65	WHY	keep	not configured means not open; one line already
+app/routes/api.csp-report.ts	98	149	CONTRACT	keep	keyed on the edge-set IP, not the body; two lines already
+app/routes/api.csp-report.ts	113	570	WHY	rewrite	the cap is on the stream, not the slice; the previous comment's false claim goes to history
+app/routes/api.csp-report.ts	134	588	CONTRACT	rewrite	the two rules that survive: JSON-encoded so a body cannot forge log lines, and unparsed so neither report shape is dropped
+app/routes/api.csp-report.ts	150	144	CONTRACT	keep	what a GET says and that it reveals nothing; already short
+app/lib/bearer.server.ts	1	2266	CONTRACT	rewrite	why one copy, and the path rule that keeps it a .server module; the extraction and the missing-test story go to history
+app/lib/bearer.server.ts	40	531	WHY	rewrite	the timing leak and why both sides are hashed first; trimmed to the two rules
+app/lib/bearer.server.ts	60	674	WHY	rewrite	why the length is folded in first and why the loop is branch-free
+app/lib/bearer.server.ts	78	985	CONTRACT	rewrite	what the label supports and what it does not; the corrected sentence goes to history
+app/lib/citations.server.ts	4	665	CONTRACT	keep	the four rules this file enforces; already a list of rules at the budget
+app/lib/citations.server.ts	20	927	WHY	rewrite	why a URL and not an address, and why the address is not quoted here either; the removal date goes to history
+app/lib/citations.server.ts	41	45	CONTRACT	keep	what the field is; one line already
+app/lib/citations.server.ts	43	40	CONTRACT	keep	what the field is; one line already
+app/lib/citations.server.ts	45	69	CONTRACT	keep	taken, never constructed; one line already
+app/lib/citations.server.ts	49	147	CONTRACT	keep	why the prefix bumped; already short
+app/lib/citations.server.ts	59	45	WHY	keep	a KV hiccup must not take the page down; one line already
+app/lib/citations.server.ts	64	1727	CONTRACT	rewrite	the key is mandatory, env not globalThis, and never the author endpoint; the vendor change and the old contract go to history
+app/lib/citations.server.ts	117	256	CONTRACT	keep	what it returns and what a cold DOI renders; already short
+app/lib/citations.server.ts	142	361	WHY	keep	an unset secret degrades to stale, never to blank or zero; at the budget
+app/lib/citations.server.ts	153	64	WHY	keep	after the response, so a cold cache costs nothing; one line already
+app/lib/citations.server.ts	164	47	CONTRACT	keep	nothing to do; one line already
+app/enhance/ask.ts	1	985	CONTRACT	rewrite	the two load paths, the caller-owned container and the DOM guard; trimmed
+app/enhance/ask.ts	21	80	CONTRACT	keep	what it matches; one line already
+app/enhance/ask.ts	31	55	CONTRACT	keep	what it does; one line already
+app/enhance/ask.ts	46	444	WHY	rewrite	appendChild never .append, and the compile error it avoids
+app/enhance/ask.ts	60	244	WHY	keep	every DOM write goes through textContent, and why; at the budget
+app/enhance/ask.ts	82	71	CONTRACT	keep	why aria-live; one line already
+app/enhance/ask.ts	86	780	WHY	rewrite	why the wording is this and not a chatbot placeholder; the date goes to history
+app/enhance/ask.ts	130	136	CONTRACT	keep	Ask failing must not look like search failing; two lines already
+app/enhance/ask.ts	140	228	WHY	keep	POST because the endpoint bills, and what a GET is reachable by; three lines already
+app/enhance/ask.ts	173	133	CONTRACT	keep	the frame separator and the partial frame; two lines already
+app/enhance/ask.ts	196	142	CONTRACT	keep	sources arrive before the first token; two lines already
+app/enhance/ask.ts	205	294	CONTRACT	keep	one key-to-URL mapping, shared with the upload path; four lines already
+app/enhance/ask.ts	252	537	CONTRACT	rewrite	who owns the rule, and why the guard is on the DOM
+app/enhance/ask.ts	273	147	CONTRACT	keep	hidden rather than disabled while streaming; two lines already
+app/lib/editor/action.server.ts	14	197	CONTRACT	keep	one implementation so the gates cannot be skipped on one path; already short
+app/lib/editor/action.server.ts	22	402	CONTRACT	keep	why the fields come back, and that nothing was written; at the budget
+app/lib/editor/action.server.ts	34	53	CONTRACT	keep	what it is; one line already
+app/lib/editor/action.server.ts	37	69	CONTRACT	keep	what it is; one line already
+app/lib/editor/action.server.ts	44	327	CONTRACT	keep	threaded rather than defaulted, and why; at the budget
+app/lib/editor/action.server.ts	55	1358	WHY	rewrite	no default, and why an unknown intent is refused; the audit of submit sites goes to history
+app/lib/editor/action.server.ts	89	69	CONTRACT	keep	re-read head so a retry is against current state; one line already
+app/lib/editor/action.server.ts	93	215	WHY	keep	refused before the try, and what fail() does instead; three lines already
+app/lib/editor/action.server.ts	105	603	CONTRACT	rewrite	the allowlist is derived from the transition table, and refused before the try
+app/lib/editor/action.server.ts	138	513	CONTRACT	rewrite	the ceremony is always opted into, and only the confirmed intent answers yes
+app/lib/editor/action.server.ts	158	377	CONTRACT	keep	not a failure, and why the submitted head is kept; at the budget
+app/lib/operator/auth.server.ts	1	795	CONTRACT	rewrite	why a static bearer and not the other two, and the token prohibition; the extraction goes to history
+app/lib/operator/auth.server.ts	23	85	NUMBER	keep	why this floor beside the constant; one line already
+app/lib/operator/auth.server.ts	32	345	WHY	keep	the ordering rule and what it prevents; at the budget
+app/lib/operator/auth.server.ts	46	77	WHY	keep	no secret means not open; one line already
+app/lib/operator/auth.server.ts	60	1135	WHY	rewrite	the length bound, why twice and not equal, and that constant time is unchanged inside it
+app/lib/operator/auth.server.ts	85	111	WHY	keep	compared even when absent, so both take the same time; two lines already
+app/lib/operator/auth.server.ts	97	1073	CONTRACT	rewrite	the two questions are separate, and the order where both run; the DESCRIBE defect goes to history
+app/lib/operator/auth.server.ts	124	146	WHY	keep	a privileged endpoint without its limiter does not serve; two lines already
+app/routes/admin.media.upload.ts	13	1004	CONTRACT	rewrite	an adapter over the store, and what is left here; the ruling goes to history
+app/routes/admin.media.upload.ts	32	299	CONTRACT	keep	why the contract is a tested object; already short
+app/routes/admin.media.upload.ts	37	237	HISTORY	delete	a removed helper and why it went; nothing in the file refers to it, so it goes to the document
+app/routes/admin.media.upload.ts	41	358	CONTRACT	rewrite	what stays is that this route is upload-only and where the lister lives; the URL change goes to history
+app/routes/admin.media.upload.ts	58	549	CONTRACT	rewrite	the explicit field, and why the editors send nothing new
+app/routes/admin.media.upload.ts	70	241	CONTRACT	keep	one refusal in the caller's language, with its params; already short
+app/routes/admin.media.upload.ts	86	750	WHY	rewrite	why read-then-refuse costs nothing and what the old order bought
+app/routes/admin.media.upload.ts	108	156	CONTRACT	keep	same upload, two answers, one branch; two lines already
+workers/ask-budget.ts	3	1256	CONTRACT	rewrite	why a Durable Object and why synchronous SQL; both concurrency runs go to history
+workers/ask-budget.ts	27	76	CONTRACT	keep	synchronous, so no call observes the table missing; one line already
+workers/ask-budget.ts	33	233	CONTRACT	keep	no await in the body, and what the returned count means; already short
+workers/ask-budget.ts	45	211	CONTRACT	keep	the value is read once and guarded, not the row count; three lines already
+workers/ask-budget.ts	55	218	CONTRACT	keep	one statement, and why old days are dropped; three lines already
+workers/ask-budget.ts	69	975	WHY	rewrite	why not the binding, and why synchronous; the four-run measurement goes to history
+workers/ask-budget.ts	91	211	CONTRACT	keep	the value is read once and guarded, not the row count; three lines already
+workers/ask-budget.ts	107	122	CONTRACT	keep	only the current window is kept, so an instance cannot grow; two lines already
+workers/ask-budget.ts	113	66	CONTRACT	keep	reads without consuming; one line already
+workers/ask-budget.ts	122	78	CONTRACT	keep	admin-only, never reachable from a page; one line already
+app/lib/webmention/decide.server.ts	5	2249	CONTRACT	rewrite	the pair is one door, the capability table answers two questions, and why the admin page passes no actor
+app/lib/webmention/decide.server.ts	47	72	CONTRACT	keep	a fourth value is a typecheck failure; one line already
+app/lib/webmention/decide.server.ts	50	89	CONTRACT	keep	why the names exist; one line already
+app/lib/webmention/decide.server.ts	56	334	CONTRACT	keep	what it does, with its params; already short
+app/lib/webmention/decide.server.ts	90	300	CONTRACT	keep	the slug comes from the statement that moved the row; already short
+app/lib/webmention/decide.server.ts	101	309	CONTRACT	keep	null means nothing moved, and nothing is purged; already short
+app/data/publications.ts	1	661	CONTRACT	rewrite	why it is a data file, why access is always carried, and which year wins
+app/data/publications.ts	42	211	CONTRACT	rewrite	the precision rule and which field is the grouping key; the record count goes to history
+app/data/publications.ts	51	67	CONTRACT	keep	when it is set; one line already
+app/data/publications.ts	61	40	CONTRACT	keep	when it is set; one line already
+app/data/publications.ts	63	37	CONTRACT	keep	when it is set; one line already
+app/data/publications.ts	65	49	CONTRACT	keep	what it is; one line already
+app/data/publications.ts	69	308	CONTRACT	keep	tdm-only is a measured answer, not an absence; at the budget
+app/data/publications.ts	76	675	CONTRACT	rewrite	what the sentence must be, that null is a state, and what the gate cannot enforce
+app/data/publications.ts	90	750	CONTRACT	rewrite	why the field exists before any record needs it, and whose DOI it is; the survey date goes to history
+app/data/publications.ts	109	533	CONTRACT	rewrite	read from the data-availability statement only, and why a regex would be wrong
+app/data/publications.ts	148	20	CONTRACT	keep	the order; one line already
+app/lib/media/resolvers/posts.server.ts	5	2605	CONTRACT	rewrite	the coverage statement and the miss list, which is the boundary a delete depends on; the replaced artifact read goes to history
+app/lib/media/resolvers/posts.server.ts	56	210	WHY	keep	deliberately not caught, so the delete fails closed; three lines already
+app/lib/media/resolvers/posts.server.ts	93	322	CONTRACT	keep	a lookbehind, not a parse, and what getting it wrong costs; at the budget
+app/lib/media/resolvers/posts.server.ts	111	42	CONTRACT	keep	what it returns; one line already
+app/lib/admin/secrets.server.ts	1	2060	CONTRACT	rewrite	presence only, the three never-returns, and the one thing check:secrets cannot see here
+app/lib/admin/secrets.server.ts	42	347	CONTRACT	keep	relative not the alias, and what the alias broke; at the budget
+app/lib/admin/secrets.server.ts	51	70	CONTRACT	keep	what one entry is; one line already
+app/lib/admin/secrets.server.ts	57	367	CONTRACT	keep	what present means and why empty is absence; at the budget
+app/lib/admin/secrets.server.ts	69	192	WHY	keep	tested and discarded in one expression; three lines already
+app/lib/auth.server.ts	10	429	CONTRACT	keep	per-request instance, where sessions live, and the single-admin hook; at the budget
+app/lib/auth.server.ts	37	44	NUMBER	keep	why the floor beside the call; one line already
+app/lib/auth.server.ts	75	239	CONTRACT	keep	what it resolves and who reads it; already short
+app/lib/auth.server.ts	83	550	CONTRACT	rewrite	why two marks and not one; the diagnosis goes to history
+app/lib/auth.server.ts	110	803	CONTRACT	rewrite	set for the human admin only, and what reading it asserts
+app/lib/auth.server.ts	127	949	CONTRACT	rewrite	the split, why it is not decorative, and why both kinds carry the same email
+app/lib/timing.ts	1	814	CONTRACT	rewrite	a header not a log, and that it changes no behaviour; the p50 measurement goes to history
+app/lib/timing.ts	21	884	CONTRACT	rewrite	why a shared collector and why a wrapper object; the unattributed measurement goes to history
+app/lib/timing.ts	39	78	CONTRACT	keep	what asks to be measured; one line already
+app/lib/timing.ts	44	245	CONTRACT	keep	optional so the wrapper degrades to a plain call; already short
+app/lib/timing.ts	61	186	WHY	keep	in a finally, so a throwing call still reports; three lines already
+app/lib/timing.ts	68	575	WHY	rewrite	the instrument may not change what it measures
+app/lib/timing.ts	90	204	CONTRACT	keep	names are stripped to a token, and what a malformed header costs; already short
+app/lib/admin/types.ts	1	194	CONTRACT	keep	type-only, so nothing here may execute or touch bindings; already short
+app/lib/admin/types.ts	9	842	CONTRACT	rewrite	two arms and the prohibition the third one broke; the removed interface goes to history
+app/lib/admin/types.ts	29	713	CONTRACT	rewrite	origin requests are a floor not a measure, and the number is sampling weighted; both are boundary statements
+app/lib/admin/types.ts	49	46	CONTRACT	keep	what it is; one line already
+app/lib/admin/types.ts	53	81	CONTRACT	keep	why the total is carried; one line already
+app/lib/admin/types.ts	55	65	CONTRACT	keep	what it counts; one line already
+app/lib/admin/types.ts	59	709	CONTRACT	rewrite	why complete exists: a missing slug is a measured zero or unknown, and the column must render them differently
+app/lib/admin/types.ts	73	42	CONTRACT	keep	what it is; one line already
+app/lib/admin/types.ts	75	82	CONTRACT	keep	what an absent path means; one line already
+app/lib/admin/types.ts	77	72	CONTRACT	keep	what it counts; one line already
+app/lib/admin/types.ts	79	76	CONTRACT	keep	what it says; one line already
+app/lib/blog-view.ts	4	850	CONTRACT	rewrite	one projection so the preview's claim cannot go quietly false, and that it is pure
+app/lib/blog-view.ts	22	66	CONTRACT	keep	what it is; one line already
+app/lib/blog-view.ts	25	445	CONTRACT	rewrite	why the neighbours are widened, and what disproves the inferred type
+app/lib/blog-view.ts	41	227	CONTRACT	keep	a malformed column costs a section, never the page; already short
+app/lib/blog-view.ts	56	77	CONTRACT	keep	type annotation only; kept
+app/lib/blog-view.ts	58	37	CONTRACT	keep	the pointer; one line already
+app/lib/blog-view.ts	64	66	WHY	keep	a malformed toc costs a contents list, not the page; one line already
+app/lib/blog-view.ts	72	663	CONTRACT	rewrite	why it is top level, what types the name, and why it is derived rather than stored
+app/lib/blog-view.ts	106	393	CONTRACT	rewrite	optional because it is a migration, and what an old row degrades to; the date goes to history
+app/lib/editor/draft-buffer.ts	1	882	CONTRACT	rewrite	local and only local, never publishes, and the base-commit key rule
+app/lib/editor/draft-buffer.ts	20	45	CONTRACT	keep	what it is; one line already
+app/lib/editor/draft-buffer.ts	22	66	CONTRACT	keep	what it holds; one line already
+app/lib/editor/draft-buffer.ts	26	212	CONTRACT	keep	why these are never restored; already short
+app/lib/editor/draft-buffer.ts	34	171	CONTRACT	keep	what a new post keys on; three lines already
+app/lib/editor/draft-buffer.ts	40	68	CONTRACT	keep	what it reads; one line already
+app/lib/editor/draft-buffer.ts	55	142	WHY	keep	the editor still works without a crash net, and says so; two lines already
+app/lib/editor/draft-buffer.ts	72	304	CONTRACT	keep	why every base commit is dropped after a save; at the budget
+app/lib/editor/draft-buffer.ts	89	12	CONTRACT	keep	as above; one line already
+app/lib/editor/draft-buffer.ts	93	578	CONTRACT	rewrite	the two key schemes and how they are told apart; the three found in a browser go to history
+app/lib/editor/draft-buffer.ts	120	336	CONTRACT	keep	why a matching buffer is not offered; at the budget
+app/lib/media/resolvers.server.ts	1	1179	CONTRACT	rewrite	the seam's cost stated so it can be judged, and the structured-result rule
+app/lib/media/resolvers.server.ts	26	64	CONTRACT	keep	what it is; one line already
+app/lib/media/resolvers.server.ts	28	48	CONTRACT	keep	what it is; one line already
+app/lib/media/resolvers.server.ts	30	47	CONTRACT	keep	what it is; one line already
+app/lib/media/resolvers.server.ts	32	33	CONTRACT	keep	what it is; one line already
+app/lib/media/resolvers.server.ts	34	29	CONTRACT	keep	what it is; one line already
+app/lib/media/resolvers.server.ts	36	57	CONTRACT	keep	what it is; one line already
+app/lib/media/resolvers.server.ts	40	202	CONTRACT	keep	why batched and not per key; already short
+app/lib/media/resolvers.server.ts	53	331	CONTRACT	keep	why an array and not a runtime register(); at the budget
+app/lib/media/resolvers.server.ts	67	132	CONTRACT	keep	what false means for a delete; already short
+app/lib/media/resolvers.server.ts	72	55	CONTRACT	keep	what it carries; one line already
+app/lib/media/resolvers.server.ts	76	491	WHY	keep	failure is reported, never swallowed, and delete fails closed; at the budget
+app/routes/api.operator.ts	7	769	CONTRACT	rewrite	why a resource route and why one POST taking tool and args; the MCP timing goes to history
+app/routes/api.operator.ts	28	74	CONTRACT	keep	never cached and never indexed; one line already
+app/routes/api.operator.ts	51	310	CONTRACT	rewrite	metered here because this is the call that does something; the split date goes to history
+app/routes/api.operator.ts	98	1139	CONTRACT	rewrite	authenticated, spends no limit, and derived from the descriptors; the drift story goes to history
+app/lib/editor/divergence.server.ts	1	1254	CONTRACT	rewrite	why KV, why one key per slug, and the eventual-consistency boundary
+app/lib/editor/divergence.server.ts	30	87	CONTRACT	keep	what it is; already short
+app/lib/editor/divergence.server.ts	40	329	WHY	keep	no TTL, and the reassuring-silence failure it avoids; at the budget
+app/lib/editor/divergence.server.ts	56	80	CONTRACT	keep	what clears it; one line already
+app/lib/editor/divergence.server.ts	61	382	CONTRACT	keep	fails soft in its return value rather than throwing; at the budget
+app/lib/editor/divergence.server.ts	81	154	WHY	keep	an unparseable key is still evidence; two lines already
+app/lib/health/snapshot.server.ts	1	593	CONTRACT	keep	one writer, one reader, and what a writing reader would undo; at the budget
+app/lib/health/snapshot.server.ts	22	1288	CONTRACT	rewrite	never throws, awaited rather than deferred, no expiry, and the stated degradation
+app/lib/health/snapshot.server.ts	53	71	WHY	keep	a snapshot write must not cost the verdict; one line already
+app/lib/health/snapshot.server.ts	57	296	CONTRACT	keep	a throw is treated as absence, and why they read the same; already short
+app/lib/content/render-snippet.server.ts	2	295	CONTRACT	keep	imported for its side effect, and why Workers need it; already short
+app/lib/content/render-snippet.server.ts	10	1897	CONTRACT	rewrite	why a named export is what removes it from the client build, and that the resolver refuses
+app/lib/editor/feedback.ts	1	981	CONTRACT	rewrite	why the URL carries a success, why a failure cannot, and that everything parsed is untrusted
+app/lib/editor/feedback.ts	28	383	CONTRACT	rewrite	what the two fields are and why they are optional; the date goes to history
+app/lib/editor/feedback.ts	44	79	CONTRACT	keep	why short; one line already
+app/lib/editor/feedback.ts	49	350	CONTRACT	keep	always the edit route, and why; at the budget
+app/lib/editor/feedback.ts	73	395	CONTRACT	keep	null for anything that does not match, and what a missing date degrades to; at the budget
+app/routes/theme.ts	7	410	CONTRACT	keep	why the Referer and why it is checked against this origin; at the budget
+app/routes/theme.ts	17	712	WHY	rewrite	origin first, and the absent-Origin allowance the no-script half needs; the measurement goes to history
+app/routes/theme.ts	42	794	WHY	rewrite	a refusal rather than a default, and why the refusal is no-store; the date goes to history
+app/routes/theme.ts	74	72	CONTRACT	keep	what a GET means; one line already
+app/routes/blog.feed[.json].ts	7	631	CONTRACT	rewrite	the shared visibility read, where the shape is asserted, and why the cap is in the query
+app/routes/blog.feed[.json].ts	25	352	CONTRACT	keep	one envelope, and which member a copy would get wrong; at the budget
+app/routes/blog.feed[.json].ts	44	921	NUMBER	rewrite	why the content type is not the SHOULD, with the size that decided it; the grounds stay beside the header
+app/data/organisms.ts	1	1578	CONTRACT	rewrite	an allowlist, the ordering and case rules, and the reviewed exclusions, which ARE the decision
+app/data/organisms.ts	33	66	CONTRACT	keep	the ordering rule; one line already
+app/data/organisms.ts	37	13	CONTRACT	keep	the section label; one line already
+app/data/organisms.ts	45	199	CONTRACT	keep	why only this genus is bare; three lines already
+app/components/admin/disclosure.ts	3	1346	CONTRACT	rewrite	why it is shared, why the disclosure stays markup, and the ARIA ruling
+app/components/admin/disclosure.ts	44	132	CONTRACT	keep	why focus returns to the control; two lines already
+app/components/admin/disclosure.ts	66	139	CONTRACT	keep	pointerdown rather than click, and why; two lines already
+app/components/admin/disclosure.ts	72	206	CONTRACT	keep	why it closes on activation; three lines already
+app/routes/admin.preview.ts	9	1046	CONTRACT	rewrite	one renderer, read-only despite the POST, and that it is behind the admin gate
+app/routes/admin.preview.ts	36	288	CONTRACT	rewrite	the same transform from the same module; the 14-byte measurement goes to history
+app/routes/admin.preview.ts	41	147	CONTRACT	keep	labels errors as the save path does; two lines already
+app/routes/admin.preview.ts	53	338	WHY	rewrite	why a preview failure is a 200
+app/lib/webmention/advertise.ts	3	1423	CONTRACT	rewrite	two readers one address, and why SITE_ORIGIN rather than the request's
+app/lib/webmention/advertise.ts	34	280	CONTRACT	keep	why a function rather than a second constant; already short
+app/data/phage-hunters.ts	1	1517	CONTRACT	rewrite	why it is a data file, the neutral-alt ruling, why alt is not empty, and the names ruling
+app/lib/context.ts	3	164	CONTRACT	keep	what it carries and who sets it; already short
+app/lib/context.ts	16	968	CONTRACT	rewrite	why a nonce cannot be an exit-path mutation, and why it is its own context
+app/lib/context.ts	38	67	CONTRACT	keep	what it returns when unset; one line already
+app/lib/context.ts	43	303	CONTRACT	keep	what it is for, and never make a reader wait for bookkeeping; already short
+app/lib/nav.ts	1	1092	CONTRACT	rewrite	one consumer, and the mirror that is now unrepresentable; the dated second reader goes to history
+app/lib/nav.ts	24	389	CONTRACT	keep	the position is the decision; at the budget
+app/routes/publications[.json].ts	6	1081	CONTRACT	rewrite	why this export is unfiltered, and why it comes from the source file
+app/routes/publications[.json].ts	31	277	CONTRACT	keep	why the specific media type and what the generic one would fail to say; already short
+app/lib/editor/link-targets.server.ts	5	1080	CONTRACT	rewrite	one module, every post is offered with its state, and why stateOf is called on the server
+app/lib/editor/link-targets.server.ts	31	215	CONTRACT	keep	why the mapping happens here; three lines already
+app/lib/auth-rate.server.ts	1	296	CONTRACT	keep	the binding call and nothing else, and where the rules live; at the budget
+app/lib/auth-rate.server.ts	11	993	WHY	rewrite	fails closed, what that costs, and the separate key prefix; the three past catches go to history
+app/routes/blog.rss[.xml].ts	7	1039	CONTRACT	rewrite	one feed policy, the shared visibility read, the cap in the query, and who owns the escaping
+app/routes/blog.rss[.xml].ts	32	205	CONTRACT	keep	the shared builder, and what a second feed would have copied; already short
+app/lib/client-ip.ts	1	1203	CONTRACT	rewrite	one statement of the identity, why the header is trustworthy, and the JUSTIFIED SUBSTITUTION marker a gate counts
+app/routes/llms-full[.txt].ts	6	1015	CONTRACT	rewrite	why it is composed at request time: the document depends on the clock
+app/routes/llms-full[.txt].ts	59	87	CONTRACT	keep	served for models, kept out of the index; two lines already
+app/routes/robots.ts	3	61	CONTRACT	keep	what the list is; one line already
+app/routes/robots.ts	16	1025	CONTRACT	rewrite	robots.txt is advisory and neither line is the control; both boundary statements stay
+app/routes/llms.ts	3	73	CONTRACT	keep	the source of truth and where the note is; one line already
+app/routes/llms.ts	7	818	CONTRACT	rewrite	the fallback is the content file, and .gitattributes is what keeps it byte-identical; the CRLF drift goes to history
+app/routes/llms.ts	30	60	CONTRACT	keep	served for models, kept out of the index; one line already
+app/routes/publications[.bib].ts	6	932	CONTRACT	rewrite	the showcase filter applies here and not per paper, and why there is no attachment disposition
+app/lib/content/wasm.server.ts	1	220	CONTRACT	keep	what resolves the import and what the plugin emits; three lines already
+app/lib/content/wasm.server.ts	8	665	CONTRACT	rewrite	why the Node default cannot be used in a Worker, and why the type is loose
+app/routes/api.auth.$.ts	8	862	CONTRACT	rewrite	what the limit actually caps, and why both exports are guarded; the audit date goes to history
+app/routes/blog.series.$series.rss[.xml].ts	10	860	CONTRACT	rewrite	the three rules that make a series feed differ: order, no cap, and 404 agreement
+app/routes/blog.$slug[.md].ts	7	257	CONTRACT	keep	the same visibility gate as the HTML route; already short
+app/routes/blog.$slug[.md].ts	24	588	CONTRACT	rewrite	one representation, so nothing for a Cookie dimension to collapse against; the date and the grounds pointer stay
+app/routes/blog.tags.$tag.rss[.xml].ts	10	692	CONTRACT	rewrite	the shared builder and the 404 agreement
+app/routes/blog.atom[.xml].ts	7	616	CONTRACT	rewrite	RSS remains advertised, and the two dialects cannot carry different posts
+app/routes/blog.tags.$tag.feed[.json].ts	10	487	CONTRACT	keep	the shared envelope and the inherited content-type ruling; at the budget
+app/routes/blog.series.$series.feed[.json].ts	10	420	CONTRACT	keep	the shared envelope, the inherited order and the inherited ruling; at the budget
+app/routes/publications.$slug[.bib].ts	8	310	CONTRACT	keep	unfiltered, and what filtering here would break; at the budget
+app/routes/publications[.ris].ts	6	303	CONTRACT	keep	the registered media type and what text/plain would cost; already short
+app/db/auth-schema.ts	4	277	CONTRACT	keep	why the column names match, and what lives in KV instead; already short
+app/routes/publications.$slug[.ris].ts	8	78	CONTRACT	keep	unfiltered, pointing at the twin; one line already
+app/lib/auth-client.ts	3	74	CONTRACT	keep	same-origin, and what baseURL defaults to; one line already

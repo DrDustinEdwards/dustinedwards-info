@@ -65,18 +65,11 @@ export const posts = sqliteTable(
     check("posts_kind_check", sql`${t.kind} in ('page', 'post')`),
     check("posts_status_check", sql`${t.status} in ('draft', 'published')`),
     /*
-     * THE INDEXES, declared here since 2026-08-28 because they were declared
-     * NOWHERE a reader of this file could see.
-     *
-     * Hard rule 11 calls this file the source of truth, and it modelled every
-     * posts column and not one of its four indexes. A query planner decision
-     * is part of what the table IS: the visibility predicate every public read
-     * composes is covered by the first of these, and somebody reading only
-     * this file would have concluded it was a table scan.
-     *
-     * `check:invariants` section 4 now compares index NAMES AND COLUMNS
-     * against the migrations in both directions, so these are checked rather
-     * than merely written down.
+     * THE INDEXES, declared here because otherwise they are declared nowhere a reader of this file can
+     * see. Hard rule 11 calls this file the source of truth, and a query planner decision is part of
+     * what the table IS: somebody reading only this file would have taken the visibility predicate every
+     * public read composes for a table scan. Section 4 compares index NAMES AND COLUMNS against the
+     * migrations in both directions.
      */
     /** Covers `publiclyVisible()`, which every public read composes. */
     index("posts_status_publish_idx").on(t.status, t.publishAt),
@@ -122,17 +115,15 @@ export const settings = sqliteTable("settings", {
 });
 
 /**
- * The media INDEX. Grounds are in drizzle/0009_media_index.sql.
+ * The media INDEX. Grounds are in `drizzle/0009_media_index.sql`.
  *
- * DERIVED, never authoritative. R2 and `public/` are the truth for what exists;
- * this is the queryable surface over them, and `check:media` reconciles the two
- * in both directions. The conflict rule is not negotiable and is stated once:
- * **R2 WINS.** A row with no object is deleted, an object with no row is
- * backfilled, never the reverse.
+ * DERIVED, never authoritative. R2 and `public/` are the truth for what exists and this is the
+ * queryable surface over them, reconciled by `check:media` in both directions. The conflict rule is
+ * not negotiable: R2 WINS. A row with no object is deleted, an object with no row is backfilled,
+ * never the reverse.
  *
- * It still describes the ASSET and never the citations. Those live in
- * `mediaRefs`, written by the pipeline at render time, so no row here can
- * authorise a delete that a fresh count would refuse.
+ * It describes the ASSET and never the citations. Those live in `mediaRefs`, so no row here can
+ * authorise a delete a fresh count would refuse.
  */
 export const media = sqliteTable(
   "media",
@@ -167,31 +158,21 @@ export const media = sqliteTable(
     focalY: real("focal_y"),
 
     /**
-     * Admin organisational labels, DELIMITER-WRAPPED: `,alpha,beta,` or "".
-     *
-     * A column rather than the posts pattern, and the four-point basis is in
-     * `drizzle/0011_media_trash_tags.sql`. The wrapping is what lets an exact
-     * tag match use LIKE without `art` also matching `chart`. Never written
-     * raw: `serialiseTags()` in `app/lib/media/tags.mjs` owns the form, and it
-     * strips the delimiter and both LIKE wildcards out of every part.
+     * Admin organisational labels, DELIMITER-WRAPPED: `,alpha,beta,` or "". The wrapping is what lets
+     * an exact tag match use LIKE without `art` also matching `chart`. NEVER WRITTEN RAW:
+     * `serialiseTags()` owns the form and strips the delimiter and both LIKE wildcards out of every
+     * part. The four-point basis is in `drizzle/0011_media_trash_tags.sql`.
      */
     tags: text("tags").notNull().default(""),
 
     /**
      * When the LIBRARY stopped showing this asset. NULL means not trashed.
      *
-     * A LIBRARY STATE, NOT AN OBJECT STATE. R2 and the public URL are untouched
-     * by trashing: keys are content-addressed and may already be cited, so a
-     * trashed asset a post cites keeps rendering for every reader while the
-     * library stops offering it to the author.
+     * A LIBRARY STATE, NOT AN OBJECT STATE. R2 and the public URL are untouched, so a trashed asset a
+     * post cites keeps rendering for every reader while the library stops offering it.
      *
-     * One nullable timestamp rather than a boolean plus a date, because two
-     * columns can disagree and one cannot.
-     *
-     * **Reconciliation is blind to it on purpose.** `check:media` compares rows
-     * against R2 in both directions and the object still exists, so the
-     * reconciliation readers keep seeing trashed rows. Only library views
-     * filter.
+     * One nullable timestamp rather than a boolean plus a date, because two columns can disagree.
+     * Reconciliation is blind to it on purpose: the object still exists, so only library views filter.
      */
     trashedAt: text("trashed_at"),
 
@@ -206,23 +187,22 @@ export const media = sqliteTable(
     index("media_storage_idx").on(t.storage),
     index("media_kind_idx").on(t.kind),
     index("media_role_idx").on(t.role),
-    /* Partial in the migration (`WHERE trashed_at IS NOT NULL`), because the
-       only question asked of it is which rows ARE trashed. Drizzle models the
-       index; the partial predicate lives in the SQL, which is the source that
-       runs. Section 4 of check:invariants compares columns, not index
-       predicates, so this asymmetry is invisible to it and is stated here. */
+    /*
+     * Partial in the migration (`WHERE trashed_at IS NOT NULL`), because the only question asked of it
+     * is which rows ARE trashed. Drizzle models the index and the predicate lives in the SQL that runs.
+     * Section 4 of `check:invariants` compares columns, not index predicates, so this asymmetry is
+     * invisible to it and is stated here instead.
+     */
     index("media_trashed_idx").on(t.trashedAt),
   ],
 );
 
 /**
- * Who cites what. Written by the PIPELINE at render time, populated in Phase 3.
+ * Who cites what. Written by the PIPELINE at render time.
  *
- * Usage stays DERIVED (ruling 2, carried forward): this table is a record of
- * what the renderer emitted, not a cache anyone may consult to decide existence.
- * Writing refs at render time is what closes the fail-open, because anything
- * through the pipeline is indexed by construction and anything else is an
- * enumerable gap rather than a silent one.
+ * Usage stays DERIVED: this is a record of what the renderer emitted, not a cache anyone may consult
+ * to decide existence. Writing refs at render time is what closes the fail-open, because anything
+ * through the pipeline is indexed by construction and anything else is an enumerable gap.
  */
 export const mediaRefs = sqliteTable(
   "media_refs",
@@ -248,32 +228,16 @@ export const mediaRefs = sqliteTable(
 /**
  * The site-wide search index. DERIVED, and the only table drizzle did not model.
  *
- * ## WHY IT IS DECLARED HERE, given that nothing reads it through drizzle
+ * WHY IT IS DECLARED HERE: hard rule 11 makes this file the source of truth for the column schema,
+ * and a table absent from it is absent from section 4's comparison against the migrations and the
+ * live database. This table's column names live inside hand-written SQL strings.
  *
- * Hard rule 11 says this file is the source of truth for the column schema, and
- * `check:invariants` section 4 compares it against the migrations and the live
- * database in both directions. A table absent from this file is absent from that
- * comparison: until 2026-08-28 the gate printed `search_docs` on a line reading
- * "not modelled in drizzle and UNCOVERED", which is an exposure honestly stated
- * and still an exposure. Declaring it closes it. That is the whole benefit and
- * it is a real one: this table's column names live inside hand-written SQL
- * strings, which is exactly the shape that produced the `media.r2_key` defect
- * section 4 was built for.
+ * AND WHY EVERY READ STAYS IN RAW SQL: hard rule 1 is enforced here by section 8, which scans the
+ * raw SQL for the composed predicate, and section 6's drizzle-shaped scan knows only `posts`, so a
+ * query-builder read would be seen by NEITHER. Section 4a asserts there is no such read; if one is
+ * ever wanted, teach section 6 about this table FIRST and delete that assertion in the same commit.
  *
- * ## AND WHY EVERY READ STAYS IN RAW SQL
- *
- * Hard rule 1 is enforced for this table by section 8, which scans the raw SQL
- * for the composed visibility predicate. Section 6, the drizzle-shaped scan,
- * knows only about `posts`. So a query-builder read of this table would be seen
- * by NEITHER, which is a hole that declaring the table would otherwise open.
- *
- * Section 4a asserts there is no such read, so the property is checked rather
- * than requested. If a drizzle read is ever wanted here, teach section 6 about
- * this table FIRST and delete that assertion in the same commit.
- *
- * The two FTS5 mirrors over this table stay out of drizzle entirely: they are
- * `CREATE VIRTUAL TABLE`, which the query builder cannot express, and section 4
- * excludes them by reading their DDL rather than by matching their names.
+ * The two FTS5 mirrors stay out of drizzle: they are `CREATE VIRTUAL TABLE`.
  */
 export const searchDocs = sqliteTable(
   "search_docs",
@@ -296,11 +260,9 @@ export const searchDocs = sqliteTable(
     anchor: text("anchor"),
     ordinal: integer("ordinal").notNull().default(0),
     /**
-     * Visibility, carried on the record rather than joined from `posts`.
-     *
-     * A future `publish_at` has to be re-evaluated per request, so an index
-     * storing only what was visible at sync time would leak a scheduled post
-     * the moment its date passed, or hide it forever.
+     * Visibility, carried on the record rather than joined from `posts`. A future `publish_at` has to
+     * be re-evaluated per request, so an index storing only what was visible at sync time would leak a
+     * scheduled post the moment its date passed, or hide it forever.
      */
     status: text("status", { enum: ["draft", "published"] }).notNull(),
     publishAt: integer("publish_at"),
@@ -318,33 +280,17 @@ export const searchDocs = sqliteTable(
 );
 
 /**
- * WEBMENTIONS RECEIVED FROM OTHER SITES. Grounds in drizzle/0014_webmentions.sql.
+ * WEBMENTIONS RECEIVED FROM OTHER SITES. Grounds in `drizzle/0014_webmentions.sql`.
  *
- * ## THE FIRST TABLE HERE THAT IS NEITHER AUTHORED NOR DERIVED
+ * NEITHER AUTHORED NOR DERIVED. A row was written by a stranger's POST and there is no source to
+ * converge it back to, so hard rule 18 does not reach this table.
+ * A rebuild cannot repair it, and the only bound on its size is the one the endpoint enforces.
  *
- * Every other content table on this site is one or the other. `posts` is
- * authored in the repository; `media`, `media_refs` and `search_docs` are
- * DERIVED and converge toward the repository and the bucket under hard rule 18.
- * A webmention row is neither: it was written by a stranger's POST, and there
- * is no source to converge it back to. So rule 18 does not reach this table,
- * a rebuild cannot repair it, and the only bound on its size is the one the
- * endpoint enforces on the way in. `app/routes/webmention.ts` states the four
- * bounds and why they are the whole answer.
+ * NO IP COLUMN, AND THERE NEVER IS ONE. Nothing about the sender is recorded beyond what their own
+ * page says, which is what `/privacy` claims and what this absence makes true.
  *
- * ## NO IP COLUMN, AND THERE NEVER IS ONE
- *
- * The per-IP rate limit is a Durable Object counter keyed on `wm:<ip>`, which
- * expires with its window and stores no row. Nothing about the sender is
- * recorded here beyond what the sender's own PAGE says: a URL they published,
- * a name from their h-card, and a sentence of their own prose. That is what
- * `/privacy` claims, and this absence is what makes the claim true.
- *
- * ## EVERY STRING IS PLAIN TEXT
- *
- * `author_name`, `author_url` and `excerpt` are read out of a document this
- * site does not control. They are stored as text, never as markup, and the H2
- * render is escaped text plus one validated anchor. A column that held HTML
- * would make every reader of this table a potential injection site.
+ * EVERY STRING IS PLAIN TEXT. `author_name`, `author_url` and `excerpt` are read out of a document
+ * this site does not control, so they are stored as text and never as markup.
  */
 export const webmentions = sqliteTable(
   "webmentions",
@@ -353,22 +299,16 @@ export const webmentions = sqliteTable(
     /** Absolute http(s) URL of the page that linked here. */
     sourceUrl: text("source_url").notNull(),
     /**
-     * THE POST SLUG, NOT A URL, and the difference is the point.
-     *
-     * A stored target URL would carry the origin it was received on, and this
-     * site answers on workers.dev today and on the apex after cutover. Rows
-     * written before the move would then name a host the render no longer
-     * uses, and deduplication would treat the two spellings of one post as two
-     * targets. The slug is what `posts` is keyed by and it does not move.
+     * THE POST SLUG, NOT A URL, and the difference is the point. A stored target URL would carry the
+     * origin it was received on, so rows written before the cutover would name a host the render no
+     * longer uses and deduplication would treat two spellings of one post as two targets.
      */
     targetSlug: text("target_slug").notNull(),
     /**
-     * unverified -> pending | failed, then pending -> approved | rejected.
-     *
-     * `unverified` is what the endpoint writes before it has fetched anything,
-     * so a row exists for the global cap to count from the first moment. Only
-     * `approved` will ever render (H2), which is why an unfetched or refused
-     * mention is inert rather than merely unshown.
+     * `unverified -> pending | failed`, then `pending -> approved | rejected`. `unverified` is what the
+     * endpoint writes before it has fetched anything, so a row exists for the global cap to count from
+     * the first moment. Only `approved` ever renders, which is why an unfetched or refused mention is
+     * inert rather than merely unshown.
      */
     status: text("status", {
       enum: ["unverified", "pending", "approved", "rejected", "failed"],
@@ -391,13 +331,9 @@ export const webmentions = sqliteTable(
       sql`${t.status} in ('unverified', 'pending', 'approved', 'rejected', 'failed')`,
     ),
     /**
-     * ONE ROW PER (SOURCE, TARGET). The third of the four bounds.
-     *
-     * A sender re-announcing the same mention updates the row it already has
-     * rather than adding one, so a loop against this endpoint cannot grow the
-     * table at all: the ceiling is the corpus size times the number of distinct
-     * pages on the internet that link to it, which is a real number rather than
-     * a function of how fast somebody can POST.
+     * ONE ROW PER (SOURCE, TARGET). A sender re-announcing the same mention updates the row it already
+     * has, so a loop against this endpoint cannot grow the table at all: the ceiling is a function of
+     * how many pages link here, not of how fast somebody can POST.
      */
     uniqueIndex("webmentions_source_target_idx").on(t.sourceUrl, t.targetSlug),
     /** Covers the moderation queue's grouping and the retention sweep's window. */

@@ -1,17 +1,8 @@
 /**
  * Ask mode: search Layer 2, over Cloudflare AI Search.
  *
- * THE RULE THIS FILE EXISTS UNDER. Classic search is D1 and only D1. Nothing
- * here is imported by `search.server.ts`, no classic query awaits anything in
- * this module, and the zero-JS path never reaches it. If `AI_SEARCH` is not
- * bound, `askAvailable()` is false, no Ask affordance is rendered, and /search
- * is byte-identical to what it was before Layer 2 existed. That property is the
- * off switch the cost-review ruling in decisions.md depends on, so it is a
- * requirement rather than a nicety.
- *
- * The corpus is the SAME section-grained records the D1 index uses, derived by
- * the same `records.mjs`. There is one record derivation for the whole site,
- * exactly as there is one markdown renderer.
+ * CLASSIC SEARCH IS D1 AND ONLY D1: with `AI_SEARCH` unbound no Ask affordance renders and /search
+ * is byte-identical to what it was before Layer 2. That off switch is a requirement, not a nicety.
  */
 
 import { createContext } from "react-router";
@@ -34,10 +25,8 @@ import {
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 /*
- * The pure half, in plain JavaScript so `check:tests` can reach it. Re-exported
- * rather than re-implemented: `search.ask.ts` imports the guard and the refusal
- * from this module, and a second import path would be a second thing to keep in
- * step. Grounds in ask-guard.mjs.
+ * The pure half, in plain JavaScript so `check:tests` can reach it, and RE-EXPORTED rather than
+ * re-implemented: a second import path would be a second thing to keep in step.
  */
 import {
   NO_ANSWER_TEXT,
@@ -54,35 +43,15 @@ export { NO_ANSWER_TEXT, answerLeaksPrompt, citedSlugs, guardAnswerStream };
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 /**
- * How many chunks the answer may draw on.
- *
- * ## RE-DERIVED 2026-08-28, and the old basis was a corpus size
- *
- * It read "the corpus is 7 records from one post", which was true when it was
- * written and had been false for a month: the index has grown by more than an
- * order of magnitude since, and nothing moved this value or noticed. A ceiling
- * justified by how much there is to retrieve has to be re-derived every time
- * anybody publishes, which is why it went stale.
- *
- * THE BOUND IS THE ANSWER, NOT THE CORPUS, and that is why it does not move.
- * The system prompt below asks for two or three sentences. An answer that
- * length cannot honestly synthesise more sources than this; past it, retrieval
- * widens the net without widening the answer, and the extra chunks only dilute
- * the ranking that chose the good ones. So the corpus growing does not raise
- * this, and shrinking would not lower it.
- *
- * No corpus figure appears here on purpose. This file owns this number and
- * nothing else, per rule 17: the index size is `sync_ask`'s to report and the
- * health check's to watch, and a copy here could only rot.
+ * How many chunks the answer may draw on. THE BOUND IS THE ANSWER, NOT THE CORPUS: past it,
+ * retrieval widens the net without widening the answer. No corpus figure here, per rule 17.
  */
 const MAX_CHUNKS = 6;
 
 /**
- * True when the AI Search binding is present.
- *
- * Checked as a property on env rather than in a try/catch, because "the
- * binding was removed" and "the instance errored" are different situations and
- * only the first one should silently remove the feature.
+ * True when the AI Search binding is present, checked as a property rather than in a try/catch:
+ * "the binding was removed" and "the instance errored" are different, and only the first should
+ * silently remove the feature.
  */
 export function askAvailable(env: Env): boolean {
   return Boolean(env.AI_SEARCH);
@@ -97,19 +66,15 @@ export interface AskCitation {
 }
 
 /**
- * Streams an answer. Returns the raw SSE stream from AI Search.
- *
- * The stream is handed to the client untouched rather than parsed and
- * re-emitted, so the Worker holds nothing in memory and time-to-first-token is
- * whatever AI Search delivers. The client already has to parse SSE to render
- * tokens as they arrive, so a second envelope would buy nothing.
+ * Streams an answer, handing the raw SSE upstream to the client untouched rather than parsing and
+ * re-emitting: the Worker holds nothing in memory, and the client already parses SSE, so a second
+ * envelope would buy nothing.
  */
 export async function askStream(env: Env, question: string): Promise<ReadableStream> {
   return env.AI_SEARCH.chatCompletions({
     /*
-     * COMPOSED IN `askMessages`, not here, because the last message is the
-     * retrieval query and a test has to be able to see it. Decorating it costs
-     * the whole search: the grounds, and the measurement, are on that function.
+     * COMPOSED IN `askMessages`, not here, because the last message is the retrieval query and a test
+     * has to be able to see it. Decorating it costs the whole search.
      */
     messages: askMessages(question),
     model: ASK_MODEL,
@@ -121,16 +86,8 @@ export async function askStream(env: Env, question: string): Promise<ReadableStr
 }
 
 /**
- * Splits the upstream stream in two: one to the reader, one to an accumulator.
- *
- * The reader gets bytes as they arrive, unchanged, so caching costs
- * time-to-first-token nothing. The second copy is parsed after the response has
- * already been sent, inside `waitUntil`, and what it accumulates is what gets
- * cached.
- *
- * Returns the stream to hand to the reader plus a promise of the parsed answer.
- * The promise resolves to null when the generation produced nothing, which must
- * not be cached.
+ * Splits the upstream in two, the second copy parsed inside `waitUntil`, so caching costs
+ * time-to-first-token nothing. Null when the generation produced nothing, which must not be cached.
  */
 export function teeForCache(upstream: ReadableStream): {
   toReader: ReadableStream;
@@ -141,11 +98,8 @@ export function teeForCache(upstream: ReadableStream): {
 }
 
 /**
- * Reads a full SSE completion into the pieces the cache needs.
- *
- * Same frame handling as the client, deliberately: if the two disagreed about
- * what a frame means, a cached replay would not match what the reader saw the
- * first time.
+ * Same frame handling as the client, deliberately: if the two disagreed about what a frame means,
+ * a cached replay would not match what the reader saw the first time.
  */
 async function parseSseAnswer(
   stream: ReadableStream,
@@ -195,13 +149,8 @@ async function parseSseAnswer(
 }
 
 /**
- * Rebuilds a cached answer as the same SSE shape the model produces.
- *
- * The client cannot tell a replay from a generation, which is the point: one
- * parser, one rendering path, and no second code path that could drift. The
- * whole answer arrives as a single delta rather than re-simulating typing,
- * because pretending to think for two seconds over a cached string would be
- * theatre.
+ * Rebuilds a cached answer in the shape the model produces, so one parser and one rendering path
+ * serve both. One delta rather than re-simulated typing, which would be theatre.
  */
 export function replayCachedAnswer(cached: {
   answer: string;
@@ -224,39 +173,18 @@ export interface CorpusSyncResult {
 }
 
 /**
- * Every item in the index, following pagination to the end.
- *
- * `items.list()` is PAGED: it takes page and per_page and reports total_count,
- * and a bare call returns only the first page. Every caller here used a bare
- * call, which was invisible while the corpus was seven records and became a
- * correctness bug the moment it was not. Measured 2026-07-29: a prune reported
- * "removed 0" for a post whose items were real but sat on a later page, so a
- * draft stayed answerable through the public Ask endpoint after the code that
- * was supposed to remove it had run and reported success.
- *
- * A prune that cannot see an item cannot delete it, and it reports success
- * either way. That is the failure mode this exists to remove.
+ * Every item, following pagination to the end. `items.list()` IS PAGED and a bare call returns the
+ * first page only: a prune that cannot see an item cannot delete it, and reports success either way.
  */
 async function listAllAskItems(env: Env, timings?: Timings) {
   /** @type {any[]} */
   const all: Awaited<ReturnType<typeof env.AI_SEARCH.items.list>>["result"] = [];
-  // 50 is the API maximum. Measured: per_page 100 is rejected with
-  // "Too big: expected number to be <=50".
+  // 50 is the API maximum.
   const perPage = 50;
   for (let page = 1; ; page += 1) {
     /*
-     * ONE MARK PER PAGE, and the COUNT of them is the measurement.
-     *
-     * The pagination cost has only ever been inferred from the index size:
-     * "81 items at 50 a page, so two round trips". That is arithmetic, not a
-     * reading. Emitting a mark per iteration means the Server-Timing header
-     * carries as many `ask_list_page` entries as there were round trips, each
-     * with its own duration, so the page count is COUNTED and the cost is
-     * attributed to a specific page rather than to the loop.
-     *
-     * Entries, not a map: two pages produce two entries with the same name, and
-     * anything that collapses them by name reports one. That mistake was made
-     * once already in this codebase's own measurement of artifact_load.
+     * ONE MARK PER PAGE, so round trips are COUNTED rather than inferred from the index size. Entries,
+     * not a map: two pages produce two entries with one name, and collapsing by name reports one.
      */
     const listed = await timed(timings, "ask_list_page", () =>
       env.AI_SEARCH.items.list({ page, per_page: perPage }),
@@ -275,19 +203,9 @@ async function listAllAskItems(env: Env, timings?: Timings) {
 /**
  * The posts that may appear in the Ask index.
  *
- * THE AI INDEX IS A PUBLIC SURFACE. `/search/ask` is unauthenticated and its
- * citations name the post they came from, so anything uploaded here is
- * readable by anyone who asks the right question. That makes this filter the
- * same kind of gate as `publiclyVisible()` on the D1 side, and it must agree
- * with it: a draft is excluded, and so is a post whose publish_at is still in
- * the future.
- *
- * This was missing, and it leaked. Five unpublished drafts staged through the
- * operator path on 2026-07-29 were uploaded unconditionally, and the public Ask
- * endpoint answered from one of them and cited it by slug. The classic index
- * was never affected: it filters at query time. Ask had no equivalent, because
- * AI Search has no per-item status the query can filter on, so the filter has
- * to happen at UPLOAD time. Nothing unpublished may enter the index at all.
+ * THE AI INDEX IS A PUBLIC SURFACE, cited by slug, so this must agree with `publiclyVisible()`. THE
+ * FILTER HAS TO HAPPEN AT UPLOAD TIME: AI Search has no per-item status a query can filter on, so
+ * nothing unpublished may enter at all.
  *
  * @param posts
  */
@@ -295,15 +213,8 @@ function publishableForAsk<T extends { draft?: boolean; publishAt?: string | nul
   posts: readonly T[],
 ): T[] {
   /*
-   * COMPOSED, NOT RESTATED, since 2026-08-23. This used to be its own filter:
-   * `draft === true` out, `publishAt > now` out. It agreed with
-   * `publiclyVisible()` by inspection and by a grep in `check:policy`, and by
-   * nothing else. A third hand-rolled copy of the visibility rule is the exact
-   * shape that leaked five drafts into Ask on 2026-07-29.
-   *
-   * `statusForDraft` is the mapping between the artifact's boolean and the row's
-   * string, so this asks the SAME predicate the D1 read path asks rather than
-   * asking an equivalent question a different way.
+   * COMPOSED, NOT RESTATED: a hand-rolled copy agreed with `publiclyVisible()` by inspection and by
+   * nothing else, which is the shape that leaked drafts into Ask.
    */
   const now = Date.now();
   return posts.filter((p) =>
@@ -317,34 +228,21 @@ function askPublishable(post: { draft?: boolean; publishAt?: string | null }): b
 }
 
 /**
- * Uploads every search record to built-in storage.
- *
- * WHY BUILT-IN STORAGE RATHER THAN THE CRAWLER. The crawler only indexes a
- * domain onboarded to this Cloudflare account, and the apex still resolves to
- * the legacy WordPress site, so a crawl would index the wrong site entirely.
- * It would also index whole pages, losing the heading granularity that lets a
- * citation deep-link to the section that answered the question. Built-in
- * storage indexes immediately; external sources run on a 6 hour schedule and
- * pause after 31 days without a query.
- *
- * Upload is an UPSERT keyed by filename, so re-running is idempotent and a
- * retitled section replaces itself rather than accumulating.
+ * Uploads every search record to built-in storage rather than through the crawler, which would
+ * index the apex, still the legacy site, and would lose the heading granularity a citation
+ * deep-links to. Upload is an UPSERT keyed by filename, so re-running is idempotent.
  */
 export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   /*
-   * THE CORPUS COMES FROM D1, since the artifact arc. The records were
-   * materialised into `search_docs` by the same records.mjs both writers run,
-   * and `askCorpusRecords` reads them back with `visibilityClause` composed
-   * in the SQL, so drafts and future posts never enter the index for the
-   * same one-owner reason `publishableForAsk` protects the per-post path.
+   * THE CORPUS COMES FROM D1, materialised by the same `records.mjs` both writers run and read back
+   * with `visibilityClause` composed in the SQL, so drafts and future posts never enter the index.
    */
   const records = await askCorpusRecords(env);
   const keys: string[] = [];
 
   for (const record of records) {
-    // Fail closed. A slug or anchor containing the separator would produce a
-    // key that resolves back to the wrong URL, and a citation pointing at the
-    // wrong section is a worse failure than no citation at all.
+    // Fail closed: a slug or anchor containing the separator would produce a key that resolves back to
+    // the wrong URL, and a citation pointing at the wrong section is worse than no citation.
     if (record.url.includes(KEY_SEPARATOR)) {
       throw new Error(
         `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
@@ -352,54 +250,32 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
       );
     }
     const key = keyForUrl(record.url);
-    // The heading is included in the uploaded text. The body alone loses what
-    // the section is about, and the retrieval model reads this as prose.
+    // The heading is included in the uploaded text: the body alone loses what the section is about.
     const content = `# ${record.title}\n\n${record.body}\n`;
     await env.AI_SEARCH.items.upload(key, content);
     keys.push(key);
   }
 
   /*
-   * THE PAPERS, FROM THEIR TWINS RATHER THAN FROM `search_docs`.
-   *
-   * The records above are posts: `askCorpusRecords` scopes to `type = 'post'`,
-   * so the 36 paper records in `search_docs` never reach the loop. That is not
-   * an oversight being worked around here, it is the split ruling 63 draws.
-   *
-   * The paper record in `search_docs` carries the abstract, which is what
-   * keyword search should match and snippet. What Ask should retrieve over is
-   * the PAPER, and the twin is the document that has it: the record, the
-   * abstract and the extracted text of the PDF, which is 1.13 MB across the
-   * corpus and has no business in an FTS5 index that shows the line it matched.
-   *
-   * Uploading both would put two documents about one paper in the retrieval
-   * index, and the shorter one would sometimes win a question the full text
-   * answers better.
+   * THE PAPERS, FROM THEIR TWINS RATHER THAN FROM `search_docs`: the record carries the abstract,
+   * which is what keyword search should snippet, and the twin has the text Ask should retrieve over.
+   * Uploading both would let the shorter sometimes win a question the longer answers.
    */
   for (const key of await uploadPaperTwins(env)) keys.push(key);
 
-  // The corpus just changed, so every cached answer was written against content
-  // that may no longer be true. Dropping them here is what stops a stale answer
-  // outliving the post it was drawn from. It happens on publish, which is the
-  // moment the change occurs, rather than being checked on every read forever.
+  // The corpus just changed, so every cached answer was written against content that may no longer
+  // be true. Dropping them at the moment of change is what stops a stale answer outliving the post.
   const dropped = await invalidateAnswerCache(env);
-  // The drift number just changed too. A delete rather than a write, because
-  // this path knows the cached value is stale and not what it became.
+  // A delete rather than a write: this path knows the cached value is stale, not what it became.
   await dropCachedDrift(env);
 
   return { uploaded: keys.length, keys, cacheDropped: dropped };
 }
 
 /**
- * Every paper's Ask item key, derived from the committed corpus.
- *
- * FROM THE MODULE, NOT FROM D1, and the reason is hard rule 1 rather than
- * convenience. Every `search_docs` reader has to compose `visibilityClause`
- * (check:invariants section 8 binds them), and composing it here would be
- * asking a visibility question about a corpus that has no visibility: a paper
- * is committed data, published by existing, with no draft state and no
- * schedule. Reading the module instead adds no reader to that surface and
- * points the index at the repository, which is the direction rule 18 requires.
+ * Every paper's Ask item key, FROM THE MODULE AND NOT FROM D1, on hard rule 1: composing
+ * `visibilityClause` here would ask a visibility question about a corpus that has none, and reading
+ * the module points the index at the repository, which is rule 18's direction.
  */
 function paperItemKeys(): string[] {
   return PUBLICATIONS.map((paper) => keyForUrl(paperPath(doiSlug(paper.doi))));
@@ -408,29 +284,12 @@ function paperItemKeys(): string[] {
 /**
  * Uploads every paper's markdown twin, and returns the keys it wrote.
  *
- * ## THE TWIN IS FETCHED THROUGH `ASSETS`, WHICH LOOKS INDIRECT AND IS NOT
+ * FETCHED THROUGH `ASSETS` because a Worker cannot read a file it does not import, and the twins
+ * are gitignored so the extracted text stays out of the bundle. Hard rule 7's property comes with
+ * it: what is indexed is the document the site actually serves at that URL.
  *
- * The twins are static assets, generated at build and gitignored, precisely so
- * that 1.13 MB of extracted PDF text stays out of the Worker bundle (the trade
- * is argued in full on `twin.mjs`). A Worker cannot read a file from its own
- * bundle that is not imported into it, so the way to the bytes is the assets
- * binding, and the binding has exactly one method: `fetch`.
- *
- * That has a property worth having anyway. What gets indexed is the document
- * the site actually serves at that URL, on this deployment, rather than a
- * second copy assembled from the same inputs. Hard rule 7's shape: the live
- * claim is verified on the live path.
- *
- * The origin in the URL is arbitrary and never leaves the isolate; the assets
- * binding routes on the path.
- *
- * ## A MISSING TWIN IS REPORTED, NOT INVENTED
- *
- * If the build step did not run, the fetch answers 404 and this uploads
- * nothing for that paper rather than an empty document. The key is still
- * returned, for the reason a failed upload still joins `live` in `syncAskPost`:
- * the caller's prune deletes every key it is not given, so omitting it would
- * turn a missing build into a DELETION of the copy already in the index.
+ * A MISSING TWIN IS REPORTED, NOT INVENTED, and its key is still returned: the caller's prune
+ * deletes every key it is not given, so omitting it would turn a missing build into a DELETION.
  */
 async function uploadPaperTwins(env: Env): Promise<string[]> {
   const keys: string[] = [];
@@ -455,73 +314,34 @@ async function uploadPaperTwins(env: Env): Promise<string[]> {
 }
 
 /**
- * Syncs ONE post's records into the index, and drops that post's stale items.
- *
- * This is what the editor's save path calls, and it is why Ask does not rot as
- * the blog grows. A full corpus sync on every save is correct at seven records
- * and absurd at seven hundred: it would re-upload every section of every post
- * because one post changed. Section decomposition is a pure function of a
- * single post's markdown, which is exactly the property the section-grained
- * ruling records, so the incremental path is sound rather than a shortcut.
- *
- * Scoped prune: a save that removes or renames a heading leaves an item behind
- * that still answers questions about a section the post no longer has. Only
- * keys belonging to THIS post are considered, so a concurrent post is never
- * touched.
+ * Syncs ONE post's records and drops that post's stale items, which is sound rather than a shortcut
+ * because section decomposition is a pure function of one post's markdown. The prune is scoped to
+ * this post's keys, so a concurrent post is never touched.
  */
 export async function syncAskPost(
   env: Env,
   post: Parameters<typeof recordsForPosts>[0][number],
 ): Promise<{ uploaded: number; removed: number; failed: string[] }> {
-  // A draft uploads NOTHING, and actively removes anything this post already
-  // has in the index. Skipping the upload alone would be a silent leak on the
-  // unpublish path: a post published, indexed, then withdrawn would stay
-  // answerable forever. The empty `live` set makes the existing prune below do
-  // the removal, so there is one removal path rather than two.
+  // A draft uploads NOTHING and actively removes what this post already has: skipping the upload
+  // alone would leave a withdrawn post answerable forever. The empty `live` set makes the prune below
+  // do it, so there is one removal path rather than two.
   const records = askPublishable(post) ? recordsForPosts([post]) : [];
   const live = new Set<string>();
 
   /*
-   * **ONE FAILING RECORD USED TO ABANDON THE REST, AND THAT IS THE DEFECT THIS
-   * LOOP IS SHAPED AROUND.**
+   * ONE FAILING RECORD USED TO ABANDON THE REST, and the caller catches by design, so a post's
+   * records went missing with the failure nowhere to go. Each is isolated and retried ONCE.
    *
-   * It was a plain `await` per record with no catch, so the first rejection
-   * threw out of this function. MEASURED CONSEQUENCE: on 2026-07-31 the
-   * Observable Plot post published with NINE records, the first upload failed,
-   * and all nine were missing from the index for three weeks. The caller
-   * catches by design (a save must not fail because an index write did), so
-   * the failure had nowhere to go but the drift badge.
-   *
-   * **THE FAILURE CLASS IS TRANSIENT, and that is measured rather than
-   * assumed.** Those same nine records uploaded without complaint when the
-   * corpus sync was finally run three weeks later, so the records were always
-   * uploadable and the original failure was a blip. This stack produces those:
-   * `sync-content` hit "transient read failed, retrying once" twice in one week
-   * against D1. A transient that costs nine records permanently is worth one
-   * retry.
-   *
-   * So: each record is isolated, retried ONCE, and a record that still fails
-   * does not stop the others.
-   *
-   * ## WHY A FAILED KEY STILL JOINS `live`, WHICH LOOKS WRONG AND IS NOT
-   *
-   * The prune below deletes every key this post owns that is NOT in `live`.
-   * Isolating the loop without this line would turn a transient upload failure
-   * into a DELETION of the perfectly good copy already in the index: the old
-   * record would be pruned because the new one failed to land. The throw used
-   * to prevent that by never reaching the prune at all.
-   *
-   * `live` means "this key should exist", not "this key was just written". A
-   * failed key should exist, so it goes in, and whatever is already there
-   * survives until a later sync replaces it.
+   * A FAILED KEY STILL JOINS `live`, WHICH LOOKS WRONG AND IS NOT: the prune deletes every key not in
+   * it, so isolating the loop without this would DELETE the good copy already indexed. `live` means
+   * "this key should exist", not "this key was just written".
    */
   const failed: string[] = [];
 
   for (const record of records) {
     if (record.url.includes(KEY_SEPARATOR)) {
-      // NOT caught below. This is a correctness guard, not a transient: the key
-      // would resolve back to the wrong URL and cite the wrong section. Retrying
-      // it would produce the same wrong key, so it still throws.
+      // NOT caught below: a correctness guard rather than a transient. The key would resolve to the wrong
+      // URL and cite the wrong section, and retrying would produce the same wrong key.
       throw new Error(
         `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
           `uploaded safely: ${record.url}`,
@@ -542,10 +362,8 @@ export async function syncAskPost(
     live.add(key);
   }
 
-  // Everything this post owns: `blog/<slug>.md` and `blog/<slug>__<anchor>.md`.
-  // Matched on the exact document key or the section prefix, never on a bare
-  // `startsWith(slug)`, which would also sweep up a longer slug that happens to
-  // begin with this one.
+  // Matched on the exact document key or the section prefix, never on a bare `startsWith(slug)`,
+  // which would sweep up a longer slug that happens to begin with this one.
   const documentKey = keyForUrl(post.url ?? `/blog/${post.slug}`);
   const sectionPrefix = `${documentKey.replace(/\.md$/, "")}${KEY_SEPARATOR}`;
   let removed = 0;
@@ -559,13 +377,10 @@ export async function syncAskPost(
   }
 
   await invalidateAnswerCache(env);
-  // The drift number just changed. A delete rather than a write, because this
-  // path knows the cached value is stale and not what it became.
+  // A delete rather than a write: this path knows the cached value is stale, not what it became.
   await dropCachedDrift(env);
-  // `records.length` MINUS what did not land. It used to return the record
-  // count unconditionally, which was accurate only because a failure threw
-  // before reaching here; with the loop isolated it would have reported nine
-  // uploads on a run that achieved none.
+  // `records.length` MINUS what did not land. It returned the record count unconditionally, which was
+  // accurate only because a failure threw before reaching here.
   return { uploaded: records.length - failed.length, removed, failed };
 }
 
@@ -577,59 +392,27 @@ export interface AskIndexStatus {
 }
 
 /**
- * Compares what the index holds against what the corpus says it should hold.
- *
- * This exists because the editor's Ask sync is deliberately allowed to fail
- * without failing the save, and the save then redirects, so a failure has
- * nowhere to be reported. Rather than build flash-message machinery to carry a
- * warning that would be read once, drift is made permanently visible on
- * /admin/posts. Silent drift in an index nobody looks at is how Ask would rot.
- *
- * Fails in BOTH directions, the same rule the backup gate follows: an item the
- * corpus does not know about is as much a defect as a record the index lacks.
+ * Compares what the index holds against what the corpus says it should hold, because the Ask sync
+ * may fail without failing the save and the save then redirects. Both directions, as the backup
+ * gate has it: an item the corpus does not know about is as much a defect as a missing record.
  */
 export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIndexStatus> {
   /*
-   * THE EXPECTED SET COMES FROM D1, NOT FROM THE REPOSITORY ARTIFACT.
-   *
-   * It used to be `recordsForPosts(publishableForAsk(posts))` over the corpus,
-   * which meant a 600KB GitHub fetch on every admin page load to produce one
-   * integer for a nav badge. `askExpectedUrls` reads the same records out of
-   * `search_docs`, where `sync:content` materialised them from the same
-   * `records.mjs`, and applies the same visibility rule through
-   * `visibilityClause`. Grounds, the verification, and the behaviour change
-   * are all stated at that function.
-   *
-   * `publishableForAsk` is still the filter the UPLOADERS use, and it must
-   * stay in step with the SQL predicate here. `check:policy` binds the two.
+   * THE EXPECTED SET COMES FROM D1, not the repository artifact, which meant a GitHub fetch per admin
+   * page load for one integer. `publishableForAsk` is still the UPLOADERS' filter and must stay in
+   * step with the SQL predicate here; `check:policy` binds the two.
    */
   /*
-   * CONCURRENT, because the two sides of this comparison share nothing.
-   *
-   * The expected set is a D1 read and the listing is a paged walk of AI Search;
-   * neither reads what the other writes, and they were strictly serial. This
-   * function is 182ms at the median on /admin/posts and its `ask_list_page`
-   * marks account for ~103ms of that, so the D1 half is most of the remainder
-   * and it was pure waiting.
-   *
-   * It matters on BOTH consumers: /admin/posts calls this uncached on every
-   * load, and the nav badge calls it on a drift-cache miss, which is the tail
-   * the cache exists to hide.
+   * CONCURRENT, because the two sides share nothing: a D1 read and a paged walk of AI Search, neither
+   * reading what the other writes, and they were strictly serial.
    */
   const [expectedUrls, listed] = await Promise.all([
     askExpectedUrls(env),
     listAllAskItems(env, timings),
   ]);
   /*
-   * THE PAPERS ARE PART OF WHAT THE INDEX SHOULD HOLD, so they are part of what
-   * is expected. `askExpectedUrls` is `type = 'post'` and stays that way: the
-   * paper half of the index is the twins, which are uploaded from the committed
-   * corpus rather than from `search_docs`, and the same list is what says they
-   * should be there.
-   *
-   * Without this the badge would report 36 permanently stale items and the
-   * repair button would delete them, which is the failure the page-record
-   * exclusion note in `askExpectedUrls` already describes for pages.
+   * THE PAPERS ARE PART OF WHAT THE INDEX SHOULD HOLD: without this the badge would report them
+   * permanently stale and the repair button would delete them.
    */
   const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperItemKeys()]);
   const present = new Set(listed.map((item) => item.key));
@@ -645,30 +428,17 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
 /**
  * The request-scoped, MEMOIZED reader for the drift status above.
  *
- * Two surfaces want the same fact now: the alert on /admin/posts, which owns
- * the repair, and the count badge on the Posts nav item, which is rendered by
- * the admin LAYOUT on every admin page. A parent cannot read a child's loader
- * data, and moving the computation up to the layout was ruled out for a
- * concrete reason: check:admin-ui fabricates `ask` in the posts route's OWN
- * loader data, and the drift alert carries the `sync-ask` form, so relocating
- * it would have emptied that scenario and moved the gate's fixture.
- *
- * So the VALUE moves rather than the loader: the admin layout's middleware puts
- * this getter on the context, exactly as it already puts the verified session
- * there "so children read it without a second lookup", and both loaders call
- * it. On /admin/posts that is one listing per request instead of two, and the
- * posts route's loader data keeps the shape the gate asserts.
- *
- * It is a getter rather than an awaited value because middleware runs for the
- * whole /admin subtree. A route that never asks never pays.
+ * Two surfaces want the fact and a parent cannot read a child's loader data. Moving the computation
+ * up was ruled out because `check:admin-ui` fabricates this in the posts route's OWN loader data,
+ * so it would have moved the gate's fixture. The VALUE moves instead, on the context. A getter, so
+ * a route that never asks never pays.
  */
 export type AskStatusReader = () => Promise<AskIndexStatus | null>;
 
 export const askStatusContext = createContext<AskStatusReader>();
 
 /**
- * Builds that reader. Resolves to null rather than throwing, on the same
- * grounds the posts loader already had: the AI index is an enhancement and it
+ * Builds that reader. Resolves to null rather than throwing: the AI index is an enhancement and
  * may not take an admin page down with it when it is unbound or unreachable.
  */
 export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
@@ -689,76 +459,23 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
 }
 
 /**
- * THE DRIFT COUNT FOR THE NAV BADGE, off the read path.
+ * THE DRIFT COUNT FOR THE NAV BADGE, off the read path, because this pages the whole index and the
+ * admin layout runs on every admin page load.
  *
- * **THE CACHE IS THE POINT, AND IT IS HIDING A SLOW PATH, SO HERE IS THE SLOW
- * PATH.** `askIndexStatus` pages the whole AI Search index through
- * `listAllAskItems`. Measured on production 2026-08-19 across 12 direct
- * samples of `/admin.data`: median 208ms, MAXIMUM 2332ms, and the admin layout
- * runs on every admin page load, so that tail was reachable from any click in
- * the admin plane. Grounds for the TTL are at `DRIFT_CACHE_TTL_SECONDS`.
+ * ON A HIT THIS DOES NOT TOUCH AI SEARCH, structurally: one `return` sits between the KV read and
+ * the first mention of the index, and `check:invariants` section 11 asserts that ON THE SOURCE
+ * rather than on a timing mark, a mark count having already failed to see an unmarked read here.
  *
- * ## ON A HIT THIS FUNCTION DOES NOT TOUCH AI SEARCH
+ * FAILURE IS NULL, NOT ZERO: zero claims the index agrees with the corpus, on no evidence, beside a
+ * repair the operator would then not perform.
  *
- * The early return below is the whole feature, and it is STRUCTURAL rather than
- * conditional: there is one `return` between the KV read and the first mention
- * of the index, so a hit cannot reach the listing. `check:invariants` section
- * 11 asserts that ordering on the source, deliberately not on a timing mark. A
- * mark count already proved unable to see an unmarked read in this codebase
- * (the second `artifact_load`, 2026-08-19), so an instrument-shaped assertion
- * here would be the same mistake with a different name.
+ * THE LATE WRITE IS THE MECHANISM, NOT AN OPTIMISATION: a floating write lands only if the isolate
+ * outlives the response, so a listing slower than the budget never populated the cache and the next
+ * request missed for the same reason. `waitUntil` is the fix rather than a longer budget, any
+ * budget having a listing slower than it, and the ExecutionContext is REQUIRED so a call site that
+ * cannot supply it is a typecheck failure.
  *
- * ## THE FAILURE MODE ON A MISS, CHOSEN RATHER THAN INHERITED
- *
- * A miss must never make the admin plane worse than a missing badge. Two things
- * follow.
- *
- * BOUNDED WAIT. The listing races a budget, and on expiry this returns null and
- * the page renders without a badge. 1000ms is taken from the measurement rather
- * than picked: it admits 11 of the 12 observed samples (168 to 970ms) and cuts
- * only the 2332ms outlier that motivated this change. So a miss costs about
- * what a miss costs, and the pathological case stops being the reader's problem.
- *
- * FAILURE IS NULL, NOT ZERO. An unbound binding, a rejected listing and an
- * expired budget all return null, and `admin.tsx` renders no badge for null.
- * Zero would be a claim that the index agrees with the corpus, made on no
- * evidence, next to a repair the operator would then not perform.
- *
- * **THE LATE WRITE IS NOW A PROMISE, AND THAT IS THIS WINDOW'S FIX. It was the
- * defect that made the cache self-perpetuating.** The paragraph here used to
- * say the late write "may not fire" and left it at that, calling it an
- * optimisation. It was not an optimisation, it was the mechanism, and treating
- * it as optional is what let the following loop run indefinitely:
- *
- *   1. a miss lists the index and the listing outruns the budget
- *   2. the budget wins, the response returns with no badge
- *   3. the write was floating, so it lands only if the isolate happens to
- *      outlive the response, and Workers may cancel pending work once a
- *      response is returned
- *   4. nothing was cached, so the NEXT request misses too, at step 1
- *
- * A slow listing therefore never populated the cache, and the TTL never got a
- * value to expire. MEASURED on production before the fix: 4 misses in 12
- * samples, at 1008, 436, 1009 and 507ms, and the only two that populated the
- * cache were the two that came in UNDER the budget. The cache filled by luck.
- *
- * `ctx.waitUntil` is the fix rather than a longer budget, because the budget is
- * not what is wrong: any budget has a listing slower than it, and raising the
- * number moves the line without removing the loop. `waitUntil` extends the
- * invocation's lifetime for exactly this, so the write lands whether or not the
- * response has already gone. The reader still waits at most `DRIFT_BUDGET_MS`,
- * which is the property the budget was there for.
- *
- * The ExecutionContext is a REQUIRED parameter and not an optional one, so a
- * call site that cannot supply it is a typecheck failure rather than a silent
- * return to the floating write. That is the same reasoning as the ordering
- * assertion above: structure, where structure is available.
- *
- * ## WHAT THIS IS NOT FOR
- *
- * The COUNT only. `/admin/posts` owns the repair and calls
- * `askStatusReader` for the full key lists, uncached, because a page whose job
- * is to fix drift must not act on a number up to five minutes old.
+ * THE COUNT ONLY: the page that owns the repair reads the full lists uncached.
  */
 export async function askDriftCount(
   env: Env,
@@ -768,20 +485,18 @@ export async function askDriftCount(
   if (!askAvailable(env)) return null;
 
   const cached = await timed(timings, "drift_cache_read", () => readCachedDrift(env));
-  // THE EARLY RETURN. Nothing below this line runs on a hit, and section 11
-  // asserts that no AI Search reference precedes it.
+  // THE EARLY RETURN. Nothing below runs on a hit, and section 11 asserts no AI Search reference precedes it.
   if (cached !== null) return cached;
 
-  // Rejection is folded into the value here rather than caught at the race, so
-  // a failing listing and an absent one reach the same null and the caller has
-  // one thing to handle instead of two.
+  // Rejection is folded into the value rather than caught at the race, so a failing listing and an
+  // absent one reach the same null and the caller has one thing to handle.
   const listing = askIndexStatus(env, timings).catch((error) => {
     console.error("ask drift count failed", error);
     return null;
   });
 
-  // The budget. Resolves to undefined rather than rejecting, so the race below
-  // reads as "whichever arrives first" rather than as error handling.
+  // The budget resolves to undefined rather than rejecting, so the race reads as "whichever arrives
+  // first" rather than as error handling.
   const budget = new Promise<undefined>((resolve) => {
     setTimeout(() => resolve(undefined), DRIFT_BUDGET_MS);
   });
@@ -790,15 +505,9 @@ export async function askDriftCount(
 
   if (status === undefined) {
     /*
-     * The budget won. The listing is HANDED TO THE RUNTIME rather than left
-     * floating: `waitUntil` is what makes the write land after the response,
-     * and without it a listing slower than the budget could never populate the
-     * cache, so the next request missed for the same reason and the cache
-     * never filled. Grounds and the before measurement are on the doc comment.
-     *
-     * The `catch` stays. `waitUntil` rejecting is not better than a floating
-     * rejection, and a failed listing here is the same non-event it is above:
-     * there is no number to cache and the badge is already absent.
+     * The budget won, so the listing is HANDED TO THE RUNTIME rather than left floating: `waitUntil` is
+     * what makes the write land after the response. The `catch` stays, because `waitUntil` rejecting is
+     * no better than a floating rejection and there is no number to cache either way.
      */
     ctx.waitUntil(
       listing
@@ -818,10 +527,8 @@ export async function askDriftCount(
 }
 
 /**
- * How long a cache miss may hold the admin layout before it gives up.
- *
- * From the measurement, not from taste: 11 of 12 observed listings finished
- * inside this and the one it cuts is the 2332ms sample this change exists for.
+ * How long a cache miss may hold the admin layout before it gives up. From the measurement rather
+ * than taste: it admits all but the one pathological listing this change exists for.
  */
 const DRIFT_BUDGET_MS = 1000;
 
@@ -838,19 +545,14 @@ export async function removeAskPost(env: Env, slug: string): Promise<number> {
     }
   }
   await invalidateAnswerCache(env);
-  // The drift number just changed. A delete rather than a write, because this
-  // path knows the cached value is stale and not what it became.
+  // A delete rather than a write: this path knows the cached value is stale, not what it became.
   await dropCachedDrift(env);
   return removed;
 }
 
 /**
- * Removes items that no longer correspond to a record.
- *
- * Upload is an upsert, so a renamed or deleted post leaves its old item behind
- * and it stays answerable forever. Same shape as the both-directions rule the
- * backup gate follows: what is present and should not be is as much a defect as
- * what is missing.
+ * Removes items that no longer correspond to a record: upload is an upsert, so a renamed or deleted
+ * post leaves its old item answering forever. Both directions, as the backup gate has it.
  */
 export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<string[]> {
   const live = new Set(liveKeys);
@@ -862,11 +564,9 @@ export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<stri
       removed.push(item.key);
     }
   }
-  // Removing items changes what the index holds, so the badge's cached number
-  // is stale. This path invalidated NOTHING before the drift cache existed,
-  // which was harmless while every read recomputed and is not once a value is
-  // stored. Only on an actual removal: a prune that removed nothing changed
-  // nothing, and dropping the key anyway would spend the next reader a listing.
+  // Removing items changes what the index holds, so the badge's cached number is stale. Only on an
+  // ACTUAL removal: a prune that removed nothing changed nothing, and dropping the key anyway would
+  // spend the next reader a listing.
   if (removed.length > 0) await dropCachedDrift(env);
   return removed;
 }

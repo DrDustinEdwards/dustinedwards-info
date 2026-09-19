@@ -5,23 +5,15 @@ import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import type { Route } from "./+types/blog.rss[.xml]";
 
 /**
- * RSS 2.0, and since 2026-08-28 it carries the whole post.
+ * RSS 2.0, carrying the whole post.
  *
- * ONE FEED POLICY. The JSON feed has served full content since it shipped and
- * this one served a one-line description, so the same corpus reached a
- * subscriber differently depending on which URL they happened to paste. Both
- * now read the same query with the same visibility predicate and the same cap;
- * only the REPRESENTATION differs, markdown for the JSON consumer and rendered
- * HTML for the reader, and `app/lib/rss-feed.mjs` says why.
+ * ONE FEED POLICY: both feeds read the same query with the same visibility predicate and the same
+ * cap, and only the REPRESENTATION differs, markdown for the JSON consumer and rendered HTML for the
+ * reader. Reads through listBlogPostsRendered, so publiclyVisible() applies on the same terms as the
+ * index, and the cap is applied IN THE QUERY rather than by slicing a full read.
  *
- * Reads through listBlogPostsRendered, so publiclyVisible() applies to the feed
- * on exactly the same terms as the index. The cap is applied IN THE QUERY, not
- * by slicing a full read, because every item now carries a rendered body.
- *
- * The item markup is built by `rssItem`, where `node:test` can reach it,
- * exactly as `feedItem` is for the JSON feed. That module is also the one owner
- * of the XML escaping, which used to live here and in nothing else, so the two
- * feeds' escaping could not be compared.
+ * The item markup is built by `rssItem`, where `node:test` can reach it, and that module is the one
+ * owner of the XML escaping, so the two feeds' escaping can be compared.
  */
 const FEED_ITEMS = 20;
 
