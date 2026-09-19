@@ -58,6 +58,23 @@ const DOCS = [
     title: "Code comment history, September 2026, wave 4",
     type: "reference",
   },
+  /*
+   * Ruling 116's two documents. They are not verbatim archives like the histories above, but they
+   * go through the same door for the same reason: the filer verifies the stored sha256 against the
+   * file, so "it was written" is measured rather than assumed.
+   */
+  {
+    file: "scratchpad/retired-2026-09.md",
+    path: "retired-2026-09.md",
+    title: "Retired and merged rulings, September 2026",
+    type: "reference",
+  },
+  {
+    file: "scratchpad/core.md",
+    path: "core.md",
+    title: "dustinedwards.info: current state",
+    type: "note",
+  },
 ];
 
 /** Which documents this run files. Empty means all of them, which is the original behaviour. */

@@ -118,12 +118,6 @@ Two things follow for the next sync, and neither is obvious from the code:
 
 ## Preview authoring, learned the hard way
 
-- **A themed wrapper must set `color: var(--text)` as well as
-  `background: var(--surface)`.** Text colour is owned by the `body` rule, so a
-  `<div data-theme="dark">` with only a background inherits the LIGHT text
-  colour. The first `PostCard.DarkTheme` capture rendered with its description
-  invisible, and it passed the mechanical render check: only reading the sheet
-  caught it.
 - `PostCard` renders an `<li>` and every cell wraps it in
   `<ul className="post-list">`.
 - `SiteLogo` and `SiteLogoHeader` forward `className` ONLY. They do not spread,
@@ -143,46 +137,24 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 
 ## Re-sync risks
 
-- **The stylesheet list in `build-inputs.mjs` WAS hand-maintained and went
-  stale, exactly as this note predicted.** `app/styles/shell.css` was imported
-  by `root.tsx` and missing from `SHEETS`, so the sheet defining `.tracks`, the
-  redesign's own grid, never reached the canvas. `check:design-sheets` now holds
-  the list against `root.tsx`, the non-admin routes and the non-admin
-  components, in both directions and including cascade order, so this is an
-  instrument rather than a diff somebody remembers to run. Ruling 111.
-  Note what it covers: cascade imports, `?url` side-loads and CSS-level
-  `@import`. `katex.generated.css` is its one named exclusion.
-- **Cascade order is load-bearing and is not alphabetical.** `SHEETS` reproduces
-  `root.tsx`'s deliberate order; sorting it would move the cascade.
+- **`SHEETS` is held against `root.tsx` and the non-admin imports by
+  `check:design-sheets`, in both directions and including cascade order**, so
+  the list is an instrument rather than a diff somebody remembers to run. Its
+  one named exclusion is `katex.generated.css`. Ruling 111 has the grounds.
 - The conventions header enumerates real token and class names. They were all
   verified against the built stylesheet on 2026-09-12; re-run that validation
   rather than assuming, since a renamed token would send the design agent
   vocabulary that resolves to nothing.
-- `globalName` is `DustinEdwards` and the conventions snippet names it. Changing
-  it means editing `conventions.md` too.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because
   there are none. A prop rename in `app/components/` is picked up on rebuild;
   nothing warns that it changed.
 
 ## THE UPLOAD MUST NEVER DELETE THE CANVAS'S OWN WORK
 
-**`part-a/`, `part-b/`, `references/` and `uploads/` are NEVER named in a
-plan's `deletes`.** Read this before any upload, and especially before a
-no-anchor one.
+**`part-a/`, `part-b/`, `references/`, `uploads/` and `github.md` are NEVER
+named in a plan's `deletes`.** Read this before any upload, and especially
+before a no-anchor one, where the skill's own instruction to delete "files this
+build doesn't produce" names exactly those paths by construction.
 
-There is no import direction. The upload rewrites `components/**`, `tokens/**`,
-`guidelines/**`, the bundles and `README.md` on every run, and `remote-diff.mjs`
-compares the local build against the sync's OWN `_ds_sync.json` sidecar rather
-than against the project's contents. So a canvas-side edit to any synced path is
-invisible to the diff and then silently overwritten. Canvas work lives in those
-four directories precisely because they are outside the writes list, and that is
-the only thing protecting it.
-
-The hazard is specific and it is in the skill's own instructions. On a re-sync
-with NO ANCHOR (a re-adopted or recovered project) the skill says to review
-`list_files` for "files this build doesn't produce" and put those paths in the
-plan's `deletes`. Those four directories are exactly that, by construction. A
-session following the instruction literally would delete the handoffs and the
-96 reference shots. Exclude them explicitly, every time.
-
-Ruling 110.
+Ruling 110 carries the grounds and the cost. This line stays here rather than
+only there because this file is what a sync agent reads and that ruling is not.

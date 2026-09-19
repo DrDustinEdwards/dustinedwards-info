@@ -58,15 +58,22 @@ export const CI_EXCLUDED = {
 
 /**
  * Every discovered gate must be tiered here or the runner refuses to start.
- * @type {Record<string, "offline" | "network" | undefined>}
+ *
+ * REPORT is the third value and it is not a weaker tier, it is a different job: a report gate is
+ * run by name, by a human or by a CI step that does not block, and no tier selects it. It exists
+ * because "leaves CI" and "leaves check:all" are different removals, and a gate that is merely
+ * moved to network is still run by check:all. Ruling 116.
+ *
+ * @type {Record<string, "offline" | "network" | "report" | undefined>}
  */
 export const TIERS = {
   /*
    * The typecheck is a gate, tiered offline so check:head typechecks an extracted HEAD. It
    * delegates to `npm run typecheck`, which package.json defines.
    */
-  /* Network: a decisions volume is a Capsid document. */
-  "check:volumes": "network",
+  /* Report (ruling 116): a decisions volume is a Capsid document, and its length is the seat's
+     business rather than a condition on deploying the site. */
+  "check:volumes": "report",
   "check:types": "offline",
   "check:content": "offline",
   /* Offline. The network half, `pubs-pipeline`, is never a gate: it would fail on Crossref's bad day. */
@@ -79,8 +86,10 @@ export const TIERS = {
   "check:fonts": "offline",
   /* Reads its inputs off disk, so `--ci` runs it (ruling 111). */
   "check:design-sheets": "offline",
-  /* Scores the diff, not the tree: on the tree its findings here are false positives. */
-  "check:slop": "offline",
+  /* Report (ruling 116). It scores the DIFF rather than the tree, so on the tree its findings
+     are false positives, and a score is a preference: 83 of 83 in-scope findings were false
+     positives when the audit opened them. The ci.yml step that runs it does not block. */
+  "check:slop": "report",
   /* Network: the `updated_at` it compares lives in Capsid (ruling 109). */
   "check:guidelines": "network",
   "check:logo": "offline",
@@ -150,7 +159,9 @@ export const TIERS = {
   "check:image-weight": "network",
   /* An offline mode could only report that it did not look. */
   "check:uptime": "network",
-  "check:mail": "network",
+  /* Report (ruling 116). It returns to a tier at the cutover, which is recorded in CUTOVER.md
+     beside the DNS step that makes mail a live path. */
+  "check:mail": "report",
   /* A local form would compare two empty databases. Weekly, because it is the slowest gate. */
   "check:restore": "network",
 };
@@ -197,7 +208,7 @@ function discoverGates() {
   if (untiered.length > 0) {
     throw new Error(
       `${untiered.length} gate(s) are not classified in TIERS: ${untiered.join(", ")}. ` +
-        `Add each as "offline" or "network". Refusing to run rather than silently ` +
+        `Add each as "offline", "network" or "report". Refusing to run rather than silently ` +
         `dropping them from the default tier.`,
     );
   }
@@ -363,7 +374,13 @@ function main() {
   console.log(`ok (${(enhanced.ms / 1000).toFixed(1)}s)`);
   /* Derived, so a new gate is in CI unless argued out. */
   const offline = gates.filter((name) => TIERS[name] === "offline");
-  const selected = all ? gates : ci ? offline.filter((name) => !CI_EXCLUDED[name]) : offline;
+  /* A report gate is selected by no tier, which is the whole of what the value means. */
+  const reported = gates.filter((name) => TIERS[name] === "report");
+  const selected = all
+    ? gates.filter((name) => TIERS[name] !== "report")
+    : ci
+      ? offline.filter((name) => !CI_EXCLUDED[name])
+      : offline;
   const skipped = gates.filter((name) => !selected.includes(name));
 
   if (ci) {
@@ -380,10 +397,20 @@ function main() {
           `${unknown.join(", ")}. Refusing to run rather than excluding nothing.`,
       );
     }
+    /*
+     * APPLIED, not declared. Printing every CI_EXCLUDED key named entries that could not have
+     * been excluded here because they were never in the offline tier to be removed from, which
+     * reads as a longer exclusion list than the run actually had.
+     */
+    const applied = offline.filter((name) => CI_EXCLUDED[name]);
     console.log(
       `  CI tier: ${selected.length} of ${offline.length} offline gate(s). ` +
-        `Excluded, with reasons in CI_EXCLUDED: ${Object.keys(CI_EXCLUDED).join(", ")}`,
+        `Excluded, with reasons in CI_EXCLUDED: ${applied.join(", ")}`,
     );
+  }
+
+  if (reported.length > 0) {
+    console.log(`  report tier, run by name and by no tier: ${reported.join(", ")}`);
   }
 
   console.log(
