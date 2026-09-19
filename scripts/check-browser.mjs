@@ -1036,6 +1036,7 @@ try {
       { path: "/blog/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
       { path: "/projects", module: "projects.tsx" },
       { path: "/playground", module: "playground.tsx" },
+      { path: "/playground/ui", module: "playground.ui.tsx" },
       { path: "/phage-discovery", module: "phage-discovery.tsx" },
       { path: "/colophon", module: "colophon.tsx" },
       { path: "/search?q=cloudflare", module: "search.tsx" },
