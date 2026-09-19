@@ -11,6 +11,7 @@
  */
 
 import { labelForUrl, urlForKey } from "~/lib/search/ask-keys.mjs";
+import { splitFollowUp } from "~/lib/search/follow-up.mjs";
 
 /** Matches the SSE `chunks` event that arrives before the completion deltas. */
 const CHUNKS_EVENT = "chunks";
@@ -86,7 +87,18 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   const sources = el("ul", "ask-sources");
   sources.hidden = true;
 
-  attach(panel, header, status, body, sources);
+  /*
+   * ONE FOLLOW-UP, AS A REAL LINK, so the whole state is the URL: it is a GET to /search, it
+   * right-clicks, it opens in a new tab, and it survives with script off in the sense that
+   * matters, which is that nothing here is a session. There is no thread and no message list.
+   *
+   * Hidden until there is one. The model is ASKED for a follow-up and is not required to give
+   * one, and every answer cached before this shipped carries none.
+   */
+  const followUp = el("p", "ask-followup");
+  followUp.hidden = true;
+
+  attach(panel, header, status, body, sources, followUp);
   attach(container, panel);
 
   let answer = "";
@@ -229,7 +241,22 @@ export function ask(container: HTMLElement, question: string): AskHandle {
               firstToken = false;
             }
             answer += delta;
-            body.textContent = answer;
+            /*
+             * SPLIT ON EVERY FRAME, not once at the end, because the marker arrives mid-stream
+             * and the reader must never see the raw "NEXT:" line in the prose. While the
+             * follow-up is still arriving the answer renders without it and the link simply is
+             * not there yet.
+             */
+            const parts = splitFollowUp(answer);
+            body.textContent = parts.answer;
+            if (parts.followUp) {
+              followUp.textContent = "";
+              const link = el("a");
+              link.href = `/search?q=${encodeURIComponent(parts.followUp)}`;
+              link.textContent = parts.followUp;
+              attach(followUp, link);
+              followUp.hidden = false;
+            }
           }
         }
       }

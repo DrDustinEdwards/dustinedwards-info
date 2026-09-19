@@ -118,3 +118,14 @@
   color: var(--text-muted);
   font-size: 0.75rem;
 }
+
+/* The suggested follow-up. A link and nothing else: the whole state is its URL, so it
+   right-clicks and opens in a new tab like any other link on the page. */
+.ask-followup {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.ask-followup a {
+  color: var(--brand);
+}
