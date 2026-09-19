@@ -1146,31 +1146,58 @@ try {
         .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"');
     /* The age sentence is not here: hard rule 8 scopes this to what the theme may change. */
 
+    /**
+     * The footer's link order, recorded on the first page and asserted on every later one.
+     * `footerOrderCompared` exists so a THEME_CACHED of one cannot report a clean sweep of
+     * a comparison that never ran.
+     *
+     * @type {string[] | null}
+     */
+    let footerOrder = null;
+    let footerOrderPath = "";
+    let footerOrderCompared = 0;
+
     for (const { path } of THEME_CACHED) {
       /* The footer assertions below need a rendered page. */
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    /* consistent help: the privacy link on every public page */
+      /* consistent help: the privacy link on every public page */
 
-    /* WCAG 2.2 3.2.6: order is asserted as well as presence. */
-    const help = await page.evaluate(() => {
-      const links = [...document.querySelectorAll(".site-shell-footer a")].map(
-        (a) => a.getAttribute("href") ?? "",
+      /*
+       * 3.2.6 asks for the same RELATIVE ORDER on every page, never a fixed index. The
+       * order is recorded on the first page and every later page is held against it.
+       *
+       * The selector sweeps the WHOLE footer, which is three containers: the Elsewhere
+       * nav, the machine-formats nav, and the copyright note. `/colophon` therefore
+       * appears twice, once as a nav link and once as prose, and that is the markup
+       * rather than a defect.
+       */
+      const help = await page.evaluate(() => {
+        const links = [...document.querySelectorAll(".site-shell-footer a")].map(
+          (a) => a.getAttribute("href") ?? "",
+        );
+        return { links, at: links.indexOf("/privacy") };
+      });
+      ok(
+        `${path}: the footer carries the privacy link`,
+        help.at !== -1,
+        `footer links are [${help.links.join(", ")}]. 3.2.6 asks for the same help ` +
+          `mechanism on every page that has one, and every public page has this footer.`,
       );
-      return { links, at: links.indexOf("/privacy") };
-    });
-    ok(
-      `${path}: the footer carries the privacy link`,
-      help.at !== -1,
-      `footer links are [${help.links.join(", ")}]. 3.2.6 asks for the same help ` +
-        `mechanism on every page that has one, and every public page has this footer.`,
-    );
-    ok(
-      `${path}: the privacy link keeps its place in the footer`,
-      help.at === 1,
-      `it is at index ${help.at} of [${help.links.join(", ")}], expected 1, after the ` +
-        `colophon. 3.2.6 is about the same relative ORDER, so a link that moves between ` +
-        `pages satisfies presence and fails the criterion.`,
-    );
+      if (footerOrder === null) {
+        footerOrder = help.links;
+        footerOrderPath = path;
+      } else {
+        footerOrderCompared += 1;
+        const recorded = footerOrder;
+        ok(
+          `${path}: the footer link order matches ${footerOrderPath}`,
+          help.links.length === recorded.length &&
+            help.links.every((href, i) => href === recorded[i]),
+          `this page lists [${help.links.join(", ")}] and ${footerOrderPath} listed ` +
+            `[${recorded.join(", ")}]. 3.2.6 is about the same relative ORDER, so a link ` +
+            `that moves between pages satisfies presence and fails the criterion.`,
+        );
+      }
 
 
       const stranger = await fetchDoc(path, {});
@@ -1275,6 +1302,14 @@ try {
           `cookieless: ...${residue?.a}...\n        dark: ...${residue?.b}...`,
       );
     }
+
+    ok(
+      "the footer order was compared against a recorded one, not just recorded",
+      footerOrderCompared >= 2,
+      `only ${footerOrderCompared} page(s) were held against ${footerOrderPath}. The first ` +
+        `page RECORDS the order and cannot disagree with itself, so a run that recorded one ` +
+        `and compared none reports a clean sweep of an assertion that never ran.`,
+    );
 
     /* the cache itself is verify-live's */
 
