@@ -6,33 +6,25 @@ import { WEBP_QUALITY } from "./encoding.mjs";
 /**
  * MEDIA CORE. Library listing, upload, thumbnails, metadata and delete mechanics.
  *
- * Shape 1 of media-module-architecture.md: this module knows nothing about what
- * cites an object. Content-agnostic BY CONSTRUCTION, not by convention, which
- * in practice means there is no import of anything post-shaped anywhere in this
- * file and no parameter that could carry one. "Who cites this key?" is asked
- * through the resolver seam in `resolvers.server.ts`, and the answer arrives as
- * data the core never inspects.
- *
- * That is the property that lets an album or a portfolio type register later
- * without this file changing.
+ * This module knows nothing about what cites an object. CONTENT-AGNOSTIC BY CONSTRUCTION, NOT BY
+ * CONVENTION: there is no import of anything post-shaped in this file and no parameter that could
+ * carry one. "Who cites this key?" is asked through the resolver seam and the answer arrives as data
+ * the core never inspects, which is what lets another type register later without this file changing.
  */
 
 /** One page. Small enough to be a page rather than a dump of the bucket. */
 export const MEDIA_PAGE_SIZE = 24;
 
-/* DERIVED_PREFIX is GONE. It existed for `isManagedKey`, which excluded `og/`
- * keys by prefix beside its own copy of the key grammar. The grammar now has
- * one owner, `isContentKey` in classify.mjs, and its pattern admits no slash
- * and no non-hex lead, so an `og/` key fails the shape test itself and the
- * prefix check had nothing left to refuse. */
+/*
+ * `DERIVED_PREFIX` is GONE. It excluded `og/` keys beside its own copy of the key grammar, and the
+ * grammar now has one owner whose pattern admits no slash, so an `og/` key fails the shape test
+ * itself and the prefix check had nothing left to refuse.
+ */
 
 /**
- * Widths the thumbnail route will honour.
- *
- * A closed set, because the width lands in a cache key and an open one lets any
- * caller mint unlimited distinct transforms of the same object, each of which
- * is a billed unique transformation. Three sizes cover the grid thumbnail, the
- * picker tile and a 2x display of either.
+ * Widths the thumbnail route will honour. A CLOSED SET, because the width lands in a cache key and
+ * an open one lets any caller mint unlimited distinct transforms of the same object, each a billed
+ * transformation.
  */
 export type ThumbWidth = 160 | 320 | 640;
 
@@ -65,24 +57,17 @@ export type MediaPage = {
 };
 
 /**
- * The URL that renders this object at a thumbnail width.
- *
- * URL-DERIVED, per ruling 3: the width is in the URL, the transform happens on
- * request from the single original in R2, and no variant is ever written back.
- * One object, every size derived from it.
+ * The URL that renders this object at a thumbnail width. URL-DERIVED: the width is in the URL, the
+ * transform happens on request from the single original in R2, and no variant is ever written back.
  */
 export function thumbUrl(key: string, width: ThumbWidth) {
-  // A STATIC asset is indexed under its own public path, which already begins
-  // with `/`, so prefixing `/media/` yields `/media//publications/x.pdf` and the
-  // R2 route 404s on it. That was every one of the 58 static rows, including all
-  // nine roster photos: the grid rendered a broken image for the only pictures
-  // the page exists to surface.
+  // A STATIC ASSET IS ITS OWN PUBLIC PATH and already begins with `/`, so prefixing `/media/` yields
+  // a double slash the R2 route 404s on. It is served by the assets host directly, so it needs no
+  // transform URL and gets none.
   //
-  // A static asset is served by the assets host directly, so it needs no
-  // transform URL and gets none. The cost is that it is delivered at full size
-  // into a thumbnail box; these are small files and a correct image beats a
-  // resized 404. Serving static transforms would mean teaching /media/* to read
-  // through ASSETS, which is a route change rather than a UI one.
+  // The cost is that it is delivered at full size into a thumbnail box. These are small files and a
+  // correct image beats a resized 404; serving static transforms would mean teaching `/media/*` to
+  // read through ASSETS.
   if (key.startsWith("/")) return key;
   return `/media/${key}?w=${width}`;
 }
@@ -95,34 +80,25 @@ export function isViewable(kind: string) {
 /**
  * The listing axes, DERIVED from `listMediaPage` rather than restated here.
  *
- * Restating them is what broke `listMedia`. The options type named six of the
- * twelve axes `listMediaPage` implements, the loader passed all twelve through
- * an object SPREAD, and spreads are exempt from excess-property checking, so
- * `sort`, `dir`, `tag`, `lens`, `templateKeys` and `trashed` were accepted by
- * the compiler and dropped on the floor. Live effect, measured on production
- * 2026-08-16: `?sort=size` and `?sort=name&dir=asc` returned byte-identical
- * rows to the default, and `?trash=1` returned 24 NOT-trashed files while the
- * trash count beside it read 0.
+ * Restating them is what broke `listMedia`: the options type named half the axes, the loader
+ * forwarded all of them through an object SPREAD, and spreads are exempt from excess-property
+ * checking, so the rest were accepted by the compiler and dropped on the floor.
  *
- * Deriving the type means a new axis on `listMediaPage` is covered here by
- * construction instead of by somebody remembering. `check:media-axes` asserts
- * both halves: that this stays derived, and that the forwarding stays a spread.
+ * Deriving the type means a new axis is covered by construction instead of by somebody remembering.
+ * `check:media-axes` asserts both halves: that this stays derived, and that the forwarding stays a
+ * spread.
  */
 type ListMediaOptions = NonNullable<Parameters<typeof listMediaPage>[1]>;
 
 /**
  * Lists one page of the library FROM D1.
  *
- * **It no longer touches R2, and that is the point of the index.** Listing from
- * the bucket could only ever paginate in key order, which stopped meaning
- * anything the moment keys became content-addressed digests. Every question the
- * library actually asks (newest first, images only, which are documents, how
- * many of each) is a query, and none of them can be built on a key-ordered
- * iterator without listing the whole bucket per request.
+ * IT NO LONGER TOUCHES R2, and that is the point of the index. Listing from the bucket could only
+ * paginate in key order, which stopped meaning anything when keys became content-addressed digests,
+ * and every question the library asks is a query.
  *
- * D1 is DERIVED, so this is reading a copy, and that is legitimate here for the
- * one reason the ruling turns on: the copy is exhaustively reconcilable against
- * its source, and `check:media` reconciles it in both directions on every run.
+ * D1 is DERIVED, so this is reading a copy, and that is legitimate for one reason: the copy is
+ * exhaustively reconcilable against its source and `check:media` reconciles it in both directions.
  * R2 remains the truth for what exists.
  */
 export async function listMedia(
@@ -164,12 +140,10 @@ export async function listMedia(
 }
 
 /**
- * Intrinsic dimensions of bytes in hand, before anything has been stored.
- *
- * The upload path needs the measurement BEFORE it has a key: since finding
- * B002 the key carries `-<w>x<h>`, so the measurement is an INPUT to the key
- * rather than something looked up after the fact. Measuring once and using it for both the key and
- * the row also means those two cannot disagree about the same image.
+ * Intrinsic dimensions of bytes in hand, before anything has been stored. The upload path needs
+ * the measurement BEFORE it has a key, because the key carries the dimensions, so it is an INPUT to
+ * the key rather than a lookup after the fact. Measuring once for both means the key and the row
+ * cannot disagree about the same image.
  */
 export async function measureDimensions(
   env: Env,
@@ -195,31 +169,17 @@ const PLACEHOLDER_WIDTH = 20;
 /**
  * A tiny base64 data URI standing in for the image until it loads.
  *
- * LQIP rather than ThumbHash or BlurHash: both of those need client-side
- * decoding, and this site's public plane ships no framework script (rule 4). A
- * data URI is bigger than a hash and renders with no script at all, which is
- * the trade the rule forces. The size it actually costs is MEASURED by
- * `check:image-weight`, which prints the mean over every stored placeholder;
- * the figure that used to sit in this sentence was written before the quality
- * defect below existed and was wrong by roughly a factor of two the whole time.
+ * LQIP rather than ThumbHash or BlurHash: both need client-side decoding and the public plane ships
+ * no framework script (rule 4). What it costs is MEASURED by `check:image-weight` and stated
+ * nowhere else.
  *
- * Returns null rather than throwing. A placeholder is an enhancement; an image
- * the transformer cannot read (an SVG, a PDF, a corrupt upload) simply has none,
- * and that must not be able to fail a rebuild or a queue message.
+ * Returns null rather than throwing: an image the transformer cannot read simply has no placeholder,
+ * and that must not fail a rebuild or a queue message.
  *
- * **THE QUALITY IS NOT OPTIONAL, and this call omitted it until 2026-09-06.**
- * The binding emits LOSSLESS WebP when no quality is given, so every
- * placeholder ever stored was a VP8L data URI, in the one column whose entire
- * purpose is to be small enough to inline in a document. Measured that day: 26
- * of 26 stored placeholders came back VP8L, across all three storage tiers,
- * which is what proved this was a defect in the derivation rather than in one
- * caller. `WEBP_QUALITY` is a shared constant precisely because there turned
- * out to be two callers of the binding.
+ * THE QUALITY IS NOT OPTIONAL. The binding emits LOSSLESS WebP when none is given, which is the
+ * worst possible answer in the one column whose purpose is to inline.
  *
- * **IT LIVES HERE, beside `measureDimensions`, because it has two callers of
- * its own.** The bulk rebuild derives it for every object; the queue consumer
- * derives it for the one object an event names. A copy in each would be two
- * placeholder encoders, and the whole reason this file exists is that a
+ * IT LIVES HERE because it has two callers, the bulk rebuild and the queue consumer, and a
  * measurement with two implementations is two answers.
  */
 export async function placeholderFor(
@@ -244,30 +204,22 @@ export async function placeholderFor(
 /**
  * Deletes one object. MECHANICS ONLY.
  *
- * There is deliberately no reference check in here. This module cannot see
- * citations and must not appear to: a `deleteMedia` that sometimes refused
- * would invite a caller to treat it as the safety, and the safety belongs in
- * the action where the resolver's answer is available and where failing closed
- * can be enforced. This function does what its name says and nothing else.
+ * There is deliberately no reference check in here. This module cannot see citations and must not
+ * appear to: a `deleteMedia` that sometimes refused would invite a caller to treat it as the safety,
+ * and the safety belongs in the action where the resolver's answer is available.
  */
 export async function deleteMediaObject(env: Env, key: string) {
   await env.MEDIA.delete(key);
 }
 
 /**
- * True when the key is one this module is willing to touch.
+ * True when the key is one this module is willing to touch. DELEGATES TO THE GRAMMAR'S OWNER and
+ * carries no pattern of its own: a reader that restates a grammar fails exactly when the writer
+ * moves, and `isContentKey` sits beside the writer.
  *
- * DELEGATES TO THE GRAMMAR'S OWNER and carries no pattern of its own. The
- * regex that lived here predated the dimension segment `contentKey` writes
- * into raster keys, so every uploaded raster was refused by delete, set-alt
- * and empty-trash while the guard looked correct. A reader that restates a
- * grammar fails exactly when the writer moves; `isContentKey` sits beside the
- * writer, where a change to one is a change made looking at the other.
- *
- * What the shape test refuses on this module's behalf: anything with a slash
- * (so a traversal segment, a leading `/` static path and an `og/` derived key
- * all fail), and anything that is not a digest-plus-extension a real upload
- * could have produced.
+ * What the shape test refuses on this module's behalf: anything with a slash, so a traversal
+ * segment, a leading `/` static path and an `og/` derived key all fail, and anything that is not a
+ * digest-plus-extension a real upload could have produced.
  */
 export function isManagedKey(key: string) {
   return isContentKey(key);

@@ -9,10 +9,9 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { commentBlocks } from "./code-blocks.mjs";
-import { CHUNKS } from "./code-wave2.mjs";
+import { CHUNKS, BEFORE, DECISIONS, flat } from "./wave.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const flat = (s) => s.replace(/\//g, "__");
 const JSDOC_HEAD =
   /@(?:param|returns?|type|typedef|template|property|prop|callback|satisfies|import|enum|throws|see|deprecated|this|overload|extends|implements)\b(?:\s*\{[^\n]*\})?(?:\s+\[?[\w.$]+(?:=[^\]\s]*)?\]?)?/g;
 const CITATION = /hard rules? ((?:\d+)(?:\s*(?:,|and)\s*\d+)*)/gi;
@@ -21,11 +20,11 @@ const cites = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+
 
 const chunk = process.argv[2];
 const min = Number(process.argv[3] ?? 160);
-const d = (await import(pathToFileURL(join(HERE, "code-decisions-wave2", `${chunk}.mjs`)).href)).default;
+const d = (await import(pathToFileURL(join(DECISIONS, `${chunk}.mjs`)).href)).default;
 const spans = Array.isArray(CHUNKS[chunk][0]) ? CHUNKS[chunk] : [CHUNKS[chunk]];
 const blocks = {};
 for (const file of [...new Set(spans.map((s) => s[0]))]) {
-  const src = readFileSync(join(HERE, "code-history-before-wave2", flat(file)), "utf8");
+  const src = readFileSync(join(BEFORE, flat(file)), "utf8");
   commentBlocks(src).forEach((b, id) => (blocks[`${file}#${id}`] = b));
 }
 

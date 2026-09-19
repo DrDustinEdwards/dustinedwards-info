@@ -1,17 +1,9 @@
 /**
  * Attribution for a slow route, reported as `Server-Timing`.
  *
- * A real response header rather than a log, because the question being asked is
- * about the LIVE path and a header can be read by whatever is already making
- * the request. Nothing here changes behaviour: the marks are collected and
- * emitted, and a route that never creates a collector pays nothing.
- *
- * **Why this exists.** `/blog` measured 276ms p50 against 35ms for `/` and 99ms
- * for `/phage-discovery`, both of which are also uncacheable HTML. The cause was
- * SUSPECTED to be three D1 queries and that suspicion was wrong in its details:
- * the three calls are already in a `Promise.all`, while `listBlogPosts` performs
- * three SERIAL round trips inside itself. Guessing which of those matters is
- * exactly what this replaces.
+ * A real response header rather than a log, because the question is about the LIVE path and a header
+ * can be read by whatever is already making the request. Nothing here changes behaviour: the marks
+ * are collected and emitted, and a route that never creates a collector pays nothing.
  */
 
 import { createContext } from "react-router";
@@ -19,20 +11,12 @@ import { createContext } from "react-router";
 export type Timings = Array<{ name: string; ms: number }>;
 
 /**
- * The per-request collector, so a MIDDLEWARE and a child LOADER can write into
- * one list and the route emits a single header.
+ * The per-request collector, so a MIDDLEWARE and a child LOADER write into one list and the route
+ * emits a single header. The admin plane needs it because the auth gate runs in `admin.tsx` and the
+ * queries live in child routes.
  *
- * `/blog` needed none of this: one loader owns the whole request and can keep
- * the array in a local. The admin plane cannot, because the auth gate that runs
- * before every admin loader lives in `admin.tsx` and the queries live in child
- * routes. Without a shared collector the session lookup is measurable only by
- * subtracting one route's total from another's, which is how the 1200ms went
- * unattributed in the first place.
- *
- * Held in a WRAPPER OBJECT whose `timings` is optional, rather than as a
- * nullable context value. The context default then describes "nobody asked"
- * without the type having to admit undefined, so a route that reads this before
- * any middleware ran gets the same answer as a request without `?timing=1`.
+ * Held in a WRAPPER OBJECT whose `timings` is optional rather than as a nullable context value, so
+ * the context default describes "nobody asked" without the type admitting undefined.
  */
 export const timingsContext = createContext<{ timings?: Timings }>({});
 
@@ -68,14 +52,11 @@ export async function timed<T>(
 /**
  * Runs `fn` and records how long it took, for a SYNCHRONOUS call.
  *
- * `createAuth()` is the reason this exists. It builds a whole Better Auth
- * instance, including the Drizzle adapter, on every admin request, and it is
- * synchronous, so wrapping it in the async `timed` would add an await to the
- * uninstrumented path as well. That would be an instrument changing the thing
- * it measures, which is the one thing an instrument may not do.
+ * `createAuth()` is the reason this exists: it is synchronous, so wrapping it in the async `timed`
+ * would add an await to the UNINSTRUMENTED path as well. That would be an instrument changing the
+ * thing it measures, which is the one thing an instrument may not do.
  *
- * Same contract as `timed`: no collector, no cost, and the call is returned
- * directly rather than through a promise.
+ * Same contract as `timed`: no collector, no cost.
  */
 export function timedSync<T>(into: Timings | undefined, name: string, fn: () => T): T {
   if (!into) return fn();

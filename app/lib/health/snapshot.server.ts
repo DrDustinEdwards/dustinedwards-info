@@ -20,27 +20,19 @@ import {
 } from "./snapshot.mjs";
 
 /**
- * Stores the verdict. NEVER throws, and never blocks the answer being wrong.
+ * Stores the verdict. NEVER throws.
  *
- * A failed snapshot write must not turn a healthy site into a 500 on the one
- * endpoint the alerting workflow reads, and it must not turn an unhealthy site
- * into a different failure that hides which check broke. So the write is
- * wrapped and the catch is silent in the same shape `recordTraffic` uses in
- * `workers/app.ts`: bookkeeping never costs a caller their response.
+ * A failed snapshot write must not turn a healthy site into a 500 on the one endpoint the alerting
+ * workflow reads, nor turn an unhealthy site into a different failure that hides which check broke.
+ * Bookkeeping never costs a caller their response. THE CONSEQUENCE IS STATED RATHER THAN HIDDEN: if
+ * KV is failing the snapshot ages, and the home tile reports it as stale.
  *
- * The consequence is stated rather than hidden: if KV is failing, the snapshot
- * ages, and the home tile reports it as stale. That is the correct degradation
- * and it is visible, which is more than the old arrangement offered.
+ * Awaited rather than deferred to `waitUntil`, so a caller that reads this endpoint and then reads
+ * the home page sees a consistent pair.
  *
- * Awaited rather than deferred to `waitUntil`. This endpoint is `no-store`,
- * unshared and polled four times an hour, so the few milliseconds buy nothing
- * worth the second code path, and awaiting means a caller that reads the
- * endpoint and then reads the home page sees a consistent pair.
- *
- * NO EXPIRY. A snapshot that expired would report `missing`, which reads as
- * "something is misconfigured"; one that simply ages reports `stale` WITH ITS
- * AGE, which is the more useful sentence when the poller has stopped. One key
- * of about eighty bytes does not need a lifecycle.
+ * NO EXPIRY. A snapshot that expired would report `missing`, which reads as "something is
+ * misconfigured"; one that ages reports `stale` WITH ITS AGE, which is the more useful sentence when
+ * the poller has stopped.
  */
 export async function writeHealthSnapshot(
   env: Env,

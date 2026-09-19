@@ -14,39 +14,18 @@ import {
 } from "~/lib/preview-token.mjs";
 
 /**
- * The KV half of draft preview links. Deliberately THIN.
+ * The KV half of draft preview links. Deliberately THIN: every rule lives in `preview-token.mjs`,
+ * which is pure and unit tested, so this file only reads and writes.
  *
- * Every rule lives in `preview-token.mjs`, which is pure and unit tested. This
- * file only reads and writes: it mints nothing of its own, decides nothing of
- * its own, and parses nothing of its own. That split is what makes the rules
- * testable by `node --test` rather than only by deploying a Worker, and it is
- * the reason a reviewer can read the whole security argument in one pure file.
+ * Two keys, written together and deleted together. `preview:token:<token>` is the AUTHORITY and
+ * deleting it revokes; `preview:post:<slug>:<token>` is the INDEX, empty, and exists so "list this
+ * post's links" and "revoke every link" are possible at all.
  *
- * ## Two keys, written together and deleted together
- *
- *   preview:token:<token>          the AUTHORITY. JSON: slug, createdAt,
- *                                  createdBy, note. Deleting it revokes.
- *   preview:post:<slug>:<token>    the INDEX. Empty value. Exists so the two
- *                                  enumerations this feature needs are possible
- *                                  at all: "list this post's links" for the
- *                                  drawer, and "revoke every link" on publish.
- *
- * **They are not transactional and this code does not pretend they are.** Two
- * puts and two deletes, in an order chosen so the failure modes are safe:
- *
- *   CREATE writes the AUTHORITY first. A crash between the two leaves a live
- *   token that no listing shows, so the author cannot see it and cannot revoke
- *   it by name. It still expires with its TTL, and it still stops working the
- *   moment the post leaves draft, because the read path re-checks status.
- *
- *   REVOKE deletes the AUTHORITY first. A crash between the two leaves an
- *   ORPHANED INDEX ENTRY: a listing that mentions a token nobody can use. That
- *   is the harmless direction, and it is why `list` skips an entry whose
- *   authority record is gone rather than rendering it. Covered in
- *   `test/preview-token.test.mjs`.
- *
- * In both cases the dangerous artifact is the AUTHORITY record, so both
- * operations put it at the end of the window they can fail in.
+ * **THEY ARE NOT TRANSACTIONAL AND THIS CODE DOES NOT PRETEND THEY ARE.** Both operations put the
+ * AUTHORITY at the end of the window they can fail in, because it is the dangerous artifact. A crash
+ * in CREATE leaves a live token no listing shows, which still expires and still stops working the
+ * moment the post leaves draft; a crash in REVOKE leaves an ORPHANED INDEX ENTRY, which is why
+ * `list` skips an entry whose authority record is gone.
  */
 
 /** What the edit route's drawer renders for one live link. */
@@ -185,10 +164,9 @@ export async function readPreviewRecord(
 /**
  * Requests one IP may make to the preview path inside {@link PREVIEW_RATE_WINDOW_SECONDS}.
  *
- * 30 per minute, which is loose for a human opening a link and reloading it and
- * tight against anything enumerating. It is NOT the reason the token space is
- * safe: 256 bits is. This is here so the traffic such an attempt would make
- * stops, rather than because the attempt could otherwise succeed.
+ * 30 per minute: loose for a human opening a link, tight against anything enumerating. It is NOT the
+ * reason the token space is safe, which is 256 bits; it is here so the traffic such an attempt would
+ * make stops.
  */
 export const PREVIEW_RATE_LIMIT = 30;
 
@@ -196,17 +174,12 @@ export const PREVIEW_RATE_LIMIT = 30;
 export const PREVIEW_RATE_WINDOW_SECONDS = 60;
 
 /**
- * The per-IP burst limit on the preview path.
+ * The per-IP burst limit on the preview path. THE ASK LIMITER'S DURABLE OBJECT, one instance per
+ * IP, `hit()` doing a synchronous read-and-write so the count cannot be raced; the measurements
+ * that ruled out the `ratelimit` binding and a KV counter are in `workers/ask-budget.ts`.
  *
- * THE ASK LIMITER'S DURABLE OBJECT, and the same shape: one instance per IP,
- * `hit()` doing a synchronous read-and-write so the count cannot be raced. The
- * measurements that ruled out both the `ratelimit` binding and a KV counter are
- * in `workers/ask-budget.ts` and are not restated here.
- *
- * FAILS CLOSED when the binding is absent, exactly as `checkAskRate` does. An
- * unprotected public path that serves unpublished content must not serve: a
- * guard that silently passes because it could not run is the failure mode this
- * project has been caught by three times.
+ * FAILS CLOSED when the binding is absent, exactly as `checkAskRate` does. An unprotected public
+ * path that serves unpublished content must not serve.
  */
 export async function checkPreviewRate(
   env: Env,

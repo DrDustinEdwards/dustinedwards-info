@@ -1,29 +1,17 @@
 /**
  * Year-by-year roster of the SEA-PHAGES research cohort at Tarleton State.
  *
- * Structured content edited by commit, so it lives here rather than in the D1
- * `posts` table, whose single body column would flatten the structure. Photo
- * dimensions are the real output of scripts/resize-phage-photos.mjs and differ
- * by year, so they are recorded per photo to keep layout shift at zero.
+ * Structured content edited by commit, so it lives here rather than in the D1 `posts` table, whose
+ * single body column would flatten the structure. Photo dimensions are the real output of
+ * scripts/resize-phage-photos.mjs and are recorded per photo to keep layout shift at zero.
  *
- * ALT TEXT IS DELIBERATELY NEUTRAL, 2026-08-02. It used to name the program
- * ("Tarleton State University phage discovery research group"). Those nine
- * strings were the only subject-matter language rendered anywhere on the public
- * site, on a page whose whole point is that it carries names and nothing else,
- * so they were the last thing left to remove. "For now": if descriptive copy
- * returns to this page, the alt text is part of that decision.
+ * ALT TEXT IS DELIBERATELY NEUTRAL, on a page whose whole point is that it carries names and nothing
+ * else. It is NOT emptied, because these photos are half the page's content rather than decoration,
+ * and `alt=""` on a content image is a WCAG failure.
  *
- * It is not emptied, because these photos are half the page's content rather
- * than decoration, and `alt=""` on a content image is a WCAG failure.
- *
- * THE NAMES ARE AS GIVEN, and there is no open question about any of them.
- *
- * A TODO stood here guessing that the 2018 entry "Matthew Bristerpostma" was
- * "likely Brister-Postma, pending confirmation". Removed 2026-09-11 by
- * Dustin's ruling: the name is the name. A speculative respelling of a real
- * person's name, published on the page that lists them, is a worse error than
- * an unhyphenated one, and a comment inviting the next reader to make that
- * edit is the same error with a delay on it.
+ * **THE NAMES ARE AS GIVEN, and there is no open question about any of them.** A speculative
+ * respelling of a real person's name, on the page that lists them, is a worse error than an
+ * unhyphenated one, and a comment inviting that edit is the same error with a delay on it.
  */
 
 export type PhageYear = {

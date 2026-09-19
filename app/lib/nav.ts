@@ -1,22 +1,13 @@
 /**
  * THE HEADER'S LINKS, in one place.
  *
- * `site-header.tsx` renders a NavLink per entry. It is the ONLY consumer, and
- * that is a change: from 2026-08-27 until 2026-08-28 `site-speculation.tsx`
- * also read this list, through an exported `HEADER_PATHS`, to build a
- * Speculation Rules `urls` payload.
+ * `site-header.tsx` renders a NavLink per entry and is the ONLY consumer. A second one read this
+ * list to build a Speculation Rules payload, and **that mirror is gone**: the rules are document
+ * rules now, matching links in the rendered document rather than a list of paths, so the drift this
+ * module was written to prevent is not merely gated, it is unrepresentable.
  *
- * **THAT SECOND CONSUMER IS GONE, AND SO IS THE MIRROR IT CREATED.** The rules
- * are document rules now (`~/lib/speculation.mjs`): they match the links in the
- * rendered document rather than a list of paths, so a header link is covered
- * because it is an `<a href>`, not because someone kept two arrays in step. The
- * drift this module was written to prevent, a nav link with no speculation
- * entry or an entry whose link had been removed, is not merely gated now, it is
- * unrepresentable.
- *
- * `HEADER_PATHS` was deleted with it. A derived export whose only reader has
- * gone is dead configuration that reads as load-bearing, which is worse than
- * either keeping it honest or removing it.
+ * `HEADER_PATHS` went with it: a derived export whose only reader has gone is dead configuration
+ * that reads as load-bearing.
  *
  * Roster's LABEL and its PATH deliberately disagree; see site-header.tsx.
  */

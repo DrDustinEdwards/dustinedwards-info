@@ -25,18 +25,30 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { stripComments } from "../scripts/lib/strip-comments.mjs";
 import { commentBlocks } from "./code-blocks.mjs";
-import * as wave1 from "./code-wave1.mjs";
-import * as wave2 from "./code-wave2.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO = join(HERE, "..");
 
-/** Which wave this run is about. Wave 1's names carry no suffix, so nothing of its moves. */
-const WAVE = process.env.WAVE === "2" ? 2 : 1;
-const FILES = WAVE === 2 ? wave2.WAVE2 : wave1.WAVE1;
-const CHUNKS = WAVE === 2 ? wave2.CHUNKS : wave1.CHUNKS;
-const KEEP_SHARE = WAVE === 2 ? wave2.KEEP_SHARE : wave1.KEEP_SHARE;
+/**
+ * Which wave this run is about. Wave 1's names carry no suffix, so nothing of its moves.
+ *
+ * The list is IMPORTED BY NUMBER rather than picked from a chain of ternaries, which is what the
+ * header above already claimed. Adding a wave to the ternary form means editing four lines that
+ * all have to agree, and one that does not is a run over another wave's files carrying this
+ * wave's decisions.
+ */
+const WAVE = Number(process.env.WAVE ?? 1);
+if (!Number.isInteger(WAVE) || WAVE < 1) throw new Error(`WAVE must be a positive integer, got ${process.env.WAVE}`);
+const waveModule = await import(pathToFileURL(join(HERE, `code-wave${WAVE}.mjs`)).href);
+const FILES = waveModule[`WAVE${WAVE}`];
+const CHUNKS = waveModule.CHUNKS;
+const KEEP_SHARE = waveModule.KEEP_SHARE;
+if (!Array.isArray(FILES) || !CHUNKS) throw new Error(`code-wave${WAVE}.mjs must export WAVE${WAVE} and CHUNKS`);
 const SUFFIX = WAVE === 1 ? "" : `-wave${WAVE}`;
+// The history header's wave sentence and base sha. Waves 1 and 2 predate these exports and
+// keep the literals they were committed with, so their documents still reproduce.
+const BASE_SHA = waveModule.BASE ?? "cdb4300";
+const SCOPE = waveModule.SCOPE ?? `the remaining ${FILES.length} files under scripts/`;
 const BEFORE = join(HERE, `code-history-before${SUFFIX}`);
 const DECISIONS = join(HERE, `code-decisions${SUFFIX}`);
 const TAGS_TSV = join(HERE, WAVE === 1 ? "code-history-tags.tsv" : `code-history-tags-wave${WAVE}.tsv`);
@@ -52,7 +64,29 @@ const MARKERS = ["JUSTIFIED SUBSTITUTION"];
 const WIDE_DASHES = [String.fromCharCode(0x2013), String.fromCharCode(0x2014)];
 
 const jsdocHeads = (t) => (t.match(JSDOC_HEAD) ?? []).map((h) => h.replace(/\s+/g, " ").trim());
-const citations = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).sort();
+
+/**
+ * A comment's prose with its markers and line breaks flattened to single spaces.
+ *
+ * WHICH CITATIONS THE COMPARISON COUNTS IS THE WHOLE QUESTION, and counting them on the RAW text
+ * gets it wrong in the one case this wave has to handle. A citation split by a line break is DEAD
+ * on the wire, matching neither this counter nor check:invariants section 15, so a block holding
+ * one reads as zero. Repairing the wrap then reads as an INVENTED citation and the rewrite is
+ * refused, which is the opposite of what the repair is for.
+ *
+ * Flattening both sides asks the question that is actually meant, which is whether the same rules
+ * are cited. A dropped or invented citation still fails, because flattening changes no number; a
+ * wrap that is opened or closed does not, because it never changed which rule was named.
+ */
+const flatProse = (t) =>
+  t
+    .split("\n")
+    .map((l) => l.replace(/^\s*(?:\/\/|\*\/|\/\*\*?|\*)\s?/, ""))
+    .join(" ");
+const citations = (t) => [...flatProse(t).matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).sort();
+
+/** Citations that are LIVE: on one line, so the counter and the gate both see them. */
+const liveCitations = (t) => [...t.matchAll(CITATION)].flatMap((m) => m[1].split(/[^\d]+/).filter(Boolean)).sort();
 const sameMultiset = (a, b) => {
   const x = [...a].sort();
   const y = [...b].sort();
@@ -126,6 +160,12 @@ function validate(b, d) {
     const ha = jsdocHeads(after);
     if (!sameMultiset(hb, ha)) problems.push(`${where}: JSDoc tag heads changed; before ${JSON.stringify(hb)} after ${JSON.stringify(ha)}`);
     if (!sameMultiset(citations(b.text), citations(after))) problems.push(`${where}: hard rule citations changed (${citations(b.text)} -> ${citations(after)})`);
+    // And every citation the replacement carries must be LIVE. The comparison above is deliberately
+    // blind to wrapping, so this is what stops a rewrite re-wrapping one, and what makes repairing
+    // an inherited wrap the only way a block can go from dead citation to live.
+    if (typeof repl === "string" && liveCitations(repl).length !== citations(repl).length) {
+      problems.push(`${where}: citation split by a line break, so it resolves to nothing`);
+    }
     for (const m of MARKERS) if (b.text.includes(m) && !after.includes(m)) problems.push(`${where}: marker "${m}" lost`);
     if (DIRECTIVE.test(b.text) && repl !== undefined) problems.push(`${where}: carries a tool directive; keep it byte-identical`);
     if (typeof repl === "string") {
@@ -297,10 +337,9 @@ if (mode === "apply") {
   const history = [
     `# Code comment history, 2026-09, wave ${WAVE}`,
     "",
-    `Extracted under ruling 115, from cdb4300. Every comment block this wave`,
+    `Extracted under ruling 115, from ${BASE_SHA}. Every comment block this wave`,
     `deleted or shortened is here VERBATIM, with the file and line it had at`,
-    `cdb4300, its tag, and why it moved. Wave 1 took app/ and the ten heaviest`,
-    `code files; wave ${WAVE} takes the remaining ${FILES.length} files under scripts/.`,
+    `${BASE_SHA}, its tag, and why it moved. Wave ${WAVE} takes ${SCOPE}.`,
     "The files keep only the short why and the contract; this is where the",
     "measurements, dates and the story went.",
     "",

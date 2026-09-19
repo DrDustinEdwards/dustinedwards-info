@@ -1,41 +1,19 @@
 /**
  * THE MIRROR. Every object in MEDIA has a byte-identical twin in MEDIA_BACKUP.
  *
- * Ruled 2026-09-01 in `decisions-vol-13.md`, after `media-unbacked` fired on the
- * first object ever put in the bucket. That check asked whether MEDIA was still
- * EMPTY, because `RECOVERY.md` section 3 grounded a no-backup acceptance on it
- * holding nothing. The acceptance was going to expire the first time a real
- * image-bearing post was written, so it was re-decided rather than deferred.
+ * It covers the site's own code, which is the realistic loss: the OG prune, the media delete action
+ * and the R2-wins reconciliation can each remove an object with no undo. It does NOT cover account
+ * loss or compromise, which needs a copy outside the account and is `check:backup`'s local pull.
  *
- * ## WHAT THIS PROTECTS AGAINST, IN THE RULED ORDER
+ * **NO SITE CODE PATH EVER DELETES FROM THE BACKUP.** There is none here and there must never be one
+ * anywhere else either; pruning the mirror is a human act, by hand. `check:destructive` fails on a
+ * delete against the `MEDIA_BACKUP` binding, which makes that sentence enforceable rather than
+ * aspirational. Copying is the only write here and it cannot lose anything, which is why
+ * `media-backup-drift` is allowed to self-repair where `media-unbacked` was not.
  *
- * 1. **The site's own code.** The OG prune, the media delete action and the
- *    R2-wins reconciliation can each remove an object with no undo. This is the
- *    realistic loss, and a same-account mirror covers it completely.
- * 2. **Account loss or compromise.** Covered only by a copy outside the
- *    account, which is `check:backup`'s local pull, not this module.
- * 3. **Cloudflare losing an object.** Least likely of the three.
- *
- * ## THE ONE RULE THIS FILE EXISTS TO KEEP
- *
- * **NO SITE CODE PATH EVER DELETES FROM THE BACKUP.** There is no delete in
- * this module and there must never be one anywhere else either; pruning the
- * mirror is a human act, by hand. `check:destructive` fails on a delete against
- * the `MEDIA_BACKUP` binding, which is what makes that sentence enforceable
- * rather than aspirational.
- *
- * Copying is also the only write here, and it is the one write that cannot lose
- * anything. That is precisely why `media-backup-drift` is allowed to self-repair
- * where `media-unbacked` was not: a repair that can only add is safe to fire
- * unattended.
- *
- * ## NEVER A DUAL WRITE
- *
- * The Worker still writes ONLY to MEDIA. The bucket emits an event, and the
- * queue consumer derives BOTH the D1 row and the twin from the object as it is
- * NOW, never from what the message claimed. So the mirror is derived state on
- * exactly the same footing as the index, and replay or out-of-order delivery
- * converge instead of corrupting.
+ * **NEVER A DUAL WRITE.** The Worker writes ONLY to MEDIA; the queue consumer derives both the D1 row
+ * and the twin from the object as it is NOW, never from what the message claimed, so replay and
+ * out-of-order delivery converge instead of corrupting.
  */
 
 import type { OperatorEnv } from "~/lib/operator/auth.server";
@@ -82,26 +60,14 @@ async function listAll(bucket: R2Bucket) {
 }
 
 /**
- * WHETHER TWO OBJECTS ARE THE SAME BYTES, and why this comparison and not
- * another.
+ * WHETHER TWO OBJECTS ARE THE SAME BYTES: **ETAG, corroborated by SIZE.** For a single-part R2
+ * object the etag IS the MD5 of the stored bytes and `list()` returns it free on both sides; every
+ * write here is a whole-object `put` under the 10 MB upload cap, so nothing in this bucket is
+ * multipart. Not size alone: a same-length corruption is exactly the case a mirror is for.
  *
- * **ETAG, corroborated by SIZE.** For a single-part R2 object the etag IS the
- * MD5 of the stored bytes, so equal etags mean equal content, and `list()`
- * returns it for free on both sides. `admin.media.upload.ts` caps an upload at
- * 10 MB and every write here is a whole-object `put`, so nothing in this bucket
- * is multipart.
- *
- * **Why not size alone:** a same-length corruption is exactly the case a mirror
- * is for, and size cannot see it.
- *
- * **Why not a full hash:** it would mean reading every object's body on every
- * health poll. The queue consumer already refuses that cost for the LQIP, in
- * this same subsystem, for the same reason.
- *
- * **The multipart escape hatch is stated rather than assumed.** A multipart
- * etag carries a `-<parts>` suffix and is NOT a content digest. If one ever
- * appears the comparison degrades to size and SAYS SO in the reason, so a
- * weaker verdict can never be mistaken for the strong one.
+ * **THE MULTIPART ESCAPE HATCH IS STATED RATHER THAN ASSUMED.** A multipart etag carries a
+ * `-<parts>` suffix and is NOT a content digest; if one appears the comparison degrades to size and
+ * SAYS SO in the reason, so a weaker verdict cannot be mistaken for the strong one.
  */
 function compare(source: R2Object, twin: R2Object | null): TwinComparison {
   if (!twin) {
@@ -167,18 +133,12 @@ export async function backupStatus(env: BackupEnv): Promise<BackupStatus> {
 }
 
 /**
- * Copy ONE object into the mirror, from the object as it is now.
+ * Copy ONE object into the mirror, from the object as it is now. The R2 binding has no server-side
+ * copy, so this is a `get` and a whole-object `put`, which keeps the etag a content digest.
  *
- * The Workers R2 binding has no server-side copy, so this is a `get` and a
- * `put`. Whole-object, which is what keeps the etag a content digest.
- *
- * IDEMPOTENT BY CONSTRUCTION: it re-reads the source and overwrites the twin
- * with the same bytes, so replay converges. It never branches on what a queue
- * message claimed.
- *
- * A source that no longer exists is NOT an error. The object was deleted
- * between the event and this call, and the twin that already exists is exactly
- * what the mirror is for: it stays.
+ * IDEMPOTENT BY CONSTRUCTION: it re-reads the source and never branches on what a queue message
+ * claimed, so replay converges. A source that no longer exists is NOT an error: the twin stays,
+ * which is what the mirror is for.
  */
 export async function mirrorObject(env: BackupEnv, key: string): Promise<"copied" | "gone"> {
   const object = await env.MEDIA.get(key);
