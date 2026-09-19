@@ -11,28 +11,14 @@ import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/login";
 
 /*
- * THE ADMIN STYLESHEET, ON A PUBLIC ROUTE, DELIBERATELY.
+ * THE ADMIN STYLESHEET, ON A PUBLIC ROUTE, DELIBERATELY. This page is
+ * unauthenticated and therefore public, but it is the admin plane's door.
  *
- * This page is unauthenticated and therefore public, but it is the admin
- * plane's door and it is styled like one. Measured 2026-08-23 while splitting
- * the admin CSS out of the public bundle: `/login` is the ONLY non-admin file
- * in `app/` that uses a class defined solely in an admin stylesheet.
- * TWO dependencies, both measured with postcss rather than assumed, and the
- * first draft of this comment got the second one wrong:
- *
- *   `.field-alarm`         admin-editor.css line 855, and NOWHERE else. It
- *                          carries the sign-in error at line 122 below, so
- *                          without this import the failure state renders with
- *                          no colour and no size.
- *   `.btn-brand:disabled`  admin-posts.css line 318. The button's ordinary
- *                          appearance comes from `app.css`, which is public,
- *                          so that half needs nothing; it is the DISABLED
- *                          state, `disabled={busy}` below, that lives only in
- *                          an admin sheet.
- *
- * The alternative was moving two rules into a public sheet, which would have
- * changed their cascade position for the admin plane to save bytes on a page
- * essentially one person loads. Not worth it.
+ * TWO dependencies, both measured with postcss rather than assumed:
+ * `.field-alarm`, which carries the sign-in error, and `.btn-brand:disabled`,
+ * which is the button's disabled state. The alternative was moving two rules into
+ * a public sheet, changing their cascade position for the admin plane to save
+ * bytes on a page essentially one person loads.
  */
 import "~/admin.css";
 
@@ -41,11 +27,9 @@ export function meta() {
 }
 
 /**
- * /login hydrates for its busy flag and the browser-client fast path on the
- * button below, and that is DECORATION: the door itself is the plain form
- * above it, a real no-script POST, which is what rule 9 requires of a public
- * route. Dropping this flag would cost the spinner and the saved round trip,
- * never the sign-in.
+ * /login hydrates for its busy flag, and that is DECORATION: the door itself is
+ * the plain form above it, a real no-script POST, which is what rule 9 requires of
+ * a public route. Dropping this flag would cost the spinner, never the sign-in.
  */
 export const handle = { hydrate: true };
 
@@ -59,40 +43,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 /**
- * THE DOOR, WITHOUT SCRIPT.
+ * THE DOOR, WITHOUT SCRIPT. The only way in used to be a `type="button"` with an
+ * `onClick`: with scripting off it rendered, it was enabled, and it did nothing.
+ * Hard rule 9 decides where the boundary sits, and the DOOR is on the public
+ * plane.
  *
- * ## What this closes
+ * WHY THIS ACTION EXISTS instead of posting straight to Better Auth: that endpoint
+ * answers 200 with a JSON body carrying the authorize URL, because it is written
+ * for a fetch client that will navigate itself, so a plain form would render that
+ * JSON as text. This action asks for the same URL and answers with a real 302.
  *
- * The only way in used to be a `type="button"` with an `onClick` that called
- * the Better Auth browser client. With scripting off it rendered, it was
- * enabled, and it did nothing at all: the site's single door was JS-only while
- * README declared that every public page works with scripting disabled. Hard
- * rule 9 decides where the boundary sits, and the admin plane behind this page
- * may require script; the DOOR is on the public plane, so it may not.
+ * `form-action 'self'` is satisfied because the form's target is this origin; the
+ * cross-origin hop afterwards is a REDIRECT, and redirects are not checked against
+ * it. If a browser ever reinstates that check, the fix is to name the provider.
  *
- * ## Why this action exists instead of posting straight to Better Auth
- *
- * `POST /api/auth/sign-in/social` answers `200` with a JSON body carrying the
- * authorize URL, because it is written for a fetch client that will navigate
- * itself. Pointed at by a plain `<form>`, a browser would render that JSON as
- * text. Verified in the installed package rather than assumed: the endpoint's
- * own schema declares a JSON response, and `better-call` has no
- * redirect-on-form-submission path.
- *
- * So the form posts HERE, this action asks the same Better Auth server API for
- * the same URL, and answers with a real 302. `form-action 'self'` is satisfied
- * because the form's target is this origin; the cross-origin hop afterwards is
- * a REDIRECT, and redirects are not checked against `form-action` (Chrome
- * shipped that check and reverted it in 78 because it broke exactly this OAuth
- * shape). If a browser ever reinstates it the symptom is a blocked navigation
- * from this page, and the fix is to name the provider in `form-action`.
- *
- * ## The rate limit is applied here too, and that is not belt-and-braces
- *
- * `/api/auth/*` is guarded on both verbs, but this route is not under that
- * path, so without this line the form would be an unguarded way to ask Better
- * Auth to mint authorize URLs and set state cookies. Same limiter, same key
- * prefix, so the two doors share one budget rather than each getting their own.
+ * THE RATE LIMIT IS APPLIED HERE TOO, and that is not belt-and-braces: this route
+ * is not under `/api/auth/*`, so without it the form would be an unguarded way to
+ * ask Better Auth to mint authorize URLs and set state cookies.
  */
 export async function action({ request, context }: Route.ActionArgs) {
   const env = getEnv(context);
@@ -113,10 +80,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * THE HEADERS MATTER AS MUCH AS THE URL. Better Auth sets the OAuth state
-   * cookie on this response, and the callback refuses without it. Returning the
-   * redirect while dropping the Set-Cookie would produce a door that opens onto
-   * a failure every time, which is worse than one that does nothing.
+   * THE HEADERS MATTER AS MUCH AS THE URL. Better Auth sets the OAuth state cookie
+   * on this response and the callback refuses without it, so returning the redirect
+   * while dropping the Set-Cookie would produce a door that opens onto a failure
+   * every time.
    */
   const headers = new Headers(result.headers);
   headers.set("Location", url);
@@ -126,9 +93,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function Login({ actionData }: Route.ComponentProps) {
   const [busy, setBusy] = useState(false);
-  // `id="main"` because root ALWAYS renders `<a class="skip-link" href="#main">`,
-  // on every route including this one. Without a target here the first thing a
-  // keyboard reader hits on the site's only door moved focus nowhere.
+  // `id="main"` because root ALWAYS renders the skip link, on every route
+  // including this one. Without a target here the first thing a keyboard reader hits
+  // on the site's only door moved focus nowhere.
   return (
     <main className="gate" id="main">
       <div className="gate-card">
@@ -142,11 +109,10 @@ export default function Login({ actionData }: Route.ComponentProps) {
           </p>
         ) : null}
         {/*
-          A PLAIN form, deliberately not react-router's <Form>. The submission
-          has to end in a cross-origin redirect to the provider, and a native
-          navigation follows that without the client router having to decide
-          what a 303 to another site means.
-        */}
+         * A PLAIN form, deliberately not react-router's `<Form>`: the submission has to
+         * end in a cross-origin redirect to the provider, and a native submission is what
+         * follows one.
+         */}
         <form method="post">
           <button
             type="submit"
@@ -154,11 +120,9 @@ export default function Login({ actionData }: Route.ComponentProps) {
             disabled={busy}
             onClick={(event) => {
               /*
-               * THE ENHANCEMENT, layered on top rather than replacing anything.
-               * With script the browser client goes straight to the provider,
-               * which saves this route a round trip and gives the operator a
-               * state to look at. Without script none of this runs and the form
-               * above posts normally.
+               * THE ENHANCEMENT, layered on top rather than replacing anything. With script
+               * the browser client goes straight to the provider; without script none of this
+               * runs and the form above posts normally.
                */
               event.preventDefault();
               setBusy(true);

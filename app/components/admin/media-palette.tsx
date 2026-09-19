@@ -6,39 +6,18 @@ import { byteSize } from "~/lib/media/byte-size.mjs";
 /**
  * THE COMMAND PALETTE, LAYERED OVER THE SEARCH FORM RATHER THAN REPLACING IT.
  *
- * ## WHAT IT IS FOR
+ * THIS COMPONENT RENDERS NOTHING ON THE SERVER. It mounts, finds the search input
+ * already in the DOM, and attaches to it. With scripting off the page is
+ * byte-for-byte what it was. That is also why it takes the input by ID rather than
+ * owning it: an enhanced control that REPLACES the unenhanced one has to
+ * reimplement everything the platform gave the original, and the first thing it
+ * loses is the no-script path.
  *
- * The library has one job, handing an author an address, and the fastest path to
- * one was: type, press Enter, wait for a page, find the row, press Copy. Four of
- * those five steps are the page getting out of its own way. Typing and pressing
- * Enter should be the whole thing, and that is what this is.
+ * THE RESULTS COME FROM THE SAME QUERY THE FORM RUNS. A client-side filter would
+ * be a SECOND answer to "what matches this", which this page has already paid for
+ * once.
  *
- * ## PROGRESSIVE ENHANCEMENT, LITERALLY
- *
- * **THIS COMPONENT RENDERS NOTHING ON THE SERVER.** It mounts, finds the search
- * input that is already in the DOM, and attaches to it. With scripting off the
- * page is byte-for-byte what it was: a native GET form that navigates and
- * filters in SQL. Nothing here is the only way to do anything.
- *
- * That is also why it takes the input by ID rather than owning it. An enhanced
- * control that REPLACES the unenhanced one has to reimplement everything the
- * platform gave the original, and the first thing it always loses is the
- * no-script path.
- *
- * ## THE RESULTS COME FROM THE SAME QUERY THE FORM RUNS
- *
- * `?palette=1` is a branch of the media loader, so `matchesQuery` in SQL decides
- * what matches for both. A client-side filter over a copy of the library would
- * be a SECOND answer to "what matches this", and this page has already paid for
- * a second answer once, when the Unused chip counted with one predicate and
- * filtered with another.
- *
- * ## CLIENT STATE, DECLARED
- *
- * Five pieces: the query, the results, the cursor, whether a request is in
- * flight, and whether the panel is open. All of it is transient by nature, none
- * of it survives a navigation, and none of it belongs in a URL: a half-typed
- * query in the address bar would make the back button walk letter by letter.
+ * CLIENT STATE, DECLARED: five pieces, all transient, none in a URL.
  */
 
 /** What `?palette=1` returns. Named so the fetch is typed rather than `any`. */
@@ -56,11 +35,9 @@ type PaletteResult = {
 export function MediaPalette({
   inputId = "media-q",
   /**
-   * HARNESS SEAM, per admin queue ruling 8: an optional prop with a production
-   * default. `check:admin-ui` renders one static pass and dispatches no events,
-   * so without this the panel never opens and the gate would assert the absence
-   * of something that structurally cannot appear. Wire-unreachable: React Router
-   * never supplies it.
+   * HARNESS SEAM: an optional prop with a production default. `check:admin-ui`
+   * renders one static pass and dispatches no events, so without this the panel never
+   * opens. Wire-unreachable: React Router never supplies it.
    */
   initialResults,
 }: {
@@ -95,13 +72,10 @@ export function MediaPalette({
   }, [inputId]);
 
   /*
-   * THE FETCH, DEBOUNCED, AND ORDERED BY SEQUENCE NUMBER.
-   *
-   * The debounce is the obvious half. The sequence number is the half that gets
-   * forgotten: two requests in flight can complete in either order, so a slow
-   * response to `ed` can land after a fast response to `edwards` and replace the
-   * right answer with a stale one. Comparing against the latest issued id makes
-   * a late response a no-op rather than a corruption.
+   * THE FETCH, DEBOUNCED, AND ORDERED BY SEQUENCE NUMBER. The sequence number is
+   * the half that gets forgotten: two requests in flight can complete in either
+   * order, so a slow response to a shorter query can land after a fast one and
+   * replace the right answer with a stale one.
    */
   useEffect(() => {
     const trimmed = query.trim();
@@ -123,9 +97,9 @@ export function MediaPalette({
           setCursor(0);
         })
         .catch(() => {
-          // A failed lookup leaves the form underneath untouched, so pressing
-          // Enter still navigates and still searches. Silence is the right
-          // behaviour: an error banner over a working control is noise.
+          // A failed lookup leaves the form underneath untouched, so pressing Enter still
+          // navigates and still searches. Silence is the right behaviour: an error banner
+          // over a working control is noise.
           if (id === seq.current) setResults([]);
         });
     }, 130);
@@ -144,13 +118,10 @@ export function MediaPalette({
   };
 
   /*
-   * THE KEY HANDLER, on the window, because two of its bindings are global.
-   *
-   * Cmd+K and slash have to work while focus is anywhere on the page, which is
-   * the point of them. Everything else only applies while the search box has
-   * focus, and the guard below is what keeps arrow keys working normally in the
-   * alt textarea: a palette that stole ArrowDown from every field on the page
-   * would break typing to fix finding.
+   * On the window, because two bindings are global. Everything else applies only
+   * while the search box has focus, and the guard is what keeps arrow keys working
+   * in the alt textarea: a palette that stole ArrowDown from every field would break
+   * typing to fix finding.
    */
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -190,21 +161,18 @@ export function MediaPalette({
         setCursor((c) => Math.max(0, c - 1));
       } else if (event.key === "Enter") {
         /*
-         * ENTER COPIES. SHIFT+ENTER OPENS.
-         *
-         * `preventDefault` matters here: without it the form submits and
-         * navigates, which is the unenhanced behaviour and would throw away the
-         * copy. With scripting off there is no handler and the same key does
-         * exactly that navigation, which is the fallback working.
+         * ENTER COPIES. SHIFT+ENTER OPENS. `preventDefault` matters: without it the form
+         * submits and navigates, which is the unenhanced behaviour and would throw away the
+         * copy. With scripting off there is no handler and the same key does exactly that
+         * navigation.
          */
         event.preventDefault();
         const hit = results[Math.min(cursor, results.length - 1)];
         if (!hit) return;
         if (event.shiftKey) {
-          // A ROUTER navigation, not `window.location`. The destination is
-          // this same route with a `key` in the query, which every other
-          // control that opens the inspector reaches by `<Link>`; assigning to
-          // `location` tore the document down and rebuilt it to show a panel.
+          // A ROUTER navigation, not `window.location`: the destination is this same route
+          // with a `key` in the query, and assigning to `location` tore the document down
+          // and rebuilt it to show a panel.
           navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
             preventScrollReset: true,
           });
@@ -231,12 +199,10 @@ export function MediaPalette({
           {results.map((r, i) => (
             <li key={r.key}>
               {/*
-                A LINK, not a button, and it goes to the inspector. The pointer
-                path and the keyboard path therefore differ on purpose: clicking
-                a row opens it, because that is what clicking a row means
-                everywhere, while Enter copies, because that is what the reader
-                came for and the hint says so.
-              */}
+               * A LINK, not a button. The pointer path and the keyboard path differ on
+               * purpose: clicking a row opens it, because that is what clicking a row means
+               * everywhere, while Enter copies, because that is what the reader came for.
+               */}
               <a
                 href={`/admin/media?key=${encodeURIComponent(r.key)}`}
                 className="media-palette-row"
@@ -263,13 +229,10 @@ export function MediaPalette({
       )}
 
       {/*
-        THE HINTS, which are the only documentation these shortcuts get.
-
-        A keyboard affordance nobody can discover is a keyboard affordance
-        nobody uses, and this row is where the reader learns that Enter does
-        something other than submit. The count on the right says "6+ matches"
-        when the cap was hit, so six never reads as the whole answer.
-      */}
+       * THE HINTS, which are the only documentation these shortcuts get: a keyboard
+       * affordance nobody can discover is one nobody uses. The count says "6+ matches"
+       * when the cap was hit, so six never reads as the whole answer.
+       */}
       <p className="media-palette-hints">
         <span>
           <b>up down</b> move

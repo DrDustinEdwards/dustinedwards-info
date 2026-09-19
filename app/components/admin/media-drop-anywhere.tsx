@@ -8,34 +8,25 @@
 import { useEffect, useState } from "react";
 
 /**
- * Drop a file anywhere on the page to load it into the upload form.
- *
  * LAYERED OVER THE FORM, never instead of it. It sets the EXISTING input's
- * `files` and does not submit, so what happens next is what has always happened
- * next: the author sees the filename in the field and presses Upload. That is
- * the whole enhancement, and it is why it degrades perfectly: with script off
- * the form is untouched and the page behaves exactly as it did before this
- * existed.
+ * `files` and does not submit, so with script off the form is untouched.
  *
- * It deliberately DOES NOT auto-submit. A drop is easy to do by accident, an
- * upload writes to R2, and the friction ladder puts a deliberate press in front
- * of every write on this page.
+ * It deliberately DOES NOT AUTO-SUBMIT: a drop is easy to do by accident, an
+ * upload writes to R2, and the ladder puts a deliberate press in front of every
+ * write on this page.
  *
- * KEYBOARD REACHABILITY is not this control's job and it does not claim any: it
- * renders no focusable element and adds no shortcut. The file input beside it
- * is the keyboard path and always was, which is why this can be a pure
- * convenience rather than a second way in that has to be made accessible.
- *
- * CLIENT STATE ADDED: one boolean, `over`, purely to draw the target. It is
- * initialised false so the hydration render matches the server's.
+ * KEYBOARD REACHABILITY is not this control's job and it claims none: the file
+ * input beside it is the keyboard path and always was.
  */
 export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | null> }) {
   const [over, setOver] = useState(false);
 
   useEffect(() => {
-    /* A COUNTER, not a boolean, because dragenter and dragleave fire for every
-       nested element the pointer crosses and a naive boolean flickers off the
-       moment the cursor moves between two tiles. */
+    /*
+     * A COUNTER, not a boolean, because dragenter and dragleave fire for every
+     * nested element the pointer crosses and a naive boolean flickers off the moment
+     * the cursor moves between two tiles.
+     */
     let depth = 0;
     const stop = (event: DragEvent) => {
       event.preventDefault();

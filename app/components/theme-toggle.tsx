@@ -3,60 +3,28 @@ import themeEnhanceUrl from "~/enhance/dist/theme.js?url";
 import { EnhancementScript } from "~/components/enhancement-script";
 
 /**
- * ONE theme button, ordered by Dustin on aesthetics 2026-08-29.
+ * ONE theme button. It switches between the two themes; the default is what a
+ * reader gets until they touch it.
  *
- * The site has two themes and a default. This control switches between the two.
- * The default is what a reader gets until they touch it, and `app/lib/theme.ts`
- * is where that resolution lives and is explained; nothing here needs to know
- * how it is spelled.
+ * WHY TWO BUTTONS SHIP AND ONE IS EVER SEEN: the control must name the theme it
+ * will switch TO, and with no cookie the server cannot know what the reader is
+ * seeing. So both are rendered and CSS displays exactly one, picked by
+ * `data-theme` or by `prefers-color-scheme`. None of it needs script, and the
+ * scripted path is then trivial: set or remove the attribute and the control
+ * follows by cascade.
  *
- * There is deliberately no control for returning to the default. Clearing the
- * cookie does it, and that is undocumented on purpose: a recovery rather than a
- * feature, and a second control to reach it is exactly the chrome this ruling
- * removes.
+ * THE ICON IS THE THEME IN EFFECT, THE NAME IS THE ACTION. They pull in opposite
+ * directions on purpose: the icon is state, the accessible name is the outcome.
  *
- * ## WHY TWO BUTTONS SHIP AND ONE IS EVER SEEN
- *
- * The control must name the theme it will switch TO, and with no cookie the
- * server cannot know what the reader is currently seeing: the preference lives
- * on their machine and arrives in no header this site reads. Asking for it
- * would mean `Accept-CH` and a `Vary` the Worker's cache key cannot carry,
- * which is the trap `media.$.ts` records at length.
- *
- * So both buttons are rendered and CSS displays exactly one. With an explicit
- * choice the `data-theme` attribute on `<html>` picks it; with no choice
- * `prefers-color-scheme` does. A reader always sees a single button, it always
- * posts the correct value, and none of it needs script.
- *
- * That also makes the SCRIPTED path trivial: `theme.ts` sets or removes
- * `data-theme` and the control follows by cascade alone. No icon swapping, no
- * label rewriting, no second copy of the SVG in a bundle.
- *
- * ## THE ICON IS THE THEME IN EFFECT, THE NAME IS THE ACTION
- *
- * A sun means "you are in light", and its label is "Switch to dark theme".
- * Those pull in opposite directions on purpose: the icon is state, which is
- * what a glance wants, and the accessible name is the outcome, which is what a
- * screen reader user needs before activating anything.
- *
- * No `aria-pressed`. This is not a control with an on and an off; it performs
- * an action and the label says which. `aria-pressed` on a button whose meaning
- * flips underneath it is the kind of half-true semantics the three-button
- * version deliberately avoided by not calling itself a radiogroup.
- *
- * It is a real form posting to /theme, so it works with scripting off: the
- * action writes the cookie and the next render carries the right attribute. The
- * enhancement intercepts the submit and flips the attribute in place, which
- * removes the round trip but is not what makes the control work.
+ * No `aria-pressed`: this is not a control with an on and an off, it performs an
+ * action and the label says which.
  */
 export function ThemeToggle() {
   /*
-   * IT TAKES NO PROPS SINCE 2026-08-29, and that is the design rather than an
-   * omission. Both buttons are always rendered and the cascade chooses, so the
-   * server's resolved theme reaches this control through `<html data-theme>`
-   * alone. A `theme` prop would be a second input that could disagree with the
-   * attribute, which is exactly how a control ends up showing one thing and
-   * posting another.
+   * IT TAKES NO PROPS, and that is the design: the resolved theme reaches this
+   * control through `<html data-theme>` alone. A `theme` prop would be a second
+   * input that could disagree with the attribute, which is how a control ends up
+   * showing one thing and posting another.
    */
   return (
     <>

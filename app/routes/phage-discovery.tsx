@@ -18,29 +18,16 @@ export function headers() {
 /**
  * Roster. Photos and names, by year, and nothing else.
  *
- * No intro copy, no JSON-LD, no description constant. Dustin's instruction, and
- * the title is "for the time being", so treat the bare state as deliberate and
- * temporary rather than as something to helpfully fill in.
+ * No intro copy, no JSON-LD, no description constant. The bare state is deliberate
+ * and temporary rather than something to helpfully fill in.
  *
- * **The URL is /phage-discovery.** It is the legacy WordPress address, indexed
- * and carrying whatever inbound links this content has, so the Worker takes it
- * over at DNS cutover instead of redirecting it. That also makes this page the
- * correction to a real error: the legacy page lists the 2022 roster twice, once
- * under a 2024 heading, so the actual 2024 cohort appears nowhere on it.
+ * THE URL IS /phage-discovery: the legacy WordPress address, indexed and carrying
+ * whatever inbound links this content has, so the Worker takes it over at cutover
+ * instead of redirecting it. That also makes this page the correction to a real
+ * error in the legacy one.
  *
- * **The photos are served from /phage-hunters/*, a static prefix, not a route.**
- * The page path and the asset path differ, which is a leftover rather than a
- * rule: the orphaned-assets rule that froze those object URLs was removed on
- * 2026-08-02. The photos are ordinary assets and are expected to move into R2
- * with the rest of the media, at which point the srcs in the data file change
- * and nothing here does.
- *
- * **Everything is styled by `.prose`, deliberately.** It already carries the
- * ratified treatment for h2, figure, img and ul, and check:contrast already
- * covers it, so this page needs no rules of its own. The alternative was a
- * `.roster-*` block in a 142 kB stylesheet for markup that prose describes
- * exactly. If the columned name list is wanted later, that is the moment to add
- * CSS, not before.
+ * EVERYTHING IS STYLED BY `.prose`, deliberately: it already carries the ratified
+ * treatment and `check:contrast` already covers it.
  */
 
 export function meta() {

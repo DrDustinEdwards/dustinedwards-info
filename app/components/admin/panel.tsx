@@ -10,16 +10,10 @@ export function Panel({
   description,
   result,
   /**
-   * Controls that belong BESIDE the title rather than above the content.
-   *
-   * Optional and absent everywhere but the media library, so no other panel
-   * changes. It exists because a page whose primary action is a full-width row
-   * of its own spends a whole band of vertical space saying "upload": measured
-   * on the media page, the upload row alone pushed the grid 68px down and was
-   * one of seven rows above it where the design has four.
-   *
-   * An action is a thing you do TO the section, so it belongs on the section
-   * heading, which is where every other admin surface would put it too.
+   * Controls that belong BESIDE the title rather than above the content. A page
+   * whose primary action is a full-width row of its own spends a whole band of
+   * vertical space saying "upload". An action is a thing you do TO the section, so it
+   * belongs on the section heading.
    */
   actions,
   children,
@@ -46,14 +40,10 @@ export function Panel({
 }
 
 /**
- * Marks a panel as live or failed, based on its SourceResult.
- *
- * THE THIRD BRANCH IS GONE with the `stub` arm it rendered, 2026-08-25. It
- * printed a "stubbed" chip whose tooltip explained which integration was
- * pending, and its removal is the point rather than a consequence: a panel can
- * no longer say "this data is not real", because no source produces data that
- * is not real. A `never` in the union here is the typecheck refusing to let one
- * back in without a decision.
+ * THE THIRD BRANCH IS GONE with the `stub` arm it rendered, and its removal is
+ * the point: a panel can no longer say "this data is not real", because no source
+ * produces data that is not real. A `never` in the union is the typecheck refusing
+ * to let one back in without a decision.
  */
 function SourceChip({ result }: { result: SourceResult<unknown> }) {
   if (result.status === "live") {
@@ -68,10 +58,8 @@ function SourceChip({ result }: { result: SourceResult<unknown> }) {
 
 /**
  * Rule 1: colour is never the only channel. The dot carries a shape per status
- * (circle, ringed circle, square) and the word rides alongside it, visually
- * hidden. Before this the state reached sighted readers as a hue and reached
- * assistive tech not at all, since the dot was the only carrier and it was
- * aria-hidden.
+ * and the word rides alongside it, visually hidden. Before this the state reached
+ * sighted readers as a hue and reached assistive tech not at all.
  */
 export function StatusDot({ status }: { status: HealthStatus }) {
   return (

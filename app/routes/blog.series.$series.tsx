@@ -18,35 +18,22 @@ import {
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series";
 
-// Both sheets the shared card needs. `PostCard` renders `.post-card-series`,
-// which lives only in the extras sheet; the tag archive learned this the hard
-// way and the note is there.
+// Both sheets the shared card needs: `PostCard` renders `.post-card-series`,
+// which lives only in the extras sheet.
 import "~/styles/blog-index.css";
 import "~/styles/blog-index-extras.css";
 
 /**
  * The archive for one series.
  *
- * A post has carried `series` and `part` since the schema was written, the post
- * page has listed the other parts for just as long, and the set had no URL: a
- * reader arriving at part three from a search result could see that a series
- * existed and had nowhere to go for it. Section E's whole content.
+ * ORDERED BY PART, WHICH IS THE ONE LISTING THAT IS NOT NEWEST FIRST. A series is
+ * the exception by construction: the author numbered the parts, and part one is
+ * where you start. The feeds take the same order, so the page and the subscription
+ * agree.
  *
- * ## ORDERED BY PART, WHICH IS THE ONE LISTING THAT IS NOT NEWEST FIRST
- *
- * Every other list on this site is reverse chronological, because that is what
- * a reader wants from a blog. A series is the exception by construction: the
- * author numbered the parts, and part one is where you start. `listSeriesPosts`
- * orders ascending and the feeds take the same order, so the page and the
- * subscription agree.
- *
- * ## 404 RATHER THAN AN EMPTY PAGE
- *
- * `getBlogSeries` resolves through `listBlogSeries`, which composes
- * `isBlogPost()`. So a series carried only by drafts or by future-dated posts
- * does not exist here, which is the tag archive's rule inherited rather than
- * re-argued: an empty archive would be a soft 404 and would leak the existence
- * of a series only a draft carries.
+ * 404 RATHER THAN AN EMPTY PAGE, the tag archive's rule inherited rather than
+ * re-argued: an empty archive would be a soft 404 and would leak the existence of a
+ * series only a draft carries.
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
@@ -59,8 +46,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const listing = await listSeriesPosts(env, series.name, { page, perPage: POSTS_PER_PAGE });
 
   // Out of range redirects to the last real page, which is `/blog`'s ruling and
-  // the tag archive's, inherited rather than restated. 302, because the bound
-  // moves as parts are published.
+  // the tag archive's. 302, because the bound moves as parts are published.
   if (page > listing.pageCount) {
     const last = listing.pageCount > 1 ? `?page=${listing.pageCount}` : "";
     throw redirect(`${seriesPath(series.name)}${last}`);
@@ -70,10 +56,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 }
 
 export function headers() {
-  // The tag archive's headers, through the same helper that owns them, which is
-  // `SHARED_CACHE_CONTROL` with the `posts` cache tag. This page negotiates
-  // nothing, so it
-  // takes the helper rather than writing the pair out.
+  // The tag archive's headers, through the same helper that owns them. This page
+  // negotiates nothing, so it takes the helper rather than writing the pair out.
   return new Headers(publicHtmlHeaders(cacheTags()));
 }
 
@@ -83,8 +67,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
   }
   const { series, page } = loaderData;
   // `pageMeta` owns the complete social and canonical set, so this page cannot
-  // ship a partial one. The canonical carries `?page=` when there is one, since
-  // page two is different posts.
+  // ship a partial one. The canonical carries `?page=` when there is one, since page
+  // two is different posts.
   const path = page > 1 ? `${seriesPath(series.name)}?page=${page}` : seriesPath(series.name);
   return pageMeta({
     title: `${series.name} | ${SITE.name}`,
@@ -123,9 +107,10 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
           </p>
         </header>
 
-        {/* The feeds for this series, as plain links, the same offer the tag
-            archive makes and for the same reason: a reader who wants one series
-            wants one series in their reader. */}
+        {/*
+         * The same offer the tag archive makes and for the same reason: a reader who
+         * wants one series wants one series in their reader.
+         */}
         <p className="muted">
           Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
         </p>
