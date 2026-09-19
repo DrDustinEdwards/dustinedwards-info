@@ -3,7 +3,7 @@
 //
 // On the register the seat accepted: prohibitions and boundary statements stay whatever they
 // cost, and what comes out is the dated measurement and the defect story. backup.server.ts and
-// cache-purge.server.ts barely move, because their headers are almost entirely one or the other.
+// cache-purge.server.ts hold the least history per byte, so they give up the least.
 export default {
   "app/lib/theme.ts#0": [
     "CONTRACT",
@@ -293,9 +293,9 @@ moment the post leaves draft; a crash in REVOKE leaves an ORPHANED INDEX ENTRY, 
     "why 30 and what it is not for; the grounds stay beside the constant",
     `Requests one IP may make to the preview path inside {@link PREVIEW_RATE_WINDOW_SECONDS}.
 
-30 per minute: loose for a human opening a link and reloading it, tight against anything
-enumerating. It is NOT the reason the token space is safe, which is 256 bits. It is here so the
-traffic such an attempt would make stops, rather than because the attempt could otherwise succeed.`,
+30 per minute: loose for a human opening a link, tight against anything enumerating. It is NOT the
+reason the token space is safe, which is 256 bits; it is here so the traffic such an attempt would
+make stops.`,
   ],
   "app/lib/preview-links.server.ts#16": ["CONTRACT", "what the window is; one line already"],
   "app/lib/preview-links.server.ts#17": [
@@ -314,14 +314,12 @@ path that serves unpublished content must not serve.`,
     "CONTRACT",
     "one commit, one file, why the Git Data API shape stays, and the token prohibition",
     `The GitHub half of the editor's write path. Every editor save is one commit on \`main\` carrying
-exactly ONE file, the markdown itself; git holds markdown only and D1 holds the only rendered copy.
+exactly ONE file, the markdown; git holds markdown only and D1 holds the only rendered copy.
 
-The Git Data API commit shape (blobs, tree, commit, ref) STAYS even so, because it carries the
-\`expectedHeadSha\` conflict guard, and the Contents API write path has no such check-then-update
-seam.
+The Git Data API commit shape STAYS even so, because it carries the \`expectedHeadSha\` conflict
+guard and the Contents API write path has no such check-then-update seam.
 
-The token is a Worker secret, never sent to the client and never logged: failures report status
-codes and GitHub's message, never the request.`,
+The token is a Worker secret, never sent to the client and never logged.`,
   ],
   "app/lib/editor/github.server.ts#1": ["CONTRACT", "what it carries; one line already"],
   "app/lib/editor/github.server.ts#2": ["CONTRACT", "why the type widens Env; one line already"],
@@ -423,13 +421,12 @@ SAYS SO in the reason, so a weaker verdict cannot be mistaken for the strong one
   "app/lib/media/backup.server.ts#10": [
     "CONTRACT",
     "whole-object copy, idempotent by construction, and a gone source is not an error",
-    `Copy ONE object into the mirror, from the object as it is now. The Workers R2 binding has no
-server-side copy, so this is a \`get\` and a whole-object \`put\`, which is what keeps the etag a
-content digest.
+    `Copy ONE object into the mirror, from the object as it is now. The R2 binding has no server-side
+copy, so this is a \`get\` and a whole-object \`put\`, which keeps the etag a content digest.
 
-IDEMPOTENT BY CONSTRUCTION: it re-reads the source and overwrites the twin with the same bytes, so
-replay converges, and it never branches on what a queue message claimed. A source that no longer
-exists is NOT an error: the twin that exists is what the mirror is for, and it stays.`,
+IDEMPOTENT BY CONSTRUCTION: it re-reads the source and never branches on what a queue message
+claimed, so replay converges. A source that no longer exists is NOT an error: the twin stays,
+which is what the mirror is for.`,
   ],
   "app/lib/media/backup.server.ts#11": ["WHY", "the only write, and the one-way prohibition; at the header budget"],
   "app/lib/media/backup.server.ts#12": ["CONTRACT", "the verdict describes the store after the writes; two lines already"],
@@ -463,11 +460,9 @@ Nothing offline can establish it.`,
   "app/lib/cache-purge.server.ts#4": [
     "CONTRACT",
     "what it purges and why not the corpus",
-    `Invalidate ONE post's page. For a write that changed that page and nothing else.
-
-The mention decisions are the whole of this today. Approving, rejecting or deleting a mention
-changes the rendered list under one post; it does not touch the index, the feeds or any other
-post, so purging \`posts\` would throw away the entire corpus's cache to fix one page.
+    `Invalidate ONE post's page, for a write that changed that page and nothing else. A mention
+decision changes the rendered list under one post and touches nothing else, so purging \`posts\`
+would throw away the whole corpus's cache to fix one page.
 
 @param slug the post whose page changed`,
   ],
@@ -476,12 +471,11 @@ post, so purging \`posts\` would throw away the entire corpus's cache to fix one
     "one vocabulary, and the refusal of purgeEverything",
     `Invalidate everything that lists the corpus, the changed post included.
 
-\`cacheTags()\` with no argument IS the \`posts\` tag, so this reads the same vocabulary the responses
-were tagged with rather than a second spelling of it. A publish moves the post page, the index,
-every tag archive, every series hub, the feeds, the sitemap and llms.txt, and they all carry
-\`posts\` for exactly this call.
+\`cacheTags()\` with no argument IS the \`posts\` tag, so this reads the same vocabulary the
+responses were tagged with rather than a second spelling of it.
 
-NOT \`purgeEverything\`. That would take the hand-authored pages with it, which no publish changes.`,
+NOT \`purgeEverything\`, which would take the hand-authored pages with it, and no publish changes
+those.`,
   ],
   "app/lib/cache-purge.server.ts#6": [
     "CONTRACT",
@@ -489,8 +483,8 @@ NOT \`purgeEverything\`. That would take the hand-authored pages with it, which 
     `Invalidate the hand-authored pages. EXPORTED AND UNCALLED, deliberately.
 
 \`PAGES_CACHE_TAG\` is on every shared-cacheable page that does not read the corpus, and nothing
-purges it because nothing changes those pages except a deploy, which already invalidates every
-entry through the Worker version in the key. This exists so the tag has a named door rather than a
-string with no reader. If it still has no caller a year from now, delete both.`,
+purges it because only a deploy changes those pages, which already invalidates every entry through
+the Worker version in the key. This exists so the tag has a named door rather than a string with no
+reader. If it still has no caller a year from now, delete both.`,
   ],
 };
