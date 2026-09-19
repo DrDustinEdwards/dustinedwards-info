@@ -112,6 +112,10 @@ export default [
   // rendered server-side, so the page has no client state and every result is a
   // shareable URL.
   route("playground", "routes/playground.tsx"),
+  // The UI inventory. Two segments where /playground is one, so they cannot
+  // collide. It is a real public route rather than a local page because the
+  // browser and contrast gates photograph it.
+  route("playground/ui", "routes/playground.ui.tsx"),
   // Ordered before /search so the Ask endpoint is not read as a search param
   // variant, and kept a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),
