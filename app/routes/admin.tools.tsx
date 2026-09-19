@@ -24,7 +24,10 @@ export async function loader({ context }: Route.LoaderArgs) {
    * value, a masked prefix or a length reaching this payload fails two independent
    * assertions. Not timed: it reads bindings already in memory.
    */
-  const secrets = auditSecrets(env as unknown as Record<string, unknown>);
+  // Spread rather than asserted: `Env` is an interface, so it carries no implicit
+  // index signature where the anonymous type a spread produces does. The audit
+  // only reads, so a shallow copy is the same answer.
+  const secrets = auditSecrets({ ...env });
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
   return data({ secrets });
 }
