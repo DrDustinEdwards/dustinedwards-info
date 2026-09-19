@@ -5,8 +5,9 @@
 // Three headers here are the wave's densest measurement: markdown-twin#4 carries a cache-variant
 // experiment and the paragraph it reversed, ask-budget#0 and #5 carry the concurrency runs that
 // chose a Durable Object. The RULE each one establishes is one or two sentences; everything that
-// established it goes to the document. posts.server#0 is the opposite case and barely moves: its
-// bulk is the "what it would MISS" list, which is the boundary statement a delete depends on.
+// established it goes to the document. posts.server#0 is the opposite case: its bulk is the
+// "what it would MISS" list, which is the boundary statement a delete depends on, so the list
+// survives and only its examples go.
 export default {
   "app/lib/markdown-twin.ts#0": ["CONTRACT", "the two representations and why one module; at the header budget"],
   "app/lib/markdown-twin.ts#1": ["CONTRACT", "what the header points at; one line already"],
@@ -37,33 +38,27 @@ than advertising none. \`media.$.ts\` records that mistake in full.`,
   "app/routes/api.csp-report.ts#0": [
     "CONTRACT",
     "the unauthenticated-sink argument, the three limits and the refusal; the window date goes to history",
-    `The CSP violation sink.
+    `The CSP violation sink. Under enforcement a report means something was BLOCKED.
 
-**THIS IS A PUBLIC, UNAUTHENTICATED POST ENDPOINT.** It has to be: browsers send violation reports
-with no credentials, and a report that needs a token is a report nobody sends. So it is written as
-a sink that cannot be turned into anything useful by an attacker, and the limits below are the
-whole of that argument. Reports still arrive under enforcement, where one means something was
-BLOCKED rather than merely observed.
+**THIS IS A PUBLIC, UNAUTHENTICATED POST ENDPOINT.** It has to be: browsers send reports with no
+credentials, and a report that needs a token is a report nobody sends. So it is written as a sink
+that cannot be turned into anything useful, and the limits below are the whole of that argument.
 
 **It LOGS the report and deliberately does not write D1.** An unauthenticated endpoint that writes
-rows is a storage-exhaustion primitive handed to the internet. If reports ever need to persist,
-that is a ruling with its own retention and privacy questions, not a quiet schema change.
+rows is a storage-exhaustion primitive handed to the internet. Persisting reports is a ruling with
+its own retention and privacy questions, not a quiet schema change.
 
-Three limits, cheapest first, the Ask guards' ordering principle:
+Three limits, cheapest first: METHOD, anything but POST is 405 and reads nothing; a BODY CAP
+checked against \`Content-Length\` before the body is read; and a PER-IP RATE LIMIT on the existing
+\`AskBudget\` Durable Object under \`csp:<ip>\`, no new class and no migration.
 
-1. **Method.** Anything but POST is 405 and reads nothing.
-2. **Body cap, 8 KB.** Checked against \`Content-Length\` BEFORE the body is read, so an oversized
-   report costs no memory.
-3. **Per-IP rate limit** on the existing \`AskBudget\` Durable Object under a \`csp:<ip>\` instance
-   name. No new class and no migration, as the operator path reuses it under \`op:<id>\`.
+**The limit is deliberately loose**, because the deliverable here is the report itself and a page
+that trips ten rules sends ten. A limit that silently ate them would make the observation window
+lie in the safe direction, which is the worst direction for this endpoint.
 
-**Why the limit is not tighter:** the deliverable here is the report itself, and a page that trips
-ten rules sends ten. A limit that silently ate them would make the observation window lie in the
-safe direction, which is the worst direction for this endpoint.
-
-**Without \`ASK_BUDGET\` the endpoint refuses**, the stance the Ask guards and the operator path
-take: an unprotected public write path does not serve. Always 204 on success, because a browser
-does not read the body and an error status would only make it retry.`,
+**Without \`ASK_BUDGET\` the endpoint refuses**: an unprotected public write path does not serve.
+Always 204 on success, because a browser does not read the body and an error status makes it
+retry.`,
   ],
   "app/routes/api.csp-report.ts#1": ["NUMBER", "why 8 KB beside the constant; one line already"],
   "app/routes/api.csp-report.ts#2": [
@@ -98,24 +93,20 @@ that understood only one would silently drop the other.`,
     "why one copy, and the path rule that keeps it a .server module; the extraction and the missing-test story go to history",
     `The two primitives every static bearer credential in this repo needs.
 
-A SECOND COPY OF A CONSTANT-TIME COMPARISON is the rule 17 defect in the one place it is least
-affordable: a copy that drifts toward \`===\` is a token recoverable a byte at a time, and it would
-drift in silence, because both spellings return the same booleans for every input a test would
-think to try.
+A SECOND COPY OF A CONSTANT-TIME COMPARISON is the rule 17 defect where it is least affordable: a
+copy that drifts toward \`===\` is a token recoverable a byte at a time, and it drifts in silence,
+because both spellings return the same booleans for every input a test would think to try.
 
 BOTH BODIES WERE LIFTED VERBATIM and proven equivalent by differential over real inputs, with the
 comparison shown able to discriminate, per hard rule 12.
 
-\`test/bearer.test.mjs\` asserts that a PREFIX is refused, which is the observable consequence of
-hashing both operands at once, and carries the naive prefix-bounded implementation as a control so
-the case is shown able to discriminate. It does NOT assert constant time: timing a comparison
-in-process measures the garbage collector, and a flaky assertion in the suite that gates a deploy
-teaches people to re-run until green. \`check:policy\` asserts the ordering below by position.
+\`test/bearer.test.mjs\` asserts that a PREFIX is refused, and carries the naive prefix-bounded
+implementation as a control. It does NOT assert constant time: timing a comparison in-process
+measures the garbage collector, and a flaky assertion in the suite that gates a deploy teaches
+people to re-run until green. \`check:policy\` asserts the ordering below by position.
 
 This is a \`.server\` module because hard rule 3 is a PATH rule. Neither function reads \`env\`, so
-\`check:secrets\` has nothing to say about the file, and that is not a licence to move it: a helper
-whose whole job is comparing a secret belongs behind the boundary whether or not a gate can see it
-there.`,
+\`check:secrets\` has nothing to say about the file, and that is not a licence to move it.`,
   ],
   "app/lib/bearer.server.ts#1": [
     "WHY",
@@ -197,15 +188,13 @@ it, and never a filter query from here.`,
     "the two load paths, the caller-owned container and the DOM guard; trimmed",
     `Ask mode's client. Search Layer 2, and the top of the enhancement stack.
 
-Loaded only on surfaces that already rendered classic results: \`/search\` renders a nonced script
-tag for this module's bundle, and the palette bundle carries an inlined copy. With scripting off
-none of this runs and \`/search\` is what it was before Layer 2.
+Loaded only on surfaces that already rendered classic results, so with scripting off none of this
+runs and \`/search\` is what it was before Layer 2. It renders into a container the CALLER owns.
 
-It renders into a container the CALLER owns, so neither surface needs this module to know about
-it. The server renders the \`/search\` Ask button HIDDEN, because an inert control that looks live
-is worse than no control, and the mount binding below unhides it. That binding is DOM-GUARDED
-because both bundles execute this module's body on \`/search\`, and two listeners would stream two
-billed answers per click.`,
+The server renders the \`/search\` Ask button HIDDEN, because an inert control that looks live is
+worse than no control, and the mount binding below unhides it. That binding is DOM-GUARDED because
+both bundles execute this module's body on \`/search\`, and two listeners would stream two billed
+answers per click.`,
   ],
   "app/enhance/ask.ts#1": ["CONTRACT", "what it matches; one line already"],
   "app/enhance/ask.ts#2": ["CONTRACT", "what it does; one line already"],
@@ -240,10 +229,9 @@ stalling rather than as this site saying what it is doing.`,
     "who owns the rule, and why the guard is on the DOM",
     `Binds the server-rendered Ask affordance on \`/search\`.
 
-The server renders the button only when the binding exists AND the query is a real question
-(search.tsx owns that rule), so an empty question here means markup this module does not own and
-the button stays hidden rather than being wired to do nothing. The guard is on the DOM, not module
-state, because the palette bundle carries an inlined copy and both copies run on \`/search\`.`,
+search.tsx owns the rule for when the button renders, so an empty question here means markup this
+module does not own and the button stays hidden rather than being wired to do nothing. The guard is
+on the DOM, not module state, because both copies of this module run on \`/search\`.`,
   ],
   "app/enhance/ask.ts#13": ["CONTRACT", "hidden rather than disabled while streaming; two lines already"],
 
@@ -310,16 +298,14 @@ or included in an error. The comparison and the caller label live in \`~/lib/bea
     "WHY",
     "the length bound, why twice and not equal, and that constant time is unchanged inside it",
     `REFUSED BEFORE THE HASH, on length alone, above twice the real token. \`constantTimeEqual\` hashes
-BOTH operands, and the input side is whatever the caller sent, so hashing it is work an
-unauthenticated caller can ask for in any quantity: a megabyte of bearer token is a megabyte of
-SHA-256 per request before anything has checked who is asking.
+BOTH operands, so hashing the input is work an unauthenticated caller can ask for in any quantity,
+before anything has checked who is asking.
 
-TWICE, NOT EQUAL, deliberately. An exact-length gate would be an oracle for the token's length, one
-request at a time; at twice the length a caller learns only that the real token is shorter than
-half of what they sent.
+TWICE, NOT EQUAL, deliberately: an exact-length gate would be an oracle for the token's length, one
+request at a time.
 
-The constant-time property is UNCHANGED for every candidate that could possibly be right: anything
-inside the bound still goes through the same hash-and-compare.`,
+The constant-time property is UNCHANGED for every candidate that could possibly be right, since
+anything inside the bound still goes through the same hash-and-compare.`,
   ],
   "app/lib/operator/auth.server.ts#5": ["WHY", "compared even when absent, so both take the same time; two lines already"],
   "app/lib/operator/auth.server.ts#6": [
@@ -327,15 +313,13 @@ inside the bound still goes through the same hash-and-compare.`,
     "the two questions are separate, and the order where both run; the DESCRIBE defect goes to history",
     `Spends one unit of the caller's rate limit.
 
-SEPARATE FROM \`authenticateOperator\`, because the two questions are separate: "who is this" is
-cheap and always asked, "may they spend one" is a Durable Object call and is asked only where
-something is spent. Metering inside authentication meant \`GET /api/operator\`, the DESCRIBE call
-that changes nothing, spent budget, so a client that read the description before each publish
-halved its own publish allowance.
+SEPARATE FROM \`authenticateOperator\`, because the two questions are: "who is this" is cheap and
+always asked, "may they spend one" is a Durable Object call asked only where something is spent.
+Metering inside authentication meant the DESCRIBE call spent budget, halving a client's publish
+allowance if it read the description first.
 
-THE ORDER IS UNCHANGED where both run. Authenticate first, then meter, so the limiter is keyed to a
-proven identity and an unauthenticated flood cannot exhaust a real operator's budget or reach a
-Durable Object at all.
+THE ORDER IS UNCHANGED where both run: authenticate, then meter, so the limiter is keyed to a proven
+identity and an unauthenticated flood cannot reach a Durable Object at all.
 
 @param env @param id the authenticated operator label`,
   ],
@@ -396,14 +380,13 @@ twice.`,
 
 WHY NOT THE \`ratelimit\` BINDING OR A KV COUNTER. Cloudflare documents the binding as "permissive,
 eventually consistent, and intentionally designed to not be used as an accurate accounting
-system", and a KV counter fails the same way and worse, because concurrent read-modify-writes each
-read the same stale value.
+system", and a KV counter is worse, because concurrent read-modify-writes each read the same stale
+value.
 
-WHY THE COUNTER IS SYNCHRONOUS SQL rather than \`storage.get\`/\`storage.put\`. A Durable Object is
-single-threaded, but that does NOT make a sequence spanning \`await\` atomic: several callers can
-read the old count before any of them writes. The SQLite storage API is synchronous, so the read
-and the write below sit in one uninterrupted block and the count cannot be raced. That is the
-entire reason this class is registered as a \`new_sqlite_classes\` migration.`,
+WHY SYNCHRONOUS SQL rather than \`storage.get\`/\`storage.put\`. A Durable Object is single-threaded,
+but that does NOT make a sequence spanning \`await\` atomic. The SQLite storage API is synchronous,
+so the read and the write below sit in one uninterrupted block and the count cannot be raced,
+which is the entire reason this class is a \`new_sqlite_classes\` migration.`,
   ],
   "workers/ask-budget.ts#1": ["CONTRACT", "synchronous, so no call observes the table missing; one line already"],
   "workers/ask-budget.ts#2": ["CONTRACT", "no await in the body, and what the returned count means; already short"],
@@ -433,24 +416,20 @@ Object is not atomic.`,
     `DECIDING A MENTION, AND PURGING WHAT THAT CHANGED. One door, two callers.
 
 Copying "write, then purge" into the second caller would be a second place to forget the purge, and
-that failure is invisible from both ends: the write succeeds and reports success, and a page that
-is never invalidated simply stays stale. Nothing errors. So the pair is one function and no caller
-can take only half of it.
+that failure is invisible from both ends: the write reports success and a page that is never
+invalidated simply stays stale. Nothing errors. So the pair is one function.
 
 THE CAPABILITY CHECK IS THE EXISTING TABLE, NOT A NEW ONE. \`WRITE_CAPABILITIES\` is keyed by actor
-kind, so a new kind is a typecheck failure rather than a silent permission, and both its questions
-are asked here:
+kind, so a new kind is a typecheck failure rather than a silent permission:
 
-  approve, reject   need \`write\`. Reversible: the DB layer's decidable set holds approved and
-                    rejected alongside pending precisely so the pair is a two-way door.
+  approve, reject   need \`write\`. Reversible, which is why the decidable set holds approved and
+                    rejected alongside pending.
   delete            needs \`destroy\` as well. It removes the only copy of what a stranger sent;
-                    there is no repository behind this table and no derivation that could produce
-                    the row again.
+                    no repository stands behind this table.
 
 **THE ADMIN PAGE DOES NOT PASS AN ACTOR AND DOES NOT NEED TO.** Every \`/admin\` write is already
 refused for the smoke credential by the layout middleware's method allowlist, before any action
-runs, and the only other caller of that plane is the human admin. The actor argument is optional
-and the operator path is what supplies it.`,
+runs. The actor argument is optional and the operator path supplies it.`,
   ],
   "app/lib/webmention/decide.server.ts#1": ["CONTRACT", "a fourth value is a typecheck failure; one line already"],
   "app/lib/webmention/decide.server.ts#2": ["CONTRACT", "why the names exist; one line already"],
@@ -463,12 +442,11 @@ and the operator path is what supplies it.`,
     "why it is a data file, why access is always carried, and which year wins",
     `Publication record for the CV and publications surfaces.
 
-Structured content edited by commit, so it lives here rather than in the D1 \`posts\` table,
-following phage-hunters.ts. PDFs are committed under public/publications/ and served as static
-assets, which cost the Worker bundle nothing.
+Structured content edited by commit, following phage-hunters.ts. PDFs are committed under
+public/publications/ and served as static assets, which cost the Worker bundle nothing.
 
-Every record carries \`access\` even though most are self-hosted, so one publication can be switched
-to an external link without a schema change. Year is the Crossref published-print year, which is
+Every record carries \`access\` even though most are self-hosted, so one can be switched to an
+external link without a schema change. Year is the Crossref published-print year, which is
 authoritative here and disagrees with ORCID on some records.`,
   ],
   "app/data/publications.ts#1": [
@@ -488,8 +466,7 @@ key; this is what \`citation_publication_date\` needs.`,
     `A PLAIN-LANGUAGE LINE, written by hand, or null.
 
 One sentence, under 200 characters, saying what the paper found in words a non-specialist reads.
-NOT a summary of the abstract, which is already on the page: a shorter paraphrase in the same
-voice would be noise.
+NOT a summary of the abstract, which is already on the page.
 
 Null until one is written, and the page renders it only where it exists, so an empty field is a
 state rather than a gap. \`check:publications\` enforces the length, the single sentence and the
@@ -522,33 +499,24 @@ citation rather than a missing one: the grounds are on \`app/lib/publications/ac
   "app/lib/media/resolvers/posts.server.ts#0": [
     "CONTRACT",
     "the coverage statement and the miss list, which is the boundary a delete depends on; the replaced artifact read goes to history",
-    `The POSTS resolver. The one registered content type today.
+    `The POSTS resolver. The one registered content type today. It scans every post's markdown out of
+D1, drafts included, for each key.
 
-It reads every post's markdown out of D1, drafts included, then scans each body for each key.
-\`posts.body\` is the markdown both writers converge to, so this is the corpus scan.
-
-**Coverage, stated rather than assumed.** Detection is by SUBSTRING (\`/media/<key>\`) and
-classification is by pattern, which is the right way round: a form this module has never heard of
-is still detected and merely lands in \`other\`. Parsing only known syntaxes would report an
-unrecognised citation as NO citation, and an "unused" label that is wrong is worse than no label.
-Absolute URLs are caught too, because \`https://host/media/<key>\` contains \`/media/<key>\`.
-
-Classified as \`markdown-image\`, \`figure-directive\`, \`frontmatter-cover\` (from the row's cover
-column), \`link\`, \`html\`, or \`other\`.
+**Coverage, stated rather than assumed.** Detection is by SUBSTRING and classification is by
+pattern, which is the right way round: a form this module has never heard of is still detected and
+merely lands in \`other\`. Parsing only known syntaxes would report an unrecognised citation as NO
+citation, and an "unused" label that is wrong is worse than no label.
 
 **What it would MISS**, which is the part that matters for a delete:
 
-  - a reference assembled at runtime from pieces. Nothing in this corpus does that and the
-    markdown pipeline could not render it, but it is not detectable in principle
-  - a citation from OUTSIDE the post corpus: another site, an already scraped social card, an
-    email, a printed link. Nothing in this repo can know about those. That is precisely why
-    deletion is a considered act rather than hygiene, and why ruling 2 exists
-  - a citation COMMITTED FROM A CLONE and not yet synced: D1 lags the repository until the next
-    sync, save, or content-drift repair, a window the scheduled health check bounds at its poll
-    interval
-  - the \`og/\` social cards, which are not scanned because they are not listed: they are build
-    output keyed by a content hash and no post cites them by name, so a usage scan would call
-    every one unused`,
+  - a reference assembled at runtime from pieces, which is not detectable in principle
+  - a citation from OUTSIDE the post corpus: another site, a scraped social card, an email, a
+    printed link. That is why deletion is a considered act rather than hygiene, and why ruling 2
+    exists
+  - a citation committed from a clone and not yet synced, a window the scheduled health check
+    bounds at its poll interval
+  - the \`og/\` social cards, which are not listed: no post cites them by name, so a usage scan
+    would call every one unused`,
   ],
   "app/lib/media/resolvers/posts.server.ts#1": ["WHY", "deliberately not caught, so the delete fails closed; three lines already"],
   "app/lib/media/resolvers/posts.server.ts#2": ["CONTRACT", "a lookbehind, not a parse, and what getting it wrong costs; at the budget"],
