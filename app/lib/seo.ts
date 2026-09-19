@@ -81,8 +81,9 @@ export function postSocial(post: PostSocialFields) {
 
 /**
  * Where a search result stops, which is NOT where the description field's own counter stops. Google
- * truncates by rendered PIXEL width, so any character count approximates a measure this site cannot
- * take, and a preview cutting at the field's counter would show text that will be clipped.
+ * truncates by rendered PIXEL width, roughly 600px of title and 920px of desktop description, so any
+ * character count approximates a measure this site cannot take. A preview cutting at the description
+ * field's own 160-character counter would show text the result will actually clip.
  */
 /**
  * The COMPLETE social and canonical set for a hand-authored page.

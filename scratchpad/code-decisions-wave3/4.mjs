@@ -67,8 +67,9 @@ a placeholder, because "no cover" is a real and correct outcome the author shoul
     "NUMBER",
     "why the limits are approximations; the pixel widths stay because they are what the number approximates",
     `Where a search result stops, which is NOT where the description field's own counter stops. Google
-truncates by rendered PIXEL width, so any character count approximates a measure this site cannot
-take, and a preview cutting at the field's counter would show text that will be clipped.`,
+truncates by rendered PIXEL width, roughly 600px of title and 920px of desktop description, so any
+character count approximates a measure this site cannot take. A preview cutting at the description
+field's own 160-character counter would show text the result will actually clip.`,
   ],
   "app/lib/seo.ts#9": [
     "CONTRACT",
@@ -282,6 +283,10 @@ only by naming. \`check:config\` binds it to the site config's \`name\`.`,
     "the four boundary statements and the two prohibitions; the 1042 probe table, the schedule counts and the throttle burst go to the history document",
     `THE WATCHDOG. A separate Worker whose only job is to notice that this site has stopped being
 healthy, repair what it can, and wake somebody otherwise.
+
+DO NOT FOLD THIS INTO THE SITE WORKER. A watcher that runs inside the thing it watches dies with
+it, which is the argument that rejected an in-Worker watcher and is why this is a separate Worker
+on the same account rather than a route.
 
 A WORKER CANNOT \`fetch()\` THIS SITE. Cloudflare error 1042 refuses Worker-to-Worker on one zone
 without a service binding, and this site has no custom domain until the DNS cutover, so

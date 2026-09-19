@@ -263,7 +263,9 @@ export async function renderAndWrite(
    *
    * IT PURGES ON A DRAFT SAVE TOO, AND THAT IS THE ACCEPTED COST. The obvious condition is where this
    * gets subtly wrong: an UNPUBLISH writes a row whose status is draft while changing every public
-   * listing, so "skip drafts" would skip the case that most needs it.
+   * listing, so "skip drafts" would skip the case that most needs it. If the purge rate limit ever
+   * makes that cost bind, the repair is a condition reading the PREVIOUS status, never one on the
+   * incoming record.
    *
    * It cannot fail this write, which is hard rule 18's second clause applied to a cache.
    */

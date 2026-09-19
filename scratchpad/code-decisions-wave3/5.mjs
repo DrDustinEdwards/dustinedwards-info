@@ -31,7 +31,8 @@ too. A truncated result set says so rather than presenting a partial count as a 
     `Snippet markers. snippet() splices these into text it does not escape, so writing \`<mark>\`
 directly would mean rendering unescaped content as HTML: a post may legitimately show \`<script>\`
 in a code block, and that text reaches the index as prose. The snippet is escaped first and the
-markers are swapped for real tags afterwards.`,
+markers are swapped for real tags afterwards, which is safe because these control characters
+CANNOT OCCUR IN THE CORPUS.`,
   ],
   "app/lib/search/search.server.ts#5": ["WHY", "why the bytes are built rather than written; two lines already"],
   "app/lib/search/search.server.ts#6": ["CONTRACT", "what they are; one line already"],
@@ -283,7 +284,8 @@ own example of a boundary note that ages.
 \`focus()\` on the heading rather than \`scrollIntoView\`, because moving focus is what a screen
 reader announces and what the next Tab continues from; scrolling alone moves the eye and leaves
 the keyboard behind. Headings are not focusable by default, so \`tabindex="-1"\` is set for the
-duration and removed afterwards.`,
+duration and removed afterwards: \`-1\` and never \`0\`, because it makes the heading programmatically
+focusable without adding it to the tab order.`,
   ],
   "app/enhance/blog.ts#10": ["WHY", "why it is removed on blur; two lines already"],
   "app/enhance/blog.ts#11": ["WHY", "what a refused clipboard must not cost; two lines already"],

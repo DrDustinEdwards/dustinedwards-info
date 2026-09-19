@@ -28,6 +28,10 @@ const SITE_SCRIPT_NAME = "dustinedwards";
  * THE WATCHDOG. A separate Worker whose only job is to notice that this site has stopped being
  * healthy, repair what it can, and wake somebody otherwise.
  *
+ * DO NOT FOLD THIS INTO THE SITE WORKER. A watcher that runs inside the thing it watches dies with
+ * it, which is the argument that rejected an in-Worker watcher and is why this is a separate Worker
+ * on the same account rather than a route.
+ *
  * A WORKER CANNOT `fetch()` THIS SITE. Cloudflare error 1042 refuses Worker-to-Worker on one zone
  * without a service binding, and this site has no custom domain until the DNS cutover, so
  * `env.SITE.fetch` is the only mechanism available.

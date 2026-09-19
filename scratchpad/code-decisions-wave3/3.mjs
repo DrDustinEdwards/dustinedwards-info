@@ -128,7 +128,9 @@ later is purged by construction rather than by somebody remembering.
 
 IT PURGES ON A DRAFT SAVE TOO, AND THAT IS THE ACCEPTED COST. The obvious condition is where this
 gets subtly wrong: an UNPUBLISH writes a row whose status is draft while changing every public
-listing, so "skip drafts" would skip the case that most needs it.
+listing, so "skip drafts" would skip the case that most needs it. If the purge rate limit ever
+makes that cost bind, the repair is a condition reading the PREVIOUS status, never one on the
+incoming record.
 
 It cannot fail this write, which is hard rule 18's second clause applied to a cache.`,
   ],
@@ -550,6 +552,10 @@ being refused, so this name is never stored. Returning \`upload.bin\` would be t
 
 IT IS AN ADAPTER and \`storeUpload\` is the write: the allowlist, the size limit and the key are the
 same code the admin upload runs. What is here is only how bytes REACH that door.
+
+TWO WAYS IN, AND \`url\` IS THE LOAD-BEARING ONE. \`data\` is base64, the obvious shape and the one
+that does not scale, since no agent carries a photograph's worth of it through a conversation.
+\`url\` is what makes the tool usable, and it is why the ruling named both.
 
 THE PRIMARY CONTROL IS THE TOKEN AND THE RATE LIMITER, said plainly because the checks below are
 secondary: HTTPS only, since a fetch is the one place a caller chooses where this Worker goes; a

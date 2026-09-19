@@ -495,7 +495,11 @@ build reads it, \`wrangler types\` SEES IT and generates it as required. Declari
 here widens the merged \`Env\` so it stops being assignable to \`Cloudflare.Env\`. THE OPTIONALITY IS
 ENFORCED IN CODE INSTEAD: \`citations.server.ts\` checks the value before spending a request,
 because an unset secret is \`undefined\` at runtime whatever the type says. The type is not the
-contract here; this comment is.`,
+contract here; this comment is.
+
+WHY THE DECLARATION EXISTS AT ALL: on a clean CI checkout there is no \`.dev.vars\`, wrangler
+generates nothing, and this line is the only declaration. Removing it compiles locally and fails
+on a fresh clone.`,
   ],
   "app/env.d.ts#6": [
     "CONTRACT",
@@ -646,7 +650,9 @@ Both are indexed, because an asset that existed and appeared nowhere is the invi
 problem the index exists to end.
 
 The static half comes from the committed manifest because A WORKER CANNOT LIST ITS OWN STATIC
-ASSETS: the assets binding has exactly one method, \`fetch()\`.`,
+ASSETS: the assets binding has exactly one method, \`fetch()\`. What keeps that list honest is
+\`build:assets\`, which writes it from \`public/\`, and \`check:media\`, which compares it against the
+filesystem so a stale manifest is named as stale.`,
   ],
   "app/lib/media/rebuild.server.ts#6": [
     "CONTRACT",

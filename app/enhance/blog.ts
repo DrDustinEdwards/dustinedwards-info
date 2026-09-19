@@ -202,7 +202,8 @@ function headingLinks() {
        * `focus()` on the heading rather than `scrollIntoView`, because moving focus is what a screen
        * reader announces and what the next Tab continues from; scrolling alone moves the eye and leaves
        * the keyboard behind. Headings are not focusable by default, so `tabindex="-1"` is set for the
-       * duration and removed afterwards.
+       * duration and removed afterwards: `-1` and never `0`, because it makes the heading programmatically
+       * focusable without adding it to the tab order.
        */
       if (!navigator.clipboard) return;
       event.preventDefault();

@@ -51,6 +51,10 @@ const UNCACHED = "private, no-store";
  * WHAT THE CACHE KEY IS: the path, and the theme, which is the only thing read off the cookie and
  * rides in both the props and the custom key.
  *
+ * THE PATH IS WRITTEN IN because a custom `cf.cacheKey` REPLACES the platform's path and query
+ * rather than extending them, and is honoured only for same-account loopback calls: a key of
+ * `theme=dark` alone would collapse every page onto one entry.
+ *
  * **THE PLATFORM CACHE IS THE ONLY CACHE.** `caches.default` is used nowhere here, and if you are
  * about to add a second one, the first was deleted on purpose.
  *
@@ -430,6 +434,10 @@ export default {
      * THE COOKIE DOWNGRADE, kept as belt and braces, and it cannot live in the Renderer: that response
      * is the one the platform STORES, so writing `private, no-store` there for a cookied reader would
      * mean cookied readers were never cached.
+     *
+     * WHAT IT IS FOR NOW: there is no shared cache in front of the gateway on workers.dev, so this is
+     * not protecting the platform cache from itself. It tells a BROWSER or an intermediary proxy not to
+     * hold a document that genuinely differs per reader.
      *
      * Keyed on the PRESENCE of any cookie, the fail-closed reading, since a request holding only a
      * session cookie must not read as cookieless. Wrapped, because a cached response can have immutable

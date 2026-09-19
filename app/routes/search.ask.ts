@@ -132,8 +132,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   /*
    * The question travels in a FORM-ENCODED BODY, which is what an ordinary `<form method="post">`
-   * sends. Ask has no no-script form today, but reading the body this way means adding one later is
-   * markup and nothing else.
+   * sends. Ask has no no-script form today and does not need one: the trigger is a button that does
+   * nothing without script, and its declared fallback is the classic results already on the page.
+   * Reading the body this way means adding a form later is markup and nothing else.
    */
   const body = await request.formData();
   const question = String(body.get("q") ?? "").trim();
