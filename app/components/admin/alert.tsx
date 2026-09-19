@@ -1,21 +1,14 @@
 /**
- * A standing condition the operator has to act on, with the action that fixes
- * it attached to it.
+ * A standing condition the operator has to act on, with the action that fixes it
+ * attached.
  *
- * The role is the point. `role="alert"` and `role="status"` are LIVE regions:
- * they exist to interrupt with something that just happened, and assistive tech
- * announces them on insertion. Ask index drift is not an event, it is a state
- * the site is in, rendered into the first byte of HTML on every visit to this
- * page. Announcing it as news on each load would be wrong twice over, once
- * because it is not news and once because a reader who arrived to do something
- * else gets interrupted by it. The drift notice carried `role="status"` before
- * this and did exactly that.
+ * THE ROLE IS THE POINT. `role="alert"` and `role="status"` are LIVE regions:
+ * they exist to interrupt with something that just happened. Drift is not an event,
+ * it is a state the site is in, rendered into the first byte of HTML on every
+ * visit, so announcing it as news would be wrong twice over.
  *
- * So it is a named region instead: `<section>` with an accessible name is a
- * `region` landmark, which puts it in the landmark list where a screen reader
- * user can find it on purpose, and leaves it silent until they do. The heading
- * names it and the glyph plus the words carry the meaning, so rule 1 holds
- * without the tint being asked to say anything on its own.
+ * So it is a named region instead, which puts it in the landmark list where a
+ * screen reader user can find it on purpose and leaves it silent until they do.
  */
 export function AdminAlert({
   title,

@@ -2,15 +2,12 @@ import { useEffect } from "react";
 import { useFetcher } from "react-router";
 
 /**
- * THE PICKER. Shape 3 of media-module-architecture.md.
+ * THE PICKER. One component, consumed by the editor drawer today and usable by
+ * any later consumer: the drawer contains no picker logic of its own, which is the
+ * difference between one media surface and two that drift.
  *
- * One component, consumed by the editor drawer today and usable by any later
- * consumer. The drawer contains no picker logic of its own: it renders this and
- * receives a chosen object back, which is the difference between one media
- * surface and two that drift.
- *
- * It reads the media page's loader rather than a listing endpoint of its own,
- * so what a picker shows and what the library shows come from the same query.
+ * It reads the media page's loader rather than a listing endpoint of its own, so
+ * what a picker shows and what the library shows come from the same query.
  */
 
 export type PickedMedia = {
@@ -73,9 +70,10 @@ export function MediaPicker({
               className="media-picker-item"
               onClick={() => onPick({ key: object.key, url: object.url, alt: object.alt })}
             >
-              {/* The THUMBNAIL, never the original. `thumb` carries the
-                  transform URL the server built, so the grid cannot
-                  accidentally pull full-resolution bytes. */}
+              {/*
+               * The THUMBNAIL, never the original. `thumb` carries the transform URL the
+               * server built, so the grid cannot accidentally pull full-resolution bytes.
+               */}
               <img src={object.thumb} alt="" loading="lazy" width={160} height={160} />
               <span className="media-picker-key">{object.key.replace(/^posts\//, "")}</span>
             </button>

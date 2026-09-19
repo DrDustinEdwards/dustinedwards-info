@@ -2,34 +2,23 @@ import { data } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
 import { EmptyState, Panel } from "~/components/admin/panel";
-// Constants come from the SHARED module, never from the .server one. This
-// component renders on the client too, where a .server import is stubbed out
-// and every value from it arrives undefined: that shipped "Top NaN of 23
-// paths" until check:admin-ui rendered the route and read the markup back.
+// Constants come from the SHARED module, never from the `.server` one. This
+// component renders on the client too, where a `.server` import is stubbed out and
+// every value from it arrives undefined.
 import { CACHE_SENTENCE, TOP_N } from "~/lib/admin/origin-requests.mjs";
 import { fetchTraffic } from "~/lib/admin/traffic.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin.origin-requests";
 
 /**
- * /admin/origin-requests, the first cockpit panel reading real data.
+ * WHAT THIS PANEL COUNTS: an edge HIT can serve a reader without the Worker
+ * running, so this is a count of ORIGIN REQUESTS, a floor under readership and
+ * never a measure of it. The words this panel must not use are asserted by the
+ * gate rather than left to reviewer memory.
  *
- * WHAT THIS PANEL COUNTS, and why the wording is not decoration. Analytics
- * Engine is written from the Worker's response path, and `cache.enabled` means
- * an edge HIT can serve a reader without the Worker running. So this is a count
- * of ORIGIN REQUESTS: a floor under readership, never a measure of it. The
- * heading, the column and the caption all say so, and the words this panel must
- * not use are asserted by the gate rather than left to reviewer memory.
- *
- * NO CLIENT JAVASCRIPT. The admin plane is exempt from the progressive
- * enhancement law, but nothing here needs the exemption: it is a server
- * rendered table and one CSS width per bar.
- *
- * THE ERROR STATE IS THE ORDINARY STATE ON A DEV MACHINE. The read token is
- * optional by contract and local dev carries no secrets, so this route renders
- * its error every time it is opened outside production. That is why the loader
- * returns the error rather than throwing: a throw would take out the admin
- * route segment and replace the whole cockpit with an error boundary.
+ * THE ERROR STATE IS THE ORDINARY STATE ON A DEV MACHINE, which is why the loader
+ * RETURNS the error rather than throwing: a throw would take out the admin route
+ * segment and replace the whole cockpit with an error boundary.
  */
 
 export function meta() {
@@ -102,10 +91,9 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
                     <td className="origin-count">{row.originRequests.toLocaleString()}</td>
                     <td className="origin-bar-cell">
                       {/*
-                        The one inline style on this page, and it is the sanctioned
-                        kind: a runtime numeric value no token could name. The
-                        colour comes from the stylesheet.
-                      */}
+                       * The one inline style on this page, and it is the sanctioned kind: a runtime
+                       * numeric value no token could name. The colour comes from the stylesheet.
+                       */}
                       <span
                         className="origin-bar"
                         style={{ width: `${max > 0 ? (row.originRequests / max) * 100 : 0}%` }}
@@ -118,23 +106,15 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
             </table>
           </div>
           {/*
-            ONE STRING, not interpolated JSX children. React SSR splices
-            <!-- --> between adjacent text nodes, so a sentence assembled from
-            several expressions renders with comments through it and any check
-            reading the markup has to strip them first. Building it in JS keeps
-            it one text node.
-          */}
+           * ONE STRING, not interpolated JSX children: React SSR splices comment nodes
+           * between adjacent text nodes, so a sentence assembled from several expressions
+           * renders with comments through it.
+           */}
           {/*
-            THE CAVEAT, AS A DISCLOSURE. It was this table's `<caption>`, which
-            a screen reader announces before EVERY row: five sentences about
-            what the number is not, repeated once per path. The closed summary
-            is enough to act on and the body is for whoever wants to know why
-            the number is what it is.
-
-            Assembled in JS for the same reason as the remainder line below:
-            one text node, so no spliced SSR comments for a reader of the
-            markup to strip.
-          */}
+           * THE CAVEAT, AS A DISCLOSURE. It was this table's `<caption>`, which a screen
+           * reader announces before EVERY row. The closed summary is enough to act on.
+           * Assembled in JS for the one-text-node reason above.
+           */}
           <details className="admin-explain origin-explain">
             <summary>What these counts include, and what they miss</summary>
             <p>

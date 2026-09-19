@@ -13,61 +13,25 @@ export function meta() {
 }
 
 /**
- * THE COCKPIT, REWIRED TO REAL INSTRUMENTS. Ruled 2026-08-25.
+ * THE COCKPIT, REWIRED TO REAL INSTRUMENTS.
  *
- * What stood here was a status board typed for a fleet: an `AdminDataSource`
- * interface with a `provider` field naming Cloudflare, Vercel, Sentry, Recova,
- * Foxing and Capsid, a `stubSource()` helper, and a `SourceResult` union whose
- * third arm meant "placeholder data, real integration pending". Under it: one
- * card, reading "Auth / Single admin", whose green dot was a CONSTANT. It would
- * have rendered the same green with the session store unreachable, because
- * nothing on the page checked anything.
+ * EVERY NUMBER HERE IS A READ-BACK, NEVER A COPY. Rule 17. `runHealthChecks` is
+ * the same function `/api/health` runs and `syncStatus` is the same function the
+ * operator tool runs, so this page cannot disagree with the alert that wakes
+ * Dustin at 2am: they are reading one instrument.
  *
- * The audits called it a stub and proposed deleting the page. That was the
- * wrong half. The page was hollow in July because there was nothing real to
- * show; August built the real things, and this is their human-readable view.
+ * The SENTENCES come from `check-copy.mjs`, which owns nouns and verbs only; the
+ * NUMBERS are substituted from each verdict's own counts.
  *
- * ## EVERY NUMBER HERE IS A READ-BACK, NEVER A COPY. Rule 17.
+ * The media index and the Ask index are not fetched again here. They are two of
+ * the health checks, and reading them separately would be a second reading of the
+ * same fact on one page, free to disagree with the first.
  *
- * `runHealthChecks` is the same function `/api/health` runs and the scheduled
- * workflow polls. `syncStatus` is the same function the `sync_status` operator
- * tool runs. Neither is reimplemented and neither is wrapped in an admin-side
- * calculation, so this page cannot disagree with the alert that wakes Dustin at
- * 2am: they are reading one instrument.
+ * NOTHING WAS INVENTED TO FILL SPACE. A reader cannot tell a measured card from a
+ * decorated one at a glance, so there are no decorated ones.
  *
- * **The sentences are no longer the verdicts' own `detail` strings.** Ruling 54
- * moved the wording to `check-copy.mjs`, because a verdict's detail is written
- * for whoever has to repair the mechanism and names it in the source's terms:
- * "content drift 2: 2 sha-changed, 0 file(s) with no row". What did NOT move is
- * the numbers. `check-copy.mjs` owns nouns and verbs only and substitutes every
- * figure from the verdict's own `counts`, and where a check ships no counts its
- * `detail` is still what renders. Rule 17 holds: the instrument that measured a
- * value is still the only thing that states it.
- *
- * **The media index and the Ask index are not fetched again here.** They are
- * two of the four health checks, and calling `mediaIndexStatus` or
- * `askIndexStatus` a second time to render them separately would be a second
- * reading of the same fact on one page, free to disagree with the first.
- *
- * ## WHAT IS NOT SHOWN, AND WHY THAT IS THE RULE
- *
- * Nothing was invented to fill space. Deploy history, error rates, portfolio
- * sites and Capsid memory are absent because no instrument in this repo reports
- * them; the previous board rendered five such cards reading "unknown" with
- * hints ending in "pending", which is a roadmap wearing the costume of
- * instrumentation. A reader cannot tell a measured card from a decorated one at
- * a glance, so there are no decorated ones.
- *
- * ## IT COSTS REAL I/O, STATED RATHER THAN HIDDEN
- *
- * The health run lists the Ask index, lists R2 and reads D1; `syncStatus`
- * lists the repository's post directory and counts four stores. That is the price
- * of a page whose entire purpose is to be true at the moment it is read, and it
- * is why the two run CONCURRENTLY and why each carries its own `timed` mark: an
- * instrument only sees what it was threaded through, so the cost of this page
- * is readable off its own Server-Timing header rather than guessed at.
- *
- * This plane is never edge-cached and has one user.
+ * IT COSTS REAL I/O, stated rather than hidden, which is why the two run
+ * concurrently and each carries its own mark.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const timings = context.get(timingsContext).timings;
@@ -75,9 +39,9 @@ export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
 
   /*
-   * CONCURRENT, because they share nothing. Serial, these two would add their
-   * latencies for no reason: the health run touches AI Search, R2 and D1, and
-   * `syncStatus` touches GitHub and D1, and neither reads the other's result.
+   * CONCURRENT, because they share nothing: the health run touches AI Search, R2
+   * and D1, `syncStatus` touches GitHub and D1, and neither reads the other's
+   * result.
    */
   const [health, stores] = await Promise.all([
     timed(timings, "overview_health", () => runHealthChecks(env)),
@@ -105,14 +69,9 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
   const { checks, stores } = loaderData;
 
   /*
-   * ONE READ OF THE CHECKS FEEDS THE SENTENCE, THE NOTICE AND THE TABLE.
-   *
-   * Ruling 54 makes "the status sentence and the notice never disagree" a rule
-   * because they were two computations and they drifted: the sentence read
-   * "every check the scheduled poll runs, answered here at page load" while the
-   * page under it showed a failing check. Both now come out of this array, and
-   * the notice is rendered from `worst`, which is the same element the sentence
-   * already described.
+   * ONE READ OF THE CHECKS FEEDS THE SENTENCE, THE NOTICE AND THE TABLE. They were
+   * two computations and they drifted, so the notice is rendered from `worst`, the
+   * same element the sentence already described.
    */
   const failing = checks.filter((check) => !check.ok);
   const worst = failing[0];
@@ -130,12 +89,10 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
       </div>
 
       {/*
-        ONE NOTICE, AND ONLY WHEN SOMETHING IS WRONG. A standing condition is
-        not news, so this is a named region rather than a live one: a `role`
-        would announce it on every load to a reader who came here to do
-        something else. The heading names it and the words carry the meaning,
-        so rule 1 holds without the edge being asked to say anything alone.
-      */}
+       * ONE NOTICE, AND ONLY WHEN SOMETHING IS WRONG. A standing condition is not
+       * news, so this is a named region rather than a live one: a `role` would announce
+       * it on every load to a reader who came to do something else.
+       */}
       {worst && worstCopy ? (
         <section className="admin-notice" data-tone="error" aria-labelledby="overview-worst">
           <svg
@@ -158,10 +115,10 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
             <p>{worstCopy.finding}</p>
           </div>
           {/*
-            THE ONE PRIMARY ON THIS PAGE, and only because a repair exists.
-            It posts to the route that ALREADY owns the intent: `/admin` has a
-            loader and no action, and this pass does not give it one.
-          */}
+           * THE ONE PRIMARY ON THIS PAGE, and only because a repair exists. It posts to
+           * the route that ALREADY owns the intent; `/admin` has a loader and no action, and
+           * this pass does not give it one.
+           */}
           {worstCopy.repair ? (
             <Form method="post" action={worstCopy.repair.action} className="admin-notice-action">
               <input type="hidden" name="intent" value={worstCopy.repair.intent} />
@@ -220,12 +177,9 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
       </div>
 
       {/*
-        TWO FIGURES. What the repository holds and what the site is serving:
-        those two can disagree, and the disagreement is why this panel exists.
-        The search index and the bindings were two more cards of the same size,
-        and neither has ever been the answer to a question anyone opened this
-        page with, so they are one disclosure below.
-      */}
+       * TWO FIGURES: what the repository holds and what the site is serving. Those two
+       * can disagree, and the disagreement is why this panel exists.
+       */}
       <h2 className="admin-section-head">Content</h2>
       <div className="admin-figures">
         <div className="admin-figure">
@@ -267,12 +221,11 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
       </details>
 
       {/*
-        DIVERGENCES: commits that landed while the site did not follow. An EMPTY
-        list is the normal answer, so this renders only when there is something
-        to say. `known: false` is a third state and is not an empty list: a
-        store that cannot be read must say so rather than report zero, which is
-        why the absence of this block is not evidence of health on its own.
-      */}
+       * An EMPTY list is the normal answer, so this renders only when there is
+       * something to say. `known: false` is a third state and is not an empty list: a
+       * store that cannot be read must say so rather than report zero, which is why the
+       * absence of this block is not evidence of health on its own.
+       */}
       {stores.divergences.known && stores.divergences.entries.length > 0 ? (
         <>
           <h2 className="admin-section-head">Changes the site did not pick up</h2>

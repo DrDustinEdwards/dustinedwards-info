@@ -4,13 +4,9 @@ import { useDisclosure } from "./disclosure";
 
 /**
  * The cockpit's overflow menu: a labelled button that reveals a panel of
- * secondary actions.
- *
- * Its keyboard and dismissal behaviour moved to `useDisclosure` on 2026-09-10,
- * when `RowMenu` needed the same three manners. The markup below is unchanged,
- * which is what keeps `check:admin-ui`'s fixture green through the extraction;
- * the grounds for the disclosure pattern and the ARIA choice now live beside
- * the hook.
+ * secondary actions. Its keyboard and dismissal behaviour live in
+ * `useDisclosure`, shared with `RowMenu`; the grounds for the disclosure pattern
+ * and the ARIA choice are beside the hook.
  */
 export function OverflowMenu({
   label,
