@@ -2600,7 +2600,7 @@ try {
     /* A dead bundle lets the form navigate; the destroyed-context throw is the finding. */
     /* The hidden twin must be `display: none`, not `.sr-only`, measured via `offsetParent`. */
     const control = await page.evaluate(() => {
-      const buttons = [...document.querySelectorAll(".bar-theme button")];
+      const buttons = [...document.querySelectorAll(".theme-toggle button")];
       const shown = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent !== null);
       const hidden = buttons.filter((b) => /** @type {HTMLElement} */ (b).offsetParent === null);
       return {
@@ -2650,7 +2650,7 @@ try {
     /* Clicked by what is visible; by value could pick the hidden button. */
     const themeClicked = await clickOrFail(
       page,
-      '.bar-theme button[value="dark"]',
+      '.theme-toggle button[value="dark"]',
       "the theme control is present to click",
     );
     /* Top level, so no return; dependent cases are skipped by name. */
@@ -2665,7 +2665,7 @@ try {
     let flipped = null;
     try {
       flipped = await page.evaluate(() => {
-        const shown = [...document.querySelectorAll(".bar-theme button")].filter(
+        const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
           (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
         );
         return {
@@ -2709,7 +2709,7 @@ try {
         await scriptless.goto(`${BASE}${postForShape}${hash}`, { waitUntil: "networkidle0" });
 
         const before = await scriptless.evaluate(() => {
-          const shown = [...document.querySelectorAll(".bar-theme button")].filter(
+          const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
             (b) => /** @type {HTMLElement} */ (b).offsetParent !== null,
           );
           return {
@@ -2734,7 +2734,7 @@ try {
           scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
           clickOrFail(
             scriptless,
-            `.bar-theme button[value="${before.value}"]`,
+            `.theme-toggle button[value="${before.value}"]`,
             "the scriptless theme control is present to click",
           ),
         ]);
