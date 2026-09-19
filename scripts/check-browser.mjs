@@ -1113,10 +1113,26 @@ try {
           "$1AGE-SENTENCE",
         );
 
+    /**
+     * ONE IDENTITY FOR THE WHOLE RUN, never one per fetch.
+     *
+     * This is a cache-buster: the themed `caches.default` entry is keyed on request URL, so a
+     * fresh value is what stops a previous run's body answering this one. Per FETCH it also
+     * made the three reads of a page three different URLs, and a route that echoes its own URL
+     * then differs for that reason alone. `/publications` does: its search `<Form>` carries no
+     * `action`, so React Router renders the request URL into the attribute and the byte-identity
+     * pair failed on the gate's own parameter. One value per run busts the cache across runs and
+     * leaves the reads comparable.
+     *
+     * Masking it instead would be the wrong direction: the mask set only ever shrinks, for the
+     * reason stated above it.
+     */
+    const RUN_IDENTITY = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
     /** @param {string} path @param {Record<string,string>} headers */
     const fetchDoc = async (path, headers) => {
       const sep = path.includes("?") ? "&" : "?";
-      const res = await fetch(`${BASE}${path}${sep}identity=${Date.now()}-${Math.round(Math.random() * 1e9)}`, {
+      const res = await fetch(`${BASE}${path}${sep}identity=${RUN_IDENTITY}`, {
         headers: { "cache-control": "no-cache", ...headers },
         redirect: "manual",
       });
