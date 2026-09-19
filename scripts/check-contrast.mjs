@@ -629,6 +629,41 @@ const NON_PARTICIPATING = new Map([
   }
 }
 
+/* content/tokens.json: the swatch inventory /playground/ui renders */
+
+/*
+ * A Worker cannot read a stylesheet, so the inventory page's swatches come from
+ * a committed build product. This re-derives the answer from app.css with the
+ * parser above rather than reading the generator's, so agreement means two
+ * readings of the sheet agree.
+ */
+{
+  const inventory = JSON.parse(readFileSync(join(root, "content", "tokens.json"), "utf8"));
+  /** @type {Array<{name: string, light: string, dark: string}>} */
+  const rows = inventory.tokens ?? [];
+
+  const expected = Object.keys(light).map((name) => ({
+    name,
+    light: resolveToken(light, name).value,
+    dark: resolveToken(darkAttr, name).value,
+  }));
+
+  assert(
+    `tokens.json scope is non-empty: ${rows.length} row(s) against ${expected.length} palette tokens`,
+    expected.length >= 53 && rows.length === expected.length,
+  );
+
+  const drift = expected.filter((want, i) => {
+    const got = rows[i];
+    return !got || got.name !== want.name || got.light !== want.light || got.dark !== want.dark;
+  });
+  assert(
+    `content/tokens.json matches app.css, token for token and in order` +
+      (drift.length ? `\n    first disagreement: ${drift[0].name}. Run npm run build:tokens.` : ""),
+    drift.length === 0,
+  );
+}
+
 /* prefers-contrast: more */
 
 /**
@@ -1038,7 +1073,7 @@ const buildPresent = existsSync(assetDir);
  * Floors: counts from running the gate with build/ present and absent, one under
  * check:floors' tolerance. Only CI reaches the absent branch.
  */
-const MINIMUM_CHECKS = buildPresent ? 871 : 677;
+const MINIMUM_CHECKS = buildPresent ? 873 : 679;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
