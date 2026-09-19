@@ -18,14 +18,9 @@ import type { loader as rootLoader } from "~/root";
 
 /*
  * THE ADMIN PLANE'S CSS, and this import is what keeps it off the public plane.
- *
- * `app/app.css` used to import all sixteen stylesheets, so every reader of the
- * home page downloaded the media library and the post editor: 109,318 built
- * bytes, 62% of them admin. This route is the layout every `/admin/*` child
- * nests under, so importing here covers the whole subtree exactly once. Vite
- * emits a separate chunk and React Router links it only on matched routes.
- *
- * `/login` imports it too and is the one other place that may; see app/admin.css.
+ * This route is the layout every `/admin/*` child nests under, so importing here
+ * covers the whole subtree exactly once. `/login` imports it too and is the one
+ * other place that may.
  */
 import "~/admin.css";
 
@@ -34,77 +29,28 @@ export function meta() {
 }
 
 /**
- * The admin plane HYDRATES, and this is the one flag that says so for the
- * whole /admin subtree: root's Layout renders <Scripts> only when a match
- * carries it, and a layout match covers every child. The public plane stopped
- * hydrating 2026-08-26; the admin plane is rule 9's stated exemption and its
- * cockpit is real client UI (editor, media library, bulk actions).
+ * The admin plane HYDRATES, and this is the one flag that says so for the whole
+ * /admin subtree: root renders `<Scripts>` only when a match carries it. The
+ * public plane does not; this is rule 9's stated exemption.
  */
 export const handle = { hydrate: true };
 
 /**
- * One gate for the whole /admin subtree. Runs before every child loader and
- * action; anyone without the single-admin session is 302'd to the login
- * screen. The verified session is stashed on the context so children read it
- * without a second lookup.
+ * One gate for the whole /admin subtree, before every child loader and action.
  *
- * **TWO WAYS IN SINCE 2026-08-24, and only one of them may write.** The human
- * admin arrives with a Better Auth session and is unchanged. A machine may
- * instead present the read-only SMOKE bearer token, which gets GET and HEAD and
- * is refused every other method here, before any child runs. That refusal is
- * the enforcement point for the whole plane's action surface, because route
- * actions do not consult a policy module; the capability table covers the
- * publish path and this covers the rest. Grounds: `app/lib/smoke.server.ts`.
+ * TWO WAYS IN, AND ONLY ONE MAY WRITE. The human admin arrives with a Better Auth
+ * session. A machine may instead present the read-only SMOKE bearer, which gets
+ * GET and HEAD and is refused every other method here, before any child runs.
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     const env = getEnv(context);
 
     /*
-     * ORIGIN, BEFORE THE SESSION LOOKUP, on every mutating method.
-     *
-     * This middleware is already the one place every `/admin/*` action must
-     * pass through, which is what makes it the right place for this: route
-     * actions do not consult a policy module, and an Origin check written into
-     * each of them would be a check the next action silently lacks.
-     *
-     * ## THE AUDIT'S CLAIM WAS HALF TRUE AT HEAD, and the half that is false
-     * ## is worth writing down because it decides what this line is FOR
-     *
-     * The claim was that no admin action has an Origin check. MEASURED against
-     * React Router 8 on 2026-08-28: `throwIfPotentialCSRFAttack` in
-     * `react-router/dist/.../lib/actions.js` compares the `origin` header's
-     * HOST against the request's host on every mutating DOCUMENT request and
-     * refuses with 400 before `staticHandler.query` runs, which is before this
-     * middleware. So `/admin/posts/new` with `Origin: https://evil.example`
-     * already answered 400, and still does.
-     *
-     * WHAT IT DOES NOT REACH IS RESOURCE ROUTES. A route with no default
-     * export is not a document request, so that check never runs for it, and
-     * three of this plane's mutating surfaces are exactly that:
-     * `admin.logout.tsx`, `admin.media.upload.ts` and `admin.preview.ts`. All
-     * three answered a foreign `Origin` before this line and answer 403 after
-     * it. `/theme` is the same shape outside this subtree and carries its own
-     * call to the same predicate.
-     *
-     * So this is not a duplicate of the framework's check. It covers the half
-     * the framework's check is not shaped to see, and it puts both halves under
-     * one predicate this repo owns rather than one the framework may change.
-     *
-     * BEFORE the session lookup because refusing costs nothing and the lookup
-     * is a KV read: a cross-origin caller should not be able to make this
-     * Worker do work. That ordering is the same cheapest-first discipline hard
-     * rule 19 states for the money paths.
-     *
-     * GET IS UNTOUCHED. A cross-origin GET of an admin page is answered by the
-     * session gate below, which redirects anyone without the single-admin
-     * session, and reading is not the thing an Origin check is for.
-     *
-     * AN ABSENT ORIGIN IS ALLOWED, per the predicate. The admin plane is React
-     * and every form here posts through it, so in practice an admin request
-     * always carries one; the exemption exists for the public no-script forms
-     * and is not narrowed here, because two spellings of the rule is exactly
-     * what this consolidation removed.
+     * Covers RESOURCE ROUTES, which the framework's document check never sees: a
+     * route with no default export is not a document request. BEFORE the session
+     * lookup, the cheapest-first order hard rule 19 states. AN ABSENT ORIGIN IS
+     * ALLOWED.
      */
     if (request.method !== "GET" && request.method !== "HEAD") {
       const verdict = originVerdict(request.headers.get("origin"), request.url);
@@ -117,15 +63,9 @@ export const middleware: Route.MiddlewareFunction[] = [
     }
 
     /*
-     * INSTRUMENTATION, READ RATHER THAN CREATED, since 2026-08-27.
-     *
-     * This middleware used to make its own collector. Root's middleware makes
-     * one for every route on the site now, and root runs first, so creating a
-     * second here would REPLACE the array root had already put in the context
-     * and discard anything recorded before this point. Reading it keeps one
-     * owner and keeps the auth gate's marks in the same list as everything
-     * else, which is the whole reason this was the one cost worth measuring:
-     * no child loader can see it.
+     * READ rather than created: root's middleware makes one for every route and runs
+     * first, so creating a second here would REPLACE the array root had already put in
+     * the context and discard anything recorded before this point.
      */
     const timings = context.get(timingsContext).timings;
     const session = await getAdminSession(env, request, timings);
@@ -134,23 +74,16 @@ export const middleware: Route.MiddlewareFunction[] = [
       context.set(adminActorContext, { kind: "admin", email: session.user.email });
     } else {
       /*
-       * THE SMOKE DOOR, and it is only reachable with no admin session.
-       *
-       * Ordered this way so the human path is untouched: a browser request
-       * carries no `Authorization` header, `authenticateSmoke` returns `absent`
-       * without reading the secret or touching the limiter, and the redirect
-       * below is the same redirect as before this existed.
+       * THE SMOKE DOOR, only reachable with no admin session. A browser carries no
+       * `Authorization` header, so `authenticateSmoke` returns `absent` without
+       * reading the secret or touching the limiter.
        */
       const smoke = await authenticateSmoke(env, request);
       if (smoke.kind === "refused") {
         /*
-         * A PRESENTED CREDENTIAL GETS AN ANSWER, not a login page. Whoever set
-         * SMOKE_TOKEN in CI is entitled to know whether it was rejected, not
-         * configured, or rate limited, because those need three different
-         * repairs and a 302 to /login names none of them.
-         *
-         * `no-store` and `noindex` on the same grounds as the operator API: it
-         * is an authenticated surface behind a secret.
+         * A PRESENTED CREDENTIAL GETS AN ANSWER, not a login page: rejected, not
+         * configured and rate limited need three different repairs, and a 302 to /login
+         * names none of them.
          */
         throw new Response(smoke.error, {
           status: smoke.status,
@@ -165,24 +98,9 @@ export const middleware: Route.MiddlewareFunction[] = [
       if (smoke.kind !== "ok") throw redirect("/login");
 
       /*
-       * READ ONLY, AND THIS IS WHERE IT IS ENFORCED FOR THE WHOLE PLANE.
-       *
-       * The capability table in `publish-policy.mjs` refuses the smoke actor
-       * from `decide()` and `decideDelete()`, which covers the publish path. It
-       * does NOT cover the eleven media intents, the tag writes, the trash, the
-       * rebuild, or any action added tomorrow: those are route actions that
-       * never consult a policy module. So the method itself is the gate, at the
-       * one place every `/admin/*` action must pass through.
-       *
-       * **A METHOD ALLOWLIST, NOT A DENYLIST.** GET and HEAD are named and
-       * everything else is refused, so a route that starts answering PUT or
-       * DELETE tomorrow is refused on the day it is written rather than on the
-       * day someone remembers to add it here. That inversion is the whole
-       * point: hard rule 19's chain is ordered for the same reason, and this
-       * repo's recorded failure shape is a fix landing in N-1 of N sites.
-       *
-       * Refused BEFORE `next()`, so no child loader, action, or middleware runs
-       * and nothing has read a row by the time the refusal is written.
+       * READ ONLY FOR THE WHOLE PLANE. AN ALLOWLIST, NOT A DENYLIST, the inversion
+       * hard rule 19 is ordered for: a route answering PUT tomorrow is refused the day it
+       * is written. Refused BEFORE `next()`.
        */
       if (request.method !== "GET" && request.method !== "HEAD") {
         throw new Response(
@@ -201,22 +119,15 @@ export const middleware: Route.MiddlewareFunction[] = [
       }
 
       /*
-       * THE SAME EMAIL THE ADMIN SEES, and it is the stated residue rather than
-       * an oversight. The topbar's binding constraint at narrow widths IS this
-       * string; a placeholder here would silently change the measurement the
-       * whole credential exists to take. Grounds on the `smoke` capability row.
+       * THE SAME EMAIL THE ADMIN SEES, a stated residue rather than an oversight: the
+       * topbar's binding constraint at narrow widths IS this string, and a placeholder
+       * would change the measurement the credential exists to take.
        */
       context.set(adminActorContext, { kind: "smoke", id: smoke.id, email: smoke.email });
     }
-    // Lazy and memoized: this layout's loader wants a drift COUNT for the nav
-    // badge and /admin/posts wants the full status for its alert. Sharing the
-    // reader means one listing per request rather than two, and a route that
-    // never asks for it never pays for it.
-    //
-    // The per-request ARTIFACT reader that used to be installed beside it is
-    // gone with the committed artifact itself: the citation scan reads
-    // `posts.body` out of D1 now, so there is no 600KB GitHub round trip left
-    // to deduplicate.
+    // Lazy and memoized: this loader wants a drift COUNT and /admin/posts wants the
+    // full status, so sharing the reader means one listing per request rather than
+    // two, and a route that never asks never pays.
     context.set(askStatusContext, askStatusReader(env, timings));
     return next();
   },
@@ -224,42 +135,25 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export async function loader({ context }: Route.LoaderArgs) {
   /*
-   * THE LAYOUT LOADER RUNS ON EVERY ADMIN REQUEST, and until now nothing in it
-   * was measured. A trivial admin route costs ~1150ms against 233ms for a
-   * public one, and `auth_getsession` accounts for 57ms of that gap; the rest
-   * is these two calls and neither had a name.
+   * This loader runs on EVERY admin request, which is why both of its calls are
+   * named.
    */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   /*
-   * IN PARALLEL, because they were strictly serial and share nothing.
-   *
-   * `ask` was awaited on its own line and `counts` was awaited inside the
-   * returned object literal, and an object literal evaluates its properties in
-   * order. So the D1 nav-count query did not start until the Ask drift check
-   * had finished, and the drift check is the slow one. Neither reads the
-   * other's result; the only reason for the ordering was where the lines
-   * happened to sit.
+   * IN PARALLEL, because neither reads the other's result: the only reason for the
+   * old ordering was where the lines happened to sit.
    */
   /*
-   * THE BADGE READS A CACHED COUNT, NOT THE INDEX.
-   *
-   * `askDriftCount` returns from KV on a hit and never touches AI Search.
-   * That is the fix: the listing's cost is per-call variance of 46 to 2055ms,
-   * measured, so removing the call from the read path is the only thing that
-   * moves the tail. Making it cheaper does not: both pages of the pagination
-   * cost about 72ms and dropping one leaves the tail where it was.
-   *
-   * The layout wants ONE INTEGER. `/admin/posts` still calls the full reader
-   * on `askStatusContext` for its repair alert, uncached, because the page
-   * that fixes drift must not act on a number up to five minutes old. The
-   * reader stays on the context for exactly that caller.
+   * THE BADGE READS A CACHED COUNT, NOT THE INDEX: `askDriftCount` returns from KV
+   * and never touches AI Search. /admin/posts still calls the full reader uncached,
+   * because the page that fixes drift must not act on a stale number.
    */
   const [drift, counts] = await Promise.all([
     /*
-     * The ExecutionContext travels with the env because the miss path finishes
-     * its cache write on `waitUntil`. It is required rather than optional so
-     * this call site cannot quietly go back to a floating write.
+     * The ExecutionContext travels with the env because the miss path finishes its
+     * cache write on `waitUntil`. Required rather than optional, so this call site
+     * cannot quietly go back to a floating write.
      */
     timed(timings, "layout_ask_drift", () =>
       askDriftCount(getEnv(context), getExecutionContext(context), timings),
@@ -269,64 +163,34 @@ export async function loader({ context }: Route.LoaderArgs) {
   const payload = {
     email: context.get(adminActorContext).email,
     /**
-     * THE NAV COUNTS, and there are TWO of them rather than the mockup's four.
-     *
-     * The mockup badged four: Sites, Content, Posts and Media. Two of those
-     * sections no longer exist. Both were stubs that could only ever have
-     * badged the length of a hardcoded array, and a numeral in the sidebar is
-     * read as a measurement, so they were deleted rather than finished.
-     *
-     * Posts and Media are real rows in D1, so these two are real numbers. The
-     * nav carries exactly the counts something has counted.
+     * Posts and Media are real rows in D1, so these two are real numbers. The nav
+     * carries exactly the counts something has counted: a numeral in the sidebar is
+     * read as a measurement.
      */
     counts,
     /**
-     * ONE number, not the status object. The badge is a count and the repair
-     * lives on /admin/posts, so shipping the key lists to every admin page
-     * would be payload the shell has no use for.
-     *
-     * Drift counts in BOTH directions, exactly as the alert reports it: an item
-     * the corpus does not know about is as much a defect as a record the index
-     * lacks.
+     * ONE number, not the status object: the badge is a count and the repair lives on
+     * /admin/posts. It counts drift in BOTH directions, since an item the corpus does
+     * not know about is as much a defect as a record the index lacks.
      */
     /*
-     * NULL BECOMES 0, which renders NO BADGE rather than a clean one.
-     *
-     * `navName` treats 0 as "nothing to report" and omits the count entirely,
-     * so an unavailable index and an index in agreement look the same to a
-     * reader. That was already true before the cache and is the honest
-     * rendering of "no evidence": the alternative is a numeral asserting
-     * agreement nobody measured.
+     * NULL BECOMES 0, which renders NO BADGE rather than a clean one: an unavailable
+     * index and an index in agreement look the same to a reader, and the alternative
+     * is a numeral asserting agreement nobody measured.
      */
     askDrift: drift ?? 0,
     /**
-     * How stale that number may be, in seconds, for the reader.
-     *
-     * TIER 1.5 FORBIDS ADDING A CACHE TO HIDE A SLOW PATH WITHOUT SAYING SO,
-     * and a comment in the source says it to the next engineer, not to the
-     * operator looking at the badge. So the number travels to the UI and the
-     * badge's own title states it. The repair lives on /admin/posts, which
-     * computes fresh.
+     * TIER 1.5 FORBIDS ADDING A CACHE TO HIDE A SLOW PATH WITHOUT SAYING SO, and a
+     * source comment says it to the next engineer rather than to the operator looking
+     * at the badge. So the number travels and the badge's own title states it.
      */
     askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
   };
 
   /*
    * THE LAYOUT'S OWN TOTAL, and it is what makes the other routes' arithmetic
-   * close.
-   *
-   * The layout's marks ride along on EVERY admin response, because `timings`
-   * is one array shared through context. So a breakdown of `/admin/posts.data`
-   * that adds up the marks it can see was adding LAYOUT time to ROUTE time and
-   * calling the total attributed. Worse, the layout's two big marks run in
-   * PARALLEL and `drift_cache_read` NESTS inside `layout_ask_drift`, so summing
-   * them overcounts twice over.
-   *
-   * MEASURED 2026-08-21 against production: summing the layout marks on
-   * /admin.data gave 313ms against a 283ms TTFB, which is arithmetic claiming
-   * more time than the request took. With this mark, every admin route reads
-   * as `layout_total` + its own `loader_total` + whatever is left, and the
-   * leftover is the response path rather than a rounding error.
+   * close. The layout's marks ride on every admin response, its two big marks run in
+   * PARALLEL and one NESTS inside the other, so summing them overcounts twice over.
    */
   timings?.push({ name: "layout_total", ms: performance.now() - loaderStart });
 
@@ -334,29 +198,20 @@ export async function loader({ context }: Route.LoaderArgs) {
 }
 
 /**
- * Where the collapsed state lives, and the attribute the stylesheet reads.
- *
- * localStorage per the ruling: not server state and not a cookie, because the
- * rail is a per-device preference rather than a fact about the account. That
- * choice has one consequence and it is the whole reason for the script below:
- * the server cannot know the state, so without help the shell would render
+ * localStorage per the ruling: a per-device preference, not server state and not
+ * a cookie. That has one consequence, and it is the whole reason for the script
+ * below: the server cannot know the state, so without help the shell would render
  * expanded and snap narrow after hydration.
  */
 const SIDEBAR_KEY = "admin-sidebar";
 const SIDEBAR_ATTR = "data-admin-sidebar";
 
 /**
- * Sets the attribute BEFORE the sidebar is painted.
+ * Sets the attribute BEFORE the sidebar is painted, so nothing is corrected
+ * afterwards. A blocking inline script, which this site otherwise avoids.
  *
- * The stylesheet keys the rail's width off an attribute on the document
- * element, so the width is decided by the time the first pixel lands and
- * nothing is corrected afterwards. It is a blocking inline script, which this
- * site otherwise avoids: the theme toggle reaches the same no-flash result with
- * a cookie read in the root loader, and that option is ruled out here.
- *
- * It lives in the ADMIN layout, not in root, so the public plane never carries
- * it. It is also why the React tree renders identically in both states: the
- * markup does not branch, so there is nothing for hydration to disagree about.
+ * It lives in the ADMIN layout, not in root, so the public plane never carries it.
+ * The markup does not branch, so hydration has nothing to disagree about.
  */
 const NO_FLASH = `try{if(localStorage.getItem(${JSON.stringify(SIDEBAR_KEY)})==="collapsed"){document.documentElement.setAttribute(${JSON.stringify(SIDEBAR_ATTR)},"collapsed")}}catch(e){}`;
 
@@ -378,27 +233,13 @@ const ICONS = {
       <path d="M4 5h16M4 10h16M4 15h11M4 20h7" />
     </>
   ),
-  /**
-   * A speech bubble, which is what a mention from another site is.
-   *
-   * Chosen against the five already here for the same reason `traffic` was:
-   * Overview is a grid of rectangles, Posts is a stack of lines, Traffic is a
-   * bar chart, Media is a picture and Tools is a slider row. A rounded bubble
-   * with a tail shares no silhouette with any of them at 20px, which is the
-   * size the collapsed rail renders at.
-   */
+  /** A speech bubble, which is what a mention from another site is. */
   mentions: (
     <>
       <path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />
     </>
   ),
-  /**
-   * Ascending bars on a baseline, which is what the panel draws.
-   *
-   * Chosen against the six already here: Content is a document, Posts is a
-   * stack of lines, Sites is a globe, Media is a picture and Tools is a slider
-   * row. A bar chart shares no silhouette with any of them at 20px.
-   */
+  /** Ascending bars on a baseline, which is what the panel draws. */
   traffic: (
     <>
       <path d="M4 20h16" />
@@ -406,13 +247,8 @@ const ICONS = {
     </>
   ),
   /**
-   * A picture: frame, horizon, sun.
-   *
-   * Chosen against the five already here rather than in isolation. Overview is
-   * rectangles, Sites a globe, Content a document, Posts stacked lines, Tools
-   * sliders, so a framed image collides with none of them at rail size. Not a
-   * pencil and not a stack of photos: the pencil reads as compose, which is
-   * Posts' job, and a stack reads as "copies" rather than "the library".
+   * A picture: frame, horizon, sun. Not a pencil, which reads as compose, and that
+   * is Posts' job.
    */
   media: (
     <>
@@ -421,14 +257,7 @@ const ICONS = {
       <path d="m4 17 4.5-4.5 3 3 3.5-3.5 5 5" />
     </>
   ),
-  /**
-   * Sliders, not the pencil this used to draw.
-   *
-   * A pencil reads as COMPOSE, which is what Posts does, so two adjacent items
-   * were claiming the same job and the one that actually writes was not the one
-   * holding the pen. Sliders say "settings and switches", which is what Tools
-   * holds.
-   */
+  /** Sliders, not a pencil: a pencil reads as COMPOSE, which is what Posts does. */
   tools: (
     <>
       <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2" />
@@ -441,56 +270,35 @@ const ICONS = {
 
 const NAV = [
   { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
-  // `drift` is the ALARM, and it is a fact about the post corpus with its
-  // repair on this page. `count` is the neutral size of the section. They are
-  // different claims and they render differently; see `navName` below.
+  // `drift` is the ALARM, a fact about the post corpus with its repair on this
+  // page. `count` is the neutral size of the section. Different claims, so they
+  // render differently.
   { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true, count: "posts" },
-  // After Posts and before Tools, because it is content the posts consume
-  // rather than an admin control. Until now /admin/media existed and loaded but
-  // NOTHING linked to it: the sidebar had five items, none of them Media, and
-  // no item even marked itself active while the page was open, so the library
-  // was reachable only by typing the URL.
+  // After Posts and before Tools, because it is content the posts consume rather
+  // than an admin control.
   { to: "/admin/media", label: "Media", icon: ICONS.media, count: "media" },
-  // Reading rather than editing, so it sits after the content items and before
-  // the controls. The label matches the panel heading exactly: this counts
-  // origin requests, and calling the nav item anything shorter would put a
-  // claim in the sidebar that the page spends a caption correcting.
+  // The label matches the panel heading exactly: this counts origin requests, and
+  // anything shorter would put a claim in the sidebar that the page spends a caption
+  // correcting.
   { to: "/admin/origin-requests", label: "Origin requests", icon: ICONS.traffic },
-  // Beside Origin requests and before Tools, because both are things other
-  // people did to this site rather than things the admin authors. NO COUNT
-  // BADGE: the counts here are `posts` and `media`, both computed by
-  // `adminNavCounts` in the layout loader on every admin request, and a pending
-  // mention is not urgent enough to make every admin page pay for a third
-  // query. The page itself is where the queue is read.
+  // NO COUNT BADGE: a pending mention is not urgent enough to make every admin page
+  // pay for a third query. The page itself is where the queue is read.
   { to: "/admin/mentions", label: "Mentions", icon: ICONS.mentions },
   { to: "/admin/tools", label: "Tools", icon: ICONS.tools },
 ];
 
 /**
- * The accessible name for a nav item, count included as WORDS.
- *
- * A badge that is only a numeral announces "Posts 3", which names no unit and
- * reads as a position as easily as a quantity. The digits are decoration over
- * this string, so the numeral itself is aria-hidden and this is what is
- * actually announced. It doubles as the `title`, which is how the count keeps a
- * text equivalent for a SIGHTED reader in the collapsed rail, where the badge
- * has room for the number but not for what the number counts.
+ * The accessible name for a nav item, count included as WORDS. A badge that is
+ * only a numeral announces "Posts 3", which names no unit and reads as a position
+ * as easily as a quantity, so the digits are decoration over this string and the
+ * numeral itself is aria-hidden.
  */
 /**
- * The nav item's accessible name, and where the CACHING IS STATED TO THE READER.
+ * Where the CACHING IS STATED TO THE READER. A source comment says it to the next
+ * engineer; this says it to the operator looking at the badge, who would otherwise
+ * act on a number without knowing how old it can be.
  *
- * Tier 1.5 forbids adding a cache to hide a slow path without saying so. A
- * source comment says it to the next engineer; this says it to the operator
- * looking at the badge, which is the person who would otherwise act on a number
- * without knowing how old it can be.
- *
- * Only on the drifted branch, deliberately. A badge showing nothing has nothing
- * to qualify, and appending an age to every nav item would be noise on five
- * links that carry no cached value at all.
- *
- * The wording names the authority as well as the age, because "up to 5 minutes
- * old" invites the question this sentence should already answer: the repair
- * page recomputes, so that is where to go and what to trust.
+ * Only on the drifted branch: a badge showing nothing has nothing to qualify.
  */
 function navName(
   label: string,
@@ -527,37 +335,21 @@ function Glyph({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Sign out, in the two places the topbar renders it: the wide bar, and the
- * overflow menu it folds into below 640px.
+ * Sign out, in the two places the topbar renders it.
  *
- * ONE STATEMENT OF THE FORM, because both sites are the same action and the
- * responsive fold is the only reason there are two. A copied `<Form>` is a
- * second owner of the logout route and of the fact that this must be a POST;
- * the two would drift on the day one of them gained a confirmation or a
- * redirect target.
- *
- * A REAL FORM in both branches, deliberately. `menu` changes the presentation
- * and nothing else: it is still `method="post"` to the same action, so the
- * folded control works with scripting off exactly as the wide one does, which
- * is what rule 9 requires of a door on a page a reader can reach.
+ * ONE STATEMENT OF THE FORM, because a copied `<Form>` is a second owner of the
+ * logout route. A REAL FORM in both branches: `menu` changes presentation only,
+ * so the folded control works with scripting off exactly as the wide one does.
  */
 function SignOutForm({ menu = false }: { menu?: boolean }) {
   return (
     <Form method="post" action="/admin/logout">
       {/*
-        THE NAME IS "Sign out" IN BOTH VARIANTS, and it took an explicit label
-        to make that true. The hint below is a CHILD of the button, so name-from-
-        content swallowed it: measured 2026-08-26 by check:browser, the folded
-        button's accessible name was "Sign outEnds this session. You will need to
-        sign in again with Google." A submit control named with a whole sentence
-        is a defect on its own, and it also broke the property the fold exists to
-        have, which is that the menu holds the SAME control the bar does rather
-        than a second one that has drifted.
-
-        `aria-describedby` keeps the sentence, as a DESCRIPTION, which is what it
-        always was: announced after the name, after a pause, and skippable. No
-        pixel moves, because the span stays exactly where the design put it.
-      */}
+       * THE NAME IS "Sign out" IN BOTH VARIANTS, and it took an explicit label: the
+       * hint is a CHILD of the button, so name-from-content swallowed it.
+       * `aria-describedby` keeps the sentence as a DESCRIPTION, announced after the
+       * name and skippable.
+       */}
       <button
         type="submit"
         {...(menu
@@ -599,25 +391,14 @@ function SignOutForm({ menu = false }: { menu?: boolean }) {
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   /*
-   * The CSP nonce, from the root loader through useRouteLoaderData, the same
-   * channel Layout and BlogSpeculation use. Read OPTIONALLY for the reason they
-   * do: on the error boundary path the root loader never ran, and a made-up
-   * fallback nonce would be worse than none.
-   *
-   * The inline script below was UN-NONCED until 2026-08-11, found by the
-   * external audit. workers/app.ts said the shared-cache nonce lifetime was THE
-   * ONLY thing blocking CSP enforcement; this was a second blocker, sitting on
-   * an admin page that a Report-Only window walking public routes would never
-   * have reported.
+   * The CSP nonce, read OPTIONALLY: on the error boundary path the root loader
+   * never ran, and a made-up fallback nonce would be worse than none.
    */
   const rootData = useRouteLoaderData<typeof rootLoader>("root");
   /**
-   * Mirrors the attribute the inline script already set.
-   *
-   * Initialised to `false` so the hydration render matches the server's, then
-   * corrected in a LAYOUT effect, which runs before the browser paints. The
-   * width never depended on this (the stylesheet reads the attribute), so what
-   * this actually keeps honest is `aria-expanded`.
+   * Initialised `false` so the hydration render matches the server's, then
+   * corrected in a LAYOUT effect, which runs before paint. The width never depended
+   * on this, so what it keeps honest is `aria-expanded`.
    */
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -629,10 +410,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   }, []);
 
   /**
-   * The toggle. It writes the attribute and the store, and it does NOT move
-   * focus: the button is the same node before and after, never unmounted, so
-   * the browser keeps focus on it across the transition with nothing to
-   * restore.
+   * It does NOT move focus: the button is the same node before and after, never
+   * unmounted, so the browser keeps focus on it with nothing to restore.
    */
   const toggle = useCallback(() => {
     setCollapsed((was) => {
@@ -670,30 +449,23 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
 
       {/*
-        THE FULL-WIDTH HEADER, above both columns.
-
-        It used to live inside .admin-main, which put it in the right-hand
-        column and made the mark's position a function of the sidebar's width.
-        Spanning both columns is what lets the mark land at the same
-        coordinates as the public header by construction rather than by tuning.
-      */}
+       * THE FULL-WIDTH HEADER, above both columns. Spanning both is what lets the mark
+       * land at the same coordinates as the public header by construction rather than by
+       * tuning.
+       */}
       <header className="admin-topbar">
         {/*
-          The identity block, at the public header's treatment. The component is
-          imported, never copied, so check:logo covers this instance too.
-
-          It links to /admin, the home of the plane you are on, mirroring the
-          public mark's link to / rather than copying its destination. Crossing
-          planes is what View site in the sidebar foot is for.
-        */}
+         * The component is imported, never copied, so check:logo covers this instance
+         * too. It links to /admin, the home of the plane you are on.
+         */}
         <Link to="/admin" className="admin-brand">
           {/* Decorative: the link's accessible name is the wordmark beside it,
               so naming the mark too would say it twice. */}
           <SiteLogoHeader className="admin-brand-mark" />
-          {/* WRAPPED so it can truncate. A bare text node cannot carry
-              `text-overflow`, and below 576px the wordmark is the widest thing
-              in the bar that is safe to give up: the mark beside it still
-              identifies the plane and the link keeps its accessible name. */}
+          {/*
+           * WRAPPED so it can truncate: a bare text node cannot carry `text-overflow`,
+           * and the mark beside it still identifies the plane.
+           */}
           <span className="admin-brand-name">{SITE.name}</span>
         </Link>
         <span className="admin-topbar-scope">Private plane</span>
@@ -722,33 +494,23 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          {/* `.muted` is the colour and `.admin-topbar-email` is the box. Split
-              because the truncation below needs a selector that means THIS
-              element, and `.muted` is used all over the admin plane. */}
+          {/*
+           * `.muted` is the colour and `.admin-topbar-email` is the box: the truncation
+           * needs a selector that means THIS element.
+           */}
           <span className="muted admin-topbar-email">{loaderData.email}</span>
           <SignOutForm />
           {/*
-            THE FOLD, below 640px. Grounds: decisions vol 8, 2026-08-25.
-
-            The wide bar above and this menu below are BOTH in the document and
-            CSS picks one, which is the only arrangement that works with no
-            script: a JS-measured breakpoint would leave a scriptless reader
-            with whichever branch the server guessed. `display: none` takes the
-            hidden branch out of the accessibility tree too, so exactly one
-            email and one Sign out are ever exposed.
-
-            The menu is the EXISTING OverflowMenu, not a new pattern, and the
-            sign-out inside it is a real `<Form method="post">` submit button,
-            so rule 9 holds on the folded side as well: the menu opens with no
-            script because it is a `<details>`, and the button posts with no
-            script because it is a form.
-          */}
+           * THE FOLD. Both branches are in the document and CSS picks one, the only
+           * arrangement that works with no script. `display: none` takes the hidden branch
+           * out of the accessibility tree too, so exactly one of each is ever exposed.
+           */}
           <div className="admin-topbar-account">
             <OverflowMenu label="Account">
-              {/* The signed-in address, as INFORMATION. It is the one thing the
-                  wide bar shows that is not a control, so it stays visible
-                  rather than being dropped: knowing which account you are in is
-                  the reason it was ever in the bar. */}
+              {/*
+               * The signed-in address, as INFORMATION: it is the one thing the wide bar shows
+               * that is not a control, and knowing which account you are in is why it is there.
+               */}
               <p className="admin-account-identity">{loaderData.email}</p>
               <SignOutForm menu />
             </OverflowMenu>
@@ -757,15 +519,17 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       </header>
 
       <aside className="admin-sidebar" id="admin-sidebar">
-        {/* The brand moved to the topbar, which spans both columns now, so the
-            mark sits at the same coordinates on both planes. The rail's top
-            gains the space it used to occupy. */}
+        {/*
+         * The brand moved to the topbar, which spans both columns, so the mark sits at
+         * the same coordinates on both planes.
+         */}
         <nav className="admin-nav" aria-label="Admin sections">
           {NAV.map((item) => {
             const drift = item.drift ? loaderData.askDrift : 0;
-            /* `null` means this section HAS no count, which is not the same as
-               a count of zero and must not render as one. Sites and Content are
-               stubs; see the loader. */
+            /*
+             * `null` means this section HAS no count, which is not the same as a count of
+             * zero and must not render as one.
+             */
             const count = item.count
               ? loaderData.counts[item.count as keyof typeof loaderData.counts]
               : null;
@@ -776,42 +540,29 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
                 to={item.to}
                 end={item.end}
                 /*
-                  The accessible name is on the element, always, so it survives
-                  the label being hidden in the rail. `title` is the sighted
-                  tooltip the ruling asks for; it is redundant beside a visible
-                  label and native, which is the trade taken rather than a
-                  custom tooltip that would have to reimplement dismissal.
-                */
+                 * The accessible name is on the element, always, so it survives the label being
+                 * hidden in the rail. `title` is the sighted tooltip, redundant beside a visible
+                 * label and native.
+                 */
                 aria-label={name}
                 title={name}
               >
                 <Glyph>{item.icon}</Glyph>
                 <span className="admin-nav-label">{item.label}</span>
                 {/*
-                  THE COUNT AND THE DRIFT BADGE ARE DIFFERENT CLAIMS, so they
-                  are different elements and they can both be present.
-
-                  The count is how big the section is: quiet, plain, always
-                  true. The badge is an alarm that something needs repairing,
-                  and it keeps the warning fill it has always had. Collapsing
-                  them into one numeral was the alternative and it is worse in
-                  both directions: styling the count like an alarm cries wolf on
-                  every page, and hiding the count whenever drift appeared would
-                  remove a fact exactly when somebody is looking at the section.
-
-                  A count of ZERO still renders, unlike the badge. "0" is a real
-                  and useful answer to "how many posts are there"; a badge of
-                  zero is an alarm about nothing.
-                */}
+                 * THE COUNT AND THE DRIFT BADGE ARE DIFFERENT CLAIMS, so they are different
+                 * elements and both can be present: the count is how big the section is, the badge
+                 * is an alarm. A count of ZERO still renders, unlike the badge.
+                 */}
                 {count !== null ? (
                   <span className="admin-nav-count" aria-hidden="true">
                     {count}
                   </span>
                 ) : null}
-                {/* Zero renders NOTHING, rather than a 0 badge: a count of
-                    nothing is not news, and a permanent badge stops being a
-                    signal. aria-hidden because the name above already says it
-                    in words. */}
+                {/*
+                 * Zero renders NOTHING rather than a 0 badge: a permanent badge stops being a
+                 * signal. aria-hidden, because the name above already says it in words.
+                 */}
                 {drift > 0 ? (
                   <span className="admin-nav-badge" aria-hidden="true">
                     {drift}
@@ -823,18 +574,14 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         </nav>
 
         {/*
-          The foot is a ZONE, not two more sections. Both items leave the list
-          of places you can be: one crosses to the public plane, the other
-          changes the rail itself. A hairline above the group says that, and is
-          why they take the nav item's shape without joining the nav's list.
-        */}
+         * The foot is a ZONE, not two more sections: both items leave the list of places
+         * you can be.
+         */}
         <div className="admin-sidebar-foot">
           {/*
-            The nav item treatment, per the polish ruling, so it stops reading
-            as a footnote under the sections. The glyph carries the signal that
-            this leaves the plane; the accessible name says it in words, because
-            an arrow leaving a box is not a name.
-          */}
+           * The accessible name says it in words, because an arrow leaving a box is not a
+           * name.
+           */}
           <a
             className="admin-view-site"
             href="/"
@@ -859,17 +606,9 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </a>
 
           {/*
-            Persistent, never hover-only, and the chevron points at what
-            pressing it DOES: left to collapse, right to expand. One glyph
-            rotated by CSS off the same attribute, so the markup does not branch
-            and the node is never replaced.
-
-            It takes the standard item shape rather than centring itself: as a
-            lone centred glyph it lined up with nothing above it and read as a
-            decoration on the rail's floor rather than a control. Its label is
-            the VERB, so expanded it reads "Collapse" beside the arrow and the
-            rail hides the word exactly as it hides every other one.
-          */}
+           * The chevron points at what pressing it DOES: left to collapse, right to expand,
+           * one glyph rotated by CSS so the markup does not branch. Its label is the VERB.
+           */}
           <button
             ref={toggleRef}
             type="button"
@@ -907,9 +646,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       />
 
       <div className="admin-main">
-        {/* id="main" for root's unconditional skip link. The admin plane had
-            the same dead hash as /login and the error boundary; found by
-            check:invariants section 12 rather than by the audit. */}
+        {/* `id="main"` for root's unconditional skip link. */}
         <main className="admin-content" id="main">
           <Outlet />
         </main>

@@ -1,5 +1,5 @@
-// POST /admin/logout: signs out via Better Auth (clearing the KV session and
-// the cookie) and redirects to the login screen. asResponse hands back the
+// POST /admin/logout: signs out via Better Auth, clearing the KV session and the
+// cookie, and redirects to the login screen. `asResponse` hands back the
 // Set-Cookie header to forward.
 import { redirect } from "react-router";
 

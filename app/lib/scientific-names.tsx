@@ -3,15 +3,10 @@ import type { ReactNode } from "react";
 import { ORGANISMS } from "~/data/organisms";
 
 /**
- * Render-time italicization of organism names.
- *
- * Stored strings are never touched. Titles and abstracts stay byte-identical
- * to what Crossref, Europe PMC and DataCite returned, which is what keeps the
- * search haystack, the JSON-LD headline and the meta description working off
- * plain text. Presentation happens here and nowhere else.
- *
- * Lives in lib rather than in the publications route because the CV will need
- * the same treatment.
+ * Render-time italicization of organism names. Stored strings are never touched:
+ * titles and abstracts stay byte-identical to what the registries returned, which
+ * is what keeps the search haystack, the JSON-LD headline and the meta description
+ * working off plain text.
  */
 
 function escapeRegExp(value: string) {
@@ -19,18 +14,16 @@ function escapeRegExp(value: string) {
 }
 
 // ORGANISMS is ordered longest first, and regex alternation takes the first
-// branch that matches at a position, so the trinomial wins over the binomial.
-// Word boundaries stop a bare genus matching inside a longer word.
+// branch that matches at a position, so the trinomial wins over the binomial. Word
+// boundaries stop a bare genus matching inside a longer word.
 const ORGANISM_PATTERN = new RegExp(
   `\\b(${ORGANISMS.map(escapeRegExp).join("|")})\\b`,
   "g",
 );
 
 /**
- * Split a plain string on organism names and wrap each match in `em`.
- *
  * Returns React nodes, never markup, so nothing here needs
- * dangerouslySetInnerHTML and the input is never parsed as HTML.
+ * `dangerouslySetInnerHTML` and the input is never parsed as HTML.
  */
 export function italicizeOrganisms(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];

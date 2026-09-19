@@ -4,33 +4,23 @@ import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
 
 /*
- * ONE DESCRIPTION LIMIT, and it is the SERP number.
- *
- * This file carried its own DESCRIPTION_LIMIT = 160 while social-previews.tsx
- * truncated at SERP_DESCRIPTION_LIMIT = 155, so the drawer told an author they
- * were inside the limit at 158 characters and the preview beside it cut the
- * sentence. 155 wins because it is the number Google actually truncates at,
- * and because the preview is the surface the author believes.
+ * ONE DESCRIPTION LIMIT, and it is the SERP number. This file carried its own
+ * while the preview beside it truncated at another, so the drawer told an author
+ * they were inside the limit and the preview cut the sentence. The preview is the
+ * surface the author believes.
  */
 import { SERP_DESCRIPTION_LIMIT } from "~/lib/seo";
 
 
 /**
- * Everything about a post that is not the writing.
+ * Built on a real `<dialog>` opened with `showModal()`, so the focus trap, the
+ * Escape handling and the focus return are the platform's rather than a
+ * hand-rolled keydown handler that will be subtly wrong.
  *
- * Built on a real `<dialog>` opened with `showModal()`, which is the same
- * choice the command palette made and for the same reasons: the focus trap,
- * the Escape handling and the focus return are the platform's, not a
- * hand-rolled keydown handler that will be subtly wrong in a way nobody
- * notices. CLAUDE.md records that decision for the palette; this inherits it.
- *
- * The controls inside it belong to the EDITING form, which is outside the
- * dialog, so every one of them carries `form={formId}`. That is what lets the
- * drawer be a modal and still be part of the same submission: form association
- * in HTML is by attribute, not by containment. A closed dialog is
- * `display: none`, and display has no bearing on whether a control is
- * submitted, so the drawer's fields ride along whether or not it was ever
- * opened. Only `disabled` removes a field, and nothing here is disabled.
+ * The controls belong to the EDITING form, which is outside the dialog, so each
+ * carries `form={formId}`: association in HTML is by attribute, not containment. A
+ * closed dialog is `display: none`, which has no bearing on whether a control is
+ * submitted, so the fields ride along whether or not it was opened.
  */
 export function SettingsDrawer({
   open,
@@ -75,13 +65,10 @@ export function SettingsDrawer({
   /** Live editor state, for the SERP and social-card previews. */
   previewPost: PreviewPost;
   /**
-   * The draft preview-link section, or nothing.
-   *
-   * ABSENT is the whole contract. A published post is handed no slot, so the
-   * section does not render, so neither the create control nor any revoke
-   * control exists on the page. The ruling says a published post offers NEITHER
-   * intent, and the way that is held is by there being nothing to press rather
-   * than by a disabled button, which submits nothing but still reads as an offer.
+   * ABSENT is the whole contract. A published post is handed no slot, so neither
+   * the create control nor any revoke control exists on the page: the ruling is held
+   * by there being nothing to press rather than by a disabled button, which submits
+   * nothing but still reads as an offer.
    */
   previewLinkSlot?: React.ReactNode;
   historySlot?: React.ReactNode;
@@ -163,12 +150,11 @@ export function SettingsDrawer({
         </div>
 
         {/*
-          The two previews, directly under the field they are about, because the
-          description is the one input in this editor whose effect is completely
-          invisible from inside it. Both render from `postSocial`, the same
-          function `blog.$slug.tsx`'s meta() calls, so they cannot drift from
-          what the site actually emits.
-        */}
+         * Directly under the field they are about, because the description is the one
+         * input whose effect is completely invisible from inside it. Both render from
+         * `postSocial`, the same function the post route's `meta()` calls, so they cannot
+         * drift from what the site emits.
+         */}
         <section className="drawer-section">
           <h3>How this appears</h3>
           <SerpPreview post={previewPost} />
@@ -224,12 +210,9 @@ export function SettingsDrawer({
 }
 
 /**
- * The slug, read-only once the post exists.
- *
  * It is the public URL and the filename, so changing it after the first save
- * would be a rename plus a redirect, which is not what a text input implies.
- * On an existing post it renders as a URL line with a copy button; only the
- * new-post flow gets an input, and that lives in the canvas rather than here.
+ * would be a rename plus a redirect, which is not what a text input implies. Only
+ * the new-post flow gets an input.
  */
 function SlugField({
   formId,
@@ -270,9 +253,11 @@ function SlugField({
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      {/* Still submitted, because the save path reads it. Read-only rather than
-          disabled: a disabled field submits nothing, and dropping the slug
-          would make every save look like a new post. */}
+      {/*
+       * Still submitted, because the save path reads it. Read-only rather than
+       * disabled: a disabled field submits nothing, and dropping the slug would make
+       * every save look like a new post.
+       */}
       <input type="hidden" form={formId} name="slug" value={slug} />
       <span className="field-hint muted">
         Fixed after the first save. It is the filename and the public URL.
@@ -282,8 +267,6 @@ function SlugField({
 }
 
 /**
- * Tags as chips, with autocomplete over the tags already used on the site.
- *
  * The submitted field is unchanged: one `tags` input holding a comma separated
  * list, exactly what `parseTags` has always split. The chips are a view of that
  * string, so the payload cannot drift from what the checkbox era sent.
@@ -417,14 +400,11 @@ function CoverField({
       </button>
 
       {/*
-        THE PICKER COMPONENT, not picker logic. Shape 3: the drawer renders it
-        and takes a chosen object back, so the listing, the thumbnails and the
-        empty state are the media module's and cannot drift from the library's.
-
-        Picking also pre-fills ALT from the record, per ruling 2, and only when
-        the field is empty: alt is contextual as well as intrinsic, so a
-        description already written for this cover outranks the stored one.
-      */}
+       * THE PICKER COMPONENT, not picker logic: the drawer renders it and takes a
+       * chosen object back, so the listing and the empty state are the media module's.
+       * Picking pre-fills ALT only when the field is empty, because a description already
+       * written for this cover outranks the stored one.
+       */}
       {picking ? (
         <div className="cover-picker">
           <MediaPicker
@@ -463,18 +443,14 @@ function CoverField({
 }
 
 /**
- * Publish date and schedule.
+ * What replaced the raw ISO input writes the SAME field in the SAME format: a
+ * `datetime-local` the author touches, and a hidden `publishAt` carrying the ISO
+ * string the server has always received. The visible control is deliberately
+ * unnamed so it cannot join the payload.
  *
- * The raw ISO text input is gone. What replaced it writes the SAME field in the
- * SAME format: a `datetime-local` control the author touches, and a hidden
- * `publishAt` carrying the ISO string the server has always received. The
- * visible control is deliberately unnamed so it cannot join the payload.
- *
- * The cost, stated rather than hidden: with scripting off the visible control
- * cannot update the hidden one, so a schedule cannot be CHANGED without script.
- * The hidden field still renders with the committed value, so an existing
- * schedule is preserved rather than silently cleared, which is the failure that
- * would actually matter.
+ * THE COST, stated rather than hidden: with scripting off a schedule cannot be
+ * CHANGED. The hidden field still renders with the committed value, so an existing
+ * schedule is preserved rather than silently cleared.
  */
 function ScheduleField({
   formId,
@@ -498,14 +474,11 @@ function ScheduleField({
 
       <span className="field-label">Publication</span>
       {/*
-        A single UNNAMED checkbox, and both halves of that matter.
-        A control with no `name` is never submitted, which keeps the schedule
-        toggle out of the payload entirely: `publishAt` below is the only field
-        the server sees, exactly as before. It was briefly a radio pair, and
-        check:admin-ui caught that immediately, because a radio group needs a
-        shared `name` to be a group and that name went straight into the
-        request as `schedule-mode=on`.
-      */}
+       * A single UNNAMED checkbox, and both halves matter: a control with no `name` is
+       * never submitted, which keeps the toggle out of the payload entirely. A radio pair
+       * needs a shared `name` to be a group, and that name went straight into the
+       * request.
+       */}
       <label className="schedule-option">
         <input
           type="checkbox"

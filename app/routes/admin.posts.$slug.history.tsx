@@ -16,20 +16,12 @@ import type { Route } from "./+types/admin.posts.$slug.history";
 /**
  * Version history for one post. READ ONLY.
  *
- * Admin-only. Git already holds the history, so this is a window onto it: the
- * commit list and the diffs come straight from the GitHub API over the token
- * the editor already uses.
+ * Git already holds the history, so this is a window onto it. Ruling 1 says a
+ * restore LOADS a revision into the editor as unsaved content and that every
+ * mutation stays on the one existing write path, so restoring happens in the
+ * editor's drawer where the author sees the change before deciding to keep it.
  *
- * **This route used to be able to restore, and that ability was removed on
- * 2026-08-02 by ruling 1 of the feature queue.** It restored by reading the
- * file at an old commit and putting it straight through `savePost`, which was
- * atomic and never rewrote history, but it was still a SECOND ROUTE THAT COULD
- * COMMIT. Ruling 1 says a restore loads a revision into the editor as unsaved
- * content and that every mutation stays on the one existing write path, so the
- * action is gone and restoring now happens in the editor's drawer, where the
- * author sees the change before deciding to keep it.
- *
- * This page therefore exports NO action at all. A POST here answers 405.
+ * This page exports NO action at all. A POST here answers 405.
  */
 
 export function meta({ params }: Route.MetaArgs) {
@@ -123,10 +115,11 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
                   {selected === commit.sha ? "Hide diff" : "View diff"}
                 </Link>
 
-                {/* No restore control here any more. Ruling 1 moved restoring
-                    into the editor's drawer, where it loads rather than
-                    writes, and leaving a second one on this page would have
-                    been a second way to commit wearing the same word. */}
+                {/*
+                 * No restore control here. Ruling 1 moved restoring into the editor's drawer,
+                 * where it loads rather than writes, and leaving a second one here would have been
+                 * a second way to commit wearing the same word.
+                 */}
               </div>
 
               {selected === commit.sha ? (
