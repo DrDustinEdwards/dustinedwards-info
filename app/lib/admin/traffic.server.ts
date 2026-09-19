@@ -1,29 +1,20 @@
 /**
  * The origin-requests source: Analytics Engine, read over the SQL API.
  *
- * SERVER ONLY. `.server.ts` so a leak into the client bundle is a build break
- * rather than a review catch. Nothing Analytics-related reaches the browser
- * except the rendered rows: not the token, not the account id, not the query.
+ * SERVER ONLY. `.server.ts` so a leak into the client bundle is a build break rather than a review
+ * catch. Nothing Analytics-related reaches the browser except the rendered rows.
  *
- * WHY THE PANEL SAYS ORIGIN REQUESTS. The dataset is written from the Worker's
- * response path in `workers/app.ts`, and `cache.enabled` means an edge HIT can
- * serve a reader without the Worker running. Every number here is therefore a
- * count of times the origin was reached, which is a floor under readership and
- * not a measure of it. The panel is labelled accordingly, everywhere.
+ * WHY THE PANEL SAYS ORIGIN REQUESTS. The dataset is written from the Worker's response path, and an
+ * edge HIT serves a reader without the Worker running. Every number here is a count of times the
+ * origin was reached, which is A FLOOR UNDER READERSHIP AND NOT A MEASURE OF IT.
  *
- * EVERY AGGREGATE IS SAMPLING WEIGHTED. Analytics Engine samples, and the
- * documented way to count events is `SUM(_sample_interval)`. A raw `COUNT()`
- * reads correctly at low volume and then silently undercounts the moment
- * sampling engages, which is the worst failure shape available: a number that
- * stays plausible while becoming wrong. The unweighted row count is carried
- * alongside only as the diagnostic for whether sampling is active.
+ * EVERY AGGREGATE IS SAMPLING WEIGHTED. The documented way to count events is
+ * `SUM(_sample_interval)`; a raw `COUNT()` reads correctly at low volume and silently undercounts
+ * the moment sampling engages, which is a number that stays plausible while becoming wrong.
  *
- * IT FAILS CLOSED, AND THAT IS THE ORDINARY CASE. `ANALYTICS_READ_TOKEN` is
- * optional by contract, exactly as `OPERATOR_TOKEN` is, and a development
- * machine will never carry it. Absence therefore returns the error result
- * rather than throwing: a thrown loader would take out the admin route segment
- * and replace the cockpit with an error boundary, which is a far worse outcome
- * than one panel saying it cannot read.
+ * IT FAILS CLOSED, AND THAT IS THE ORDINARY CASE. `ANALYTICS_READ_TOKEN` is optional by contract, so
+ * absence returns the error result rather than throwing: a thrown loader would replace the whole
+ * cockpit with an error boundary.
  */
 
 import { READERSHIP_PATH_LIMIT, TOP_N, WINDOW_DAYS } from "./origin-requests.mjs";
@@ -33,13 +24,11 @@ import type { PostReadership, SourceResult, TrafficReport, TrafficRow } from "./
 const DATASET = "dustinedwards_traffic";
 
 /**
- * Builds the panel query.
+ * Builds the panel query, exported so the gate can assert its SHAPE without a network call or a
+ * token.
  *
- * Exported so the gate can assert its SHAPE without a network call or a token.
- *
- * `INTERVAL '7' DAY` in the QUOTED form. The unquoted `INTERVAL 7 DAY` is
- * rejected by this API and that is recorded law, not a preference. Verified
- * against the current Analytics Engine SQL API documentation before first use.
+ * `INTERVAL '7' DAY` in the QUOTED form. The unquoted spelling is rejected by this API, and that is
+ * recorded law rather than a preference.
  *
  * @param windowDays how far back to look
  * @param limit how many paths to return
@@ -58,10 +47,9 @@ export function trafficQuery(windowDays: number, limit: number) {
 }
 
 /**
- * Total across every path in the window, so the top N can state what it omits.
- *
- * A separate statement because the SQL API takes one per request. Two cheap
- * aggregates beat presenting a truncated list as if it were the whole picture.
+ * Total across every path in the window, so the top N can state what it omits. A separate
+ * statement because the SQL API takes one per request, and two cheap aggregates beat presenting a
+ * truncated list as if it were the whole picture.
  *
  * @param windowDays how far back to look
  */
@@ -151,53 +139,25 @@ export async function fetchTraffic(env: Env): Promise<SourceResult<TrafficReport
 }
 
 /**
- * THE PER-POST READ, and it adds no query. Roadmap item G, first half.
+ * THE PER-POST READ, and it adds no query.
  *
- * The post list wants origin requests for each post's public route. That is the
- * SAME data the origin-requests panel already reads, windowed the same way, so
- * this composes `trafficQuery` and `trafficTotalQuery` above rather than adding
- * a third statement. A second builder would be a second definition of what a
- * window is and what an origin request counts as, and those two would agree
- * until the day one of them was edited.
+ * It composes `trafficQuery` and `trafficTotalQuery` rather than adding a third statement: a second
+ * builder would be a second definition of what a window is and what an origin request counts as,
+ * and the two would agree until one was edited.
  *
- * ## ONE READ FOR THE WHOLE LIST, never one per row
+ * ONE READ FOR THE WHOLE LIST, never one per row. The two statements are issued in parallel and the
+ * route indexes the result by path, so adding a post costs nothing.
  *
- * Twelve posts must not be twelve HTTP calls to a third party inside a loader
- * that already makes three network reads. The two statements here are the same
- * two the panel makes, issued in parallel, and the route indexes the result by
- * path. Adding a post costs nothing.
+ * THE LIMIT IS A CUT AND THE CALLER IS TOLD WHEN IT BITES. `pathsReturned` is the independent
+ * measure of how many paths had activity, and comparing the two is the only way to know whether an
+ * absent path means zero. `complete` carries that answer, so the column never shows a measured zero
+ * for a post whose number was not asked for.
  *
- * ## THE LIMIT IS A CUT AND THE CALLER IS TOLD WHEN IT BITES
+ * THE TTL IS BELOW A LAG THIS DATA ALREADY HAS, so the cache costs no accuracy that existed to lose.
  *
- * `trafficQuery` orders by origin requests descending and applies a LIMIT, so a
- * path below the limit is absent from the result for a reason that has nothing
- * to do with its count. `pathsReturned` from the total query is the independent
- * measure of how many paths actually had activity, and comparing the two is the
- * only way to know whether the absence of a path means zero. `complete` carries
- * that answer so the column never has to guess, and the guess it would
- * otherwise make is the one ruling 2 forbids: showing a zero for a post whose
- * number simply was not asked for.
- *
- * ## WHY A CACHE, AND WHY THIS TTL
- *
- * Measured against production 2026-09-04, five samples: `ae_fetch_traffic` ran
- * 165 to 244ms. The post list's own loader ran a median of about 145ms over ten
- * samples, so an uncached read here would have been the slowest thing in it.
- * `askDriftCount` solved the identical problem for the nav badge and the same
- * shape is used here.
- *
- * The TTL is not a guess about freshness, it is BELOW a lag this data already
- * has: `CACHE_SENTENCE` records 72 seconds of Analytics Engine ingestion lag,
- * measured. A number this panel could not have shown yet anyway is not made
- * staler by holding it for a minute, so the cache costs no accuracy that
- * existed to lose.
- *
- * NO BUDGET RACE, deliberately, and the difference from `askDriftCount` is that
- * its 1000ms budget came from twelve measurements of a call that had been seen
- * at 2332ms. There is no such measurement here. A budget picked without one
- * would be an invented threshold in a file whose whole subject is not inventing
- * numbers, so the cache is the mitigation and the tail is recorded rather than
- * guarded against.
+ * NO BUDGET RACE, deliberately: `askDriftCount` has a measured tail to guard against and this has
+ * none, and a budget picked without one would be an invented threshold in a file whose whole subject
+ * is not inventing numbers.
  */
 const READERSHIP_CACHE_KEY = "traffic:by-path";
 
@@ -209,9 +169,9 @@ async function readCachedReadership(env: Env): Promise<PostReadership | null> {
     const cached = await env.APP_KV.get(READERSHIP_CACHE_KEY, "json");
     if (!cached || typeof cached !== "object") return null;
     const value = cached as Partial<PostReadership>;
-    // Shape-checked rather than trusted. A stored object from an older shape
-    // must read as a miss, not as a report with undefined fields, because
-    // `byPath` being undefined would make every post render as a measured zero.
+    // Shape-checked rather than trusted. A stored object from an older shape must read as a MISS, not
+    // as a report with undefined fields, because `byPath` being undefined would make every post render
+    // as a measured zero.
     if (typeof value.windowDays !== "number") return null;
     if (typeof value.pathsReturned !== "number") return null;
     if (typeof value.complete !== "boolean") return null;
@@ -262,12 +222,9 @@ export async function fetchPostReadership(env: Env): Promise<SourceResult<PostRe
       byPath,
       pathsReturned,
       /*
-       * Both halves, and the second is the one that catches a silent cut. The
-       * row count proves the limit was not reached; the total proves no path
-       * with activity is missing. Either alone can be satisfied while the
-       * result is short: a query that returned fewer rows than the limit
-       * because the API truncated would pass the first, and a stale total would
-       * pass the second.
+       * Both halves, and the second is the one that catches a silent cut. The row count proves the limit
+       * was not reached; the total proves no path with activity is missing. Either alone can be satisfied
+       * while the result is short.
        */
       complete: pathRows.length < READERSHIP_PATH_LIMIT && pathsReturned <= pathRows.length,
     };

@@ -6,41 +6,21 @@ import { ALLOWED, validateUpload } from "./upload-contract.mjs";
 /**
  * THE ONE DOOR TO THE MEDIA BUCKET, for bytes a person or an agent supplied.
  *
- * Everything an upload does after the bytes are in hand happens here and
- * nowhere else: refuse, measure, address, put, annotate. Two callers, both thin
- * adapters over this, on the same law the publish tools live under:
+ * Everything an upload does after the bytes are in hand happens here and nowhere else: refuse,
+ * measure, address, put, annotate. Two thin adapters call it on the same law the publish tools live
+ * under, `admin.media.upload.ts` with a multipart form and `upload_media` over the operator token.
  *
- *   `admin.media.upload.ts`  a multipart form from the editors and the library
- *   `upload_media`           base64 or a URL, over the operator token
- *
- * ## WHY IT IS A MODULE AND NOT A SECOND COPY OF THE ROUTE
- *
- * The route's action WAS the upload, which was fine while it was the only
- * writer to MEDIA. Ruling 32d added a second one, and the sequence below is not
- * the kind a second copy stays equal to: the dimensions are measured before the
- * key exists because the key CARRIES them (finding B002), the filename is
- * written to the object's custom metadata as well as to D1, and the D1 write is
- * deliberately non-fatal. A copy that got any of those three wrong would look
- * correct and would produce objects the rebuild cannot fully re-derive.
- *
- * `savePost` is the precedent. The editor action is an adapter over it, the
- * operator's `save_post` is another, and there is one write path underneath.
- *
- * ## WHAT IT STILL DOES NOT OWN
- *
- * The `no-file` refusal, because each caller's missing input is a different
- * thing with a different repair, and the branch between a redirect and a JSON
- * body, because that is a property of who is asking. Both stay in the adapters.
+ * WHAT IT STILL DOES NOT OWN: the `no-file` refusal, because each caller's missing input has a
+ * different repair, and the branch between a redirect and a JSON body, because that is a property of
+ * who is asking. Both stay in the adapters.
  */
 
 /**
  * The bytes and what the caller knows about them.
  *
- * `type` is the MIME the caller asserts. It is CHECKED against `ALLOWED` and
- * never sniffed: the form path takes it from the `File`, the operator path
- * takes it from a `data:` prefix, an explicit argument or the fetched
- * response's own `Content-Type`. All three are claims, and the allowlist is
- * what makes a wrong claim harmless rather than the claim being trusted.
+ * `type` is the MIME the caller ASSERTS. It is CHECKED against `ALLOWED` and never sniffed: every
+ * path's type is a claim, and the allowlist is what makes a wrong claim harmless rather than the
+ * claim being trusted.
  */
 export type UploadInput = {
   bytes: ArrayBuffer;
@@ -74,12 +54,11 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   if (refusal) return { ok: false, ...refusal };
 
   /*
-   * Present by construction: `validateUpload` refused every type outside
-   * ALLOWED one statement ago, and the two read the SAME map. The fallback is
-   * unreachable and is written as a throw rather than a default extension,
-   * because hard rule 13 says a fallback that substitutes a different value is
-   * not failing closed, and `"bin"` here would put an unclassifiable object in
-   * the bucket that `classify()` then throws on for every later reader.
+   * Present by construction: `validateUpload` refused every type outside ALLOWED one statement ago,
+   * and the two read the SAME map. Written as a throw rather than a default extension:
+   * hard rule 13 says a fallback that substitutes a different value is not failing closed, and
+   * `"bin"` would put an unclassifiable object in the bucket that `classify()` throws on for every
+   * later reader.
    */
   const extension = ALLOWED.get(file.type);
   if (!extension) {
@@ -90,17 +69,12 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   }
 
   /**
-   * MEASURED BEFORE THE KEY EXISTS, because the key carries the measurement.
+   * MEASURED BEFORE THE KEY EXISTS, because the key carries the measurement: it holds `-<w>x<h>` so
+   * both resolvers parse rather than fetch, which makes this an input to the key rather than something
+   * read back off the object.
    *
-   * Finding B002: image dimensions are baked into the gated HTML, and the two
-   * writers measured them from two different stores, one of which a clone
-   * cannot reach. The key carries `-<w>x<h>` so both resolvers parse rather
-   * than fetch. That makes this measurement an input to the key, which is why
-   * it happens here rather than by reading the object back after the put.
-   *
-   * Null is a real answer and not a failure: an SVG has no intrinsic pixel
-   * size, so it gets a key with no dimension segment, exactly as the `media`
-   * table records a NULL width for the same reason.
+   * Null is a real answer and not a failure: an SVG has no intrinsic pixel size, so it gets a key with
+   * no dimension segment, exactly as the `media` table records a NULL width.
    */
   const dimensions = await measureDimensions(env, file.bytes);
   const key = contentKey(
@@ -109,55 +83,35 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
     dimensions,
   );
 
-  // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the
-  // bytes, so re-uploading the same image overwrites an object with a
-  // byte-identical one. There is deliberately no "does it exist" check first,
-  // which would cost a round trip to save a write that changes nothing.
+  // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the bytes, so re-uploading
+  // the same image overwrites an object with a byte-identical one. There is deliberately no "does it
+  // exist" check first.
   await env.MEDIA.put(key, file.bytes, {
     httpMetadata: {
       contentType: file.type,
       cacheControl: "public, max-age=31536000, immutable",
     },
-    // THE FILENAME LIVES ON THE OBJECT, not only in the row.
+    // THE FILENAME LIVES ON THE OBJECT, not only in the row. A content-addressed key is a digest, so the
+    // name the author chose is not recoverable from it, and the D1 write below is deliberately non-fatal.
     //
-    // A content-addressed key is a digest, so the name the author chose is not
-    // recoverable from it and a rebuild cannot re-derive what only D1 held. The
-    // D1 write below is deliberately non-fatal, and the queue consumer inserts
-    // its own row from the event without one, so the name had exactly one
-    // source and that source was allowed to fail silently.
-    //
-    // Custom metadata makes it a property of the OBJECT, which is the same rule
-    // the whole module runs on: R2 is the truth, D1 is derived, and anything
-    // derived must be re-derivable. Found by audit 2026-08-02.
+    // Custom metadata makes it a property of the OBJECT, which is the rule the whole module runs on: R2
+    // is the truth, D1 is derived, and anything derived must be re-derivable.
     customMetadata: { originalName: file.name },
   });
 
   /**
-   * The annotation row, created HERE rather than left to the backfill.
+   * The annotation row, created HERE rather than left to the backfill, so a fresh upload shows its
+   * dimensions in the library without anyone remembering to run one. Alt starts empty.
    *
-   * The backfill exists for objects that predate the table; making it also the
-   * only path that measures dimensions would mean every fresh upload showed no
-   * dimensions in the library until someone remembered to run it, which is a
-   * chore the system can do for itself. Alt starts empty, because nobody has
-   * written one yet, and the library is where it gets filled in.
-   *
-   * Non-fatal, deliberately: the object is already in R2 and the upload has
-   * succeeded, so a D1 hiccup must not report failure for a write that
-   * happened. The library lists objects from the BUCKET and treats a missing
-   * row as empty metadata, so the worst case is an un-annotated object and a
-   * backfill button offering to fix it.
-   *
-   * REPORTED rather than only logged, since this became a door two callers
-   * share. A console line is readable by whoever is tailing the Worker; an
-   * operator calling this over HTTP is not, and `recorded: false` is what lets
-   * it say "the object landed, the row did not, run sync_media" instead of
-   * reporting an unqualified success it cannot see behind.
+   * NON-FATAL, deliberately: the object is already in R2 and the upload has succeeded, so a D1 hiccup
+   * must not report failure for a write that happened. REPORTED rather than only logged, because an
+   * operator calling this over HTTP cannot read a console line, and `recorded: false` is what lets it
+   * say the object landed and the row did not.
    */
   let recorded = true;
   try {
-    // `dimensions` is the measurement the key was built from, reused rather
-    // than re-read: one measurement means the row and the key cannot disagree,
-    // and it drops a round trip back to R2 for bytes we just had in hand.
+    // `dimensions` is the measurement the key was built from, reused rather than re-read: one
+    // measurement means the row and the key cannot disagree.
     const { kind, mime } = classify(key);
     await upsertMediaRecord(env, {
       key,

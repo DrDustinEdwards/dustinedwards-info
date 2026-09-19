@@ -1,0 +1,292 @@
+/**
+ * Year-by-year roster of the SEA-PHAGES research cohort at Tarleton State.
+ *
+ * Structured content edited by commit, so it lives here rather than in the D1
+ * `posts` table, whose single body column would flatten the structure. Photo
+ * dimensions are the real output of scripts/resize-phage-photos.mjs and differ
+ * by year, so they are recorded per photo to keep layout shift at zero.
+ *
+ * ALT TEXT IS DELIBERATELY NEUTRAL, 2026-08-02. It used to name the program
+ * ("Tarleton State University phage discovery research group"). Those nine
+ * strings were the only subject-matter language rendered anywhere on the public
+ * site, on a page whose whole point is that it carries names and nothing else,
+ * so they were the last thing left to remove. "For now": if descriptive copy
+ * returns to this page, the alt text is part of that decision.
+ *
+ * It is not emptied, because these photos are half the page's content rather
+ * than decoration, and `alt=""` on a content image is a WCAG failure.
+ *
+ * THE NAMES ARE AS GIVEN, and there is no open question about any of them.
+ *
+ * A TODO stood here guessing that the 2018 entry "Matthew Bristerpostma" was
+ * "likely Brister-Postma, pending confirmation". Removed 2026-09-11 by
+ * Dustin's ruling: the name is the name. A speculative respelling of a real
+ * person's name, published on the page that lists them, is a worse error than
+ * an unhyphenated one, and a comment inviting the next reader to make that
+ * edit is the same error with a delay on it.
+ */
+
+export type PhageYear = {
+  year: number;
+  photo: { src: string; width: number; height: number; alt: string } | null;
+  researchers: string[];
+};
+
+export const PHAGE_YEARS: PhageYear[] = [
+  {
+    year: 2025,
+    photo: {
+      src: "/phage-hunters/2025.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2025 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Alexandra Aguilar",
+      "Gustave Allen",
+      "Dafne Balderas",
+      "Toby Barrera",
+      "Lisseth Cervantes",
+      "Trinity Cobb",
+      "Adriana Drescher",
+      "Kinley Harris",
+      "Angel Lozano",
+      "Olivia McCutchan",
+      "Joshua Otero",
+      "Shelby Perrenoud",
+      "Yasmeen Ramirez",
+      "Aliana Ramos",
+      "McKenna Rice",
+      "Jacob Schilhab",
+      "Richard Turner",
+    ],
+  },
+  {
+    year: 2024,
+    photo: {
+      src: "/phage-hunters/2024.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2024 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Gustave Allen",
+      "Fathya Bashir",
+      "Grace Bransom",
+      "Kendall Brown",
+      "Mattisyn Brown",
+      "Evelyn Chacon",
+      "Priscilla Doucette",
+      "Shannon Dycus",
+      "Levi Jackson",
+      "Mia Lombardo",
+      "Hannah McNab",
+      "Morgan Miller",
+      "Cole Moore",
+      "Brittney Moser",
+      "Elizabeth Ronck",
+    ],
+  },
+  {
+    year: 2023,
+    photo: {
+      src: "/phage-hunters/2023.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2023 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Anna Buchholz",
+      "Ethan Collum",
+      "Anayah Copeland",
+      "Kaitlyn Crow",
+      "Isabel Gonzaba",
+      "Timothy Hester",
+      "Kelci Hill",
+      "Joshua Hutchings",
+      "Katelyn Kaase",
+      "Cole Moore",
+      "Ashlynn Nowlin",
+      "M. Li Prahl",
+      "Alyssa Reza",
+      "Elijah Rodriguez",
+      "Ricardo Torres",
+      "Rylee Widger",
+      "Azah Williams",
+    ],
+  },
+  {
+    year: 2022,
+    photo: {
+      src: "/phage-hunters/2022.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2022 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Selina Alvarado",
+      "Jessica Blakely",
+      "Diana Estrada",
+      "Rebeca Fernandez Robles",
+      "Katelyn Fitzgerald",
+      "Marlee Goppert",
+      "Shelby Jeffers",
+      "Timyee Leung",
+      "Brady Morgan",
+      "Jasmine Munoz",
+      "Ashley Olivos",
+      "Aeron Pennington",
+      "Anayeli Ramirez",
+      "Caressa Smith",
+      "Justin Spere",
+      "Ethan Zavala",
+      "Becca Zoda",
+    ],
+  },
+  {
+    year: 2021,
+    photo: {
+      src: "/phage-hunters/2021.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2021 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Ivy Adame",
+      "Megan Ashcroft",
+      "Dasire Brawley",
+      "Carlos Canales",
+      "Sharon Cherian",
+      "Grace Clements",
+      "Austin Densmore",
+      "Jesse Edmonson",
+      "Julia Gaston",
+      "Paloma Gonzalez",
+      "Marlee Goppert",
+      "Kendall Johnson",
+      "Sydney Keyon",
+      "Marisol Luciano",
+      "Cole Moore",
+      "Virginia Munoz",
+      "Aurod Ounsinegad",
+      "Aryana Pernarelli",
+      "Maci Pitner",
+      "Esmae Velsen",
+      "Kara Wiggam",
+    ],
+  },
+  {
+    year: 2020,
+    photo: {
+      src: "/phage-hunters/2020.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2020 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Selina Alvarado",
+      "Tommy Butler",
+      "Matthew Castro",
+      "Faith Cox",
+      "Marlee Goppert",
+      "Raylon Huckaby",
+      "Jesse Laposky",
+      "Jessica Lee",
+      "Jaime Merrill",
+      "Cheyenne Rodriguez",
+      "Victoria Saadeh",
+      "Ashley Suris",
+      "Damla Ustundag",
+    ],
+  },
+  {
+    year: 2019,
+    photo: {
+      src: "/phage-hunters/2019.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2019 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Skyler Adams",
+      "Riley Babcock",
+      "Abigail Ballard",
+      "Chloe Butler",
+      "Samantha Conger",
+      "Faith Cox",
+      "Madison Crew",
+      "Joanna Gonzalez",
+      "Jocelyn Hodges",
+      "David Kiker",
+      "Alondra Martinez",
+      "Austin McDonald",
+      "Samuel Munoz",
+      "Chloe O'Grady",
+      "Abigail Quirl",
+      "Kristin Sefcik",
+      "Gabrielle Spotz",
+      "Tanner Taylor",
+      "Gustavo Vazquez",
+      "Lee Williams",
+    ],
+  },
+  {
+    year: 2018,
+    photo: {
+      src: "/phage-hunters/2018.webp",
+      width: 1080,
+      height: 720,
+      alt: "Group photo of the 2018 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Michaela Aguirre",
+      "Shey Andrews",
+      "Kayla Bahr",
+      "Abigail Ballard",
+      "Matthew Bristerpostma",
+      "Cecilia Cabrera",
+      "Faith Cox",
+      "Leah Dowell",
+      "David Kiker",
+      "Jennifer Laskowski",
+      "Tiffany Lee",
+      "Tiffany Lujan",
+      "Stacy Luka",
+      "Dylan Neubauer",
+      "Abbigail Ramirez",
+      "Rheaven Sandoval",
+      "Kenneth Underhill",
+    ],
+  },
+  {
+    year: 2017,
+    photo: {
+      src: "/phage-hunters/2017.webp",
+      width: 1080,
+      height: 810,
+      alt: "Group photo of the 2017 Phage Discovery Program cohort",
+    },
+    researchers: [
+      "Megan Adams",
+      "Danielle Bachhofer",
+      "Ashleigh Cooper",
+      "Jessica Doty",
+      "Miranda Fuentes",
+      "Morgan Gaitan",
+      "Leeila Hanson",
+      "Josh Katuri",
+      "Brandi McElroy",
+      "Travis Miller",
+      "Jonathon Musgrave",
+      "Aleksey Palumbo",
+      "Esperanza Sandoval",
+      "Heidi Spann",
+      "Brittany Stewart",
+      "Amanda Stone",
+      "Mario Tovar",
+      "Camille Trautman",
+      "Bianca Willis",
+      "Keely Wilson",
+    ],
+  },
+];

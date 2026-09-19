@@ -11,23 +11,14 @@ import { AUTH_RATE_LIMIT, AUTH_RATE_PERIOD_SECONDS } from "~/lib/auth-rate.mjs";
 /**
  * True when this request may proceed to Better Auth.
  *
- * ## FAILS CLOSED when the limiter binding is absent
+ * **FAILS CLOSED when the limiter binding is absent**, as `checkAskRate` and `authenticateOperator`
+ * do. Removing the Durable Object therefore DISABLES sign-in rather than un-protecting it, and that
+ * is the right cost: an admin who cannot sign in notices immediately, where a guard that silently
+ * passed would not be noticed at all.
  *
- * Same stance as `checkAskRate` and `authenticateOperator`, and for the same
- * reason: a guard that silently passes because it could not run is the failure
- * this project has been caught by three times. Removing the Durable Object from
- * `wrangler.jsonc` therefore DISABLES sign-in rather than un-protecting it.
- *
- * That is a real cost and it is the right one. The alternative is that the one
- * configuration mistake nobody would notice is the one that removes the guard,
- * and an admin who cannot sign in notices immediately.
- *
- * ## ONE INSTANCE PER IP, under its own key prefix
- *
- * `auth:` rather than the `ip:` that Ask uses, so the two limits are separate
- * counters. Sharing the prefix would let a burst of questions from a reader's
- * network consume the sign-in allowance for that address, which is a coupling
- * nobody would predict from either file.
+ * **ONE INSTANCE PER IP, under `auth:` rather than the `ip:` that Ask uses.** Sharing the prefix
+ * would let a burst of questions from a reader's network consume the sign-in allowance for that
+ * address, a coupling nobody would predict from either file.
  */
 export async function checkAuthRate(env: Env, ip: string): Promise<boolean> {
   if (!env.ASK_BUDGET) return false;

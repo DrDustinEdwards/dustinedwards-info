@@ -55,27 +55,17 @@ export async function handleEditorAction(
   /**
    * NO DEFAULT. An absent intent is REFUSED, not treated as a save.
    *
-   * This was `String(form.get("intent") ?? "save")`, so a malformed POST that
-   * carried no intent PERFORMED A WRITE: a commit to GitHub and a D1 sync,
-   * from a request that never said what it wanted. Hard rule 13, on the worst
-   * possible surface for it, since the substituted value was an action rather
-   * than a label.
+   * Defaulting it meant a malformed POST carrying no intent PERFORMED A WRITE: a commit to GitHub and
+   * a D1 sync, from a request that never said what it wanted. Hard rule 13 on the worst possible
+   * surface, since the substituted value was an action rather than a label.
    *
-   * The only caller that ever relied on the default was the editor's Cmd+S,
-   * which submits with no submitter. It sends its intent explicitly through a
-   * hidden field it enables for one submit, so nothing legitimate reaches this
-   * branch. Checked against every submit site before the default was removed:
-   * the four save controls, the preview control and the delete control all name
-   * their intent already.
+   * THE INTENT ALSO CARRIES THE DRAFT FLAG, so an intent this module does not recognise is refused
+   * below rather than run as a save. Falling through to one was survivable while `draft` was its own
+   * field and is not now: an unknown intent would be a write whose publication state came from a
+   * fallback.
    *
-   * SINCE 2026-09-03 THE INTENT ALSO CARRIES THE DRAFT FLAG, so an intent this
-   * module does not recognise is refused below rather than run as a save. It
-   * used to fall through to one, which was survivable while `draft` was its own
-   * field and is not now: an unknown intent would be a write whose publication
-   * state came from a fallback.
-   *
-   * The read lives in `intent.mjs` so the rule is testable; this file cannot be
-   * imported by `node:test`. Covered in `test/editor-intent.test.mjs`.
+   * The read lives in `intent.mjs` so the rule is testable; this file cannot be imported by
+   * `node:test`.
    */
   const rawIntent = readIntent(form);
   const isNew = form.get("isNew") === "1";
@@ -103,16 +93,12 @@ export async function handleEditorAction(
   const intent = rawIntent;
 
   /*
-   * THE ALLOWLIST, and it is derived rather than written out.
+   * THE ALLOWLIST, and it is DERIVED rather than written out: `DRAFT_BY_INTENT` is built from the
+   * transition table, so a transition added there is permitted without anybody widening a literal.
+   * `preview` is named separately because it is not a transition.
    *
-   * `DRAFT_BY_INTENT` is built from the transition table itself, so the set of
-   * intents that may write is exactly the set of transitions the buttons can
-   * send, and a transition added to the table is permitted here without anybody
-   * remembering to widen a literal. `preview` is the one write-free intent and
-   * is named separately because it is not a transition.
-   *
-   * Refused BEFORE the try for the same reason the absent intent is: an
-   * unrecognised intent is a malformed request, not a save that failed.
+   * Refused BEFORE the try, for the reason the absent intent is: an unrecognised intent is a malformed
+   * request, not a save that failed.
    */
   if (intent !== "preview" && !(intent in DRAFT_BY_INTENT)) {
     return fail(
@@ -136,14 +122,10 @@ export async function handleEditorAction(
       isNew,
       actor,
       /*
-       * THE EDITOR OPTS INTO THE CEREMONY, always, with a real boolean.
-       *
-       * Every save from this module answers the question, so a first
-       * publication reached from the editor can never skip it. The confirmed
-       * intent is the ONLY thing that answers yes: it is sent by the ceremony's
-       * own submits and by the server-rendered second step, and by nothing
-       * else, which is what makes a plain `publish` land on the confirmation
-       * rather than on the commit.
+       * THE EDITOR OPTS INTO THE CEREMONY, always, with a real boolean, so a first publication reached
+       * from the editor can never skip it. The confirmed intent is the ONLY thing that answers yes: it is
+       * sent by the ceremony's own submits and by the server-rendered second step and by nothing else,
+       * which is what makes a plain `publish` land on the confirmation rather than on the commit.
        */
       firstPublishConfirmed: intent === PUBLISH_CONFIRMED_INTENT,
     });

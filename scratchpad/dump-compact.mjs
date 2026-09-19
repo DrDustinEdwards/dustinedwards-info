@@ -7,10 +7,9 @@ import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { commentBlocks } from "./code-blocks.mjs";
-import { CHUNKS } from "./code-wave2.mjs";
+import { CHUNKS, BEFORE, flat } from "./wave.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const flat = (s) => s.replace(/\//g, "__");
 const chunk = process.argv[2];
 const spec = CHUNKS[chunk];
 const spans = Array.isArray(spec[0]) ? spec : [spec];
@@ -25,7 +24,7 @@ const prose = (t) =>
 
 let total = 0;
 for (const [file, from, to] of spans) {
-  const src = readFileSync(join(HERE, "code-history-before-wave2", flat(file)), "utf8");
+  const src = readFileSync(join(BEFORE, flat(file)), "utf8");
   console.log(`\n@@@@@ ${file}`);
   commentBlocks(src).forEach((b, id) => {
     if (id < from || id > to) return;
