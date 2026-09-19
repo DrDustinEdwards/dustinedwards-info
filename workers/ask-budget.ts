@@ -3,23 +3,15 @@ import { DurableObject } from "cloudflare:workers";
 /**
  * The exact spend ceiling for Ask mode.
  *
- * WHY THIS EXISTS RATHER THAN A KV COUNTER, measured on this deployment
- * 2026-07-28 rather than assumed. Twelve concurrent requests against a
- * `ratelimit` binding configured for 5 per 60 seconds produced ELEVEN
- * generations. That is not a defect in the binding: Cloudflare documents it as
- * "permissive, eventually consistent, and intentionally designed to not be used
- * as an accurate accounting system". A KV counter fails the same way and worse,
- * because concurrent read-modify-writes each read the same stale value.
+ * WHY NOT THE `ratelimit` BINDING OR A KV COUNTER. Cloudflare documents the binding as "permissive,
+ * eventually consistent, and intentionally designed to not be used as an accurate accounting
+ * system", and a KV counter is worse, because concurrent read-modify-writes each read the same stale
+ * value.
  *
- * WHY THE COUNTER IS SYNCHRONOUS SQL RATHER THAN `storage.get`/`storage.put`,
- * also measured. The first version of this class did an async read, then an
- * async write. A Durable Object is single-threaded but that does NOT make a
- * sequence spanning `await` atomic: fourteen concurrent requests against a
- * ceiling of three produced EIGHT generations, because several of them had
- * already read the old count before any of them wrote. The SQLite storage API
- * is synchronous, so the read and the write below sit in one uninterrupted
- * block and the count cannot be raced. That is the entire reason this class is
- * registered as a `new_sqlite_classes` migration.
+ * WHY SYNCHRONOUS SQL rather than `storage.get`/`storage.put`. A Durable Object is single-threaded,
+ * but that does NOT make a sequence spanning `await` atomic. The SQLite storage API is synchronous,
+ * so the read and the write below sit in one uninterrupted block and the count cannot be raced,
+ * which is the entire reason this class is a `new_sqlite_classes` migration.
  */
 export class AskBudget extends DurableObject {
   constructor(ctx: DurableObjectState, env: Env) {
@@ -69,19 +61,13 @@ export class AskBudget extends DurableObject {
   /**
    * Per-IP burst counting, on a fixed window. One instance per IP.
    *
-   * WHY NOT THE `ratelimit` BINDING, measured across four runs on this
-   * deployment 2026-07-28. Twelve concurrent requests against a binding
-   * configured for 5 per 60 seconds were refused 1, then 2, then 9, then 0
-   * times. Cloudflare documents exactly this ("permissive, eventually
-   * consistent"), and it is fine for shedding sustained load. It is not fine as
-   * the only thing standing between one abusive client and the entire daily
-   * budget, because a client that burns 200 answers in a burst has denied Ask
-   * to every other reader for the rest of the day. That is the failure this
-   * method exists to prevent, and it needs a real count rather than a hint.
+   * WHY NOT THE `ratelimit` BINDING. It is documented permissive and eventually consistent, which is
+   * fine for shedding sustained load and is not fine as the only thing between one abusive client and
+   * the entire daily budget: a client that burns the day's answers in a burst has denied Ask to every
+   * other reader until tomorrow. That needs a real count rather than a hint.
    *
-   * Synchronous, for the same reason `consume` is: a read and a write spanning
-   * `await` inside a Durable Object is not atomic, and interleaving is what
-   * made the first version of this class leak.
+   * Synchronous, for the reason `consume` is: a read and a write spanning `await` inside a Durable
+   * Object is not atomic.
    */
   hit(limit: number, windowSeconds: number): { ok: boolean; used: number } {
     const window = Math.floor(Date.now() / 1000 / windowSeconds);

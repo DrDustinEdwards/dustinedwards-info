@@ -81,15 +81,12 @@ export async function getAdminSession(
   env: Env,
   request: Request,
   /**
-   * Optional collector. Absent on every request that did not ask for timing,
-   * which is all of them but the ones being diagnosed.
+   * Optional collector. Absent on every request that did not ask for timing.
    *
-   * SPLIT INTO TWO MARKS ON PURPOSE. `createAuth` and `getSession` are one
-   * line together and two completely different costs: the first is CPU
-   * building an auth instance and a Drizzle adapter from scratch on every
-   * request, the second is IO against KV. A single `auth_total` would have
-   * left the next session guessing which, and guessing is what the instrument
-   * exists to replace.
+   * SPLIT INTO TWO MARKS ON PURPOSE. `createAuth` and `getSession` are one line together and two
+   * completely different costs: CPU building an auth instance and a Drizzle adapter from scratch, then
+   * IO against KV. A single `auth_total` would leave the next session guessing which, and guessing is
+   * what the instrument exists to replace.
    */
   timings?: Timings,
 ): Promise<AdminSession | null> {
@@ -108,17 +105,13 @@ export async function getAdminSession(
 }
 
 /**
- * Set by the admin middleware after the gate passes, so loaders under /admin
- * read the session without a second KV round trip.
+ * Set by the admin middleware after the gate passes, so loaders under /admin read the session
+ * without a second KV round trip.
  *
- * **SET FOR THE HUMAN ADMIN ONLY.** The read-only smoke credential has no
- * Better Auth session and never will, so anything reading this context is
- * asserting a human is present. That is the right failure mode for the one
- * remaining reader on a write path (`admin.posts.$slug.edit.tsx` stamps
- * `createdBy` with the signed-in address): if it were ever reached by a machine
- * actor it would throw rather than attribute a revision to nobody. It cannot be
- * reached, because the middleware refuses the method first, and a second
- * guarantee at the point of use costs nothing.
+ * **SET FOR THE HUMAN ADMIN ONLY.** The read-only smoke credential has no Better Auth session and
+ * never will, so anything reading this context is asserting a human is present. That is the right
+ * failure mode for the one remaining reader on a write path: if it were ever reached by a machine
+ * actor it would throw rather than attribute a revision to nobody.
  *
  * Anything that only needs to know WHO IS ASKING reads `adminActorContext`.
  */
@@ -127,18 +120,14 @@ export const adminSessionContext = createContext<AdminSession>();
 /**
  * WHO IS ASKING, for the whole `/admin` subtree. Always set once the gate passes.
  *
- * Split from `adminSessionContext` on 2026-08-24 with the smoke credential.
- * The distinction is not decorative: one of these is a Better Auth session and
- * the other is an identity, the plane now has two kinds of caller, and only one
- * of them has a session. Collapsing them would have meant either synthesising a
- * fake `AdminSession` for the machine, which is the stub this repo refuses on
- * the grounds that it authenticates through a path production does not have, or
- * teaching every reader to handle a null session it can never see.
+ * Separate from `adminSessionContext` because one is a Better Auth SESSION and the other an
+ * IDENTITY, and only one kind of caller has a session. Collapsing them means synthesising a fake
+ * `AdminSession` for the machine, the stub this repo refuses because it authenticates through a
+ * path production does not have.
  *
- * `email` is present for both kinds and is the same address for both, which is
- * deliberate and is part of the stated residue: the smoke render has to be the
- * page Dustin sees, down to the topbar's widest unbreakable token, or the
- * layout numbers taken through it are numbers about a different page.
+ * `email` is the SAME address for both kinds, deliberately: the smoke render has to be the page
+ * Dustin sees, down to the topbar's widest unbreakable token, or the layout numbers taken through it
+ * describe a different page.
  */
 export type AdminActor =
   | { kind: "admin"; email: string }

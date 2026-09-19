@@ -3,24 +3,16 @@ import { useEffect } from "react";
 /**
  * The three behaviours a bare `<details>` disclosure does not have.
  *
- * EXTRACTED 2026-09-10, when the row kebab was added. It was the whole body of
- * `OverflowMenu`'s effect and it is now shared with `RowMenu`, because the
- * alternative was two implementations of Escape, arrow keys and close-on-
- * outside-click that would drift the first time one of them was fixed. Neither
- * component's markup changed, so `check:admin-ui`'s fixture is untouched.
+ * Shared by `OverflowMenu` and `RowMenu`, because two implementations of Escape, arrow keys and
+ * close-on-outside-click would drift the first time one was fixed.
  *
- * The disclosure itself stays markup. What hides behind these controls are
- * REPAIR operations, which is exactly the set you reach for when something is
- * already broken, so opening one must not require script. As markup it opens,
- * closes and reports its own expanded state with nothing loaded; this only adds
- * the keyboard and dismissal manners on top.
+ * THE DISCLOSURE ITSELF STAYS MARKUP. What hides behind these controls are REPAIR operations, the set
+ * you reach for when something is already broken, so opening one must not require script. This only
+ * adds the keyboard and dismissal manners on top.
  *
- * ARIA: deliberately a DISCLOSURE, not `role="menu"`. Every item is a submit
- * button inside its own form, and a `role="menu"` container owes `menuitem`
- * children it directly owns; interleaving forms breaks that, and the menu roles
- * would suppress the native button semantics the items already have. APG says
- * to use a disclosure once the contents are form controls, so `<summary>`
- * carries the name and the expanded state and nothing overrides it.
+ * ARIA: deliberately a DISCLOSURE, not `role="menu"`. Every item is a submit button inside its own
+ * form, and a `role="menu"` container owes `menuitem` children it directly owns; interleaving forms
+ * breaks that and would suppress the native button semantics.
  *
  * @param ref The `<details>` element this manages.
  */

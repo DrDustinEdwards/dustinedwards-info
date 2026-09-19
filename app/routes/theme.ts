@@ -15,18 +15,13 @@ import type { Route } from "./+types/theme";
  */
 export async function action({ request }: Route.ActionArgs) {
   /*
-   * ORIGIN FIRST, before the body is even read.
+   * ORIGIN FIRST, before the body is even read. A POST here sets a cookie, so it is a mutating route
+   * and takes the same predicate `/search/ask` and the admin plane take.
    *
-   * A POST here sets a cookie, so it is a mutating route and takes the same
-   * predicate `/search/ask` and the admin plane take. Measured 2026-08-27: a
-   * POST carrying `Origin: https://evil.example` set the theme cookie.
-   *
-   * AN ABSENT ORIGIN IS STILL ALLOWED, and that is the whole reason this
-   * predicate exists rather than a same-origin comparison written inline: this
-   * form is the NO-SCRIPT half of the theme toggle, a scriptless form post
-   * carries no `Origin`, and refusing it would break the fallback hard rule 9
-   * requires. The literal string "null" is a different thing and is refused;
-   * grounds on the predicate.
+   * AN ABSENT ORIGIN IS STILL ALLOWED, and that is the whole reason this is a predicate rather than a
+   * same-origin comparison written inline: this form is the NO-SCRIPT half of the theme toggle, a
+   * scriptless form post carries no `Origin`, and refusing it would break the fallback hard rule 9
+   * requires. The literal string "null" is a different thing and is refused.
    */
   const verdict = originVerdict(request.headers.get("origin"), request.url);
   if (!verdict.ok) {
@@ -40,20 +35,14 @@ export async function action({ request }: Route.ActionArgs) {
   const choice = form.get("theme");
 
   /*
-   * ONLY THE WRITABLE THEMES ARE ACCEPTED, since 2026-08-29.
+   * ONLY THE WRITABLE THEMES ARE ACCEPTED. Substituting a default is the fail-open direction
+   * hard rule 13 is about: a malformed request becomes a silent theme change rather than an error.
    *
-   * This substituted a default for anything it did not recognise, which is the
-   * fail-open direction hard rule 13 is about: a malformed request became a
-   * silent theme change rather than an error.
+   * Nothing legitimate reaches this branch, because the control posts the value of a visible button and
+   * both carry a writable theme, so anything else is hand-made and 400 tells its author the truth.
    *
-   * A REFUSAL RATHER THAN A DEFAULT. Nothing legitimate reaches this branch,
-   * because the control posts the value of the button that was visible and both
-   * of its buttons carry a writable theme. A request arriving with anything else
-   * is hand-made, and 400 tells its author the truth instead of quietly writing
-   * a cookie they did not ask for.
-   *
-   * `no-store` for the same reason the origin refusal above carries it: a
-   * refusal that could be cached is a refusal served to somebody else.
+   * `no-store` for the reason the origin refusal carries it: a cacheable refusal is a refusal served
+   * to somebody else.
    */
   if (!isWritableTheme(choice)) {
     return new Response("Theme must be light or dark.\n", {

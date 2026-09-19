@@ -1,19 +1,14 @@
 /**
  * The editor's crash net.
  *
- * Ruling 5 of the redesign spec: save equals commit here, so autosaving to the
- * server would write git history every few seconds. The buffer is therefore
- * local and only local, and it is never the thing that publishes. Nothing in
- * this module touches the network.
+ * Save equals commit here, so autosaving to the server would write git history every few seconds.
+ * The buffer is LOCAL AND ONLY LOCAL, never the thing that publishes, and nothing here touches the
+ * network.
  *
- * The key carries the BASE COMMIT the editor loaded against, and that is the
- * interesting part. A buffer written on top of commit A is not safely
- * restorable over content loaded from commit B: main moved, and the text the
- * author was editing may no longer be the text that is there. Rather than
- * offering a restore that would silently revert someone else's change, a buffer
- * from a different base simply does not match the key and is never offered.
- * The editor's own conflict rule refuses the save in that situation anyway, so
- * this keeps the two in step.
+ * The key carries the BASE COMMIT the editor loaded against, because a buffer written on top of
+ * commit A is not safely restorable over content loaded from commit B. Rather than offer a restore
+ * that would silently revert someone else's change, a buffer from a different base never matches the
+ * key.
  */
 
 export type DraftBuffer = {
@@ -91,16 +86,12 @@ export function clearAllBuffersFor(slug: string) {
 }
 
 /**
- * Removes buffers written under the pre-Session-2 key scheme.
+ * Removes buffers written under the pre-Session-2 key scheme, `post-draft:<slug>` and
+ * `post-draft:new`, which carried no base commit. A legacy key can never match a lookup and is never
+ * offered, so it is dead storage rather than a hazard.
  *
- * That scheme was `post-draft:<slug>` and `post-draft:new`, with no base commit
- * in the key. The current one is `post-draft:<slug>:<headSha>`, so a legacy key
- * can never match a lookup and is never offered: it is dead storage rather than
- * a hazard. Three were still in the browser on 2026-08-01, one of them for a
- * post that no longer exists.
- *
- * A slug is kebab-case and cannot contain a colon, so the two schemes are told
- * apart by counting segments: three means current, two means legacy.
+ * A slug is kebab-case and cannot contain a colon, so the two schemes are told apart by counting
+ * segments: three means current, two means legacy.
  */
 export function purgeLegacyBuffers() {
   try {

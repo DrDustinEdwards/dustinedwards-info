@@ -1,24 +1,20 @@
 /**
  * Command palette. Site-wide, loaded as its own chunk, and pure enhancement.
  *
- * Nothing on the site depends on this file. The header ships an anchor to
- * /search; this upgrades it into a button that opens a dialog. If the chunk
- * fails to load, fails to parse, or throws on the first line, the anchor is
- * still an anchor and /search still works with no script at all.
+ * NOTHING ON THE SITE DEPENDS ON THIS FILE. The header ships an anchor to `/search`; this upgrades
+ * it into a button that opens a dialog. If the chunk fails to load, parse or run, the anchor is
+ * still an anchor.
  *
- * Built on the NATIVE <dialog> element rather than a hand-rolled overlay,
- * because showModal() already provides the three things a hand-rolled one gets
- * wrong: a real focus trap, Escape to dismiss, and returning focus to whatever
- * opened it. Re-implementing those in application code is how inaccessible
- * modals happen.
+ * Built on the NATIVE <dialog> rather than a hand-rolled overlay, because `showModal()` already
+ * provides the three things a hand-rolled one gets wrong: a real focus trap, Escape, and returning
+ * focus to whatever opened it.
  *
- * The listbox follows the ARIA combobox pattern: FOCUS NEVER LEAVES THE INPUT.
- * Arrow keys move `aria-activedescendant`, which is a pointer, not focus. A
- * palette that moves DOM focus to each row breaks typing, which is the one
- * thing the component exists to support.
+ * The listbox follows the ARIA combobox pattern: FOCUS NEVER LEAVES THE INPUT. Arrow keys move
+ * `aria-activedescendant`, which is a pointer and not focus. A palette that moves DOM focus to each
+ * row breaks typing, which is the one thing the component exists to support.
  *
- * Results come from the Layer 0 JSON endpoint, so the palette and the
- * server-rendered page cannot disagree about what matches.
+ * Results come from the Layer 0 JSON endpoint, so the palette and the server-rendered page cannot
+ * disagree about what matches.
  */
 
 const RECENT_KEY = "search:recent";
@@ -54,14 +50,9 @@ let listbox: HTMLUListElement | null = null;
 // so a bare `let status` collides with it at type level.
 let statusLine: HTMLParagraphElement | null = null;
 /**
- * The palette's own "All results" escape hatch.
- *
- * It was a static `<a href="/search">`, so it threw away whatever had been
- * typed and landed the reader on an empty search page. Enter-with-no-hit in the
- * same file already did the right thing, going to
- * `/search?q=<typed>`, so the palette contained two answers to one question and
- * only one of them was correct. This handle exists so the link can be kept in
- * step with the input rather than being rebuilt from the text of the anchor.
+ * The palette's own "All results" escape hatch. A static `<a href="/search">` threw away whatever
+ * had been typed, while Enter-with-no-hit in the same file already went to `/search?q=<typed>`. This
+ * handle exists so the link can be kept in step with the input.
  */
 let allResultsLink: HTMLAnchorElement | null = null;
 let hits: Hit[] = [];
@@ -145,9 +136,8 @@ function build() {
   askTrigger = dialog.querySelector(".palette-ask-trigger");
   askContainer = dialog.querySelector(".palette-ask-container");
 
-  // Ask is a deliberate second action, never automatic. Results are already on
-  // screen when this is pressed, and an answer that generates on every
-  // keystroke would bill Workers AI for typing.
+  // Ask is a deliberate second action, never automatic. Results are already on screen when this is
+  // pressed, and an answer that generated on every keystroke would bill Workers AI for typing.
   askTrigger?.addEventListener("click", () => void runAsk());
 
   dialog.querySelector(".palette-close")?.addEventListener("click", () => close());
@@ -158,13 +148,9 @@ function build() {
     if (event.target === dialog) close();
   });
 
-  // Native Escape fires `cancel`. Let it close, but reset state first so the
-  // next open does not flash the previous results.
-  // Backstop for any close this code did not initiate. The reset also runs
-  // synchronously inside close(), because the `close` event proved unreliable
-  // to depend on: it was observed not firing at all for a programmatic
-  // dialog.close() on 2026-07-28, so a reset that only lived here would
-  // silently never run.
+  // Native Escape fires `cancel`; let it close, but reset first so the next open does not flash the
+  // previous results. This listener is a backstop only: the reset also runs synchronously inside
+  // `close()`, because the `close` event proved unreliable to depend on for a programmatic close.
   dialog.addEventListener("close", reset);
 
   input?.addEventListener("input", onInput);
@@ -258,10 +244,9 @@ function syncSelection() {
 
 function renderRecent() {
   if (!listbox || !input) return;
-  // Recent searches are presentational buttons, not listbox options, so the
-  // combobox is NOT expanded while they are showing. Set before the early
-  // return: leaving a stale aria-expanded="true" over an empty listbox tells a
-  // screen reader there are options to arrow through when there are none.
+  // Recent searches are presentational buttons, not listbox options, so the combobox is NOT expanded
+  // while they show. Set BEFORE the early return: a stale `aria-expanded="true"` over an empty listbox
+  // tells a screen reader there are options to arrow through when there are none.
   input.setAttribute("aria-expanded", "false");
   input.removeAttribute("aria-activedescendant");
 
@@ -305,9 +290,8 @@ async function run(query: string) {
     };
     // A slower earlier request must not overwrite a newer one.
     if (mine !== sequence) return;
-    // Ask's presence is the server's answer, carried on the response the
-    // palette already makes. Remove the binding and this goes false, so the
-    // affordance disappears without a second switch to remember.
+    // Ask's presence is the server's answer, carried on the response the palette already makes.
+    // Remove the binding and this goes false, so the affordance disappears with no second switch.
     askAvailable = data.askAvailable === true;
     hits = data.results ?? [];
     active = hits.length > 0 ? 0 : -1;
@@ -315,9 +299,9 @@ async function run(query: string) {
       statusLine.textContent =
         hits.length === 0 ? "No results" : `${data.total ?? hits.length} results`;
     }
-    // Offered only once classic results have rendered, and only when the server
-    // says Ask exists. Offered even on zero results, because a question the
-    // keyword index cannot match is exactly where an answer might help.
+    // Offered only once classic results have rendered, and only when the server says Ask exists.
+    // Offered even on zero results, because a question the keyword index cannot match is exactly where
+    // an answer might help.
     if (askTrigger) askTrigger.hidden = !askAvailable;
     render();
   } catch {
@@ -332,11 +316,8 @@ async function run(query: string) {
 }
 
 /**
- * Streams an answer into the palette.
- *
- * The streaming client is a separate dynamic import, so the palette chunk does
- * not carry Ask's weight for readers who only ever search. Loaded on the first
- * press and cached by the browser after that.
+ * Streams an answer into the palette. The streaming client is a separate dynamic import, so the
+ * palette chunk does not carry Ask's weight for readers who only ever search.
  */
 async function runAsk() {
   if (!askContainer || !input) return;
@@ -392,14 +373,9 @@ function open_() {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  // Escape is handled here rather than left to the dialog, and it must come
-  // before every other branch.
-  //
-  // `<input type="search">` has a NATIVE Escape behaviour: the first press
-  // clears the field and stops there, so the keystroke never reaches the
-  // dialog and the palette stays open. A reader pressing Escape once and
-  // watching nothing close reasonably concludes the thing is broken. Measured
-  // in Chrome 2026-07-28.
+  // Escape is handled here rather than left to the dialog, and it must come before every other
+  // branch. `<input type="search">` has a NATIVE Escape behaviour: the first press clears the field
+  // and stops there, so the keystroke never reaches the dialog and the palette stays open.
   if (event.key === "Escape") {
     event.preventDefault();
     close();
@@ -451,22 +427,19 @@ function openPalette() {
 }
 
 /**
- * Drops every piece of open state.
- *
- * Bumping the sequence is the part that is not optional. Clearing the DOM alone
- * loses a race: a fetch still in flight when the reader closes the palette
- * resolves afterwards and repaints the listbox of a closed dialog, leaving
- * stale options and aria-expanded="true" behind it. Observed 2026-07-28, with
- * the response outliving the close by a few hundred milliseconds.
+ * Drops every piece of open state. BUMPING THE SEQUENCE IS THE PART THAT IS NOT OPTIONAL: clearing
+ * the DOM alone loses a race, because a fetch still in flight when the reader closes resolves
+ * afterwards and repaints the listbox of a closed dialog, leaving stale options and
+ * `aria-expanded="true"` behind it.
  */
 function reset() {
   sequence += 1;
   hits = [];
   active = -1;
   clearTimeout(debounce);
-  // Aborts an in-flight answer too. Without this a fetch still streaming when
-  // the palette closes goes on writing into a closed dialog, which is the same
-  // late-response trap the sequence number exists for on the search side.
+  // Aborts an in-flight answer too. Without this a stream still running when the palette closes goes
+  // on writing into a closed dialog, which is the same late-response trap the sequence number exists
+  // for on the search side.
   resetAsk();
   if (listbox) listbox.innerHTML = "";
   if (statusLine) statusLine.textContent = "";
@@ -486,33 +459,20 @@ function close() {
 /**
  * THE ONE THING THIS FILE BINDS, and it is not a shortcut.
  *
- * Until 2026-08-27 this module ended by attaching a document keydown listener
- * and upgrading the header trigger, which meant it had to be on every page for
- * the shortcut to exist, which meant every reader downloaded a search dialog in
- * order to be able to press a key. The gestures moved to `theme.ts`, which is
- * already on every page and a fraction of the size: it holds the "/" key, the
- * Cmd-K chord and the trigger click, and it appends a script tag for this
- * bundle the first time one of them fires. So the palette costs its bytes when
- * it is asked for, and nothing before.
+ * The gestures live in `theme.ts`, which is already on every page and a fraction of the size, and
+ * it appends a script tag for this bundle the first time one fires. So the palette costs its bytes
+ * when it is asked for and nothing before.
  *
- * What is left here is a single listener for the event that loader dispatches.
- * The gesture itself is deliberately NOT re-bound: two copies of the shortcut,
- * one in each module, would both fire and the second would find the dialog
- * already open. One binding makes that impossible rather than guarded against.
+ * THE GESTURE IS DELIBERATELY NOT RE-BOUND HERE. Two copies of the shortcut, one per module, would
+ * both fire and the second would find the dialog already open. One binding makes that impossible
+ * rather than guarded against.
  *
- * THE EVENT, NOT AN EXPORT, and the reason is a measurement. The obvious shape
- * is `export { openPalette }` with a dynamic `import()` on the other side, and
- * it was written that way first: vite rewrites every `import()` into a call to
- * its own `__vitePreload` helper, which added roughly 2.3 KB to the 714-byte
- * bundle that is on every page, to manage a preload graph that does not exist
- * here. That is a large fraction of what moving the palette off the page saved.
- * A script element inserted by an already-trusted script is allowed by
- * `strict-dynamic` without a nonce, costs nothing, and needs no change to
- * build-enhance's rule that a bundle carries no imports at all.
+ * THE EVENT, NOT AN EXPORT: a dynamic `import()` is rewritten by vite into its preload helper, which
+ * is a large fraction of what moving the palette off the page saved. A script element inserted by an
+ * already-trusted script is allowed by `strict-dynamic` without a nonce.
  *
- * The trigger's own affordances stay where they always were: the href is left
- * in place, so with script absent, broken or still in flight the element is a
- * working link to /search and middle-click still opens a tab.
+ * The trigger's own affordances stay where they were: the href is left in place, so with script
+ * absent, broken or still in flight the element is a working link and middle-click still opens a tab.
  */
 document.addEventListener("palette:open", () => openPalette());
 

@@ -1,15 +1,12 @@
 /**
  * Publication record for the CV and publications surfaces.
  *
- * Structured content edited by commit, so it lives here rather than in the D1
- * `posts` table, following the precedent set by phage-hunters.ts. PDFs are
- * committed under public/publications/ and served as static assets, which are
- * a separate limit from the Worker script size and so cost the bundle nothing.
+ * Structured content edited by commit, following phage-hunters.ts. PDFs are committed under
+ * public/publications/ and served as static assets, which cost the Worker bundle nothing.
  *
- * Every record carries `access` even though most are self-hosted, so a single
- * publication can be switched to an external link without a schema change.
- * Year is the Crossref published-print year, which is authoritative here and
- * disagrees with ORCID on four records.
+ * Every record carries `access` even though most are self-hosted, so one can be switched to an
+ * external link without a schema change. Year is the Crossref published-print year, which is
+ * authoritative here and disagrees with ORCID on some records.
  */
 
 export type TopicId =
@@ -40,9 +37,8 @@ export type Publication = {
   journal: string | null;
   year: number;
   /**
-   * The deposited date at its own precision: YYYY-MM-DD, YYYY-MM or YYYY.
-   * `year` stays the grouping key; this is what `citation_publication_date`
-   * needs, and 28 of the 36 records carry a day.
+   * The deposited date at its own precision: YYYY-MM-DD, YYYY-MM or YYYY. `year` stays the grouping
+   * key; this is what `citation_publication_date` needs.
    */
   publishedDate: string | null;
   volume: string | null;
@@ -76,30 +72,23 @@ export type Publication = {
   /**
    * A PLAIN-LANGUAGE LINE, written by hand, or null.
    *
-   * One sentence, under 200 characters, saying what the paper found in words a
-   * non-specialist reads. NOT a summary of the abstract: the abstract is already
-   * on the page, and a shorter paraphrase of it in the same voice would be
-   * noise. This is the sentence somebody would say out loud.
+   * One sentence, under 200 characters, saying what the paper found in words a non-specialist reads.
+   * NOT a summary of the abstract, which is already on the page.
    *
-   * Null on every record until Dustin writes one. The page renders it only
-   * where it exists, which is why an empty field is a state rather than a gap.
-   * `check:publications` enforces the length, the single sentence and the
-   * house dash rule; it cannot enforce that the sentence is any good.
+   * Null until one is written, and the page renders it only where it exists, so an empty field is a
+   * state rather than a gap. `check:publications` enforces the length, the single sentence and the
+   * house dash rule; IT CANNOT ENFORCE THAT THE SENTENCE IS ANY GOOD.
    */
   summary: string | null;
   /**
    * A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN, or null.
    *
-   * Null on every record, and measured rather than assumed: no `updated-by`
-   * and no `relation` on any of the 34 Crossref DOIs, read 2026-09-12. The
-   * field exists so that the day one arrives is a data change and not a code
-   * change, which is the day nobody wants to be writing this. `doi` is the
-   * NOTICE's DOI: a paper carries `updated-by` pointing at the notice, and
-   * the notice carries `update-to` pointing back.
+   * Null on every record. The field exists so that the day one arrives is a data change and not a code
+   * change, which is the day nobody wants to be writing this. `doi` is the NOTICE's DOI: a paper
+   * carries `updated-by` pointing at the notice, and the notice carries `update-to` pointing back.
    *
-   * The shape and the sentence belong to `app/lib/publications/update-notice.mjs`,
-   * which `check:publications` validates every record through and
-   * `test/publication-update-notice.test.mjs` drives with a real retracted DOI.
+   * The shape and the sentence belong to `app/lib/publications/update-notice.mjs`, which
+   * `check:publications` validates every record through.
    */
   updateNotice: {
     type: "retraction" | "correction" | "expression-of-concern";
@@ -107,15 +96,12 @@ export type Publication = {
     date: string | null;
   } | null;
   /**
-   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own
-   * data-availability statement and from nowhere else.
+   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own data-availability statement and from
+   * nowhere else.
    *
-   * Empty on every record whose journal requires no such statement. A bare
-   * accession regex over a PDF returns the COMPARISON organisms' deposits, which
-   * is a wrong citation rather than a missing one: the grounds, and the three
-   * measured cases, are on `app/lib/publications/accessions.mjs`.
-   * `check:publications` reconciles this against the extracted text in both
-   * directions.
+   * A bare accession regex over a PDF returns the COMPARISON organisms' deposits, which is a wrong
+   * citation rather than a missing one: the grounds are on `app/lib/publications/accessions.mjs`.
+   * `check:publications` reconciles this against the extracted text in both directions.
    */
   accessions: { kind: string; id: string }[];
   selected: boolean;

@@ -1,19 +1,13 @@
 /**
  * Ask mode's client. Search Layer 2, and the top of the enhancement stack.
  *
- * Loaded two ways, both only on surfaces that already rendered classic
- * results: /search renders a nonced script tag for this module's own bundle,
- * and the palette bundle carries an inlined copy (build-enhance.mjs inlines
- * its lazy import, because a bundle may not import). With scripting off none
- * of this runs and /search is exactly what it was before Layer 2.
+ * Loaded only on surfaces that already rendered classic results, so with scripting off none of this
+ * runs and `/search` is what it was before Layer 2. It renders into a container the CALLER owns.
  *
- * It renders into a container the caller owns rather than creating its own
- * placement, so /search and the palette can both use it without this module
- * knowing about either. The mount binding at the bottom is the /search half:
- * the server renders the Ask button HIDDEN (an inert control that looks live
- * is worse than no control), and this unhides and binds it. The binding is
- * DOM-guarded because on /search both bundles execute this module's body, and
- * two listeners would stream two billed answers per click.
+ * The server renders the `/search` Ask button HIDDEN, because an inert control that looks live is
+ * worse than no control, and the mount binding below unhides it. That binding is DOM-GUARDED because
+ * both bundles execute this module's body on `/search`, and two listeners would stream two billed
+ * answers per click.
  */
 
 import { labelForUrl, urlForKey } from "~/lib/search/ask-keys.mjs";
@@ -44,14 +38,10 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 /**
- * Appends children.
- *
- * `appendChild`, never `.append()`. Client chunks in this repo are type-checked
- * with the Workers types in scope, where the global `Element` is HTMLRewriter's
- * and its `append` takes a string or a Response. The DOM spread form therefore
- * fails to compile with an error that talks about `ReadableStream`, which is
- * baffling until you know why. The palette chunk uses `appendChild` for the
- * same reason.
+ * `appendChild`, never `.append()`. Client chunks here are type-checked with the Workers types in
+ * scope, where the global `Element` is HTMLRewriter's and its `append` takes a string or a Response,
+ * so the DOM spread form fails to compile with an error about `ReadableStream`. The palette chunk
+ * uses `appendChild` for the same reason.
  */
 function attach(parent: HTMLElement, ...children: HTMLElement[]): void {
   for (const child of children) parent.appendChild(child);
@@ -84,18 +74,13 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   body.setAttribute("aria-busy", "true");
 
   /*
-   * `Looking it up.` and not `Thinking...`, which is what this said until
-   * 2026-09-11. Two reasons and the second is the one that decided it.
+   * `Looking it up.` and not `Thinking...`. It is not thinking, it is retrieving: the request in
+   * flight is an AI Search query over this site's own chunks, which is the entire claim the badge and
+   * the source list beside this line make.
    *
-   * It is not thinking; it is retrieving. The request in flight is an AI
-   * Search query over this site's own chunks, and the answer that comes back
-   * is grounded in them, which is the entire claim the badge and the source
-   * list beside this line make. "Thinking" describes a different product.
-   *
-   * And it is every chatbot's placeholder, three dots included. A reader who
-   * has seen it a hundred times reads it as the interface stalling rather than
-   * as this site saying what it is doing. A full stop instead of an ellipsis
-   * for the same reason: the sentence is a statement, not a trailing-off.
+   * A full stop instead of an ellipsis for the same reason: the sentence is a statement, not a
+   * trailing-off, and the three-dot form is every chatbot's placeholder, read as the interface
+   * stalling rather than as this site saying what it is doing.
    */
   const status = el("p", "ask-status", "Looking it up.");
   const sources = el("ul", "ask-sources");
@@ -250,14 +235,11 @@ export function ask(container: HTMLElement, question: string): AskHandle {
 }
 
 /**
- * Binds the server-rendered Ask affordance on /search.
+ * Binds the server-rendered Ask affordance on `/search`.
  *
- * The server renders the button only when the binding exists AND the query is
- * a real question (search.tsx owns that rule), so an empty question here means
- * markup this module does not own; the button stays hidden rather than being
- * wired to do nothing. The guard is on the DOM, not module state, because the
- * palette bundle carries an inlined copy of this module and both copies run on
- * /search; the discipline is decorateCodeBlock's, ask the element itself.
+ * search.tsx owns the rule for when the button renders, so an empty question here means markup this
+ * module does not own and the button stays hidden rather than being wired to do nothing. The guard is
+ * on the DOM, not module state, because both copies of this module run on `/search`.
  */
 function mountAskTriggers() {
   for (const mount of document.querySelectorAll<HTMLElement>("[data-ask-mount]")) {

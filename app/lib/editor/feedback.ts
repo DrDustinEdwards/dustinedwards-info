@@ -1,21 +1,14 @@
 /**
- * The editor's one feedback slot: what it can say, and how a success survives
- * the redirect.
+ * The editor's one feedback slot: what it can say, and how a success survives the redirect.
  *
- * A save is post/redirect/get, so the outcome has to cross a navigation. It
- * crosses in the URL rather than in a flash cookie or session store, for three
- * reasons: it needs no server state, it renders identically with scripting off,
- * and a reload re-renders the same message instead of re-posting the form.
+ * A save is post/redirect/get, so the outcome crosses in the URL rather than a flash cookie: no
+ * server state, identical with scripting off, and a reload re-renders rather than re-posting.
  *
- * A FAILURE cannot travel this way, because a redirect would throw away the
- * body the author just typed. Failures stay in the action result. That is the
- * one asymmetry in the slot, and both sources feed the same component, so there
- * is still exactly one place a save can speak from.
+ * A FAILURE cannot travel this way, because a redirect would throw away the body the author just
+ * typed, so failures stay in the action result. Both feed the same component.
  *
- * Everything parsed here is treated as untrusted: the address bar is editable.
- * A value that does not match its shape is dropped rather than rendered, which
- * is why the shas and the date are pattern-checked and the slug is never read
- * from the query at all.
+ * Everything parsed here is UNTRUSTED, because the address bar is editable: a value that does not
+ * match its shape is dropped rather than rendered.
  */
 
 import type { SaveOutcome } from "./publish-policy.mjs";
@@ -26,11 +19,9 @@ export type EditorFeedback =
   | { state: "republished"; sha: string; slug: string }
   | { state: "unpublished"; sha: string; slug: string }
   /**
-   * `field` and `line` come from `EditorError`, which has carried both since it
-   * was written and had no way to reach a human until 2026-09-03: the routes
-   * copied `message` and `conflict` and dropped the two values that say WHERE.
-   * Optional because most refusals have neither; the display renders what it is
-   * given and says nothing when it is given nothing.
+   * `field` and `line` come from `EditorError`, which has carried both since it was written.
+   * Optional because most refusals have neither; the display renders what it is given and says nothing
+   * when it is given nothing.
    */
   | { state: "failed"; message: string; conflict: boolean; field?: string; line?: number };
 
