@@ -18,6 +18,10 @@ import "~/styles/prose.css";
  * can check. This page changes on taste, by the person it is about, and asking him
  * to edit a component to move a comma is how a page like this goes stale.
  *
+ * RENDERED AT BUILD TIME AND NOT IN THE WORKER, with the grounds on `buildAbout`:
+ * the public plane must not grow a second markdown renderer, and must not pay for
+ * the first one on a static page.
+ *
  * THE JSON-LD IS THE HOME PAGE'S, THE SAME FUNCTION. Two `Person` objects for one
  * person, differing in a field, is worse for a machine reader than one of them not
  * existing.

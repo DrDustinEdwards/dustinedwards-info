@@ -110,6 +110,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   /*
    * The catch is attached AT CREATION: a promise that rejects before anything
    * awaits it is an unhandled rejection, and starting work early creates that gap.
+   * A FAILING BUDGET READ MUST NOT TAKE THE PAGE DOWN, so it resolves to null and
+   * the list still renders.
    */
   const budgetPromise: Promise<Awaited<ReturnType<typeof readAskBudget>> | null> =
     askAvailable(env)
@@ -388,7 +390,9 @@ export async function action({ request, context }: Route.ActionArgs) {
       /*
        * **THE LADDER IS ENFORCED HERE, NOT ONLY IN THE UI**: with scripting off an
        * `onClick` ceremony never runs. An unconfirmed delete is the CONFIRMATION STEP,
-       * not an error.
+       * not an error. The count comes from the slugs in THIS request and never from a
+       * number the form carried, so a stale page cannot authorise a delete of a
+       * different size than the operator was shown.
        */
       const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
       if (!confirmationSatisfied(typed, slugs.length)) {

@@ -187,6 +187,9 @@ export async function action({ request, params, context }: Route.ActionArgs) {
      * scripting off the handler never ran and the file went with no confirmation at
      * all. `expectedHeadSha` is CONCURRENCY, NOT CONSENT: it stops a stale page
      * overwriting a newer one and says nothing about whether a human meant to delete.
+     * One post, so the count is 1, and the predicate and field name are the bulk and
+     * empty-trash paths' own: three spellings of one ceremony is how one of them ends
+     * up unchecked. An unconfirmed delete renders a server-rendered second step.
      */
     const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
     if (!confirmationSatisfied(typed, 1)) {

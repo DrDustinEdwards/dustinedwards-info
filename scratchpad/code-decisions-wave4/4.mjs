@@ -41,7 +41,9 @@ cannot drift in what they hand the component.`,
     "the visibility re-check, which is the prohibition; the write-time history goes to the history document",
     `THE RELATED LIST IS RE-CHECKED AGAINST THE LIVE ROWS. The list is stored on the
 row, and a post can be unpublished after a list naming it was written, so
-without this a stale title and URL keep rendering on a public page.`,
+without this a stale title and URL keep rendering on a public page. One indexed
+query composing \`publiclyVisible()\`, like every other public read, so there is
+no second opinion about what public means.`,
   ],
   "app/routes/blog.$slug.tsx#5": [
     "CONTRACT",
@@ -249,10 +251,12 @@ The ranking above is untouched.`,
   ],
   "app/routes/blog.$slug.tsx#36": [
     "CONTRACT",
-    "the target size and the machine-readable half; the old inline shape goes to the history document",
+    "the target size, the no-image prohibition and the machine-readable half; the old inline shape goes to the history document",
     `Each is a bordered block carrying the label above the title, which gives it a
-real touch target and lets direction be read before the title. \`rel="prev"\` and
-\`rel="next"\` are the machine-readable half and are kept.`,
+real 24px-plus target on touch and lets direction be read before the title. NO
+IMAGE, deliberately: a thumbnail here would be a third image on a page that
+already has a cover and a card. \`rel="prev"\` and \`rel="next"\` are the
+machine-readable half and are kept.`,
   ],
   "app/root.tsx#0": [
     "CONTRACT",

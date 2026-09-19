@@ -45,7 +45,9 @@ export function meta() {
  * This site's proof is that it measures itself continuously and publishes the
  * measurements, so THE THREE NUMBERS ARE READ AT RENDER from the instruments that
  * own them, never typed into this file. A digit here would be a second copy of a
- * number a gate already owns. Rule 17.
+ * number a gate already owns. Rule 17. The writing tile is `total` from
+ * `listHomeStartHere`, the same `publiclyVisible()` predicate the blog index
+ * counts with, so a different count here is a visibility bug and not copy.
  *
  * THE CACHED PAGE MUST NOT LIE. This page is shared-cached, so a verdict rendered
  * into it can be minutes old by the time it is read. The tile therefore carries

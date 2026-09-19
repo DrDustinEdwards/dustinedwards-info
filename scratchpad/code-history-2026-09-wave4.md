@@ -119,7 +119,7 @@ the independence and what it buys; the twelve samples go to the history document
 
 ### app/routes/admin.posts._index.tsx:146 (WHY, shortened)
 
-the prohibition: a rejection before the await is unhandled.
+the prohibition: a rejection before the await is unhandled, and what the catch keeps.
 
 ```tsx
 /*
@@ -423,7 +423,7 @@ keeps the omitted sha; partial failure and the file-and-line citations go to the
 
 ### app/routes/admin.posts._index.tsx:549 (WHY, shortened)
 
-the no-script prohibition and the rule that follows it; the sibling-defect story goes to the history document.
+the no-script prohibition, what the count is taken from, and the rule that follows; the sibling-defect story goes to the history document.
 
 ```tsx
 /*
@@ -1217,7 +1217,7 @@ the prohibition on automatic restore.
 
 ### app/components/admin/post-editor.tsx:285 (CONTRACT, shortened)
 
-keeps enhancement-not-a-gate and the pathname comparison; the beforeunload half goes to the history document.
+keeps enhancement-not-a-gate, the pathname comparison and the save it does not cover; the beforeunload half goes to the history document.
 
 ```tsx
 /**
@@ -3295,7 +3295,7 @@ why it degrades rather than renders empty.
 
 ### app/routes/blog.$slug.tsx:818 (CONTRACT, shortened)
 
-the target size and the machine-readable half; the old inline shape goes to the history document.
+the target size, the no-image prohibition and the machine-readable half; the old inline shape goes to the history document.
 
 ```tsx
 /*
@@ -3852,7 +3852,7 @@ why the member is selected rather than the property read.
 
 ### app/components/admin/media-grid.tsx:61 (CONTRACT, shortened)
 
-the accessibility prohibition.
+the accessibility prohibition, and the rule that decided it.
 
 ```tsx
 // A plain list. NOT role="grid": positional information is meaningless
@@ -7000,7 +7000,7 @@ why the asymmetry is deliberate.
 
 ### app/routes/admin.posts.$slug.edit.tsx:225 (WHY, shortened)
 
-keeps the no-script prohibition and the consent distinction; the three-spellings note goes to the history document.
+keeps the no-script prohibition, the consent distinction, the count and the one-spelling rule.
 
 ```tsx
 /*
@@ -10928,7 +10928,7 @@ the route-scoped sheet rule.
 
 ### app/routes/about.tsx:13 (CONTRACT, shortened)
 
-header: why markdown here and why one Person graph; the audit finding goes to the history document.
+header: why markdown here, why it is rendered at build time, and why one Person graph; the audit finding goes to the history document.
 
 ```tsx
 /**
@@ -11840,7 +11840,7 @@ header: the live-region prohibition and what replaces it.
 
 ### app/components/enhancement-script.tsx:5 (CONTRACT, shortened)
 
-header: how every public enhancement loads, and the optional nonce.
+header: how every public enhancement loads, the optional nonce, and the CSP that makes an unnonced tag inert.
 
 ```tsx
 /**

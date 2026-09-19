@@ -64,9 +64,11 @@ so the loader's floor is the SLOWEST of them and not their sum.`,
   ],
   "app/routes/admin.posts._index.tsx#7": [
     "WHY",
-    "the prohibition: a rejection before the await is unhandled",
+    "the prohibition: a rejection before the await is unhandled, and what the catch keeps",
     `The catch is attached AT CREATION: a promise that rejects before anything
-awaits it is an unhandled rejection, and starting work early creates that gap.`,
+awaits it is an unhandled rejection, and starting work early creates that gap.
+A FAILING BUDGET READ MUST NOT TAKE THE PAGE DOWN, so it resolves to null and
+the list still renders.`,
   ],
   "app/routes/admin.posts._index.tsx#8": [
     "CONTRACT",
@@ -178,10 +180,12 @@ head.`,
   "app/routes/admin.posts._index.tsx#31": ["CONTRACT", "already one line"],
   "app/routes/admin.posts._index.tsx#32": [
     "WHY",
-    "the no-script prohibition and the rule that follows it; the sibling-defect story goes to the history document",
+    "the no-script prohibition, what the count is taken from, and the rule that follows; the sibling-defect story goes to the history document",
     `**THE LADDER IS ENFORCED HERE, NOT ONLY IN THE UI**: with scripting off an
 \`onClick\` ceremony never runs. An unconfirmed delete is the CONFIRMATION STEP,
-not an error.`,
+not an error. The count comes from the slugs in THIS request and never from a
+number the form carried, so a stale page cannot authorise a delete of a
+different size than the operator was shown.`,
   ],
   "app/routes/admin.posts._index.tsx#33": [
     "CONTRACT",

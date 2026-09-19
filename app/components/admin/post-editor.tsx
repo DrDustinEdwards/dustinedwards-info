@@ -252,7 +252,9 @@ export function PostEditor({
   /**
    * An ENHANCEMENT, not a gate: nothing here refuses a save, and with scripting off
    * none of it runs. The pathname comparison lets a save's own redirect through,
-   * which the flag it is about to clear would otherwise block.
+   * which the flag it is about to clear would otherwise block. It is not enough on
+   * its own: a NEW post's save redirects to a DIFFERENT path, and what lets that one
+   * through is `onSubmit` clearing `dirty` before the request leaves.
    */
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>

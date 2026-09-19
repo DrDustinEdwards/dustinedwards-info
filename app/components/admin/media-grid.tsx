@@ -55,9 +55,10 @@ export function MediaGrid({
   tagCounts: Listing["tagCounts"];
 }) {
   return (
-        // NOT `role="grid"`: positional information is meaningless to a screen reader
-        // here, because the column count depends on the container width and directional
-        // navigation does not help anyone find a picture.
+        // A plain list. NOT `role="grid"`: positional information is meaningless to a
+        // screen reader here, because the column count depends on the container width and
+        // directional navigation does not help anyone find a picture. SEMANTIC ELEMENTS
+        // FIRST, and ARIA only where no element carries the meaning.
         /*
          * ONE MARKUP TREE, TWO LAYOUTS, selected by data attributes. A second branch of
          * JSX is a second place for a control to go missing, and `check:admin-ui` would

@@ -119,10 +119,12 @@ local text is the surprise this exists to prevent.`,
   "app/components/admin/post-editor.tsx#23": ["CONTRACT", "already at size"],
   "app/components/admin/post-editor.tsx#24": [
     "CONTRACT",
-    "keeps enhancement-not-a-gate and the pathname comparison; the beforeunload half goes to the history document",
+    "keeps enhancement-not-a-gate, the pathname comparison and the save it does not cover; the beforeunload half goes to the history document",
     `An ENHANCEMENT, not a gate: nothing here refuses a save, and with scripting off
 none of it runs. The pathname comparison lets a save's own redirect through,
-which the flag it is about to clear would otherwise block.`,
+which the flag it is about to clear would otherwise block. It is not enough on
+its own: a NEW post's save redirects to a DIFFERENT path, and what lets that one
+through is \`onSubmit\` clearing \`dirty\` before the request leaves.`,
   ],
   "app/components/admin/post-editor.tsx#25": [
     "WHY",
