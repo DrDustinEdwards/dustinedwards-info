@@ -8,31 +8,17 @@ import {
 import { OverflowMenu } from "./overflow-menu";
 
 /**
- * The publish state machine, as controls.
+ * The publish state machine, as controls. The primary button names the
+ * transition rather than stating a field.
  *
- * The draft checkbox is gone. What replaced it names the transition instead of
- * stating a field: the primary button says Publish, Republish or Update, and
- * the author never has to translate "draft is unticked" into "this is on the
- * internet".
+ * EVERY BUTTON CARRIES ITS OWN TRANSITION. Each control submits
+ * `intent=<transition id>` and the server reads the draft flag off that intent, so
+ * nothing is flipped, nothing is armed, and no handler has to run for the request
+ * to say what the author asked for.
  *
- * ## EVERY BUTTON CARRIES ITS OWN TRANSITION, since 2026-09-03
- *
- * Each control submits `intent=<transition id>`, and the server reads the draft
- * flag off that intent. Nothing is flipped, nothing is armed, and no handler
- * has to run for the request to say what the author asked for.
- *
- * What this replaced was a hidden `draft` input toggled through a ref in each
- * button's `onClick`. It reproduced a checkbox faithfully and it made all three
- * publication transitions depend on script, two of them silently: republish
- * saved a draft, revert-to-draft left the post live, and a first publication
- * could not be reached at all. `publish-transition.mjs` carries the full
- * account and the argument for putting the decision in the submitter.
- *
- * That the transitions map correctly is asserted by check:admin-ui against
- * publish-transition.mjs, not by this component. What check:admin-ui CAN now
- * see, which it could not before, is the whole contract: the intent a button
- * sends is in the markup, so the gate reads the transition off the rendered
- * page rather than taking a click handler on trust.
+ * That the transitions map correctly is asserted by `check:admin-ui` against
+ * `publish-transition.mjs`: the intent is in the markup, so the gate reads it off
+ * the rendered page rather than taking a click handler on trust.
  */
 export function PublishActions({
   state,
@@ -94,24 +80,13 @@ export function PublishActions({
       {primary.ceremony ? (
         <>
           {/*
-            A REAL SUBMIT that a script INTERCEPTS, which is the delete path's
-            shape and is the whole of the fix.
-
-            It was `type="button"`, so with scripting off there was no path to a
-            first publication at all: both real submits lived inside a <dialog>
-            that is display:none until showModal() runs. Now the press always
-            means something. Scripted, the handler opens the dialog instead and
-            the author answers there; unscripted, the request reaches the server
-            as a plain `publish`, which is the ASK rather than the answer, and
-            the server renders the confirmation step.
-
-            The ceremony is not weakened by this, because the ceremony was never
-            the dialog: it is savePost refusing an unconfirmed first
-            publication. The dialog is earlier feedback, and this handler is the
-            same. Note the race it makes harmless, too: a click landing before
-            hydration submits for real and still cannot publish, because the
-            server asks anyway.
-          */}
+           * A REAL SUBMIT that a script INTERCEPTS. It was `type="button"`, so with
+           * scripting off there was no path to a first publication at all. Unscripted, the
+           * request reaches the server as a plain `publish`, which is the ASK rather than
+           * the answer. The ceremony was never the dialog: it is `savePost` refusing an
+           * unconfirmed first publication, so a click landing before hydration still cannot
+           * publish.
+           */}
           <button
             type="submit"
             name="intent"
@@ -144,17 +119,11 @@ export function PublishActions({
             {busy ? "Saving" : primary.label}
           </button>
           {/*
-            RENDERED ONLY WHERE IT CAN BE OPENED, which is the same condition
-            the Reschedule menu item carries. This arm also serves a WITHDRAWN
-            draft, whose primary is Republish and which offers no Reschedule, so
-            an unconditional dialog would leave two submits in the markup that
-            nothing can reach. They would not be harmless: the reschedule arm
-            sends the in-place `save`, which on a draft means draft:false, so
-            the page would carry a publication nobody can see and check:admin-ui
-            would record it as part of this page's request surface. Held by
-            there being nothing to submit rather than by nothing opening it,
-            which is how the preview-link section holds the same kind of rule.
-          */}
+           * RENDERED ONLY WHERE IT CAN BE OPENED. An unconditional dialog would leave two
+           * submits nothing can reach, and they would not be harmless: the reschedule arm
+           * sends the in-place save, which on a draft means `draft:false`, so the page would
+           * carry a publication nobody can see and the fixture would record it.
+           */}
           {state !== "draft" ? (
             <PublishCeremony
               open={ceremony}
@@ -171,22 +140,17 @@ export function PublishActions({
 }
 
 /**
- * Publish now, or hold until a time.
- *
- * A `<dialog>` again, for the platform focus trap. Both buttons inside it are
- * real submits of the editing form: the dialog sits INSIDE that form, and
+ * A `<dialog>` for the platform focus trap. It sits INSIDE the editing form and
  * `showModal()` moves an element to the top layer visually without moving it in
  * the DOM, so form association by containment still holds.
  *
- * BOTH SEND THE CONFIRMED INTENT, which is what separates them from the primary
- * that opened them. A closed `<dialog>` still submits the fields it contains,
- * so a confirmation carried in a hidden input here would have to be armed on
- * click, which is the machinery this whole change removes. The submitter is the
- * only part of a form that means "this is the control that was pressed".
+ * BOTH SEND THE CONFIRMED INTENT. A closed `<dialog>` still submits the fields it
+ * contains, so a confirmation in a hidden input would have to be armed on click;
+ * the submitter is the only part of a form that means "this is the control that
+ * was pressed".
  *
- * The RESCHEDULE arm sends the ordinary in-place save instead: a post that is
- * already public is not publishing for the first time, so there is nothing to
- * confirm and the ceremony's intent would be a lie about what is happening.
+ * The RESCHEDULE arm sends the ordinary in-place save: a post already public is
+ * not publishing for the first time.
  */
 function PublishCeremony({
   open,

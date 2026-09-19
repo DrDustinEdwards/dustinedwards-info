@@ -33,20 +33,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const year = url.searchParams.get("year");
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
-  // INSTRUMENTATION, OFF BY DEFAULT. `?timing=1` opts in, and root's
-  // middleware is what reads that parameter and creates the collector, for
-  // this route and every other one. This loader used to make its own, which is
-  // why the public plane answered `?timing=1` on exactly one page.
+  // INSTRUMENTATION, OFF BY DEFAULT. `?timing=1` opts in, and root's middleware is
+  // what reads it and creates the collector for every route. This loader used to make
+  // its own.
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
 
   const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
     Promise.all([
-      // ONE round trip now, not three: the tag lookup became a LEFT JOIN and
-      // what remained went into a `db.batch`. These two run in parallel with
-      // it and were entirely hidden underneath the old serial chain, so
-      // whether they are now the critical path is the thing to read off the
-      // numbers rather than assume.
+      // ONE round trip now, not three. These two run in parallel with it and were
+      // hidden underneath the old serial chain, so whether they are now the critical path
+      // is the thing to read off the numbers rather than assume.
       listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
       timed(timings, "d1_tag_list", () => listBlogTags(env)),
       timed(timings, "d1_year_list", () => listBlogYears(env)),
@@ -54,30 +51,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   );
 
   /*
-   * The featured post is surfaced only on the unfiltered first page. Inside a
-   * filter it would be noise.
+   * The featured post is surfaced only on the unfiltered first page, AND IT IS
+   * REMOVED FROM THE LIST BELOW IT. Filtered here rather than in the component, so
+   * the count the page reports and the items it renders come from one decision.
    *
-   * AND IT IS REMOVED FROM THE LIST BELOW IT, since 2026-08-21. The comment
-   * that used to sit here ended "repeating it above a list it already appears
-   * in reads as a duplicate", and then the code did exactly that: `featured` is
-   * FOUND IN `listing.posts` and the list was rendered from the same array
-   * unchanged, so the hero post appeared twice on /blog. The sentence was the
-   * argument against the behaviour it introduced.
+   * PAGINATION IS UNAFFECTED: `pageCount` is computed over the whole corpus.
    *
-   * Filtered HERE rather than in the component so the payload is already
-   * correct, which also means the count the page reports and the items it
-   * renders come from one decision instead of two.
-   *
-   * PAGINATION IS UNAFFECTED, and that is worth stating because it is the
-   * obvious worry. `pageCount` is computed by the query over the whole corpus,
-   * and page 2 is a separate offset query; removing one item from page 1's
-   * rendered list does not shift anything into or out of page 2. Page 1 still
-   * displays the same posts, one of them as the hero rather than as a row.
-   *
-   * KNOWN LIMIT, unchanged and now written down: the hero only appears when the
-   * featured post happens to fall on page 1, because that is the only page this
-   * loader has in hand. A featured post old enough to sit on page 3 is featured
-   * nowhere.
+   * KNOWN LIMIT: the hero only appears when the featured post falls on page 1.
    */
   const { featured, posts } = splitFeatured(
     listing.posts,
@@ -85,29 +65,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   );
 
   /*
-   * OUT OF RANGE REDIRECTS TO THE LAST REAL PAGE. Chosen over 404 and over
-   * clamping in place, and the three differ in what they tell the reader.
-   *
-   * `/blog?page=99` rendered an empty list under the words "Page 99 of 3". The
-   * list was honest and the sentence was not, and a crawler reading it sees a
-   * soft 404: a 200 with no content, which is the shape search engines penalise
-   * hardest because it cannot be distinguished from a real page.
-   *
-   * NOT 404, because the resource EXISTS. `/blog?tag=cloudflare` is a real
-   * list; 99 is out of bounds for that list, not a missing document, and 404
-   * would also be wrong the moment enough posts are published to make it valid.
-   *
-   * NOT CLAMPED IN PLACE, because the URL would then disagree with the page:
-   * the address bar says 99 and the content is page 3, so a copied link is a
-   * lie and the canonical would have to argue with its own URL.
-   *
-   * A REDIRECT fixes both. The reader lands on a page that exists, at the URL
-   * that names it, and a crawler follows one hop to the canonical rather than
-   * indexing an empty one. 302 rather than 301: the bound moves as posts are
-   * published, so this is where page 99 goes TODAY, not forever.
-   *
-   * Page 0 and negatives fall out of the same clamp. The parse above already
-   * turns junk into 1 via `|| 1`, so only numbers above the bound reach here.
+   * OUT OF RANGE REDIRECTS TO THE LAST REAL PAGE. NOT 404, because the resource
+   * EXISTS and 404 would be wrong the moment enough posts make the page valid. NOT
+   * CLAMPED IN PLACE, because the URL would then disagree with the page and a copied
+   * link would be a lie. 302 rather than 301: the bound moves as posts are
+   * published.
    */
   if (page > listing.pageCount) {
     const target = new URLSearchParams();
@@ -122,9 +84,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const payload = {
     ...listing,
-    // AFTER the spread, so the filtered array wins over `listing.posts`. Spread
-    // first and this line is the whole fix; spread second and it is a no-op
-    // that reads like one.
+    // AFTER the spread, so the filtered array wins over `listing.posts`. Spread first
+    // and this line is the whole fix; spread second and it is a no-op that reads like
+    // one.
     posts,
     tags: tagList,
     years: yearList,
@@ -134,24 +96,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   };
 
   /*
-   * **AND THE LAST ROUTE-LEVEL STAMP IS GONE, 2026-08-27.**
-   *
-   * It was kept because the array here was LOCAL: nothing set `timingsContext`
-   * on the public plane, so the transport read `undefined` and stamping here
-   * was the only Server-Timing a public reader could get. Root's middleware
-   * sets it for every route now, so `workers/app.ts` writes the header from the
-   * same array AFTER the handler returns, which is the one point where it is
-   * complete. Stamping here would emit a header built from a list still being
-   * written to, which is the race that transport-side note describes.
+   * The transport writes the header from the same array AFTER the handler returns,
+   * which is the one point where it is complete. Stamping here would emit a header
+   * built from a list still being written to.
    */
   return data(payload);
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  // Publicly cacheable for EVERY reader since 2026-09-05: the theme is a
-  // dimension of the cache key rather than a Vary, so this page no longer
-  // declares one. Tagged `posts`, because its content is a function of the
-  // corpus and a publish must be able to move it. Grounds on cacheTags in seo.ts.
+  // The theme is a dimension of the cache key rather than a Vary, so this page no
+  // longer declares one. Tagged `posts`, because its content is a function of the
+  // corpus and a publish must be able to move it.
   const headers = new Headers(publicHtmlHeaders(cacheTags()));
   // Carried through from the loader. `headers` does not inherit them, so a
   // loader header that is not forwarded here simply never reaches the client.
@@ -169,17 +124,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const title = filterLabel ? `Blog: ${filterLabel} | ${SITE.name}` : `Blog | ${SITE.name}`;
   const description = "Writing on building for the web, mostly on Cloudflare.";
   /*
-   * THE CANONICAL CARRIES EVERY AXIS THAT CHANGES THE LIST, which is all three.
-   *
-   * It carried `tag` alone, so `/blog?year=2026` and `/blog?page=2` each
-   * declared `/blog` as their canonical. That tells a crawler those are the
-   * same document as the unfiltered first page, which they are not: they are
-   * different posts. The recorded consequence is thin-duplicate treatment, and
-   * the actual one is worse, that the pages are asking to be dropped from the
-   * index in favour of a page whose content they do not share.
-   *
-   * Built from the same axes `filterHref` uses, in the same order, so the
-   * canonical of a page is byte-identical to the link that reaches it.
+   * THE CANONICAL CARRIES EVERY AXIS THAT CHANGES THE LIST. Built from the same
+   * axes `filterHref` uses, in the same order, so the canonical of a page is
+   * byte-identical to the link that reaches it.
    */
   const canonicalParams = new URLSearchParams();
   if (loaderData?.activeTag) canonicalParams.set("tag", loaderData.activeTag);
@@ -190,24 +137,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const canonicalQuery = canonicalParams.toString();
 
   /*
-   * A TAG-ONLY FILTER CANONICALISES TO THE ARCHIVE, since the archive exists.
-   *
-   * `/blog?tag=x` and `/blog/tags/x` are the same list of posts at two
-   * addresses, which is duplicate content by construction. The archive is the
-   * better one: it has a title naming the tag, a description, a breadcrumb, its
-   * own feeds and a place in the sitemap, none of which a query-string view of
-   * the index has. So the filtered view keeps working, keeps composing with the
-   * year chips beside it, and tells a crawler where the canonical copy lives.
-   *
-   * ONLY WHEN THE TAG IS THE ONLY FILTER, and that condition is the whole care
-   * in this block. `?tag=x&year=2026` is a DIFFERENT list from the archive, so
-   * naming the archive as its canonical would point a crawler at a page whose
-   * content it does not share, which is the exact defect the comment above
-   * describes and fixed for `year` in the first place. There is no year archive
-   * to send it to, so it stays self-canonical.
-   *
-   * Page two of a tag-only filter maps to page two of the archive, because the
-   * archive paginates the same list in the same order at the same size.
+   * A TAG-ONLY FILTER CANONICALISES TO THE ARCHIVE, and ONLY when the tag is the
+   * only filter: `?tag=x&year=2026` is a DIFFERENT list, so naming the archive would
+   * point a crawler at a page whose content it does not share.
    */
   const tagOnly = Boolean(loaderData?.activeTag) && !loaderData?.activeYear;
   const path = tagOnly
@@ -219,16 +151,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
       : "/blog";
 
   /*
-   * THE SHARED BUILDER, and nothing else any more.
-   *
-   * The social half was a hand-written array here exactly as it was on five
-   * other pages, and it had drifted the same way: no `twitter:image`, so the
-   * card it declared rendered as a bare link. `pageMeta` owns that set.
-   *
-   * The two feed alternates used to be added here because this was the only
-   * page that had them. They moved to root's `links` on 2026-08-27, which are
-   * merged onto every route, so a reader arriving on a post can find the feed
-   * too. Nothing about this page is local any more.
+   * `pageMeta` owns the social set. The two feed alternates moved to root's
+   * `links`, which are merged onto every route, so nothing about this page is local
+   * any more.
    */
   return pageMeta({ title, description, path });
 }
@@ -238,23 +163,13 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
     loaderData;
 
   /**
-   * EVERY link on this page, from one builder.
+   * EVERY link on this page, from one builder. The loader ANDs tag and year, so a
+   * reader can be in both at once and a chip that knew only its own axis silently
+   * destroyed the other. An override of `null` clears one axis.
    *
-   * The loader composes tag AND year into a single query, so the two filters
-   * are ANDed and a reader can legitimately be in both at once. The chips did
-   * not know that: a tag chip linked to `/blog?tag=x` and a year chip to
-   * `/blog?year=y`, so clicking either one silently DESTROYED the other. A
-   * reader filtering to 2026 and then clicking a tag lost the year without
-   * being told, and the chip they had just been using stopped being current.
-   *
-   * `pageHref` already knew how to preserve both and was the only link that
-   * did. This generalises it rather than adding a second spelling: an override
-   * of `null` clears one axis, which is what the All chips want, and every
-   * other caller passes what it is changing.
-   *
-   * Page is dropped on any filter change, deliberately. Page 3 of one filter is
-   * not page 3 of another, and carrying it would land a reader on an empty list
-   * that their own click created.
+   * Page is dropped on any filter change: page 3 of one filter is not page 3 of
+   * another, and carrying it would land a reader on an empty list their own click
+   * created.
    */
   const filterHref = (
     override: { tag?: string | null; year?: string | null; page?: number } = {},
@@ -275,25 +190,13 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       {/*
-        THE h-feed IS THE `<main>` ITSELF, and that is a deliberate refusal to
-        add a wrapper. The feed has to contain BOTH the featured section and the
-        list, and those are siblings; a `<div class="h-feed">` around the pair
-        would be a new element introduced for a class, on a page whose whole
-        constraint this arc is that nothing visual moves. `.page` is a plain
-        block with padding and both children centre themselves with `margin:
-        0 auto`, so a wrapper would almost certainly have been harmless, and
-        "almost certainly harmless" is not a reason to add markup.
-
-        WHAT ELSE FALLS INSIDE THE FEED: the search form, the tag chips, the
-        year archive and the pagination. None of them carries a microformats
-        class, so a parser reads past them; a feed's properties are the
-        annotated descendants, not everything in the subtree.
-
-        NOT ON THE TAG ARCHIVE OR THE SERIES PAGE. Those render the same cards,
-        so their entries parse as top-level h-entries, which is valid and is
-        what they are: a filtered view is not this blog's feed. If either ever
-        wants to BE a feed, it says so itself rather than inheriting it here.
-      */}
+       * THE h-feed IS THE `<main>` ITSELF, a deliberate refusal to add a wrapper: the
+       * feed has to contain both the featured section and the list, and those are
+       * siblings.
+       *
+       * NOT ON THE TAG ARCHIVE OR THE SERIES PAGE: a filtered view is not this blog's
+       * feed.
+       */}
       <main className="page h-feed" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
@@ -308,28 +211,20 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         />
 
         <header className="page-head">
-          {/* The feed's own name, on the heading that already is it.
-
-              MEASURED, because the first version of this comment guessed and
-              was wrong. It claimed that without an explicit `p-name` a parser
-              would imply one from the page text. It does not: implied
-              properties are skipped for a root that contains nested
-              microformats, and this feed contains an h-entry per card, so the
-              feed's properties parse as `{}` with the class absent. The class
-              is not preventing a bad name, it is supplying the only one. */}
+          {/*
+           * MEASURED, because the first version of this comment guessed and was wrong.
+           * Implied properties are skipped for a root containing nested microformats, so the
+           * class is not preventing a bad name, it is supplying the only one.
+           */}
           <h1 className="p-name">Blog</h1>
           <p className="muted">Writing on building for the web, mostly on Cloudflare.</p>
         </header>
 
-        {/* Blog-scoped search is site search with type pinned, not a second
-            engine. The hidden field is what scopes it, so the same index, the
-            same parser and the same ranking serve both, and a reader can widen
-            to the whole site by removing one chip on the results page.
-
-            A router `<Form method="get">`, which emits the same markup and the
-            same URL as a plain form, so it still works with scripting off. The
-            destination's own form (`search.tsx`) has always been a `<Form>`;
-            these two now agree. */}
+        {/*
+         * Blog-scoped search is site search with type pinned, not a second engine: the
+         * same index, parser and ranking serve both. A `<Form method="get">` emits the
+         * same markup and URL as a plain form, so it works with scripting off.
+         */}
         <Form method="get" action="/search" role="search" className="blog-search">
           <label className="sr-only" htmlFor="blog-search-input">
             Search the blog
@@ -387,22 +282,13 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         )}
 
         {/*
-          THE FEATURED POST IS AN ENTRY IN THE FEED, which is the whole reason
-          the feed is the `<main>`. `splitFeatured` REMOVES this post from the
-          list below, so a feed scoped to the `<ul>` alone would silently omit
-          the one post the page is pushing hardest. That omission is invisible
-          from the page: the reader sees it, and only a parser notices it gone.
-
-          IT CARRIES THE SAME FOUR PROPERTIES AS A CARD, so every entry in this
-          feed has one shape and `check:microformats` needs no special case for
-          this one. A special case is where a gate stops biting.
-
-          `dt-published` IS HIDDEN HERE and visible on a card, because this
-          section renders no date and never has. Showing one would change the
-          page; the alternative is a feed whose first entry has no date, which
-          is the property a reader sorts by. The hidden `<time>` carries the
-          same value the card below would have rendered for this post.
-        */}
+         * THE FEATURED POST IS AN ENTRY IN THE FEED, which is why the feed is the
+         * `<main>`: `splitFeatured` removes it from the list, so a feed scoped to the
+         * `<ul>` would silently omit the post the page pushes hardest.
+         *
+         * `dt-published` IS HIDDEN HERE because this section renders no date and never
+         * has; showing one would change the page.
+         */}
         {featured && (
           <section className="featured-post h-entry" aria-labelledby="featured-heading">
             <p className="featured-label" id="featured-heading">
@@ -437,15 +323,12 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         <Pagination page={page} pageCount={pageCount} hrefFor={pageHref} />
       </main>
       <ShellFooter />
-      {/* NO BlogEnhancements HERE, since 2026-08-27. Every one of that bundle's
-          seven enhancements targets markup the post PIPELINE renders inside
-          `.prose`: the reading bar wants `.post .prose`, the scrollspy wants
-          `.post-toc`, and the code buttons, heading links, footnote previews and
-          lightbox all want elements that exist only inside a rendered post body.
-          This page has none of them, so the bundle was 4,514 bytes downloaded and
-          parsed to find nothing on the site's second most visited page.
-          check:browser asserts on the resource timeline that it is not fetched
-          here, which is the half a source reading cannot give you. */}
+      {/*
+       * NO BlogEnhancements HERE. Every one of that bundle's enhancements targets
+       * markup the post pipeline renders inside `.prose`, and this page has none of it.
+       * `check:browser` asserts on the resource timeline that it is not fetched here,
+       * which is the half a source reading cannot give you.
+       */}
     </>
   );
 }
