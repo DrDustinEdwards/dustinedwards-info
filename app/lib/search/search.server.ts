@@ -32,7 +32,8 @@ const IDENTITY_WEIGHTS = { title: 10.0, tags: 4.0 };
  * Snippet markers. snippet() splices these into text it does not escape, so writing `<mark>`
  * directly would mean rendering unescaped content as HTML: a post may legitimately show `<script>`
  * in a code block, and that text reaches the index as prose. The snippet is escaped first and the
- * markers are swapped for real tags afterwards.
+ * markers are swapped for real tags afterwards, which is safe because these control characters
+ * CANNOT OCCUR IN THE CORPUS.
  */
 // Built at runtime so no control byte is ever written into this source file,
 // where it would be invisible in a diff and unguessable in a grep.

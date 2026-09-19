@@ -61,6 +61,10 @@ const ANSWER_CACHE_PREFIX = "ask:answer:";
  * expected and `missing` grows with no write anywhere. TTL expiry is what recomputes on the clock's
  * schedule, and the TTL bounds how long the badge can under-report that.
  *
+ * WHY THIS VALUE AND NOT 60 OR 3600: KV refuses a TTL under 60 seconds, so 60 is the shortest
+ * expressible, and the ceiling is harm. Five minutes of an under-reported badge on a page that is
+ * not the repair page harms nobody; an hour would start to.
+ *
  * That clock dependency is also why this is a TTL cache and not compute-on-write: a number
  * recomputed only on save would under-report a scheduled post until the next unrelated save.
  */

@@ -444,7 +444,9 @@ reaches the same API as \`ctx.cache.purge\`.
 succeeded, so a failed invalidation is a stale page and a log line, never a 500 handed to the
 operator who just published: hard rule 18's second clause in a new place. \`success\` IS READ,
 because \`purge\` resolves with \`{ success, errors }\` rather than rejecting on a refusal, so a
-caller that awaited it and looked at nothing would report a purge that never happened.
+caller that awaited it and looked at nothing would report a purge that never happened. The
+realistic way it comes back false is the purge rate limit, which is the Free-tier zone limit
+regardless of plan.
 
 **LOCAL DEV HAS NO PURGE, AND THAT IS A GUARD RATHER THAN A HOPE.** Miniflare does not implement
 Workers Cache, so there is nothing local to purge and the API may be absent entirely; absence is a

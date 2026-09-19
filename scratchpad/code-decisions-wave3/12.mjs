@@ -62,7 +62,8 @@ COMPOSED FROM D1 AT REQUEST TIME rather than emitted as an artifact, because THI
 ON THE CLOCK: a post scheduled with a future publish_at must be absent today and present next week.
 A generated document would either carry a timestamp, whose byte gate fails the moment a scheduled
 post goes live, or ignore publish_at and leak unpublished writing. Composing here removes the
-drift rather than gating it.`,
+drift rather than gating it: there is no second copy that can disagree. The markdown itself is
+still gated, because it comes from the same \`posts.body\` the generator wrote.`,
   ],
   "app/routes/llms-full[.txt].ts#1": ["CONTRACT", "served for models, kept out of the index; two lines already"],
 

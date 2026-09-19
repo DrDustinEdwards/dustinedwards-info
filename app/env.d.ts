@@ -59,6 +59,10 @@ declare global {
      * ENFORCED IN CODE INSTEAD: `citations.server.ts` checks the value before spending a request,
      * because an unset secret is `undefined` at runtime whatever the type says. The type is not the
      * contract here; this comment is.
+     *
+     * WHY THE DECLARATION EXISTS AT ALL: on a clean CI checkout there is no `.dev.vars`, wrangler
+     * generates nothing, and this line is the only declaration. Removing it compiles locally and fails
+     * on a fresh clone.
      */
     OPENALEX_API_KEY: string;
 

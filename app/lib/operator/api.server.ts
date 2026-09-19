@@ -741,6 +741,10 @@ function defaultName(type: string, url: string): string {
  * IT IS AN ADAPTER and `storeUpload` is the write: the allowlist, the size limit and the key are the
  * same code the admin upload runs. What is here is only how bytes REACH that door.
  *
+ * TWO WAYS IN, AND `url` IS THE LOAD-BEARING ONE. `data` is base64, the obvious shape and the one
+ * that does not scale, since no agent carries a photograph's worth of it through a conversation.
+ * `url` is what makes the tool usable, and it is why the ruling named both.
+ *
  * THE PRIMARY CONTROL IS THE TOKEN AND THE RATE LIMITER, said plainly because the checks below are
  * secondary: HTTPS only, since a fetch is the one place a caller chooses where this Worker goes; a
  * capped read; and the same `validateUpload` contract a form upload meets.
