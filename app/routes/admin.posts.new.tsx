@@ -14,10 +14,9 @@ import { adminActorContext } from "~/lib/auth.server";
 import type { Route } from "./+types/admin.posts.new";
 
 /*
- * THE MATH STYLESHEET, ALWAYS. Same reason as the edit route beside it: the
+ * THE MATH STYLESHEET, ALWAYS, for the same reason as the edit route: the
  * exact-preview pane copies this document's stylesheets into its iframe, so an
  * author typing an expression needs the sheet on the page they are typing on.
- * Grounds in root.tsx, which reads this handle.
  */
 export const handle = { math: true };
 
@@ -27,9 +26,8 @@ export function meta() {
 
 export async function loader({ context }: Route.LoaderArgs) {
   /*
-   * FOUR SERIAL AWAITS, three of them inside the returned object literal, same
-   * shape as the editor. Marked without reordering, so the numbers describe
-   * what ships.
+   * FOUR SERIAL AWAITS, three inside the returned object literal. Marked without
+   * reordering, so the numbers describe what ships.
    */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
@@ -46,9 +44,9 @@ export async function loader({ context }: Route.LoaderArgs) {
     ).map((tag) => tag.slug),
     // The site's own posts, for the body editor's Cmd+K link search.
     linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
-    // So the slug field can say "taken" while the author is still typing,
-    // rather than after a round trip that gets refused. The save gate remains
-    // the authority; this only saves a wasted submit.
+    // So the slug field can say "taken" while the author is still typing rather than
+    // after a round trip that gets refused. The save gate remains the authority; this
+    // only saves a wasted submit.
     existingSlugs: (
       await timed(timings, "d1_all_posts", () => listAllPostsForAdmin(env).catch(() => []))
     ).map((post) => post.slug),
@@ -88,15 +86,14 @@ export default function NewPost({ loaderData, actionData }: Route.ComponentProps
             }
           : null
       }
-      // A post that does not exist yet is a draft that has never been public,
-      // so the primary action is Publish behind the ceremony, exactly as it
-      // would be on the first edit after creating it.
+      // A post that does not exist yet is a draft that has never been public, so the
+      // primary action is Publish behind the ceremony, exactly as it would be on the
+      // first edit after creating it.
       state="draft"
       everPublished={false}
-      // A post that has never existed has never been public, so its first save
-      // with a publish intent is a first publication and gets the same second
-      // step the edit route renders. `fields` above already carries the
-      // submitted body back, because this arm has fields like `problem` does.
+      // A post that has never existed has never been public, so its first save with a
+      // publish intent is a first publication and gets the same second step the edit
+      // route renders.
       awaitingPublishConfirmation={actionData?.kind === "confirm-publish"}
       tagOptions={loaderData.tagOptions}
       linkTargets={loaderData.linkTargets}

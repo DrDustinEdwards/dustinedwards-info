@@ -8,26 +8,14 @@
 import { docTitle } from "~/lib/media/view.mjs";
 
 /**
- * The file extension, uppercased, off the key. PDF, SVG, PNG.
+ * Read from the KEY rather than the mime type, because the key is what the reader
+ * sees everywhere else and a mime type disagreeing with a filename is a
+ * distinction nobody wants explained on a tile.
  *
- * Read from the KEY rather than from the mime type, because the key is what the
- * reader sees everywhere else on this page and a mime type disagreeing with a
- * filename is a distinction nobody wants explained on a tile. Falls back to the
- * mime subtype when a key genuinely carries no extension.
- *
- * **RENAMED FROM `extensionOf` ON 2026-08-24, and the rename IS the fix.**
- * `app/lib/media/classify.mjs` exports a function of that name which is not
- * this one: it takes a plain string, returns LOWERCASE, and returns the empty
- * string for a key with no extension, because `classify()` depends on that
- * empty string to THROW on an unknown type. This one takes a row, returns
- * UPPERCASE for display, caps at five characters, and falls back to the mime
- * subtype rather than returning nothing.
- *
- * Two functions, one name, different inputs and different outputs is the shape
- * VERIFICATION.md calls a vacuity machine: a body copied from one to the other
- * type-checks at neither call site and changes behaviour at both. They are not
- * merged because the difference is real and each is right where it is. What is
- * removed is the collision.
+ * NOT `classify.mjs`'s `extensionOf`, which takes a string, returns lowercase, and
+ * returns the empty string that `classify()` depends on to THROW. Two functions,
+ * one name, different inputs and outputs is a vacuity machine; they are not merged
+ * because the difference is real.
  */
 function extensionLabel(object: { key: string; mime: string | null }) {
   const fromKey = /\.([a-z0-9]{1,5})$/i.exec(object.key.split("/").pop() ?? "")?.[1];
@@ -36,42 +24,16 @@ function extensionLabel(object: { key: string; mime: string | null }) {
 }
 
 /**
- * WHAT A DOCUMENT TILE SHOWS INSTEAD OF A PICTURE.
+ * WHAT A DOCUMENT TILE SHOWS INSTEAD OF A PICTURE: an extension label, the TITLE
+ * in words, a suggestion of text.
  *
- * **31 of the 70 rows are documents and they currently read as damage.** The
- * tile was a label floating in an empty band, so a folder of five papers
- * rendered as five identical grey boxes whose only distinguishing text was
- * `edw...omics.pdf` against `edw...lysis.pdf`: the middle-elision working
- * correctly on a string that should never have been the identifying one.
+ * THERE IS NO BOTTOM LINE, BECAUSE THE FACT IT WOULD CARRY DOES NOT EXIST. Nothing
+ * stores a page count, and getting one would mean fetching the object out of R2 per
+ * render. The size was tried there and was worse: the body's meta line already
+ * prints it, and a fact repeated reads as a bug. `check:admin-ui` holds both
+ * halves: no invented page count, and the size stated exactly ONCE per tile.
  *
- * The mockup's answer, verified in its source rather than in a description of
- * it: a small extension label top left, the TITLE in words, a few faint ruled
- * lines standing in for the text of the page, and one fact along the bottom.
- * A reader scanning that grid sees five different papers.
- *
- * **THERE IS NO BOTTOM LINE, BECAUSE THE FACT IT WOULD CARRY DOES NOT EXIST.**
- *
- * The mockup's card ends with "24 pages". In the mockup that string is FIXTURE
- * DATA, typed into its row table beside the size, and nothing computes it.
- * Nothing in this system stores a page count either: `media` carries bytes,
- * mime, width and height, and width and height are null for every PDF. Getting
- * one would mean fetching the object out of R2 and parsing it, per row, per
- * render, which is a network read for a decoration.
- *
- * The SIZE was put there instead for one render and it was worse, which is why
- * this note is longer than the code it explains. The mockup's tile has NO BODY:
- * the card IS the whole tile. This page's tile has always had a body, and that
- * body's meta line already prints the size, so a card foot carrying it too
- * rendered `1.4 MB` twice inside sixty pixels. A fact repeated is not a fact
- * confirmed; it reads as a bug, and it read as one on a screenshot.
- *
- * So the space is left empty, and the card is the extension, the title and the
- * suggestion of text. A page count goes in when a column holds one.
- * `check:admin-ui` holds both halves meanwhile: no invented page count, and the
- * size stated exactly ONCE per tile.
- *
- * THE RULED LINES ARE DECORATION and are marked so: `aria-hidden`, no text, no
- * meaning carried. They are the one thing here that suggests rather than states.
+ * THE RULED LINES ARE DECORATION and are marked so.
  */
 export function DocumentCard({
   object,

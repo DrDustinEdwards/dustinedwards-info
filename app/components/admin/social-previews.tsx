@@ -7,19 +7,14 @@ import {
 } from "~/lib/seo";
 
 /**
- * What this post will look like in a search result and on a social card.
+ * Both read from `postSocial`, the SAME function the post route's `meta()`
+ * calls. A preview that derived its own version would eventually disagree with the
+ * page, and it would disagree SILENTLY, because no view renders both at once for a
+ * human to compare.
  *
- * Both read from `postSocial` in `app/lib/seo.ts`, which is the SAME function
- * `blog.$slug.tsx`'s `meta()` calls to emit the real tags. Nothing here
- * recomputes a canonical URL, a title template or a card image. That is the
- * whole point: a preview that derived its own version would eventually disagree
- * with the page, and it would disagree SILENTLY, because no view renders both
- * at once for a human to compare.
- *
- * These are previews of the head tags, not of Google's or a social network's
- * rendering, which change without notice and cannot be tracked from here. What
+ * These are previews of the head tags, not of a search engine's rendering. What
  * they promise is "these are the strings the site emits, cut where they will be
- * cut", which is a claim this repo can actually keep.
+ * cut".
  */
 
 /** The fields both previews need, which is what the editor already holds. */
@@ -32,13 +27,10 @@ export type PreviewPost = {
 };
 
 /**
- * Maps the editor's form state onto the shape `postSocial` takes.
- *
- * `ogImage` is deliberately NOT supplied and that is not an omission. The
- * build:og card is a fact about R2 discovered at sync time; the editor cannot
- * know whether one exists for a title the author is still typing, and claiming
- * one would be the preview inventing an image. So the editor's preview falls
- * through cover, then the site mark, and says which it landed on.
+ * `ogImage` is deliberately NOT supplied and that is not an omission: the
+ * build:og card is a fact about R2 discovered at sync time, and the editor cannot
+ * know whether one exists for a title the author is still typing. Claiming one
+ * would be the preview inventing an image.
  */
 function fromEditor(post: PreviewPost) {
   return postSocial({
@@ -90,11 +82,10 @@ export function OgPreview({ post }: { post: PreviewPost }) {
     <div className="og-preview">
       <div className="og-preview-image">
         {/*
-          The real image, at the real URL, and NOT a placeholder when there is
-          no cover. A post with no cover does not get an empty box on Twitter,
-          it gets the site mark, so that is what is shown here. Inventing a grey
-          rectangle would hide the one case worth seeing.
-        */}
+         * The real image, at the real URL, and NOT a placeholder when there is no cover:
+         * a post with no cover gets the site mark, so that is what is shown. Inventing a
+         * grey rectangle would hide the one case worth seeing.
+         */}
         <img
           src={social.image}
           alt={

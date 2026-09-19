@@ -40,16 +40,10 @@ export function meta() {
 /**
  * The pill's three states out of the two the database stores.
  *
- * "scheduled" is derived, not a column: `status` is only ever draft or
- * published, and a published row whose `publish_at` is still ahead of now is
- * live to the admin and invisible to the public. The test is deliberately the
- * same one `publiclyVisible()` runs, so the pill cannot claim a post is on the
- * site when the public query would hide it.
- *
- * Derived in the LOADER rather than in the component, because it reads the
- * clock. Computed during render it would be evaluated once on the server and
- * again on the client, and a post scheduled for the next few seconds would
- * hydrate into a different word than it rendered with.
+ * `scheduled` is DERIVED, not a column: a published row whose `publish_at` is
+ * still ahead of now is live to the admin and invisible to the public, and the
+ * test is the one `publiclyVisible()` runs. Derived in the LOADER because it
+ * reads the clock.
  */
 function statusOf(
   status: string,
@@ -62,15 +56,9 @@ function statusOf(
 }
 
 /**
- * The id tying a row's button to the form it submits, STATED ONCE.
- *
- * The button and the form are rendered in two different places, hundreds of
- * lines apart, and a browser resolves the pair by string equality alone: a
- * mismatch produces a button that submits the whole page's default form or
- * nothing at all, silently, with no error anywhere. One function means the two
- * spellings cannot drift.
- *
- * Slugs match `SLUG_PATTERN`, so the result is always a valid HTML id.
+ * The id tying a row's button to the form it submits, STATED ONCE. A browser
+ * pairs them by string equality alone, so a mismatch submits the wrong form or
+ * nothing, silently.
  */
 function rowFormId(intent: "duplicate" | "unpublish", slug: string) {
   return `row-${intent}-${slug}`;
@@ -80,13 +68,10 @@ function rowFormId(intent: "duplicate" | "unpublish", slug: string) {
 const FILTER_KEYS = { q: "q", status: "status", tag: "tag" } as const;
 
 /**
- * The filter state, read from the URL and normalized.
- *
- * URL-driven rather than component state, which is what makes it work with
- * scripting off and makes a filtered list a LINK. `status` is validated against
- * the three states the pill can show, so a hand-typed `?status=banana` degrades
- * to "no status filter" rather than silently matching nothing and looking like
- * an empty corpus.
+ * The filter state, read from the URL and normalized. URL-driven is what makes
+ * it work with scripting off and makes a filtered list a LINK. `status` is
+ * validated, so `?status=banana` degrades to no filter rather than matching
+ * nothing and looking like an empty corpus.
  */
 function readFilters(params: URLSearchParams) {
   const status = (params.get(FILTER_KEYS.status) ?? "").trim();
@@ -98,12 +83,8 @@ function readFilters(params: URLSearchParams) {
 }
 
 /**
- * Days from now until a scheduled post goes live, rounded UP.
- *
- * Ceiling rather than round, because a post going live in 30 hours is "in 2
- * days" and never "in 1 day": the author must not read a number that has
- * already passed. Computed in the LOADER for the same reason `statusOf` is;
- * see the note there.
+ * Rounded UP: a post going live in 30 hours is "in 2 days" and never "in 1
+ * day", because the author must not read a number that has already passed.
  */
 function daysUntil(publishAt: Date, now: number) {
   return Math.max(1, Math.ceil((publishAt.getTime() - now) / 86_400_000));
@@ -111,12 +92,8 @@ function daysUntil(publishAt: Date, now: number) {
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   /*
-   * INSTRUMENTED 2026-08-22, and this route is why the session exists.
-   *
-   * It cost 1,420ms median with NOT ONE `timed()` call, while its two D1
-   * queries measure 0.33 to 0.47ms IN D1. Roughly 1,400ms was unattributed, and
-   * three previous fixes landed on the 90ms layout because the layout was the
-   * only thing marked. Every await below now has a name.
+   * Every await below is named. Unattributed time sent three earlier fixes to the
+   * layout, which was the only thing marked.
    */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
@@ -124,32 +101,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const filters = readFilters(new URL(request.url).searchParams);
 
   /*
-   * THREE INDEPENDENT READS, STARTED TOGETHER.
-   *
-   * MEASURED on production 2026-08-22, twelve samples, and the marks tiled
-   * `loader_total` with a residual of EXACTLY ZERO on all twelve, which is what
-   * proved they were strictly serial: d1_admin_posts 80ms + ask_status_uncached
-   * 182ms + ask_budget_do 50ms = loader_total 314ms at the median.
-   *
-   * None of the three reads anything the others write. D1, AI Search and a
-   * Durable Object are three different backends. So the loader's floor is the
-   * SLOWEST of them, not their sum.
-   *
-   * This is the third instance of one shape in this repo: the admin layout's
-   * drift and nav counts were serial, and the editor awaits five times inside
-   * its returned object literal. Started here, awaited below, in the order the
-   * work downstream actually needs them.
+   * THREE INDEPENDENT READS, STARTED TOGETHER. None reads what the others write,
+   * so the loader's floor is the SLOWEST of them and not their sum.
    */
   const askPromise = timed(timings, "ask_status_uncached", () =>
     context.get(askStatusContext)(),
   );
   /*
-   * The catch is attached AT CREATION, not at the await. A promise that rejects
-   * before anything awaits it is an unhandled rejection, and starting work
-   * early is exactly what creates that gap. `askStatusReader` resolves to null
-   * rather than throwing, so only this one needs it, and it keeps the same
-   * "a failing budget read must not take the page down" behaviour the awaited
-   * try/catch had.
+   * The catch is attached AT CREATION: a promise that rejects before anything
+   * awaits it is an unhandled rejection, and starting work early creates that gap.
+   * A FAILING BUDGET READ MUST NOT TAKE THE PAGE DOWN, so it resolves to null and
+   * the list still renders.
    */
   const budgetPromise: Promise<Awaited<ReturnType<typeof readAskBudget>> | null> =
     askAvailable(env)
@@ -160,17 +122,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       : Promise.resolve(null);
 
   /*
-   * A FOURTH INDEPENDENT READ, started here with the other three. Roadmap G.
-   *
-   * Analytics Engine is a fourth backend and shares nothing with D1, AI Search
-   * or the budget Durable Object, so it belongs in the same concurrent group
-   * and the loader's floor stays the SLOWEST of the four rather than their sum.
-   * That is the property the comment above this block measured and it is why
-   * this is a promise rather than an await.
-   *
-   * `fetchPostReadership` never rejects: it returns the error arm of
-   * `SourceResult`, which is what the column renders as an absence with a
-   * reason. So there is no catch here, unlike the budget read.
+   * A FOURTH INDEPENDENT READ, same group. `fetchPostReadership` never rejects,
+   * it returns the error arm of `SourceResult`, so it needs no catch.
    */
   const readershipPromise = timed(timings, "ae_post_readership", () =>
     fetchPostReadership(env),
@@ -194,11 +147,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ...post,
       state,
       tags: tagsBySlug.get(post.slug) ?? [],
-      // Only a scheduled post has one, and it is a NUMBER by the time the
-      // component sees it. Rendering "in N days" from a date in the component
-      // would read the clock during render, which is the trap `statusOf`
-      // already documents: the server and the hydration would disagree for any
-      // post near a day boundary.
+      // A NUMBER by the time the component sees it. Rendering from a date would read
+      // the clock during render, and server and hydration would disagree near a day
+      // boundary.
       scheduledInDays:
         state === "scheduled" && post.publishAt ? daysUntil(post.publishAt, now) : null,
     };
@@ -218,29 +169,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const filtered = Boolean(filters.q || filters.status || filters.tag);
 
-  // Ask index drift, shown because the editor's Ask sync is allowed to fail
-  // without failing the save. This is an ADMIN page, so it may await the AI
-  // layer; no public route ever does.
-  //
-  // The status now comes from the reader the admin layout's middleware put on
-  // the context, because the Posts nav badge wants the same fact and a listing
-  // per consumer would be two. It still arrives in THIS route's loader data:
-  // the alert owns the repair, and check:admin-ui fabricates `ask` here.
+  // This is an ADMIN page, so it may await the AI layer; NO PUBLIC ROUTE EVER
+  // DOES. The status comes from the layout middleware's reader, so the nav badge and
+  // this alert read one listing.
   /*
-   * THE PRIME CANDIDATE, now a measurement instead of an argument.
-   *
-   * This is the UNCACHED Ask reader. `askDriftCount` gave the nav badge a
-   * short-TTL KV cache precisely because this call's per-call variance is 46 to
-   * 2,055ms measured, and that fix took it off the LAYOUT's path. This page
-   * still makes it, on every load, and nothing named it until now.
+   * The UNCACHED Ask reader. The nav badge has a short-TTL KV cache precisely
+   * because this call's per-call variance is wide.
    */
   const ask = await askPromise;
 
   /*
-   * A SECOND UNMARKED AWAIT, which the diagnosis did not name: this reads the
-   * ASK_BUDGET Durable Object. A DO read is a network hop and a cold object has
-   * to be woken, so it is a candidate on the same footing as the Ask reader and
-   * it had no more instrumentation than the other did.
+   * Reads the ASK_BUDGET Durable Object: a network hop, and a cold object has to
+   * be woken.
    */
   const budget = await budgetPromise;
 
@@ -256,19 +196,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** The unfiltered total, so the list can say "12 of 31" honestly. */
     total: all.length,
     /**
-     * The scheduled queue's headline number, counted over the WHOLE corpus and
-     * not the filtered view. What is scheduled is a fact about the site, and it
-     * must not disappear because the author happened to be searching.
+     * Counted over the WHOLE corpus, not the filtered view: what is scheduled is a
+     * fact about the site and must not vanish because the author was searching.
      */
     scheduledTotal: all.filter((post) => post.state === "scheduled").length,
     /**
-     * THE TAB COUNTS, off the SAME array the list is drawn from.
-     *
-     * Not a second query, which is the media library's recorded defect: its
-     * Unused chip counted with one predicate and filtered with another, so the
-     * chip and the grid disagreed. Counted over `all` rather than `posts`,
-     * because a tab's job is to say how many are behind it, and a count that
-     * shrank to the current filter would say nothing.
+     * THE TAB COUNTS, off the SAME array the list is drawn from, never a second
+     * query: a count and a list drawn from two predicates disagree.
      */
     statusCounts: {
       all: all.length,
@@ -279,12 +213,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /** Every tag in use, drafts included, for the filter's options. */
     tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
     /**
-     * Origin requests by path, or the reason there are none. Roadmap G.
-     *
-     * The WHOLE report rather than a per-row number, because the column has to
-     * tell a measured zero from an unasked question and only `complete` and the
-     * error arm carry that. Flattening it to `readership[slug] ?? 0` in the
-     * loader would throw away the distinction ruling 2 turns on.
+     * The WHOLE report rather than a per-row number: only `complete` and the error
+     * arm can tell a measured zero from an unasked question. Ruling 2.
      */
     readership,
   };
@@ -301,9 +231,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = getEnv(context);
   const intent = form.get("intent");
   /*
-   * WHO IS ASKING, read once for every branch below. The layout middleware put
-   * it here; `savePost` and `deletePost` require it rather than defaulting to
-   * the most privileged principal, so the bulk paths say it explicitly.
+   * WHO IS ASKING, read once for every branch. `savePost` and `deletePost`
+   * require it rather than defaulting to the most privileged principal.
    */
   const actor = context.get(adminActorContext);
 
@@ -326,19 +255,9 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { message: "Ask is not enabled: no AI Search binding." };
     }
     /*
-     * **THE CONFIRMATION, CHECKED HERE. Ruled 2026-08-17.**
-     *
-     * "Sync" reads as additive and is not: `pruneAskCorpus` DELETES every AI
-     * Search record whose key is not in the set this run uploaded, and the run
-     * also drops cached answers. So a sync against a partial artifact prunes
-     * the index to whatever that artifact contained, and the button sat one
-     * item below Regenerate in the same menu with nothing between a mis-click
-     * and that outcome.
-     *
-     * The count is 1 rather than the number of records at risk, for the same
-     * reason as the media rebuild: how many a prune removes is not knowable
-     * without running it, so a typed count would be invented precision. The
-     * step states the corpus size instead, which is what is actually at stake.
+     * **CHECKED HERE.** "Sync" reads as additive and is not: `pruneAskCorpus`
+     * DELETES every record this run did not upload. The typed count is 1 because how
+     * many it removes cannot be known first.
      */
     const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
 
@@ -365,31 +284,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * DUPLICATE AS TEMPLATE. Section F item 3.
+   * DUPLICATE AS TEMPLATE. Reads the committed file, gives it a free slug, and
+   * re-enters `savePost` as a NEW post: no second write path.
    *
-   * Reads the committed file, gives it a free slug, and re-enters `savePost` as
-   * a NEW post. There is no second write path and no copy of the frontmatter
-   * logic: the copy is serialized by the same `serializePost` the editor uses,
-   * so anything the editor round-trips, this round-trips.
-   *
-   * ## IT CANNOT BE A BACK DOOR TO A FIRST PUBLICATION, BY CONSTRUCTION
-   *
-   * The copy is written with `draft: true`, so `decide()` sees `wantsPublished`
-   * false and cannot classify the write as `published-first` whatever the
-   * source post's state was. That is the structural half. The stamping half is
-   * the same call: `priorRaw` is null for a new slug and the post is a draft,
-   * so `forceFirstPublished` REMOVES the key rather than carrying the original
-   * one across. Clearing it here as well is belt and braces and is written down
-   * as such, because a reader looking for the guarantee should find it in the
-   * policy module rather than in this route's good manners.
-   *
-   * ## WHAT IS COPIED, AND WHY THE TITLE IS NOT TOUCHED
-   *
-   * Everything except the publication state. Section F asks for the same body
-   * and frontmatter, and a route that also invented a title would be making an
-   * editorial decision on the author's behalf in the one place they are about
-   * to look anyway: the copy opens in the editor. The list tells the two apart
-   * by slug, which is the field that had to change.
+   * IT CANNOT BE A BACK DOOR TO A FIRST PUBLICATION: the copy is written with
+   * `draft: true`, so `decide()` cannot classify it as `published-first`, and
+   * `forceFirstPublished` removes the key rather than carrying it across.
    */
   if (intent === "duplicate") {
     const slug = String(form.get("slug") ?? "");
@@ -398,11 +298,8 @@ export async function action({ request, context }: Route.ActionArgs) {
     const fields = parsePost(file.content);
 
     /*
-     * The first candidate with no committed file wins. Probed against the
-     * repository rather than against the loader's D1 rows, because D1 is a
-     * DERIVED store (rule 18) and the file is what `savePost` will refuse on.
-     * Asking the derived copy would let a row that had drifted hand out a slug
-     * the commit then rejects.
+     * Probed against the repository, not the loader's D1 rows: D1 is a DERIVED store
+     * (rule 18) and the file is what `savePost` will refuse on.
      */
     let target: string | null = null;
     const candidates = copySlugCandidates(slug);
@@ -439,55 +336,17 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * UNPUBLISH FROM THE LIST. Section F item 4.
-   *
-   * THE SAME TRANSITION THE EDITOR'S "Revert to draft" MAKES, reached without
-   * opening the post. No new policy and no new writer: read the committed file,
-   * flip one flag, and go back through `savePost`, which is the door every
-   * other write in this repo uses.
-   *
-   * ## WHY IT IS A READ-MODIFY-WRITE AND NOT A POST TO THE EDIT ROUTE
-   *
-   * The editor's unpublish carries the whole post in its payload, because the
-   * author may have edited the body in the same breath. A list row carries a
-   * slug and nothing else, so posting that payload to the edit route would
-   * serialize a post with an empty body and destroy it. The file is the only
-   * thing that knows what the post says, so the file is what gets read.
-   *
-   * ## NO CONFIRMATION, DELIBERATELY, and the ladder is the reason
-   *
-   * Bulk delete types the count and single delete confirms, because both are
-   * recoverable only through git. This is reversible by its own inverse, in one
-   * click, and the message says how. A ladder whose every rung is the same
-   * height has no rungs, which is the argument the delete path already makes
-   * here in as many words.
-   *
-   * `expectedHeadSha` IS OMITTED, the same no-optimistic-check path the bulk
- * operations below take and for a weaker version of the same reason. The window
- * is between this read and the commit, and what it costs is one concurrent edit
- * to the body being overwritten with the copy this action read. `commitFiles`
- * re-reads head itself, so nothing is lost from another POST; only a save this
- * action never saw could be. On a single-admin site with one editor open that
- * is a window nobody has hit, and carrying a sha from a list page rendered
- * minutes ago would refuse ordinary unpublishes for a fact the list never
- * displayed. Stated rather than left for a reader to notice.
- *
- * REPUBLISH IS NOT OFFERED ON THE LIST. `first_published` is frontmatter and
-   * not a D1 column, so this loader cannot tell a never-published draft from a
-   * withdrawn one without reading every file from GitHub. A republish control
-   * that could not make that distinction would be a one-click first publication
-   * on the rows where it is wrong, which is exactly what the ceremony reserves
-   * to the editor. Republishing stays where the fact lives.
+   * UNPUBLISH FROM THE LIST. REPUBLISH IS NOT OFFERED: `first_published` is
+   * frontmatter, not a D1 column, so a control here could not tell a
+   * never-published draft from a withdrawn one.
    */
   if (intent === "unpublish") {
     const slug = String(form.get("slug") ?? "");
     const file = await readFile(env, postPath(slug));
     if (!file) return { message: `No post file exists for "${slug}".` };
     const fields = parsePost(file.content);
-    // The COMMITTED file decides, not the row the page was rendered from. A
-    // list open in another tab can be describing a post that has already been
-    // withdrawn, and writing an identical file would cost a commit that changes
-    // nothing.
+    // The COMMITTED file decides, not the row the page was rendered from: another
+    // tab can describe a post already withdrawn.
     if (fields.draft) return { message: `"${slug}" is already a draft. Nothing changed.` };
 
     try {
@@ -510,27 +369,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * BULK OPERATIONS.
-   *
-   * Each one ITERATES the existing per-post write function, serially, one
-   * commit per post. There is no bulk commit variant and no second write path:
-   * `deletePost` and `savePost` stay the only mutators, so every gate, policy
-   * and side effect that guards a single post guards each of these too.
-   *
-   * expectedHeadSha is OMITTED, which `commitFiles` documents as the
-   * no-optimistic-check path (`github.server.ts:190` treats a falsy value as
-   * "do not compare"). That is correct here rather than lax: each successful
-   * commit ADVANCES head, so one captured sha would refuse on iteration two by
-   * construction, and `commitFiles` re-reads head itself on every call
-   * (`:188`), so each iteration already builds on the current tree. Re-reading
-   * `currentHead` per iteration would add a round trip and protect against
-   * nothing a single-admin bulk action can hit.
-   *
-   * PARTIAL FAILURE IS THE DESIGN CENTRE. There is no transaction across
-   * posts, so the loop continues past a failure and reports per slug. That is
-   * safe because each post is an independent commit and `deletePost` throws
-   * before `commitFiles` when the file is missing, so a refused post leaves
-   * nothing half-written.
+   * Each ITERATES the per-post writer, one commit each, so every gate guarding one
+   * post guards all. `expectedHeadSha` is OMITTED because each commit advances
+   * head.
    */
   if (
     intent === "bulk-delete" ||
@@ -547,24 +388,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 
     if (intent === "bulk-delete") {
       /*
-       * **THE TYPED-COUNT LADDER, ENFORCED HERE AND NOT ONLY IN THE UI.**
-       *
-       * It lived entirely in `confirmDelete()`, an `onClick` handler calling
-       * `prompt()`. With scripting off the handler never ran, the button
-       * submitted, and this loop deleted every selected post with no
-       * confirmation at all. The ceremony was script-only while the destruction
-       * was not, which is exactly the defect `empty-trash` was fixed for and
-       * which survived here because that fix closed one instance and never
-       * swept for siblings.
-       *
-       * AN UNCONFIRMED DELETE IS NOT AN ERROR, IT IS THE CONFIRMATION STEP.
-       * Refusing with the slugs in hand lets the page render a real
-       * server-rendered second step, so the no-script path gets a confirmation
-       * rather than a dead end.
-       *
-       * Counted from the slugs in THIS request, never from a number the form
-       * carried, so a stale page cannot authorise a delete of a different size
-       * than the operator was shown.
+       * **THE LADDER IS ENFORCED HERE, NOT ONLY IN THE UI**: with scripting off an
+       * `onClick` ceremony never runs. An unconfirmed delete is the CONFIRMATION STEP,
+       * not an error. The count comes from the slugs in THIS request and never from a
+       * number the form carried, so a stale page cannot authorise a delete of a
+       * different size than the operator was shown.
        */
       const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
       if (!confirmationSatisfied(typed, slugs.length)) {
@@ -590,8 +418,8 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     }
 
-    // Retag ADDS or REMOVES one tag. It never replaces the set, so a post's
-    // other tags are untouched and a mistake costs one tag rather than all.
+    // Retag ADDS or REMOVES one tag, never replaces the set, so a mistake costs one
+    // tag rather than all.
     const wanted = parseTags(String(form.get("tag") ?? ""))[0];
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
@@ -605,9 +433,8 @@ export async function action({ request, context }: Route.ActionArgs) {
         }
         const fields = parsePost(file.content);
         const has = fields.tags.includes(wanted);
-        // A no-op post is SKIPPED rather than committed. Writing it anyway
-        // would cost a commit that changes nothing, and would rewrite the
-        // frontmatter of the two posts whose key order is not yet canonical.
+        // A no-op post is SKIPPED: writing it would cost a commit that changes nothing
+        // and rewrite frontmatter whose key order is not yet canonical.
         if (adding === has) {
           skipped += 1;
           continue;
@@ -649,11 +476,9 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 /**
- * The status facet, which is FIXED and therefore tabs rather than a select.
- *
- * `key` indexes the loader's counts and `value` is the URL parameter. "All" is
- * the ABSENCE of the parameter rather than a fifth value, so the unfiltered
- * list and the All tab are one URL by construction.
+ * The status facet, FIXED and therefore tabs rather than a select. "All" is the
+ * ABSENCE of the parameter, so the unfiltered list and the All tab are one URL by
+ * construction.
  */
 const STATUS_TABS = [
   { key: "all", value: "", label: "All" },
@@ -666,24 +491,21 @@ export default function AdminPosts({
   loaderData,
   actionData,
   /**
-   * The selection this page starts with. Empty in production, always: React
-   * Router passes only loaderData, actionData, params and matches, so nothing
-   * on the wire can set this.
+   * The selection this page starts with. Empty in production, always: React Router
+   * passes only loaderData, actionData, params and matches.
    *
-   * It exists for `check:admin-ui`, which renders one static pass and never
-   * dispatches an event. Without a way to declare an initial selection the bulk
-   * bar never mounts under the harness, and the three bulk intents contribute
-   * no payload at all, which is how session D shipped with that gap stated.
-   * scripts/lib/route-render.mjs spreads declared props last; the reasoning for
-   * a prop over a fabricated loaderData field is recorded there.
+   * It exists for `check:admin-ui`, which renders one static pass and dispatches no
+   * event: without it the bulk bar never mounts under the harness and the three bulk
+   * intents contribute no payload.
    */
   initialSelection = [],
 }: Route.ComponentProps & { initialSelection?: string[] }) {
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
-  /* Defaulted for the same reason `readership` is: check:admin-ui renders this
-     component against fabricated loader data, and a fixture written before this
-     field existed must render zeros rather than throw. */
+  /*
+   * Defaulted like `readership`: `check:admin-ui` renders against fabricated
+   * loader data, and a fixture written before this field existed must render zeros.
+   */
   const statusCounts = loaderData.statusCounts ?? {
     all: total,
     published: 0,
@@ -694,19 +516,9 @@ export default function AdminPosts({
   /**
    * Origin requests for one post's public route, or the reason there is none.
    *
-   * THREE OUTCOMES AND THEY ARE NOT INTERCHANGEABLE. A number, a measured zero,
-   * or an absence with a sentence. Ruling 2 of the blog roadmap: where the data
-   * source cannot answer, the number is ABSENT and the panel says why, never a
-   * zero and never a dash a reader could read as one.
-   *
-   * The measured zero is a real answer and is rendered as one: the source was
-   * live, the result was complete, and this path had no origin requests in the
-   * window. What it does NOT mean is that nobody read the post, which is what
-   * the caveat under the table is for.
-   *
-   * `readership` is defaulted because `check:admin-ui` renders this component
-   * against fabricated loader data, and a state written before this field
-   * existed must render an honest absence rather than throw.
+   * THREE OUTCOMES, NOT INTERCHANGEABLE: a number, a measured zero, or an absence
+   * with a sentence. Where the source cannot answer the number is ABSENT and the
+   * panel says why, never a zero and never a dash a reader could read as one.
    */
   const readership = loaderData.readership ?? {
     status: "error" as const,
@@ -727,23 +539,17 @@ export default function AdminPosts({
   };
 
   /*
-   * PENDING STATE, from the router. Every control on this page changes which
-   * rows come back, so unlike /admin/media there is no display-only case to
-   * exclude: any navigation here is a real fetch and all of them get the mark.
-   * One attribute the stylesheet dims plus `aria-busy`. No spinner, no timer.
+   * PENDING STATE. Every control here changes which rows come back, so every
+   * navigation gets the mark: one dimmed attribute plus `aria-busy`. No spinner.
    */
   const navigation = useNavigation();
   const pending = navigation.state === "loading" && navigation.location != null;
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
 
   /*
-   * Selection lives in the client, which the admin plane is allowed (hard rule
-   * 9 exempts it, and /login with it). The public plane's law is untouched.
-   *
-   * Keyed by slug rather than by row index so a re-render, a sort or a filter
-   * change cannot silently re-point a selection at a different post. The
-   * selection is deliberately NOT persisted across a filter change either: the
-   * bulk bar can only ever act on what the author can currently see.
+   * Selection lives in the client, which hard rule 9 exempts for the admin plane.
+   * Keyed by slug, not row index, so a re-render or filter change cannot re-point it
+   * at a different post.
    */
   const [selected, setSelected] = useState<string[]>(initialSelection);
   const visible = posts.map((post) => post.slug);
@@ -756,11 +562,8 @@ export default function AdminPosts({
     );
 
   /**
-   * WHERE CANCEL GOES, and it carries the filter the operator was looking at.
-   *
-   * The confirmation used to send Cancel to a bare `/admin/posts`, which
-   * silently dropped a status or tag filter the reader had set: they backed out
-   * of one delete and lost the view they were working in.
+   * Cancel carries the filter the operator was looking at: a bare `/admin/posts`
+   * drops it and loses the view they were working in.
    */
   const cancelParams = new URLSearchParams();
   if (filters.q) cancelParams.set("q", filters.q);
@@ -770,11 +573,8 @@ export default function AdminPosts({
   const cancelHref = cancelQuery ? `/admin/posts?${cancelQuery}` : "/admin/posts";
 
   /**
-   * Whether the client is running, for the two controls that must differ.
-   *
-   * Initialised false so the hydration render matches the server's. The bulk
-   * bar's count is meaningless without script (nothing updates it) and the
-   * server is the only thing that knows how many slugs a submission carried.
+   * Initialised false so the hydration render matches the server's. The bulk bar's
+   * count is meaningless without script.
    */
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -791,13 +591,9 @@ export default function AdminPosts({
       <div className="admin-page-head">
         <h1>Posts</h1>
         {/*
-          THE ONE STATUS SENTENCE, and it AGREES WITH THE NOTICE below it.
-
-          Ruling 54 makes that a rule because the two drifted: the panel's
-          description read "Every post, drafts included" while a drift alert
-          under it said search was answering from stale text. The description
-          was about the page; this is about the site right now.
-        */}
+         * THE ONE STATUS SENTENCE, and it AGREES WITH THE NOTICE below it: that is
+         * about the page, this is about the site right now.
+         */}
         <p className="admin-page-status">
           {`${statusCounts.all} post${statusCounts.all === 1 ? "" : "s"}, ` +
             `${statusCounts.published} published and ${statusCounts.draft} draft(s).` +
@@ -806,11 +602,10 @@ export default function AdminPosts({
               : " Search is up to date with all of them.")}
         </p>
       </div>
-      {/* New post is the only thing in this row that CREATES. The other three
-          intents repair, so they sit behind the overflow on the far side
-          rather than beside the primary action wearing the same weight. Every
-          one of them submits the identical form it did before: same method,
-          same intent value, same action. */}
+      {/*
+       * New post is the only thing here that CREATES; the other three repair, so they
+       * sit behind the overflow rather than wearing the primary action's weight.
+       */}
       <div className="posts-toolbar">
         <Link to="/admin/posts/new" className="btn">
           New post
@@ -830,10 +625,11 @@ export default function AdminPosts({
               </span>
             </button>
           </Form>
-          {/* Kept here as well as in the drift alert. The alert owns the repair
-              when there is something to repair, but it does not render when the
-              index is clean, and an intent that exists only while it is needed
-              cannot be run pre-emptively. */}
+          {/*
+           * Kept here as well as in the drift alert: the alert does not render when the
+           * index is clean, and an intent that exists only while needed cannot be run
+           * pre-emptively.
+           */}
           <Form method="post">
             <button
               type="submit"
@@ -864,33 +660,14 @@ export default function AdminPosts({
       </div>
 
       {/*
-        SEARCH AND FILTER, as a GET form.
-
-        A GET form is the whole design: the filter state lives in the URL, so it
-        survives a reload, is linkable, is what the back button restores, and
-        works with scripting off with no enhancement at all. That is also why
-        this is a plain <form> rather than react-router's <Form>: the browser's
-        own submission already produces exactly the navigation wanted.
-
-        It is a NEW SUBMISSION on this page and therefore a real change to
-        check:admin-ui's fixture. Regenerated deliberately, with the before and
-        after triples reported, per the queue's standing rule.
-      */}
+       * A GET form: the filter state lives in the URL, so it survives a reload, is
+       * linkable, is what the back button restores, and works with scripting off.
+       */}
       {/*
-        ONE FILTER ROW: the search box on the left, then the status tabs.
-
-        THE STATUS SELECT BECAME TABS because status is a FIXED vocabulary of
-        four, and a select hides three of them behind a click while a tab row
-        shows all four and how many are behind each. Tag stays a select: its
-        vocabulary is whatever the corpus happens to contain, so it is not a
-        fixed facet and a tab per tag would grow without limit.
-
-        NO "Filter" BUTTON. The text input submits on Enter, the tabs are links,
-        and the tag select carries the visually hidden submit below, which is
-        what keeps the tag facet usable with scripting off: a select cannot
-        submit its own form without either a button or script, and dropping the
-        button entirely would have taken the tag filter with it.
-      */}
+       * TABS because status is a FIXED vocabulary of four; tag stays a select, its
+       * vocabulary being whatever the corpus holds. The hidden submit keeps the tag
+       * facet usable with scripting off.
+       */}
       <Form method="get" action="/admin/posts" className="posts-filters" role="search">
         <label className="sr-only" htmlFor="posts-q">
           Search titles and slugs
@@ -904,9 +681,10 @@ export default function AdminPosts({
           className="posts-filter-input"
         />
 
-        {/* Links, so the filtered view is a URL: it survives a reload, it is
-            linkable, the back button restores it, and it needs no script.
-            `aria-current` is what announces which one is on. */}
+        {/*
+         * Links, so the filtered view is a URL that survives a reload and needs no
+         * script. `aria-current` announces which one is on.
+         */}
         <nav className="posts-tabs" aria-label="Filter by status">
           {STATUS_TABS.map((tab) => {
             const on = filters.status === tab.value;
@@ -923,10 +701,10 @@ export default function AdminPosts({
                 className="posts-tab"
               >
                 {tab.label}
-                {/* A count of ZERO renders. "Scheduled 0" is a real answer to
-                    the question the tab poses; hiding it would make an empty
-                    facet look like a missing one. Announced as words, because
-                    a bare numeral beside a label reads as a position. */}
+                {/*
+                 * A count of ZERO renders: hiding it would make an empty facet look like a
+                 * missing one. Announced as words, because a bare numeral reads as a position.
+                 */}
                 <span className="posts-tab-count" aria-hidden="true">
                   {statusCounts[tab.key]}
                 </span>
@@ -1013,23 +791,13 @@ export default function AdminPosts({
       ) : null}
 
       {/*
-        THE SERVER-RENDERED CONFIRMATION STEP.
-
-        Reached when the action refused an unconfirmed bulk delete, which is the
-        no-script path: the handler that would have prompted never ran, so the
-        request arrived with an empty confirmation and nothing was deleted. This
-        is the second step, and it exists so the refusal is a confirmation
-        rather than a dead end.
-
-        It re-carries each slug as a hidden field, so the selection survives a
-        round trip it never made as URL state, and it is an ordinary form: no
-        script participates at any point.
-      */}
+       * THE SERVER-RENDERED CONFIRMATION STEP, which is the no-script path. It
+       * re-carries each slug as a hidden field, and no script participates at any point.
+       */}
       {/*
-        THE SYNC-ASK CONFIRMATION. Same shape as the bulk-delete step below: the
-        action refuses an unconfirmed run and returns what is at stake, and this
-        renders it as an ordinary form so the no-script path reaches it too.
-      */}
+       * THE SYNC-ASK CONFIRMATION, same shape: the action refuses an unconfirmed run
+       * and returns what is at stake, so the no-script path reaches it too.
+       */}
       {actionData?.confirmSyncAsk !== undefined ? (
         <ConfirmDialog
           title="Rebuild the search answer index?"
@@ -1065,9 +833,10 @@ export default function AdminPosts({
           confirmLabel="Delete permanently"
           cancelHref={cancelHref}
         >
-          {/* THE INTENT IS A FIELD, not the submitter's value. The button is
-              disabled until the count matches, and a disabled submitter sends
-              neither its name nor its value. */}
+          {/*
+           * THE INTENT IS A FIELD, not the submitter's value: a disabled submitter sends
+           * neither its name nor its value.
+           */}
           <input type="hidden" name="intent" value="bulk-delete" />
           {actionData.confirmDelete.slugs.map((slug) => (
             <input key={slug} type="hidden" name="slug" value={slug} />
@@ -1075,22 +844,15 @@ export default function AdminPosts({
         </ConfirmDialog>
       ) : null}
 
-      {/* Ask index drift. Surfaced here because a save is allowed to succeed
-          when the Ask sync behind it fails, and the save then redirects, so
-          there is nowhere else a failure could be reported. Nothing renders
-          when the index is clean; the count still reaches the meta line under
-          the table, where it is reference rather than a demand. */}
+      {/*
+       * Surfaced here because a save may succeed when the Ask sync behind it fails and
+       * then redirects, so there is nowhere else to report it.
+       */}
       {askDrifted && ask ? (
         /*
-          A STANDING CONDITION, so a named region and never a live one. It is
-          rendered into the first byte of HTML on every visit; announcing it as
-          news each time would interrupt a reader who came to do something else,
-          and it is not news, it is a state the site is in.
-
-          The words say what it means for a READER of the site rather than what
-          it means for the index: ruling 54 keeps "Ask index" and "corpus" off
-          the operator's page.
-        */
+         * A STANDING CONDITION, so a named region and never a live one: announcing it as
+         * news on every visit would interrupt a reader who came to do something else.
+         */
         <section className="admin-notice" data-tone="warning" aria-labelledby="ask-drift">
           <svg
             width="18"
@@ -1124,11 +886,10 @@ export default function AdminPosts({
       ) : null}
 
       {posts.length === 0 ? (
-        /* Two different nothings, and they must not read the same. An empty
-           corpus is a state of the site; an empty RESULT is a state of the
-           question just asked, so it repeats the question and offers the way
-           back out. Reporting "no posts yet" to someone who mistyped a slug
-           would be the system lying about itself. */
+        /*
+         * Two different nothings, and they must not read the same. An empty corpus is a
+         * state of the site; an empty RESULT is a state of the question just asked.
+         */
         filtered ? (
           <div className="posts-empty">
             <p>
@@ -1144,36 +905,21 @@ export default function AdminPosts({
         )
       ) : (
         <div className="posts-card">
-          {/* One Form around the bar AND the table, so the checkboxes are its
-              own controls. Nesting a form inside another is invalid, which is
-              why this sits here rather than wrapping the toolbar above. */}
+          {/*
+           * One Form around the bar AND the table, so the checkboxes are its own controls:
+           * a form cannot nest inside another.
+           */}
           <Form method="post">
             {/*
-              ALWAYS IN THE DOCUMENT, revealed by CSS. Ruling 54, and it closes
-              a measured defect rather than a preference.
-
-              It used to render only when `chosen.length > 0`, which is CLIENT
-              state. With scripting off `onChange` never runs, `chosen` stays
-              empty, and the bar never rendered at all: measured 2026-09-09 on
-              the server render, `posts-bulk` absent, `bulk-delete` absent. So a
-              scriptless operator could tick every checkbox and had no control
-              to act on them, and the server-rendered confirmation step behind
-              that control was unreachable from this page.
-
-              `:has(.posts-check input:checked)` in admin-posts.css reveals it
-              instead, which is the browser answering a question about its own
-              checkboxes with no script involved. The row still submits `slug`
-              per ticked box exactly as before.
-            */}
+             * ALWAYS IN THE DOCUMENT, revealed by CSS: on CLIENT state a scriptless operator
+             * could tick every box with no control to act on. `:has()` asks the browser about
+             * its own checkboxes.
+             */}
               <div className="posts-bulk" role="group" aria-label="Actions for the selected posts">
                 {/*
-                  THE COUNT IS SCRIPT-ONLY, and says so by not appearing.
-                  Nothing updates it without script, and a bar reading
-                  "0 selected" above two ticked boxes is worse than a bar that
-                  does not claim a number. The heading names the group either
-                  way; the server counts the slugs the submission actually
-                  carried, and the confirmation states that count.
-                */}
+                 * THE COUNT IS SCRIPT-ONLY and says so by not appearing: a bar reading
+                 * "0 selected" above two ticked boxes is worse than one claiming no number.
+                 */}
                 <p className="posts-bulk-count" aria-live="polite">
                   {hydrated ? `${chosen.length} selected` : "With the selected posts"}
                 </p>
@@ -1213,38 +959,17 @@ export default function AdminPosts({
               </div>
 
             {/*
-              THE SCROLLPORT, and the table scrolls inside it so the DOCUMENT
-              does not. Measured on the deployed build once the topbar stopped
-              being the widest thing on the page: this table's own min-content
-              is 582px, the same number the topbar had, so for as long as both
-              were 582 the table was invisible behind the bar. Two independent
-              defects wearing one number.
-
-              `tabindex` and the region role are what make a scrollable box
-              usable rather than merely contained: without them a keyboard
-              reader can see the clipped columns and has no way to reach them.
-              The label names what scrolls, because "region" alone announces
-              nothing.
-            */}
+             * `tabindex` and the region role are what make a scrollable box usable rather
+             * than merely contained: without them a keyboard reader sees the clipped columns
+             * and cannot reach them.
+             */}
             <div className="posts-table-scroll" tabIndex={0} role="region" aria-label="Posts table">
             <table className="posts-table" data-pending={pending || undefined} aria-busy={pending || undefined}>
               {/*
-                THE CAVEAT, and it is `CACHE_SENTENCE` itself rather than a
-                second telling of it. `app/lib/admin/origin-requests.mjs` owns
-                that sentence and records the probe that produced it; a
-                paraphrase here would be a second copy of a measured claim,
-                free to drift from the measurement. Rule 17.
-
-                IN THE CAPTION, matching the origin-requests panel, and for the
-                same reason its own gate records: a caption is the element whose
-                job is to say what a number is and is not, so it is the one
-                place allowed to name the thing the column is being contrasted
-                against. Every label surface stays plain.
-
-                ONE STRING, not interpolated children, because React SSR splices
-                comment nodes between adjacent text nodes and anything reading
-                the markup back would have to strip them first.
-              */}
+               * `CACHE_SENTENCE` itself, not a paraphrase: that would be a second copy of a
+               * measured claim. Rule 17. ONE STRING, because React SSR splices comment nodes
+               * between adjacent text.
+               */}
               <thead>
                 <tr>
                   <th scope="col" className="posts-check">
@@ -1266,16 +991,9 @@ export default function AdminPosts({
                   <th scope="col" className="posts-title-cell">Title</th>
                   <th scope="col">Published</th>
                   {/*
-                    THE LABEL IS "Reads counted", and it is where two rulings meet.
-
-                    Ruling 54 takes "origin requests" off the operator's page. The
-                    copy law gated in check-admin-ui.mjs forbids "views", "visits",
-                    "visitors" and "traffic" here, because a cached read never
-                    reaches the Worker and any of those words would overstate
-                    readership by whatever the edge served. The participle is what
-                    satisfies both: plain words that CLAIM only what was counted.
-                    What is not counted is the disclosure under the table.
-                  */}
+                   * THE LABEL IS "Reads counted". check-admin-ui.mjs forbids "views", "visits",
+                   * "visitors" and "traffic" here: a cached read never reaches the Worker.
+                   */}
                   <th scope="col" className="posts-readership">Reads counted</th>
                   <th scope="col" className="posts-row-actions">Actions</th>
                 </tr>
@@ -1300,30 +1018,17 @@ export default function AdminPosts({
                       <Link to={`/admin/posts/${post.slug}/edit`} className="posts-title">
                         {post.title}
                       </Link>
-                      {/* Rule 1: the state is a WORD first. Colour separates the
-                          three at a glance and border-style separates them again,
-                          so the pill still says three different things once
-                          forced-colors has taken the fill and the tint away.
-
-                          ON the title row since ruling 54, rather than in a
-                          column of its own. The reader scans titles; the state
-                          they want is the state of the title they just found,
-                          and a column two cells away makes them track back. */}
+                      {/*
+                       * The state is a WORD first. Colour and border-style separate the three again,
+                       * so the pill still says three things once forced-colors takes the fill away.
+                       */}
                       <span className="status-pill" data-state={post.state}>
                         {post.state}
                       </span>
                       {/*
-                        THE HERO, MARKED. The public index promotes one featured
-                        post above the others and this list could not say which,
-                        so the only way to find it was to read the markdown.
-
-                        A WORD, for the same reason the status pill is a word:
-                        rule 1, and a mark carried only by colour or an icon says
-                        nothing under forced-colors and nothing to a screen
-                        reader. It sits beside the state rather than in it,
-                        because it is orthogonal: a featured post can be draft,
-                        scheduled or published.
-                      */}
+                       * THE HERO, MARKED WITH A WORD: a mark carried only by colour or an icon says
+                       * nothing under forced-colors and nothing to a screen reader.
+                       */}
                       {post.featured ? <span className="posts-featured">Featured</span> : null}
                     </span>
                     <span className="posts-slug">/{post.slug}</span>
@@ -1332,10 +1037,10 @@ export default function AdminPosts({
                     {post.publishAt
                       ? new Date(post.publishAt).toISOString().slice(0, 10)
                       : "not set"}
-                    {/* The queue, per post: a scheduled row says WHEN in
-                        readable terms as well as in ISO. The number arrived
-                        from the loader already computed, so nothing here reads
-                        the clock. */}
+                    {/*
+                     * The number arrived from the loader already computed, so nothing here reads the
+                     * clock.
+                     */}
                     {post.scheduledInDays !== null ? (
                       <span className="posts-date-relative">
                         in {post.scheduledInDays} day{post.scheduledInDays === 1 ? "" : "s"}
@@ -1343,10 +1048,9 @@ export default function AdminPosts({
                     ) : null}
                   </td>
                   {/*
-                    ORIGIN REQUESTS for this post's public route. Roadmap G.
-                    A number, a measured zero, or an absence carrying its own
-                    sentence: never a bare dash, which reads as zero.
-                  */}
+                   * A number, a measured zero, or an absence carrying its own sentence: never a
+                   * bare dash, which reads as zero.
+                   */}
                   <td className="posts-readership">
                     {(() => {
                       const value = readershipFor(post.slug);
@@ -1355,26 +1059,17 @@ export default function AdminPosts({
                           {value.count.toLocaleString()}
                         </span>
                       ) : (
-                        // The reason is the content, not a tooltip: a title
-                        // attribute is invisible to touch and to a screen
-                        // reader that does not announce it, and this sentence
-                        // is the whole point of the cell.
+                        // The reason is the content, not a tooltip: a `title` is invisible to touch and
+                        // to a screen reader that does not announce it.
                         <span className="posts-readership-absent">{value.absent}</span>
                       );
                     })()}
                   </td>
                   <td className="posts-row-actions">
                     {/*
-                      ONE MENU PER ROW. It used to be up to four loose buttons
-                      per row, which across fifteen rows is fifty-odd controls
-                      competing with the fifteen names the reader came to find.
-
-                      Every item still submits exactly what it submitted before:
-                      same method, same intent value, same form. The buttons are
-                      associated by the `form` ATTRIBUTE because this cell sits
-                      inside the bulk selection form and forms cannot nest; the
-                      row forms themselves sit below the table.
-                    */}
+                     * Associated by the `form` ATTRIBUTE because this cell sits inside the bulk
+                     * selection form and forms cannot nest; the row forms sit below the table.
+                     */}
                     <RowMenu label={`Actions for ${post.title}`}>
                       <Link
                         to={`/admin/posts/${post.slug}/edit`}
@@ -1396,12 +1091,10 @@ export default function AdminPosts({
                         </a>
                       ) : null}
                       {/*
-                        UNPUBLISH, on the rows where it is a real transition. A
-                        draft has nothing to withdraw, and a never-published
-                        draft must not be offered anything that changes public
-                        state from here: first publication has a ceremony and it
-                        lives in the editor.
-                      */}
+                       * Only where it is a real transition: a never-published draft must not be
+                       * offered anything that changes public state here. First publication lives in the
+                       * editor.
+                       */}
                       {post.state === "published" || post.state === "scheduled" ? (
                         <button
                           type="submit"
@@ -1436,29 +1129,10 @@ export default function AdminPosts({
           </Form>
 
           {/*
-            THE ROW-ACTION FORMS, one pair per post, OUTSIDE the bulk form.
-
-            They cannot live in the cells that hold their buttons: those cells
-            are inside the selection form, a form cannot nest inside another,
-            and a browser drops the inner one. Same resolution the editor's
-            delete button already uses, by the `form` attribute.
-
-            ## WHY THE SLUG IS A HIDDEN FIELD AND NOT THE BUTTON'S VALUE
-
-            One shared form per intent with `name="slug"` on each button would
-            be two forms in total instead of two per row, and it would put the
-            slug in the SUBMITTER. `check:admin-ui` reads a submitter's name and
-            value as the intent, so the page's submission tuple set would then
-            grow by one entry per post and the fixture would be describing the
-            corpus rather than the request surface. The gate's media pages
-            already record that trap in as many words. With the slug as a field,
-            every row contributes the identical tuple and the distinct set stays
-            one wide however many posts exist.
-
-            No confirmation on either: duplicate creates a draft and changes
-            nothing public, and unpublish is reversible by its own inverse. The
-            typed-count ladder is reserved for what only git can undo.
-          */}
+           * OUTSIDE the bulk form: forms cannot nest. THE SLUG IS A FIELD, not the
+           * button's value: `check:admin-ui` reads a submitter as the intent, so the tuple
+           * set would grow per post.
+           */}
           {posts.map((post) => (
             <Form
               key={`duplicate-${post.slug}`}
@@ -1483,12 +1157,9 @@ export default function AdminPosts({
             ))}
 
           {/*
-            THE CAVEAT, AS A DISCLOSURE. It was the table's `<caption>`, which a
-            screen reader announces before every row and which spent five
-            sentences at the top of the page explaining a column. The closed
-            summary is enough to act on; the body is for whoever wants to know
-            why the number is what it is.
-          */}
+           * A DISCLOSURE rather than a `<caption>`, which a screen reader announces before
+           * every row.
+           */}
           <details className="posts-explain">
             <summary>What the read count includes, and what it misses</summary>
             <p>

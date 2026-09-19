@@ -32,11 +32,9 @@ import "~/styles/search-facets.css";
 const PAGE_SIZE = 10;
 
 /**
- * Reads the query parameters this route understands.
- *
  * `type`, `tag` and `year` are separate parameters as well as query operators,
- * so a facet chip can be an ordinary link rather than a second filter language
- * that only the form knows how to speak. Both feed the same parse.
+ * so a facet chip can be an ordinary link rather than a second filter language only
+ * the form knows how to speak.
  */
 function readParams(url: URL) {
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
@@ -50,16 +48,12 @@ function readParams(url: URL) {
 }
 
 /**
- * JSON negotiation runs as middleware, not in the loader.
- *
  * A document route's loader cannot return a raw Response: React Router hands it
- * to the component as `loaderData` and the first property read 500s. Measured
- * on this repo 2026-07-28. Middleware is the layer allowed to short-circuit,
- * which is the same mechanism `/blog/:slug` uses for its markdown twin and the
- * same one the /admin gate uses.
+ * to the component as `loaderData` and the first property read 500s. Middleware is
+ * the layer allowed to short-circuit.
  *
- * The JSON representation is the SAME query against the SAME index. It is an
- * agent affordance, not a second search, and it is documented in llms.txt.
+ * The JSON representation is the SAME query against the SAME index. It is an agent
+ * affordance, not a second search.
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
@@ -83,10 +77,9 @@ export const middleware: Route.MiddlewareFunction[] = [
           total: result.total,
           page: result.page,
           pageSize: result.pageSize,
-          // Whether Ask exists, as a fact about this deployment. The palette
-          // reads it off the response it already makes, so the Ask affordance
-          // costs no extra request and vanishes with the binding rather than
-          // needing a second switch to turn off.
+          // The palette reads it off the response it already makes, so the Ask affordance
+          // costs no extra request and vanishes with the binding rather than needing a second
+          // switch.
           askAvailable: askAvailable(getEnv(context)),
           truncated: result.truncated,
           tookMs: result.tookMs,
@@ -109,30 +102,19 @@ export const middleware: Route.MiddlewareFunction[] = [
       {
         headers: {
           "content-type": "application/json; charset=utf-8",
-          // NEVER STORED, and this is not a performance oversight. Do not
-          // "optimise" this back to SHARED_CACHE_CONTROL.
+          // NEVER STORED, and this is not a performance oversight. Do not "optimise" this
+          // back to a shared cache-control.
           //
-          // `/search` sets `Vary: Accept, Cookie`. Measured 2026-08-05 with a
-          // paired control on fresh URLs: with only the HTML representation in
-          // play, a cookie-bearing request correctly BYPASSes and is downgraded
-          // to `private, no-store` by `workers/app.ts`. After ONE request for
-          // this JSON representation, that same request gets a `HIT` and
-          // `public` instead, because the edge answers from the stored
-          // cookieless variant and the Worker never runs. A reader with
-          // `theme=dark` then receives the light document. `Accept` separates
-          // storage correctly; the `Cookie` dimension is what collapses once a
-          // second variant exists under the key.
+          // `/search` varies on Accept and Cookie. With only the HTML representation in
+          // play, a cookie-bearing request correctly bypasses and is downgraded. After ONE
+          // request for this JSON representation, that same request gets a HIT and `public`
+          // instead, because the edge answers from the stored cookieless variant and the
+          // Worker never runs: a reader with `theme=dark` then receives the light document.
+          // Accept separates storage correctly; the Cookie dimension is what collapses once
+          // a second variant exists under the key.
           //
-          // A response that is never stored cannot become that second variant.
-          // The fix belongs here rather than on the HTML side, which is
-          // measured correct while it is the only representation.
-          //
-          // The trigger is advertised: llms.txt tells agents this exact URL
-          // returns JSON for `Accept: application/json`.
-          //
-          // Documented repair is a Cache Rule with `bypass` on `Cookie`, which
-          // needs a proxied zone, so it is a DNS-cutover item. Citations in
-          // `media.$.ts`.
+          // A response that is never stored cannot become that second variant. The trigger
+          // is advertised, because llms.txt tells agents this URL returns JSON.
           "cache-control": NO_STORE_CACHE_CONTROL,
           // Still true and still correct to advertise: the body genuinely
           // depends on Accept. Inert on a response that is never stored.
@@ -150,26 +132,23 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const result = await search(env, { ...params, pageSize: PAGE_SIZE });
 
-  // Only ask for suggestions when there is a query that found nothing. A blank
-  // /search is a search box, not a failure, and does not need consoling. A
-  // filter that matched nothing (tag:typo) is a failure and does.
+  // Only when there is a query that found nothing. A blank `/search` is a search
+  // box, not a failure, and does not need consoling; a filter that matched nothing
+  // is a failure and does.
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
 
-  // A boolean, computed from the binding's presence. NOT an AI call: the loader
-  // that renders classic results must never wait on the AI layer, so all the
-  // server does here is say whether the affordance exists.
+  // A boolean computed from the binding's presence. NOT an AI call: the loader that
+  // renders classic results must never wait on the AI layer, so all the server does
+  // here is say whether the affordance exists.
   return { params, result, suggestions, askAvailable: askAvailable(env) };
 }
 
 export function headers() {
   return new Headers({
-    // Publicly cacheable for EVERY reader since 2026-09-05: the theme is a
-    // dimension of the cache key rather than a Vary. `Accept` STAYS, because
-    // this URL really does serve a JSON representation as well as HTML and a
-    // cache that ignored that would hand one to the other.
-    //
-    // Tagged `posts`: the results are the corpus, so a publish must move them.
+    // The theme is a dimension of the cache key rather than a Vary. `Accept` STAYS,
+    // because this URL really does serve a JSON representation and a cache that ignored
+    // that would hand one to the other. Tagged `posts`: the results are the corpus.
     "Cache-Control": SHARED_CACHE_CONTROL,
     "Cache-Tag": cacheTags(),
     Vary: HTML_VARY_ACCEPT,
@@ -177,22 +156,13 @@ export function headers() {
 }
 
 /**
- * ## THE SHARED BUILDER, AND A CANONICAL THAT DROPS THE QUERY
+ * THE CANONICAL IS `/search`, WITHOUT THE QUERY, DELIBERATELY. Every distinct
+ * `?q=` is a distinct URL for what is one page of the site, and there are
+ * unboundedly many. Pointing all of them at the bare path says "this is the search
+ * page" rather than minting a canonical per query.
  *
- * This page was the last one writing its own social tags by hand, which is the
- * shape `pageMeta` exists to end: it had a title and a description and no
- * canonical, no `og:*` and no card, so a shared search link rendered as a bare
- * URL. It takes the builder now like every other page.
- *
- * **THE CANONICAL IS `/search`, WITHOUT THE QUERY, DELIBERATELY.** Every
- * distinct `?q=` is a distinct URL for what is one page of the site, and there
- * are unboundedly many of them. Pointing all of them at the bare path says
- * "this is the search page" rather than minting a canonical per query. The
- * `noindex` below already keeps results out of an index; the canonical is what
- * a crawler that ignores it, or a social card, or a link shortener, reads.
- *
- * `noindex, follow` survives the merge and is still the ruling: results pages
- * are not content, and the links out of them are worth following.
+ * `noindex, follow` is still the ruling: results pages are not content, and the
+ * links out of them are worth following.
  */
 export function meta({ loaderData }: Route.MetaArgs) {
   const q = loaderData?.params.q;
@@ -237,18 +207,13 @@ function pageHref(params: ReturnType<typeof readParams>, page: number) {
 }
 
 /**
- * Keyed by the UNION, not by `string`, and there is deliberately no fallback.
+ * Keyed by the UNION, not by `string`, and there is deliberately no fallback: the
+ * `Record<string, string>` shape is what shipped the colophon defect, where a new
+ * enum member typechecked clean and rendered the raw value to readers.
+ * Hard rule 13.
  *
- * This was `Record<string, string>` with `?? reason` at the call site, which is
- * byte-for-byte the shape that shipped the colophon defect: a fifth
- * `MatchReason` would typecheck clean and render the raw enum to readers, and
- * every surface would agree because every surface read the same wrong value.
- * Hard rule 13, and it was the last live instance of that class.
- *
- * Typed this way, adding a reason to `MatchReason` without adding a label here
- * is a TYPECHECK failure at the point of the omission. That is strictly better
- * than a lint or a gate: it cannot be skipped, it names the missing key, and it
- * fails before anything is built.
+ * Adding a reason without a label here is a TYPECHECK failure at the point of the
+ * omission, which cannot be skipped and fails before anything is built.
  */
 const WHY_LABEL: Record<MatchReason, string> = {
   title: "title",
@@ -311,9 +276,9 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
   const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
-  // `isEmpty` means no matchable TEXT, which is not the same as no request. A
-  // bare year or a tag chip clicked from an empty box is a real query answered
-  // by the browse path, and it still has a count and a result list to render.
+  // `isEmpty` means no matchable TEXT, which is not the same as no request: a bare
+  // year or a tag chip clicked from an empty box is a real query answered by the
+  // browse path.
   const hasQuery = !result.parsed.isEmpty || hasFilters(result.parsed);
 
   return (
@@ -395,31 +360,17 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </ul>
         ) : null}
 
-        {/* Ask mode, search Layer 2.
-            Rendered ABOVE the results and after them in source order is not the
-            question: what matters is that the results below were produced by
-            the loader and are already on screen. This is an empty container and
-            a script tag. With scripting off it stays empty and the page is
-            byte-identical to the pre-Layer-2 page apart from these two inert
-            elements. With the binding absent it is not rendered at all. */}
         {/*
-            ASK NEEDS A QUESTION, NOT A FILTER.
-
-            The condition was `hasQuery`, which is
-            `!parsed.isEmpty || hasFilters(parsed)`. So `/search?year=2026` with
-            no `q` mounted the Ask affordance and handed it `params.q ?? ""`, an
-            EMPTY STRING. The button appeared, a reader clicked it, and it
-            returned immediately because there was no question to answer. That is
-            a control that looks live and does nothing.
-
-            Filters narrow a list; Ask answers a sentence. A year is not a
-            sentence, and there is nothing sensible for it to generate. So the
-            affordance is gone on filter-only queries rather than being made to
-            fail more gracefully: the honest fix for a control with nothing to do
-            is not to offer it.
-
-            The trimmed check also covers `?q=` and `?q=%20`, which reached the
-            same empty string by a different route. */}
+         * An empty container and a script tag. With scripting off it stays empty and the
+         * page is byte-identical to the pre-Ask page apart from these two inert elements.
+         * With the binding absent it is not rendered at all.
+         */}
+        {/*
+         * ASK NEEDS A QUESTION, NOT A FILTER. On a filter-only query the affordance was
+         * handed an empty string, so the button appeared and returned immediately: a
+         * control that looks live and does nothing. The honest fix for a control with
+         * nothing to do is not to offer it.
+         */}
         {askAvailable && (params.q ?? "").trim().length > 0 ? (
           <AskMount question={params.q ?? ""} />
         ) : null}
@@ -432,9 +383,11 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               ))}
             </ol>
 
-            {/* Facets are links, never click handlers, and their counts come
-                from the same query that produced the list, so a chip only ever
-                promises results a click would actually return. */}
+            {/*
+             * Facets are links, never click handlers, and their counts come from the same
+             * query that produced the list, so a chip only ever promises results a click would
+             * actually return.
+             */}
             <aside className="search-facets" aria-label="Filter results">
               {facets.types.length > 1 ? (
                 <section>

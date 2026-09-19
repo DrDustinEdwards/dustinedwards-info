@@ -9,36 +9,15 @@ import {
 /**
  * The frontmatter keys the editor carried and never offered.
  *
- * `featured`, `series`/`part`, `further_reading`, `og_title` and
- * `og_description` are all real schema keys that reach D1 and the public page.
- * Until 2026-09-03 the editor relayed them through hidden inputs so that saving
- * did not DELETE them (finding B004) while giving the author no way to set one:
- * the only routes to a series or a featured flag were hand-editing the markdown
- * or the operator API.
+ * WHY THIS IS NOT IN THE SETTINGS DRAWER: the drawer is a `<dialog>` opened with
+ * `showModal()`, so its fields can only be EDITED by someone whose browser ran the
+ * script that opens it. A control inside a modal nobody can open is a control that
+ * does not exist on that path, and the brief is that these work with scripting off.
  *
- * ## WHY THIS IS NOT IN THE SETTINGS DRAWER
- *
- * The drawer is a real `<dialog>` opened with `showModal()`. Its fields are
- * submitted whether or not it was ever opened, because they carry `form=`, but
- * they can only be EDITED by someone whose browser ran the script that opens
- * it. That is a fine home for a control the author can also live without.
- *
- * It is not a home for these, because the brief for this work is that they work
- * with scripting off, and the further-reading picker in particular is specified
- * as a server-rendered checkbox list. A control inside a modal nobody can open
- * is a control that does not exist on that path. So this section lives in the
- * editing form itself, disclosed by `<details>`, which is the same element the
- * overflow menu uses and for the same recorded reason: it opens without script.
- *
- * ## THE RULE EVERY CONTROL HERE OBEYS
- *
- * **An absent field never means cleared.** A text input always submits, even
- * empty, so `series`, `part`, `ogTitle` and `ogDescription` are safe as
- * ordinary inputs and their payload is unchanged. The two that are not safe are
- * handled explicitly and each carries its argument at the point of use:
- * `featured` pairs a hidden "false" with the checkbox, and further reading
- * carries a marker plus the untouched stored JSON. Neither adds a way for a
- * missing field to read as an author's decision.
+ * THE RULE EVERY CONTROL HERE OBEYS: an absent field never means cleared. A text
+ * input always submits, even empty; the two that are not safe are handled
+ * explicitly, and neither adds a way for a missing field to read as an author's
+ * decision.
  */
 export function PostMetadata({
   formId,
@@ -74,28 +53,20 @@ export function PostMetadata({
   );
 
   /*
-   * PUBLISHED ONLY, and not the post being edited.
-   *
-   * `linkTargets` deliberately carries every post with its state, because the
-   * Cmd+K palette wants to link forward to a scheduled part and marks it. This
-   * picker is a different question: further reading is rendered to the public,
-   * so offering a draft would be offering a link that 404s for every reader.
-   * The palette's own comment argues for the wider list; the narrowing is here
-   * rather than there so both stay right.
-   *
-   * A post citing itself is filtered for the same reason a self-link is not
-   * further reading. Nothing enforces it downstream, so it is enforced by not
-   * being offered.
+   * PUBLISHED ONLY, and not the post being edited. Further reading is rendered to
+   * the public, so offering a draft would be offering a link that 404s for every
+   * reader; the palette wants the wider list, so the narrowing is here rather than
+   * there. Nothing enforces the self-citation rule downstream, so it is enforced by
+   * not being offered.
    */
   const candidates = linkTargets.filter(
     (target) => target.state === "published" && target.slug !== currentSlug,
   );
 
   /*
-   * One spare row, always. Existing links render as filled rows and the spare
-   * is what makes adding one possible without script; saving reveals the next
-   * spare. Two spares were considered and rejected as clutter, since the cost
-   * of a second link is one more save rather than a lost one.
+   * One spare row, always: it is what makes adding a link possible without script,
+   * and saving reveals the next spare. Two spares were rejected as clutter, since the
+   * cost of a second link is one more save rather than a lost one.
    */
   const rows = [...reading.external, { title: "", url: "" }];
 
@@ -112,13 +83,10 @@ export function PostMetadata({
         <fieldset className="post-metadata-group">
           <legend>Index</legend>
           {/*
-            THE HIDDEN "false" IS NOT REDUNDANT. It is the half that makes the
-            checkbox safe: an unticked checkbox is absent from the submission
-            entirely, so without this the request would carry no `featured` key
-            and the parser would read that absence. It is rendered BEFORE the
-            checkbox because `fieldsFromForm` takes the LAST value, so ticking
-            the box overrides it and leaving it alone does not.
-          */}
+           * THE HIDDEN "false" IS NOT REDUNDANT: an unticked checkbox is absent from the
+           * submission entirely, so without this the parser would read that absence. It is
+           * rendered BEFORE the checkbox because `fieldsFromForm` takes the LAST value.
+           */}
           <input type="hidden" form={formId} name="featured" value="false" />
           <label className="post-metadata-check">
             <input
@@ -207,16 +175,11 @@ export function PostMetadata({
         <fieldset className="post-metadata-group">
           <legend>Further reading</legend>
           {/*
-            THE MARKER AND THE CARRIED VALUE, together, and neither is optional.
-
-            The marker says this control was on the page, so an empty result is
-            the author clearing the list rather than a form that never offered
-            one. The hidden `furtherReading` is what the parser falls back to
-            when the marker is absent, which is every caller that is not this
-            section; it is the same relay the editor had before this existed and
-            it is kept for exactly that case. `furtherReadingFromForm` carries
-            the full argument.
-          */}
+           * THE MARKER AND THE CARRIED VALUE, together, and neither is optional. The
+           * marker says this control was on the page, so an empty result is the author
+           * clearing the list rather than a form that never offered one. The hidden value is
+           * what the parser falls back to for every caller that is not this section.
+           */}
           <input type="hidden" form={formId} name={FR_CONTROL} value="1" />
           <input
             type="hidden"
@@ -272,10 +235,10 @@ export function PostMetadata({
                   <li key={target.slug}>
                     <label className="post-metadata-check">
                       {/*
-                        The VALUE carries the slug and the title together, so
-                        the picker contributes exactly one field name to the
-                        submission tuple no matter how long the blog gets.
-                      */}
+                       * The VALUE carries the slug and the title together, so the picker contributes
+                       * exactly one field name to the submission tuple no matter how long the blog
+                       * gets.
+                       */}
                       <input
                         type="checkbox"
                         form={formId}
