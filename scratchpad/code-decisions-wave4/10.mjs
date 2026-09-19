@@ -507,13 +507,17 @@ renders unstyled, which \`check:page-payload\`'s coverage half catches.`,
   ],
   "app/routes/about.tsx#1": [
     "CONTRACT",
-    "header: why markdown here and why one Person graph; the audit finding goes to the history document",
+    "header: why markdown here, why it is rendered at build time, and why one Person graph; the audit finding goes to the history document",
     `Who this is, in the first person.
 
 WHY THE PROSE IS IN MARKDOWN: \`/privacy\` and \`/colophon\` are prose in JSX and
 that is right for them, because every sentence there is tied to a file a reader
 can check. This page changes on taste, by the person it is about, and asking him
 to edit a component to move a comma is how a page like this goes stale.
+
+RENDERED AT BUILD TIME AND NOT IN THE WORKER, with the grounds on \`buildAbout\`:
+the public plane must not grow a second markdown renderer, and must not pay for
+the first one on a static page.
 
 THE JSON-LD IS THE HOME PAGE'S, THE SAME FUNCTION. Two \`Person\` objects for one
 person, differing in a field, is worse for a machine reader than one of them not

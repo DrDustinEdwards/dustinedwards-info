@@ -31,7 +31,9 @@ the corpus.`,
 This site's proof is that it measures itself continuously and publishes the
 measurements, so THE THREE NUMBERS ARE READ AT RENDER from the instruments that
 own them, never typed into this file. A digit here would be a second copy of a
-number a gate already owns. Rule 17.
+number a gate already owns. Rule 17. The writing tile is \`total\` from
+\`listHomeStartHere\`, the same \`publiclyVisible()\` predicate the blog index
+counts with, so a different count here is a visibility bug and not copy.
 
 THE CACHED PAGE MUST NOT LIE. This page is shared-cached, so a verdict rendered
 into it can be minutes old by the time it is read. The tile therefore carries
@@ -347,11 +349,14 @@ the one that removes access.`,
   ],
   "app/routes/admin.posts.$slug.edit.tsx#15": [
     "WHY",
-    "keeps the no-script prohibition and the consent distinction; the three-spellings note goes to the history document",
+    "keeps the no-script prohibition, the consent distinction, the count and the one-spelling rule",
     `**THE CONFIRMATION IS CHECKED HERE, NOT IN THE FORM'S onSubmit.** With
 scripting off the handler never ran and the file went with no confirmation at
 all. \`expectedHeadSha\` is CONCURRENCY, NOT CONSENT: it stops a stale page
-overwriting a newer one and says nothing about whether a human meant to delete.`,
+overwriting a newer one and says nothing about whether a human meant to delete.
+One post, so the count is 1, and the predicate and field name are the bulk and
+empty-trash paths' own: three spellings of one ceremony is how one of them ends
+up unchecked. An unconfirmed delete renders a server-rendered second step.`,
   ],
   "app/routes/admin.posts.$slug.edit.tsx#16": ["CONTRACT", "already at size"],
   "app/routes/admin.posts.$slug.edit.tsx#17": [

@@ -78,7 +78,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   /*
    * THE RELATED LIST IS RE-CHECKED AGAINST THE LIVE ROWS. The list is stored on the
    * row, and a post can be unpublished after a list naming it was written, so
-   * without this a stale title and URL keep rendering on a public page.
+   * without this a stale title and URL keep rendering on a public page. One indexed
+   * query composing `publiclyVisible()`, like every other public read, so there is
+   * no second opinion about what public means.
    */
   const stillPublic = await publiclyVisibleSlugs(
     getEnv(context),
@@ -595,8 +597,10 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
         {/*
          * Each is a bordered block carrying the label above the title, which gives it a
-         * real touch target and lets direction be read before the title. `rel="prev"` and
-         * `rel="next"` are the machine-readable half and are kept.
+         * real 24px-plus target on touch and lets direction be read before the title. NO
+         * IMAGE, deliberately: a thumbnail here would be a third image on a page that
+         * already has a cover and a card. `rel="prev"` and `rel="next"` are the
+         * machine-readable half and are kept.
          */}
         <nav className="post-nav" aria-label="More posts">
           {post.previous && (

@@ -30,10 +30,11 @@ One owner: the loader.`,
   ],
   "app/components/admin/media-grid.tsx#2": [
     "CONTRACT",
-    "the accessibility prohibition",
-    `NOT \`role="grid"\`: positional information is meaningless to a screen reader
-here, because the column count depends on the container width and directional
-navigation does not help anyone find a picture.`,
+    "the accessibility prohibition, and the rule that decided it",
+    `A plain list. NOT \`role="grid"\`: positional information is meaningless to a
+screen reader here, because the column count depends on the container width and
+directional navigation does not help anyone find a picture. SEMANTIC ELEMENTS
+FIRST, and ARIA only where no element carries the meaning.`,
   ],
   "app/components/admin/media-grid.tsx#3": [
     "CONTRACT",

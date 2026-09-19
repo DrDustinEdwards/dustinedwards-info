@@ -177,7 +177,7 @@ export const CHUNKS = {
  * everything else at the calibration. This number is only what that produces, kept so the
  * check's budget line stays readable. Re-measure it; never aim at it.
  */
-export const KEEP_SHARE = 0.49;
+export const KEEP_SHARE = 0.5;
 
 /** What this wave covers and where it was measured, for the history document's header. */
 export const BASE = "e3fc98a";

@@ -380,15 +380,16 @@ screen reader user can find it on purpose and leaves it silent until they do.`,
   ],
   "app/components/enhancement-script.tsx#0": [
     "CONTRACT",
-    "header: how every public enhancement loads, and the optional nonce",
+    "header: how every public enhancement loads, the optional nonce, and the CSP that makes an unnonced tag inert",
     `A nonced module script tag for one prebuilt enhancement bundle. \`type="module"\`
 gives deferred execution, so the markup a bundle upgrades exists before the
 bundle runs, and the browser de-duplicates by URL.
 
 The nonce is OPTIONAL because on the error-boundary path the root loader never
-ran and there is nothing honest to stamp; the browser then refuses the fetch. An
-error page costs its enhancements and nothing else, and the markup they would
-have upgraded still works.`,
+ran and there is nothing honest to stamp. \`script-src\` is the nonce plus
+\`strict-dynamic\` and carries no \`'self'\`, so the browser then refuses the
+fetch. An error page costs its enhancements and nothing else, and the markup
+they would have upgraded still works, which is rule 9's fallback doing its job.`,
   ],
   "app/lib/scientific-names.tsx#0": [
     "CONTRACT",
