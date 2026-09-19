@@ -61,6 +61,9 @@ visited. Do not restate that on every anchor.
 rows are `tag-chips` holding `tag-chip`. Chrome is `site-header` and
 `site-shell-footer`; the login card is `gate-card` with `gate-mark`.
 
+Components come off the bundle global `DustinEdwards`. Renaming it means
+editing this file too, because the snippet below names it.
+
 ## Where the truth lives
 
 Read `styles.css` and the files it imports before styling anything: they are the
