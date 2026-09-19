@@ -618,6 +618,12 @@ const ROUTE_CEILINGS = {
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
   "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
   "/playground": { id: "routes/playground", css: 8200, total: 9000 },
+  /*
+   * The inventory carries the whole kit, so it is the heaviest public sheet on
+   * the site by design. It is also the only page that does, which is what keeps
+   * the number off every other route.
+   */
+  "/playground/ui": { id: "routes/playground.ui", css: 10600, total: 11500 },
   "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8200 },
   "/privacy": { id: "routes/privacy", css: 7400, total: 8200 },
   /* /privacy and /colophon's shape, app.css plus prose.css and one bundle. */
