@@ -7,15 +7,11 @@ import type { Route } from "./+types/blog.feed[.json]";
 /**
  * JSON Feed 1.1, alongside RSS.
  *
- * Reads through listBlogPostsFullText, so publiclyVisible() applies on exactly
- * the same terms as the index, the RSS feed and llms-full.txt. Each item is
- * built by `feedItem` in app/lib/json-feed.mjs, where `node:test` asserts the
- * shape: this file once promised `content_text` in a comment while the item
- * map emitted no content field at all, which JSON Feed 1.1 forbids, and no
- * gate could see a comment disagreeing with a map three lines under it.
+ * Reads through listBlogPostsFullText, so publiclyVisible() applies on the same terms as the index,
+ * the RSS feed and llms-full.txt. Each item is built by `feedItem`, where `node:test` asserts the
+ * shape, because NO GATE CAN SEE A COMMENT DISAGREEING WITH A MAP THREE LINES UNDER IT.
  *
- * The cap is applied in the query, not by slicing a full read, because every
- * item now carries its whole markdown body.
+ * The cap is applied in the query rather than by slicing a full read.
  */
 const FEED_ITEMS = 20;
 
@@ -42,22 +38,15 @@ export async function loader({ context }: Route.LoaderArgs) {
   return new Response(`${JSON.stringify(feed, null, 2)}\n`, {
     headers: {
       /*
-       * `application/json`, NOT `application/feed+json`, and the reason is
-       * 160 KB.
+       * `application/json`, NOT `application/feed+json`, and the reason is 160 KB.
        *
-       * JSON Feed 1.1 says the content type SHOULD be `application/feed+json`.
-       * It is a SHOULD, and this is what obeying it cost, measured on
-       * production 2026-08-27 with `Accept-Encoding: br, gzip`:
+       * JSON Feed 1.1 says the content type SHOULD be `application/feed+json`. Cloudflare compresses a
+       * fixed list of content types and `+json` suffixed types are not on it, so obeying the SHOULD made
+       * the largest response on the site the only one shipping raw and uncompressed.
        *
-       *     /blog/rss.xml    application/rss+xml    Content-Encoding: br
-       *     /blog/feed.json  application/feed+json  none, 160,577 bytes
-       *
-       * Cloudflare compresses a fixed list of content types and `+json`
-       * suffixed types are not on it, so the largest response on the site was
-       * the only one shipping raw. Every reader identifies this document by the
-       * `version` member inside it, which is unchanged; the content type is how
-       * it travels. Trading a SHOULD for what a subscriber actually downloads
-       * is the right way round.
+       * Every reader identifies this document by the `version` member inside it, which is unchanged; the
+       * content type is how it travels. Trading a SHOULD for what a subscriber actually downloads is the
+       * right way round.
        */
       "content-type": "application/json; charset=utf-8",
       "cache-control": SHARED_CACHE_CONTROL,

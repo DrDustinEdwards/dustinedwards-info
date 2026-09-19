@@ -1,16 +1,10 @@
 /**
  * The operator publish tools.
  *
- * Every write here calls the SAME functions the browser editor's action calls:
- * `savePost` and `deletePost` in publish.server.ts. Nothing in this file talks
- * to GitHub, to D1, or to the AI index directly, and nothing here re-implements
- * a gate. That is the ruling of 2026-07-28, and it is the reason the refactor
- * this session expected turned out to be unnecessary: `savePost(env, options)`
- * already took a plain env and options rather than a Request, so the editor
- * action was already a thin adapter over a callable module.
- *
- * The read tools go through D1 and per-file repository reads the same way the
- * admin surfaces do, so an operator sees what the editor sees.
+ * EVERY WRITE HERE CALLS THE SAME FUNCTIONS THE BROWSER EDITOR'S ACTION CALLS. Nothing in this file
+ * talks to GitHub, D1 or the AI index directly, and nothing re-implements a gate. The read tools go
+ * through D1 and per-file repository reads the same way the admin surfaces do, so an operator sees
+ * what the editor sees.
  */
 
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
@@ -58,20 +52,10 @@ import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 import type { OperatorEnv } from "./auth.server";
 
 /**
- * A slug, validated against the SAME predicate the write path enforces.
- *
- * Every one of these values is interpolated into `content/posts/<slug>.md` and
- * handed to the GitHub contents API, which builds its URL with `encodeURI`.
- * `encodeURI` does NOT escape `.`, `/` or `?`, so `../../../../user?` walks out
- * of the posts directory and truncates the rest into a query string, on a
- * request that carries the GITHUB_TOKEN bearer header.
- *
- * The WRITE path was always safe: renderPost requires the frontmatter slug to
- * equal the expected one and the schema pins it to kebab-case. The READ paths
- * had no such check and ran first. Found by the external audit of 2026-08-11.
- *
- * SLUG_PATTERN is imported rather than restated, so there is one statement of
- * the rule and not a copy that can drift from the schema's.
+ * A slug, validated against the SAME predicate the write path enforces, because every one of these
+ * is interpolated into a repository path and handed to an API that builds its URL with `encodeURI`,
+ * which does NOT escape `.`, `/` or `?`. The WRITE path was always safe; the READ paths ran first
+ * with no such check.
  */
 function readSlug(args: Record<string, unknown>, tool: string) {
   const slug = String(args.slug ?? "").trim();
@@ -80,10 +64,8 @@ function readSlug(args: Record<string, unknown>, tool: string) {
     return { slug: "", error: `${tool} requires a lowercase kebab-case slug.` };
   }
   /*
-   * THE LENGTH BOUND IS APPLIED HERE TOO, and for the reason the pattern is:
-   * a read path that accepts what the write schema refuses interpolates a
-   * slug the repository can never hold into a GitHub API path. Same constant,
-   * imported, never a second number.
+   * THE LENGTH BOUND IS APPLIED HERE TOO: a read path that accepts what the write schema refuses
+   * interpolates a slug the repository can never hold into an API path. Same constant, imported.
    */
   if (slug.length > SLUG_MAX_LENGTH) {
     return {
@@ -126,17 +108,10 @@ export function toolNames(): readonly ToolName[] {
 /**
  * What GET /api/operator says about each tool, beside the dispatch that runs it.
  *
- * KEYED BY `ToolName`, the `WRITE_CAPABILITIES` idiom (hard rule 13): a tool
- * added to `TOOLS` without a descriptor is a TYPECHECK failure, and a
- * descriptor for a tool that does not exist is one too, so the self-description
- * cannot drift from the dispatch in either direction.
- *
- * MOVED HERE 2026-08-25 because the route carried a hand-written copy of this
- * list and it had already drifted the way a second copy does: `sync_ask` and
- * `sync_media` were callable, ship called both on every run, and the
- * description a caller wires itself up from named neither. Rule 17: the
- * dispatch below is the fact, this table is bound to it by the key, and the
- * route renders what it is handed.
+ * KEYED BY `ToolName`, the `WRITE_CAPABILITIES` idiom (hard rule 13): a tool added without a
+ * descriptor is a TYPECHECK failure, and a descriptor for a tool that does not exist is one too, so
+ * the self-description cannot drift from the dispatch in either direction. The route carried a
+ * hand-written copy and it had already drifted.
  */
 export const TOOL_DESCRIPTORS: Readonly<
   Record<ToolName, { args: Record<string, string>; returns: string; policy?: string }>
@@ -255,24 +230,11 @@ export const TOOL_DESCRIPTORS: Readonly<
 };
 
 /**
- * The moderation queue, over the operator token.
+ * The moderation queue, over the operator token, because a step that can only be taken by hand is a
+ * step that gets taken late.
  *
- * WHY THE OPERATOR GETS THIS AT ALL. Approving a mention was the one step in
- * the webmention path that needed a human with a browser, and it was proven on
- * 2026-09-05 by asking Dustin to click a button so a purge could be measured.
- * A step that can only be taken by hand is a step that gets taken late, and
- * this is a moderation queue whose whole value is being read.
- *
- * UNFILTERED BY DEFAULT, which is what `/admin/mentions` shows and for the same
- * reason: an operator triaging a queue has to see the failures as well as the
- * pending rows, or it cannot tell "nothing arrived" from "everything was
- * refused".
- *
- * READS THROUGH THE SAME FUNCTION THE ADMIN PAGE READS. The status filter is
- * applied here rather than in a second query, so there is one statement of what
- * the queue IS and this cannot come to disagree with the page about it. The
- * table is bounded by the endpoint's open-queue cap plus whatever has been
- * approved, so filtering in memory costs nothing worth a second query shape.
+ * UNFILTERED BY DEFAULT: a queue that hides its failures cannot tell "nothing arrived" from
+ * "everything was refused". Read through the SAME function the admin page reads.
  */
 async function listMentionsTool(
   env: OperatorEnv,
@@ -284,11 +246,8 @@ async function listMentionsTool(
 
   if (status) {
     /*
-     * A STATUS THE COLUMN CANNOT HOLD IS A 400, not an empty list. An agent
-     * that typed `pendign` and got `[]` would conclude the queue was empty,
-     * which is the wrong repair and is indistinguishable from the right one.
-     * The set is the schema's CHECK constraint, stated here because a caller
-     * needs to be told what it may ask for.
+     * A STATUS THE COLUMN CANNOT HOLD IS A 400, not an empty list: an agent that mistyped one and got
+     * `[]` would conclude the queue was empty, which is indistinguishable from the right answer.
      */
     const allowed = ["unverified", "pending", "approved", "rejected", "failed"];
     if (!allowed.includes(status)) {
@@ -325,17 +284,10 @@ async function listMentionsTool(
 }
 
 /**
- * Approve, reject or delete one mention, and purge the page it changed.
- *
- * IT CALLS `decideMention` AND NOTHING ELSE, which is the point of that
- * function existing. The write and the purge travel together there, so this
- * cannot ship the half that changes the database without the half that makes
- * the change visible. The admin page's action calls the same door.
- *
- * THE CAPABILITY CHECK IS INSIDE THAT DOOR TOO, reading `WRITE_CAPABILITIES`,
- * so the refusal is the same one whichever caller asks. An operator may
- * approve and reject and may not delete, which is `delete_post`'s shape and
- * `delete_post`'s reason: this removes the only copy of what a stranger sent.
+ * Approve, reject or delete one mention, and purge the page it changed. IT CALLS `decideMention` AND
+ * NOTHING ELSE: the write and the purge travel together there, so this cannot ship the half that
+ * changes the database without the half that makes it visible. The capability check is in that door
+ * too, so the refusal is the same whichever caller asks.
  */
 async function decideMentionTool(
   env: OperatorEnv,
@@ -365,11 +317,9 @@ async function decideMentionTool(
   const result = await decideMention(env as unknown as Env, id, decision, actor);
 
   /*
-   * `changed: false` IS A REAL ANSWER AND NOT AN ERROR. The row may not exist,
-   * or may be `unverified` or `failed`, which the DB layer's `where` refuses
-   * because neither has evidence to approve. Reporting that as a 404 would make
-   * a caller retry something that will never succeed; reporting it as success
-   * with `changed: false` tells it what happened.
+   * `changed: false` IS A REAL ANSWER AND NOT AN ERROR: the row may be one the write refuses for
+   * having no evidence to approve, and reporting that as a 404 would make a caller retry something
+   * that will never succeed.
    */
   return {
     ok: true,
@@ -384,13 +334,10 @@ async function decideMentionTool(
 }
 
 /**
- * Runs one tool.
- *
- * Errors are TRANSLATED here rather than thrown, and the translation is the
- * contract: a gate rejection returns the gate's own message with the field and
- * line it named, verbatim. An agent that gets "invalid frontmatter" and nothing
- * else cannot fix its own mistake, and the whole point of exposing this path is
- * that the caller can.
+ * Runs one tool. Errors are TRANSLATED here rather than thrown, and the translation IS the
+ * contract: a gate rejection returns the gate's own message with the field and line it named,
+ * verbatim, because an agent that gets "invalid frontmatter" and nothing else cannot fix its own
+ * mistake.
  */
 export async function runTool(
   env: OperatorEnv,
@@ -438,8 +385,8 @@ export async function runTool(
 }
 
 function translate(error: unknown): ToolResult {
-  // Policy refusal. 403, and it names the policy so a caller can branch on it
-  // rather than string-matching the prose.
+  // Policy refusal. 403, and it names the policy so a caller can branch on it rather than
+  // string-matching the prose.
   if (error instanceof PolicyError) {
     return {
       ok: false,
@@ -461,23 +408,11 @@ function translate(error: unknown): ToolResult {
 
   // A conflict means main moved under the caller. Retryable after a re-read.
   /*
-   * DIVERGENCE IS ITS OWN BRANCH, ahead of the generic 500.
+   * DIVERGENCE IS ITS OWN BRANCH, because it means the OPPOSITE of the failures above: the commit
+   * landed, the writing is safe, and retrying is the one response that does not help.
    *
-   * It is distinguishable from the three failures above in the way that
-   * matters to a caller: a PolicyError (403) and an EditorError (422) both mean
-   * NOTHING HAPPENED and the request should be corrected and retried. A
-   * GitHubError (409/502) means nothing was committed. This one means the
-   * OPPOSITE: the commit landed, the writing is safe, and retrying is the one
-   * response that does not help.
-   *
-   * Matched on `name` rather than `instanceof`, because the error is
-   * constructed in a `.mjs` module and a cross-module identity check through
-   * two build graphs holds only until something duplicates the module.
-   *
-   * 500 rather than a 4xx: the caller did nothing wrong. Not 502, which this
-   * file already uses for GitHub, because the upstream that failed is ours.
-   * `detail.code` is the machine-readable half so a client can branch without
-   * parsing prose.
+   * Matched on `name` rather than `instanceof`, a cross-module identity check through two build
+   * graphs holding only until something duplicates the module. 500: the caller did nothing wrong.
    */
   if (error instanceof Error && error.name === DIVERGENCE_ERROR_NAME) {
     return {
@@ -506,12 +441,8 @@ function translate(error: unknown): ToolResult {
 
 async function listPosts(env: OperatorEnv) {
   /*
-   * D1, not the repository, since the artifact arc: the rows are what the
-   * site serves, they converge to the repo (rule 18, held by the
-   * content-drift health check), and a listing that needed no GitHub call
-   * before needs none now. Field names are the tool's contract and are
-   * unchanged; `date` derives from publishAt and `updated` is the revision
-   * date, both of which is what they always meant.
+   * D1, not the repository: the rows are what the site serves and they converge to the repo under
+   * rule 18. Field names are the tool's contract and are unchanged.
    */
   const rows = await listPostsForOperator(env);
   return {
@@ -554,9 +485,8 @@ async function getPost(env: OperatorEnv, args: Record<string, unknown>): Promise
       raw,
       headSha: await currentHead(env),
       draft: state.draft,
-      // Whether an operator may publish this post is a question about the FILE,
-      // so it is answered from the file and reported rather than left to be
-      // discovered by a 403.
+      // Whether an operator may publish this post is a question about the FILE, so it is answered from
+      // the file and reported rather than left to be discovered by a 403.
       firstPublished: state.firstPublished,
       operatorMayPublish: state.firstPublished !== null,
       html: record?.html ?? null,
@@ -582,10 +512,9 @@ async function savePostTool(
     };
   }
 
-  // Absent expectedHeadSha the save is unconditional. That is a deliberate
-  // choice for a non-browser caller: it has no page to reload, and forcing it
-  // to read-then-write would make every agent save a two-call dance. A caller
-  // that wants the editor's conflict semantics passes the sha from get_post.
+  // Absent `expectedHeadSha` the save is unconditional, deliberately for a non-browser caller: it
+  // has no page to reload, and forcing a read-then-write would make every agent save a two-call
+  // dance. A caller that wants the editor's conflict semantics passes the sha from `get_post`.
   const expectedHeadSha =
     typeof args.expectedHeadSha === "string" && args.expectedHeadSha
       ? args.expectedHeadSha
@@ -605,8 +534,7 @@ async function savePostTool(
       draft: result.record.draft,
       published: result.published,
       firstPublished: result.firstPublished,
-      // The AI index cannot fail a save, so its outcome is reported rather than
-      // raised. A caller that ignores this still got a correct save.
+      // The AI index cannot fail a save, so its outcome is reported rather than raised.
       askSync: result.askSync,
     },
   };
@@ -638,38 +566,17 @@ async function deletePostTool(
 
 
 /**
- * THE FULL-CORPUS ASK UPLOAD, as an operator operation.
+ * THE FULL-CORPUS ASK UPLOAD. `savePost` keeps Ask in step for a post published THROUGH the editor,
+ * and nothing kept it in step for a post published by COMMIT, which is how most of this site's
+ * writing lands.
  *
- * ## Why this exists at all
- *
- * `savePost` keeps Ask in step for a post published THROUGH the editor. Nothing
- * kept it in step for a post published by COMMIT, which is how most of this
- * site's writing lands: `ship` runs `sync:content`, which rebuilds D1 and both
- * FTS indexes and does not touch AI Search. So every git-authored change left
- * the answer index behind, silently, until somebody read an alert.
- *
- * Measured 2026-08-23: the scheduled health check went red four polls running
- * with `expected 91, present 90`, and shipping nine post updates widened it to
- * `expected 99, present 90`, tracking `search_docs` growth exactly. The repair
- * was a human clicking sync-ask in the admin, which is a step nobody is holding.
- *
- * ## IDEMPOTENT, and that is what makes it safe as a pipeline step
- *
- * The upload writes every record under a key derived from its URL, so running
- * it twice writes the same keys with the same content; the prune then removes
- * anything in the index that the corpus no longer names. Running it when there
- * is nothing to do is a no-op that costs a listing.
- *
- * ## THE COUNTS ARE READ BACK, NOT ACCUMULATED
- *
- * `uploaded` is what the loop thinks it wrote. `expected` and `present` come
- * from D1 and from AI Search AFTERWARDS, and `converged` is derived from those
- * two. A caller cannot be told this succeeded by an operation that merely ran.
+ * IDEMPOTENT, which is what makes it safe as a pipeline step. THE COUNTS ARE READ BACK, NOT
+ * ACCUMULATED, so a caller cannot be told this succeeded by an operation that merely ran.
  */
 async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
   if (!askAvailable(env)) {
-    // Same stance the Ask endpoint takes: absent binding means the feature is
-    // not here, rather than here and broken.
+    // Same stance the Ask endpoint takes: an absent binding means the feature is not here, rather than
+    // here and broken.
     return { ok: false, status: 404, error: "Ask is not enabled on this deployment." };
   }
 
@@ -677,10 +584,8 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
   const removed = await pruneAskCorpus(env, keys);
 
   /*
-   * READ BACK AFTER BOTH WRITES. Between the upload and this read the index is
-   * eventually consistent, so a drift reported here can be a moment behind
-   * rather than a fault; ship says exactly that when it refuses, and the next
-   * scheduled health poll is the tiebreaker.
+   * READ BACK AFTER BOTH WRITES. The index is eventually consistent, so drift reported here can be a
+   * moment behind rather than a fault, and the next scheduled poll is the tiebreaker.
    */
   const status = await askIndexStatus(env);
 
@@ -699,65 +604,20 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
 /**
  * REBUILDS THE MEDIA INDEX, THROUGH THE DERIVATION, AND PROVES IT AFTERWARDS.
  *
- * The door that lets `ship` and the health workflow do what previously only a
- * human clicking a button in `/admin/media` could do. Ruled 2026-08-24 under
- * the standing AUTOMATE directive: a chore that ends in a person's hands and is
- * not a decision is a defect. The OFL.txt row waited weeks for that click.
+ * RULE 18 IS THE WHOLE SHAPE: it takes no arguments describing what to write, and there is
+ * deliberately no way to ask it to index one key, which is the shape that turns an index into a
+ * second truth. THE VERDICT IS RECONCILED, NEVER SUPPLIED.
  *
- * ## THE BUTTON IS NOT REPLACED, AND THAT IS DELIBERATE
- *
- * `/admin/media`'s rebuild intent calls `rebuildMediaIndex` too, and keeps
- * doing so. It is the MANUAL REPAIR: the thing you reach for when something has
- * gone wrong out of band. What changes is that the routine case, an index that
- * drifts because a ship added or removed an asset, no longer needs it.
- *
- * ## RULE 18, WHICH IS THE WHOLE SHAPE OF THIS FUNCTION
- *
- * The index converges toward the repository and the bucket, never the reverse,
- * and a derived store is repaired THROUGH ITS DERIVATION rather than by a hand
- * written INSERT. So this takes no arguments describing what to write: it calls
- * the same derivation the button calls, and the row arrives the way every other
- * row arrived. There is deliberately no way to ask this endpoint to index one
- * key, because that is the shape that turns an index into a second truth.
- *
- * ## THE VERDICT IS RECONCILED, NEVER SUPPLIED
- *
- * `rebuildMediaIndex` returns what its loops think they wrote. `converged`
- * comes from `mediaIndexStatus`, which re-enumerates both buckets and the
- * manifest and reads D1 back afterwards, and from the failure list. A caller
- * cannot be told this worked by an operation that merely ran.
- *
- * ## NO POLL, AND THE REASON IS STRUCTURAL RATHER THAN OPTIMISTIC
- *
- * `sync_ask` waits out a convergence window because AI Search is a separate,
- * eventually consistent service: its write is visible to a later read on its
- * own schedule. This store is D1, the rebuild AWAITS every upsert and delete
- * before returning, and the read-back happens in the SAME Worker request, which
- * reads its own writes. There is no interval during which a correct rebuild
- * reports drift, so a window would only slow a real failure down. Measured
- * rather than assumed: see the ship report for this batch.
+ * The manual button is not replaced: it stays as the repair for when something has gone wrong out
+ * of band. NO POLL, structurally: the rebuild awaits every write and the read-back is in the SAME
+ * request, which reads its own writes.
  */
 /**
- * THE MIRROR REPAIR, as an operator operation. The fourth repairable class.
+ * THE MIRROR REPAIR, deriving its work from the SAME comparison the drift check uses.
  *
- * `media-backup-drift` compares MEDIA against MEDIA_BACKUP; this is its repair,
- * and both derive their work from the SAME `backupStatus`, so what the check
- * calls drift is exactly what this copies. That is the same one-owner shape the
- * other three repairs follow.
- *
- * ## WHY THIS ONE IS SAFE TO FIRE UNATTENDED
- *
- * It has no delete branch, in either bucket, and it never writes to MEDIA. The
- * worst a spurious run can do is rewrite a twin with the bytes it already had.
- * Every other repair in the table can remove something; this one cannot, which
- * is the argument recorded in `REPAIRABLE` for allowing self-repair here.
- *
- * ## IDEMPOTENT, AND THE VERDICT IS READ BACK
- *
- * Running it against a converged mirror copies nothing and reports converged.
- * The counts come from a SECOND comparison taken after the writes, on the same
- * rule the three syncs follow: a report assembled from the loop's own counters
- * describes what the loop believed rather than what the store holds.
+ * SAFE TO FIRE UNATTENDED because it has no delete branch in either bucket and never writes to the
+ * primary, so the worst a spurious run does is rewrite a twin with the bytes it already had. The
+ * counts come from a SECOND comparison after the writes.
  */
 async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
   const { copied, gone, status } = await copyMissingTwins(env);
@@ -766,8 +626,8 @@ async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
     ok: true,
     data: {
       copied,
-      // An object that vanished between the comparison and the copy. Not an
-      // error: its twin, if it had one, is exactly what the mirror is for.
+      // An object that vanished between the comparison and the copy. Not an error: its twin, if it had
+      // one, is exactly what the mirror is for.
       gone,
       objects: status.objects,
       twins: status.twins,
@@ -797,13 +657,10 @@ async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
 }
 
 /**
- * A `data:` URI's own declaration, or null when this is bare base64.
- *
- * Parsed rather than stripped, because the prefix carries the MIME type and an
- * agent that pasted a whole data URI has already told us what it thinks the
- * bytes are. Only base64 payloads are accepted: a percent-encoded `data:` URI
- * is a different encoding and silently mis-decoding one would store rubbish
- * under a digest that looks perfectly valid.
+ * A `data:` URI's own declaration, or null when this is bare base64. Parsed rather than stripped,
+ * because the prefix carries the MIME type. Only base64 payloads are accepted: a percent-encoded
+ * URI is a different encoding, and silently mis-decoding one would store rubbish under a digest
+ * that looks perfectly valid.
  */
 function readDataUri(value: string): { type: string; payload: string } | null {
   const match = /^data:([^;,]*)(;base64)?,/i.exec(value);
@@ -814,8 +671,8 @@ function readDataUri(value: string): { type: string; payload: string } | null {
 
 /** Base64 to bytes, or null when it is not base64 at all. */
 function decodeBase64(payload: string): Uint8Array | null {
-  // Whitespace is what a base64 blob acquires by travelling through a chat or a
-  // YAML block, and `atob` throws on it.
+  // Whitespace is what a base64 blob acquires travelling through a chat or a YAML block, and `atob`
+  // throws on it.
   const packed = payload.replace(/\s+/g, "");
   try {
     const binary = atob(packed);
@@ -828,12 +685,9 @@ function decodeBase64(payload: string): Uint8Array | null {
 }
 
 /**
- * The response body, up to a cap, or null if it went past it.
- *
- * READ IN CHUNKS AND ABANDONED AT THE CAP, rather than `arrayBuffer()` then a
- * length check. A `Content-Length` is a claim the far end makes and a body can
- * simply not stop; buffering it whole to discover that is the shape where a
- * remote URL decides how much memory this isolate uses.
+ * The response body, up to a cap, READ IN CHUNKS AND ABANDONED AT THE CAP rather than buffered and
+ * length-checked: a `Content-Length` is a claim the far end makes and a body can simply not stop,
+ * so buffering it whole to discover that lets a remote URL decide how much memory this isolate uses.
  */
 async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promise<Uint8Array | null> {
   const reader = body.getReader();
@@ -861,11 +715,9 @@ async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promis
 }
 
 /**
- * What to record as `original_name` when the caller did not say.
- *
- * The URL's last path segment first, because that is what the file was called
- * at the far end and is the closest thing to a name a person chose. Otherwise
- * `upload.<ext>`, which at least describes the object.
+ * What to record when the caller did not say: the URL's last path segment first, that being the
+ * closest thing to a name a person chose, and otherwise a default that at least describes the
+ * object.
  */
 function defaultName(type: string, url: string): string {
   if (url) {
@@ -873,58 +725,29 @@ function defaultName(type: string, url: string): string {
       const base = new URL(url).pathname.split("/").filter(Boolean).pop();
       if (base) return decodeURIComponent(base);
     } catch {
-      // An unparseable URL never gets this far; `uploadMediaTool` parsed it to
-      // check the protocol. Caught anyway rather than thrown out of a naming
-      // helper, and the extension form below is the answer.
+      // An unparseable URL never gets this far, the protocol having been checked already. Caught anyway
+      // rather than thrown out of a naming helper.
     }
   }
   const extension = ALLOWED.get(type);
-  // NOT a substituted default (hard rule 13): a type outside the allowlist is
-  // one statement away from being refused by `storeUpload`, so this name is
-  // never stored. Returning `upload.bin` would be the substitution.
+  // NOT a substituted default (hard rule 13): a type outside the allowlist is one statement away from
+  // being refused, so this name is never stored. Returning `upload.bin` would be the substitution.
   return extension ? `upload.${extension}` : "upload";
 }
 
 /**
  * THE BUCKET, as an operator operation. Ruling 32d.
  *
- * ## IT IS AN ADAPTER, and `storeUpload` is the write
+ * IT IS AN ADAPTER and `storeUpload` is the write: the allowlist, the size limit and the key are the
+ * same code the admin upload runs. What is here is only how bytes REACH that door.
  *
- * Everything that decides what lands in MEDIA is in `app/lib/media/upload.server.ts`
- * and is the same code `/admin/media/upload` runs: the same allowlist, the same
- * size limit, the same content-addressed key, the same custom metadata and the
- * same non-fatal annotation row. What is here is only how bytes REACH that
- * door over an HTTP tool call, which is the half the editor solves with a
- * multipart form.
+ * THE PRIMARY CONTROL IS THE TOKEN AND THE RATE LIMITER, said plainly because the checks below are
+ * secondary: HTTPS only, since a fetch is the one place a caller chooses where this Worker goes; a
+ * capped read; and the same `validateUpload` contract a form upload meets.
  *
- * ## TWO WAYS IN, AND THE URL IS THE LOAD-BEARING ONE
- *
- * `data` is base64, which is the obvious shape and the one that does not scale:
- * a 13 MB photograph is 17 MB of base64 and no agent is carrying that through a
- * conversation. `url` is what makes the tool usable, and it is why the ruling
- * named both.
- *
- * ## WHAT GUARDS THE FETCH
- *
- * The primary control is that this endpoint is behind `OPERATOR_TOKEN` and a
- * rate limiter, so the caller is already trusted. Said plainly because the
- * three checks below are secondary and should not be mistaken for the fence:
- *
- *   HTTPS ONLY   `http:` is refused along with every other scheme. This Worker
- *                holds GITHUB_TOKEN and OPERATOR_TOKEN, and a fetch is the one
- *                place a caller chooses where it goes.
- *   CAPPED READ  `readCapped` abandons the body past MAX_BYTES rather than
- *                buffering it to find out how big it was.
- *   THE SAME CONTRACT  the bytes then meet `validateUpload` exactly as a form
- *                upload does, so a fetched HTML page is refused by the
- *                allowlist and a mislabelled SVG by the markup check.
- *
- * The type the caller declares WINS over the response's own `Content-Type`, and
- * that is deliberate: a perfectly good PNG served as `application/octet-stream`
- * is common, and refusing it would make the URL path useless against half the
- * web. It is safe because the declared type is checked against the allowlist
- * and against the bytes, which is the same treatment `file.type` gets on the
- * form path, where it is equally a claim.
+ * THE TYPE THE CALLER DECLARES WINS, deliberately, because a good PNG served as
+ * `application/octet-stream` is common. Safe, because it is checked against the allowlist AND the
+ * bytes, the same treatment `file.type` gets on the form path.
  */
 async function uploadMediaTool(
   env: OperatorEnv,
@@ -936,10 +759,9 @@ async function uploadMediaTool(
   const declaredName = typeof args.name === "string" ? args.name.trim() : "";
 
   /*
-   * EXACTLY ONE SOURCE. Both given is refused rather than resolved by a
-   * precedence rule, because a caller that supplied both has two different
-   * images in mind and silently picking one stores the wrong photograph under a
-   * digest that will never look wrong.
+   * EXACTLY ONE SOURCE. Both given is refused rather than resolved by a precedence rule, because a
+   * caller that supplied both has two different images in mind and silently picking one stores the
+   * wrong photograph under a digest that will never look wrong.
    */
   if (data && url) {
     return {
@@ -973,16 +795,14 @@ async function uploadMediaTool(
       };
     }
 
-    // The URI's own type only when the caller named none: an explicit argument
-    // is the more deliberate statement of the two.
+    // The URI's own type only when the caller named none: an explicit argument is the more deliberate
+    // statement of the two.
     if (!type && uri) type = uri.type;
 
     /*
-     * REFUSED ON THE ENCODED LENGTH, before `atob` allocates anything. Base64
-     * is 4 characters per 3 bytes, so this is arithmetic on the string in hand
-     * rather than a guess, and it is deliberately GENEROUS: it only has to stop
-     * an absurd payload from being decoded, and `validateUpload` states the
-     * real limit afterwards against the real byte count.
+     * REFUSED ON THE ENCODED LENGTH, before `atob` allocates anything: base64 is four characters per
+     * three bytes, so this is arithmetic on the string in hand. Deliberately GENEROUS, since it only
+     * has to stop an absurd payload being decoded and `validateUpload` states the real limit.
      */
     const packedLength = (uri ? uri.payload : data).replace(/\s+/g, "").length;
     if (packedLength > Math.ceil(MAX_BYTES / 3) * 4 + 4) {
@@ -1026,15 +846,10 @@ async function uploadMediaTool(
       };
     }
     /*
-     * THE PROTOCOL IS CHECKED AGAIN, ON WHERE IT LANDED.
-     *
-     * `fetch` follows redirects, and a `https://` URL is free to redirect to
-     * `http://`. Checking only the URL the caller typed would make the https
-     * rule above a check on the caller's typing rather than on where the bytes
-     * came from, which is the wrong half of the question.
-     *
-     * `response.url` is the post-redirect URL; falling back to the request's
-     * own href keeps this closed rather than open if it is ever empty.
+     * THE PROTOCOL IS CHECKED AGAIN, ON WHERE IT LANDED, because `fetch` follows redirects and an
+     * `https://` URL is free to redirect to `http://`. Checking only what the caller typed would make
+     * the rule a check on their typing rather than on where the bytes came from. The fallback keeps it
+     * closed rather than open if the post-redirect URL is ever empty.
      */
     let landed = "";
     try {
@@ -1075,24 +890,20 @@ async function uploadMediaTool(
     }
     bytes = read;
 
-    // The response's own claim, only when the caller made none. Split on `;`
-    // because `image/svg+xml; charset=utf-8` is one of the two types where a
-    // charset parameter is normal, and the allowlist holds bare types.
+    // The response's own claim, only when the caller made none. Split on `;`, because a charset
+    // parameter is normal on one of these types and the allowlist holds bare types.
     if (!type) {
       type = (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
     }
   }
 
   /*
-   * COPIED INTO A FRESH ArrayBuffer rather than handed `bytes.buffer`.
-   *
-   * Two reasons, and the second is the one that would have hurt. `.buffer` is
-   * typed `ArrayBufferLike`, so it does not satisfy the door's parameter at
-   * all. And it is the whole underlying allocation, not the view: it happens to
-   * be exactly the content today because `decodeBase64` and `readCapped` each
-   * size their array to what they read, but that is a property of those two
-   * functions rather than of this call. A later change to either would hash and
-   * store the wrong bytes under a key that still looks perfectly valid.
+   * COPIED INTO A FRESH ArrayBuffer rather than handed `bytes.buffer`. Two reasons, and the second is
+   * the one that would have hurt: `.buffer` does not satisfy the door's parameter type at all, and it
+   * is the whole underlying allocation rather than the view. It happens to be exactly the content
+   * today because the two producers size their arrays to what they read, which is a property of those
+   * functions rather than of this call, so a later change to either would hash and store the wrong
+   * bytes under a key that still looks valid.
    */
   const payload = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(payload).set(bytes);
@@ -1110,19 +921,17 @@ async function uploadMediaTool(
   return {
     ok: true,
     data: {
-      // The editors' own two keys, from the same function that builds theirs,
-      // so the string an agent puts in markdown and the string the editor
-      // inserts are one statement rather than two that agree today.
+      // The editor's own two keys, from the same function that builds theirs, so the string an agent puts
+      // in markdown and the string the editor inserts are one statement rather than two that agree today.
       ...uploadSuccessBody(stored.key),
       bytes: stored.bytes,
       width: stored.width,
       height: stored.height,
       /*
-       * THE ANNOTATION ROW IS REPORTED, not assumed. It is written non-fatally
-       * because the object is already in R2 and a D1 hiccup must not report
-       * failure for a write that happened, which is right and leaves an
-       * operator with no way to see it. `false` here means the object landed
-       * and the row did not: the repair is `sync_media`, which re-derives it.
+       * THE ANNOTATION ROW IS REPORTED, not assumed. It is written non-fatally because the object is
+       * already in R2 and a D1 hiccup must not report failure for a write that happened, which leaves an
+       * operator with no way to see it. `false` means the object landed and the row did not; the repair
+       * is `sync_media`, which re-derives it.
        */
       recorded: stored.recorded,
     },
@@ -1130,30 +939,9 @@ async function uploadMediaTool(
 }
 
 /**
- * THE CONTENT-DRIFT REPAIR, as an operator operation.
- *
- * The third repairable class. The content-drift health check compares
- * `posts.source_blob_sha` against the repository's blob shas; this is its
- * repair, and the two derive their work from the SAME `contentDriftCompare`,
- * so what the check calls drift is exactly what this repairs. It is also what
- * makes a markdown commit from any machine live within one health poll with
- * no deploy: the scheduled workflow calls this through the same door ship's
- * syncs use.
- *
- * ## RULE 18, THE WHOLE SHAPE
- *
- * Scoped, but never hand-written: every drifted slug is re-rendered through
- * `renderAndWrite`, the one door to a rendered row, with the listing's blob
- * sha riding along so the door proves it rendered the bytes the repository
- * holds. A row whose file is gone loses its rows through the same
- * `deletePostFromD1` a delete uses. Nothing here can construct a row.
- *
- * ## IDEMPOTENT, AND THE VERDICT IS READ BACK
- *
- * Running it against a converged corpus repairs nothing and reports
- * converged. `expected`/`present`/`converged` come from a SECOND listing and
- * a second row read taken after the writes, never from the loop's own
- * counters, on the same rule as the other two syncs.
+ * THE CONTENT-DRIFT REPAIR, deriving its work from the SAME comparison the health check uses, which
+ * is what makes a markdown commit from any machine live within one poll with no deploy. RULE 18:
+ * scoped, but never hand-written, every drifted slug going through the one door.
  */
 async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   const readSides = async () => {
@@ -1192,8 +980,8 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
     removed += 1;
   }
 
-  // READ BACK AFTER THE WRITES. D1 reads its own writes in-request, so a
-  // correct repair can never report drift here; a reported drift is real.
+  // READ BACK AFTER THE WRITES. D1 reads its own writes in-request, so a correct repair can never
+  // report drift here and a reported drift is real.
   const after = await readSides();
   const residual = contentDriftCompare(after.files, after.rows);
   const residualCount =
@@ -1212,44 +1000,31 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 }
 
 /**
- * What the operator can see about the state of the pipeline without guessing.
- *
- * Deliberately reports the three stores separately, because they can disagree
- * and the whole design assumes they fail independently.
+ * What the operator can see about the state of the pipeline without guessing. The three stores are
+ * reported SEPARATELY, because they can disagree and the whole design assumes they fail
+ * independently.
  */
 /**
- * EXPORTED since 2026-08-25, because the cockpit renders it.
- *
- * `/admin` is the human-readable view of the instruments, and rule 17 says the
- * page renders what an instrument reports rather than computing a second
- * answer. So the cockpit calls THIS function, the one the `sync_status`
- * operator tool calls, and there is no admin-side copy of the four store
- * counts to drift from it. The export is the whole change; nothing about the
- * body moved.
+ * EXPORTED because the cockpit renders it: rule 17 says the page renders what an instrument reports
+ * rather than computing a second answer, so it calls THIS function and there is no admin-side copy
+ * of the store counts to drift from it.
  */
 export async function syncStatus(env: OperatorEnv) {
   /*
-   * The repository's post count, from ONE Contents directory listing. The
-   * field is still named `artifactPosts` because the field names are the
-   * tool's contract; what it has always meant is "how many posts the
-   * repository holds", and that is what it still reports now that the
-   * committed artifact is gone.
+   * The repository's post count, from ONE Contents directory listing. The field name is the tool's
+   * contract and is unchanged; what it has always meant is how many posts the repository holds.
    */
   const repoEntries = await listDirectory(env, "content/posts");
   const repoPosts = repoEntries.filter(
     (e) => e.type === "file" && e.name.endsWith(".md"),
   ).length;
 
-  // Counted through DRIZZLE, not by interpolating publiclyVisible() into a
-  // template string. It returns a Drizzle expression object, so interpolation
-  // stringifies it to "[object Object]" and D1 answers
-  //   no such column: object Object at offset 38
-  // on every call. That is how this shipped: locally the tool failed earlier,
-  // at the missing GITHUB_TOKEN, and never reached the query. Found by the live
-  // round trip, which is the only place it could have been found.
+  // Counted through DRIZZLE, not by interpolating the predicate into a template string, which
+  // stringifies the expression object and makes D1 answer `no such column`. Locally the tool failed
+  // earlier, at a missing token, and never reached the query, so the live round trip was the only
+  // place this could have been found.
   //
-  // Hard rule 1 is why the predicate is reused rather than rewritten in SQL:
-  // every public read composes publiclyVisible(), and a hand-copied WHERE
+  // Hard rule 1 is why the predicate is reused rather than rewritten in SQL: a hand-copied WHERE
   // clause here would be exactly the drift that rule exists to prevent.
   const db = getDb(env);
   const totalRow = await db.select({ n: count() }).from(postsTable).get();
@@ -1268,22 +1043,18 @@ export async function syncStatus(env: OperatorEnv) {
     artifactPosts: repoPosts,
     d1Posts: totalRow?.n ?? 0,
     d1PubliclyVisible: visibleRow?.n ?? 0,
-    // Counted on the docsize shadow table, never COUNT(*) on the index itself:
-    // that reads THROUGH to search_docs and can never detect drift.
+    // Counted on the docsize shadow table, never `COUNT(*)` on the index itself, which reads THROUGH to
+    // the content table and can never detect drift.
     searchIndexDocs: indexed?.n ?? 0,
     askConfigured: askAvailable(env),
     githubConfigured: Boolean(env.GITHUB_TOKEN),
     /*
-     * COMMITS THAT LANDED WHILE D1 DID NOT FOLLOW.
+     * COMMITS THAT LANDED WHILE D1 DID NOT FOLLOW: the only store here whose absence is the interesting
+     * state, so an empty list is the normal answer. Read from KV rather than D1, because a record of a
+     * D1 failure kept in D1 is missing exactly when it matters.
      *
-     * The fourth store this tool reports on, and the only one whose absence is
-     * the interesting state: an empty list is the normal answer. Read from KV
-     * rather than D1 on purpose, because a record of a D1 failure kept in D1 is
-     * missing exactly when it matters.
-     *
-     * `known: false` is a distinct answer from an empty list. A status tool
-     * that cannot read one of its stores must say so rather than report zero,
-     * which is the same distinction `d1Posts` would need if the query threw.
+     * `known: false` is a distinct answer from an empty list: a status tool that cannot read one of its
+     * stores must say so rather than report zero.
      */
     divergences: await listDivergences(env),
   };

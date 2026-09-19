@@ -9,63 +9,29 @@ import { verifyWebmention } from "~/lib/webmention/verify.server";
 import type { Route } from "./+types/webmention";
 
 /**
- * The webmention receiver. Item H1.
+ * The webmention receiver.
  *
- * **THIS IS THE SECOND PUBLIC, UNAUTHENTICATED POST ENDPOINT ON THIS SITE, and
- * the first one that writes a row.** It has to be public: a webmention is sent
- * by another site's server with no credential to offer, and an endpoint that
- * needs a token is an endpoint nobody sends to.
+ * THE SECOND PUBLIC, UNAUTHENTICATED POST ENDPOINT ON THIS SITE, and the first that writes a row. It
+ * has to be public: a webmention is sent by another site's server with no credential to offer.
+ * `api.csp-report.ts` refuses to write rows because an unauthenticated endpoint that writes them is
+ * a storage-exhaustion primitive handed to the internet. This one cannot log instead, because the
+ * deliverable IS the stored mention, so the argument is answered rather than avoided.
  *
- * ## THE ARGUMENT IT HAS TO ANSWER
+ * FOUR BOUNDS, AND THEY ARE THE WHOLE ANSWER:
  *
- * `app/routes/api.csp-report.ts` refuses to write rows and says why: "an
- * unauthenticated endpoint that writes rows is a storage-exhaustion primitive
- * handed to the internet". That is correct and it is the reason that endpoint
- * logs instead. This one cannot log instead, because the deliverable IS the
- * stored mention, so the argument has to be answered rather than avoided.
+ * 1. Per-IP rate, on the existing `AskBudget` object under a `wm:<ip>` instance.
+ * 2. The target must already be a publicly visible post here, read through the DB chokepoint.
+ * 3. One row per (source, target), a unique index, so a re-send UPDATES and repetition costs nothing.
+ * 4. A global cap on open rows, answered 503. This is the bound that does not depend on the other
+ *    three being right, and it is what makes the storage claim a fact rather than an argument.
  *
- * ## FOUR BOUNDS, AND THEY ARE THE WHOLE ANSWER
+ * WITHOUT `ASK_BUDGET` THIS DOES NOT SERVE, the stance every metered path here takes.
  *
- * 1. **Per-IP rate, 20 per 60 seconds**, on the existing `AskBudget` Durable
- *    Object under a `wm:<ip>` instance name. No new class and no migration,
- *    exactly as the CSP sink, the operator path, the smoke credential and
- *    `/api/health` reuse it. This bounds the RATE.
- * 2. **The target must already be a publicly visible post here.** Not a URL
- *    shape, not a slug that parses: a row that `publiclyVisible()` admits,
- *    read through `webmentionTarget` in the DB chokepoint. So the set of
- *    accepted targets is the published corpus, which is a number this site
- *    controls entirely.
- * 3. **One row per (source, target)**, a unique index, and a re-sent mention
- *    UPDATES rather than inserting. So repetition costs nothing: the table's
- *    size is the corpus times the number of distinct pages that link to it,
- *    not a function of how many times anybody presses send.
- * 4. **A global cap on open rows.** At or above `OPEN_QUEUE_CAP` mentions in
- *    `unverified` or `pending`, this answers 503 and logs one line. This is the
- *    bound that does not depend on the other three being right, and it is the
- *    one that makes the storage claim a fact rather than an argument: the table
- *    cannot pass the cap plus whatever the admin has already approved.
+ * IT RENDERS NOTHING. An accepted mention reaches `unverified`, then `pending` if the source really
+ * links here, and stops; approval is a human action.
  *
- * Together those are a bounded table filled at a bounded rate from a bounded
- * set of targets. Bound 4 alone would be enough to refuse the exhaustion; the
- * other three are what keep the endpoint USEFUL while it is refusing, which is
- * the property a cap on its own does not have.
- *
- * **Without `ASK_BUDGET` this does not serve.** The stance the Ask guards, the
- * CSP sink, `/api/health` and the operator path all take: an unprotected public
- * write path does not serve unmetered, it does not serve.
- *
- * ## WHAT IT DOES NOT DO
- *
- * It does not render anything. An accepted mention reaches `unverified`, then
- * `pending` if the source really links here, and stops. Approval is a human
- * action in `/admin/mentions`, and even an approved row has no public effect in
- * H1: rendering under the post, cache invalidation on approve, and advertising
- * this endpoint are all H2. A mention cannot reach a reader from this commit.
- *
- * It stores NO IP ADDRESS. The rate limiter's counter is keyed on one and
- * expires with its window; the row carries the sender's published URL, a name
- * from their h-card, and a sentence of their own prose. `/privacy` says exactly
- * that.
+ * IT STORES NO IP ADDRESS. The limiter's counter expires with its window, and the row carries only
+ * what the sender's own page says.
  */
 
 /**
@@ -80,17 +46,12 @@ const RATE_PERIOD_SECONDS = 60;
 /**
  * The ceiling on `unverified` plus `pending` rows. The fourth bound.
  *
- * **WHY 500 AND NOT SOMETHING LARGER.** This is a personal site with a corpus
- * in the low dozens. Five hundred unmoderated mentions is already far past what
- * one person will ever work through in a sitting, so a higher number would not
- * buy a real sender anything; it would only raise the amount of storage an
- * attacker who defeats bounds 1 through 3 can take. And the refusal is
- * RECOVERABLE by the one action that was needed anyway: the admin moderating
- * the queue drops the count below the cap.
+ * WHY IT IS SMALL: a higher number buys a real sender nothing on a personal site and only raises the
+ * storage an attacker who defeats bounds 1 to 3 can take. The refusal is RECOVERABLE by the action
+ * that was needed anyway, which is the admin moderating the queue.
  *
- * A 503 rather than a 429, because the condition is about this site's state
- * rather than about the caller's rate, and a well-behaved sender retrying later
- * is exactly the right response to it.
+ * A 503 rather than a 429, because the condition is about this site's state rather than the caller's
+ * rate, and a well-behaved sender retrying later is the right response.
  */
 const OPEN_QUEUE_CAP = 500;
 
@@ -98,28 +59,19 @@ const OPEN_QUEUE_CAP = 500;
 const NO_STORE = "private, no-store";
 
 /**
- * WHAT A REFUSED SENDER IS TOLD, and it is deliberately one string for four
- * different target problems.
- *
- * An unparseable URL, a foreign origin, a path that is not a post, a slug that
- * is not a slug, and a slug that names a DRAFT all answer with this. Especially
- * the draft: a distinct message would turn this endpoint into an oracle for
- * unpublished slugs, which is hard rule 1's leak arriving through a 400 instead
- * of through a page.
+ * WHAT A REFUSED SENDER IS TOLD, and it is deliberately one string for four different target
+ * problems. Especially the draft: a distinct message would turn this endpoint into an oracle for
+ * unpublished slugs, which is hard rule 1's leak arriving through a 400 instead of through a page.
  */
 const BAD_TARGET = "target must be a published post on this site";
 
 const BAD_FORM = "send application/x-www-form-urlencoded with source and target";
 
 /**
- * The origins this site answers on, for both the target and the source checks.
- *
- * TWO RATHER THAN ONE, and `app/lib/origin.mjs` makes the argument at length:
- * the site is pre-cutover, `SITE_ORIGIN` is workers.dev today and the apex
- * later, and pinning to a constant refuses every real request from whichever
- * host is not the constant at exactly the moment of the move. `SITE_ORIGIN` is
- * the origin a sender READ off a canonical link; the request's own origin is
- * where their POST arrived.
+ * The origins this site answers on, for both the target and the source checks. TWO RATHER THAN
+ * ONE: the site is pre-cutover, so pinning to a constant would refuse every real request from
+ * whichever host is not the constant at exactly the moment of the move. `app/lib/origin.mjs` makes
+ * the argument at length.
  */
 function siteOrigins(request: Request): string[] {
   try {
@@ -147,11 +99,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * 2. CONTENT-LENGTH IS A HINT FROM THE CLIENT, so it refuses early and never
-   * permits. An honest oversized header is rejected without touching the body;
-   * a missing or lying one falls through to `readCapped` below, which counts
-   * the bytes as they arrive. The grounds are `app/lib/read-capped.mjs`, which
-   * records the three ways the old Content-Length-only cap failed.
+   * CONTENT-LENGTH IS A HINT FROM THE CLIENT, so it refuses early and never permits. An honest
+   * oversized header is rejected without touching the body; a missing or lying one falls through to
+   * `readCapped`, which counts the bytes as they arrive.
    */
   const declared = Number(request.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
@@ -165,17 +115,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * 3. THE RATE LIMIT PRECEDES THE BODY READ, which is a change of order from
-   * the letters this was specified in and is deliberate. Every check below it
-   * costs something: a materialised body, a form parse, a D1 read. The
-   * limiter's decision costs one Durable Object call and is the only thing here
-   * that bounds how often the rest can be reached at all, so it goes first
-   * among the things that can refuse a well-formed request. Same ordering
-   * principle as hard rule 19's chain: each stage refuses before the next
-   * spends anything.
+   * THE RATE LIMIT PRECEDES THE BODY READ. Every check below it costs something: a materialised
+   * body, a form parse, a D1 read. The limiter costs one Durable Object call and is the only thing
+   * here that bounds how often the rest can be reached, which is hard rule 19's chain applied to this
+   * route: each stage refuses before the next spends anything.
    *
-   * Keyed on the edge-set client IP rather than anything in the body, which the
-   * caller controls. One statement of the read: `app/lib/client-ip.ts`.
+   * Keyed on the edge-set client IP rather than anything in the body, which the caller controls.
    */
   const ip = clientIp(request);
   const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`wm:${ip}`));
@@ -185,10 +130,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * 4. THE FORM ENCODING, checked on the HEADER before the body is read,
-   * because it is free there. The webmention protocol specifies this one
-   * encoding, so accepting JSON as well would be inventing a dialect nobody
-   * sends and giving the parser a second shape to be wrong about.
+   * THE FORM ENCODING, checked on the HEADER before the body is read, because it is free there. The
+   * protocol specifies this one encoding, so accepting JSON as well would be inventing a dialect
+   * nobody sends and giving the parser a second shape to be wrong about.
    */
   const contentType = (request.headers.get("content-type") ?? "").toLowerCase();
   if (!contentType.includes("application/x-www-form-urlencoded")) {
@@ -226,24 +170,19 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * THE VISIBILITY READ, and it is AFTER the source check on purpose. Both are
-   * refusals; only this one costs a query, and a caller sending garbage sources
-   * should not be able to make this site read D1 for each one.
-   *
-   * A draft, a scheduled post and a slug that names nothing are one answer,
-   * `BAD_TARGET`, for the reason stated on that constant.
+   * THE VISIBILITY READ, AFTER the source check on purpose. Both are refusals; only this one costs a
+   * query, and a caller sending garbage sources should not be able to make this site read D1 for each
+   * one. A draft, a scheduled post and a slug that names nothing are one answer.
    */
   if (!(await webmentionTarget(env, slug))) {
     return answer(BAD_TARGET, 400);
   }
 
   /*
-   * 7. THE GLOBAL CAP, the fourth bound, read immediately before the write it
-   * guards. It is a count and not a reservation, so two requests arriving
-   * together can both pass at the boundary; that is accepted and stated rather
-   * than papered over, because the failure it would cause is one row past a cap
-   * chosen with an order of magnitude of headroom, and the alternative is a
-   * second Durable Object to make a queue length transactional.
+   * THE GLOBAL CAP, the fourth bound, read immediately before the write it guards. It is a count and
+   * not a reservation, so two requests arriving together can both pass at the boundary. That is
+   * accepted and stated rather than papered over: the failure is one row past a cap chosen with an
+   * order of magnitude of headroom, and the alternative is a second Durable Object.
    */
   const open = await countOpenWebmentions(env);
   if (open >= OPEN_QUEUE_CAP) {
@@ -258,11 +197,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const id = await receiveWebmention(env, { sourceUrl: source, targetSlug: slug });
 
   /*
-   * 9. VERIFICATION AFTER THE ANSWER. The sender gets 202 immediately, which is
-   * what the protocol asks for and what keeps a slow source off the critical
-   * path. `waitUntil` rather than a queue: ruled 2026-09-04, a queue would be
-   * new infrastructure for a load of zero. What a cut-short `waitUntil` leaves
-   * behind, and why that is the safe direction, is on `verifyWebmention`.
+   * VERIFICATION AFTER THE ANSWER. The sender gets 202 immediately, which is what the protocol asks
+   * for and what keeps a slow source off the critical path. `waitUntil` rather than a queue, which
+   * would be new infrastructure for a load of zero. What a cut-short `waitUntil` leaves behind is on
+   * `verifyWebmention`.
    */
   getExecutionContext(context).waitUntil(verifyWebmention(env, id, source, target));
 
@@ -270,12 +208,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 /**
- * A GET says what this is rather than 404ing, so anyone who finds the endpoint
- * knows what they are looking at. It reveals nothing: the text below is true of
- * every webmention receiver on the internet.
- *
- * The same shape as the CSP sink's loader, deliberately. Both are public POST
- * endpoints somebody may arrive at by hand.
+ * A GET says what this is rather than 404ing, so anyone who finds the endpoint knows what they are
+ * looking at. It reveals nothing: the text is true of every webmention receiver on the internet.
  */
 export function loader() {
   return answer(

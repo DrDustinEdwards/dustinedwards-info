@@ -5,51 +5,27 @@ import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/api.csp-report";
 
 /**
- * The CSP violation sink. Phase B.
+ * The CSP violation sink. Under enforcement a report means something was BLOCKED.
  *
- * **The Report-Only window closed on 2026-08-17 and this endpoint did not.**
- * `report-uri` and `report-to` are still sent beside the enforcing header, so
- * reports still arrive here: under enforcement a report means something was
- * BLOCKED, which is a live symptom rather than an observation. Everything below
- * about being an unauthenticated sink is unchanged by that.
+ * **THIS IS A PUBLIC, UNAUTHENTICATED POST ENDPOINT.** It has to be: browsers send reports with no
+ * credentials, and a report that needs a token is a report nobody sends. So it is written as a sink
+ * that cannot be turned into anything useful, and the limits below are the whole of that argument.
  *
- * **THIS IS A PUBLIC, UNAUTHENTICATED POST ENDPOINT.** It has to be: browsers
- * send violation reports with no credentials, and a report that needs a token
- * is a report nobody sends. So it is written as a sink that cannot be turned
- * into anything useful by an attacker, and the three limits below are the whole
- * of that argument.
+ * **It LOGS the report and deliberately does not write D1.** An unauthenticated endpoint that writes
+ * rows is a storage-exhaustion primitive handed to the internet. Persisting reports is a ruling with
+ * its own retention and privacy questions, not a quiet schema change.
  *
- * ## What it does with a report: LOGS IT
+ * Three limits, cheapest first: METHOD, anything but POST is 405 and reads nothing; a BODY CAP
+ * checked against `Content-Length` before the body is read; and a PER-IP RATE LIMIT on the existing
+ * `AskBudget` Durable Object under `csp:<ip>`, no new class and no migration.
  *
- * Deliberately not D1. An unauthenticated endpoint that writes rows is a
- * storage-exhaustion primitive handed to the internet, and the observation
- * window this exists for is measured in days. `console.log` reaches Workers
- * observability and `wrangler tail`, which is where these are meant to be read.
- * If reports ever need to persist, that is a ruling with its own retention and
- * privacy questions, not a quiet schema change.
+ * **The limit is deliberately loose**, because the deliverable here is the report itself and a page
+ * that trips ten rules sends ten. A limit that silently ate them would make the observation window
+ * lie in the safe direction, which is the worst direction for this endpoint.
  *
- * ## Three limits, cheapest first, same ordering principle as the Ask guards
- *
- * 1. **Method.** Anything but POST is 405 and reads nothing.
- * 2. **Body cap, 8 KB.** Checked against `Content-Length` BEFORE the body is
- *    read, so an oversized report costs no memory. A real CSP report is a few
- *    hundred bytes; 8 KB is generous for the `report-to` batching format, which
- *    can carry several reports in one array.
- * 3. **Per-IP rate limit, 60 per 60 seconds**, on the existing `AskBudget`
- *    Durable Object under a `csp:<ip>` instance name. NO new class and no
- *    migration, exactly as the operator path reuses it under `op:<id>`.
- *
- * **Why 60 and not something tighter.** The deliverable here is the violation
- * report itself, and a page that trips ten rules sends ten reports; a limit
- * that silently ate them would make the observation window lie in the safe
- * direction, which is the worst direction for this particular endpoint. 60 is
- * enough for any real page and still bounds a flood.
- *
- * **Without `ASK_BUDGET` the endpoint refuses**, the same stance the Ask guards
- * and the operator path take: an unprotected public write path does not serve.
- *
- * Always answers 204 on the success path. A browser does not read the body and
- * an error status would only make it retry.
+ * **Without `ASK_BUDGET` the endpoint refuses**: an unprotected public write path does not serve.
+ * Always 204 on success, because a browser does not read the body and an error status makes it
+ * retry.
  */
 
 /** Bytes. A real report is a few hundred; the batch format is still small. */
@@ -68,15 +44,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * CONTENT-LENGTH IS A HINT FROM THE CLIENT, so it is used to refuse early and
-   * never to permit. An honest oversized header is rejected here without
-   * touching the body; a missing or lying one falls through to `readCapped`
-   * below, which counts the bytes as they arrive.
-   *
-   * This used to be the ONLY cap, and it was `Number(header ?? "0")`: a request
-   * with no Content-Length became 0, sailed past `> MAX_BODY_BYTES`, and the
-   * body was then materialised whole by `request.text()`. A small lie did the
-   * same. The endpoint is public, unauthenticated and POST.
+   * CONTENT-LENGTH IS A HINT FROM THE CLIENT, so it is used to refuse early and NEVER to permit. An
+   * honest oversized header is rejected here without touching the body; a missing or lying one falls
+   * through to `readCapped` below, which counts the bytes as they arrive.
    */
   const declared = Number(request.headers.get("content-length") ?? "");
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES) {
@@ -111,16 +81,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * READ THE STREAM AND STOP AT THE CAP.
-   *
-   * The previous comment here claimed the cap preceded the read. It did not:
-   * `request.text()` materialises the whole body before `.slice()` can shorten
-   * it, so the slice bounded what was LOGGED and never what was received.
-   *
-   * `readCapped` cancels the stream the moment the count crosses the limit, so
-   * an oversized body costs the bytes already in flight and nothing more, and a
-   * client that omits or understates Content-Length gets the same treatment as
-   * one that declares it honestly.
+   * READ THE STREAM AND STOP AT THE CAP. `request.text()` materialises the whole body before a
+   * `.slice()` can shorten it, so a slice bounds what is LOGGED and never what is RECEIVED.
+   * `readCapped` cancels the stream the moment the count crosses the limit, so a client that omits or
+   * understates Content-Length gets the same treatment as one that declares it honestly.
    */
   const capped = await readCapped(request, MAX_BODY_BYTES);
   if (capped === null) {
@@ -131,14 +95,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
   const body = capped;
 
-  // One line, prefixed so it can be filtered out of the log stream. The report
-  // is logged VERBATIM rather than parsed: both the legacy `report-uri` shape
-  // and the `report-to` batch shape land here, and a parser that understood
-  // only one would silently drop the other.
-  // JSON-encoded, so a body containing newlines cannot forge additional log
-  // lines past the [csp-report] prefix the stream is filtered on. The body stays
-  // UNPARSED, which is deliberate: both the report-uri and report-to shapes land
-  // here and this endpoint is not the place to decide between them.
+  // One line, prefixed so it can be filtered out of the log stream, and JSON-encoded so a body
+  // containing newlines cannot forge additional lines past the [csp-report] prefix. The body stays
+  // UNPARSED: both the legacy report-uri shape and the report-to batch shape land here, and a parser
+  // that understood only one would silently drop the other.
   console.log(`[csp-report] ${JSON.stringify(body)}`);
 
   return new Response(null, {

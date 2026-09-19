@@ -6,18 +6,15 @@ import onigModule from "shiki/onig.wasm";
 import { setWasmLoader } from "./pipeline.mjs";
 
 /**
- * Teaches the shared pipeline how to load oniguruma inside a Worker.
+ * Teaches the shared pipeline how to load oniguruma inside a Worker. Import for its side effect,
+ * before anything renders.
  *
- * Workers refuse `WebAssembly.instantiate()` on raw bytes ("Wasm code
- * generation disallowed by embedder"), which is what `import("shiki/wasm")`
- * ends up doing, so the Node default cannot be used here. A module imported
- * statically is already compiled, and instantiating one of those is allowed.
+ * Workers refuse `WebAssembly.instantiate()` on raw bytes, which is what `import("shiki/wasm")` ends
+ * up doing, so the Node default cannot be used here. A module imported STATICALLY is already
+ * compiled, and instantiating one of those is allowed.
  *
- * Import this module for its side effect, before anything renders.
- *
- * Typed loosely on purpose: the Cloudflare Vite plugin resolves the `.wasm`
- * import to a `WebAssembly.Module` at build time, and the Worker tsconfig does
- * not carry DOM's WebAssembly value declarations.
+ * Typed loosely on purpose: the Worker tsconfig does not carry DOM's WebAssembly value
+ * declarations.
  */
 const wasm = (globalThis as unknown as {
   WebAssembly: { instantiate: (m: unknown, i: unknown) => Promise<unknown> };

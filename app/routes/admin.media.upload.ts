@@ -11,22 +11,15 @@ import { storeUpload } from "~/lib/media/upload.server";
 import type { Route } from "./+types/admin.media.upload";
 
 /**
- * Image upload for the editor. Sits under /admin so the existing Better Auth
- * middleware gates it; there is no unauthenticated write path to the bucket.
+ * Image upload for the editor. Sits under /admin so the existing Better Auth middleware gates it;
+ * there is no unauthenticated write path to the bucket.
  *
- * ## AN ADAPTER, since 2026-09-07, and the store is `upload.server.ts`
+ * AN ADAPTER over `upload.server.ts`, which owns everything after the bytes arrive. The
+ * content-addressing ruling is at `contentKey` in `classify.mjs`, where the key is made.
  *
- * Everything this route used to do after the bytes arrived, it now asks
- * `storeUpload` to do: refuse, measure, address, put, annotate. Ruling 32d gave
- * MEDIA a second writer in the operator API's `upload_media`, and the sequence
- * is not one two copies stay equal to, so it moved to a door they share. The
- * grounds are at that function; the content-addressing ruling is at
- * `contentKey` in `classify.mjs`, which is where the key is actually made.
- *
- * WHAT IS LEFT HERE IS EXACTLY WHAT IS THIS ROUTE'S: parsing a multipart form,
- * naming its own missing-input refusal, and choosing between a redirect and a
- * JSON body. All three are properties of who is asking rather than of what is
- * being stored, which is the line the extraction was cut along.
+ * WHAT IS LEFT HERE IS EXACTLY WHAT IS THIS ROUTE'S: parsing a multipart form, naming its own
+ * missing-input refusal, and choosing between a redirect and a JSON body. All three are properties of
+ * who is asking rather than of what is being stored, which is the line the extraction was cut along.
  */
 
 /* The accepted types, the size limit and the reply shapes live in
@@ -34,16 +27,10 @@ import type { Route } from "./+types/admin.media.upload";
  * assert them. Two editors read the JSON this route returns and neither may
  * change, so the contract is a tested object rather than a convention. */
 
-/* `slugifyName` lived here to build the human-readable half of a key. Content
- * addressing removed the only caller: the key is a digest now, and the filename
- * goes to `original_name` verbatim rather than being mangled into a slug. */
 
 /**
- * The listing loader that used to live here MOVED to the media page at
- * /admin/media, so there is one lister and one media surface. This route is now
- * the upload endpoint only, which is why it kept the action and lost the
- * loader. Its URL changed from /admin/media to /admin/media/upload; the editor
- * and the picker both post to the new one.
+ * The upload endpoint only. The listing lives on the media page at /admin/media, so there is one
+ * lister and one media surface.
  */
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -56,14 +43,11 @@ export async function action({ request, context }: Route.ActionArgs) {
   const file = form.get("file");
 
   /*
-   * WHICH CALLER IS THIS, decided by an EXPLICIT FIELD and by nothing else.
-   *
-   * The library posts a form and navigates; the two editors `fetch` and read
-   * JSON. The library declares itself with a hidden `intent=upload-form`, so
-   * the editors keep the JSON path by SENDING NOTHING NEW, which is the whole
-   * point: their contract cannot be moved by a header default changing under
-   * them. `isFormUpload` is an equality against one token, asserted in
-   * test/upload-contract.test.mjs against "1", "true", "" and undefined.
+   * WHICH CALLER IS THIS, decided by an EXPLICIT FIELD and by nothing else. The library posts a form
+   * and navigates, declaring itself with a hidden `intent=upload-form`; the two editors `fetch` and
+   * read JSON, and keep that path by SENDING NOTHING NEW, so their contract cannot be moved by a header
+   * default changing under them. `isFormUpload` is an equality against one token, asserted in
+   * test/upload-contract.test.mjs.
    */
   const asForm = isFormUpload(form.get("intent"));
 
@@ -84,18 +68,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * READ, THEN REFUSE, and the ordering costs nothing measurable.
+   * READ, THEN REFUSE, and the ordering costs nothing measurable: `request.formData()` above has
+   * already buffered the entire body into this isolate, so `arrayBuffer()` is a copy out of memory
+   * rather than a read off the wire. What the old order bought was a second statement of the size rule
+   * living in this file, which is the thing the extraction was for.
    *
-   * The type and size checks used to run against `file.type` and `file.size`
-   * before the bytes were touched, which reads as the thrifty order and is not:
-   * `request.formData()` above has already buffered the entire body into this
-   * isolate, so `arrayBuffer()` is a copy out of memory rather than a read off
-   * the wire, and an oversized post was oversized in here before any of this
-   * ran. What the old order actually bought was a second statement of the size
-   * rule living in this file, which is the thing the extraction was for.
-   *
-   * Read once, too: the bytes are needed to hash and to store, and a File's
-   * stream cannot be consumed twice.
+   * Read once, too: the bytes are needed to hash and to store, and a File's stream cannot be consumed
+   * twice.
    */
   const stored = await storeUpload(env, {
     bytes: await file.arrayBuffer(),
