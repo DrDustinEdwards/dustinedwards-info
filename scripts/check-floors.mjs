@@ -52,11 +52,6 @@ const UNFLOORED = {
   "check:backup": "carries four scope floors on table counts, not an executed-count floor.",
   "check:image-weight": "asserts per-row and reports rows examined; no executed-count floor.",
   /*
-   * DELEGATES WHOLLY to a third-party binary that emits no floor line. Its threshold is a SCORE on
-   * the diff, so there is nothing to read back.
-   */
-  "check:slop": "delegates wholly to aislop, which owns its reporting and scores the diff.",
-  /*
    * Its two floors are on BUILT CHUNKS and FILES WALKED, which are scope proofs. The chunk one
    * sits far under its count, which reads as drift and is not: the count is a property of the
    * bundler's splitting on the day.
