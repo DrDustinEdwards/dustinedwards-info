@@ -1,3 +1,4 @@
+// aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { DurableObject } from "cloudflare:workers";
 
 /**

@@ -1,3 +1,4 @@
+// aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { cache } from "cloudflare:workers";
 
 import { PAGES_CACHE_TAG, cacheTags } from "~/lib/seo";
