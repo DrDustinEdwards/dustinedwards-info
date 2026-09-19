@@ -39,6 +39,7 @@ const STATIC_PATHS = [
   "/colophon",
   "/projects",
   "/playground",
+  "/playground/ui",
   "/privacy",
 ];
 
