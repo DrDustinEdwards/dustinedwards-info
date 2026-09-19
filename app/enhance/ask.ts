@@ -97,16 +97,33 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     sources.textContent = "";
     const heading = el("li", "ask-sources-heading", "Sources");
     attach(sources, heading);
+    /*
+     * NUMBERED, and the number is inside the link rather than beside it: a bare "[1]" next to a
+     * title is a second target a keyboard reader has to skip past to reach the one that works.
+     *
+     * SAME-ORIGIN PATHS ONLY. Every citation this site can make is a path on this site, so a URL
+     * that is not one did not come from the corpus and is not rendered as a link. It is dropped
+     * rather than shown unlinked, because a citation nobody can follow is not a citation.
+     */
+    let index = 0;
     for (const citation of citations) {
+      if (!citation.url.startsWith("/") || citation.url.startsWith("//")) continue;
+      index += 1;
       const item = el("li");
       const link = el("a");
       link.href = citation.url;
-      link.textContent = citation.title;
+      attach(link, el("span", "ask-source-index", `${index}. `), el("span", undefined, citation.title));
       attach(item, link);
       if (citation.isSection) {
         attach(item, el("span", "ask-source-kind", " section"));
       }
       attach(sources, item);
+    }
+    // Every citation was off-origin, so there is nothing to show and the heading would head an
+    // empty list.
+    if (index === 0) {
+      sources.hidden = true;
+      return;
     }
     sources.hidden = false;
   }
