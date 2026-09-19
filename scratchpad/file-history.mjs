@@ -52,6 +52,12 @@ const DOCS = [
     title: "Code comment history, September 2026, wave 3",
     type: "reference",
   },
+  {
+    file: "scratchpad/code-history-2026-09-wave4.md",
+    path: "code-history-2026-09-wave4.md",
+    title: "Code comment history, September 2026, wave 4",
+    type: "reference",
+  },
 ];
 
 /** Which documents this run files. Empty means all of them, which is the original behaviour. */
