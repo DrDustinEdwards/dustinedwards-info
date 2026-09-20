@@ -14,3 +14,33 @@
   font-weight: 400;
   line-height: 1.7;
 }
+
+.evidence a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.evidence a:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+/* The wayfinding exemption: these figures are the page describing itself, and a visited colour
+   would make the row look like a trail through the site rather than a reading of it. */
+.evidence a:visited {
+  color: var(--brand);
+}
+
+/*
+ * UNDER THE ROW, OUTSIDE THE RULES. A health ratio is only true with its read time beside it and
+ * this page is shared-cached, so the sentence is part of the claim rather than a footnote to it.
+ */
+.evidence-detail {
+  margin: 0.5rem 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
