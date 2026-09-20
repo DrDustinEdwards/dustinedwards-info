@@ -1,6 +1,8 @@
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 import { PostHistory } from "~/components/post-history";
+import { EvidenceRow } from "~/components/evidence-row";
+import { ENHANCE_GZIP_BYTES } from "~/lib/enhance-sizes.generated";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { ShellFooter } from "~/components/shell-footer";
@@ -20,7 +22,6 @@ import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
 import { seriesPath } from "~/lib/series-path.mjs";
-import { tagPath } from "~/lib/tag-path.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -37,6 +38,8 @@ import {
 import type { Route } from "./+types/blog.$slug";
 
 import "~/styles/blog-index.css";
+import "~/styles/post-rail.css";
+import "~/styles/evidence-row.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
@@ -216,6 +219,17 @@ export function meta({ loaderData }: Route.MetaArgs) {
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
 /**
+ * Fewer entries than this and the contents list is furniture rather than a map, so the rail drops
+ * it. Three is the handoff's number and this is its only copy.
+ */
+const TOC_MIN = 3;
+
+/** The rail's date form: machine data in a mono column, so it is the machine's spelling. */
+function ymd(value: Date | string | number) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+/**
  * THE ONE PLACE ON THIS PAGE WHERE THE TEXT IS NOT OURS.
  *
  * Every string in a mention was read out of a page this site does not control, so
@@ -302,10 +316,32 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
       ? longDateUTC(post.updatedAt)
       : null;
 
+  /* The rail maps SECTIONS, so h3s are filtered out here rather than indented in CSS. */
+  const sections = toc.filter((entry) => entry.depth === 2);
+
+  /*
+   * THE EVIDENCE ROW'S THREE FACTS, assembled here because this is where all three are in scope.
+   * Each is computed rather than typed: the words and the hash come off the projection, the
+   * bundle size off the module `build:enhance` writes beside the bytes it measured. A null makes
+   * the row omit ITSELF rather than render two facts and a gap.
+   */
+  const gzipBytes = ENHANCE_GZIP_BYTES.blog;
+  const evidence = [
+    post.wordCount > 0 ? `${post.wordCount.toLocaleString("en-US")} words` : null,
+    gzipBytes ? `${(gzipBytes / 1000).toFixed(2)} kB gzipped` : null,
+    post.sourceBlobSha ? `source hash ${post.sourceBlobSha.slice(0, 7)}` : null,
+  ];
+
   return (
     <>
       <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
+      {/*
+       * THE h-entry IS ON `main`, NOT ON THE ARTICLE, and that is forced by the layout rather than
+       * chosen: the title and the article are now siblings in the track grid, so an h-entry on the
+       * article alone would publish a post with no p-name and no dt-published. `check:microformats`
+       * asserts exactly one h-entry and one h-card on the page.
+       */}
+      <main className="tracks post-tracks h-entry" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -334,70 +370,100 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
          * Annotating the first copy cannot go out of step with itself, where a third copy
          * of the same facts would be a third thing to keep true. Ruling 50 as amended.
          */}
-        <article className="post h-entry">
-          <header className="post-head">
-            <h1 className="p-name">{post.title}</h1>
-            {/*
-             * The SAME STRING the meta tag carries. `postSocial` falls back to the site
-             * description where a post has none, so the raw column would put a different
-             * sentence on the page than in the head.
-             */}
-            <p className="post-dek">{dek}</p>
-            {/*
-             * BETWEEN THE DEK AND THE DATE, because all three qualify the post before it is read:
-             * whether it is finished, who it is for, and what it concludes. Below the meta line
-             * they would be read after the reader has already decided.
-             */}
-            <PostHeadBlocks
-              writingStatus={(post.writingStatus as WritingStatus | null) ?? null}
-              assumedAudience={post.assumedAudience ?? null}
-              keyTakeaways={post.keyTakeaways ?? null}
-            />
-            <p className="post-card-meta">
-              {post.publishAt && (
-                <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
-                  {longDateUTC(post.publishAt)}
-                </time>
-              )}
-              {post.readingTimeMinutes && <> · {post.readingTimeMinutes} min read</>}
-              {/*
-               * STILL CONDITIONAL, deliberately: a post nobody has revised has no updated date,
-               * and emitting the row's `updatedAt` regardless would publish a sync timestamp as
-               * if it were an edit.
-               */}
-              {revisedLabel && (
-                <>
-                  {" "}
-                  · Updated{" "}
-                  <time className="dt-updated" dateTime={new Date(post.updatedAt!).toISOString()}>
-                    {revisedLabel}
+        <header className="post-head">
+          <h1 className="p-name">{post.title}</h1>
+          {/*
+           * The SAME STRING the meta tag carries. `postSocial` falls back to the site
+           * description where a post has none, so the raw column would put a different
+           * sentence on the page than in the head.
+           */}
+          <p className="post-dek">{dek}</p>
+          {/* Under the opening block and above the body, which is this object's slot on every
+              page that carries it. Text track, never the rail. */}
+          <EvidenceRow facts={evidence} />
+          {/*
+           * `hidden` and not `.sr-only`: `.sr-only` is still announced, and a screen
+           * reader gaining a name and a link on every post IS a change to the page. Every
+           * mf2 parser reads the markup rather than the computed style.
+           */}
+          <p className="p-author h-card" hidden>
+            <a className="p-name u-url" href="/">
+              {SITE.name}
+            </a>
+          </p>
+        </header>
+
+        {/*
+         * THE RAIL: when the post was published, where its sections are, and nothing else. It
+         * PRECEDES the article in source, so at one column it lands above the body in the order a
+         * reader wants: what this is, then where it goes.
+         *
+         * The chronology carries ONE authored date, not the handoff's two. `date` in frontmatter
+         * is the only one the corpus has and `posts` has no column for a separate written date,
+         * so a "written" line here would be `created_at`, which is when the sync ran. Hard rule
+         * 13: omit the row rather than substitute a different value.
+         */}
+        <div className="post-rail u-rail">
+          <p className="post-machine">
+            {post.publishAt && (
+              <>
+                <b>
+                  <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
+                    {ymd(post.publishAt)}
                   </time>
-                </>
-              )}
-            </p>
-            {/*
-             * `hidden` and not `.sr-only`: `.sr-only` is still announced, and a screen
-             * reader gaining a name and a link on every post IS a change to the page. Every
-             * mf2 parser reads the markup rather than the computed style.
-             */}
-            <p className="p-author h-card" hidden>
-              <a className="p-name u-url" href="/">
-                {SITE.name}
-              </a>
-            </p>
-            {post.tags.length > 0 && (
-              <p className="post-card-tags">
-                {/* To the ARCHIVE, not to a filtered index. `tagPath` is the
-                    one owner of that address; the chips on /blog keep pointing
-                    at the filtered view because theirs composes with the year. */}
-                {post.tags.map((tag) => (
-                  <Link key={tag} to={tagPath(tag)}>
-                    {tag}
-                  </Link>
-                ))}
-              </p>
+                </b>
+                first published
+              </>
             )}
-          </header>
+            {/*
+             * STILL CONDITIONAL, deliberately: a post nobody has revised has no updated date, and
+             * emitting the row's `updatedAt` regardless would publish a sync timestamp as if it
+             * were an edit. `check:microformats` asserts the pairing in BOTH directions, so the
+             * word and the `dt-updated` move together or the gate fails.
+             */}
+            {revisedLabel && (
+              <>
+                <b>
+                  <time className="dt-updated" dateTime={new Date(post.updatedAt!).toISOString()}>
+                    {ymd(post.updatedAt!)}
+                  </time>
+                </b>
+                Updated
+              </>
+            )}
+          </p>
+
+          {/*
+           * H2s ONLY, and only from three up: the rail is a map of the argument's sections, and a
+           * two-entry map is furniture. `data-depth` is gone with the h3s it indented.
+           *
+           * Server-rendered anchors are the page; `app/enhance/blog.ts` adds `data-current` on
+           * scroll and its fallback is that every entry reads muted.
+           */}
+          {sections.length >= TOC_MIN && (
+            <nav className="post-toc" aria-labelledby="contents-heading">
+              <p id="contents-heading">Contents</p>
+              <ol>
+                {sections.map((entry) => (
+                  <li key={entry.id}>
+                    <a href={`#${entry.id}`}>{entry.text}</a>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+          )}
+        </div>
+
+        <article className="post post-body">
+          {/*
+           * BEFORE THE PROSE, because all three qualify the post before it is read: whether it is
+           * finished, who it is for, and what it concludes.
+           */}
+          <PostHeadBlocks
+            writingStatus={(post.writingStatus as WritingStatus | null) ?? null}
+            assumedAudience={post.assumedAudience ?? null}
+            keyTakeaways={post.keyTakeaways ?? null}
+          />
 
           {/*
            * ABSENT, NOT EMPTY, when there is no cover: an empty figure is a landmark a
@@ -461,19 +527,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </nav>
           )}
 
-          {toc.length > 1 && (
-            <nav className="post-toc" aria-labelledby="contents-heading">
-              <h2 id="contents-heading">Contents</h2>
-              <ol>
-                {toc.map((entry) => (
-                  <li key={entry.id} data-depth={entry.depth}>
-                    <a href={`#${entry.id}`}>{entry.text}</a>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
-
           {/*
             The body is rendered at build time from markdown we author and is
             stored as HTML in D1. It contains no third-party input, which is why
@@ -498,13 +551,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               </ul>
             </section>
           )}
-
-          {/*
-           * THE SAME THRESHOLD, NOT A SECOND ONE. `revisedLabel` is already the answer to "has this
-           * post been revised rather than merely redeployed", so the history hangs off it: a post
-           * cannot claim a revision here and deny it in the line above.
-           */}
-          {revisedLabel && post.changelog && <PostHistory entries={post.changelog} />}
 
           {/*
            * Every one is a plain link, so all three work with scripting off. The
@@ -544,7 +590,9 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
            * that works; an anchor is visible, focusable, right-clickable and long-pressable.
            * NO enhancement is registered for it.
            */}
-          <nav className="post-actions post-share" aria-label="Share this post">
+          {/* `.post-share` is also the enhancement's hook for the copy-link-to-selection upgrade,
+              which finds the permalink at `.post-share .u-url`. The class stays if the row moves. */}
+          <nav className="post-actions post-share" aria-label="This post's address">
             {/*
              * The permalink is also the h-entry's `u-url`: this anchor already holds the
              * canonical absolute URL, it is visible, and it is the one a reader copies. One
@@ -552,23 +600,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
              */}
             <a className="post-action u-url" href={canonical}>
               Permalink
-            </a>
-            <a
-              className="post-action"
-              href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(
-                canonical,
-              )}`}
-              rel="noopener noreferrer"
-            >
-              Share on LinkedIn
-            </a>
-            <a
-              className="post-action"
-              href={`mailto:?subject=${encodeURIComponent(post.title)}&body=${encodeURIComponent(
-                canonical,
-              )}`}
-            >
-              Share by email
             </a>
           </nav>
 
@@ -593,71 +624,64 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
            * pointer to them, because twelve post footers restating them is eleven that go
            * stale.
            */}
-          <p className="muted">
+          <p className="post-colophon-note">
             Built on the stack described at <Link to="/colophon">/colophon</Link>.
           </p>
+
+          {/*
+           * THE SAME THRESHOLD, NOT A SECOND ONE. `revisedLabel` is already the answer to "has this
+           * post been revised rather than merely redeployed", so the history hangs off it: a post
+           * cannot claim a revision here and deny it in the rail above.
+           */}
+          {revisedLabel && post.changelog && (
+            <PostHistory
+              entries={post.changelog}
+              publishedAt={post.publishAt ? ymd(post.publishAt) : null}
+              sourceHash={post.sourceBlobSha}
+            />
+          )}
+
+          {/*
+           * LINKED FROM, WHICH IS NOT MENTIONS. This is this site linking to itself, derived from
+           * every rendered body at build time; the mentions section above is other people's sites
+           * saying they linked here, approved one at a time. Two facts, two sections, two names.
+           *
+           * A `nav`, not a `section`: it is navigation, and a screen reader should be able to skip
+           * it. Omitted when empty and never shown as an empty state.
+           */}
+          {post.backlinks.length > 0 && (
+            <nav className="post-backlinks" aria-labelledby="backlinks-heading">
+              <p id="backlinks-heading">Linked from</p>
+              <ul>
+                {post.backlinks.map((item) => (
+                  <li key={item.slug}>
+                    <Link to={`/blog/${item.slug}`}>{item.title}</Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          )}
+
+          {/*
+           * The page turn, as two ruled rows rather than two bordered blocks: radius 0 and no box
+           * is the direction, and the label above the title still lets direction be read before
+           * the title. `rel="prev"` and `rel="next"` are the machine-readable half and are kept.
+           */}
+          <nav className="post-nav" aria-label="More posts">
+            {post.previous && (
+              <Link className="post-nav-target" to={`/blog/${post.previous.slug}`} rel="prev">
+                <span className="post-nav-label">Previous</span>
+                <span className="post-nav-title">{post.previous.title}</span>
+              </Link>
+            )}
+            {post.next && (
+              <Link className="post-nav-target" to={`/blog/${post.next.slug}`} rel="next">
+                <span className="post-nav-label">Next</span>
+                <span className="post-nav-title">{post.next.title}</span>
+              </Link>
+            )}
+          </nav>
         </article>
-
-        {post.related.length > 0 && (
-          <section className="related-posts" aria-labelledby="related-heading">
-            <h2 id="related-heading">Related posts</h2>
-            <ul>
-              {/*
-               * Rendered only when the row HAS one: rows written before the field existed carry
-               * no description, so this degrades to the title rather than to an empty paragraph.
-               * The ranking above is untouched.
-               */}
-              {post.related.map((item) => (
-                <li key={item.slug}>
-                  <Link to={`/blog/${item.slug}`}>{item.title}</Link>
-                  {item.description ? (
-                    <span className="related-description">{item.description}</span>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/*
-         * LINKED FROM, WHICH IS NOT MENTIONS. This is this site linking to itself, derived from
-         * every rendered body at build time; the mentions section below is other people's sites
-         * saying they linked here, approved one at a time. Two facts, two sections, two names.
-         */}
-        {post.backlinks.length > 0 && (
-          <section className="post-backlinks" aria-labelledby="backlinks-heading">
-            <h2 id="backlinks-heading">Linked from</h2>
-            <ul>
-              {post.backlinks.map((item) => (
-                <li key={item.slug}>
-                  <Link to={`/blog/${item.slug}`}>{item.title}</Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {/*
-         * Each is a bordered block carrying the label above the title, which gives it a
-         * real 24px-plus target on touch and lets direction be read before the title. NO
-         * IMAGE, deliberately: a thumbnail here would be a third image on a page that
-         * already has a cover and a card. `rel="prev"` and `rel="next"` are the
-         * machine-readable half and are kept.
-         */}
-        <nav className="post-nav" aria-label="More posts">
-          {post.previous && (
-            <Link className="post-nav-target" to={`/blog/${post.previous.slug}`} rel="prev">
-              <span className="post-nav-label">Previous</span>
-              <span className="post-nav-title">{post.previous.title}</span>
-            </Link>
-          )}
-          {post.next && (
-            <Link className="post-nav-target" to={`/blog/${post.next.slug}`} rel="next">
-              <span className="post-nav-label">Next</span>
-              <span className="post-nav-title">{post.next.title}</span>
-            </Link>
-          )}
-        </nav>
       </main>
       <ShellFooter />
       <BlogEnhancements />
