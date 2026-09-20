@@ -529,9 +529,17 @@ function selectionLink() {
     url = `${permalink.href}#:~:text=${fragment}`;
     button.textContent = SELECTION_LABEL;
     const block = blockOf(selection.getRangeAt(0).endContainer);
-    /* insertBefore, never .after(): the global Element here is HTMLRewriter's, whose after takes
-       a string or a Response. search.ts records the same trap for prepend. */
-    if (block) article.insertBefore(button, block.nextSibling);
+    /*
+     * ONLY WHEN IT IS NOT ALREADY THERE, and this is not an optimisation. `insertBefore` REMOVES a
+     * node that already has a parent before inserting it, so moving the button to the place it is
+     * already in detaches it: `pointerup` fires between mousedown and click, and a target detached
+     * in that window never receives the click at all. Measured in a browser; the button looked
+     * right and did nothing.
+     *
+     * insertBefore, never .after(): the global Element here is HTMLRewriter's, whose after takes a
+     * string or a Response. search.ts records the same trap for prepend.
+     */
+    if (block && block.nextSibling !== button) article.insertBefore(button, block.nextSibling);
   };
 
   /*
