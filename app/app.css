@@ -144,13 +144,15 @@
   --t-label-weight: 600;
   --t-label-vars: "opsz" 14, "wght" 600;
 
-  /* Bar destinations and footer links. No leading token: nothing ever set a
+  /* The header's destinations, its only reader. No leading token: nothing ever set a
      line-height from it. A level member with no reader is not a scale hole;
-     add the token back in the commit that reads it. */
+     add the token back in the commit that reads it.
+     WEIGHT 400, not 520: ruling 117 runs Inter at regular settings everywhere except the
+     wordmark, the home name and a page label, and 520 was the weight of a bar that is gone. */
   --t-nav-family: var(--font-sans);
   --t-nav-size: 0.9375rem;
-  --t-nav-weight: 520;
-  --t-nav-vars: "opsz" 16, "wght" 520;
+  --t-nav-weight: 400;
+  --t-nav-vars: "opsz" 16, "wght" 400;
 
   /* Subheads inside posts, papers and admin. The last Inter level, and the
      highest `opsz` any Inter level asks for. */
@@ -241,20 +243,20 @@
   --line-w-thick: 0.125rem;
   --radius-control: 0.125rem;
 
-  /* THE THREE GUTTERS. 64rem is also the header's one breakpoint, so the
-     header introduces no number of its own. */
-  --gutter: 1.25rem;
+  /* THE THREE GUTTERS, set to the Direction D frames: 24px at 375 and 72px at 1280. They were
+     20 / 32 / 48. Every public route reads them, so this moves all of them. */
+  --gutter: 1.5rem;
 }
 
 @media (min-width: 48rem) {
   :root {
-    --gutter: 2rem;
+    --gutter: 3rem;
   }
 }
 
 @media (min-width: 64rem) {
   :root {
-    --gutter: 3rem;
+    --gutter: 4.5rem;
   }
 }
 
@@ -1005,92 +1007,6 @@ a:hover {
   margin: 0.25rem 0 0;
   font-size: 1rem;
   color: var(--text-muted);
-}
-
-/* The front door lives here, not in a route sheet: it styles the page every reader lands on, and a split
-   would add a request before first paint. Post cards reuse blog-index.css; a second style is two owners. */
-.home {
-  max-width: 52rem;
-  margin: 0 auto;
-  padding: 4rem 1.5rem 5rem;
-  display: grid;
-  gap: 4rem;
-}
-
-.home-intro {
-  /* No `min-height: 100dvh`. The hero it replaces filled the viewport and put
-     everything that answers "why believe you" below the fold, which is the one
-     place the proof cannot do its job. */
-  max-width: 40rem;
-}
-
-.home-section-heading {
-  margin: 0 0 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.proof-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  /* auto-fit with a floor: tiles share a row where there is room and stack where not, with no breakpoint.
-     The floor stops a tile shrinking until its number wraps. */
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-  gap: 1.5rem;
-}
-
-.proof {
-  display: grid;
-  gap: 0.25rem;
-  padding: 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  background: var(--surface);
-}
-
-/* The whole tile is the link except its detail line, which is prose about the number.
-   The link carries value and label, so its accessible name is never a bare digit. */
-.proof-link {
-  display: grid;
-  gap: 0.125rem;
-  color: var(--text);
-  text-decoration: none;
-}
-
-.proof-link:hover .proof-value {
-  color: var(--brand-hover);
-}
-
-.proof-value {
-  font-size: 2rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--brand);
-}
-
-.proof-label {
-  font-size: 0.9375rem;
-}
-
-.proof-detail {
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.home-more {
-  margin: 1.5rem 0 0;
-  font-size: 0.9375rem;
-}
-
-.home-machines p {
-  margin: 0;
-  max-width: 44rem;
-  line-height: 1.7;
 }
 
 .gate {
