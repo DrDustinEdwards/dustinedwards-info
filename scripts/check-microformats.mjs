@@ -674,7 +674,7 @@ await cleanup();
  * load bearing for CI. WHAT THE TIGHTNESS COSTS: unpublishing breaches it, and the repair is a
  * re-measured floor in the same commit.
  */
-const MINIMUM_CHECKS = 216;
+const MINIMUM_CHECKS = 226;
 const floorBreach = assertFloor(
   "check:microformats",
   "checks",
