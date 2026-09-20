@@ -1080,8 +1080,13 @@ const buildPresent = existsSync(assetDir);
 /*
  * Floors: counts from running the gate with build/ present and absent, one under
  * check:floors' tolerance. Only CI reaches the absent branch.
+ *
+ * RE-MEASURED 2026-09-20 after the --brand-active pair landed, by RUNNING both branches: the
+ * absent count is taken by moving build/ aside, never by reasoning about which assertions skip.
+ * The previous 873/679 drifted 47 and 37 over their counts against a 5% tolerance, which is what
+ * check:floors failed on rather than this gate.
  */
-const MINIMUM_CHECKS = buildPresent ? 873 : 679;
+const MINIMUM_CHECKS = buildPresent ? 920 : 716;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
