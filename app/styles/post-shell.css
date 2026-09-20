@@ -159,14 +159,22 @@
   font-family: var(--font-mono);
 }
 
-/* The markdown twin and the permalink: plain links in a row, each a real target. They are not
-   share buttons, which Direction D's kill list removed; they are the ways to take the post
-   somewhere else, and every one of them works with scripting off. */
+/*
+ * The markdown twin and the permalink: plain links under one dust rule, each a real target. They
+ * are not share buttons, which Direction D's kill list removed; they are the ways to take the post
+ * somewhere else, and every one works with scripting off.
+ *
+ * THIS SHEET IS THE ONLY OWNER of `.post-action`. post-enhancements.css used to set the same
+ * selector at the same (0,1,0) specificity and is imported AFTER this file, so its filled pill won
+ * the tie and shipped while these rules sat inert. Ink and a rule, no fill, no radius, no border.
+ */
 .post-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0 var(--s-5);
-  margin-block-start: var(--s-5);
+  margin-block-start: var(--s-6);
+  border-block-start: var(--line-w) solid var(--dust);
+  padding-block-start: 0.875rem;
   font-family: var(--font-sans);
   font-size: 0.9375rem;
 }
@@ -175,7 +183,19 @@
   display: inline-flex;
   align-items: center;
   min-block-size: var(--control-min-dense);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--brand);
+  text-decoration: none;
+}
+
+.post-action:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
 }
 
 .post-share {
