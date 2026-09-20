@@ -14,37 +14,15 @@
   flex-wrap: wrap;
   column-gap: 1.375rem;
   row-gap: 0.5rem;
-  /* Pushed to the far side at wide widths, so the destinations sit against the tools rather than
-     against the wordmark. */
+  /* Pushed to the far side, so the destinations sit against the tools rather than against the
+     wordmark. When the line runs out the whole nav wraps beneath, which is the only width
+     behaviour the header has: there is no breakpoint and no `print` exception to this rule. */
   margin-inline-start: auto;
   /* The nav type level, whose only reader this is. */
   font-family: var(--t-nav-family);
   font-size: var(--t-nav-size);
   font-weight: var(--t-nav-weight);
   font-variation-settings: var(--t-nav-vars);
-}
-
-/*
- * THE ONE WIDTH RULE IN THE HEADER, and it is here because the handoff asks for two things that
- * cannot both hold: "no media query but print", and `order: 3; flex-basis: 100%` at small widths.
- * Only the second describes what the frames draw, so it wins and this is the cost.
- *
- * 785px, because 786 is MEASURED: the width at which the six labels stop fitting beside the
- * wordmark and the two controls. Taken by binary search over real layout with this rule
- * neutralised on the elements, since measuring with it in place finds this query's own boundary
- * and reports the instrument back to itself. Renaming or adding a link moves it, so it is
- * re-measured after the link lands, never reasoned from label widths.
- */
-@media (max-width: 49.0625rem) {
-  .site-header-nav {
-    order: 3;
-    flex-basis: 100%;
-    margin-inline-start: 0;
-  }
-
-  .site-header-tools {
-    margin-inline-start: auto;
-  }
 }
 
 /* Ink, not brand: destinations are wayfinding, and six purple labels under a wordmark read as six
