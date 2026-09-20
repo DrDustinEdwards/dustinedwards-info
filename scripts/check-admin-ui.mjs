@@ -1596,6 +1596,11 @@ const STATES = [
         { name: "OPERATOR_TOKEN", present: true },
         { name: "SMOKE_TOKEN", present: true },
       ],
+      /* Rows, so the demand list and the ENABLED sweep button are both rendered somewhere. */
+      misses: [
+        { query: "d1 backups", count: 7, firstSeen: 0, lastSeen: 0 },
+        { query: "workers cache", count: 2, firstSeen: 0, lastSeen: 0 },
+      ],
     },
   },
   {
@@ -1609,6 +1614,8 @@ const STATES = [
         { name: "OPERATOR_TOKEN", present: false },
         { name: "SMOKE_TOKEN", present: true },
       ],
+      /* Empty, so the empty state and the DISABLED sweep button are covered. */
+      misses: [],
     },
   },
 ];

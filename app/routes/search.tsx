@@ -6,10 +6,11 @@ import { AskMount } from "~/components/ask-panel";
 import { EnhancementScript } from "~/components/enhancement-script";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { getEnv } from "~/lib/context";
+import { getEnv, getExecutionContext } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
 import { askAvailable } from "~/lib/search/ask.server";
+import { recordZeroResult } from "~/lib/search/zero-result.server";
 import {
   parseSort,
   search,
@@ -146,6 +147,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // is a failure and does.
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
+
+  /*
+   * A SEARCH THAT FOUND NOTHING IS THE ONE WORTH RECORDING: it names something a reader expected
+   * this site to have. Text queries only, because a filter that matches nothing is a narrow filter
+   * rather than a gap in the writing.
+   *
+   * AFTER THE RESPONSE, and its failure is swallowed. A reader whose search returned nothing must
+   * not then be shown an error about the recording of that fact, and demand signal is worth
+   * strictly less than the page rendering. `waitUntil` also keeps the write off the critical path,
+   * so the empty-results page is no slower than any other.
+   */
+  if (asked && result.total === 0 && !result.parsed.isEmpty) {
+    getExecutionContext(context).waitUntil(
+      recordZeroResult(env, params.q).catch(() => {}),
+    );
+  }
 
   // A boolean computed from the binding's presence. NOT an AI call: the loader that
   // renders classic results must never wait on the AI layer, so all the server does
