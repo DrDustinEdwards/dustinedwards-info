@@ -12,10 +12,13 @@
  *   footnote previews   the footnote jump links already work
  *   image lightbox      the image is an anchor to the original file
  *   copy as markdown    the button is an anchor to the .md twin
+ *   link to selection   the permalink beside it is the whole-post equivalent
  *
  * Every animation checks prefers-reduced-motion. Nothing here writes to the network or to storage.
  * The machine-readable inventory is `content/enhancements.json`, gated by `check:features`.
  */
+
+import { textFragment } from "../lib/text-fragment.mjs";
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -474,6 +477,97 @@ function copyMarkdown() {
   });
 }
 
+/** The button's resting label, and the one it returns to after a copy. */
+const SELECTION_LABEL = "Copy link to selection";
+
+/**
+ * A link to the passage a reader selected, as a URL text fragment.
+ *
+ * SCRIPT-ONLY WITH NO FALLBACK, AND THE PERMALINK IS WHY THAT IS ALLOWED. There is no scriptless
+ * way to ask a reader what they highlighted, so this cannot have a fallback; what it has is an
+ * equivalent path that is always present two blocks below, the permalink to the whole post. That
+ * permalink is deliberately NOT a clipboard button, so this control does not duplicate one: it does
+ * the one thing the permalink cannot say.
+ *
+ * IT IS PLACED IN THE FLOW AFTER THE SELECTED BLOCK, not floated over the text. A popover needs
+ * coordinates, clamping and a scroll listener, and it still arrives at the END of the tab order; an
+ * element after the block a reader just selected is the next tab stop for free, because a selection
+ * sets the sequential focus navigation starting point.
+ *
+ * THE CANONICAL ORIGIN COMES FROM THE PERMALINK, never from `location`. The origin a reader is on
+ * is not always the origin a link should carry, and the page already states the canonical one once.
+ */
+function selectionLink() {
+  const article = document.querySelector<HTMLElement>(".post .prose");
+  const permalink = document.querySelector<HTMLAnchorElement>(".post-share .u-url");
+  if (!article || !permalink || !navigator.clipboard) return;
+
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "selection-link";
+  button.textContent = SELECTION_LABEL;
+
+  let url = "";
+  let dragging = false;
+
+  /** The article's own child that a node sits under, so the button lands between blocks. */
+  const blockOf = (node: Node) => {
+    let element = node instanceof Element ? node : node.parentElement;
+    while (element && element !== article && element.parentElement !== article) {
+      element = element.parentElement;
+    }
+    return element === article ? null : element;
+  };
+
+  const update = () => {
+    const selection = getSelection();
+    const fragment = selection?.isCollapsed ? null : textFragment(selection?.toString() ?? "");
+    if (!selection || !fragment || !article.contains(selection.getRangeAt(0).commonAncestorContainer)) {
+      button.remove();
+      return;
+    }
+    url = `${permalink.href}#:~:text=${fragment}`;
+    button.textContent = SELECTION_LABEL;
+    const block = blockOf(selection.getRangeAt(0).endContainer);
+    /* insertBefore, never .after(): the global Element here is HTMLRewriter's, whose after takes
+       a string or a Response. search.ts records the same trap for prepend. */
+    if (block) article.insertBefore(button, block.nextSibling);
+  };
+
+  /*
+   * The selection has to survive the click. A mousedown on the button collapses it and takes the
+   * button away with it, so the click would land on nothing.
+   */
+  button.addEventListener("mousedown", (event) => event.preventDefault());
+
+  button.addEventListener("click", () => {
+    void navigator.clipboard.writeText(url).then(() => {
+      // The same two words the heading link announces, and one string in the bundle for both.
+      button.textContent = "Link copied";
+      announce("Link copied");
+      setTimeout(() => {
+        button.textContent = SELECTION_LABEL;
+      }, 2000);
+    });
+  });
+
+  /*
+   * `selectionchange` alone fires on every character of a drag, so the button would hop down the
+   * page under the pointer. The pointer pair holds it still until the reader lets go, and keyboard
+   * selection still arrives through `selectionchange` with no pointer down.
+   */
+  document.addEventListener("selectionchange", () => {
+    if (!dragging) update();
+  });
+  document.addEventListener("pointerdown", () => {
+    dragging = true;
+  });
+  document.addEventListener("pointerup", () => {
+    dragging = false;
+    update();
+  });
+}
+
 readingProgress();
 scrollSpy();
 codeBlocks();
@@ -482,7 +576,5 @@ onIdle(() => {
   footnotePreviews();
   lightbox();
   copyMarkdown();
+  selectionLink();
 });
-
-// Marks this file as a module so it can be dynamically imported.
-export {};
