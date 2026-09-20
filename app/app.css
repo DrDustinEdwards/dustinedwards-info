@@ -978,37 +978,6 @@ a:hover {
   padding: 2rem;
 }
 
-.eyebrow {
-  margin: 0 0 0.75rem;
-  font-size: 0.875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.hero-name {
-  margin: 0;
-  font-size: clamp(2.5rem, 6vw, 4rem);
-  font-weight: 700;
-  line-height: 1.05;
-  color: var(--brand);
-}
-
-.hero-role {
-  margin: 0.5rem 0 0;
-  font-size: 1.25rem;
-  color: var(--text);
-}
-
-/* The affiliation sits under the role as a quieter line: it answers "where do
-   they work", which is a fact a reader wants available rather than announced,
-   and giving it the role's weight would make the hero two headlines. */
-.hero-affiliation {
-  margin: 0.25rem 0 0;
-  font-size: 1rem;
-  color: var(--text-muted);
-}
-
 .gate {
   min-height: 100dvh;
   display: grid;
