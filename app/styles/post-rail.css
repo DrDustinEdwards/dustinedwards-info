@@ -39,8 +39,24 @@
   }
 }
 
+/*
+ * ONE COLUMN: THE RAIL GOES BACK TO THE TEXT TRACK. `--rail` is 0 at this width, and a child left
+ * in a zero-width track does not stack above the article, it OVERLAPS it: the chronology and the
+ * contents list paint straight over the first paragraphs. Measured at 375 before this rule
+ * existed. The class stays in the markup and the placement is decided here, per width.
+ */
+.post-tracks > .post-rail.u-rail {
+  grid-column: text;
+}
+
+@media (min-width: 48rem) {
+  .post-tracks > .post-rail.u-rail {
+    grid-column: rail;
+  }
+}
+
 /* One column: the rail keeps its source position above the article and reads left like everything
-   else. `--rail` is still 0 here, so there is no track to place anything in. */
+   else. */
 .post-rail {
   margin-block-start: var(--s-6);
   color: var(--text-secondary);
