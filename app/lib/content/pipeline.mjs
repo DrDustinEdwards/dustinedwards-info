@@ -1370,10 +1370,121 @@ function remarkDetails(file) {
   };
 }
 
+/** At most this many pull quotes on a page. The third one is a design with no hierarchy left. */
+const PULL_QUOTE_LIMIT = 2;
+
+/**
+ * A pull quote is a glance, so it is capped at roughly one line of display type. Longer than this
+ * and a reader reads it twice instead of once, which is the failure the aria-hidden is about in the
+ * other direction.
+ */
+const PULL_QUOTE_MAX_CHARS = 160;
+
+/**
+ * `:pullquote[a sentence already in the prose]` raises a visual copy of that sentence above its
+ * paragraph.
+ *
+ * IT MARKS THE PROSE, IT DOES NOT DUPLICATE IT, and that is the whole design. Written the obvious
+ * way, as a block the author types the sentence into, the sentence would exist TWICE in the source
+ * and therefore twice in the markdown twin, which serves the source verbatim. Marking the sentence
+ * where it already lives means the twin has it once, the reader of the twin gets the prose
+ * unchanged, and the quote cannot drift from the line it quotes because it IS the line.
+ *
+ * VISUAL ONLY. The raised copy is `aria-hidden`, so a screen reader hears the sentence once, in the
+ * paragraph, in order. It is not a `blockquote`: a blockquote is a quotation from somewhere else,
+ * and this is the page quoting itself.
+ *
+ * BEFORE THE PARAGRAPH, never after, because a pull quote a reader meets after reading the sentence
+ * is a repetition rather than an invitation.
+ *
+ * The marker is unwrapped from the prose, so the paragraph renders exactly as it would have.
+ *
+ * @param {string} file
+ */
+function remarkPullQuote(file) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    let raised = 0;
+    visit(tree, (node, index, parent) => {
+      if (node.type !== "paragraph" || parent?.type !== "root" || index === undefined) return;
+
+      /** @type {any[]} */
+      const marks = [];
+      visit(node, "textDirective", (child) => {
+        if (child.name === "pullquote") marks.push(child);
+      });
+      if (marks.length === 0) return;
+
+      const line = marks[0].position?.start?.line;
+      const where = `:pullquote${line ? ` on line ${line} of the body` : ""}`;
+
+      if (marks.length > 1) {
+        throw new ContentError(
+          file,
+          `${where}: one paragraph carries ${marks.length} pull quotes. A paragraph has one ` +
+            "sentence worth raising, and two raised above the same paragraph read as a list.",
+        );
+      }
+
+      const mark = marks[0];
+      const text = (mark.children ?? [])
+        .map((/** @type {any} */ child) => (child.type === "text" ? child.value : ""))
+        .join("")
+        .trim();
+
+      if (text.length === 0) {
+        throw new ContentError(
+          file,
+          `${where} is empty. Wrap the sentence it should raise: :pullquote[the sentence].`,
+        );
+      }
+      if (text.length > PULL_QUOTE_MAX_CHARS) {
+        throw new ContentError(
+          file,
+          `${where} is ${text.length} characters and the limit is ${PULL_QUOTE_MAX_CHARS}. ` +
+            "A pull quote is read at a glance; mark the clause rather than the sentence.",
+        );
+      }
+
+      const at = (node.children ?? []).indexOf(mark);
+      if (at === -1) {
+        throw new ContentError(
+          file,
+          `${where} is nested inside other markup. It must sit directly in the paragraph, so the ` +
+            "sentence it raises is the sentence a reader reads.",
+        );
+      }
+
+      raised += 1;
+      if (raised > PULL_QUOTE_LIMIT) {
+        throw new ContentError(
+          file,
+          `${where} is pull quote number ${raised} and the limit is ${PULL_QUOTE_LIMIT}. ` +
+            "A third one is a page with no emphasis left to spend.",
+        );
+      }
+
+      // The marker leaves the prose, and its own children stay: the paragraph renders unchanged.
+      node.children.splice(at, 1, .../** @type {any[]} */ (mark.children ?? []));
+
+      parent.children.splice(index, 0, {
+        type: "paragraph",
+        data: {
+          hName: "p",
+          hProperties: { className: ["pull-quote"], "aria-hidden": "true" },
+        },
+        children: [{ type: "text", value: text }],
+      });
+
+      // Past the quote just inserted and past the paragraph it was read from.
+      return index + 2;
+    });
+  };
+}
+
 /**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
-export const KNOWN_DIRECTIVES = ["chart", "details", "diagram", "figure", "swatch"];
+export const KNOWN_DIRECTIVES = ["chart", "details", "diagram", "figure", "pullquote", "swatch"];
 
 /**
  * Fails the build on any directive this pipeline does not implement.
@@ -2108,6 +2219,7 @@ export async function renderBody({ file, body, resolveImage }) {
     // shares no syntax with the three block ones, so nothing upstream can
     // consume its opener and it consumes nobody else's. Placed here so the
     // handlers read in the order KNOWN_DIRECTIVES lists them.
+    .use(remarkPullQuote, file)
     .use(remarkSwatch, file)
     .use(remarkChart, file, charts)
     .use(remarkDiagram, file, diagrams)
