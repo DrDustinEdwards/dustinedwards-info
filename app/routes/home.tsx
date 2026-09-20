@@ -24,14 +24,10 @@ import type { Route } from "./+types/home";
 import "~/styles/blog-index.css";
 
 /**
- * Publicly cacheable for COOKIELESS readers only.
- *
- * This route had no `headers` export and reached `private, no-store` through the
- * hard rule 8 default. That default STAYS and still covers everything unlisted;
- * this route now opts in, and `workers/app.ts` downgrades it right back whenever
- * every reader since 2026-09-05: the theme is a dimension of the cache key
- * rather than a Vary. Tagged `posts`, because the proof tiles and the featured
- * list read the corpus. Grounds on cacheTags in seo.ts.
+ * Publicly cacheable. The hard rule 8 default STAYS and still covers everything
+ * unlisted; this route opts in. The theme is a dimension of the cache key rather
+ * than a Vary. Tagged `posts`, because the proof tiles and the featured list read
+ * the corpus.
  */
 export function headers() {
   return publicHtmlHeaders(cacheTags());
@@ -44,109 +40,38 @@ export function meta() {
 }
 
 /**
- * THE FRONT DOOR: who, what, and why believe it. Ruled 2026-08-25.
+ * THE FRONT DOOR: who, what, and why believe it.
  *
- * What stood here was a centred name and a one-line role in a full-viewport
- * hero, and nothing else: a reader who arrived knowing nothing left knowing a
- * name. The research the ruling rests on is consistent and dull, which is why
- * it was followed rather than argued with: the first screen answers who and
- * what within seconds, two or three pieces of featured work beat a wall of
- * links, and PROOF beats claims.
+ * This site's proof is that it measures itself continuously and publishes the
+ * measurements, so THE THREE NUMBERS ARE READ AT RENDER from the instruments that
+ * own them, never typed into this file. A digit here would be a second copy of a
+ * number a gate already owns. Rule 17. The writing tile is `total` from
+ * `listHomeStartHere`, the same `publiclyVisible()` predicate the blog index
+ * counts with, so a different count here is a visibility bug and not copy.
  *
- * This site's proof is unusual and is the reason the tiles exist at all: it
- * measures itself continuously and publishes the measurements. So the three
- * numbers are READ AT RENDER from the instruments that own them, never typed
- * into this file.
+ * THE CACHED PAGE MUST NOT LIE. This page is shared-cached, so a verdict rendered
+ * into it can be minutes old by the time it is read. The tile therefore carries
+ * the time it was read and the page stays cached: "All N checks passed at 14:32
+ * UTC" is TRUE when read at 14:41, and "All N checks passed" is not.
  *
- *   gates      `stack.gates.length`, from content/generated/stack.json, which
- *              `build:stack` derives from package.json and `check:stack`
- *              reconciles in both directions. A digit here would be a second
- *              copy of a number a gate already owns. Rule 17.
- *   health     the SNAPSHOT `/api/health` last wrote to KV, read here and never
- *              recomputed. One KV read. See the correction below.
- *   writing    `total` from `listHomeStartHere`, the same `publiclyVisible()`
- *              predicate the blog index counts with, in the same batch.
+ * NOTHING HERE CAN START A HEALTH RUN. `/api/health` writes its verdict to KV and
+ * this loader reads it: one KV read. The subrequest is refused because a Worker
+ * fetching its own public URL is a hop out to the edge and back, naming an origin
+ * that changes at cutover.
  *
- * ## THE HEALTH TILE AND THE SHARED CACHE, and this is the decision the ruling
- * ## asked to see stated
- *
- * This page is `public, s-maxage=600`, so a verdict rendered into it can be up
- * to ten minutes old by the time it is read, and stale-while-revalidate widens
- * that further. A tile reading "healthy" with no qualifier would therefore be a
- * claim the page cannot support, which is the specific failure the ruling named:
- * the cached page must not lie.
- *
- * **The tile carries the time it was read, and the page stays cached.** The
- * alternative on offer was to keep health out of the cached body, and it is
- * refused: it costs either the tile (the most interesting of the three) or the
- * shared cache for every reader on the site's most-visited page, and it buys
- * accuracy this page does not need. "All N checks passed at 14:32 UTC" is TRUE
- * when read at 14:41. "All N checks passed" is not.
- *
- * `/api/health` is linked beside it, uncached and answering in real time, for
- * anyone who wants the current answer rather than the rendered one.
- *
- * ## THIS LOADER NO LONGER RUNS THE HEALTH SUITE. Corrected 2026-08-26.
- *
- * What stood here argued for calling `runHealthChecks` directly, against the
- * alternative of a subrequest to `/api/health`. The argument against the
- * subrequest was right and is kept below. The argument FOR computing was
- * wrong, and it was wrong about the cost rather than about the frequency:
- *
- *   "the health run is the slow half of this loader at roughly 0.7 to 2.7
- *    seconds... It is paid on a cache MISS only... Readers on a HIT pay
- *    nothing for it."
- *
- * Both sentences are true and the conclusion does not follow. MEASURED
- * 2026-08-26 against a control, unthrottled, six samples each: this page
- * rendered at origin in 1.07 to 3.48 s while `/blog` rendered in 0.32 to
- * 0.90 s, and `/api/health` measured alone took 0.98 to 2.01 s. The gap IS
- * the suite. On the throttled mobile profile two audits used, that arrived as
- * an LCP of 3.8 to 5.2 s on this page against 1.4 s on every other one.
- *
- * "A cache miss only" is not rare. The entry is `s-maxage=600` and it is per
- * LOCATION, so every colo pays it every ten minutes and the first reader in
- * each window pays all of it. A reader who has ever set a theme cookie paid it
- * on EVERY view, because a cookie-bearing request was downgraded past the
- * shared cache entirely. The slowest page on the site was the front door.
- *
- * ## WHAT IT DOES INSTEAD: ONE KV READ
- *
- * `/api/health` writes its verdict to KV on the way out, and the fifteen
- * minute scheduled poll goes through that same endpoint, so the snapshot stays
- * fresh with no second timer in existence. This loader reads it and renders
- * it. Nothing here can start a health run.
- *
- * The subrequest is still refused, for the reasons that were always good: a
- * Worker fetching its own public URL is a hop out to the edge and back, it
- * would have to name an origin that changes at DNS cutover, and it would put a
- * cacheable-looking request in front of an endpoint whose contract is
- * `no-store`. KV is neither a hop nor an origin.
- *
- * ## THE TILE GAINS A THIRD STATE, AND THAT IS THE PRICE
- *
- * The snapshot can be absent or old, so the tile must be able to say so
- * instead of showing a verdict. `healthTile` in `snapshot.mjs` owns the
- * classification and every uncertain input resolves to `missing`. The age is
- * measured from the SNAPSHOT'S timestamp, not from this render, so it counts
- * both hops of staleness: how long ago the suite ran, plus however long this
- * cached body has been sitting in front of a reader.
+ * THE TILE HAS A THIRD STATE. The snapshot can be absent or old, so the tile must
+ * be able to say so instead of showing a verdict; every uncertain input resolves
+ * to `missing`.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
   /*
-   * CONCURRENT. The listing is D1 and the tile is one KV read, and neither
-   * reads the other's result, so serialising them would add their latencies
-   * for nothing. Both are now cheap; the shape is kept because it costs
-   * nothing and the reason it was right has not changed.
-   *
-   * `home_health` KEEPS ITS NAME, deliberately. It is now the KV read rather
-   * than the suite, which is the whole point of the change, and the mark is
-   * what will show that in production: the same name against a different
-   * number is a legible before and after, where a renamed mark would look
-   * like the instrument was removed.
+   * CONCURRENT: neither reads the other's result. `home_health` KEEPS ITS NAME
+   * deliberately, because the same name against a different number is a legible
+   * before and after where a renamed mark would look like the instrument was
+   * removed.
    */
   const [start, tile] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
@@ -154,19 +79,10 @@ export async function loader({ context }: Route.LoaderArgs) {
   ]);
 
   /*
-   * `splitFeatured` IS GONE FROM THIS ROUTE, and that is ruling 57.
-   *
-   * It searched for the featured post inside the four rows this loader had
-   * already fetched, so the lead was only ever found when it happened to be
-   * among the four newest. The flagship sorts fifth, so the section was dark in
-   * production: no heading, no cards, no "All N posts" link, on the page people
-   * paste. `listHomeStartHere` asks for the featured post by name.
-   *
-   * `/blog` KEEPS `splitFeatured`, and the two are not disagreeing. There the
-   * question really is "is the hero on the page I just fetched", because the
-   * hero is drawn above a list it must then be removed from and only the
-   * unfiltered first page may show one. Here the question is "what leads", and
-   * that is a different query rather than a different answer.
+   * `splitFeatured` IS GONE FROM THIS ROUTE, ruling 57: it searched inside the rows
+   * already fetched, so the lead was only found when it happened to be among them.
+   * `/blog` keeps it, because there the question really is "is the hero on the page
+   * I just fetched".
    */
   return {
     gates: stack.gates.length,
@@ -174,11 +90,9 @@ export async function loader({ context }: Route.LoaderArgs) {
     featured: start.featured,
     recent: start.recent,
     /*
-     * HANDED STRAIGHT THROUGH. The classification, the age and the refusal to
-     * present an uncertain snapshot as a verdict all happened in `healthTile`,
-     * which is where `node:test` can reach them. This route decides nothing
-     * about health and computes no timestamp of its own: the age belongs to
-     * the snapshot, not to this render.
+     * HANDED STRAIGHT THROUGH. The classification, the age and the refusal to present
+     * an uncertain snapshot as a verdict all happened in `healthTile`. This route
+     * computes no timestamp of its own.
      */
     health: tile,
   };
@@ -187,11 +101,10 @@ export async function loader({ context }: Route.LoaderArgs) {
 /**
  * A proof tile. The number is always passed in; this component owns none.
  *
- * `age` is optional and is emitted as `data-health-age` in SECONDS. It exists
- * for `check:browser`, which asserts that a freshly deployed home page carries
- * a verdict inside one poll interval. The gate reads the attribute rather than
- * the sentence beside it, because the sentence is prose that will be edited and
- * the attribute is a number that cannot be satisfied by a rewording.
+ * `age` is emitted as `data-health-age` in SECONDS for `check:browser`. The gate
+ * reads the attribute rather than the sentence beside it, because the sentence is
+ * prose that will be edited and the attribute is a number that cannot be satisfied
+ * by a rewording.
  */
 function Proof({
   value,
@@ -222,22 +135,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { gates, posts, featured, recent, health } = loaderData;
 
   /*
-   * THE TILE'S THREE STATES, resolved to a value and a sentence here and
-   * nowhere else.
-   *
-   * `missing` and `stale` both refuse to show a ratio, and they refuse for the
-   * same reason: a number beside the words "health checks passing" is read as
-   * the CURRENT answer no matter what sentence sits under it. A dash is not
-   * mistakable for a verdict. This is the same stance the old timestamp took,
-   * carried one step further now that there is a state where the page has no
-   * verdict at all rather than an old one.
-   *
-   * UTC is named in the detail, and the page is cached and served worldwide,
-   * so a local time would be the reader's or the origin's depending on where
-   * it rendered. `data-health-age` carries the age in seconds for
-   * `check:browser`, which asserts a fresh deploy's tile is inside one poll
-   * interval; a gate reading the prose would be reading a sentence rather than
-   * a number.
+   * `missing` and `stale` both refuse to show a ratio: a number beside "health
+   * checks passing" is read as the CURRENT answer no matter what sentence sits under
+   * it, and a dash is not mistakable for a verdict.
    */
   const healthValue =
     health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
@@ -254,21 +154,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <SiteHeader />
       <main className="home" id="main" tabIndex={-1}>
         {/*
-          THE SITE AUTHOR'S h-card, on the hero that already says who this is.
-          Item I, ruling 50 as amended: microformats only. No `rel="me"`, no
-          social links; social presence lives with germomics.
-
-          MOSTLY VISIBLE, unlike the post page's author card. The name is the
-          `<h1>` a reader already sees, so `p-name` needed no new markup and no
-          hiding. Only `u-url` had nowhere to go: nothing in this hero links to
-          the site's own root, and the one element that does, the header
-          wordmark, is on every page rather than this one. So the anchor is
-          hidden, and it is the ONE hidden element here.
-
-          NO `u-photo`. There is no photograph of Dustin on this page or in the
-          Person JSON-LD beside it, and a card claiming a photo the site does
-          not publish would be the h-card version of a substituted value.
-        */}
+         * Ruling 50 as amended: microformats only, no `rel="me"`. Only `u-url` had
+         * nowhere to go, so the anchor is hidden and it is the ONE hidden element here.
+         *
+         * NO `u-photo`: a card claiming a photo the site does not publish would be the
+         * h-card version of a substituted value.
+         */}
         <div className="home-intro h-card">
           <p className="eyebrow">{SITE.eyebrow}</p>
           <h1 className="hero-name p-name">{SITE.name}</h1>
@@ -276,32 +167,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             {SITE.name}
           </a>
           {/*
-            ONE SENTENCE OF WHO AND WHAT, and it is `SITE.tagline`, the string
-            the Person record and the meta description already derive from.
-            A second sentence written here would be a second answer to the
-            question the whole page exists to answer once.
-          */}
+           * ONE SENTENCE OF WHO AND WHAT, and it is `SITE.tagline`, the string the Person
+           * record and the meta description already derive from.
+           */}
           <p className="hero-role">{SITE.tagline}</p>
           {/*
-            **THE UNIVERSITY, IN TEXT A PERSON CAN READ.**
-
-            It was in `personJsonLd` and nowhere else. The pre-cutover audit's
-            fourth part put it plainly: a stranger could read this whole site
-            and never learn where the author works, because the only place it
-            was written was a script element addressed to machines.
-
-            `SITE.affiliation`, the SAME constant the Person record takes its
-            `worksFor` from, so the page and the graph cannot come to name
-            different employers. And it is `p-org` on the h-card this block
-            already is, which is the property that was missing from it: a card
-            with a name and no organisation is the half a reader wanted.
-
-            The JOB TITLE is deliberately not repeated here. `SITE.tagline`
-            one line up already says "Professor by training", and `/about`
-            carries the current title in prose; three statements of one job
-            across two pages is the mirror this file's own comments keep
-            arguing against.
-          */}
+           * THE UNIVERSITY, IN TEXT A PERSON CAN READ. `SITE.affiliation`, the SAME
+           * constant the Person record's `worksFor` comes from, so the page and the graph
+           * cannot name different employers. The JOB TITLE is deliberately not repeated
+           * here.
+           */}
           <p className="hero-affiliation">
             <span className="p-org">{SITE.affiliation}</span>
           </p>
@@ -340,27 +215,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               Start here
             </h2>
             {/*
-              THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not
-              `PostCard`.
-
-              This list has never used that component and this arc is not the
-              place to make it: the cards here are `h3` under a section heading
-              rather than `h2`, and the recent ones deliberately show no
-              description. Marking them by hand is three lines; unifying the
-              two card shapes is a design change nobody asked for. It IS a
-              second place the property set is written down, which is the cost,
-              and `check:microformats` reads both surfaces so the two cannot
-              quietly diverge.
-
-              `dt-published` NEEDED AN ELEMENT. The date here was bare text,
-              formatted and then thrown away, so unlike the blog index there was
-              no `<time>` to take the class. The rendered string is unchanged;
-              what is new is the element around it and its machine-readable
-              `datetime`, which this list should have had anyway.
-
-              NO h-feed. This is a hand-picked three, not the blog's feed, and
-              `/blog` is the page that says it is one.
-            */}
+             * THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not `PostCard`. It
+             * IS a second place the property set is written down, which is the cost, and
+             * `check:microformats` reads both surfaces so the two cannot quietly diverge.
+             *
+             * NO h-feed: this is a hand-picked three, not the blog's feed.
+             */}
             <ul className="post-list">
               <li className="post-card h-entry">
                 <h3 className="post-card-title p-name">
@@ -413,11 +273,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         ) : null}
 
         {/*
-          FOR READERS WHO ARE NOT PEOPLE, stated plainly rather than left to be
-          discovered in a Link header. Every post serves its own markdown source
-          at `.md`, and llms.txt lists the corpus; an agent that knows this can
-          read the writing without parsing markup at all.
-        */}
+         * FOR READERS WHO ARE NOT PEOPLE, stated plainly rather than left to be
+         * discovered in a Link header: an agent that knows this can read the writing
+         * without parsing markup at all.
+         */}
         <section className="home-machines" aria-labelledby="machines-heading">
           <h2 id="machines-heading" className="home-section-heading">
             Reading this as a machine

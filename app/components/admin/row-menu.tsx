@@ -3,22 +3,16 @@ import { useRef } from "react";
 import { useDisclosure } from "./disclosure";
 
 /**
- * ONE ACTIONS MENU PER ROW, and it is borderless.
+ * ONE ACTIONS MENU PER ROW, and it is borderless: a bordered box on every row is
+ * fifteen more rectangles to look past, so the trigger draws only its dots until it
+ * is hovered or focused.
  *
- * The list used to carry a row of loose buttons per row: Edit, View, Unpublish,
- * Duplicate across fifteen rows is fifty-odd controls competing with the fifteen
- * NAMES the reader came to find. The design rule is one control per row holding
- * every action for it, and a bordered box on every row is fifteen more
- * rectangles to look past, so the trigger draws only its dots until it is
- * hovered or focused.
+ * It opens with no script because it is a `<details>`, and every item inside is a
+ * real link or a real submit button.
  *
- * Behaviour is `useDisclosure`, shared with `OverflowMenu`. It opens with no
- * script because it is a `<details>`, and every item inside is a real link or a
- * real submit button, so the whole menu works with nothing loaded.
- *
- * The accessible name NAMES THE ROW, never just "Actions". Fifteen controls all
- * announcing "Actions" tell a screen reader user which control they are on and
- * nothing about which post it acts on.
+ * THE ACCESSIBLE NAME NAMES THE ROW, never just "Actions": fifteen controls all
+ * announcing "Actions" tell a screen reader user nothing about which post they act
+ * on.
  */
 export function RowMenu({
   label,
@@ -34,9 +28,11 @@ export function RowMenu({
   return (
     <details className="row-menu" ref={ref}>
       <summary className="row-menu-button" aria-label={label} title={label}>
-        {/* Three dots, drawn rather than typed: the character U+22EE renders at
-            the mercy of whatever font has it, and this is a 24px target that
-            has to line up with the 32px controls beside it. */}
+        {/*
+         * Three dots, drawn rather than typed: U+22EE renders at the mercy of whatever
+         * font has it, and this is a 24px target that has to line up with the 32px controls
+         * beside it.
+         */}
         <svg
           width="16"
           height="16"

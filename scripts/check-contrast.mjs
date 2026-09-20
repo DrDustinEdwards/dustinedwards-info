@@ -1,63 +1,10 @@
 /**
  * Gate over the shipped colour tokens.
  *
- * OBSERVATION BOUNDARY: computes ratios from token values in the stylesheet. It
- * does not render a page, so it cannot see a token applied to the wrong element,
- * text over an image, or a pair that never occurs in the markup. It also skips
- * the built-CSS check when the build is older than app.css, and SAYS SO.
- *
- * **AND IT CANNOT SEE OPACITY.** It reads token hexes; `opacity` is compositing
- * applied by the browser afterwards, so a pair that measures 7:1 here can reach
- * the reader at 4.35:1. That is not hypothetical: it is what `.figure-credit`
- * did until 2026-08-21. EVERY opacity on text is a hole of this shape.
- *
- * ENUMERATED 2026-08-21, all 19 `opacity` declarations in app.css, classified,
- * so the next reader inherits the list rather than the search:
- *
- *   ON TEXT, PERSISTENT, and therefore the ones that matter:
- *     .figure-credit                   FIXED, was 0.8 and 4.35:1 in light
- *     .heading-anchor       0.55       inside @media (hover: none); the permalink
- *                                      glyph is the only thing it paints
- *     .search-why-sep       0.5        a "/" between why-terms. 3.06:1 light,
- *                                      4.18:1 dark. Incidental punctuation, so
- *                                      LEFT, and recorded rather than hidden
- *   ON TEXT, TRANSIENT (a pending state, admin plane, seconds at a time):
- *     .posts-table[data-pending]       0.55
- *     .media-grid[data-pending]        0.55
- *   DISABLED CONTROLS, which WCAG 1.4.3 exempts outright:
- *     .row-action:disabled             0.55
- *     .media-modal-actions .btn-danger[disabled]  0.5
- *   NOT TEXT: two scrims (.media-detail-scrim 0.28, .media-modal-scrim 0.5)
- *   REVEAL PAIRS, 0 then 1, so nothing is ever painted at a partial value:
- *     .heading-anchor, .media-card-body, .media-check-label, .media-toast
- *   KEYFRAMES: two `from { opacity: 0 }` steps
- *
- * NOT GATEABLE HERE, said plainly rather than left as a to-do. Deciding whether
- * a selector paints TEXT needs a rendering, and a hand-maintained list of
- * text-bearing selectors is the mirror this file exists to avoid. The instrument
- * that could measure it is `check:browser`, which renders and can read a
- * COMPUTED colour with the compositing already applied.
- *
  *   npm run check:contrast
  *
- * The point of this script is that it reads TWO INDEPENDENT SOURCES and makes
- * them argue. The hexes come out of the stylesheet that ships. The pairs and
- * their thresholds come from dustinedwards/design-tokens.md, transcribed below
- * as token NAMES rather than values. Nothing here restates a hex, so a hex
- * edited in app.css cannot also edit the expectation: it moves one side of the
- * comparison and the gate fails.
- *
- * A gate that has never been observed failing has not been verified. Plant a
- * violation and watch it fail before trusting a green run: change any hex in
- * app/app.css and this exits 1 naming the pair.
- *
- * WCAG 2.x contrast is what FAILS a run, because it is the ratified compliance
- * target. APCA Lc is computed and printed alongside as advisory only, since it
- * is the model that produced the fills-over-pastels rule and it disagrees with
- * WCAG in exactly the places worth watching.
- *
- * Pure: no database, no network, no build step. Safe to run on a clean
- * checkout, which is why it is in the check family.
+ * Hexes come from the stylesheet; pairs and thresholds from design-tokens.md, as names, so
+ * an edited hex fails. WCAG 2.x fails a run; APCA is advisory. Renders nothing.
  */
 
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
@@ -68,29 +15,10 @@ import { fileURLToPath } from "node:url";
 // the gate cannot drift from the renderer by checking a theme nothing uses.
 import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
 
-// The colour maths, on exactly the footing query.mjs has with check:search: the
-// Worker imports this module and so does this gate, so /playground's contrast
-// lab cannot compute a ratio by a different rule than the one gated here. The
-// functions moved out of this file unchanged; the keystone-vector check below
-// and the matrix recomputation are what prove the move was lossless.
-//
-// This does NOT weaken the two-independent-sources design. The hexes still come
-// from the shipped stylesheet and the pairs and thresholds are still transcribed
-// here from design-tokens.md. Only the arithmetic is shared, and arithmetic is
-// not one of the two sources.
-// Only the two the gate calls directly. `channels` and `luminance` are exercised
-// through them, exactly as they were when all four lived in this file.
+// Shared with /playground so both compute ratios by one rule. Only arithmetic is shared.
 import { apca, contrast } from "../app/lib/contrast.mjs";
 
-/*
- * FILE DISCOVERY ONLY, and that distinction is what keeps this gate's design
- * intact. `tokens.mjs` says this file deliberately keeps its OWN palette
- * parsing, so the two can disagree, and that is unchanged: every hex below is
- * still read by the parser in this file from the block in this file's own
- * CSS_PATH. What is imported is the LIST OF STYLESHEETS, which is not one of
- * the two sources; it is the answer to "which files does the site ship", and
- * having two answers to that would be the drift, not the safeguard.
- */
+/* File discovery only; palette parsing stays here, independent of `tokens.mjs`. */
 import { allSourceCss, stylesheetPaths } from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
@@ -99,27 +27,13 @@ const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CSS_PATH = join(root, "app", "app.css");
 
-/* -------------------------------------------------------------------------
- * Reading the tokens back out of the stylesheet that ships
- * ---------------------------------------------------------------------- */
+/* Tokens, from the shipped stylesheet */
 
 const cssSource = readFileSync(CSS_PATH, "utf8");
 
-/**
- * Comments are stripped before anything is located, because the token block's
- * own comment SPELLS OUT the three selectors it documents. Searching the raw
- * file finds the prose first and then parses whichever block follows it. That
- * is not hypothetical: the first run of this gate read the light block three
- * times and reported the light values as the dark ones, and every dark row
- * passed for the wrong reason.
- */
+/** Strip comments first: the token block's comment names its selectors. */
 const css = cssSource
-  // CRLF is normalised FIRST. This repo runs core.autocrlf=true and app.css is
-  // not pinned by .gitattributes, so a fresh clone on Windows gets CRLF and
-  // every multi-line selector match below silently stops matching. Measured:
-  // this gate threw "selector not found in app.css" on the first clean checkout
-  // after a merge, having passed on the branch it was written on, purely
-  // because the working tree there still had LF.
+  // CRLF first: a Windows clone gets CRLF and multi-line matches fail.
   .replace(/\r\n/g, "\n")
   .replace(/\/\*[\s\S]*?\*\//g, "");
 
@@ -142,11 +56,7 @@ function tokenBlock(label, selector) {
   /** @type {Record<string, string>} */
   const out = {};
   /**
-   * EVERY declaration of each name, in source order, because a mixed fill
-   * ships TWICE: the composite hex first, then the `color-mix` that produced
-   * it. The hex is the source of truth and the fallback; the mix is what a
-   * browser with `color-mix` paints. Keeping only the last would make this
-   * gate read the recipe where it needs the value.
+   * Every declaration, in order: a mixed fill ships its hex, then its `color-mix` recipe.
    * @type {Record<string, string[]>}
    */
   const allDecls = {};
@@ -188,19 +98,7 @@ const light = tokenBlock("light", ':root,\n[data-theme="light"]');
 const darkMedia = tokenBlock("dark (prefers-color-scheme)", ":root:not([data-theme])");
 const darkAttr = tokenBlock("dark (attribute)", '[data-theme="dark"]');
 
-/*
- * THE CANARY. Each selector above is located by its literal text and the FIRST
- * match wins, so a theme block added ABOVE the palette would be parsed as the
- * palette and every ratio below would be computed from twelve tokens nobody
- * meant. The file's own comment already records that failure once: the first
- * run of this gate read the light block three times and reported the light
- * values as the dark ones, and every dark row passed for the wrong reason.
- *
- * `--paper` is the page ground and is declared in all three palette blocks and
- * in no other theme block, so its absence means the wrong block was parsed.
- * Non-colour theme blocks are legitimate and exist (the lamp's geometry), which
- * is exactly why this cannot rely on there being only one block per selector.
- */
+/* Canary: the first selector match wins; `--paper` is only in the palette blocks. */
 /** @type {Array<[string, Record<string, string>]>} */
 const PALETTE_BLOCKS = [
   ["light", light],
@@ -216,9 +114,7 @@ for (const [label, block] of PALETTE_BLOCKS) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * Assertions
- * ---------------------------------------------------------------------- */
+/* Assertions */
 
 let checks = 0;
 /** @type {string[]} */
@@ -239,11 +135,7 @@ function assert(label, ok) {
   if (!ok) fail(label);
 }
 
-// --- Structural: the two dark blocks and the name parity ------------------
-//
-// Both theme blocks land on the html element, so they do not cascade into one
-// another. A token declared in light and forgotten in dark keeps its LIGHT
-// value under a dark theme, which is invisible to every other check here.
+// Name parity: a token missing from dark keeps its light value there.
 
 {
   const lightNames = Object.keys(light).sort();
@@ -274,20 +166,7 @@ function assert(label, ok) {
   );
 }
 
-// --- Every token RESOLVES to a literal hex ---------------------------------
-//
-// A token resolving to var(...) would make this gate read a name where it
-// needs a value, and would silently check nothing. That was enforced by
-// requiring the DECLARATION to be a hex, which also forbade a legitimate
-// shape: the figure palette's ramps are the primitives and the series slots
-// are the interface, so `--fig-s1: var(--fig-purple-500)` is one owner for one
-// hex. Restating the hex on the slot would be a second owner of the same
-// decision, which is the thing rule 17 exists to stop.
-//
-// So the indirection is RESOLVED, inside the same block, and the RESOLVED
-// value must be a literal hex. A name that resolves to nothing, to something
-// that is not a hex, or around a cycle still fails: the gate never reads a
-// name where it needs a value, which is the whole of the original reason.
+// Each token must resolve through same-block `var()` to a literal hex.
 
 /**
  * Follow a chain of same-block `var()` references to the value it lands on.
@@ -329,21 +208,7 @@ for (const [mode, block] of MODES) {
   }
 }
 
-/* --- A MIXED FILL AND ITS RECIPE ARE MADE TO ARGUE -------------------------
- *
- * A glass fill ships twice: the composite hex, then the `color-mix` that
- * produced it. Both branches paint the same pixel, which is the point, and it
- * is also what makes the second declaration worth shipping rather than
- * leaving in a comment: a comment cannot be checked, and this can.
- *
- * The hex is the SOURCE OF TRUTH and every ratio above is computed from it.
- * What is asserted here is that the recipe beside it still produces it, so a
- * fill retuned by hand and a fill whose recipe was edited both fail, instead
- * of the two drifting apart with the comment quietly becoming fiction.
- *
- * One-unit tolerance per channel, because the rounding of a channel landing
- * exactly on .5 is not worth pinning a browser to.
- */
+/* A mixed fill's recipe must still produce its hex, one unit per channel. */
 for (const [mode, block] of MODES) {
   const decls = /** @type {Record<string, string[]>} */ (
     /** @type {any} */ (block).__decls
@@ -374,25 +239,9 @@ for (const [mode, block] of MODES) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * The APCA implementation, checked against the published vectors
- * ---------------------------------------------------------------------- */
+/* APCA, checked against the published vectors */
 
-/**
- * An advisory number nobody has verified is decoration.
- *
- * These are the keystone vectors published with apca-w3, taken from the shipped
- * `test/index.js` of version 0.1.9 (algorithm 0.0.98G-4g) rather than quoted
- * from a write-up, because secondary sources get them wrong. There are EIGHT,
- * not four: every pair appears in both polarities, which makes them a test of
- * the sign convention as well as of the magnitude.
- *
- * Two further pairs (#123 on #234 and its reverse) sit in the same upstream
- * block but are explicitly marked as NOT matching apca-w3, and both return 0
- * under loClip. They are deliberately absent.
- *
- * Positive is dark text on a light background; negative is light on dark.
- */
+/** apca-w3 0.1.9 keystone vectors, both polarities, so the sign is tested. */
 const APCA_KEYSTONE = [
   ["#888", "#fff", 63.056469930209424],
   ["#fff", "#888", -68.54146436644962],
@@ -421,48 +270,26 @@ for (const [text, bg, expected] of APCA_KEYSTONE) {
   );
 }
 
-/* -------------------------------------------------------------------------
- * The matrix, transcribed from design-tokens.md as NAMES
- * ---------------------------------------------------------------------- */
+/* The matrix, from design-tokens.md, as names */
 
-// A fill is specified as a BUTTON BACKGROUND carrying text, never as a bare
-// shape on the page, so there is no --fill-* against --bg row here. Measured:
-// gold on caliche is 2.07:1 and dark crimson on prairie night is 2.49:1, and
-// neither would ever clear 3:1. Where app.css does use a fill as a shape, the
-// status dots, the discernible boundary is the family's --border-* ring, and
-// those rows below are what verify it.
+// No --fill-* on --bg row: a fill always carries text.
 const TEXT = 4.5; // WCAG 1.4.3 AA, normal text
 const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
-// DISABLED, a 3.0 house floor, is GONE as of 2026-09-13 and is not coming back
-// as an unused constant. WCAG exempts an inactive component outright, and the
-// only row that used it has been replaced by a named exemption; see the comment
-// where that row was. A threshold nothing applies is a threshold somebody
-// re-applies by accident.
+// No disabled floor: WCAG exempts inactive components.
 
 /** @type {Array<[string, string, number, string]>} fg, bg, min, note */
 const MATRIX = [
   // Body and neutrals
   ["--text", "--bg", TEXT, "body text"],
   ["--text", "--surface", TEXT, "body on surface"],
-  // CodeMirror's syntax colours. The markdown editor paints headings and bold
-  // in --text-heading and inline code in --text-accent, on --bg normally and on
-  // --surface for the active line, so all four combinations ship. They are
-  // drawn from tokens the matrix already knows rather than a syntax theme of
-  // their own, which is the whole reason they can be checked here at all.
+  // CodeMirror syntax colours, on --bg and the active line's --surface.
   ["--text-heading", "--bg", TEXT, "heading text on page"],
   ["--text-heading", "--surface", TEXT, "heading text on surface"],
   ["--text-accent", "--surface", TEXT, "accent text on surface"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
-  // The settings drawer sits on the popover step and puts its own inputs on
-  // --surface inside it, so the drawer's field text is body-on-surface, and its
-  // borders are the strong ones per the Session 1 elevated-surface rule.
+  // The settings drawer: inputs on --surface inside the popover step.
   ["--text-heading", "--surface-popover", TEXT, "heading on popover"],
-  // No --text-disabled on --surface-popover row, for the same reason there is
-  // no --border one: it does not clear the floor there (2.71:1 light, 2.46:1
-  // dark) and nothing ships it. The only disabled-coloured text in the editor
-  // is the title placeholder, which sits on the canvas. If a placeholder ever
-  // lands inside the drawer it needs a token that survives the elevation, and
-  // this comment is the reason why rather than a puzzle to re-derive.
+  // No --text-disabled on --surface-popover row: it fails there, nothing ships it.
   ["--text", "--surface-code", TEXT, "body on code surface"],
   ["--text", "--mark-bg", TEXT, "body on search highlight"],
   ["--text", "--selection-bg", TEXT, "body on selection"],
@@ -470,35 +297,13 @@ const MATRIX = [
   ["--text-muted", "--bg", TEXT, "muted text"],
   ["--text-muted", "--surface", TEXT, "muted on surface"],
   ["--text-muted", "--surface-popover", TEXT, "muted on popover"],
-  // THE DISABLED ROW IS GONE, and its house floor with it. RULED 2026-09-13.
-  //
-  // It asserted --text-disabled on --bg at a 3.0 house floor, which WCAG does
-  // not ask for: 1.4.3 and 1.4.11 both exempt an inactive component outright.
-  // Part A step 6a set the disabled pair deliberately faint and this repo's
-  // floor was the only thing arguing with it. The floor lost, because a
-  // disabled control that meets 4.5:1 reads as available, which is the failure
-  // the faintness exists to avoid.
-  //
-  // What identifies a disabled control instead is the `disabled` attribute,
-  // which takes it out of the tab order and marks it inactive in the
-  // accessibility tree; the recess to --paper, below its own page ground; and
-  // visible text beside it saying why. None of those is a contrast ratio, and
-  // `cursor: not-allowed` is not a cue at all.
-  //
-  // The two tokens are named in NON_PARTICIPATING with their measured ratios,
-  // so they are recorded as failing rather than quietly unmeasured.
+  // No disabled row: WCAG exempts inactive controls. See NON_PARTICIPATING.
 
   // Borders are non-text UI
   ["--border", "--bg", UI, "border on page"],
   ["--border", "--surface", UI, "border on surface"],
-  // There is deliberately NO --border on --surface-popover row. It measures
-  // 2.66:1 in dark (#746a5f on #322a25) and would fail, which this gate
-  // reported the moment the admin's hovered table row was put on the popover
-  // surface. --border only just clears on --surface (3.04:1), so it has no
-  // headroom left for a third elevation, and anything drawn on the popover step
-  // takes --border-strong instead. Asserting the failing pair here would red
-  // the gate forever over a combination nothing ships; the two rows below are
-  // what actually holds that rule up.
+  // No --border on --surface-popover row: it fails there, so the popover step takes
+  // --border-strong.
   ["--border-strong", "--bg", UI, "strong border"],
   ["--border-strong", "--surface", UI, "strong border on surface"],
   ["--border-strong", "--surface-popover", UI, "strong border on popover"],
@@ -511,9 +316,7 @@ const MATRIX = [
   ["--brand", "--surface-popover", UI, "brand ring on popover"],
   ["--brand", "--tint-brand", TEXT, "brand on its own tint"],
   ["--brand-hover", "--bg", TEXT, "brand hover text"],
-  // The admin identity block sits on the shell surface, not the page, so its
-  // hover colour lands on a background the public header never puts it on.
-  // The only genuinely new pairing the brand-parity pass introduced.
+  // The admin identity block hovers on the shell surface, not the page.
   ["--brand-hover", "--surface", TEXT, "brand hover on surface"],
   ["--brand-active", "--bg", TEXT, "brand active text"],
   ["--on-brand", "--brand", TEXT, "text on brand fill"],
@@ -526,52 +329,18 @@ const MATRIX = [
   // No --focus-ring-on-brand against --fill-danger. It measures 1.47:1 in dark,
   // so app.css does not draw that ring and this does not pretend it does.
 
-  // Chrome (v4). The public header and footer are a brand SURFACE, so the text
-  // they carry is measured against the chrome and not against the page canvas.
-  // Nothing here retires an older row: every pair the pre-v4 header shipped
-  // (--brand on --bg for the wordmark, --text-muted on --bg for the nav) is
-  // still shipped elsewhere, by .hero-name and .eyebrow respectively, so the
-  // rows stay for those.
+  // Chrome text is measured against the chrome, not the page.
   ["--on-chrome", "--surface-chrome", TEXT, "wordmark and current nav on chrome"],
   ["--on-chrome-muted", "--surface-chrome", TEXT, "nav at rest on chrome"],
   // The mark is a graphical object, not text, so it takes the 1.4.11 floor.
   ["--mark-on-chrome", "--surface-chrome", UI, "logo mark on chrome"],
   ["--focus-ring-on-chrome", "--surface-chrome", UI, "focus ring on chrome"],
-  // The INVERTED pair: the pressed theme toggle's icon and the skip link's text,
-  // both sitting on an --on-chrome-muted fill laid over the chrome, plus that
-  // toggle's inset focus ring. WCAG contrast is symmetric, so this row computes
-  // the same ratio as the one two above it and cannot fail alone; it is here
-  // because APCA is NOT symmetric and is reported signed, and because a pair
-  // that ships should be NAMED in the matrix rather than inferred from its
-  // reverse. Read it as documentation with a number attached, not as an
-  // independent assertion.
+  // Inverted pair: WCAG is symmetric, APCA is not.
   ["--surface-chrome", "--on-chrome-muted", TEXT, "pressed toggle and skip link, inverted"],
-  // THE TILE CAPTION SCRIM. The media grid lays a filename, a size and a copy
-  // control over the picture on the selected tile, and this is the pair that
-  // makes it provable: the band under the text is OPAQUE, so the ratio is a
-  // constant rather than a function of whichever photograph is underneath.
-  //
-  // That opacity is the whole point of the row. The mockup fades its scrim to
-  // transparent through the region the text sits in, which means the real
-  // backdrop is the image: measured against a white backdrop, a #1a1614 scrim
-  // reaches 4.70:1 at alpha 0.60 and 3.42:1 at 0.50, so a gradient through that
-  // range crosses the floor at a point no gate can name and no reviewer can
-  // see. design-tokens.md reached the same conclusion for the glass extension
-  // and put a hard alpha floor on it. Here there is no alpha to floor: the
-  // fade is a separate strip ABOVE the band, over which no text is ever drawn.
-  //
-  // Same values in both themes, deliberately. A scrim is a hole punched in the
-  // page rather than a surface the page tints, so a "dark mode scrim" would be
-  // a lighter one, which is backwards.
+  // The caption band is opaque, so the ratio ignores the picture.
   ["--on-scrim", "--scrim", TEXT, "tile caption over the image"],
 
-  // There is deliberately NO --border-strong on --surface-chrome row for the
-  // header and footer seam. Measured 1.80:1 light and 3.22:1 dark, and the
-  // ruling is explicit that a surface-to-surface seam carries no 3:1
-  // obligation: the seam separates two backgrounds, it is not a control
-  // boundary. Asserting it would red the gate forever over a value the ruling
-  // already accepted. The dark seam is the one that needed the STRONG border at
-  // all, because chrome-to-canvas there is 1.4:1.
+  // No --border-strong on --surface-chrome row: a seam has no 3:1 obligation.
 
   // Danger
   ["--text-danger", "--bg", TEXT, "danger text"],
@@ -615,33 +384,13 @@ const MATRIX = [
   ["--chart-gold", "--bg", UI, "chart gold"],
   ["--chart-rust", "--bg", UI, "chart rust"],
 
-  /*
-   * DESTRUCTIVE, the v6 rust. A REVERSIBLE removal, not the danger family.
-   *
-   * Measured on all three surfaces it actually lands on in the media library:
-   * the page background under the Trash heading, the card surface under a
-   * trashed row, and the popover under the confirm dialog. Its own tint is
-   * measured as a ground too, because the hover state puts the two together and
-   * a token only ever measured against --bg would miss that pair entirely.
-   */
+  /* Destructive, on every surface it lands on and its own tint. */
   ["--text-destructive", "--bg", TEXT, "destructive text"],
   ["--text-destructive", "--surface", TEXT, "destructive text on a card"],
   ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
   ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
 
-  /* ----------------------------------------------------------------------
-   * PAPER, GLASS, LIGHT. Ruling 65, Part A steps 1, 2, 4 and 6a.
-   *
-   * These pairs are transcribed from the approved handoffs as NAMES, on the
-   * same footing as every row above: the handoff supplied the pair and the
-   * threshold, this file never restates its hex, and the ratio is recomputed
-   * from the shipped stylesheet. Where two handoffs disagreed the later step
-   * won, and the superseded value is recorded in the commit rather than here.
-   *
-   * NOTHING BELOW IS SHIPPED TO A READER YET. The roles are declared and no
-   * component reads them until builds 2 to 4, so these rows are what stops
-   * the palette being retuned by hand in the meantime.
-   * ------------------------------------------------------------------- */
+  /* Paper, glass, light: pairs from the handoffs, as names */
 
   // Text on the two paper surfaces, and on the one glass that touches paper.
   ["--text", "--paper", TEXT, "body on limestone"],
@@ -650,9 +399,7 @@ const MATRIX = [
   ["--text-secondary", "--paper", TEXT, "muted copy on limestone"],
   ["--text-secondary", "--raised", TEXT, "muted copy on the raised step"],
   ["--text-secondary", "--glass-fill-paper", TEXT, "muted copy on paper glass"],
-  // The placeholder is NOT --text-secondary and is measured as its own role:
-  // secondary text is content a reader is meant to read, a placeholder is a
-  // hint that must sit below the value which will replace it.
+  // The placeholder must sit below the value that replaces it.
   ["--placeholder", "--raised", TEXT, "placeholder in a field"],
 
   // Brand, its two states, and the second shade a followed link takes.
@@ -666,32 +413,14 @@ const MATRIX = [
   ["--visited", "--paper", TEXT, "visited link on limestone"],
   ["--visited", "--raised", TEXT, "visited link on the raised step"],
   ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
-  // A followed link inside an alert. The tints are the only surfaces a visited
-  // link lands on that are neither paper nor raised, and step 2 measured all
-  // three rather than assuming the paper ratio carried over.
+  // A followed link inside an alert tint.
   ["--visited", "--error-tint", TEXT, "visited link on an error tint"],
   ["--visited", "--warning-tint", TEXT, "visited link on a warning tint"],
   ["--visited", "--success-tint", TEXT, "visited link on a success tint"],
 
-  // THE BAR HAS NO ROWS. There were six, and the surface all six measured
-  // against is gone: --bar-fill, --glass-fill-bar, --glass-fill-bar-open and
-  // --line-on-brand were deleted on 2026-09-14 with these rows, because the
-  // bar they described came out of shell.css when Dustin ruled the old header
-  // back and no queued build reads them.
-  //
-  // A PAIR AGAINST A SURFACE NOTHING PAINTS IS NOT COVERAGE. It computes, it
-  // passes, and it raises this gate's executed count while asserting something
-  // about no reader's screen. Rule 10's class: a pass count is not coverage.
-  // When a bar comes back, its fill comes back with the rows that measure it,
-  // and both arrive in the commit that paints it.
-  //
-  // --on-brand and --focus-ring-on-brand SURVIVE with their own rows above,
-  // against --brand and its states, so neither lost its participation.
+  // No bar rows: a pair against a surface nothing paints is not coverage (rule 10's class).
 
-  // Lines. --dust has NO row against either paper surface and that is the
-  // finding, not an omission: it measures 1.57:1 on limestone, so it can rule
-  // and hairline but can never be the thing that identifies a control. That is
-  // why --line-strong exists at all, and these two rows are what hold it up.
+  // No --dust row on paper: it cannot identify a control; --line-strong does.
   ["--line-strong", "--paper", UI, "a control edge on limestone"],
   ["--line-strong", "--raised", UI, "a control edge on the raised step"],
 
@@ -717,16 +446,7 @@ const MATRIX = [
   ["--fig-s3", "--fig-ground", UI, "figure series 3 stroke"],
   ["--fig-s4", "--fig-ground", UI, "figure series 4 stroke"],
   ["--fig-s5", "--fig-ground", UI, "figure series 5 stroke"],
-  // THE AXIS AND GRID STROKE IS --fig-dust-400, NOT -300. RULED 2026-09-13.
-  //
-  // Step 4 set `.fig-axis,.fig-grid` to --fig-dust-300 and separately ruled
-  // that a figure's strokes must clear 3:1. MEASURED, -300 is 2.33:1 on
-  // limestone (#a89d8d on #f4efe6) and 6.74:1 in dark, so the light theme
-  // missed step 4's own rule. An axis is a graphical object carrying meaning
-  // rather than decoration, so 1.4.11 applies and the stroke moves one step
-  // darker: --fig-dust-400 measures 4.11:1 light (#7d7263) and 4.00:1 dark
-  // (#82776a). Both themes clear it, so this is one row rather than a comment
-  // explaining why there is no row.
+  // Axis and grid take --fig-dust-400: an axis carries meaning, so 1.4.11 applies.
   ["--fig-dust-400", "--fig-ground", UI, "figure axis and grid stroke"],
   ["--text-secondary", "--fig-ground", TEXT, "figure label"],
   ["--text", "--fig-ground", TEXT, "figure key label"],
@@ -758,35 +478,11 @@ for (const [mode, block] of MODES) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * Resolution: a token USED and never declared is invisible to everything above
- * ---------------------------------------------------------------------- */
+/* Resolution: a token used and never declared */
 
 /*
- * THIS GATE WALKS DECLARED TOKENS. A token that is USED and never declared is
- * structurally outside every assertion in this file: name parity compares two
- * declaration blocks, the literal-hex pass iterates declarations, and
- * participation starts from declarations. `var(--nothing)` resolves to the
- * empty string, the property is dropped, and the element inherits or falls back
- * to the initial value. Transparent, usually.
- *
- * IT HAS BITTEN TWICE, both caught by a person rather than by anything here:
- * `--surface-2`, the floor every media tile paints on, and `--border-accent`.
- * Both are declared today, which is why this section has no live finding to
- * show; it exists so the third one is not found by eye either.
- *
- * ## THE EXEMPTION MAP IS FOR TOKENS DECLARED SOMEWHERE THIS FILE CANNOT SEE
- *
- * Not every var() is meant to resolve in the stylesheet. Shiki writes its four
- * colour tokens as INLINE STYLE ATTRIBUTES on each highlighted span, one set per
- * token per code block, and app.css reads them back with attribute selectors.
- * They are correctly used and correctly never declared here. Naming them costs
- * four lines; a blanket "ignore anything starting with --shiki" would exempt a
- * future typo in the same family.
- *
- * SELF-POLICING, on the same rule as NON_PARTICIPATING below: an entry naming a
- * token that is no longer USED, or one that has since been DECLARED, fails here
- * rather than quietly widening the hole.
+ * An undeclared `var()` drops silently, and every pass above walks declarations.
+ * DECLARED_ELSEWHERE lists tokens set outside CSS, and polices itself.
  */
 
 /** @type {Map<string, string>} token -> why it is declared outside app.css */
@@ -814,20 +510,7 @@ const DECLARED_ELSEWHERE = new Map([
 ]);
 
 {
-  /*
-   * THE WHOLE STYLESHEET SET, not app.css alone, since the 2026-08-21 split.
-   *
-   * `css` above is app.css, which now holds the tokens and the imports and
-   * almost no rules. Scanning it alone dropped this from 69 var() uses to 13,
-   * and the scope floor below FAILED rather than reporting a clean sweep over a
-   * thirteenth of the stylesheet. That failure is the reason this line exists.
-   *
-   * COMMENTS ARE STRIPPED HERE, and it is not a duplicate of the stripping
-   * app.css already gets: `allSourceCss()` returns RAW text for every part. The
-   * dependency is load-bearing, because app.css documents the Shiki contract in
-   * prose that spells out all four token names, so a scan over raw source reads
-   * documentation as though it were CSS and reports every one as a use.
-   */
+  /* All source stylesheets, stripped: app.css prose names the Shiki tokens. */
   const code = allSourceCss().replace(/\/\*[\s\S]*?\*\//g, " ");
 
   const used = new Set([...code.matchAll(/var\(\s*(--[A-Za-z0-9_-]+)/g)].map((m) => m[1]));
@@ -835,19 +518,7 @@ const DECLARED_ELSEWHERE = new Map([
     [...code.matchAll(/(?:^|[;{]|\s)(--[A-Za-z0-9_-]+)\s*:/g)].map((m) => m[1]),
   );
 
-  /*
-   * SCOPE, ASSERTED, BOTH SIDES. An empty `used` set finds no undeclared token
-   * because it looked at nothing, and an empty `declaredAnywhere` set reports
-   * every token as undeclared, which fails for the wrong reason and sends the
-   * reader to the stylesheet instead of to this parser. Measured 2026-08-21 and
-   * unchanged when re-measured 2026-08-24: 69 used, 79 declared. The floors were
-   * 50 and 60, roughly a quarter under, and are now about eight percent under.
-   *
-   * The participation floor further down is DELIBERATELY NOT set this way: it is
-   * bound to the token count `design-tokens.md` states, which is an independent
-   * source, and moving it to track the measurement would make this gate check
-   * its own output.
-   */
+  /* Scope, both sides: an empty set on either side fails for the wrong reason. */
   assert(
     `resolution scope: ${used.size} var() token(s) found in app.css`,
     used.size >= 63,
@@ -879,27 +550,12 @@ const DECLARED_ELSEWHERE = new Map([
   }
 }
 
-/* -------------------------------------------------------------------------
- * Participation: a declared token that no pair measures is not proven
- * ---------------------------------------------------------------------- */
+/* Participation: every declared token is measured by some pair */
 
-// The gap this closes was LIVE AND GREEN. v4's five chrome tokens landed in all
-// three theme blocks; name parity passed, the literal-hex pass passed, the
-// built-CSS pass found all of them, and this gate printed 587 checks and zero
-// failures -- while nothing whatsoever measured the chrome's contrast, because
-// MATRIX is a hand-transcribed list and none of the five was on it.
-//
-// Name parity proves a token is DECLARED twice. It never proved a token is
-// MEASURED once. Every previous amendment happened to add its rows by hand, so
-// the omission had no way to show itself until an amendment forgot.
-//
-// The exemption map is CLOSED and self-policing: an entry naming a token that
-// no longer exists, or one that has since joined the matrix, fails here rather
-// than quietly widening the hole.
+// Parity proves a token declared, not measured. Exemptions police themselves.
 /** @type {Map<string, string>} token -> why no ratio of its own can be asserted */
 const NON_PARTICIPATING = new Map([
-  // THE PAPER, GLASS, LIGHT ENTRIES. Every one is a token whose job carries no
-  // contrast obligation, not a token nobody got round to measuring.
+  // Paper, glass, light tokens with no contrast obligation.
   [
     "--dust",
     "lines only, and deliberately below the floor: 1.57:1 on limestone. It rules, hairlines and " +
@@ -918,12 +574,7 @@ const NON_PARTICIPATING = new Map([
       "atmosphere and never meaning, so nothing reads it and no pair can be required of it. Its " +
       "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
-  // The ramp steps no series slot resolves through. They are fills, letterbox
-  // grounds and spare tints: step 4's rule is that a shape's INTERIOR may sit
-  // lighter than 3:1 and only its EDGE may not, and an edge is always a slot.
-  // A step that a slot later adopts stops being exempt on that day, because
-  // the participation pass walks the slot's chain and this map refuses an
-  // entry that has joined the matrix.
+  // Unused ramp steps: interiors may sit below 3:1, only edges may not.
   ...(/** @type {Array<[string, string]>} */ (
     [
       "--fig-purple-400",
@@ -947,17 +598,7 @@ const NON_PARTICIPATING = new Map([
 {
   const named = new Set(MATRIX.flatMap(([fg, bg]) => [fg, bg]));
 
-  /*
-   * PARTICIPATION IS TRANSITIVE, because a token can ship its hex under
-   * another name. `--fig-s1` is declared as `var(--fig-purple-500)`, so the
-   * ratio the matrix measures for `--fig-s1` IS the ramp step's ratio: the
-   * primitive is measured, by the name that ships it. Counting only the names
-   * the matrix spells would have forced every ramp step to restate its hex on
-   * a slot, which is the second-owner shape rule 17 forbids.
-   *
-   * Resolved in BOTH modes, and a token counts if either mode resolves through
-   * it, because the two themes point their slots at different ramp steps.
-   */
+  /* Transitive: a slot declared as `var(--ramp)` measures the ramp step. */
   const inMatrix = new Set(named);
   for (const [, block] of MODES) {
     for (const n of named) {
@@ -967,9 +608,7 @@ const NON_PARTICIPATING = new Map([
 
   const declared = Object.keys(light).filter((n) => n in darkAttr && n in darkMedia);
 
-  // A zero-scope search reports zero violations. Floor it against the doc's
-  // stated 53 purpose-named tokens per mode, so a parser that stopped finding
-  // tokens cannot pass this section by finding nothing to check.
+  // Floored at the doc's 53 purpose-named tokens per mode, so an empty parse fails.
   assert(
     `participation scope is non-empty: ${declared.length} tokens declared in all three blocks`,
     declared.length >= 53,
@@ -990,18 +629,45 @@ const NON_PARTICIPATING = new Map([
   }
 }
 
-/* -------------------------------------------------------------------------
- * The prefers-contrast: more tier (v3 amendment 3)
- * ---------------------------------------------------------------------- */
+/* content/tokens.json: the swatch inventory /playground/ui renders */
+
+/*
+ * A Worker cannot read a stylesheet, so the inventory page's swatches come from
+ * a committed build product. This re-derives the answer from app.css with the
+ * parser above rather than reading the generator's, so agreement means two
+ * readings of the sheet agree.
+ */
+{
+  const inventory = JSON.parse(readFileSync(join(root, "content", "tokens.json"), "utf8"));
+  /** @type {Array<{name: string, light: string, dark: string}>} */
+  const rows = inventory.tokens ?? [];
+
+  const expected = Object.keys(light).map((name) => ({
+    name,
+    light: resolveToken(light, name).value,
+    dark: resolveToken(darkAttr, name).value,
+  }));
+
+  assert(
+    `tokens.json scope is non-empty: ${rows.length} row(s) against ${expected.length} palette tokens`,
+    expected.length >= 53 && rows.length === expected.length,
+  );
+
+  const drift = expected.filter((want, i) => {
+    const got = rows[i];
+    return !got || got.name !== want.name || got.light !== want.light || got.dark !== want.dark;
+  });
+  assert(
+    `content/tokens.json matches app.css, token for token and in order` +
+      (drift.length ? `\n    first disagreement: ${drift[0].name}. Run npm run build:tokens.` : ""),
+    drift.length === 0,
+  );
+}
+
+/* prefers-contrast: more */
 
 /**
- * The high-contrast tier is a palette too, so it is held to the same matrix.
- *
- * It is narrow by design: only muted text and the default border move. That is
- * exactly why it needs checking rather than eyeballing, because a tier nobody
- * verifies is a tier that can quietly contain a value LOWER than the one it
- * replaced and still look like a high-contrast mode.
- *
+ * The high-contrast tier is held to the same matrix, so it cannot lower a value.
  * @param {string} label
  * @param {string} selector
  */
@@ -1080,22 +746,10 @@ function contrastTierBlock(label, selector) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * Shiki syntax tokens against the NEW code surfaces
- * ---------------------------------------------------------------------- */
+/* Shiki syntax tokens against the code surfaces */
 
 /**
- * The prior verification was against the themes' own backgrounds and is void:
- * app.css now drops those and puts code on --surface-code, with the
- * highlighted-line band on --surface-popover. Every token colour the theme can
- * emit is checked against both, in the mode that theme serves.
- */
-/**
- * A theme rule may PAIR a foreground with a background of its own. Those tokens
- * never touch our surfaces, so checking them against one would be measuring a
- * combination no reader sees. They are checked against the background they
- * actually ship on, and everything else against both code surfaces.
- *
+ * Paired rules are measured on their own background; the rest on both code surfaces.
  * @param {any} theme
  */
 function themeRules(theme) {
@@ -1119,18 +773,7 @@ function themeRules(theme) {
   return out;
 }
 
-/**
- * Every rule that pairs a background is a VCS scope: the diff markup family
- * and carriage-return. None of them can be emitted here, because `diff` is not
- * a loaded grammar and the content paths are pinned to LF by .gitattributes.
- *
- * Three of them fail against their own backgrounds upstream in
- * github-dark-high-contrast (carriage-return 2.12, markup.deleted 4.35,
- * markup.changed 3.31). They are reported and not counted as failures, but the
- * exemption FAILS CLOSED: it is conditioned on `diff` being absent from
- * LANGUAGES, which is asserted rather than assumed. Add diff as a language and
- * this gate goes red until those colours are dealt with.
- */
+/** VCS scopes are reported, not counted, only while `diff` is not in LANGUAGES. */
 const VCS_SCOPE = /^(markup\.(deleted|inserted|changed|ignored|untracked)|carriage-return|meta\.diff)/;
 const diffReachable = LANGUAGES.includes("diff");
 
@@ -1183,9 +826,7 @@ for (const [mode, theme, block] of shikiCases) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * The built stylesheet, when there is one
- * ---------------------------------------------------------------------- */
+/* The built stylesheet, when present */
 
 /**
  * app.css is what ships, but only after Vite has had it. If a build is present
@@ -1194,19 +835,7 @@ for (const [mode, theme, block] of shikiCases) {
  */
 const assetDir = join(root, "build", "client", "assets");
 let builtNote = "no build present, skipped";
-/*
- * THE NEWEST OF EVERY SOURCE STYLESHEET, not app.css alone.
- *
- * This was `statSync(CSS_PATH).mtimeMs` and it narrowed the moment there was a
- * second entry: from 2026-08-23 an edit to `app/admin.css` or any admin part
- * leaves app.css untouched, so a build predating that edit compared as FRESH
- * and the shipped-value section below examined a stylesheet that no longer
- * matched the source. That is the same silence this block was written to end,
- * arriving through a file it could not see.
- *
- * Derived from `stylesheetPaths()`, the one owner of which files the site
- * ships, so a future entry is covered without editing this line.
- */
+/* Newest of every source stylesheet, from `stylesheetPaths()`, not app.css alone. */
 const cssMtime = Math.max(...stylesheetPaths().map((p) => statSync(p).mtimeMs));
 if (existsSync(assetDir)) {
   const sheets = readdirSync(assetDir).filter((f) => f.endsWith(".css"));
@@ -1214,22 +843,7 @@ if (existsSync(assetDir)) {
     0,
     ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs),
   );
-  /*
-   * A STALE BUILD IS NOW A FAILURE, and an ABSENT one is still not. The
-   * distinction is the whole finding.
-   *
-   * This block used to say "skipped as stale" and pass. The external audit
-   * measured what that costs: `touch app/app.css` and nothing else drops this
-   * gate from 567 checks to 461, EXIT 0. One hundred and six assertions, 18.7
-   * percent, gone in silence.
-   *
-   * And the trigger is the ordinary case. EDITING app.css is what makes it
-   * newer than the build, so the section that verifies the SHIPPED stylesheet
-   * skipped itself on exactly the runs where a token had just changed, which
-   * are the runs it exists for. Absent a build there is genuinely nothing to
-   * compare and reporting is right; present-but-stale means someone changed the
-   * source and this gate would have told them nothing.
-   */
+  /* Stale fails, absent does not: editing a source is what makes the build stale. */
   if (newest < cssMtime) {
     builtNote = "build is OLDER than a source stylesheet";
     fail(
@@ -1245,11 +859,7 @@ if (existsSync(assetDir)) {
   } else if (!built) {
     fail("build/client/assets exists but carries no CSS");
   } else {
-    // Compare NORMALISED values, never raw text. Lightning CSS rewrites
-    // #ffffff to #fff, so a substring match reports three tokens missing from
-    // a stylesheet that carries all of them. Measured, not guessed: the first
-    // run of this block failed on --on-brand, --on-fill-danger and
-    // --on-fill-success, every one of them a white that had been shortened.
+    // Compare normalised values: Lightning CSS shortens #ffffff to #fff.
     /** @param {string} v */
     const norm = (v) => {
       const h = v.trim().toLowerCase().replace("#", "");
@@ -1269,11 +879,7 @@ if (existsSync(assetDir)) {
       if (!shipped.has(m[1])) shipped.set(m[1], new Set());
       shipped.get(m[1])?.add(norm(m[2]));
     }
-    // AND THE INDIRECTIONS. A series slot ships as `--fig-s1:var(--fig-purple-500)`,
-    // which the hex pattern above cannot see, so every slot read as "shipped
-    // values: none" and failed while being present and correct. The minifier
-    // drops the space after the colon, so this matches the built spelling
-    // rather than the source's.
+    // Slots ship as `var()`, minified without the space after the colon.
     for (const m of built.matchAll(/(--[a-z0-9-]+)\s*:\s*(var\(\s*--[a-z0-9-]+\s*\))/g)) {
       if (!shipped.has(m[1])) shipped.set(m[1], new Set());
       shipped.get(m[1])?.add(m[2].replace(/\s+/g, ""));
@@ -1300,9 +906,7 @@ if (existsSync(assetDir)) {
   }
 }
 
-/* -------------------------------------------------------------------------
- * Report
- * ---------------------------------------------------------------------- */
+/* Report */
 
 console.log("check:contrast");
 console.log(`  tokens        light ${Object.keys(light).length}, dark ${Object.keys(darkAttr).length}`);
@@ -1327,11 +931,7 @@ const worst = advisory
   .filter((a) => Math.abs(a.lc) > 0)
   .sort((a, b) => Math.abs(a.lc) - Math.abs(b.lc))
   .slice(0, 8);
-// SIGNED Lc, required by APCA conformance. The sign IS the polarity: positive
-// is dark text on a light background, negative is light on dark. Reporting a
-// bare magnitude throws that away, and it is the half of the number that says
-// which of the two asymmetric curves produced it. Ranked by magnitude, because
-// the question is "what is weakest", not "what is most negative".
+// Signed Lc: the sign is the polarity. Ranked by magnitude.
 console.log("\n  APCA Lc (SIGNED, advisory only), eight weakest of the matrix:");
 for (const a of worst) {
   const lc = `${a.lc >= 0 ? "+" : ""}${a.lc.toFixed(1)}`;
@@ -1340,100 +940,11 @@ for (const a of worst) {
   );
 }
 
-/*
- * A FLOOR ON THIS GATE'S OWN EXECUTED ASSERTIONS.
- *
- * Every other floor in this repo guards a SCOPE: files walked, sites found. A
- * scope floor cannot see control flow skipping a block it already reached, and
- * that is the failure the external audit measured here.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE, 2026-08-13: 599 with the built
- * stylesheet compared, 483 without. Both re-measured by RUNNING the gate, the
- * second by renaming build/client/assets aside and restoring it, never by
- * adding up the sections by hand. Superseded 2026-08-11's 567 and 461: v4 added
- * five chrome pairs (10 checks across two modes), the participation section (2),
- * and ten built-CSS value assertions.
- *
- * CONDITIONAL ON A BUILD BEING PRESENT, and that is not a softening. A fresh
- * checkout has no `build/` at all, because it is gitignored, so a flat floor
- * failed inside check:head's extraction on the first attempt: the gate was
- * green on disk and red against HEAD, which is exactly the divergence check:head
- * exists to surface. It surfaced mine.
- *
- * Absent a build there is genuinely nothing to compare and 483 is the honest
- * full count. Present-but-stale is a failure on its own above; this floor is
- * the second lock on the same door, for the case where that assertion is ever
- * weakened.
- *
- * **RE-MEASURED 2026-08-16, BOTH TIERS, BY RUNNING THEM: 625 with the build
- * present and 501 without.** The scrim pair landed for the media v6 caption
- * bar (`--scrim`, `--on-scrim`), which the participation assertion caught the
- * moment the tokens were declared and before either had a pair.
- *
- * **THE OWED MEASUREMENT IS PAID.** The previous note recorded that renaming
- * `build/` aside had been refused by this filesystem twice, so the no-build
- * tier had never actually been run and 460 was left deliberately loose with the
- * measurement stated as owed rather than done. The rename succeeded this time
- * (`build/client/assets` moved aside, gate run, moved back), and the tier reads
- * 501.
- *
- * **THE ARITHMETIC WOULD HAVE BEEN WRONG AGAIN, THIRD INSTANCE.** Subtracting
- * the previously recorded 132-check gap from 625 predicts 493; the measurement
- * is 501. The two prior instances are on the record in the same class:
- * verify-live's predicted 213 measured 214, and this gate's own prior note
- * carried 599 in its failure message while its prose carried 615. A count is
- * measured or it is a guess with a number attached.
- *
- * Both floors are 94 percent of their own measurement, which is the margin the
- * other gates use: 587 of 625, and 470 of 501.
- */
-/* ---- partial opacity on text is refused ------------------------------- */
+/* Partial opacity on text is refused */
 
 /*
- * THE HOLE THIS CLOSES, and this gate's own header has described it for a week.
- *
- * Everything above reads token hexes and computes ratios. `opacity` is
- * compositing the browser applies AFTERWARDS, so a pair that measures 7:1 here
- * can reach the reader at 4.35:1 and nothing in this file can tell. The header
- * calls every opacity on text "a hole of this shape" and enumerates nineteen
- * declarations by hand. A hand enumeration in a comment is not a gate: it was
- * right when written and could not notice the twentieth.
- *
- * `.heading-anchor` is what made it worth building. Under `(hover: none)` it
- * was `opacity: 0.55` over `--text-muted`, which is a measured token painted at
- * an unmeasured strength, on every heading of every post for every touch
- * reader. It is gone; this is what stops the next one.
- *
- * ## WHAT COUNTS AS PARTIAL, AND WHY 0 AND 1 DO NOT
- *
- * Only `0 < value < 1` is refused. `opacity: 0` and `opacity: 1` are a REVEAL
- * PAIR: the element is either absent or painted at full strength, so nothing is
- * ever composited at a value nobody measured. That is the arrangement
- * `.heading-anchor` now uses inside `@media (hover: hover)`, and refusing it
- * would refuse the fix along with the defect.
- *
- * ## WHAT IT CANNOT DECIDE, WHICH IS WHY THERE IS A LIST
- *
- * Whether a selector paints TEXT needs a rendering, and this gate has none. So
- * the rule is inverted: every partial opacity is refused unless it is named
- * here with a reason. A new one fails until somebody classifies it, which is
- * the direction that cannot go quietly wrong. The reasons below are lifted from
- * the header's own enumeration rather than invented, so there is one
- * classification rather than two.
- *
- * ## KEYED BY PATTERN, NOT BY SELECTOR TEXT, and the first attempt was not
- *
- * The exemptions were written as exact selector strings, and the gate refused
- * `.row-action:disabled` on its first run: the declaration in the file is a
- * comma-separated GROUP of eight disabled-control selectors, and the name I had
- * copied was only its last line. That is the mirror failure in miniature, and
- * the repair is to describe the CLASS rather than transcribe the instance.
- *
- * A group is exempt only when EVERY member of it matches an entry. One
- * unclassified selector in a group of eight is still an unclassified selector,
- * and the alternative rule (exempt if ANY member matches) would let a text
- * selector ride along beside a scrim.
- *
+ * Refuses 0 < opacity < 1 unless listed (0 and 1 are a reveal pair). A group is exempt only
+ * when every member matches.
  * @type {Array<{ test: RegExp, why: string }>}
  */
 const OPACITY_EXEMPT = [
@@ -1447,11 +958,7 @@ const OPACITY_EXEMPT = [
   },
   { test: /-scrim/, why: "a scrim, not text" },
   {
-    /*
-     * ANCHORED AT THE END, per hard rule 10: a bare `backdrop` would also match
-     * a future `.backdrop-blur` or `.admin-backdrop-note`, which is the
-     * unanchored-needle class this file has been bitten by before.
-     */
+    /* Anchored at the end, per hard rule 10: a bare `backdrop` matches `.backdrop-blur`. */
     test: /(?:::backdrop|-backdrop)$/,
     why:
       "a modal veil, not text. Nothing is drawn on this layer: it exists to dim " +
@@ -1502,11 +1009,7 @@ function opacityExempt(selectorGroup) {
     }
   }
 
-  /*
-   * SCOPE FLOOR. A regex that stopped matching would report no partial opacity
-   * anywhere, which is exactly what a clean sweep reports. The site has never
-   * had fewer than a handful of opacity declarations of any value.
-   */
+  /* Scope floor: a regex that stopped matching reports what a clean sweep reports. */
   assert(
     `the opacity scan read declarations at all (${declarations} found)`,
     declarations >= 8,
@@ -1522,11 +1025,7 @@ function opacityExempt(selectorGroup) {
     unclassified.length === 0,
   );
 
-  /*
-   * AND THE LIST DOES NOT ROT. An exemption naming a selector that no longer
-   * carries a partial opacity is a licence nobody is using, and the next reader
-   * would take it as evidence the pattern is fine.
-   */
+  /* An exemption no partial opacity uses is stale and fails. */
   const stale = OPACITY_EXEMPT.filter(
     (entry) =>
       !partial.some((d) =>
@@ -1541,21 +1040,9 @@ function opacityExempt(selectorGroup) {
   );
 }
 
-/* ---- the theme-color meta tags are a SECOND COPY of two tokens ---------- */
+/* theme-color meta tags copy two tokens */
 
-/*
- * `<meta name="theme-color">` paints the browser chrome and the OS task
- * switcher, and neither resolves a custom property, so root.tsx writes the two
- * background hexes out literally. That is a second copy of a value the palette
- * owns, which is exactly what rule 17 forbids leaving unwatched, and the copy
- * is in a file no colour gate reads.
- *
- * So it is watched here. The tags are matched by their media query rather than
- * by position, because two tags differing only in an attribute are the easiest
- * pair in the file to transpose, and a light hex under the dark media query is
- * a defect no page renders differently: it shows up on the phone's chrome and
- * nowhere in any screenshot.
- */
+/* root.tsx copies the background hexes. Matched by media query, as a swap is invisible. */
 {
   const rootSource = readFileSync(join(root, "app", "root.tsx"), "utf8");
   const declared = Object.fromEntries(
@@ -1583,80 +1070,10 @@ function opacityExempt(selectorGroup) {
 const buildPresent = existsSync(assetDir);
 
 /*
- * TWO FLOORS, AND ONLY ONE OF THEM IS REACHABLE ON A DEVELOPER MACHINE.
- *
- * This machine always has build/, so `npm run check` and `check:floors` only
- * ever exercise the build-PRESENT branch. The absent branch runs where nothing
- * has built the client, which in practice means CI, and its floor is therefore
- * the one number here that no local run can observe drifting.
- *
- * That is not hypothetical. On 2026-09-06 the floor sweep re-measured every
- * floor it could REACH, moved seventeen of them, and left this one at 486
- * because reaching it needs build/ moved aside. CI then failed at 3bcf858 with
- * 518 against 486, a gap of 32 against a tolerance of 26. The sweep's own
- * instrument could not see the floor the sweep had missed.
- *
- * RE-MEASURED 2026-09-06 by RUNNING the gate with build/ renamed away, which is
- * the same method the 2026-08-28 entry used and the only one that works: 518
- * absent, 642 present. Floors are those minus the check:floors tolerance at
- * each count, 26 and 33.
- *
- * RE-MEASURED AGAIN 2026-09-08, both branches, by the same method: 520 absent,
- * 644 present. The `:swatch` directive added ONE entry to DECLARED_ELSEWHERE
- * and that map is self-policing, so it contributes two assertions (the token is
- * still used, and it is still not declared) in both branches. Measured rather
- * than added to the old figure, which is the failure the paragraph below
- * describes.
- *
- * When this branch's count moves, CI is the instrument that says so. Re-measure
- * it the same way rather than deriving it from the present-branch number.
- *
- * RE-MEASURED 2026-09-13 for the Paper, Glass, Light token layer, by the same
- * method and in both branches: build/ renamed away gives 792, build/ in place
- * gives 1022, after the disabled exemption and the axis-stroke row. The jump is the new palette's matrix rows, the mix-composites
- * pass and the var()-resolution pass, and it is why the floors below moved by
- * hundreds rather than by a handful.
- *
- * Floors are those counts minus ONE UNDER check:floors' own tolerance at each
- * count, max(3, ceil(n * 0.05)) being 40 and 52: 753 and 971, so each floor
- * sits 39 and 51 under its count. One tighter than the maximum slack allowed,
- * deliberately, because the tolerance is the point at which the gate starts
- * complaining and there is no reason to sit exactly on it. Taken from the
- * printed counts, never by arithmetic on the old floors, which is what the
- * paragraphs above record going wrong twice.
- *
- * RE-MEASURED 2026-09-14, BOTH BRANCHES, BY RUNNING THEM, when the bar's six
- * matrix rows and the four tokens they measured were deleted: 754 with build/
- * renamed away and 976 with it in place, against 792 and 1022 before.
- *
- * THE MOVE IS 46 AND 38, WHICH IS NOT WHAT SIX ROWS LOOK LIKE, and that is the
- * reason to run rather than subtract. A matrix row is not one assertion: it is
- * measured per mode, walked again by the var()-resolution pass, and compared
- * again against the built stylesheet in the present branch. Three of the four
- * deleted tokens also shipped as a hex plus a color-mix recipe, so each took
- * three assertions per mode out of the composite pass as well.
- *
- * BOTH OLD FLOORS WOULD HAVE HELD AND BOTH WERE WRONG TO KEEP. 976 cleared 971
- * by five and 754 cleared 753 by ONE. A floor one under its count fails the
- * next honest change and reports it as "a block was SKIPPED", which is the
- * misleading failure this instrument exists to avoid producing. Reset to the
- * same rule as the line above: tolerance 49 and 38, so 928 and 717.
- *
- * RE-MEASURED 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after the bar's lamp
- * chroma and four orphaned tokens were deleted with their matrix rows and
- * their NON_PARTICIPATING entries: 940 present and 728 absent, against 976 and
- * 754. Three matrix rows and two exemption entries left, and the move is 36
- * and 26, which is again not what five entries look like from the outside and
- * is again why it was RUN.
- *
- * Floors one under tolerance, 47 and 37: 894 and 692.
- *
- * RE-MEASURED 2026-09-14, BOTH BRANCHES BY RUNNING THEM, after the info role's
- * four tokens and their four matrix rows were deleted: 916 present and 712
- * absent, against 940 and 728. Floors one under tolerance, 46 and 36: 871 and
- * 677.
+ * Floors: counts from running the gate with build/ present and absent, one under
+ * check:floors' tolerance. Only CI reaches the absent branch.
  */
-const MINIMUM_CHECKS = buildPresent ? 871 : 677;
+const MINIMUM_CHECKS = buildPresent ? 873 : 679;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

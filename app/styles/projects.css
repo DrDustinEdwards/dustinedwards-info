@@ -1,38 +1,8 @@
-/*
- * /projects. Cards on the canvas, metric before name.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Projects index -----------------------------------------------------------
- *
- * Cards on the canvas, which binding rule 7 permits because this IS an index.
- * The metric leads each card, above the name, and that ordering carries the
- * page's whole argument: a number before a claim.
- *
- * `auto-fit` with a minimum rather than a fixed column count, so the grid is
- * responsive with no breakpoint of its own and no JavaScript. At narrow widths
- * it collapses to one column by construction.
- *
- * **A CARD ENDS WHERE ITS CONTENT ENDS, since 2026-08-30.** The grid's default
- * stretch made every card as tall as the tallest in its row, which was the
- * intent while the cards were of similar length: the foot links then lined up
- * across a row. The evidence and notable fields broke that premise. The
- * flagship card carries three notable sentences and seven citations and its
- * neighbour carries neither, so the stretch produced roughly four hundred
- * pixels of empty card under the short one, with its Source link parked at the
- * bottom of a box that had stopped saying anything.
- *
- * `start` moves that whitespace BELOW the card, where it reads as spacing
- * rather than as an unfinished card. The auto margins on the foot blocks are
- * kept and are not dead: they still order the links row above the evidence
- * block, and they come back into effect for any row whose cards are close
- * enough in length to leave slack. Measured from screenshots, Dustin's call.
- */
+/* Projects index: cards on the canvas (rule 7 permits it for an index); the metric leads, above the name.
+   auto-fit with a minimum, so no breakpoint. align-items: start, so a card ends where its content ends
+   instead of stretching to the tallest; the foot margins still order links above evidence. */
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
@@ -101,10 +71,8 @@
   color: var(--text-muted);
 }
 
-/* What is technically notable. Prose inside a card, so it takes the card's
-   muted body colour and the same measure as the description above it. Marker
-   suppressed and indent removed: these are three sentences, not an enumeration,
-   and a bullet would promise an ordering the list does not have. */
+/* Technical notes are prose in a card: muted body colour, the description's measure, and no bullets,
+   which would promise an order the sentences do not have. */
 .project-notable {
   margin: 0.875rem 0 0;
   padding: 0;
@@ -171,13 +139,8 @@
   color: var(--text-muted);
 }
 
-/* Pushed to the card's foot. `auto` on the top margin only works while this is
-   the LAST flex child, so the evidence block below takes it whenever one is
-   present and this keeps it for the cards that have none. With the grid on
-   `align-items: start` there is usually no slack for it to consume, which is
-   the point of that change rather than a reason to drop this: it still orders
-   the two foot blocks, and it still does its original job on a row whose cards
-   happen to be close in length. */
+/* Pushed to the foot: an auto top margin works only on the last flex child, so the evidence block takes it
+   when present and this otherwise. */
 .project-links {
   display: flex;
   flex-wrap: wrap;
@@ -188,17 +151,17 @@
   font-size: 0.9375rem;
 }
 
-/* The citations. Last in the card, so it takes the auto margin that pushes the
-   foot down; where both are present the links row sits directly above it and
-   its own auto margin collapses to nothing, which is the intended order. */
+/* The citations, last in the card, take the auto margin that pushes the foot
+   down; when both are present the links row sits directly above and its own
+   margin collapses to nothing. */
 .project-evidence {
   margin: auto 0 0;
   padding: 1rem 0 0;
 }
 
-/* An h3 under the card's h2. Sized down to a label rather than a heading,
-   because it introduces the list rather than competing with the project name;
-   the element is a heading so the outline is right, the type is not. */
+/* An h3 under the card's h2: the element is a heading so the outline is
+   right, but the type is not, sized as a label so it introduces the list
+   instead of competing with the project name. */
 .project-evidence-title {
   margin: 0;
   font-size: 0.75rem;
@@ -227,4 +190,3 @@
   line-height: 1.4;
 }
 
-/* Public content page. Generic, kept for the blog. */

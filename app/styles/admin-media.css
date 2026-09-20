@@ -1,64 +1,14 @@
-/*
- * The media library: grid, facets, SERP and social previews, document card, caption bar, tile, list table.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* The media library: grid, facets, SERP and social previews, document card, caption bar, tile, list.
+ * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* MEDIA LIBRARY ------------------------------------------------------------
- *
- * The grid sits on the CANVAS, so --border is correct here; the picker lives in
- * the drawer, which is the popover step, so it takes --border-strong. Both are
- * below. Every tile renders a TRANSFORM, never the original: the src carries
- * ?w=, and the intrinsic width/height attributes match what the transform
- * returns so the grid does not reflow as tiles arrive. */
-/* DENSITY, MEASURED IN A BROWSER RATHER THAN CALCULATED.
- *
- * The table that stood here was arithmetic and it was wrong. It read
- * `.admin-content` as the grid's width, when the grid sits inside 24px of
- * padding on each side and the scroll container takes another 15 for its
- * scrollbar. It claimed 6 columns at a 1280 viewport; the page rendered 5.
- *
- * The 6 below is real, and it arrived with the scrollbar fix rather than with a
- * tuning change: the escaped `.sr-only` spans gave the document a second
- * scrollbar, that scrollbar took 15px off the viewport, and 15px was the whole
- * difference between 5 columns and 6. A layout bug was costing a column.
- *
- * These numbers come from rendering this route with 24 seeded rows into the
- * real shell, with the built stylesheet, and reading the layout back out of the
- * browser. gridW is contentW minus 48 of padding minus 15 of scrollbar.
- *
- *   viewport   contentW   gridW   columns   tile
- *   1440       1152       1089    6         171x199
- *   1280       1040        977    6         153x203
- *   1024        784        721    4         171x198
- *    900        660        597    3         191x212
- *    768        768        705    4         167x196     sidebar is a bar here
- *    390        390        327    2         157x189
- *
- * contentW is min(72rem, viewport - 15rem sidebar) above the 800px breakpoint
- * and the viewport below it. Nothing asserts any of this: check:admin-ui
- * reduces the page to what it submits and sees no styling, so this table is the
- * record and it is only as fresh as the last time someone rendered the page. */
-/* PENDING, while a data-changing navigation is in flight.
- *
- * The router sets `data-pending` through `useNavigation`; nothing here polls or
- * animates a widget. A data change on this plane costs a round trip plus a D1
- * query, MEASURED at 1629ms median, and an unmarked page reads as frozen and
- * gets pressed twice.
- *
- * The rows STAY LEGIBLE and stay in place: this dims and stops accepting
- * pointer input, it does not blank the grid or collapse its height, so nothing
- * reflows under the cursor and the previous answer is still readable while the
- * next one is fetched. `aria-busy` on the same element carries it to a screen
- * reader, so the affordance is not visual only.
- *
- * NOT applied to a display change. Those resolve without the loader, so
- * flagging them would flash over a re-render that already happened.
- */
+/* Media library. The grid sits on the canvas, so --border; the picker is on the popover step, so
+ * --border-strong. Tiles render a transform, never the original, with matching width and height, so the
+ * grid never reflows. */
+/* Density is measured in a browser, not calculated: the grid is narrower than .admin-content by its
+ * padding and the scrollbar. No gate asserts the column counts; re-render before trusting a number. */
+/* Pending while a data-changing navigation is in flight (the router sets data-pending): an unmarked page
+ * reads as frozen and gets pressed twice. Rows dim and stop taking pointer input but never blank or
+ * reflow; aria-busy carries it. Never on a display change, which resolves without the loader. */
 /* The same treatment on the posts table. Every control there changes which rows
  * come back, so there is no display-only case to exclude. */
 .posts-table[data-pending] {
@@ -85,17 +35,8 @@
 
 .media-grid {
   display: grid;
-  /* `min(100%, ...)` is the mockup's form and is a correctness fix rather than a
-     density one: a bare minimum cannot shrink below itself, so a viewport
-     narrower than one tile plus its padding overflows instead of yielding one
-     column. It is also the form this stylesheet already uses twice elsewhere.
-
-     THE MOCKUP'S 124px TILE IS NOT ADOPTED, and this is the one place the
-     approved look loses to a measurement. At 124px the grid renders SEVEN
-     columns at a 1280 viewport and the tile body drops to 131px, at which 18 of
-     24 filenames are cut by CSS from the END again: the exact defect the
-     middle-elision was built to repair, reintroduced by density. 9.5rem holds
-     six columns and no name is cut. */
+  /* min(100%, ...) lets a viewport narrower than one tile yield one column instead of overflowing.
+     The mockup's 124px tile is not adopted: it brings back end-truncated filenames. */
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
   gap: 0.625rem;
   margin: 0;
@@ -112,42 +53,21 @@
   background: var(--surface);
 }
 
-/* THE FIXED BOX. An explicit ratio on the WRAPPER, so the space is reserved
-   before the image arrives and a lazily-loaded tile cannot reflow the rows below
-   it. The grid was ragged because it mixes 1200x630 cards, 3:2 photos and 1:1
-   icons with nothing constraining them, which also made cards tall enough to
-   clip their own buttons. */
+/* The fixed box: an explicit ratio on the wrapper reserves the space before the image arrives,
+   so a lazy tile cannot reflow the rows below and mixed ratios stay aligned. */
 .media-thumb-box {
-  /* `display: block` IS LOAD BEARING and its absence was a shipped defect.
-     The element became a <span> when the tile gained a link around it, and
-     `aspect-ratio` does not apply to a non-replaced INLINE box, so the fixed
-     3:2 box silently stopped existing: measured in a browser, an image tile was
-     181x181 rather than 181x121 and a PDF tile collapsed to 181x21 with the
-     label floating in a stretched card. Both symptoms Dustin reported on the
-     first look. */
+  /* display: block is load-bearing: this is a <span>, and aspect-ratio does not apply to an inline box,
+     so without it the fixed 3:2 box stops existing. */
   display: block;
   position: relative;
   aspect-ratio: 3 / 2;
   overflow: hidden;
-  /* The floor every tile paints on. An SVG has NO LQIP, because the Images
-     binding does not rasterize vectors (11 of 70 rows), so the background image
-     below is set only when one exists and this colour is what shows through
-     otherwise. That is the difference between a quiet empty tile and a black
-     hole.
-
-     **IT WAS `--surface-2`, WHICH THIS STYLESHEET NEVER DECLARED**, in either
-     theme, at either of its two use sites. An undefined custom property makes
-     the declaration invalid at computed-value time, so `background-color` fell
-     back to its initial value, transparent, and the floor this comment
-     describes did not exist. check:contrast could not see it: the participation
-     assertion walks DECLARED tokens, and a token nobody declares is in no
-     block to walk. `--surface-popover` is the recessed step this well already
-     wanted, and it is a token both themes carry and the matrix already prices. */
+  /* The floor every tile paints on: SVGs get no LQIP, since the Images binding does not rasterize vectors.
+   * Never --surface-2: nothing declares it, so the declaration was invalid and the floor transparent,
+   * and check:contrast cannot see an undeclared token. */
   background-color: var(--surface-popover);
-  /* Describes the inline LQIP when there is one. `cover` and `center` mirror the
-     object-fit below, so the blur sits exactly where the real image lands and
-     the swap is invisible. It is a ~20px image scaled up, so the browser's own
-     smoothing IS the blur: no filter is applied and none is needed. */
+  /* The inline LQIP: cover and center mirror the object-fit below, so the swap is invisible.
+     A tiny image scaled up is its own blur; no filter is needed. */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -168,16 +88,11 @@
   padding: 1rem;
 }
 
-/* THE 5:2 SQUASH IS GONE, and the reason it existed is the reason it goes.
-   It read "a document has nothing to show, so it does not get a picture's
-   height", which was true of a box containing one word. `DocumentCard` now puts
-   a title, a suggestion of text and a size in that space, so there IS something
-   to show and squashing it would crush the thing that fixed the wall of empty
-   boxes. 3:2, which is also every tile's ratio in the mockup. */
+/* 3:2 for documents too: DocumentCard fills the space with a title, text and size, so squashing it
+   would crush what fixed the wall of empty boxes. */
 
-/* What a document shows instead of an image. 31 of 70 rows are PDFs and the
-   Images binding cannot render one, so they get a legible label rather than an
-   empty box that reads as a failed load. */
+/* What a document shows instead of an image: the Images binding cannot render a PDF, so it gets a
+   legible label rather than an empty box that reads as a failed load. */
 .media-thumb-label {
   display: flex;
   align-items: center;
@@ -190,12 +105,8 @@
   letter-spacing: 0.08em;
 }
 
-/* THE FACET ROW, from the ratified mockup: a fixed-width mono label, the chips,
-   and a hint saying who owns the axis. The hint is the design's whole argument,
-   so it is copy rather than decoration and it lives in the markup.
-
-   The label column is a fixed width so the row reads as a label and a set
-   rather than as a sentence that happens to start with a word. */
+/* The facet row: a fixed-width mono label, the chips, and a hint naming who owns the axis. The hint is
+   the design's argument, so it is copy in the markup. The fixed label width makes it read as label and set. */
 .media-facet {
   display: flex;
   align-items: center;
@@ -215,11 +126,8 @@
   text-transform: uppercase;
 }
 
-/* "assigned by the system". Mono and muted, so it reads as an annotation on the
-   row rather than as another control in it. --text-muted and not a lighter
-   tertiary: the mockup's #8B8274 measures 3.55:1 on the page, under the 4.5
-   floor this repo enforces for text, and this is text a reader is meant to
-   read. */
+/* "assigned by the system": mono and muted, an annotation rather than a control. --text-muted, never a
+   lighter grey: this is text a reader must read, so it meets the 4.5:1 text floor. */
 .media-facet-hint {
   color: var(--text-muted);
   font-family: var(--font-mono);
@@ -233,10 +141,8 @@
   margin: 0;
 }
 
-/* THE USAGE HONESTY LINE, from the mockup, and the reason it is a tinted box
-   rather than a muted sentence: it is the one thing on this page that stops a
-   reader deleting a file the site is serving. It sits on the accent tint, which
-   is the surface the palette already has for "read this before acting". */
+/* The usage honesty line is a tinted box, not a muted sentence: it is what stops a reader deleting a file
+   the site serves. It sits on the accent tint, the palette's "read this before acting" surface. */
 .media-usage-note {
   margin: 0 0 1rem;
   padding: 0.625rem 0.75rem;
@@ -258,14 +164,8 @@
   padding-top: 0.5rem;
 }
 
-/* Name and Copy share a row, so the control sits beside the thing it copies
-   rather than under it as a full-width slab repeated once per tile.
-
-   `min-width: 0` IS LOAD BEARING HERE. Measured: without it the row is a grid
-   item with `min-width: auto`, so it refuses to shrink below the name's natural
-   width. The row rendered 212px wide inside a 151px tile and `.media-card`'s
-   `overflow: hidden` clipped the copy button off the page: the control was
-   present, focusable and invisible. */
+/* Name and Copy share a row. min-width: 0 is load-bearing: without it the grid item refuses to shrink
+   below the name, and the tile's overflow clips the copy button while it stays focusable. */
 .media-name-row {
   display: flex;
   min-width: 0;
@@ -274,13 +174,8 @@
   gap: 0.25rem;
 }
 
-/* The filename is a LINK to the detail view, and it is the no-script route to
-   the address the Copy button writes to the clipboard.
-   `color: inherit` and no underline at rest, which does not offend rule 2: the
-   link is not distinguished by COLOUR either, so colour is not carrying
-   anything alone. What marks it is position and weight inside a tile that is a
-   click target end to end, and the underline arrives on hover and focus. An
-   underline under an already-elided string reads as a second truncation. */
+/* The filename links to the detail view: the no-script route to the address Copy writes. No colour and no
+   resting underline, which rule 2 allows because colour carries nothing alone; it underlines on hover and focus. */
 .media-name {
   display: block;
   min-width: 0;
@@ -290,11 +185,8 @@
   font-size: 0.8125rem;
   font-weight: 600;
   text-decoration: none;
-  /* ONE LINE, and the string arrives already elided in the MIDDLE by
-     `middleTruncate`. A clamp of two or three lines was measured and rejected:
-     it still cuts the END, which is the half of these names that differs. The
-     ellipsis here is the backstop for a name that is short in characters and
-     wide in pixels, which a server-side character cap cannot see. */
+  /* One line: the string arrives middle-elided by middleTruncate. A line clamp was rejected because it
+     cuts the end, the half that differs. The ellipsis backstops names wide in pixels. */
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -314,55 +206,25 @@
    its children are cells of the card. Its padding moved onto those children,
    because a wrapper that lays nothing out cannot carry any. */
 
-/* THE PAGE'S ONE JOB, as a compact control beside the name.
- *
- * `position: relative` IS THE FIX FOR THE SECOND SCROLLBAR, and it is not
- * cosmetic. The button carries a `.sr-only` span for its accessible name;
- * `.sr-only` is `position: absolute`, so with no positioned ancestor its
- * containing block was the INITIAL one, which means it was laid out in
- * DOCUMENT coordinates and escaped `.admin-content`'s overflow clip entirely.
- * Measured in a browser: 24 invisible 1px spans dragged the document's scroll
- * height to 1685px inside a 598px shell, which is the second scrollbar and the
- * screen of dead space under the grid. Making the button a containing block
- * puts them back inside the scroller: document scrollHeight 1685 -> 542, equal
- * to clientHeight, no document scroll.
- *
- * `data-copied` is written by the click handler; there is no component state on
- * this page by ruling. */
+/* position: relative is the fix for the second scrollbar: the .sr-only label span is absolutely
+ * positioned, and without a positioned ancestor it escapes .admin-content's clip and stretches the
+ * document. data-copied is written by the click handler; this page has no component state, by ruling. */
 .media-copy {
   position: relative;
   display: flex;
   flex: none;
   align-items: center;
   justify-content: center;
-  /* `.btn-ghost` carries `margin-top: 1.25rem`, which is right for a button
-     stacked under a form and wrong for a 22px glyph sitting in a table cell.
-     This rule reset the padding and the size and left the margin, so the copy
-     control contributed 42px to a row that wanted to be 46: 22 of button and 20
-     of a margin meant for something else. Found by measuring the list row and
-     walking down to the one child that would not shrink. */
+  /* margin-top: 0 resets .btn-ghost's stacked-button margin, which is wrong for a glyph in a table cell
+     and made the copy control the one child the row could not shrink. */
   margin: 0;
   width: 1.375rem;
   height: 1.375rem;
   padding: 0;
 }
 
-/* A COPY BUTTON THAT CARRIES A WORD IS NOT A 22px SQUARE.
- *
- * `.media-copy` is sized for a TILE, where the measurement is on the record:
- * the word "Copy" cost 41px of a 131px row and pushed the filename back into
- * the end-truncation the middle-elision exists to prevent. So the tile control
- * is a fixed 22x22 glyph, correctly.
- *
- * The inspector's three snippet buttons carry visible labels, added so the
- * adaptive naming ("HTML tag" against "HTML link") can actually warn somebody
- * before they press it. They inherited the fixed square and the labels rendered
- * OUTSIDE their own buttons: measured at 22px wide with the text overhanging by
- * 19, 29 and 12px, overlapping each other. The label shipped invisible for one
- * commit, then shipped overflowing for one more.
- *
- * `:has()` rather than a modifier class, because the condition IS "this button
- * contains a label" and there is no second fact to name. */
+/* A copy button with a visible word is not a 22px square: the square is sized for a tile, and the
+ * inspector's labelled snippet buttons overflowed it. :has() because the condition is "contains a label". */
 .media-copy:has(.media-copy-label) {
   width: auto;
   height: auto;
@@ -391,11 +253,8 @@
   font-size: 0.75rem;
 }
 
-/* IT WRAPS RATHER THAN CLIPPING. `nowrap` plus an ellipsis rendered "unused" as
-   "unu..." on the live page: measured at a 183px tile the line is exactly as
-   wide as the box, so the longer role words cut the usage word off. Wrapping
-   costs a line on the few tiles that need one; clipping hides the one word on
-   this line a reader is looking for. */
+/* It wraps rather than clipping: nowrap with an ellipsis cut the usage word, the one word on this line
+   a reader is looking for. */
 .media-meta {
   margin: 0;
   color: var(--text-muted);
@@ -403,41 +262,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* THE DETAIL VIEW, above the grid rather than beside it.
- *
- * Above, because a side panel at this content width would take a third of the
- * grid permanently and this page is only ever showing one asset at a time. It
- * is a `?key=` on the same URL, so it is linkable, survives a reload and needs
- * no script. */
-/* THE INSPECTOR AS A DOCKED DRAWER, which is what the mockup has and what two
- * previous attempts were not.
- *
- * ## WHAT WAS WRONG WITH THE IN-FLOW PANEL
- *
- * It was `position: sticky` inside a two-column panel grid, and every one of
- * its measured properties was wrong. Opening a file put 23 of the panel's 566
- * pixels on screen and required 507px of scrolling to reach its top. It also
- * SQUEEZED the page behind it: the search bar, the lens row, the usage note and
- * the grid all went from 977px to 573px, the grid dropped from six columns to
- * three, and a 483px void of empty column sat above the panel. Clicking a file
- * to learn about it reflowed the entire library you were reading.
- *
- * ## WHAT IT IS NOW
- *
- * Fixed, flush to the right edge of the viewport, full viewport height, over a
- * scrim, with the page behind it completely unaffected. That is the mockup's
- * design and the reason for it is that inspecting is a SIDE activity: the
- * reader is comparing the panel against the grid, so the grid must not move.
- *
- * `position: fixed` also takes it out of `.admin-content`, which is the shell's
- * scroll container on desktop, so the drawer pins to the viewport rather than
- * to a scrolled box. That is why there is no breakpoint here: the same
- * mechanism is correct at every width, and `min(392px, 100%)` makes it
- * full-bleed on a phone without a media query.
- *
- * 100dvh rather than 100vh, because on mobile Safari 100vh is taller than the
- * visible area and the panel's last control would sit under the browser chrome.
- */
+/* The detail view sits above the grid, not beside it: a side panel would take a third of the grid for
+ * one asset. It is a ?key= on the same URL, so it is linkable and needs no script. */
+/* The inspector is a fixed drawer at the viewport's right edge over a scrim, and the grid behind it must
+ * not move: inspecting is a side activity. Fixed escapes .admin-content's scroller, so no breakpoint is
+ * needed. 100dvh, not 100vh, which is taller than the visible area on mobile Safari. */
 .media-detail {
   position: fixed;
   z-index: var(--z-overlay);
@@ -459,10 +288,8 @@
   border-radius: 0;
 }
 
-/* THE STICKY HEAD, so the name of the thing you are reading about does not
-   scroll away from the facts about it, and Close stays reachable without
-   scrolling back up. Negative margins pull it out to the drawer's padding edge
-   so the band is full bleed rather than a strip with gaps at its sides. */
+/* The sticky head keeps the name and Close in view. Negative margins pull the band to the drawer's
+   padding edge so it is full bleed. */
 .media-detail-head {
   position: sticky;
   z-index: var(--z-tile-body);
@@ -476,12 +303,8 @@
   border-bottom: 1px solid var(--border);
 }
 
-/* The name takes the free space and ELLIPSISES rather than wrapping. A
-   content-addressed key is 20 characters of hash and a static one is a path;
-   either wraps to three lines and pushes the whole panel down. `min-width: 0`
-   is what makes the ellipsis possible: a flex item refuses to shrink below its
-   content otherwise, and the close control would be pushed off the panel. The
-   full string is in the title attribute and in the Address field below. */
+/* The name ellipsises rather than wrapping, which would push the panel down. min-width: 0 lets the flex
+   item shrink so Close stays on the panel; the full string is in the title and the Address field. */
 .media-detail-head h3 {
   flex: 1 1 auto;
   min-width: 0;
@@ -528,30 +351,15 @@
   background: var(--surface-popover);
 }
 
-/* THE SCRIM. A real link, so closing works with no script at all, and the whole
-   area outside the drawer is the target, which is what everybody expects of a
-   drawer. `aria-hidden` would be wrong on a focusable control, so it carries a
-   real accessible name instead and is simply not announced as decoration. */
+/* The scrim is a real link, so closing works with no script and the whole outside area is the target.
+   Not aria-hidden, which is wrong on a focusable control; it carries a real accessible name. */
 .media-detail-scrim {
   position: fixed;
   z-index: var(--z-overlay-scrim);
   inset: 0;
   display: block;
-  /* THE EXISTING `--scrim` TOKEN AT 28 PERCENT, not a new one.
-
-     A `--scrim-veil: rgba(...)` was written first and check:contrast refused it
-     three ways, all correctly: the token block accepts LITERAL HEXES only, so
-     an rgba() is unparseable; Lightning CSS minifies it to `#2a262247` so the
-     shipped value would not match the declared one either; and the
-     participation assertion demands every declared token appear in a measured
-     pair, which a translucent veil cannot honestly do because no text ever sits
-     on it and it has no ratio.
-
-     `opacity` on the element sidesteps all three. `--scrim` is already declared
-     in every theme and already priced in the matrix against `--on-scrim`, and
-     nothing is drawn on this layer, so dimming the whole element is exactly
-     what is wanted. The mockup's own value is rgba(42,38,34,0.28); this is the
-     ratified dark neutral at the same 28 percent. */
+  /* Dimmed with opacity on the existing --scrim, never a new rgba() token: the token block takes literal
+     hexes only, minification would change the value, and a veil with no text on it has no pair to measure. */
   background: var(--scrim);
   opacity: 0.28;
 }
@@ -562,25 +370,15 @@
   }
 }
 
-/* ONE COLUMN INSIDE THE SIDE PANEL, at every width.
- *
- * The two-column body was written for a card spanning the whole content area,
- * where 20rem of preview beside the facts fits comfortably. In a 24rem panel it
- * does not: measured, the facts column was pushed past the panel edge and the
- * labels rendered as "Ad", "Ke", "Ro", "Ty" down the right margin. The panel is
- * the narrow context now, so it gets the narrow layout, and the media query
- * above stops being the only thing that knows about narrowness. */
+/* One column inside the side panel at every width: the two-column body pushed the facts column past
+ * the panel edge. The panel is the narrow context, so it gets the narrow layout. */
 @media (min-width: 60rem) {
   .panel:has(> .media-detail) .media-detail-body {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  /* NOTHING IN THE PANEL MAY BE WIDER THAN THE PANEL.
-     An <input> has an intrinsic default width of about 20 characters and does
-     NOT shrink to its grid track, so the readonly address field ran past the
-     panel edge with its own value hidden under the scrollbar. `min-width: 0` on
-     the row and `width: 100%` on the field is the pair that fixes it; either
-     alone leaves the overflow. Same class as the list row's name cell. */
+  /* Nothing in the panel may be wider than the panel. An <input> keeps an intrinsic width and does not
+     shrink to its track: min-width: 0 on the row and width: 100% on the field are both needed. */
   .panel:has(> .media-detail) .media-detail-address-row {
     min-width: 0;
   }
@@ -599,9 +397,8 @@
   justify-content: center;
   aspect-ratio: 3 / 2;
   border-radius: 0.5rem;
-  /* The same floor the tiles paint on, so a transparent PNG and an SVG with no
-     LQIP read the same way here as they do in the grid. Was `--surface-2`,
-     which nothing declares; see the tile's own note. */
+  /* The same floor the tiles paint on, so a transparent PNG and an SVG with no LQIP read as they do in
+     the grid. */
   background-color: var(--surface-popover);
 }
 
@@ -758,17 +555,9 @@
   justify-items: start;
 }
 
-/* SERP AND SOCIAL CARD PREVIEWS -------------------------------------------
- *
- * Both live in the drawer, which is the POPOVER STEP, so every border here is
- * --border-strong: --border clears 3:1 on --surface but drops to 2.66:1 on
- * --surface-popover, which is the elevated-surface law this repo already
- * records twice.
- *
- * Neither imitates a specific search engine's or network's chrome. They show
- * the STRINGS the site emits, cut where they will be cut, because the rendering
- * of those strings changes without notice and a pixel-faithful mock would be
- * quietly wrong within a month. */
+/* SERP and social previews live in the drawer, on the popover step, so every border is --border-strong.
+ * Neither imitates a real engine's chrome: they show the strings the site emits, cut where they will be
+ * cut, because a pixel-faithful mock goes quietly wrong. */
 .serp-preview,
 .og-preview {
   padding: 0.75rem;
@@ -893,14 +682,8 @@
   white-space: nowrap;
 }
 
-/* THE UPLOAD CONTROL, one thing in the page head.
- *
- * The file input is visually folded into its label so the head shows a single
- * button rather than a bare picker plus a submit. It is NOT display:none: a
- * hidden input is unreachable by keyboard, and the whole point of layering an
- * enhancement over a working form is that the form keeps working. Clipped to a
- * pixel, the standard sr-only technique, so it stays focusable and its focus
- * ring still lands on the label. */
+/* The upload control: the file input is folded into its label so the head shows one button. Never
+ * display: none, which is unreachable by keyboard; it is clipped sr-only, so focus lands on the label. */
 .media-upload input[type="file"] {
   position: absolute;
   width: 1px;
@@ -932,13 +715,8 @@
   outline-offset: 1px;
 }
 
-/* MEDIA v6: the design's own structure.
- *
- * THE SECTION HEADING IS THE SPINE. Small caps, a count, and the note right
- * aligned and quiet. Every value below resolves to a token that clears its
- * floor: the mockup's #A79C8A muted label measures 2.34 to 1 and its #F3EEE3
- * divider 1.16, so neither ships. Quietness comes from SIZE, WEIGHT and
- * TRACKING, and separation from FILL, which is the rule the arc established. */
+/* The section heading is the spine: small caps, a count, a quiet right-aligned note. The mockup's failing
+ * greys do not ship; quietness is size, weight and tracking, and separation is fill. */
 .media-group-heading {
   display: flex;
   align-items: baseline;
@@ -963,10 +741,7 @@
   color: var(--text-muted);
 }
 
-/* THE NOTE. Right aligned, per the mockup, and the reason the grouping exists.
-   --text-muted rather than the mockup's grey: it is the quietest token that
-   still clears 4.5 to 1, which is the floor a sentence someone must READ has
-   to meet. */
+/* The note: right aligned. --text-muted, the quietest token that still clears the 4.5:1 text floor. */
 .media-group-note {
   margin-left: auto;
   font-size: 0.75rem;
@@ -996,10 +771,8 @@
   outline-offset: 1px;
 }
 
-/* MEDIA v6 session 3: group headings, selection, and the drop hint.
- *
- * Same rule as the rest of the arc: no hairline that fails a floor. The heading
- * separates by SPACE and WEIGHT, not by a rule nobody can see. */
+/* Group headings, selection and the drop hint. No hairline that fails a floor:
+ * the heading separates by space and weight. */
 .media-group + .media-group {
   margin-top: 1.25rem;
 }
@@ -1061,16 +834,9 @@
   border-radius: 0.5rem;
 }
 
-/* MEDIA v6: the display bar, the two layouts, and the destructive accent.
- *
- * THE SOFTNESS IS REBUILT LEGALLY. The mockup's hairlines (#e5ddce at 1.35:1,
- * #c9bfa9 at 1.82:1, #f3eee3 at 1.16:1) and its two greys (#a79c8a at 2.34:1,
- * #8b8274 at 3.27:1) all fail their floors, so none of them ships. What made
- * the mockup feel calm is reproduced with TINT, SPACING and WEIGHT instead:
- * surfaces separate by fill rather than by a line nobody can see, labels get
- * size and letter-spacing rather than a lighter grey, and rows get air. That is
- * the instruction not to substitute the nearest compliant hairline, which is
- * what made the previous pass read as paint. */
+/* The display bar, the two layouts and the destructive accent. The mockup's hairlines and greys fail
+ * their floors and do not ship, and no nearest compliant hairline replaces them: calm comes from tint,
+ * spacing and weight. */
 
 .media-display-bar {
   display: flex;
@@ -1201,28 +967,11 @@
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
 }
 
-/* MEDIA v6 session 4: the document card, the caption bar, and the real table.
- *
- * THE MOCKUP'S COLOURS ARE STILL REFUSED, and the same three are refused again
- * here for the same measured reasons: #f3eee3 as a row rule is 1.16:1, #e5ddce
- * as a header rule is 1.35:1, and #a79c8a as a muted label is 2.34:1. What made
- * the mockup calm is rebuilt with FILL, SPACING, SIZE and TRACKING, which is
- * the instruction this arc has followed from the start. Where a line is the
- * only honest way to say "the header ends here", it takes --border, which
- * clears the 3:1 graphical floor, and it is one line rather than one per row. */
+/* Document card, caption bar and table. The mockup's failing colours stay refused. Where a line is the only
+ * honest boundary it is --border, once for the table header, never once per row. */
 
-/* ---- THE DOCUMENT CARD --------------------------------------------------
- *
- * 31 of the 70 rows are documents. They rendered as a word floating in an empty
- * band, so a folder of five papers was five identical grey boxes distinguished
- * only by `edw...omics.pdf` against `edw...lysis.pdf`.
- *
- * Every colour here resolves to a token and every one is a pair the matrix
- * already carries: the extension label is --brand on --surface (7.6:1), the
- * title is --text on --surface (13.4:1), the foot is --text-muted on --surface
- * (6.6:1). The mockup's #b7a5e0 label is 2.0:1 on white and does not ship; what
- * makes it read as a label is the size, the tracking and the uppercase, none of
- * which needed the colour to be faint. */
+/* The document card: a label, a title and a foot, each a pair check:contrast already carries. The mockup's
+ * pale label does not ship; size, tracking and uppercase make it read as a label. */
 .media-doc {
   display: flex;
   flex-direction: column;
@@ -1254,10 +1003,8 @@
   overflow: hidden;
 }
 
-/* THREE LINES, then the ellipsis. A title is words rather than a slug, so it
-   wraps like prose and the cut lands at a line end instead of mid-token. This
-   is the one place a line clamp is right on this page: the string is no longer
-   a filename whose distinguishing half is its tail. */
+/* Three lines, then the ellipsis: a title is words, so a line clamp is right here and the cut lands
+   at a line end. Filenames elsewhere are never clamped. */
 .media-doc-title {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1270,33 +1017,20 @@
   overflow-wrap: anywhere;
 }
 
-/* THE SUGGESTION OF TEXT. Decoration, aria-hidden in the markup, carrying no
-   meaning at all, which is why it may be quiet: WCAG 1.4.11 reaches graphical
-   objects needed to UNDERSTAND the content, and nothing is lost by not seeing
-   these. They still take --border rather than the mockup's 1.16:1 hairline,
-   because this stylesheet does not carry a colour nobody can see even where the
-   rule would allow one. Quietness comes from being 1px and from the last one
-   stopping at 62 percent, which is what a paragraph looks like from a distance. */
+/* The suggestion of text is aria-hidden decoration, so WCAG 1.4.11 does not reach it; it still takes
+   --border, because this sheet never carries a colour nobody can see. */
 .media-doc-rules {
   display: flex;
   flex: none;
   flex-direction: column;
-  /* More air than the mockup gives them, and that is a CONSEQUENCE of the
-     colour rather than a taste. At #ede6d8 the mockup can stack three rules 3px
-     apart and they still read as texture; at --border they are legible lines,
-     and three legible lines 3px apart read as a triple underline hanging off
-     the title. Spacing them buys back the "paragraph seen from across a room"
-     the faint colour was doing for free. */
+  /* More air than the mockup: at --border the rules are legible lines, and three of them tightly stacked
+     read as a triple underline. */
   gap: 0.3125rem;
   padding-top: 0.5rem;
 }
 
-/* RAGGED, LIKE TEXT IS. The mockup runs two full-width rules and one at 62
-   percent. At this contrast a full-width rule reads as a divider, so all three
-   stop short and stop at different places: what makes it read as prose rather
-   than as ruling is the uneven right edge, which costs no contrast at all.
-   Quietness from SHAPE, which is the same move the labels make with size and
-   tracking. */
+/* Ragged, like text: a full-width rule reads as a divider, so all three stop short at different places.
+   Quietness from shape, which costs no contrast. */
 .media-doc-rules span {
   height: 1px;
   background: var(--border);
@@ -1314,16 +1048,10 @@
   width: 45%;
 }
 
-/* NO RULE FOR A CARD FOOT, because there is no card foot. The mockup ends its
-   document card with "24 pages", which is fixture data there and unstorable
-   here, and the size that stood in for it duplicated the tile's own meta line.
-   `DocumentCard` carries the full reasoning. */
+/* No card foot: the mockup's page count is fixture data this site cannot store. DocumentCard has the reasoning. */
 
-/* The three tile sizes give the card different amounts of room, so the parts
-   that need room appear only when there is some. At S the card is ~112px wide
-   and a clamped title plus three rules plus a foot is a stack of noise, so the
-   rules go and the title takes the space. Nothing is HIDDEN that carries
-   meaning: the rules are decoration and the foot repeats the meta line below. */
+/* Each tile size gives the card different room, so parts that need room appear only when it exists.
+   At S the rules go; nothing hidden carries meaning. */
 .media-grid[data-size="s"] .media-doc-rules {
   display: none;
 }
@@ -1333,12 +1061,8 @@
   font-size: 0.75rem;
 }
 
-/* ---- THE CAPTION BAR ----------------------------------------------------
- *
- * Over the picture, on the tile the reader has selected or opened. The frame is
- * what makes it possible: the caption is a SIBLING of the thumbnail link rather
- * than a child, because it carries a button and a <button> inside an <a> is
- * invalid markup that browsers resolve inconsistently. */
+/* The caption bar is a SIBLING of the thumbnail link, not a child: it carries a button, and a <button>
+ * inside an <a> is invalid markup browsers resolve inconsistently. */
 .media-thumb-frame {
   position: relative;
   display: block;
@@ -1352,11 +1076,7 @@
   display: flex;
   align-items: center;
   gap: 0.375rem;
-  /* MEASURED AND TIGHTENED. At 7px of padding with inherited line-heights the
-     bar came out 56px tall on a 102px tile, and with the fade above it the
-     picture the caption exists to label was almost entirely covered. A label
-     that hides its subject is not a label. 37px leaves the image readable and
-     still fits both lines and the control. */
+  /* Tightened padding and explicit line-heights: a caption that covers the picture it labels is not a label. */
   padding: 0.3125rem 0.5rem;
   /* SOLID under the text, and the fade is a separate strip ABOVE it that
      carries nothing. See the --scrim token for the measured reason: a gradient
@@ -1420,37 +1140,17 @@
 
 .media-caption .media-copy:hover,
 .media-caption .media-copy:focus-visible {
-  /* An OUTLINE rather than a tinted fill. A fill here would have to be a
-     translucent white over the scrim, which is the unmeasurable composite the
-     scrim exists to remove, and it would be this stylesheet's only
-     `color-mix()`, which check:contrast reads values out of. */
+  /* An outline, not a fill: a fill would be translucent white over the scrim, the unmeasurable composite the
+     scrim exists to remove, and color-mix() here would confuse check:contrast. */
   outline: 1px solid var(--on-scrim);
   outline-offset: 1px;
 }
 
-/* ---- THE GRID TILE, now explicitly placed -------------------------------
- *
- * The card became a GRID so the copy control could leave the name row. It had
- * to leave: a name row holding two things is one cell, and the list then has no
- * eighth column to put the button in. Explicit placement means the source order
- * serves the LIST (check, thumb, name, usage, dims, size, added, copy) while
- * the tile still reads thumbnail, then name and copy, then meta. */
-/* **THE TILE IS THE CARD.** It was a card ABOUT a picture: a 102px thumbnail
- * with a 98px text body stapled underneath carrying a middle-elided filename, a
- * role chip, a size and a usage word. Six tiles in a row printed
- * `202...ohort.jpg` six times, which identifies nothing, and the picture, which
- * is the only thing that does identify these files, got half the height.
- *
- * The mockup's answer is the whole tile: 3:2, edge to edge, and the metadata
- * appears over the image on hover or when the tile is picked out. That is the
- * shape a library of photographs wants, and the caption bar built two sessions
- * ago was already most of the mechanism.
- *
- * NOTHING IS DELETED FROM THE MARKUP, so the one-tree rule holds and every
- * control keeps its no-script path. The name link and the copy button are still
- * rendered, still focusable in source order, and revealed by hover, focus or
- * selection rather than drawn at rest.
- */
+/* The tile is an explicitly placed grid: source order serves the list's eight columns while the tile reads
+ * thumbnail, then name and copy, then meta. */
+/* The tile is the card: 3:2, edge to edge, with metadata over the image on hover or selection.
+ * Nothing is removed from the markup, so the one-tree rule holds: the name link and copy button stay
+ * focusable in source order and are revealed by hover, focus or selection. */
 .media-grid[data-view="grid"] .media-card {
   position: relative;
   display: block;
@@ -1472,10 +1172,8 @@
   aspect-ratio: auto;
 }
 
-/* THE BODY IS THE CAPTION NOW. It stays in the DOM and is laid over the image,
-   revealed on hover, on focus-within, on selection and on the open tile. Focus
-   is in that list deliberately: a keyboard reader never hovers, and chrome that
-   only appears on hover is chrome they can never see. */
+/* The body is the caption, laid over the image and revealed on hover, focus-within, selection and open.
+   Focus is in the list because a keyboard reader never hovers. */
 .media-grid[data-view="grid"] .media-card-body {
   position: absolute;
   z-index: var(--z-tile-body);
@@ -1574,10 +1272,8 @@
   visibility: visible;
 }
 
-/* THE HOVER LIFT AND RING, the mockup's own values. The inset hairline is the
-   tile's resting edge; hover replaces it with a shadow that raises the tile off
-   the page, and the 2px transform is what makes it read as a lift rather than a
-   glow. */
+/* The hover lift: a shadow replaces the resting inset hairline, and the small transform makes it read as
+   a lift rather than a glow. */
 .media-grid[data-view="grid"] .media-card {
   box-shadow: inset 0 0 0 1px var(--border);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -1585,13 +1281,8 @@
 
 .media-grid[data-view="grid"] .media-card:hover {
   transform: translateY(-2px);
-  /* `rgb(0 0 0 / 12%)` is this stylesheet's OWN shadow idiom, already used by
-     the popover elevation, rather than a `--shadow-tile` token. A shadow colour
-     is not a palette colour: it has no contrast obligation, nothing is drawn on
-     it, and minting a token for it would put an entry in the block that the
-     participation assertion could never price. Grepping the declarations before
-     shipping caught the invented token, which is the fourth instance of that
-     class in this arc. */
+  /* A literal rgb() shadow, not a --shadow-tile token: a shadow colour has no contrast pair, and a token
+     with none can never participate in check:contrast's matrix. */
   box-shadow: 0 6px 18px rgb(0 0 0 / 12%), inset 0 0 0 1px var(--border);
 }
 
@@ -1624,35 +1315,19 @@
   display: none;
 }
 
-/* THE EXTENSION LABEL CLEARS THE CHECKBOX. Both want the top-left corner: the
-   selection box is absolutely positioned there on every tile, and the document
-   card's label starts there too, so a PDF card rendered its checkbox ON the
-   word and the pair read as "DF". Measured: the box is 19px plus its 6px inset,
-   so the label starts past 25px. Grid only; in the list the two are in
-   different columns and neither needs to move. */
+/* The extension label clears the checkbox, which is absolutely positioned in the same corner.
+   Grid only; in the list they are in different columns. */
 .media-grid[data-view="grid"] .media-doc-ext {
   padding-left: 1.5rem;
 }
 
-/* A DOCUMENT TILE DOES NOT REPEAT ITS OWN NAME.
-   The card already carries the title in words and the extension in the corner,
-   so the body's filename line rendered `edw...omics.pdf` directly beneath
-   `edwards 2024 phage genomics`: the same file, twice, one of them in the
-   elided form this design exists to stop being the identifying one.
-
-   HIDDEN, NOT REMOVED. The anchor stays in the markup, so it stays in the
-   evaporation scan's link set and stays the no-script route to the address, and
-   nothing is lost by not drawing it: the thumbnail above it is a link to the
-   same inspector. An image tile keeps its name, because an image card carries
-   no text of its own. */
+/* A document tile hides its filename: the card already shows the title and extension. Hidden, not removed:
+   the anchor stays for the evaporation scan and the no-script route. Image tiles keep their name. */
 .media-grid[data-view="grid"] .media-card[data-kind="document"] .media-name-row {
   display: none;
 }
 
-/* With the name row gone, the copy control has nothing to sit beside on its own
-   row, so it drops onto the meta line instead of hovering over an empty track.
-   The meta gives up the second column to make room, which it was only spanning
-   because there was nothing else on that row. */
+/* With the name row hidden, the copy control drops onto the meta line, which gives up its second column. */
 .media-grid[data-view="grid"] .media-card[data-kind="document"] .media-col-copy {
   grid-row: 3;
 }
@@ -1662,16 +1337,8 @@
   padding-right: 0;
 }
 
-/* ---- THE LIST, AS A REAL TABLE ------------------------------------------
- *
- * Eight tracks, the mockup's own, read out of its source rather than estimated:
- * 34px 44px minmax(160px, 1fr) 112px 78px 68px 84px 50px, 8px gap, rows at
- * 7px 14px and the header at 9px 14px.
- *
- * The header and every row are SEPARATE grids on an IDENTICAL track list, which
- * is how the mockup does it and is why the columns line up while folder
- * sections still break the rows into groups. A single grid spanning all of them
- * could not carry a heading between two rows without breaking the tracks. */
+/* The list is a real table: the header and each row are separate grids on an identical track list, so
+ * columns align while folder headings still break the rows into groups. */
 .media-list-head,
 .media-grid[data-view="list"] .media-card {
   display: grid;
@@ -1682,18 +1349,15 @@
 
 .media-list-head {
   padding: 9px 14px;
-  /* The header separates from the rows by FILL, and takes one --border rule
-     beneath it because a table's header genuinely does end somewhere. One line
-     on the whole table, not one per row: the mockup's per-row #f3eee3 is 1.16:1
-     and rows separate here by alternating fill instead. */
+  /* The header separates by fill plus one --border rule beneath it; rows separate by alternating fill,
+     never a rule per row. */
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   border-radius: 0.375rem 0.375rem 0 0;
 }
 
-/* A COLUMN HEADING IS A LINK, because the sort it applies is a URL. Quiet by
-   size, tracking and uppercase rather than by an unreadable grey: the mockup's
-   #8b8274 is 3.27:1 and its #a79c8a is 2.34:1, and neither ships. */
+/* A column heading is a link, because its sort is a URL. Quiet by size, tracking and uppercase,
+   never by an unreadable grey. */
 .media-col-head {
   display: flex;
   align-items: center;
@@ -1733,16 +1397,8 @@
   font-size: 0.5625rem;
 }
 
-/* A NUMERIC HEADING SITS OVER THE EDGE ITS VALUES ARE ALIGNED TO, and it reads
-   its side off its own attribute.
-
-   It was `nth-of-type`, which was wrong on the first render and looked right in
-   the code: that selector counts among siblings of the SAME ELEMENT TYPE, and
-   this row mixes anchors with spans, so `:nth-of-type(4)` picked the fourth
-   ANCHOR rather than the fourth heading. Size ended up left-aligned in its
-   track, hard against a right-aligned Dims, and the two words collided. A
-   positional selector over a mixed-type row is a guess about markup that has
-   already changed once. */
+/* A numeric heading sits over the edge its values align to and reads its side off its own attribute.
+   Never nth-of-type here: it counts same-type siblings, and this row mixes anchors and spans. */
 .media-col-head[data-align="end"] {
   justify-content: flex-end;
 }
@@ -1758,28 +1414,13 @@
   border: 0;
   border-radius: 0;
   font-size: 0.8125rem;
-  /* **THE RESET IS THE FIX, AND ITS ABSENCE WAS A SHIPPED DEFECT.**
-     `.media-card` sets `background: var(--surface)` on every card for the grid,
-     and the list block never took it back, so the `:nth-child(odd)` rule below
-     was painting --surface onto rows that were already --surface. Measured in a
-     browser: four consecutive rows all rgb(241,235,225), adjacent-row contrast
-     1.00:1, which is not banding, it is one solid slab. The comment beside that
-     rule said "rows separate by TINT" and had been describing something that
-     never happened since the list view shipped. */
+  /* The reset is load-bearing: .media-card paints --surface on every card, so without it the odd-row
+     banding below paints --surface onto --surface and the rows become one slab. */
   background: transparent;
 }
 
-/* Rows separate by TINT rather than by a hairline: every hairline in the mockup
-   failed its floor (#f3eee3 is 1.16:1), and a filled alternate row needs no
-   line at all.
-
-   The measured difference is --surface against the canvas, 1.11:1, which is in
-   the same range as the hairline it replaces and is not held to it: this is a
-   surface-to-surface seam, and the palette law is explicit that such a seam
-   carries no 3:1 obligation (the chrome ruling makes the same call about the
-   header seam at 1.80:1). What separates a row here is a BAND the full width of
-   the table rather than a one-pixel line, and a band at 1.11 is legible where a
-   line at 1.16 is not. */
+/* Rows separate by a full-width tint band, not a hairline: the mockup's hairlines fail their floor.
+   A surface-to-surface seam carries no 3:1 obligation under the palette law. */
 .media-grid[data-view="list"] .media-card:nth-child(odd) {
   background: var(--surface);
 }
@@ -1831,12 +1472,8 @@
   min-width: 0;
 }
 
-/* THE NAME CLIPS HERE RATHER THAN WRAPPING, and that reverses the previous
-   pass deliberately. Wrapping was right when a row was 122px tall and had the
-   vertical space to spend; a table row is 45px and one wrapped name pushes
-   every column in that row out of alignment with the header. The whole name is
-   still a hover away in the `title` and a click away in the inspector, and the
-   DIRECTORY beneath now carries the half that used to be cut. */
+/* The name clips rather than wrapping: one wrapped name knocks the whole row out of alignment with the
+   header. The full name is in the title and the inspector, and the directory beneath carries the rest. */
 .media-grid[data-view="list"] .media-name {
   min-width: 0;
   overflow: hidden;
@@ -1877,10 +1514,8 @@
   gap: 6px;
 }
 
-/* The usage dot is a SECOND CHANNEL beside the word, never the signal itself:
-   the cell says "used" or "unattached" in text right next to it, so the colour
-   adds emphasis and carries nothing on its own. That is rule 1 of the palette
-   law, and it is why a reader who cannot separate the two hues loses nothing. */
+/* The usage dot is a second channel beside the word, never the signal (rule 1),
+   so a reader who cannot separate the hues loses nothing. */
 .media-usage-dot {
   flex: none;
   width: 5px;
@@ -1889,13 +1524,7 @@
   background: var(--text-muted);
 }
 
-/* THE `data-cited` RULE IS GONE. It coloured the dot of the two-state model,
-   where a row was cited or it was not. Nothing has rendered that attribute
-   since the three states landed and the dot became `data-usage`, so it was a
-   rule matching an attribute no markup carries: dead on the day the model
-   changed and invisible to every gate, because a selector for an element
-   nobody renders simply never applies. Found by grepping the deployed
-   stylesheet for a negative needle. */
+
 
 .media-col-dims,
 .media-col-size,
@@ -1931,19 +1560,9 @@
   box-shadow: inset 0 0 0 2px var(--border-strong);
 }
 
-/* NARROW VIEWPORTS. The eight fixed tracks add to 470px plus seven 8px gaps
-   plus 28px of padding, which is 554px and does not fit a 390px phone: the row
-   would overflow and take the whole page sideways with it.
-
-   COLUMNS DROP RATHER THAN THE TABLE SCROLLING. A horizontal scroll would need
-   a wrapper around the header AND every group so they scrolled together, and a
-   header that scrolled separately from its rows would label the wrong columns.
-   Dims and Added go first because they are the two a phone-sized reader is
-   least likely to be scanning for, and because Dims is already the column the
-   design mutes. Size stays: it is the number somebody pruning a library reads.
-
-   The header's cells are dropped by the same query, so the two stay in step. A
-   heading left over a removed column is worse than no heading. */
+/* Narrow viewports: the fixed tracks do not fit a phone, so columns drop rather than the table scrolling,
+   which would need header and groups to scroll together. Dims and Added go first; Size stays.
+   The header cells drop in the same query: a heading over a removed column is worse than none. */
 @media (max-width: 40rem) {
   .media-list-head,
   .media-grid[data-view="list"] .media-card {
@@ -1961,14 +1580,8 @@
   }
 }
 
-/* DRAFT PREVIEW LINKS, in the drawer.
- *
- * The drawer is the popover step, so the rule that draws a line here takes
- * --border-strong and never --border. Hard rule 5.
- *
- * The row is deliberately NOT a `.slug-line`: the token sits beside its expiry
- * AND two controls rather than beside one, so the meta column has to be allowed
- * to shrink while the actions keep their width. */
+/* Draft preview links, in the drawer: popover step, so --border-strong, never --border (hard rule 5).
+ * Not a .slug-line: the meta column must shrink while two actions keep their width. */
 .preview-link-list {
   display: grid;
   gap: 0.5rem;
@@ -2159,10 +1772,8 @@
 
 }
 
-/* A banner, not a control, so the pastel tint is the right register here and
-   the fill is not. This is the editor's ONE semantic tint (rule 4): the
-   character counter and the invalid-field border alongside it are text and
-   border, never a second tinted surface. */
+/* A banner, not a control, so the pastel tint is right. It is the editor's one semantic tint (rule 4);
+   the counter and invalid-field border stay text and border, never a second tinted surface. */
 .editor-problem {
   padding: 0.875rem 1rem;
   border: 1px solid var(--border-danger);

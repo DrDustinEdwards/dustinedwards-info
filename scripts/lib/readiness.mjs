@@ -1,33 +1,8 @@
 /**
- * Ship's readiness verdict: does `/api/health` say this deploy is healthy.
+ * Ship's readiness verdict: does the health endpoint say this deploy is healthy.
  *
- * Extracted for the reason `ci-status.mjs` and `ask-converge.mjs` are: the
- * decision is pure, `node:test` can drive every branch of it, and the
- * alternative is a branch that can only be exercised by running a real deploy.
- * A refusal path that has never been executed is not a refusal path.
- *
- * ## WHAT THIS IS FOR
- *
- * Ship polled `/colophon` for five 200s and never asked `/api/health`. Those
- * are different questions. Five 200s prove the Worker booted, the route table
- * resolves, and the rollout finished. They are blind to every invariant this
- * site actually watches: a drifted Ask index, a media index that lost its
- * rows, D1 out of step with the repository, an FTS index that is empty beside
- * a full content table. All four of those serve `/colophon` with a 200, and
- * all four are what `/api/health` reports.
- *
- * The scheduled workflow has read that endpoint every fifteen minutes and
- * alerted on it, so the deploy path was the only path that shipped without
- * consulting the instrument the site trusts the rest of the time.
- *
- * ## THE VERDICT COMES FROM THE BODY, NOT THE STATUS LINE
- *
- * They agree today: the endpoint answers 200 only when every check passed.
- * Reading the status alone would make this step depend on that agreement,
- * which lives in a different file and is not this module's to assume. The
- * endpoint's own docblock says the STATUS is the contract for the workflow,
- * which reads it with `curl --fail`; this reads a parsed body because it can,
- * and because naming the failing checks is most of the value of refusing.
+ * BOUNDARY: the decision only, pure, so `node:test` can drive every branch and a refusal path is
+ * not one that has never been executed. The reading itself is ship's.
  */
 
 /**
@@ -49,27 +24,12 @@ const NOTHING_SYNCED =
 /**
  * Reads a readiness verdict out of a response.
  *
- * FAILS CLOSED IN EVERY UNCERTAIN DIRECTION, and the list is long because this
- * value arrives over a network from an endpoint that can be rate limited, can
- * be replaced by a 404 page, and can be behind an interception proxy. Every
- * shape that is not recognisably a health report refuses, because "I could not
- * tell" and "it is healthy" must never take the same branch on the last step
- * before a production write.
- *
- * ## DEFERRED CHECKS, RULING 48
- *
- * `deferred` names checks that this step REPORTS but does not gate on, because
- * asserting them here would block the very step that repairs them. The case
- * that forced it, 2026-09-09: a ship refused at readiness on `content-drift`
- * (expected 16, present 14), and the D1 sync three steps later is exactly what
- * converges that drift. The deploy had already landed, so the refusal left
- * production serving a build whose index nothing had updated, and the only way
- * forward was to run the sync by hand.
- *
- * A deferred check is not ignored: it is printed with everything else, and ship
- * asserts it AFTER the sync, where a failure means the sync ran and did not
- * work, which is a real defect rather than a stale index. The other checks
- * still gate here, so a bad deploy still cannot reach a production write.
+ * FAILS CLOSED IN EVERY UNCERTAIN DIRECTION, and the list is long because this arrives over a
+ * network from an endpoint that can be rate limited, replaced by a 404 page, or fronted by a
+ * proxy: "I could not tell" and "it is healthy" must never take the same branch on the last step
+ * before a production write. DEFERRED CHECKS name the ones this step REPORTS but does not gate
+ * on, because asserting them here blocks the very step that repairs them: a ship once refused at
+ * readiness on a drift the later sync converges. A deferred check is still printed.
  *
  * @param {number} status the HTTP status
  * @param {string} text the raw body
@@ -79,10 +39,8 @@ const NOTHING_SYNCED =
  */
 export function readinessVerdict(status, text, path = "/api/health", deferred = []) {
   /*
-   * 429 IS CALLED OUT SEPARATELY. Since the per-IP limit landed on the health
-   * endpoint, a burst from this address can refuse the check, and "rate
-   * limited" and "unhealthy" need completely different repairs. Collapsing
-   * them would send somebody to look for a drifted index that is fine.
+   * A rate-limited answer IS CALLED OUT SEPARATELY: "rate limited" and "unhealthy" need completely
+   * different repairs, and collapsing them sends somebody to look for a drifted index that is fine.
    */
   if (status === 429) {
     return {
@@ -121,11 +79,8 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
     : [];
 
   /*
-   * NO CHECKS IS A REFUSAL, and this is the case the plant points at. A body
-   * carrying no verdicts is not a health report, so reading `ok` off it would
-   * be trusting one field of a shape nothing recognises. Any JSON document on
-   * the origin can carry `ok: true` by accident; only a health report carries
-   * a checks array, and requiring it is what stops this step passing on the
+   * NO CHECKS IS A REFUSAL: any JSON document on the origin can carry a verdict field by accident,
+   * and only a health report carries a checks array. Requiring it is what stops this passing on the
    * wrong URL.
    */
   if (checks.length === 0) {
@@ -142,11 +97,8 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
   const gatingFailed = failed.filter((name) => !deferredNames.includes(name));
 
   /*
-   * A GATING CHECK DECIDES THIS STEP. `value.ok` is deliberately NOT the
-   * subject: the endpoint reports `ok: false` when ANY check fails, deferred
-   * ones included, so reading it here would reinstate the refusal ruling 48
-   * removed. The deferred names are subtracted from the failures first, and
-   * what is left is what this step is entitled to refuse on.
+   * A GATING CHECK DECIDES THIS STEP, and the endpoint's own verdict field is deliberately NOT the
+   * subject: it reports failure when ANY check fails, deferred ones included.
    */
   if (gatingFailed.length > 0) {
     return {
@@ -158,9 +110,8 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
   }
 
   /*
-   * `ok` IS FALSE AND NOTHING IS MARKED FAILING: an endpoint disagreeing with
-   * itself. Refused, because the two halves of a health report that do not
-   * agree cannot both be trusted, and this is the last step before a write.
+   * The verdict is false and nothing is marked failing: an endpoint disagreeing with itself, which
+   * cannot be trusted on the last step before a write.
    */
   if (value.ok !== true && failed.length === 0) {
     return {
@@ -175,10 +126,8 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
 }
 
 /**
- * One printable line per check, so a refusal and a pass show the same table.
- *
- * The counts print only when the endpoint sent them, which it does for a
- * FAILING drift check and nothing else; that pair is the whole triage.
+ * One printable line per check, so a refusal and a pass show the same table. The counts print only
+ * when the endpoint sent them, which it does for a FAILING drift check and nothing else.
  *
  * @param {HealthCheckRow[]} checks
  * @returns {string[]}
@@ -194,37 +143,15 @@ export function readinessLines(checks) {
 }
 
 /**
- * The verdict on the DEFERRED checks, read after their repair steps have run.
+ * The verdict on the DEFERRED checks, read after their repair steps have run. A function rather
+ * than inline, so the plant that proves a body passes readiness and then fails HERE by name is
+ * writable at all.
  *
- * ## WHY THIS IS HERE AND NOT INLINE IN SHIP
- *
- * The same reason `readinessVerdict` is: the decision is pure, `node:test` can
- * drive every branch of it, and the alternative is a branch that can only be
- * exercised by running a real deploy against a broken site. Ruling 56 asks for
- * a plant proving a body with `ask-index-drift` failing passes readiness and
- * then fails HERE by name, and that plant is only writable if this is a
- * function rather than forty lines in the middle of a script.
- *
- * ## THE MEANING INVERTS BETWEEN THE TWO SITES, which is the whole design
- *
- * At readiness a failing deferred check means "the index is behind", the
- * ordinary state of a corpus that has just been committed. Here, after its
- * repair step has run, the same row means THE REPAIR RAN AND DID NOT WORK.
- *
- * ## A MISSING ROW IS A MISS, NOT A PASS
- *
- * An endpoint that stopped reporting a check proves nothing about it, and
- * reading that as success is the "assertion that can pass by reading nothing"
- * this repo has already been bitten by. It is named rather than skipped.
- *
- * ## WHY THE `detail` STRING IS NOT IN THESE MESSAGES
- *
- * It is not on the wire. `publicHealthBody` rebuilds every row as name, ok and
- * the two counts, and drops each `detail` DELIBERATELY: they carry row counts
- * and an R2 object key, and `/api/health` is unauthenticated. That decision is
- * stated in `app/routes/api.health.ts`'s own docblock. The counts are what the
- * wire carries and they are the triage for a drift check; the pointer to
- * Workers Logs is where the rest lives.
+ * THE MEANING INVERTS BETWEEN THE TWO SITES, which is the whole design: at readiness a failing
+ * deferred check means the index is behind, the ordinary state of a corpus just committed; here it
+ * means THE REPAIR RAN AND DID NOT WORK. A MISSING ROW IS A MISS, NOT A PASS. THE DETAIL STRING
+ * IS NOT IN THESE MESSAGES because it is not on the wire: the public body drops it DELIBERATELY,
+ * those strings carrying row counts on an unauthenticated endpoint.
  *
  * @param {HealthCheckRow[]} checks every row the endpoint returned
  * @param {Record<string, string>} deferred check name to the step that repairs it
@@ -261,32 +188,11 @@ export function deferredMisses(checks, deferred, path = "/api/health") {
 }
 
 /**
- * CHECKS THE READINESS STEP REPORTS BUT DOES NOT GATE ON, each with the step
- * that repairs it. Ruling 48, generalised by ruling 56.
- *
- * THE RULE: readiness gates only on checks whose repair is NOT a later ship
- * step. A step that refuses before its own remedy is a deadlock, and the
- * remedy is the thing the refusal prevents from running.
- *
- * `content-drift` was the first instance and forced ruling 48. On 2026-09-09 a
- * ship deployed, refused at readiness on `expected 16, present 14`, and left
- * production serving a build whose index nothing had updated. The drift was
- * real and pre-existing, which is precisely the case the sync exists for.
- *
- * `ask-index-drift` was the second, and it cost two deploys on 2026-09-10.
- * Versions 8b4f0ae4 and ad7cb0fb both landed, both refused here, and both
- * synced nothing; the drift cleared itself within minutes each time. Its
- * repair is the Ask converge, which runs after readiness, so it was the same
- * deadlock wearing a different check's name. `media-index-drift` is the same
- * shape and is included before it costs a third.
- *
- * A VALUE PER KEY, naming the step, because the whole point of deferring is
- * that something later fixes it. A check with nothing to name does not belong
- * here, which is the test to apply before adding a fourth.
- *
- * STILL GATING, deliberately: `media-backup-drift` and `fts-equality`. Neither
- * has a ship step that repairs it, so under the rule above they gate. See the
- * note at the assertion step about `fts-equality`, which is the closest call.
+ * CHECKS THE READINESS STEP REPORTS BUT DOES NOT GATE ON, each with the step that repairs it.
+ * THE RULE: readiness gates only on checks whose repair is NOT a later ship step, since a step
+ * that refuses before its own remedy is a deadlock. Two checks forced it in turn, the second
+ * costing two deploys that both landed, both refused here, and both synced nothing. A VALUE PER
+ * KEY, naming the step, which is the test to apply before adding another.
  */
 /** @type {Record<string, string>} */
 export const DEFERRED_CHECKS = {

@@ -1,74 +1,12 @@
 /**
  * Gate: the D1 media index must agree with R2 and with `public/`, both ways.
  *
- * OBSERVATION BOUNDARY, REWRITTEN 2026-08-18 rather than extended, because two
- * of its sentences went false when the manifest half moved out. A boundary note
- * is a claim that ages (hard rule 7), and this file has now aged one twice.
- *
- * It reconciles KEYS. It lists R2, walks public/ and diffs both against D1. For
- * everything except the social cards it still never FETCHES one of those URLs,
- * and an object that exists with a row and 404s through the serving route
- * passes, which is exactly how 58 static rows carried broken /media//path
- * thumbnails while this gate was green.
- *
- * **THE SOCIAL CARDS ARE THE ONE EXCEPTION, and they are the exception because
- * the key-only reading is what let them break.** Added 2026-09-11 after ten of
- * eleven published posts served a 404 `og:image` for an unknown number of days:
- * the bucket held cards under the posts' OLD slugs, D1 held the new ones, and
- * every reconciliation any gate performed was internally consistent. The OG
- * block below therefore asserts BOTH directions, and one of them leaves this
- * file's usual boundary on purpose. See it for what each half can and cannot
- * see.
- *
- * **IT NO LONGER READS content/generated/assets.json AT ALL.** That comparison
- * was pure filesystem, so it was the one offline-capable assertion in a gate
- * that must be remote, and it now lives in `check:content` beside the two other
- * artifacts in that directory. What follows from the move, and it is the part
- * worth reading twice: this gate still detects a stale manifest, but only
- * INDIRECTLY and only AFTER A REBUILD. The Worker writes rows from the manifest,
- * so a manifest missing a file becomes a public/ file with no D1 row, which is
- * direction 3 below. Between a bad `build:assets` and the next rebuild, this
- * gate sees nothing, and when it does speak it names a missing ROW rather than
- * the manifest that caused it. That is precisely the "confusing D1 diff whose
- * real cause is two directories away" the old comment here warned about, and it
- * is now someone else's job to say it first, offline.
- *
- * So: manifest-to-filesystem is NOT here. Manifest-to-D1 is here, transitively,
- * late, and under a different name.
- *
  *   npm run check:media -- --local
  *   npm run check:media -- --remote
  *
- * **This gate is the entire reason the index is allowed to exist.** The ruling
- * (decisions.md, 2026-08-02) turns on one principle: an index is legitimate
- * exactly when it can be reconciled against its source. A USAGE cache cannot be,
- * because a citation may live outside the corpus and no scan can enumerate what
- * it does not know about. An EXISTENCE index can be, because R2 `list` is a
- * total function over the bucket and `public/` is a directory walk. So the
- * reconciler is not a follow-up to the index; it ships with it or the index is
- * not justified.
- *
- * FOUR directions, and it fails on any of them:
- *   1. an R2 object with no D1 row          -> backfill it
- *   2. a D1 row with no R2 object           -> delete the row
- *   3. a public/ file with no row           -> backfill it
- *   4. a storage='static' row with no file  -> delete the row
- *
- * Note which way each repair runs. **R2 WINS**, and `public/` wins for static.
- * A row is deleted because an object is absent; an object is NEVER deleted
- * because a row is. That asymmetry is what keeps D1 derived rather than a second
- * truth, and it is why this script only ever REPORTS: it has no repair mode at
- * all, because the repair for half these cases would be destroying data.
- *
- * DERIVED, never hardcoded, on the same rule `check-backup.mjs` follows: its
- * table list comes from `drizzle/` rather than a literal, so a new table is
- * covered the moment its migration lands. Here the expected sets come from R2
- * itself and from walking `public/`. Nothing in this file names an asset.
- *
- * FAILS CLOSED on an empty enumeration. A gate that passes because it examined
- * nothing is the failure mode that looks most like success, and this repo has
- * already been bitten by it: `COUNT(*)` on an fts5 index reads through to its
- * content table and reported 7 while the index held 0.
+ * BOUNDARY: it reconciles KEYS, and except for the social cards it never FETCHES one, so an
+ * object that exists with a row and 404s through the serving route passes. A boundary note is a
+ * claim that ages, hard rule 7, and this file has aged one twice.
  */
 
 import { spawnSync } from "node:child_process";
@@ -89,9 +27,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 import { resolveD1Address } from "./lib/d1-address.mjs";
 
 const DB_NAME = "dustinedwards";
-// DERIVED from the wrangler config, never restated. Two buckets split on
-// lifecycle, and both are indexed: an OG card that existed but appeared in no
-// listing is exactly the invisible-object problem the index exists to end.
+// DERIVED from the wrangler config. Two buckets split on lifecycle, and both are indexed: an
+// object in no listing is the invisible-object problem the index exists to end.
 const BUCKETS = bucketNames();
 
 /**
@@ -119,10 +56,8 @@ function wrangler(args) {
 function mediaRows(target) {
   const result = wrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
-      // alt joins the projection so the roster comparison below has an index
-      // side to compare against. It was absent on the first run of that
-      // assertion, which read every row's alt as "" and reported nine
-      // disagreements that were really one missing column.
+      // `alt` joins the projection so the roster comparison has an index side: absent, every row's alt
+      // read as "" and the run reported one missing column as disagreements.
       `"SELECT key, storage, kind, role, alt FROM media ORDER BY key;"`,
   );
   if (result.status !== 0) {
@@ -144,15 +79,9 @@ function sample(list, n = 8) {
 }
 
 /**
- * The reference collector, over a fixture that exercises every form.
- *
- * **This exists because the real corpus exercises NONE of it.** All 12 posts
- * carry zero images, zero figure directives and zero covers, so the collector
- * could be completely broken and every other gate would still pass. A code path
- * with no coverage and no exercise is exactly the thing this repo refuses to
- * ship, and "it returned 0 refs" would look identical whether it worked or not.
- *
- * Pure: no network, no database. Runs FIRST so a contract failure is immediate.
+ * The reference collector, over a fixture that exercises every form. **This exists because the
+ * real corpus exercises NONE of it**, so the collector could be broken and "0 refs" would look
+ * identical. Runs FIRST, so a contract failure is immediate.
  *
  * @returns {Promise<string[]>} problems
  */
@@ -211,9 +140,8 @@ async function checkReferenceForms() {
     if (!got.has(key)) problems.push(`reference form not collected: ${label} (${key})`);
   }
 
-  // The negatives matter as much as the positives. Over-collection puts rows in
-  // media_refs that can never join to anything, and every one of them would
-  // refuse a delete forever for a citation that does not exist.
+  // The negatives matter as much: over-collection puts rows in `media_refs` that join to nothing
+  // and refuse a delete forever for a citation that does not exist.
   for (const [needle, label] of [
     ["/blog/something", "a page link"],
     ["#top", "a bare anchor"],
@@ -247,10 +175,8 @@ async function main() {
   /** @type {Array<{ key: string, size: number, uploaded: string, etag: string }>} */
   const objects = [];
   for (const [binding, bucket] of Object.entries(BUCKETS)) {
-    // RETRIED ONCE. The R2 list HUNG on 2026-08-07 with a 400 carrying no
-    // CF-R2-Error header, taking check:all past a ten minute timeout, and was
-    // clean on retry at 27s. retryRead wraps a timeout as well as a rejection
-    // precisely for that symptom. Read only.
+    // RETRIED ONCE: the R2 list has hung with no diagnostic header and was clean on retry, which is
+    // the symptom `retryRead` wraps a timeout for. Read only.
     const listed = await retryRead(
       () => listAllObjects({ bucket, remote: target === "--remote" }),
       { label: `check:media R2 list (${bucket})` },
@@ -274,23 +200,10 @@ async function main() {
   }
 
   /*
-   * AND FLOORS, not just the two `=== 0` guards above, added by the 2026-08-24
-   * floor sweep. This gate had no floor of any kind, and `=== 0` is the weakest
-   * form of an anti-vacuity check: it catches a listing that returned NOTHING
-   * and nothing else.
-   *
-   * The failure it cannot see is the one this gate is for. Every comparison
-   * below is a set difference between three enumerations, so they are satisfied
-   * by the enumerations shrinking TOGETHER: a listing that paginates once and
-   * stops, a walk that stops descending, a `mediaRows` query that grows a
-   * WHERE clause. Ten objects against ten rows reconcile perfectly, and the
-   * fifty-nine that vanished are reported by no one. `rows` had no guard at all,
-   * not even `=== 0`.
-   *
-   * MEASURED THROUGH THIS GATE 2026-08-24 by running it --remote: 11 R2
-   * objects, 59 public files, 69 D1 rows. Floors about eight percent under.
-   * These track CONTENT, so they are expected to move up as media is added and
-   * they are deliberately not tight.
+   * AND FLOORS, not just the two `=== 0` guards, which catch a listing that returned NOTHING. The
+   * failure they cannot see is the enumerations shrinking TOGETHER: a listing that paginates once
+   * and stops, a walk that stops descending, a query that grows a WHERE clause. These track
+   * CONTENT, so they move up as media is added and are deliberately not tight.
    */
   const scopeFloor = (/** @type {string} */ what, /** @type {number} */ n, /** @type {number} */ min) => {
     if (n < min) {
@@ -358,9 +271,8 @@ async function main() {
     );
   }
 
-  // Every row's storage and kind must be what classify.mjs says they are. This
-  // is what stops a row being hand-written, or written by a path that guessed,
-  // and it costs one function call per row because the classifier is pure.
+  // Every row's storage and kind must be what the classifier says, which is what stops a row being
+  // hand-written or written by a path that guessed.
   /** @type {string[]} */
   const misclassified = [];
   for (const row of rows) {
@@ -381,10 +293,8 @@ async function main() {
         `${row.key}: storage is "${row.storage}", storageOf() says "${expectedStorage}"`,
       );
     }
-    // ROLE, verified against the deriver exactly as kind and storage are. This
-    // is what stops the picker filter silently rotting: a row whose role drifts
-    // from `roleOf()` either hides a real image or offers half a diagram pair,
-    // and neither is visible from anywhere else.
+    // ROLE, verified against the deriver as kind and storage are: a drifted role hides a real image
+    // or offers half a diagram pair, neither visible from anywhere else.
     if (row.role !== expectedRole) {
       misclassified.push(`${row.key}: role is "${row.role}", roleOf() says "${expectedRole}"`);
     }
@@ -396,35 +306,10 @@ async function main() {
   }
 
   /*
-   * NO SOCIAL CARD MAY EXIST FOR A POST THE PUBLIC CANNOT SEE.
-   *
-   * MEASURED 2026-08-23, which is why this block exists: the draft
-   * `charts-on-workers-fixture` had a card in the OG bucket answering 200 with
-   * 41,149 bytes of PNG at /media/og/charts-on-workers-fixture-8af354a5.png,
-   * while /blog/charts-on-workers-fixture answered 404. The card renders the
-   * post's TITLE, so an unpublished headline was public. `build-og.mjs` had no
-   * notion of visibility: its loop skipped posts with a cover and nothing else.
-   *
-   * The key is a hash of the template version, slug, title and tags, so it is
-   * not guessable at a glance. That is not a defence and is not treated as one:
-   * the object is public, unauthenticated and served with
-   * `max-age=31536000, immutable`, and the URL is written into D1's og_image
-   * for every post including this one.
-   *
-   * THE VISIBILITY RULE IS IMPORTED. `isPubliclyVisible` is the one JavaScript
-   * owner of it; a second copy here is the shape that put five drafts into Ask
-   * in July.
-   *
-   * Direction: cards that must NOT exist. This is the SECURITY half.
-   *
-   * **THE OTHER DIRECTION IS NOW ASSERTED TOO, in the block after this one.**
-   * It used to be skipped on the reasoning that "cards are written by a manual
-   * `build:og --remote` and a missing one is a cosmetic gap, not a disclosure".
-   * The first clause is still true and is exactly why the second one failed:
-   * nothing runs `build:og`, ship does not call it, and the key is a hash of
-   * the slug, title and description, so a rename or a retitle silently moves
-   * every card. Measured 2026-09-11: ten of eleven published posts served a
-   * 404 og:image, and every unfurler got a broken card.
+   * NO SOCIAL CARD MAY EXIST FOR A POST THE PUBLIC CANNOT SEE: a draft had a card answering 200
+   * while its page 404d, and the card renders the TITLE. The key is a hash, which is not treated as
+   * a defence: the object is public, immutable and written into D1. THE VISIBILITY RULE IS
+   * IMPORTED, a second copy being what put drafts into the Ask index once already.
    */
   {
     const artifactPath = join(root, "content", "generated", "posts.json");
@@ -471,43 +356,16 @@ async function main() {
     }
 
     /*
-     * EVERY PUBLICLY VISIBLE POST HAS A CARD, in the bucket and on the wire.
+     * EVERY PUBLICLY VISIBLE POST HAS A CARD, in the bucket and on the wire. TWO ASSERTIONS OVER ONE
+     * EXPECTED SET, failing for different reasons:
      *
-     * TWO ASSERTIONS OVER ONE EXPECTED SET, and they are separate because they
-     * fail for different reasons and neither implies the other.
+     *   KEY RECONCILIATION reads the R2 listing and names the DEFECT, the generator not having run.
+     *   THE WIRE READ fetches through the deployed route and sees what keys cannot: an unbound
+     *   bucket, a cache rule swallowing the prefix, a deploy that never happened.
      *
-     *   KEY RECONCILIATION reads the R2 listing this gate already has. It is
-     *   the half that names the DEFECT: `build:og` has not been run since the
-     *   slug or the title moved, and the card the site advertises was never
-     *   generated. It needs no HTTP request of its own.
-     *
-     *   THE WIRE READ fetches each card through the deployed serving route.
-     *   It is the half that can see what the key comparison cannot: a bucket
-     *   the route is not bound to, a cache rule swallowing `/media/og/`, a
-     *   deploy that never happened. It is the 58-broken-thumbnails lesson at
-     *   the top of this file applied to the one class of object where a 404 is
-     *   visible to every stranger who shares a link.
-     *
-     * Neither half is a substitute for the other, and the plant that proved
-     * these two assertions MEASURED that rather than arguing it. On
-     * 2026-09-11 one card key was deleted from the live bucket and the gate
-     * re-run: the key reconciliation named the slug immediately, and the wire
-     * read still reported 11 of 11 answering 200. Cards are served
-     * `max-age=31536000, immutable`, so the edge kept serving an object that
-     * no longer existed.
-     *
-     * Read that in both directions, because it is the whole argument for
-     * running both. The KEY half sees a missing card the wire cannot see for
-     * up to a year. The WIRE half sees a bucket the route is not bound to, a
-     * cache rule swallowing `/media/og/`, or a deploy that never happened,
-     * none of which a key comparison can reach. The repair for either is the
-     * same one command.
-     *
-     * THE EXPECTED SET IS THE SAME `cards` DERIVATION `build-og.mjs` USES,
-     * spelled through the same two imported predicates rather than restated:
-     * publicly visible, and no cover of its own. A post with a cover uses the
-     * cover as its og:image and has no generated card, which is why it is not
-     * in this set and why asserting over every post would fail on it forever.
+     * A plant MEASURED that: one key deleted from the live bucket, and the key half named the slug
+     * while the wire half still saw every card answering 200, cards being served immutable. THE
+     * EXPECTED SET IS THE GENERATOR'S OWN DERIVATION, through the same two imported predicates.
      */
     /** @type {Array<{ slug: string, key: string }>} */
     const expected = [];
@@ -520,12 +378,8 @@ async function main() {
     }
 
     /*
-     * SCOPE, PROVEN NON-EMPTY. An artifact whose posts are all drafts, or a
-     * `cover` field that started arriving on everything, empties this set, and
-     * both loops below then sweep clean over nothing. The floor is a floor and
-     * not a zero-check for the reason every floor in this repo is: 11 was
-     * measured on 2026-09-11 and a set that has fallen to one is a scan that
-     * has stopped finding posts, not a blog that lost ten.
+     * SCOPE, PROVEN NON-EMPTY: an artifact whose posts are all drafts empties this set and both loops
+     * sweep clean. A floor rather than a zero-check, a set fallen to one being a scan that stopped.
      */
     if (expected.length < 8) {
       problems.push(
@@ -547,11 +401,8 @@ async function main() {
     }
 
     /*
-     * THE WIRE. Fetched from SITE_ORIGIN, which is the deployed host and NOT
-     * whatever `--local` points at, because a local miniflare bucket has no
-     * bearing on what a scraper gets. GET rather than HEAD: the serving route
-     * is allowed to answer a HEAD differently and a 404 body is what the
-     * audit actually observed.
+     * THE WIRE, from the deployed host and not whatever `--local` points at. GET rather than HEAD:
+     * the route may answer a HEAD differently, and a 404 body is what was observed.
      */
     /** @type {string[]} */
     const unreachable = [];
@@ -581,28 +432,11 @@ async function main() {
   }
 
   /*
-   * THE ROSTER'S ALT TEXT AND THE MEDIA INDEX'S MUST BE THE SAME STRING.
-   *
-   * MEASURED 2026-08-23: they were not. D1 held "Group photo of the 2019 Phage
-   * Discovery Program cohort" for /phage-hunters/2019.webp and the page shipped
-   * "The 2019 research group." Two owners of one fact, and the weaker string was
-   * the one a screen reader actually got, on the only page on this site whose
-   * whole content is photographs of people.
-   *
-   * NOTHING COULD SEE IT. The media library's no-alt lens counts EMPTY alt, so
-   * a row with good text and a page with worse text is invisible to it; the page
-   * renders from a typed data file, so a missing alt is a typecheck failure and
-   * a divergent one is not. Both halves were individually correct.
-   *
-   * The page keeps rendering from the data file rather than querying D1: it is a
-   * static page on a shared-cached route, and a per-request read to fetch a
-   * constant is a cost with no reader. So the data file stays the render source
-   * and THIS is what stops the two drifting.
-   *
-   * The pairs are extracted rather than imported because the data file is .ts
-   * and this gate is .mjs. The extraction is scoped tightly (a src line, then
-   * the next alt line) and its count is asserted, so a parser that stopped
-   * matching reports zero pairs and fails rather than sweeping clean.
+   * THE ROSTER'S ALT TEXT AND THE MEDIA INDEX'S MUST BE THE SAME STRING, and they were not: two
+   * owners of one fact, the weaker string the one a screen reader got. NOTHING COULD SEE IT, the
+   * no-alt lens counting EMPTY alt and the typecheck catching a missing alt but not a divergent
+   * one. The pairs are extracted rather than imported, the data file being .ts, and the extraction
+   * count is asserted, so a parser that stopped matching fails rather than sweeping clean.
    */
   {
     const rosterPath = join(root, "app", "data", "phage-hunters.ts");
@@ -625,10 +459,8 @@ async function main() {
       rows.filter((r) => r.key.startsWith("/phage-hunters/")).map((r) => [r.key, r.alt ?? ""]),
     );
     /*
-     * FLOORED rather than zero-checked, since the 2026-08-24 sweep. The nine
-     * cohort photographs are a FIXED set in a committed data file, so a scan
-     * that returns eight has stopped matching one of them and the missing one
-     * is precisely where a drifted alt would hide.
+     * FLOORED rather than zero-checked: the cohort photographs are a FIXED set, so one fewer means
+     * the scan stopped matching one, which is precisely where a drifted alt would hide.
      */
     if (pairs.length < 8 || rosterRows.size < 8) {
       problems.push(

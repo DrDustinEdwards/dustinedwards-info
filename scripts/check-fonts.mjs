@@ -1,59 +1,11 @@
 /**
- * Gate over the self-hosted fonts: every `@font-face` DECLARATION must be true
- * of the BINARY it names.
+ * Gate: every `@font-face` DECLARATION must be true of the BINARY it names.
  *
- * ## THE HOLE THIS FILLS
+ *   npm run check:fonts [-- --update]
  *
- * `font-weight: 100 900` is a claim about a file. Nothing checked it. The two
- * Inter faces under `app/fonts/` were taken from `fonts.gstatic.com` and
- * committed, so unlike every other derived thing here they have no upstream to
- * be compared against: a file swapped for a static build, a re-subset that
- * narrows the weight axis, or a variable axis that quietly disappears would all
- * have rendered wrong and failed nothing.
- *
- * It exists now rather than later because a type scale is about to declare
- * `font-variation-settings: "opsz" <n>` per level. `opsz` on these files runs
- * 14 to 32, and a browser CLAMPS an out-of-range axis value silently: no error,
- * no console line, just a level that did not get the optical size it asked for.
- * That is the class of defect this gate is for.
- *
- * ## WHAT IT ASSERTS, per `@font-face` block that names a file
- *
- * The declared `font-weight` range against the `wght` axis, EXACTLY rather than
- * as a subset, so a narrowed re-subset fails. A single declared weight against
- * `OS/2.usWeightClass`, which is the static-font form. `font-style` against the
- * italic evidence in the file. `font-stretch` against `wdth` where declared.
- * The declared `font-family` against the file's own name table, so a wholesale
- * swap of a different typeface fails. And every `"opsz"`-style axis named in a
- * `font-variation-settings` anywhere in the sheets must EXIST in that family's
- * faces and CONTAIN the requested value.
- *
- * ## THE BASELINE, and why axis assertions alone are not enough
- *
- * Everything above is satisfied by a file that was re-subsetted while keeping
- * its axes: same `wght`, same `opsz`, fewer glyphs. That is a real way to break
- * a page and it is invisible to every assertion in the list. So each binary
- * also carries a pinned SHA-256 in `scripts/fixtures/font-baseline.json`, and a
- * changed byte is a named failure. `--update` rewrites it, deliberately loud,
- * which is the same shape `check:admin-ui` uses for the same reason: a fixture
- * that can be regenerated silently is not a fixture.
- *
- * ## OBSERVATION BOUNDARY
- *
- * It reads DISK, never the wire, so it says nothing about what a browser
- * received. It asserts AGREEMENT and never judgment: whether `font-display`,
- * the metric-adjusted fallback or a `unicode-range` are the RIGHT choices is
- * not a thing it can know. It cannot see whether a font renders correctly, only
- * whether the declaration and the file agree about what the file is.
- *
- * ## OVERLAP, stated rather than discovered
- *
- * The 20 KaTeX faces are included for uniformity and the protection here is the
- * WEAKER half: `check:content` section 5 already byte-compares
- * `katex.generated.css` AND its faces against a fresh derivation from the
- * installed katex package, reconciled both ways, so a swapped or re-subsetted
- * KaTeX font already fails there. A rule with an exception is a rule somebody
- * edits, which is why they are in rather than out.
+ * BOUNDARY: it reads DISK, never the wire. Per block that names a file it compares the declared
+ * weight range, style, stretch and family against the file's own tables, and pins each binary by
+ * digest so a re-subset with its axes intact cannot pass.
  */
 
 import { createHash } from "node:crypto";
@@ -73,10 +25,9 @@ let failures = 0;
 let checks = 0;
 
 /**
- * The first argument is named `ok` because six other gates spell it that way
- * and `check:invariants` section 17 refuses two argument orders for one helper
- * name: an assertion copied between files would otherwise put a truthy STRING
- * in the condition slot, never fail, and still increment the count.
+ * The first argument is named `ok` as six other gates spell it, `check:invariants` section 17
+ * refusing two argument orders for one name: a copied assertion would put a truthy STRING in the
+ * condition slot and still increment the count.
  *
  * @param {boolean} ok
  * @param {string} label
@@ -105,8 +56,7 @@ const SHEETS = [
 ];
 
 /**
- * Comments are stripped BEFORE matching, hard rule 10: prose about a face is
- * not a face.
+ * Comments are stripped BEFORE matching, hard rule 10: prose about a face is not a face.
  *
  * @param {string} css
  * @returns {string}
@@ -140,8 +90,8 @@ for (const sheet of SHEETS) {
     });
   }
 
-  // Axis requests anywhere in the sheet, not only inside @font-face: this is
-  // what catches a type scale asking for an optical size the file cannot serve.
+  // Axis requests anywhere in the sheet, which is what catches a type scale asking for an optical
+  // size the file cannot serve.
   for (const m of css.matchAll(/font-variation-settings\s*:\s*([^;}]+)/gi)) {
     for (const a of m[1].matchAll(/['"]([a-zA-Z]{4})['"]\s*(-?[\d.]+)/g)) {
       variationRequests.push({ sheet, axis: a[1], value: Number(a[2]), family: null });
@@ -149,21 +99,10 @@ for (const sheet of SHEETS) {
   }
 
   /*
-   * AND THE TYPE LEVELS, which do not spell `font-variation-settings` anywhere.
-   *
-   * app.css carries the scale as five properties per level, so a level's axes
-   * live in `--t-<level>-vars` and its family in `--t-<level>-family`. The
-   * regex above sees neither, which would have made this gate blind to exactly
-   * the defect its own header says it was written for: a type scale asking for
-   * an optical size the file cannot serve.
-   *
-   * THE FAMILY IS CARRIED WITH THE REQUEST, and that is the half that makes the
-   * assertion sharp. Two shipped families now carry `opsz` on different ranges,
-   * Inter 14 to 32 and Source Serif 4 8 to 60. Checking a request against every
-   * carrier would fail the serif's legitimate `opsz` 48 against Inter; checking
-   * it against none would let an Inter level ask for 48 and be clamped in
-   * silence. Each level is checked against the family its own -family token
-   * names, and nothing else.
+   * AND THE TYPE LEVELS, which spell `font-variation-settings` nowhere: the scale carries a level's
+   * axes and its family in separate tokens, so the regex above sees neither. THE FAMILY IS CARRIED
+   * WITH THE REQUEST: two shipped families carry `opsz` on different ranges, so checking against
+   * every carrier fails a legitimate value and checking against none lets a level be clamped.
    */
   const levelFamilies = new Map();
   for (const m of css.matchAll(/--t-([a-z0-9-]+)-family\s*:\s*([^;]+);/gi)) {
@@ -171,16 +110,11 @@ for (const sheet of SHEETS) {
   }
   for (const m of css.matchAll(/--t-([a-z0-9-]+)-vars\s*:\s*([^;]+);/gi)) {
     const [, level, value] = m;
-    // A VARIANT INHERITS ITS LEVEL'S FAMILY. A `--t-<level>-strong-vars` is
-    // that level at a heavier weight, not a ninth level, so it has no
-    // `-family` of its own and must not: a second family token for one level
-    // would be a second owner of the same decision. The base is the level name
-    // with its last segment dropped, and only when no exact `-family` exists,
-    // so a real level always wins over the fallback.
-    //
-    // The variant is NOT spelled in full here on purpose. Section 31's token
-    // scan reads scripts/ without stripping comments, so naming it would mark
-    // it as referenced and then fail it for being referenced.
+    // A VARIANT INHERITS ITS LEVEL'S FAMILY: a heavier spelling of a level is not a ninth level, so a
+    // family token of its own would be a second owner. The base is the level name minus its last
+    // segment, and only when no exact token exists. The variant is NOT spelled in full here: section
+    // 31's token scan reads `scripts/` without stripping comments, so naming it would mark it
+    // referenced and then fail it for being referenced.
     const base = level.includes("-") ? level.slice(0, level.lastIndexOf("-")) : null;
     const family =
       levelFamilies.get(level) ?? (base ? (levelFamilies.get(base) ?? null) : null);
@@ -191,21 +125,14 @@ for (const sheet of SHEETS) {
 }
 
 /*
- * SCOPE, ASSERTED BEFORE ANY PER-BLOCK ASSERTION. A regex that stopped matching
- * would iterate nothing and every loop below would report a clean sweep, which
- * is the tenth vacuity class. The floors are the inventory as it stands and are
- * deliberately low bars: they exist to prove the parse happened at all.
+ * SCOPE, ASSERTED BEFORE ANY PER-BLOCK ASSERTION: a regex that stopped matching iterates nothing
+ * and every loop reports a clean sweep. Low bars, existing to prove the parse happened at all.
  */
 /*
- * Split rather than filtered, so `file` is a string in the half that has one.
- * `blocks.filter((b) => b.file)` leaves the type `string | null` and every use
- * below would need a cast, which is a way of telling the typechecker to stop
- * looking at exactly the field whose absence this gate cares about.
- *
- * The annotation below is a DOUBLE-STAR block on purpose. Written as a plain
- * `/*` comment the `@type` is not JSDoc, TypeScript ignores it, and the array
- * infers `any[]`: every null error disappears and nothing is checked, which is
- * a silent pass wearing the costume of a fix.
+ * Split rather than filtered, so `file` is a string in the half that has one: filtering leaves
+ * the type nullable and every use needs a cast, which tells the typechecker to stop looking at
+ * the field this gate cares about. The annotation below is a DOUBLE-STAR block on purpose:
+ * written `/*` the `@type` is not JSDoc, the array infers `any[]`, and nothing is checked.
  */
 /** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string, raw: string}[]} */
 const withFile = [];
@@ -219,13 +146,8 @@ assertThat(blocks.length >= 20, "the sheets parsed into @font-face blocks", `${b
 assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile.length} name a file`);
 
 /*
- * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future
- * file-backed block cannot fall into the skip path unnoticed. Two today, both
- * metric-adjusted fallbacks: "Inter Fallback" over `local("Arial")` and
- * "Source Serif 4 Web Fallback" over `local("Georgia")`.
- *
- * The list is exact rather than a count, because a count is satisfied by any
- * two fileless faces and the thing worth asserting is WHICH two.
+ * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future file-backed block cannot
+ * fall into the skip path unnoticed. Exact rather than a count: WHICH two is the assertion.
  */
 const FILELESS = ["Inter Fallback", "Source Serif 4 Web Fallback"];
 {
@@ -267,17 +189,10 @@ function fontFor(file) {
   return font;
 }
 
-// NAMESPACED FAMILIES are the one case where the declared family and the
-// binary's own name table legitimately differ. app.css declares the serif as
-// "Source Serif 4 Web" so that a reader with the retail family installed cannot
-// put a different file in the resolution path for the same name. This map is
-// what keeps that from being a licence: the declaration is still pinned to ONE
-// binary family, so swapping the typeface behind the namespaced name fails
-// exactly as it would without one.
-//
-// It polices itself below, in both directions, for the reason the exemption
-// maps in check:contrast do: an entry naming a family app.css no longer
-// declares is a hole nobody would notice.
+// NAMESPACED FAMILIES are the one case where the declared family and the binary's name table
+// legitimately differ: the serif is namespaced so a reader with the retail family installed
+// cannot put a different file in the resolution path. This map keeps that from being a licence,
+// the declaration still being pinned to ONE binary family. It polices itself both directions.
 /** @type {Map<string, string>} declared family -> the family its file must report */
 const NAMESPACED = new Map([["Source Serif 4 Web", "Source Serif 4"]]);
 
@@ -373,15 +288,10 @@ for (const [declared, binary] of NAMESPACED) {
 }
 
 /*
- * AXIS REQUESTS FROM THE SHEETS. The value must be IN RANGE, because a browser
- * clamps an out-of-range axis silently: the level renders, at the wrong optical
- * size, with nothing anywhere reporting it.
+ * AXIS REQUESTS FROM THE SHEETS, IN RANGE: a browser clamps silently, so the level renders at
+ * the wrong optical size with nothing reporting it.
  */
-/*
- * A ZERO-SCOPE SEARCH REPORTS A CLEAN SWEEP. The scale carries eight levels and
- * every one of them names two axes, so the floor is the inventory as it stands
- * and exists to prove the parse happened at all rather than to bound it.
- */
+/* A ZERO-SCOPE SEARCH REPORTS A CLEAN SWEEP. The floor proves the parse happened at all. */
 assertThat(
   variationRequests.length >= 16,
   "axis requests were found in the sheets",
@@ -454,62 +364,21 @@ for (const req of variationRequests) {
 }
 
 /*
- * THE SATORI FACES, which are not in any stylesheet.
- *
- * `build-og.mjs` and `check-logo.mjs` draw the social cards with the static
- * TTFs under `assets/fonts/`. They are Inter too, and nothing reconciled them
- * against the faces the site serves: MEASURED 2026-09-12, the TTFs are Inter
- * 4.001 build git-9221beed3 and the served woff2 are 4.001 build git-66647c0bb,
- * so the cards are already drawn with a different build of the same release.
- * That is tolerable and it is not nothing, which is why it is asserted here
- * rather than left to be discovered: the family must match what the site
- * serves, and the weights build-og asks for must be the weights in the files.
- *
- * ## RULED 2026-09-12: THE SERVED woff2 BUILD IS CANONICAL
- *
- * `git-66647c0bb`, the build under `app/fonts/`, is the site's Inter. It is
- * what every reader sees, and its provenance is already ruled: byte-identical
- * to what fonts.gstatic.com served, so the change was WHO serves them and not
- * WHAT is served. Social cards are a secondary artifact of that identity and
- * take their typeface from it rather than the other way round.
- *
- * THE TWO ARE NOT ALIGNED AND CANNOT CHEAPLY BE. satori reads TTF, OTF and
- * WOFF and NOT woff2, by its own README, so one shared file is impossible.
- * Aligning would mean statics compiled from the canonical build, and those do
- * not exist to download: Google Fonts publishes Inter as variable fonts only
- * (`Inter[opsz,wght].ttf`), and rsms/inter releases carry their own version
- * lineage rather than a `4.001;git-*` build string.
- *
- * So the difference STANDS, deliberately, and what was refused with it was
- * building a woff2-to-TTF instancing pipeline: a new dependency, a build step
- * and a gate to keep the two in step, which is the same trade app.css already
- * refused for italic subsetting. What holds the line instead is this section
- * plus the byte baseline: neither side can move without a named failure.
- *
- * MEASURED, and the reason this is tolerable rather than merely accepted: the
- * two builds agree on unitsPerEm, ascent, descent and lineGap, and on the
- * advance width of every glyph tested, so card text sets identically. Outlines
- * differ in point encoding, which is what a variable default instance against a
- * compiled static looks like, so that comparison cannot separate a build
- * difference from variable-versus-static and is not offered as evidence.
+ * THE SATORI FACES, which are in no stylesheet: the cards are drawn from static TTFs that are the
+ * same typeface as the served woff2 and a DIFFERENT BUILD of it, and nothing reconciled them.
+ * THE SERVED woff2 BUILD IS CANONICAL, cards being a secondary artifact of that identity, and
+ * THE TWO CANNOT CHEAPLY BE ALIGNED, satori not reading woff2. So the difference STANDS, and what
+ * was refused with it was an instancing pipeline: a dependency, a build step and a gate.
  */
 const OG_FACES = [
   { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
   { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
 ];
 /*
- * THE FAMILY THE SITE SERVES, read from `--font-sans` rather than from the
- * FIRST `@font-face` block under app/fonts/.
- *
- * It was the first block, which was true for exactly as long as Inter was the
- * only family there. The serif landed under app/fonts/ on 2026-09-13 and made
- * the old selector a statement about source ORDER: moving the serif's face
- * above Inter's would have silently re-pointed this comparison at the serif and
- * the cards would have been checked against the wrong typeface, passing.
- *
- * `--font-sans` is an independent declaration and the right source anyway: the
- * cards draw body-weight text, and the body's family is what that token says.
- * The serif sets headings and never appears on a card.
+ * THE FAMILY THE SITE SERVES, read from the `--font-sans` token rather than the FIRST
+ * `@font-face` block, which was true only while one family lived there: a second made that a
+ * statement about source ORDER. The token is an independent declaration and the right source
+ * anyway, the cards drawing body-weight text.
  */
 const servedFamily = (() => {
   const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
@@ -583,23 +452,11 @@ if (update) {
 }
 
 /*
- * THE FLOOR. Measured by RUNNING this gate over the tree as it stands, never by
- * summing the assertions above: a hand-counted floor is a second owner of a
- * number the gate already knows.
- *
- * MEASURED ON THE DEFAULT BRANCH, and the distinction cost a wrong floor once
- * already. `--update` SKIPS the per-binary baseline comparisons, so it executes
- * 26 fewer checks than a plain run: 117 against 143. A floor measured from an
- * `--update` run sits 26 under the count it is supposed to guard, which is the
- * exact shape ruling 23 exists to catch.
- *
- * RE-MEASURED 2026-09-13 on a plain run, NOT an `--update` one, after the serif
- * and the type levels landed: 232. The rise is the serif's own per-binary
- * assertions plus 22 axis requests where there were none, since the scale is
- * the first thing on this site to ask for an optical size. Floor is that count
- * minus the check:floors tolerance, max(3, ceil(232 * 0.05)) = 12.
+ * THE FLOOR, measured by RUNNING this gate: a hand-counted floor is a second owner of a number
+ * the gate already knows. MEASURED ON A PLAIN RUN, and that distinction cost a wrong floor once:
+ * `--update` SKIPS the per-binary baseline comparisons.
  */
-const MINIMUM_CHECKS = 220;
+const MINIMUM_CHECKS = 240;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 

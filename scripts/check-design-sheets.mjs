@@ -1,80 +1,13 @@
 /**
- * Gate: `SHEETS` in `.design-sync/build-inputs.mjs` matches the stylesheets the
- * public plane actually loads.
+ * Gate: the design sync's sheet list matches the stylesheets the public plane actually loads.
  *
- * ## THE DEFECT, AND NOTES.md PREDICTED IT IN WRITING
+ *   npm run check:design-sheets
  *
- * `.design-sync/NOTES.md` says, under Re-sync risks:
- *
- *   "The stylesheet list in build-inputs.mjs is hand-maintained and will go
- *   stale. A sheet added to app/root.tsx or to a public route does not appear
- *   here on its own. Diff SHEETS against root.tsx's imports and the non-admin
- *   app/routes/*.tsx imports before trusting a re-sync."
- *
- * Nobody ran that diff. `app/styles/shell.css` was imported by `app/root.tsx`
- * and absent from `SHEETS`, so it never reached `ds-styles.css`, never reached
- * `_ds_bundle.css`, and never reached the canvas. That sheet DEFINES `.tracks`
- * and carries the "NAMED `.tracks`, NOT `.page`" reasoning (ruling 99), so the
- * design agent was redesigning against a grid class it had never been shown.
- * Ruling 111 turned the sentence into this instrument.
- *
- * A prediction written in prose is a prediction nothing re-checks. That is the
- * same shape as the carried-token map's build-4 deadline and vol 18's freeze
- * point: a rule enforced by whoever happens to read it.
- *
- * ## OFFLINE TIER
- *
- * It reads `.design-sync/build-inputs.mjs`, `app/root.tsx`, `app/routes/*.tsx`
- * and the stylesheets they name, all off disk. No network, no binding, no
- * clock. A clean checkout can run it, so `--ci` does too.
- *
- * ## BOTH DIRECTIONS, because one of them is the silent one
- *
- * A sheet LOADED but not SYNCED is the defect above: the canvas designs blind
- * and nothing says so. A sheet SYNCED but no longer LOADED is the quieter one:
- * the bundle carries rules the site has stopped applying, so the canvas is
- * told about a surface that no longer exists. Neither direction reports
- * itself, so both are asserted here.
- *
- * ## WHAT IS DELIBERATELY NOT HERE
- *
- * No copy of the sheet list. `SHEETS` is parsed out of `build-inputs.mjs`,
- * which stays its one owner (hard rule 17): a mirror here would be a second
- * list to keep in step, which is the very failure being gated.
- *
- * CASCADE ORDER is checked for the root-imported sheets only. NOTES.md:
- * "Cascade order is load-bearing and is not alphabetical. SHEETS reproduces
- * root.tsx's deliberate order; sorting it would move the cascade." Across
- * ROUTES there is no defined order -- route sheets load after the root
- * module's and no two routes race -- so ordering is asserted exactly where the
- * repo defines one and nowhere else.
- *
- * COMMENTS ARE STRIPPED BEFORE MATCHING, and this is not hygiene. `app.css`
- * line 1937 carries prose about having removed `@import "tailwindcss"`, and
- * the converter's own validator failed that sentence twice as a missing
- * import (NOTES.md, converter defect 3). A gate that matched it would inherit
- * the identical bug -- hard rule 10, "strip comments before matching".
- *
- * ## TWO WAYS A SHEET REACHES A READER, and the first draft knew only one
- *
- * A bare `import "./x.css";` joins the bundled cascade. A `?url` side-load
- * (`import href from "~/styles/x.css?url"`) ships the sheet as its own file
- * that a component links at the point of use. Both reach readers; only the
- * first has a cascade POSITION.
- *
- * Scanning only the cascade form reported `palette-dialog.css` as orphaned:
- * `app/components/search-trigger.tsx` side-loads it, and `ask.css` beside it.
- * That was this gate failing, not the repo -- so the scan covers components
- * and counts both forms, and only cascade imports from root.tsx are ordered.
- *
- * ## THE ONE EXCLUSION IS NOTES.md's, NOT THIS FILE'S
- *
- * `katex.generated.css` is side-loaded by root.tsx and is deliberately out of
- * sync scope: NOTES.md excludes `katex*` as "a generated artifact carrying
- * twenty font faces whose binaries would have to ship too". It is named here
- * as ONE path rather than a prefix, because an exclusion written as a pattern
- * excludes everything that ever matches it (hard rule 10, "enumerate inside
- * exclusions"), and the scope assertion below refuses a list that has grown.
+ * BOUNDARY: it reads the list, the root module, the routes and the stylesheets they name, all off
+ * disk and both directions, and nothing here restates the list, whose one owner hard rule 17
+ * names. Comments are stripped before matching, which is hard rule 10: a stylesheet carries prose
+ * about an `@import` it removed. The one exclusion is named as ONE path rather than a prefix,
+ * which is hard rule 10 again, enumerate inside exclusions.
  */
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
@@ -90,17 +23,15 @@ const ROUTES_DIR = "app/routes";
 const COMPONENTS_DIR = "app/components";
 
 /**
- * Sheets the public plane loads that the sync deliberately does not carry.
- * Exact paths, never prefixes. Grounds live in NOTES.md, which owns the
- * decision; this list only has to stay short enough to read.
+ * Sheets the public plane loads that the sync deliberately does not carry. Exact paths, never
+ * prefixes; the grounds live in the notes, which own the decision.
  */
 const OUT_OF_SCOPE = ["app/styles/katex.generated.css"];
 const MAXIMUM_EXCLUSIONS = 2;
 
 /**
- * Below these the scan has stopped reading rather than found a clean tree. A
- * search over an empty scope reports what a clean sweep reports (hard rule 10),
- * so each is asserted before any conclusion is drawn from a count.
+ * Below these the scan has stopped reading rather than found a clean tree: a search over an empty
+ * scope reports what a clean sweep reports (hard rule 10).
  */
 const MINIMUM_SHEETS = 15;
 const MINIMUM_IMPORTERS = 20;
@@ -230,9 +161,8 @@ function main() {
 
   const excluded = new Set(OUT_OF_SCOPE);
   /**
-   * A path this gate is responsible for. Narrows away null so every caller
-   * downstream has a string, which is the same reason it is a type predicate
-   * rather than a plain boolean.
+   * A path this gate is responsible for. Narrows away null, which is why it is a type predicate.
+   *
    * @param {string | null} sheet @returns {sheet is string}
    */
   const keep = (sheet) => sheet !== null && !sheet.includes("/admin") && !excluded.has(sheet);
@@ -302,9 +232,9 @@ function main() {
     `${missingOnDisk.join(", ")} named in SHEETS with no file at that path.`,
   );
 
-  // Cascade order, for the sheets root.tsx names. SHEETS must list them in the
-  // same relative order; entries root.tsx does not import (reset.css arrives by
-  // @import, route sheets by their routes) are not constrained here.
+  // Cascade order, for the sheets the root module names. The list must carry them in the same
+  // relative order; entries it does not import, arriving by `@import` or by their routes, are not
+  // constrained here.
   const rootInSheets = sheets.filter((s) => rootOrder.includes(s));
   const expected = rootOrder.filter((s) => inSheets.has(s));
   ok(

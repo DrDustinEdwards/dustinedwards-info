@@ -1,29 +1,17 @@
 /**
  * The site mark, inline and in one place.
  *
- * Inline rather than an <img> because the theme is driven by a data-theme
- * attribute, so a <picture> with prefers-color-scheme would ignore the manual
- * toggle. The five purple paths take .site-logo-brand, which is var(--brand),
- * and that token already resolves to #4f2d7f in light and #b7a5e0 in dark,
- * including under SYSTEM mode where no attribute is present at all. That is the
- * entire swap: no second file, no hidden element, no media query of its own.
+ * INLINE rather than an `<img>` because the theme is driven by a data attribute,
+ * so a `<picture>` with `prefers-color-scheme` would ignore the manual toggle. The
+ * purple paths take a token that already resolves in light, dark and SYSTEM mode.
+ * Nothing can flash and nothing can shift.
  *
- * Nothing can flash, because the token is resolved during the first paint of
- * the first byte, and nothing can shift, because there is one element that is
- * never hidden.
- *
- * The four shipped SVGs (logo, logo-header, and their dark variants) differ in
- * exactly two ways: the viewBox, and whether the purple paths carry #4F2D7F or
- * #B7A5E0. Verified by diff with fills stripped, 2026-07-29. One path list plus
- * a viewBox therefore reproduces all four.
- *
- * The warm three keep literal fills because they are IDENTICAL in both
- * variants. Binding them to tokens would make the mark render differently from
- * the ratified assets.
+ * The warm three keep literal fills because they are IDENTICAL in both variants;
+ * binding them to tokens would make the mark render differently from the ratified
+ * assets.
  *
  * GENERATED from public/logo.svg. Path data is verbatim and must never be
- * hand-edited: the construction spec is Capsid dustinedwards/logo-spec.md, and
- * a variant is a rebuild from those values.
+ * hand-edited: a variant is a rebuild from the construction spec.
  */
 
 /** The eight paths, in the spec's paint order: ring, bowl, base, arc, tube, amber, pale, cap. */

@@ -1,46 +1,12 @@
 /**
- * Extract the stylesheets' reasoning into guidance the canvas can read.
+ * Extract the stylesheets' reasoning into guidance the design canvas can read, the bundle having
+ * stripped the comments on the way there.
  *
- * ## THE DEFECT, ruling 109
- *
- * `build-inputs.mjs` runs `stripCssComments` over every sheet on the way to
- * the bundle, and its own comment claimed "the comments are worth keeping
- * where they were written and worthless in a bundle a design agent consumes,
- * so nothing is lost by dropping them here."
- *
- * That claim is falsified. `public-chrome.css` lines 91 to 92 carry "The
- * `:visited` and `:hover` selectors are (0,2,0) and outrank the base
- * pseudo-class rules deliberately. Do not 'simplify' them away." The redesign
- * simplified them away and shipped a wordmark that turned visited-plum on the
- * purple bar. The canvas never saw the warning, because the strip had already
- * removed it.
- *
- * The strip STAYS. It exists for its own measured reason: the converter's
- * validator greps `_ds_bundle.css` for `@import` without stripping comments,
- * and `app.css`'s prose about having removed `@import "tailwindcss"` failed
- * that gate twice. The repair is not to stop stripping; it is to stop
- * DISCARDING. This script is where the reasoning goes instead.
- *
- * ## IT IS NOT A GATE AND MAKES NO ASSERTION
- *
- * It is a build step. `check:design-sheets` owns whether the sheet list is
- * right; this reads that list and writes files. Output is gitignored, because
- * a committed copy would be a second owner of prose the stylesheets already
- * own (hard rule 17) and would drift the moment a comment was edited.
- *
- * ## WHAT IT DOES NOT SHIP
- *
- * Build-only narration. A block about the converter, a gate, a migration or a
- * lockfile tells a design agent nothing and spends the budget that the rules
- * it CAN break need. A block is dropped when it reads as build talk and
- * carries no design signal, never on the build needle alone.
- *
- * ## THE CAP IS HONEST RATHER THAN SILENT
- *
- * Each file is capped near 16 KB. Blocks are emitted strongest first, by how
- * many independent design needles they hit, and anything that does not fit is
- * NAMED on stdout with its source and line. A truncation nobody can see is the
- * same class of defect as a search over an empty scope.
+ * BOUNDARY: a build step that makes no assertion, with gitignored output, a committed copy being
+ * a second owner of prose the stylesheets already own (hard rule 17). The strip it compensates
+ * for stays, because the converter's validator greps the bundle for `@import` without stripping
+ * comments and a stylesheet's prose about a removed `@import` failed that twice. The cap is
+ * honest rather than silent: what does not fit is NAMED with its source and line.
  */
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
@@ -58,10 +24,8 @@ const FILE_CAP_BYTES = 16 * 1024;
 const MINIMUM_PROSE_BYTES = 120;
 
 /**
- * The four destinations, in priority order. A block lands in the FIRST file
- * whose needles it hits, so the order here decides where an overlapping block
- * goes: chrome before layout, because a bar rule that also mentions z-index is
- * a chrome rule first.
+ * The four destinations, in priority order: a block lands in the FIRST file whose needles it
+ * hits, so this order decides where an overlapping block goes.
  */
 const FILES = [
   {
@@ -144,9 +108,8 @@ const FILES = [
 ];
 
 /**
- * Build talk. Present on its own, a block is dropped; present alongside a
- * design needle, the design needle wins, because a comment often explains a
- * design rule BY naming the gate that holds it.
+ * Build talk. Present on its own a block is dropped; present alongside a design needle the design
+ * needle wins, because a comment often explains a design rule BY naming the gate that holds it.
  */
 const BUILD_NEEDLES = [
   /\bcheck:[a-z-]+/i,
@@ -169,29 +132,24 @@ function hits(prose, needles) {
 }
 
 /**
- * The page singletons: real parts of the site the sync cannot ship as
- * components, described so the canvas at least knows what they ARE.
- *
- * NOTES.md excludes these from the component sync because "nothing there is
- * composable by a design agent", and that is true about INSTANTIATION and says
- * nothing about visibility. An agent that cannot instantiate the header can
- * still be told what the header is, and the 2026-09 redesign proves the cost of
- * not telling it.
- *
- * The component-to-sheet mapping is HAND-WRITTEN, because nothing in the repo
- * declares it: a sheet does not name the component it styles.
+ * The page singletons: real parts of the site the sync cannot ship as components, described so
+ * the canvas at least knows what they ARE. They are excluded from the component sync because
+ * nothing there is composable, which is true about INSTANTIATION and says nothing about
+ * visibility. The component-to-sheet mapping is HAND-WRITTEN, because nothing in the repo declares
+ * it: a sheet does not name the component it styles.
  */
 const SINGLETONS = [
   { name: "site-header", component: "app/components/site-header.tsx", sheets: ["app/styles/public-chrome.css", "app/styles/chrome-nav.css"] },
-  { name: "site-footer", component: "app/components/shell-footer.tsx", sheets: ["app/styles/public-chrome.css"] },
+  // The footer's sheet, not the chrome one: it was renamed and moved sheets, so mapping it there
+  // would have sent the canvas the HEADER's tokens as the footer's.
+  { name: "site-footer", component: "app/components/shell-footer.tsx", sheets: ["app/styles/shell.css"] },
   { name: "theme-toggle", component: "app/components/theme-toggle.tsx", sheets: ["app/styles/public-chrome.css"] },
   { name: "search-trigger", component: "app/components/search-trigger.tsx", sheets: ["app/styles/search-trigger.css", "app/styles/palette-dialog.css"] },
 ];
 
 /**
- * HAND-WRITTEN. The rulings that bind the singletons cannot be derived from the
- * source: a ruling lives in the decisions log, and the code carries its effect
- * rather than its authority.
+ * HAND-WRITTEN: the rulings that bind the singletons cannot be derived from the source, the code
+ * carrying a ruling's effect rather than its authority.
  */
 const SINGLETON_PREAMBLE = `These four are real parts of every public page and are NOT in the component
 library, because none of them can be instantiated by a design agent: they are
@@ -208,8 +166,9 @@ specific commit on Dustin's order, and two standing design rulings are SUSPENDED
 for it rather than satisfied by it. Nothing about it changes without that
 suspension being lifted.
 
-**The header has no width breakpoints.** It is \`flex-wrap: nowrap\`, the only
-media query touching it is \`print\`, and it REFLOWS rather than breaking. The
+**The header has no width breakpoints.** It is \`flex-wrap: wrap\` on both the
+header and the nav, the only media query touching it is \`print\`, and it WRAPS
+onto a second line rather than overflowing. The
 thresholds below are measured values from the component's own comment, dated in
 the source; they are properties of the current link labels, so a longer word
 moves them and they are re-measured rather than reasoned from.
@@ -220,8 +179,9 @@ is right.
 `;
 
 /**
- * A module's leading doc comment: the reasoning a component carries about
- * itself, which the stylesheet extractor never sees because it reads only CSS.
+ * A module's leading doc comment: the reasoning a component carries about itself, which the
+ * stylesheet extractor never sees because it reads only CSS.
+ *
  * @param {string} source
  */
 function leadingDocComment(source) {
@@ -231,6 +191,7 @@ function leadingDocComment(source) {
 
 /**
  * Literal className values, which are the vocabulary the canvas composes with.
+ *
  * @param {string} source
  */
 function classNames(source) {
@@ -243,6 +204,7 @@ function classNames(source) {
 
 /**
  * Every custom property a sheet READS, which is what the singleton consumes.
+ *
  * @param {string} css
  */
 function tokensRead(css) {

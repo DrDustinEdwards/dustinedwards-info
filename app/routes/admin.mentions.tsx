@@ -22,70 +22,19 @@ import type { Route } from "./+types/admin.mentions";
 /**
  * /admin/mentions: the webmention moderation queue.
  *
- * ## THE SMOKE ACTOR IS REFUSED, AND NOT BY ANYTHING IN THIS FILE
+ * THE SMOKE ACTOR IS REFUSED, AND NOT BY ANYTHING IN THIS FILE. `admin.tsx`'s
+ * middleware is a METHOD ALLOWLIST that refuses every write before a child action
+ * runs, and none of the three actions below is a publish, so a capability read
+ * here would be a SECOND enforcement point for a rule that already has one, which
+ * is the shape hard rule 17 refuses: two owners of one fact, free to disagree.
  *
- * That is deliberate and it is the mechanism every other non-publish admin
- * write already uses. `app/routes/admin.tsx`'s middleware is a METHOD
- * ALLOWLIST: GET and HEAD are named, everything else is refused with
- * `SMOKE_READ_ONLY_POLICY` before a single child action runs. Its own comment
- * names the surfaces it covers ("the eleven media intents, the tag writes, the
- * trash, the rebuild, or any action added tomorrow") and says why the inversion
- * matters: a route that starts answering a new method is refused on the day it
- * is written rather than on the day somebody remembers to add it.
- *
- * The `WRITE_CAPABILITIES` table in `publish-policy.mjs` is consulted by
- * `decide()` and `decideDelete()` on the PUBLISH path only, and none of the
- * three actions below is a publish. So a capability read here would be a SECOND
- * enforcement point for a rule that already has one, which is the shape hard
- * rule 17 refuses: two owners of one fact, free to disagree. The refusal is
- * asserted in `test/worker/webmention.test.ts` against the middleware, which is
- * where it actually lives.
- *
- * ## ONE QUEUE, NOT FOUR PANELS, ruling 21 on 2026-09-05
- *
- * The page was four `Panel` groups stacked in a fixed order, each with its own
- * heading, its own description and its own empty box. With one mention in the
- * table that is three headings shouting about nothing, and the operator's own
- * verdict on it was "terrible on screen". A status is a FILTER, not a section:
- * the reader is deciding about one row at a time and wants the set that needs
- * deciding, so the statuses became link chips carrying `?status=` and the rows
- * became one list. The chips are the same server-rendered pattern the media
- * library uses for its lenses, for the same reason: every state is a URL, and
- * nothing about it needs script.
- *
- * ## APPROVING IS IMMEDIATE, AND IT WAS NOT
- *
- * This docblock said "there is no public surface for it in H1" and then, after
- * H2, that an approval reached readers within ten minutes. Both were true when
- * written. Since 2026-09-05 an approval PURGES `post:<slug>` and the section
- * appears on the next fetch, because Workers Cache gained a purge API and
- * ruling 7 was reversed by ruling 10.
- *
- * The one clause beside Approve is all that survives of the paragraph that used
- * to explain this. THE NUMBER WENT WITH IT, deliberately: the old sentence
- * derived a fallback minute count from `SHARED_CACHE_CONTROL` for the case
- * where a purge is rate limited and refused, which is honest and is a sentence
- * for the person who BUILT the page rather than the person deciding. A refused
- * purge degrades to the behaviour the page had for its whole first month, and
- * the operator finds out by looking at the post, which they were going to do
- * anyway.
- *
- * ## EVERY VALUE ON IT CAME FROM A STRANGER
- *
- * The source URL, the author name and the excerpt were read out of a document
- * this site does not control. They are rendered as React children, which
- * escapes them; the source URL is shown as TEXT rather than as a link, because
+ * EVERY VALUE ON IT CAME FROM A STRANGER. They are rendered as React children,
+ * which escapes them, and the source URL is shown as TEXT rather than as a link:
  * an admin page is not a place to put a one-click navigation to a URL an
- * unauthenticated POST chose. H2's public render is the one that gets an
- * anchor, and it gets `rel="nofollow ugc noopener"` with it.
+ * unauthenticated POST chose.
  *
- * ## NO CLIENT JAVASCRIPT
- *
- * The admin plane is exempt from the progressive enhancement law and nothing
- * here needs the exemption: four plain `<Form method="post">` submissions, a
- * row of links, and a server-rendered list. THE FILTER IS RESOLVED IN THE
- * LOADER rather than by a hook, so the component is a pure function of what the
- * server handed it and the rendered page is the whole answer.
+ * NO CLIENT JAVASCRIPT, and THE FILTER IS RESOLVED IN THE LOADER, so the component
+ * is a pure function of what the server handed it.
  */
 
 export function meta() {
@@ -101,18 +50,12 @@ function isIntent(value: string): value is Intent {
 }
 
 /**
- * THE FILTER ROW, and the order is a decision rather than an alphabet.
- *
- * Pending first because it is the only one that wants an action, failed second
- * because it is the only one that might mean something is broken, then the two
- * settled states, then everything. That is the order the four panels were in,
- * and the reasoning survived the panels.
+ * The order is a decision rather than an alphabet: pending first because it is
+ * the only one that wants an action, failed second because it is the only one that
+ * might mean something is broken.
  *
  * `all` LISTS EVERY ROW INCLUDING `unverified`, which is what makes the counts
- * on this row add up: four filter counts plus the unverified chip equals the
- * All count, and a reader can see at a glance that nothing is hiding. The old
- * page could not do that, because `unverified` had no panel and its number was
- * a sentence at the bottom of a different section.
+ * add up and lets a reader see that nothing is hiding.
  */
 const FILTERS = [
   { id: "pending", label: "Pending" },
@@ -125,13 +68,9 @@ const FILTERS = [
 type FilterId = (typeof FILTERS)[number]["id"];
 
 /**
- * What an empty filter says, KEYED BY THE UNION ITSELF.
- *
- * A `Record<FilterId, string>` is total by typecheck, which is what rule 13
- * asks for in `app/`: a filter added to the list above with no line here is a
- * compile error rather than a lookup that quietly substitutes a different
- * filter's sentence, or renders nothing at all and leaves an empty page with
- * no explanation on it.
+ * KEYED BY THE UNION ITSELF, so it is total by typecheck, which is what rule 13
+ * asks for in `app/`: a filter added with no line here is a compile error rather
+ * than a lookup that substitutes a different filter's sentence.
  */
 const EMPTY_LINE: Record<FilterId, string> = {
   pending: "No pending mentions.",
@@ -146,14 +85,10 @@ function isFilterId(value: string | null): value is FilterId {
 }
 
 /**
- * Which filter a request is asking for.
- *
  * AN ABSENT `?status=` IS NOT `all`, and neither is an unrecognised one. The
- * default lands on the set that wants a decision when there is one, and on
- * everything when there is not, so arriving at the page with nothing pending
- * shows the log rather than a quiet line about an empty queue. `?status=all` is
- * how a reader asks for everything on purpose, which is the media library's own
- * rule for `?role=` and is why an empty parameter is treated as absent.
+ * default lands on the set that wants a decision when there is one, so arriving
+ * with nothing pending shows the log rather than a quiet line about an empty
+ * queue.
  */
 function resolveFilter(requested: string | null, rows: Webmention[]): FilterId {
   if (isFilterId(requested)) return requested;
@@ -165,11 +100,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const loaderStart = performance.now();
   const env = getEnv(context);
   /*
-   * THE EXPIRING COUNT IS READ HERE because the sweep button is LABELLED with
-   * it, and a label is a fact the page states rather than a fact the action
-   * discovers. It was already read on the confirmation step; reading it in the
-   * loader too is what turns "Sweep expired mentions" into "Remove 3 expired"
-   * and lets the control disable itself when there is nothing to remove.
+   * The sweep button is LABELLED with it, and a label is a fact the page states
+   * rather than one the action discovers. It is what turns "Sweep expired mentions"
+   * into "Remove 3 expired" and lets the control disable itself.
    */
   const [mentions, expiring] = await Promise.all([
     timed(timings, "d1_list_webmentions", () => listWebmentionsForAdmin(env)),
@@ -183,11 +116,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 /** What an action hands back. Every field optional; the page renders what it gets. */
 type ActionResult = {
   /**
-   * WHETHER `message` IS AN OUTCOME OR A REFUSAL, carried as a boolean because
-   * the alternative is classifying by string matching and that is a second
-   * owner of a fact the action already knows. A page that read "Unknown action."
-   * and inferred failure would silently start rendering a success in the error
-   * box the day somebody rephrased a message.
+   * Carried as a boolean because the alternative is classifying by string
+   * matching, which is a second owner of a fact the action already knows: a page
+   * that inferred failure would render a success in the error box the day somebody
+   * rephrased a message.
    */
   ok?: boolean;
   message?: string;
@@ -207,24 +139,17 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * THE TYPED CONFIRMATION, read once for whichever branch below wants it.
-   *
-   * `app/lib/destructive.mjs` states the rule: a guard that runs in a handler
-   * is feedback, not a guard, because with scripting off the handler never runs
-   * and the form posts anyway. So both destructive intents here refuse in the
-   * ACTION and the refusal renders a second step, which is what makes the
-   * ceremony real for a reader without JavaScript.
+   * A guard that runs in a handler is feedback, not a guard, because with scripting
+   * off the handler never runs and the form posts anyway. So both destructive
+   * intents refuse in the ACTION and the refusal renders a second step.
    */
   const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
 
   if (intent === "sweep") {
     /*
-     * THE COUNT IS 1, not the number of rows at risk, and the reason is the
-     * same one the media rebuild gives: the operator is authorising the SWEEP,
-     * and a typed row count read a moment before the delete would be a number
-     * invented to look precise about a set that can change underneath it. The
-     * confirmation step states the current quantity instead, which is the thing
-     * actually at stake.
+     * THE COUNT IS 1, not the rows at risk: the operator is authorising the SWEEP,
+     * and a typed row count read a moment before the delete would be invented
+     * precision about a set that can change underneath it.
      */
     if (!confirmationSatisfied(typed, 1)) {
       return data<ActionResult>({ confirmSweep: await countExpiringWebmentions(env) });
@@ -239,10 +164,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * THE ID IS PARSED AND CHECKED, never passed through. It arrives in a form
-   * body, and `Number("")` is 0, which is a plausible-looking rowid. An id that
-   * is not a positive integer is a malformed request rather than a row that
-   * happens not to exist.
+   * PARSED AND CHECKED, never passed through: it arrives in a form body and
+   * `Number("")` is 0, which is a plausible-looking rowid. A non-positive integer is
+   * a malformed request, not a row that happens not to exist.
    */
   const id = Number(form.get("id"));
   if (!Number.isInteger(id) || id <= 0) {
@@ -254,24 +178,21 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "delete") {
     /*
-     * ONE ROW, SO THE COUNT IS 1. Deleting a mention removes the only copy of
-     * what somebody sent: there is no repository behind this table and no
-     * derivation that could produce the row again, which is exactly why this is
-     * classified destructive rather than reversible.
+     * ONE ROW, SO THE COUNT IS 1. Deleting a mention removes the only copy of what
+     * somebody sent: there is no repository behind this table and no derivation that
+     * could produce the row again.
      */
     if (!confirmationSatisfied(typed, 1)) {
       return data<ActionResult>({ confirmDelete: id });
     }
-    // ONE DOOR, shared with the operator API since 2026-09-05. The write and
-    // the purge travel together in `decideMention` so a second caller cannot
-    // take only half of them; grounds are on that function.
+    // ONE DOOR, shared with the operator API. The write and the purge travel together
+    // in `decideMention` so a second caller cannot take only half of them.
     await decideMention(env, id, "delete");
     return data<ActionResult>({ ok: true, message: "Mention deleted." });
   }
 
   if (intent === "approve") {
-    // THE REVERSAL OF RULING 7, PROVEN ON THE WIRE 2026-09-05: the page was a
-    // cache HIT with no section, and after this call it was a MISS carrying it.
+    // An approval purges the post's tag, so the section appears on the next fetch.
     // That is what the clause beside the Approve button is reporting.
     await decideMention(env, id, "approve");
     return data<ActionResult>({ ok: true, message: "Mention approved." });
@@ -285,34 +206,21 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * UNREACHABLE, AND WRITTEN AS FOUR SEPARATE COMPARISONS RATHER THAN A TERNARY
-   * TO GET HERE.
-   *
-   * `check:destructive` builds its vocabulary by matching a strict equality
-   * between the word intent and a string literal, ON THE RAW SOURCE, so an
-   * intent handled as the else arm of a ternary is INVISIBLE to it, and a
-   * comment that spelled the needle out would invent one. Both were true of
-   * this file's first draft: it decided approve and reject with a ternary, the
-   * gate classified three of the four intents while `reject` was never named,
-   * and the comment written to explain that then registered as a fifth.
-   *
-   * An unclassifiable destructive path is the hole that gate exists to close,
-   * so the branch shape is chosen to stay inside its view.
+   * WRITTEN AS FOUR SEPARATE COMPARISONS RATHER THAN A TERNARY. `check:destructive`
+   * matches a strict equality against a string literal ON THE RAW SOURCE, so an
+   * intent handled as a ternary's else arm is INVISIBLE to it, and an unclassifiable
+   * destructive path is the hole that gate exists to close.
    */
   return data<ActionResult>({ ok: false, message: "Unknown action." }, { status: 400 });
 }
 
 /**
- * A timestamp as an ISO instant.
+ * ISO rather than a friendly rendering: this is a moderation log and an
+ * unambiguous instant is worth more than "3 days ago".
  *
- * ISO rather than a friendly rendering, deliberately: this page is a moderation
- * log, the reader is one person who wrote the schema, and an unambiguous
- * instant is worth more here than "3 days ago".
- *
- * NO NULL BRANCH, which is rule 13 rather than an oversight. `received_at` is
- * `notNull` in the schema, and the only other stamp on the row is rendered
- * behind a check for its own presence, so a placeholder string here would be a
- * substituted value for a case that cannot arrive.
+ * NO NULL BRANCH, which is rule 13 rather than an oversight: `received_at` is
+ * `notNull`, so a placeholder would be a substituted value for a case that cannot
+ * arrive.
  */
 function iso(value: Date): string {
   return value.toISOString().replace(".000Z", "Z");
@@ -322,14 +230,9 @@ function iso(value: Date): string {
 const DECIDABLE: ReadonlyArray<Webmention["status"]> = ["pending", "approved", "rejected"];
 
 /**
- * One row.
- *
- * THE EXCERPT LEADS, which is the whole of ruling 21b and is a change of
- * subject rather than a reordering. The row used to open with the source URL,
- * so the first thing on every row was a long unbreakable string a stranger
- * chose, and the sentence a human wrote was third. The reader is judging
- * whether a mention is worth publishing, and the quotation is the evidence for
- * that; the URL is how they would check it, which is a second question.
+ * THE EXCERPT LEADS, which is a change of subject rather than a reordering. The
+ * reader is judging whether a mention is worth publishing and the quotation is the
+ * evidence; the URL is how they would check it, which is a second question.
  */
 function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDelete?: number }) {
   const decidable = DECIDABLE.includes(mention.status);
@@ -339,12 +242,10 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
         {mention.excerpt ? (
           <blockquote className="mention-quote">{mention.excerpt}</blockquote>
         ) : null}
-        {/* THE ABSENCE IS NAMED rather than left as a dangling verb. A source
-            page with no h-card gives this row no author at all, and the line
-            used to open on the word "mentioned" with nothing in front of it,
-            which reads as a rendering fault rather than as a fact about the
-            sender. It is a statement about what the fetch found, not a value
-            substituted for one it did not find. */}
+        {/*
+         * THE ABSENCE IS NAMED rather than left as a dangling verb. It is a statement
+         * about what the fetch found, not a value substituted for one it did not find.
+         */}
         <p className="mention-who">
           {mention.authorName ? `${mention.authorName} ` : "An unnamed sender "}
           {mention.authorUrl ? `(${mention.authorUrl}) ` : ""}
@@ -354,11 +255,10 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
         {/* TEXT, NOT A LINK. An unauthenticated POST chose this string. */}
         <p className="mention-source">{mention.sourceUrl}</p>
         <p className="muted mention-stamps">
-          {/* THE VERIFIED STAMP IS GONE, and it is the one fact here that was
-              never worth a column of the reader's attention: it lands seconds
-              after `received` for every row that has one at all, and the rows
-              where it matters are the ones that DO NOT have one, which is what
-              the unverified chip counts. */}
+          {/*
+           * The rows where a verified stamp matters are the ones that DO NOT have one,
+           * which is what the unverified chip counts.
+           */}
           {`received ${iso(mention.receivedAt)}` +
             (mention.decidedAt ? `, decided ${iso(mention.decidedAt)}` : "") +
             (mention.failureReason ? `, reason ${mention.failureReason}` : "")}
@@ -378,12 +278,10 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
       </div>
       <div className="mention-actions">
         {/*
-          APPROVE STAYS ON THE ROW, because it is the decision the operator came
-          to make and burying the primary action of a queue inside a menu would
-          be the opposite of the rule. Approve and reject are each hidden on the
-          state they would produce, so the pair reads as a decision that can be
-          changed rather than as two buttons one of which does nothing.
-        */}
+         * APPROVE STAYS ON THE ROW, because it is the decision the operator came to make.
+         * Approve and reject are each hidden on the state they would produce, so the pair
+         * reads as a decision that can be changed.
+         */}
         {decidable && mention.status !== "approved" ? (
           <Form method="post" className="mention-approve">
             <input type="hidden" name="intent" value="approve" />
@@ -394,12 +292,10 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
           </Form>
         ) : null}
         {/*
-          REJECT AND DELETE MOVE INTO THE ROW MENU, which is the same change the
-          posts list took and for the same reason: three controls on every row
-          compete with the excerpt the reader is actually judging. Delete was
-          already the lightest thing here; a menu is lighter still and it is
-          where an irreversible action belongs beside a reversible one.
-        */}
+         * Three controls on every row compete with the excerpt the reader is actually
+         * judging, and a menu is where an irreversible action belongs beside a reversible
+         * one.
+         */}
         <RowMenu
           label={`Actions for the mention from ${mention.authorName ?? "an unnamed sender"}`}
         >
@@ -432,31 +328,28 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
   const confirmSweep = actionData?.confirmSweep;
 
   /*
-   * ONE ARRAY FEEDS THE CHIPS AND THE LIST, which is the media library's own
-   * lesson written down: its Unused chip counted with one predicate and
-   * filtered with another, and the chip and the grid disagreed. A count derived
-   * from the same rows the list is about cannot do that.
+   * ONE ARRAY FEEDS THE CHIPS AND THE LIST. A count derived from the same rows the
+   * list is about cannot disagree with it.
    */
   const countOf = (id: FilterId) =>
     id === "all" ? mentions.length : mentions.filter((m) => m.status === id).length;
   const rows = status === "all" ? mentions : mentions.filter((m) => m.status === status);
 
   /*
-   * `unverified` rows are COUNTED on the filter row rather than given a filter
-   * of their own. They are a state that lasts seconds: the endpoint writes one
-   * and hands verification to `waitUntil` in the same request. A row that STAYS
-   * unverified means verification never completed, which is worth a number
-   * where the numbers are and is not a decision anybody can make. Shown only
-   * when it is above zero, because a chip reading 0 is an alarm about nothing.
+   * COUNTED on the filter row rather than given a filter of its own: it is a state
+   * that lasts seconds, and a row that STAYS unverified is worth a number rather
+   * than a decision. Shown only above zero, because a chip reading 0 is an alarm
+   * about nothing.
    */
   const unverified = mentions.filter((m) => m.status === "unverified").length;
   const expired = expiring.failed + expiring.rejected;
 
   return (
     <>
-      {/* THE BOX MATCHES THE OUTCOME. A success in an error box was the first
-          thing the operator named about this page, and `ok` is a field on the
-          action's result rather than a guess made from the message text. */}
+      {/*
+       * `ok` is a field on the action's result rather than a guess made from the
+       * message text, so a success cannot render in the error box.
+       */}
       {message ? (
         <p
           className={`${actionData?.ok ? "editor-notice" : "panel-error"} mention-feedback`}
@@ -484,15 +377,11 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
         ) : null}
       </nav>
 
-      {/* THE PURGE CLAUSE, ONCE. Ruling 21e asked for it beside Approve, and it
-          was rendered per pending row: on a queue of twelve it said the same
-          sentence twelve times, which is how a page stops being read. It states
-          a property of the whole pending filter, not of any one mention, so it
-          belongs where the filter is chosen. Amended 2026-09-06.
-
-          Shown only on the pending filter and only when there is something to
-          approve: on an empty queue it would be advice about an action nobody
-          can take. */}
+      {/*
+       * THE PURGE CLAUSE, ONCE. It states a property of the whole pending filter, not
+       * of any one mention, so it belongs where the filter is chosen. Rendered per row it
+       * said the same sentence twelve times, which is how a page stops being read.
+       */}
       {status === "pending" && rows.length > 0 ? (
         <p className="muted mention-hint mention-purge-note">
           Approving appears on the post within seconds.
@@ -510,36 +399,14 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
       )}
 
       {/*
-        RETENTION, AND IT IS A BUTTON RATHER THAN A CRON. The reason is written
-        here because the alternative was considered and refused.
-
-        This site's only scheduled work is the watchdog Worker's cron, which
-        polls /api/health and repairs DRIFT: a derived store that has fallen
-        out of step with the repository, under hard rule 18. A webmention is
-        neither derived nor repo-sourced, so there is no derivation to run and
-        nothing for a health check to find; wiring an expiry into that door
-        would put a permanently-healthy check into a mechanism whose whole job
-        is to notice unhealthy ones. `sync:content` is the same objection in the
-        other direction: it converges D1 toward the repository, and these rows
-        have no repository side to converge to.
-
-        So there is no honest existing home, and rather than adding a second
-        cron for two DELETE statements the sweep is a control on the page whose
-        rows it removes. It is idempotent, it reports what it removed, and the
-        admin who is already here to moderate is the person who runs it.
-
-        THE ESSAY THAT USED TO BE ON THE PAGE IS NOW ENTIRELY IN THIS COMMENT,
-        which is ruling 21e. Three of its four sentences explained a DESIGN to a
-        reader who did not ask: why two windows, why open rows are never swept,
-        why the cap would move if they were. The person deciding needs the two
-        windows and the number at stake, and the button now carries the number
-        rather than a verb with no object. `unverified` lost its sentence here
-        and gained a chip on the filter row, where a count belongs.
-
-        THE TWO WINDOWS ARE IMPORTED, never typed, which is hard rule 17: a
-        button labelled with one number beside a sweep that uses another is the
-        drift the rule exists to prevent.
-      */}
+       * A BUTTON RATHER THAN A CRON. The watchdog's cron repairs DRIFT, a derived
+       * store out of step with the repository, under hard rule 18; a webmention is
+       * neither derived nor repo-sourced, so there is nothing for it to find.
+       *
+       * THE TWO WINDOWS ARE IMPORTED, never typed, which is hard rule 17: a button
+       * labelled with one number beside a sweep that uses another is the drift the rule
+       * exists to prevent.
+       */}
       <section className="mention-retention" aria-label="Retention">
         <p className="muted">
           {`Failed mentions are removed after ${FAILED_RETENTION_DAYS} days, rejected after ` +
@@ -564,10 +431,11 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
         ) : (
           <Form method="post">
             <input type="hidden" name="intent" value="sweep" />
-            {/* DISABLED AT ZERO, WITH THE SAME LABEL. A control that changes its
-                words when it has nothing to do makes the reader read it twice to
-                learn there is nothing to do; a greyed "Remove 0 expired" says it
-                once, and the count is the same fact in both states. */}
+            {/*
+             * DISABLED AT ZERO, WITH THE SAME LABEL: a control that changes its words when it
+             * has nothing to do makes the reader read it twice to learn there is nothing to
+             * do.
+             */}
             <button type="submit" className="btn-secondary" disabled={expired === 0}>
               {`Remove ${expired} expired`}
             </button>

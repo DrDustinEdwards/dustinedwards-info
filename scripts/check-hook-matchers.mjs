@@ -3,62 +3,9 @@
  *
  *   npm run check:hook-matchers
  *
- * ## Why this exists, 2026-09-15
- *
- * A PreToolUse matcher is a regex over the TOOL NAME. The matchers here read
- * `Write|Edit|Bash` and `Bash` until today, and the agent's PowerShell tool
- * reports the name `PowerShell`, which matches neither. Every hook in this
- * directory fired on Bash calls and on nothing else, while the session held
- * pre-approved `PowerShell(npm run *)` and `PowerShell(git *)` permission
- * rules. So `npm run deploy` with no deploy door, an unscoped `git add` with no
- * scoped-add check, and a push with no lint were all reachable with no prompt
- * and no guard, for 59 days on the two oldest hooks.
- *
- * ef6be97 on 2026-08-14 had already fixed this once, one tool name earlier,
- * when the em dash hook matched only Write and Edit. A matcher ENUMERATES
- * tools, so it goes stale every time the harness gains one, and until this file
- * nothing in the repo read a matcher at all: check:hook-syntax parses the hooks
- * and says in its own header that it cannot see whether one is REGISTERED, and
- * check:hook-scope replays the deploy hook and says it cannot see whether the
- * harness invokes it. Both gaps end at this gate.
- *
- * ## OBSERVATION BOUNDARY, and it is the important half
- *
- * THE HARNESS TOOL LIST IS NOT IN THIS REPO. There is no manifest of the tools
- * a session can call, so the assertion a reader actually wants, every tool that
- * can execute a command string is in every matcher, is NOT statically decidable
- * here. Nothing in a checkout knows that a tool named PowerShell exists.
- *
- * What IS on disk is the PERMISSION ALLOW LIST, and that is what this gate
- * reads. A tool the session has been granted appears there by name, so the
- * matchers can be compared against a set derived from a DIFFERENT file than the
- * one under test, which is the fixture independence rule 10 asks for. That
- * comparison is exactly the desync that went unnoticed: the PowerShell rules
- * and the Bash-only matcher sat in the same directory for ten weeks.
- *
- * THE RESIDUAL, stated rather than hidden. A tool used under one-off approvals
- * writes no permission rule, so this gate cannot see it. The window it closes
- * is the one that actually happened, from ten weeks down to the next gate run,
- * and the window it leaves open is a tool nobody has ever granted. That is why
- * REQUIRED carries a hard floor as well: the names known to matter today are
- * asserted whether or not a permission rule still mentions them.
- *
- * ## FAILS CLOSED ON AN UNKNOWN TOOL
- *
- * Every tool name found in an allow list must be CLASSIFIED below. A name this
- * file has never been told about is a FAILURE, not a skip, and the message says
- * which bucket to put it in. That is the one direction that matters: the defect
- * this gate exists about was a new tool name arriving and nothing noticing, so
- * an unclassified name has to stop the tier rather than pass through it.
- *
- * ## TWO BRANCHES, because `settings.local.json` is gitignored
- *
- * The local file holds most of the interesting rules and is untracked, exactly
- * like `wrangler.jsonc` and for the same reason check:config cannot run in CI.
- * A checkout has no copy, so this gate runs the tracked half there and says so.
- * The two branches print DIFFERENT floor names, `checks-local` and
- * `checks-tracked`, so a floor measured under one is never read against the
- * other. check:invariants records that collision costing a silent pass.
+ * BOUNDARY, AND IT IS THE IMPORTANT HALF: **THE HARNESS TOOL LIST IS NOT IN THIS REPO**, so the
+ * assertion a reader actually wants is not statically decidable here. What is on disk is the
+ * permission allow list, and a tool used under one-off approvals writes no rule at all.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -88,10 +35,8 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * TOOLS THAT EXECUTE A COMMAND STRING. Each one must appear in EVERY PreToolUse
- * matcher registered in this file, because every hook here reads
- * `tool_input.command` and none of them reads `tool_name`: a hook is blind to
- * which tool sent the command, so the matcher is the only thing deciding.
+ * TOOLS THAT EXECUTE A COMMAND STRING. Each must appear in EVERY PreToolUse matcher registered
+ * here, because every hook reads the command and none reads the tool name.
  *
  * @type {Record<string, string>}
  */
@@ -113,11 +58,9 @@ const CONTENT_TOOLS = {
 };
 
 /**
- * TOOLS THAT NEED NO MATCHER, enumerated rather than defaulted.
- *
- * AN EXCLUSION NAMING A TOOL EXCLUDES EVERYTHING IT CAN DO, which is rule 10's
- * discipline about enumerating inside exclusions, so each one carries the reason
- * it cannot reach a guarded act: it neither runs a command nor writes a file.
+ * TOOLS THAT NEED NO MATCHER, enumerated rather than defaulted. AN EXCLUSION NAMING A TOOL
+ * EXCLUDES EVERYTHING IT CAN DO, which is rule 10's discipline about enumerating inside
+ * exclusions, so each carries the reason it cannot reach a guarded act.
  *
  * @type {Record<string, string>}
  */
@@ -131,23 +74,16 @@ const UNGUARDED_TOOLS = {
 };
 
 /**
- * The names asserted present whether or not a permission rule still mentions
- * them. A hard floor, because the residual above is real: a tool used under
- * one-off approvals leaves no rule behind, and a rule deleted in a tidy-up must
- * not quietly delete the requirement with it.
+ * The names asserted present whether or not a permission rule still mentions them: a tool used
+ * under one-off approvals leaves no rule behind, and a rule deleted in a tidy-up must not delete
+ * the requirement with it.
  */
 const REQUIRED_FLOOR = ["Bash", "PowerShell"];
 
 /**
- * The same floor for the dash matcher, and here it is not a belt-and-braces
- * measure but the ONLY thing asserting anything.
- *
- * MEASURED 2026-09-15: Write and Edit appear in no allow list in this repo and
- * never will, because they are permitted by default and a rule is only written
- * for something that prompts. So the observed set can never demand them, and a
- * content half built purely on observation asserts NOTHING while reporting a
- * clean sweep. That is the unfailable-condition class from rule 10, found by
- * running this gate and reading "content tools checked: none observed".
+ * The same floor for the dash matcher, and here it is the ONLY thing asserting anything: those
+ * tools appear in no allow list and never will, being permitted by default. A content half built
+ * purely on observation asserts NOTHING while reporting a clean sweep.
  */
 const DASH_FLOOR = ["Write", "Edit"];
 
@@ -180,24 +116,14 @@ console.log(
 );
 
 /*
- * 1. REGISTRATION. Every hook file on disk is registered, and every registered
- *    command points at a file that exists.
- *
- * This is the gap check:hook-syntax names in its own header and cannot close: it
- * compiles what it finds in the directory, so a hook nobody registered compiles
- * cleanly and guards nothing, and a registration whose path has drifted takes a
- * guard out while leaving its file in place to be read and believed.
+ * 1. REGISTRATION, both directions. This is the gap `check:hook-syntax` names and cannot close:
+ * it compiles what it finds in the directory, so an unregistered hook compiles cleanly and guards
+ * nothing, and a drifted path takes a guard out while leaving its file to be read and believed.
  */
 console.log("  1. every hook is registered and every registration resolves\n");
 
 /**
- * ONE SHAPE FOR A HOOK ENTRY, declared rather than inferred.
- *
- * `JSON.parse` returns `any`, and the first draft read `entry?.hooks` through it
- * with an `Array.isArray` ternary whose other branch was `never[]`. Six implicit
- * `any` errors, caught by the Stop hook running `npm run typecheck` rather than
- * by anything here, which is the check:types half of rule 10: a gate script is
- * source like any other and an untyped read of parsed JSON is where it lands.
+ * ONE SHAPE FOR A HOOK ENTRY, declared rather than inferred: parsing JSON returns `any`.
  *
  * @typedef {{ matcher?: string, hooks?: Array<{ command?: string }> }} HookEntry
  */
@@ -250,12 +176,9 @@ for (const command of registeredCommands) {
 }
 
 /*
- * 2. THE MATCHERS AGAINST THE PERMISSION ALLOW LISTS.
- *
- * The tool names are taken from the allow rules, which are a different file
- * from the matchers in the local case and a different SECTION of the same file
- * in the tracked one. Either way the expected set is not produced by the thing
- * being checked, which is what rule 10 means by fixture independence.
+ * 2. THE MATCHERS AGAINST THE PERMISSION ALLOW LISTS. The tool names come from the allow rules, a
+ * different file in one case and a different SECTION in the other, so the expected set is not
+ * produced by the thing being checked, which is what rule 10 means by fixture independence.
  */
 console.log("\n  2. every tool that can reach a guarded act is in the matchers\n");
 
@@ -268,10 +191,8 @@ function allowRules(value) {
 const rules = [...allowRules(settings), ...(local ? allowRules(local) : [])];
 
 /*
- * THE TOOL NAME IS THE PREFIX BEFORE THE PAREN, and a rule with no paren is the
- * whole name. `mcp__server__tool` rules are dropped: an MCP tool runs on a
- * server and cannot reach this tree or this shell, and they would otherwise be
- * hundreds of names demanding classification.
+ * THE TOOL NAME IS THE PREFIX BEFORE THE PAREN, and a rule with no paren is the whole name. MCP
+ * rules are dropped: such a tool cannot reach this tree or this shell.
  */
 const observed = [
   ...new Set(
@@ -339,10 +260,9 @@ for (const [index, matcher] of matchers.entries()) {
 }
 
 /*
- * THE CONTENT TOOLS, against the matcher that registers the dash hook rather
- * than against all of them. Asking every matcher for Write would demand it on
- * the shell-only group, which reads no file content and would be a false
- * requirement that somebody eventually satisfies by widening the wrong matcher.
+ * THE CONTENT TOOLS, against the matcher that registers the dash hook: demanding them on the
+ * shell-only group is a false requirement somebody eventually satisfies by widening the wrong
+ * matcher.
  */
 const dashMatchers = preToolUse.filter((entry) =>
   (entry.hooks ?? []).some((hook) => String(hook.command ?? "").includes("no-em-dash.sh")),
@@ -378,21 +298,9 @@ console.log(
 console.log("");
 
 /*
- * EXECUTED-COUNT FLOOR, one name per branch.
- *
- * MEASURED THROUGH THIS GATE'S OWN PIPELINE on 2026-09-15 by RUNNING it both
- * ways: 22 with the local settings present, and 22 with the file moved aside,
- * which is how the second number was taken rather than by subtracting.
- *
- * THE TWO ARE EQUAL TODAY AND THE SPLIT IS STILL RIGHT. They are equal because
- * every tool the local file adds beyond the tracked one is either already in
- * the hard floor (PowerShell) or unguarded (Read, WebFetch), and an unguarded
- * tool asserts nothing. The moment a new COMMAND tool is granted in the local
- * file alone, the local branch gains one assertion per matcher and the tracked
- * branch gains none, so a single floor would then be measured on this machine
- * and read against CI. That is the collision check:invariants records costing a
- * silent pass, and it is cheaper to keep the names apart than to discover it
- * again.
+ * EXECUTED-COUNT FLOOR, one name per branch, MEASURED BY RUNNING IT BOTH WAYS. THE TWO ARE EQUAL
+ * TODAY AND THE SPLIT IS STILL RIGHT: the moment a new COMMAND tool is granted locally, that
+ * branch gains an assertion per matcher and the other gains none.
  */
 const MINIMUM_LOCAL = 22;
 const MINIMUM_TRACKED = 22;

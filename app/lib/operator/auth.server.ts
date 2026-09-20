@@ -1,18 +1,12 @@
 /**
  * Authentication for the operator publish path.
  *
- * A static bearer token, held as a wrangler secret. Not Better Auth: that plane
- * is a Google login with a browser session in KV, and an agent has no browser.
- * Not OAuth either, because there is one caller class and one owner, and an
- * authorization-code dance with nobody to click "allow" is theatre.
+ * A static bearer token, held as a wrangler secret. Not Better Auth, whose plane is a Google login
+ * with a browser session in KV and an agent has no browser; not OAuth, because there is one caller
+ * class and one owner, and an authorization-code dance with nobody to click "allow" is theatre.
  *
- * The token is the whole boundary, so it is compared in constant time and it is
- * never echoed, logged, or included in an error.
- *
- * The comparison and the caller label moved to `~/lib/bearer.server` on
- * 2026-08-24 when the SMOKE credential became the second static bearer here.
- * Both bodies went across verbatim; see that file for why a second copy of a
- * constant-time compare is the expensive kind of duplication.
+ * The token is the whole boundary, so it is compared in constant time and it is never echoed, logged
+ * or included in an error. The comparison and the caller label live in `~/lib/bearer.server`.
  */
 
 import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
@@ -58,25 +52,15 @@ export async function authenticateOperator(
   const presented = /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] ?? "";
 
   /*
-   * REFUSED BEFORE THE HASH, on length alone, above twice the real token.
+   * REFUSED BEFORE THE HASH, on length alone, above twice the real token. `constantTimeEqual` hashes
+   * BOTH operands, so hashing the input is work an unauthenticated caller can ask for in any quantity,
+   * before anything has checked who is asking.
    *
-   * `constantTimeEqual` hashes BOTH operands so that comparison time does not
-   * depend on where they diverge. That is the right shape and it has one cost:
-   * the input side is whatever the caller sent, so hashing it is work an
-   * unauthenticated caller can ask for in any quantity. A megabyte of bearer
-   * token is a megabyte of SHA-256 per request, before anything has checked
-   * who is asking.
+   * TWICE, NOT EQUAL, deliberately: an exact-length gate would be an oracle for the token's length, one
+   * request at a time.
    *
-   * TWICE, NOT EQUAL, deliberately. An exact-length gate would turn this into
-   * an oracle for the token's length, one request at a time. At twice the
-   * length the only thing a caller learns is that the real token is shorter
-   * than half of what they sent, which no attack needs, and everything past
-   * that bound is refused for free.
-   *
-   * The constant-time property is UNCHANGED for every candidate that could
-   * possibly be right: anything inside the bound still goes through the same
-   * hash-and-compare, so a missing header and a wrong token of plausible
-   * length still take the same path and the same time.
+   * The constant-time property is UNCHANGED for every candidate that could possibly be right, since
+   * anything inside the bound still goes through the same hash-and-compare.
    */
   if (presented.length > configured.length * 2) {
     return { ok: false, status: 401, error: "Invalid or missing bearer token." };
@@ -97,22 +81,13 @@ export async function authenticateOperator(
 /**
  * Spends one unit of the caller's rate limit.
  *
- * ## SPLIT OUT OF `authenticateOperator` on 2026-08-28
+ * SEPARATE FROM `authenticateOperator`, because the two questions are: "who is this" is cheap and
+ * always asked, "may they spend one" is a Durable Object call asked only where something is spent.
+ * Metering inside authentication meant the DESCRIBE call spent budget, halving a client's publish
+ * allowance if it read the description first.
  *
- * Metering ran unconditionally inside authentication, so every request that
- * proved who it was also spent budget, including `GET /api/operator`, which is
- * the DESCRIBE call: it takes no arguments, changes nothing, and exists so a
- * client can discover the surface. A client that reads the description before
- * each publish therefore halved its own publish allowance, and a client that
- * polled the description could exhaust it without ever writing anything.
- *
- * The two questions are separate and now the code says so: "who is this" is
- * cheap and always asked, "may they spend one" is a Durable Object call and is
- * asked only where something is spent.
- *
- * THE ORDER IS UNCHANGED where both run. Authenticate first, then meter, so
- * the limiter is keyed to a proven identity and an unauthenticated flood
- * cannot exhaust a real operator's budget or reach a Durable Object at all.
+ * THE ORDER IS UNCHANGED where both run: authenticate, then meter, so the limiter is keyed to a proven
+ * identity and an unauthenticated flood cannot reach a Durable Object at all.
  *
  * @param env @param id the authenticated operator label
  */

@@ -7,23 +7,17 @@ import { placeholderFor } from "./core.server";
 /**
  * Re-derives the media index from the things that are actually true.
  *
- * **The rule this whole module exists to obey:** hash, mime, bytes, dimensions
- * and the placeholder are RECOMPUTABLE from the object. `alt`, `caption`,
- * `focal_x` and `focal_y` are AUTHORED and recoverable from NOTHING. They are
- * the only media data in this system that can be permanently lost, so a rebuild
- * re-derives the first set and preserves the second. That is why this walks
- * through `upsertDerivedMedia`, whose conflict clause names the derived columns
- * explicitly, and never through a delete-then-insert.
+ * THE RULE THIS MODULE EXISTS TO OBEY: hash, mime, bytes, dimensions and the placeholder are
+ * RECOMPUTABLE from the object. `alt`, `caption`, `focal_x` and `focal_y` are AUTHORED and
+ * recoverable from NOTHING. So a rebuild re-derives the first set and preserves the second, which is
+ * why it walks through `upsertDerivedMedia` and never through a delete-then-insert.
  *
- * **The conflict rule, one direction only: R2 WINS.** A row whose object has
- * disappeared is deleted. An object with no row is indexed. An object is never
- * deleted because a row said so, and this module has no code path that could:
- * it does not import `deleteMediaObject` and takes no bucket-write of any kind.
+ * THE CONFLICT RULE, ONE DIRECTION ONLY: R2 WINS. A row whose object has disappeared is deleted, an
+ * object with no row is indexed, and an object is never deleted because a row said so. This module
+ * has no code path that could: it imports no delete and takes no bucket-write of any kind.
  *
- * Both sources are enumerated exhaustively before anything is written, because a
- * partial listing would make every absent key look like a deletion. That is the
- * failure this repo has already shipped once, when `items.list()` returned one
- * page and a prune reported "removed 0" for items that were real.
+ * BOTH SOURCES ARE ENUMERATED EXHAUSTIVELY BEFORE ANYTHING IS WRITTEN, because a partial listing
+ * would make every absent key look like a deletion.
  */
 
 export type RebuildReport = {
@@ -54,33 +48,23 @@ export type MediaSource = { key: string; size: number; uploaded: string };
 /**
  * EVERY ASSET THAT ACTUALLY EXISTS: both buckets, plus the static manifest.
  *
- * Extracted from `rebuildMediaIndex` on 2026-08-24 so that the rebuild and the
- * reconciliation below CANNOT disagree about what the sources are. Before this
- * there was one enumeration, inside the rebuild, and any verdict about whether
- * the rebuild worked had to re-derive the same set by different code. Two
- * enumerations of the same thing is two answers to "what exists", and the one
- * used to grade the other would have been the one nobody checked.
+ * Extracted so the rebuild and the reconciliation CANNOT disagree about what the sources are. Two
+ * enumerations of the same thing are two answers to "what exists", and the one used to grade the
+ * other would be the one nobody checked. Rule 18: the bucket and the repository are the SOURCES, the
+ * index is the projection, and this function is that sentence in code.
  *
- * Rule 18: the bucket and the repository are the SOURCES; the index is the
- * projection. This function is that sentence in code, and it is why the verdict
- * cannot be supplied by a caller.
+ * EXHAUSTIVE, TO THE END OF THE CURSOR. A partial listing makes every absent key look like a
+ * deletion, so a truncated page with no cursor throws rather than being mistaken for the whole
+ * bucket.
  *
- * EXHAUSTIVE, to the end of the cursor. A partial listing makes every absent key
- * look like a deletion, which this repo has already shipped once when
- * `items.list()` returned one page and a prune reported "removed 0" for items
- * that were real. The throw on a truncated page with no cursor is what stops a
- * half-read listing being mistaken for the whole bucket.
+ * Two buckets, split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a command can regenerate.
+ * Both are indexed, because an asset that existed and appeared nowhere is the invisible-object
+ * problem the index exists to end.
  *
- * Two buckets, split on LIFECYCLE: MEDIA is irreplaceable, OG holds cards a
- * command can regenerate. Both are indexed, because the index describes every
- * asset the site has and an OG card that existed but appeared nowhere would be
- * exactly the invisible-object problem the index exists to end.
- *
- * The static half comes from the committed manifest because a Worker CANNOT
- * list its own static assets: the assets binding has exactly one method,
- * `fetch()`, so it can serve any path it is given and discover none of them.
- * `build:assets` walks public/ and commits the list; `check:media` compares that
- * list against the filesystem so a stale one is named as stale.
+ * The static half comes from the committed manifest because A WORKER CANNOT LIST ITS OWN STATIC
+ * ASSETS: the assets binding has exactly one method, `fetch()`. What keeps that list honest is
+ * `build:assets`, which writes it from `public/`, and `check:media`, which compares it against the
+ * filesystem so a stale manifest is named as stale.
  */
 async function enumerateMediaSources(
   env: Env,
@@ -119,24 +103,14 @@ async function enumerateMediaSources(
 }
 
 /**
- * WHAT THE INDEX WOULD HAVE TO HOLD, AGAINST WHAT IT HOLDS.
+ * WHAT THE INDEX WOULD HAVE TO HOLD, AGAINST WHAT IT HOLDS. `expected` comes from the SOURCES and
+ * `present` from the index, both read AFTER any write, so a caller cannot be told a sync succeeded
+ * by an operation that merely ran: a loop over a wrongly enumerated set reports a healthy `indexed`
+ * and leaves the index short.
  *
- * The read-back verdict for a media sync, on exactly the footing
- * `askIndexStatus` has for the answer index: `expected` comes from the SOURCES
- * and `present` from the index, both read AFTER any write, so a caller cannot
- * be told a sync succeeded by an operation that merely ran.
- *
- * `rebuildMediaIndex` returns `indexed` and `removed`, which are what its loop
- * THINKS it wrote. Those are useful for a human and are not evidence: a loop
- * that ran cleanly over a set it enumerated wrongly reports a healthy `indexed`
- * and leaves the index short, and only this comparison can tell.
- *
- * BOTH DIRECTIONS, and `missing` and `extra` are not symmetric in what they
- * mean. A missing key is an asset the site has and the index cannot describe.
- * An extra key is a row for something that no longer exists, which is how a
- * deleted object keeps appearing in the library. Both are drift; neither is
- * allowed to average out against the other, which is why `drift` is computed
- * from their SUM and not from the difference of the two totals.
+ * BOTH DIRECTIONS, and the two are not symmetric. A missing key is an asset the site has and the
+ * index cannot describe; an extra key is a row for something that no longer exists. Neither is
+ * allowed to average out against the other, which is why `drift` is their SUM.
  */
 export async function mediaIndexStatus(env: Env): Promise<{
   expected: number;
@@ -174,9 +148,8 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
   for (const object of objects) {
     try {
       const { kind, mime } = classify(object.key);
-      // An OG card lives in the OG bucket now, so the read has to follow the
-      // key rather than assume MEDIA. This was the third inline copy of that
-      // expression; it is one shared function since 2026-08-04.
+      // An OG card lives in the OG bucket, so the read has to follow the key rather than assume MEDIA.
+      // One shared function, never a fourth inline copy of that expression.
       const bucket = bucketFor(env, object.key);
       // Two separate GETs, because a body is a stream and can only be read once.
       // `.info()` and the transform each consume one.
@@ -188,11 +161,9 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
         : null;
 
-      // The filename, re-derived from the OBJECT rather than preserved by luck.
-      // This is what makes `original_name` recomputable and therefore honestly
-      // a derived column: before the name rode in custom metadata, a rebuild
-      // could only keep whatever D1 already had, and a row that never got one
-      // could never acquire it.
+      // The filename, re-derived from the OBJECT rather than preserved by luck. This is what makes
+      // `original_name` honestly a derived column: before the name rode in custom metadata, a row that
+      // never got one could never acquire it.
       const named = await bucket.head(object.key);
 
       await upsertDerivedMedia(env, {
@@ -218,9 +189,8 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
   for (const path of files) {
     try {
       const { kind, mime } = classify(path);
-      // The hostname is ignored; only the pathname is matched. Verified
-      // 2026-08-02, which is what makes the static tier first-class rather than
-      // a second-class listing with no transforms.
+      // The hostname is ignored and only the pathname is matched, which is what makes the static tier
+      // first-class rather than a listing with no transforms.
       const response = await env.ASSETS.fetch(new Request(`https://assets.local${path}`));
       if (!response.ok) {
         failures.push(`${path}: ASSETS returned ${response.status}`);
@@ -246,9 +216,8 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         width: dimensions?.width ?? null,
         height: dimensions?.height ?? null,
         placeholder,
-        // A static asset has no upload event. Its mtime is a property of the
-        // build machine, not of the asset, so recording one would be inventing
-        // a fact. Null is the honest value.
+        // A static asset has no upload event. Its mtime is a property of the build machine rather than of
+        // the asset, so recording one would be inventing a fact.
         uploadedAt: null,
       });
       indexed += 1;
@@ -257,10 +226,9 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
     }
   }
 
-  // ---- 5. Remove rows whose source is gone. R2 and public/ win. -----------
-  // Deliberately last, and deliberately computed from the SAME enumerations that
-  // were just written from. Anything that failed above is still in `live` only
-  // if it was indexed, so a transient read failure cannot cause a deletion.
+  // Remove rows whose source is gone. R2 and `public/` win. Deliberately LAST, and computed from the
+  // SAME enumerations that were just written from, so a transient read failure cannot cause a
+  // deletion.
   const live = new Set<string>([...objects.map((o) => o.key), ...files]);
   const rows = await listMediaRecords(env);
   let removed = 0;

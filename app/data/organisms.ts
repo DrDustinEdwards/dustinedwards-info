@@ -1,32 +1,18 @@
 /**
  * Organism names to italicize when rendering publication titles and abstracts.
  *
- * A reviewed allowlist, not a pattern. Matching on "Capitalized lowercase"
- * pairs would italicize Rio Grande, Cancer Handbook, Phage Therapy and dozens
- * of ordinary sentence openings, so every entry here was read in context first.
- * Derived by auditing the stored titles and abstracts, not from memory.
+ * A REVIEWED ALLOWLIST, NOT A PATTERN. Matching "Capitalized lowercase" pairs would italicize Rio
+ * Grande, Cancer Handbook and dozens of ordinary sentence openings, so every entry was read in
+ * context first.
  *
- * Order matters: longest first. The matcher takes the first alternative that
- * fits, so "Meleagris gallopavo intermedia" has to precede "Meleagris
- * gallopavo" or the subspecies epithet is left upright.
+ * ORDER MATTERS: longest first, because the matcher takes the first alternative that fits, or a
+ * subspecies epithet is left upright. Case sensitive, so the genus capital is required, which keeps
+ * the bare genus from colliding with ordinary prose.
  *
- * Matching is case sensitive, so the genus capital is required. That is what
- * keeps the bare genus "Mycobacterium" from colliding with ordinary prose.
- *
- * Deliberately NOT included:
- *
- * - Virus agent names: reticuloendotheliosis virus, fowlpox virus,
- *   lymphoproliferative disease virus, human T-cell leukemia virus. ICTV
- *   italicizes formal taxa, not vernacular agent names, and these titles use
- *   the agent form throughout.
- * - Phage isolate names: Arlo, Fizzles, Finny, Loca, Godfather, Ryadel,
- *   Zeuska, Tripl3t, IndyLu, MrAaronian, Joy99, Didgeridoo, Quaker, Squash.
- *   Those are strain names, which stay upright.
- * - "Rhesus macaques", a common name rather than a binomial, and "Rho family",
- *   which is a protein family.
- * - "Siphoviridae", which appears 3 times. It is a formal ICTV family-rank
- *   taxon rather than an agent name, so it arguably belongs here, but that is
- *   a judgement call left open rather than made silently.
+ * Deliberately NOT included: virus AGENT names, because ICTV italicizes formal taxa rather than
+ * vernacular agent names; PHAGE ISOLATE names, which are strain names; common names and protein
+ * families; and "Siphoviridae", a formal family-rank taxon that arguably belongs here, left open
+ * rather than decided silently.
  */
 
 export const ORGANISMS: readonly string[] = [

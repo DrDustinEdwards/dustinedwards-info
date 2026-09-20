@@ -1,20 +1,9 @@
 /**
  * Minimal readers for the two binary container formats the icon suite ships.
  *
- * Hand-rolled on purpose. The repo carries `image-size`, which answers
- * dimensions and nothing else, and `@resvg/resvg-js`, which ENCODES PNG and
- * cannot decode one. Nothing here needs a decoder in the general sense: the
- * gate asks for a header and for one corner pixel, and both are reachable
- * without decompressing an image.
- *
- * Every function throws rather than returning a sentinel. A gate that receives
- * `null` from a parser and carries on is a gate that passes on a file it could
- * not read, which is the failure mode that looks most like success.
- *
- * These readers are SELF-TESTED by check:logo against files produced by a third
- * party encoder, not against fixtures built with the same assumptions the reader
- * makes. A parser and its test agreeing about a format both got wrong is not
- * evidence.
+ * BOUNDARY: not a decoder in the general sense. The gate asks for a header and one corner pixel,
+ * both reachable without decompressing an image, and every function throws rather than returning a
+ * sentinel, because a gate that carries on past a null passes on a file it could not read.
  */
 
 import { inflateSync } from "node:zlib";
@@ -83,21 +72,11 @@ export function readPngChunks(buf) {
 /**
  * The colour of pixel (0, 0), as an uppercase #RRGGBB string.
  *
- * WHY ONLY THE FIRST PIXEL, and why that is exact rather than approximate.
- * A PNG scanline is filtered against its left neighbour and the row above it,
- * so reading an arbitrary pixel means reconstructing every row before it. The
- * FIRST pixel of the FIRST row has neither: there is no prior row and no left
- * neighbour, so all five filter types collapse to the identity there.
- *
- *   None     x
- *   Sub      x + left(0)              = x
- *   Up       x + above(0)             = x
- *   Average  x + floor((0 + 0) / 2)   = x
- *   Paeth    x + Paeth(0, 0, 0) = x + 0
- *
- * So one inflate and three bytes answer it, with no unfiltering loop to get
- * wrong. This is a deliberate limit, not an unfinished decoder: callers that
- * need an interior pixel need a real decoder and should say so.
+ * WHY ONLY THE FIRST PIXEL, and why it is exact rather than approximate. A PNG scanline is
+ * filtered against its left neighbour and the row above, so an arbitrary pixel means
+ * reconstructing every row before it. The FIRST pixel of the FIRST row has neither, so all five
+ * filter types collapse to the identity there and one inflate answers it with no unfiltering loop
+ * to get wrong. A deliberate limit, not an unfinished decoder.
  *
  * @param {Buffer} buf
  */

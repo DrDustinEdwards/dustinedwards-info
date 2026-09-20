@@ -5,32 +5,14 @@ import { useNavigate } from "react-router";
  * THE DRAWER'S KEYBOARD CONTRACT: Escape closes it, Tab stays inside it, and
  * focus goes back to the tile that opened it.
  *
- * ## THE PANEL ITSELF NEEDS NO SCRIPT
+ * THE PANEL ITSELF NEEDS NO SCRIPT: it is server-rendered whenever `?key=` is
+ * present, the scrim is a real link, and every control is a form. This component
+ * adds the three things a modal surface owes that HTML cannot express.
  *
- * It is server-rendered whenever `?key=` is present, the scrim is a real link
- * that closes it, and every control inside is a form. With scripting off the
- * drawer opens, works and closes. This component adds the three things a modal
- * surface owes that HTML cannot express on its own.
- *
- * ## WHY A FOCUS TRAP AT ALL
- *
- * The drawer covers the page behind a scrim. Tabbing out of it lands on
- * controls the reader cannot see and cannot reach with a pointer, which is the
- * failure mode that makes an overlay unusable rather than merely awkward. The
- * trap is what makes the scrim honest.
- *
- * ## FOCUS RETURN WITHOUT REMEMBERING ANYTHING
- *
- * The obvious implementation stores `document.activeElement` before opening and
- * restores it after. That does not survive a navigation, and opening this
- * drawer IS a navigation: the URL gains `?key=`, React Router re-renders, and
- * the element reference from before may be a different node.
- *
- * So focus return is DERIVED instead. The drawer knows which key it is showing,
- * every tile carries `data-tile="<key>"`, and closing scrolls that tile into
- * view and focuses its link. It is more reliable than a stored reference and it
- * also works when the drawer was opened from the URL rather than from a click,
- * where there is no trigger to remember.
+ * FOCUS RETURN IS DERIVED, not stored. Opening this drawer IS a navigation, so a
+ * remembered `activeElement` may be a different node; the drawer knows which key
+ * it shows and every tile carries `data-tile`. That also works when the drawer was
+ * opened from the URL, where there is no trigger to remember.
  */
 export function MediaDrawer({
   activeKey,
@@ -58,21 +40,17 @@ export function MediaDrawer({
       ].filter((n) => n.offsetParent !== null || getComputedStyle(n).position === "fixed");
 
     /*
-     * FOCUS MOVES IN ON OPEN, and to the panel rather than to its first control.
-     *
-     * The first control is the Close link, and focusing it makes a screen reader
-     * announce "Close" as the whole of what just happened. The panel carries the
-     * dialog role and its label, so focusing the container announces what opened
-     * and leaves Tab to reach the controls in order.
+     * FOCUS MOVES IN ON OPEN, and to the panel rather than its first control:
+     * focusing Close makes a screen reader announce "Close" as the whole of what just
+     * happened, where the panel carries the dialog role and its label.
      */
     const previous = document.activeElement as HTMLElement | null;
     el.focus({ preventScroll: true });
 
     const close = () => {
       navigate(closeHref, { preventScrollReset: true });
-      // After the transition, hand focus back to the tile that owns this key.
-      // Deferred twice: once for React to commit, once for layout to settle,
-      // because a tile inside a scroller is not focusable until it has a box.
+      // Deferred twice: once for React to commit, once for layout to settle, because a
+      // tile inside a scroller is not focusable until it has a box.
       window.setTimeout(() => {
         const tile = document.querySelector<HTMLElement>(
           `[data-tile="${CSS.escape(activeKey)}"] a.media-thumb-link`,
@@ -81,9 +59,9 @@ export function MediaDrawer({
           tile.focus({ preventScroll: false });
           return;
         }
-        // The tile may not be on this page: the drawer is reachable by URL and
-        // the row it names can be on any page or none. Falling back to the
-        // previously focused element beats collapsing focus to <body>.
+        // The tile may not be on this page: the drawer is reachable by URL and the row it
+        // names can be on any page or none. Falling back to the previously focused element
+        // beats collapsing focus to `<body>`.
         if (previous && previous.isConnected && previous !== document.body) previous.focus();
       }, 0);
     };
@@ -91,9 +69,9 @@ export function MediaDrawer({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        // STOP HERE. Escape inside the drawer means close the drawer, and
-        // nothing else on the page may also act on it, or one press would close
-        // the drawer AND clear the selection behind it.
+        // STOP HERE. Escape inside the drawer means close the drawer, and nothing else
+        // may also act on it, or one press would close the drawer AND clear the selection
+        // behind it.
         event.stopPropagation();
         close();
         return;

@@ -1,12 +1,4 @@
-/*
- * The generic public page frame, plus the footer's login link and the error-boundary stack.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 .page {
   padding: 2rem;
@@ -17,9 +9,9 @@
   margin: 0 auto;
 }
 
-/* The error boundary's DEV-ONLY stack. Deliberately not `.prose pre`: this is
-   diagnostic output, not writing, and `overflow-x: auto` is what stops a long
-   frame widening the document the way the header used to. */
+/* The error boundary's dev-only stack. Not `.prose pre`: this is diagnostic
+   output, not writing. `overflow-x: auto` stops a long frame widening the
+   document. */
 .error-stack {
   max-width: 100%;
   overflow-x: auto;
@@ -47,78 +39,5 @@
   line-height: 1.6;
 }
 
-/* Public footer. Brand surface with the header, per v4: the ruling names the
-   header, the footer, and the nav they carry as one chrome, so a purple header
-   over a canvas-coloured footer would be half an amendment. */
-.site-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 4rem;
-  /* Moves WITH the header. A footer left at 2rem would have put the public
-     plane's two horizontal rules at different insets, which is the site
-     disagreeing with itself about where its own edge is. */
-  padding: 1rem var(--site-inset);
-  background: var(--surface-chrome);
-  border-top: 1px solid var(--border-strong);
-  color: var(--on-chrome);
-  font-size: 0.8125rem;
-}
-
-.site-footer p {
-  margin: 0;
-}
-
-/* The copyright line carries `.muted`, which is --text-muted at (0,1,0) and
-   olive on purple. (0,2,0) repoints it at the chrome's own muted value. */
-.site-footer .muted {
-  color: var(--on-chrome-muted);
-}
-
-/* v4: the colophon links and Login are chrome nav. Same treatment as the header
-   nav, including the explicit :visited. Login keeps its quieter role by SIZE and
-   position, which is what the component comment says carries it, not by being
-   the only muted thing on the row.
-   Specificity: `.footer-colophon a:visited` is (0,2,1) and `.footer-login:visited`
-   is (0,2,0); the base `a:visited` is (0,1,1). Both win. */
-.footer-colophon a,
-.footer-colophon a:visited,
-.footer-login,
-.footer-login:visited {
-  color: var(--on-chrome-muted);
-}
-
-.footer-colophon a:hover,
-.footer-login:hover {
-  color: var(--on-chrome);
-}
-
-.footer-login {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-/*
- * WCAG 2.2 2.5.8 for the footer, same measurement and same repair as the
- * pagination links: bare inline anchors whose box is their line box, which
- * lands a pixel under the 24px floor.
- *
- * Scoped to the footer's own links rather than to every anchor on the site,
- * because the exception this does NOT take is real: a link inside a sentence
- * of prose is exempt, and applying a min-height there would change the leading
- * of every paragraph on the site to fix a criterion it already satisfies.
- */
-.site-footer a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-}
-
-/* Admin cockpit shell */
-/* The shell owns the viewport, so the editor can own one scroll context inside
-   it. Before this the page grew and the browser scrolled it; the editor needs
-   a command bar that stays put and a canvas that scrolls under it, and a
-   document that also scrolls behind both is the double-scroll the spec forbids.
-   Ordinary pages are unaffected: .admin-content scrolls instead of the body. */
+/* The shell owns the viewport so the editor owns one scroll context; a scrolling body behind it would be
+   the forbidden double scroll. Other pages scroll .admin-content instead. */

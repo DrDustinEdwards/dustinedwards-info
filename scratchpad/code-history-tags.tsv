@@ -1,0 +1,2014 @@
+file	line	bytes	tag	action	reason
+scripts/check-browser.mjs	1	64	CONTRACT	keep	tool directive; kept
+scripts/check-browser.mjs	3	5553	CONTRACT	rewrite	usage and observation boundary kept; audit story, tool choice and dev-server measurement moved
+scripts/check-browser.mjs	110	156	WHY	rewrite	trimmed
+scripts/check-browser.mjs	116	317	WHY	rewrite	trimmed
+scripts/check-browser.mjs	135	648	WHY	rewrite	placement reason kept; 2026-09-03 measurement moved
+scripts/check-browser.mjs	150	762	WHY	rewrite	purpose and gitignore reason kept; 2026-08-31 measurement moved
+scripts/check-browser.mjs	166	945	CONTRACT	rewrite	two modes kept; narrative moved
+scripts/check-browser.mjs	185	59	WHY	keep	already one line
+scripts/check-browser.mjs	189	2730	WHY	rewrite	no-fake prohibition and cookie-name trap kept; three-session and 2026-08-21 story moved
+scripts/check-browser.mjs	241	446	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	254	49	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	270	638	CONTRACT	rewrite	never-print-values rule kept
+scripts/check-browser.mjs	289	581	WHY	rewrite	ordering reason kept; plant story moved
+scripts/check-browser.mjs	310	73	WHY	keep	already one line
+scripts/check-browser.mjs	325	753	WHY	rewrite	redaction reason kept; plant story moved
+scripts/check-browser.mjs	339	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	362	361	WHY	rewrite	trimmed
+scripts/check-browser.mjs	375	623	WHY	rewrite	trimmed
+scripts/check-browser.mjs	390	1452	CONTRACT	rewrite	states and never-print kept; dated narrative moved
+scripts/check-browser.mjs	419	85	WHY	keep	already one line
+scripts/check-browser.mjs	439	77	WHY	keep	already one line
+scripts/check-browser.mjs	442	380	WHY	rewrite	trimmed
+scripts/check-browser.mjs	455	709	WHY	rewrite	jar-over-header reason kept; navigation counts moved
+scripts/check-browser.mjs	482	639	WHY	rewrite	trimmed; counts moved
+scripts/check-browser.mjs	499	159	CONTRACT	keep	already short
+scripts/check-browser.mjs	510	413	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	531	464	WHY	rewrite	trimmed
+scripts/check-browser.mjs	545	107	CONTRACT	keep	already short
+scripts/check-browser.mjs	579	404	WHY	rewrite	trimmed
+scripts/check-browser.mjs	589	216	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	597	80	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	606	897	CONTRACT	rewrite	fail-soft reason kept; 2026-09-14 rename incident moved
+scripts/check-browser.mjs	640	48	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	646	369	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	660	78	CONTRACT	keep	section divider
+scripts/check-browser.mjs	664	767	WHY	rewrite	reporting and never-kill-a-stranger rules kept
+scripts/check-browser.mjs	688	2428	WHY	rewrite	kill-only-on-needle rule kept; 2026-09-03 measurements and strictPort story moved
+scripts/check-browser.mjs	735	228	WHY	rewrite	trimmed to one line
+scripts/check-browser.mjs	743	49	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	772	487	WHY	rewrite	trimmed
+scripts/check-browser.mjs	799	540	WHY	rewrite	trimmed; 2026-08-31 measurement moved
+scripts/check-browser.mjs	811	299	WHY	rewrite	trimmed; timing moved
+scripts/check-browser.mjs	820	231	WHY	rewrite	trimmed
+scripts/check-browser.mjs	832	215	WHY	rewrite	trimmed
+scripts/check-browser.mjs	851	216	WHY	rewrite	trimmed
+scripts/check-browser.mjs	857	1704	WHY	rewrite	purpose and hand-written reason kept; item H2 narrative moved
+scripts/check-browser.mjs	891	80	CONTRACT	keep	already one line
+scripts/check-browser.mjs	893	72	WHY	keep	already one line
+scripts/check-browser.mjs	895	80	CONTRACT	keep	already one line
+scripts/check-browser.mjs	898	82	NUMBER	keep	asserted by the seed count check
+scripts/check-browser.mjs	902	210	WHY	rewrite	trimmed
+scripts/check-browser.mjs	921	772	WHY	rewrite	trap kept; learning story moved
+scripts/check-browser.mjs	949	2127	WHY	rewrite	preview-door reason, hard rule 7 and --file reason kept; narrative moved
+scripts/check-browser.mjs	991	388	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1000	82	WHY	keep	already one line
+scripts/check-browser.mjs	1003	79	WHY	keep	already one line
+scripts/check-browser.mjs	1010	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1012	234	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1034	65	WHY	keep	already one line
+scripts/check-browser.mjs	1035	22	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1077	338	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1105	699	WHY	rewrite	purpose kept; 2026-08-24 story moved
+scripts/check-browser.mjs	1118	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1121	29	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1131	876	WHY	rewrite	trap kept; 2026-09-03 measurement moved
+scripts/check-browser.mjs	1159	709	WHY	rewrite	trimmed; 2026-08-31 measurement moved
+scripts/check-browser.mjs	1175	452	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1185	68	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1190	3321	WHY	rewrite	bound reasoning kept; dated samples and corrections moved
+scripts/check-browser.mjs	1247	82	WHY	keep	already one line
+scripts/check-browser.mjs	1248	28	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1249	975	WHY	rewrite	purpose kept; 2026-09-14 ruling narrative moved
+scripts/check-browser.mjs	1266	48	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1269	73	WHY	keep	already one line
+scripts/check-browser.mjs	1275	557	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1300	1626	WHY	rewrite	reason kept; 2026-09-06 measurement moved
+scripts/check-browser.mjs	1342	169	WHY	rewrite	trimmed to one line
+scripts/check-browser.mjs	1347	369	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	1355	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1364	153	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1378	295	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	1386	277	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1407	212	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1435	737	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	1449	625	WHY	rewrite	trimmed; duplicate-count incident moved
+scripts/check-browser.mjs	1476	261	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1489	659	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	1510	185	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1516	368	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1526	573	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1538	31	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1551	76	WHY	keep	already one line
+scripts/check-browser.mjs	1557	667	WHY	rewrite	trap kept; plant measurement moved
+scripts/check-browser.mjs	1575	386	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1586	345	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1599	77	CONTRACT	keep	section divider
+scripts/check-browser.mjs	1601	316	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1618	2058	WHY	rewrite	intent kept; re-measurement history and counts moved
+scripts/check-browser.mjs	1663	76	CONTRACT	keep	section divider
+scripts/check-browser.mjs	1665	1611	WHY	rewrite	prime and cache-bust reasons kept; 2026-08-26 timings moved
+scripts/check-browser.mjs	1697	104	CONTRACT	keep	already short
+scripts/check-browser.mjs	1714	200	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1720	556	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	1733	2692	WHY	rewrite	discrimination and poll reasons kept; plant and 2026-08-28 story moved
+scripts/check-browser.mjs	1789	305	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1799	72	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	1838	242	WHY	rewrite	trimmed
+scripts/check-browser.mjs	1877	701	WHY	rewrite	trap kept; incident moved
+scripts/check-browser.mjs	1893	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	1895	1890	WHY	rewrite	cache-key precondition and run-mode limits kept; measurements moved
+scripts/check-browser.mjs	1930	232	CONTRACT	rewrite	short; subject set bound to source
+scripts/check-browser.mjs	1945	362	WHY	rewrite	tag choice kept, shortened
+scripts/check-browser.mjs	1953	399	HISTORY	delete	efc0dab drift narrative
+scripts/check-browser.mjs	1962	408	WHY	rewrite	canonical slash kept, shortened
+scripts/check-browser.mjs	1972	772	WHY	rewrite	exemption reason kept; tutorial cut
+scripts/check-browser.mjs	1997	228	WHY	rewrite	comment-stripping trap kept, shortened
+scripts/check-browser.mjs	2003	1930	WHY	rewrite	exemption grounds kept; dated join history moved
+scripts/check-browser.mjs	2062	845	CONTRACT	rewrite	mask intent kept; measurement moved
+scripts/check-browser.mjs	2084	1986	WHY	rewrite	why here and not maskTheme kept; incident moved
+scripts/check-browser.mjs	2121	66	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2131	60	CONTRACT	keep	already short
+scripts/check-browser.mjs	2132	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2132	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2140	238	CONTRACT	rewrite	enumeration intent kept, shortened
+scripts/check-browser.mjs	2145	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2148	474	WHY	rewrite	why the meta is masked kept; date moved
+scripts/check-browser.mjs	2157	770	HISTORY	delete	aria-pressed removal narrative
+scripts/check-browser.mjs	2171	723	WHY	rewrite	hard rule 8 citation kept; reasoning shortened
+scripts/check-browser.mjs	2186	315	WHY	rewrite	shortened
+scripts/check-browser.mjs	2193	75	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	2195	753	WHY	rewrite	3.2.6 order requirement kept, shortened
+scripts/check-browser.mjs	2249	281	WHY	rewrite	shortened
+scripts/check-browser.mjs	2263	688	WHY	rewrite	same-document and scope-first kept
+scripts/check-browser.mjs	2301	173	WHY	keep	already short
+scripts/check-browser.mjs	2349	77	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	2351	1853	WHY	rewrite	why skipped kept; port history moved
+scripts/check-browser.mjs	2392	77	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	2394	988	WHY	rewrite	scope limit kept; incident moved
+scripts/check-browser.mjs	2442	311	WHY	rewrite	shortened
+scripts/check-browser.mjs	2458	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	2460	3020	WHY	rewrite	cause and why-not-pixels kept; measurements moved
+scripts/check-browser.mjs	2518	383	CONTRACT	rewrite	why both-values kept, shortened
+scripts/check-browser.mjs	2529	271	WHY	rewrite	legacy cookie kept; date moved
+scripts/check-browser.mjs	2538	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2540	53	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2559	465	WHY	rewrite	position rationale kept, shortened
+scripts/check-browser.mjs	2580	360	WHY	rewrite	rule 17 pairing kept, shortened
+scripts/check-browser.mjs	2608	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	2610	1879	WHY	rewrite	cause and two-half assertion kept; measurements moved
+scripts/check-browser.mjs	2649	585	WHY	rewrite	binding choice kept; first-version story moved
+scripts/check-browser.mjs	2660	62	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2664	58	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2671	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2678	1200	WHY	rewrite	trap kept; attempt narrative moved
+scripts/check-browser.mjs	2702	628	WHY	rewrite	breakpoint trap kept; incident moved
+scripts/check-browser.mjs	2725	547	HISTORY	delete	hover rationale narrative
+scripts/check-browser.mjs	2734	1555	WHY	rewrite	zero-box trap and fallback kept; defect report moved
+scripts/check-browser.mjs	2762	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2784	66	WHY	keep	already short
+scripts/check-browser.mjs	2820	76	WHY	keep	already short
+scripts/check-browser.mjs	2853	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	2855	2315	WHY	rewrite	never assert activation kept; measurements moved
+scripts/check-browser.mjs	2897	160	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2907	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2910	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2927	132	WHY	keep	already short
+scripts/check-browser.mjs	2933	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2935	211	WHY	keep	already short
+scripts/check-browser.mjs	2938	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2958	32	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	2976	55	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3028	226	WHY	rewrite	shortened
+scripts/check-browser.mjs	3033	55	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3050	242	WHY	rewrite	shortened
+scripts/check-browser.mjs	3058	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3059	595	WHY	rewrite	stripComments trap kept; measurement moved
+scripts/check-browser.mjs	3079	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3088	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3109	887	WHY	rewrite	reason kept; incident moved
+scripts/check-browser.mjs	3127	77	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3129	1839	WHY	rewrite	placement, throttle and null-observer kept; measurements moved
+scripts/check-browser.mjs	3171	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3176	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3184	74	WHY	keep	already short
+scripts/check-browser.mjs	3187	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3210	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3212	525	WHY	rewrite	alignment-not-literal kept; measurement moved
+scripts/check-browser.mjs	3223	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3249	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3251	309	WHY	rewrite	shortened
+scripts/check-browser.mjs	3276	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3278	288	WHY	rewrite	shortened
+scripts/check-browser.mjs	3311	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3313	562	WHY	rewrite	why every page and named element kept; measurement moved
+scripts/check-browser.mjs	3324	434	WHY	rewrite	shortened; date moved
+scripts/check-browser.mjs	3347	63	WHY	keep	already short
+scripts/check-browser.mjs	3363	79	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3365	1429	WHY	rewrite	paired control and hard rule 4 kept, shortened
+scripts/check-browser.mjs	3404	321	WHY	rewrite	shortened
+scripts/check-browser.mjs	3418	797	WHY	rewrite	hoisting trap kept; incident moved
+scripts/check-browser.mjs	3508	75	WHY	keep	already short
+scripts/check-browser.mjs	3531	975	WHY	rewrite	shortened
+scripts/check-browser.mjs	3555	599	WHY	rewrite	workaround kept; version measurement moved
+scripts/check-browser.mjs	3602	75	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3620	79	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3622	1352	WHY	rewrite	Hard rule 7 kept, shortened
+scripts/check-browser.mjs	3652	72	CONTRACT	keep	already short
+scripts/check-browser.mjs	3656	373	WHY	rewrite	shortened
+scripts/check-browser.mjs	3667	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3670	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3674	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3677	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3707	214	WHY	rewrite	shortened
+scripts/check-browser.mjs	3713	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3729	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3736	359	WHY	rewrite	shortened
+scripts/check-browser.mjs	3751	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3753	392	WHY	rewrite	shortened
+scripts/check-browser.mjs	3784	331	WHY	rewrite	shortened
+scripts/check-browser.mjs	3803	252	WHY	rewrite	shortened
+scripts/check-browser.mjs	3815	28	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3822	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3840	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3842	1266	WHY	rewrite	rule 9 half, Ask exclusion and console check kept; date moved
+scripts/check-browser.mjs	3864	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3866	42	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3875	394	WHY	rewrite	shortened
+scripts/check-browser.mjs	3895	310	WHY	rewrite	shortened
+scripts/check-browser.mjs	3909	916	CONTRACT	rewrite	both directions kept; size history moved
+scripts/check-browser.mjs	3928	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3930	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	3961	68	WHY	keep	already short
+scripts/check-browser.mjs	3979	60	WHY	keep	already short
+scripts/check-browser.mjs	3992	78	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	3994	891	WHY	rewrite	why a browser gate and found-post kept; defect story moved
+scripts/check-browser.mjs	4031	64	WHY	keep	already short
+scripts/check-browser.mjs	4041	321	WHY	rewrite	shortened
+scripts/check-browser.mjs	4064	203	WHY	keep	already short
+scripts/check-browser.mjs	4078	165	WHY	keep	already short
+scripts/check-browser.mjs	4102	76	CONTRACT	rewrite	section marker shortened
+scripts/check-browser.mjs	4104	629	WHY	rewrite	observable limit kept; defect story moved
+scripts/check-browser.mjs	4154	462	WHY	rewrite	trap kept; narrative moved
+scripts/check-browser.mjs	4174	263	WHY	keep	already short
+scripts/check-browser.mjs	4180	424	WHY	rewrite	trap kept; plant story moved
+scripts/check-browser.mjs	4188	802	WHY	rewrite	shortened
+scripts/check-browser.mjs	4205	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4206	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4210	144	WHY	keep	already short
+scripts/check-browser.mjs	4213	22	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4218	622	WHY	rewrite	serialization trap kept; incident moved
+scripts/check-browser.mjs	4229	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4230	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4259	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4261	296	WHY	rewrite	shortened
+scripts/check-browser.mjs	4272	416	WHY	rewrite	shortened
+scripts/check-browser.mjs	4287	115	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4292	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4296	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4309	278	WHY	rewrite	shortened
+scripts/check-browser.mjs	4324	2051	WHY	rewrite	rule 9 fallback and fragment limit kept; history moved
+scripts/check-browser.mjs	4365	301	WHY	rewrite	trimmed
+scripts/check-browser.mjs	4377	26	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4393	864	WHY	rewrite	mechanism kept; crash incident moved
+scripts/check-browser.mjs	4430	359	WHY	rewrite	trimmed
+scripts/check-browser.mjs	4450	369	CONTRACT	rewrite	intent kept; retired-shortcut history moved
+scripts/check-browser.mjs	4457	528	WHY	rewrite	trap kept; date moved
+scripts/check-browser.mjs	4473	557	WHY	rewrite	mechanism kept; retired-key history moved
+scripts/check-browser.mjs	4484	325	WHY	rewrite	prohibition and hard rule citation kept; six-week story moved
+scripts/check-browser.mjs	4513	801	WHY	rewrite	mechanism kept; before-and-after story moved
+scripts/check-browser.mjs	4544	299	WHY	rewrite	trimmed; ruling history moved
+scripts/check-browser.mjs	4555	296	WHY	rewrite	trimmed
+scripts/check-browser.mjs	4570	219	WHY	keep	already short
+scripts/check-browser.mjs	4587	703	WHY	rewrite	mechanism kept
+scripts/check-browser.mjs	4600	819	WHY	rewrite	intent kept; 2026-09-13 incident moved
+scripts/check-browser.mjs	4618	446	WHY	rewrite	trap kept; incident moved
+scripts/check-browser.mjs	4638	145	WHY	keep	already short
+scripts/check-browser.mjs	4699	117	WHY	keep	already short
+scripts/check-browser.mjs	4710	137	WHY	rewrite	unasserted cold-query measurement moved
+scripts/check-browser.mjs	4732	1497	WHY	rewrite	both halves and the raw-comparison trap kept; narration cut
+scripts/check-browser.mjs	4760	1020	WHY	rewrite	mechanism and boundary kept; crawl history moved
+scripts/check-browser.mjs	4781	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4782	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4783	18	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	4798	569	WHY	rewrite	dated content measurement moved
+scripts/check-browser.mjs	4859	61	WHY	keep	already short
+scripts/check-browser.mjs	4878	816	WHY	rewrite	mechanism kept; before-state history moved
+scripts/check-browser.mjs	4945	238	WHY	keep	already short
+scripts/check-browser.mjs	4964	276	CONTRACT	rewrite	trimmed
+scripts/check-browser.mjs	5002	79	CONTRACT	rewrite	section header, capitals dropped
+scripts/check-browser.mjs	5004	820	WHY	rewrite	scope warning kept; outage story moved
+scripts/check-browser.mjs	5019	1219	CONTRACT	rewrite	three states kept; narration cut
+scripts/check-browser.mjs	5043	647	HISTORY	delete	vol 15 story and floor history; the ok() message states the refusal
+scripts/check-browser.mjs	5111	447	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5133	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	5138	23	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	5146	72	CONTRACT	keep	section header
+scripts/check-browser.mjs	5148	563	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5166	736	WHY	rewrite	scope reason kept; ruling 21 date moved
+scripts/check-browser.mjs	5198	72	CONTRACT	keep	section header
+scripts/check-browser.mjs	5200	981	WHY	rewrite	mechanism kept; split history moved
+scripts/check-browser.mjs	5217	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	5269	67	CONTRACT	rewrite	section header, capitals dropped
+scripts/check-browser.mjs	5301	78	CONTRACT	rewrite	section header; history word cut
+scripts/check-browser.mjs	5303	1383	WHY	rewrite	read-only prohibition kept; split story moved
+scripts/check-browser.mjs	5331	78	CONTRACT	keep	section header
+scripts/check-browser.mjs	5333	355	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5374	873	WHY	rewrite	trap kept; wrong-first-draft story moved
+scripts/check-browser.mjs	5402	326	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5422	78	CONTRACT	keep	section header
+scripts/check-browser.mjs	5424	253	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5483	78	CONTRACT	keep	section header
+scripts/check-browser.mjs	5485	600	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5515	121	WHY	keep	already short
+scripts/check-browser.mjs	5544	253	WHY	keep	already short
+scripts/check-browser.mjs	5564	78	CONTRACT	keep	section header
+scripts/check-browser.mjs	5566	1488	WHY	rewrite	prohibition and mechanism kept; sub-headings cut
+scripts/check-browser.mjs	5645	141	WHY	keep	already short
+scripts/check-browser.mjs	5659	38	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	5680	159	WHY	keep	already short
+scripts/check-browser.mjs	5688	77	CONTRACT	keep	section header
+scripts/check-browser.mjs	5690	4885	WHY	rewrite	sampling reason kept; measurements and repair narrative moved
+scripts/check-browser.mjs	5777	1336	WHY	rewrite	scope reason kept; dated re-read moved
+scripts/check-browser.mjs	5842	468	NUMBER	rewrite	widths appear in the list below; dates moved
+scripts/check-browser.mjs	5857	326	WHY	rewrite	trimmed; ruling reference moved
+scripts/check-browser.mjs	5870	141	WHY	keep	already short
+scripts/check-browser.mjs	5892	549	WHY	rewrite	trimmed
+scripts/check-browser.mjs	5937	2133	WHY	rewrite	three mechanisms kept; found-defect story moved
+scripts/check-browser.mjs	5974	75	CONTRACT	keep	already short
+scripts/check-browser.mjs	5975	21	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	5975	22	CONTRACT	keep	type annotation only; kept
+scripts/check-browser.mjs	5987	126	WHY	keep	already short
+scripts/check-browser.mjs	6011	197	WHY	keep	already short
+scripts/check-browser.mjs	6044	277	WHY	keep	already short
+scripts/check-browser.mjs	6055	1347	WHY	rewrite	floor purpose kept; measurements moved
+scripts/check-browser.mjs	6080	15520	HISTORY	delete	dated re-measurement log; floors are asserted in code below
+scripts/check-browser.mjs	6347	421	WHY	rewrite	trimmed
+scripts/check-browser.mjs	6357	1894	NUMBER	rewrite	floors asserted below; dated measurements moved
+scripts/check-browser.mjs	6396	337	WHY	rewrite	trimmed
+scripts/check-browser.mjs	6415	977	WHY	rewrite	prohibition kept
+scripts/check-browser.mjs	6450	765	WHY	rewrite	trap and hard rule citation kept; date moved
+scripts/check-browser.mjs	6465	231	WHY	rewrite	trimmed; ruling citation moved
+scripts/check-invariants.mjs	1	3344	CONTRACT	rewrite	usage and boundary kept; section list, B002 and r2_key incident moved
+scripts/check-invariants.mjs	73	957	CONTRACT	rewrite	purpose and limit kept; hoisting and first-draft story moved
+scripts/check-invariants.mjs	96	304	WHY	rewrite	trap kept, shortened
+scripts/check-invariants.mjs	108	90	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	121	60	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	131	80	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	135	158	CONTRACT	keep	already short
+scripts/check-invariants.mjs	157	342	WHY	rewrite	exclusion reason kept, shortened
+scripts/check-invariants.mjs	171	111	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	182	39	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	187	131	WHY	keep	already a short trap
+scripts/check-invariants.mjs	192	272	WHY	rewrite	mechanism kept, shortened
+scripts/check-invariants.mjs	219	77	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	224	458	CONTRACT	rewrite	shape and non-match kept
+scripts/check-invariants.mjs	275	72	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	279	1090	CONTRACT	rewrite	fixture intent and clock trap kept; first-version story moved
+scripts/check-invariants.mjs	298	97	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	311	158	WHY	rewrite	shortened
+scripts/check-invariants.mjs	321	463	WHY	rewrite	binding mechanism kept, shortened
+scripts/check-invariants.mjs	359	28	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	362	72	WHY	keep	already short
+scripts/check-invariants.mjs	383	20	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	399	153	WHY	rewrite	shortened
+scripts/check-invariants.mjs	425	72	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	429	1020	CONTRACT	rewrite	scope and placeholder rule kept; B002 narrative moved
+scripts/check-invariants.mjs	452	133	WHY	rewrite	shortened
+scripts/check-invariants.mjs	490	225	WHY	rewrite	shortened
+scripts/check-invariants.mjs	507	74	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	519	225	WHY	rewrite	shortened
+scripts/check-invariants.mjs	522	40	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	533	219	WHY	rewrite	shortened
+scripts/check-invariants.mjs	536	40	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	555	257	WHY	rewrite	rule kept; earlier-version story moved
+scripts/check-invariants.mjs	567	82	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	571	1470	CONTRACT	rewrite	three sources and derivation kept; r2_key incident moved
+scripts/check-invariants.mjs	599	358	CONTRACT	rewrite	owner pointer kept; lift date moved
+scripts/check-invariants.mjs	611	179	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	651	76	WHY	keep	already short
+scripts/check-invariants.mjs	652	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	664	75	WHY	rewrite	subsection divider shortened
+scripts/check-invariants.mjs	672	47	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	678	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	689	70	WHY	rewrite	subsection divider shortened
+scripts/check-invariants.mjs	697	51	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	698	22	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	706	47	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	709	20	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	734	65	WHY	rewrite	subsection divider shortened
+scripts/check-invariants.mjs	763	75	WHY	rewrite	subsection divider shortened
+scripts/check-invariants.mjs	765	1909	WHY	rewrite	scope and exclusions kept; added date and headings moved
+scripts/check-invariants.mjs	801	36	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	806	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	808	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	816	36	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	819	20	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	823	67	WHY	keep	already short
+scripts/check-invariants.mjs	825	20	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	838	317	WHY	rewrite	shortened
+scripts/check-invariants.mjs	875	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	908	482	WHY	rewrite	exposure kept; section 5 deletion history moved
+scripts/check-invariants.mjs	921	60	WHY	rewrite	subsection divider shortened
+scripts/check-invariants.mjs	925	944	WHY	rewrite	Windows traps kept; round-trip timing moved
+scripts/check-invariants.mjs	945	606	WHY	rewrite	throw trap kept; review story moved
+scripts/check-invariants.mjs	982	47	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	990	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1024	82	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	1026	1745	WHY	rewrite	ban, reason and exit kept; dates and headings moved
+scripts/check-invariants.mjs	1068	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1083	527	WHY	rewrite	scope reason kept; unasserted measurement and draft story moved
+scripts/check-invariants.mjs	1100	227	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1125	78	WHY	rewrite	retired section divider shortened
+scripts/check-invariants.mjs	1127	2096	WHY	rewrite	gap and remaining matcher kept; measurements and ruling moved
+scripts/check-invariants.mjs	1162	76	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	1164	1771	WHY	rewrite	chokepoint, exemption shape and write scope kept; measurements moved
+scripts/check-invariants.mjs	1201	197	CONTRACT	rewrite	shortened
+scripts/check-invariants.mjs	1261	1137	CONTRACT	rewrite	contract kept; 2026-08-11 sweep moved
+scripts/check-invariants.mjs	1286	669	WHY	rewrite	trap kept; first-draft story moved
+scripts/check-invariants.mjs	1308	67	WHY	keep	already short
+scripts/check-invariants.mjs	1318	76	CONTRACT	keep	already short
+scripts/check-invariants.mjs	1319	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1327	67	WHY	keep	already short
+scripts/check-invariants.mjs	1335	425	WHY	rewrite	prohibition kept; measurement moved
+scripts/check-invariants.mjs	1343	137	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1370	729	CONTRACT	rewrite	contract and CRLF trap kept; incident moved
+scripts/check-invariants.mjs	1399	478	WHY	rewrite	scoping rule kept; discovery moved
+scripts/check-invariants.mjs	1418	65	CONTRACT	keep	already short
+scripts/check-invariants.mjs	1452	108	WHY	keep	already short
+scripts/check-invariants.mjs	1467	297	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1489	1194	WHY	rewrite	floor rationale kept; dated measurements moved
+scripts/check-invariants.mjs	1536	147	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1557	76	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	1559	1650	WHY	rewrite	both traps kept; measurements and headings moved
+scripts/check-invariants.mjs	1603	20	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1609	301	WHY	rewrite	tripwire reason kept
+scripts/check-invariants.mjs	1629	1865	WHY	rewrite	replacement reason kept; plant and measurements moved
+scripts/check-invariants.mjs	1668	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1670	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1673	538	WHY	rewrite	guard reason kept; discovery moved
+scripts/check-invariants.mjs	1699	149	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1708	241	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1717	484	WHY	rewrite	guard reason kept; plant moved
+scripts/check-invariants.mjs	1725	304	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1731	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1746	364	WHY	rewrite	trap kept; discovery moved
+scripts/check-invariants.mjs	1760	769	WHY	rewrite	scope reason kept; measurements moved
+scripts/check-invariants.mjs	1802	513	WHY	rewrite	intent kept; enumeration history moved
+scripts/check-invariants.mjs	1826	79	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	1828	1477	WHY	rewrite	gap and two levels kept; audit story moved
+scripts/check-invariants.mjs	1864	671	WHY	rewrite	classification traps kept
+scripts/check-invariants.mjs	1880	79	CONTRACT	keep	already short
+scripts/check-invariants.mjs	1883	29	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	1909	618	WHY	rewrite	granularity reason kept; first-version story moved
+scripts/check-invariants.mjs	1935	398	WHY	rewrite	shortened
+scripts/check-invariants.mjs	1950	1717	WHY	rewrite	bounded-risk tripwire kept; measurements moved
+scripts/check-invariants.mjs	2009	557	WHY	rewrite	scope reason kept; stale count moved
+scripts/check-invariants.mjs	2026	404	CONTRACT	rewrite	shortened
+scripts/check-invariants.mjs	2063	295	WHY	rewrite	shortened
+scripts/check-invariants.mjs	2079	74	WHY	keep	already short
+scripts/check-invariants.mjs	2102	82	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	2104	1271	WHY	rewrite	both failure directions kept, shortened
+scripts/check-invariants.mjs	2159	427	WHY	rewrite	shortened
+scripts/check-invariants.mjs	2176	46	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2179	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2183	46	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2186	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2193	153	WHY	rewrite	shortened
+scripts/check-invariants.mjs	2219	142	WHY	rewrite	shortened
+scripts/check-invariants.mjs	2229	519	WHY	rewrite	shortened
+scripts/check-invariants.mjs	2256	70	WHY	keep	already short
+scripts/check-invariants.mjs	2261	145	WHY	rewrite	shortened
+scripts/check-invariants.mjs	2265	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2273	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2280	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2290	1088	WHY	rewrite	guard and assertion boundaries kept
+scripts/check-invariants.mjs	2326	44	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2329	18	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2349	671	WHY	rewrite	reason kept; plant story moved
+scripts/check-invariants.mjs	2386	858	WHY	rewrite	rule kept; plant and media_refs story moved
+scripts/check-invariants.mjs	2417	1051	WHY	rewrite	hard rule citation kept; removal narrative moved
+scripts/check-invariants.mjs	2447	79	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	2454	370	WHY	rewrite	numbering rule kept; deletion story moved
+scripts/check-invariants.mjs	2462	80	WHY	rewrite	section divider shortened
+scripts/check-invariants.mjs	2464	1792	WHY	rewrite	properties kept; latency measurements and incident moved
+scripts/check-invariants.mjs	2507	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2507	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2516	279	WHY	rewrite	scope-first reason kept; tutorial cut
+scripts/check-invariants.mjs	2530	158	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	2553	1072	WHY	rewrite	prohibition kept; measured incident moved
+scripts/check-invariants.mjs	2587	1139	WHY	rewrite	trap kept; three-week incident moved
+scripts/check-invariants.mjs	2619	660	WHY	rewrite	mechanism kept; first-version story moved
+scripts/check-invariants.mjs	2631	887	WHY	rewrite	prohibition and hard rule 12 kept; heredoc story moved
+scripts/check-invariants.mjs	2671	181	WHY	rewrite	trimmed to one line
+scripts/check-invariants.mjs	2697	206	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	2724	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	2726	1172	CONTRACT	rewrite	rule and scope kept; regression history moved
+scripts/check-invariants.mjs	2754	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2769	195	WHY	rewrite	scope reason kept; incident count moved
+scripts/check-invariants.mjs	2789	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	2791	1446	CONTRACT	rewrite	rule, builders and exemption policy kept; 2026-08-20 measurement moved
+scripts/check-invariants.mjs	2822	63	CONTRACT	keep	already short
+scripts/check-invariants.mjs	2832	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2850	165	WHY	rewrite	scope reason kept; incident count moved
+scripts/check-invariants.mjs	2876	80	CONTRACT	keep	section header
+scripts/check-invariants.mjs	2878	1549	CONTRACT	rewrite	decidable rule and why-not-derive kept; 2026-08-20 finding moved
+scripts/check-invariants.mjs	2913	80	CONTRACT	keep	already short
+scripts/check-invariants.mjs	2922	255	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	2933	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	2943	206	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	2973	986	WHY	rewrite	binding kept; 2026-08-28 measurement moved
+scripts/check-invariants.mjs	2992	1585	WHY	rewrite	mechanism and hard rule 10 kept; first-draft story and counts moved
+scripts/check-invariants.mjs	3024	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3034	221	WHY	rewrite	scope reason kept; unasserted count moved
+scripts/check-invariants.mjs	3039	377	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3068	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	3070	1911	CONTRACT	rewrite	assertion and stated gap kept with citations; audit history moved
+scripts/check-invariants.mjs	3111	217	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3118	1754	WHY	rewrite	truncation reason kept; absorption history and dropped-check list moved
+scripts/check-invariants.mjs	3161	194	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3183	391	WHY	rewrite	needle trap kept
+scripts/check-invariants.mjs	3196	75	CONTRACT	keep	already short
+scripts/check-invariants.mjs	3201	238	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3206	546	WHY	rewrite	floor reasoning and both hard rule 10 citations kept; raise history moved
+scripts/check-invariants.mjs	3223	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3228	609	WHY	rewrite	list-needle reason and citation kept; discovery story moved
+scripts/check-invariants.mjs	3242	351	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3258	77	CONTRACT	keep	already short
+scripts/check-invariants.mjs	3276	1190	NUMBER	rewrite	floors asserted in code; measurements and plant story moved
+scripts/check-invariants.mjs	3303	1093	WHY	rewrite	reason and hard rule 10 kept; first-draft story moved
+scripts/check-invariants.mjs	3340	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	3342	2001	CONTRACT	rewrite	contract and both-directions reason kept; rule 6 history and per-rule survey moved
+scripts/check-invariants.mjs	3388	62	CONTRACT	keep	already short
+scripts/check-invariants.mjs	3389	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3396	226	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3409	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3410	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3412	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3430	78	CONTRACT	keep	subsection header
+scripts/check-invariants.mjs	3447	78	CONTRACT	keep	subsection header
+scripts/check-invariants.mjs	3448	792	WHY	rewrite	rule and shape reason kept; old-login story moved
+scripts/check-invariants.mjs	3494	78	CONTRACT	keep	subsection header
+scripts/check-invariants.mjs	3500	428	WHY	rewrite	reason kept; plant story moved
+scripts/check-invariants.mjs	3520	78	CONTRACT	keep	subsection header
+scripts/check-invariants.mjs	3526	485	WHY	rewrite	exclusion reason and prohibition kept; first-run story moved
+scripts/check-invariants.mjs	3556	78	CONTRACT	keep	subsection header
+scripts/check-invariants.mjs	3571	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	3573	1854	CONTRACT	rewrite	derivation and boundary kept; move history moved
+scripts/check-invariants.mjs	3610	626	HISTORY	delete	first-draft plant story; the why moves to the next line, the limit lives at module scope
+scripts/check-invariants.mjs	3623	80	WHY	rewrite	dated note replaced by the why from the block above
+scripts/check-invariants.mjs	3636	240	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3672	1278	WHY	rewrite	binding and floor-not-pin kept; 2026-08-23 drift and audit story moved
+scripts/check-invariants.mjs	3722	77	CONTRACT	keep	subsection header
+scripts/check-invariants.mjs	3724	1060	CONTRACT	rewrite	three properties and boundary kept; incident reference moved
+scripts/check-invariants.mjs	3777	538	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3817	80	CONTRACT	keep	section header
+scripts/check-invariants.mjs	3819	2542	CONTRACT	rewrite	class, both rules and boundary kept; audit history and measurements moved
+scripts/check-invariants.mjs	3874	237	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	3885	60	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3899	138	WHY	rewrite	trimmed to one line
+scripts/check-invariants.mjs	3921	78	CONTRACT	keep	already short
+scripts/check-invariants.mjs	3922	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3944	71	CONTRACT	keep	already short
+scripts/check-invariants.mjs	3948	30	WHY	keep	trailing note, already short
+scripts/check-invariants.mjs	3952	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	3977	3113	NUMBER	rewrite	floor asserted in code; three re-measurement narratives moved
+scripts/check-invariants.mjs	4044	361	WHY	rewrite	reason kept; date moved
+scripts/check-invariants.mjs	4064	80	CONTRACT	keep	section header
+scripts/check-invariants.mjs	4066	1734	CONTRACT	rewrite	binding and boundary kept; consolidation history moved
+scripts/check-invariants.mjs	4105	200	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4117	267	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4123	38	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	4137	1239	WHY	rewrite	anchoring reason and hard rule 10 kept; plant and audit story moved
+scripts/check-invariants.mjs	4173	138	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4196	80	CONTRACT	keep	section header
+scripts/check-invariants.mjs	4198	1584	CONTRACT	rewrite	assertions, sha exclusion and boundary kept
+scripts/check-invariants.mjs	4237	159	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4245	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	4254	264	NUMBER	rewrite	limits asserted in code; 2026-08-21 measurement moved
+scripts/check-invariants.mjs	4276	201	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4283	26	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	4303	615	WHY	rewrite	prefix rule kept; first-run story moved
+scripts/check-invariants.mjs	4333	158	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4345	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	4347	1321	CONTRACT	rewrite	assertion and limit kept; 2026-08-21 measurement moved
+scripts/check-invariants.mjs	4378	69	CONTRACT	keep	JSDoc type, already short
+scripts/check-invariants.mjs	4401	180	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4413	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	4443	246	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4466	2003	HISTORY	delete	detached floor re-measurement log; the floor and its why live at the end of the file
+scripts/check-invariants.mjs	4502	79	CONTRACT	keep	section header
+scripts/check-invariants.mjs	4504	1148	WHY	rewrite	order property and scoping kept; audit reference moved
+scripts/check-invariants.mjs	4542	138	WHY	rewrite	trimmed to one line
+scripts/check-invariants.mjs	4587	259	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	4602	1050	WHY	rewrite	one-owner reason and both directions kept; 2026-08-25 history moved
+scripts/check-invariants.mjs	4666	79	CONTRACT	keep	section heading
+scripts/check-invariants.mjs	4668	1168	CONTRACT	rewrite	two-halves contract kept; argument trimmed
+scripts/check-invariants.mjs	4707	999	WHY	rewrite	invariant kept; 2026-08-26 needle move and timings moved
+scripts/check-invariants.mjs	4738	1096	WHY	rewrite	invariant kept; ruling 57 needle history moved
+scripts/check-invariants.mjs	4767	277	WHY	rewrite	trap kept, trimmed
+scripts/check-invariants.mjs	4781	314	WHY	rewrite	needle intent kept, trimmed
+scripts/check-invariants.mjs	4801	860	CONTRACT	rewrite	composition contract kept; artifact arc history moved
+scripts/check-invariants.mjs	4902	1734	CONTRACT	rewrite	scope and blind spots kept; dated arc narrative moved
+scripts/check-invariants.mjs	4948	157	CONTRACT	keep	short doc comment
+scripts/check-invariants.mjs	4954	54	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	4968	158	CONTRACT	keep	short doc comment
+scripts/check-invariants.mjs	4986	65	WHY	keep	one-line why
+scripts/check-invariants.mjs	4991	74	CONTRACT	keep	type with meaning
+scripts/check-invariants.mjs	4993	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5000	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5004	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5045	2087	CONTRACT	rewrite	binding contract kept; 2026-08-29 subject move and measurement moved
+scripts/check-invariants.mjs	5095	321	WHY	rewrite	trap kept, trimmed
+scripts/check-invariants.mjs	5101	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5108	22	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5130	297	CONTRACT	rewrite	doc trimmed
+scripts/check-invariants.mjs	5144	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5147	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5147	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5149	74	WHY	keep	one-line why
+scripts/check-invariants.mjs	5166	224	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5190	540	WHY	rewrite	intent kept; commit narrative moved
+scripts/check-invariants.mjs	5209	580	WHY	rewrite	prohibition kept, trimmed
+scripts/check-invariants.mjs	5241	249	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5256	200	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5275	1439	CONTRACT	rewrite	both-directions contract kept; consolidation story moved
+scripts/check-invariants.mjs	5307	243	WHY	rewrite	anchor reason kept, trimmed
+scripts/check-invariants.mjs	5318	161	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5329	219	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5363	1560	WHY	rewrite	method and hard rule 10 citations kept; dated re-measurements moved
+scripts/check-invariants.mjs	5391	1703	HISTORY	delete	dated re-measurement log
+scripts/check-invariants.mjs	5421	511	HISTORY	delete	dated measurement and incident
+scripts/check-invariants.mjs	5431	273	HISTORY	delete	dated re-measurement
+scripts/check-invariants.mjs	5439	1814	CONTRACT	rewrite	both-directions contract and needle kept; prompt and RECOVERY.md history moved
+scripts/check-invariants.mjs	5493	71	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	5508	295	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5538	1826	CONTRACT	rewrite	scope and instrument split kept; audit story moved
+scripts/check-invariants.mjs	5572	253	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5580	1245	WHY	rewrite	derived-exemption rule and hard rule 5 kept; first-draft story moved
+scripts/check-invariants.mjs	5612	198	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5626	49	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5637	46	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5640	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5658	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5664	269	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5673	401	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5685	138	WHY	keep	already short
+scripts/check-invariants.mjs	5696	281	WHY	rewrite	trimmed; measurement date moved
+scripts/check-invariants.mjs	5725	1840	CONTRACT	rewrite	rule and scope kept; three incidents moved
+scripts/check-invariants.mjs	5765	77	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	5770	70	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	5779	159	WHY	keep	already short prohibition
+scripts/check-invariants.mjs	5793	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5827	205	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5851	2048	CONTRACT	rewrite	rules and mechanism kept; login first-run story moved
+scripts/check-invariants.mjs	5889	77	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	5895	98	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	5896	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5896	21	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5922	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5931	24	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	5940	73	WHY	keep	one-line
+scripts/check-invariants.mjs	5966	160	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	5990	2423	CONTRACT	rewrite	three rules kept; the revisit note kept as ruling 88 requires; 2026-09-13 measurements moved
+scripts/check-invariants.mjs	6036	77	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	6045	67	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	6058	26	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	6060	319	CONTRACT	rewrite	trimmed; tag kept
+scripts/check-invariants.mjs	6068	180	CONTRACT	rewrite	trimmed; tag kept
+scripts/check-invariants.mjs	6084	86	CONTRACT	keep	one-line
+scripts/check-invariants.mjs	6085	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	6087	26	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	6101	2707	WHY	rewrite	rule and hard rule 10 kept; ruling narrative and plant moved
+scripts/check-invariants.mjs	6158	300	WHY	rewrite	trap kept, trimmed
+scripts/check-invariants.mjs	6182	23	CONTRACT	keep	type annotation only; kept
+scripts/check-invariants.mjs	6187	77	WHY	keep	one-line
+scripts/check-invariants.mjs	6196	155	WHY	rewrite	trimmed
+scripts/check-invariants.mjs	6223	1437	CONTRACT	rewrite	self-policing contract kept; redesign build narrative moved
+scripts/check-invariants.mjs	6250	7387	WHY	rewrite	row format kept; rulings 103 and 104, orphan deletions and counts moved
+scripts/check-invariants.mjs	6375	19	CONTRACT	keep	sentinel read by the scan
+scripts/check-invariants.mjs	6376	129	CONTRACT	keep	short typed doc
+scripts/check-invariants.mjs	6470	17	CONTRACT	keep	sentinel read by the scan
+scripts/check-invariants.mjs	6526	1674	HISTORY	delete	dated re-measurement log
+scripts/check-invariants.mjs	6553	1368	HISTORY	delete	dated re-measurement and CI incident
+scripts/check-invariants.mjs	6578	4256	HISTORY	delete	dated re-measurement log; method kept in #287
+scripts/check-invariants.mjs	6652	370	WHY	rewrite	reason kept; measurements and incident moved
+scripts/check-admin-ui.mjs	1	2063	CONTRACT	rewrite	usage and contract kept; redesign story and fixture provenance moved
+scripts/check-admin-ui.mjs	51	309	WHY	rewrite	trimmed; hard rule 17 kept
+scripts/check-admin-ui.mjs	59	159	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	89	462	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	103	28	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	108	73	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	114	504	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	124	272	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	129	230	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	136	65	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	140	177	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	155	147	WHY	rewrite	row count moved
+scripts/check-admin-ui.mjs	162	76	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	164	66	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	166	310	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	177	420	CONTRACT	rewrite	stale-fixture incident moved
+scripts/check-admin-ui.mjs	195	362	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	204	330	WHY	rewrite	session heading moved
+scripts/check-admin-ui.mjs	221	62	CONTRACT	keep	already short
+scripts/check-admin-ui.mjs	228	464	WHY	rewrite	wording history moved
+scripts/check-admin-ui.mjs	240	65	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	267	271	HISTORY	delete	one-run incident; rest restates the code
+scripts/check-admin-ui.mjs	278	65	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	287	533	WHY	rewrite	roadmap reference moved
+scripts/check-admin-ui.mjs	302	149	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	310	78	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	322	75	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	335	53	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	336	711	WHY	rewrite	B004 crash story moved
+scripts/check-admin-ui.mjs	374	621	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	390	66	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	403	62	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	410	258	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	418	380	WHY	rewrite	ruling citation moved
+scripts/check-admin-ui.mjs	429	499	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	443	374	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	481	533	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	499	130	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	525	70	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	542	406	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	619	187	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	621	76	CONTRACT	rewrite	section marker shortened
+scripts/check-admin-ui.mjs	679	367	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	684	764	WHY	rewrite	2026-08-12 gap and session story moved
+scripts/check-admin-ui.mjs	700	516	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	737	938	WHY	rewrite	session and seam-count narrative moved
+scripts/check-admin-ui.mjs	799	638	WHY	rewrite	redesign narrative moved
+scripts/check-admin-ui.mjs	837	112	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	853	192	WHY	rewrite	row count moved
+scripts/check-admin-ui.mjs	880	346	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	895	135	WHY	rewrite	404 incident moved
+scripts/check-admin-ui.mjs	902	221	WHY	rewrite	row count moved
+scripts/check-admin-ui.mjs	912	957	WHY	rewrite	session heading and counts moved
+scripts/check-admin-ui.mjs	943	214	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	966	231	WHY	rewrite	ruling citation moved
+scripts/check-admin-ui.mjs	982	415	HISTORY	delete	session heading and narrative
+scripts/check-admin-ui.mjs	990	152	WHY	rewrite	before-state moved
+scripts/check-admin-ui.mjs	1029	124	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1053	132	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1079	231	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1095	227	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1109	343	WHY	rewrite	plant story moved
+scripts/check-admin-ui.mjs	1133	72	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1145	152	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1159	158	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1168	96	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1180	269	HISTORY	delete	session heading
+scripts/check-admin-ui.mjs	1186	310	WHY	rewrite	prompt() history moved
+scripts/check-admin-ui.mjs	1204	240	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1217	166	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1232	176	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1242	154	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1269	487	WHY	rewrite	2026-08-17 gap moved
+scripts/check-admin-ui.mjs	1300	195	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1320	283	WHY	rewrite	restates #49
+scripts/check-admin-ui.mjs	1349	187	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1362	155	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1374	141	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1386	549	WHY	rewrite	heading moved
+scripts/check-admin-ui.mjs	1402	135	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1433	141	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1451	215	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1481	175	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1496	151	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1512	135	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1527	79	HISTORY	delete	session heading
+scripts/check-admin-ui.mjs	1529	206	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1540	106	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1549	139	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1566	631	WHY	rewrite	ruling and incident moved
+scripts/check-admin-ui.mjs	1588	219	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1599	226	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1618	76	CONTRACT	rewrite	section marker shortened
+scripts/check-admin-ui.mjs	1647	76	CONTRACT	rewrite	section marker shortened
+scripts/check-admin-ui.mjs	1682	283	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1735	648	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1747	267	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1798	1161	WHY	rewrite	feature heading and table trimmed
+scripts/check-admin-ui.mjs	1843	298	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1851	358	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1878	818	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1893	684	WHY	rewrite	ruling heading moved
+scripts/check-admin-ui.mjs	1920	366	WHY	rewrite	ruling and old-page history moved
+scripts/check-admin-ui.mjs	1945	599	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	1978	361	WHY	rewrite	ruling citation moved
+scripts/check-admin-ui.mjs	2001	585	HISTORY	delete	2026-08-25 coverage gap narrative
+scripts/check-admin-ui.mjs	2054	76	CONTRACT	rewrite	separator shortened
+scripts/check-admin-ui.mjs	2058	1294	CONTRACT	rewrite	2026-09-03 change narrative moved
+scripts/check-admin-ui.mjs	2083	73	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2087	38	CONTRACT	keep	already short
+scripts/check-admin-ui.mjs	2095	50	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2099	133	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2104	8	CONTRACT	keep	already short
+scripts/check-admin-ui.mjs	2113	61	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2121	66	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2122	65	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2128	381	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2148	255	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2161	364	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2169	72	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2187	211	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2197	1138	WHY	rewrite	2026-09-03 replay and counts moved
+scripts/check-admin-ui.mjs	2217	18	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2219	81	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2220	28	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2229	79	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2239	155	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2243	304	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2249	21	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2264	116	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2277	130	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2293	150	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2305	1233	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2327	133	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2348	80	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2349	20	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2356	62	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2365	26	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2371	622	WHY	rewrite	discovery story moved; hard rule 10 kept
+scripts/check-admin-ui.mjs	2384	22	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2404	34	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2411	130	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2420	46	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2429	135	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2440	203	CONTRACT	rewrite	banner trimmed
+scripts/check-admin-ui.mjs	2447	48	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2453	74	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2454	34	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2457	39	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2459	77	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2460	37	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2485	231	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2506	129	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2514	39	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2544	1847	WHY	rewrite	dated measurements moved; hard rule 10 kept
+scripts/check-admin-ui.mjs	2582	1061	WHY	rewrite	dated measurements moved
+scripts/check-admin-ui.mjs	2607	656	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2618	45	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2621	377	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2641	90	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2667	149	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2680	200	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2683	72	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2695	815	HISTORY	delete	2026-09-03 rewrite story; the rule is in #167
+scripts/check-admin-ui.mjs	2708	215	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2711	72	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	2730	349	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2750	140	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2764	178	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2781	421	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2793	515	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2803	81	CONTRACT	keep	already short
+scripts/check-admin-ui.mjs	2818	225	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2835	497	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2854	867	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2876	474	WHY	rewrite	plant story moved
+scripts/check-admin-ui.mjs	2887	427	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2899	123	WHY	rewrite	trimmed; hard rule 10 kept
+scripts/check-admin-ui.mjs	2908	394	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2924	470	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	2932	216	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2943	447	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2963	147	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2974	224	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2985	80	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	2989	56	WHY	keep	already short
+scripts/check-admin-ui.mjs	2996	230	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3007	140	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3016	161	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3025	154	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3027	821	WHY	rewrite	history moved
+scripts/check-admin-ui.mjs	3043	42	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3055	146	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3060	553	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3080	118	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3091	1128	WHY	rewrite	incident narrative moved
+scripts/check-admin-ui.mjs	3114	634	WHY	rewrite	session history moved
+scripts/check-admin-ui.mjs	3172	35	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3181	730	WHY	rewrite	discovery story moved
+scripts/check-admin-ui.mjs	3200	156	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3208	110	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	3214	139	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3217	135	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3235	449	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3262	715	CONTRACT	rewrite	session heading moved
+scripts/check-admin-ui.mjs	3274	78	CONTRACT	rewrite	trimmed
+scripts/check-admin-ui.mjs	3282	370	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3295	276	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3313	209	WHY	rewrite	trimmed
+scripts/check-admin-ui.mjs	3324	533	WHY	rewrite	mockup story moved
+scripts/check-admin-ui.mjs	3340	1150	WHY	rewrite	first-draft story moved
+scripts/check-admin-ui.mjs	3366	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3382	206	WHY	rewrite	negative half kept; approval narrative cut
+scripts/check-admin-ui.mjs	3393	475	WHY	rewrite	reason kept, shortened
+scripts/check-admin-ui.mjs	3414	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3428	284	WHY	rewrite	reason kept, shortened
+scripts/check-admin-ui.mjs	3442	310	WHY	rewrite	discrimination reason kept
+scripts/check-admin-ui.mjs	3461	1048	CONTRACT	rewrite	intent and prohibition kept; quoted spec cut
+scripts/check-admin-ui.mjs	3490	48	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3494	318	WHY	rewrite	trap kept; incident reference cut
+scripts/check-admin-ui.mjs	3501	45	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3503	45	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3506	117	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3509	277	WHY	rewrite	trap kept, shortened
+scripts/check-admin-ui.mjs	3515	555	WHY	rewrite	prohibition kept; first-draft story moved
+scripts/check-admin-ui.mjs	3527	215	WHY	rewrite	scope-first reason kept
+scripts/check-admin-ui.mjs	3542	80	CONTRACT	keep	already short
+scripts/check-admin-ui.mjs	3544	37	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3552	30	WHY	keep	already short
+scripts/check-admin-ui.mjs	3571	302	WHY	rewrite	reason kept, shortened
+scripts/check-admin-ui.mjs	3589	782	CONTRACT	rewrite	intent kept; session label cut
+scripts/check-admin-ui.mjs	3606	365	WHY	rewrite	derivation reason kept
+scripts/check-admin-ui.mjs	3626	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3638	144	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3651	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3654	300	WHY	rewrite	reason kept; date cut
+scripts/check-admin-ui.mjs	3662	185	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3672	288	WHY	rewrite	prohibition kept
+scripts/check-admin-ui.mjs	3683	111	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3690	730	WHY	rewrite	mechanism kept; commit story moved
+scripts/check-admin-ui.mjs	3728	1268	WHY	rewrite	prohibition and scoping kept; screenshot incident moved
+scripts/check-admin-ui.mjs	3761	143	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3768	637	WHY	rewrite	trap kept; plant and first-draft story moved
+scripts/check-admin-ui.mjs	3780	44	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	3797	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3804	445	WHY	rewrite	trap kept; first-draft story moved
+scripts/check-admin-ui.mjs	3826	649	WHY	rewrite	discrimination reason kept; plant story moved
+scripts/check-admin-ui.mjs	3844	193	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3853	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3856	297	WHY	rewrite	reason kept; date and tier cut
+scripts/check-admin-ui.mjs	3870	221	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3876	129	HISTORY	delete	narrowing note; code shows the facts
+scripts/check-admin-ui.mjs	3883	290	WHY	rewrite	reason kept; date cut
+scripts/check-admin-ui.mjs	3892	219	HISTORY	delete	narrowing note; exclusion below explains itself
+scripts/check-admin-ui.mjs	3897	141	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3905	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3912	148	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	3924	161	WHY	rewrite	reason kept; unasserted counts cut
+scripts/check-admin-ui.mjs	3932	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3945	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3960	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	3962	232	HISTORY	delete	session story; the next blocks carry the rule
+scripts/check-admin-ui.mjs	3976	307	WHY	rewrite	pointer kept; date cut
+scripts/check-admin-ui.mjs	3983	291	CONTRACT	rewrite	shortened
+scripts/check-admin-ui.mjs	4000	676	WHY	rewrite	rule and mechanism kept; plant story moved
+scripts/check-admin-ui.mjs	4035	980	WHY	rewrite	boundary kept; plant story moved
+scripts/check-admin-ui.mjs	4071	225	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4089	80	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	4091	741	WHY	rewrite	rule 17 reason kept, shortened
+scripts/check-admin-ui.mjs	4106	368	WHY	rewrite	owner pointer kept
+scripts/check-admin-ui.mjs	4116	167	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4125	362	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4133	115	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	4146	260	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4155	234	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4165	153	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4176	129	HISTORY	delete	duplicate of the next block
+scripts/check-admin-ui.mjs	4180	477	WHY	rewrite	reason kept; ruling narrative cut
+scripts/check-admin-ui.mjs	4197	206	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4206	217	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4221	233	CONTRACT	rewrite	shortened
+scripts/check-admin-ui.mjs	4236	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	4238	580	WHY	rewrite	rule kept, shortened
+scripts/check-admin-ui.mjs	4271	634	CONTRACT	rewrite	intent kept; session label cut
+scripts/check-admin-ui.mjs	4282	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	4291	283	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4313	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	4315	427	WHY	rewrite	trap kept
+scripts/check-admin-ui.mjs	4336	353	WHY	rewrite	trap kept
+scripts/check-admin-ui.mjs	4354	494	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4365	57	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4372	590	CONTRACT	rewrite	doc and hard rule 10 kept; plant story moved
+scripts/check-admin-ui.mjs	4399	361	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4412	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	4429	79	CONTRACT	rewrite	section heading shortened
+scripts/check-admin-ui.mjs	4431	368	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4438	856	WHY	rewrite	trap kept; measurements moved
+scripts/check-admin-ui.mjs	4461	407	CONTRACT	rewrite	shortened; session label cut
+scripts/check-admin-ui.mjs	4477	408	WHY	rewrite	shortened; verdict story moved
+scripts/check-admin-ui.mjs	4501	241	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4511	79	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4528	118	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4536	826	WHY	rewrite	reason kept
+scripts/check-admin-ui.mjs	4552	757	WHY	rewrite	reason kept; date cut
+scripts/check-admin-ui.mjs	4576	152	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4610	570	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4626	121	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4634	30	WHY	keep	already short
+scripts/check-admin-ui.mjs	4646	2513	CONTRACT	rewrite	scope reason kept; audit and ruling history moved
+scripts/check-admin-ui.mjs	4691	443	CONTRACT	rewrite	trap kept; measurement cut
+scripts/check-admin-ui.mjs	4715	82	CONTRACT	rewrite	shortened
+scripts/check-admin-ui.mjs	4716	21	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	4719	347	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4742	151	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4758	989	WHY	rewrite	controlled comparison kept; roadmap label cut
+scripts/check-admin-ui.mjs	4782	653	WHY	rewrite	shortened; ruling narrative moved
+scripts/check-admin-ui.mjs	4805	137	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4815	270	WHY	rewrite	trap kept
+scripts/check-admin-ui.mjs	4832	223	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4838	21	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	4851	155	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4866	231	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4877	341	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4900	72	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4907	79	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4923	48	WHY	keep	already short
+scripts/check-admin-ui.mjs	4934	78	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4951	635	WHY	rewrite	both-halves reason kept; probe history moved
+scripts/check-admin-ui.mjs	4975	584	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	4995	183	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5001	223	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5007	134	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5012	204	WHY	rewrite	ruling label cut
+scripts/check-admin-ui.mjs	5020	319	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5027	38	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5044	392	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5057	73	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5071	174	WHY	rewrite	ruling label cut
+scripts/check-admin-ui.mjs	5079	158	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5087	272	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5099	183	HISTORY	delete	restates the assertions below
+scripts/check-admin-ui.mjs	5125	258	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5152	381	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5174	151	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5182	571	WHY	rewrite	trap kept; amendment history moved
+scripts/check-admin-ui.mjs	5193	21	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5200	139	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5211	163	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5230	314	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5251	158	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5265	177	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5286	493	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5318	184	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5329	6968	HISTORY	delete	floor measurement log; the floor's why is kept at MINIMUM_CHECKS
+scripts/check-admin-ui.mjs	5443	1177	WHY	rewrite	rule and mechanism kept; ruling date cut
+scripts/check-admin-ui.mjs	5465	615	WHY	rewrite	hard rule 10 kept; plant story moved
+scripts/check-admin-ui.mjs	5477	64	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5484	134	CONTRACT	rewrite	shortened
+scripts/check-admin-ui.mjs	5498	239	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5507	192	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5518	27	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5529	70	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5542	38	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5563	525	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5592	1110	CONTRACT	rewrite	boundary kept; measurement cut
+scripts/check-admin-ui.mjs	5627	160	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5636	378	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5644	74	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5651	205	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5665	368	CONTRACT	rewrite	shortened
+scripts/check-admin-ui.mjs	5671	555	WHY	rewrite	mechanism kept; history cut
+scripts/check-admin-ui.mjs	5714	588	WHY	rewrite	trap kept
+scripts/check-admin-ui.mjs	5737	298	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5763	417	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5794	503	WHY	rewrite	shortened; incident examples moved
+scripts/check-admin-ui.mjs	5804	70	CONTRACT	keep	already short
+scripts/check-admin-ui.mjs	5809	89	CONTRACT	rewrite	shortened
+scripts/check-admin-ui.mjs	5814	39	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5835	203	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5846	532	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5871	761	WHY	rewrite	scope and trap kept; count cut
+scripts/check-admin-ui.mjs	5889	23	CONTRACT	keep	type annotation only; kept
+scripts/check-admin-ui.mjs	5900	124	WHY	rewrite	shortened
+scripts/check-admin-ui.mjs	5910	2009	NUMBER	rewrite	floor reason kept; measurement log moved
+scripts/check-admin-ui.mjs	5944	559	WHY	rewrite	hard rule 17 kept; plant story moved
+scripts/check-features.mjs	1	3397	CONTRACT	rewrite	usage, boundaries and anchor rule kept; argument and emphasis cut
+scripts/check-features.mjs	83	304	WHY	rewrite	reason kept, shortened
+scripts/check-features.mjs	89	307	WHY	rewrite	shortened
+scripts/check-features.mjs	103	203	WHY	rewrite	shortened
+scripts/check-features.mjs	107	151	WHY	rewrite	shortened
+scripts/check-features.mjs	130	80	WHY	keep	already one line
+scripts/check-features.mjs	131	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	133	1783	CONTRACT	rewrite	contract kept; incident narrative moved
+scripts/check-features.mjs	165	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	168	861	CONTRACT	rewrite	rule kept; move history cut
+scripts/check-features.mjs	191	90	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	204	985	CONTRACT	rewrite	contract and failure direction kept
+scripts/check-features.mjs	223	308	WHY	rewrite	trap kept; list of other gates cut
+scripts/check-features.mjs	229	26	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	231	63	WHY	keep	already one line
+scripts/check-features.mjs	241	570	CONTRACT	rewrite	trimmed
+scripts/check-features.mjs	255	34	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	267	69	CONTRACT	keep	already one line
+scripts/check-features.mjs	270	34	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	274	174	WHY	rewrite	shortened
+scripts/check-features.mjs	292	71	CONTRACT	keep	already one line
+scripts/check-features.mjs	301	81	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	308	560	NUMBER	rewrite	floor asserted in code; measurement history moved
+scripts/check-features.mjs	333	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	336	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	337	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	342	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	342	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	352	82	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	355	72	CONTRACT	keep	already one line
+scripts/check-features.mjs	365	201	WHY	rewrite	shortened
+scripts/check-features.mjs	372	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	386	2518	WHY	rewrite	rule and signals kept; audit measurement and draft story moved
+scripts/check-features.mjs	457	310	WHY	rewrite	shortened
+scripts/check-features.mjs	488	842	WHY	rewrite	trap kept; backlog item and incident moved
+scripts/check-features.mjs	537	81	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	539	2849	WHY	rewrite	rule, boundary and exemptions kept; audit story moved
+scripts/check-features.mjs	597	309	CONTRACT	rewrite	trimmed
+scripts/check-features.mjs	611	76	CONTRACT	keep	already one line
+scripts/check-features.mjs	614	138	HISTORY	delete	note about a move
+scripts/check-features.mjs	617	352	WHY	rewrite	date cut
+scripts/check-features.mjs	633	152	WHY	rewrite	shortened
+scripts/check-features.mjs	638	23	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	640	23	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	664	314	NUMBER	rewrite	floor asserted in code; measurement moved
+scripts/check-features.mjs	677	366	WHY	rewrite	shortened
+scripts/check-features.mjs	711	81	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	713	514	HISTORY	delete	placement rationale about another gate; nothing binding
+scripts/check-features.mjs	727	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	730	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	733	148	WHY	rewrite	ruling citation cut
+scripts/check-features.mjs	742	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	746	1180	CONTRACT	rewrite	trimmed; counts cut
+scripts/check-features.mjs	768	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	772	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	784	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	790	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	791	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	804	310	WHY	rewrite	shortened
+scripts/check-features.mjs	813	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	828	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	836	376	WHY	rewrite	shortened
+scripts/check-features.mjs	872	81	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	874	1029	WHY	rewrite	intent kept; 2026-08-05 defect story moved
+scripts/check-features.mjs	900	77	WHY	keep	already one line
+scripts/check-features.mjs	907	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	909	55	CONTRACT	keep	already one line
+scripts/check-features.mjs	918	154	WHY	rewrite	shortened
+scripts/check-features.mjs	928	250	WHY	rewrite	shortened
+scripts/check-features.mjs	936	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	952	119	WHY	rewrite	shortened
+scripts/check-features.mjs	963	424	WHY	rewrite	trap kept; list of gates cut
+scripts/check-features.mjs	994	241	WHY	rewrite	shortened
+scripts/check-features.mjs	1012	1603	WHY	rewrite	rule kept; 2026-09-11 incident moved
+scripts/check-features.mjs	1050	27	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1072	81	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	1074	911	WHY	rewrite	rule and boundary kept
+scripts/check-features.mjs	1094	296	NUMBER	rewrite	count asserted in code
+scripts/check-features.mjs	1103	375	NUMBER	rewrite	floor asserted in code; measurement moved
+scripts/check-features.mjs	1118	20	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1124	80	CONTRACT	keep	already one line
+scripts/check-features.mjs	1146	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1149	68	CONTRACT	keep	already one line
+scripts/check-features.mjs	1159	58	CONTRACT	keep	already one line
+scripts/check-features.mjs	1168	825	CONTRACT	rewrite	exclusions kept; measurement moved
+scripts/check-features.mjs	1183	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1183	23	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1198	221	WHY	rewrite	shortened
+scripts/check-features.mjs	1201	1206	NUMBER	rewrite	floor asserted in code; measurement history moved
+scripts/check-features.mjs	1229	538	WHY	rewrite	trap kept; recurrence story moved
+scripts/check-features.mjs	1243	1440	WHY	rewrite	reason kept; defect story and measurement moved
+scripts/check-features.mjs	1290	197	WHY	rewrite	shortened
+scripts/check-features.mjs	1302	81	CONTRACT	keep	already one line
+scripts/check-features.mjs	1303	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1344	144	WHY	rewrite	shortened
+scripts/check-features.mjs	1354	61	WHY	keep	already one line
+scripts/check-features.mjs	1387	148	WHY	rewrite	shortened
+scripts/check-features.mjs	1397	81	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	1399	319	WHY	rewrite	shortened
+scripts/check-features.mjs	1421	942	WHY	rewrite	intent kept; spec discussion cut
+scripts/check-features.mjs	1444	857	WHY	rewrite	shortened
+scripts/check-features.mjs	1466	221	WHY	rewrite	unasserted measurement moved
+scripts/check-features.mjs	1470	364	WHY	rewrite	date cut
+scripts/check-features.mjs	1491	119	WHY	keep	already short
+scripts/check-features.mjs	1511	210	WHY	rewrite	shortened
+scripts/check-features.mjs	1517	236	WHY	rewrite	shortened
+scripts/check-features.mjs	1525	398	WHY	rewrite	move history cut
+scripts/check-features.mjs	1536	89	WHY	keep	already one line
+scripts/check-features.mjs	1539	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1540	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1563	307	WHY	rewrite	shortened
+scripts/check-features.mjs	1594	465	WHY	rewrite	shortened
+scripts/check-features.mjs	1628	320	WHY	rewrite	shortened
+scripts/check-features.mjs	1655	371	WHY	rewrite	shortened
+scripts/check-features.mjs	1679	455	WHY	rewrite	shortened
+scripts/check-features.mjs	1724	459	WHY	rewrite	shortened
+scripts/check-features.mjs	1763	176	WHY	rewrite	shortened
+scripts/check-features.mjs	1769	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1774	452	WHY	rewrite	shortened
+scripts/check-features.mjs	1783	1094	WHY	rewrite	rule and exemptions kept
+scripts/check-features.mjs	1805	23	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1812	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1812	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1826	421	NUMBER	rewrite	floor asserted in code; measurement moved
+scripts/check-features.mjs	1862	539	WHY	rewrite	shortened
+scripts/check-features.mjs	1901	293	WHY	rewrite	shortened
+scripts/check-features.mjs	1915	227	WHY	rewrite	shortened
+scripts/check-features.mjs	1921	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1930	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1935	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1936	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1945	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	1954	1052	NUMBER	rewrite	floor asserted in code; measurement history moved
+scripts/check-features.mjs	1991	1292	WHY	rewrite	section intent and boundary kept
+scripts/check-features.mjs	2026	80	CONTRACT	keep	already one line
+scripts/check-features.mjs	2027	20	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2030	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2032	464	WHY	rewrite	reason kept; measurement date cut
+scripts/check-features.mjs	2041	37	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2044	81	WHY	rewrite	shortened
+scripts/check-features.mjs	2046	325	WHY	rewrite	shortened
+scripts/check-features.mjs	2094	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2116	483	WHY	rewrite	shortened
+scripts/check-features.mjs	2148	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2157	72	WHY	keep	already one line
+scripts/check-features.mjs	2158	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2162	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2163	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2196	546	WHY	rewrite	hoisting history moved
+scripts/check-features.mjs	2220	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2236	149	WHY	rewrite	shortened
+scripts/check-features.mjs	2249	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2251	78	WHY	keep	already one line
+scripts/check-features.mjs	2257	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2258	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2283	157	WHY	rewrite	shortened
+scripts/check-features.mjs	2301	664	WHY	rewrite	trap kept; first-version story cut
+scripts/check-features.mjs	2344	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2346	839	WHY	rewrite	shortened
+scripts/check-features.mjs	2404	240	WHY	rewrite	shortened
+scripts/check-features.mjs	2433	226	WHY	rewrite	shortened
+scripts/check-features.mjs	2438	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2439	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2440	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2458	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2459	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2464	80	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2489	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2491	629	WHY	rewrite	shortened
+scripts/check-features.mjs	2517	320	WHY	rewrite	shortened
+scripts/check-features.mjs	2528	827	WHY	rewrite	behaviour kept; plant story moved
+scripts/check-features.mjs	2577	183	WHY	rewrite	shortened
+scripts/check-features.mjs	2582	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2591	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2597	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2603	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2610	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2615	80	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2617	662	WHY	rewrite	trap kept; plant story moved
+scripts/check-features.mjs	2635	376	WHY	rewrite	shortened
+scripts/check-features.mjs	2670	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2672	843	WHY	rewrite	shortened
+scripts/check-features.mjs	2690	21	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2707	353	WHY	rewrite	shortened
+scripts/check-features.mjs	2742	327	WHY	rewrite	shortened
+scripts/check-features.mjs	2757	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2771	293	WHY	rewrite	shortened
+scripts/check-features.mjs	2788	242	WHY	rewrite	shortened
+scripts/check-features.mjs	2795	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2800	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2805	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2810	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2812	272	WHY	rewrite	shortened
+scripts/check-features.mjs	2846	290	WHY	rewrite	shortened
+scripts/check-features.mjs	2868	216	WHY	rewrite	shortened
+scripts/check-features.mjs	2876	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	2883	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2936	109	WHY	rewrite	shortened
+scripts/check-features.mjs	2951	80	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	2963	1066	HISTORY	delete	record of a deleted assertion
+scripts/check-features.mjs	2987	663	WHY	rewrite	reason kept; refactor story moved
+scripts/check-features.mjs	3005	115	WHY	keep	already short
+scripts/check-features.mjs	3013	79	CONTRACT	rewrite	section heading shortened
+scripts/check-features.mjs	3016	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	3025	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	3029	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	3030	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	3039	18	CONTRACT	keep	type annotation only; kept
+scripts/check-features.mjs	3048	373	NUMBER	rewrite	floor asserted in code; summing history moved
+scripts/check-features.mjs	3077	1036	WHY	rewrite	reason kept; measurements moved
+scripts/check-features.mjs	3098	1321	NUMBER	rewrite	floor asserted in code; incident and measurements moved
+scripts/verify-live.mjs	1	2687	CONTRACT	rewrite	usage, boundary and harness rules kept; theme-cookie incident moved
+scripts/verify-live.mjs	55	203	WHY	rewrite	imported, never restated
+scripts/verify-live.mjs	64	332	WHY	rewrite	trimmed
+scripts/verify-live.mjs	70	287	WHY	rewrite	trimmed; owner kept
+scripts/verify-live.mjs	75	74	HISTORY	delete	refers to removed code
+scripts/verify-live.mjs	77	235	WHY	rewrite	trimmed
+scripts/verify-live.mjs	83	200	WHY	rewrite	trimmed; incident moved
+scripts/verify-live.mjs	90	493	WHY	rewrite	trimmed
+scripts/verify-live.mjs	113	23	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	116	73	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	122	68	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	132	61	WHY	keep	already one line
+scripts/verify-live.mjs	133	24	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	136	793	WHY	rewrite	trap kept; measurement moved
+scripts/verify-live.mjs	160	75	WHY	keep	already one line
+scripts/verify-live.mjs	165	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	167	24	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	172	74	WHY	rewrite	shortened
+scripts/verify-live.mjs	184	149	WHY	rewrite	trimmed
+scripts/verify-live.mjs	193	77	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	201	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	204	1572	WHY	rewrite	two-plane assertion intent kept; split history moved
+scripts/verify-live.mjs	242	280	WHY	rewrite	trimmed
+scripts/verify-live.mjs	270	210	WHY	rewrite	trimmed
+scripts/verify-live.mjs	289	63	WHY	keep	already one line
+scripts/verify-live.mjs	294	280	WHY	rewrite	trimmed
+scripts/verify-live.mjs	308	923	WHY	rewrite	scope rule kept; split history moved
+scripts/verify-live.mjs	341	238	WHY	rewrite	trimmed
+scripts/verify-live.mjs	356	145	CONTRACT	keep	SCOPED-BY marker read by check:assertions; kept
+scripts/verify-live.mjs	362	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	374	774	WHY	rewrite	contract kept; dated history moved
+scripts/verify-live.mjs	394	142	WHY	rewrite	trimmed
+scripts/verify-live.mjs	402	707	WHY	rewrite	wire half kept; history moved
+scripts/verify-live.mjs	431	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	437	344	WHY	rewrite	trap kept; measurement moved
+scripts/verify-live.mjs	445	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	446	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	454	553	WHY	rewrite	chain kept; tautology story moved
+scripts/verify-live.mjs	470	77	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	475	141	WHY	rewrite	trimmed
+scripts/verify-live.mjs	489	77	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	496	77	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	523	715	CONTRACT	rewrite	heading and cap rule kept; leak story moved
+scripts/verify-live.mjs	544	20	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	545	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	546	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	549	711	WHY	rewrite	trimmed; ruling history moved
+scripts/verify-live.mjs	568	700	WHY	rewrite	intent kept; tautology story moved
+scripts/verify-live.mjs	578	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	579	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	594	129	HISTORY	delete	tense-bound narrative
+scripts/verify-live.mjs	600	146	CONTRACT	keep	SCOPED-BY marker; kept
+scripts/verify-live.mjs	608	484	WHY	rewrite	trimmed
+scripts/verify-live.mjs	615	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	617	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	618	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	637	232	WHY	rewrite	trimmed
+scripts/verify-live.mjs	655	134	WHY	rewrite	trimmed
+scripts/verify-live.mjs	665	516	CONTRACT	rewrite	key shape kept; first-version story moved
+scripts/verify-live.mjs	676	145	WHY	rewrite	date moved
+scripts/verify-live.mjs	688	111	WHY	rewrite	trimmed
+scripts/verify-live.mjs	697	20	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	702	531	WHY	rewrite	trimmed
+scripts/verify-live.mjs	718	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	723	1304	WHY	rewrite	intent kept; audit story moved
+scripts/verify-live.mjs	749	28	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	805	148	NUMBER	rewrite	rate limit not asserted here; cap rule kept
+scripts/verify-live.mjs	820	79	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	823	682	WHY	rewrite	prohibition kept; history moved
+scripts/verify-live.mjs	840	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	846	153	HISTORY	delete	repeats the header rule
+scripts/verify-live.mjs	850	492	WHY	rewrite	trap kept; audit story moved
+scripts/verify-live.mjs	866	151	WHY	rewrite	trimmed
+scripts/verify-live.mjs	875	550	WHY	rewrite	trimmed; history moved
+scripts/verify-live.mjs	890	107	WHY	rewrite	trimmed
+scripts/verify-live.mjs	900	79	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	906	203	HISTORY	delete	repeats the header rule
+scripts/verify-live.mjs	911	150	WHY	rewrite	trimmed
+scripts/verify-live.mjs	919	143	WHY	rewrite	trimmed
+scripts/verify-live.mjs	921	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	930	468	WHY	rewrite	trimmed; history moved
+scripts/verify-live.mjs	939	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	948	174	WHY	rewrite	trimmed
+scripts/verify-live.mjs	965	303	WHY	rewrite	trimmed
+scripts/verify-live.mjs	972	113	CONTRACT	keep	SCOPED-BY marker; kept
+scripts/verify-live.mjs	978	179	WHY	rewrite	trimmed
+scripts/verify-live.mjs	989	1000	CONTRACT	rewrite	heading kept; commit history moved
+scripts/verify-live.mjs	1007	515	WHY	rewrite	trimmed; measurement moved
+scripts/verify-live.mjs	1025	775	CONTRACT	rewrite	trimmed; history moved
+scripts/verify-live.mjs	1044	561	WHY	rewrite	trap kept; measurement moved
+scripts/verify-live.mjs	1057	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1066	20	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1073	78	WHY	keep	already one line
+scripts/verify-live.mjs	1081	76	HISTORY	delete	restates the code
+scripts/verify-live.mjs	1086	328	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1113	286	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1121	20	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1136	343	CONTRACT	rewrite	trimmed
+scripts/verify-live.mjs	1169	152	HISTORY	delete	restates the rule above
+scripts/verify-live.mjs	1174	77	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	1176	936	WHY	rewrite	trap kept; story moved
+scripts/verify-live.mjs	1197	74	HISTORY	delete	restates #100
+scripts/verify-live.mjs	1198	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1198	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1207	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1210	634	WHY	rewrite	trimmed; history moved
+scripts/verify-live.mjs	1225	268	HISTORY	delete	restates the population rule below
+scripts/verify-live.mjs	1232	495	WHY	rewrite	populations kept; history moved
+scripts/verify-live.mjs	1242	528	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1269	1008	WHY	rewrite	trimmed; inversion history moved
+scripts/verify-live.mjs	1312	409	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1329	324	WHY	rewrite	owner kept
+scripts/verify-live.mjs	1336	296	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1351	311	HISTORY	delete	revert story
+scripts/verify-live.mjs	1366	1280	WHY	rewrite	intent kept; measurement moved
+scripts/verify-live.mjs	1389	78	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1391	36	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1414	153	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1432	148	HISTORY	delete	restates the code
+scripts/verify-live.mjs	1464	283	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1480	282	HISTORY	delete	restates the check
+scripts/verify-live.mjs	1484	1123	WHY	rewrite	prohibition kept; incident moved
+scripts/verify-live.mjs	1507	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1531	1032	CONTRACT	rewrite	heading and parse rule kept; history moved
+scripts/verify-live.mjs	1552	186	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1559	33	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1564	132	HISTORY	delete	restated by the assertion
+scripts/verify-live.mjs	1572	46	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1589	831	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1618	1311	WHY	rewrite	trimmed; reversal history moved
+scripts/verify-live.mjs	1670	1568	WHY	rewrite	trimmed; cache history moved
+scripts/verify-live.mjs	1697	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1698	21	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1723	236	HISTORY	delete	incident
+scripts/verify-live.mjs	1733	1505	WHY	rewrite	trimmed; measurement and dates moved
+scripts/verify-live.mjs	1788	1661	CONTRACT	rewrite	heading and gap kept; measurement moved
+scripts/verify-live.mjs	1819	280	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1839	144	HISTORY	delete	restated by the needle
+scripts/verify-live.mjs	1857	156	HISTORY	delete	restated by the message
+scripts/verify-live.mjs	1860	377	CONTRACT	rewrite	SCOPED-BY rationale trimmed
+scripts/verify-live.mjs	1869	60	CONTRACT	keep	SCOPED-BY marker; kept
+scripts/verify-live.mjs	1875	60	CONTRACT	keep	SCOPED-BY marker; kept
+scripts/verify-live.mjs	1882	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	1884	1074	WHY	rewrite	trimmed; dates moved
+scripts/verify-live.mjs	1918	23	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1926	144	WHY	rewrite	trimmed
+scripts/verify-live.mjs	1947	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	1949	1167	WHY	rewrite	trimmed; measurement moved
+scripts/verify-live.mjs	1975	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1976	18	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1984	52	CONTRACT	keep	type annotation only; kept
+scripts/verify-live.mjs	1989	160	HISTORY	delete	restates the regex
+scripts/verify-live.mjs	2009	131	WHY	rewrite	trimmed
+scripts/verify-live.mjs	2023	78	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	2025	2188	WHY	rewrite	mechanism and window kept; essay moved
+scripts/verify-live.mjs	2068	272	WHY	rewrite	trimmed
+scripts/verify-live.mjs	2091	389	WHY	rewrite	trimmed
+scripts/verify-live.mjs	2115	77	CONTRACT	rewrite	section heading shortened
+scripts/verify-live.mjs	2119	4247	WHY	rewrite	floor rule kept; measurement history moved
+scripts/verify-live.mjs	2198	400	WHY	rewrite	trimmed; draft story moved
+app/routes/admin.media._index.tsx	79	2281	CONTRACT	rewrite	module purpose and no-script fallback kept; v1 redesign narrative moved
+app/routes/admin.media._index.tsx	125	678	CONTRACT	rewrite	vocabulary kept; deleted-array story moved
+app/routes/admin.media._index.tsx	141	415	WHY	rewrite	cap reason kept, trimmed
+app/routes/admin.media._index.tsx	152	1543	WHY	rewrite	evidence mechanism kept; plant story moved
+app/routes/admin.media._index.tsx	196	355	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	222	722	WHY	rewrite	build-time import reason kept, trimmed
+app/routes/admin.media._index.tsx	241	397	CONTRACT	rewrite	trimmed
+app/routes/admin.media._index.tsx	255	142	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	259	801	WHY	rewrite	one-definition reason kept; alternatives discussion moved
+app/routes/admin.media._index.tsx	275	357	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	280	480	WHY	rewrite	structural reason kept; incident moved
+app/routes/admin.media._index.tsx	297	79	WHY	keep	already one line
+app/routes/admin.media._index.tsx	304	190	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	315	228	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	320	581	WHY	rewrite	prohibition kept, trimmed
+app/routes/admin.media._index.tsx	333	246	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	357	701	WHY	rewrite	restated cap moved; exclusion reason kept
+app/routes/admin.media._index.tsx	386	801	WHY	rewrite	two-source union reason kept, trimmed
+app/routes/admin.media._index.tsx	398	1010	WHY	rewrite	placement prohibition kept; serial-await story moved
+app/routes/admin.media._index.tsx	424	97	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	433	640	WHY	rewrite	unasserted row count moved
+app/routes/admin.media._index.tsx	474	67	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	481	59	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	486	547	CONTRACT	rewrite	regex replacement story moved
+app/routes/admin.media._index.tsx	497	58	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	499	73	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	505	53	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	507	377	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	516	61	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	526	299	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	536	623	WHY	rewrite	unasserted corpus numbers moved
+app/routes/admin.media._index.tsx	559	530	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	571	75	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	573	75	WHY	keep	already one line
+app/routes/admin.media._index.tsx	575	76	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	577	450	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	591	353	WHY	rewrite	unasserted count and mockup story moved
+app/routes/admin.media._index.tsx	602	80	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	604	83	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	609	72	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	612	284	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	620	57	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	622	56	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	624	226	CONTRACT	rewrite	trimmed
+app/routes/admin.media._index.tsx	632	313	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	640	232	WHY	rewrite	incident moved
+app/routes/admin.media._index.tsx	647	635	HISTORY	delete	removed-chip narrative
+app/routes/admin.media._index.tsx	658	907	WHY	rewrite	limitation kept; rewrite story moved
+app/routes/admin.media._index.tsx	682	764	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	698	150	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	708	566	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	720	887	WHY	rewrite	grammar and single-writer prohibition kept
+app/routes/admin.media._index.tsx	740	142	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	759	135	WHY	keep	already short
+app/routes/admin.media._index.tsx	789	852	WHY	rewrite	prohibition kept; incident moved
+app/routes/admin.media._index.tsx	823	358	WHY	rewrite	ruling citation and narration moved
+app/routes/admin.media._index.tsx	831	668	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	888	474	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	900	794	WHY	rewrite	enforcement reason kept; incident moved
+app/routes/admin.media._index.tsx	927	136	WHY	keep	already short
+app/routes/admin.media._index.tsx	955	210	WHY	rewrite	ruling number dropped
+app/routes/admin.media._index.tsx	963	1896	WHY	rewrite	two-question distinction kept; 2026-08-02 incident moved
+app/routes/admin.media._index.tsx	991	805	WHY	rewrite	trimmed; ruling date moved
+app/routes/admin.media._index.tsx	1030	138	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1037	134	WHY	keep	already short
+app/routes/admin.media._index.tsx	1052	788	WHY	rewrite	incident moved
+app/routes/admin.media._index.tsx	1071	501	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1088	232	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1096	73	WHY	rewrite	ruling number dropped
+app/routes/admin.media._index.tsx	1103	339	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1121	1197	WHY	rewrite	race reasoning kept; finding id moved
+app/routes/admin.media._index.tsx	1154	62	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	1164	213	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1172	1112	CONTRACT	rewrite	measurement and ruling date moved
+app/routes/admin.media._index.tsx	1199	238	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1210	634	WHY	rewrite	seam contract and the ceiling kept (admin queue ruling 8); incident moved
+app/routes/admin.media._index.tsx	1222	610	WHY	rewrite	trimmed; the ceiling kept
+app/routes/admin.media._index.tsx	1239	76	WHY	keep	already one line
+app/routes/admin.media._index.tsx	1260	531	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1274	765	WHY	rewrite	measurement moved
+app/routes/admin.media._index.tsx	1304	674	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1318	72	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	1321	72	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	1327	551	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1339	80	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	1355	143	WHY	keep	already short
+app/routes/admin.media._index.tsx	1361	628	WHY	rewrite	incident moved
+app/routes/admin.media._index.tsx	1376	61	CONTRACT	keep	already one line
+app/routes/admin.media._index.tsx	1382	232	HISTORY	delete	describes the previous subtitle
+app/routes/admin.media._index.tsx	1385	269	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1392	395	WHY	rewrite	layout story moved
+app/routes/admin.media._index.tsx	1403	453	CONTRACT	rewrite	trimmed
+app/routes/admin.media._index.tsx	1418	385	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1426	327	WHY	rewrite	duplicate of the comment above, trimmed
+app/routes/admin.media._index.tsx	1443	379	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1453	300	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1477	521	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1488	710	WHY	rewrite	stale Cmd+K note moved
+app/routes/admin.media._index.tsx	1512	226	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1529	744	WHY	rewrite	ruling narrative moved
+app/routes/admin.media._index.tsx	1547	324	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1556	483	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1565	558	WHY	rewrite	replacement story moved
+app/routes/admin.media._index.tsx	1597	289	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1608	134	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1624	519	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1655	477	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1665	922	WHY	rewrite	move story removed; prohibition kept
+app/routes/admin.media._index.tsx	1736	682	WHY	rewrite	bug narrative moved
+app/routes/admin.media._index.tsx	1768	141	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1778	767	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1812	254	WHY	rewrite	history; JSX comment cannot be deleted
+app/routes/admin.media._index.tsx	1818	731	WHY	rewrite	session narration moved
+app/routes/admin.media._index.tsx	1841	218	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1856	489	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1868	437	WHY	rewrite	incident moved
+app/routes/admin.media._index.tsx	1886	366	CONTRACT	rewrite	trimmed
+app/routes/admin.media._index.tsx	1916	363	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1921	337	WHY	rewrite	history; JSX comment cannot be deleted
+app/routes/admin.media._index.tsx	1929	575	WHY	rewrite	coincidence story moved
+app/routes/admin.media._index.tsx	1964	189	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	1995	577	WHY	rewrite	cursor history moved
+app/routes/admin.media._index.tsx	2004	277	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	2010	590	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	2041	680	WHY	rewrite	trimmed
+app/routes/admin.media._index.tsx	2055	230	WHY	rewrite	trimmed
+app/db/index.ts	50	199	CONTRACT	rewrite	trimmed
+app/db/index.ts	62	705	WHY	rewrite	finding id and incident date moved
+app/db/index.ts	87	303	WHY	rewrite	section header trimmed
+app/db/index.ts	94	76	CONTRACT	keep	already short
+app/db/index.ts	113	890	WHY	rewrite	reader list and normalisation essay trimmed
+app/db/index.ts	141	394	CONTRACT	rewrite	trimmed
+app/db/index.ts	161	59	CONTRACT	keep	already short
+app/db/index.ts	163	34	CONTRACT	keep	type annotation
+app/db/index.ts	182	176	CONTRACT	rewrite	trimmed
+app/db/index.ts	194	71	CONTRACT	keep	already short
+app/db/index.ts	204	124	WHY	rewrite	trimmed
+app/db/index.ts	207	120	WHY	rewrite	trimmed
+app/db/index.ts	215	1952	WHY	rewrite	latency measurements and rewrite story moved; subquery and tie-break traps kept
+app/db/index.ts	258	256	WHY	rewrite	trimmed
+app/db/index.ts	279	784	WHY	rewrite	incident narrative moved
+app/db/index.ts	294	150	WHY	rewrite	trimmed
+app/db/index.ts	298	213	WHY	rewrite	trimmed
+app/db/index.ts	305	176	WHY	rewrite	trimmed
+app/db/index.ts	310	231	WHY	rewrite	trimmed
+app/db/index.ts	322	70	WHY	keep	already short
+app/db/index.ts	335	1968	WHY	rewrite	2026-09-10 defect and ruling 57 story moved; hard rule citations kept
+app/db/index.ts	380	57	CONTRACT	keep	already short
+app/db/index.ts	383	305	WHY	rewrite	trimmed
+app/db/index.ts	407	314	WHY	rewrite	trimmed
+app/db/index.ts	418	223	CONTRACT	rewrite	trimmed
+app/db/index.ts	436	70	CONTRACT	keep	already short
+app/db/index.ts	445	614	CONTRACT	rewrite	trimmed
+app/db/index.ts	466	741	WHY	rewrite	unasserted count moved
+app/db/index.ts	488	644	WHY	rewrite	trimmed
+app/db/index.ts	532	77	CONTRACT	keep	already short
+app/db/index.ts	544	61	CONTRACT	keep	already short
+app/db/index.ts	558	133	WHY	rewrite	trimmed
+app/db/index.ts	582	1629	WHY	rewrite	visibility exemption kept, explanation cut
+app/db/index.ts	625	426	WHY	rewrite	trimmed
+app/db/index.ts	639	494	WHY	rewrite	exemption kept; old wording story moved
+app/db/index.ts	649	2054	WHY	rewrite	deleted-stub story moved; gate visibility, exemption and trash rules kept
+app/db/index.ts	702	372	WHY	rewrite	trimmed
+app/db/index.ts	717	452	WHY	rewrite	artifact history moved
+app/db/index.ts	733	219	WHY	rewrite	trimmed
+app/db/index.ts	749	600	WHY	rewrite	artifact arc and boundary note moved; draft rule kept
+app/db/index.ts	772	128	CONTRACT	rewrite	trimmed
+app/db/index.ts	803	68	CONTRACT	keep	already short
+app/db/index.ts	817	591	WHY	rewrite	trimmed
+app/db/index.ts	839	304	WHY	rewrite	trimmed
+app/db/index.ts	846	76	CONTRACT	keep	already short
+app/db/index.ts	853	65	CONTRACT	keep	already short
+app/db/index.ts	858	1427	WHY	rewrite	old narrower definition story moved
+app/db/index.ts	886	303	WHY	rewrite	trimmed
+app/db/index.ts	894	473	WHY	rewrite	trimmed
+app/db/index.ts	914	749	WHY	rewrite	unasserted counts moved; reconciliation prohibition kept
+app/db/index.ts	928	220	NUMBER	rewrite	asserted by the constant below
+app/db/index.ts	940	545	CONTRACT	rewrite	trimmed
+app/db/index.ts	952	225	WHY	rewrite	trimmed
+app/db/index.ts	963	208	WHY	rewrite	unasserted count moved
+app/db/index.ts	983	1086	WHY	rewrite	ruling narrative and R2 comparison moved
+app/db/index.ts	1012	54	CONTRACT	keep	already short
+app/db/index.ts	1014	296	CONTRACT	rewrite	trimmed
+app/db/index.ts	1022	479	WHY	rewrite	trimmed
+app/db/index.ts	1032	78	CONTRACT	keep	already short
+app/db/index.ts	1034	22	CONTRACT	keep	already short
+app/db/index.ts	1036	321	WHY	rewrite	trimmed
+app/db/index.ts	1050	649	WHY	rewrite	live-error story and unasserted count moved
+app/db/index.ts	1063	138	WHY	keep	already short
+app/db/index.ts	1066	368	WHY	rewrite	trimmed
+app/db/index.ts	1077	432	WHY	rewrite	trimmed
+app/db/index.ts	1084	298	WHY	rewrite	trimmed
+app/db/index.ts	1089	431	WHY	rewrite	trimmed
+app/db/index.ts	1103	415	WHY	rewrite	trimmed
+app/db/index.ts	1122	643	HISTORY	delete	superseded narrative repeated by the next block
+app/db/index.ts	1133	913	WHY	rewrite	trimmed
+app/db/index.ts	1153	195	WHY	rewrite	trimmed
+app/db/index.ts	1160	80	CONTRACT	keep	already short
+app/db/index.ts	1165	219	WHY	rewrite	trimmed
+app/db/index.ts	1173	434	WHY	rewrite	trimmed
+app/db/index.ts	1186	226	WHY	rewrite	trimmed
+app/db/index.ts	1194	1275	WHY	rewrite	trash-not-delete and refcount rule kept, explanation cut
+app/db/index.ts	1224	266	HISTORY	delete	old regex defect story
+app/db/index.ts	1237	53	CONTRACT	keep	already short
+app/db/index.ts	1251	547	WHY	rewrite	Unused chip story moved
+app/db/index.ts	1267	518	WHY	rewrite	divergence story moved
+app/db/index.ts	1291	284	WHY	rewrite	trimmed
+app/db/index.ts	1306	569	WHY	rewrite	trimmed
+app/db/index.ts	1327	73	CONTRACT	keep	already short
+app/db/index.ts	1337	68	CONTRACT	keep	already short
+app/db/index.ts	1347	387	WHY	rewrite	trimmed
+app/db/index.ts	1364	482	WHY	rewrite	unasserted row count moved
+app/db/index.ts	1390	312	CONTRACT	rewrite	trimmed
+app/db/index.ts	1403	1190	WHY	rewrite	trimmed
+app/db/index.ts	1464	1056	WHY	rewrite	queue consumer story moved
+app/db/index.ts	1482	907	WHY	rewrite	race story moved
+app/db/index.ts	1501	283	CONTRACT	rewrite	trimmed
+app/db/index.ts	1546	122	WHY	keep	already short
+app/db/index.ts	1564	253	WHY	rewrite	trimmed
+app/db/index.ts	1575	1977	WHY	rewrite	finding id and r2_key incident moved; atomicity, order and query-builder rules kept
+app/db/index.ts	1622	65	CONTRACT	keep	already short
+app/db/index.ts	1628	467	WHY	rewrite	fail-open story moved
+app/db/index.ts	1637	79	CONTRACT	keep	already short
+app/db/index.ts	1649	278	WHY	rewrite	trimmed
+app/db/index.ts	1666	537	WHY	rewrite	trimmed
+app/db/index.ts	1685	63	CONTRACT	keep	already short
+app/db/index.ts	1690	341	WHY	rewrite	trimmed
+app/db/index.ts	1701	380	WHY	rewrite	trimmed
+app/db/index.ts	1721	794	WHY	rewrite	trimmed
+app/db/index.ts	1743	63	CONTRACT	keep	already short
+app/db/index.ts	1748	341	WHY	rewrite	duplicate of the full-text reader
+app/db/index.ts	1759	380	WHY	rewrite	duplicate of the full-text reader
+app/db/index.ts	1779	43	CONTRACT	keep	already short
+app/db/index.ts	1798	637	WHY	rewrite	item id and gate explanation trimmed
+app/db/index.ts	1810	310	WHY	rewrite	trimmed
+app/db/index.ts	1819	585	WHY	rewrite	trimmed
+app/db/index.ts	1840	197	WHY	rewrite	trimmed
+app/db/index.ts	1853	579	WHY	rewrite	trimmed
+app/db/index.ts	1893	358	WHY	rewrite	trimmed; hard rule 13 kept
+app/db/index.ts	1903	49	CONTRACT	keep	already short
+app/db/index.ts	1913	457	WHY	rewrite	trimmed
+app/db/index.ts	1951	1812	WHY	rewrite	gate investigation narrative moved; both hard rule 1 citations kept
+app/db/index.ts	2011	482	CONTRACT	rewrite	trimmed
+app/db/index.ts	2026	286	WHY	rewrite	trimmed
+app/db/index.ts	2034	507	WHY	rewrite	trimmed
+app/db/index.ts	2050	537	WHY	rewrite	trimmed
+app/db/index.ts	2073	381	WHY	rewrite	trimmed
+app/db/index.ts	2101	75	CONTRACT	keep	already short
+app/db/index.ts	2103	78	WHY	keep	already short
+app/db/index.ts	2111	535	WHY	rewrite	trimmed
+scripts/ship.mjs	1	2667	CONTRACT	rewrite	usage, ordering rules and fail-closed contract kept; incident and prompt history moved
+scripts/ship.mjs	89	80	CONTRACT	keep	section divider
+scripts/ship.mjs	91	313	WHY	rewrite	gitignore reasons shortened
+scripts/ship.mjs	99	441	WHY	rewrite	age-not-count reason kept in one line
+scripts/ship.mjs	111	1836	CONTRACT	rewrite	re-exec mechanism and boundary kept; origin story moved
+scripts/ship.mjs	157	51	WHY	keep	already short
+scripts/ship.mjs	171	86	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	181	31	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	186	18	WHY	keep	already short
+scripts/ship.mjs	196	451	WHY	rewrite	placement reason shortened
+scripts/ship.mjs	217	589	WHY	rewrite	import-not-literal reason kept; history moved
+scripts/ship.mjs	234	422	WHY	rewrite	gate binding kept
+scripts/ship.mjs	248	28	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	254	357	CONTRACT	rewrite	trimmed
+scripts/ship.mjs	269	53	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	285	78	CONTRACT	keep	section divider
+scripts/ship.mjs	288	963	WHY	rewrite	token-before-build rule and secrecy kept
+scripts/ship.mjs	332	79	CONTRACT	keep	section divider
+scripts/ship.mjs	334	1512	WHY	rewrite	pull and orphan prohibitions kept; 2026-09-10 incident moved
+scripts/ship.mjs	391	304	WHY	rewrite	needle owner kept
+scripts/ship.mjs	399	229	WHY	rewrite	shortened
+scripts/ship.mjs	423	335	WHY	rewrite	shortened
+scripts/ship.mjs	450	201	WHY	rewrite	full-sha trap kept
+scripts/ship.mjs	457	983	HISTORY	delete	deleted-step narrative
+scripts/ship.mjs	476	79	CONTRACT	keep	section divider
+scripts/ship.mjs	478	2391	WHY	rewrite	path-not-deploy safety argument kept; ruling narrative and timings moved
+scripts/ship.mjs	536	756	WHY	rewrite	token requirement kept; measurement moved
+scripts/ship.mjs	554	472	CONTRACT	rewrite	hard rule 10 citation kept
+scripts/ship.mjs	566	758	WHY	rewrite	retry rationale kept; incident moved
+scripts/ship.mjs	593	79	WHY	keep	already short
+scripts/ship.mjs	605	83	CONTRACT	keep	section divider
+scripts/ship.mjs	607	1967	WHY	rewrite	refuse-not-apply rule kept; ship window 5 story moved
+scripts/ship.mjs	649	1591	WHY	rewrite	retry-only-unreadable mechanism kept; incident moved
+scripts/ship.mjs	687	146	WHY	keep	already short
+scripts/ship.mjs	691	18	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	699	18	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	728	78	CONTRACT	keep	section divider
+scripts/ship.mjs	731	557	WHY	rewrite	shortened
+scripts/ship.mjs	743	641	WHY	rewrite	shortened
+scripts/ship.mjs	758	596	WHY	rewrite	silent-404 trap kept; count removed
+scripts/ship.mjs	774	201	WHY	keep	already short
+scripts/ship.mjs	780	386	WHY	rewrite	shortened
+scripts/ship.mjs	794	78	CONTRACT	keep	section divider
+scripts/ship.mjs	798	325	HISTORY	delete	ruling narration; log lines say it
+scripts/ship.mjs	813	79	CONTRACT	keep	section divider
+scripts/ship.mjs	815	2530	WHY	rewrite	fail-closed table and no-override kept; audit history moved
+scripts/ship.mjs	865	1073	WHY	rewrite	fresh-read rule kept
+scripts/ship.mjs	900	78	CONTRACT	keep	section divider
+scripts/ship.mjs	916	78	CONTRACT	keep	section divider
+scripts/ship.mjs	922	184	WHY	keep	already short
+scripts/ship.mjs	949	75	CONTRACT	keep	section divider
+scripts/ship.mjs	951	2118	WHY	rewrite	ordering and body-read reasons kept; narrative moved
+scripts/ship.mjs	994	21	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	996	21	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	1015	143	WHY	keep	already short
+scripts/ship.mjs	1021	271	WHY	rewrite	shortened
+scripts/ship.mjs	1039	73	CONTRACT	keep	section divider
+scripts/ship.mjs	1041	1754	WHY	rewrite	order and miss-not-refusal kept
+scripts/ship.mjs	1079	71	CONTRACT	keep	already short
+scripts/ship.mjs	1094	273	WHY	rewrite	shortened
+scripts/ship.mjs	1108	671	WHY	rewrite	shortened
+scripts/ship.mjs	1131	1403	WHY	rewrite	order and miss rule kept; measurement moved
+scripts/ship.mjs	1160	65	CONTRACT	keep	already short
+scripts/ship.mjs	1172	313	WHY	rewrite	shortened
+scripts/ship.mjs	1190	80	CONTRACT	keep	section divider
+scripts/ship.mjs	1192	386	WHY	rewrite	shortened
+scripts/ship.mjs	1215	69	CONTRACT	keep	already short
+scripts/ship.mjs	1220	613	WHY	rewrite	discriminator kept
+scripts/ship.mjs	1236	1463	WHY	rewrite	confirming-sync mechanism kept; ruling story moved
+scripts/ship.mjs	1290	317	WHY	rewrite	shortened
+scripts/ship.mjs	1312	78	CONTRACT	keep	section divider
+scripts/ship.mjs	1314	2124	WHY	rewrite	order and miss rule kept; measurements moved
+scripts/ship.mjs	1357	69	CONTRACT	keep	already short
+scripts/ship.mjs	1360	294	CONTRACT	rewrite	shortened
+scripts/ship.mjs	1368	658	CONTRACT	rewrite	shared-helper contract kept; history moved
+scripts/ship.mjs	1384	30	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	1386	18	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	1394	146	WHY	keep	already short
+scripts/ship.mjs	1407	138	WHY	keep	already short
+scripts/ship.mjs	1425	2105	WHY	rewrite	read-only poll and double bound kept; measurement moved
+scripts/ship.mjs	1463	67	CONTRACT	keep	already short
+scripts/ship.mjs	1468	170	WHY	keep	already short
+scripts/ship.mjs	1472	18	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	1526	80	CONTRACT	keep	section divider
+scripts/ship.mjs	1528	1914	WHY	rewrite	order and no-poll reason kept; history moved
+scripts/ship.mjs	1565	72	CONTRACT	keep	already short
+scripts/ship.mjs	1588	154	WHY	keep	already short
+scripts/ship.mjs	1601	80	CONTRACT	keep	section divider
+scripts/ship.mjs	1603	1022	WHY	rewrite	deferral meaning kept; ruling narrative moved
+scripts/ship.mjs	1622	82	CONTRACT	keep	already short
+scripts/ship.mjs	1625	363	WHY	rewrite	shortened
+scripts/ship.mjs	1633	21	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	1635	21	CONTRACT	keep	type annotation only; kept
+scripts/ship.mjs	1651	727	WHY	rewrite	fts-equality exclusion kept; session note moved
+scripts/ship.mjs	1673	78	CONTRACT	keep	section divider
+scripts/ship.mjs	1681	1008	WHY	rewrite	all-misses and no-rollback kept
+scripts/check-contrast.mjs	1	3422	CONTRACT	rewrite	two-source contract and boundary kept; opacity enumeration and dates moved
+scripts/check-contrast.mjs	67	155	WHY	keep	already a short why
+scripts/check-contrast.mjs	71	818	WHY	rewrite	shared-arithmetic why kept; move narrative dropped
+scripts/check-contrast.mjs	85	537	WHY	rewrite	file-discovery distinction kept, shortened
+scripts/check-contrast.mjs	102	213	CONTRACT	rewrite	section heading shortened
+scripts/check-contrast.mjs	108	429	WHY	rewrite	trap kept; first-run incident moved
+scripts/check-contrast.mjs	117	437	WHY	rewrite	trap kept; checkout incident moved
+scripts/check-contrast.mjs	126	242	CONTRACT	keep	already short
+scripts/check-contrast.mjs	142	37	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	144	404	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	157	140	WHY	keep	already short
+scripts/check-contrast.mjs	166	293	CONTRACT	keep	already short
+scripts/check-contrast.mjs	181	44	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	191	792	WHY	rewrite	canary trap kept; incident moved
+scripts/check-contrast.mjs	204	54	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	219	167	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	224	23	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	227	28	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	232	128	CONTRACT	keep	already short
+scripts/check-contrast.mjs	242	310	WHY	rewrite	trap kept, shortened
+scripts/check-contrast.mjs	265	143	WHY	keep	already short
+scripts/check-contrast.mjs	277	897	WHY	rewrite	rule kept; history of the earlier rule moved
+scripts/check-contrast.mjs	292	204	CONTRACT	keep	already short
+scripts/check-contrast.mjs	300	23	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	303	60	WHY	keep	already short
+scripts/check-contrast.mjs	316	54	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	332	818	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	348	39	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	349	18	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	364	42	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	377	219	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	381	719	WHY	rewrite	source and sign-convention why kept; upstream detail moved
+scripts/check-contrast.mjs	416	129	WHY	keep	already short
+scripts/check-contrast.mjs	424	211	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	428	430	WHY	rewrite	why kept; measurements moved
+scripts/check-contrast.mjs	434	29	WHY	keep	trailing one-liner
+scripts/check-contrast.mjs	435	49	WHY	keep	trailing one-liner
+scripts/check-contrast.mjs	436	341	WHY	rewrite	prohibition kept; date moved
+scripts/check-contrast.mjs	442	72	CONTRACT	keep	type tag kept
+scripts/check-contrast.mjs	444	20	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	447	386	WHY	rewrite	shortened
+scripts/check-contrast.mjs	456	229	WHY	rewrite	session reference dropped
+scripts/check-contrast.mjs	460	462	WHY	rewrite	why kept; measurements moved
+scripts/check-contrast.mjs	473	1015	WHY	rewrite	exemption why kept; ruling narrative moved
+scripts/check-contrast.mjs	491	26	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	494	578	WHY	rewrite	prohibition kept; measurements and incident moved
+scripts/check-contrast.mjs	506	8	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	510	71	WHY	keep	already short
+scripts/check-contrast.mjs	514	221	WHY	rewrite	project note dropped
+scripts/check-contrast.mjs	526	153	WHY	keep	already short
+scripts/check-contrast.mjs	529	415	WHY	rewrite	why kept; retirement note moved
+scripts/check-contrast.mjs	537	74	WHY	keep	already short
+scripts/check-contrast.mjs	540	572	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	549	1143	WHY	rewrite	opaque-band why kept; measurements moved
+scripts/check-contrast.mjs	568	505	WHY	rewrite	exemption kept; measurements moved
+scripts/check-contrast.mjs	576	9	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	579	70	WHY	keep	already short
+scripts/check-contrast.mjs	586	10	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	592	138	WHY	keep	already short
+scripts/check-contrast.mjs	599	10	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	607	44	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	610	31	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	618	476	WHY	rewrite	shortened
+scripts/check-contrast.mjs	632	822	CONTRACT	rewrite	heading kept; ruling and build narrative moved
+scripts/check-contrast.mjs	646	75	WHY	keep	already short
+scripts/check-contrast.mjs	653	215	WHY	rewrite	shortened
+scripts/check-contrast.mjs	658	69	WHY	keep	already short
+scripts/check-contrast.mjs	669	217	WHY	rewrite	step reference dropped
+scripts/check-contrast.mjs	676	873	WHY	rewrite	prohibition kept; deletion narrative moved
+scripts/check-contrast.mjs	691	309	WHY	rewrite	why kept; measurement moved
+scripts/check-contrast.mjs	698	46	CONTRACT	keep	row group label
+scripts/check-contrast.mjs	712	234	WHY	keep	already short
+scripts/check-contrast.mjs	720	651	WHY	rewrite	why kept; ruling and measurements moved
+scripts/check-contrast.mjs	735	77	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	740	116	WHY	keep	already short
+scripts/check-contrast.mjs	761	233	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	765	1467	WHY	rewrite	trap and exemption rule kept; incidents moved
+scripts/check-contrast.mjs	792	78	CONTRACT	keep	type tag kept
+scripts/check-contrast.mjs	817	804	WHY	rewrite	scope and strip why kept; measurements moved
+scripts/check-contrast.mjs	838	757	WHY	rewrite	both-sides scope why kept; stale measurements moved
+scripts/check-contrast.mjs	872	55	WHY	keep	already short
+scripts/check-contrast.mjs	882	224	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	886	809	WHY	rewrite	why kept; incident moved
+scripts/check-contrast.mjs	899	83	CONTRACT	keep	type tag kept
+scripts/check-contrast.mjs	901	146	WHY	rewrite	shortened
+scripts/check-contrast.mjs	921	425	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	927	38	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	950	614	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	970	219	NUMBER	rewrite	asserted floor 53 kept
+scripts/check-contrast.mjs	993	205	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	997	434	CONTRACT	rewrite	why shortened; tags kept
+scripts/check-contrast.mjs	1018	37	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1029	76	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1033	76	WHY	keep	already short
+scripts/check-contrast.mjs	1059	141	WHY	keep	already short
+scripts/check-contrast.mjs	1074	107	WHY	keep	already short
+scripts/check-contrast.mjs	1083	206	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	1087	299	HISTORY	delete	prior-verification narrative; next block states the contract
+scripts/check-contrast.mjs	1093	337	CONTRACT	rewrite	shortened; tag kept
+scripts/check-contrast.mjs	1102	68	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1104	50	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1122	673	WHY	rewrite	fail-closed exemption kept; upstream measurements moved
+scripts/check-contrast.mjs	1137	59	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1144	23	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1149	69	WHY	keep	already short
+scripts/check-contrast.mjs	1154	68	WHY	keep	already short
+scripts/check-contrast.mjs	1186	196	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	1190	244	CONTRACT	keep	already short
+scripts/check-contrast.mjs	1197	650	WHY	rewrite	why kept; narrowing incident moved
+scripts/check-contrast.mjs	1217	843	WHY	rewrite	why kept; audit measurement moved
+scripts/check-contrast.mjs	1244	39	WHY	keep	already short
+scripts/check-contrast.mjs	1248	371	WHY	rewrite	trap kept; first-run incident moved
+scripts/check-contrast.mjs	1253	24	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1266	39	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1272	345	WHY	rewrite	trap kept, shortened
+scripts/check-contrast.mjs	1303	163	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	1324	134	WHY	keep	already short
+scripts/check-contrast.mjs	1330	382	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	1343	2600	HISTORY	delete	floor measurement narrative; later block owns the floor
+scripts/check-contrast.mjs	1390	77	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	1392	2524	WHY	rewrite	reveal-pair and every-member rules kept; narrative moved
+scripts/check-contrast.mjs	1450	232	WHY	rewrite	hard rule 10 citation kept
+scripts/check-contrast.mjs	1468	131	CONTRACT	keep	already short
+scripts/check-contrast.mjs	1479	21	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1485	71	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1505	235	WHY	rewrite	shortened
+scripts/check-contrast.mjs	1525	219	WHY	rewrite	shortened
+scripts/check-contrast.mjs	1533	21	CONTRACT	keep	type annotation only; kept
+scripts/check-contrast.mjs	1544	79	CONTRACT	rewrite	heading shortened
+scripts/check-contrast.mjs	1546	708	WHY	rewrite	why kept, shortened
+scripts/check-contrast.mjs	1585	4308	NUMBER	rewrite	asserted floors kept; re-measurement log moved
+scripts/check-all.mjs	1	1560	CONTRACT	rewrite	usage, boundary and run-everything contract kept; the incident and the gate-count story moved
+scripts/check-all.mjs	48	1025	WHY	rewrite	read-before-truncate and union whys kept; the 2026-09 kill measurements moved
+scripts/check-all.mjs	69	1487	NUMBER	rewrite	value asserted by the code below; the method stays, the dated 35 to 40 history moved
+scripts/check-all.mjs	98	209	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	105	657	WHY	rewrite	the dedupe trap kept, trimmed
+scripts/check-all.mjs	122	741	CONTRACT	rewrite	contract kept; the 2026-08-20 measurement moved
+scripts/check-all.mjs	139	633	WHY	rewrite	why check:config cannot pass in a checkout, trimmed; verbatim output moved
+scripts/check-all.mjs	153	408	WHY	rewrite	why no local D1 is provisioned, trimmed; verbatim error moved
+scripts/check-all.mjs	164	660	WHY	rewrite	vacuity reason kept, trimmed
+scripts/check-all.mjs	177	1927	WHY	rewrite	the tier call and its ground kept; the 2026-08 falsified reason, ruling dates and timings moved
+scripts/check-all.mjs	211	358	WHY	rewrite	why CI does not build the client, trimmed
+scripts/check-all.mjs	221	582	CONTRACT	rewrite	tier contract kept, trimmed
+scripts/check-all.mjs	236	2237	WHY	rewrite	offline tiering, delegation and ordering whys kept; the 2026-08-20 incident moved
+scripts/check-all.mjs	274	234	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	282	432	WHY	rewrite	offline reason and the pipeline boundary kept, trimmed
+scripts/check-all.mjs	295	237	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	301	524	WHY	rewrite	what it reads kept; the drift incident moved (ruling 111 cited)
+scripts/check-all.mjs	312	869	WHY	rewrite	tier caveat and diff-scoring why kept; audit count moved
+scripts/check-all.mjs	328	511	WHY	rewrite	network reason and purpose kept, trimmed (ruling 109 cited)
+scripts/check-all.mjs	343	604	WHY	rewrite	why it can be offline and its build dependency kept, trimmed
+scripts/check-all.mjs	354	244	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	362	299	CONTRACT	rewrite	boundary kept, trimmed
+scripts/check-all.mjs	367	295	CONTRACT	rewrite	boundary kept, trimmed
+scripts/check-all.mjs	372	217	CONTRACT	keep	already three lines; kept
+scripts/check-all.mjs	376	585	WHY	rewrite	why it runs in CI kept; date moved
+scripts/check-all.mjs	388	264	WHY	rewrite	in-CI reason kept; incident date moved
+scripts/check-all.mjs	395	468	WHY	rewrite	in-CI reason kept, trimmed
+scripts/check-all.mjs	405	464	WHY	rewrite	why it is slow and why check:head excludes it, trimmed
+scripts/check-all.mjs	414	75	CONTRACT	keep	one line; kept
+scripts/check-all.mjs	416	64	CONTRACT	keep	one line; kept
+scripts/check-all.mjs	418	158	CONTRACT	keep	two lines; kept
+scripts/check-all.mjs	421	224	CONTRACT	rewrite	boundary kept, trimmed
+scripts/check-all.mjs	425	283	CONTRACT	rewrite	boundary kept, trimmed
+scripts/check-all.mjs	430	372	CONTRACT	rewrite	boundary kept, trimmed
+scripts/check-all.mjs	436	227	CONTRACT	keep	already three lines; kept
+scripts/check-all.mjs	440	767	CONTRACT	rewrite	subject, boundary and the enforced offline guard kept; first-run story moved
+scripts/check-all.mjs	455	216	CONTRACT	keep	already three lines; kept
+scripts/check-all.mjs	459	72	CONTRACT	keep	one line; kept
+scripts/check-all.mjs	461	140	CONTRACT	keep	two lines; kept
+scripts/check-all.mjs	464	212	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	467	916	WHY	rewrite	the two reasons it is not offline and the consequence kept; timing and recommendation moved
+scripts/check-all.mjs	486	345	WHY	rewrite	vacuity reason kept, trimmed
+scripts/check-all.mjs	494	383	WHY	rewrite	network reason kept, trimmed
+scripts/check-all.mjs	503	695	WHY	rewrite	why no local form, and why it is weekly, trimmed
+scripts/check-all.mjs	520	131	CONTRACT	keep	already short; kept
+scripts/check-all.mjs	528	211	CONTRACT	keep	already three lines; kept
+scripts/check-all.mjs	532	344	WHY	rewrite	what --remote adds kept; the fifteen-day incident moved
+scripts/check-all.mjs	543	75	CONTRACT	keep	one line; kept
+scripts/check-all.mjs	546	82	CONTRACT	keep	one line; kept
+scripts/check-all.mjs	549	431	WHY	rewrite	one-derivation and self-invocation whys kept; the colophon story moved
+scripts/check-all.mjs	583	50	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	592	2806	WHY	rewrite	the errored-gate rule, its test and its licence kept; incidents and the first-attempt story moved (hard rule 12 citation kept)
+scripts/check-all.mjs	648	226	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	665	248	WHY	rewrite	why the status is a field, trimmed
+scripts/check-all.mjs	675	318	CONTRACT	rewrite	null-is-not-zero contract kept, trimmed
+scripts/check-all.mjs	683	28	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	687	3633	WHY	rewrite	the four conditions and what it does not claim kept; the 2026-09-15 measurements moved (hard rule 10 citation kept)
+scripts/check-all.mjs	749	118	CONTRACT	rewrite	shortened to one line
+scripts/check-all.mjs	759	29	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	765	244	CONTRACT	keep	type contract; kept
+scripts/check-all.mjs	780	36	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	783	21	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	785	23	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	788	55	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	791	69	WHY	keep	one line; kept
+scripts/check-all.mjs	801	599	WHY	rewrite	order why kept; the ruling 39a history moved
+scripts/check-all.mjs	823	868	WHY	rewrite	build-before-read and loud-refusal whys kept, trimmed
+scripts/check-all.mjs	849	488	WHY	rewrite	why the twins are built first, trimmed
+scripts/check-all.mjs	869	415	WHY	rewrite	why the bundles are built first, trimmed
+scripts/check-all.mjs	888	459	WHY	rewrite	derived-exclusion direction kept, trimmed
+scripts/check-all.mjs	902	270	WHY	keep	already short; kept
+scripts/check-all.mjs	926	953	WHY	rewrite	preflight purpose and the by-pid prohibition kept; the 2026-09-09 measurement moved
+scripts/check-all.mjs	945	673	WHY	rewrite	one-read liveness why kept; the 47-kill incident moved
+scripts/check-all.mjs	967	294	WHY	keep	already short; kept
+scripts/check-all.mjs	978	472	CONTRACT	rewrite	what it covers and what it cannot, trimmed
+scripts/check-all.mjs	1003	139	WHY	keep	two lines; kept
+scripts/check-all.mjs	1009	43	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	1011	650	WHY	rewrite	why check:floors is fed rather than spawned, trimmed; the timing moved
+scripts/check-all.mjs	1028	448	WHY	rewrite	the marker, its citation and the partial-map why kept, trimmed
+scripts/check-all.mjs	1036	148	WHY	keep	two lines; kept
+scripts/check-all.mjs	1040	269	WHY	rewrite	window-closing why kept, trimmed
+scripts/check-all.mjs	1059	623	WHY	rewrite	why gates are passed and only passes are fed, trimmed
+scripts/check-all.mjs	1098	159	WHY	keep	two lines; kept
+scripts/check-all.mjs	1113	157	WHY	keep	two lines; kept
+scripts/check-all.mjs	1118	164	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	1126	157	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	1133	370	WHY	rewrite	trimmed to the rule
+scripts/check-all.mjs	1141	318	WHY	rewrite	unfailable-branch why kept, trimmed (hard rule 10 citation kept)
+scripts/check-all.mjs	1158	154	WHY	keep	two lines; kept
+scripts/check-all.mjs	1164	240	WHY	rewrite	trimmed
+scripts/check-all.mjs	1169	55	CONTRACT	keep	type annotation only; kept
+scripts/check-all.mjs	1224	193	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	1227	1597	WHY	rewrite	exitCode-not-exit and the explicit cleanUp why kept; the 2026-09-13 investigation moved
+scripts/check-all.mjs	1254	215	WHY	rewrite	shortened to one line
+scripts/check-all.mjs	1263	627	WHY	rewrite	guard purpose and the pathToFileURL trap kept, trimmed

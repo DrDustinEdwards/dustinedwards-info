@@ -1,0 +1,156 @@
+// File the history documents into Capsid, reading the bytes OFF DISK so a verbatim archive
+// never passes through a model. That is the whole reason this is a script: every one of them
+// holds deleted comment blocks verbatim, and a model retyping two megabytes is not verbatim.
+//
+//   node scratchpad/run-with-capsid.mjs scratchpad/file-history.mjs [--dry] [path ...]
+//
+// A trailing path files only the documents it names. Re-filing one that has not changed is not
+// free: a write moves `updated_at`, and `check:guidelines` reads that against the stamp on
+// every export taken from it, so an idle rewrite reds that gate.
+//
+// IT NEEDS A WRITE-SCOPED TOKEN AND THE REPO'S IS NOT ONE. CAPSID_TOKEN in the main checkout's
+// .dev.vars resolves to agent:dustinedwards-guidelines-gate, whose tool scope is read and list,
+// which is correct for what it was minted for (check:guidelines exports documents, it does not
+// write them). Filing needs an agent with the write tool on the dustinedwards namespace, and
+// minting one is admin-only by design: a minted agent that could mint has no scope. So the
+// sequence is mint, put the key in the main checkout's .dev.vars as CAPSID_TOKEN, run this.
+//
+// The write is verified rather than assumed: the response carries the stored body's sha256 and
+// this compares it to the file's own. Equal means the bytes landed exactly.
+import { readFileSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+import { CAPSID_MCP, NAMESPACE } from "../scripts/lib/capsid.mjs";
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO = join(HERE, "..");
+const DRY = process.argv.includes("--dry");
+
+const DOCS = [
+  {
+    file: "scratchpad/sheet-history-2026-09.md",
+    path: "sheet-history-2026-09.md",
+    title: "Stylesheet comment history, September 2026",
+    type: "reference",
+  },
+  {
+    file: "scratchpad/code-history-2026-09-wave1.md",
+    path: "code-history-2026-09-wave1.md",
+    title: "Code comment history, September 2026, wave 1",
+    type: "reference",
+  },
+  {
+    file: "scratchpad/code-history-2026-09-wave2.md",
+    path: "code-history-2026-09-wave2.md",
+    title: "Code comment history, September 2026, wave 2",
+    type: "reference",
+  },
+  {
+    file: "scratchpad/code-history-2026-09-wave3.md",
+    path: "code-history-2026-09-wave3.md",
+    title: "Code comment history, September 2026, wave 3",
+    type: "reference",
+  },
+  {
+    file: "scratchpad/code-history-2026-09-wave4.md",
+    path: "code-history-2026-09-wave4.md",
+    title: "Code comment history, September 2026, wave 4",
+    type: "reference",
+  },
+  /*
+   * Ruling 116's two documents. They are not verbatim archives like the histories above, but they
+   * go through the same door for the same reason: the filer verifies the stored sha256 against the
+   * file, so "it was written" is measured rather than assumed.
+   */
+  {
+    file: "scratchpad/retired-2026-09.md",
+    path: "retired-2026-09.md",
+    title: "Retired and merged rulings, September 2026",
+    type: "reference",
+  },
+  {
+    file: "scratchpad/core.md",
+    path: "core.md",
+    title: "dustinedwards.info: current state",
+    type: "note",
+  },
+];
+
+/** Which documents this run files. Empty means all of them, which is the original behaviour. */
+const named = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const selected = named.length ? DOCS.filter((d) => named.includes(d.path)) : DOCS;
+if (named.length && selected.length !== named.length) {
+  console.error(`no such document: ${named.filter((n) => !DOCS.some((d) => d.path === n)).join(", ")}`);
+  process.exit(2);
+}
+
+/**
+ * `callTool` in scripts/lib/capsid.mjs parses the tool's text as JSON, and an authorization
+ * refusal arrives as a plain sentence, so it surfaces as "Unexpected token 'u'". This keeps the
+ * raw text, because the sentence names the agent and its scope and that is the whole diagnosis.
+ *
+ * @param {string} token @param {string} name @param {Record<string, unknown>} args
+ */
+async function call(token, name, args) {
+  const res = await fetch(CAPSID_MCP, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+    },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }),
+  });
+  const text = await res.text();
+  const payload = text.includes("data:")
+    ? text.split("\n").filter((l) => l.startsWith("data:")).pop()?.slice(5).trim()
+    : text;
+  const rpc = JSON.parse(payload ?? "{}");
+  if (rpc.error) return { error: rpc.error.message ?? "rpc error" };
+  const content = rpc.result?.content?.[0]?.text ?? "";
+  try {
+    return { result: JSON.parse(content) };
+  } catch {
+    return { error: content };
+  }
+}
+
+const token = process.env.CAPSID_TOKEN;
+if (!token) {
+  console.error("CAPSID_TOKEN absent; run this through scratchpad/run-with-capsid.mjs");
+  process.exit(2);
+}
+
+for (const doc of selected) {
+  const abs = join(REPO, doc.file);
+  if (!existsSync(abs)) {
+    console.error(`missing: ${doc.file}`);
+    process.exit(2);
+  }
+  const body = readFileSync(abs, "utf8");
+  const sha = createHash("sha256").update(body, "utf8").digest("hex");
+  console.log(`${doc.file}: ${Buffer.byteLength(body)} bytes, sha256 ${sha}`);
+  if (DRY) continue;
+
+  const { result, error } = await call(token, "write", {
+    namespace: NAMESPACE,
+    path: doc.path,
+    title: doc.title,
+    type: doc.type,
+    body,
+    mode: "replace",
+    confirm: true,
+  });
+  if (error) {
+    console.error(`  -> REFUSED: ${error}`);
+    process.exitCode = 1;
+    continue;
+  }
+  const same = result?.sha256 === sha;
+  console.log(
+    `  -> ${NAMESPACE}/${doc.path}: ${result?.bytes} bytes, sha256 ${result?.sha256}` +
+      ` ${same ? "MATCHES the file" : "DOES NOT MATCH the file, read it back before trusting it"}`,
+  );
+  if (!same) process.exitCode = 1;
+}

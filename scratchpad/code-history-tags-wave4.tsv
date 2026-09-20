@@ -1,0 +1,914 @@
+file	line	bytes	tag	action	reason
+app/routes/admin.posts._index.tsx	40	716	CONTRACT	rewrite	header: the derived state and why it is computed in the loader
+app/routes/admin.posts._index.tsx	64	489	CONTRACT	rewrite	header: stated once, and what a mismatch costs
+app/routes/admin.posts._index.tsx	79	90	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	82	403	CONTRACT	rewrite	header: why the state is in the URL; the example names the failure
+app/routes/admin.posts._index.tsx	100	324	WHY	rewrite	header: the rounding direction and the prohibition it protects
+app/routes/admin.posts._index.tsx	113	377	WHY	rewrite	tagged by what STAYS; the date, the median and the misdirected fixes go to the history document
+app/routes/admin.posts._index.tsx	126	848	CONTRACT	rewrite	the independence and what it buys; the twelve samples go to the history document
+app/routes/admin.posts._index.tsx	146	420	WHY	rewrite	the prohibition: a rejection before the await is unhandled
+app/routes/admin.posts._index.tsx	162	667	CONTRACT	rewrite	why it joins the group and why it needs no catch
+app/routes/admin.posts._index.tsx	197	336	CONTRACT	rewrite	the hydration boundary, which is why the number is computed here
+app/routes/admin.posts._index.tsx	207	139	WHY	keep	already at size
+app/routes/admin.posts._index.tsx	221	506	WHY	rewrite	the prohibition on public routes awaiting the AI layer, and the one-listing rule
+app/routes/admin.posts._index.tsx	229	382	WHY	rewrite	tagged by what STAYS; the measured variance range goes to the history document
+app/routes/admin.posts._index.tsx	239	305	WHY	rewrite	why a DO read is a candidate; the diagnosis story goes to the history document
+app/routes/admin.posts._index.tsx	247	78	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	256	69	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	258	243	CONTRACT	rewrite	the prohibition: the count must not follow the filter
+app/routes/admin.posts._index.tsx	264	450	CONTRACT	rewrite	one array for count and list; the media library's defect goes to the history document
+app/routes/admin.posts._index.tsx	279	67	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	281	395	CONTRACT	rewrite	why the whole report travels; the ruling citation stays on one line
+app/routes/admin.posts._index.tsx	294	144	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	303	240	CONTRACT	rewrite	why the actor is required rather than defaulted
+app/routes/admin.posts._index.tsx	321	215	WHY	keep	already at size; carries the independence prohibition
+app/routes/admin.posts._index.tsx	328	814	WHY	rewrite	the destructive semantics and why the typed count is 1
+app/routes/admin.posts._index.tsx	346	72	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	367	1494	CONTRACT	rewrite	header: the by-construction guarantee; section F and the title reasoning go to the history document
+app/routes/admin.posts._index.tsx	400	352	WHY	rewrite	the derived-store rule; the citation keeps the original spelling
+app/routes/admin.posts._index.tsx	430	198	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	441	2375	CONTRACT	rewrite	keeps the load-bearing prohibition; read-modify-write and no-confirmation go to the history document
+app/routes/admin.posts._index.tsx	487	248	CONTRACT	rewrite	the committed file is the authority
+app/routes/admin.posts._index.tsx	512	1269	CONTRACT	rewrite	keeps the omitted sha; partial failure and the file-and-line citations go to the history document
+app/routes/admin.posts._index.tsx	543	69	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	549	1055	WHY	rewrite	the no-script prohibition and the rule that follows it; the sibling-defect story goes to the history document
+app/routes/admin.posts._index.tsx	593	149	CONTRACT	rewrite	the blast-radius statement
+app/routes/admin.posts._index.tsx	608	220	WHY	rewrite	why a no-op is skipped rather than committed
+app/routes/admin.posts._index.tsx	651	297	CONTRACT	rewrite	header: why tabs and what All is
+app/routes/admin.posts._index.tsx	668	662	CONTRACT	rewrite	header: what the prop is for and the gate that needs it
+app/routes/admin.posts._index.tsx	684	217	CONTRACT	rewrite	the fixture contract
+app/routes/admin.posts._index.tsx	694	894	CONTRACT	rewrite	header: the three-outcome prohibition
+app/routes/admin.posts._index.tsx	722	143	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	729	322	CONTRACT	rewrite	the pending contract; the contrast with /admin/media goes to the history document
+app/routes/admin.posts._index.tsx	739	473	CONTRACT	rewrite	the hard rule 9 exemption and the keying prohibition
+app/routes/admin.posts._index.tsx	758	307	WHY	rewrite	the defect the parameter carry closed, stated as the rule
+app/routes/admin.posts._index.tsx	772	321	CONTRACT	rewrite	the hydration boundary, which is the whole point of the flag
+app/routes/admin.posts._index.tsx	782	73	CONTRACT	keep	already one line
+app/routes/admin.posts._index.tsx	793	383	CONTRACT	rewrite	the agreement rule; the drifted wording goes to the history document
+app/routes/admin.posts._index.tsx	809	346	CONTRACT	rewrite	why the create action is separated
+app/routes/admin.posts._index.tsx	833	276	WHY	rewrite	why the duplicate exists: the alert does not render when clean
+app/routes/admin.posts._index.tsx	866	661	CONTRACT	rewrite	the no-script contract; the fixture-regeneration note goes to the history document
+app/routes/admin.posts._index.tsx	879	841	CONTRACT	rewrite	keeps the scriptless tag facet; the no-Filter-button reasoning goes to the history document
+app/routes/admin.posts._index.tsx	907	208	CONTRACT	rewrite	the link and aria contract
+app/routes/admin.posts._index.tsx	926	292	CONTRACT	rewrite	why zero renders and why it is announced as words
+app/routes/admin.posts._index.tsx	957	215	CONTRACT	keep	already at size; carries the no-script statement
+app/routes/admin.posts._index.tsx	964	263	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	975	452	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	1006	177	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	1015	607	CONTRACT	rewrite	the no-script path is the reason this step exists
+app/routes/admin.posts._index.tsx	1028	250	CONTRACT	rewrite	same shape, one line
+app/routes/admin.posts._index.tsx	1068	194	WHY	rewrite	the disabled-submitter prohibition
+app/routes/admin.posts._index.tsx	1078	371	WHY	rewrite	why there is nowhere else to report it
+app/routes/admin.posts._index.tsx	1084	503	CONTRACT	rewrite	the live-region prohibition
+app/routes/admin.posts._index.tsx	1127	353	CONTRACT	rewrite	the two-nothings prohibition
+app/routes/admin.posts._index.tsx	1147	222	CONTRACT	rewrite	the nesting prohibition, which is why the form sits here
+app/routes/admin.posts._index.tsx	1151	976	WHY	rewrite	the no-script defect and its repair; the measurement date goes to the history document
+app/routes/admin.posts._index.tsx	1169	465	CONTRACT	rewrite	why the count is absent rather than wrong
+app/routes/admin.posts._index.tsx	1191	121	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	1215	784	CONTRACT	rewrite	the keyboard contract; the 582px coincidence goes to the history document
+app/routes/admin.posts._index.tsx	1231	983	CONTRACT	rewrite	the one-owner rule and the SSR prohibition; the caption reasoning goes to the history document
+app/routes/admin.posts._index.tsx	1257	125	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	1268	672	CONTRACT	rewrite	the gated copy law, which forbids four words
+app/routes/admin.posts._index.tsx	1303	613	CONTRACT	rewrite	the forced-colors contract; the placement ruling goes to the history document
+app/routes/admin.posts._index.tsx	1315	708	CONTRACT	rewrite	the forced-colors and screen-reader prohibition
+app/routes/admin.posts._index.tsx	1335	247	CONTRACT	rewrite	the no-clock-in-render contract
+app/routes/admin.posts._index.tsx	1345	248	CONTRACT	rewrite	the three outcomes, short form
+app/routes/admin.posts._index.tsx	1358	265	CONTRACT	rewrite	the tooltip prohibition, which is an accessibility statement
+app/routes/admin.posts._index.tsx	1367	650	CONTRACT	rewrite	the form-attribute contract; the fifty-odd-controls story goes to the history document
+app/routes/admin.posts._index.tsx	1398	389	WHY	rewrite	the first-publication prohibition
+app/routes/admin.posts._index.tsx	1417	141	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	1438	1375	CONTRACT	rewrite	the nesting and submitter prohibitions; the no-confirmation clause goes to the history document
+app/routes/admin.posts._index.tsx	1485	368	CONTRACT	rewrite	the screen-reader reason the caption became a disclosure
+app/routes/admin.posts._index.tsx	1501	206	CONTRACT	keep	already at size
+app/routes/admin.posts._index.tsx	1506	58	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	33	783	CONTRACT	rewrite	header: the three regions and the payload contract; the checkbox era and the baseline move go to the history document
+app/components/admin/post-editor.tsx	49	355	CONTRACT	rewrite	the ruling 6 boundary and what the no-script reader keeps
+app/components/admin/post-editor.tsx	59	80	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	65	313	NUMBER	rewrite	why this interval and not a second
+app/components/admin/post-editor.tsx	77	572	CONTRACT	rewrite	header: the adjacency rule that stops it reading as a save
+app/components/admin/post-editor.tsx	95	68	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	98	345	CONTRACT	rewrite	header: why it strips rather than transliterates
+app/components/admin/post-editor.tsx	150	69	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	152	66	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	154	81	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	156	75	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	160	215	CONTRACT	rewrite	the no-script property: server state, so the step is in the first byte
+app/components/admin/post-editor.tsx	169	359	CONTRACT	rewrite	header: the prohibition on rewriting a chosen slug
+app/components/admin/post-editor.tsx	186	376	CONTRACT	rewrite	why a second input is needed; the unused-savedAt story goes to the history document
+app/components/admin/post-editor.tsx	195	326	CONTRACT	rewrite	the two nulls that must not read the same
+app/components/admin/post-editor.tsx	205	332	CONTRACT	rewrite	why the editor states it
+app/components/admin/post-editor.tsx	214	73	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	222	82	CONTRACT	keep	already one line
+app/components/admin/post-editor.tsx	227	165	CONTRACT	keep	already at size; carries the never-commits prohibition
+app/components/admin/post-editor.tsx	234	329	CONTRACT	rewrite	the bit that separates a failure from a first run
+app/components/admin/post-editor.tsx	243	151	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	249	261	WHY	rewrite	the prohibition on automatic restore
+app/components/admin/post-editor.tsx	265	154	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	273	155	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	285	1744	CONTRACT	rewrite	keeps enhancement-not-a-gate and the pathname comparison; the beforeunload half goes to the history document
+app/components/admin/post-editor.tsx	320	451	WHY	rewrite	why a stale block is released
+app/components/admin/post-editor.tsx	333	596	WHY	rewrite	the overlap this avoids; the dependency reasoning goes to the history document
+app/components/admin/post-editor.tsx	352	232	CONTRACT	rewrite	the hydration boundary and where the preference lives
+app/components/admin/post-editor.tsx	360	76	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	369	54	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	373	623	CONTRACT	rewrite	header: the one-renderer claim and the stale-response guard
+app/components/admin/post-editor.tsx	410	1967	CONTRACT	rewrite	header: the explicit intent and hard rule 13; the 2026-08-01 discovery goes to the history document
+app/components/admin/post-editor.tsx	454	73	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	485	1414	CONTRACT	rewrite	keeps ruling 1 and the buffer rewrite; the dismissed-offer hazard goes to the history document
+app/components/admin/post-editor.tsx	513	114	CONTRACT	keep	already at size
+app/components/admin/post-editor.tsx	541	776	CONTRACT	rewrite	the modality prohibition, which is the accessibility half
+app/components/admin/post-editor.tsx	617	385	CONTRACT	rewrite	why the value is carried at all
+app/components/admin/post-editor.tsx	625	765	CONTRACT	rewrite	why this one stays hidden; the B004 relay list goes to the history document
+app/components/admin/post-editor.tsx	639	652	WHY	rewrite	the no-script defect the absence fixes
+app/components/admin/post-editor.tsx	652	71	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/components/admin/post-editor.tsx	679	626	CONTRACT	rewrite	the required-and-hidden prohibition, which is why the two conditions are one
+app/components/admin/post-editor.tsx	711	373	CONTRACT	rewrite	why it is an element rather than prose; the wrapping measurement goes to the history document
+app/components/admin/post-editor.tsx	729	627	CONTRACT	rewrite	the render conditions and the harness property
+app/components/admin/post-editor.tsx	746	906	CONTRACT	rewrite	the absent-safety-net rule and the tint budget
+app/components/admin/post-editor.tsx	767	673	CONTRACT	rewrite	the no-script path and why it is removed rather than hidden
+app/components/admin/post-editor.tsx	791	184	CONTRACT	keep	already at size; carries the accessible-name rule
+app/components/admin/post-editor.tsx	835	71	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/components/admin/post-editor.tsx	848	308	CONTRACT	rewrite	the live-region guarantees
+app/components/admin/post-editor.tsx	858	1394	CONTRACT	rewrite	keeps the two-meanings prohibition; the delete-confirmation contrast goes to the history document
+app/components/admin/post-editor.tsx	919	444	CONTRACT	rewrite	ruling 1 made visible; the tint reasoning goes to the history document
+app/components/admin/post-editor.tsx	974	369	CONTRACT	rewrite	the one-spelling rule; the shipped no-op goes to the history document
+app/components/admin/post-editor.tsx	982	329	CONTRACT	rewrite	why the bound is its own attribute, which is the no-script half
+app/components/admin/post-editor.tsx	1012	921	CONTRACT	rewrite	the no-script path and the required-and-hidden prohibition
+app/components/admin/post-editor.tsx	1058	742	CONTRACT	rewrite	the zero-JS image path and the payload guarantee
+app/components/admin/post-editor.tsx	1084	68	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/components/admin/post-editor.tsx	1085	235	CONTRACT	rewrite	the no-script reason these are not in the drawer
+app/components/admin/post-editor.tsx	1105	71	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/components/admin/post-editor.tsx	1162	1022	CONTRACT	rewrite	header: the untouched-HTML claim and the frame isolation; the 2026-08-01 measurement goes to the history document
+app/components/admin/post-editor.tsx	1196	362	CONTRACT	rewrite	the no-second-copy rule
+app/components/admin/post-editor.tsx	1212	483	CONTRACT	rewrite	the division of labour; the overlap story goes to the history document
+app/components/admin/post-editor.tsx	1248	245	CONTRACT	rewrite	header: both ways out are explicit
+app/components/admin/post-editor.tsx	1300	380	CONTRACT	rewrite	header: why every state carries the sha
+app/components/admin/post-editor.tsx	1316	554	CONTRACT	rewrite	why a location is shown only when present
+app/components/admin/post-editor.tsx	1401	131	CONTRACT	keep	already at size; carries the inline-SVG rule
+app/components/admin/post-editor.tsx	1447	248	CONTRACT	rewrite	header: why alt is required at insert time
+app/routes/admin.tsx	19	564	CONTRACT	rewrite	header: the payload boundary; the 109,318 built bytes go to the history document
+app/routes/admin.tsx	36	382	CONTRACT	rewrite	the hydration boundary and the rule 9 exemption
+app/routes/admin.tsx	45	810	CONTRACT	rewrite	header: the one gate, and the two doors with only one writer
+app/routes/admin.tsx	63	2675	WHY	rewrite	keeps resource routes, the ordering and the absent-Origin exemption; the React Router measurement goes to the history document
+app/routes/admin.tsx	119	588	WHY	rewrite	why the collector is read rather than created
+app/routes/admin.tsx	136	389	CONTRACT	rewrite	the ordering that leaves the human path untouched
+app/routes/admin.tsx	146	453	WHY	rewrite	why a presented credential gets an answer
+app/routes/admin.tsx	167	1187	WHY	rewrite	keeps the allowlist inversion and the ordering; the capability-table inventory goes to the history document
+app/routes/admin.tsx	203	332	CONTRACT	rewrite	why the real email is the stated residue
+app/routes/admin.tsx	211	534	CONTRACT	rewrite	one listing per request; the removed artifact reader goes to the history document
+app/routes/admin.tsx	226	290	WHY	rewrite	tagged by what STAYS; the measured gap goes to the history document
+app/routes/admin.tsx	234	487	WHY	rewrite	why they run in parallel; the object-literal diagnosis goes to the history document
+app/routes/admin.tsx	244	735	CONTRACT	rewrite	keeps the cached-vs-fresh split; the measured variance goes to the history document
+app/routes/admin.tsx	259	234	CONTRACT	rewrite	why the context is required rather than optional
+app/routes/admin.tsx	271	549	CONTRACT	rewrite	the prohibition on badging a hardcoded array; the mockup's four go to the history document
+app/routes/admin.tsx	283	397	CONTRACT	rewrite	why one number, and what it counts
+app/routes/admin.tsx	292	423	CONTRACT	rewrite	the honest rendering of no evidence
+app/routes/admin.tsx	302	414	CONTRACT	rewrite	tier 1.5, and why the number travels to the UI
+app/routes/admin.tsx	314	908	CONTRACT	rewrite	why the total exists; the 2026-08-21 measurement goes to the history document
+app/routes/admin.tsx	336	443	CONTRACT	rewrite	header: where the state lives and the consequence that follows
+app/routes/admin.tsx	348	682	CONTRACT	rewrite	header: the paint boundary, the plane boundary and the hydration property
+app/routes/admin.tsx	363	145	CONTRACT	keep	already at size; carries the glyph idiom
+app/routes/admin.tsx	381	435	WHY	rewrite	the silhouette argument goes to the history document
+app/routes/admin.tsx	395	305	WHY	rewrite	the silhouette argument goes to the history document
+app/routes/admin.tsx	408	440	WHY	rewrite	the silhouette argument goes to the history document
+app/routes/admin.tsx	424	314	WHY	rewrite	keeps the one distinction that changed the drawing
+app/routes/admin.tsx	444	223	CONTRACT	rewrite	the two claims are different
+app/routes/admin.tsx	448	354	WHY	rewrite	the ordering reason; the unlinked-library story goes to the history document
+app/routes/admin.tsx	454	298	CONTRACT	rewrite	why the label is the long one
+app/routes/admin.tsx	459	431	CONTRACT	rewrite	why there is no third query
+app/routes/admin.tsx	469	528	CONTRACT	rewrite	header: the count is announced as words
+app/routes/admin.tsx	479	791	CONTRACT	rewrite	header: tier 1.5 stated to the operator, and why only on the drifted branch
+app/routes/admin.tsx	511	70	CONTRACT	keep	already one line
+app/routes/admin.tsx	529	758	CONTRACT	rewrite	header: one owner, and the no-script property of the folded control
+app/routes/admin.tsx	547	859	CONTRACT	rewrite	the accessible-name defect and its repair; the measurement goes to the history document
+app/routes/admin.tsx	601	629	CONTRACT	rewrite	why the read is optional; the un-nonced history goes to the history document
+app/routes/admin.tsx	614	360	CONTRACT	rewrite	the hydration boundary and what it actually keeps honest
+app/routes/admin.tsx	631	251	CONTRACT	rewrite	the focus contract
+app/routes/admin.tsx	646	60	CONTRACT	keep	already at size
+app/routes/admin.tsx	652	79	CONTRACT	keep	already one line
+app/routes/admin.tsx	669	71	CONTRACT	keep	already at size
+app/routes/admin.tsx	672	366	WHY	rewrite	why it spans both columns; the old placement goes to the history document
+app/routes/admin.tsx	681	390	CONTRACT	rewrite	the imported-never-copied rule and the gate it buys
+app/routes/admin.tsx	690	128	CONTRACT	keep	already at size
+app/routes/admin.tsx	693	293	CONTRACT	rewrite	why the wrapper exists
+app/routes/admin.tsx	725	218	CONTRACT	rewrite	why the two classes are split
+app/routes/admin.tsx	730	886	CONTRACT	rewrite	keeps the no-script arrangement and the a11y-tree property; the OverflowMenu account goes to the history document
+app/routes/admin.tsx	748	278	CONTRACT	rewrite	why the address stays visible
+app/routes/admin.tsx	760	197	WHY	rewrite	the placement consequence
+app/routes/admin.tsx	766	189	CONTRACT	rewrite	the null-is-not-zero prohibition
+app/routes/admin.tsx	778	408	CONTRACT	rewrite	the accessible name survives the label being hidden
+app/routes/admin.tsx	790	935	CONTRACT	rewrite	the two claims and the zero rule; the collapsing alternative goes to the history document
+app/routes/admin.tsx	811	247	CONTRACT	rewrite	why zero renders nothing here
+app/routes/admin.tsx	825	324	WHY	rewrite	what the zone means
+app/routes/admin.tsx	832	305	CONTRACT	rewrite	the accessible name carries what the glyph cannot
+app/routes/admin.tsx	861	674	CONTRACT	rewrite	the direction rule and the verb rule; the centring argument goes to the history document
+app/routes/admin.tsx	895	123	CONTRACT	keep	already at size
+app/routes/admin.tsx	902	68	CONTRACT	keep	already one line
+app/routes/admin.tsx	910	211	CONTRACT	rewrite	what the id is for; the gate that found it goes to the history document
+app/routes/blog.$slug.tsx	42	403	CONTRACT	rewrite	header: why negotiation is middleware; the 2026-07-28 measurement goes to the history document
+app/routes/blog.$slug.tsx	55	75	CONTRACT	keep	already at size; carries the visibility statement
+app/routes/blog.$slug.tsx	58	347	CONTRACT	rewrite	the never-stored prohibition
+app/routes/blog.$slug.tsx	79	235	CONTRACT	rewrite	the one-projection rule
+app/routes/blog.$slug.tsx	84	812	WHY	rewrite	the visibility re-check, which is the prohibition; the write-time history goes to the history document
+app/routes/blog.$slug.tsx	104	821	CONTRACT	rewrite	why the read is not in the shared projection
+app/routes/blog.$slug.tsx	131	464	CONTRACT	rewrite	the header shape and the one-origin rule
+app/routes/blog.$slug.tsx	142	390	CONTRACT	rewrite	why the tag is built in the loader
+app/routes/blog.$slug.tsx	157	520	CONTRACT	rewrite	the cache dimension and the two tags
+app/routes/blog.$slug.tsx	168	180	CONTRACT	keep	already at size; carries the forwarding rule
+app/routes/blog.$slug.tsx	183	439	CONTRACT	rewrite	the one-owner rule; the editor-preview history goes to the history document
+app/routes/blog.$slug.tsx	204	483	CONTRACT	rewrite	the card contract
+app/routes/blog.$slug.tsx	214	600	CONTRACT	rewrite	why they are spread rather than written out
+app/routes/blog.$slug.tsx	236	106	CONTRACT	keep	already at size
+app/routes/blog.$slug.tsx	244	535	CONTRACT	rewrite	why both are emitted
+app/routes/blog.$slug.tsx	259	328	NUMBER	rewrite	header: why one day
+app/routes/blog.$slug.tsx	268	1295	WHY	rewrite	header: the escaped-vs-injected rule, which is the whole of it
+app/routes/blog.$slug.tsx	297	655	CONTRACT	rewrite	the ordering and the still-renders rule
+app/routes/blog.$slug.tsx	311	439	WHY	rewrite	hard rule 13's distinction, on a public page
+app/routes/blog.$slug.tsx	326	288	CONTRACT	rewrite	what each token is for
+app/routes/blog.$slug.tsx	351	452	CONTRACT	rewrite	why it is called here rather than threaded
+app/routes/blog.$slug.tsx	361	601	CONTRACT	rewrite	derived rather than queried
+app/routes/blog.$slug.tsx	414	1016	CONTRACT	rewrite	why classes and not a second representation; the ruling citation stays on one line
+app/routes/blog.$slug.tsx	434	632	CONTRACT	rewrite	the same-string rule
+app/routes/blog.$slug.tsx	453	1027	CONTRACT	rewrite	keeps the conditional prohibition; the element's history goes to the history document
+app/routes/blog.$slug.tsx	481	1295	CONTRACT	rewrite	keeps hidden-not-sr-only, which is the accessibility half; the byline argument goes to the history document
+app/routes/blog.$slug.tsx	510	223	CONTRACT	keep	already at size; carries the one-owner rule
+app/routes/blog.$slug.tsx	522	1899	CONTRACT	rewrite	keeps absent-not-empty and the LCP eagerness; the srcset ladder and the dimensions history go to the history document
+app/routes/blog.$slug.tsx	567	1042	CONTRACT	rewrite	why both controls exist; the roadmap quotation goes to the history document
+app/routes/blog.$slug.tsx	634	215	CONTRACT	keep	already at size; carries the first-party grounds
+app/routes/blog.$slug.tsx	659	315	CONTRACT	rewrite	the no-script property of all three
+app/routes/blog.$slug.tsx	693	1556	CONTRACT	rewrite	keeps the no-script permalink argument; the Bluesky removal goes to the history document
+app/routes/blog.$slug.tsx	720	757	CONTRACT	rewrite	why the class landed on this anchor; the ruling 50 account goes to the history document
+app/routes/blog.$slug.tsx	755	613	CONTRACT	rewrite	absent not empty, and the pointer to the mention rule
+app/routes/blog.$slug.tsx	777	521	CONTRACT	rewrite	the one-owner rule for the stack facts
+app/routes/blog.$slug.tsx	795	594	CONTRACT	rewrite	why it degrades rather than renders empty
+app/routes/blog.$slug.tsx	818	859	CONTRACT	rewrite	the target size and the machine-readable half; the old inline shape goes to the history document
+app/root.tsx	22	669	CONTRACT	rewrite	header: the ordering prohibition; the Tailwind-hoisting story goes to the history document
+app/root.tsx	41	569	CONTRACT	rewrite	why the position is kept; the header suspension goes to the history document
+app/root.tsx	54	370	CONTRACT	rewrite	the one-owner rule for the hashed name
+app/root.tsx	62	735	CONTRACT	rewrite	what `?url` buys; the katex build grounds go to the history document
+app/root.tsx	78	412	CONTRACT	rewrite	header: the whole flash fix
+app/root.tsx	87	1477	CONTRACT	rewrite	header: the opt-in property and the middleware requirement
+app/root.tsx	123	290	CONTRACT	rewrite	why the nonce travels this way
+app/root.tsx	131	289	CONTRACT	rewrite	the merge asymmetry, which is why these live here
+app/root.tsx	139	718	CONTRACT	rewrite	why the type stays; the every-page history goes to the history document
+app/root.tsx	167	1626	CONTRACT	rewrite	keeps crossorigin and normal-face-only; the measured bytes and timings go to the history document
+app/root.tsx	208	227	CONTRACT	rewrite	the error-boundary path
+app/root.tsx	213	1289	CONTRACT	rewrite	keeps the no-fallback prohibition; the discharged note goes to the history document
+app/root.tsx	238	1279	CONTRACT	rewrite	the opt-in law and the gate that pins it
+app/root.tsx	266	2099	CONTRACT	rewrite	keeps the React-hoisting defect and the mirror gate; the useMatches probe goes to the history document
+app/root.tsx	308	1210	CONTRACT	rewrite	why unconditional, and the stated cost
+app/root.tsx	339	1810	CONTRACT	rewrite	keeps the ordering contract and what the gate asserts; the frame measurement goes to the history document
+app/root.tsx	371	1004	CONTRACT	rewrite	the merge reason and the second-copy gate
+app/root.tsx	392	925	CONTRACT	rewrite	why it is not removable; the measured bytes go to the history document
+app/root.tsx	410	685	CONTRACT	rewrite	the cascade position and the precedence prohibition
+app/root.tsx	425	69	CONTRACT	keep	already one line; carries the skip-link reason
+app/root.tsx	430	212	CONTRACT	keep	already at size; carries the not-nonced statement
+app/root.tsx	449	785	WHY	rewrite	why the strings are deliberate; the four originals go to the history document
+app/root.tsx	479	1209	CONTRACT	rewrite	keeps the a-404-is-still-the-site rule and why the header is safe; the Tailwind classes go to the history document
+app/components/admin/media-grid.tsx	1	304	CONTRACT	rewrite	header: the one-tree rule; the move date goes to the history document
+app/components/admin/media-grid.tsx	30	241	CONTRACT	rewrite	why the member is selected rather than the property read
+app/components/admin/media-grid.tsx	61	387	CONTRACT	rewrite	the accessibility prohibition
+app/components/admin/media-grid.tsx	66	462	CONTRACT	rewrite	the one-tree rule and what a second branch would cost
+app/components/admin/media-grid.tsx	75	527	CONTRACT	rewrite	the nesting prohibition and the fixture consequence
+app/components/admin/media-grid.tsx	89	380	WHY	rewrite	which question the number answers
+app/components/admin/media-grid.tsx	104	435	CONTRACT	rewrite	why it cannot submit, and the line shape
+app/components/admin/media-grid.tsx	143	107	CONTRACT	keep	already at size
+app/components/admin/media-grid.tsx	156	484	CONTRACT	rewrite	the ladder position and why the button cannot submit
+app/components/admin/media-grid.tsx	172	53	CONTRACT	keep	already at size
+app/components/admin/media-grid.tsx	183	873	WHY	rewrite	keeps the page-local ruling and the braces prohibition; the leak story goes to the history document
+app/components/admin/media-grid.tsx	199	520	WHY	rewrite	why the header is not repeated
+app/components/admin/media-grid.tsx	221	509	CONTRACT	rewrite	what the note prevents, and the contrast floor; the rejected hex goes to the history document
+app/components/admin/media-grid.tsx	245	143	CONTRACT	keep	already at size
+app/components/admin/media-grid.tsx	247	361	CONTRACT	rewrite	the one-definition rule
+app/components/admin/media-grid.tsx	266	1098	CONTRACT	rewrite	keeps no-new-client-state and the hover prohibition; the mockup comparison goes to the history document
+app/components/admin/media-grid.tsx	291	306	CONTRACT	rewrite	why the attribute is the key
+app/components/admin/media-grid.tsx	300	216	CONTRACT	rewrite	the one-grammar rule
+app/components/admin/media-grid.tsx	312	285	CONTRACT	rewrite	the keyboard behaviour that falls out of it
+app/components/admin/media-grid.tsx	322	548	CONTRACT	rewrite	why the ratio is on the wrapper; the ragged-grid story goes to the history document
+app/components/admin/media-grid.tsx	331	528	WHY	rewrite	the invalid-HTML prohibition
+app/components/admin/media-grid.tsx	341	605	CONTRACT	rewrite	what the prop prevents
+app/components/admin/media-grid.tsx	356	1127	CONTRACT	rewrite	keeps the no-script guarantee; the file-manager argument goes to the history document
+app/components/admin/media-grid.tsx	384	759	CONTRACT	rewrite	the conditional is the prohibition; the eleven-of-seventy count goes to the history document
+app/components/admin/media-grid.tsx	401	832	WHY	rewrite	keeps the live reason; the superseded premise goes to the history document
+app/components/admin/media-grid.tsx	416	363	WHY	rewrite	why a card and not an img; the counts go to the history document
+app/components/admin/media-grid.tsx	437	369	CONTRACT	rewrite	one dot, and where it sits
+app/components/admin/media-grid.tsx	455	664	CONTRACT	rewrite	the one-control rule and its accessibility reason
+app/components/admin/media-grid.tsx	471	444	WHY	rewrite	why the absence is not printed here
+app/components/admin/media-grid.tsx	489	703	CONTRACT	rewrite	why the wrapper stops laying out
+app/components/admin/media-grid.tsx	502	255	CONTRACT	keep	already at size
+app/components/admin/media-grid.tsx	507	398	CONTRACT	rewrite	why the last segment, and where the key stays
+app/components/admin/media-grid.tsx	519	959	CONTRACT	rewrite	why the clamp is per layout; the worked example goes to the history document
+app/components/admin/media-grid.tsx	538	579	CONTRACT	rewrite	why the directory comes back in the list
+app/components/admin/media-grid.tsx	549	1086	WHY	rewrite	the forbidden word is the prohibition; the drift story goes to the history document
+app/components/admin/media-grid.tsx	573	417	CONTRACT	rewrite	hidden not omitted, and why an absence is spelled
+app/components/admin/media-grid.tsx	581	482	CONTRACT	rewrite	the second-channel rule
+app/components/admin/media-grid.tsx	601	130	CONTRACT	keep	already at size
+app/components/admin/media-grid.tsx	615	536	CONTRACT	rewrite	why it is the card's last child; the old placement goes to the history document
+app/routes/playground.tsx	10	625	CONTRACT	rewrite	why the export is named, and the no-new-bytes fact
+app/routes/playground.tsx	26	287	CONTRACT	rewrite	the one-statement rule
+app/routes/playground.tsx	51	326	CONTRACT	rewrite	why the resolver is imported
+app/routes/playground.tsx	69	3201	CONTRACT	rewrite	header: the two laws; the corrections and the dated load figures go to the history document
+app/routes/playground.tsx	126	516	CONTRACT	rewrite	header: why the manifest owns the data
+app/routes/playground.tsx	142	772	CONTRACT	rewrite	the enum prohibition and the threat-model reason
+app/routes/playground.tsx	162	248	CONTRACT	rewrite	imported so the demo cannot offer what the renderer rejects
+app/routes/playground.tsx	172	735	CONTRACT	rewrite	the cap is stated; the generosity argument goes to the history document
+app/routes/playground.tsx	187	792	CONTRACT	rewrite	two bounds, and why the second is a refusal
+app/routes/playground.tsx	206	158	WHY	rewrite	tagged by what STAYS; the before-state goes to the history document
+app/routes/playground.tsx	219	159	CONTRACT	rewrite	why the types are named
+app/routes/playground.tsx	228	78	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	235	159	CONTRACT	rewrite	the same-parser rule
+app/routes/playground.tsx	251	71	NUMBER	keep	already at size; carries the WCAG citation and the two floors
+app/routes/playground.tsx	259	78	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	270	156	CONTRACT	rewrite	the real-path law, restated locally
+app/routes/playground.tsx	281	78	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	293	527	CONTRACT	rewrite	the refusal is a result, and catching does not soften it
+app/routes/playground.tsx	327	78	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	329	473	CONTRACT	rewrite	why presence and not truthiness
+app/routes/playground.tsx	355	323	CONTRACT	rewrite	why the request is real, and the absent-header distinction
+app/routes/playground.tsx	375	78	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	380	173	CONTRACT	rewrite	reported rather than corrected
+app/routes/playground.tsx	393	319	CONTRACT	rewrite	the real-renderer law and what the wrapper adds
+app/routes/playground.tsx	408	297	CONTRACT	rewrite	why the refusal branch exists
+app/routes/playground.tsx	418	78	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	426	223	CONTRACT	rewrite	reported rather than corrected
+app/routes/playground.tsx	437	228	CONTRACT	rewrite	what the wrapper owns
+app/routes/playground.tsx	486	73	CONTRACT	keep	already at size; carries the no-toast prohibition
+app/routes/playground.tsx	495	1087	CONTRACT	rewrite	header: why it reads the manifest and why it throws; the duplicated literals go to the history document
+app/routes/playground.tsx	526	672	CONTRACT	rewrite	why the key is the slug; the failure mode goes to the history document
+app/routes/playground.tsx	541	474	WHY	rewrite	the fail-closed rule
+app/routes/playground.tsx	573	69	CONTRACT	keep	already at size; carries the carry rule
+app/routes/playground.tsx	580	178	CONTRACT	rewrite	carried on presence, matching the loader
+app/routes/playground.tsx	608	67	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	701	67	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	741	466	WHY	rewrite	the prohibition, and why it follows from the second law
+app/routes/playground.tsx	780	200	CONTRACT	keep	already at size
+app/routes/playground.tsx	813	67	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	850	242	CONTRACT	keep	already at size; carries the first-party grounds
+app/routes/playground.tsx	875	67	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	898	145	CONTRACT	keep	already at size; carries the shareable-result rule
+app/routes/playground.tsx	955	327	CONTRACT	rewrite	the refusal is a result, not a fault
+app/routes/playground.tsx	1010	67	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	1060	271	CONTRACT	rewrite	why the absence is spelled out
+app/routes/playground.tsx	1104	67	CONTRACT	rewrite	separator: label kept, dashes dropped
+app/routes/playground.tsx	1136	300	WHY	rewrite	the mirror prohibition
+app/routes/playground.tsx	1164	452	CONTRACT	rewrite	why it is injected, and why it gets the article treatment
+app/routes/admin.mentions.tsx	22	3836	CONTRACT	rewrite	header, over 370 on purpose: three prohibitions, none of which the others cover
+app/routes/admin.mentions.tsx	95	80	CONTRACT	keep	already one line
+app/routes/admin.mentions.tsx	103	735	CONTRACT	rewrite	the ordering reason and the adding-up property; the four-panel history goes to the history document
+app/routes/admin.mentions.tsx	127	401	CONTRACT	rewrite	why the record is keyed by the union
+app/routes/admin.mentions.tsx	148	518	CONTRACT	rewrite	what an absent parameter means
+app/routes/admin.mentions.tsx	167	397	WHY	rewrite	why the count is read in the loader
+app/routes/admin.mentions.tsx	183	86	CONTRACT	keep	already at size
+app/routes/admin.mentions.tsx	185	374	CONTRACT	rewrite	why the flag is a boolean
+app/routes/admin.mentions.tsx	194	70	CONTRACT	keep	already one line
+app/routes/admin.mentions.tsx	196	63	CONTRACT	keep	already one line
+app/routes/admin.mentions.tsx	209	455	WHY	rewrite	the no-script prohibition on handler guards
+app/routes/admin.mentions.tsx	221	432	NUMBER	rewrite	why the typed count is 1
+app/routes/admin.mentions.tsx	241	271	CONTRACT	rewrite	why the id is parsed and checked
+app/routes/admin.mentions.tsx	256	299	NUMBER	rewrite	why one row is still a ceremony
+app/routes/admin.mentions.tsx	265	212	CONTRACT	rewrite	the one-door rule
+app/routes/admin.mentions.tsx	273	226	WHY	rewrite	tagged by what STAYS; the wire proof goes to the history document
+app/routes/admin.mentions.tsx	281	128	CONTRACT	keep	already at size
+app/routes/admin.mentions.tsx	287	793	WHY	rewrite	the branch shape is the prohibition; the first-draft story goes to the history document
+app/routes/admin.mentions.tsx	305	538	CONTRACT	rewrite	header: why ISO, and why there is no null branch
+app/routes/admin.mentions.tsx	321	80	CONTRACT	keep	already one line
+app/routes/admin.mentions.tsx	324	478	CONTRACT	rewrite	header: the excerpt leads, and why
+app/routes/admin.mentions.tsx	342	432	CONTRACT	rewrite	the absence is a statement, not a substituted value
+app/routes/admin.mentions.tsx	354	66	CONTRACT	keep	already at size; carries the whole prohibition
+app/routes/admin.mentions.tsx	357	350	WHY	rewrite	why the stamp went; the timing detail goes to the history document
+app/routes/admin.mentions.tsx	380	407	CONTRACT	rewrite	why approve stays on the row
+app/routes/admin.mentions.tsx	396	400	WHY	rewrite	why the other two move into the menu
+app/routes/admin.mentions.tsx	434	298	CONTRACT	rewrite	the one-array rule; the media library's defect goes to the history document
+app/routes/admin.mentions.tsx	444	483	CONTRACT	rewrite	why unverified is counted and not filtered
+app/routes/admin.mentions.tsx	457	227	CONTRACT	rewrite	the box matches the outcome
+app/routes/admin.mentions.tsx	487	560	CONTRACT	rewrite	why the clause is rendered once; the amendment date goes to the history document
+app/routes/admin.mentions.tsx	512	1885	WHY	rewrite	keeps why it is not a cron; the sync:content objection goes to the history document
+app/routes/admin.mentions.tsx	567	304	CONTRACT	rewrite	why the label does not change
+app/components/admin/markdown-editor.tsx	9	152	CONTRACT	keep	already at size; carries the split reason
+app/components/admin/markdown-editor.tsx	13	603	CONTRACT	rewrite	header: ruling 2 and the chunk boundary
+app/components/admin/markdown-editor.tsx	27	551	CONTRACT	rewrite	separator plus the token prohibition
+app/components/admin/markdown-editor.tsx	67	429	CONTRACT	rewrite	why these tokens and not a seventh palette
+app/components/admin/markdown-editor.tsx	91	300	CONTRACT	rewrite	separator plus the one-path rule
+app/components/admin/markdown-editor.tsx	96	80	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	110	81	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	127	55	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	131	156	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	143	76	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	155	137	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	163	311	CONTRACT	rewrite	header: why alt is scaffolded
+app/components/admin/markdown-editor.tsx	210	345	CONTRACT	rewrite	the second-channel rule; the ruling citation stays
+app/components/admin/markdown-editor.tsx	245	304	CONTRACT	rewrite	why state rides along
+app/components/admin/markdown-editor.tsx	259	55	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	262	359	CONTRACT	rewrite	why a literal destination is taken as one
+app/components/admin/markdown-editor.tsx	274	1788	CONTRACT	rewrite	header, kept long: the read-off-the-document argument is the correctness argument
+app/components/admin/markdown-editor.tsx	322	77	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	330	527	CONTRACT	rewrite	the no-script defect this flag closes
+app/components/admin/markdown-editor.tsx	346	231	CONTRACT	rewrite	why the numbers are seeded
+app/components/admin/markdown-editor.tsx	357	376	CONTRACT	rewrite	why the range is captured
+app/components/admin/markdown-editor.tsx	375	60	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	388	73	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	400	205	CONTRACT	rewrite	why the route's reason is reported
+app/components/admin/markdown-editor.tsx	411	466	CONTRACT	rewrite	why the query is seeded from the selection
+app/components/admin/markdown-editor.tsx	432	80	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	440	141	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	446	260	CONTRACT	rewrite	why the cursor lands after
+app/components/admin/markdown-editor.tsx	470	49	CONTRACT	keep	already one line
+app/components/admin/markdown-editor.tsx	478	142	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	488	381	CONTRACT	rewrite	why the nonce facet comes first
+app/components/admin/markdown-editor.tsx	505	294	CONTRACT	rewrite	counted from the document, and the identity bail-out
+app/components/admin/markdown-editor.tsx	515	199	CONTRACT	rewrite	why the trigger is narrow
+app/components/admin/markdown-editor.tsx	559	278	WHY	rewrite	tagged by what STAYS; the old stub goes to the history document
+app/components/admin/markdown-editor.tsx	565	220	CONTRACT	rewrite	why Cmd+S is not handled here
+app/components/admin/markdown-editor.tsx	580	187	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	590	267	CONTRACT	keep	carries an eslint directive, so it is kept byte-identical and not rewritten
+app/components/admin/markdown-editor.tsx	596	359	CONTRACT	rewrite	why the guard is on the text differing
+app/components/admin/markdown-editor.tsx	671	216	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	690	629	CONTRACT	rewrite	why it is a hint and why it is aria-hidden
+app/components/admin/markdown-editor.tsx	721	741	CONTRACT	rewrite	the placement reason and the live-region prohibition
+app/components/admin/markdown-editor.tsx	737	109	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	751	353	CONTRACT	rewrite	why it searches posts; the rest is the palette's own shape
+app/components/admin/markdown-editor.tsx	780	190	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	798	217	CONTRACT	rewrite	why the event is stopped as well as prevented
+app/components/admin/markdown-editor.tsx	806	112	CONTRACT	keep	already at size
+app/components/admin/markdown-editor.tsx	830	212	CONTRACT	rewrite	why both drive one highlight
+app/components/admin/markdown-editor.tsx	839	205	CONTRACT	keep	already at size; carries the in-words rule
+app/components/admin/markdown-editor.tsx	911	214	CONTRACT	rewrite	the alt policy, as the prohibition
+app/components/admin/markdown-editor.tsx	950	72	CONTRACT	keep	already one line
+app/components/admin/media-inspector.tsx	1	536	CONTRACT	rewrite	header: the one-owner rule; the move date goes to the history document
+app/components/admin/media-inspector.tsx	25	282	CONTRACT	rewrite	why the member is selected
+app/components/admin/media-inspector.tsx	43	624	CONTRACT	rewrite	the no-script mechanism and the one-way-to-close rule
+app/components/admin/media-inspector.tsx	64	405	CONTRACT	rewrite	why the role is on a div
+app/components/admin/media-inspector.tsx	78	848	CONTRACT	rewrite	keeps the ellipsis reason and the repeated pill; the mockup note goes to the history document
+app/components/admin/media-inspector.tsx	126	286	CONTRACT	rewrite	the no-script path for the page's one job
+app/components/admin/media-inspector.tsx	143	520	CONTRACT	rewrite	why the panel says derived
+app/components/admin/media-inspector.tsx	174	168	CONTRACT	keep	already at size
+app/components/admin/media-inspector.tsx	178	313	CONTRACT	rewrite	why the field is images only; the counts go to the history document
+app/components/admin/media-inspector.tsx	200	1010	CONTRACT	rewrite	keeps the one-writer rule and the empty-field condition; the value-on-the-button reasoning goes to the history document
+app/components/admin/media-inspector.tsx	237	468	CONTRACT	rewrite	the parsed-not-storage rule
+app/components/admin/media-inspector.tsx	261	1370	CONTRACT	rewrite	keeps the one-writer rule, the clear marker and the no-script property; the join-character history goes to the history document
+app/components/admin/media-inspector.tsx	305	615	CONTRACT	rewrite	why clearing is deliberate, and why it hides at one
+app/components/admin/media-inspector.tsx	342	926	CONTRACT	rewrite	keeps the label rule and its owner; the seventy-row story goes to the history document
+app/components/admin/media-inspector.tsx	376	520	CONTRACT	rewrite	exact identity only, and what makes the offer safe
+app/components/admin/media-inspector.tsx	392	758	CONTRACT	rewrite	what the sentence has to say; the mockup attribution goes to the history document
+app/components/admin/media-inspector.tsx	430	270	CONTRACT	rewrite	why a static row gets nothing
+app/components/admin/media-inspector.tsx	442	841	CONTRACT	rewrite	the claim, the boundary and the evidence; the old confession goes to the history document
+app/components/admin/media-inspector.tsx	473	53	CONTRACT	keep	already at size
+app/components/admin/media-inspector.tsx	496	623	CONTRACT	rewrite	why paths and why not links
+app/components/admin/media-inspector.tsx	521	757	CONTRACT	rewrite	the ladder, and why a static row may still be trashed
+app/components/admin/media-inspector.tsx	554	285	CONTRACT	rewrite	why the refusal is explained
+app/components/admin/media-inspector.tsx	562	435	CONTRACT	rewrite	earlier feedback, not the gate
+app/components/admin/media-inspector.tsx	579	128	CONTRACT	keep	already at size
+app/components/admin/media-inspector.tsx	602	149	CONTRACT	keep	already at size; carries the no-script statement
+app/routes/home.tsx	26	519	CONTRACT	rewrite	the opt-in and the default that still covers everything else; the citation stays on one line
+app/routes/home.tsx	41	137	CONTRACT	keep	already at size
+app/routes/home.tsx	46	4987	CONTRACT	rewrite	header, over 370 on purpose: four prohibitions about a cached page; the measurements and both corrections go to the history document
+app/routes/home.tsx	139	639	CONTRACT	rewrite	why concurrent, and why the mark keeps its name
+app/routes/home.tsx	156	844	WHY	rewrite	keeps ruling 57 and why /blog differs; the dark-section story goes to the history document
+app/routes/home.tsx	176	364	CONTRACT	rewrite	this route decides nothing about health
+app/routes/home.tsx	187	475	CONTRACT	rewrite	header: why the gate reads an attribute and not the prose
+app/routes/home.tsx	224	943	CONTRACT	rewrite	why an uncertain state shows a dash; the UTC reasoning goes to the history document
+app/routes/home.tsx	256	909	CONTRACT	rewrite	keeps the one hidden element and the no-photo rule; the ruling citation stays on one line
+app/routes/home.tsx	278	304	CONTRACT	rewrite	the one-owner rule for the sentence
+app/routes/home.tsx	285	1090	CONTRACT	rewrite	keeps the one-constant rule and the not-repeated title; the audit finding goes to the history document
+app/routes/home.tsx	342	1206	CONTRACT	rewrite	keeps the stated cost and the gate that covers it; the element history goes to the history document
+app/routes/home.tsx	415	312	CONTRACT	rewrite	why it is stated on the page
+app/routes/home.tsx	438	49	CONTRACT	keep	already at size
+app/routes/blog._index.tsx	30	155	CONTRACT	keep	already at size; carries the URL-state rule
+app/routes/blog._index.tsx	36	291	CONTRACT	rewrite	the opt-in and its one owner
+app/routes/blog._index.tsx	45	336	WHY	rewrite	what to read off the numbers rather than assume
+app/routes/blog._index.tsx	56	1425	CONTRACT	rewrite	keeps the removal, the pagination property and the known limit; the self-contradicting comment goes to the history document
+app/routes/blog._index.tsx	87	1405	CONTRACT	rewrite	keeps the three-way argument compressed; the soft-404 explanation goes to the history document
+app/routes/blog._index.tsx	125	181	CONTRACT	rewrite	the ordering is the whole fix
+app/routes/blog._index.tsx	136	618	WHY	rewrite	why the route no longer stamps; the local-array history goes to the history document
+app/routes/blog._index.tsx	151	305	CONTRACT	rewrite	the cache dimension and the tag
+app/routes/blog._index.tsx	156	152	CONTRACT	keep	already at size
+app/routes/blog._index.tsx	164	131	CONTRACT	keep	already at size
+app/routes/blog._index.tsx	171	698	CONTRACT	rewrite	what the canonical must carry; the consequence goes to the history document
+app/routes/blog._index.tsx	192	1171	CONTRACT	rewrite	the condition is the whole care in the block
+app/routes/blog._index.tsx	221	586	CONTRACT	rewrite	the one-builder rule; the drift and the feed move go to the history document
+app/routes/blog._index.tsx	240	1009	CONTRACT	rewrite	header: the AND property and the page-drop rule; the destroyed-axis defect goes to the history document
+app/routes/blog._index.tsx	277	1229	CONTRACT	rewrite	keeps the no-wrapper refusal and the scope; the harmlessness argument goes to the history document
+app/routes/blog._index.tsx	311	591	CONTRACT	rewrite	the measured correction is the point
+app/routes/blog._index.tsx	324	573	CONTRACT	rewrite	one engine, and the no-script property
+app/routes/blog._index.tsx	350	67	CONTRACT	keep	already at size
+app/routes/blog._index.tsx	373	40	CONTRACT	keep	already at size
+app/routes/blog._index.tsx	389	1017	CONTRACT	rewrite	keeps why the feed is the main and the hidden date; the one-shape argument goes to the history document
+app/routes/blog._index.tsx	440	699	CONTRACT	rewrite	why the bundle is absent and what asserts it; the byte count goes to the history document
+app/routes/admin.posts.$slug.edit.tsx	28	389	CONTRACT	rewrite	why a handle and not a loader field
+app/routes/admin.posts.$slug.edit.tsx	43	438	WHY	rewrite	why the marks were added without reordering; the date goes to the history document
+app/routes/admin.posts.$slug.edit.tsx	57	161	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	66	153	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	69	295	CONTRACT	rewrite	the hydration boundary
+app/routes/admin.posts.$slug.edit.tsx	74	570	CONTRACT	rewrite	the empty array is the mechanism; the non-fatal stance stays
+app/routes/admin.posts.$slug.edit.tsx	94	139	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	99	297	CONTRACT	rewrite	the one fact the table needs
+app/routes/admin.posts.$slug.edit.tsx	104	204	WHY	rewrite	why the vocabulary is offered
+app/routes/admin.posts.$slug.edit.tsx	110	65	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	112	655	CONTRACT	rewrite	keeps ruling 1 holding by route shape and the non-fatal stance
+app/routes/admin.posts.$slug.edit.tsx	137	542	CONTRACT	rewrite	why these two are not in the shared path
+app/routes/admin.posts.$slug.edit.tsx	153	345	CONTRACT	rewrite	why every arm has one shape
+app/routes/admin.posts.$slug.edit.tsx	163	710	WHY	rewrite	the server-side prohibition and the authority
+app/routes/admin.posts.$slug.edit.tsx	202	458	WHY	rewrite	why the asymmetry is deliberate
+app/routes/admin.posts.$slug.edit.tsx	225	900	WHY	rewrite	keeps the no-script prohibition and the consent distinction; the three-spellings note goes to the history document
+app/routes/admin.posts.$slug.edit.tsx	264	120	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	275	245	WHY	rewrite	why the save lands here
+app/routes/admin.posts.$slug.edit.tsx	284	377	CONTRACT	rewrite	why the narrowing is by kind
+app/routes/admin.posts.$slug.edit.tsx	294	324	CONTRACT	rewrite	why the third arm carries fields
+app/routes/admin.posts.$slug.edit.tsx	309	219	CONTRACT	rewrite	what persistent means here
+app/routes/admin.posts.$slug.edit.tsx	318	69	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	326	232	CONTRACT	rewrite	the transition describes what is committed
+app/routes/admin.posts.$slug.edit.tsx	331	705	CONTRACT	rewrite	the structural holding, and why the state is the loader's
+app/routes/admin.posts.$slug.edit.tsx	389	444	CONTRACT	rewrite	the nesting prohibition
+app/routes/admin.posts.$slug.edit.tsx	410	316	CONTRACT	rewrite	the no-script path
+app/routes/admin.posts.$slug.edit.tsx	446	348	CONTRACT	rewrite	earlier feedback, not the gate
+app/routes/admin.posts.$slug.edit.tsx	462	135	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.edit.tsx	467	923	CONTRACT	rewrite	keeps the nesting reason and the fixture argument
+app/routes/admin.posts.$slug.edit.tsx	485	118	CONTRACT	keep	already at size
+app/routes/publications.tsx	41	313	CONTRACT	rewrite	header: why abstracts stay in the file and out of the page
+app/routes/publications.tsx	56	453	CONTRACT	rewrite	header: why the descriptions are written
+app/routes/publications.tsx	89	380	CONTRACT	rewrite	header: the comparison-time rule
+app/routes/publications.tsx	100	147	CONTRACT	keep	already at size
+app/routes/publications.tsx	107	433	CONTRACT	rewrite	header: why the haystack is decoded
+app/routes/publications.tsx	130	1415	CONTRACT	rewrite	header: what noindex means now, and the one-builder rule; the archived period goes to the history document
+app/routes/publications.tsx	170	310	CONTRACT	rewrite	header: what omitting the export would cost; the citation stays on one line
+app/routes/publications.tsx	189	214	CONTRACT	rewrite	what an unrecognised value does
+app/routes/publications.tsx	195	147	CONTRACT	keep	already at size
+app/routes/publications.tsx	210	149	CONTRACT	keep	already at size
+app/routes/publications.tsx	243	434	CONTRACT	rewrite	the canonical policy, compressed
+app/routes/publications.tsx	253	76	CONTRACT	keep	already at size
+app/routes/publications.tsx	259	69	CONTRACT	keep	already at size
+app/routes/publications.tsx	260	205	CONTRACT	keep	already at size
+app/routes/publications.tsx	266	446	WHY	rewrite	the one thing a canonical must never do
+app/routes/publications.tsx	283	133	CONTRACT	keep	already at size
+app/routes/publications.tsx	287	110	CONTRACT	keep	already at size
+app/routes/publications.tsx	300	79	CONTRACT	keep	already at size
+app/routes/publications.tsx	336	486	CONTRACT	rewrite	header: why the collapse always includes the owner
+app/routes/publications.tsx	357	509	CONTRACT	rewrite	why the flag is derived from the value
+app/routes/publications.tsx	399	72	CONTRACT	keep	already at size
+app/routes/publications.tsx	400	609	WHY	rewrite	tagged by what STAYS; the before-state goes to the history document
+app/routes/publications.tsx	433	381	CONTRACT	rewrite	the zero rule and the provenance reason
+app/routes/publications.tsx	448	730	CONTRACT	rewrite	keeps why a list page can carry this and the per-paper split; the ruling citation stays
+app/routes/publications.tsx	502	214	CONTRACT	rewrite	what the id is for; the gate reference goes to the history document
+app/routes/publications.tsx	539	68	CONTRACT	keep	already at size; carries the no-script rule
+app/routes/publications.tsx	582	363	CONTRACT	rewrite	why the files are always the full list
+app/routes/publications.tsx	615	764	WHY	rewrite	the injection prohibition and why this route is the highest risk
+app/routes/projects.tsx	24	2046	CONTRACT	rewrite	header: the no-script property, the two provenances and the card licence; the slogan correction goes to the history document
+app/routes/projects.tsx	60	304	CONTRACT	rewrite	header: why a union and not two optional fields
+app/routes/projects.tsx	71	74	CONTRACT	keep	already at size
+app/routes/projects.tsx	92	353	CONTRACT	rewrite	header: why neither input is measured here
+app/routes/projects.tsx	102	304	CONTRACT	rewrite	the one-owner rule and what it prevents
+app/routes/projects.tsx	111	466	CONTRACT	rewrite	header: what omitting the export cost; the citation stays on one line
+app/routes/projects.tsx	125	158	CONTRACT	keep	already at size
+app/routes/projects.tsx	134	424	CONTRACT	rewrite	header: why it is un-nonced
+app/routes/projects.tsx	154	473	WHY	rewrite	the closed vocabulary; the six-of-seven story goes to the history document
+app/routes/projects.tsx	175	668	CONTRACT	rewrite	header: one transformation in one place, and the fail-closed rule
+app/routes/projects.tsx	199	758	CONTRACT	rewrite	header: why it is its own component; the type-error account goes to the history document
+app/routes/projects.tsx	219	132	CONTRACT	keep	already at size
+app/routes/projects.tsx	228	80	CONTRACT	keep	already at size
+app/routes/projects.tsx	253	223	CONTRACT	rewrite	the silent failure this prevents
+app/routes/projects.tsx	257	210	CONTRACT	keep	already at size; carries the ordering argument
+app/routes/projects.tsx	267	738	CONTRACT	rewrite	the two forms and why the derived one carries no date
+app/routes/projects.tsx	288	486	CONTRACT	rewrite	why the field is optional
+app/routes/projects.tsx	320	339	CONTRACT	rewrite	the binding rule and the empty-list rule
+app/routes/projects.tsx	341	465	CONTRACT	rewrite	why the heading exists and why it is an h3
+app/routes/publications.$slug.tsx	36	1514	CONTRACT	rewrite	header: the slash rule and the DOI slug; Scholar's expectation goes to the history document
+app/routes/publications.$slug.tsx	64	83	CONTRACT	keep	already at size
+app/routes/publications.$slug.tsx	77	214	CONTRACT	rewrite	why the 404 costs nothing
+app/routes/publications.$slug.tsx	87	73	CONTRACT	keep	already at size
+app/routes/publications.$slug.tsx	97	551	CONTRACT	rewrite	why the list is committed and why both numbers travel; the credit cost goes to the history document
+app/routes/publications.$slug.tsx	113	1224	CONTRACT	rewrite	header: the no-exemption rule and the description; the refused first attempt goes to the history document
+app/routes/publications.$slug.tsx	160	58	CONTRACT	keep	already at size
+app/routes/publications.$slug.tsx	170	393	CONTRACT	rewrite	why no collapse here
+app/routes/publications.$slug.tsx	216	176	CONTRACT	keep	already at size
+app/routes/publications.$slug.tsx	236	214	CONTRACT	keep	already at size
+app/routes/publications.$slug.tsx	241	721	CONTRACT	rewrite	the no-script property and why the query is the title; the gate reference stays
+app/routes/publications.$slug.tsx	254	300	CONTRACT	rewrite	the provenance rule and the zero rule
+app/routes/publications.$slug.tsx	269	569	CONTRACT	rewrite	why the cap is stated and why the link is conditional
+app/routes/publications.$slug.tsx	307	852	CONTRACT	rewrite	the placement rule and the role choice; the dark-path reasoning goes to the history document
+app/routes/publications.$slug.tsx	331	597	CONTRACT	rewrite	why it sits above the abstract
+app/routes/publications.$slug.tsx	347	281	CONTRACT	rewrite	why it is never inside a details
+app/routes/publications.$slug.tsx	358	765	CONTRACT	rewrite	the placement reason and the refusal rule
+app/routes/search.tsx	34	292	CONTRACT	rewrite	header: why the facets are parameters too
+app/routes/search.tsx	52	578	CONTRACT	rewrite	header: why middleware, and what the representation is; the measurement goes to the history document
+app/routes/search.tsx	86	274	CONTRACT	rewrite	why the flag rides on the response
+app/routes/search.tsx	112	1461	WHY	rewrite	kept long: a measured prohibition whose failure is the wrong document served to a cookied reader
+app/routes/search.tsx	137	138	CONTRACT	keep	already at size
+app/routes/search.tsx	153	220	CONTRACT	rewrite	when a zero state is warranted
+app/routes/search.tsx	159	216	CONTRACT	rewrite	the prohibition on waiting for the AI layer
+app/routes/search.tsx	167	374	CONTRACT	rewrite	the cache dimension, why Accept stays, and the tag
+app/routes/search.tsx	179	978	CONTRACT	rewrite	header: why the canonical drops the query; the hand-written history goes to the history document
+app/routes/search.tsx	206	71	CONTRACT	keep	already at size
+app/routes/search.tsx	211	71	CONTRACT	keep	already at size
+app/routes/search.tsx	224	145	CONTRACT	rewrite	why a filter change resets the page
+app/routes/search.tsx	239	741	CONTRACT	rewrite	header: why the union keying is better than a gate; the colophon defect goes to the history document
+app/routes/search.tsx	257	72	CONTRACT	keep	already at size
+app/routes/search.tsx	273	141	CONTRACT	keep	already at size
+app/routes/search.tsx	281	139	CONTRACT	keep	already at size; carries the escaping grounds
+app/routes/search.tsx	314	235	CONTRACT	rewrite	what isEmpty does and does not mean
+app/routes/search.tsx	325	131	CONTRACT	keep	already at size; carries the no-script statement
+app/routes/search.tsx	345	127	CONTRACT	keep	already at size
+app/routes/search.tsx	367	152	CONTRACT	keep	already at size
+app/routes/search.tsx	398	498	CONTRACT	rewrite	the no-script guarantee and the absent-binding case
+app/routes/search.tsx	405	962	WHY	rewrite	the prohibition on offering a control with nothing to do; the empty-string path goes to the history document
+app/routes/search.tsx	435	211	CONTRACT	rewrite	the one-query rule
+app/routes/search.tsx	493	52	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	5	1851	CONTRACT	rewrite	header: the capability rule and the two gate-visible shapes; the nesting account goes to the history document
+app/components/admin/preview-links.tsx	41	39	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	43	73	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	51	72	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	54	1464	CONTRACT	rewrite	header: why this is not rule 13's class, and why the marker is absent; the gate exchange goes to the history document
+app/components/admin/preview-links.tsx	86	61	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	94	72	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	99	1276	CONTRACT	rewrite	keeps the measured bound and the asymmetry; the production measurement goes to the history document
+app/components/admin/preview-links.tsx	127	410	CONTRACT	rewrite	why it is shown once
+app/components/admin/preview-links.tsx	150	137	CONTRACT	keep	already at size
+app/components/admin/preview-links.tsx	191	1763	CONTRACT	rewrite	header: why it is not the shared button, and the stated difference; the rename goes to the history document
+app/routes/colophon.tsx	23	121	CONTRACT	keep	already at size
+app/routes/colophon.tsx	31	2130	CONTRACT	rewrite	header: the four standing rules; the ruling citation and the evidence go to the history document
+app/routes/colophon.tsx	77	393	CONTRACT	rewrite	header: the silent failure this prevents
+app/routes/colophon.tsx	88	156	CONTRACT	keep	already at size
+app/routes/colophon.tsx	105	374	CONTRACT	rewrite	what the flag means and why it is not hand-kept
+app/routes/colophon.tsx	116	470	CONTRACT	rewrite	header: why a Map, and why there is no taxonomy
+app/routes/colophon.tsx	135	626	CONTRACT	rewrite	header: the page's best property, and why a gate anchor is not a link
+app/routes/colophon.tsx	149	975	CONTRACT	rewrite	the two reasons and the prohibition; the audit measurement goes to the history document
+app/routes/colophon.tsx	216	423	CONTRACT	rewrite	the one-owner rule for the title
+app/routes/colophon.tsx	310	364	CONTRACT	rewrite	one constant, and why it is prose
+app/routes/colophon.tsx	322	360	CONTRACT	rewrite	one constant, and why it reads as prose
+app/routes/colophon.tsx	339	271	CONTRACT	rewrite	the never-hue-alone rule
+app/routes/colophon.tsx	353	281	CONTRACT	rewrite	why each page names the other
+app/routes/preview.$token.tsx	17	2612	CONTRACT	rewrite	header, kept long: the placement IS the control, plus the one-404 rule and the real-path claim
+app/routes/preview.$token.tsx	66	417	CONTRACT	rewrite	header: why the values are literals
+app/routes/preview.$token.tsx	81	601	CONTRACT	rewrite	header: why middleware, and what the ordering buys
+app/routes/preview.$token.tsx	95	101	CONTRACT	keep	already at size
+app/routes/preview.$token.tsx	119	154	CONTRACT	keep	already at size; carries the one-refusal rule
+app/routes/preview.$token.tsx	123	74	CONTRACT	keep	already at size
+app/routes/preview.$token.tsx	126	45	CONTRACT	keep	already at size; carries the whole prohibition
+app/routes/preview.$token.tsx	134	1533	WHY	rewrite	keeps why the field is passed and where the grounds live; the 500 and its dates go to the history document
+app/routes/preview.$token.tsx	173	771	CONTRACT	rewrite	the belt-and-control split, and the two deliberate absences
+app/routes/preview.$token.tsx	193	459	CONTRACT	rewrite	header: why it is re-exported rather than wrapped
+app/routes/admin._index.tsx	15	3241	CONTRACT	rewrite	header: the read-back rule, the one-reading rule and the nothing-invented rule; the July stub goes to the history document
+app/routes/admin._index.tsx	77	245	CONTRACT	rewrite	why concurrent
+app/routes/admin._index.tsx	107	509	CONTRACT	rewrite	the one-array rule; the drifted wording goes to the history document
+app/routes/admin._index.tsx	121	154	CONTRACT	keep	already at size
+app/routes/admin._index.tsx	132	392	CONTRACT	rewrite	the live-region prohibition
+app/routes/admin._index.tsx	160	240	CONTRACT	rewrite	why there is one primary and where it posts
+app/routes/admin._index.tsx	193	134	CONTRACT	keep	already at size; carries the three-channel rule
+app/routes/admin._index.tsx	202	133	CONTRACT	keep	already at size
+app/routes/admin._index.tsx	222	378	CONTRACT	rewrite	why these two figures and not four cards
+app/routes/admin._index.tsx	269	404	CONTRACT	rewrite	why an absent block is not evidence of health
+app/components/admin/settings-drawer.tsx	6	438	CONTRACT	rewrite	the one-limit rule; the drifted pair goes to the history document
+app/components/admin/settings-drawer.tsx	18	960	CONTRACT	rewrite	header: the platform choice and the form-association rule
+app/components/admin/settings-drawer.tsx	75	64	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	77	460	CONTRACT	rewrite	absent is the whole contract
+app/components/admin/settings-drawer.tsx	99	145	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	155	126	CONTRACT	keep	already at size; carries the alarms-never-blocks rule
+app/components/admin/settings-drawer.tsx	165	369	CONTRACT	rewrite	the placement reason and the one-function rule
+app/components/admin/settings-drawer.tsx	226	367	CONTRACT	rewrite	header: why the slug is read-only
+app/components/admin/settings-drawer.tsx	246	145	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	273	206	CONTRACT	rewrite	read-only rather than disabled
+app/components/admin/settings-drawer.tsx	284	319	CONTRACT	rewrite	header: the payload is unchanged
+app/components/admin/settings-drawer.tsx	345	132	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	352	119	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	370	63	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	376	62	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	419	479	CONTRACT	rewrite	the component boundary and the alt rule
+app/components/admin/settings-drawer.tsx	465	691	CONTRACT	rewrite	header: the same field in the same format, and the stated cost
+app/components/admin/settings-drawer.tsx	500	503	CONTRACT	rewrite	why the checkbox is unnamed; the radio-pair catch goes to the history document
+app/components/admin/settings-drawer.tsx	537	67	CONTRACT	keep	already at size
+app/components/admin/settings-drawer.tsx	543	63	CONTRACT	keep	already at size
+app/components/site-header.tsx	11	3629	CONTRACT	rewrite	header: the standing rules; every measured threshold and the probe story go to the history document
+app/components/site-header.tsx	74	403	CONTRACT	rewrite	why it reads no loader data
+app/components/site-header.tsx	85	224	CONTRACT	keep	already at size; carries the decorative rule
+app/components/site-header.tsx	91	424	CONTRACT	rewrite	why the nav is named
+app/components/site-header.tsx	104	720	WHY	rewrite	why there is nothing left to substitute; the 2026-08-10 ruling goes to the history document
+app/components/site-header.tsx	119	303	CONTRACT	rewrite	why the speculation rides here
+app/entry.server.tsx	12	353	CONTRACT	rewrite	what the fifth argument is
+app/entry.server.tsx	21	2700	CONTRACT	rewrite	kept long: both halves of the nonce are required and neither covers the other
+app/entry.server.tsx	72	150	CONTRACT	keep	already at size; carries the pointer to the block above
+app/entry.server.tsx	77	201	CONTRACT	keep	already at size
+app/entry.server.tsx	88	2065	WHY	rewrite	keeps the structural reason and the reversal condition; the measurement and its control go to the history document
+app/routes/login.tsx	13	1346	CONTRACT	rewrite	header: the two measured dependencies and the refused alternative; the line numbers go to the history document
+app/routes/login.tsx	43	337	CONTRACT	rewrite	header: what hydration costs and what it does not
+app/routes/login.tsx	52	75	CONTRACT	keep	already at size
+app/routes/login.tsx	55	65	CONTRACT	keep	already at size
+app/routes/login.tsx	61	1964	CONTRACT	rewrite	header, kept long: three prohibitions on the site's only unauthenticated write
+app/routes/login.tsx	110	152	CONTRACT	keep	already at size
+app/routes/login.tsx	115	317	CONTRACT	rewrite	why the headers travel with the URL
+app/routes/login.tsx	129	231	CONTRACT	rewrite	what the id is for
+app/routes/login.tsx	135	59	CONTRACT	keep	already at size
+app/routes/login.tsx	144	291	CONTRACT	rewrite	why a plain form
+app/routes/login.tsx	156	378	CONTRACT	rewrite	the enhancement is layered, not a replacement
+app/components/search-trigger.tsx	7	3632	CONTRACT	rewrite	header: the link, the honesty contract and the attribute; the badge history and the corrections go to the history document
+app/components/search-trigger.tsx	69	299	CONTRACT	rewrite	header: one statement, two attributes
+app/components/search-trigger.tsx	90	133	CONTRACT	keep	already at size
+app/components/search-trigger.tsx	108	562	CONTRACT	rewrite	why hidden and not sr-only, and why it sits outside
+app/components/search-trigger.tsx	119	536	CONTRACT	rewrite	why the server text is a placeholder; the stale-string story goes to the history document
+app/components/admin/media-palette.tsx	6	1778	CONTRACT	rewrite	header: the no-server-render rule, the one-query rule and the declared state; the four-step story goes to the history document
+app/components/admin/media-palette.tsx	44	80	CONTRACT	keep	already at size
+app/components/admin/media-palette.tsx	58	357	CONTRACT	rewrite	the harness seam and its wire-unreachability
+app/components/admin/media-palette.tsx	78	76	CONTRACT	keep	already at size
+app/components/admin/media-palette.tsx	80	56	CONTRACT	keep	already at size
+app/components/admin/media-palette.tsx	97	450	CONTRACT	rewrite	the half that gets forgotten
+app/components/admin/media-palette.tsx	126	217	CONTRACT	rewrite	why silence is right
+app/components/admin/media-palette.tsx	135	58	CONTRACT	keep	already at size
+app/components/admin/media-palette.tsx	146	448	CONTRACT	rewrite	why the handler is global and what the guard protects
+app/components/admin/media-palette.tsx	167	149	CONTRACT	keep	already at size
+app/components/admin/media-palette.tsx	192	369	CONTRACT	rewrite	why preventDefault is the fallback boundary
+app/components/admin/media-palette.tsx	204	298	CONTRACT	rewrite	why a router navigation
+app/components/admin/media-palette.tsx	233	381	CONTRACT	rewrite	why the two paths differ on purpose
+app/components/admin/media-palette.tsx	265	385	CONTRACT	rewrite	why the hints exist and what the count says
+app/components/admin/post-metadata.tsx	9	1885	CONTRACT	rewrite	header: why not the drawer, and the absent-field rule; the B004 relay goes to the history document
+app/components/admin/post-metadata.tsx	63	75	CONTRACT	keep	already at size
+app/components/admin/post-metadata.tsx	66	71	CONTRACT	keep	already at size
+app/components/admin/post-metadata.tsx	68	55	CONTRACT	keep	already at size
+app/components/admin/post-metadata.tsx	76	686	CONTRACT	rewrite	why the narrowing is here and not in the palette
+app/components/admin/post-metadata.tsx	94	308	CONTRACT	rewrite	why one spare row
+app/components/admin/post-metadata.tsx	114	473	CONTRACT	rewrite	why the hidden false is required and why it comes first
+app/components/admin/post-metadata.tsx	209	603	CONTRACT	rewrite	why both the marker and the carried value are required
+app/components/admin/post-metadata.tsx	235	52	CONTRACT	keep	tool directive; kept
+app/components/admin/post-metadata.tsx	274	257	CONTRACT	rewrite	why the value carries both
+app/components/admin/media-keyboard.tsx	3	296	CONTRACT	rewrite	header: both need script and neither is the only way
+app/components/admin/media-keyboard.tsx	11	81	CONTRACT	keep	already at size
+app/components/admin/media-keyboard.tsx	14	475	CONTRACT	rewrite	header: why an event and not context
+app/components/admin/media-keyboard.tsx	28	602	CONTRACT	rewrite	header: why a live region, and why it is always mounted
+app/components/admin/media-keyboard.tsx	49	73	CONTRACT	keep	already at size
+app/components/admin/media-keyboard.tsx	66	900	CONTRACT	rewrite	header: why geometry and not a layout model, and the degradation
+app/components/admin/media-keyboard.tsx	87	147	CONTRACT	rewrite	why the mark is in the DOM
+app/components/admin/media-keyboard.tsx	97	74	CONTRACT	keep	already at size
+app/components/admin/media-keyboard.tsx	117	131	CONTRACT	keep	already at size; carries the never-in-a-field rule
+app/components/admin/media-keyboard.tsx	124	219	CONTRACT	rewrite	why the first id is guarded
+app/components/admin/media-keyboard.tsx	150	304	CONTRACT	rewrite	why unreachable returns are still written
+app/components/admin/media-keyboard.tsx	159	145	CONTRACT	keep	already at size
+app/components/admin/media-keyboard.tsx	192	595	CONTRACT	rewrite	what Escape clears and why the order is not arbitrary
+app/components/admin/media-keyboard.tsx	205	63	CONTRACT	keep	already at size
+app/components/admin/media-keyboard.tsx	209	146	CONTRACT	rewrite	why the real boxes are unchecked
+app/components/admin/media-keyboard.tsx	217	188	CONTRACT	rewrite	why the real checkbox is clicked
+app/components/admin/publish-actions.tsx	10	1424	CONTRACT	rewrite	header: the transition rides in the submitter; the checkbox era goes to the history document
+app/components/admin/publish-actions.tsx	96	1095	CONTRACT	rewrite	the real-submit shape and the race it makes harmless
+app/components/admin/publish-actions.tsx	146	801	CONTRACT	rewrite	why the dialog is conditional, and what an unconditional one would submit
+app/components/admin/publish-actions.tsx	173	977	CONTRACT	rewrite	header: why containment still holds, and why the submitter carries the intent
+app/routes/blog.tags.$tag.tsx	21	474	CONTRACT	rewrite	header: why both sheets, and what a payload gate cannot see
+app/routes/blog.tags.$tag.tsx	34	1176	CONTRACT	rewrite	header: the 404 rule and the one-list rule; the missing-page history goes to the history document
+app/routes/blog.tags.$tag.tsx	64	324	CONTRACT	rewrite	why the order matters
+app/routes/blog.tags.$tag.tsx	79	364	CONTRACT	rewrite	inherited rather than re-argued
+app/routes/blog.tags.$tag.tsx	95	877	CONTRACT	rewrite	why the helper, and why not the Accept vary
+app/routes/blog.tags.$tag.tsx	120	529	CONTRACT	rewrite	the complete-set rule and the page axis
+app/routes/blog.tags.$tag.tsx	168	247	CONTRACT	rewrite	why the per-tag feeds exist
+app/components/site-speculation.tsx	7	3880	CONTRACT	rewrite	header, kept long: the browser's asymmetry, the credentialed cost, and a standing instruction to a future gate author
+app/components/admin/media-document-card.tsx	1	156	CONTRACT	keep	already at size
+app/components/admin/media-document-card.tsx	10	1231	CONTRACT	rewrite	header: why the key and not the mime, and why the name differs from its neighbour
+app/components/admin/media-document-card.tsx	38	2169	CONTRACT	rewrite	keeps the no-invented-fact rule and what the gate holds; the mockup comparison goes to the history document
+app/components/admin/media-document-card.tsx	87	221	CONTRACT	keep	already at size; carries the decoration rule
+app/components/admin/confirm-dialog.tsx	6	2740	CONTRACT	rewrite	header, kept long: four prohibitions on the one destructive ceremony
+app/components/admin/confirm-dialog.tsx	59	76	CONTRACT	keep	already at size
+app/components/admin/confirm-dialog.tsx	61	77	CONTRACT	keep	already at size
+app/components/admin/confirm-dialog.tsx	64	69	CONTRACT	keep	already at size
+app/components/admin/confirm-dialog.tsx	66	75	CONTRACT	keep	already at size
+app/components/admin/confirm-dialog.tsx	80	73	CONTRACT	keep	already at size
+app/components/admin/confirm-dialog.tsx	87	76	CONTRACT	keep	already at size
+app/components/admin/confirm-dialog.tsx	89	225	CONTRACT	rewrite	why autoFocus is not enough
+app/components/admin/confirm-dialog.tsx	121	213	CONTRACT	rewrite	the one-wire-name rule
+app/components/admin/media-drawer.tsx	4	1491	CONTRACT	rewrite	header: the three things HTML cannot express, and why focus return is derived
+app/components/admin/media-drawer.tsx	39	77	CONTRACT	keep	already at size
+app/components/admin/media-drawer.tsx	41	77	CONTRACT	keep	already at size
+app/components/admin/media-drawer.tsx	52	67	CONTRACT	keep	already at size
+app/components/admin/media-drawer.tsx	60	399	CONTRACT	rewrite	why focus lands on the panel
+app/components/admin/media-drawer.tsx	73	229	CONTRACT	rewrite	why the return is deferred twice
+app/components/admin/media-drawer.tsx	84	219	CONTRACT	rewrite	the fallback and why it beats the alternative
+app/components/admin/media-drawer.tsx	94	204	CONTRACT	rewrite	why the event stops here
+app/components/admin/media-drawer.tsx	105	152	CONTRACT	keep	already at size
+app/components/admin/media-drawer.tsx	109	152	CONTRACT	keep	already at size
+app/components/admin/media-drawer.tsx	124	145	CONTRACT	keep	already at size
+app/components/theme-toggle.tsx	5	2480	CONTRACT	rewrite	header: why two buttons ship, the icon/name split and the no-aria-pressed rule; the ruling date goes to the history document
+app/components/theme-toggle.tsx	53	424	CONTRACT	rewrite	why it takes no props
+app/components/theme-toggle.tsx	97	156	CONTRACT	keep	already at size
+app/components/theme-toggle.tsx	114	48	CONTRACT	keep	already at size
+app/components/theme-toggle.tsx	124	47	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.revisions.tsx	15	1143	CONTRACT	rewrite	header: ruling 1 held structurally, and the three questions
+app/routes/admin.posts.$slug.revisions.tsx	39	582	CONTRACT	rewrite	why a resource route is instrumented; the superseded sentence goes to the history document
+app/routes/admin.posts.$slug.revisions.tsx	53	588	CONTRACT	rewrite	why the push stays and the write went
+app/routes/admin.posts.$slug.revisions.tsx	75	532	WHY	rewrite	keeps why the branch exists and why the import is static; the warning history goes to the history document
+app/routes/admin.posts.$slug.revisions.tsx	89	155	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.revisions.tsx	105	150	CONTRACT	keep	already at size
+app/components/admin/media-confirm.tsx	6	1551	CONTRACT	rewrite	header: why prompt had to go, the preserved ladder and the two triggers
+app/components/admin/media-confirm.tsx	42	76	CONTRACT	keep	already at size
+app/components/admin/media-confirm.tsx	45	72	CONTRACT	keep	already at size
+app/components/admin/media-confirm.tsx	47	77	CONTRACT	keep	already at size
+app/components/admin/media-confirm.tsx	63	803	CONTRACT	rewrite	the server is the authority and the button ships enabled
+app/components/admin/media-confirm.tsx	107	152	CONTRACT	keep	already at size
+app/components/admin/media-confirm.tsx	129	149	CONTRACT	keep	already at size
+app/components/admin/media-confirm.tsx	160	221	CONTRACT	rewrite	the one-wire-name rule
+app/components/admin/media-list-header.tsx	1	165	CONTRACT	keep	already at size
+app/components/admin/media-list-header.tsx	12	305	CONTRACT	rewrite	header: one list, and what null means
+app/components/admin/media-list-header.tsx	27	1425	CONTRACT	rewrite	header: every cell is a link, one builder, and why Dims is a span
+app/components/admin/media-list-header.tsx	56	76	CONTRACT	keep	already at size
+app/components/admin/media-list-header.tsx	61	124	CONTRACT	keep	already at size
+app/components/admin/media-list-header.tsx	75	519	CONTRACT	rewrite	why alignment is data; the collision goes to the history document
+app/components/admin/media-list-header.tsx	83	140	CONTRACT	keep	already at size
+app/components/admin/media-list-header.tsx	86	213	CONTRACT	rewrite	why none is not noise
+app/components/admin/media-list-header.tsx	94	133	CONTRACT	keep	already at size
+app/routes/admin.origin-requests.tsx	5	302	CONTRACT	rewrite	the shared-module rule; the NaN story goes to the history document
+app/routes/admin.origin-requests.tsx	14	1127	CONTRACT	rewrite	header: what it counts, and why the loader returns the error
+app/routes/admin.origin-requests.tsx	40	148	CONTRACT	keep	already at size
+app/routes/admin.origin-requests.tsx	52	81	CONTRACT	keep	already at size
+app/routes/admin.origin-requests.tsx	61	139	CONTRACT	keep	already at size
+app/routes/admin.origin-requests.tsx	75	149	CONTRACT	keep	already at size
+app/routes/admin.origin-requests.tsx	104	248	CONTRACT	rewrite	the sanctioned inline style
+app/routes/admin.origin-requests.tsx	120	356	CONTRACT	rewrite	the SSR splicing prohibition
+app/routes/admin.origin-requests.tsx	127	548	CONTRACT	rewrite	why a disclosure and not a caption
+app/components/admin/media-copy-button.tsx	1	154	CONTRACT	keep	already at size
+app/components/admin/media-copy-button.tsx	10	1099	CONTRACT	rewrite	header: why an icon and where the fallback is; the measured widths go to the history document
+app/components/admin/media-copy-button.tsx	33	370	CONTRACT	rewrite	why the default is what it is
+app/components/admin/media-copy-button.tsx	42	771	CONTRACT	rewrite	why glyph-only is the default and why the inspector needs words; the gate finding goes to the history document
+app/components/admin/media-copy-button.tsx	69	222	CONTRACT	rewrite	the half a screen reader gets
+app/components/admin/media-copy-button.tsx	82	200	CONTRACT	keep	already at size
+app/components/admin/media-copy-button.tsx	101	146	CONTRACT	keep	already at size
+app/routes/about.tsx	8	235	CONTRACT	rewrite	the route-scoped sheet rule
+app/routes/about.tsx	13	1876	CONTRACT	rewrite	header: why markdown here and why one Person graph; the audit finding goes to the history document
+app/routes/about.tsx	50	96	CONTRACT	keep	already at size
+app/routes/about.tsx	73	502	CONTRACT	rewrite	why it is injected, and what ran over it
+app/routes/privacy.tsx	5	235	CONTRACT	rewrite	the route-scoped sheet rule
+app/routes/privacy.tsx	10	1990	CONTRACT	rewrite	header: the derivability rule and the two refusals; the file list goes to the history document
+app/routes/privacy.tsx	51	242	CONTRACT	rewrite	why the shared builder
+app/components/post-card.tsx	6	526	CONTRACT	rewrite	header: why it was extracted
+app/components/post-card.tsx	31	964	CONTRACT	rewrite	why a summary entry and where u-url sits
+app/components/post-card.tsx	70	555	CONTRACT	rewrite	why the card links to the archive
+app/components/post-card.tsx	91	302	CONTRACT	rewrite	header: why the href is passed in
+app/routes/blog.series.$series.tsx	21	186	CONTRACT	rewrite	why both sheets
+app/routes/blog.series.$series.tsx	27	1148	CONTRACT	rewrite	header: the one ascending list and the 404 rule; section E goes to the history document
+app/routes/blog.series.$series.tsx	61	192	CONTRACT	rewrite	inherited rather than restated
+app/routes/blog.series.$series.tsx	73	231	CONTRACT	rewrite	why the helper
+app/routes/blog.series.$series.tsx	85	192	CONTRACT	rewrite	the complete-set rule and the page axis
+app/routes/blog.series.$series.tsx	126	198	CONTRACT	rewrite	why the per-series feeds exist
+app/components/admin/social-previews.tsx	9	805	CONTRACT	rewrite	header: the same-function rule and what the preview claims
+app/components/admin/social-previews.tsx	25	77	CONTRACT	keep	already at size
+app/components/admin/social-previews.tsx	34	456	CONTRACT	rewrite	header: why ogImage is deliberately absent
+app/components/admin/social-previews.tsx	52	88	CONTRACT	keep	already at size
+app/components/admin/social-previews.tsx	60	57	CONTRACT	keep	already at size
+app/components/admin/social-previews.tsx	69	141	CONTRACT	keep	already at size
+app/components/admin/social-previews.tsx	85	83	CONTRACT	keep	already at size
+app/components/admin/social-previews.tsx	92	310	CONTRACT	rewrite	why there is no placeholder
+app/routes/phage-discovery.tsx	10	121	CONTRACT	keep	already at size
+app/routes/phage-discovery.tsx	18	1521	CONTRACT	rewrite	header: the deliberate bareness, the legacy URL and the prose decision; the asset-move note goes to the history document
+app/routes/phage-discovery.tsx	74	131	CONTRACT	keep	already at size
+app/routes/phage-discovery.tsx	89	129	CONTRACT	keep	already at size
+app/components/admin/revision-list.tsx	12	988	CONTRACT	rewrite	header: ruling 1 and the structural guarantee; the standalone page goes to the history document
+app/components/admin/revision-list.tsx	37	84	CONTRACT	keep	already at size
+app/components/admin/revision-list.tsx	52	116	CONTRACT	keep	already at size
+app/components/admin/revision-list.tsx	118	204	CONTRACT	rewrite	the hydration boundary
+app/components/admin/revision-list.tsx	136	215	CONTRACT	rewrite	why the newest is never offered
+app/components/admin/revision-list.tsx	157	204	CONTRACT	rewrite	one convention, not two
+app/components/admin/revision-list.tsx	179	60	CONTRACT	keep	already at size
+app/routes/admin.tools.tsx	13	683	CONTRACT	rewrite	header: why there is no control; the deleted stub goes to the history document
+app/routes/admin.tools.tsx	31	368	CONTRACT	rewrite	presence only, and where that is asserted
+app/routes/admin.tools.tsx	53	565	CONTRACT	rewrite	the no-restated-count rule; the stale word goes to the history document
+app/routes/admin.tools.tsx	76	241	CONTRACT	rewrite	the second-channel rule
+app/components/admin/media-drop-anywhere.tsx	1	171	CONTRACT	keep	already at size
+app/components/admin/media-drop-anywhere.tsx	10	1133	CONTRACT	rewrite	header: layered over the form, the no-auto-submit rule and the keyboard disclaimer
+app/components/admin/media-drop-anywhere.tsx	36	207	CONTRACT	rewrite	why a counter
+app/components/admin/media-drop-anywhere.tsx	60	141	CONTRACT	keep	already at size
+app/components/admin/media-drop-anywhere.tsx	63	139	CONTRACT	keep	already at size
+app/components/admin/media-empty-state.tsx	1	293	CONTRACT	rewrite	header: why the decision is here; the move date goes to the history document
+app/components/admin/media-empty-state.tsx	16	241	CONTRACT	rewrite	why the member is selected
+app/components/admin/media-empty-state.tsx	33	1234	CONTRACT	rewrite	the three meanings, compressed to what each must say
+app/components/admin/panel.tsx	3	209	CONTRACT	rewrite	header: what the frame is for
+app/components/admin/panel.tsx	12	619	CONTRACT	rewrite	header: why an action belongs on the heading; the measurement goes to the history document
+app/components/admin/panel.tsx	48	494	CONTRACT	rewrite	header: why the third branch is gone and what enforces it
+app/components/admin/panel.tsx	69	334	CONTRACT	rewrite	header: the never-hue-alone rule
+app/components/admin/panel.tsx	112	85	CONTRACT	keep	already at size
+app/components/site-logo.tsx	1	1368	CONTRACT	rewrite	header: why inline, what the tokens do, and the generated-file prohibition; the diff verification goes to the history document
+app/components/site-logo.tsx	29	97	CONTRACT	keep	already at size
+app/components/site-logo.tsx	43	55	CONTRACT	keep	already at size
+app/components/site-logo.tsx	52	119	CONTRACT	keep	already at size
+app/components/shell-footer.tsx	5	1103	CONTRACT	rewrite	header: the tonal rule and why the machine links are there; the build history goes to the history document
+app/components/shell-footer.tsx	43	460	CONTRACT	rewrite	why the year is a literal
+app/routes/admin.posts.new.tsx	16	291	CONTRACT	rewrite	why the handle is unconditional
+app/routes/admin.posts.new.tsx	29	182	WHY	rewrite	why the marks were added without reordering
+app/routes/admin.posts.new.tsx	38	153	CONTRACT	keep	already at size
+app/routes/admin.posts.new.tsx	47	65	CONTRACT	keep	already at size
+app/routes/admin.posts.new.tsx	49	204	CONTRACT	rewrite	the save gate remains the authority
+app/routes/admin.posts.new.tsx	78	144	CONTRACT	keep	already at size
+app/routes/admin.posts.new.tsx	91	204	CONTRACT	rewrite	why the primary is Publish
+app/routes/admin.posts.new.tsx	96	304	CONTRACT	rewrite	why the same second step applies
+app/routes/admin.posts.$slug.history.tsx	16	922	CONTRACT	rewrite	header: ruling 1 and the structural guarantee; the removed action goes to the history document
+app/routes/admin.posts.$slug.history.tsx	54	119	CONTRACT	keep	already at size
+app/routes/admin.posts.$slug.history.tsx	126	285	CONTRACT	rewrite	why there is no control here
+app/components/admin/row-menu.tsx	5	909	CONTRACT	rewrite	header: the one-control rule, the no-script mechanism and the naming rule; the count goes to the history document
+app/components/admin/row-menu.tsx	27	56	CONTRACT	keep	already at size
+app/components/admin/row-menu.tsx	37	213	CONTRACT	rewrite	why the dots are drawn
+app/components/admin/alert.tsx	1	1070	CONTRACT	rewrite	header: the live-region prohibition and what replaces it
+app/components/enhancement-script.tsx	5	1061	CONTRACT	rewrite	header: how every public enhancement loads, and the optional nonce
+app/lib/scientific-names.tsx	5	457	CONTRACT	rewrite	header: stored strings are never touched
+app/lib/scientific-names.tsx	21	223	CONTRACT	rewrite	why the order and the boundaries matter
+app/lib/scientific-names.tsx	29	207	CONTRACT	rewrite	header: why nodes and not markup
+app/lib/scientific-names.tsx	39	56	CONTRACT	keep	already at size
+app/components/admin/media-picker.tsx	4	493	CONTRACT	rewrite	header: one component, one query
+app/components/admin/media-picker.tsx	19	74	CONTRACT	keep	already at size
+app/components/admin/media-picker.tsx	39	67	CONTRACT	keep	already at size
+app/components/admin/media-picker.tsx	76	188	CONTRACT	rewrite	the thumbnail prohibition
+app/components/ask-panel.tsx	5	738	CONTRACT	rewrite	header: the hidden-until-listening rule and where the real guard lives
+app/components/blog-enhancements.tsx	5	725	CONTRACT	rewrite	header: why the bundle must be prebuilt; the React-effect history goes to the history document
+app/components/admin/media-display-group.tsx	1	169	CONTRACT	keep	already at size
+app/components/admin/media-display-group.tsx	10	406	CONTRACT	rewrite	header: why links and not a select
+app/components/admin/overflow-menu.tsx	5	437	CONTRACT	rewrite	header: where the behaviour lives now; the extraction date goes to the history document
+app/routes/admin.logout.tsx	1	186	CONTRACT	rewrite	what the route does and why the header is forwarded

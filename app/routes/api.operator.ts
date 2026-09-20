@@ -7,17 +7,13 @@ import type { Route } from "./+types/api.operator";
 /**
  * The operator publish endpoint.
  *
- * A RESOURCE ROUTE, no default export, so the action can return a raw Response.
- * A document route's loader hands its return value to a component and 500s on
- * the first property read; the same reason /search/ask and the markdown twins
- * are resource routes.
+ * A RESOURCE ROUTE, no default export, so the action can return a raw Response. A document route's
+ * loader hands its return value to a component and 500s on the first property read; the same reason
+ * /search/ask and the markdown twins are resource routes.
  *
- * One POST endpoint taking `{ tool, args }` rather than five REST paths. The
- * shape is chosen so an MCP front end can be layered over it later without
- * reshaping anything: `tools/call` carries exactly a name and an argument
- * object. Decided 2026-07-28 to build this first and MCP after, because the MCP
- * spec shipped a breaking revision that same day and the recova precedent has
- * its MCP tools calling an operator HTTP API rather than a database.
+ * One POST endpoint taking `{ tool, args }` rather than five REST paths, so an MCP front end can be
+ * layered over it later without reshaping anything: `tools/call` carries exactly a name and an
+ * argument object.
  */
 
 const json = (body: unknown, status = 200, headers: HeadersInit = {}) =>
@@ -49,10 +45,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * METERED HERE, because this is the call that does something. Authentication
-   * and metering split on 2026-08-28; grounds on `meterOperator`. Immediately
-   * after the identity is proven, so the limiter is keyed to a real operator
-   * and an unauthenticated flood cannot reach a Durable Object.
+   * METERED HERE, because this is the call that does something, and immediately after the identity is
+   * proven, so the limiter is keyed to a real operator and an unauthenticated flood cannot reach a
+   * Durable Object. Grounds on `meterOperator`.
    */
   const metered = await meterOperator(env, auth.id);
   if (!metered.ok) {
@@ -96,25 +91,17 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 /**
- * GET describes the tools, behind the same token.
+ * GET describes the tools, behind the same token: an unauthenticated caller learns nothing,
+ * including whether the endpoint exists in a useful form.
  *
- * It is a convenience for a caller wiring itself up, and it is authenticated
- * like everything else: an unauthenticated caller learns nothing, including
- * whether the endpoint exists in a useful form.
+ * IT SPENDS NO RATE LIMIT. This call takes no arguments and changes nothing, so it authenticates and
+ * stops there. Metering it meant a client that read the description before each publish halved its
+ * own allowance.
  *
- * IT SPENDS NO RATE LIMIT, since 2026-08-28. Metering used to live inside
- * `authenticateOperator`, so describing the surface cost the same unit as
- * publishing to it: a client that read the description before each publish
- * halved its own allowance, and one that polled the description could exhaust
- * it without ever writing anything. This call takes no arguments and changes
- * nothing, so it authenticates and stops there.
- *
- * DERIVED from `TOOL_DESCRIPTORS`, never written here. This loader used to
- * carry its own copy of the list and the copy drifted exactly as rule 17 says
- * a second copy does: `sync_ask` and `sync_media` were callable and ship
- * called both, while the description a caller reads named neither. The table
- * is keyed by `ToolName`, so a tool this list omits is a typecheck failure in
- * `api.server.ts`, not a silent gap on the wire.
+ * DERIVED from `TOOL_DESCRIPTORS`, never written here. A local copy of the list drifted exactly as
+ * rule 17 says a second copy does, leaving tools callable that the description named nowhere. The
+ * table is keyed by `ToolName`, so a tool this list omits is a typecheck failure in `api.server.ts`,
+ * not a silent gap on the wire.
  */
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context) as Parameters<typeof authenticateOperator>[0];

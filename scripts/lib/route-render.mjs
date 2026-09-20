@@ -1,30 +1,8 @@
 /**
- * Renders route components to static HTML in Node, so a gate can read the
- * markup they actually produce.
+ * Renders route components to static HTML in Node, so a gate can read the markup they produce.
  *
- * Why this exists: /admin sits behind a real Google session, so no gate can
- * reach those pages over HTTP, and the one property that matters most about the
- * admin redesign is invisible to a typecheck. A route may move a control
- * anywhere it likes, but it may not change WHAT PRESSING IT SENDS. That is a
- * fact about rendered markup, so the only honest way to assert it is to render.
- *
- * The route modules import server-only code (`~/db`, `~/lib/*.server`) at the
- * top level for their loaders and actions. None of it runs during a render, so
- * it is stubbed at resolve time rather than executed. That is a deliberate
- * limit worth stating: this harness proves things about COMPONENTS, and proves
- * nothing about loaders, actions, or anything server-side.
- *
- * ## TWO GATES SINCE 2026-09-10, and the header used to say "admin"
- *
- * `check:microformats` renders the three PUBLIC routes through the same door.
- * It is the same problem in a different disguise: a microformats class is a
- * fact about rendered markup, a typecheck cannot see a string in a `className`,
- * and `check:content` renders the corpus rather than a page. The alternative
- * was a second copy of the bundler, which is how the two would have come to
- * disagree about what a stub is.
- *
- * The public routes brought one requirement the admin routes did not, and it is
- * `URL_ASSET` below.
+ * BOUNDARY: server-only imports are stubbed at resolve time rather than executed, so this proves
+ * things about COMPONENTS and nothing about loaders, actions, or anything server-side.
  */
 
 import { existsSync } from "node:fs";
@@ -36,12 +14,8 @@ import { pathToFileURL } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 /**
- * What a Vite `?url` import resolves to inside this harness.
- *
- * Exported so a gate can ASSERT on it rather than discovering it as a
- * surprising `src` in a diff, and so the string is stated once. It is
- * deliberately not a plausible path: a sentinel that looked like a real asset
- * URL is one somebody would eventually compare against a real asset URL.
+ * What a Vite `?url` import resolves to here. Exported so a gate can ASSERT on it rather than
+ * meeting it as a surprising `src`, and deliberately not a plausible path.
  */
 export const URL_ASSET = "asset-url-stubbed-by-route-render";
 
@@ -60,22 +34,18 @@ function resolveAppPath(spec) {
 }
 
 /**
- * Bundles route modules for Node with their server-only imports stubbed.
- *
- * The stub is a CJS Proxy rather than an ES module, because an ES stub has to
- * declare every named export the importer asks for and the importers ask for
- * dozens. Interop gives every name back as a no-op function, which is enough:
- * nothing here is called.
+ * Bundles route modules for Node with their server-only imports stubbed. The stub is a CJS Proxy
+ * rather than an ES module, which would have to declare every named export the importers ask for;
+ * interop gives every name back as a no-op, which is enough, nothing here being called.
  *
  * @param {string[]} entries repo-relative module paths
  * @returns {Promise<{ outDir: string, files: string[], cleanup: () => Promise<void> }>}
  */
 export async function bundleRoutes(entries) {
   const { build } = await import("esbuild");
-  // Inside the repo, NOT the OS temp directory. react and react-router stay
-  // external so the components share the harness's instances, and a bare
-  // specifier only resolves if Node can walk up into this repo's node_modules.
-  // From %TEMP% it cannot, and the import fails with ERR_MODULE_NOT_FOUND.
+  // Inside the repo, NOT the OS temp directory: react and react-router stay external so the
+  // components share the harness's instances, and a bare specifier only resolves if Node can walk
+  // up into this repo's node_modules.
   const cacheRoot = join(root, "node_modules", ".cache");
   await mkdir(cacheRoot, { recursive: true });
   const outDir = await mkdtemp(join(cacheRoot, "admin-ui-render-"));
@@ -102,24 +72,11 @@ export async function bundleRoutes(entries) {
         loader: "js",
       }));
       /*
-       * VITE'S `?url` SUFFIX, which esbuild does not speak.
-       *
-       * The public plane loads its enhancement bundles and two lazy
-       * stylesheets by importing them with `?url` and putting the resulting
-       * string in a `src` or an `href`. esbuild reads that as part of the
-       * FILENAME and refuses: "Cannot read file: .../blog.js?url". Three of
-       * the five do not exist on disk at all until `build:enhance` has run, so
-       * even teaching it to strip the suffix would make this harness depend on
-       * a build product, and a gate that only runs after a build is a gate
-       * that does not run on a fresh checkout.
-       *
-       * So the suffix resolves to the SENTINEL below. What that costs is
-       * stated rather than left to be discovered: the rendered `src` is this
-       * string and not the hashed asset path, so NO GATE USING THIS HARNESS
-       * MAY ASSERT ANYTHING ABOUT AN ENHANCEMENT URL. `check:page-payload`
-       * owns that, against the real build, which is where the question belongs.
-       * What survives here is the script TAG's existence and every attribute
-       * the component writes itself.
+       * VITE'S `?url` SUFFIX, which esbuild reads as part of the FILENAME and refuses. Stripping it
+       * would not help, several of those files not existing until the enhancement build has run, and a
+       * gate that only runs after a build does not run on a fresh checkout. So the suffix resolves to
+       * the SENTINEL, and the cost is stated: NO GATE USING THIS HARNESS MAY ASSERT ANYTHING ABOUT AN
+       * ENHANCEMENT URL. What survives is the script TAG and every attribute the component writes.
        */
       b.onResolve({ filter: /\?url$/ }, (args) => ({ path: args.path, namespace: "urlasset" }));
       b.onLoad({ filter: /.*/, namespace: "urlasset" }, () => ({
@@ -186,22 +143,11 @@ export async function renderRoute(mod, options) {
           params: options.params ?? {},
           matches: [],
           /*
-           * DECLARED INITIAL CLIENT STATE, spread last so a state declaration
-           * can seed a route's own `useState`.
-           *
-           * This exists because the harness renders ONE static pass:
-           * `renderToStaticMarkup` never dispatches an event, so any UI behind
-           * client state is invisible no matter how the fixture is
-           * regenerated. Session D shipped bulk actions whose three intents
-           * contributed NO payload for exactly that reason, and an admin
-           * mutation surface the gate cannot see is the search_docs lesson in
-           * UI form.
-           *
-           * The route takes an OPTIONAL prop with a production default, so
-           * React Router never supplies it and shipped behaviour is unchanged.
-           * Seeding from `loaderData` was the alternative and is worse: it
-           * would put a field in the server contract that no loader returns,
-           * and policing that contract is what this gate is for.
+           * DECLARED INITIAL CLIENT STATE, spread last so it can seed a route's own `useState`. The harness
+           * renders ONE static pass and dispatches no event, so any UI behind client state is invisible, and
+           * an admin mutation surface the gate cannot see is the class this exists to close. The route takes
+           * an OPTIONAL prop with a production default, so shipped behaviour is unchanged; seeding from
+           * loader data would put a field in the server contract that no loader returns.
            */
           ...options.props,
         }),
@@ -221,29 +167,15 @@ export async function importBundled(file) {
 }
 
 /**
- * Fields whose VALUE the UI decides, so the value is part of the contract.
- *
- * `draft` is the whole publish state machine reduced to one key: present as
- * "on" or absent, nothing else. `isNew` picks the create path over the edit
- * path. `headSha` and `firstPublished` are server-owned facts the form carries
- * back untouched, and a change to either would be a real defect rather than a
- * layout choice. Everything else in the payload is the author's content, and
- * recording its value would make the fixture a copy of the test data.
+ * Fields whose VALUE the UI decides, so the value is part of the contract. Everything else in the
+ * payload is the author's content, and recording it would make the fixture a copy of the test data.
  */
 const CONTRACT_VALUES = new Set(["draft", "isNew", "headSha", "firstPublished"]);
 
 /**
- * Every request the rendered page can submit, as a stable shape.
- *
- * A form's identity here is (action, method, intent, field names). That is
- * exactly the tuple the server reads: `handleEditorAction` dispatches on
- * `intent` and `fieldsFromForm` reads a fixed set of keys, so two markups with
- * the same tuple set send the same thing no matter how they are laid out.
- *
- * A DISABLED control submits nothing, and that is load bearing rather than a
- * detail: it is how the editor reproduces a checkbox's "absent when unticked"
- * without a checkbox. Disabled fields are excluded here for the same reason a
- * browser excludes them.
+ * Every request the rendered page can submit, as a stable shape: a form's identity is (action,
+ * method, intent, field names), exactly the tuple the server reads. A DISABLED control submits
+ * nothing, which is how the editor reproduces "absent when unticked" without a checkbox.
  *
  * @param {string} html
  * @returns {Array<{ action: string, method: string, intent: string, fields: string[] }>}
@@ -252,12 +184,8 @@ export function submissions(html) {
   /** @type {Array<{ action: string, method: string, intent: string, fields: string[] }>} */
   const out = [];
 
-  // Form ownership is by the `form` ATTRIBUTE first and containment second,
-  // which is how a browser resolves it. Modelling only containment would be a
-  // lie the moment a control sits outside the form it submits, and the editor
-  // has exactly that case: the delete button lives at the foot of the settings
-  // drawer, inside the editing form, and belongs to a different one. Forms
-  // cannot nest, so a flat scan for their ranges is sufficient.
+  // Form ownership is by the `form` ATTRIBUTE first and containment second, which is how a browser
+  // resolves it, and the editor has a control outside the form it submits. Forms cannot nest.
   /** @type {Array<{ id: string, start: number, end: number, open: string }>} */
   const forms = [];
   for (const match of html.matchAll(/<form\b[^>]*>/g)) {
@@ -299,29 +227,15 @@ export function submissions(html) {
       if (!name) continue;
 
       const type = /\stype="([^"]*)"/.exec(tag)?.[1] ?? "text";
-      // An UNCHECKED checkbox is not submitted either, and modelling that is
-      // what makes `draft` honest: the checkbox era sent `draft=on` on a draft
-      // and sent no `draft` key at all on a published post. A baseline that
-      // listed the field unconditionally would have recorded a payload the
-      // browser never sends, and then demanded the redesign reproduce it.
+      // An UNCHECKED checkbox is not submitted either: the checkbox era sent the publish field on a
+      // draft and no key at all on a published post, so an unconditional listing would record a payload
+      // the browser never sends and demand the redesign reproduce it.
       if ((type === "checkbox" || type === "radio") && !/\bchecked\b/.test(tag)) continue;
 
-      // For a few fields the VALUE is the contract, so it is recorded; for the
-      // rest only the name is, because the value is whatever the author typed.
-      //
-      // The split is by field NAME, not by widget type. Keying it on
-      // `type="hidden"` was the obvious first cut and it was wrong: the
-      // redesign moved coverSrc, tags and publishAt from text inputs to hidden
-      // inputs driven by pickers, which changes the widget and changes nothing
-      // about the request, and the gate reported all three as payload changes.
-      // What is actually contractual is the set of fields the UI decides on the
-      // author's behalf.
-      //
-      // A checkbox with no `value` attribute submits the string "on" (HTML
-      // spec, the "default/on" state). React renders `checked` and no value, so
-      // reading the attribute literally would record an empty string while the
-      // browser sends "on". `fieldsFromForm` tests `=== "on"`, so this is the
-      // difference between recording what is sent and what is written.
+      // For a few fields the VALUE is the contract; for the rest only the name is. THE SPLIT IS BY FIELD
+      // NAME, NOT BY WIDGET TYPE: moving a field from a text input to a hidden one changes the widget
+      // and nothing about the request. A checkbox with no `value` submits "on" per the spec and React
+      // renders no value, so reading the attribute literally would record an empty string.
       const explicit = /\svalue="([^"]*)"/.exec(tag)?.[1];
       const entry = CONTRACT_VALUES.has(name)
         ? `${name}=${explicit ?? (type === "checkbox" || type === "radio" ? "on" : "")}`
@@ -355,12 +269,8 @@ export function submissions(html) {
  * @returns {string[]}
  */
 export function submissionKeys(html) {
-  // DISTINCT, deliberately. The contract is which requests a page can issue,
-  // not how many controls offer each one: the drift alert and the maintenance
-  // menu both submit sync-ask, and the editor now reaches an identical save
-  // from the primary button and from inside the publish ceremony. Counting
-  // those as differences would make the gate object to layout, which is the one
-  // thing this redesign is allowed to change.
+  // DISTINCT, deliberately: the contract is which requests a page can issue, not how many controls
+  // offer each one, and counting duplicates would make the gate object to layout.
   return [
     ...new Set(
       submissions(html).map(
