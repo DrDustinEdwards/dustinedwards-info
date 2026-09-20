@@ -350,7 +350,13 @@ if (ledger === null) {
  * section emitting no assertion where there is no local database. It steps by a fixed amount per
  * migration, which is append-only by hard rule 14.
  */
-const MINIMUM_CHECKS = 68;
+/*
+ * 65, NOT THE 68 A WORKING TREE RUNS. check:head runs this gate against a FRESH CHECKOUT of HEAD,
+ * which has no local D1, so the three assertions comparing the applied set to that database do not
+ * run there. A floor set to the richer context's number fails the poorer one, and the poorer one is
+ * the context CI has. The old 56 carried the same slack for the same reason.
+ */
+const MINIMUM_CHECKS = 65;
 const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
