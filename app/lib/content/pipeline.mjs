@@ -1393,6 +1393,8 @@ const PULL_QUOTE_LIMIT = 2;
  */
 function remarkSidenote(file) {
   return (/** @type {import("mdast").Root} */ tree) => {
+    /* Per document, so the numbering restarts on every post and `#sn-1` is always its first. */
+    let noteIndex = 0;
     visit(tree, (node) => {
       if (node.type !== "containerDirective" || node.name !== "sidenote") return;
 
@@ -1416,7 +1418,18 @@ function remarkSidenote(file) {
         );
       }
 
-      node.data = { ...node.data, hName: "aside", hProperties: { className: ["post-note"] } };
+      /*
+       * AN ID, SO A MARKER CAN ANCHOR TO IT. Numbered in source order, which is the order a reader
+       * meets them, so `#sn-1` is the page's first note and stays that for whoever links to it.
+       * Without one a note is unreferenceable, and adding markers later would have to migrate
+       * every note that had already shipped.
+       */
+      noteIndex += 1;
+      node.data = {
+        ...node.data,
+        hName: "aside",
+        hProperties: { className: ["post-note"], id: `sn-${noteIndex}` },
+      };
       node.children = [
         {
           type: "paragraph",
