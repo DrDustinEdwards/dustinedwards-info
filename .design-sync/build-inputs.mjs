@@ -84,6 +84,11 @@ const SHEETS = [
   "app/styles/prose.css",
   "app/styles/blog-index.css",
   "app/styles/blog-index-extras.css",
+  // The rail track's own sheet and the evidence row's, in blog.$slug.tsx's import order. The
+  // evidence row is a site object rather than a route sheet: home and the colophon import the
+  // same component, so it sits here once and not per page.
+  "app/styles/post-rail.css",
+  "app/styles/evidence-row.css",
   "app/styles/post-shell.css",
   "app/styles/post-enhancements.css",
   // The post page's two newest sheets, in blog.$slug.tsx's own import order after

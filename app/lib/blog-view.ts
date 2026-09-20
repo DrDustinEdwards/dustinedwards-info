@@ -1,5 +1,6 @@
 import type { getBlogPost, listSeriesParts } from "~/db";
 import { htmlHasMath } from "~/lib/content/math.mjs";
+import { countWords } from "~/lib/content/reading-time.mjs";
 
 /**
  * The loader payload one post page renders from, built in ONE place.
@@ -38,6 +39,20 @@ type SeriesParts = Awaited<ReturnType<typeof listSeriesParts>>;
  * Moved here with the projection rather than left behind, because a parser that
  * lives beside one caller is a parser the other caller writes again.
  */
+/**
+ * Words in the rendered body, for the evidence row.
+ *
+ * `countWords` is the site's one definition of a word, borrowed rather than restated. What is
+ * handed to it differs from the build's input on purpose: the build counts MARKDOWN, syntax and
+ * all, because that is what `reading_time_minutes` was computed from and it must not move. This
+ * counts the rendered text, which is what a reader would count, so a code fence contributes its
+ * code and not its backticks. The two numbers are close and are never shown together.
+ */
+function bodyWordCount(html: string | null) {
+  if (!html) return 0;
+  return countWords(html.replace(/<[^>]*>/g, " "));
+}
+
 function parseJson(value: string | null, fallback: unknown) {
   if (!value) return fallback;
   try {
@@ -84,6 +99,18 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       coverAlt: post.coverAlt,
       ogImage: post.ogImage,
       readingTimeMinutes: post.readingTimeMinutes,
+      /*
+       * THE EVIDENCE ROW'S THREE FACTS, and the reason two of them are here rather than on the
+       * route: the preview renders this same projection, so a fact added to one page and not the
+       * other is exactly the drift this file exists to stop. The third, the enhancement bundle's
+       * gzipped size, is a build product and is read from the generated module instead.
+       *
+       * The hash is the SOURCE blob, not the render hash: it names the markdown this page was
+       * rendered FROM, which is the claim the row is making. Null on a row that predates the
+       * column, and the row then omits itself rather than showing a blank.
+       */
+      wordCount: bodyWordCount(post.html),
+      sourceBlobSha: post.sourceBlobSha,
       tags: post.tags,
       previous: post.previous,
       next: post.next,
