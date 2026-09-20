@@ -9,13 +9,21 @@
    paragraph resolve against one column list. It is 0 wide here and a page opts in by setting
    --rail: every page that does not is laid out exactly as it was before the track existed. */
 .tracks {
+  /* THE RAIL MEASURE, stated once for every page that draws one. The post page puts a rail in the
+     track; home draws a date column of the same width inside its rows. Two pages, one number. */
+  --rail-w: 7.5rem;
+  --rail-gap-w: 1.5rem;
+
   --rail: 0rem;
   --rail-gap: 0rem;
 
   display: grid;
   grid-template-columns:
     [full-start] var(--gutter)
-    [wide-start] minmax(0, 1fr)
+    /* LEFT, NOT CENTRED: this track was a 1fr and the text track floated between two of them.
+       Direction D's frames set both pages against the gutter with the slack all on the right,
+       so the leading track is zero and the trailing one absorbs it. */
+    [wide-start] 0
     [rail-start] var(--rail) [rail-end] var(--rail-gap)
     /* 100% minus the gutters, never 100%: 100% is the whole grid container, so the fixed tracks plus gutters
        overflowed at narrow widths. The rail subtracts here for the same reason. */
@@ -92,11 +100,19 @@
   align-items: center;
   min-block-size: var(--control-min);
   color: var(--brand);
-  font-family: var(--t-nav-family);
-  font-size: var(--t-nav-size);
-  font-weight: var(--t-nav-weight);
-  font-variation-settings: var(--t-nav-vars);
+  font-family: var(--font-sans);
+  /* 14px regular, not the nav scale: these are not destinations, so they do not take the
+     header's weight. Sentence case throughout. */
+  font-size: 0.875rem;
+  font-weight: 400;
   font-optical-sizing: none;
+  text-decoration: none;
+}
+
+.site-shell-footer-nav a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
 }
 
 .site-shell-footer-nav a:visited {
@@ -106,10 +122,9 @@
 .site-shell-footer-note {
   margin-block-start: var(--s-3);
   color: var(--text-secondary);
-  font-family: var(--t-small-family);
-  font-size: var(--t-small-size);
-  line-height: var(--t-small-leading);
-  font-weight: var(--t-small-weight);
-  font-variation-settings: var(--t-small-vars);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  font-weight: 400;
   font-optical-sizing: none;
 }
