@@ -4269,7 +4269,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 478 : 440;
+const MINIMUM_CHECKS = wantsRemote ? 502 : 460;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

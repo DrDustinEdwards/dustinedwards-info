@@ -30,7 +30,7 @@ const FORCE = args.includes("--force");
  * Below this the directory is not a migrations directory. The earlier value could not notice a
  * third of it being deleted, and the first migration is the only copy of the CREATE TABLEs.
  */
-const MINIMUM_MIGRATIONS = 12;
+const MINIMUM_MIGRATIONS = 18;
 
 let checks = 0;
 let failures = 0;
@@ -350,7 +350,7 @@ if (ledger === null) {
  * section emitting no assertion where there is no local database. It steps by a fixed amount per
  * migration, which is append-only by hard rule 14.
  */
-const MINIMUM_CHECKS = 56;
+const MINIMUM_CHECKS = 68;
 const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
