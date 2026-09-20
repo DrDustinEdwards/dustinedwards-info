@@ -27,12 +27,6 @@
   text-decoration-thickness: var(--line-w);
 }
 
-/* The wayfinding exemption: these figures are the page describing itself, and a visited colour
-   would make the row look like a trail through the site rather than a reading of it. */
-.evidence a:visited {
-  color: var(--brand);
-}
-
 /*
  * UNDER THE ROW, OUTSIDE THE RULES. A health ratio is only true with its read time beside it and
  * this page is shared-cached, so the sentence is part of the claim rather than a footnote to it.
