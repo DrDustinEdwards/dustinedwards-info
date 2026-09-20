@@ -456,7 +456,9 @@ if (update) {
  * the gate already knows. MEASURED ON A PLAIN RUN, and that distinction cost a wrong floor once:
  * `--update` SKIPS the per-binary baseline comparisons.
  */
-const MINIMUM_CHECKS = 240;
+/* RE-MEASURED 2026-09-20 on a plain run: home.css added axis requests, and 240 then sat 28 under
+   its count against a 5% tolerance, which is what check:floors failed on rather than this gate. */
+const MINIMUM_CHECKS = 268;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 
