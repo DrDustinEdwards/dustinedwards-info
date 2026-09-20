@@ -15,8 +15,8 @@
 
 @media (min-width: 48rem) {
   .post-tracks {
-    --rail: 7.5rem;
-    --rail-gap: 1.5rem;
+    --rail: var(--rail-w);
+    --rail-gap: var(--rail-gap-w);
   }
 
   /*
