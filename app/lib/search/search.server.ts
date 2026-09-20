@@ -14,6 +14,7 @@ import {
   parseQuery,
   toMatchExpression,
 } from "./query.mjs";
+import { applySort, parseSort, type SearchSort } from "./sort.mjs";
 
 /** @see app/lib/search/query.mjs */
 type ParsedQuery = ReturnType<typeof parseQuery>;
@@ -314,11 +315,27 @@ export interface SearchOptions {
    * what `fuse()` already recorded, so the flag cannot make the demo and the real search disagree.
    */
   explain?: boolean;
+  /**
+   * Reader-chosen ordering of the TEXT path. Relevance is the default and stays the default: the
+   * best pages here are old papers, and a date-first list buries them under whatever was written
+   * most recently.
+   *
+   * It re-sorts the FUSED list and never the SQL. `runIndex`'s `ORDER BY` picks which candidates
+   * come back from one index; the order a reader sees is `fuse()`'s, over both. Pushing the choice
+   * into SQL would change the candidate set per sort, so page 2 of one ordering would hold results
+   * page 2 of the other never saw.
+   *
+   * THE BROWSE PATH IGNORES IT, and the route does not offer the control there. A filter with no
+   * text has no relevance signal at all, which is why that path is date-ordered in SQL; offering a
+   * choice between date and nothing would be a control that explains nothing.
+   */
+  sort?: SearchSort;
 }
 
 export async function search(env: Env, options: SearchOptions): Promise<SearchResult> {
   const pageSize = options.pageSize ?? 10;
   const page = Math.max(1, options.page ?? 1);
+  const sort: SearchSort = options.sort ?? "relevance";
   const now = options.now ?? new Date();
   const nowSeconds = Math.floor(now.getTime() / 1000);
 
@@ -401,7 +418,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   const proseUids = new Set(proseRows.map((r) => r.uid));
   const fused = fuse<RawRow & { uid: string }>([identityRows, proseRows]);
 
-  const hits: SearchHit[] = fused.map(({ item, score }) => ({
+  const fusedHits: SearchHit[] = fused.map(({ item, score }) => ({
     uid: item.uid,
     url: item.url,
     type: item.type,
@@ -421,6 +438,9 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     why: whyMatched(item, parsed, proseUids.has(item.uid)),
     score,
   }));
+
+  /* Sorted BEFORE the slice; `applySort` carries the reasoning and the test. */
+  const hits = applySort(fusedHits, sort);
 
   return {
     parsed,
@@ -594,3 +614,7 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
     })),
   };
 }
+
+/* Re-exported so a caller needs one import for the search API. sort.mjs owns both. */
+export { parseSort };
+export type { SearchSort };

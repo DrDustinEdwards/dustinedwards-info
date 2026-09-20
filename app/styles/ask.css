@@ -59,15 +59,31 @@
   margin: 0;
 }
 
+/*
+ * THE RESERVED WELL. Ask sits ABOVE the results, so every line the answer gains pushes the whole
+ * list down while a reader is reading it. The body holds its height from the moment the panel
+ * opens, so the stream fills a box that is already the right size.
+ *
+ * SIZED IN `lh`, not pixels: the reservation is a number of LINES of this element's own text, so
+ * it follows the type scale and the theme instead of being a measurement of one of them.
+ *
+ * FOUR LINES, because that is what the answer this site asks for occupies. The system prompt says
+ * two or three sentences; at this measure that lands in three to four lines. It is deliberately
+ * NOT sized to the longest answer the model could emit: reserving for a worst case nothing
+ * produces would leave a visibly empty box under every real answer.
+ */
 .ask-body {
   margin: 0;
   line-height: 1.65;
   white-space: pre-wrap;
+  min-block-size: 4lh;
 }
 
-.ask-body:empty {
-  display: none;
-}
+/*
+ * NO `:empty { display: none }` ANY MORE, and that rule was the defect: an empty body collapsed to
+ * nothing and the panel grew by four lines the instant the first token arrived, which is the jump
+ * the well exists to remove. Empty is now simply an empty well of the right height.
+ */
 
 .ask-sources {
   margin: 0.75rem 0 0;
@@ -89,7 +105,27 @@
   margin-top: 0.25rem;
 }
 
+/*
+ * The citation number. Tabular so a two-digit marker does not shift its title, and not a link of
+ * its own: the number and the title are one target.
+ */
+.ask-source-index {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .ask-source-kind {
   color: var(--text-muted);
   font-size: 0.75rem;
+}
+
+/* The suggested follow-up. A link and nothing else: the whole state is its URL, so it
+   right-clicks and opens in a new tab like any other link on the page. */
+.ask-followup {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+}
+
+.ask-followup a {
+  color: var(--brand);
 }
