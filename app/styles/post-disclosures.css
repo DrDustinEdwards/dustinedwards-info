@@ -1,79 +1,68 @@
 /*
- * THE TWO DISCLOSURES ON A POST PAGE, in one sheet so the marker has one owner.
+ * THE DISCLOSURE ON A POST PAGE: `.post-details`, the `:::details` directive, supplementary
+ * material inside the prose.
  *
- * `.post-history` is the author-written revision list at the foot of the page. `.post-details` is
- * the `:::details` directive, supplementary material inside the prose. They look the same on
- * purpose: a reader learns the affordance once.
+ * IT USED TO BE TWO. `.post-history` was the second and is no longer a disclosure at all: Direction
+ * D turned it into one ruled mono line, so its rules moved to post-shell.css with it. The marker
+ * still has one owner because there is now one thing wearing it.
  *
  * TOKENS ONLY, no raw hex: check:invariants section 31 refuses a component sheet that states one,
  * and a colour invented here would be a colour no contrast pair measures.
  */
 
-.post-history {
-  max-width: 44rem;
-  margin: 2.5rem auto 0;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
-  font-size: 0.9375rem;
+/* Ruled top and bottom, no box: radius 0 and no fill is the direction. Adjacent disclosures share
+   one rule rather than stacking two. */
+.post-details {
+  margin: 1.875rem 0;
+  border-block: var(--line-w) solid var(--dust);
+  padding: 0;
+}
+
+.post-details + .post-details {
+  margin-block-start: -1.875rem;
+  border-block-start: 0;
 }
 
 /*
  * The marker is the site's own, not the browser's: the default triangle is a different shape and
- * weight in every engine, and this sits beside a row of pill controls.
+ * weight in every engine. Mono, because it is the only glyph on the line and a mono plus and minus
+ * are the same width, so the summary text does not shift when it opens.
  */
-.post-history > summary,
 .post-details > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.625rem;
+  padding-block: 0.8125rem;
+  color: var(--brand);
   cursor: pointer;
-  color: var(--text-muted);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
   list-style: none;
 }
 
-.post-history > summary::-webkit-details-marker,
 .post-details > summary::-webkit-details-marker {
   display: none;
 }
 
-.post-history > summary::before,
 .post-details > summary::before {
   content: "+";
-  display: inline-block;
-  width: 1rem;
-  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
 }
 
-.post-history[open] > summary::before,
 .post-details[open] > summary::before {
   content: "\2212";
 }
 
-.post-history > summary:hover,
 .post-details > summary:hover {
-  color: var(--brand);
+  color: var(--brand-hover);
 }
 
-.post-history-list {
-  margin: 0.75rem 0 0;
-  padding-left: 1rem;
-  display: grid;
-  gap: 0.5rem;
-}
-
-/* The date leads each line, so the dates form a readable column down the left of the notes. */
-.post-history-list time {
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Supplementary material inside the prose. It takes the column's own measure from prose.css. */
-.post-details {
-  margin: 1.5rem 0;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-}
-
-.post-details > summary {
-  font-size: 0.9375rem;
+/* NO ANIMATION AND NO HEIGHT TRANSITION. The handoff asks for none, so there is none to disable
+   under prefers-reduced-motion either. */
+.post-details > *:not(summary) {
+  padding-block-end: 1rem;
 }
 
 /*
@@ -86,7 +75,6 @@
  * engine understands one of them.
  */
 @media print {
-  .post-history::details-content,
   .post-details::details-content {
     content-visibility: visible;
     block-size: auto;

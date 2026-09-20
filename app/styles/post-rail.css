@@ -1,0 +1,131 @@
+/* The post's two tracks and the rail that fills the narrow one. The grid itself is shell.css's
+   `.tracks`; this file only opts the post page into the rail track and dresses what sits in it. */
+
+/*
+ * THE OPT-IN, and the whole reason the rail is a variable rather than a second grid: `.tracks`
+ * declares the rail at 0 and every other page keeps the layout it had. 64ch is measured in the
+ * READING face, which is why the serif is set here and not only on the prose: `ch` resolves against
+ * the element's own font, so a sans-serif container would cap the column at the wrong width.
+ */
+.post-tracks {
+  --measure: 64ch;
+
+  font-family: var(--font-serif);
+}
+
+@media (min-width: 48rem) {
+  .post-tracks {
+    --rail: 7.5rem;
+    --rail-gap: 1.5rem;
+  }
+
+  /*
+   * The rail and the body share a row, so the rail sits BESIDE the article rather than above it.
+   * The head is row 1 and spans the text track alone, which leaves the rail empty beside the
+   * title exactly as the handoff draws it.
+   */
+  .post-tracks > .post-head {
+    grid-row: 1;
+  }
+
+  .post-tracks > .post-rail,
+  .post-tracks > .post-body {
+    grid-row: 2;
+  }
+
+  .post-rail {
+    /* Right-aligned so the ragged edge faces the text it annotates. */
+    text-align: right;
+  }
+}
+
+/* One column: the rail keeps its source position above the article and reads left like everything
+   else. `--rail` is still 0 here, so there is no track to place anything in. */
+.post-rail {
+  margin-block-start: var(--s-6);
+  color: var(--text-secondary);
+}
+
+.post-tracks > .post-body {
+  margin-block-start: var(--s-6);
+}
+
+/* 1 · Chronology. Mono, because it is machine data: the date the row carries, not prose about it.
+   The value is ink and the label is muted, so a scan reads the dates and not the words. */
+.post-machine {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.post-machine b {
+  display: block;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.post-machine b + b {
+  margin-block-start: 0.875rem;
+}
+
+/* 2 · Contents. Sans, because it is navigation a reader reads, and one ruled row per section. */
+.post-toc {
+  margin-block-start: var(--s-5);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+@media (min-width: 48rem) {
+  .post-toc {
+    /* A plain 20px: the header is static and scrolls away, so there is nothing to subtract and
+       `--bar-h` is gone. Do not reintroduce it. */
+    position: sticky;
+    top: 1.25rem;
+  }
+}
+
+.post-toc > p {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+}
+
+.post-toc ol {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--line-w) solid var(--dust);
+  list-style: none;
+}
+
+.post-toc li {
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.post-toc a {
+  display: block;
+  padding-block: 0.4375rem;
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.post-toc a:hover {
+  color: var(--brand);
+}
+
+/*
+ * THE CURRENT SECTION IS THE ENHANCEMENT, the anchors are the page. `app/enhance/blog.ts` sets
+ * `data-current` on scroll; with no script every entry reads muted, which is the named fallback.
+ */
+.post-toc a[data-current] {
+  color: var(--text);
+}
+
+/* Print: the rail prints above the article and the contents list goes, because a page number is
+   not a link. The history line stays; it is provenance. */
+@media print {
+  .post-toc {
+    display: none;
+  }
+}
