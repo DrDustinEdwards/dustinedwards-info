@@ -38,21 +38,35 @@ export function PostHistory({
    */
   const ordered = [...entries].sort((a, b) => a.date.localeCompare(b.date));
 
+  /*
+   * A FACT IS A DATE AND A SENTENCE, kept apart rather than joined into a string, because ruling
+   * 118 item 6 gives the mono channel to the VALUE alone: the date is machine data and takes the
+   * mono, the words beside it are prose and stay sans. Joining them made one text node that no
+   * stylesheet could tell apart.
+   */
   const facts = [
-    publishedAt ? `${publishedAt} first published` : null,
-    ...ordered.map((entry) => `${entry.date} ${entry.note}`),
-  ].filter(Boolean);
+    ...(publishedAt ? [{ date: publishedAt, note: "first published" }] : []),
+    ...ordered,
+  ];
 
   return (
     <p className="post-history">
-      <b>Post history</b>
-      {facts.join(" · ")}
+      <span className="post-history-label">Post history</span>
+      {facts.map((fact, i) => (
+        <span key={`${fact.date} ${fact.note}`}>
+          {i > 0 ? " · " : null}
+          <time className="post-history-value" dateTime={fact.date}>
+            {fact.date}
+          </time>{" "}
+          {fact.note}
+        </span>
+      ))}
       {/* The hash is the whole claim the page makes about itself: it names the markdown this copy
           was rendered from. Absent on a row written before the column existed. */}
       {sourceHash ? (
         <>
           {" · rendered from source hash "}
-          <b>{sourceHash.slice(0, 7)}</b>
+          <span className="post-history-value">{sourceHash.slice(0, 7)}</span>
         </>
       ) : null}
     </p>
