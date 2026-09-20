@@ -32,10 +32,27 @@ function onIdle(fn: () => void) {
   }
 }
 
+/**
+ * How much taller than the viewport a post must be before the bar is worth drawing.
+ *
+ * LONG POSTS ONLY was always the rule and was never implemented: the bar was created for every
+ * post. On one that fits in a viewport there is nothing to scroll, so `height` below is zero or
+ * negative and the bar sat permanently at `scaleX(0)`: a decoration that is always empty, telling
+ * the reader they have read none of a page they have finished.
+ *
+ * Two viewports, not one. At exactly one the bar exists to describe a few pixels of scroll and
+ * jumps from empty to full, which is worse than absent.
+ */
+const PROGRESS_MIN_VIEWPORTS = 2;
+
 /** Reading progress. Purely decorative, so it is created by script or not at all. */
 function readingProgress() {
   const article = document.querySelector<HTMLElement>(".post .prose");
   if (!article) return;
+
+  /* Long enough NOW. Re-checked on every frame below, because a rotation changes the answer. */
+  const worthDrawing = () => article.offsetHeight >= window.innerHeight * PROGRESS_MIN_VIEWPORTS;
+  if (!worthDrawing()) return;
 
   const bar = document.createElement("div");
   bar.className = "reading-progress";
@@ -44,6 +61,12 @@ function readingProgress() {
 
   let ticking = false;
   const update = () => {
+    /*
+     * HIDDEN RATHER THAN REMOVED when a resize makes the post short: removing it would mean
+     * rebuilding it on the next rotation, and `hidden` is one property on an element that is
+     * already there.
+     */
+    bar.hidden = !worthDrawing();
     const start = article.offsetTop;
     const height = article.offsetHeight - window.innerHeight;
     const scrolled = height > 0 ? (window.scrollY - start) / height : 0;
@@ -51,15 +74,15 @@ function readingProgress() {
     ticking = false;
   };
 
-  addEventListener(
-    "scroll",
-    () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(update);
-    },
-    { passive: true },
-  );
+  const schedule = () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(update);
+  };
+
+  addEventListener("scroll", schedule, { passive: true });
+  /* A rotation changes both the viewport and the article's height, so it re-asks the question. */
+  addEventListener("resize", schedule, { passive: true });
   update();
 }
 
