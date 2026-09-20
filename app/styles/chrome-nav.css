@@ -1,94 +1,106 @@
 /* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Blog. Post bodies are generated HTML stored in D1, and Tailwind never sees
-   that markup, so every class they use (including sr-only, which remark-gfm
-   emits on the footnotes label) is defined here. */
-
-/* One row, one centreline: every item takes --control-h, so no item's height sets the row's. Declared here,
-   not in the token blocks, because only these controls share it and check:contrast parses :root as colours. */
+/*
+ * THE HEADER'S DESTINATIONS AND ITS TWO CONTROLS, on paper.
+ *
+ * The nav is LAST in source and takes a full basis at narrow widths, which drops the destinations
+ * to their own line while the wordmark and the tools keep line 1. No breakpoint: the layout is a
+ * property of the label widths, so the wrap thresholds are MEASURED after a link lands and never
+ * reasoned from. The old 537 and 619 figures described a three- and four-link header.
+ */
 .site-header-nav {
   display: flex;
   align-items: center;
-  /* The measurement is on `.site-header` above. Wrapping here lets the four
-     labels and three controls break; wrapping there gives them a line of
-     their own to break onto. */
   flex-wrap: wrap;
-  gap: 0.75rem;
-  font-size: 0.9375rem;
-  --control-h: 2.25rem;
+  column-gap: 1.375rem;
+  row-gap: 0.5rem;
+  /* Pushed to the far side at wide widths, so the destinations sit against the tools rather than
+     against the wordmark. */
+  margin-inline-start: auto;
+  /* The nav type level, whose only reader this is. */
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
 }
 
-/* Nav links are bare text, so they underline (rule 2); the search icon opts out on its own rule. Nav links
-   have no :visited state: wayfinding is not a trail. .site-header-nav a:visited is (0,2,1) against
-   a:visited at (0,1,1), so this wins rather than ties. */
+/*
+ * THE ONE WIDTH RULE IN THE HEADER, and it is here because the handoff asks for two things that
+ * cannot both hold: "no media query but print", and `order: 3; flex-basis: 100%` at small widths.
+ * Only the second describes what the frames draw, so it wins and this is the cost.
+ *
+ * 785px, because 786 is MEASURED: the width at which the six labels stop fitting beside the
+ * wordmark and the two controls. Taken by binary search over real layout with this rule
+ * neutralised on the elements, since measuring with it in place finds this query's own boundary
+ * and reports the instrument back to itself. Renaming or adding a link moves it, so it is
+ * re-measured after the link lands, never reasoned from label widths.
+ */
+@media (max-width: 49.0625rem) {
+  .site-header-nav {
+    order: 3;
+    flex-basis: 100%;
+    margin-inline-start: 0;
+  }
+
+  .site-header-tools {
+    margin-inline-start: auto;
+  }
+}
+
+/* Ink, not brand: destinations are wayfinding, and six purple labels under a wordmark read as six
+   things to click rather than as a map. Nav links have no :visited state, because wayfinding is
+   not a trail; (0,2,1) against a:visited at (0,1,1), so this wins rather than ties. */
 .site-header-nav a,
 .site-header-nav a:visited {
-  color: var(--on-chrome-muted);
+  color: var(--text);
+  text-decoration: none;
 }
 
-/* The text link gets the controls' hit area, so its baseline sits on their centreline and the underline
-   stays still. :not() because the search control is also an anchor and sizes itself. */
-.site-header-nav a:not(.search-trigger) {
-  display: inline-flex;
-  align-items: center;
-  height: var(--control-h);
+.site-header-nav a:hover {
+  color: var(--brand);
 }
 
-.site-header-nav a:hover,
+/* The current page takes a 1px ink underline, not a colour: colour is what a link uses to say it
+   is a link, so reusing it for "you are here" says two things with one signal. */
 .site-header-nav a[aria-current="page"] {
-  color: var(--on-chrome);
+  color: var(--text);
+  border-block-end: var(--line-w) solid var(--text);
+  padding-block-end: 0.125rem;
 }
 
-/* The pill controls use the chrome's tokens (--on-chrome, --on-chrome-muted): --border, --text-muted and
-   --tint-brand vanish or blotch on purple. Hover is a colour step, not a fill: nothing in the header is filled. */
-.site-header .theme-toggle,
-.site-header-nav .search-trigger {
-  border-color: var(--on-chrome-muted);
-}
-
-.site-header-nav .theme-option {
-  color: var(--on-chrome-muted);
-}
-
-.site-header-nav .theme-option:hover,
-.site-header-nav .search-trigger:hover {
-  color: var(--on-chrome);
-  border-color: var(--on-chrome);
-  background: transparent;
-}
-
-
-/* Theme toggle: two buttons ship and one is displayed; the other is display: none, so a screen reader finds
-   one. With no choice, prefers-color-scheme picks, matching the no-script form. html[data-theme] must outrank
-   the media query, and does: (0,3,1) against (0,2,0). Script only sets the attribute. No transition. */
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  /* Shared with the search control and the Blog link. Falls back to auto
-     wherever --control-h is not in scope, which is its natural height. */
-  height: var(--control-h);
-  padding: 0.125rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-}
-
+/*
+ * THE THEME TOGGLE IS A GLYPH, NOT A PILL. Ruling 117's kill list takes the border, the radius and
+ * the fill: what is left is the icon in --brand, a colour step on hover, and a square focus ring.
+ * No background change in any state. The search control states the same shape in its own sheet,
+ * because that sheet owns that control.
+ */
 .theme-option {
   display: grid;
   place-items: center;
-  /* WCAG 2.2 target size: 28px square, above the 24px floor. */
-  min-width: 1.75rem;
-  min-height: 1.75rem;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--brand);
   cursor: pointer;
 }
 
 .theme-option:hover {
-  color: var(--text);
-  background: var(--tint-brand);
+  color: var(--brand-hover);
+  background: transparent;
+}
+
+/*
+ * Theme toggle: two buttons ship and one is displayed; the other is display: none, so a screen
+ * reader finds one. With no choice, prefers-color-scheme picks, matching the no-script form.
+ * html[data-theme] must outrank the media query, and does: (0,3,1) against (0,2,0). Script only
+ * sets the attribute. No transition.
+ */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
 }
 
 /* Default layer: with no cookie the machine decides. A browser reporting no
@@ -117,4 +129,13 @@ html[data-theme="dark"] .theme-option[data-when="dark"] {
 html[data-theme="light"] .theme-option[data-when="dark"],
 html[data-theme="dark"] .theme-option[data-when="light"] {
   display: none;
+}
+
+/* Print: the destinations and both controls are ways to go somewhere else, and paper goes
+   nowhere. The wordmark and the mark stay, because they name the page. */
+@media print {
+  .site-header-nav,
+  .site-header-tools {
+    display: none;
+  }
 }

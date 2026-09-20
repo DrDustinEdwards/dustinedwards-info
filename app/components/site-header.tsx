@@ -57,6 +57,13 @@ export function SiteHeader() {
             {item.label}
           </NavLink>
         ))}
+      </nav>
+      {/*
+       * THE TOOLS SIT OUTSIDE THE NAV. They are the two controls a reader reaches for without
+       * reading, they are not destinations, and keeping them out of the nav is what lets the
+       * destinations drop to their own line while these stay beside the wordmark.
+       */}
+      <div className="site-header-tools">
         <SearchTrigger />
         {/*
          * THE HARD RULE 13 SUBSTITUTION THAT SAT HERE IS GONE, and so is the reason for
@@ -65,7 +72,7 @@ export function SiteHeader() {
          * substitute when `data` is absent.
          */}
         <ThemeToggle />
-      </nav>
+      </div>
       {/*
        * It rides HERE rather than in root's Layout so its scope is exactly the
        * header's: every public page, never the admin plane, which does not render this
