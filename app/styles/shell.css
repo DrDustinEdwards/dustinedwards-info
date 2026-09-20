@@ -5,20 +5,32 @@
 /* 1 · The track grid, named .tracks, not .page: .page has live consumers, and one name for two jobs drifts.
    The track is the measure, so a full-bleed figure and a paragraph share one source. At narrow widths the
    1fr tracks are zero and all three share a column, so no media query. */
+/* The rail is a track of this grid and not a second grid on the post, so a rail item and a
+   paragraph resolve against one column list. It is 0 wide here and a page opts in by setting
+   --rail: every page that does not is laid out exactly as it was before the track existed. */
 .tracks {
+  --rail: 0rem;
+  --rail-gap: 0rem;
+
   display: grid;
   grid-template-columns:
     [full-start] var(--gutter)
     [wide-start] minmax(0, 1fr)
+    [rail-start] var(--rail) [rail-end] var(--rail-gap)
     /* 100% minus the gutters, never 100%: 100% is the whole grid container, so the fixed tracks plus gutters
-       overflowed at narrow widths. */
-    [text-start] min(var(--measure), 100% - 2 * var(--gutter)) [text-end]
+       overflowed at narrow widths. The rail subtracts here for the same reason. */
+    [text-start] min(var(--measure), 100% - 2 * var(--gutter) - var(--rail) - var(--rail-gap))
+    [text-end]
     minmax(0, 1fr) [wide-end]
     var(--gutter) [full-end];
 }
 
 .tracks > * {
   grid-column: text;
+}
+
+.tracks > .u-rail {
+  grid-column: rail;
 }
 
 .tracks > .u-wide {

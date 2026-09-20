@@ -46,6 +46,12 @@
 # exclude this directory by path for the same reason they skip build/.
 /app/enhance/dist/
 
+# The gzipped size of each of those bundles, written by the same build step. The evidence row
+# publishes the number and the Worker has no filesystem to measure it in, so it is measured where
+# the bytes are produced. Committing it would commit a measurement that goes stale on the next
+# build without anything noticing.
+/app/lib/enhance-sizes.generated.ts
+
 # The markdown twin of every paper, written by build:publication-twins. Same
 # class as posts.json above and the same argument: derived entirely from
 # tracked sources (app/data/publications.ts, data/publications.text.json,

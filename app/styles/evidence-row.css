@@ -1,0 +1,16 @@
+/* The evidence row, a site object rather than a per-page flourish: two dust hairlines with nothing
+   between them but mono text. Facts are separated by the column gap and never by punctuation, so a
+   wrapped row at 375 reads as a list rather than as a broken sentence. */
+.evidence {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 1.375rem;
+  margin: 0;
+  border-block: var(--line-w) solid var(--dust);
+  padding-block: 0.6875rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.7;
+}

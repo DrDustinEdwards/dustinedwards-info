@@ -1,9 +1,15 @@
 /**
- * The three optional author-set blocks at the top of a post: a status tag, an assumed-audience
- * line, and a key-takeaways box.
+ * The three optional author-set blocks at the top of a post: writing status, assumed audience and
+ * key takeaways, as ruled `dl` rows.
  *
  * ALL THREE ARE OPTIONAL AND MOST POSTS CARRY NONE. The component renders nothing at all when a
- * post sets none of them, so the ordinary post's markup is unchanged.
+ * post sets none of them, so the ordinary post's markup is unchanged. A row a post has nothing to
+ * say in is omitted rather than filled.
+ *
+ * A `dl` AND NOT HEADINGS, which is the change Direction D made and the reason it matters: the
+ * takeaways used to carry an `h2`, so every post that set them put a heading in the contents list
+ * that was not one of the article's own sections. Labels are `dt`, values are `dd`, and the
+ * heading list is the argument's.
  *
  * NONE OF THEM IS A BYLINE, and that is the constraint worth stating rather than discovering. The
  * missing byline on this site is deliberate: there is one author, the site is his name, and a
@@ -29,42 +35,6 @@ const STATUS_LABEL = {
 
 export type WritingStatus = keyof typeof STATUS_LABEL;
 
-/**
- * A glyph per status, inline rather than from an icon set, per the repo's bundle-leanness rule.
- *
- * AT 12px WITH `currentColor`, so it survives forced-colors: the OS repaints the text colour and
- * the stroke follows. A background-image glyph disappears entirely in that mode.
- *
- * The glyph is `aria-hidden` because the word beside it carries the meaning. THE WORD IS NEVER
- * DROPPED in favour of the glyph: five shapes are not five things a reader learns at a glance.
- */
-function StatusGlyph({ status }: { status: WritingStatus }) {
-  const paths: Record<WritingStatus, React.ReactNode> = {
-    notes: <path d="M4 4h10M4 8h10M4 12h6" />,
-    draft: <path d="M3 13l2-5 7-7 3 3-7 7-5 2z" />,
-    "in progress": <path d="M9 2a7 7 0 1 1-7 7" />,
-    finished: <path d="M3 9l4 4 8-9" />,
-    obsolete: <path d="M9 2a7 7 0 1 1-7 7M2 2l14 14" />,
-  };
-  return (
-    <svg
-      className="post-status-glyph"
-      width="12"
-      height="12"
-      viewBox="0 0 18 18"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.75"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      focusable="false"
-    >
-      {paths[status]}
-    </svg>
-  );
-}
-
 export function PostHeadBlocks({
   writingStatus,
   assumedAudience,
@@ -78,41 +48,34 @@ export function PostHeadBlocks({
   if (!writingStatus && !assumedAudience && takeaways.length === 0) return null;
 
   return (
-    <div className="post-head-blocks">
+    <dl className="post-blocks">
       {writingStatus ? (
-        <p className="post-status" data-status={writingStatus}>
-          <StatusGlyph status={writingStatus} />
-          {STATUS_LABEL[writingStatus]}
-        </p>
+        <div className="post-block">
+          <dt>Writing status</dt>
+          <dd>{STATUS_LABEL[writingStatus]}</dd>
+        </div>
       ) : null}
 
-      {/*
-       * A LABELLED LINE, not a bare sentence. "Physicists who have not met phage" reads as the
-       * opening of the post without the label telling a reader it is about them.
-       */}
       {assumedAudience ? (
-        <p className="post-audience">
-          <span className="post-audience-label">Assumed audience:</span> {assumedAudience}
-        </p>
+        <div className="post-block">
+          <dt>Assumed audience</dt>
+          <dd>{assumedAudience}</dd>
+        </div>
       ) : null}
 
-      {/*
-       * A NAMED REGION, not an aside. A reader who wants the answer before the argument should be
-       * able to find this in a landmark list on purpose, and `aside` would put it in the tree as
-       * tangential to a post it is in fact summarising.
-       */}
+      {/* The only row that may be a list, because it is the only one that is several claims. */}
       {takeaways.length > 0 ? (
-        <section className="post-takeaways" aria-labelledby="takeaways-h">
-          <h2 className="post-takeaways-h" id="takeaways-h">
-            Key takeaways
-          </h2>
-          <ul>
-            {takeaways.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </ul>
-        </section>
+        <div className="post-block">
+          <dt>Key takeaways</dt>
+          <dd>
+            <ul>
+              {takeaways.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          </dd>
+        </div>
       ) : null}
-    </div>
+    </dl>
   );
 }
