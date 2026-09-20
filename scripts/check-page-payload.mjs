@@ -616,12 +616,22 @@ const REDESIGN_UPLIFT = new Map([
 const ROUTE_CEILINGS = {
   "/": { id: "routes/home", css: 6900, total: 7800 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
-  "/blog/:slug": { id: "routes/blog.$slug", css: 9000, total: 11600 },
+  /*
+   * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
+   * layout and its own type rules. Measured 8982 css / 12051 total on the build that raised it.
+   * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
+   */
+  "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 12400 },
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7200, total: 8100 },
   /* The tag archive's, for the reason above: one bar for one kind of page. */
   "/blog/series/:series": { id: "routes/blog.series.$series", css: 7200, total: 8100 },
-  "/search": { id: "routes/search", css: 7600, total: 10000 },
+  /*
+   * The total alone is raised, and by the rail track's share: `.tracks` gained the rail as a
+   * third track, which every public route pays for because they all load shell.css. This page
+   * had 52 bytes of headroom and was the only one that did not absorb it.
+   */
+  "/search": { id: "routes/search", css: 7600, total: 10300 },
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
   "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
   "/playground": { id: "routes/playground", css: 8200, total: 9000 },
@@ -647,8 +657,12 @@ const ROUTE_CEILINGS = {
   "/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
 };
 
-/** THE MATH VARIANT: `/blog/:slug` with one more sheet, generated from a pinned package. */
-const MATH_CEILING = { css: 11800, total: 14500 };
+/**
+ * THE MATH VARIANT: `/blog/:slug` with one more sheet, generated from a pinned package.
+ *
+ * Raised with its parent for Part B page 1, by the same sheets: measured 11801 css / 14870 total.
+ */
+const MATH_CEILING = { css: 12300, total: 15200 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
 const MINIMUM_MATH_FACES = 20;
