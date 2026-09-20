@@ -1,5 +1,6 @@
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
+import { PostHistory } from "~/components/post-history";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { ShellFooter } from "~/components/shell-footer";
@@ -40,6 +41,7 @@ import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
 import "~/styles/post-head-blocks.css";
+import "~/styles/post-history.css";
 
 /**
  * Content negotiation runs as middleware rather than in the loader: a document
@@ -493,6 +495,13 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               </ul>
             </section>
           )}
+
+          {/*
+           * THE SAME THRESHOLD, NOT A SECOND ONE. `revisedLabel` is already the answer to "has this
+           * post been revised rather than merely redeployed", so the history hangs off it: a post
+           * cannot claim a revision here and deny it in the line above.
+           */}
+          {revisedLabel && post.changelog && <PostHistory entries={post.changelog} />}
 
           {/*
            * Every one is a plain link, so all three work with scripting off. The

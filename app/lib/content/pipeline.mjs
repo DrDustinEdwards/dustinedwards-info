@@ -327,6 +327,28 @@ export const frontmatterSchema = z.object({
    * Two to four items, because one is a dek and five is the post.
    */
   key_takeaways: z.array(z.string().min(1).max(300)).min(2).max(4).optional(),
+  /**
+   * THE POST HISTORY, author-written, one line per revision.
+   *
+   * `updated_at` on the row already says WHEN and cannot say WHAT; it is also rewritten by every
+   * sync, which is why the page puts a 24-hour threshold in front of it. This says what changed,
+   * and only the author knows that.
+   *
+   * THE DATE IS `isoDate`, the same preprocessor the post's own `date` uses, because YAML parses a
+   * bare 2026-08-15 into a Date object and a hand-rolled string regex would reject every unquoted
+   * one. A revision is a day and not an instant. Ordering is the renderer's, so an author may
+   * append a line rather than prepend one.
+   */
+  changelog: z
+    .array(
+      z.object({
+        date: isoDate,
+        note: z.string().min(1).max(300),
+      }),
+    )
+    .min(1)
+    .max(20)
+    .optional(),
   /** Curated outbound links, rendered at the end of the post. */
   further_reading: z
     .array(
@@ -2131,6 +2153,7 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     writingStatus: fm.writing_status ?? null,
     assumedAudience: fm.assumed_audience ?? null,
     keyTakeaways: fm.key_takeaways ?? null,
+    changelog: fm.changelog ?? null,
     furtherReading: fm.further_reading,
     ogTitle: fm.og_title ?? null,
     ogDescription: fm.og_description ?? null,
