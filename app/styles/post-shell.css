@@ -131,21 +131,32 @@
   line-height: 1.4;
 }
 
-/* The provenance line: mono, under one rule, the last machine-readable thing in the column. */
+/*
+ * The provenance line, under one rule, the last machine-readable thing in the column.
+ *
+ * ONE MONO CHANNEL, AND IT IS THE VALUE (ruling 118 item 6): the dates and the source hash take
+ * the mono; the label and the revision notes are prose and stay sans and muted. The row used to be
+ * mono throughout, which put the author's sentences in a machine face.
+ */
 .post-history {
   margin: var(--s-6) 0 0;
   border-block-start: var(--line-w) solid var(--dust);
   padding-block-start: 0.875rem;
   color: var(--text-secondary);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   line-height: 1.8;
 }
 
-.post-history b {
+.post-history-label {
   display: block;
   color: var(--text);
   font-weight: 500;
+}
+
+.post-history-value {
+  color: var(--text);
+  font-family: var(--font-mono);
 }
 
 /* The markdown twin and the permalink: plain links in a row, each a real target. They are not

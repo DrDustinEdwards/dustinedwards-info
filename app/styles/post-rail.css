@@ -66,11 +66,18 @@
   margin-block-start: var(--s-6);
 }
 
-/* 1 · Chronology. Mono, because it is machine data: the date the row carries, not prose about it.
-   The value is ink and the label is muted, so a scan reads the dates and not the words. */
+/*
+ * 1 · Chronology. ONE MONO CHANNEL PER ROW, AND IT IS THE VALUE (ruling 118 item 6): the date is
+ * machine data and takes the mono; the words beside it are a label and stay sans and muted, so a
+ * scan reads the dates and not the words.
+ *
+ * 01-post.html §2 still says `--font-mono` for the whole row and needs correcting on the canvas.
+ * Ruling 118 is the later step and wins (ruling 93); both values are recorded here.
+ */
 .post-machine {
   margin: 0;
-  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
   font-size: 0.75rem;
   line-height: 1.7;
 }
@@ -78,6 +85,7 @@
 .post-machine b {
   display: block;
   color: var(--text);
+  font-family: var(--font-mono);
   font-weight: 500;
 }
 
