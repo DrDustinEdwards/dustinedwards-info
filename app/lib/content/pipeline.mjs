@@ -1318,9 +1318,62 @@ function remarkMathValidate(file, sink) {
 }
 
 /**
+ * Turns `:::details{summary="Raw counts"}` into a native `<details>`.
+ *
+ * SUPPLEMENTARY MATERIAL ONLY: long methods, raw data, an appendix. Never the main argument, and
+ * that is not left to a comment. A heading inside is REFUSED, because a heading is how this site
+ * spells "section of the argument": it goes in the table of contents, it is a link target, and a
+ * section that is in the contents and invisible until somebody clicks is the exact failure the rule
+ * is about. Prose, tables, code and lists are all fine.
+ *
+ * NATIVE `details`, so the text is IN THE HTML whether or not anything runs. A reader with no
+ * script opens it; a reader who prints gets it open; a search engine and the markdown twin have it
+ * either way. No enhancement is registered for this, because there is nothing to enhance.
+ *
+ * THE SUMMARY IS REQUIRED. A disclosure with no label is a triangle, and a reader deciding whether
+ * to open it is deciding blind.
+ *
+ * @param {string} file
+ */
+function remarkDetails(file) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
+      if (node.type !== "containerDirective" || node.name !== "details") return;
+
+      const summary = (node.attributes ?? {}).summary;
+      if (!summary) {
+        throw new ContentError(file, ":::details requires a summary attribute");
+      }
+
+      const heading = (node.children ?? []).find((child) => child.type === "heading");
+      if (heading) {
+        const line = heading.position?.start?.line;
+        throw new ContentError(
+          file,
+          `:::details holds a heading${line ? ` on line ${line}` : ""}, which makes it a section ` +
+            "of the argument rather than supplementary material. A heading is in the table of " +
+            "contents and is a link target, so collapsing it hides a section a reader was sent " +
+            "to. Use it for long methods, raw data or an appendix, and leave the argument open.",
+        );
+      }
+
+      node.data = { ...node.data, hName: "details", hProperties: { className: ["post-details"] } };
+      node.children = [
+        {
+          type: "paragraph",
+          data: { hName: "summary" },
+          children: [{ type: "text", value: String(summary) }],
+        },
+        .../** @type {any[]} */ (node.children ?? []),
+      ];
+    });
+  };
+}
+
+/**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
-export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure", "swatch"];
+export const KNOWN_DIRECTIVES = ["chart", "details", "diagram", "figure", "swatch"];
 
 /**
  * Fails the build on any directive this pipeline does not implement.
@@ -2050,6 +2103,7 @@ export async function renderBody({ file, body, resolveImage }) {
     // can be told apart from an ordinary markdown image.
     .use(remarkCollectMedia, mediaRefs)
     .use(remarkFigure, file)
+    .use(remarkDetails, file)
     // No ordering constraint of its own: `swatch` is an INLINE directive and
     // shares no syntax with the three block ones, so nothing upstream can
     // consume its opener and it consumes nobody else's. Placed here so the

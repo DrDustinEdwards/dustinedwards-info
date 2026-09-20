@@ -13,7 +13,7 @@ import { longDateUTC } from "~/lib/long-date.mjs";
  *
  * CLOSED BY DEFAULT AND OPEN ON PAPER. It is the history of the argument rather than the argument,
  * so it does not sit between a reader and the end of the post; a printed page has no disclosure to
- * click, so the print sheet opens it.
+ * click, so `post-disclosures.css` opens it, along with every `:::details` in the prose.
  *
  * NOT MICROFORMATS. Each date is a plain `time` with no `dt-` class: the h-entry already publishes
  * `dt-updated`, and a second set of dates in the same tree would tell a parser the post has many
