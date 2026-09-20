@@ -94,6 +94,7 @@ const SHEETS = [
   "app/styles/publications.css",
   "app/styles/palette-dialog.css",
   "app/styles/playground.css",
+  "app/styles/playground-ui.css",
 ];
 
 /**

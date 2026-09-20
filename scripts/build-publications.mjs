@@ -1,20 +1,12 @@
 /**
- * Generates app/data/publications.ts from the two source files.
+ * Generates the publications module from the canonical bibliographic record and the site-only
+ * fields keyed by DOI.
  *
- * Inputs:
- *   data/publications.csl.json   canonical CSL-JSON, the bibliographic record
- *   data/publications.site.json  site-only fields, keyed by DOI as deposited
+ *   npm run build:publications
  *
- * Deterministic and offline. The network refresh that produces those two files
- * lives outside this repo in pubs-pipeline/assemble.py.
- *
- * Run: npm run build:publications
- *
- * app/data/publications.ts is a build artifact. Do not hand-edit it.
- * `npm run check:publications` imports `generate()` from here and fails if the
- * committed module has drifted from a fresh generation, along with the rest of
- * the corpus assertions. That gate used to be this file's `--check` flag; it
- * moved out when it grew past one comparison.
+ * BOUNDARY: deterministic and offline, and the network refresh that produces those two files
+ * lives outside this repo. The generated module is a build artifact: the gate imports `generate()`
+ * from here and fails when the committed copy has drifted.
  */
 
 import { readFileSync, writeFileSync } from "node:fs";
@@ -25,18 +17,15 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(ROOT, "app", "data", "publications.ts");
 
 /**
- * DOI names are case-insensitive per the DOI spec, which folds ASCII case for
- * comparison. Store as deposited, compare casefolded. A raw-string join here
- * silently drops records rather than throwing.
+ * DOI names are case-insensitive per the spec. Store as deposited, compare casefolded: a raw
+ * join silently drops records rather than throwing.
  */
 /** @param {string | null | undefined} doi */
 const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
 /*
- * Punctuation that never takes a space BEFORE it, and brackets that never take
- * one after. Listed as two explicit classes rather than one clever pattern,
- * because the two rules are different facts about typography and a combined
- * regex would be unreadable at exactly the point somebody needs to check it.
+ * Punctuation that never takes a space BEFORE it, and brackets that never take one after. Two
+ * explicit classes rather than one clever pattern: they are different facts about typography.
  */
 const SPACE_BEFORE_PUNCTUATION = /\s+([,;:.)\]])/g;
 const SPACE_AFTER_OPENING = /([([])\s+/g;
@@ -44,27 +33,12 @@ const SPACE_AFTER_OPENING = /([([])\s+/g;
 /**
  * Registry markup reduced to plain text.
  *
- * ## THE SPACE IS NOT OPTIONAL AND NEITHER IS CLEANING UP AFTER IT
- *
- * Tags are replaced with a SPACE rather than with nothing, and that rule is
- * load-bearing: the July import replaced them with nothing and turned
- * `<scp>RNA</scp>Tumour Viruses` into `RNATumour`. It is recorded as one of the
- * reasons PDF text was never trusted.
- *
- * The cost is that a tag sitting against punctuation leaves a space that was
- * never in the rendered text. MEASURED in this corpus: three TITLES and several
- * abstracts carry it, because italicised organism names are wrapped in `<i>`
- * inside parentheses. The Texas survey's title read
- *
- *     Survey of Reticuloendotheliosis Virus in Wild Turkeys ( Meleagris gallopavo) in Texas, USA
- *
- * and `citation_title` is the single field Google Scholar matches a paper on.
- * A title that differs from the published one by a space is a title that may
- * not match, and a correction takes six to nine months.
- *
- * So the space is inserted, whitespace is collapsed, and then the space is
- * removed from the two places typography never puts one. The order matters:
- * collapsing first means the cleanup sees a single space rather than a run.
+ * THE SPACE IS NOT OPTIONAL AND NEITHER IS CLEANING UP AFTER IT. Tags become a SPACE rather than
+ * nothing, an earlier import having welded two words together. The cost is a space that was never
+ * in the rendered text, which several titles carry, italicised organism names sitting inside
+ * parentheses, and a title differing by a space may not match in Google Scholar. So the space is
+ * inserted, whitespace collapsed, then the space removed from the two places typography never
+ * puts one. The order matters: collapsing first means the cleanup sees a single space.
  *
  * @param {string | null | undefined} value
  */
@@ -105,20 +79,9 @@ function cslYear(record) {
 }
 
 /**
- * The publication date at WHATEVER PRECISION the registry deposited, as
- * `YYYY-MM-DD`, `YYYY-MM` or `YYYY`.
- *
- * Separate from `year`, which stays a number and stays the thing the page
- * groups and sorts by. This exists for `citation_publication_date`, which
- * Google Scholar treats as one of the three fields whose absence stops a paper
- * being indexed at all, and which is better served by a real date than by a
- * year when a real date exists.
- *
- * MEASURED across this corpus: 28 of 36 carry a full date, 6 carry year and
- * month, 2 carry only a year. So padding everything to `YYYY-01-01` would
- * invent a day for eight records, and taking the year for all of them would
- * throw away a month and a day for 28. Emitting the precision on deposit is the
- * only option that asserts nothing the registry did not.
+ * The publication date at WHATEVER PRECISION the registry deposited, separate from the year, which
+ * stays the thing the page groups by. Padding would invent a day for month-only records and taking
+ * the year would throw one away for most; emitting the deposited precision asserts nothing extra.
  *
  * @param {any} record @returns {string | null}
  */
@@ -136,31 +99,16 @@ function cslDate(record) {
 }
 
 /*
- * A page range, written as an escape rather than as the characters.
- *
- * Crossref deposits both a plain hyphen and U+2013 as the separator. The wide
- * one is in a `\u` escape because this repo's hook refuses the literal
- * character in source, and because an invisible-width character in a character
- * class is unreviewable: a reader cannot tell a correct en dash from whatever a
- * copy and paste turned it into. Same treatment `fold()` in the route gives the
- * dash family.
+ * A page range, written as an escape rather than as the characters: this repo's hook refuses the
+ * literal wide one, and an invisible-width character in a class is unreviewable.
  */
 const PAGE_RANGE = new RegExp("^(\\d+)\\s*[-\\u2013]\\s*(\\d+)$");
 
 /**
- * A CSL `page` split into first and last, ONLY when it really is a page range.
- *
- * ## THE TRAP, AND IT IS IN THIS CORPUS
- *
- * The obvious implementation splits on a hyphen. MEASURED across the 36
- * records, `page` takes four shapes: absent on 24, a range on 7, a bare number
- * on 3, and an ARTICLE NUMBER on 2, which are `e1004454` and `e42123`. PLoS
- * numbers articles rather than paginating them.
- *
- * A split is safe on those two only because they happen to contain no
- * separator. The rule is written as a positive match on the shape rather than
- * as a split, so a future article number carrying one cannot be read as a range,
- * and so `citation_firstpage` is emitted only where a first page exists.
+ * A page value split into first and last, ONLY when it really is a page range. THE TRAP, AND IT IS
+ * IN THIS CORPUS: some records carry an ARTICLE NUMBER rather than pagination, and a split is safe
+ * on today's only because they contain no separator. Written as a positive match on the shape, so
+ * a future article number carrying one cannot be read as a range.
  *
  * @param {string | null | undefined} page
  * @returns {{ first: string | null, last: string | null }}
@@ -185,15 +133,12 @@ function cslAuthors(record) {
 const PRELUDE = `/**
  * Publication record for the CV and publications surfaces.
  *
- * Structured content edited by commit, so it lives here rather than in the D1
- * \`posts\` table, following the precedent set by phage-hunters.ts. PDFs are
- * committed under public/publications/ and served as static assets, which are
- * a separate limit from the Worker script size and so cost the bundle nothing.
+ * Structured content edited by commit, following phage-hunters.ts. PDFs are committed under
+ * public/publications/ and served as static assets, which cost the Worker bundle nothing.
  *
- * Every record carries \`access\` even though most are self-hosted, so a single
- * publication can be switched to an external link without a schema change.
- * Year is the Crossref published-print year, which is authoritative here and
- * disagrees with ORCID on four records.
+ * Every record carries \`access\` even though most are self-hosted, so one can be switched to an
+ * external link without a schema change. Year is the Crossref published-print year, which is
+ * authoritative here and disagrees with ORCID on some records.
  */
 
 export type TopicId =
@@ -224,9 +169,8 @@ export type Publication = {
   journal: string | null;
   year: number;
   /**
-   * The deposited date at its own precision: YYYY-MM-DD, YYYY-MM or YYYY.
-   * \`year\` stays the grouping key; this is what \`citation_publication_date\`
-   * needs, and 28 of the 36 records carry a day.
+   * The deposited date at its own precision: YYYY-MM-DD, YYYY-MM or YYYY. \`year\` stays the grouping
+   * key; this is what \`citation_publication_date\` needs.
    */
   publishedDate: string | null;
   volume: string | null;
@@ -260,30 +204,23 @@ export type Publication = {
   /**
    * A PLAIN-LANGUAGE LINE, written by hand, or null.
    *
-   * One sentence, under 200 characters, saying what the paper found in words a
-   * non-specialist reads. NOT a summary of the abstract: the abstract is already
-   * on the page, and a shorter paraphrase of it in the same voice would be
-   * noise. This is the sentence somebody would say out loud.
+   * One sentence, under 200 characters, saying what the paper found in words a non-specialist reads.
+   * NOT a summary of the abstract, which is already on the page.
    *
-   * Null on every record until Dustin writes one. The page renders it only
-   * where it exists, which is why an empty field is a state rather than a gap.
-   * \`check:publications\` enforces the length, the single sentence and the
-   * house dash rule; it cannot enforce that the sentence is any good.
+   * Null until one is written, and the page renders it only where it exists, so an empty field is a
+   * state rather than a gap. \`check:publications\` enforces the length, the single sentence and the
+   * house dash rule; IT CANNOT ENFORCE THAT THE SENTENCE IS ANY GOOD.
    */
   summary: string | null;
   /**
    * A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN, or null.
    *
-   * Null on every record, and measured rather than assumed: no \`updated-by\`
-   * and no \`relation\` on any of the 34 Crossref DOIs, read 2026-09-12. The
-   * field exists so that the day one arrives is a data change and not a code
-   * change, which is the day nobody wants to be writing this. \`doi\` is the
-   * NOTICE's DOI: a paper carries \`updated-by\` pointing at the notice, and
-   * the notice carries \`update-to\` pointing back.
+   * Null on every record. The field exists so that the day one arrives is a data change and not a code
+   * change, which is the day nobody wants to be writing this. \`doi\` is the NOTICE's DOI: a paper
+   * carries \`updated-by\` pointing at the notice, and the notice carries \`update-to\` pointing back.
    *
-   * The shape and the sentence belong to \`app/lib/publications/update-notice.mjs\`,
-   * which \`check:publications\` validates every record through and
-   * \`test/publication-update-notice.test.mjs\` drives with a real retracted DOI.
+   * The shape and the sentence belong to \`app/lib/publications/update-notice.mjs\`, which
+   * \`check:publications\` validates every record through.
    */
   updateNotice: {
     type: "retraction" | "correction" | "expression-of-concern";
@@ -291,15 +228,12 @@ export type Publication = {
     date: string | null;
   } | null;
   /**
-   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own
-   * data-availability statement and from nowhere else.
+   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own data-availability statement and from
+   * nowhere else.
    *
-   * Empty on every record whose journal requires no such statement. A bare
-   * accession regex over a PDF returns the COMPARISON organisms' deposits, which
-   * is a wrong citation rather than a missing one: the grounds, and the three
-   * measured cases, are on \`app/lib/publications/accessions.mjs\`.
-   * \`check:publications\` reconciles this against the extracted text in both
-   * directions.
+   * A bare accession regex over a PDF returns the COMPARISON organisms' deposits, which is a wrong
+   * citation rather than a missing one: the grounds are on \`app/lib/publications/accessions.mjs\`.
+   * \`check:publications\` reconciles this against the extracted text in both directions.
    */
   accessions: { kind: string; id: string }[];
   selected: boolean;
@@ -424,9 +358,8 @@ export function generate() {
     lines.push(`    licenseSource: ${str(r.licenseSource)},`);
     lines.push(`    summary: ${str(r.summary)},`);
     /*
-     * EMITTED AS JSON, not field by field, because it is a small closed record
-     * and a per-field emitter here would be a second statement of the shape
-     * that update-notice.mjs owns. JSON string syntax is valid TS.
+     * EMITTED AS JSON, not field by field: a per-field emitter would be a second statement of the
+     * shape another module owns.
      */
     lines.push(
       `    updateNotice: ${r.updateNotice ? JSON.stringify(r.updateNotice) : "null"},`,
@@ -444,18 +377,9 @@ export function generate() {
 }
 
 /*
- * WRITES ONLY WHEN RUN DIRECTLY, since 2026-09-12.
- *
- * `--check` moved out to `scripts/check-publications.mjs`, which imports
- * `generate()` and compares. That import is the reason for this guard: the
- * bottom of this file used to call `generate()` and then WRITE at module scope,
- * so importing it for the comparison would have rewritten the very file the
- * comparison was about, and the gate would have passed by repairing its own
- * subject before looking at it. A gate that cannot fail is the tenth vacuity
- * class, reached here through an import rather than through an assertion.
- *
- * `process.argv[1]` rather than an `import.meta.main` check, which Node does
- * not have at the version this repo pins.
+ * WRITES ONLY WHEN RUN DIRECTLY, and the gate's import is the reason: the bottom of this file used
+ * to write at module scope, so importing it would have rewritten the very file the comparison was
+ * about, and the gate would pass by repairing its own subject.
  */
 if (pathToFileURL(process.argv[1] ?? "").href === import.meta.url) {
   const emitted = generate();

@@ -1,61 +1,30 @@
 /**
- * The SMOKE credential: a read-only machine principal for the admin plane.
+ * The SMOKE credential: a read-only machine principal for the admin plane, so `check:browser` can
+ * sweep the authenticated admin unattended rather than being handed the single admin's own session
+ * cookie.
  *
- * Ruled 2026-08-24 under Dustin's standing automation directive. `check:browser`
- * could only reach the real authenticated admin by being handed the single
- * admin's own session cookie, pasted out of Chrome into a gitignored file, which
- * meant the admin cases had never once run unattended and the plane's layout
- * defects were found by Dustin clicking. This is the credential that moves that
- * sweep into CI.
+ * **IT IS ITS OWN PRINCIPAL, NOT A COPY OF THE ADMIN'S SESSION.** It READS AND CANNOT WRITE, and not
+ * by convention: `decide()` and `decideDelete()` refuse it from the capability table, and the
+ * `/admin` middleware refuses every non-GET method before an action runs. It is revocable alone, and
+ * it is storable as a secret, which a Better Auth session cookie is not.
  *
- * ## IT IS ITS OWN PRINCIPAL, NOT A COPY OF THE ADMIN'S SESSION
- *
- * Three properties, and each one is why this exists rather than a shared cookie:
- *
- *   LEAST PRIVILEGE  it reads and cannot write. Not by convention: `decide()`
- *                    and `decideDelete()` refuse it from the capability table,
- *                    and the `/admin` middleware refuses every non-GET method
- *                    before a single action runs. See `publish-policy.mjs`.
- *   REVOCABLE ALONE  `wrangler secret delete SMOKE_TOKEN` ends it and touches
- *                    nothing else. Revoking a leaked admin session means
- *                    invalidating the only human's login.
- *   STORABLE         a wrangler secret, a GitHub Actions secret, a local file.
- *                    A Better Auth session cookie is none of those: it expires,
- *                    it lives in the production KV namespace, and it cannot be
- *                    minted by a machine at all.
- *
- * Storage and lifecycle are the OPERATOR TOKEN's, deliberately and exactly:
- * `wrangler secret put SMOKE_TOKEN` for the Worker, `SMOKE_TOKEN_FILE` pointing
- * at a local file for a machine that runs the gate, `gh secret set SMOKE_TOKEN`
- * for CI. Never on a command line, never in a log, never in an error body.
- *
- * ## THE RESIDUE IS ON THE ACTOR, WHERE THE ACTOR IS DEFINED
- *
- * What a read still exposes is stated on the `smoke` row of `WRITE_CAPABILITIES`
- * in `app/lib/editor/publish-policy.mjs`, because that is where the kind is
- * defined and a residue filed anywhere else is a residue nobody meets. Short
- * form: the claim this credential supports is BOUNDED, not SAFE.
+ * Storage and lifecycle are the OPERATOR TOKEN's exactly: never on a command line, never in a log,
+ * never in an error body. What a read still exposes is stated on the `smoke` row of
+ * `WRITE_CAPABILITIES` in `app/lib/editor/publish-policy.mjs`, where the kind is defined.
  */
 
 import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
 
 /**
- * ITS OWN RATE-LIMIT KEY PREFIX on the existing Durable Object, joining `ip:`,
- * `auth:`, `op:`, `preview:` and `csp:`.
+ * ITS OWN RATE-LIMIT KEY PREFIX on the existing Durable Object, joining `ip:`, `auth:`, `op:`,
+ * `preview:` and `csp:`, so the two cannot exhaust each other: a CI sweep must never lock the
+ * publish path out, and a runaway agent must never make the browser gate report a layout failure
+ * that is really a 429.
  *
- * Its own, not the operator's, so the two cannot exhaust each other: a CI sweep
- * running flat out must never be able to lock the publish path out, and a
- * runaway agent must never be able to make the browser gate report a layout
- * failure that is really a 429.
- *
- * **THE CEILING IS DELIBERATELY HIGH, and the reason is what the limit is FOR.**
- * This is not a per-visitor throttle on a billed path. Nothing behind it spends
- * money: every request it admits is a D1 read the admin plane already does. Its
- * job is to bound the read volume a LEAKED token could draw before anyone
- * notices, and to stop an infinite loop in a harness. A legitimate sweep is a
- * burst of tens of document loads inside a few seconds, which is exactly the
- * traffic shape a tight limit would refuse, so a tight limit here would buy
- * nothing and break the one caller.
+ * **THE CEILING IS DELIBERATELY HIGH**, because nothing behind it spends money: every request it
+ * admits is a D1 read the admin plane already does. Its job is to bound what a LEAKED token could
+ * draw and to stop a runaway harness. A legitimate sweep is a burst of tens of loads in a few
+ * seconds, which a tight limit would refuse for nothing.
  */
 const SMOKE_RATE_LIMIT = 240;
 const SMOKE_RATE_PERIOD_SECONDS = 60;
@@ -141,24 +110,14 @@ export async function authenticateSmoke(env: Env, request: Request): Promise<Smo
   }
 
   /*
-   * THE EMAIL IS RESOLVED HERE, INSIDE THE BOUNDARY, and that placement is a
-   * gate's finding rather than a preference.
+   * THE EMAIL IS RESOLVED HERE, INSIDE THE BOUNDARY. `admin.tsx` is a ROUTE and hard rule 3 is a PATH
+   * rule, so a route reading a ratified secret is a violation whether or not the value ever leaves the
+   * server. The session path already resolves the address inside `auth.server.ts`, so neither kind of
+   * caller's route touches the secret.
    *
-   * The middleware read `env.ADMIN_EMAIL` directly to build the actor, and
-   * `check:secrets` refused it by name: `admin.tsx` is a ROUTE, and hard rule 3
-   * is a PATH rule, so a route reading a ratified secret is a violation whether
-   * or not the value ever leaves the server. The alternative on offer was an
-   * allowlist entry, which that gate's own header calls the wrong move.
-   *
-   * Resolving it here is also the more honest shape: the session path already
-   * resolves the admin's address inside `auth.server.ts`, so both kinds of
-   * caller now learn who they render as from a `.server` module, and neither
-   * route touches the secret.
-   *
-   * Empty string when unset, matching `getAdminSession`'s own treatment of an
-   * unconfigured ADMIN_EMAIL. Not a substituted placeholder: an empty topbar
-   * label is visibly wrong, where an invented one would quietly move the
-   * layout measurement this credential exists to take.
+   * Empty string when unset, matching `getAdminSession`. Not a substituted placeholder: an empty
+   * topbar label is visibly wrong, where an invented one would quietly move the layout measurement
+   * this credential exists to take.
    */
   return { kind: "ok", id, email: env.ADMIN_EMAIL ?? "" };
 }

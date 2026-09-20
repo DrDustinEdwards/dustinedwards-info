@@ -34,31 +34,16 @@ import type { Route } from "./+types/publications.$slug";
 import "~/styles/publications.css";
 
 /**
- * ONE PAGE PER PAPER, which is the whole reason this route exists.
+ * ONE PAGE PER PAPER, which is the whole reason this route exists: a browse page
+ * listing many papers is explicitly not a unique URL for each.
  *
- * Google Scholar's technical guidelines: "Each paper must have its own unique
- * URL in order for it to be included in Google Scholar", and a browse page
- * listing many papers is explicitly not that. The July build had a good index
- * and no per-paper page, so none of these were indexable from this site: they
- * are in Scholar through their publishers, and what this adds is a clean
- * self-hosted record, not a ranking change. That expectation is ruling 63's and
- * is worth keeping in view before anybody measures this against Scholar.
+ * THE URL ENDS IN A SLASH, AND IT IS NOT A STYLE CHOICE. `citation_pdf_url` must
+ * refer to a file in the same subdirectory as the HTML abstract, and only the
+ * trailing-slash spelling puts the PDF there.
  *
- * ## THE URL ENDS IN A SLASH, AND IT IS NOT A STYLE CHOICE
- *
- * `citation_pdf_url` "must refer to a file in the same subdirectory as the HTML
- * abstract". `/publications/<slug>` has the subdirectory `/publications/`;
- * `/publications/<slug>/` has `/publications/<slug>/`, which is where the PDF
- * sits. Only the second satisfies the rule. The slashless spelling redirects in
- * the gateway so there is one URL rather than two. Grounds on `paths.mjs`.
- *
- * ## THE SLUG IS THE DOI, NOT THE CURATED ID
- *
- * `edwards-2025-godfather` would read better than `10-1128-mra-00888-24`. It is
- * also a name somebody chose, and a name can be chosen again: the July rename
- * plan retitled these twice before freezing. A publication URL that is
- * re-decidable will eventually be re-decided, after Scholar has indexed it, and
- * a correction takes six to nine months. A DOI cannot be re-decided.
+ * THE SLUG IS THE DOI, NOT A CURATED ID: a name somebody chose can be chosen
+ * again, and a publication URL that is re-decidable will be re-decided after
+ * Scholar has indexed it.
  */
 
 /** Built once at module scope. The corpus is a committed artifact, not a query. */
@@ -75,9 +60,8 @@ export function headers() {
 export async function loader({ params, context }: Route.LoaderArgs) {
   const paper = BY_SLUG.get(params.slug ?? "");
   /*
-   * 404 out of the loader, which is the ordinary shape here. There is no
-   * database read to save: the map above is the corpus, so an unknown slug is
-   * known to be unknown before anything is fetched.
+   * 404 out of the loader. There is no database read to save: the map above is the
+   * corpus, so an unknown slug is known to be unknown before anything is fetched.
    */
   if (!paper) throw new Response("Not found", { status: 404 });
 
@@ -95,14 +79,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     pdfPath: hosted ? paperPdfPath(slug) : null,
     cited: citations[paper.doi] ?? null,
     /*
-     * WHO CITES THIS, from the committed artifact rather than from OpenAlex at
-     * request time. The grounds are in scripts/fetch-cited-by.mjs: the list is
-     * 55 KB across the corpus, it needs a 10-credit filter query where a count
-     * needs a 1-credit lookup, and it is evidence, so it carries the date it was
-     * read rather than pretending to be current.
+     * From the committed artifact rather than from OpenAlex at request time, and it
+     * carries the date it was read rather than pretending to be current.
      *
-     * `total` and the list length are BOTH carried, because one paper here has
-     * 52 citing works against a cap of 50 and the page has to be able to say so.
+     * `total` and the list length are BOTH carried, because one paper exceeds the cap
+     * and the page has to be able to say so.
      */
     citedBy: citedByFor(citedByArtifact, paper.doi),
     citedByFetchedAt: citedByFetchedAt(citedByArtifact),
@@ -111,28 +92,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 /**
- * The head: the site's social set, plus the citation tags.
+ * `pageMeta` FOR THE SOCIAL HALF. Five pages once ended up with five different
+ * partial social sets, each missing a different edge, and every one was a page
+ * whose author thought it was special. The repair was to teach `pageMeta` the one
+ * thing this page needed, not to take an exemption.
  *
- * ## `pageMeta` FOR THE SOCIAL HALF, AND WHY THAT WAS NOT THE FIRST ATTEMPT
+ * The citation tags stay here: they are not social metadata and they are built by
+ * a module `check:features` calls.
  *
- * This was written as a hand-assembled array, on the reasoning that a paper
- * page needs a repeated `citation_author` tag and `pageMeta` has no business
- * knowing about those. `check:invariants` section 13 refused it, and the
- * section is right: five pages once ended up with five different partial
- * social sets, each missing a different edge, and every one of them was a page
- * whose author thought it was special. The repair was to teach `pageMeta` the
- * one thing this page actually needed differently, `og:type: article`, rather
- * than to take an exemption.
- *
- * The citation tags stay here. They are not social metadata, no other page has
- * them, and they are built by a module `check:features` calls, so the tag set
- * on the page and the tag set the gate asserts cannot come apart.
- *
- * ## THE DESCRIPTION IS THE ABSTRACT'S OPENING
- *
- * Not a written line. A paper's own first sentences are the best short
- * description of it that exists, and hand-writing 36 of them would produce 36
- * worse ones. Cut at a word boundary, the way a search engine cuts.
+ * THE DESCRIPTION IS THE ABSTRACT'S OPENING, cut at a word boundary. Hand-writing
+ * 36 of them would produce 36 worse ones.
  */
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: `Publication, ${SITE.name}` }];
@@ -168,11 +137,9 @@ function truncateAtWord(text: string, limit: number) {
 
 function Authors({ authors }: { authors: string[] }) {
   /*
-   * EVERY AUTHOR, VISIBLE, with no collapse. The index collapses around the
-   * owner because it shows 33 records at once; this page shows one, and the
-   * author list of a paper is part of the record rather than a detail to hide.
-   * It is also what `citation_author` asserts, and a page whose visible content
-   * disagrees with its own meta tags is the thing Scholar penalises.
+   * EVERY AUTHOR, VISIBLE. It is what `citation_author` asserts, and a page whose
+   * visible content disagrees with its own meta tags is the thing Scholar
+   * penalises.
    */
   return (
     <p className="paper-authors">
@@ -238,23 +205,21 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                 pointed at one and a reader can see what they are getting. */}
             <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
             <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
-            {/* ASK, AS A LINK. The URL is built by `paperAskUrl`, which carries
-                the reasoning and the measurement: /search renders keyword
-                results from its loader and mounts the Ask affordance as an
-                enhancement, so a link with the query already in `q` works both
-                with scripting and without it, and nothing here is a second
-                implementation of Ask. The query is the quoted title alone,
-                because the classic index ANDs its terms and an interrogative
-                wrapped around the title returned zero results.
-                check:publications exercises that function over every record and
-                asserts this route calls it. */}
+            {/*
+             * ASK, AS A LINK. `/search` renders classic results from its loader and mounts
+             * Ask as an enhancement, so a link with the query in `q` works with scripting and
+             * without it. The query is the quoted title alone, because the classic index ANDs
+             * its terms. `check:publications` asserts this route calls that function.
+             */}
             <a href={paperAskUrl(decodeEntities(paper.title))}>Ask about this paper</a>
           </p>
 
-          {/* The count, LABELLED with its source and the date it was read.
-              A bare number is a claim with no provenance and no age, and this
-              one moves without a deploy. Rendered only at 1 or more, so a cold
-              cache shows nothing rather than a zero that looks measured. */}
+          {/*
+           * LABELLED with its source and the date it was read: a bare number is a claim
+           * with no provenance and no age, and this one moves without a deploy. Rendered only
+           * at 1 or more, so a cold cache shows nothing rather than a zero that looks
+           * measured.
+           */}
           {cited && cited.count >= 1 ? (
             <p className="paper-cited">
               {cited.url ? (
@@ -267,16 +232,10 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {/*
-            WHO CITES THIS, under the count, which is where ruling 63 puts it.
-
-            Newest first and capped, and the cap is STATED when it bites: one
-            paper here has 52 citing works against a cap of 50, and a list that
-            silently showed 50 would be claiming completeness it does not have.
-
-            A plain list rather than a table. Each entry is a sentence (title,
-            venue, year) and a link where a DOI exists; three of the 263 have no
-            DOI, which is why the link is conditional rather than assumed.
-          */}
+           * Newest first and capped, and the cap is STATED when it bites: a list that
+           * silently showed 50 of 52 would be claiming completeness it does not have. The
+           * link is conditional because a few records have no DOI.
+           */}
           {citedBy && citedBy.citing.length > 0 ? (
             <section className="paper-citedby" aria-labelledby="citedby-heading">
               <h2 id="citedby-heading">
@@ -305,21 +264,11 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {/*
-            A RETRACTION OR CORRECTION, ABOVE EVERYTHING IT APPLIES TO.
-
-            Above the plain-language line, the abstract and the PDF link,
-            because a reader who stops after the first paragraph must not stop
-            before this one. Rendered only when the record carries a notice, and
-            no record does today: the field is dark on purpose, and
-            `update-notice.mjs` carries the reason for building a dark path
-            cold rather than on the day it is needed.
-
-            `role="status"` rather than `alert`: an alert interrupts a screen
-            reader mid-sentence, and this is part of the document rather than
-            something that just happened. The link goes to the NOTICE, which has
-            its own DOI and its own authors, and not to the paper's landing
-            page.
-          */}
+           * ABOVE EVERYTHING IT APPLIES TO, because a reader who stops after the first
+           * paragraph must not stop before this one. `role="status"` rather than `alert`:
+           * an alert interrupts a screen reader mid-sentence. The link goes to the NOTICE,
+           * not the paper's landing page.
+           */}
           {paper.updateNotice ? (
             <aside className="paper-update-notice" role="status">
               <strong>{updateNoticeText(paper.updateNotice).label}.</strong>{" "}
@@ -329,25 +278,19 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {/*
-            THE PLAIN-LANGUAGE LINE, ABOVE THE ABSTRACT.
-
-            Above rather than below, because it is for the reader who will not
-            read the abstract: a sentence saying what the paper found, in words
-            that do not assume the field. Rendered only where one exists, which
-            is why an absent summary leaves no empty heading behind.
-
-            Not styled as a quotation or a callout. It is the author speaking
-            plainly about his own work, and a decorative frame would make it
-            look like something lifted from somewhere else.
-          */}
+           * ABOVE THE ABSTRACT, because it is for the reader who will not read the
+           * abstract. Not styled as a quotation: it is the author speaking plainly about his
+           * own work, and a decorative frame would make it look lifted from somewhere else.
+           */}
           {paper.summary ? (
             <p className="paper-summary">{italicizeOrganisms(paper.summary)}</p>
           ) : null}
 
-          {/* VISIBLE, never inside a details element. The index collapses
-              abstracts because it lists 33 of them; this page exists to BE the
-              abstract, and a crawler that has to open a disclosure to find the
-              text is a crawler that does not find it. */}
+          {/*
+           * VISIBLE, never inside a `details`: this page exists to BE the abstract, and a
+           * crawler that has to open a disclosure to find the text is a crawler that does not
+           * find it.
+           */}
           {paper.abstract ? (
             <section className="paper-abstract" aria-labelledby="abstract-heading">
               <h2 id="abstract-heading">Abstract</h2>
@@ -356,20 +299,11 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           ) : null}
 
           {/*
-            THE DATA BEHIND THE PAPER, under the abstract rather than in the
-            link row above it.
-
-            The link row is where a reader goes to READ the paper; this is where
-            they go to check it, which is a different errand and belongs after
-            the abstract has said what there is to check. Rendered only for the
-            papers whose journal made the authors say what they deposited, which
-            is the twelve announcements.
-
-            Each accession is labelled with its registry and links there
-            directly. `accessionUrl` refuses a kind it has no registry for
-            rather than guessing one, because an SRA run under a nuccore URL is
-            a 404 that looks like a working link.
-          */}
+           * Under the abstract rather than in the link row: the link row is where a reader
+           * goes to READ the paper, this is where they go to check it. `accessionUrl`
+           * refuses a kind it has no registry for rather than guessing one, because a wrong
+           * registry is a 404 that looks like a working link.
+           */}
           {paper.accessions.length > 0 ? (
             <section className="paper-data" aria-labelledby="data-heading">
               <h2 id="data-heading">Data</h2>

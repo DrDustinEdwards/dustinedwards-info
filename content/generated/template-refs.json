@@ -20,7 +20,8 @@
       "public/site.webmanifest"
     ],
     "/og-image.png": [
-      "app/lib/seo.ts"
+      "app/lib/seo.ts",
+      "app/routes/playground.ui.tsx"
     ],
     "/phage-hunters/2017.webp": [
       "app/data/phage-hunters.ts"
@@ -44,7 +45,8 @@
       "app/data/phage-hunters.ts"
     ],
     "/phage-hunters/2024.webp": [
-      "app/data/phage-hunters.ts"
+      "app/data/phage-hunters.ts",
+      "app/routes/playground.ui.tsx"
     ],
     "/phage-hunters/2025.webp": [
       "app/data/phage-hunters.ts"
@@ -146,6 +148,6 @@
       "app/root.tsx"
     ]
   },
-  "filesRead": 271,
+  "filesRead": 278,
   "assetsConsidered": 59
 }

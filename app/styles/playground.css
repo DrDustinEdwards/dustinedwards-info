@@ -1,24 +1,7 @@
-/*
- * /playground: the contrast lab, search anatomy, chart options.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* -------------------------------------------------------------------------
- * /playground
- *
- * Each demo is a section on the page canvas whose CONTROLS and RESULT sit on
- * `--surface`. That is binding rule 7 read correctly rather than stretched: the
- * prose stays on the canvas and the distinct surfaces are interruptions, the
- * same standing code blocks and figures have inside an article.
- *
- * No colour here carries meaning on its own (rule 1). Pass and fail are words,
- * the error block is a word plus a border, and nothing is distinguished by hue.
- * ---------------------------------------------------------------------- */
+/* /playground: controls and results sit on --surface while prose stays on the canvas (rule 7).
+   No colour carries meaning alone: pass and fail are words. */
 
 .playground-demo {
   margin: 3.5rem 0 0;
@@ -222,9 +205,8 @@
 
 .playground-table th,
 .playground-table td {
-  /* Tightened from 0.75rem: at the 48rem measure the six columns overflowed the
-     container by 26px, which clipped the fused total, the one number the table
-     exists to show. It still scrolls if a title forces it to. */
+  /* Tight padding so the six columns fit the measure and the fused total is never clipped.
+     It still scrolls if a title forces it to. */
   padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
@@ -253,9 +235,9 @@
   min-width: 14rem;
 }
 
-/* In and Out, inside a demo's result. An h3 under the demo's h2, so the
-   document outline stays ordered; sized as a label rather than a heading
-   because it separates two panes rather than introducing a new topic. */
+/* In and Out inside a demo's result: an h3 under the demo's h2 so the outline
+   stays ordered, sized as a label because it separates two panes rather than
+   starting a new topic. */
 .playground-subhead {
   margin: 1.75rem 0 0;
   font-size: 0.75rem;
@@ -265,9 +247,9 @@
   color: var(--text-muted);
 }
 
-/* The snippet verbatim, deliberately NOT highlighted: this is the input, and
-   highlighting it would render the demo's subject with the demo's subject.
-   Scrolls in its own box so the page body never scrolls sideways. */
+/* The snippet verbatim, deliberately not highlighted: it is the input, and
+   highlighting it would render the demo's subject with the demo's subject. It
+   scrolls in its own box so the page never scrolls sideways. */
 .playground-source {
   margin: 0.5rem 0 0;
   padding: 0.875rem 1rem;
@@ -279,10 +261,9 @@
   line-height: 1.5;
 }
 
-/* The rendered body. `.prose` already carries the ratified treatment for every
-   element the pipeline can emit, so this adds separation and nothing else:
-   a rule under a heading here would be a second answer to a question
-   prose.css already owns. */
+/* The rendered body. `.prose` already styles everything the pipeline emits,
+   so this only adds separation; a rule here would be a second answer to what
+   prose.css owns. */
 .playground-rendered {
   margin: 0.5rem 0 0;
   padding: 1rem 1.25rem;

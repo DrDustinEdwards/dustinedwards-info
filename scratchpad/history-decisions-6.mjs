@@ -1,0 +1,27 @@
+// Ruling 115 decisions: the four- and five-line blocks the first pass left
+// undecided. Same shape as history-decisions-1.mjs.
+export default {
+  26: ["WHY", "trimmed to three lines", "The serif sets public headings at 32px and up, never a control, chip, logo, header or admin screen.\n\"Source Serif 4 Web Fallback\" sits between it and Georgia, so font-display: swap moves no line."],
+  36: ["WHY", "trimmed to three lines", "Tracking is declared apart so it is not mistaken for part of a level. A level with none has no token:\na 0 every consumer must remember is worse than nothing."],
+  46: ["WHY", "trimmed to three lines", "The answer to a pointer: under about 100ms reads as simultaneous with the input.\nNot 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device."],
+  59: ["WHY", "trimmed to three lines", "Charts are keyed by hue, not ladder position, which differs between the doc's two ladders and would\nchange hue on a theme flip. Core-5 is the unlabeled-safe set; rust is extended and needs a direct label."],
+  75: ["WHY", "trimmed to three lines", "The series slots are the interface; the ramps are primitives. A chart reads --fig-s1 to --fig-s5, never a\nhue or tint index, so one markup is correct in both themes."],
+  112: ["WHY", "trimmed to three lines", "Dark, chosen explicitly, with the same values as the block above. Written twice, not shared through a\ncustom property, because check:contrast must read the hex that ships."],
+  143: ["WHY", "trimmed to three lines", "At zero the gradient still renders as a 0% mix, the backdrop, so the reduced case needs no second path.\nA reduced-transparency reader loses the lamp and keeps the glass fill."],
+  150: ["WHY", "trimmed to three lines", "The cockpit's surface ladder is all background, so everything resolves to Canvas here. The card keeps\nits border, and the hovered row is restated as an edge."],
+  156: ["WHY", "trimmed to three lines", "v3 amendment 2, element-level so a component heading colour still outranks it.\nIn light it equals the body text value, so it is not a second colour to keep in step."],
+  161: ["WHY", "trimmed to three lines", "auto-fit with a floor: tiles share a row where there is room and stack where not, with no breakpoint.\nThe floor stops a tile shrinking until its number wraps."],
+  162: ["WHY", "a count in an example is a number that rots; trimmed", "The whole tile is the link except its detail line, which is prose about the number.\nThe link carries value and label, so its accessible name is never a bare digit."],
+  170: ["WHY", "trimmed to three lines", "First publication, the one act reserved to the human, so it does not look like every other save.\nWeight comes from size and a heavier edge, never a colour alone, so it reads without the hue."],
+  191: ["WHY", "trimmed to two lines", "Write, split and preview. The panes inherit the canvas's single scroll context: each pane scrolls its own\noverflow and the page does not."],
+  202: ["WHY", "trimmed to three lines", "Word count and reading time: at the far end, tabular so the strip does not twitch as digits change,\nand muted, because it is reference."],
+  209: ["WHY", "trimmed to three lines", "The body fills what is left of the canvas. resize: none, since a resize handle in a flex column fights\nthe layout and the body is already as tall as the room allows."],
+  210: ["WHY", "trimmed to three lines", "After CodeMirror mounts, the textarea is still the submitted field but not the control, so it leaves\nview and the accessibility tree rather than being a stale second copy."],
+  238: ["WHY", "trimmed to two lines", "The palette, hung under its bar. --surface-popover with --border-strong: the elevated step never takes\n--border (hard rule 5)."],
+  368: ["WHY", "trimmed to three lines", "The usage dot is a second channel beside the word, never the signal (rule 1),\nso a reader who cannot separate the hues loses nothing."],
+  381: ["WHY", "trimmed to three lines", "A banner, not a control, so the pastel tint is right. It is the editor's one semantic tint (rule 4);\nthe counter and invalid-field border stay text and border, never a second tinted surface."],
+  391: ["WHY", "trimmed to three lines", "The scheduled queue note is neutral (rule 4: the view's tint is spent on the drift alert).\nThe clock glyph carries the meaning beside the words."],
+  429: ["WHY", "trimmed to three lines", "The absence is a sentence, not a number: left-aligned and wrapping, so it never reads as a value.\nThe words carry the meaning without the colour."],
+  519: ["WHY", "trimmed to three lines", "Status dots carry a shape as well as a fill (rule 1): circle healthy, ringed degraded, square failed.\nThe word is in the adjacent hidden label."],
+  684: ["WHY", "vendored note compressed to one line", "Placeholder text: a semi-transparent version of the current text colour, only in browsers\nthat do not crash on color-mix() with currentcolor."],
+};

@@ -1,14 +1,5 @@
-/*
- * A single post: head, table of contents, generated prose, figures, charts, diagrams.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Post detail --------------------------------------------------------------- */
 
 .post {
   max-width: 44rem;
@@ -52,15 +43,8 @@
   padding-left: 1rem;
 }
 
-/*
- * WCAG 2.2 2.5.8. MEASURED at 497.6 x 22.5 and 493.9 x 22.5, so these are wide
- * links that are a pixel and a half short in HEIGHT, for the same reason the
- * pagination links were: a bare anchor's box is its line box.
- *
- * Not named by the audit, which listed the pagination and the footer. Found by
- * measuring every interactive target on a post rather than only the ones on the
- * list, which is why the list is not the instrument.
- */
+/* WCAG 2.2 2.5.8: a bare anchor's box is its line box, which fell short of 24px here,
+   so these wide links get an explicit minimum height rather than relying on their width. */
 .post-nav a {
   display: inline-flex;
   align-items: center;
@@ -79,14 +63,10 @@
   font-size: 0.9375rem;
 }
 
-/* What the model already held ----------------------------------------------
-   Cover, dek, related descriptions, prev/next targets and the share row. Added
-   2026-09-03; all of it was stored and none of it was drawn.
-   ------------------------------------------------------------------------ */
 
-/* The dek. Larger than body text and quieter than the title, which is what a
-   standfirst is: the same sentence the meta description carries, so it reads as
-   a summary rather than as the first paragraph. */
+/* The dek: larger than body text and quieter than the title. It carries the
+   meta description's sentence, so it reads as a summary, not the first
+   paragraph. */
 .post-dek {
   margin: 0 0 0.75rem;
   color: var(--text-muted);
@@ -94,9 +74,9 @@
   line-height: 1.5;
 }
 
-/* The cover. Full column width with the height left to the image, because D1
-   stores no intrinsic dimensions; fixing the width is what bounds the shift to
-   one axis. */
+/* The cover: full column width, height left to the image. D1 stores no
+   intrinsic dimensions, so fixing the width limits the layout shift to one
+   axis. */
 .post-cover {
   margin: 0 0 2rem;
 }
@@ -142,15 +122,15 @@
   font-weight: 500;
 }
 
-/* The share row sits under the agent row and is the same kind of thing, so it
-   inherits .post-actions and only needs its own spacing. */
+/* The share row is the same kind of thing as the agent row above it, so it
+   inherits .post-actions and only sets its own spacing. */
 .post-share {
   margin-top: 0.5rem;
 }
 
-/* The series reading path. Two targets side by side under the parts list,
-   sharing .post-nav-target with the prev/next pair at the foot of the post so
-   there is one bordered-target style rather than two. */
+/* The series reading path: two targets under the parts list. They share
+   .post-nav-target with the prev/next pair, so there is one bordered-target
+   style, not two. */
 .post-series-steps {
   display: flex;
   flex-wrap: wrap;

@@ -1,0 +1,1525 @@
+/*
+ * The UI inventory's stylesheet: the foundation, the Paper kit and the Admin
+ * kit from Part A steps 6a, 6b and 6c, plus the page that displays them.
+ *
+ * ROUTE-SCOPED AND CLASS-SCOPED ON PURPOSE. The kit's names collide with live
+ * ones (.btn in the admin sheets and in app.css's focus rule, .post-card and
+ * .pagination in blog-index.css, .search-form in search-page.css, .ask-note in
+ * ask.css). Loading this globally would restyle those pages, and the brief
+ * builds public pages one at a time. So every kit rule sits under .pgui, the
+ * scope each themed specimen panel carries. Part B drops that prefix when it
+ * promotes a component to the page that uses it.
+ *
+ * A DEMONSTRATED STATE IS ONE DECLARATION BLOCK WITH TWO SELECTORS. Nothing can
+ * force :hover, :focus-visible, :active or :visited in a screenshot, so those
+ * rules also match a data-demo attribute and the pair shares one block: the
+ * specimen cannot drift from the state it claims to show. Disabled needs no
+ * companion, because the attribute that styles it is the one that ships.
+ */
+
+/* ---- tokens this kit declares ------------------------------------------- */
+
+/*
+ * The palette is app.css's and nothing here adds to it. These four are the
+ * kit's own: two dimensions lucide needs, one admin row height, and one
+ * disabled outline that is deliberately below the contrast floor, which 1.4.11
+ * exempts for an inactive control.
+ */
+:root,
+[data-theme="light"],
+[data-theme="dark"] {
+  --icon-size: 1.25rem;
+  --icon-stroke: 1.5;
+  --admin-row-h: 2.25rem;
+  --admin-rail-w: 15rem;
+  --admin-topbar-h: 3rem;
+  --line-disabled: color-mix(in srgb, var(--line-strong) 45%, var(--paper));
+}
+
+/* ---- 6a · foundation ---------------------------------------------------- */
+
+/* The border is --line-strong, not --dust: it is the only thing identifying a
+   text button as a control, so 1.4.11's 3:1 applies to it. */
+.pgui .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-2);
+  min-block-size: var(--control-min);
+  padding-inline: var(--s-3);
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-leading);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--brand);
+  background: transparent;
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    color var(--motion-instant) var(--ease-state),
+    background-color var(--motion-instant) var(--ease-state),
+    border-color var(--motion-state) var(--ease-state);
+}
+
+.pgui .btn:hover,
+.pgui .btn[data-demo="hover"] {
+  color: var(--brand-hover);
+  border-color: var(--text-secondary);
+}
+
+/* A press that repeats its hover tells the reader nothing about whether the
+   click landed, so active has its own brand step. */
+.pgui .btn:active,
+.pgui .btn[data-demo="active"] {
+  background: var(--raised);
+  color: var(--brand-pressed);
+  border-color: var(--brand-pressed);
+}
+
+.pgui .btn:disabled {
+  color: var(--text-disabled);
+  border-color: var(--line-disabled);
+  cursor: not-allowed;
+}
+
+/* Filled loses its purple when disabled. Greying only the label would leave a
+   full-strength brand surface advertising an action nobody can take. */
+.pgui .btn-primary {
+  color: var(--on-brand);
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+.pgui .btn-primary:hover,
+.pgui .btn-primary[data-demo="hover"] {
+  color: var(--on-brand);
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+.pgui .btn-primary:active,
+.pgui .btn-primary[data-demo="active"] {
+  color: var(--on-brand);
+  background: var(--brand-pressed);
+  border-color: var(--brand-pressed);
+}
+
+.pgui .btn-primary:disabled {
+  color: var(--text-disabled);
+  background: var(--line-disabled);
+  border-color: var(--line-disabled);
+}
+
+/* Fields */
+
+.pgui .field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.pgui .field-label {
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  line-height: var(--t-label-leading);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--text);
+}
+
+.pgui .field-hint {
+  margin: 0;
+  font-family: var(--t-small-family);
+  font-size: var(--t-small-size);
+  line-height: var(--t-small-leading);
+  font-weight: var(--t-small-weight);
+  font-variation-settings: var(--t-small-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+}
+
+.pgui .field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-1);
+  margin: 0;
+  font-family: var(--t-small-family);
+  font-size: var(--t-small-size);
+  line-height: var(--t-small-leading);
+  font-weight: var(--t-small-weight);
+  font-variation-settings: var(--t-small-vars);
+  font-optical-sizing: none;
+  color: var(--error);
+}
+
+.pgui .field-input {
+  min-block-size: var(--control-min);
+  padding: var(--s-2) var(--s-3);
+  font-family: var(--t-body-family);
+  font-size: var(--t-body-size);
+  line-height: var(--t-body-leading);
+  font-weight: var(--t-body-weight);
+  font-variation-settings: var(--t-body-vars);
+  font-optical-sizing: none;
+  color: var(--text);
+  background: var(--raised);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+  transition: border-color var(--motion-state) var(--ease-state);
+}
+
+.pgui .field-input::placeholder {
+  color: var(--placeholder);
+}
+
+.pgui .field-input:hover,
+.pgui .field-input[data-demo="hover"] {
+  border-color: var(--text-secondary);
+}
+
+/* A disabled field drops to --paper, below its own page ground: raised means
+   available, recessed means not. */
+.pgui .field-input:disabled {
+  color: var(--text-disabled);
+  background: var(--paper);
+  border-color: var(--line-disabled);
+  cursor: not-allowed;
+}
+
+/* Error keys off aria-invalid, so the visual state and the announced state
+   cannot drift. The doubled border is what carries it in greyscale. */
+.pgui .field-input[aria-invalid="true"] {
+  border-color: var(--error);
+  border-width: var(--line-w-thick);
+}
+
+.pgui .field-textarea {
+  min-block-size: calc(var(--control-min) * 2);
+  resize: vertical;
+}
+
+.pgui .field-select {
+  appearance: none;
+  padding-inline-end: var(--s-6);
+}
+
+/* The chevron: pointer-events:none, or the square over the control swallows the
+   click meant to open it. currentColor keeps it alive under forced-colors. */
+.pgui .select-wrap {
+  position: relative;
+  display: flex;
+}
+
+.pgui .select-wrap .field-select {
+  inline-size: 100%;
+}
+
+.pgui .select-chevron {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-end: var(--s-3);
+  translate: 0 -50%;
+  inline-size: var(--control-min-dense);
+  block-size: var(--control-min-dense);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+/* Checkbox */
+
+.pgui .check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-2);
+  min-block-size: var(--control-min);
+}
+
+.pgui .check-box {
+  appearance: none;
+  flex: 0 0 auto;
+  inline-size: var(--control-min-dense);
+  block-size: var(--control-min-dense);
+  margin: 0;
+  margin-block-start: var(--s-2);
+  background: var(--raised);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-instant) var(--ease-state),
+    border-color var(--motion-instant) var(--ease-state);
+}
+
+.pgui .check-box:hover,
+.pgui .check-box[data-demo="hover"] {
+  border-color: var(--text-secondary);
+}
+
+.pgui .check-box:checked {
+  background: var(--brand);
+  border-color: var(--brand);
+}
+
+/* The tick is two borders and a rotation. A 12px icon inside a 24px box is a
+   paint for a shape that is two lines. */
+.pgui .check-box:checked::after {
+  content: "";
+  display: block;
+  inline-size: 35%;
+  block-size: 65%;
+  margin: 8% auto 0;
+  border-inline-end: var(--line-w-thick) solid var(--on-brand);
+  border-block-end: var(--line-w-thick) solid var(--on-brand);
+  rotate: 45deg;
+}
+
+.pgui .check-box:disabled {
+  background: var(--paper);
+  border-color: var(--line-disabled);
+  cursor: not-allowed;
+}
+
+/* Disabled and checked keeps the tick: a disabled box is often showing a
+   setting the reader cannot change and does need to read. */
+.pgui .check-box:disabled:checked {
+  background: var(--line-disabled);
+  border-color: var(--line-disabled);
+}
+
+.pgui .check-box:disabled + .check-label {
+  color: var(--text-disabled);
+}
+
+.pgui .check-label {
+  padding-block: var(--s-2);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Forced-colors hands the box back to the OS rather than opting it out with
+   forced-color-adjust: the OS draws a check that is guaranteed to contrast. */
+@media (forced-colors: active) {
+  .pgui .check-box {
+    appearance: auto;
+  }
+
+  .pgui .check-box::after {
+    content: none;
+  }
+}
+
+/* Focus ring. Restated at (0,2,0) because app.css gives .btn the on-brand ring
+   at that weight, which is measured against a filled admin button, not paper. */
+.pgui :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
+.pgui [data-demo="focus"] {
+  outline: var(--line-w-thick) solid var(--focus-ring);
+  outline-offset: var(--s-1);
+  transition: none;
+}
+
+.pgui .btn:focus-visible,
+.pgui .btn[data-demo="focus"] {
+  outline: var(--line-w-thick) solid var(--focus-ring);
+  outline-offset: var(--s-1);
+}
+
+/* Icon */
+
+.pgui .icon {
+  flex: 0 0 auto;
+  inline-size: var(--icon-size);
+  block-size: var(--icon-size);
+  stroke-width: var(--icon-stroke);
+}
+
+/* The one case flex cannot reach: an icon inside flowing text. */
+.pgui .icon-inline {
+  vertical-align: -0.15em;
+}
+
+/* Table: horizontal rules only, two weights. --dust separates rows and is
+   decorative here, --line-strong closes the header and the body. */
+.pgui .table {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.pgui .table-caption {
+  padding-block-end: var(--s-2);
+  text-align: start;
+  font-family: var(--t-small-family);
+  font-size: var(--t-small-size);
+  line-height: var(--t-small-leading);
+  font-weight: var(--t-small-weight);
+  font-variation-settings: var(--t-small-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+}
+
+.pgui .table th,
+.pgui .table td {
+  padding: var(--s-2) var(--s-3);
+  text-align: start;
+  vertical-align: baseline;
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .table thead th {
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+  border-block-end: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .table tbody tr:last-child > * {
+  border-block-end: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .table-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Focusable and named, so a keyboard reader can scroll a wide table. */
+.pgui .table-scroll {
+  overflow-x: auto;
+}
+
+/* ---- 6b · the Paper kit ------------------------------------------------- */
+
+/* Skip link. The only public thing that stacks. Shown here in its focused
+   position; at rest it is translated out of the page. */
+.pgui .skip {
+  position: absolute;
+  z-index: var(--z-skip-link);
+  inset-block-start: var(--s-2);
+  inset-inline-start: var(--s-2);
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-min);
+  padding-inline: var(--s-3);
+  color: var(--brand);
+  background: var(--raised);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  translate: 0 -200%;
+}
+
+.pgui .skip:focus-visible,
+.pgui .skip[data-demo="focus"] {
+  translate: 0 0;
+}
+
+/* The specimen needs a box to sit in, since the link itself is positioned. */
+.pgui .skip-stage {
+  position: relative;
+  min-block-size: calc(var(--control-min) + var(--s-4));
+}
+
+.pgui .skip-stage .skip {
+  translate: 0 0;
+}
+
+/* Post card: not a card. A rule beneath and space above; a grid of boxed cards
+   on paper reads as a product listing. */
+.pgui .post-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding-block: var(--s-5);
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .post-card-title {
+  margin: 0;
+  font-family: var(--t-h3-family);
+  font-size: var(--t-h3-size);
+  line-height: var(--t-h3-leading);
+  font-weight: var(--t-h3-weight);
+  font-variation-settings: var(--t-h3-vars);
+  font-optical-sizing: none;
+}
+
+/* Only the title is a link: a whole-card target swallows selection and gives a
+   screen reader one enormous unlabelled link. */
+.pgui .post-card-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.pgui .post-card-title a:hover,
+.pgui .post-card-title a[data-demo="hover"] {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+}
+
+.pgui .post-card-title a:visited,
+.pgui .post-card-title a[data-demo="visited"] {
+  color: var(--visited);
+}
+
+.pgui .post-card-meta {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.pgui .post-card-excerpt {
+  margin: 0;
+  max-inline-size: var(--measure);
+}
+
+/* Pagination: two steps and a position. Newer and Older, because on a
+   time-ordered list "previous" is ambiguous about direction. */
+.pgui .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin-block-start: var(--s-7);
+  padding-block-start: var(--s-4);
+  border-block-start: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .pagination-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-block-size: var(--control-min);
+}
+
+.pgui .pagination-pos {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Chips: no fill on either, selected or not. */
+.pgui .tag-list,
+.pgui .filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pgui .tag,
+.pgui .filter {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-min);
+  padding-inline: var(--s-3);
+  color: var(--brand);
+  background: none;
+  border: var(--line-w) solid var(--dust);
+  border-radius: var(--radius-control);
+  text-decoration: none;
+  transition:
+    border-color var(--motion-state) var(--ease-state),
+    color var(--motion-instant) var(--ease-state);
+}
+
+.pgui .tag:hover,
+.pgui .tag[data-demo="hover"],
+.pgui .filter:hover,
+.pgui .filter[data-demo="hover"] {
+  color: var(--brand-hover);
+  border-color: var(--line-strong);
+}
+
+/* Four cues on the current filter, because weight alone is unreliable at chip
+   size. aria-current is page, not true: the filtered listing is a real URL. */
+.pgui .filter[aria-current="page"] {
+  color: var(--text);
+  border-color: var(--line-strong);
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+  text-decoration: underline;
+  text-decoration-thickness: var(--line-w-thick);
+  text-underline-offset: var(--s-1);
+}
+
+/* Quote: body face at body weight. A long quote in italic is harder to read
+   than the text around it. */
+.pgui .quote {
+  margin-block: var(--s-6);
+  margin-inline: 0;
+  padding-inline-start: var(--s-4);
+  border-inline-start: var(--line-w-thick) solid var(--line-strong);
+  color: var(--text);
+}
+
+.pgui .quote p {
+  margin: 0;
+}
+
+.pgui .quote-source {
+  margin-block-start: var(--s-2);
+  color: var(--text-secondary);
+}
+
+.pgui .code {
+  margin-block: var(--s-6);
+  padding: var(--s-3) var(--s-4);
+  overflow-x: auto;
+  background: var(--raised);
+  border: var(--line-w) solid var(--dust);
+  border-radius: var(--radius-control);
+}
+
+.pgui .code pre {
+  margin: 0;
+  font-family: var(--font-mono);
+}
+
+/* Table of contents. 24px targets, not 44: dense text links in a list, which
+   is what 2.5.8 asks for. */
+.pgui .toc {
+  margin-block: var(--s-6);
+  padding-inline-start: var(--s-4);
+  border-inline-start: var(--line-w) solid var(--dust);
+}
+
+.pgui .toc-h {
+  margin: 0 0 var(--s-2);
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+}
+
+.pgui .toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pgui .toc-list a {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--control-min-dense);
+  padding-block: var(--s-1);
+}
+
+.pgui .toc-list a[aria-current="true"] {
+  color: var(--text);
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+}
+
+/* Prev and next: auto-fit collapses the two at 375 with no media query. */
+.pgui .post-nav {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin-block-start: var(--s-7);
+  padding-block-start: var(--s-4);
+  border-block-start: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .post-nav-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-block-size: var(--control-min);
+  text-decoration: none;
+}
+
+.pgui .post-nav-dir {
+  color: var(--text-secondary);
+}
+
+.pgui .post-nav-title {
+  color: var(--brand);
+}
+
+.pgui .post-nav-item:hover .post-nav-title,
+.pgui .post-nav-item[data-demo="hover"] .post-nav-title {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: var(--s-1);
+}
+
+/* The separator is a ::before, so it is not in the accessibility tree and is
+   never read aloud as "slash". */
+.pgui .crumb-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-secondary);
+}
+
+.pgui .crumb-list li + li::before {
+  content: "/";
+  margin-inline-end: var(--s-2);
+  color: var(--dust);
+}
+
+/* Empty state: what is not here, and where to go instead. */
+.pgui .empty {
+  padding-block: var(--s-7);
+  border-block: var(--line-w) solid var(--dust);
+}
+
+.pgui .empty-line {
+  margin: 0;
+  color: var(--text);
+}
+
+.pgui .empty-next {
+  margin-block-start: var(--s-3);
+  margin-block-end: 0;
+}
+
+/* Alerts: accent and icon, no tinted panel. A filled state panel needs a
+   measured surface pair per state per theme, and the palette has none. */
+.pgui .alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+  margin-block: var(--s-5);
+  padding: var(--s-3) var(--s-4);
+  background: var(--raised);
+  border: var(--line-w) solid var(--dust);
+  border-inline-start: var(--line-w-thick) solid var(--alert-accent);
+  border-radius: var(--radius-control);
+}
+
+.pgui .alert .icon {
+  color: var(--alert-accent);
+}
+
+.pgui .alert-title {
+  margin: 0;
+  color: var(--text);
+}
+
+.pgui .alert-detail {
+  margin: var(--s-1) 0 0;
+  color: var(--text-secondary);
+}
+
+.pgui .alert-error {
+  --alert-accent: var(--error);
+}
+
+.pgui .alert-warning {
+  --alert-accent: var(--warning);
+}
+
+.pgui .alert-success {
+  --alert-accent: var(--success);
+}
+
+/* Search. min-inline-size:0 or a long value refuses to shrink and pushes the
+   button off the edge at 375. */
+.pgui .search-field {
+  display: flex;
+  gap: var(--s-2);
+}
+
+.pgui .search-field .field-input {
+  flex: 1 1 auto;
+  min-inline-size: 0;
+}
+
+.pgui .search-count {
+  margin-block: var(--s-5) var(--s-4);
+  color: var(--text-secondary);
+}
+
+.pgui .search-results {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pgui .search-result {
+  padding-block: var(--s-5);
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .search-result-title {
+  margin: 0;
+  font-family: var(--t-h3-family);
+  font-size: var(--t-h3-size);
+  line-height: var(--t-h3-leading);
+  font-weight: var(--t-h3-weight);
+  font-variation-settings: var(--t-h3-vars);
+  font-optical-sizing: none;
+}
+
+.pgui .search-result-where {
+  margin: var(--s-1) 0 0;
+  color: var(--text-secondary);
+}
+
+.pgui .search-result-snippet {
+  margin: var(--s-1) 0 0;
+}
+
+/* The UA yellow belongs to neither theme. Weight alone is a weak hit cue at
+   body size, so the thickened underline carries the mark. */
+.pgui .search-result-snippet mark {
+  background: none;
+  color: var(--text);
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+  text-decoration: underline;
+  text-decoration-thickness: var(--line-w-thick);
+  text-underline-offset: var(--s-1);
+}
+
+/* Under forced-colors the system highlight is the only distinction mark has. */
+@media (forced-colors: active) {
+  .pgui .search-result-snippet mark {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
+/* The Ask frame is solid --raised. It is not a glass surface. */
+.pgui .ask {
+  margin-block-start: var(--s-8);
+  padding: var(--s-5) var(--s-5) var(--s-6);
+  background: var(--raised);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+.pgui .ask-h {
+  margin: 0;
+  font-family: var(--t-h3-family);
+  font-size: var(--t-h3-size);
+  line-height: var(--t-h3-leading);
+  font-weight: var(--t-h3-weight);
+  font-variation-settings: var(--t-h3-vars);
+  font-optical-sizing: none;
+}
+
+.pgui .ask-note {
+  margin: var(--s-2) 0 0;
+  max-inline-size: var(--measure);
+  color: var(--text-secondary);
+}
+
+/* ---- 6c · the Admin kit ------------------------------------------------- */
+
+/* The admin topbar is --raised with a rule beneath, never the purple chrome:
+   seeing purple should mean "you are on the public site". */
+.pgui .admin {
+  border: var(--line-w) solid var(--dust);
+  border-radius: var(--radius-control);
+  overflow: hidden;
+}
+
+.pgui .admin-topbar {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  block-size: var(--admin-topbar-h);
+  padding-inline: var(--s-4);
+  background: var(--raised);
+  border-block-end: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .admin-brand {
+  color: var(--text);
+  text-decoration: none;
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+}
+
+.pgui .admin-context {
+  margin: 0;
+  margin-inline-end: auto;
+  color: var(--text-secondary);
+}
+
+.pgui .admin-body {
+  display: grid;
+  grid-template-columns: var(--admin-rail-w) minmax(0, 1fr);
+}
+
+/* Four items, flat, no collapse: a collapsible rail manages a problem this
+   admin does not have. */
+.pgui .admin-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3) var(--s-2);
+  border-inline-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .admin-rail-item {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-block-size: var(--admin-row-h);
+  padding-inline: var(--s-3);
+  color: var(--text);
+  text-decoration: none;
+  border-radius: var(--radius-control);
+}
+
+.pgui .admin-rail-item:hover,
+.pgui .admin-rail-item[data-demo="hover"] {
+  background: var(--paper);
+}
+
+/* Inset shadow rather than a border, so the box does not shift when an item
+   becomes current. */
+.pgui .admin-rail-item[aria-current="page"] {
+  background: var(--paper);
+  box-shadow: inset var(--line-w-thick) 0 0 0 var(--brand);
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+}
+
+.pgui .admin-rail-count {
+  margin-inline-start: auto;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pgui .admin-main {
+  padding: var(--s-5) var(--s-5) var(--s-8);
+}
+
+/* Data table */
+
+.pgui .dt {
+  inline-size: 100%;
+  border-collapse: collapse;
+}
+
+.pgui .dt th,
+.pgui .dt td {
+  padding-inline: var(--s-3);
+  text-align: start;
+  vertical-align: middle;
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .dt thead th {
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+  border-block-end: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .dt-row {
+  block-size: var(--admin-row-h);
+}
+
+.pgui .dt-row:hover,
+.pgui .dt-row[data-demo="hover"] {
+  background: var(--raised);
+}
+
+/* Surface plus an inset brand bar is the admin's selected treatment, and the
+   brand outline is permitted on this plane only. */
+.pgui .dt-row[data-selected] {
+  background: var(--raised);
+  box-shadow: inset var(--line-w-thick) 0 0 0 var(--brand);
+}
+
+.pgui .dt-pick {
+  inline-size: var(--control-min);
+  padding-inline-start: var(--s-3);
+}
+
+.pgui .dt-pick .check-box {
+  margin-block-start: 0;
+}
+
+/* A one-line title's own text box misses 2.5.8 inside a 36px row, so the link
+   is a flex box at the dense minimum. */
+.pgui .dt-title a {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--control-min-dense);
+  padding-block: var(--s-1);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.pgui .dt-title a:hover,
+.pgui .dt-title a[data-demo="hover"] {
+  color: var(--brand-hover);
+  text-decoration: underline;
+}
+
+.pgui .dt-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+/* The bulk bar is always present. One that appears on selection shifts the
+   table under the pointer at the moment you aim at the second checkbox. */
+.pgui .dt-bulk {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-block-size: var(--control-min);
+  margin-block-end: var(--s-3);
+  padding: var(--s-2) var(--s-3);
+  background: var(--raised);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+/* "0 selected" is the explanation for the hidden buttons, so it is never
+   removed, never shortened and never hidden at zero. */
+.pgui .dt-bulk-count {
+  margin: 0;
+  margin-inline-end: auto;
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+}
+
+/* Status pill: a read-only label, never a link, and it shares nothing with a
+   public chip. */
+.pgui .pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-1);
+  min-block-size: var(--control-min-dense);
+  padding-inline: var(--s-2);
+  color: var(--pill-ink);
+  border: var(--line-w) solid var(--pill-ink);
+  border-radius: var(--radius-control);
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  white-space: nowrap;
+}
+
+.pgui .pill::before {
+  content: "";
+  inline-size: var(--s-2);
+  block-size: var(--s-2);
+  border-radius: var(--radius-control);
+  background: currentColor;
+}
+
+.pgui .pill-live {
+  --pill-ink: var(--success);
+}
+
+.pgui .pill-draft {
+  --pill-ink: var(--text-secondary);
+}
+
+.pgui .pill-held {
+  --pill-ink: var(--warning);
+}
+
+.pgui .pill-gone {
+  --pill-ink: var(--error);
+}
+
+/* Moderation queue row */
+
+.pgui .mq-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pgui .mq-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s-2);
+  padding-block: var(--s-3);
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .mq-meta {
+  grid-column: 1;
+}
+
+.pgui .mq-who {
+  margin: 0;
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+}
+
+.pgui .mq-where {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.pgui .mq-text {
+  grid-column: 1;
+  margin: 0;
+  padding-inline-start: var(--s-3);
+  border-inline-start: var(--line-w-thick) solid var(--dust);
+}
+
+.pgui .mq-text p {
+  margin: 0;
+}
+
+.pgui .mq-acts {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  align-self: start;
+}
+
+/* Delete is the only destructive action and the only one that looks different.
+   Not filled: a red fill would pull the eye to the hardest action to undo. */
+.pgui .mq-delete,
+.pgui .mq-delete:hover {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+.pgui .mq-delete:hover {
+  background: var(--raised);
+}
+
+/* Health card: two facts and a state. No sparkline, no gauge. */
+.pgui .hc {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  background: var(--raised);
+  border: var(--line-w) solid var(--dust);
+  border-inline-start: var(--line-w-thick) solid var(--hc-accent);
+  border-radius: var(--radius-control);
+}
+
+.pgui .hc-name {
+  margin: 0;
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+}
+
+.pgui .hc-state {
+  margin: 0;
+}
+
+.pgui .hc-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 8rem));
+  gap: var(--s-2);
+  margin: 0;
+}
+
+.pgui .hc-facts dt {
+  color: var(--text-secondary);
+}
+
+.pgui .hc-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pgui .hc-ok {
+  --hc-accent: var(--success);
+}
+
+.pgui .hc-degraded {
+  --hc-accent: var(--warning);
+}
+
+.pgui .hc-down {
+  --hc-accent: var(--error);
+}
+
+/* Unknown and checking share an accent. Neither is a judgement about the
+   service, and a fourth hue would cost the dashboard its glance. */
+.pgui .hc-unknown,
+.pgui .hc-checking {
+  --hc-accent: var(--line-strong);
+}
+
+.pgui .hc-checking .hc-state {
+  color: var(--text-secondary);
+}
+
+/* Admin form: labels above fields, one column, at the measure. */
+.pgui .af {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  max-inline-size: var(--measure);
+}
+
+.pgui .af-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.pgui .af-group-h {
+  margin: 0;
+  padding-block-end: var(--s-1);
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+  border-block-end: var(--line-w) solid var(--dust);
+}
+
+.pgui .af-mono {
+  font-family: var(--font-mono);
+}
+
+/* Opaque --paper with a rule, so body text scrolling under it does not show
+   through. */
+.pgui .af-actions {
+  display: flex;
+  gap: var(--s-2);
+  padding-block: var(--s-3);
+  background: var(--paper);
+  border-block-start: var(--line-w) solid var(--line-strong);
+}
+
+.pgui .ed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+
+.pgui .ed-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.pgui .ed-tool {
+  min-block-size: var(--control-min-dense);
+  padding-inline: var(--s-2);
+}
+
+/* Doubled with an inset shadow so the pressed state does not rest on border
+   colour alone. */
+.pgui .ed-tool[aria-pressed="true"] {
+  color: var(--text);
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 var(--line-w) var(--brand);
+}
+
+.pgui .ed-area {
+  min-block-size: calc(var(--admin-row-h) * 6);
+  resize: vertical;
+  line-height: 1.7;
+}
+
+/* The one modal in the system, and it lives only on the admin plane. The
+   specimen renders it inline, since a public page runs no script to open it. */
+.pgui .dlg {
+  position: static;
+  display: block;
+  max-inline-size: var(--measure);
+  padding: 0;
+  color: var(--text);
+  background: var(--raised);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+.pgui .dlg-in {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  padding: var(--s-4) var(--s-5) var(--s-5);
+}
+
+.pgui .dlg-h {
+  margin: 0;
+  font-family: var(--t-h3-family);
+  font-size: var(--t-h3-size);
+  line-height: var(--t-h3-leading);
+  font-weight: var(--t-h3-weight);
+  font-variation-settings: var(--t-h3-vars);
+  font-optical-sizing: none;
+}
+
+.pgui .dlg-body {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.pgui .dlg-acts {
+  display: flex;
+  gap: var(--s-2);
+  justify-content: flex-end;
+}
+
+.pgui .dlg-go {
+  color: var(--error);
+  border-color: var(--error);
+}
+
+/* Below 64rem the rail scrolls horizontally and admin density yields to touch.
+   It is the one place the two densities meet. */
+@media (max-width: 64rem) {
+  .pgui .admin-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pgui .admin-rail {
+    flex-direction: row;
+    overflow-x: auto;
+    border-inline-end: 0;
+    border-block-end: var(--line-w) solid var(--dust);
+  }
+
+  .pgui .admin-rail-item,
+  .pgui .ed-tool {
+    min-block-size: var(--control-min);
+  }
+
+  .pgui .mq-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pgui .mq-acts {
+    grid-column: 1;
+    grid-row: auto;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}
+
+/* ---- the inventory page itself ------------------------------------------ */
+
+.pgui-page {
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+  padding-block-end: var(--s-9);
+  max-inline-size: 70rem;
+}
+
+.pgui-intro {
+  max-inline-size: var(--measure);
+  margin-block: var(--s-6) var(--s-8);
+}
+
+.pgui-section {
+  margin-block-start: var(--s-9);
+}
+
+.pgui-section > h2 {
+  margin: 0 0 var(--s-2);
+  padding-block-end: var(--s-2);
+  border-block-end: var(--line-w) solid var(--line-strong);
+}
+
+.pgui-section > p {
+  max-inline-size: var(--measure);
+  color: var(--text-secondary);
+}
+
+.pgui-spec {
+  margin-block-start: var(--s-7);
+}
+
+.pgui-spec > h3 {
+  margin: 0 0 var(--s-3);
+}
+
+.pgui-spec > p {
+  max-inline-size: var(--measure);
+  margin-block: 0 var(--s-3);
+  color: var(--text-secondary);
+}
+
+/* The two themes side by side, stacked when there is no room for two. */
+.pgui-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--s-4);
+}
+
+/* A themed container owes both a background and a colour: with only the
+   background it inherits the other theme's ink. */
+.pgui-panel {
+  padding: var(--s-4);
+  background: var(--paper);
+  color: var(--text);
+  border: var(--line-w) solid var(--dust);
+  border-radius: var(--radius-control);
+}
+
+.pgui-panel-tag {
+  display: block;
+  margin-block-end: var(--s-3);
+  font-family: var(--t-label-family);
+  font-size: var(--t-label-size);
+  font-weight: var(--t-label-weight);
+  font-variation-settings: var(--t-label-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+}
+
+.pgui-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+
+.pgui-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+/* Each state says which state it is: a swatch nobody can label is a swatch
+   nobody can check. */
+.pgui-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+
+.pgui-state > span {
+  font-family: var(--t-small-family);
+  font-size: var(--t-small-size);
+  font-weight: var(--t-small-weight);
+  font-variation-settings: var(--t-small-vars);
+  font-optical-sizing: none;
+  color: var(--text-secondary);
+}
+
+.pgui-note {
+  max-inline-size: var(--measure);
+  margin-block: var(--s-4);
+  padding-inline-start: var(--s-4);
+  border-inline-start: var(--line-w-thick) solid var(--line-strong);
+  color: var(--text-secondary);
+}
+
+/* Swatches: name, hex and the colour itself, per theme. A token that resolves
+   to nothing shows as an empty chip rather than as silence. */
+.pgui-swatches {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pgui-swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-2);
+  background: var(--paper);
+  color: var(--text);
+  border: var(--line-w) solid var(--dust);
+  border-radius: var(--radius-control);
+}
+
+.pgui-swatch-chip {
+  flex: 0 0 auto;
+  inline-size: var(--s-7);
+  block-size: var(--s-7);
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+}
+
+.pgui-swatch-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.pgui-swatch-name,
+.pgui-swatch-hex {
+  font-family: var(--font-mono);
+  font-size: var(--t-small-size);
+  overflow-wrap: anywhere;
+}
+
+.pgui-swatch-hex {
+  color: var(--text-secondary);
+}
+
+/* The composited fixtures: text over a photograph, and the social card at its
+   own aspect. These are pixels, not token pairs. */
+.pgui-shot {
+  position: relative;
+  margin: 0;
+  max-inline-size: var(--measure);
+}
+
+.pgui-shot img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: var(--radius-control);
+}
+
+.pgui-shot figcaption {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: 0;
+  padding: var(--s-2) var(--s-3);
+  background: var(--scrim);
+  color: var(--on-scrim);
+}
+
+.pgui-og {
+  max-inline-size: 37.5rem;
+}
+
+.pgui-og img {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border: var(--line-w) solid var(--dust);
+}
+
+/* Enough page below the header for the photograph to scroll past it. */
+.pgui-scroll-room {
+  block-size: 120vh;
+}
+
+/* An icon-only control is square: the label is gone, so the inline padding that
+   sized it around text would leave a lopsided box. */
+.pgui .btn-icon {
+  inline-size: var(--control-min);
+  padding-inline: 0;
+}
+
+/* The accessible name, printed. It is the whole reason an icon-only control is
+   allowed, and it is the half a capture of this page cannot record. */
+.pgui-aname {
+  display: block;
+  margin-block-start: var(--s-1);
+  font-family: var(--font-mono);
+  font-size: var(--t-small-size);
+  color: var(--text-secondary);
+}

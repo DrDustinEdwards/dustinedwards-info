@@ -1,44 +1,10 @@
 /**
- * Gate for the chart directive.
+ * Gate for the chart directive: determinism, Node-versus-Worker parity and the emitted contract.
  *
- * OBSERVATION BOUNDARY: determinism, Node-vs-Worker parity and the emitted
- * contract. It bundles chart.mjs ALONE, not the markdown pipeline, and it never
- * looks at a chart in a browser, so nothing here sees whether a chart is legible
- * or correctly scaled.
+ *   npm run check:charts
  *
- * `check:content` renders the corpus twice and compares, so a chart renderer
- * that is not deterministic fails THAT gate too, at corpus scope, naming a
- * slug. What this gate adds is the chart-scoped half, in-process, across
- * processes and across the Node/Worker engine split: the shape of failure the
- * shiki JavaScript-engine incident produced and the reason oniguruma is a
- * dependency. This gate proves the property that makes both content
- * comparisons meaningful for charts.
- *
- * Four things are asserted:
- *
- *   1. **Determinism in-process.** Every fixture rendered 200 times must yield
- *      exactly one distinct output.
- *   2. **Determinism across processes.** The same fixtures rendered in three
- *      SEPARATE node processes must yield those same hashes. Module-level state
- *      and hash-order effects only show up across process boundaries.
- *   3. **Node vs Worker parity.** The two writers are a Node build script and a
- *      Cloudflare Worker, and the artifact they produce must be byte-identical
- *      or the editor commits HTML the next build will not reproduce. The Worker
- *      half runs the SAME module under real workerd, via miniflare.
- *   4. **The directive contract.** Palette tokens only, an accessible name on
- *      the SVG, a generated data table, no legend, and a validation failure for
- *      every rule the contract states.
- *
- * Pure apart from the workerd run: no database, no network, no GitHub.
- *
- * SCOPE NOTE, stated rather than implied. The parity run bundles
- * `app/lib/content/chart.mjs`, which is the whole of the new rendering surface
- * and the only part whose behaviour under workerd was ever in question (Plot and
- * linkedom). It deliberately does NOT re-bundle the markdown pipeline, because
- * that would drag in shiki's WASM module and end up testing the Vite plugin's
- * wasm handling rather than the chart renderer. The rest of the pipeline is
- * plain deterministic JavaScript shared by both callers, and the live sweep
- * exercises the full Worker path against a real deploy.
+ * BOUNDARY: it bundles the chart module ALONE and never looks at a chart in a browser, so nothing
+ * here sees whether one is legible or correctly scaled.
  */
 
 import { execFileSync } from "node:child_process";
@@ -78,10 +44,8 @@ function assertThat(ok, message) {
 }
 
 /**
- * Asserts that rendering throws, and that the message names the reason.
- *
- * A rule with no paired negative is not a verified rule. Every contract rule
- * below has one of these.
+ * Asserts that rendering throws, and that the message names the reason. A rule with no paired
+ * negative is not a verified rule.
  *
  * @param {string} label
  * @param {Record<string, any>} attrs an omitted attribute is `undefined`, which
@@ -192,15 +156,9 @@ async function workerHashes() {
   // check:contrast hit when its parser found prose in a comment before the real
   // declaration.
   /*
-   * WEAK ON PURPOSE. This is JSONC on its way to JSON.parse, so the shared
-   * strong stripper in scripts/lib/strip-comments.mjs must NOT be used: its
-   * line-comment rule eats a protocol-relative url ("//cdn.example.com/x"),
-   * whose slashes follow a quote rather than a colon, and takes the rest of
-   * the line with it. MEASURED 2026-08-23: the config stops parsing.
-   *
-   * Weak is SUFFICIENT here, which is the other half: JSON.parse throws on
-   * any comment this fails to remove, so an under-strip cannot pass quietly.
-   * test/strip-comments.test.mjs asserts both halves.
+   * WEAK ON PURPOSE: this is JSONC on its way to a parser, and the shared strong stripper's
+   * line-comment rule eats a protocol-relative url. Weak is SUFFICIENT, the parser throwing on any
+   * comment this fails to remove, so an under-strip cannot pass quietly.
    */
   const compat = JSON.parse(
     readFileSync(new URL("../wrangler.jsonc.example", import.meta.url), "utf8")
@@ -209,18 +167,9 @@ async function workerHashes() {
   );
 
   /*
-   * THROUGH `convertV4MiniflareOptions`, and the indirection is not decoration.
-   *
-   * Miniflare 5 (which arrives with wrangler 4.117 and later) reshaped the
-   * constructor: worker options moved under a `workers[].config` object and the
-   * top-level `modules`/`script` pair it used to take is refused outright. The
-   * library ships this converter for exactly this case, so the options below
-   * stay in the shape a reader can compare against `wrangler.jsonc.example`
-   * beside them, and the translation is the library's rather than a hand-built
-   * copy of it that would drift at the next reshape.
-   *
-   * Found by RUNNING, not by reading a changelog: the upgrade turned this gate
-   * red with a zod validation error naming `workers: undefined`.
+   * THROUGH THE LIBRARY'S OWN CONVERTER: a major version reshaped the constructor and refuses the
+   * pair this used to pass. The options then stay in a shape a reader can compare against the
+   * wrangler config beside them, and the translation is the library's. Found by RUNNING.
    */
   const mf = new Miniflare(
     convertV4MiniflareOptions({
@@ -243,22 +192,10 @@ async function main() {
   console.log("check:charts");
 
   /*
-   * SCOPE FLOOR, added by the 2026-08-24 floor sweep.
-   *
-   * Every block below iterates FIXTURES: the in-process determinism loop, the
-   * cross-process one and the node-versus-workerd parity comparison. An empty
-   * or shortened list makes all three agree about nothing, and the two loops
-   * that compare hashes are the ones that would say "identical" loudest.
-   *
-   * The executed-count floor at the end catches a large truncation, because
-   * assertions scale with fixtures, but it is a floor on OUTPUT and this is a
-   * floor on INPUT: they fail on different bugs, and a fixture list rebuilt to
-   * be shorter while some other block grew would slip past the first.
-   *
-   * EXACT rather than under, uniquely here, and the reason is that this list is
-   * not measured, it is CONSTRUCTED: four mark types crossed with the single
-   * and multi-series shapes. It moves only when a mark type is added, which is
-   * a deliberate edit to the array directly above.
+   * SCOPE FLOOR. Every block below iterates the fixtures, and an empty list makes all three agree
+   * about nothing, the two that compare hashes saying "identical" loudest. The executed-count floor
+   * is a floor on OUTPUT and this on INPUT. EXACT rather than under, uniquely here, because this
+   * list is CONSTRUCTED: the mark types crossed with the two shapes.
    */
   assertThat(
     FIXTURES.length >= 8,
@@ -315,9 +252,8 @@ async function main() {
       /<svg[^>]*\srole="img"/.test(html),
       `${fixture.name}: the SVG is missing role="img"`,
     );
-    // The name must be on the SVG, never on the figure: role="img" makes its
-    // descendants presentational, so naming the figure would hide the caption
-    // and the data table from the readers the table exists for.
+    // The name must be on the SVG, never on the figure: the image role makes its descendants
+    // presentational, so naming the figure hides the caption and the data table.
     const label = html.match(/<svg[^>]*\saria-label="([^"]*)"/)?.[1];
     assertThat(
       typeof label === "string" && label.length > 0,
@@ -338,10 +274,8 @@ async function main() {
     );
     assertThat(!/swatch|-legend/.test(html), `${fixture.name}: charts label series directly, never with a legend`);
 
-    // The model reshapes data into {x, series, value} internally. Those names
-    // are an implementation detail and must never surface as an axis label:
-    // Plot's default would print "x" and "value", which names the data
-    // structure rather than the thing measured.
+    // The model reshapes data internally, and those names must never surface as an axis label: the
+    // default prints the data structure rather than the thing measured.
     const svg = html.slice(html.indexOf("<svg"), html.indexOf("</svg>"));
     assertThat(
       !/>\s*[↑→]?\s*value\s*</.test(svg),
@@ -467,11 +401,8 @@ async function main() {
   }
   assertThat(!/<div>/.test(prose.html), "prose: a colon-digit sequence still renders as an empty div");
 
-  // 8. Unknown directives fail closed (ruled 2026-07-30).
-  //
-  // An unhandled directive is not inert: remark-rehype renders it as a bare
-  // <div>, so a typo publishes a silent empty element where a figure was meant
-  // to be. These are the paired negatives for that rule.
+  // Unknown directives fail closed: the renderer emits a bare element, so a typo publishes a silent
+  // empty block where a figure was meant to be.
   const render = (/** @type {string} */ body) =>
     renderBody({ file: "check-charts", body, resolveImage: async () => ({ width: 1, height: 1 }) });
 
@@ -502,20 +433,10 @@ async function main() {
   assertThat(!/<div>/.test(escaped.html), "an escaped colon still produced a div");
 
   /*
-   * And the known ones still render, so the check is not simply refusing
-   * everything.
-   *
-   * TWO ASSERTIONS RATHER THAN ONE ADJACENCY. This was `/<figure><img/`, which
-   * went red on 2026-08-26 when the pipeline started wrapping every body image
-   * in a link to its original: the figure rendered perfectly and the two tags
-   * had simply stopped being neighbours. A control that pins markup BETWEEN the
-   * things it cares about fails on changes it has no opinion about, and its
-   * label then names the wrong subject.
-   *
-   * What this control needs is that the directive produced a figure and that
-   * the author's src reached an image. Both stay falsifiable, and neither has
-   * an opinion about what sits in between. The anchor itself is owned by
-   * test/post-image-links.test.mjs and is deliberately not restated here.
+   * And the known ones still render, so the check is not refusing everything. TWO ASSERTIONS RATHER
+   * THAN ONE ADJACENCY: this pinned two tags as neighbours and went red when body images started
+   * being wrapped in a link. A control that pins markup BETWEEN the things it cares about fails on
+   * changes it has no opinion about.
    */
   const known = await render(':::figure{src="/og-image.png" alt="x"}\ncap\n:::');
   assertThat(
@@ -528,19 +449,10 @@ async function main() {
   );
 
   /*
-   * EXECUTED-COUNT FLOOR.
-   *
-   * This gate is ASYNC and spawns a bundler and a Miniflare worker. That is the
-   * shape most able to skip silently: an await that resolves to an empty
-   * fixture list, a parity block that returns early, a determinism loop that
-   * runs zero renders. All of them leave `failed` at zero.
-   *
-   * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it: 181 on
-   * 2026-08-14, 183 on 2026-08-26 when the figure control became two
-   * assertions instead of one adjacency.
-   * Never summed. Floored at 170, roughly 6 percent: the count is a fixed
-   * function of the eight fixtures crossed with the mark types and the planted
-   * negatives, so it moves only when a fixture or a rule is added.
+   * EXECUTED-COUNT FLOOR. This gate is ASYNC and spawns a bundler and a worker runtime, the shape
+   * most able to skip silently: an await resolving to an empty fixture list, a parity block
+   * returning early, a determinism loop running zero renders, all leaving the count at zero.
+   * MEASURED BY RUNNING IT, never summed.
    */
   const MINIMUM_PASSED = 173;
   const floorBreach = assertFloor("check:charts", "passed", passed, MINIMUM_PASSED);

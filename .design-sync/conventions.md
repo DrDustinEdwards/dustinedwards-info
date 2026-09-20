@@ -35,12 +35,12 @@ the tokens below.
 
 | Family | Names |
 |---|---|
-| Surfaces | `--surface` `--surface-chrome` `--surface-code` `--surface-hero` `--surface-popover` |
-| Text | `--text` `--text-muted` `--text-heading` `--text-accent` `--text-disabled` `--text-danger` `--text-success` `--text-warning` `--text-info` |
+| Surfaces | `--surface` `--surface-chrome` `--surface-code` `--surface-popover` |
+| Text | `--text` `--text-muted` `--text-heading` `--text-accent` `--text-disabled` `--text-danger` `--text-success` `--text-warning` |
 | Brand | `--brand` `--brand-hover` `--brand-active` `--on-brand` |
 | On chrome | `--on-chrome` `--on-chrome-muted` `--mark-on-chrome` |
-| Borders | `--border` `--border-strong` `--border-danger` `--border-info` `--border-success` `--border-warning` |
-| Tints | `--tint-brand` `--tint-accent` `--tint-danger` `--tint-info` `--tint-success` `--tint-warning` |
+| Borders | `--border` `--border-strong` `--border-danger` `--border-success` `--border-warning` |
+| Tints | `--tint-brand` `--tint-danger` `--tint-success` `--tint-warning` |
 | Type | `--font-sans` `--font-mono` |
 | Focus | `--focus-ring` `--focus-ring-on-brand` `--focus-ring-on-chrome` |
 | Charts | `--chart-purple` `--chart-cadet` `--chart-claret` `--chart-gold` `--chart-rust` `--chart-sage` |
@@ -59,7 +59,10 @@ visited. Do not restate that on every anchor.
 `page-head` and `page-title` for the heading block. Long-form copy goes in
 `prose`. Listings are `<ul class="post-list">`. Secondary text is `muted`. Tag
 rows are `tag-chips` holding `tag-chip`. Chrome is `site-header` and
-`site-footer`; the login card is `gate-card` with `gate-mark`.
+`site-shell-footer`; the login card is `gate-card` with `gate-mark`.
+
+Components come off the bundle global `DustinEdwards`. Renaming it means
+editing this file too, because the snippet below names it.
 
 ## Where the truth lives
 

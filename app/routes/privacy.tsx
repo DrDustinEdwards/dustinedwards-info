@@ -4,54 +4,28 @@ import { SITE, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 // This page renders into `.prose`, and prose.css is route-scoped since the
 // per-route CSS split. A page that uses the class and does not import the sheet
-// renders unstyled, which check:page-payload's coverage half is what catches.
+// renders unstyled, which `check:page-payload`'s coverage half catches.
 import "~/styles/prose.css";
 
 /**
  * What this site records, in plain English.
  *
- * ## EVERY SENTENCE IS DERIVABLE FROM THE CODE
+ * EVERY SENTENCE IS DERIVABLE FROM THE CODE. That is the rule this page is written
+ * under and the reason it can be short: there is no "we may collect", and each
+ * claim names something a reader could go and check.
  *
- * That is the rule this page is written under, and it is the reason it can be
- * short. There is no "we may collect" and no "from time to time": each claim
- * below names something a reader could go and check, and the cited files are
- * the ones that do it.
+ * NO RETENTION PERIOD IS STATED THAT THE CODE DOES NOT OWN. The Ask cache has one,
+ * because `expirationTtl` is a number in the source; Analytics Engine's is
+ * Cloudflare's, so this page says that rather than inventing a figure.
  *
- *   the analytics fields      workers/app.ts, recordTraffic
- *   the redaction             app/lib/analytics-path.mjs
- *   the Ask cache and its TTL app/lib/search/ask-guard.server.ts
- *   the CSP report sink       app/routes/api.csp-report.ts
- *   the webmention receiver   app/routes/webmention.ts
- *   what a mention stores     app/db/schema.ts, the `webmentions` table
- *   what it reads off a page  app/lib/webmention/verify.server.ts
- *   the theme cookie          app/lib/theme.ts
- *   the admin session         app/lib/auth.server.ts
+ * NO COMPLIANCE CLAIM: none of it would be a true statement about a personal site.
  *
- * NO RETENTION PERIOD IS STATED THAT THE CODE DOES NOT OWN. The Ask cache has
- * one, because `expirationTtl` is a number in the source. Analytics Engine's
- * retention is Cloudflare's and is not set here, so this page says that rather
- * than inventing a figure, which is the difference between a privacy page and a
- * privacy performance.
- *
- * NO COMPLIANCE CLAIM. This is not a GDPR notice, it does not name a lawful
- * basis, and it does not promise a process for requests, because none of those
- * would be true statements about a personal site. Saying what is recorded is
- * something this page can actually stand behind.
- *
- * ## WHY IT IS A ROUTE AND NOT A POST
- *
- * A post is content that ages and carries a date. This is a statement about how
- * the site works right now, so it lives beside `/colophon`, takes the shared
- * cache headers like every other public page, and changes when the code does.
- *
- * It joins the footer on every page, which is WCAG 2.2 3.2.6 consistent help:
- * the same help mechanism in the same relative order on every page that has it.
+ * It joins the footer on every page, which is WCAG 2.2 3.2.6 consistent help.
  */
 export function headers() {
-  // The SHARED builder, never a hand-written pair. check:headers refuses the
-  // latter by name: a hand-written pair is how the Vary line gets dropped, and
-  // the shared string without Vary: Cookie serves one reader's theme to
-  // another.
+  // The SHARED builder, never a hand-written pair. `check:headers` refuses the
+  // latter by name: a hand-written pair is how the Vary line gets dropped, and the
+  // shared string without it serves one reader's theme to another.
   return new Headers(publicHtmlHeaders());
 }
 

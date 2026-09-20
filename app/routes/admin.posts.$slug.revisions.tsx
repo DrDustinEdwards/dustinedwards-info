@@ -15,51 +15,29 @@ import type { Route } from "./+types/admin.posts.$slug.revisions";
 /**
  * Reading git, for the editor's revision drawer. JSON, GET, and NOTHING ELSE.
  *
- * **This module exports no `action`, and that is the enforcement of ruling 1,
- * not a stylistic choice.** Ruling 1 says a restore LOADS a revision into the
- * editor as unsaved content and never writes, and that every mutation stays on
- * the one existing save path. A route with no action cannot be made to write by
- * any request: React Router answers a POST here with 405 before any code of
- * mine runs. The guarantee is therefore structural rather than a promise made
- * in a comment, which is what makes it provable from outside.
- *
- * It sits inside /admin, so the layout middleware has already required the
- * single-admin session before any of this executes.
+ * THIS MODULE EXPORTS NO `action`, and that is the enforcement of ruling 1 rather
+ * than a stylistic choice: a route with no action cannot be made to write by any
+ * request, because React Router answers a POST with 405 before any code of mine
+ * runs. The guarantee is structural and therefore provable from outside.
  *
  * Three questions, one route, because they are the same resource at different
- * depths and a route each would be three places to keep the path construction
- * in step:
- *
- *   (no params)          the commits that touched this post
- *   ?sha=<sha>           that commit's diff against its parent
- *   ?sha=<sha>&want=content   that revision's fields, for loading into the editor
+ * depths and a route each would be three places to keep the path construction in
+ * step.
  */
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   /*
-   * A RESOURCE ROUTE, and instrumented anyway.
-   *
-   * It returns raw `Response.json`, so the `headers()` export the other admin
-   * routes used to carry never applied here. That sentence used to end "the
-   * header is set on each Response directly", which stopped being true when the
-   * per-route stamps came out: the header is written once, in `workers/app.ts`,
-   * for every response on both planes.
-   *
-   * Marked because it makes GitHub calls and because the finding this session
-   * exists for is that the ONE loader nobody suspected was the expensive one.
+   * A RESOURCE ROUTE, and instrumented anyway: it makes GitHub calls, and the
+   * finding this instrumentation exists for is that the ONE loader nobody suspected
+   * was the expensive one.
    */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   /*
-   * PUSHES THE MARK, DOES NOT WRITE THE HEADER. It used to do both, and the
-   * write was redundant: `workers/app.ts` stamps `Server-Timing` from the same
-   * shared array after the handler returns, with `set`, so this one was
-   * overwritten by an identical value on every request that asked for it.
-   *
-   * The push stays because it is the MEASUREMENT, and it is the only place
-   * `loader_total` is recorded for this route. The response argument is kept so
-   * every return path still runs it: dropping it would make the mark
-   * conditional on which branch returned.
+   * PUSHES THE MARK, DOES NOT WRITE THE HEADER: the transport stamps it from the
+   * same shared array after the handler returns. The push stays because it is the
+   * MEASUREMENT, and the response argument is kept so every return path still runs
+   * it.
    */
   const stamp = (response: Response) => {
     if (timings) {
@@ -72,14 +50,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const sha = url.searchParams.get("sha");
 
   if (!sha) {
-    // The commit list is supplied by the edit route's own loader, so this
-    // branch exists for a refresh after a save rather than for first paint.
-    //
-    // STATIC, since 2026-08-26. It was `await import(...)`, which bought
-    // nothing: this file already imports the same module statically three lines
-    // into its own header, and five other modules import it statically too, so
-    // the chunk was in the graph however this line was written. Rolldown said
-    // so on every build, in a warning that had become scenery.
+    // This branch exists for a refresh after a save rather than for first paint.
+    // STATIC, because this file already imports the same module statically and five
+    // others do too, so the chunk was in the graph however this line was written.
     const commits = await timed(timings, "gh_commits", () =>
       listCommitsForPath(env, postPath(params.slug)),
     );

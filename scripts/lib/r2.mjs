@@ -1,22 +1,10 @@
 /**
- * Listing an R2 bucket from a Node build script.
+ * Listing an R2 bucket from a Node build script, through the platform proxy because the CLI has
+ * no `list` verb.
  *
- * ONE implementation, several callers, for the reason `diagram-audit.mjs` is one
- * implementation with two callers: a second copy of this would be a second place
- * for the paging to be got wrong.
- *
- * **Why a platform proxy and not the CLI.** `wrangler r2 object` has exactly
- * three verbs, `get`, `put` and `delete`. There is no `list`, so the one thing
- * a reconciler cannot do without is the one thing the CLI does not offer.
- * `getPlatformProxy` hands a Node script the same `env.MEDIA` the Worker gets,
- * over wrangler's existing OAuth, which is why nothing here needs a new API
- * token or an S3 access key.
- *
- * **`remote: true` goes on the BINDING and nowhere else.** It is what selects
- * the real bucket rather than local miniflare state; measured 2026-08-02, it is
- * the difference between reading 1 object and 13. The config carrying it is
- * built here and thrown away rather than tracked, so the flag cannot leak into
- * `wrangler.jsonc` and quietly point `npm run dev` at production R2.
+ * BOUNDARY: the remote flag goes on the BINDING and nowhere else, and the config carrying it is
+ * built here and thrown away, so it cannot leak into the real config and point local development
+ * at production R2.
  */
 
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -26,12 +14,9 @@ import path from "node:path";
 import { getPlatformProxy } from "wrangler";
 
 /**
- * Build the throwaway config that binds ONE bucket, and hand back a proxy.
- *
- * Lifted out when `downloadAllObjects` became the second caller. The `remote`
- * flag and the discard-the-config discipline are the two things this file's
- * header argues for, and a second hand-rolled copy is exactly how one of them
- * would quietly stop being true.
+ * Build the throwaway config that binds ONE bucket, and hand back a proxy. Lifted out when a
+ * second caller arrived: a hand-rolled copy is how the remote flag or the discard discipline would
+ * quietly stop being true.
  *
  * @param {string} bucket @param {boolean} remote
  */
@@ -53,23 +38,10 @@ async function bucketProxy(bucket, remote) {
 }
 
 /**
- * Pull every object in a bucket to disk. THE ONLY COPY OUTSIDE THE ACCOUNT.
- *
- * Ruled 2026-09-01 (decisions-vol-13.md). The same-account mirror covers the
- * realistic loss, which is this site's own code deleting an object; it does
- * nothing at all for account loss or compromise. This is the answer to that,
- * and it is a chore that ends in Dustin's hands, so it is scripted rather than
- * remembered.
- *
- * **THE SIZE IS VERIFIED PER OBJECT, not just the count.** A short read writes
- * a file that exists, has a plausible name, and restores to a corrupt image. A
- * backup whose failure mode looks exactly like success is the thing this whole
- * script family is about, so every write is compared against the size R2
- * reported for the object and a mismatch is returned rather than logged.
- *
- * Keys may carry `/` (the OG cards are `og/<slug>-<hash>.png`), so the
- * directory structure is recreated rather than the separator flattened, which
- * would let two distinct keys collide on one filename.
+ * Pull every object in a bucket to disk. THE ONLY COPY OUTSIDE THE ACCOUNT, the same-account
+ * mirror doing nothing for account loss. **THE SIZE IS VERIFIED PER OBJECT, not just the count**:
+ * a short read writes a file that exists, has a plausible name, and restores to a corrupt image.
+ * Keys may carry a separator, so the structure is recreated rather than flattened.
  *
  * @param {object} options
  * @param {string} options.bucket
@@ -119,18 +91,13 @@ export async function downloadAllObjects({ bucket, destDir, remote = true }) {
 }
 
 /**
- * Every object under a prefix, PAGED TO THE END.
- *
- * The paging is not a nicety. This repo has already shipped a listing that
- * ignored it: `items.list()` on the Ask index returned only the first page at
- * all four call sites, and a prune reported "removed 0" for a post whose items
- * were real but sat on a later page. A lister that cannot see an object reports
- * success either way, and that is the shape of this whole class of bug.
+ * Every object under a prefix, PAGED TO THE END. Not a nicety: this repo has already shipped a
+ * listing that ignored it, and a prune reported removing nothing for items on a later page.
  *
  * @param {object} options
- * @param {string} options.bucket bucket name, e.g. "dustinedwards-media"
+ * @param {string} options.bucket bucket name
  * @param {string} [options.prefix] "" lists the whole bucket
- * @param {boolean} [options.remote] false reads local miniflare state
+ * @param {boolean} [options.remote] false reads local state
  * @returns {Promise<Array<{ key: string, size: number, uploaded: string, etag: string }>>}
  */
 export async function listAllObjects({ bucket, prefix = "", remote = true }) {
@@ -166,16 +133,10 @@ export async function listAllObjects({ bucket, prefix = "", remote = true }) {
       if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
     }
   } finally {
-    // workerd can throw on teardown after a remote session (measured: a WSARecv
-    // failure on Windows). The listing is already in hand by then, so a dispose
-    // that fails must not fail the caller.
-    //
-    // Note what this does NOT swallow: an error thrown by `list()` itself
-    // propagates out of the try above and this function never returns. That
-    // distinction is the whole safety property. A caller that deletes things
-    // must be able to tell "the bucket holds nothing" from "the listing did not
-    // finish", and a partial listing returned as if it were total is how a
-    // prune deletes live objects.
+    // The runtime can throw on teardown after a remote session, and the listing is already in hand.
+    // Note what this does NOT swallow: an error from the listing itself propagates, which is the whole
+    // safety property, a caller that deletes having to tell "the bucket holds nothing" from "the
+    // listing did not finish".
     try {
       await proxy.dispose();
     } catch {
@@ -189,23 +150,14 @@ export async function listAllObjects({ bucket, prefix = "", remote = true }) {
 /**
  * A listing a destructive caller may act on, or a refusal.
  *
- * **Why this is separate from `listAllObjects`.** On 2026-08-02 a prune run
- * printed `workerd/jsg/util.c++: WSARecv(): #64 The specified network name is no
- * longer available` in the middle of its output and carried on to report
- * "1 orphaned". It was correct that time. It would have looked EXACTLY THE SAME
- * if the listing had been cut short, and the difference between those two cases
- * is deleting one dead file or deleting eleven live ones.
+ * **Why this is separate.** A prune once printed a transport error mid-output and carried on to
+ * report one orphan. It was correct that time and would have looked EXACTLY THE SAME if the
+ * listing had been cut short, and the difference is deleting one dead file or every live one. So
+ * a caller states how many objects it expects to still be there:
  *
- * So a caller that is about to delete does not get a bare array. It states how
- * many objects it expects to still be there, and this refuses if the listing
- * cannot support that:
- *
- *   - an EMPTY listing is always a refusal. A bucket that genuinely holds
- *     nothing needs no prune, so there is no case where acting on zero is both
- *     correct and necessary.
- *   - a listing that does not contain every key the caller expects to keep means
- *     the listing is missing objects that certainly exist, so everything else it
- *     appears to be missing is unproven too.
+ *   - an EMPTY listing is always a refusal: a bucket that holds nothing needs no prune.
+ *   - a listing missing a key the caller expects is demonstrably missing objects that certainly
+ *     exist, so everything else it appears to be missing is unproven too.
  *
  * @param {object} options
  * @param {string} options.bucket

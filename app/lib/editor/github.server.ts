@@ -1,17 +1,11 @@
 /**
- * The GitHub half of the editor's write path.
+ * The GitHub half of the editor's write path. Every editor save is one commit on `main` carrying
+ * exactly ONE file, the markdown; git holds markdown only and D1 holds the only rendered copy.
  *
- * Every editor save is one commit on `main`. Since the artifact arc a save
- * carries exactly ONE file, the markdown itself; git holds markdown only and
- * D1 holds the only rendered copy. The Git Data API commit shape (blobs,
- * tree, commit, ref) STAYS even so, because it is what carries the
- * `expectedHeadSha` conflict guard: the head is checked up front and the ref
- * update refuses a non-fast-forward, so a save can never silently replay on
- * top of work nobody looked at. The Contents API write path has no such
- * check-then-update seam.
+ * The Git Data API commit shape STAYS even so, because it carries the `expectedHeadSha` conflict
+ * guard and the Contents API write path has no such check-then-update seam.
  *
- * The token is a Worker secret. It is never sent to the client and never
- * logged; failures report status codes and GitHub's message, never the request.
+ * The token is a Worker secret, never sent to the client and never logged.
  */
 
 import { contentsCapMessage } from "./contents-cap.mjs";
@@ -97,17 +91,12 @@ export async function getHead(env: GhEnv) {
 }
 
 /**
- * Reads a file at a given ref. Returns null for 404 so a caller can tell
- * "absent" from "failed", which is the difference between creating a post and
- * an outage.
+ * Reads a file at a given ref. Returns null for 404 so a caller can tell "absent" from "failed",
+ * which is the difference between creating a post and an outage.
  *
- * GUARDED AGAINST THE 1 MB CONTENTS CAP, the same guard `readBinaryFile` has
- * always had. The JSON media type returns a file over 1 MB with `size` set and
- * no base64 content, and this function used to decode that to an empty string:
- * a markdown file crossing the cap would have surfaced downstream as parse
- * garbage rather than as the transport failure it is. The decision lives in
- * `contentsCapMessage` (contents-cap.mjs) so `node:test` can drive it with
- * a stubbed response.
+ * GUARDED AGAINST THE 1 MB CONTENTS CAP: the JSON media type returns a file over 1 MB with `size`
+ * set and no base64 content, which decodes to an empty string rather than to the transport failure
+ * it is. The decision lives in `contentsCapMessage` (contents-cap.mjs) so `node:test` can drive it.
  */
 export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
   try {
@@ -137,20 +126,13 @@ export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
 }
 
 /**
- * Lists one directory of the repository at a ref.
+ * Lists one directory of the repository at a ref. The Contents API returns every entry with its git
+ * blob sha in ONE call, and blob shas are content-addressed, so this answers which markdown files
+ * exist and what bytes they hold without fetching any of them.
  *
- * The Contents API on a directory returns every entry with its git blob sha
- * in ONE call, and blob shas are content-addressed, so this is the whole
- * cost of asking "which markdown files exist and what bytes do they hold"
- * without fetching any of them. `regenerateAllFromRepo` walks it to rebuild
- * D1, and the content-drift health check compares its shas against
- * `posts.source_blob_sha`.
- *
- * NOT RECURSIVE, deliberately: `content/posts/` is flat by construction
- * (`postPath` states the one shape a post path can take), and the directory
- * form of this endpoint caps at 1000 entries, which is stated here rather
- * than discovered at post 1001. The refusal below fires long before the cap
- * binds.
+ * NOT RECURSIVE, deliberately: `content/posts/` is flat by construction (`postPath` states the one
+ * shape a post path can take), and the directory form caps at 1000 entries, stated here rather than
+ * discovered at post 1001.
  */
 export async function listDirectory(env: GhEnv, path: string, ref = BRANCH) {
   const entries = await gh<
@@ -173,23 +155,15 @@ export async function listDirectory(env: GhEnv, path: string, ref = BRANCH) {
 }
 
 /**
- * Reads a file at a given ref as RAW BYTES.
+ * Reads a file at a given ref as RAW BYTES. `readFile` decodes to text, which is right for markdown
+ * and destroys an image: `TextDecoder` replaces every invalid UTF-8 sequence, so a PNG comes back a
+ * different length than it went in and nothing can measure it.
  *
- * `readFile` decodes to text, which is right for markdown and destroys an
- * image: `TextDecoder` replaces every invalid UTF-8 sequence, so a PNG comes
- * back a different length than it went in and nothing can measure it.
+ * Reading the repo at the pinned ref measures what the REPOSITORY says, which is the bytes a clone
+ * would build from, rather than the deployed asset.
  *
- * Added for finding B002. The editor's image resolver used to measure
- * `public/*` by fetching `SITE_ORIGIN`, which is the DEPLOYED asset, while
- * `build:content` measured the file in the working tree. A retouched image
- * committed but not yet deployed therefore gave the two writers different
- * dimensions for the same src. Reading the repo at the pinned ref measures what
- * the repository says, which is exactly the bytes a clone would build from.
- *
- * The Contents API caps out at 1 MB per file; anything larger comes back with
- * an empty `content` and needs the blob endpoint. Site images are well under
- * that, and the empty-content case is reported rather than measured, so an
- * oversized asset fails the save instead of silently losing its dimensions.
+ * The Contents API caps at 1 MB per file; the empty-content case is reported rather than measured,
+ * so an oversized asset fails the save instead of silently losing its dimensions.
  */
 export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
   try {
@@ -222,12 +196,10 @@ export type FileChange =
 /**
  * Lands every change as one commit on main.
  *
- * `expectedHeadSha` is the conflict gate. The caller records the head commit
- * when it loads the editor and passes it back on save; if main has moved since,
- * the update is refused rather than replayed on top of work nobody looked at.
- * GitHub enforces this itself on the ref update (non-fast-forward without
- * force), and it is checked up front so the failure is a clean message rather
- * than a rejected push after blobs have been created.
+ * `expectedHeadSha` is the conflict gate: the caller records the head commit when it loads the
+ * editor and passes it back on save, and if main has moved the update is refused rather than
+ * replayed on top of work nobody looked at. Checked up front so the failure is a clean message
+ * rather than a rejected push after blobs exist.
  */
 export async function commitFiles(
   env: GhEnv,

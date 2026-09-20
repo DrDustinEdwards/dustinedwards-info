@@ -1,38 +1,24 @@
 /**
  * Theme toggle enhancement, and the door the search palette comes through.
  *
- * Everything here removes a round trip and nothing here makes the control work:
- * with this file absent the form posts to /theme, the action sets the cookie
- * and the server renders the chosen theme. That is the zero-JS path and it is
- * the same path the enhancement writes to, because both end at the same cookie.
+ * EVERYTHING HERE REMOVES A ROUND TRIP AND NOTHING HERE MAKES THE CONTROL WORK: with this file
+ * absent the form posts to `/theme` and the server renders the chosen theme. Both paths end at the
+ * same cookie.
  *
- * There is deliberately no "apply the stored theme on load" step. The server
- * already wrote the attribute from the cookie, so a script that re-applied it
- * could only ever agree, or race. The flash this file does not have is the one
- * it never creates.
+ * There is deliberately no "apply the stored theme on load" step: the server already wrote the
+ * attribute, so a script that re-applied it could only agree, or race.
  *
- * ## WHY THE PALETTE LOADER LIVES HERE, of all places
- *
- * Two bundles used to be on every document: this one and the search palette.
- * The palette is by far the larger of the two and it exists to answer one
- * gesture, so almost every reader downloaded a search dialog, parsed it, and
- * navigated away without ever opening it. What the shortcut actually needs on
- * page load is a keydown listener, which is a few lines.
- *
- * So the few lines are here, in the module that is on every page anyway, and
- * the dialog arrives on the first gesture. This file is the smallest thing on
- * the site that is genuinely site-wide, which is the whole reason it was
- * chosen: adding the loader to it costs one document nothing extra, while
- * adding a second site-wide bundle costs every document.
+ * WHY THE PALETTE LOADER LIVES HERE: the shortcut needs only a keydown listener on load, and this is
+ * the smallest genuinely site-wide module. Putting it here costs one document nothing; a second
+ * site-wide bundle costs every document.
  */
 
 import { serializeThemeCookie, isWritableTheme, type WritableTheme } from "~/lib/theme";
 
 function enhanceThemeToggle() {
-  // Loaded by a script tag whose module executes once per document, so there
-  // is no re-run to guard against: without hydration every navigation is a
-  // fresh document. Listening on the document rather than the form keeps the
-  // handler working wherever the toggle is placed.
+  // Loaded by a script tag whose module executes once per document, so there is no re-run to guard
+  // against: without hydration every navigation is a fresh document. Listening on the document keeps
+  // the handler working wherever the toggle is placed.
   document.addEventListener("submit", (event) => {
     const form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
@@ -45,10 +31,8 @@ function enhanceThemeToggle() {
 
     const choice = submitter.value;
     /*
-     * THE WRITABLE SET, which is exactly what `/theme` accepts. One predicate
-     * for both, so the enhancement cannot apply a value its own fallback would
-     * reject: the two halves of the control agree about what a legal
-     * submission is because they ask the same function.
+     * THE WRITABLE SET, which is exactly what `/theme` accepts. One predicate for both, so the
+     * enhancement cannot apply a value its own fallback would reject.
      */
     if (!isWritableTheme(choice)) return;
 
@@ -63,19 +47,12 @@ enhanceSearchTrigger();
 /**
  * The event `app/enhance/palette.ts` listens for. One spelling, two files.
  *
- * A custom event rather than a module export, and the reason is a
- * measurement rather than a preference. The direct shape is a dynamic
- * `import()` of the bundle and a call to what it exports; vite rewrites every
- * `import()` into a call to its own `__vitePreload` helper, which MEASURED
- * 2026-08-27 added roughly 2.3 KB to this 714-byte bundle in order to manage a
- * preload graph that does not exist here, since build-enhance emits one
- * self-contained chunk per module. That is a large fraction of what taking the
- * palette off every page saved in the first place.
+ * A custom event rather than a dynamic `import()`, because vite rewrites every `import()` into its
+ * preload helper, which is a large fraction of this bundle in order to manage a preload graph that
+ * does not exist: build-enhance emits one self-contained chunk per module.
  *
- * A script element inserted by a script that is already trusted is allowed by
- * `script-src 'strict-dynamic'` with no nonce, which is why this needs no
- * access to the request nonce that `EnhancementScript` has and this file does
- * not.
+ * A script element inserted by a script that is already trusted is allowed by `script-src
+ * 'strict-dynamic'` with no nonce, which is why this needs no access to the request nonce.
  */
 const PALETTE_OPEN = "palette:open";
 
@@ -85,23 +62,18 @@ let requested = false;
 /**
  * Opens the palette, fetching it first if this is the first gesture.
  *
- * FAILURE FALLS BACK TO THE PAGE, never to nothing. The caller has already
- * prevented the anchor's default, so a load error would otherwise leave a
- * reader who clicked with no response at all. `/search` is the same
- * destination the anchor carries, so a reader on a broken connection gets the
- * server-rendered search page, which is rule 9's fallback rather than a
- * consolation.
+ * FAILURE FALLS BACK TO THE PAGE, NEVER TO NOTHING. The caller has already prevented the anchor's
+ * default, so a load error would leave a reader who clicked with no response at all. `/search` is
+ * the same destination the anchor carries.
  *
- * The first gesture dispatches from the script's own `load`, because the
- * listener on the other side does not exist until the module has executed.
- * Every later gesture dispatches immediately.
+ * The first gesture dispatches from the script's own `load`, because the listener on the other side
+ * does not exist until the module has executed.
  */
 function openPalette() {
   const trigger = document.querySelector<HTMLElement>("[data-palette]");
-  // The URL is hashed by the app build, so it cannot be written down here: the
-  // `?url` import in search-trigger.tsx is the one statement of it and it
-  // arrives on the element this file upgrades. No attribute means no palette,
-  // rather than a broken one.
+  // The URL is hashed by the app build, so it cannot be written down here: the `?url` import in
+  // `search-trigger.tsx` is the one statement of it. No attribute means no palette, rather than a
+  // broken one.
   const url = trigger?.dataset.palette;
   if (!url) {
     location.assign("/search");
@@ -112,23 +84,15 @@ function openPalette() {
     requested = true;
 
     /*
-     * THE DIALOG'S STYLESHEETS TRAVEL WITH ITS BUNDLE, and they are awaited.
+     * THE DIALOG'S STYLESHEETS TRAVEL WITH ITS BUNDLE, and they are awaited. The palette's CSS exists
+     * for markup that does not exist until somebody searches, so it comes down here from
+     * `data-palette-css` rather than on every document.
      *
-     * The palette's CSS is 861 bytes brotli and the Ask panel inside it another
-     * 402, on every document, for markup that does not exist until somebody
-     * searches. It comes down here instead, from `data-palette-css`, which the
-     * trigger carries as `?url` imports so the hashed names stay the build's
-     * business.
+     * AWAITED, because the bundle calls `showModal` the moment it runs and a stylesheet still in flight
+     * at that point is an unstyled modal on screen.
      *
-     * AWAITED, because the alternative is a visible flash: the bundle builds
-     * the dialog and calls showModal the moment it runs, and a stylesheet still
-     * in flight at that point means an unstyled modal on screen. Waiting costs
-     * nothing a reader can see, since the two fetches are parallel with the
-     * script's own.
-     *
-     * A FAILED STYLESHEET RESOLVES rather than rejecting. An unstyled dialog is
-     * a bad dialog and no dialog at all is worse, so only the SCRIPT failing is
-     * treated as failure.
+     * A FAILED STYLESHEET RESOLVES rather than rejecting: an unstyled dialog is bad and no dialog is
+     * worse, so only the SCRIPT failing is treated as failure.
      */
     const pending = [];
     for (const href of (trigger?.dataset.paletteCss ?? "").split(",").filter(Boolean)) {
@@ -166,49 +130,26 @@ function openPalette() {
 }
 
 /*
- * `isTyping` WENT WITH THE BARE SLASH. It existed so a slash typed into a
- * field stayed a slash, and Cmd/Ctrl-K needs no such guard: it collides with
- * nothing a reader types. A helper kept past its only caller is dead code that
- * reads as load-bearing.
+ * `isTyping` WENT WITH THE BARE SLASH. Cmd/Ctrl-K needs no such guard, and a helper kept past its
+ * only caller is dead code that reads as load-bearing.
  */
 
 /**
  * Binds the two ways into search and makes the shortcut discoverable.
  *
- * THE HINT IS TOLD HERE AND NOWHERE ELSE, and that is the same promise it has
- * always made: nothing advertises the shortcut until the shortcut works. It
- * used to wait for the palette bundle, because that bundle held the listener;
- * the listener is attached by the line below, so the hint becomes true earlier
- * rather than later, and a reader whose script did not run is still never told
- * about a key that would do nothing for them.
- *
- * WHAT CHANGED 2026-08-29 IS THE SURFACE, NOT THE CONTRACT. It was a visible
- * `<kbd>/</kbd>` inside the control, removed on Dustin's aesthetic ruling. The
- * two surfaces that replace it cost no pixels: `title`, which a pointer user
- * gets on hover, and the `aria-describedby` region, which a screen reader
- * announces after the control's name. Both are set from here, so both inherit
- * the honesty contract for free.
+ * THE HINT IS TOLD HERE AND NOWHERE ELSE, which is the promise it has always made: nothing
+ * advertises the shortcut until the shortcut works, so a reader whose script did not run is never
+ * told about a key that would do nothing for them. The two surfaces are `title` for a pointer and
+ * the `aria-describedby` region for a screen reader, and both are set from here.
  */
 /**
- * THE CHORD, SPELLED FOR THE PLATFORM, AND THE ONLY PLACE IT IS SPELLED.
+ * THE CHORD, SPELLED FOR THE PLATFORM, AND THE ONLY PLACE IT IS SPELLED. A chord spelled in two
+ * places stops agreeing the day one is edited, and the half that rots is the one nobody can see.
  *
- * MEASURED 2026-09-14 on the deployed site: "/" did not open the palette and
- * Ctrl-K did, while the hint announced "Press slash to search" and the tooltip
- * read "Search". The slash was retired in the Part A review and the two
- * surfaces that advertise it were never moved, so the site spent that window
- * telling screen reader users to press a key bound to nothing. Nothing caught
- * it because `check:browser` could not run.
- *
- * Both surfaces are written from this one function for the reason the id is
- * written once: a chord spelled in two places stops agreeing the day one is
- * edited, and the half that rots is the one nobody can see.
- *
- * `userAgentData.platform` first because `navigator.platform` is deprecated;
- * the old property is the fallback rather than the primary, and the userAgent
- * string is the last resort. Getting this wrong costs a reader the wrong
- * modifier name, not a broken control: the listener takes meta OR ctrl either
- * way, which is why the detection may be best-effort here and may not be in
- * the handler.
+ * `userAgentData.platform` first because `navigator.platform` is deprecated, then the old property,
+ * then the userAgent string. Getting this wrong costs a reader the wrong modifier NAME, not a broken
+ * control: the listener takes meta OR ctrl either way, which is why the detection may be best-effort
+ * here and may not be in the handler.
  */
 function shortcutChord(): string {
   const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
@@ -220,11 +161,8 @@ function enhanceSearchTrigger() {
   const chord = shortcutChord();
 
   /*
-   * THE TEXT IS WRITTEN BEFORE THE UNHIDE, not after. The server renders a
-   * placeholder that is never announced, and the moment this element becomes
-   * visible to assistive technology it must already carry the true chord.
-   * Unhiding first would open a window, however short, in which the stale
-   * server text is the announced description.
+   * THE TEXT IS WRITTEN BEFORE THE UNHIDE, not after. Unhiding first would open a window, however
+   * short, in which the stale server placeholder is the announced description.
    */
   for (const hint of document.querySelectorAll<HTMLElement>("[data-search-hint]")) {
     hint.textContent = `Press ${chord} to search`;
@@ -233,9 +171,8 @@ function enhanceSearchTrigger() {
 
   for (const trigger of document.querySelectorAll<HTMLElement>("[data-search-trigger]")) {
     /*
-     * THE TOOLTIP IS SET HERE RATHER THAN SERVER-RENDERED, for the reason the
-     * description is hidden until now: a `title` the server wrote would promise
-     * a shortcut to a reader who has no script to answer it.
+     * THE TOOLTIP IS SET HERE RATHER THAN SERVER-RENDERED: a `title` the server wrote would promise a
+     * shortcut to a reader who has no script to answer it.
      */
     trigger.title = `Search (${chord})`;
     trigger.dataset.shortcutHint = "shown";
@@ -255,12 +192,9 @@ function enhanceSearchTrigger() {
       return;
     }
     /*
-     * THE BARE SLASH IS GONE, ruled against in the Part A review and accepted.
-     * It collides with find-in-page, which is a browser affordance readers
-     * already own, and it was borrowed from application UIs rather than earned
-     * by anything this site does. Cmd/Ctrl-K stays: it is the palette
-     * convention, it collides with nothing a browser binds, and it is not
-     * advertised to a reader who has no script to answer it.
+     * THE BARE SLASH IS GONE. It collides with find-in-page, which is a browser affordance readers
+     * already own. Cmd/Ctrl-K stays: it collides with nothing a browser binds, and it is not advertised
+     * to a reader who has no script to answer it.
      */
   });
 }
@@ -269,39 +203,23 @@ function apply(choice: WritableTheme, form: HTMLFormElement) {
   const root = document.documentElement;
 
   /*
-   * A FLIP, so the attribute is always written. This carried a branch that
-   * removed it instead, for a submission the control no longer makes; it was
-   * unreachable code on the one path it existed for and still cost every reader
-   * its bytes.
-   *
-   * Returning to the default is not a submission and needs no line here: a
-   * reader clears the cookie in their browser and the next render omits the
-   * attribute server-side, which is where the default has always been applied.
+   * A FLIP, so the attribute is always written. Returning to the default is not a submission and
+   * needs no line here: a reader clears the cookie and the next render omits the attribute
+   * server-side, which is where the default has always been applied.
    */
   root.setAttribute("data-theme", choice);
 
   document.cookie = serializeThemeCookie(choice);
 
   /*
-   * ## THE CONTROL REDRAWS ITSELF FROM THE ATTRIBUTE, so there is nothing here
+   * THE CONTROL REDRAWS ITSELF FROM THE ATTRIBUTE, so there is nothing here. Both buttons are in the
+   * DOM and the sheet displays whichever matches `data-theme`; swapping an icon or a label from here
+   * would be a second owner of a decision the cascade already makes.
    *
-   * This used to rewrite `aria-pressed` across three buttons. The single
-   * control has no pressed state and no label to rewrite: both buttons are in
-   * the DOM, `chrome-nav.css` displays whichever matches `data-theme`, and the
-   * line above is the only thing that has to change for the right one to
-   * appear. Swapping an icon or a label from here would be a second owner of a
-   * decision the cascade already makes.
-   *
-   * ## FOCUS HAS TO MOVE, THOUGH, and that is not cosmetic
-   *
-   * The button that was just activated is the one the cascade hides, and
-   * `display: none` on the focused element drops focus to `<body>`. A keyboard
-   * reader would flip the theme and lose their place in the header, which is a
-   * worse outcome than the round trip this enhancement exists to avoid.
-   *
-   * So focus moves to the button that replaced it, but ONLY when the hidden one
-   * actually held focus. A pointer click leaves focus wherever the browser put
-   * it, and stealing it in that case would be its own defect.
+   * FOCUS HAS TO MOVE, THOUGH, and that is not cosmetic. The button just activated is the one the
+   * cascade hides, and `display: none` on the focused element drops focus to `<body>`. So focus moves
+   * to the button that replaced it, but ONLY when the hidden one actually held focus: a pointer click
+   * leaves focus wherever the browser put it, and stealing it there would be its own defect.
    */
   const active = document.activeElement;
   if (active instanceof HTMLElement && form.contains(active) && active.offsetParent === null) {

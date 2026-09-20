@@ -1,30 +1,10 @@
-/*
- * /search and the Ask panel, search Layer 2.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Search -------------------------------------------------------------------
-   Layer 0 is server rendered and must be fully usable with scripting off, so
-   nothing here depends on a class a script adds. */
+/* Search. Layer 0 is server rendered and must work fully with scripting off,
+   so nothing here depends on a class a script adds. */
 
-/* THE SAME COLUMN as everything around it, which it was not.
-
-   MEASURED at 1280: this form laid out 1216px wide from x=32, while
-   `.page-head`, `.tag-chips` and `.post-list` were each 768px from x=256. The
-   search field was the only full-bleed element on the page, so the blog index
-   read as a full-width bar sitting above a centred column.
-
-   The three siblings each carry `max-width: 48rem; margin: 0 auto` literally,
-   so this restates the pair rather than inventing a third way to say it. It is
-   a mirror of a value, which this repo normally refuses; the honest fix is a
-   shared class or a custom property across all four, and that is a refactor of
-   a 8,700-line stylesheet rather than a defect fix. Recorded so the next person
-   widening the column knows there are now four places and not three. */
+/* The same column as the page head, chips and list. This restates their max-width and margin, a mirror
+   this repo normally refuses; the real fix is one shared class for all four. */
 .blog-search {
   display: flex;
   gap: 0.5rem;

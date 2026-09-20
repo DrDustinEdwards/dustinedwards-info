@@ -95,6 +95,15 @@
       "fallbackKind": "route",
       "fallbackAt": "/search",
       "why": null
+    },
+    {
+      "id": "search-live",
+      "module": "app/enhance/search.ts",
+      "enhancement": "Replaces the results list in place as the reader types, after three characters, by re-requesting the SAME URL the form would have submitted at Accept: application/json. Also moves focus through the results with the arrow keys and clears the field on Escape. No client index and no model call.",
+      "fallback": "The page is a GET form whose response is the answer. Pressing Enter submits it and the server renders the same results this module fetches, from the same query against the same index.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".search-form",
+      "why": null
     }
   ]
 }

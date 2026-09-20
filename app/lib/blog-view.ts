@@ -4,19 +4,14 @@ import { htmlHasMath } from "~/lib/content/math.mjs";
 /**
  * The loader payload one post page renders from, built in ONE place.
  *
- * Two routes render a post: `/blog/:slug` and `/preview/:token`. They differ in
- * exactly one respect, which is the row they are allowed to fetch; everything
- * after that is identical, and this is the "identical" written down.
+ * Two routes render a post and differ in exactly one respect, the row they are allowed to fetch.
+ * This is the "identical" written down.
  *
- * It exists because the alternative is two projections of the same row that
- * agree today. The preview's whole claim is that a reviewer sees what a reader
- * would see, and a second projection would let that claim go quietly false: a
- * column added to the public page and not to this one would show up as a
- * section missing from the preview, which is precisely the class of drift a
- * preview is supposed to make impossible.
+ * THE PREVIEW'S WHOLE CLAIM is that a reviewer sees what a reader would see, and a second projection
+ * would let that claim go quietly false: a column added to the public page and not to this one shows
+ * up as a section missing from the preview.
  *
- * Pure, and it reads no clock and no environment, so the two routes cannot
- * differ by timing either.
+ * Pure, and it reads no clock and no environment, so the two cannot differ by timing either.
  */
 
 /** A neighbouring post in the reading order, or the end of it. */
@@ -25,11 +20,10 @@ type Neighbour = { slug: string; title: string } | null;
 /**
  * A blog row as either reader hands it over.
  *
- * The neighbours are WIDENED to nullable here rather than taken as `getBlogPost`
- * infers them. That function's `previous ?? null` narrows back to non-null,
- * because the array destructure it comes from is not index-checked, so its
- * inferred type says a post always has a neighbour. Every post at either end of
- * the corpus disproves that, and a draft preview has neither by design.
+ * The neighbours are WIDENED to nullable here rather than taken as `getBlogPost` infers them: its
+ * `previous ?? null` narrows back to non-null, because the array destructure it comes from is not
+ * index-checked, so the inferred type says a post always has a neighbour. Every post at either end
+ * of the corpus disproves that, and a draft preview has neither by design.
  */
 type LoadedPost = Omit<
   NonNullable<Awaited<ReturnType<typeof getBlogPost>>>,
@@ -70,16 +64,13 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
     toc,
     seriesParts,
     /*
-     * AT THE TOP LEVEL OF THE PAYLOAD, not inside `post`, because root reads it
-     * with `useRouteLoaderData` and a nested field would make root know the
-     * shape of this route's `post` as well as its own name for the flag. The
-     * name is the contract between the two files and nothing types it: root
-     * casts what the hook returns, so `check:page-payload` asserts both
-     * spellings against each other.
+     * AT THE TOP LEVEL OF THE PAYLOAD, not inside `post`, because root reads it with
+     * `useRouteLoaderData` and a nested field would make root know the shape of this route's `post` as
+     * well as its own name for the flag. The name is the contract between the two files and NOTHING TYPES
+     * IT: root casts what the hook returns, so `check:page-payload` asserts both spellings against each
+     * other.
      *
-     * Derived from the html rather than stored, so nothing has to migrate, sync
-     * or stay true; `htmlHasMath` carries the argument for that, and
-     * `check:content` makes it argue with the renderer's own AST flag.
+     * Derived from the html rather than stored, so nothing has to migrate, sync or stay true.
      */
     hasMath: htmlHasMath(post.html),
     post: {
@@ -104,11 +95,10 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
         slug: string;
         title: string;
         /**
-         * OPTIONAL, and that is the migration rather than sloppiness. The field
-         * was added to the stored blob on 2026-09-03; rows written before that
-         * carry none until the next sync or save rewrites them. The renderer
-         * shows it only when present, so an old row degrades to the bare title
-         * it always was instead of rendering "undefined".
+         * OPTIONAL, and that is the migration rather than sloppiness. Rows written before the field was
+         * added to the stored blob carry none until the next sync or save rewrites them, and the renderer
+         * shows it only when present, so an old row degrades to the bare title it always was instead of
+         * rendering "undefined".
          */
         description?: string | null;
       }>,

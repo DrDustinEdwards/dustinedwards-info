@@ -22,15 +22,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   }
 
   /*
-   * PUBLICLY CACHED, since 2026-08-26. This URL has exactly one
-   * representation, so there is no second variant under its key and nothing
-   * for a Cookie dimension to collapse against. It was `private, no-store`
-   * only because it shared a function with the negotiated representation under
-   * `/blog/:slug`, which genuinely must not be stored; the grounds and the
-   * measurement are on `markdownResponse`.
-   *
-   * This is the machine-readable surface `llms.txt` advertises and every post
-   * announces in a `Link` header, so every agent fetch was an origin render.
+   * PUBLICLY CACHED. This URL has exactly one representation, so there is nothing for a Cookie
+   * dimension to collapse against; the negotiated representation under `/blog/:slug` genuinely must
+   * not be stored, and the grounds are on `markdownResponse`.
    */
   return markdownResponse(params.slug, post.body, SHARED_CACHE_CONTROL);
 }

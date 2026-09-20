@@ -3,61 +3,9 @@
  *
  *   npm run check:mail
  *
- * NETWORK TIER. It resolves live DNS and cannot run offline, which is why it is
- * not in the tier `ship` runs.
- *
- * ## WHY THIS EXISTS
- *
- * The watchdog is the thing that tells Dustin the site is down. Its whole value
- * is one email arriving. SPF, DKIM and DMARC decide whether that email is
- * delivered or silently dropped, and all six records live in a dashboard where
- * a single click can remove one. Nothing else in this repo can see them: they
- * are not in a config file, they are not in the Worker, and a green deploy says
- * nothing about them. Measured 2026-09-08: every record below was already
- * correct and NOBODY HAD CHECKED, which is the state this gate ends.
- *
- * ## TWO PATHS, NAMED SEPARATELY, BECAUSE THEY ARE DIFFERENT CLAIMS
- *
- * Cloudflare Email Service onboards a domain twice, and the two halves use
- * different hosts and different DKIM selectors. Conflating them is the easy
- * mistake here, and it fails in the direction that looks green:
- *
- * - **SENDING** is what the alert mail uses. Email Sending puts the bounce and
- *   return path on a `cf-bounce` subdomain, so the SPF that authorises the
- *   watchdog's mail is on `cf-bounce.<domain>` and NOT on the apex, and its
- *   DKIM selector is `cf-bounce._domainkey`.
- * - **ROUTING** is what the domain receives on. Email Routing puts MX and SPF
- *   on the apex and uses the `cf2024-1._domainkey` selector.
- *
- * A gate that asserted "the apex SPF has Cloudflare's include" would therefore
- * be checking the ROUTING path while claiming to protect the ALERT MAIL, and
- * would stay green through a `cf-bounce` record being deleted. Both paths are
- * asserted here and each failure names which one it is.
- *
- * ## THE MAIL DOMAIN HAS ONE OWNER AND IT IS NOT THIS FILE
- *
- * Rule 17. The domain is read out of `ALERT_FROM` in `workers/watchdog.ts`, the
- * single place that states where the alert mail comes from. It is deliberately
- * NOT `SITE_ORIGIN`: that is a `workers.dev` host until the cutover, and
- * `watchdog.ts` records at length why the mail domain and the serving origin
- * are separate facts. Parsed rather than imported because `watchdog.ts` is a
- * Worker entry module that does not load under node.
- *
- * ## OBSERVATION BOUNDARY, and it is a real one
- *
- * This proves the RECORDS ARE PUBLISHED AND WELL FORMED. It does not prove a
- * message authenticates: only a received message's `Authentication-Results`
- * header proves that, which is a manual step recorded in the session report and
- * cannot be a gate, because it needs a mailbox this repo cannot read.
- *
- * It also cannot see DKIM key VALIDITY. A published `p=` that no longer matches
- * Cloudflare's private key is indistinguishable from a good one at this
- * distance, and would fail closed only at the recipient.
- *
- * Resolution goes through Google Public DNS rather than Cloudflare's, and the
- * independence is the point: every record here is managed by Cloudflare, so
- * asking Cloudflare's own resolver about them would put one party on both sides
- * of the question. A resolver that cannot answer is a FAILURE and never a pass.
+ * BOUNDARY: it proves the records are PUBLISHED AND WELL FORMED over live DNS, never that a
+ * message authenticates, which only a received message's headers can, and a published key that no
+ * longer matches the private one is indistinguishable from a good one here.
  */
 
 import { readFileSync } from "node:fs";
@@ -83,18 +31,8 @@ let failures = 0;
 const recordsChecked = new Set();
 
 /**
- * `ok(label, condition, detail)`, the argument order every gate in this repo
- * uses, and it is NOT a style preference.
- *
- * The first version of this file took the path as a leading argument, so the
- * label sat where the condition belongs. `check:invariants` section 17 refused
- * it on sight, correctly: a string in the condition slot is always truthy, so
- * every assertion here would have passed forever while the check count went on
- * rising. FAILURES.md carries the shape ("one helper name with two argument
- * orders can never fail") and this file was very nearly its next instance.
- *
- * The path stays visible by being the first thing in the LABEL instead, which
- * costs nothing and cannot be mistaken for a condition.
+ * The argument order every gate here uses, and NOT a style preference: the first version took the
+ * path first, so a string sat in the condition slot and every assertion would have passed forever.
  *
  * @param {string} label
  * @param {boolean} condition
@@ -109,12 +47,9 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * THE MAIL DOMAIN, read from its one owner.
- *
- * Anchored on the `const ALERT_FROM` declaration rather than on any address
- * shaped string in the file, so a mention of an address in a comment cannot
- * satisfy it. Hard rule 10: strip comments before matching is not enough on its
- * own, the needle has to name the binding.
+ * THE MAIL DOMAIN, read from its one owner, anchored on the DECLARATION rather than an
+ * address-shaped string. Hard rule 10: stripping comments is not enough, the needle has to name
+ * the binding.
  */
 function mailDomain() {
   const source = readFileSync(join(root, "workers", "watchdog.ts"), "utf8");
@@ -145,16 +80,9 @@ async function resolve(name, type) {
   recordsChecked.add(`${type} ${name}`);
   let response;
   /*
-   * RETRIED, and the reason is measured rather than defensive. The first full
-   * run of this gate went red on `TypeError: fetch failed` for ONE of the six
-   * queries while the other five answered, so the record was fine and the
-   * transport blinked. A monitoring gate that cries wolf on a single dropped
-   * packet gets ignored, which is the exact lesson `alert-state.mjs` was written
-   * around: an alert that repeats itself costs the next real one its job.
-   *
-   * TRANSPORT FAILURES ONLY. An answered query is never retried, however
-   * unwelcome the answer: NXDOMAIN and a wrong record are FINDINGS, and retrying
-   * a finding until it changes is how a gate is talked out of a true failure.
+   * RETRIED, and measured rather than defensive: one query of six failed on the transport while the
+   * other five answered. TRANSPORT FAILURES ONLY, and an answered query is never retried however
+   * unwelcome: retrying a finding until it changes is how a gate is talked out of a true failure.
    */
   const attempts = 3;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -184,10 +112,8 @@ async function resolve(name, type) {
     // Type 16 is TXT, 15 is MX. Anything else in the answer section is a CNAME
     // hop or a signature and is not the record asked for.
     .filter((/** @type {any} */ a) => (type === "TXT" ? a.type === 16 : a.type === 15))
-    // A TXT record longer than 255 bytes reaches the wire as several quoted
-    // strings and MUST be concatenated before matching. A DKIM key is always
-    // over 255 bytes, so a matcher that skipped this would read a truncated key
-    // and could never find the end of it.
+    // A TXT record over the size limit reaches the wire as several quoted strings and MUST be
+    // concatenated: a DKIM key is always over it.
     .map((/** @type {any} */ a) =>
       String(a.data)
         .replace(/"\s+"/g, "")
@@ -197,10 +123,8 @@ async function resolve(name, type) {
 }
 
 /**
- * SPF, asserted the same way on both paths.
- *
- * EXACTLY ONE record, because two SPF records on one name is a permanent error
- * under RFC 7208 and resolves to `permerror` rather than to either record.
+ * SPF, asserted the same way on both paths. EXACTLY ONE record: two on one name is a permanent
+ * error under the RFC and resolves to neither.
  *
  * @param {string} path
  * @param {string} name
@@ -227,11 +151,8 @@ async function assertSpf(path, name) {
 }
 
 /**
- * DKIM, asserted by selector.
- *
- * The public key is checked for PRESENCE and NON-EMPTINESS only. `p=` with an
- * empty value is the documented way to REVOKE a key, and it is valid syntax, so
- * a gate that only checked the record parsed would pass a revoked selector.
+ * DKIM, by selector, checked for PRESENCE and NON-EMPTINESS: an empty value is the documented way
+ * to REVOKE a key and is valid syntax.
  *
  * @param {string} path
  * @param {string} name
@@ -261,7 +182,7 @@ async function main() {
   console.log("\ncheck:mail\n");
   console.log(`  alert mail leaves as ${from.local}@${domain} (workers/watchdog.ts ALERT_FROM)\n`);
 
-  /* ------------------------------------------------ SENDING: the alert mail */
+  /* SENDING: the alert mail */
 
   await assertSpf("sending", `${BOUNCE_HOST}.${domain}`);
   await assertDkim("sending", `${SENDING_SELECTOR}.${domain}`);
@@ -281,10 +202,8 @@ async function main() {
         "no p= tag, so the record instructs recipients to do nothing",
       );
       /*
-       * p=reject SPECIFICALLY, not merely "a policy". The zone has been at
-       * reject since before this gate existed, and the failure worth catching
-       * is a WEAKENING: a dashboard edit to p=none looks like a valid DMARC
-       * record to any check that only asks whether a policy is present.
+       * The strict policy SPECIFICALLY, not merely "a policy": the failure worth catching is a
+       * WEAKENING, which looks valid to any check that asks only whether a record is present.
        */
       ok(
         `[sending] ${dmarcName} is at p=reject`,
@@ -292,9 +211,8 @@ async function main() {
         `policy is p=${policy ? policy[1] : "(absent)"}, which is weaker than the ruled value`,
       );
       /*
-       * A rua, so failures are OBSERVABLE. Without one, DMARC is enforcing at
-       * reject and reporting to nobody, which is the state this zone was in
-       * when the gate was written.
+       * A reporting address, so failures are OBSERVABLE: without one the policy is enforcing and
+       * reporting to nobody, which is the state this zone was in.
        */
       ok(
         `[sending] ${dmarcName} names an aggregate report address`,
@@ -305,7 +223,7 @@ async function main() {
     }
   }
 
-  /* --------------------------------------- ROUTING: what the domain receives */
+  /* ROUTING: what the domain receives */
 
   await assertSpf("routing", domain);
   await assertDkim("routing", `${ROUTING_SELECTOR}.${domain}`);
@@ -329,19 +247,9 @@ async function main() {
   );
 
   /*
-   * FLOOR ON RECORDS CHECKED, which is the count that matters here.
-   *
-   * The failure this floors against is a resolver returning early or a path
-   * being skipped: every assertion above hangs off a `resolve` call, so a gate
-   * that queried nothing would print no failures and report clean. Counting
-   * ASSERTIONS alone would not catch it either, because a query that fails
-   * closed still increments the assertion count.
-   *
-   * MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, never summed.
-   * Six named records: cf-bounce SPF, cf-bounce DKIM, _dmarc, apex SPF,
-   * cf2024-1 DKIM, apex MX. Floored at the full six with no slack, because the
-   * set is enumerated in this file rather than discovered, so it cannot drift
-   * without someone editing the enumeration.
+   * FLOOR ON RECORDS CHECKED: every assertion hangs off a resolve call, so a gate that queried
+   * nothing reports clean, and counting ASSERTIONS would not catch it because a query that fails
+   * closed still increments. MEASURED BY RUNNING IT, with no slack, the set being enumerated here.
    */
   const MINIMUM_RECORDS = 6;
   const recordBreach = assertFloor("check:mail", "records", recordsChecked.size, MINIMUM_RECORDS);
@@ -353,11 +261,7 @@ async function main() {
 
   console.log(`${checks} checks, ${failures} failures\n`);
 
-  /*
-   * `exitCode` rather than `process.exit()`, on check:uptime's measurement:
-   * `process.exit()` tears the process down while libuv still holds queued
-   * stdout writes on Windows and the gate exits 127 with its output lost.
-   */
+  /* `exitCode` rather than `process.exit()`, which tears the process down mid stdout write. */
   process.exitCode = failures > 0 ? 1 : 0;
 }
 

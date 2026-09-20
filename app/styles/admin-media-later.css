@@ -1,59 +1,13 @@
-/*
- * MORE MEDIA LIBRARY, and the name is deliberate. These rules are separated from admin-media.css by the whole of /playground in the source, so merging the two would REORDER them. Order is what this split refuses to change, so they stay two files and this comment is the reason.
- *
- * Split out of app.css on 2026-08-21. It was 9,269 lines and every layout
- * defect this month lived in it. THE ORDER OF THESE FILES IS THE CASCADE:
- * app.css imports them in the order they were cut, which is the order they
- * sat in the original file, so a rule that won by source position still wins.
- * Moving an import, or moving a rule between files, can change what renders.
- */
+/* More media library, separate from admin-media.css because /playground sat between them in the original
+ * order. Import order is the cascade: merging the two, moving an import, or moving a rule between files can
+ * change what renders. */
 
-/* ---- MOVED HERE FROM playground.css, 2026-08-23 -------------------------
- *
- * Everything from `MEDIA v6 session 5` to the end of this file was the TAIL of
- * playground.css. It is 42 admin-only classes and one `.admin-chip.is-active
- * .media-lens-dot` rule, all of them referenced by `admin.media._index.tsx`
- * and by nothing else. They were cut into playground.css on 2026-08-21 because
- * that is where they sat in the 9,269-line app.css, not because they have
- * anything to do with /playground.
- *
- * THE MOVE PRESERVES THE CASCADE EXACTLY, which is the property this file's
- * header refuses to change: playground.css was imported IMMEDIATELY before
- * this file, so its tail sat immediately before `.panel-actions` below, and it
- * still does. Nothing public was imported between them then and nothing is now.
- *
- * WHY IT HAD TO MOVE: splitting the admin stylesheets out of the public bundle
- * would otherwise have left these rules in the PUBLIC one, where they would
- * have stopped overriding `admin-media.css`. Measured before the split, by
- * parsing all sixteen sheets and comparing winners per (context, property):
- * SEVEN declarations changed winner on an admin page, all of them here, all
- * `.media-col-usage` and `.media-usage-dot`. `.media-usage-dot` was a verbatim
- * DUPLICATE of admin-media.css's, so it changed nothing; `.media-col-usage` is
- * the correction whose own comment below says the cell rendered
- * "in template no a..." clipped before it, and reverting that is what the move
- * prevents. Re-measured after: zero winner changes on either plane.
- * ---------------------------------------------------------------------- */
+/* Admin-only rules that must load after admin-media.css: in the public bundle they would stop
+ * overriding it (.media-col-usage). Their position here preserves the cascade exactly. */
 
-/* MEDIA v6 session 5: the three-state usage model and the surfaces it feeds.
- *
- * THE MOCKUP'S USAGE COLOURS DO NOT SHIP AS DRAWN. Its dots are #6E8F62 (sage),
- * #4F2D7F (brand) and #CE7F44 (rust) as literals, and its muted usage label is
- * #A79C8A at 2.34:1. Two of the three hues map onto tokens this palette already
- * ratifies and the third does not need inventing:
- *
- *   used         --fill-success   the state that needs no action
- *   in template  --brand          the site places it. Brand is not signalling a
- *                                 SEMANTIC state here, it is signalling "this
- *                                 belongs to the site itself", which is what
- *                                 brand means. Rule 6 forbids purple carrying
- *                                 danger, success or warning; this is none of
- *                                 those.
- *   unattached   --text-accent    rust, decorative by rule 6, and paired with
- *                                 the WORD "unattached" in every place it
- *                                 appears, so the colour carries nothing alone.
- *
- * Every dot is aria-hidden with its sentence beside it in text, which is rule 1:
- * colour is never the only channel. */
+/* Usage states take tokens, not mockup literals: used is --fill-success; in template is --brand (it
+ * belongs to the site, not a semantic state, so rule 6 holds); unattached is --text-accent, always beside
+ * the word. Every dot is aria-hidden with its sentence in text: colour is never the only channel (rule 1). */
 
 .media-usage-line {
   display: flex;
@@ -83,11 +37,7 @@
   background: var(--text-accent);
 }
 
-/* THE USAGE CELL IS A COLUMN, and this is a correction.
-   `.media-col-usage` is `display: flex` for the dot, so a second child became a
-   second item on the SAME ROW: the cell rendered "in template no a..." with both
-   the state and its flags clipped. The dot's row is its own element now, and the
-   cell stacks. */
+/* The usage cell is a column: as a flex row, the flags became a second item and clipped the state. */
 .media-col-usage {
   flex-direction: column;
   align-items: stretch;
@@ -95,11 +45,7 @@
   gap: 1px;
 }
 
-/* THE PER-ROW FLAGS, under the usage word in the list.
- *
- * --text-accent rather than the mockup's #CE7F44 literal, which is the same
- * rust through the token. Quiet by SIZE, because a flag is a note and not an
- * alarm: three of them on one row should read as a list, not a siren. */
+/* Per-row flags take --text-accent, not a literal. Quiet by size: a flag is a note, not an alarm. */
 .media-row-flags {
   display: block;
   overflow: hidden;
@@ -113,10 +59,7 @@
 /* THE TILE'S CORNER FLAG. One dot, top right, with a white ring so it reads on
    any photograph underneath. The ring is the mockup's own device and it is what
    makes a 7px dot legible over an arbitrary image without knowing the image. */
-/* GRID ONLY. In the list the frame is a 44px thumbnail and an absolutely
-   positioned dot lands ON the picture, which is what it did: every row carried a
-   coloured spot over its thumbnail. The row already prints the same information
-   as words in the Usage cell, so the list needs no dot at all. */
+/* Grid only: in the list a dot would land on the thumbnail, and the Usage cell already says it in words. */
 .media-grid[data-view="list"] .media-tile-flag {
   display: none;
 }
@@ -164,16 +107,8 @@
   background: var(--on-brand);
 }
 
-/* THE LENS NOTE, which is what stops a narrowed view reading as an accusation.
- *
- * A warm left rule, which is the mockup's device. It takes --border-warning:
- * there is no --border-accent in this palette, and reaching for one was the
- * --surface-2 mistake repeated, an undeclared token that resolves to nothing
- * and that check:contrast structurally cannot see, because the participation
- * assertion walks DECLARED tokens and a token nobody declares is in no block to
- * walk. Caught here by grepping the declarations before shipping rather than by
- * any gate. The surface is --surface rather than the mockup's white-on-cream,
- * because separation here is fill and not a 1.35:1 hairline. */
+/* The lens note keeps a narrowed view from reading as an accusation. --border-warning, since there is no
+ * --border-accent: an undeclared token resolves to nothing and check:contrast cannot see it. */
 .media-lens-note {
   display: flex;
   align-items: center;
@@ -201,12 +136,8 @@
   font-weight: 500;
 }
 
-/* THE EMPTY STATES. Three of them, because they mean three different things.
- *
- * The library-empty case is the only one that gets a heading, a paragraph and a
- * button: it is the only state where the reader has nothing to undo and needs
- * to be told what the thing is for. The other two are a sentence and a way
- * back, because the reader already has a view and wants a different one. */
+/* Three empty states. Only library-empty gets a heading, paragraph and button: it is the only one where
+ * the reader must learn what the page is for. */
 .media-empty {
   margin: 1rem 0;
   padding: 3rem 1.5rem;
@@ -251,12 +182,8 @@
   cursor: pointer;
 }
 
-/* THE ALT SUGGESTION AND THE TAG CHIPS.
- *
- * A DASHED OUTLINE MEANS "OFFERED", a solid one means "applied". That is the
- * mockup's distinction and it is doing real work: the suggestion and the tag
- * chip are the same size and sit on the same row, so shape is what separates
- * them for a reader who cannot separate the colours. */
+/* A dashed outline means offered, solid means applied: the suggestion and tag chips share size and row,
+ * so shape separates them without colour. */
 .media-suggestion,
 .media-tag-suggestion {
   padding: 0.1875rem 0.5rem;
@@ -341,15 +268,8 @@
   text-wrap: pretty;
 }
 
-/* MEDIA v6 session 5, part two: the command palette, the shortcuts panel, the
- * toast, and the marks the keyboard navigator leaves.
- *
- * Every one of these needs script and every one degrades to nothing. The
- * mockup's colours are again resolved to tokens: its dropdown border is #4F2D7F
- * (brand, which does ship), its hint row is #8B8274 at 3.27:1 and its toast is
- * #2A2622 with #F3EEE3 text, which are the text and mark colours respectively
- * and are reached here through --scrim and --on-scrim, already ratified for the
- * caption bar and already carried by check:contrast. */
+/* Palette, shortcuts panel, toast and keyboard marks: all need script and degrade to nothing.
+ * Mockup literals resolve to tokens; the toast uses --scrim and --on-scrim, which check:contrast measures. */
 
 /* The search form becomes the positioning context for the dropdown under it. */
 .media-search {
@@ -368,10 +288,8 @@
   border-radius: 0.25rem;
 }
 
-/* THE PALETTE, hung under the bar it belongs to.
- *
- * --surface-popover with --border-strong, per hard rule 5: this is popover
- * elevation and the elevated step never takes --border. */
+/* The palette, hung under its bar. --surface-popover with --border-strong: the elevated step never takes
+ * --border (hard rule 5). */
 .media-palette {
   position: absolute;
   z-index: var(--z-popover);
@@ -547,13 +465,8 @@
   border-radius: 0.25rem;
 }
 
-/* THE TOAST. Bottom centre, over everything, and it never takes pointer events:
- * a message that can be clicked is a message that can swallow a click meant for
- * the grid underneath it.
- *
- * --scrim and --on-scrim, the pair minted for the caption bar and already a
- * matrix row at 18:1. The mockup's #2A2622 on #F3EEE3 is the same idea reached
- * through two literals. */
+/* The toast: bottom centre, over everything, and it never takes pointer events, so it cannot swallow
+ * a click meant for the grid. --scrim and --on-scrim, a pair check:contrast already measures. */
 .media-toast {
   position: fixed;
   z-index: var(--z-transient);
@@ -609,19 +522,10 @@
   font-weight: 400;
 }
 
-/* MEDIA v6 session 6: the page head, the floating selection bar, and the type
- * treatments the mockup carries.
- *
- * THE FIVE FAILING COLOURS ARE STILL REFUSED. Nothing below reintroduces
- * #F3EEE3, #E5DDCE, #C9BFA9, #A79C8A or #8B8274; separation is still fill and
- * quietness is still size, weight and tracking. */
+/* Page head, floating selection bar and type. The mockup's five failing colours stay refused:
+ * separation is fill, and quietness is size, weight and tracking. */
 
-/* ---- THE PAGE HEAD ------------------------------------------------------
- *
- * The grid started at y 625 with seven rows above it, where the mockup starts
- * at 345 with four. Three of those rows were structural rather than useful: an
- * upload row of its own, a select-all row of its own, and the gap each one
- * carried. Both controls moved into rows that already existed. */
+
 
 .panel-actions {
   display: flex;
@@ -636,14 +540,7 @@
   align-items: center;
 }
 
-/* THE ROWS ABOVE THE GRID CLOSE UP.
- *
- * Measured after the two rows were removed: 28px of gap between every pair,
- * from `.panel`'s own 16px row gap plus each row's own margins stacking on top
- * of it. The mockup runs 18 to 20 between the same rows and 39 between the lens
- * row and the controls. Four consecutive 28px gaps is 40px of slack that the
- * grid pays for.
- *
+/* The rows above the grid close up; stacked panel gaps were costing the grid height.
  * Scoped to the media panel so no other admin section moves. */
 .panel:has(.media-search) {
   gap: 0.625rem;
@@ -674,17 +571,8 @@
   gap: 0.5rem;
 }
 
-/* ---- THE FLOATING SELECTION BAR ----------------------------------------
- *
- * It was a static block in the content flow at y 564, which put it under the
- * fold on a short viewport at exactly the moment the reader had just selected
- * something and wanted to act on it. The mockup floats it, and the reason is
- * that a selection is a MODE: it persists while you scroll, so its controls
- * have to persist too.
- *
- * `--scrim` and `--on-scrim`, the opaque pair already minted for the caption
- * bar and already priced in the matrix at 18:1, which is what the mockup gets
- * with #2A2622 on #F3EEE3 through two literals. */
+/* The floating selection bar: a selection is a MODE that persists while you scroll, so its controls
+ * persist too. --scrim and --on-scrim, a pair check:contrast already measures. */
 .posts-bulk {
   position: fixed;
   z-index: var(--z-pinned-bar);
@@ -694,13 +582,8 @@
   align-items: center;
   gap: 0.625rem;
   width: max-content;
-  /* 64rem, not 56. The mockup's bar carries four controls; this one also
-     carries the ruled bulk TAGGING controls, which the mockup has no equivalent
-     for. At 56rem the extra width tipped it into wrapping: measured 896x161, a
-     four-row block floating over the grid. At 64rem the same content is 991x85.
-     It still takes two rows at a 1280 viewport, and that is the honest residue
-     of having more controls than the drawing did, not a layout to fix by
-     hiding one. */
+  /* 64rem, not 56: this bar also carries the bulk tagging controls, and narrower it wraps into a block over
+     the grid. Two rows at 1280 is the honest residue; do not hide a control to fix it. */
   max-width: min(64rem, calc(100vw - 2rem));
   padding: 0.625rem 0.75rem 0.625rem 1.125rem;
   background: var(--scrim);
@@ -755,37 +638,10 @@
   scroll-margin-bottom: 5rem;
 }
 
-/* ---- TYPE ---------------------------------------------------------------
- *
- * **THE FAMILIES ARE NOT CHANGED HERE, and the first reason written down for
- * that was FALSE, so here is the measured one.**
- *
- * The draft of this comment said the site ships no webfont and has no font-src
- * for a third party. Both are wrong: `app/root.tsx` preconnects to
- * fonts.googleapis.com and fonts.gstatic.com and loads Inter, and
- * `workers/app.ts` already carries `font-src https://fonts.gstatic.com`. A
- * claim written from memory rather than from the file, which is the class this
- * repo keeps paying for.
- *
- * What is actually true:
- *
- *   IBM PLEX SANS would be a SWAP, not an addition. Same origin, same CSP, one
- *   Google Fonts request either way. It is also `--font-sans`, which every
- *   PUBLIC page uses, so it is the site's brand typeface and not a property of
- *   the media library. Changing it is an aesthetic verdict, and those are
- *   Dustin's by the standing delegation.
- *
- *   IBM PLEX MONO would be a real ADDITION. `--font-mono` is a system stack
- *   today and costs nothing; adding a webfont for it puts a new request on the
- *   public plane, because app.css ships as one stylesheet for both.
- *
- * So the TREATMENT matches and the families are left for Dustin: size, weight
- * and tracking are set to the mockup's values, which is what carries the
- * difference between a title that reads as a title and one that reads as a
- * paragraph. */
+/* Type: the families are not changed here. --font-sans is the site's brand face and --font-mono a
+ * free system stack; changing either is Dustin's call. Only size, weight and tracking follow the mockup. */
 
-/* The page title. The mockup is 27px / 600 / -0.018em; this was 20px / 400,
-   which is smaller than the search field beneath it. */
+
 .panel-head h2 {
   font-size: 1.6875rem;
   font-weight: 600;
@@ -793,9 +649,8 @@
   line-height: 1.15;
 }
 
-/* THE GROUP HEADING IS MONO IN THE MOCKUP, and the family is the point: it is a
-   machine's label for a folder, not a piece of prose. 11px, 500, wide tracking,
-   uppercase. It was 12px Inter at 600, which reads as a small headline. */
+/* The group heading is mono: it is a machine's label for a folder, not prose.
+   Small, medium weight, wide tracking, uppercase. */
 .media-group-title {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
@@ -804,11 +659,7 @@
   text-transform: uppercase;
 }
 
-/* ---- THE LIST ROW -------------------------------------------------------
- *
- * 56px against the mockup's 46px, and the 10px was two things: a 19.5px line
- * height on a 13px name where the mockup uses 16.9px, and 1px more padding.
- * A 21 percent taller row is four fewer files on a screen. */
+/* The list row: line height and padding match the mockup, because a taller row shows fewer files. */
 .media-grid[data-view="list"] .media-name {
   line-height: 1.3;
 }
@@ -821,22 +672,16 @@
   line-height: 1.3;
 }
 
-/* AND THE COPY CELL IS A FLEX BOX. `.media-col` is `display: block`, so the
-   cell was a line box holding an inline-block button, which adds the strut's
-   descent under it. That is small next to the margin above, but it is real and
-   it is what puts the glyph off the row's optical centre. */
+/* The copy cell is a flex box: as a line box, the inline-block button gains a strut descent
+   that pulls the glyph off the row's optical centre. */
 .media-grid[data-view="list"] .media-col-copy {
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
 
-/* THE CONFIRMATION MODAL. Replaces `window.prompt`, which was unstyleable, told
- * a screen reader nothing beyond its bare string, blocked the whole browser and
- * is silently disabled in some contexts, where the form submitted unconfirmed.
- *
- * Centred rather than docked, because a confirmation is a question that stops
- * everything, not a panel you work beside. */
+/* The confirmation modal replaces window.prompt, which is unstyleable, mute to a screen reader and
+ * silently disabled in some contexts. Centred, not docked: a confirmation stops everything. */
 .media-modal-layer {
   position: fixed;
   z-index: var(--z-transient);

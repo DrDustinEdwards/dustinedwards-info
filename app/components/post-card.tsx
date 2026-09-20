@@ -4,16 +4,10 @@ import { longDateUTC } from "~/lib/long-date.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 
 /**
- * One post in a listing.
- *
- * EXTRACTED rather than copied, on 2026-09-03, when the tag archive needed the
- * same card. The spec asks for "the same cards", and the only way to be sure of
- * that is for there to be one card: two copies of thirty lines of markup are
- * two places a field gets added and one place it gets forgotten, which is how
- * the index and the archive would come to show different things about the same
- * post.
- *
- * The shape is the row `listBlogPosts` returns, narrowed to what a card draws.
+ * One post in a listing. EXTRACTED rather than copied, because two copies of
+ * thirty lines of markup are two places a field gets added and one place it gets
+ * forgotten, which is how the index and the archive would come to show different
+ * things about the same post.
  */
 export type CardPost = {
   slug: string;
@@ -29,21 +23,12 @@ export type CardPost = {
 export function PostCard({ post }: { post: CardPost }) {
   return (
     /*
-     * THE SUMMARY h-entry, and it rides HERE for the same reason the card
-     * itself was extracted: three routes render this component (`/blog`, the
-     * tag archive and the series page), so one set of classes marks all three
-     * and there is no second copy to forget.
+     * A SUMMARY ENTRY, not a truncated full one: it deliberately carries no
+     * `e-content`, because a consumer that finds content on a listing entry has been
+     * handed a summary labelled as the article.
      *
-     * A SUMMARY ENTRY, not a truncated full one. It carries `p-name`, `u-url`,
-     * `dt-published` and `p-summary` and deliberately no `e-content`: a
-     * consumer that finds content on a listing entry has been handed a summary
-     * labelled as the article, and the honest signal for "the body is at the
-     * url" is the absence of a content property.
-     *
-     * `u-url` is on the anchor rather than on the `<li>`, because the anchor is
-     * where the address actually is. It renders relative, and a parser resolves
-     * it against the page it was served from, which is what
-     * `check:microformats` asserts by handing the parser the page's own URL.
+     * `u-url` is on the anchor rather than the `<li>`, because the anchor is where the
+     * address actually is.
      */
     <li className="post-card h-entry">
       <h2 className="post-card-title p-name">
@@ -68,15 +53,11 @@ export function PostCard({ post }: { post: CardPost }) {
       {post.tags.length > 0 && (
         <p className="post-card-tags">
           {/*
-            THE TAG NAME IS A LINK TO THE ARCHIVE, not to a filtered index.
-
-            It pointed at `/blog?tag=<slug>`, which is a filtered VIEW of the
-            index: a real list, but one whose canonical now names the archive,
-            so every card on the site was linking at the non-canonical address
-            of a page that exists at a better one. The chips on `/blog` keep
-            pointing at the filtered view, because their job is composing with
-            the year filter beside them; a card's tag has no such job.
-          */}
+           * THE TAG NAME IS A LINK TO THE ARCHIVE, not to a filtered index: every card was
+           * linking at the non-canonical address of a page that exists at a better one. The
+           * chips on `/blog` keep the filtered view, because their job is composing with the
+           * year beside them.
+           */}
           {post.tags.map((tag) => (
             <Link key={tag} to={tagPath(tag)}>
               {tag}
@@ -89,11 +70,9 @@ export function PostCard({ post }: { post: CardPost }) {
 }
 
 /**
- * Newer/older pagination, shared for the same reason the card is.
- *
- * `hrefFor` is passed in because the two listings paginate at different URLs:
- * the index composes a query string of three axes, the archive appends `?page=`
- * to a path. The MARKUP is what has to be identical, and it is.
+ * `hrefFor` is passed in because the two listings paginate at different URLs: the
+ * index composes a query string of three axes, the archive appends `?page=` to a
+ * path. The MARKUP is what has to be identical, and it is.
  */
 export function Pagination({
   page,
