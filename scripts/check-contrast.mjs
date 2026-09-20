@@ -410,6 +410,14 @@ const MATRIX = [
   ["--brand-hover", "--raised", TEXT, "hovered link on the raised step"],
   ["--brand-pressed", "--paper", TEXT, "pressed link on limestone"],
   ["--on-brand", "--brand-pressed", TEXT, "label on a pressed primary button"],
+  /*
+   * --brand-active IS NOT --brand-pressed, and the difference only shows in dark: they share
+   * #2f1a4d in light and split to #c9baea against #a08ecd. The post page's `:active` link takes
+   * --brand-active because the Direction D handoff's token table names it, so the pressed pair
+   * above measured a colour no link on limestone was wearing. Its --bg pairing near the top of
+   * this list is the legacy ground, not this one.
+   */
+  ["--brand-active", "--paper", TEXT, "active link on limestone"],
   ["--visited", "--paper", TEXT, "visited link on limestone"],
   ["--visited", "--raised", TEXT, "visited link on the raised step"],
   ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
