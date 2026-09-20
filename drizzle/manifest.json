@@ -17,6 +17,7 @@
     "0014_webmentions.sql": "7d138f3d059ea26821eeb74029a6e2fa99c490e67fdda5895dc0978f44073f8b",
     "0015_zero_result_queries.sql": "f9b21a159d9146cc0cf25214a9329fc7971d5e5ceca1ad6ed8567ff824f65c55",
     "0016_post_head_blocks.sql": "71b01d427e7f87effe753743cbff8e5c1331ba954a2bb3ad1de85739c4867556",
-    "0017_post_changelog.sql": "7fe40c187b38620d19bded6d2ba59b73f9444931c159cc3861af5c3f3c09e586"
+    "0017_post_changelog.sql": "7fe40c187b38620d19bded6d2ba59b73f9444931c159cc3861af5c3f3c09e586",
+    "0018_post_backlinks.sql": "6ad183058f38b5f71b8923d4e309af348624a2f359fde1fe58313b9d287d64d3"
   }
 }

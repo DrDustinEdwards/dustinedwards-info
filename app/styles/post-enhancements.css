@@ -200,6 +200,7 @@
    gaps between entries and no bullet. No new colour token. */
 .further-reading,
 .related-posts,
+.post-backlinks,
 .post-mentions {
   max-width: 44rem;
   margin: 2.5rem auto 0;
@@ -209,6 +210,7 @@
 
 .further-reading h2,
 .related-posts h2,
+.post-backlinks h2,
 .post-mentions h2 {
   margin: 0 0 0.75rem;
   font-size: 1rem;
@@ -216,6 +218,7 @@
 
 .further-reading ul,
 .related-posts ul,
+.post-backlinks ul,
 .post-mentions ul {
   margin: 0;
   padding-left: 1.25rem;

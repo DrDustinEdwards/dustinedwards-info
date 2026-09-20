@@ -85,7 +85,8 @@ function buildSql(posts) {
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
         `further_reading, og_title, og_description, related, og_image, source_blob_sha, ` +
-        `render_hash, writing_status, assumed_audience, key_takeaways, changelog, updated_at) VALUES (` +
+        `render_hash, writing_status, assumed_audience, key_takeaways, changelog, backlinks, ` +
+        `updated_at) VALUES (` +
         `${sql(post.slug)}, 'post', ${sql(post.title)}, ${sql(post.markdown)}, ${sql(post.html)}, ` +
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
@@ -99,6 +100,8 @@ function buildSql(posts) {
         `${sql(post.keyTakeaways ? JSON.stringify(post.keyTakeaways) : null)}, ` +
         // The author-written post history, NULL on the posts nobody has revised.
         `${sql(post.changelog ? JSON.stringify(post.changelog) : null)}, ` +
+        // The posts that link here, NULL when nothing does.
+        `${sql(post.backlinks && post.backlinks.length > 0 ? JSON.stringify(post.backlinks) : null)}, ` +
         `${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
@@ -113,6 +116,7 @@ function buildSql(posts) {
         `writing_status = excluded.writing_status, ` +
         `assumed_audience = excluded.assumed_audience, ` +
         `key_takeaways = excluded.key_takeaways, changelog = excluded.changelog, ` +
+        `backlinks = excluded.backlinks, ` +
         `updated_at = excluded.updated_at;`,
     );
   }

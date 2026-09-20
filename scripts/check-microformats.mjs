@@ -207,6 +207,13 @@ function postLoaderData(record) {
       ogTitle: record.ogTitle ?? null,
       ogDescription: record.ogDescription ?? null,
       related: record.related ?? [],
+      /*
+       * The two lists the artifact now carries beside `related`. Spelled out rather than left
+       * undefined: this fixture is a deliberate SECOND statement of the projection, so a field the
+       * component reads and this object omits is a crash here and a silent hole in the assertion.
+       */
+      backlinks: record.backlinks ?? [],
+      changelog: record.changelog ?? null,
       furtherReading: record.furtherReading ?? [],
     },
   };

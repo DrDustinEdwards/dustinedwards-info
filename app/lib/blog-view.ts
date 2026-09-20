@@ -91,6 +91,15 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       part: post.part,
       ogTitle: post.ogTitle,
       ogDescription: post.ogDescription,
+      /*
+       * The posts on this site that link here. An empty array rather than null: the renderer asks
+       * for `.length`, and the loader below filters it against the live rows exactly as it filters
+       * `related`, in the same query.
+       */
+      backlinks: parseJson(post.backlinks, []) as Array<{
+        slug: string;
+        title: string;
+      }>,
       related: parseJson(post.related, []) as Array<{
         slug: string;
         title: string;

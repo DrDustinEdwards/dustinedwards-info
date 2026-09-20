@@ -88,7 +88,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
    */
   const stillPublic = await publiclyVisibleSlugs(
     getEnv(context),
-    view.post.related.map((item) => item.slug),
+    // BOTH LISTS IN ONE QUERY. Backlinks are stored and stale for the same reason and need the same
+    // re-check, and asking twice would be two indexed reads for one answer.
+    [...view.post.related, ...view.post.backlinks].map((item) => item.slug),
   );
 
   /*
@@ -105,6 +107,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       post: {
         ...view.post,
         related: view.post.related.filter((item) => stillPublic.has(item.slug)),
+        backlinks: view.post.backlinks.filter((item) => stillPublic.has(item.slug)),
       },
     },
     {
@@ -610,6 +613,24 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                   {item.description ? (
                     <span className="related-description">{item.description}</span>
                   ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/*
+         * LINKED FROM, WHICH IS NOT MENTIONS. This is this site linking to itself, derived from
+         * every rendered body at build time; the mentions section below is other people's sites
+         * saying they linked here, approved one at a time. Two facts, two sections, two names.
+         */}
+        {post.backlinks.length > 0 && (
+          <section className="post-backlinks" aria-labelledby="backlinks-heading">
+            <h2 id="backlinks-heading">Linked from</h2>
+            <ul>
+              {post.backlinks.map((item) => (
+                <li key={item.slug}>
+                  <Link to={`/blog/${item.slug}`}>{item.title}</Link>
                 </li>
               ))}
             </ul>
