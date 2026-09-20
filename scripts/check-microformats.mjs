@@ -207,6 +207,13 @@ function postLoaderData(record) {
       ogTitle: record.ogTitle ?? null,
       ogDescription: record.ogDescription ?? null,
       related: record.related ?? [],
+      /*
+       * The two lists the artifact now carries beside `related`. Spelled out rather than left
+       * undefined: this fixture is a deliberate SECOND statement of the projection, so a field the
+       * component reads and this object omits is a crash here and a silent hole in the assertion.
+       */
+      backlinks: record.backlinks ?? [],
+      changelog: record.changelog ?? null,
       furtherReading: record.furtherReading ?? [],
     },
   };
@@ -667,7 +674,7 @@ await cleanup();
  * load bearing for CI. WHAT THE TIGHTNESS COSTS: unpublishing breaches it, and the repair is a
  * re-measured floor in the same commit.
  */
-const MINIMUM_CHECKS = 216;
+const MINIMUM_CHECKS = 226;
 const floorBreach = assertFloor(
   "check:microformats",
   "checks",

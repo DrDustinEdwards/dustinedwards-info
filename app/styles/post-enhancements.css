@@ -200,6 +200,7 @@
    gaps between entries and no bullet. No new colour token. */
 .further-reading,
 .related-posts,
+.post-backlinks,
 .post-mentions {
   max-width: 44rem;
   margin: 2.5rem auto 0;
@@ -209,6 +210,7 @@
 
 .further-reading h2,
 .related-posts h2,
+.post-backlinks h2,
 .post-mentions h2 {
   margin: 0 0 0.75rem;
   font-size: 1rem;
@@ -216,6 +218,7 @@
 
 .further-reading ul,
 .related-posts ul,
+.post-backlinks ul,
 .post-mentions ul {
   margin: 0;
   padding-left: 1.25rem;
@@ -247,4 +250,26 @@
 .post-mention-date {
   color: var(--text-muted);
   font-size: 0.8125rem;
+}
+
+/* The selection link, created by script and inserted into the prose after the block a reader just
+   selected. Quieter than a `.post-action`: it appears mid-read, beside the sentence, so it must not
+   outweigh the paragraph it sits under. */
+.selection-link {
+  display: block;
+  margin: 0.5rem 0 1rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.selection-link:hover {
+  border-style: solid;
+  border-color: var(--brand);
+  color: var(--brand);
 }

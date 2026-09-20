@@ -331,3 +331,16 @@
 [data-theme="dark"] .prose .shiki span[style*="--shiki-dark-bg"] {
   background-color: var(--shiki-dark-bg);
 }
+
+/*
+ * A PULL QUOTE: one clause of the paragraph below it, raised. `aria-hidden` in the markup, so the
+ * sentence is heard once, in the prose, in order. Not a blockquote, which is a quotation from
+ * somewhere else; this is the page quoting itself, so it takes no quotation mark and no rule.
+ */
+.prose .pull-quote {
+  margin: 1.5rem 0 0.5rem;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  line-height: 1.35;
+  text-wrap: balance;
+}

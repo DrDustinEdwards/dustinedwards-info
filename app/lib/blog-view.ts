@@ -91,6 +91,15 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       part: post.part,
       ogTitle: post.ogTitle,
       ogDescription: post.ogDescription,
+      /*
+       * The posts on this site that link here. An empty array rather than null: the renderer asks
+       * for `.length`, and the loader below filters it against the live rows exactly as it filters
+       * `related`, in the same query.
+       */
+      backlinks: parseJson(post.backlinks, []) as Array<{
+        slug: string;
+        title: string;
+      }>,
       related: parseJson(post.related, []) as Array<{
         slug: string;
         title: string;
@@ -106,6 +115,23 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
         title: string;
         url: string;
       }>,
+      /*
+       * The three optional head blocks, passed through as stored. NULL stays null: absent is the
+       * normal case and the renderer shows each only when present, so a row written before these
+       * columns existed degrades to the post it already was rather than to empty furniture.
+       */
+      writingStatus: post.writingStatus ?? null,
+      assumedAudience: post.assumedAudience ?? null,
+      keyTakeaways: parseJson(post.keyTakeaways, null) as string[] | null,
+      /*
+       * The post history, passed through as stored. The 24-hour threshold that decides whether it
+       * is shown at all lives on the route beside the Updated line it already governs, so there is
+       * one comparison and not two.
+       */
+      changelog: parseJson(post.changelog, null) as Array<{
+        date: string;
+        note: string;
+      }> | null,
     },
   };
 }

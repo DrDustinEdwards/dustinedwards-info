@@ -22,6 +22,7 @@ import {
   findWideDashes,
   postPath,
   renderPost,
+  withBacklinks,
   withRelated,
 } from "~/lib/content/pipeline.mjs";
 // Side-effect import: installs the Worker WASM loader before anything renders.
@@ -39,7 +40,7 @@ import {
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
-import { listPostCorpusForRelated } from "~/db";
+import { listPostCorpusForRelated, listPostLinkCorpus } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 
 export { GitHubError, PolicyError };
@@ -228,6 +229,43 @@ async function relatedFor(env: PublishEnv, record: any) {
 }
 
 /**
+ * The saved post's backlink list, computed against the D1 corpus.
+ *
+ * ONLY THIS POST'S LIST IS WRITTEN, exactly as `relatedFor` above writes only this post's related
+ * list. Saving a post also changes the backlinks of every post it links TO, and those rows wait for
+ * the next bulk sync; recomputing them here would mean writing rows this door was not asked to
+ * write.
+ *
+ * The corpus carries rendered bodies because that is where a link is read from, and the saved post
+ * goes LAST so `withBacklinks` returns its entry at a position that cannot miss.
+ */
+async function backlinksFor(env: PublishEnv, record: any) {
+  const corpus = await listPostLinkCorpus(env);
+  const others = corpus
+    .filter((p) => p.slug !== record.slug)
+    .map((p) => ({
+      slug: p.slug,
+      title: p.title,
+      html: p.html ?? "",
+      draft: p.status === "draft",
+      // ISO strings, matching what the pipeline compares: string order over ISO timestamps IS
+      // chronological order.
+      publishAt: p.publishAt ? p.publishAt.toISOString() : "",
+    }));
+  const computed = withBacklinks([
+    ...others,
+    {
+      slug: record.slug,
+      title: record.title,
+      html: record.html,
+      draft: record.draft,
+      publishAt: record.publishAt,
+    },
+  ]);
+  return computed[computed.length - 1].backlinks;
+}
+
+/**
  * THE ONLY DOOR TO A RENDERED ROW. Nothing else may write one, because two writers of one row shape
  * is the drift the committed artifact used to exist to catch.
  *
@@ -254,6 +292,7 @@ export async function renderAndWrite(
   }
 
   record.related = await relatedFor(env, record);
+  record.backlinks = await backlinksFor(env, record);
   await syncPostToD1(env, record);
 
   /*
@@ -524,9 +563,10 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at,
            cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part,
            further_reading, og_title, og_description, related, source_blob_sha, render_hash,
+           writing_status, assumed_audience, key_takeaways, changelog, backlinks,
            updated_at)
          VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-           ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, unixepoch())
+           ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, unixepoch())
          ON CONFLICT(slug) DO UPDATE SET
            kind = excluded.kind, title = excluded.title, body = excluded.body,
            html = excluded.html, description = excluded.description, status = excluded.status,
@@ -537,6 +577,10 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
            further_reading = excluded.further_reading, og_title = excluded.og_title,
            og_description = excluded.og_description, related = excluded.related,
            source_blob_sha = excluded.source_blob_sha, render_hash = excluded.render_hash,
+           writing_status = excluded.writing_status,
+           assumed_audience = excluded.assumed_audience,
+           key_takeaways = excluded.key_takeaways, changelog = excluded.changelog,
+           backlinks = excluded.backlinks,
            updated_at = unixepoch()`,
       )
       .bind(
@@ -561,6 +605,16 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         JSON.stringify(record.related ?? []),
         record.sourceBlobSha ?? null,
         record.renderHash ?? null,
+        /*
+         * The three optional head blocks. NULL rather than an empty value when absent, because
+         * absent is the normal case and a written empty string would be the author saying nothing
+         * in a way the page cannot tell from the author saying something.
+         */
+        record.writingStatus ?? null,
+        record.assumedAudience ?? null,
+        record.keyTakeaways ? JSON.stringify(record.keyTakeaways) : null,
+        record.changelog ? JSON.stringify(record.changelog) : null,
+        record.backlinks ? JSON.stringify(record.backlinks) : null,
       ),
     ...record.tags.map((tag: string) =>
       db

@@ -50,6 +50,35 @@ export const posts = sqliteTable(
     ogDescription: text("og_description"),
     /** JSON array of { slug, title, shared }, computed over the whole corpus. */
     related: text("related"),
+    /**
+     * JSON array of { slug, title }: the posts on this site that link TO this one, computed over
+     * the whole corpus like `related` above. Not the webmentions table, which is other people's
+     * sites and is approved one at a time.
+     */
+    backlinks: text("backlinks"),
+    /**
+     * THE THREE OPTIONAL AUTHOR-SET HEAD BLOCKS, all nullable because absent is the normal case.
+     *
+     * Columns rather than frontmatter reads, because the public route reads the RENDERED row:
+     * D1 holds the only rendered copy (hard rule 18) and a field that is not a column is a field
+     * the page cannot show. They are derived from the repository like everything else here.
+     *
+     * NOT `status`, which is taken: that is the draft/published visibility column above. A post
+     * may be published and still carry `writing_status: draft`, meaning the prose is a draft, and
+     * one name for both facts would make that sentence unsayable.
+     */
+    writingStatus: text("writing_status"),
+    assumedAudience: text("assumed_audience"),
+    /** JSON array of strings, matching `related` rather than inventing a second list convention. */
+    keyTakeaways: text("key_takeaways"),
+    /**
+     * THE AUTHOR-WRITTEN POST HISTORY. JSON array of { date, note }, in the same convention.
+     *
+     * `updatedAt` above already says WHEN and cannot say WHAT, and it is rewritten by every sync,
+     * so it is a deploy timestamp carrying an edit's name. This is prose about a revision, which
+     * only the author has, and it arrives through frontmatter like every other authored field.
+     */
+    changelog: text("changelog"),
     /** Generated social card path, set by sync after build:og uploads it. */
     ogImage: text("og_image"),
     /**

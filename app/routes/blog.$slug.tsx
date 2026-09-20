@@ -1,4 +1,6 @@
 import { Link, data } from "react-router";
+import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
+import { PostHistory } from "~/components/post-history";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { ShellFooter } from "~/components/shell-footer";
@@ -38,6 +40,8 @@ import "~/styles/blog-index.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
+import "~/styles/post-head-blocks.css";
+import "~/styles/post-disclosures.css";
 
 /**
  * Content negotiation runs as middleware rather than in the loader: a document
@@ -84,7 +88,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
    */
   const stillPublic = await publiclyVisibleSlugs(
     getEnv(context),
-    view.post.related.map((item) => item.slug),
+    // BOTH LISTS IN ONE QUERY. Backlinks are stored and stale for the same reason and need the same
+    // re-check, and asking twice would be two indexed reads for one answer.
+    [...view.post.related, ...view.post.backlinks].map((item) => item.slug),
   );
 
   /*
@@ -101,6 +107,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       post: {
         ...view.post,
         related: view.post.related.filter((item) => stillPublic.has(item.slug)),
+        backlinks: view.post.backlinks.filter((item) => stillPublic.has(item.slug)),
       },
     },
     {
@@ -336,6 +343,16 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
              * sentence on the page than in the head.
              */}
             <p className="post-dek">{dek}</p>
+            {/*
+             * BETWEEN THE DEK AND THE DATE, because all three qualify the post before it is read:
+             * whether it is finished, who it is for, and what it concludes. Below the meta line
+             * they would be read after the reader has already decided.
+             */}
+            <PostHeadBlocks
+              writingStatus={(post.writingStatus as WritingStatus | null) ?? null}
+              assumedAudience={post.assumedAudience ?? null}
+              keyTakeaways={post.keyTakeaways ?? null}
+            />
             <p className="post-card-meta">
               {post.publishAt && (
                 <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
@@ -483,6 +500,13 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           )}
 
           {/*
+           * THE SAME THRESHOLD, NOT A SECOND ONE. `revisedLabel` is already the answer to "has this
+           * post been revised rather than merely redeployed", so the history hangs off it: a post
+           * cannot claim a revision here and deny it in the line above.
+           */}
+          {revisedLabel && post.changelog && <PostHistory entries={post.changelog} />}
+
+          {/*
            * Every one is a plain link, so all three work with scripting off. The
            * enhancement script upgrades the first to a clipboard copy.
            */}
@@ -589,6 +613,24 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                   {item.description ? (
                     <span className="related-description">{item.description}</span>
                   ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/*
+         * LINKED FROM, WHICH IS NOT MENTIONS. This is this site linking to itself, derived from
+         * every rendered body at build time; the mentions section below is other people's sites
+         * saying they linked here, approved one at a time. Two facts, two sections, two names.
+         */}
+        {post.backlinks.length > 0 && (
+          <section className="post-backlinks" aria-labelledby="backlinks-heading">
+            <h2 id="backlinks-heading">Linked from</h2>
+            <ul>
+              {post.backlinks.map((item) => (
+                <li key={item.slug}>
+                  <Link to={`/blog/${item.slug}`}>{item.title}</Link>
                 </li>
               ))}
             </ul>
