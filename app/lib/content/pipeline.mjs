@@ -295,6 +295,60 @@ export const frontmatterSchema = z.object({
   /** Multi-part writing. Both fields travel together or neither does. */
   series: z.string().min(1).optional(),
   part: z.number().int().min(1, "must be 1 or greater").optional(),
+  /**
+   * THE AUTHOR-SET HEAD BLOCKS, all three optional and most posts carrying none.
+   *
+   * NOT `status`: that name is the row's draft/published column. A post may be published and
+   * still be a draft in prose, which is what `writing_status: draft` says.
+   *
+   * A CLOSED SET, not a free string. gwern's five words are the whole vocabulary, and the point of
+   * a status tag is that a reader learns the five once and then reads them at a glance; a free
+   * field turns it into a second dek written in a different voice on every post. An unknown value
+   * is a build failure at the post that set it, which is where it can be fixed.
+   *
+   * NONE OF THE THREE IS A BYLINE. The missing byline is deliberate: there is one author, the site
+   * is his name, and a hidden p-author h-card carries it for microformats. A line naming a person
+   * here would reintroduce by accident what was removed on purpose.
+   */
+  writing_status: z.enum(["notes", "draft", "in progress", "finished", "obsolete"]).optional(),
+  /**
+   * WHO THE POST IS FOR, in one sentence the author writes. It replaces a depth tag, because
+   * "advanced" tells a reader less than a sentence does.
+   *
+   * Capped so it stays a line rather than becoming a second dek. A longer one belongs in the prose.
+   */
+  assumed_audience: z.string().min(1).max(200).optional(),
+  /**
+   * THE ANSWER, THE QUALIFICATION, AND WHAT TO DO NEXT, in that order, author-written.
+   *
+   * NOT A TEMPLATE FEATURE and not generated: a summary the author did not write is a summary
+   * nobody checked. Long technical posts only, where the dek does not already give the answer.
+   *
+   * Two to four items, because one is a dek and five is the post.
+   */
+  key_takeaways: z.array(z.string().min(1).max(300)).min(2).max(4).optional(),
+  /**
+   * THE POST HISTORY, author-written, one line per revision.
+   *
+   * `updated_at` on the row already says WHEN and cannot say WHAT; it is also rewritten by every
+   * sync, which is why the page puts a 24-hour threshold in front of it. This says what changed,
+   * and only the author knows that.
+   *
+   * THE DATE IS `isoDate`, the same preprocessor the post's own `date` uses, because YAML parses a
+   * bare 2026-08-15 into a Date object and a hand-rolled string regex would reject every unquoted
+   * one. A revision is a day and not an instant. Ordering is the renderer's, so an author may
+   * append a line rather than prepend one.
+   */
+  changelog: z
+    .array(
+      z.object({
+        date: isoDate,
+        note: z.string().min(1).max(300),
+      }),
+    )
+    .min(1)
+    .max(20)
+    .optional(),
   /** Curated outbound links, rendered at the end of the post. */
   further_reading: z
     .array(
@@ -667,6 +721,93 @@ export function withRelated(posts) {
       related: scored
         .slice(0, RELATED_LIMIT)
         .map(({ slug, title, description, shared }) => ({ slug, title, description, shared })),
+    };
+  });
+}
+
+/**
+ * Every post on this site that a rendered body links to, as slugs.
+ *
+ * READ FROM THE RENDERED HTML, not the markdown. Markdown has inline links, reference links and
+ * raw HTML, and the renderer turns all three into one shape; scanning the source would mean a
+ * second, worse parser for the same fact.
+ *
+ * THE CAPTURE IS DELIBERATELY LOOSE AND THE CORPUS IS THE FILTER. Anchoring the pattern on a slug
+ * grammar would put a second copy of that grammar here; instead this returns whatever sits in the
+ * path and `withBacklinks` keeps only what is a post. That is also what makes `/blog/tags/x` and
+ * `/blog/some-post.md` fall out for free rather than by exclusion, which is hard rule 10's
+ * over-wide-exclusion class.
+ *
+ * @param {string} html
+ * @returns {Set<string>}
+ */
+export function outgoingPostLinks(html) {
+  const found = new Set();
+  for (const match of html.matchAll(/href="\/blog\/([^"#?]+)(?:[#?][^"]*)?"/g)) {
+    found.add(match[1]);
+  }
+  return found;
+}
+
+/**
+ * Fills in each post's `backlinks`: the posts on this site that link TO it.
+ *
+ * THE SAME SHAPE AS `withRelated` AND FOR THE SAME REASON. A backlink is a property of the SET:
+ * publishing one post changes the backlink list of every post it links to, so a writer that
+ * recomputed one entry against a stale view of the rest would disagree with the next full build.
+ * Both writers therefore run this over the complete corpus.
+ *
+ * IT IS NOT THE MENTIONS SECTION. Webmentions are other people's sites saying they linked here and
+ * are approved one at a time; this is this site linking to itself, and it is derived.
+ *
+ * THE SOURCE IS FILTERED FOR VISIBILITY, not the target. A draft or scheduled post linking to a
+ * published one must not put its own title on that public page, which is the same road the related
+ * list's `!draft` filter left open. `isPubliclyVisible` is the one JavaScript owner of that rule.
+ *
+ * THE READER FILTERS AGAIN. This is computed at write time and stored, and a linking post can be
+ * unpublished afterwards, so `blog.$slug.tsx` re-checks the stored list against the live rows in
+ * the same query it already runs for `related`.
+ *
+ * NO LIMIT. A cap here would silently drop a real link, and a cap that never fires is an assertion
+ * that cannot fail. The list is titles at the foot of the page and it grows with the corpus.
+ *
+ * @param {any[]} posts
+ */
+export function withBacklinks(posts) {
+  const now = Date.now();
+  const isPost = new Set(posts.map((post) => post.slug));
+  /** @type {Map<string, Array<{ slug: string, title: string, publishAt: string }>>} */
+  const incoming = new Map();
+
+  for (const post of posts) {
+    if (
+      !isPubliclyVisible(
+        { status: statusForDraft(post.draft), publishAt: post.publishAt },
+        now,
+      )
+    ) {
+      continue;
+    }
+    for (const target of outgoingPostLinks(post.html ?? "")) {
+      // A post linking to itself is a table of contents, not a backlink.
+      if (target === post.slug || !isPost.has(target)) continue;
+      const list = incoming.get(target) ?? [];
+      list.push({ slug: post.slug, title: post.title, publishAt: post.publishAt });
+      incoming.set(target, list);
+    }
+  }
+
+  return posts.map((post) => {
+    // Newest first, then slug. No tie is left to array order, because array order is not stable
+    // input: the same corpus read in a different order would otherwise produce a different page.
+    const list = (incoming.get(post.slug) ?? []).sort(
+      (a, b) =>
+        (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : 0) ||
+        (a.slug < b.slug ? -1 : 1),
+    );
+    return {
+      ...post,
+      backlinks: list.map(({ slug, title }) => ({ slug, title })),
     };
   });
 }
@@ -1177,9 +1318,173 @@ function remarkMathValidate(file, sink) {
 }
 
 /**
+ * Turns `:::details{summary="Raw counts"}` into a native `<details>`.
+ *
+ * SUPPLEMENTARY MATERIAL ONLY: long methods, raw data, an appendix. Never the main argument, and
+ * that is not left to a comment. A heading inside is REFUSED, because a heading is how this site
+ * spells "section of the argument": it goes in the table of contents, it is a link target, and a
+ * section that is in the contents and invisible until somebody clicks is the exact failure the rule
+ * is about. Prose, tables, code and lists are all fine.
+ *
+ * NATIVE `details`, so the text is IN THE HTML whether or not anything runs. A reader with no
+ * script opens it; a reader who prints gets it open; a search engine and the markdown twin have it
+ * either way. No enhancement is registered for this, because there is nothing to enhance.
+ *
+ * THE SUMMARY IS REQUIRED. A disclosure with no label is a triangle, and a reader deciding whether
+ * to open it is deciding blind.
+ *
+ * @param {string} file
+ */
+function remarkDetails(file) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    visit(tree, (node) => {
+      if (node.type !== "containerDirective" || node.name !== "details") return;
+
+      const summary = (node.attributes ?? {}).summary;
+      if (!summary) {
+        throw new ContentError(file, ":::details requires a summary attribute");
+      }
+
+      const heading = (node.children ?? []).find((child) => child.type === "heading");
+      if (heading) {
+        const line = heading.position?.start?.line;
+        throw new ContentError(
+          file,
+          `:::details holds a heading${line ? ` on line ${line}` : ""}, which makes it a section ` +
+            "of the argument rather than supplementary material. A heading is in the table of " +
+            "contents and is a link target, so collapsing it hides a section a reader was sent " +
+            "to. Use it for long methods, raw data or an appendix, and leave the argument open.",
+        );
+      }
+
+      node.data = { ...node.data, hName: "details", hProperties: { className: ["post-details"] } };
+      node.children = [
+        {
+          type: "paragraph",
+          data: { hName: "summary" },
+          children: [{ type: "text", value: String(summary) }],
+        },
+        .../** @type {any[]} */ (node.children ?? []),
+      ];
+    });
+  };
+}
+
+/** At most this many pull quotes on a page. The third one is a design with no hierarchy left. */
+const PULL_QUOTE_LIMIT = 2;
+
+/**
+ * A pull quote is a glance, so it is capped at roughly one line of display type. Longer than this
+ * and a reader reads it twice instead of once, which is the failure the aria-hidden is about in the
+ * other direction.
+ */
+const PULL_QUOTE_MAX_CHARS = 160;
+
+/**
+ * `:pullquote[a sentence already in the prose]` raises a visual copy of that sentence above its
+ * paragraph.
+ *
+ * IT MARKS THE PROSE, IT DOES NOT DUPLICATE IT, and that is the whole design. Written the obvious
+ * way, as a block the author types the sentence into, the sentence would exist TWICE in the source
+ * and therefore twice in the markdown twin, which serves the source verbatim. Marking the sentence
+ * where it already lives means the twin has it once, the reader of the twin gets the prose
+ * unchanged, and the quote cannot drift from the line it quotes because it IS the line.
+ *
+ * VISUAL ONLY. The raised copy is `aria-hidden`, so a screen reader hears the sentence once, in the
+ * paragraph, in order. It is not a `blockquote`: a blockquote is a quotation from somewhere else,
+ * and this is the page quoting itself.
+ *
+ * BEFORE THE PARAGRAPH, never after, because a pull quote a reader meets after reading the sentence
+ * is a repetition rather than an invitation.
+ *
+ * The marker is unwrapped from the prose, so the paragraph renders exactly as it would have.
+ *
+ * @param {string} file
+ */
+function remarkPullQuote(file) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    let raised = 0;
+    visit(tree, (node, index, parent) => {
+      if (node.type !== "paragraph" || parent?.type !== "root" || index === undefined) return;
+
+      /** @type {any[]} */
+      const marks = [];
+      visit(node, "textDirective", (child) => {
+        if (child.name === "pullquote") marks.push(child);
+      });
+      if (marks.length === 0) return;
+
+      const line = marks[0].position?.start?.line;
+      const where = `:pullquote${line ? ` on line ${line} of the body` : ""}`;
+
+      if (marks.length > 1) {
+        throw new ContentError(
+          file,
+          `${where}: one paragraph carries ${marks.length} pull quotes. A paragraph has one ` +
+            "sentence worth raising, and two raised above the same paragraph read as a list.",
+        );
+      }
+
+      const mark = marks[0];
+      const text = (mark.children ?? [])
+        .map((/** @type {any} */ child) => (child.type === "text" ? child.value : ""))
+        .join("")
+        .trim();
+
+      if (text.length === 0) {
+        throw new ContentError(
+          file,
+          `${where} is empty. Wrap the sentence it should raise: :pullquote[the sentence].`,
+        );
+      }
+      if (text.length > PULL_QUOTE_MAX_CHARS) {
+        throw new ContentError(
+          file,
+          `${where} is ${text.length} characters and the limit is ${PULL_QUOTE_MAX_CHARS}. ` +
+            "A pull quote is read at a glance; mark the clause rather than the sentence.",
+        );
+      }
+
+      const at = (node.children ?? []).indexOf(mark);
+      if (at === -1) {
+        throw new ContentError(
+          file,
+          `${where} is nested inside other markup. It must sit directly in the paragraph, so the ` +
+            "sentence it raises is the sentence a reader reads.",
+        );
+      }
+
+      raised += 1;
+      if (raised > PULL_QUOTE_LIMIT) {
+        throw new ContentError(
+          file,
+          `${where} is pull quote number ${raised} and the limit is ${PULL_QUOTE_LIMIT}. ` +
+            "A third one is a page with no emphasis left to spend.",
+        );
+      }
+
+      // The marker leaves the prose, and its own children stay: the paragraph renders unchanged.
+      node.children.splice(at, 1, .../** @type {any[]} */ (mark.children ?? []));
+
+      parent.children.splice(index, 0, {
+        type: "paragraph",
+        data: {
+          hName: "p",
+          hProperties: { className: ["pull-quote"], "aria-hidden": "true" },
+        },
+        children: [{ type: "text", value: text }],
+      });
+
+      // Past the quote just inserted and past the paragraph it was read from.
+      return index + 2;
+    });
+  };
+}
+
+/**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
-export const KNOWN_DIRECTIVES = ["chart", "diagram", "figure", "swatch"];
+export const KNOWN_DIRECTIVES = ["chart", "details", "diagram", "figure", "pullquote", "swatch"];
 
 /**
  * Fails the build on any directive this pipeline does not implement.
@@ -1909,10 +2214,12 @@ export async function renderBody({ file, body, resolveImage }) {
     // can be told apart from an ordinary markdown image.
     .use(remarkCollectMedia, mediaRefs)
     .use(remarkFigure, file)
+    .use(remarkDetails, file)
     // No ordering constraint of its own: `swatch` is an INLINE directive and
     // shares no syntax with the three block ones, so nothing upstream can
     // consume its opener and it consumes nobody else's. Placed here so the
     // handlers read in the order KNOWN_DIRECTIVES lists them.
+    .use(remarkPullQuote, file)
     .use(remarkSwatch, file)
     .use(remarkChart, file, charts)
     .use(remarkDiagram, file, diagrams)
@@ -2096,6 +2403,10 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     featured: fm.featured,
     series: fm.series ?? null,
     part: fm.part ?? null,
+    writingStatus: fm.writing_status ?? null,
+    assumedAudience: fm.assumed_audience ?? null,
+    keyTakeaways: fm.key_takeaways ?? null,
+    changelog: fm.changelog ?? null,
     furtherReading: fm.further_reading,
     ogTitle: fm.og_title ?? null,
     ogDescription: fm.og_description ?? null,

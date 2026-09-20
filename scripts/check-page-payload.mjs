@@ -41,7 +41,12 @@ const DIST_DIR = join(root, "app", "enhance", "dist");
  */
 const ENHANCE_BROTLI_CEILINGS = {
   "ask.js": 2000,
-  "blog.js": 2100,
+  /*
+   * Raised for the selection link, which is a feature and not a dependency: the module
+   * graph is still blog.ts alone plus one local encoder. The margin above the measured
+   * bundle is kept at what it was, so this moves the floor and not the slack.
+   */
+  "blog.js": 2500,
   "palette.js": 6000,
   /* Measured on the first build of this module, at 1121 brotli. */
   "search.js": 1600,

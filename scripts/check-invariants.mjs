@@ -895,6 +895,19 @@ const VISIBILITY_EXEMPT = {
     "public readers all sit behind publiclyVisible() at the route. Reached " +
     "from the save and rebuild paths, which are behind Better Auth or the " +
     "operator token.",
+  listPostLinkCorpus:
+    "feeds backlinksFor in publish.server.ts, and stands on listPostCorpusForRelated " +
+    "above for the same reason: withBacklinks does its own visibility filtering of " +
+    "the LINKING post while still computing a backlink list FOR a draft, so " +
+    "pre-filtering here would change that half. It is the WIDER exemption of the two, " +
+    "because it selects the rendered html, so state what that buys and what it costs: " +
+    "a backlink is read out of a rendered body and there is nowhere else to read one, " +
+    "and a draft's html therefore passes through this function. Nothing of it is " +
+    "returned: withBacklinks keeps only the linking post's slug and title, and only " +
+    "when that post is publicly visible. Its output reaches the posts row's " +
+    "`backlinks` column, whose public reader re-checks every slug against " +
+    "publiclyVisible() at the route. Reached from the save path behind Better Auth or " +
+    "the operator token.",
   listPostSourcesForCitations:
     "the media citation scan. A DRAFT citing an image must still refuse that " +
     "image's deletion, so filtering drafts out would fail OPEN, which is the " +
@@ -4256,7 +4269,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 478 : 440;
+const MINIMUM_CHECKS = wantsRemote ? 502 : 460;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

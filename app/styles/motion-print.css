@@ -34,6 +34,7 @@
   .year-archive,
   .code-copy,
   .code-lang,
+  .selection-link,
   .skip-link,
   .lightbox {
     display: none !important;

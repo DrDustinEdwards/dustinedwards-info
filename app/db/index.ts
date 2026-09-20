@@ -466,6 +466,25 @@ export async function listPostCorpusForRelated(env: Env) {
   return [...bySlug.values()];
 }
 
+/**
+ * Corpus for `withBacklinks`, drafts included: it filters the LINKING post itself.
+ *
+ * It carries `html` because a backlink is read out of a rendered body, which is the same reason
+ * `listPostSourcesForCitations` below carries `body`. Admin plane only, on a save.
+ */
+export async function listPostLinkCorpus(env: Env) {
+  return getDb(env)
+    .select({
+      slug: posts.slug,
+      title: posts.title,
+      status: posts.status,
+      publishAt: posts.publishAt,
+      html: posts.html,
+    })
+    .from(posts)
+    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
+}
+
 /** Markdown and covers for the citation scan, drafts included: they still block deletion. */
 export async function listPostSourcesForCitations(env: Env) {
   return getDb(env)
