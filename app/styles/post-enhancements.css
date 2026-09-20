@@ -54,33 +54,51 @@
   padding-top: 2.25rem;
 }
 
+/*
+ * NO TRACKED CAPS. It was `text-transform: uppercase` plus `letter-spacing`, which is exactly the
+ * pair ruling 118 item 7 defines as TRACKED CAPS and the lock's kill list names.
+ *
+ * Mono and lower case, because the text is the fence's own language token (`typescript`, `bash`),
+ * an identifier rather than a label, and Direction D gives identifiers the mono channel. Printing
+ * it as written is also the honest form: upper-casing it invented a spelling the source never had.
+ */
 .code-lang {
   position: absolute;
   top: 0.5rem;
   left: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
   font-size: 0.75rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-muted);
 }
 
+/*
+ * INK, NO FILL, NO RADIUS. It was a 4px-radius button filled with `--bg`, which ruling 117's fail
+ * conditions and ruling 118 item 3 both forbid: 118 allows a small radius only on something that
+ * floats and then leaves, and a copy button sitting on the page is not one.
+ *
+ * It needs no fill to stay legible: the block reserves `padding-top: 2.25rem` above whenever
+ * scripting is enabled, so the button occupies a clear band rather than overlaying code.
+ */
 .code-copy {
   position: absolute;
   top: 0.375rem;
   right: 0.5rem;
+  /* WCAG 2.2 2.5.8: the label is 12px, so the box carries the target size. */
   min-height: 1.75rem;
-  padding: 0.2rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 0.25rem;
-  background: var(--bg);
-  color: var(--text-muted);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--brand);
   font-size: 0.75rem;
   cursor: pointer;
 }
 
 .code-copy:hover {
-  color: var(--text);
-  border-color: var(--brand);
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
 }
 
 /* Highlighted lines use a neutral band, not a brand tint: check:contrast holds syntax tokens to 4.5:1
