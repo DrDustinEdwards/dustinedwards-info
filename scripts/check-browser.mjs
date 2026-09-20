@@ -905,7 +905,9 @@ try {
       });
       const read = await page.evaluate(() => {
         const el = document.querySelector("[data-health-age]");
-        const value = document.querySelector(".home-proof .proof[data-health-age] .proof-value");
+        /* The proof tiles became the evidence row (ruling 117). The ratio is now the health
+           fact's own text and the attribute still rides the element carrying it. */
+        const value = document.querySelector(".evidence [data-health-age]");
         return {
           present: !!el,
           age: el ? Number(el.getAttribute("data-health-age")) : null,
@@ -1109,7 +1111,7 @@ try {
          * it is masked here and not in `maskTheme`. The health-tile case asserts the age.
          */
         .replace(
-          /(data-health-age="A"[\s\S]*?<span class="proof-detail[^"]*">)[^<]*/,
+          /(data-health-age="A"[\s\S]*?<p class="evidence-detail[^"]*">)[^<]*/,
           "$1AGE-SENTENCE",
         );
 

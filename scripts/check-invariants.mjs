@@ -3145,10 +3145,16 @@ console.log("\n  21. savePost commits before it touches D1");
       "publiclyVisible() predicate, that /blog counts with.",
   );
 
-  /* Bounded by the section element, not a character window, which reads a neighbour's compliance. */
-  const proof = /<section className="home-proof"[\s\S]*?<\/section>/.exec(home)?.[0] ?? "";
+  /*
+   * Bounded by the element, not a character window, which reads a neighbour's compliance.
+   *
+   * THE ANCHOR MOVED WITH THE FIGURES (ruling 117): the three proof tiles were flattened into the
+   * evidence row, so `section.home-proof` no longer exists and this bounded on nothing. The
+   * zero-scope guard below is what caught that, which is the whole reason it is here.
+   */
+  const proof = /<EvidenceRow[\s\S]*?\/>/.exec(home)?.[0] ?? "";
   ok(
-    "the proof section was located to scan",
+    "the evidence row was located to scan",
     proof.length > 200,
     `extracted ${proof.length} chars. Without it the literal scan below would ` +
       `examine nothing and report a clean result.`,
@@ -3162,9 +3168,9 @@ console.log("\n  21. savePost commits before it touches D1");
     (m) => m[0].trim(),
   );
   ok(
-    "no proof tile states a number of its own",
+    "no evidence fact states a number of its own",
     literals.length === 0,
-    `the home page's proof section contains ${literals.length} numeric literal(s): ` +
+    `the home page's evidence row contains ${literals.length} numeric literal(s): ` +
       `${literals.join(", ")}. Every number on that section is a claim about a ` +
       `measurement and must come from the instrument that took it. Rule 17.`,
   );
