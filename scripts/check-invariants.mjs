@@ -4168,17 +4168,8 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--t-display-tracking",   "scale: the display type level"],
   ["--t-display-vars",       "scale: the display type level"],
   ["--t-display-weight",     "scale: the display type level"],
-  ["--t-h1-family",          "scale: the h1 type level"],
-  ["--t-h1-leading",         "scale: the h1 type level"],
-  ["--t-h1-size",            "scale: the h1 type level"],
-  ["--t-h1-tracking",        "scale: the h1 type level"],
-  ["--t-h1-vars",            "scale: the h1 type level"],
-  ["--t-h1-weight",          "scale: the h1 type level"],
-  ["--t-h2-family",          "scale: the h2 type level"],
-  ["--t-h2-leading",         "scale: the h2 type level"],
-  ["--t-h2-size",            "scale: the h2 type level"],
-  ["--t-h2-vars",            "scale: the h2 type level"],
-  ["--t-h2-weight",          "scale: the h2 type level"],
+  /* The h1 and h2 levels landed with Part B page 1: post-shell.css paints the post title and the
+     in-article h2 from them. Eleven entries out, which is the map doing its job. */
   ["--t-h3-tracking",        "scale: the h3 type level"],
   ["--lamp-origin",          "component: the lamp on the glass controls, ruling 74"],
   ["--lamp-reach",           "component: the lamp on the glass controls, ruling 74"],
@@ -4269,7 +4260,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 502 : 460;
+const MINIMUM_CHECKS = wantsRemote ? 480 : 438;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
