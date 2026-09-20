@@ -524,10 +524,10 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at,
            cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part,
            further_reading, og_title, og_description, related, source_blob_sha, render_hash,
-           writing_status, assumed_audience, key_takeaways,
+           writing_status, assumed_audience, key_takeaways, changelog,
            updated_at)
          VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-           ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, unixepoch())
+           ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, unixepoch())
          ON CONFLICT(slug) DO UPDATE SET
            kind = excluded.kind, title = excluded.title, body = excluded.body,
            html = excluded.html, description = excluded.description, status = excluded.status,
@@ -540,7 +540,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
            source_blob_sha = excluded.source_blob_sha, render_hash = excluded.render_hash,
            writing_status = excluded.writing_status,
            assumed_audience = excluded.assumed_audience,
-           key_takeaways = excluded.key_takeaways,
+           key_takeaways = excluded.key_takeaways, changelog = excluded.changelog,
            updated_at = unixepoch()`,
       )
       .bind(
@@ -573,6 +573,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         record.writingStatus ?? null,
         record.assumedAudience ?? null,
         record.keyTakeaways ? JSON.stringify(record.keyTakeaways) : null,
+        record.changelog ? JSON.stringify(record.changelog) : null,
       ),
     ...record.tags.map((tag: string) =>
       db

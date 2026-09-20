@@ -65,6 +65,14 @@ export const posts = sqliteTable(
     assumedAudience: text("assumed_audience"),
     /** JSON array of strings, matching `related` rather than inventing a second list convention. */
     keyTakeaways: text("key_takeaways"),
+    /**
+     * THE AUTHOR-WRITTEN POST HISTORY. JSON array of { date, note }, in the same convention.
+     *
+     * `updatedAt` above already says WHEN and cannot say WHAT, and it is rewritten by every sync,
+     * so it is a deploy timestamp carrying an edit's name. This is prose about a revision, which
+     * only the author has, and it arrives through frontmatter like every other authored field.
+     */
+    changelog: text("changelog"),
     /** Generated social card path, set by sync after build:og uploads it. */
     ogImage: text("og_image"),
     /**

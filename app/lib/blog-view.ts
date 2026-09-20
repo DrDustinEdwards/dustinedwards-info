@@ -114,6 +114,15 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       writingStatus: post.writingStatus ?? null,
       assumedAudience: post.assumedAudience ?? null,
       keyTakeaways: parseJson(post.keyTakeaways, null) as string[] | null,
+      /*
+       * The post history, passed through as stored. The 24-hour threshold that decides whether it
+       * is shown at all lives on the route beside the Updated line it already governs, so there is
+       * one comparison and not two.
+       */
+      changelog: parseJson(post.changelog, null) as Array<{
+        date: string;
+        note: string;
+      }> | null,
     },
   };
 }
