@@ -96,6 +96,8 @@ Mainline only until the DNS cutover. Everything lands on `main`, committed and p
 
 **THIS FOLDER IS THE MAIN CHECKOUT AND THE SITE SESSION'S ALONE (ruling 60).** Every other actor works in a worktree under `C:\Users\email\dev\worktrees\`, on its own branch, landing by PULL REQUEST on green CI. Renovate is the other exception and sessions do not merge its PRs; a red one is a REPORT, repaired by a scoped commit on `main`.
 
+**TWO FILES HERE ARE CAPSID'S AND NOT THIS REPO'S TO RESTYLE:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. They are byte-identical across five roster repos, written here by capsid's `sync-scorer` copier, and a comment pass that touches either one makes this repo the odd one out. Leave them out of any repo-wide recut; a change goes to capsid and arrives by the copier.
+
 Read `FAILURES.md` first. Every gate verifies DISK, not HEAD. `git diff <path>` before `git add <path>`; never `git add -A`. Destructive operations, money paths and auth secrets stay with Dustin. If a session rebases onto commits it did not expect, or finds its own edits absent from disk, that is not a merge conflict: stop and re-establish the baseline before writing anything.
 
 ## Commands
