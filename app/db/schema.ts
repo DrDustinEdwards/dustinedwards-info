@@ -51,6 +51,12 @@ export const posts = sqliteTable(
     /** JSON array of { slug, title, shared }, computed over the whole corpus. */
     related: text("related"),
     /**
+     * JSON array of { slug, title }: the posts on this site that link TO this one, computed over
+     * the whole corpus like `related` above. Not the webmentions table, which is other people's
+     * sites and is approved one at a time.
+     */
+    backlinks: text("backlinks"),
+    /**
      * THE THREE OPTIONAL AUTHOR-SET HEAD BLOCKS, all nullable because absent is the normal case.
      *
      * Columns rather than frontmatter reads, because the public route reads the RENDERED row:

@@ -725,6 +725,93 @@ export function withRelated(posts) {
   });
 }
 
+/**
+ * Every post on this site that a rendered body links to, as slugs.
+ *
+ * READ FROM THE RENDERED HTML, not the markdown. Markdown has inline links, reference links and
+ * raw HTML, and the renderer turns all three into one shape; scanning the source would mean a
+ * second, worse parser for the same fact.
+ *
+ * THE CAPTURE IS DELIBERATELY LOOSE AND THE CORPUS IS THE FILTER. Anchoring the pattern on a slug
+ * grammar would put a second copy of that grammar here; instead this returns whatever sits in the
+ * path and `withBacklinks` keeps only what is a post. That is also what makes `/blog/tags/x` and
+ * `/blog/some-post.md` fall out for free rather than by exclusion, which is hard rule 10's
+ * over-wide-exclusion class.
+ *
+ * @param {string} html
+ * @returns {Set<string>}
+ */
+export function outgoingPostLinks(html) {
+  const found = new Set();
+  for (const match of html.matchAll(/href="\/blog\/([^"#?]+)(?:[#?][^"]*)?"/g)) {
+    found.add(match[1]);
+  }
+  return found;
+}
+
+/**
+ * Fills in each post's `backlinks`: the posts on this site that link TO it.
+ *
+ * THE SAME SHAPE AS `withRelated` AND FOR THE SAME REASON. A backlink is a property of the SET:
+ * publishing one post changes the backlink list of every post it links to, so a writer that
+ * recomputed one entry against a stale view of the rest would disagree with the next full build.
+ * Both writers therefore run this over the complete corpus.
+ *
+ * IT IS NOT THE MENTIONS SECTION. Webmentions are other people's sites saying they linked here and
+ * are approved one at a time; this is this site linking to itself, and it is derived.
+ *
+ * THE SOURCE IS FILTERED FOR VISIBILITY, not the target. A draft or scheduled post linking to a
+ * published one must not put its own title on that public page, which is the same road the related
+ * list's `!draft` filter left open. `isPubliclyVisible` is the one JavaScript owner of that rule.
+ *
+ * THE READER FILTERS AGAIN. This is computed at write time and stored, and a linking post can be
+ * unpublished afterwards, so `blog.$slug.tsx` re-checks the stored list against the live rows in
+ * the same query it already runs for `related`.
+ *
+ * NO LIMIT. A cap here would silently drop a real link, and a cap that never fires is an assertion
+ * that cannot fail. The list is titles at the foot of the page and it grows with the corpus.
+ *
+ * @param {any[]} posts
+ */
+export function withBacklinks(posts) {
+  const now = Date.now();
+  const isPost = new Set(posts.map((post) => post.slug));
+  /** @type {Map<string, Array<{ slug: string, title: string, publishAt: string }>>} */
+  const incoming = new Map();
+
+  for (const post of posts) {
+    if (
+      !isPubliclyVisible(
+        { status: statusForDraft(post.draft), publishAt: post.publishAt },
+        now,
+      )
+    ) {
+      continue;
+    }
+    for (const target of outgoingPostLinks(post.html ?? "")) {
+      // A post linking to itself is a table of contents, not a backlink.
+      if (target === post.slug || !isPost.has(target)) continue;
+      const list = incoming.get(target) ?? [];
+      list.push({ slug: post.slug, title: post.title, publishAt: post.publishAt });
+      incoming.set(target, list);
+    }
+  }
+
+  return posts.map((post) => {
+    // Newest first, then slug. No tie is left to array order, because array order is not stable
+    // input: the same corpus read in a different order would otherwise produce a different page.
+    const list = (incoming.get(post.slug) ?? []).sort(
+      (a, b) =>
+        (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : 0) ||
+        (a.slug < b.slug ? -1 : 1),
+    );
+    return {
+      ...post,
+      backlinks: list.map(({ slug, title }) => ({ slug, title })),
+    };
+  });
+}
+
 /** Built once per isolate. Creating it is the expensive part, not using it. */
 function getHighlighter() {
   if (!highlighterPromise) {

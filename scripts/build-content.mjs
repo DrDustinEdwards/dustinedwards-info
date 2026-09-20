@@ -20,7 +20,7 @@ import { playgroundPages } from "../app/lib/playground-page.mjs";
 import { projectsPages } from "../app/lib/projects-page.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
-import { renderBody, withRelated } from "../app/lib/content/pipeline.mjs";
+import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 
 export const CONTENT_DIR = path.join("content", "posts");
@@ -93,7 +93,9 @@ export async function buildArtifact() {
    * assembly of the same records.
    */
   return serializeArtifact(
-    withRelated(posts),
+    // Both run over the COMPLETE corpus, because relatedness and being linked to are properties of
+    // the set. Order between them does not matter: neither reads what the other writes.
+    withBacklinks(withRelated(posts)),
     [
       ...colophonPages(stack, features),
       ...projectsPages(projects),
