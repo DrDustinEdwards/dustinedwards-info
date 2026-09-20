@@ -1,6 +1,9 @@
 import { Form, Link } from "react-router";
 
+import searchEnhanceUrl from "~/enhance/dist/search.js?url";
+
 import { AskMount } from "~/components/ask-panel";
+import { EnhancementScript } from "~/components/enhancement-script";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getEnv } from "~/lib/context";
@@ -387,6 +390,13 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             ) : null}
           </ul>
         ) : null}
+
+        {/*
+         * The page's own enhancement: results as you type and keyboard navigation of them. It
+         * upgrades the form and the list that are already here, so with scripting off the page is
+         * exactly what it was and nothing below depends on it.
+         */}
+        <EnhancementScript src={searchEnhanceUrl} />
 
         {/*
          * An empty container and a script tag. With scripting off it stays empty and the
