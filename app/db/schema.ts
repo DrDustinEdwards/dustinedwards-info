@@ -341,6 +341,53 @@ export const webmentions = sqliteTable(
   ],
 );
 
+/**
+ * Zero-result search queries, kept as demand signal: the one search result worth storing is the one
+ * that found nothing, because it names something a reader expected this site to have.
+ *
+ * THE SECOND TABLE THAT IS NEITHER AUTHORED NOR DERIVED, after `webmentions`. `posts` is authored in
+ * the repository and `media`, `media_refs` and `search_docs` converge toward the repository and the
+ * bucket under hard rule 18. These rows converge toward nothing, so a rebuild cannot repair this
+ * table and no gate reconciles it against a source. What bounds it is the retention sweep and the
+ * primary key, not a rebuild.
+ *
+ * FOUR COLUMNS, THREE OF THEM COUNTERS, AND NOWHERE TO PUT A READER. No IP, no user agent, no
+ * session, no cookie, no fingerprint. That is a shape rather than a policy: a column that does not
+ * exist cannot be filled in later by somebody who has not read this. `/privacy` can therefore say
+ * that no search is attributable to a reader and be stating a fact about the schema.
+ */
+export const zeroResultQueries = sqliteTable(
+  "zero_result_queries",
+  {
+    /**
+     * THE QUERY IS THE KEY, normalised by the writer, so the same miss asked fifty times is one row
+     * counted fifty times rather than fifty rows. It is what makes the table's size a function of
+     * the distinct things people look for.
+     */
+    query: text("query").primaryKey(),
+    count: integer("count").notNull().default(1),
+    firstSeen: integer("first_seen", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    lastSeen: integer("last_seen", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    /**
+     * CAPPED IN THE DATABASE, not only in the writer. A query past this length is not a question,
+     * and the constraint is the difference between a demand signal and a place to put arbitrary
+     * text. Section 4 does not compare a check predicate, so the SQL is the owner of the number.
+     */
+    check("zero_result_queries_length_check", sql`length(${t.query}) <= 200`),
+    check("zero_result_queries_nonempty_check", sql`length(${t.query}) > 0`),
+    /** The admin list orders by demand. */
+    index("zero_result_queries_count_idx").on(t.count),
+    /** The 90-day retention sweep selects on the window. */
+    index("zero_result_queries_last_seen_idx").on(t.lastSeen),
+  ],
+);
+
 export type Post = typeof posts.$inferSelect;
 export type Tag = typeof tags.$inferSelect;
 export type Setting = typeof settings.$inferSelect;
@@ -348,3 +395,4 @@ export type Media = typeof media.$inferSelect;
 export type MediaRef = typeof mediaRefs.$inferSelect;
 export type SearchDoc = typeof searchDocs.$inferSelect;
 export type Webmention = typeof webmentions.$inferSelect;
+export type ZeroResultQuery = typeof zeroResultQueries.$inferSelect;

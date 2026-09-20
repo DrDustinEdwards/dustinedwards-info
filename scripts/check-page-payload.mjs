@@ -43,6 +43,8 @@ const ENHANCE_BROTLI_CEILINGS = {
   "ask.js": 2000,
   "blog.js": 2100,
   "palette.js": 6000,
+  /* Measured on the first build of this module, at 1121 brotli. */
+  "search.js": 1600,
   "theme.js": 1000,
 };
 
@@ -663,6 +665,9 @@ const BUNDLE_USE = {
   "theme.js": () => true,
   "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
   "ask.js": (/** @type {string} */ id) => id === "routes/search",
+  /* The search page's own enhancement: it upgrades that page's form and result list and has
+     nothing to do anywhere else. */
+  "search.js": (/** @type {string} */ id) => id === "routes/search",
   "palette.js": () => false,
 };
 

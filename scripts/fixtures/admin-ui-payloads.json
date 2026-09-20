@@ -640,6 +640,10 @@
   "overview, one check failing": [
     "POST /admin/media | (none) | intent"
   ],
-  "tools, all secrets set": [],
-  "tools, one secret missing": []
+  "tools, all secrets set": [
+    "POST /admin/tools | (none) | intent"
+  ],
+  "tools, one secret missing": [
+    "POST /admin/tools | (none) | intent"
+  ]
 }
