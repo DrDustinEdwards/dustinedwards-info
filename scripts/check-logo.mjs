@@ -186,8 +186,13 @@ const EXPECTED_FILL_BINDINGS = [
    * THE TOKEN WENT AND CAME BACK. The measurement behind moving it was right; the CONCLUSION was
    * not, the question asked being "which token survives this bar" when it was "why did the bar
    * change". The COUNT is what caught the missing mark.
+   *
+   * THE VALUE CHANGED WITH THE SURFACE, THE BINDING DID NOT (ruling 117): the header is paper, so
+   * the mark is drawn in one ink and follows --text through the brand link. --mark-on-chrome
+   * described a purple bar the public plane no longer has. The binding stays because what it
+   * guards is that the mark renders in the header at all, which is the omission it caught.
    */
-  [".site-header .site-logo-brand", "var(--mark-on-chrome)"],
+  [".site-header .site-logo-brand", "currentColor"],
 ];
 
 {

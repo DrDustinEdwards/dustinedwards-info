@@ -1,58 +1,86 @@
 /* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* Public header: the chrome is a brand surface in both themes. The seam takes --border-strong, never --border:
-   a seam needs no 3:1, but it needs a visible edge. Public plane only. */
-/* The header wraps, or public pages scroll sideways on a phone. flex-wrap is on both .site-header and
-   .site-header-nav: on either alone, one of them stays an unbreakable row. No media query. */
+/*
+ * PUBLIC HEADER: PAPER, NOT CHROME. Ruling 117 retires the purple bar; the header is the page's own
+ * ground with one `--dust` rule under the whole thing, and nothing between its rows.
+ *
+ * Static, so it scrolls away. `--bar-h` stays deleted: there is no fixed bar to subtract, which is
+ * why the post page's sticky rail offsets by a plain 20px.
+ *
+ * The header wraps, or public pages scroll sideways on a phone. flex-wrap is on both .site-header
+ * and .site-header-nav: on either alone, one of them stays an unbreakable row. The only media query
+ * touching it is print, so the layout is a property of the label widths rather than of a chosen
+ * breakpoint.
+ */
 .site-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   flex-wrap: wrap;
-  gap: 1rem;
-  min-height: 4rem;
+  column-gap: 1.625rem;
+  row-gap: 0.75rem;
   /* The shared inset. The admin topbar reads this same declaration, so the
      mark sits at the same x on both planes. */
-  padding: 1rem var(--site-inset);
-  background: var(--surface-chrome);
-  border-bottom: 1px solid var(--border-strong);
+  padding: 1.375rem var(--site-inset) 1.125rem;
+  background: var(--paper);
+  border-block-end: var(--line-w) solid var(--dust);
 }
 
-/* The chrome is a fill, so its focus ring sits on brand purple, not on the
-   page canvas --focus-ring was measured against. These descendant selectors
-   are (0,2,0) and outrank the bare `:focus-visible` at (0,1,0). */
-.site-header :focus-visible {
-  outline-color: var(--focus-ring-on-chrome);
-}
-
-/* Identity exemption: the wordmark never takes :visited. .site-header-brand is (0,1,0) and a:visited
-   (0,1,1), so without these it turns claret. It takes --on-chrome; hover steps down to --on-chrome-muted,
-   because rest is already the lightest measured value on chrome. The :visited and :hover selectors are
-   (0,2,0) and outrank the base pseudo-class rules deliberately. Do not "simplify" them away. */
+/*
+ * Identity exemption: the wordmark never takes :visited. `.site-header-brand` is (0,1,0) and
+ * a:visited (0,1,1), so without these it turns claret. Ink, not brand: on paper the wordmark is the
+ * page's name rather than a control, and ruling 117 keeps purple for things a reader clicks.
+ */
 .site-header-brand,
 .site-header-brand:visited {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  color: var(--on-chrome);
+  gap: 0.625rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 1.1875rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
   text-decoration: none;
 }
 
 .site-header-brand:hover {
-  color: var(--on-chrome-muted);
+  color: var(--brand);
 }
 
-/* v4 variant assignment. (0,2,0) beats `.site-logo-brand` at (0,1,0), so the
-   login card's mark is untouched and keeps following --brand. */
+/*
+ * ONE INK ON CHROME. Every path takes currentColor, so the mark inherits --text from the brand link
+ * and follows the theme. The warm literals and the --brand fills in site-logo.tsx are overridden
+ * here and in the footer; the full-colour mark appears only on /about and /colophon, at a size
+ * where the drawing is legible. (0,2,0) beats `.site-logo-brand` at (0,1,0).
+ */
 .site-header .site-logo-brand {
-  fill: var(--mark-on-chrome);
+  fill: currentColor;
 }
 
-/* 2rem keeps the brand row inside the header's existing 4rem min-height, so
-   adding the mark moves nothing below it. Width follows the 36x50 ratio. */
+/*
+ * The other three paths carry literal warm fills as presentation attributes, which any CSS rule
+ * outranks. Deliberately NOT written against `.site-logo-brand`: check:logo holds a closed set of
+ * bindings on that class and a third would fail it, correctly.
+ */
+.site-header-mark path {
+  fill: currentColor;
+}
+
+/* Width follows the 36x50 ratio of the crop in site-logo.tsx. */
 .site-header-mark {
   display: block;
-  height: 2rem;
+  height: 2.0625rem;
   width: auto;
+}
+
+/*
+ * THE TOOLS STAY ON LINE 1. `margin-inline-start: auto` pushes them to the far edge, and because
+ * the nav follows them in source with a full basis at narrow widths, the destinations drop beneath
+ * without either control moving.
+ */
+.site-header-tools {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }

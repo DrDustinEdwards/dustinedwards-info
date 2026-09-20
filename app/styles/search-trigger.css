@@ -4,22 +4,29 @@
    app/enhance/palette.ts creates, so a reader without script never sees any
    of it. */
 
-/* Search entry point: one icon control, no visible "/". The shortcut is announced through title and
-   aria-describedby, written by the enhancement, so it exists only with the listener. No text plus a border
-   meets rule 2. Height is --control-h; the padding keeps it square above the 24px target. */
+/*
+ * Search entry point: ONE GLYPH, no border, no radius, no fill. It was a pill; ruling 117's kill
+ * list takes all three, so what identifies it is the icon in --brand and nothing else. No visible
+ * "/": the shortcut is announced through title and aria-describedby, written by the enhancement,
+ * so it exists only with the listener.
+ *
+ * WCAG 2.2 2.5.8: the glyph is 18px, so the box carries the target size rather than the icon.
+ */
 .search-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: var(--control-h);
-  padding: 0 0.5rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
+  color: var(--brand);
   text-decoration: none;
 }
 
 .search-trigger:hover {
-  color: var(--text);
-  background: var(--tint-brand);
+  color: var(--brand-hover);
+}
+
+/* Wayfinding, not a trail: the control goes to the same place every time. */
+.search-trigger:visited {
+  color: var(--brand);
 }
