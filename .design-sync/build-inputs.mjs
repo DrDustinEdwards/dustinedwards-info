@@ -86,6 +86,11 @@ const SHEETS = [
   "app/styles/blog-index-extras.css",
   "app/styles/post-shell.css",
   "app/styles/post-enhancements.css",
+  // The post page's two newest sheets, in blog.$slug.tsx's own import order after
+  // post-enhancements.css. post-head-blocks.css shipped one commit before this list
+  // learned about it, which is the failure ruling 111 added this gate to catch.
+  "app/styles/post-head-blocks.css",
+  "app/styles/post-disclosures.css",
   "app/styles/blog-search.css",
   "app/styles/search-page.css",
   "app/styles/search-facets.css",
