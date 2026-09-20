@@ -10,9 +10,6 @@ key_takeaways:
   - "An API and an MCP server answer different questions and compose as layers; asking which to build is the wrong question."
   - "Authentication, authorization and business policy belong in the HTTP API, implemented exactly once."
   - "An MCP server should be a thin translation layer that contains none of that policy."
-changelog:
-  - date: 2026-08-26
-    note: "Added the August update section, reporting how the rule held in the second production implementation."
 draft: false
 first_published: 2026-07-30
 ---
