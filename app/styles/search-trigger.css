@@ -25,8 +25,3 @@
 .search-trigger:hover {
   color: var(--brand-hover);
 }
-
-/* Wayfinding, not a trail: the control goes to the same place every time. */
-.search-trigger:visited {
-  color: var(--brand);
-}
