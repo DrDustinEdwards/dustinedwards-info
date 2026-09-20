@@ -41,7 +41,7 @@ import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
 import "~/styles/post-head-blocks.css";
-import "~/styles/post-history.css";
+import "~/styles/post-disclosures.css";
 
 /**
  * Content negotiation runs as middleware rather than in the loader: a document
