@@ -89,6 +89,7 @@ const SHEETS = [
   // same component, so it sits here once and not per page.
   "app/styles/post-rail.css",
   "app/styles/evidence-row.css",
+  "app/styles/home.css",
   "app/styles/post-shell.css",
   "app/styles/post-enhancements.css",
   // The post page's two newest sheets, in blog.$slug.tsx's own import order after
