@@ -30,8 +30,24 @@ test("the directive is registered, or every use of it is an unknown-directive fa
 
 test("it renders an aside with the kind label first", async () => {
   const { html } = await render(':::sidenote{kind="Fallback"}\nA short note.\n:::\n');
-  assert.match(html, /<aside class="post-note"><b class="post-note-kind">Fallback<\/b>/);
+  assert.match(html, /<aside class="post-note" id="sn-1"><b class="post-note-kind">Fallback<\/b>/);
   assert.match(html, /<p>A short note\.<\/p><\/aside>/);
+});
+
+/*
+ * THE ID IS THE ANCHOR. A note with no id cannot be referenced, and adding markers later would
+ * have to migrate every note already published, so the numbering is asserted rather than assumed.
+ */
+test("notes are numbered per document, in source order", async () => {
+  const { html } = await render(
+    ':::sidenote{kind="One"}\nA.\n:::\n\nBetween.\n\n:::sidenote{kind="Two"}\nB.\n:::\n',
+  );
+  assert.match(html, /id="sn-1"/);
+  assert.match(html, /id="sn-2"/);
+  assert.ok(
+    html.indexOf('id="sn-1"') < html.indexOf('id="sn-2"'),
+    "numbering follows source order",
+  );
 });
 
 test("an `aside`, so a screen reader can skip what is tangential", async () => {
