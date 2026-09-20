@@ -295,6 +295,38 @@ export const frontmatterSchema = z.object({
   /** Multi-part writing. Both fields travel together or neither does. */
   series: z.string().min(1).optional(),
   part: z.number().int().min(1, "must be 1 or greater").optional(),
+  /**
+   * THE AUTHOR-SET HEAD BLOCKS, all three optional and most posts carrying none.
+   *
+   * NOT `status`: that name is the row's draft/published column. A post may be published and
+   * still be a draft in prose, which is what `writing_status: draft` says.
+   *
+   * A CLOSED SET, not a free string. gwern's five words are the whole vocabulary, and the point of
+   * a status tag is that a reader learns the five once and then reads them at a glance; a free
+   * field turns it into a second dek written in a different voice on every post. An unknown value
+   * is a build failure at the post that set it, which is where it can be fixed.
+   *
+   * NONE OF THE THREE IS A BYLINE. The missing byline is deliberate: there is one author, the site
+   * is his name, and a hidden p-author h-card carries it for microformats. A line naming a person
+   * here would reintroduce by accident what was removed on purpose.
+   */
+  writing_status: z.enum(["notes", "draft", "in progress", "finished", "obsolete"]).optional(),
+  /**
+   * WHO THE POST IS FOR, in one sentence the author writes. It replaces a depth tag, because
+   * "advanced" tells a reader less than a sentence does.
+   *
+   * Capped so it stays a line rather than becoming a second dek. A longer one belongs in the prose.
+   */
+  assumed_audience: z.string().min(1).max(200).optional(),
+  /**
+   * THE ANSWER, THE QUALIFICATION, AND WHAT TO DO NEXT, in that order, author-written.
+   *
+   * NOT A TEMPLATE FEATURE and not generated: a summary the author did not write is a summary
+   * nobody checked. Long technical posts only, where the dek does not already give the answer.
+   *
+   * Two to four items, because one is a dek and five is the post.
+   */
+  key_takeaways: z.array(z.string().min(1).max(300)).min(2).max(4).optional(),
   /** Curated outbound links, rendered at the end of the post. */
   further_reading: z
     .array(
@@ -2096,6 +2128,9 @@ export async function renderPost({ file, raw, expectedSlug, resolveImage }) {
     featured: fm.featured,
     series: fm.series ?? null,
     part: fm.part ?? null,
+    writingStatus: fm.writing_status ?? null,
+    assumedAudience: fm.assumed_audience ?? null,
+    keyTakeaways: fm.key_takeaways ?? null,
     furtherReading: fm.further_reading,
     ogTitle: fm.og_title ?? null,
     ogDescription: fm.og_description ?? null,

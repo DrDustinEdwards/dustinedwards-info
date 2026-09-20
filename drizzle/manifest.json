@@ -15,6 +15,7 @@
     "0012_drop_posts_category.sql": "fdeb49e4e1ebca42cdcbcf5f314586efbc4ce23a3e70c95f889fd1c1ba87b7ce",
     "0013_content_hashes.sql": "c6b1025ea220786fe4c3ea011eddbc382c7f93989740218f0a139a41d0361b38",
     "0014_webmentions.sql": "7d138f3d059ea26821eeb74029a6e2fa99c490e67fdda5895dc0978f44073f8b",
-    "0015_zero_result_queries.sql": "f9b21a159d9146cc0cf25214a9329fc7971d5e5ceca1ad6ed8567ff824f65c55"
+    "0015_zero_result_queries.sql": "f9b21a159d9146cc0cf25214a9329fc7971d5e5ceca1ad6ed8567ff824f65c55",
+    "0016_post_head_blocks.sql": "71b01d427e7f87effe753743cbff8e5c1331ba954a2bb3ad1de85739c4867556"
   }
 }
