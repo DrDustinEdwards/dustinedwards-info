@@ -70,6 +70,15 @@
       "why": null
     },
     {
+      "id": "copy-link-to-selection",
+      "module": "app/enhance/blog.ts",
+      "enhancement": "Offers a link to the passage a reader has selected, as a URL text fragment, in the flow after the selected block.",
+      "fallback": "The permalink, which links to the whole post rather than to the passage. It is server-rendered and always present.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".post-share",
+      "why": "There is no scriptless way to ask a reader what they highlighted, so the fallback cannot be this affordance degraded; it is the nearest thing the page can always offer. The permalink is deliberately not a clipboard button, so this adds a capability rather than a second copy of one."
+    },
+    {
       "id": "theme-toggle",
       "module": "app/enhance/theme.ts",
       "enhancement": "Applies the theme in place, without a round trip. Also holds the \"/\" key, the Cmd-K chord and the search trigger's click, and fetches the command palette bundle on the first of them.",

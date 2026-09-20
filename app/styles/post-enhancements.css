@@ -248,3 +248,25 @@
   color: var(--text-muted);
   font-size: 0.8125rem;
 }
+
+/* The selection link, created by script and inserted into the prose after the block a reader just
+   selected. Quieter than a `.post-action`: it appears mid-read, beside the sentence, so it must not
+   outweigh the paragraph it sits under. */
+.selection-link {
+  display: block;
+  margin: 0.5rem 0 1rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.selection-link:hover {
+  border-style: solid;
+  border-color: var(--brand);
+  color: var(--brand);
+}
