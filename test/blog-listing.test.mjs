@@ -98,15 +98,15 @@ test("the input array is not mutated", () => {
  */
 
 const flagship = { slug: "flagship" };
-const others = [{ slug: "n1" }, { slug: "n2" }, { slug: "n3" }, { slug: "n4" }];
+const others = [{ slug: "n1" }, { slug: "n2" }, { slug: "n3" }, { slug: "n4" }, { slug: "n5" }];
 
 test("the featured post leads and the others fill in behind it", () => {
   const { featured, recent } = startHere([flagship], others);
   assert.equal(featured.slug, "flagship");
   assert.deepEqual(
     recent.map((p) => p.slug),
-    ["n1", "n2", "n3"],
-    "four cards in total, so three follow the lead",
+    ["n1", "n2", "n3", "n4"],
+    "five rows in total (02-home.html §4), so four follow the lead",
   );
 });
 
@@ -119,13 +119,13 @@ test("the featured post is never also one of the others", () => {
   );
 });
 
-test("with nothing featured the newest leads and the section still shows four", () => {
+test("with nothing featured the newest leads and the section still shows five", () => {
   const { featured, recent } = startHere([], others);
   assert.equal(featured.slug, "n1", "ruling 57: the newest leads");
   assert.deepEqual(
     recent.map((p) => p.slug),
-    ["n2", "n3", "n4"],
-    "four cards, not three: the section must not shrink because nothing is featured",
+    ["n2", "n3", "n4", "n5"],
+    "five rows, not four: the section must not shrink because nothing is featured",
   );
 });
 
