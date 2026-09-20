@@ -1,4 +1,5 @@
 import { Link, data } from "react-router";
+import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
 
 import { BlogEnhancements } from "~/components/blog-enhancements";
 import { ShellFooter } from "~/components/shell-footer";
@@ -38,6 +39,7 @@ import "~/styles/blog-index.css";
 import "~/styles/post-shell.css";
 import "~/styles/prose.css";
 import "~/styles/post-enhancements.css";
+import "~/styles/post-head-blocks.css";
 
 /**
  * Content negotiation runs as middleware rather than in the loader: a document
@@ -336,6 +338,16 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
              * sentence on the page than in the head.
              */}
             <p className="post-dek">{dek}</p>
+            {/*
+             * BETWEEN THE DEK AND THE DATE, because all three qualify the post before it is read:
+             * whether it is finished, who it is for, and what it concludes. Below the meta line
+             * they would be read after the reader has already decided.
+             */}
+            <PostHeadBlocks
+              writingStatus={(post.writingStatus as WritingStatus | null) ?? null}
+              assumedAudience={post.assumedAudience ?? null}
+              keyTakeaways={post.keyTakeaways ?? null}
+            />
             <p className="post-card-meta">
               {post.publishAt && (
                 <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>

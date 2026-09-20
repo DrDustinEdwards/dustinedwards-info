@@ -85,7 +85,7 @@ function buildSql(posts) {
       `INSERT INTO posts (slug, kind, title, body, html, description, status, publish_at, ` +
         `cover_image, cover_alt, reading_time_minutes, source_path, toc, featured, series, part, ` +
         `further_reading, og_title, og_description, related, og_image, source_blob_sha, ` +
-        `render_hash, updated_at) VALUES (` +
+        `render_hash, writing_status, assumed_audience, key_takeaways, updated_at) VALUES (` +
         `${sql(post.slug)}, 'post', ${sql(post.title)}, ${sql(post.markdown)}, ${sql(post.html)}, ` +
         `${sql(post.description)}, '${status}', ${num(publishAt)}, ` +
         `${sql(post.cover ? post.cover.src : null)}, ${sql(post.cover ? post.cover.alt : null)}, ` +
@@ -93,7 +93,11 @@ function buildSql(posts) {
         `${sql(JSON.stringify(post.toc))}, ${post.featured ? 1 : 0}, ${sql(post.series)}, ${num(post.part)}, ` +
         `${sql(JSON.stringify(post.furtherReading))}, ${sql(post.ogTitle)}, ${sql(post.ogDescription)}, ` +
         `${sql(JSON.stringify(post.related))}, ${sql(ogImage)}, ${sql(post.sourceBlobSha ?? null)}, ` +
-        `${sql(post.renderHash ?? null)}, ${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
+        `${sql(post.renderHash ?? null)}, ` +
+        // The three optional head blocks. NULL when absent, which is most posts.
+        `${sql(post.writingStatus ?? null)}, ${sql(post.assumedAudience ?? null)}, ` +
+        `${sql(post.keyTakeaways ? JSON.stringify(post.keyTakeaways) : null)}, ` +
+        `${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
         `kind = excluded.kind, title = excluded.title, body = excluded.body, ` +
         `html = excluded.html, description = excluded.description, status = excluded.status, ` +
@@ -104,6 +108,9 @@ function buildSql(posts) {
         `og_title = excluded.og_title, og_description = excluded.og_description, ` +
         `related = excluded.related, og_image = excluded.og_image, ` +
         `source_blob_sha = excluded.source_blob_sha, render_hash = excluded.render_hash, ` +
+        `writing_status = excluded.writing_status, ` +
+        `assumed_audience = excluded.assumed_audience, ` +
+        `key_takeaways = excluded.key_takeaways, ` +
         `updated_at = excluded.updated_at;`,
     );
   }

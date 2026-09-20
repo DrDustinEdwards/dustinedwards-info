@@ -1,0 +1,95 @@
+/*
+ * The three optional author-set blocks at the top of a post.
+ *
+ * TOKENS ONLY, no raw hex: check:invariants section 31 refuses a component sheet that states one,
+ * and a colour invented here would be a colour no contrast pair measures.
+ */
+
+.post-head-blocks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem;
+}
+
+/*
+ * THE STATUS TAG. A bordered chip, not a filled one: a fill would make an editorial note the
+ * loudest thing above a title, and purple is reserved for what a reader can click (ruling 75).
+ * The five statuses differ by WORD, and the word is always present.
+ */
+.post-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/*
+ * OBSOLETE IS THE ONE THAT CHANGES COLOUR, because it is the one a reader must not miss: it says
+ * the post is wrong now. It takes the warning border, and the WORD still carries the meaning, so
+ * nothing here rests on hue alone.
+ */
+.post-status[data-status="obsolete"] {
+  border-color: var(--border-warning);
+  color: var(--text-warning);
+}
+
+.post-status-glyph {
+  display: block;
+  flex: none;
+}
+
+/* The audience line. Secondary ink: it is about the reader, not part of the argument. */
+.post-audience {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  max-width: 42rem;
+}
+
+.post-audience-label {
+  font-weight: 500;
+  color: var(--text);
+}
+
+/*
+ * KEY TAKEAWAYS. A quoted rule rather than a filled panel, matching the series block's treatment,
+ * because both are the author stepping outside the prose to address the reader directly.
+ */
+.post-takeaways {
+  margin: 0;
+  padding: 0.75rem 0 0.75rem 1rem;
+  border-left: 3px solid var(--border-strong);
+  max-width: 42rem;
+}
+
+.post-takeaways-h {
+  margin: 0 0 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.post-takeaways ul {
+  margin: 0;
+  padding-left: 1.125rem;
+}
+
+.post-takeaways li + li {
+  margin-top: 0.25rem;
+}
+
+/*
+ * IN PRINT THEY ALL STAY. Each is content the author wrote, not furniture: a printed post that
+ * drops its own obsolete tag is a printed post that lies.
+ */

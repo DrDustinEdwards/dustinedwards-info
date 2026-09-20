@@ -106,6 +106,14 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
         title: string;
         url: string;
       }>,
+      /*
+       * The three optional head blocks, passed through as stored. NULL stays null: absent is the
+       * normal case and the renderer shows each only when present, so a row written before these
+       * columns existed degrades to the post it already was rather than to empty furniture.
+       */
+      writingStatus: post.writingStatus ?? null,
+      assumedAudience: post.assumedAudience ?? null,
+      keyTakeaways: parseJson(post.keyTakeaways, null) as string[] | null,
     },
   };
 }
