@@ -1,0 +1,223 @@
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
+
+/*
+ * WHAT EVERY LISTING PAGE SHARES: the wide track, the page label and its sentence, the evidence
+ * row's slot, the search line, the filter rows and the pager. /blog, the two blog archives and
+ * /publications all draw these; the rows under them differ, and each listing's own sheet carries
+ * those.
+ *
+ * Paper and Plate: ruled rows on the page's own ground, radius 0, no fill, no card, hairlines in
+ * --dust and nothing else drawn.
+ */
+
+/*
+ * THE WIDE TRACK, as home does it: the rules run the full measure between the gutters and the
+ * things that must stay readable carry their own ch caps. Same specificity as `.tracks > *` in
+ * shell.css (0,1,1), and route sheets load after the root's, so this wins on order, which is the
+ * arrangement home.css already relies on.
+ */
+.list-tracks > * {
+  grid-column: wide;
+}
+
+/* 1 · The head: the page label, the sentence under it, and the evidence row. */
+
+.list-head {
+  margin-block-start: var(--s-7);
+}
+
+/*
+ * ONE OF THE THREE PLACES INTER IS ALLOWED AT DISPLAY SETTINGS, and this is the one home.css names
+ * as "a page label used as a page title". Smaller than the name on home: that one is a mark, this
+ * one is a heading over a list.
+ */
+.list-label {
+  margin: 0 0 0.875rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 3rem;
+  font-weight: 800;
+  /* 32, not 48: Inter's opsz axis stops at 32. check:fonts compares every request against the
+     shipped binary's real range. */
+  font-variation-settings: "opsz" 32, "wght" 800;
+  letter-spacing: -0.032em;
+  line-height: 1;
+}
+
+.list-dek {
+  margin: 0 0 1.75rem;
+  /* 54ch, not 46: /blog's sentence fits either way and /publications' is four lines at 46 and
+     three at 54. A dek is one paragraph, so the measure is set by the longest one that exists. */
+  max-width: 54ch;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.5;
+}
+
+/*
+ * NO BOTTOM MARGIN ON THE ROW. The evidence row is the head's last child, and `.tracks > * + *`
+ * already sets the space to the next block; adding one here stacked two gaps into a 68px hole
+ * between the rule and the search line, which read as a missing section rather than as spacing.
+ */
+.list-head .evidence {
+  margin-block-end: 0;
+}
+
+/* 2 · Search. A field is a ruled line, not a box: one hairline under the input, ink text on the
+   page's own ground, and the submit is a word. Nothing here is a filled control. */
+
+.list-search {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-4);
+}
+
+.list-search input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 28rem;
+  border: 0;
+  border-block-end: var(--line-w) solid var(--dust);
+  border-radius: 0;
+  padding: 0.5rem 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  /* The UA's own search decorations put a rounded box back on some platforms. */
+  appearance: none;
+}
+
+.list-search input[type="search"]:focus-visible {
+  border-block-end-color: var(--text);
+}
+
+.list-search button {
+  min-block-size: var(--control-min-dense);
+  border: 0;
+  border-radius: 0;
+  padding: 0.5rem 0;
+  background: transparent;
+  color: var(--brand);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+/*
+ * 3 · The filters: tag and year, each a wrapped row of TEXT LINKS. They were 26 capsules whose
+ * selected state was a filled --brand pill, which is ruling 118 item 7's CHIP condition exactly.
+ * The state is now weight and ink, and it is also `aria-current`, so it is in the accessibility
+ * tree and not only in the pixels. The URL remains the state; these are links, never handlers.
+ */
+
+.list-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.875rem;
+  row-gap: 0.375rem;
+  margin-block-start: var(--s-5);
+}
+
+.list-filter-label {
+  flex: 0 0 auto;
+  min-inline-size: 3.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.list-filter a {
+  display: inline-flex;
+  align-items: center;
+  /* WCAG 2.2 2.5.8: a bare inline anchor's box is its line box. These are links alone in a nav,
+     so the inline-link exception does not apply and the box carries the target. */
+  min-block-size: var(--control-min-dense);
+  color: var(--brand);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+/* WHERE YOU ARE IS INK AND WEIGHT. Never a fill, and never hue alone. */
+.list-filter a[aria-current] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* A token, never opacity: check:contrast reads token hexes, and opacity on text hides a failing
+   composite behind a passing pair. */
+.filter-count {
+  margin-inline-start: 0.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 5 · Paging, and the feed links under the list. */
+
+.pager {
+  display: flex;
+  align-items: center;
+  column-gap: var(--s-5);
+  margin-block-start: var(--s-6);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+
+.pager a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-min-dense);
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.pager-where {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.list-feeds {
+  margin-block-start: var(--s-5);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.list-feeds a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+
+/*
+ * EVERY HOVER ON THIS SHEET, IN ONE RULE. Four rules were saying the same three declarations,
+ * which is the site's one underline: a hairline, offset far enough to clear a descender.
+ */
+.list-filter a:hover,
+.pager a:hover,
+.list-feeds a:hover,
+.list-search button:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+@media (max-width: 47.99rem) {
+  .list-label {
+    font-size: 2.25rem;
+    letter-spacing: -0.028em;
+  }
+  .list-dek {
+    max-width: none;
+    font-size: 1.0625rem;
+  }
+}

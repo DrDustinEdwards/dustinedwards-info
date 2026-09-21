@@ -22,6 +22,7 @@ import type { Route } from "./+types/blog.series.$series";
 // One sheet, where the card needed two: `.post-card-series` lived only in the extras sheet. The
 // listing is one object now and an archive is the same object filtered.
 import "~/styles/evidence-row.css";
+import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
 /**
