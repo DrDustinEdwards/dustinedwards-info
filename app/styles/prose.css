@@ -171,11 +171,36 @@
   color: var(--text);
 }
 
+/* The scroll container the pipeline wraps every table in. A table whose columns do not fit the
+   reading column scrolls here instead of scrolling the document: measured at 320, the table in
+   ten-years-on-cloudflare was 431px wide and took the whole page sideways with it.
+
+   UNSCOPED ON PURPOSE, and this rule is the owner: /playground/ui's inventory table had the same
+   defect (+68 at 320) and takes the same container, so the behaviour is stated once rather than
+   once per sheet. The margin is scoped to prose, where the pipeline puts it. */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.prose .table-scroll {
+  margin: 1.5rem 0;
+}
+
 .prose table {
   width: 100%;
   margin: 1.5rem 0;
   border-collapse: collapse;
   font-size: 0.9375rem;
+}
+
+/* Only inside the container, so a table written in JSX rather than produced by the pipeline keeps
+   the old behaviour rather than escaping a parent that has no scroll. max-content, not 100%: at
+   100% a wide table squeezes its cells to fit and the scroll never happens; the min keeps a narrow
+   table filling the column as it did before. */
+.prose .table-scroll > table {
+  inline-size: max-content;
+  min-inline-size: 100%;
+  margin: 0;
 }
 
 .prose th,
