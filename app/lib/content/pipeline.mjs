@@ -1374,6 +1374,75 @@ function remarkDetails(file) {
 const PULL_QUOTE_LIMIT = 2;
 
 /**
+ * `:::sidenote{kind="Fallback"}` puts a short note in the rail beside the paragraph it follows.
+ *
+ * IT STAYS IN THE PROSE FLOW AND IS FLOATED INTO THE RAIL, which is the one arrangement that
+ * aligns without measuring. The handoff sketches it inside `.post-rail`, but a note in that
+ * container can only line up with its paragraph if something reads the paragraph's position, and
+ * that is JavaScript on a plane that does not hydrate. Left where the author wrote it, the note
+ * aligns because it is a sibling of the paragraph it annotates, and `post-rail.css` floats it into
+ * the rail's column. At one column the float is dropped and it reads inline, in reading order.
+ *
+ * THE KIND IS REQUIRED, like `:::details`'s summary: the label is what tells a reader whether the
+ * note is an aside, a caveat or a measurement before they decide to read it.
+ *
+ * AN `aside`, so a screen reader can skip it and so it is announced as tangential, which is what a
+ * sidenote is.
+ *
+ * @param {string} file
+ */
+function remarkSidenote(file) {
+  return (/** @type {import("mdast").Root} */ tree) => {
+    /* Per document, so the numbering restarts on every post and `#sn-1` is always its first. */
+    let noteIndex = 0;
+    visit(tree, (node) => {
+      if (node.type !== "containerDirective" || node.name !== "sidenote") return;
+
+      const kind = (node.attributes ?? {}).kind;
+      if (!kind) {
+        throw new ContentError(
+          file,
+          ':::sidenote requires a kind attribute, for example :::sidenote{kind="Fallback"}. ' +
+            "The label is the reader's only cue about what the note is before they read it.",
+        );
+      }
+
+      const heading = (node.children ?? []).find((child) => child.type === "heading");
+      if (heading) {
+        const line = heading.position?.start?.line;
+        throw new ContentError(
+          file,
+          `:::sidenote holds a heading${line ? ` on line ${line}` : ""}. A heading is a section ` +
+            "of the argument: it lands in the table of contents and is a link target, and the " +
+            "rail is not where a section goes. Keep a note to prose.",
+        );
+      }
+
+      /*
+       * AN ID, SO A MARKER CAN ANCHOR TO IT. Numbered in source order, which is the order a reader
+       * meets them, so `#sn-1` is the page's first note and stays that for whoever links to it.
+       * Without one a note is unreferenceable, and adding markers later would have to migrate
+       * every note that had already shipped.
+       */
+      noteIndex += 1;
+      node.data = {
+        ...node.data,
+        hName: "aside",
+        hProperties: { className: ["post-note"], id: `sn-${noteIndex}` },
+      };
+      node.children = [
+        {
+          type: "paragraph",
+          data: { hName: "b", hProperties: { className: ["post-note-kind"] } },
+          children: [{ type: "text", value: String(kind) }],
+        },
+        .../** @type {any[]} */ (node.children ?? []),
+      ];
+    });
+  };
+}
+
+/**
  * A pull quote is a glance, so it is capped at roughly one line of display type. Longer than this
  * and a reader reads it twice instead of once, which is the failure the aria-hidden is about in the
  * other direction.
@@ -1484,7 +1553,15 @@ function remarkPullQuote(file) {
 /**
  * Every directive this pipeline understands. Adding one means adding it here.
  */
-export const KNOWN_DIRECTIVES = ["chart", "details", "diagram", "figure", "pullquote", "swatch"];
+export const KNOWN_DIRECTIVES = [
+  "chart",
+  "details",
+  "diagram",
+  "figure",
+  "pullquote",
+  "sidenote",
+  "swatch",
+];
 
 /**
  * Fails the build on any directive this pipeline does not implement.
@@ -2220,6 +2297,9 @@ export async function renderBody({ file, body, resolveImage }) {
     // consume its opener and it consumes nobody else's. Placed here so the
     // handlers read in the order KNOWN_DIRECTIVES lists them.
     .use(remarkPullQuote, file)
+    /* No ordering constraint: `sidenote` shares no syntax with the others and consumes nothing
+       they open. Placed in the order KNOWN_DIRECTIVES lists it, like the rest. */
+    .use(remarkSidenote, file)
     .use(remarkSwatch, file)
     .use(remarkChart, file, charts)
     .use(remarkDiagram, file, diagrams)

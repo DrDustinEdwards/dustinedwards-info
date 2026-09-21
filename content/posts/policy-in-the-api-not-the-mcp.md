@@ -4,6 +4,12 @@ slug: policy-in-the-api-not-the-mcp
 description: "APIs and MCP servers are layers, not rivals. A practical rule for architects: implement authentication, authorization, and business policy in the HTTP API exactly once, and build MCP servers as thin discovery layers that contain none of it."
 date: 2026-07-30
 tags: [mcp, api, architecture, agents]
+writing_status: finished
+assumed_audience: "Architects deciding whether to build an API or an MCP server, and where authorization should live once they have both."
+key_takeaways:
+  - "An API and an MCP server answer different questions and compose as layers; asking which to build is the wrong question."
+  - "Authentication, authorization and business policy belong in the HTTP API, implemented exactly once."
+  - "An MCP server should be a thin translation layer that contains none of that policy."
 draft: false
 first_published: 2026-07-30
 ---
