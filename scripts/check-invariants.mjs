@@ -4177,9 +4177,10 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   /* The h1 and h2 levels landed with Part B page 1: post-shell.css paints the post title and the
      in-article h2 from them. Eleven entries out, which is the map doing its job. */
   ["--t-h3-tracking",        "scale: the h3 type level"],
-  /* The four lamp tokens left this map with the figure haze (ruling 118 item 5). They had been
-     carried since ruling 65 with no consumer, waiting on glass controls that ruling 117 then
-     retired, so the owner named here could never have landed. post-shell.css reads all four. */
+  ["--lamp-origin",          "component: the lamp on the glass controls, ruling 74"],
+  ["--lamp-reach",           "component: the lamp on the glass controls, ruling 74"],
+  ["--surface-catch",        "component: the lamp on the glass controls, ruling 74"],
+  ["--lamp-chroma-on-paper", "component: the lamp on the paper glass surface, ruling 74"],
   ["--error-fill",           "component: the error alert, and a form field in its error state"],
   ["--error-tint",           "component: the error alert, and a form field in its error state"],
   ["--on-error-fill",        "component: the error alert, and a form field in its error state"],
@@ -4265,7 +4266,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 472 : 430;
+const MINIMUM_CHECKS = wantsRemote ? 480 : 438;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
