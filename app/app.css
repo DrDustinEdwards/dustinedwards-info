@@ -859,10 +859,8 @@
   .btn-danger,
   .btn-ghost,
   .search-submit,
-  .blog-search button,
   .skip-link,
   .ask-badge,
-  .tag-chip[aria-current="true"],
   .search-chip.is-active,
   /* The admin chip's active state is a brand fill, which this mode removes,
      so it takes the same forced outline as the search chip. */
@@ -1041,9 +1039,7 @@ a:hover {
 .btn:focus-visible,
 .btn-brand:focus-visible,
 .skip-link:focus-visible,
-.search-submit:focus-visible,
-.blog-search button:focus-visible,
-.tag-chip[aria-current="true"]:focus-visible {
+.search-submit:focus-visible {
   outline: 2px solid var(--focus-ring-on-brand);
   outline-offset: -4px;
 }

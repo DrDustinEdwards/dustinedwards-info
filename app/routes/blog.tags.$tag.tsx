@@ -1,10 +1,11 @@
 import { Link, data, redirect } from "react-router";
 
-import { PostCard, Pagination } from "~/components/post-card";
+import { EvidenceRow } from "~/components/evidence-row";
+import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getBlogTag, listBlogPosts } from "~/db";
-import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
+import { POSTS_PER_PAGE, listingFacts } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import {
@@ -19,13 +20,13 @@ import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/blog.tags.$tag";
 
 /*
- * BOTH SHEETS THE SHARED CARD NEEDS. `PostCard` renders `.post-card-series`,
- * defined ONLY in blog-index-extras.css, so importing blog-index.css alone left
- * that element unstyled on this page and on no other. Nothing in a payload gate
- * can see it, because the weight was merely lower.
+ * ONE SHEET, where the card needed two: `.post-card-series` lived only in blog-index-extras.css,
+ * so importing blog-index.css alone left that element unstyled on this page and on no other, which
+ * nothing in a payload gate could see because the weight was merely lower. The listing is one
+ * object now, and an archive is the same object filtered.
  */
-import "~/styles/blog-index.css";
-import "~/styles/blog-index-extras.css";
+import "~/styles/evidence-row.css";
+import "~/styles/entry-list.css";
 
 /**
  * The archive for one tag.
@@ -100,14 +101,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogTag({ loaderData }: Route.ComponentProps) {
-  const { posts, tag, page, pageCount } = loaderData;
+  const { posts, tag, page, pageCount, total, span } = loaderData;
   const hrefFor = (n: number) =>
     n > 1 ? `${tagPath(tag.slug)}?page=${n}` : tagPath(tag.slug);
 
   return (
     <>
       <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
+      <main className="tracks list-tracks" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -121,35 +122,37 @@ export default function BlogTag({ loaderData }: Route.ComponentProps) {
           }}
         />
 
-        <header className="page-head">
-          <h1>Posts tagged {tag.name}</h1>
-          <p className="muted">
-            {tag.total} post{tag.total === 1 ? "" : "s"}.{" "}
-            <Link to="/blog">All posts</Link>
+        <header className="list-head">
+          <h1 className="list-label">Tagged {tag.name}</h1>
+          <p className="list-dek">
+            Every post on this blog tagged {tag.name}. <Link to="/blog">All posts</Link>
           </p>
+          {/* The same three counted facts the index carries, over this archive's own list. The
+              count is the listing's, not `tag.total`: two owners for one number is one too many. */}
+          <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
-        {/*
-         * A reader who filters to a subject is exactly the reader who wants only that
-         * subject in their reader, and until these existed the only feed on offer was
-         * everything.
-         */}
-        <p className="muted">
-          Subscribe: <a href={`${tagPath(tag.slug)}/rss.xml`}>RSS</a>{" "}
-          <a href={`${tagPath(tag.slug)}/feed.json`}>JSON</a>
-        </p>
-
         {posts.length === 0 ? (
-          <p className="muted">No posts here yet.</p>
+          <p className="list-empty">No posts here yet.</p>
         ) : (
-          <ul className="post-list">
+          <ul className="entry-list">
             {posts.map((post) => (
-              <PostCard key={post.slug} post={post} />
+              <PostRow key={post.slug} post={post} />
             ))}
           </ul>
         )}
 
-        <Pagination page={page} pageCount={pageCount} hrefFor={hrefFor} />
+        <Pager page={page} pageCount={pageCount} hrefFor={hrefFor} />
+
+        {/*
+         * A reader who filters to a subject is exactly the reader who wants only that subject in
+         * their reader, and until these existed the only feed on offer was everything. Under the
+         * list now rather than above it: it is what to do after reading, not before.
+         */}
+        <p className="list-feeds">
+          Subscribe: <a href={`${tagPath(tag.slug)}/rss.xml`}>RSS</a>{" "}
+          <a href={`${tagPath(tag.slug)}/feed.json`}>JSON</a>
+        </p>
       </main>
       <ShellFooter />
     </>

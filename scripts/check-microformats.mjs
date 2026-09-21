@@ -399,9 +399,32 @@ function indexLoaderData(page) {
     activeYear: null,
     page,
     pageCount: totalPages,
+    /*
+     * THE EVIDENCE ROW'S OWN INPUTS, over the WHOLE corpus rather than this page of it, which is
+     * what `listBlogPosts` answers and what `listingFacts` says the row means. Supplied rather
+     * than omitted: a fixture that leaves them out renders a page missing a block the site ships,
+     * and this gate's whole value is that what it parses is what a reader is served.
+     */
+    total: ordered.length,
+    span: {
+      firstYear: year(ordered.at(-1)?.publishAt),
+      lastYear: year(ordered[0]?.publishAt),
+      minutes:
+        ordered.reduce((n, p) => n + (p.readingTimeMinutes ?? 0), 0) || null,
+    },
     /** The number of entries the page will render, which is what section 2 asserts. */
     expectedEntries: split.posts.length + (split.featured ? 1 : 0),
   };
+}
+
+/**
+ * The UTC year of a publish date, or null. `ordered` is newest first, so the last row is oldest.
+ *
+ * @param {string | number | Date | null | undefined} value
+ */
+function year(value) {
+  if (!value) return null;
+  return String(new Date(value).getUTCFullYear());
 }
 
 let feedsParsed = 0;

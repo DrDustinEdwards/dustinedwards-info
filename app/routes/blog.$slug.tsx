@@ -37,7 +37,6 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/blog.$slug";
 
-import "~/styles/blog-index.css";
 import "~/styles/post-rail.css";
 import "~/styles/evidence-row.css";
 import "~/styles/post-shell.css";

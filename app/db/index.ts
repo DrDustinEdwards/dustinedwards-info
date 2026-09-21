@@ -14,6 +14,7 @@ import {
   lte,
   or,
   sql,
+  type SQL,
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
@@ -89,6 +90,49 @@ function isBlogPost() {
   return and(eq(posts.kind, "post"), publiclyVisible());
 }
 
+/**
+ * THE COUNT AND THE THREE FACTS BESIDE IT, as ONE statement over a listing's own narrowing, so the
+ * evidence row over a list cannot describe a different list than the rows under it. The index, the
+ * tag archive and the series archive all state the same three and take them from here.
+ *
+ * IT COMPOSES `isBlogPost()` ITSELF and takes only the EXTRA clauses. Written first to take a
+ * finished `where` from the caller, which read fine and was wrong twice over: `check:invariants`
+ * section 6 could not see a predicate in this body and failed it, correctly, and a future caller
+ * could have passed a `where` without one and nothing would have said so. Hard rule 1 is a
+ * chokepoint, not a convention, so the predicate belongs where it cannot be left out.
+ *
+ * The years come from SQLite rather than from a JavaScript date: `publish_at` is epoch seconds,
+ * `listBlogYears` already asks for a year exactly this way, and two spellings of one conversion
+ * are two answers waiting to disagree across a new year in a different zone.
+ */
+function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
+  return db
+    .select({
+      total: count(),
+      firstYear: sql<string | null>`strftime('%Y', min(${posts.publishAt}), 'unixepoch')`.as(
+        "first_year",
+      ),
+      lastYear: sql<string | null>`strftime('%Y', max(${posts.publishAt}), 'unixepoch')`.as(
+        "last_year",
+      ),
+      minutes: sql<number | null>`sum(${posts.readingTimeMinutes})`.as("minutes"),
+    })
+    .from(posts)
+    .where(and(isBlogPost(), ...narrowing));
+}
+
+/**
+ * The span row as the page reads it. A NULL IS NOT A ZERO: an empty list has no first year and
+ * nothing to read, and the row omits itself rather than claiming a span nothing occupies.
+ */
+function spanOf(row: { firstYear: string | null; lastYear: string | null; minutes: number | null } | undefined) {
+  return {
+    firstYear: row?.firstYear ?? null,
+    lastYear: row?.lastYear ?? null,
+    minutes: row?.minutes ?? null,
+  };
+}
+
 /** One tag predicate so index, archive and feeds agree. A join would multiply rows. */
 function carriesTag(db: DB, tagSlug: string) {
   return inArray(
@@ -153,14 +197,16 @@ export async function listBlogPosts(
   const tag = options.tag?.trim() || null;
   const year = options.year?.trim() || null;
 
-  // Filtered in the query, so the shipped HTML is already narrowed.
-  const clauses = [isBlogPost()];
+  /* Filtered in the query, so the shipped HTML is already narrowed. The two filter clauses are
+     kept apart from the predicate because `listingSpanSelect` composes its own: one narrowing,
+     two statements, and neither can be given a where that forgot hard rule 1. */
+  const narrowing: (SQL | undefined)[] = [];
   // Via `carriesTag`, shared with the tag archive and its feeds.
-  if (tag) clauses.push(carriesTag(db, tag));
+  if (tag) narrowing.push(carriesTag(db, tag));
   if (year) {
-    clauses.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
+    narrowing.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
   }
-  const where = and(...clauses);
+  const where = and(isBlogPost(), ...narrowing);
 
   // One round trip. The page is a subquery the tag join wraps; joining first would LIMIT
   // joined rows. `id DESC` breaks ties, or posts sharing `publish_at` interleave by tag.
@@ -174,9 +220,10 @@ export async function listBlogPosts(
     .as("page_of_posts");
 
   // Named one by one: drizzle will not select a subquery as a nested object.
-  const [countRows, joined] = await timed(options.timings, "d1_batch", () =>
+  const [statRows, joined] = await timed(options.timings, "d1_batch", () =>
     db.batch([
-      db.select({ total: count() }).from(posts).where(where),
+      /* The count and the evidence row's three facts, over the same narrowing as the rows. */
+      listingSpanSelect(db, ...narrowing),
       db
         .select({
           id: pageOfPosts.id,
@@ -204,7 +251,8 @@ export async function listBlogPosts(
   );
 
   // COUNT(*) without GROUP BY always returns one row.
-  const total = countRows[0]?.total ?? 0;
+  const stats = statRows[0];
+  const total = stats?.total ?? 0;
 
   // One entry per post; the Map keeps the ORDER BY's post and tag order.
   type Row = (typeof joined)[number];
@@ -226,6 +274,9 @@ export async function listBlogPosts(
     page,
     perPage,
     pageCount: Math.max(1, Math.ceil(total / perPage)),
+    /* THE WHOLE FILTERED LIST, not this page of it: a reader on page 2 of a 36-post archive is
+       still reading a 36-post archive. */
+    span: spanOf(stats),
   };
 }
 
@@ -318,8 +369,10 @@ export async function listSeriesPosts(
   const page = Math.max(1, options.page ?? 1);
   const where = and(isBlogPost(), eq(posts.series, series));
 
-  const [totalRows, rows] = await db.batch([
-    db.select({ n: count() }).from(posts).where(where),
+  const [statRows, rows] = await db.batch([
+    /* The same statement the index counts with, so the archive's evidence row states the same
+       three facts about its own list rather than a second set with its own arithmetic. */
+    listingSpanSelect(db, eq(posts.series, series)),
     db
       .select({ ...postCard, id: posts.id })
       .from(posts)
@@ -329,13 +382,14 @@ export async function listSeriesPosts(
       .offset((page - 1) * perPage),
   ]);
 
-  const total = Number(totalRows[0]?.n ?? 0);
+  const total = Number(statRows[0]?.total ?? 0);
   const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
   return {
     posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
     total,
     page,
     pageCount: Math.max(1, Math.ceil(total / perPage)),
+    span: spanOf(statRows[0]),
   };
 }
 

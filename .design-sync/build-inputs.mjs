@@ -82,8 +82,10 @@ const SHEETS = [
   "app/styles/shell.css",
   // Route sheets, which load after the root module's on the site.
   "app/styles/prose.css",
-  "app/styles/blog-index.css",
-  "app/styles/blog-index-extras.css",
+  // The listing: /blog and the two archives, one sheet where there were two. It replaced
+  // blog-index.css and blog-index-extras.css, whose chips, featured well and 48rem column were
+  // the 2025 vocabulary conventions.md already described as deleted.
+  "app/styles/entry-list.css",
   // The rail track's own sheet and the evidence row's, in blog.$slug.tsx's import order. The
   // evidence row is a site object rather than a route sheet: home and the colophon import the
   // same component, so it sits here once and not per page.
