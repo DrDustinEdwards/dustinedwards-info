@@ -49,23 +49,14 @@
 }
 
 /*
- * ONE INK ON CHROME. Every path takes currentColor, so the mark inherits --text from the brand link
- * and follows the theme. The warm literals and the --brand fills in site-logo.tsx are overridden
- * here and in the footer; the full-colour mark appears only on /about and /colophon, at a size
- * where the drawing is legible. (0,2,0) beats `.site-logo-brand` at (0,1,0).
+ * NO FILL RULE FOR THE MARK HERE, and the absence is the ruling. 118.2: the logo's own fills are the
+ * logo, so the header draws it in its own colours. The five purple paths take --brand from app.css
+ * and move with the theme; the three warm paths keep the presentation attributes site-logo.tsx
+ * gives them, identical in both variants. Any rule here would beat both.
+ *
+ * check:logo holds the fill bindings on `.site-logo-brand` as a closed set and holds the
+ * `.site-header-mark` family at zero, so re-inking the mark fails rather than winning quietly.
  */
-.site-header .site-logo-brand {
-  fill: currentColor;
-}
-
-/*
- * The other three paths carry literal warm fills as presentation attributes, which any CSS rule
- * outranks. Deliberately NOT written against `.site-logo-brand`: check:logo holds a closed set of
- * bindings on that class and a third would fail it, correctly.
- */
-.site-header-mark path {
-  fill: currentColor;
-}
 
 /* Width follows the 36x50 ratio of the crop in site-logo.tsx. */
 .site-header-mark {
