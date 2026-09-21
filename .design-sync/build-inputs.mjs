@@ -85,6 +85,7 @@ const SHEETS = [
   // The listing: /blog and the two archives, one sheet where there were two. It replaced
   // blog-index.css and blog-index-extras.css, whose chips, featured well and 48rem column were
   // the 2025 vocabulary conventions.md already described as deleted.
+  "app/styles/listing.css",
   "app/styles/entry-list.css",
   // The rail track's own sheet and the evidence row's, in blog.$slug.tsx's import order. The
   // evidence row is a site object rather than a route sheet: home and the colophon import the
@@ -105,6 +106,7 @@ const SHEETS = [
   "app/styles/ask.css",
   "app/styles/projects.css",
   "app/styles/publications.css",
+  "app/styles/paper.css",
   "app/styles/palette-dialog.css",
   "app/styles/playground.css",
   "app/styles/playground-ui.css",
