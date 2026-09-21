@@ -72,16 +72,28 @@ redefining the old one.
 
 ## Purple is the only accent a user can click
 
-Limestone and dust are neutrals. Leaf and iron oxide are atmosphere and figure
-palette. None of the three ever lands on a control. If something is interactive,
-it is purple or it is not signalling interactivity.
+Limestone and dust are neutrals. **Iron oxide and leaf are FIGURE SERIES, not
+atmosphere** (ruling 122): oxide is series 1 and carries every annotation, the
+figure and plate numbers, leaders, labels and strokes; leaf is series 2; cadet
+is series 3; and the dust step used for lawn and halo texture is never a series
+at all. None of them ever lands on a control, and purple never lands in a
+figure: in light `--brand` IS the link colour, so a purple series reads as a row
+of links. If something is interactive, it is purple or it is not signalling
+interactivity.
 
-Light is atmosphere, never meaning: nothing may depend on a glow to be
-understood. **Glass was retired as a material by ruling 117.** It survives only
-on things that float and then leave: modal dialogs, the image viewer, tooltips.
-Solid first, blur 12px at most, no brand fill, radius 0, opaque under
-`prefers-reduced-transparency` and in print. Never on the header, a well, live
-results, Ask, or anything that stays after the pointer leaves.
+**The system is Paper and Plate** (ruling 123), internal only, never printed on
+the site. The page is paper; the drawings are plates, which are flat line work
+in the taxonomic-key tradition: outline rather than shading, mono labels on
+leaders, a scale bar.
+
+**Light touches only glass, and a figure is never lit** (ruling 124). No
+gradient, no field, no shadowed rim, no haze behind a figure, because a lit
+diagram is a diagram pretending to be a photograph. Glass is the thing
+physically over the page, briefly: a modal dialog, the image viewer, and a
+readout held over a figure. Never the header, a well, a panel, live results, the
+rail, or anything sticky. Solid first, blur 12px at most, no brand fill, radius
+0, opaque under `prefers-reduced-transparency` and in print. `conventions.md`
+carries the pane's own values; this file does not restate them.
 
 ## The kill list is five conditions, not five words
 

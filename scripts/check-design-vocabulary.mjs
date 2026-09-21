@@ -120,7 +120,7 @@ console.log(
 );
 
 /* The floor is measured by RUNNING this gate, never counted by hand. */
-const MINIMUM_CHECKS = 62;
+const MINIMUM_CHECKS = 72;
 const breach = assertFloor("check:design-vocabulary", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 
