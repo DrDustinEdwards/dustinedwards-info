@@ -6,6 +6,12 @@ date: 2026-07-31
 draft: false
 first_published: 2026-07-31
 tags: [cloudflare, workers, data-visualization, observable-plot, accessibility]
+writing_status: finished
+assumed_audience: "People rendering charts on the server who have hit a DOM dependency, and anyone weighing a library against workerd's limits."
+key_takeaways:
+  - "Observable Plot renders inside a Worker with linkedom as the DOM: 930 KiB raw, 226 KiB gzipped, and byte-identical SVG in Node and workerd."
+  - "The three configurations that failed define the boundary as precisely as the one that works, and two of the failures generalise well beyond charts."
+  - "Accessibility is enforced by the build rather than promised in the prose."
 ---
 
 Observable Plot can render charts inside a Cloudflare Worker. As far as I can determine, this has not been documented before: Plot's own documentation covers server-side rendering in Node.js via JSDOM, the Plot team has demonstrated rendering in a browser Web Worker via a DOM substitute, and searching for the Cloudflare case returns nothing. This article reports the working configuration, measured on 2026-07-31: Plot 0.6.17 with linkedom 0.18.13 as the DOM implementation, bundling at 930 KiB raw and 226 KiB gzipped as measured in this site's production Worker, rendering deterministically (200 in-process renders and multiple separate processes producing one distinct output), and, the property that mattered most here, producing byte-identical SVG in Node and in workerd, verified by SHA-256 comparison. It also reports the three candidate configurations that failed, with their exact errors, because the failures define the boundary of what works and two of them generalize well beyond charts.
@@ -15,6 +21,10 @@ Everything below is reproducible; the chart in this article is rendered by the p
 ## Why render charts in the Worker at all
 
 The obvious architecture for a static blog is to render charts at build time only, and if that fits your system, you should do it and skip the hard parts of this article. The requirement here was stricter because of two standing rules on this site. First, charts are content: the data lives in the post's markdown as a fenced block inside a chart directive, and the rendered SVG is part of the stored HTML rather than an asset beside it, the same regime [all content here lives under](/blog/posts-in-git-served-from-d1). Second, that render has two writers, the Node build and the Worker's save path (the browser editor, and the [agent-operated publishing API](/blog/agent-write-access-to-a-live-site) this post arrived through), and the whole design depends on both writers producing identical bytes. Together these rules mean the chart renderer must run in the Worker, produce output byte-identical to the Node build's, and do so deterministically forever. That combination, not any single requirement, is what eliminated most of the field.
+
+:::sidenote{kind="Constraint"}
+Byte-identical is the word that decides this. Two writers producing *equivalent* SVG would still fail the build's comparison, because the gate compares bytes rather than rendered pictures.
+:::
 
 ## The configuration that works: Plot plus linkedom
 

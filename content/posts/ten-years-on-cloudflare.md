@@ -6,6 +6,11 @@ date: 2026-07-30
 draft: false
 featured: true
 tags: [cloudflare, workers, d1, platform, architecture]
+assumed_audience: "Developers choosing among Cloudflare's products, who want the refusals listed beside the adoptions."
+key_takeaways:
+  - "Every Cloudflare developer product as of September 8, 2026, what each does in plain words, and whether this site uses it."
+  - "The refusals sit in the table with everything else, because a survey that lists only what worked is an advertisement."
+  - "The pages, database, uploads, search, AI answers, alert mail and publishing pipeline all run on Cloudflare, and nothing else is in the stack."
 first_published: 2026-07-30
 ---
 
