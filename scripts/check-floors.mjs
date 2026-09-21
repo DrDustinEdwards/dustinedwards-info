@@ -56,7 +56,8 @@ const UNFLOORED = {
    * sits far under its count, which reads as drift and is not: the count is a property of the
    * bundler's splitting on the day.
    */
-  "check:page-payload": "carries scope floors on built chunks and files walked, not executed counts.",
+  "check:page-payload":
+    "carries scope floors on built chunks, files walked and routes rendered, not executed counts.",
 };
 
 /**
