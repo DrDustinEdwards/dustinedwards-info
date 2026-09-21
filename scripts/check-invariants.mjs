@@ -4193,7 +4193,8 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--fig-ground",           "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-dust-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-dust-200",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  ["--fig-dust-300",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  /* --fig-dust-300 left this map with Plate I (ruling 124), which paints it as the lawn stipple,
+     the halo ring and the dashed inner margin. Texture, never a series: ruling 122. */
   ["--fig-leaf-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-400",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-500",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
@@ -4266,7 +4267,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 480 : 438;
+const MINIMUM_CHECKS = wantsRemote ? 478 : 436;
 const floorBreach = assertFloor(
   "check:invariants",
   /*
