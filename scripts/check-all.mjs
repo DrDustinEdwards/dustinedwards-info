@@ -86,6 +86,9 @@ export const TIERS = {
   "check:fonts": "offline",
   /* Reads its inputs off disk, so `--ci` runs it (ruling 111). */
   "check:design-sheets": "offline",
+  /* Offline: reads conventions.md and the sheets it names, and renders nothing. Ruling 120's
+     first item, because the canvas reads that file every time it designs. */
+  "check:design-vocabulary": "offline",
   /* Report (ruling 116). It scores the DIFF rather than the tree, so on the tree its findings
      are false positives, and a score is a preference: 83 of 83 in-scope findings were false
      positives when the audit opened them. The ci.yml step that runs it does not block. */

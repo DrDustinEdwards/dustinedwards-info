@@ -14,6 +14,28 @@ runtime dependencies, and what was deliberately not adopted and why. The stack
 half is generated from the repository's own configuration and reconciled
 against it by a build gate rather than maintained by hand.
 
+## How it looks
+
+The look is a fixed direction rather than a theme that drifts per page. It is
+Swiss editorial on warm limestone paper: ink text, 1px hairlines as the only
+structure, and one accent colour used as ink for links and focus rather than as
+a fill. Titles and prose are a serif, and dates, identifiers and counts are a
+monospace, so the machine-readable values on a page are the ones set in mono.
+The rule is ruled rows rather than cards, no filled public control, no capsule
+and no tracked capitals. The post page and the home page are rebuilt under that
+rule; the index pages still carry the older vocabulary and are being brought to
+it, so a page that contradicts this paragraph is behind, not an exception. The
+theme is an attribute and follows prefers-color-scheme when none is set.
+
+The half of that which never degrades is the machine half. Every public page
+renders its content, data, citations, dates and structure in server HTML,
+complete and correct without script, and keeps its markdown twin, its entry in
+this file, its JSON-LD and its microformats. No public route hydrates and no
+framework runs on a reading page. The script that does load is hand-written and
+adds only what a person would want, such as zooming a figure or filtering
+without a reload, and a filter writes the query string, so a URL you are handed
+shows you what it showed whoever sent it.
+
 ## Blog
 
 Posts are listed at /blog and can be filtered by tag at /blog?tag=<tag>.
