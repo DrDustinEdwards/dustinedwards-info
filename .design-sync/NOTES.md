@@ -110,11 +110,15 @@ Two things follow for the next sync, and neither is obvious from the code:
   --shiki-dark-bg`. Legitimate: the markdown pipeline's syntax highlighter sets
   these inline on rendered code blocks at build time, so no stylesheet defines
   them. Non-blocking, do not chase.
-- `_ds_bundle.css fonts: 2 dead @font-face block(s) dropped` on every build.
+- `_ds_bundle.css fonts: N dead @font-face block(s) dropped` on every build.
   Also legitimate and slightly misreported: the working faces are in
   `fonts/fonts.css`, which `styles.css` imports FIRST, and the drop removes the
   duplicates that would otherwise shadow them. The converter's own drop regex
   backtracks around a quoted `./fonts/` url, which is why it fires at all.
+  **N is one per shipped face, so it tracks the font count rather than being a
+  fixed number**: it read 2 while Inter normal and italic were the whole set and
+  reads 3 now that Source Serif 4 ships with them. A count that moved because a
+  face was added is not a new warn.
 
 ## Preview authoring, learned the hard way
 
@@ -142,9 +146,24 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
   the list is an instrument rather than a diff somebody remembers to run. Its
   one named exclusion is `katex.generated.css`. Ruling 111 has the grounds.
 - The conventions header enumerates real token and class names. They were all
-  verified against the built stylesheet on 2026-09-12; re-run that validation
-  rather than assuming, since a renamed token would send the design agent
-  vocabulary that resolves to nothing.
+  verified against the built stylesheet on 2026-09-12 and again on 2026-09-21
+  (34 tokens, 33 classes, all resolving); re-run that validation rather than
+  assuming, since a renamed token would send the design agent vocabulary that
+  resolves to nothing. **Two names fail that check ON PURPOSE and are not
+  drift**: `--bar-fill`, which canvas-constraints.md names as the invented
+  token that broke the header, and `aria-hidden`, which is an attribute. The
+  repo's own `check:design-vocabulary` gate is scoped to conventions.md alone
+  for exactly the first reason.
+- **The Capsid exports carry design law the repo does not.** Rulings 122, 123
+  and 124 (the closed colour system, Paper and Plate, light touches only glass)
+  reach the canvas ONLY through
+  `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because
+  `decisions-vol-19.md` is not an exported document and conventions.md does not
+  restate them. Two consequences: `build-capsid-guidelines.mjs` must run before
+  `check:guidelines` or the export directory is missing and the gate fails, and
+  a ruling added to the volume after a sync is invisible to the canvas until
+  someone patches the brief. That is how a job built a figure haze in PR #57
+  that ruling 124 forbids.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because
   there are none. A prop rename in `app/components/` is picked up on rebuild;
   nothing warns that it changed.
@@ -172,10 +191,20 @@ canvas's work gets deleted.
 `guidelines/.design-sync/guidelines/chrome-and-bars.md`. That is three
 directories of noise in front of every file a design agent is meant to read.
 
-The flatten is a WRITE-TIME choice, not a config one: the destination path in the
-plan is what decides where a file lands, so the plan names
-`guidelines/chrome-and-bars.md` and reads from the nested local path. Changing
-`guidelinesGlob` does not fix it, because the glob selects which files go, not
-where they arrive. When the flatten happens, the old nested paths are deleted in
-the same plan; `guidelines/` is not on the safe list above and never held canvas
-work.
+The mechanism is in `lib/docs.mjs`'s `emitGuidelines`: the dest keeps the
+PKG_DIR-relative subpath, and collapses to `basename(p)` only for a file outside
+the package. PKG_DIR is this repo root, so everything under `.design-sync/`
+keeps three directories of prefix. Changing `guidelinesGlob` cannot fix it: the
+glob selects WHICH files go, not where they arrive.
+
+**DONE on 2026-09-21, and here is the shape so the next sync keeps it.** The
+flatten is a post-build step on the bundle, not a config change: after the
+driver run, move `ds-bundle/guidelines/.design-sync/guidelines/*` up to
+`ds-bundle/guidelines/` (capsid subdir included), remove the emptied
+directories, and REWRITE `guidelines/index.md`, which the emitter generated with
+the nested hrefs and which otherwise points the design agent at paths that no
+longer exist. The upload then preserves the flat paths verbatim. The eight old
+nested paths were deleted in the same plan, on Dustin's explicit approval, since
+an anchored diff cannot derive them; `guidelines/` is not on the safe list above
+and has never held canvas work. A future converter version that flattens on its
+own makes this step a no-op rather than wrong.
