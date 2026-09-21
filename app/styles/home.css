@@ -182,3 +182,215 @@
     font-size: 1.125rem;
   }
 }
+
+/*
+ * PLATE I AND THE TWO FIGURES.
+ *
+ * THE LOCAL ALIASES ARE NOT NEW TOKENS. Oxide and cadet each hold a measured pair by using a
+ * DIFFERENT ramp step per theme (oxide 400 light and 300 dark is 5.5:1 and 5.4:1 on paper), and a
+ * component-scoped variable is how this repo swaps a step per theme without inventing a global
+ * name. Ruling 122 assigns the jobs: oxide is series 1 and every annotation, cadet is series 3,
+ * --fig-dust-300 is texture and never a series, --brand appears in no figure at all.
+ */
+.home-plate,
+.home-figure {
+  --fig-ink: var(--fig-oxide-400);
+  --fig-cell: var(--chart-cadet);
+
+  margin: 0 0 var(--s-7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .home-plate,
+  :root:not([data-theme="light"]) .home-figure {
+    --fig-ink: var(--fig-oxide-300);
+  }
+}
+
+[data-theme="dark"] .home-plate,
+[data-theme="dark"] .home-figure {
+  --fig-ink: var(--fig-oxide-300);
+}
+
+/*
+ * The plate fills the reading column. The handoff caps it near 500px, which is right for the
+ * placement it drew, the intro's RIGHT COLUMN beside the name at 1280; this page sets it below the
+ * evidence row across the whole track, where that cap leaves it in a pool of whitespace with its
+ * labels crowded to one side.
+ *
+ * It never scales below 300px: under that the six specimens stop being distinguishable, and an
+ * indistinct key is worse than none.
+ */
+.plate,
+.fig {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+/* Never below 300px: under that the six specimens stop being distinguishable. */
+.plate {
+  min-inline-size: 300px;
+}
+
+/*
+ * Mono labels on leaders, which is what a plate's annotation is. Sizes are the reference
+ * drawing's, part-c/06-morphology-key.html: 10.5px on a leader label and 9.5px on the scale bar,
+ * which is smaller than body mono on purpose. A plate's annotation sits under the drawing rather
+ * than competing with it.
+ */
+.plate-label,
+.fig-label,
+.plate-scale {
+  font-family: var(--font-mono);
+}
+
+.plate-label,
+.fig-label {
+  fill: var(--fig-ink);
+  font-size: 10.5px;
+}
+
+.plate-scale {
+  fill: var(--text-secondary);
+  font-size: 9.5px;
+}
+
+.fig-label {
+  fill: var(--text-secondary);
+}
+
+/* The caption splits like the rail: mono label, prose sentence (ruling 118 item 6). */
+.home-plate-caption,
+.home-figure-caption {
+  margin-block-start: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  max-inline-size: 58ch;
+}
+
+.home-plate-num,
+.home-figure-num {
+  margin-inline-end: 0.5rem;
+  color: var(--fig-ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+/*
+ * THE KEY STRIP is the plate's key, not a second image: the six drawn small with their names and
+ * sentences as real text, so a reader who cannot see the drawing still gets the taxonomy. Ruled
+ * rows, not cards: one dust rule above the strip and one under each item.
+ */
+.plate-key {
+  margin: 0 0 var(--s-8);
+  padding: 0;
+  border-block-start: var(--line-w) solid var(--dust);
+  list-style: none;
+  display: grid;
+  gap: 0;
+  /* Two columns at 375, which is what the handoff draws. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/*
+ * SIX COLUMNS, not auto-fit. An auto-fit track list put five specimens on one row and left the
+ * sixth alone underneath, which reads as a list that ran out rather than as a key of six. The
+ * count is the point here, so it is written down.
+ */
+@media (min-width: 68rem) {
+  .plate-key {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.plate-key-item {
+  border-block-end: var(--line-w) solid var(--dust);
+  padding: 1rem 1rem 1rem 0;
+}
+
+.plate-key-mark {
+  display: block;
+  inline-size: 3.25rem;
+  block-size: 3.25rem;
+  margin-block-end: 0.5rem;
+}
+
+.plate-key-name {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.plate-key-label {
+  margin-inline-end: 0.375rem;
+  color: var(--fig-ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.plate-key-reading {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* The numbered sections. The numeral is mono and muted: it is an index, not a heading word. */
+.home-section {
+  margin-block-end: 2.75rem;
+}
+
+.home-section-num {
+  margin-inline-end: 0.5rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.home-section-lede {
+  margin: 0 0 1.25rem;
+  max-inline-size: 62ch;
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}
+
+/*
+ * THE SPLIT HERO. The handoff puts the plate in the intro's right column at 1280 with a 76px
+ * gutter and below the evidence line at 375, so this is one grid with a single breakpoint rather
+ * than two layouts. Source order is name, sentence, evidence, plate at every width, which is also
+ * the order a screen reader should hear them in.
+ *
+ * 68rem, not 1280: the split needs the intro column to still hold the name at display size beside
+ * a 500px plate, and 68rem is where that stops being cramped. Below it the grid is one column and
+ * nothing else changes.
+ */
+.home-hero {
+  display: grid;
+  gap: var(--s-7);
+  margin-block-end: var(--s-7);
+}
+
+@media (min-width: 68rem) {
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr) 500px;
+    column-gap: 76px;
+    align-items: start;
+  }
+
+  .home-hero > .home-intro {
+    margin-block-end: 0;
+  }
+}
+
+/* The key strip spans the same width as the pair above it, so the plate and its key read as one
+   object rather than as a figure and an unrelated list. Written as a child of .tracks because
+   shell.css sets every track child to the text column at (0,1,1), which outranks a bare class. */
+.tracks > .plate-key {
+  grid-column: wide;
+}

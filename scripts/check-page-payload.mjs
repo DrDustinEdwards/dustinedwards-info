@@ -614,7 +614,22 @@ const REDESIGN_UPLIFT = new Map([
 ]);
 
 const ROUTE_CEILINGS = {
-  "/": { id: "routes/home", css: 6900, total: 7800 },
+  /*
+   * RAISED FOR PART B PAGE 2: home became Plate I. The page gained a drawn morphology key, its
+   * key strip, two computed figures and a split hero grid, which is a ruled feature (117, 123 and
+   * 124) rather than a bundle that grew on its own. Measured 6929 css on the build that raised
+   * it, against a 6900 ceiling.
+   *
+   * TWO CONSOLIDATION PASSES RAN FIRST, because a raise is not the default answer to an overage
+   * (ruling 119): two annotation aliases collapsed into one name, and the plate and figure box
+   * rules merged. Together they moved brotli by a single byte. The repetition was already being
+   * compressed away, so there was nothing left to reclaim and the cost is the feature itself.
+   *
+   * The total ceiling is NOT raised. The whole cold load is 7743 of 7800 and still fits.
+   *
+   * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
+   */
+  "/": { id: "routes/home", css: 7100, total: 7800 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
