@@ -3,8 +3,15 @@
  *
  *   npm run check:page-payload
  *
- * BOUNDARY: it reads the BUILD ON DISK and never builds, so a stale build is certified stale, and
- * it cannot see a RENDERED page.
+ * BOUNDARY: it reads the BUILD ON DISK and never builds, so a stale build is certified stale.
+ *
+ * IT NOW RENDERS, which the line above used to deny. The last section renders each public route's
+ * components in Node and ceilings the markup they produce, because the three lines this gate
+ * printed before it existed added up to a number it called "the whole cold load" and that was
+ * false on the home page by a factor of two: four inline drawings, 85% of the markup, and not one
+ * byte of them visible to any gate. What it renders is the ROUTE'S OWN MARKUP and not the served
+ * document; the section states that difference in bytes, measured against a served page rather
+ * than estimated. Three routes cannot be rendered at all and are named with the reason.
  */
 
 import {
@@ -252,7 +259,7 @@ function walkSource(dir) {
   return out;
 }
 
-function main() {
+async function main() {
   const { files, manifestFile } = walkHydrationSet();
   const bundles = enhancementAssets();
 
@@ -491,6 +498,8 @@ function main() {
   gradeBuildOnlyDependencies();
 
   gradeEveryPage();
+
+  await gradeRenderedHtml();
 
   if (failures > 0) {
     console.log(`\n${failures} FAILED of ${checks} checks\n`);
@@ -1091,9 +1100,282 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
   );
 }
 
+
+/* ------------------------------------------------------------------ the HTML the page ships */
+
+/**
+ * THE DOCUMENT'S OWN CEILINGS, in brotli bytes, measured on the build that introduced them.
+ *
+ * WHY THIS SECTION EXISTS. Until it did, this gate measured stylesheets and enhancement bundles
+ * and called the sum "the whole cold load", and on the home page that sentence was false by a
+ * factor of two: PR #61 put four inline drawings on it, 85% of its markup, and not one byte of
+ * them was visible here. A gate that reports the second largest cost on a page and calls it the
+ * total is worse than no gate, because it is believed.
+ *
+ * WHAT IS MEASURED, EXACTLY. The markup the route's own components render, produced offline by
+ * `route-render.mjs`, brotli-compressed at the same quality as everything else here. NOT the
+ * served document: the transport wraps this in `<html>`, a `<head>` of meta and link tags, and
+ * the nonced module script tags.
+ *
+ * THAT SHELL WAS MEASURED RATHER THAN ESTIMATED, against three served pages on 2026-09-21:
+ *
+ *     route     served          this section    the shell between them
+ *     /         89,918 / 10,994  86,657 / 10,428  3,261 raw /  566 brotli
+ *     /blog     21,288 /  4,285  18,488 /  3,700  2,800 raw /  585 brotli
+ *     /about     8,793 /  2,354   6,162 /  1,817  2,631 raw /  537 brotli
+ *
+ * A fixed 540 to 590 brotli on three routes that share nothing else, which is what a head of
+ * meta tags and link tags should look like: no route can change it, so no route's ceiling should
+ * carry it. The tags in it point at the stylesheets and bundles the two lines above already
+ * ceiling, so those bytes are counted once, in the right place.
+ *
+ * THE MARGIN IS 15% OVER THE MEASUREMENT, rounded up to the next 100, and it is not slack to
+ * spend: a page that grows into it grows because someone added something, and the commit that
+ * adds it says so. Ruling 119: a raise is not the default answer to an overage.
+ *
+ * AND NO EXPIRY MAP, deliberately, where the stylesheet ceilings have one. `REDESIGN_UPLIFT`
+ * exists because those raises were TEMPORARY SLACK: a ceiling held above the real number until
+ * the old palette left, so it had to carry a date or it would have become the number. An HTML
+ * ceiling never holds slack. It is a current measurement plus a fixed margin, both written down,
+ * so a page that legitimately grows is re-measured in the commit that grew it and both numbers
+ * move together. There is nothing to expire, which is why there is no date to move.
+ *
+ * EACH ENTRY CARRIES THE MEASUREMENT IT WAS SET FROM, so a later raise is legible as a raise.
+ * The `measured` number is provenance and NOT a second ceiling: it is never compared against the
+ * page, because /blog and /blog/:slug move with the corpus and publishing a post must not turn a
+ * gate red. What IS asserted on it is the MAP: no ceiling may sit more than 25% above the
+ * measurement it claims to come from, which is what stops a raise from being unbounded.
+ *
+ * @type {Record<string, { brotli: number, measured: number }>}
+ */
+const HTML_CEILINGS = {
+  "/": { brotli: 12000, measured: 10428 },
+  "/blog": { brotli: 4300, measured: 3700 },
+  /* The LONGEST post in the corpus, which is what this route's worst case means. */
+  "/blog/:slug": { brotli: 12300, measured: 10660 },
+  "/blog/tags/:tag": { brotli: 3900, measured: 3391 },
+  "/blog/series/:series": { brotli: 4000, measured: 3404 },
+  "/projects": { brotli: 6400, measured: 5559 },
+  "/colophon": { brotli: 13900, measured: 12043 },
+  "/playground": { brotli: 6300, measured: 5435 },
+  "/playground/ui": { brotli: 13600, measured: 11789 },
+  "/phage-discovery": { brotli: 3400, measured: 2922 },
+  "/privacy": { brotli: 3200, measured: 2772 },
+  "/about": { brotli: 2100, measured: 1817 },
+};
+
+/** The most a ceiling may sit above the measurement it records. Ruling 119 in one number. */
+const HTML_CEILING_MARGIN = 1.25;
+/**
+ * THE THREE ROUTES THIS SECTION CANNOT MEASURE, each with the reason, because a silent gap is
+ * indistinguishable from a page nobody thought about.
+ *
+ * All three fail the same way and it is structural rather than lazy: `route-render.mjs` stubs
+ * server-only modules at resolve time, so a loader that calls into one binds undefined and
+ * throws. Fabricating the payload instead would measure the fabrication, which on a page whose
+ * whole size is its result list is not a measurement of anything.
+ *
+ * @type {Record<string, string>}
+ */
+const HTML_UNMEASURED = {
+  "/search":
+    "its size IS the query: a result page for one word and a result page for a common " +
+    "one are different documents, and its loader reaches search.server.ts, which the render " +
+    "harness stubs. There is no single number for this route to be under.",
+  "/publications":
+    "its loader computes twenty fields over the paper data and the citation counts, " +
+    "through citations.server.ts. A fabricated payload would measure the fabrication. The " +
+    "Part B job for this page is the commit that should make it renderable and ceiling it.",
+  "/publications/:slug":
+    "the same citations.server.ts call, for one paper. It follows /publications in " +
+    "and out of this list.",
+};
+
+/**
+ * A floor on the routes this section renders, so a harness that quietly stops working reports a
+ * clean sweep of nothing. Hard rule 10: a pass count is not coverage.
+ */
+const MINIMUM_ROUTES_RENDERED = 12;
+
+/** Inline SVG, which is what made this section necessary and is reported per route. */
+function inlineSvgOf(/** @type {string} */ html) {
+  return (html.match(/<svg[^]*?<\/svg>/g) ?? []).join("");
+}
+
+/**
+ * Renders every measurable public route offline and grades the markup it produces.
+ *
+ * THE FIXTURES ARE THE REPOSITORY'S OWN CORPUS, built by `build-content.mjs` from the markdown,
+ * not typed into this file: a fixture decides the size, so an invented one measures an invention.
+ */
+async function gradeRenderedHtml() {
+  const { buildArtifact, revisedDate } = await import("./build-content.mjs");
+  const { bundleRoutes, importBundled, renderRoute } = await import("./lib/route-render.mjs");
+  const { homeLoaderData, indexLoaderData, postLoaderData } = await import(
+    "./lib/route-fixtures.mjs"
+  );
+  const { HOME_CARDS, POSTS_PER_PAGE } = await import("../app/lib/blog-listing.mjs");
+
+  console.log("\n  the document each route renders, brotli bytes\n");
+
+  /* BOTH DIRECTIONS, the same reconciliation the ceilings above get: a route is measured or it is
+     named unmeasured, and a name that no longer matches a route is a dead exemption. */
+  const graded = Object.keys(ROUTE_CEILINGS);
+  const covered = [...Object.keys(HTML_CEILINGS), ...Object.keys(HTML_UNMEASURED)].sort();
+  const uncovered = graded.filter((r) => !covered.includes(r));
+  const orphaned = covered.filter((r) => !graded.includes(r));
+  ok(
+    "every route this gate ceilings has an HTML ceiling or a named reason it has none",
+    uncovered.length === 0 && orphaned.length === 0,
+    `no HTML ceiling and no reason: ${uncovered.join(", ") || "none"}; named but no such ` +
+      `route: ${orphaned.join(", ") || "none"}.`,
+  );
+
+  /*
+   * THE MAP POLICES ITSELF. A ceiling is allowed to be raised and the commit that raises it says
+   * why; what it may not be is arbitrary, and a number nobody can trace back to a measurement is
+   * arbitrary however carefully it was chosen.
+   */
+  const overwide = Object.entries(HTML_CEILINGS).filter(
+    ([, c]) => c.brotli > Math.ceil((c.measured * HTML_CEILING_MARGIN) / 100) * 100,
+  );
+  ok(
+    `every HTML ceiling is within ${Math.round((HTML_CEILING_MARGIN - 1) * 100)}% of the ` +
+      `measurement it records`,
+    overwide.length === 0,
+    overwide
+      .map(([route, c]) => `${route}: ${c.brotli} against a recorded ${c.measured}`)
+      .join(", ") +
+      `. Either the ceiling is slack nobody measured, or the recorded measurement is stale ` +
+      `and the raise was never written down.`,
+  );
+
+  for (const [route, reason] of Object.entries(HTML_UNMEASURED)) {
+    console.log(`  ${route.padEnd(22)} not measured: ${reason.slice(0, 64)}...`);
+  }
+
+  /* `buildArtifact` answers the SERIALISED artifact, which is what the sync writes, so the
+     fixtures below read exactly the bytes production reads. */
+  const artifact = JSON.parse(await buildArtifact());
+  const published = artifact.posts.filter((/** @type {any} */ p) => !p.draft);
+  const ordered = [...published].sort(
+    (/** @type {any} */ a, /** @type {any} */ b) =>
+      new Date(b.publishAt).getTime() - new Date(a.publishAt).getTime(),
+  );
+
+  ok(
+    "the corpus the fixtures are built from is not empty",
+    ordered.length > 0,
+    "no published post was built, so every listing fixture below would render an empty " +
+      "page and every size would pass.",
+  );
+  if (ordered.length === 0) return;
+
+  /*
+   * THE LONGEST POST, not the newest: a post page's size is its body, and the ceiling on that
+   * route has to be the worst case the corpus actually contains or it is a ceiling on whichever
+   * post happened to be published last.
+   */
+  const longest = [...ordered].sort(
+    (/** @type {any} */ a, /** @type {any} */ b) => (b.html ?? "").length - (a.html ?? "").length,
+  )[0];
+
+  const listing = indexLoaderData(ordered, POSTS_PER_PAGE);
+  /** @type {[string, string, string, unknown, Record<string, string>][]} */
+  const cases = [
+    ["/", "app/routes/home.tsx", "/", homeLoaderData(ordered, HOME_CARDS), {}],
+    ["/blog", "app/routes/blog._index.tsx", "/blog", listing, {}],
+    [
+      "/blog/:slug",
+      "app/routes/blog.$slug.tsx",
+      `/blog/${longest.slug}`,
+      postLoaderData(longest, revisedDate),
+      { slug: longest.slug },
+    ],
+    [
+      "/blog/tags/:tag",
+      "app/routes/blog.tags.$tag.tsx",
+      "/blog/tags/cloudflare",
+      { ...listing, tag: { slug: "cloudflare", name: "cloudflare", total: listing.total } },
+      { tag: "cloudflare" },
+    ],
+    [
+      "/blog/series/:series",
+      "app/routes/blog.series.$series.tsx",
+      "/blog/series/ten-years-on-cloudflare",
+      {
+        ...listing,
+        series: { name: longest.series ?? "A series", total: listing.posts.length },
+      },
+      { series: "a-series" },
+    ],
+    ["/projects", "app/routes/projects.tsx", "/projects", {}, {}],
+    ["/colophon", "app/routes/colophon.tsx", "/colophon", {}, {}],
+    ["/playground", "app/routes/playground.tsx", "/playground", "RUN_THE_LOADER", {}],
+    ["/playground/ui", "app/routes/playground.ui.tsx", "/playground/ui", {}, {}],
+    ["/phage-discovery", "app/routes/phage-discovery.tsx", "/phage-discovery", {}, {}],
+    ["/privacy", "app/routes/privacy.tsx", "/privacy", {}, {}],
+    ["/about", "app/routes/about.tsx", "/about", {}, {}],
+  ];
+
+  const bundled = await bundleRoutes(cases.map((c) => c[1]));
+  let rendered = 0;
+
+  try {
+    for (const [i, [route, , url, fixture, params]] of cases.entries()) {
+      const mod = await importBundled(bundled.files[i]);
+      let loaderData = fixture;
+      /*
+       * ONE ROUTE RUNS ITS OWN LOADER. /playground's is pure over the query string and reaches no
+       * server module, so the real thing is available and a fixture would be a worse copy of it.
+       */
+      if (fixture === "RUN_THE_LOADER") {
+        loaderData = await /** @type {any} */ (mod).loader({
+          request: new Request(`https://dustinedwards.info${url}`),
+          params,
+          context: { get: () => ({}) },
+        });
+      }
+
+      const html = await renderRoute(mod, { path: url, url, loaderData, params });
+      const svg = inlineSvgOf(html);
+      const htmlBrotli = brotliSize(Buffer.from(html, "utf8"));
+      const svgBrotli = svg ? brotliSize(Buffer.from(svg, "utf8")) : 0;
+      const { brotli: ceiling } = HTML_CEILINGS[route];
+      rendered += 1;
+
+      console.log(
+        `  ${route.padEnd(22)} html ${String(htmlBrotli).padStart(6)} of ${String(
+          ceiling,
+        ).padStart(6)}   ${String(html.length).padStart(7)} raw   ` +
+          `inline svg ${String(svgBrotli).padStart(5)} brotli, ` +
+          `${String(Math.round((svg.length / html.length) * 100)).padStart(2)}% of the raw markup`,
+      );
+
+      ok(
+        `${route}: the rendered document is under ${ceiling} brotli`,
+        htmlBrotli <= ceiling,
+        `${htmlBrotli} bytes, ${html.length} raw, of which ${svg.length} is inline SVG. ` +
+          `A document grows by a thing at a time: a drawing, a section, a row. Raise this ` +
+          `ceiling in the commit that says why and when it comes down, ruling 119, or take ` +
+          `the weight back out.`,
+      );
+    }
+  } finally {
+    await bundled.cleanup();
+  }
+
+  ok(
+    `${rendered} public route(s) rendered, floor ${MINIMUM_ROUTES_RENDERED}`,
+    rendered >= MINIMUM_ROUTES_RENDERED,
+    `${rendered} rendered. A harness that has quietly stopped working reports a clean sweep ` +
+      `of nothing, which reads exactly like a page that got smaller.`,
+  );
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   try {
-    main();
+    await main();
   } catch (/** @type {any} */ error) {
     console.error(
       `check:page-payload failed. ${error instanceof Error ? error.message : String(error)}`,
