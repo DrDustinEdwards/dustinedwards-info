@@ -4,25 +4,25 @@
  * The tight 36x50 crop, for the header. Same rule as SiteLogo: no intrinsic
  * size, `className` is the only prop, so a bare render paints nothing.
  *
- * REWRITTEN 2026-09-21, because these cells were teaching a header that no
- * longer exists. They drew a purple bar with `--surface-chrome` hardcoded
- * inline and told the canvas the mark takes a light `--mark-on-chrome` variant
- * inside it. Ruling 117 made the header PAPER and PR #54 shipped it: the five
- * chrome role tokens now have zero paint consumers in any public sheet, so the
- * variant those cells existed to show is gone.
+ * REWRITTEN 2026-09-21 for ruling 118.2, which puts the FULL-COLOUR mark in the
+ * header. These cells taught one ink: every path was `fill: currentColor` in
+ * public-chrome.css, so the mark took `--text` from the brand link and moved to
+ * `--brand` with it on hover. That rule is deleted and nothing replaced it, so
+ * the mark now paints itself.
  *
- * THE VARIANT STORY THAT IS ACTUALLY TRUE, and it is simpler: every path in the
- * mark is `fill: currentColor` (public-chrome.css), so the mark inherits the
- * brand link's ink rather than carrying a fill of its own. On paper that is
- * `--text`, because the wordmark is the page's NAME and not a control, and
- * ruling 117 keeps purple for things a reader clicks. Hover moves both to
- * `--brand` together. One ink, decided by the ancestor, which is still exactly
- * the kind of thing a preview has to show rather than describe.
+ * THE VARIANT STORY, which is the whole contract: the five purple paths carry
+ * no fill of their own and take `--brand` from app.css, so they move between
+ * the two purples with the theme. The three warm paths carry literal fills as
+ * presentation attributes and are IDENTICAL in both variants, which is why
+ * binding them to tokens would make the mark render differently from the
+ * ratified assets. One consequence a preview has to show rather than describe:
+ * the mark no longer follows its ancestor's `color`, so hovering the wordmark
+ * moves the word and leaves the drawing where it was.
  */
 
 import { SiteLogoHeader } from "dustinedwards-info";
 
-/** The shipped header: paper, one dust rule under the whole thing, ink wordmark. */
+/** The shipped header: paper, one dust rule under the whole thing, ink wordmark, colour mark. */
 export function InTheHeader() {
   return (
     <header
@@ -41,7 +41,7 @@ export function InTheHeader() {
   );
 }
 
-/** The same header in dark: paper and ink both move, and the mark moves with them. */
+/** The same header in dark: paper and ink move, and the mark's purple moves with them. */
 export function InTheHeaderDark() {
   return (
     <div data-theme="dark">
@@ -63,11 +63,12 @@ export function InTheHeaderDark() {
 }
 
 /**
- * currentColor, proved. The same markup in containers that set `color`
- * directly: the mark follows with no prop and no variant class, which is the
- * whole contract. The right-hand cell is the hover ink.
+ * The mark ignores its ancestor, proved. The same markup in containers that set
+ * `color` directly: a wordmark beside it would follow, and the mark does not
+ * move. The right-hand cell is the wordmark's hover ink, which is where one ink
+ * used to drag the whole drawing over to purple.
  */
-export function FollowsCurrentColor() {
+export function IgnoresCurrentColor() {
   return (
     <div style={{ display: "flex", gap: "1rem" }}>
       <div style={{ background: "var(--paper)", color: "var(--text)", padding: "1.5rem", flex: 1 }}>
