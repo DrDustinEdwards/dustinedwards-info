@@ -337,3 +337,47 @@
     display: none;
   }
 }
+
+/*
+ * THE FIGURE HAZE, and it is the first thing on this site the lamp tokens have ever painted.
+ * Ruling 118 item 5 deleted "no atmosphere yet" as a rule, on the grounds that it was sequencing
+ * rather than a finding, and named this surface: one static haze on a post figure. Not on home,
+ * not on the footer join, which has only just stopped being chrome.
+ *
+ * Three declared-since-ruling-65 tokens do the work, and this is their first consumer:
+ * --lamp-origin places it, --lamp-reach sets how far it carries, --surface-catch is its strength.
+ * --lamp-chroma-on-paper is the colour. Halving the catch is what keeps the mix inside the 12%
+ * ceiling the rule sets: 0.14 and 0.22 are glass values, and against paper they read as a stain.
+ * Measured here at 7% light and 11% dark.
+ *
+ * REDUCED TRANSPARENCY NEEDS NO SECOND PATH: app.css already takes --surface-catch to 0, so the
+ * mix resolves to transparent and the gradient paints the backdrop. Print drops it outright,
+ * because a haze is ink on paper that says nothing.
+ *
+ * Geometry, not script (ruling 119): no motion, no grain, no scroll-driven light, nothing to load.
+ */
+.post-body .prose figure {
+  position: relative;
+  /* Its own stacking context, so the negative layer stays behind the figure and not behind the page. */
+  isolation: isolate;
+}
+
+.post-body .prose figure::before {
+  content: "";
+  position: absolute;
+  /* Past the figure's edges, so the light falls off outside the frame rather than stopping at it. */
+  inset: calc(-1 * var(--s-4));
+  z-index: -1;
+  background: radial-gradient(
+    ellipse at var(--lamp-origin) 0%,
+    color-mix(in oklab, var(--lamp-chroma-on-paper) calc(var(--surface-catch) * 50%), transparent),
+    transparent var(--lamp-reach)
+  );
+  pointer-events: none;
+}
+
+@media print {
+  .post-body .prose figure::before {
+    display: none;
+  }
+}
