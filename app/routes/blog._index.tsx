@@ -29,6 +29,7 @@ import type { Route } from "./+types/blog._index";
  * `check:design-sheets` reads: the sheet list is gated against the route imports.
  */
 import "~/styles/evidence-row.css";
+import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
 export async function loader({ request, context }: Route.LoaderArgs) {

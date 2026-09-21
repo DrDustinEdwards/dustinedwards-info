@@ -31,7 +31,11 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/publications.$slug";
 
-import "~/styles/publications.css";
+/*
+ * NOT listing.css: this page renders none of its classes. The list it is reached from is the one
+ * that draws a page label, filters and a pager; `.tracks` itself is root's.
+ */
+import "~/styles/paper.css";
 
 /**
  * ONE PAGE PER PAPER, which is the whole reason this route exists: a browse page
@@ -161,40 +165,74 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
   const { paper, slug, hosted, pagePath, pdfPath, cited, citedBy, citedByFetchedAt, topics } =
     loaderData;
   const pageUrl = `${SITE_ORIGIN}${pagePath}`;
-  const citation = [
-    decodeEntities(paper.journal ?? ""),
-    paper.volume ? `volume ${paper.volume}` : null,
-    paper.issue ? `issue ${paper.issue}` : null,
-    paper.pages ? `pages ${paper.pages}` : null,
-    String(paper.year),
-  ]
-    .filter(Boolean)
-    .join(", ");
+  /* The citation line moved into the rail, which is where a venue, a volume and a year are
+     machine data rather than prose, so nothing assembles them into a sentence here any more. */
 
   return (
     <>
       <SiteHeader />
-      <main id="main" className="page" tabIndex={-1}>
-        <div className="page-inner">
+      {/*
+       * THE POST PAGE SHAPE, because a paper and a post are the same object to a reader: a
+       * title, a rail of machine data beside it, and the text in the text track. The rail
+       * PRECEDES the body in source, so at one column it lands above it in the order a reader
+       * wants, which is what this is before what it says.
+       */}
+      <main id="main" className="tracks paper-tracks" tabIndex={-1}>
+        <header className="paper-head">
           <p className="paper-breadcrumb">
             <Link to={PUBLICATIONS_PATH}>Publications</Link>
           </p>
 
           {/* The H1 is the TITLE. Scholar reads the first heading as the
-              paper's title, and a page whose H1 said "Publication" would be
+              paper title, and a page whose H1 said "Publication" would be
               asking it to guess. */}
           <h1 className="paper-title">{italicizeOrganisms(decodeEntities(paper.title))}</h1>
 
           <Authors authors={paper.authors} />
+        </header>
 
-          <p className="paper-meta">
-            {citation}
-            {paper.isOpenAccess ? <span className="pub-badge">Open access</span> : null}
+        {/*
+         * THE RAIL: what a machine and a librarian both want, in the column the post page puts
+         * its dates in. The DOI is the identifier, so it is the one that is a link.
+         */}
+        <div className="paper-rail u-rail">
+          <p className="paper-machine">
+            <b>{paper.year}</b>
+            published
+            {paper.journal ? (
+              <>
+                <b className="paper-machine-venue">{decodeEntities(paper.journal)}</b>
+                {[
+                  paper.volume ? `volume ${paper.volume}` : null,
+                  paper.issue ? `issue ${paper.issue}` : null,
+                  paper.pages ? `pages ${paper.pages}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </>
+            ) : null}
+            <b>
+              <a href={`https://doi.org/${paper.doi}`}>{paper.doi}</a>
+            </b>
+            doi
+            {paper.type !== "article" ? (
+              <>
+                <b>{paper.type}</b>
+                kind
+              </>
+            ) : null}
+            {paper.isOpenAccess ? (
+              <>
+                <b>open access</b>
+                licence
+              </>
+            ) : null}
           </p>
+        </div>
 
-          <p className="pub-links paper-links">
+        <div className="paper-text">
+          <p className="paper-links">
             {hosted && pdfPath ? <a href={pdfPath}>PDF</a> : null}
-            <a href={`https://doi.org/${paper.doi}`}>DOI</a>
             {paper.pmcUrl ? <a href={paper.pmcUrl}>PMC</a> : null}
             {paper.preprintDoi ? (
               <a href={`https://doi.org/${paper.preprintDoi}`}>Preprint</a>
@@ -227,47 +265,15 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
               ) : (
                 <>Cited by {cited.count}</>
               )}{" "}
-              <span className="muted">OpenAlex, read {cited.fetchedAt}</span>
+              <span className="paper-provenance">OpenAlex, read {cited.fetchedAt}</span>
             </p>
-          ) : null}
-
-          {/*
-           * Newest first and capped, and the cap is STATED when it bites: a list that
-           * silently showed 50 of 52 would be claiming completeness it does not have. The
-           * link is conditional because a few records have no DOI.
-           */}
-          {citedBy && citedBy.citing.length > 0 ? (
-            <section className="paper-citedby" aria-labelledby="citedby-heading">
-              <h2 id="citedby-heading">
-                Cited by{" "}
-                {citedBy.total > citedBy.citing.length
-                  ? `${citedBy.citing.length} of ${citedBy.total}`
-                  : citedBy.total}
-              </h2>
-              <p className="muted paper-citedby-source">
-                OpenAlex, read {citedByFetchedAt ?? "an unrecorded date"}. Newest first.
-              </p>
-              <ol className="paper-citedby-list">
-                {citedBy.citing.map((w, i) => (
-                  <li key={`${w.doi ?? w.title}-${i}`}>
-                    {w.doi ? (
-                      <a href={`https://doi.org/${w.doi}`}>{w.title ?? w.doi}</a>
-                    ) : (
-                      (w.title ?? "Untitled")
-                    )}
-                    {w.venue ? <span className="muted">, {w.venue}</span> : null}
-                    {w.year ? <span className="muted">, {w.year}</span> : null}
-                  </li>
-                ))}
-              </ol>
-            </section>
           ) : null}
 
           {/*
            * ABOVE EVERYTHING IT APPLIES TO, because a reader who stops after the first
            * paragraph must not stop before this one. `role="status"` rather than `alert`:
            * an alert interrupts a screen reader mid-sentence. The link goes to the NOTICE,
-           * not the paper's landing page.
+           * not the landing page of the paper.
            */}
           {paper.updateNotice ? (
             <aside className="paper-update-notice" role="status">
@@ -307,7 +313,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
           {paper.accessions.length > 0 ? (
             <section className="paper-data" aria-labelledby="data-heading">
               <h2 id="data-heading">Data</h2>
-              <p className="pub-links">
+              <p className="paper-links">
                 {paper.accessions.map((accession) => (
                   <a key={accession.id} href={accessionUrl(accession)}>
                     {accessionLabel(accession.kind)} {accession.id}
@@ -317,10 +323,42 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             </section>
           ) : null}
 
+          {/*
+           * Newest first and capped, and the cap is STATED when it bites: a list that
+           * silently showed 50 of 52 would be claiming completeness it does not have. The
+           * link is conditional because a few records have no DOI.
+           */}
+          {citedBy && citedBy.citing.length > 0 ? (
+            <section className="paper-citedby" aria-labelledby="citedby-heading">
+              <h2 id="citedby-heading">
+                Cited by{" "}
+                {citedBy.total > citedBy.citing.length
+                  ? `${citedBy.citing.length} of ${citedBy.total}`
+                  : citedBy.total}
+              </h2>
+              <p className="paper-provenance paper-citedby-source">
+                OpenAlex, read {citedByFetchedAt ?? "an unrecorded date"}. Newest first.
+              </p>
+              <ol className="paper-citedby-list">
+                {citedBy.citing.map((w, i) => (
+                  <li key={`${w.doi ?? w.title}-${i}`}>
+                    {w.doi ? (
+                      <a href={`https://doi.org/${w.doi}`}>{w.title ?? w.doi}</a>
+                    ) : (
+                      (w.title ?? "Untitled")
+                    )}
+                    {w.venue ? <span className="paper-provenance">, {w.venue}</span> : null}
+                    {w.year ? <span className="paper-provenance">, {w.year}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ) : null}
+
           {topics.length > 0 ? (
             <p className="paper-topics">
               {topics.map((t) => (
-                <Link key={t.id} to={`${PUBLICATIONS_PATH}?topic=${t.id}`} className="pub-chip">
+                <Link key={t.id} to={`${PUBLICATIONS_PATH}?topic=${t.id}`}>
                   {t.label}
                 </Link>
               ))}

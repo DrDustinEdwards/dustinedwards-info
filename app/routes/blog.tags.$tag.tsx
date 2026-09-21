@@ -26,6 +26,7 @@ import type { Route } from "./+types/blog.tags.$tag";
  * object now, and an archive is the same object filtered.
  */
 import "~/styles/evidence-row.css";
+import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
 /**
