@@ -170,6 +170,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          * THE EYEBROW IS GONE. An uppercase tracked line above the name is the one typographic
          * move this direction refuses outright, and the sentence under the name already said it.
          */}
+        {/*
+         * THE SPLIT HERO, and it is the first consumer .u-wide has ever had. The handoff puts the
+         * plate in the intro's RIGHT COLUMN at 1280 with a 76px gutter, and below the evidence
+         * line at 375. Name, sentence and evidence row hold the left; the plate holds the right;
+         * below the breakpoint the grid collapses and the source order is already correct.
+         *
+         * The pair takes the wide track because the text track is the prose measure and a 500px
+         * plate beside a column of type is not prose (ruling 118 item 4).
+         */}
+        <div className="home-hero u-wide">
         <section className="home-intro h-card" aria-labelledby="intro-h">
           <h1 className="intro-name p-name" id="intro-h">
             {SITE.name}
@@ -222,9 +232,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          */}
 
         {/*
-         * PLATE I. A drawing, not data: it does not change with the corpus. It sits under the
-         * evidence row because the row is what can be checked and the plate is what is being
-         * taught, and a teaching object that arrives before the evidence reads as decoration.
+         * PLATE I. A drawing, not data: it does not change with the corpus. Second in source, so
+         * a reader without the grid meets the name, the sentence and the checkable row before the
+         * teaching object, and a screen reader hears them in that order at every width.
          */}
         <figure className="home-plate">
           <PlateI />
@@ -234,6 +244,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             call, at one magnification.
           </figcaption>
         </figure>
+        </div>
         <PlateKey />
 
         {featured ? (

@@ -6,7 +6,7 @@
  * Ruling 122 assigns the ink: oxide is series 1 and every annotation, cadet is series 3, `--dust`
  * rules and nothing else. `--brand` is absent, because purple means a reader can click it.
  *
- * `--fig-annotation` and `--fig-cell` are LOCAL aliases rather than new tokens: oxide and cadet
+ * `--fig-ink` and `--fig-cell` are LOCAL aliases rather than new tokens: oxide and cadet
  * each need a different ramp step per theme to hold their measured pairs, and home.css declares
  * both on the figure.
  */
@@ -69,7 +69,7 @@ export function FigurePapersPerYear() {
           y1={BASE}
           x2={x(i)}
           y2={BASE - b.count * UNIT}
-          stroke="var(--fig-annotation)"
+          stroke="var(--fig-ink)"
           strokeWidth="6"
         />
       ))}

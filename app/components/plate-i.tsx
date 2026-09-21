@@ -15,7 +15,7 @@
  * leaders and labels are oxide, which is what annotation is for. `--brand` appears nowhere: purple
  * means a reader can click it and nothing in a drawing is clickable.
  *
- * `--plate-annotation` is a LOCAL alias, not a new token. Oxide needs a different ramp step per
+ * `--fig-ink` is a LOCAL alias, not a new token. Oxide needs a different ramp step per
  * theme to hold its measured pair (5.5:1 light on `--fig-oxide-400`, 5.4:1 dark on
  * `--fig-oxide-300`), and a component-scoped variable is how this repo swaps a step per theme
  * without inventing a global name. home.css declares it.
@@ -170,17 +170,31 @@ function clearedBy(x: number, y: number): boolean {
   return false;
 }
 
+/*
+ * Stipple measured off the reference drawing, part-c/06-morphology-key.html: 573 dots over a 245
+ * unit dish, which is 3.04 per thousand square units, at radii from 0.7 to 1.4. Matching the
+ * DENSITY rather than the count is what carries the style across a different dish size.
+ */
+const LAWN_DENSITY = 3.04 / 1000;
+const LAWN_MIN_R = 0.7;
+const LAWN_MAX_R = 1.4;
+
 function lawn(): { x: number; y: number; r: number }[] {
   const rand = mulberry32(0x5ea1ed);
   const dots: { x: number; y: number; r: number }[] = [];
+  const target = Math.round(Math.PI * (MARGIN_R - 6) ** 2 * LAWN_DENSITY);
   /* Rejection sampling inside the dashed margin, so no dot sits on the rim or outside it. */
-  for (let i = 0; i < 4200 && dots.length < 560; i += 1) {
+  for (let i = 0; i < target * 8 && dots.length < target; i += 1) {
     const t = rand() * Math.PI * 2;
     const rr = Math.sqrt(rand()) * (MARGIN_R - 6);
     const x = 250 + Math.cos(t) * rr;
     const y = 250 + Math.sin(t) * rr;
     if (clearedBy(x, y)) continue;
-    dots.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, r: Math.round((0.8 + rand() * 0.6) * 10) / 10 });
+    dots.push({
+      x: Math.round(x * 10) / 10,
+      y: Math.round(y * 10) / 10,
+      r: Math.round((LAWN_MIN_R + rand() * (LAWN_MAX_R - LAWN_MIN_R)) * 10) / 10,
+    });
   }
   return dots;
 }
@@ -305,7 +319,7 @@ export function PlateI() {
             y1={p.cy}
             x2={p.elbow[0]}
             y2={p.elbow[1]}
-            stroke="var(--plate-annotation)"
+            stroke="var(--fig-ink)"
             strokeWidth="1"
           />
           <line
@@ -313,7 +327,7 @@ export function PlateI() {
             y1={p.elbow[1]}
             x2={p.tick[0]}
             y2={p.tick[1]}
-            stroke="var(--plate-annotation)"
+            stroke="var(--fig-ink)"
             strokeWidth="1"
           />
           <text
@@ -334,6 +348,26 @@ export function PlateI() {
       </text>
     </svg>
   );
+}
+
+/** The same surviving lawn as the plate, at strip scale: 76 units across rather than 500. */
+function keyHaze(p: Plaque): { x: number; y: number; r: number }[] {
+  const rand = mulberry32(0x5721 + p.label.length);
+  const outer = p.label === "iii" ? 30 : 30;
+  const inner = p.innerR !== undefined ? 13.5 : 0;
+  const dots: { x: number; y: number; r: number }[] = [];
+  const target = Math.round((outer * outer - inner * inner) * 0.03);
+  for (let i = 0; i < target * 20 && dots.length < target; i += 1) {
+    const t = rand() * Math.PI * 2;
+    const rr = Math.sqrt(rand()) * (outer - 2);
+    if (rr < inner + 1.5) continue;
+    dots.push({
+      x: Math.round((38 + Math.cos(t) * rr) * 10) / 10,
+      y: Math.round((38 + Math.sin(t) * rr) * 10) / 10,
+      r: Math.round((0.7 + rand() * 0.5) * 10) / 10,
+    });
+  }
+  return dots;
 }
 
 /**
@@ -376,8 +410,18 @@ export function PlateKey() {
                 strokeWidth="1.6"
               />
             )}
+            {/*
+             * The surviving lawn, in the strip as well as on the plate. Without it i and ii are
+             * two identical circles here, which is the same failure the plate had: the key would
+             * be teaching that clear and turbid look alike.
+             */}
+            {p.lawnInside
+              ? keyHaze(p).map((d, i) => (
+                  <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="var(--fig-dust-300)" />
+                ))
+              : null}
             {p.innerR !== undefined ? (
-              <circle cx="38" cy="38" r="13.5" fill="none" stroke="var(--text)" strokeWidth="1.2" />
+              <circle cx="38" cy="38" r="13.5" fill="var(--paper)" stroke="var(--text)" strokeWidth="1.2" />
             ) : null}
             {p.label === "v" ? (
               <circle
