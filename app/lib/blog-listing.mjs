@@ -137,3 +137,42 @@ export function startHere(featuredRows, others, cards = HOME_CARDS) {
   return { featured: lead, recent };
 }
 
+
+/**
+ * The three machine facts a listing's evidence row states: how many posts, the years they span,
+ * and how long they are to read.
+ *
+ * THEY DESCRIBE THE FILTERED LIST, NOT THE CORPUS. A reader who has narrowed to one tag is
+ * looking at that list, so a row stating the whole blog's span over a seven-post view would be
+ * true of something the page does not show. `listBlogPosts` counts all three in SQL over the same
+ * `where` the rows come from, which is what makes that possible at all.
+ *
+ * HERE RATHER THAN IN THE ROUTE, because three routes render this row and a rule written three
+ * times is a rule that disagrees with itself the first time one copy changes. A route module is
+ * also the wrong place to import from: it carries a loader and a default export, and a second
+ * route importing it would pull both into its own module graph.
+ *
+ * A NULL IS NOT A ZERO. An empty list has no first year and nothing to read, and `EvidenceRow`
+ * omits itself below three facts rather than padding to three, so the row simply does not appear
+ * on a page that cannot fill it.
+ *
+ * @param {number} total posts in the whole filtered list, not on this page of it
+ * @param {{ firstYear: string | null, lastYear: string | null, minutes: number | null }} span
+ * @returns {(string | null)[]} three facts, in the row's order
+ */
+export function listingFacts(total, span) {
+  const years =
+    span.firstYear && span.lastYear
+      ? span.firstYear === span.lastYear
+        ? span.firstYear
+        : `${span.firstYear} to ${span.lastYear}`
+      : null;
+  /* Hours past two, minutes below it: "132 minutes of reading" is a number the reader has to
+     divide, and "1 hour" rounded from 38 minutes is a number that is wrong. */
+  const reading = span.minutes
+    ? span.minutes >= 120
+      ? `${Math.round(span.minutes / 60)} hours of reading`
+      : `${span.minutes} minutes of reading`
+    : null;
+  return [`${total} post${total === 1 ? "" : "s"}`, years, reading];
+}

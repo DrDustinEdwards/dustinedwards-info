@@ -1,10 +1,11 @@
 import { Form, Link, data, redirect } from "react-router";
 
-import { PostCard, Pagination } from "~/components/post-card";
+import { EvidenceRow } from "~/components/evidence-row";
+import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
-import { POSTS_PER_PAGE, splitFeatured } from "~/lib/blog-listing.mjs";
+import { POSTS_PER_PAGE, listingFacts, splitFeatured } from "~/lib/blog-listing.mjs";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
@@ -19,9 +20,16 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
-import "~/styles/blog-search.css";
-import "~/styles/blog-index.css";
-import "~/styles/blog-index-extras.css";
+/*
+ * ONE SHEET, where there were three. blog-search.css is gone from this page rather than restyled:
+ * its remaining rule is `.search-submit`, which is /search's filled button, and /search is its own
+ * page with its own job. The listing's own field and word are in entry-list.css.
+ *
+ * evidence-row.css is imported HERE and not by the component, which is the house pattern
+ * `check:design-sheets` reads: the sheet list is gated against the route imports.
+ */
+import "~/styles/evidence-row.css";
+import "~/styles/entry-list.css";
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
@@ -159,7 +167,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogIndex({ loaderData }: Route.ComponentProps) {
-  const { posts, tags, years, activeTag, activeYear, featured, page, pageCount } =
+  const { posts, tags, years, activeTag, activeYear, featured, page, pageCount, total, span } =
     loaderData;
 
   /**
@@ -191,13 +199,12 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
       <SiteHeader />
       {/*
        * THE h-feed IS THE `<main>` ITSELF, a deliberate refusal to add a wrapper: the
-       * feed has to contain both the featured section and the list, and those are
-       * siblings.
+       * feed has to contain the head, the filters and the list, and those are siblings.
        *
        * NOT ON THE TAG ARCHIVE OR THE SERIES PAGE: a filtered view is not this blog's
        * feed.
        */}
-      <main className="page h-feed" id="main" tabIndex={-1}>
+      <main className="tracks list-tracks h-feed" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -210,14 +217,17 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           }}
         />
 
-        <header className="page-head">
+        <header className="list-head">
           {/*
            * MEASURED, because the first version of this comment guessed and was wrong.
            * Implied properties are skipped for a root containing nested microformats, so the
            * class is not preventing a bad name, it is supplying the only one.
            */}
-          <h1 className="p-name">Blog</h1>
-          <p className="muted">Writing on building for the web, mostly on Cloudflare.</p>
+          <h1 className="list-label p-name">Blog</h1>
+          <p className="list-dek">Writing on building for the web, mostly on Cloudflare.</p>
+          {/* Three counted facts about THIS list, in the slot the evidence row takes on every
+              page that carries one. Never typed; see `listingFacts`. */}
+          <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
         {/*
@@ -225,7 +235,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
          * same index, parser and ranking serve both. A `<Form method="get">` emits the
          * same markup and URL as a plain form, so it works with scripting off.
          */}
-        <Form method="get" action="/search" role="search" className="blog-search">
+        <Form method="get" action="/search" role="search" className="list-search">
           <label className="sr-only" htmlFor="blog-search-input">
             Search the blog
           </label>
@@ -240,34 +250,37 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           <button type="submit">Search</button>
         </Form>
 
+        {/*
+         * THE FILTERS ARE TEXT LINKS. They were 26 capsules with a filled --brand current state,
+         * which is ruling 118 item 7's CHIP condition exactly; the state is weight and ink now,
+         * and `aria-current` carries it into the accessibility tree either way. Still links, never
+         * handlers: the URL is the state, with script or without it.
+         */}
         {tags.length > 0 && (
-          <nav className="tag-chips" aria-label="Filter posts by tag">
+          <nav className="list-filter" aria-label="Filter posts by tag">
+            <span className="list-filter-label">Tags</span>
             {/* Clears the TAG and keeps the year, rather than clearing both. */}
-            <Link
-              to={filterHref({ tag: null })}
-              className="tag-chip"
-              aria-current={activeTag ? undefined : "true"}
-            >
+            <Link to={filterHref({ tag: null })} aria-current={activeTag ? undefined : "true"}>
               All
             </Link>
             {tags.map((tag) => (
               <Link
                 key={tag.slug}
                 to={filterHref({ tag: tag.slug })}
-                className="tag-chip"
                 aria-current={activeTag === tag.slug ? "true" : undefined}
               >
-                {tag.name} <span className="tag-count">{tag.total}</span>
+                {tag.name} <span className="filter-count">{tag.total}</span>
               </Link>
             ))}
           </nav>
         )}
 
         {years.length > 1 && (
-          <nav className="year-archive" aria-label="Filter posts by year">
+          <nav className="list-filter" aria-label="Filter posts by year">
+            <span className="list-filter-label">Years</span>
             {/* Clears the YEAR and keeps the tag. */}
             <Link to={filterHref({ year: null })} aria-current={activeYear ? undefined : "true"}>
-              All years
+              All
             </Link>
             {years.map((entry) => (
               <Link
@@ -275,52 +288,34 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
                 to={filterHref({ year: String(entry.year) })}
                 aria-current={activeYear === entry.year ? "true" : undefined}
               >
-                {entry.year} <span className="tag-count">{entry.total}</span>
+                {entry.year} <span className="filter-count">{entry.total}</span>
               </Link>
             ))}
           </nav>
         )}
 
         {/*
-         * THE FEATURED POST IS AN ENTRY IN THE FEED, which is why the feed is the
-         * `<main>`: `splitFeatured` removes it from the list, so a feed scoped to the
-         * `<ul>` would silently omit the post the page pushes hardest.
+         * THE FEATURED POST IS THE FIRST ROW OF THE LIST, not a well above it. `splitFeatured`
+         * still removes it from the page's own array, so it appears once; what it no longer gets
+         * is a bordered, rounded, filled box with a tracked-caps label on top, which was four of
+         * ruling 117's kill list in one object. Being first, dated and marked is the whole claim.
          *
-         * `dt-published` IS HIDDEN HERE because this section renders no date and never
-         * has; showing one would change the page.
+         * It is still an entry in the feed, which is why the feed is the `<main>`: a feed scoped
+         * to the `<ul>` would have omitted it while it was a sibling, and `check:microformats`
+         * counts the entries either way.
          */}
-        {featured && (
-          <section className="featured-post h-entry" aria-labelledby="featured-heading">
-            <p className="featured-label" id="featured-heading">
-              Featured
-            </p>
-            <h2 className="post-card-title p-name">
-              <Link className="u-url" to={`/blog/${featured.slug}`}>
-                {featured.title}
-              </Link>
-            </h2>
-            {featured.publishAt && (
-              <time
-                className="dt-published"
-                dateTime={new Date(featured.publishAt).toISOString()}
-                hidden
-              />
-            )}
-            {featured.description && <p className="p-summary">{featured.description}</p>}
-          </section>
-        )}
-
-        {posts.length === 0 ? (
-          <p className="muted">No posts here yet.</p>
+        {posts.length === 0 && !featured ? (
+          <p className="list-empty">No posts here yet.</p>
         ) : (
-          <ul className="post-list">
+          <ul className="entry-list">
+            {featured && <PostRow post={featured} mark="Featured" />}
             {posts.map((post) => (
-              <PostCard key={post.slug} post={post} />
+              <PostRow key={post.slug} post={post} />
             ))}
           </ul>
         )}
 
-        <Pagination page={page} pageCount={pageCount} hrefFor={pageHref} />
+        <Pager page={page} pageCount={pageCount} hrefFor={pageHref} />
       </main>
       <ShellFooter />
       {/*
