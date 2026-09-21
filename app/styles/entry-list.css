@@ -1,0 +1,377 @@
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
+
+/*
+ * THE LISTING: /blog, one tag's archive and one series' archive, which are one object at three
+ * addresses. It replaces blog-index.css and blog-index-extras.css, whose vocabulary was the 2025
+ * site's: a 48rem column restated in four places, capsule chips with a filled --brand current
+ * state, a bordered and rounded featured well, and a tracked-caps label over it.
+ *
+ * Paper and Plate: ruled rows on the page's own ground, radius 0, no fill, no card, hairlines in
+ * --dust and nothing else drawn. A row is a date in the machine column and a title, a summary and
+ * its tags in the text column. The rules are the only furniture.
+ */
+
+/*
+ * THE WIDE TRACK, as home does it: the rules run the full measure between the gutters and the
+ * things that must stay readable carry their own ch caps. Same specificity as `.tracks > *` in
+ * shell.css (0,1,1), and route sheets load after the root's, so this wins on order, which is the
+ * arrangement home.css already relies on.
+ */
+.list-tracks > * {
+  grid-column: wide;
+}
+
+/* 1 · The head: the page label, the sentence under it, and the evidence row. */
+
+.list-head {
+  margin-block-start: var(--s-7);
+}
+
+/*
+ * ONE OF THE THREE PLACES INTER IS ALLOWED AT DISPLAY SETTINGS, and this is the one home.css names
+ * as "a page label used as a page title". Smaller than the name on home: that one is a mark, this
+ * one is a heading over a list.
+ */
+.list-label {
+  margin: 0 0 0.875rem;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 3rem;
+  font-weight: 800;
+  /* 32, not 48: Inter's opsz axis stops at 32. check:fonts compares every request against the
+     shipped binary's real range. */
+  font-variation-settings: "opsz" 32, "wght" 800;
+  letter-spacing: -0.032em;
+  line-height: 1;
+}
+
+.list-dek {
+  margin: 0 0 1.75rem;
+  max-width: 46ch;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.5;
+}
+
+/*
+ * NO BOTTOM MARGIN ON THE ROW. The evidence row is the head's last child, and `.tracks > * + *`
+ * already sets the space to the next block; adding one here stacked two gaps into a 68px hole
+ * between the rule and the search line, which read as a missing section rather than as spacing.
+ */
+.list-head .evidence {
+  margin-block-end: 0;
+}
+
+/* 2 · Search. A field is a ruled line, not a box: one hairline under the input, ink text on the
+   page's own ground, and the submit is a word. Nothing here is a filled control. */
+
+.list-search {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s-4);
+}
+
+.list-search input[type="search"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 28rem;
+  border: 0;
+  border-block-end: var(--line-w) solid var(--dust);
+  border-radius: 0;
+  padding: 0.5rem 0;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  /* The UA's own search decorations put a rounded box back on some platforms. */
+  appearance: none;
+}
+
+.list-search input[type="search"]:focus-visible {
+  border-block-end-color: var(--text);
+}
+
+.list-search button {
+  min-block-size: var(--control-min-dense);
+  border: 0;
+  border-radius: 0;
+  padding: 0.5rem 0;
+  background: transparent;
+  color: var(--brand);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.list-search button:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+/*
+ * 3 · The filters: tag and year, each a wrapped row of TEXT LINKS. They were 26 capsules whose
+ * selected state was a filled --brand pill, which is ruling 118 item 7's CHIP condition exactly.
+ * The state is now weight and ink, and it is also `aria-current`, so it is in the accessibility
+ * tree and not only in the pixels. The URL remains the state; these are links, never handlers.
+ */
+
+.list-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.875rem;
+  row-gap: 0.375rem;
+  margin-block-start: var(--s-5);
+}
+
+.list-filter-label {
+  flex: 0 0 auto;
+  min-inline-size: 3.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.list-filter a {
+  display: inline-flex;
+  align-items: center;
+  /* WCAG 2.2 2.5.8: a bare inline anchor's box is its line box. These are links alone in a nav,
+     so the inline-link exception does not apply and the box carries the target. */
+  min-block-size: var(--control-min-dense);
+  color: var(--brand);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  text-decoration: none;
+}
+
+.list-filter a:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+/* WHERE YOU ARE IS INK AND WEIGHT. Never a fill, and never hue alone. */
+.list-filter a[aria-current] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* A token, never opacity: check:contrast reads token hexes, and opacity on text hides a failing
+   composite behind a passing pair. */
+.filter-count {
+  margin-inline-start: 0.25rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 4 · The rows. */
+
+.entry-list {
+  margin: 0;
+  margin-block-start: var(--s-6);
+  padding: 0;
+  border-block-start: var(--line-w) solid var(--dust);
+  list-style: none;
+}
+
+/*
+ * THE SAME RAIL MEASURE THE POST PAGE AND HOME USE, read from shell.css rather than restated, so
+ * four pages share one grid instead of resembling each other.
+ */
+.entry {
+  display: grid;
+  grid-template-columns: var(--rail-w) var(--rail-gap-w) minmax(0, 1fr);
+  border-block-end: var(--line-w) solid var(--dust);
+  padding-block: 1.125rem;
+}
+
+.entry-when {
+  grid-column: 1;
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  text-align: right;
+}
+
+.entry-minutes,
+.entry-mark {
+  display: block;
+}
+
+.entry-mark {
+  color: var(--text);
+}
+
+.entry-body {
+  grid-column: 3;
+  min-width: 0;
+}
+
+/* Titles are ink, not purple: they are the row, and a screen of purple headlines is a screen of
+   shouts. The list is a reading list, so a read row should look read. */
+.entry-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.entry-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.entry-title a:hover {
+  color: var(--brand);
+}
+
+.entry-title a:visited {
+  color: var(--visited);
+}
+
+.entry-series {
+  margin: 0.25rem 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.entry-summary {
+  margin: 0.3125rem 0 0;
+  max-width: 62ch;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0.75rem;
+  margin: 0.4375rem 0 0;
+}
+
+.entry-tags a {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+
+.entry-tags a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+.list-empty {
+  margin-block-start: var(--s-6);
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+}
+
+/* 5 · Paging, and the feed links under the list. */
+
+.pager {
+  display: flex;
+  align-items: center;
+  column-gap: var(--s-5);
+  margin-block-start: var(--s-6);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+
+.pager a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-min-dense);
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.pager a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+.pager-where {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.list-feeds {
+  margin-block-start: var(--s-5);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.list-feeds a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.list-feeds a:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: var(--line-w);
+}
+
+@media (max-width: 47.99rem) {
+  .list-label {
+    font-size: 2.25rem;
+    letter-spacing: -0.028em;
+  }
+
+  .list-dek {
+    max-width: none;
+    font-size: 1.0625rem;
+  }
+
+  /* One column: the date reads left, above its title, in the same order. */
+  .entry {
+    display: block;
+  }
+
+  .entry-when {
+    margin-block-end: 0.3125rem;
+    text-align: left;
+  }
+
+  /* The three machine facts sit on one line when they are not a column. */
+  .entry-minutes,
+  .entry-mark {
+    display: inline;
+  }
+
+  .entry-minutes::before,
+  .entry-mark::before {
+    content: "  ";
+    white-space: pre;
+  }
+
+  .entry-title {
+    font-size: 1.125rem;
+  }
+
+  .entry-summary {
+    font-size: 0.9375rem;
+  }
+}

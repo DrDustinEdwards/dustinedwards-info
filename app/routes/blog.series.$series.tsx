@@ -1,10 +1,11 @@
 import { Link, data, redirect } from "react-router";
 
-import { PostCard, Pagination } from "~/components/post-card";
+import { EvidenceRow } from "~/components/evidence-row";
+import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getBlogSeries, listSeriesPosts } from "~/db";
-import { POSTS_PER_PAGE } from "~/lib/blog-listing.mjs";
+import { POSTS_PER_PAGE, listingFacts } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import {
@@ -18,10 +19,10 @@ import {
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series";
 
-// Both sheets the shared card needs: `PostCard` renders `.post-card-series`,
-// which lives only in the extras sheet.
-import "~/styles/blog-index.css";
-import "~/styles/blog-index-extras.css";
+// One sheet, where the card needed two: `.post-card-series` lived only in the extras sheet. The
+// listing is one object now and an archive is the same object filtered.
+import "~/styles/evidence-row.css";
+import "~/styles/entry-list.css";
 
 /**
  * The archive for one series.
@@ -78,14 +79,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogSeries({ loaderData }: Route.ComponentProps) {
-  const { posts, series, page, pageCount } = loaderData;
+  const { posts, series, page, pageCount, total, span } = loaderData;
   const base = seriesPath(series.name);
   const hrefFor = (n: number) => (n > 1 ? `${base}?page=${n}` : base);
 
   return (
     <>
       <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
+      <main className="tracks list-tracks" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -99,33 +100,36 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
           }}
         />
 
-        <header className="page-head">
-          <h1>{series.name}</h1>
-          <p className="muted">
+        <header className="list-head">
+          <h1 className="list-label">{series.name}</h1>
+          <p className="list-dek">
             A series in {series.total} part{series.total === 1 ? "" : "s"}, in order.{" "}
             <Link to="/blog">All posts</Link>
           </p>
+          {/* The index's three counted facts, over this series' own list. */}
+          <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
-        {/*
-         * The same offer the tag archive makes and for the same reason: a reader who
-         * wants one series wants one series in their reader.
-         */}
-        <p className="muted">
-          Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
-        </p>
-
         {posts.length === 0 ? (
-          <p className="muted">No posts here yet.</p>
+          <p className="list-empty">No posts here yet.</p>
         ) : (
-          <ul className="post-list">
+          <ul className="entry-list">
             {posts.map((post) => (
-              <PostCard key={post.slug} post={post} />
+              <PostRow key={post.slug} post={post} />
             ))}
           </ul>
         )}
 
-        <Pagination page={page} pageCount={pageCount} hrefFor={hrefFor} />
+        <Pager page={page} pageCount={pageCount} hrefFor={hrefFor} />
+
+        {/*
+         * The same offer the tag archive makes and for the same reason: a reader who wants one
+         * series wants one series in their reader. Under the list, which is where a reader who
+         * has decided to subscribe actually is.
+         */}
+        <p className="list-feeds">
+          Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
+        </p>
       </main>
       <ShellFooter />
     </>

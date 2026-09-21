@@ -17,13 +17,16 @@
  * WHY `PostCard` AND `Pagination` LEFT, 2026-09-21. The canvas was handed them
  * as components to build with, on the same README that said in its deleted list
  * that they and their router wrapper were gone. A design agent cannot act on a
- * page which contradicts itself, and the vocabulary is the half that is current:
- * Direction D's listing is ruled rows, not cards. They are still live in the app
- * on /blog and its archives, which have their own Part B jobs; the components go
- * when those pages do.
+ * page which contradicts itself, and the vocabulary is the half that is
+ * current: Direction D's listing is ruled rows, not cards.
+ *
+ * PR #60 wrote the other half of that sentence: they were still live on /blog
+ * and its archives, so "the components go when those pages do". THIS IS THOSE
+ * PAGES. The listing is ruled rows, `post-card.tsx` is deleted, and what the
+ * README always said is finally true of the code.
  *
  * `MemoryRouter` went with them, and they were its whole reason for being here:
- * it was re-exported for `cfg.provider` alone, because those two render
+ * it was re-exported for `cfg.provider` alone, because those two rendered
  * react-router `Link`s that throw outside a router. Nothing left in this entry
  * imports react-router, so the provider is gone from the config too.
  */
