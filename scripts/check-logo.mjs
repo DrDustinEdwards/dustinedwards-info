@@ -169,34 +169,26 @@ for (const { file, purple, viewBox } of FIXTURES) {
 
 /*
  * Where the five purple paths actually get their colour: everything above compares GEOMETRY. It
- * names both bindings by VALUE and the set is CLOSED, so a third rule setting fill on this class
- * fails rather than quietly winning the cascade. It does NOT resolve the tokens to hexes.
+ * names the binding by VALUE and the set is CLOSED, so a second rule setting fill on this class
+ * fails rather than quietly winning the cascade. It does NOT resolve the token to a hex.
  */
 
 /** Selector, normalised, to the fill it binds. The COMPLETE set. */
 /*
- * TWO BINDINGS, the second asserting that the mark RENDERS ON THE BAR. A build once replaced the
- * header with a wordmark, this caught it, and the gate was cut to one binding to fit the defect.
- * A gate narrowed to accommodate an omission lets the next one through in silence: restored
- * FIRST and watched to fail, which is hard rule 12.
+ * ONE BINDING SINCE RULING 118.2. The second was `.site-header .site-logo-brand -> currentColor`
+ * and it did two jobs: it stated the header's ink, and it was the only assertion that the mark
+ * RENDERS IN THE HEADER AT ALL, which is the omission it caught when a build replaced the header
+ * with a wordmark.
+ *
+ * The header now draws the mark in the logo's own colours, so the rule is gone and the binding
+ * with it. THE OMISSION GUARD DOES NOT GO WITH IT, which would be a gate narrowed to fit a change:
+ * it moves below, to an assertion that reads the header COMPONENT. That is the property the
+ * binding was a proxy for, and it holds whatever the header is painted in next.
  */
-const EXPECTED_FILL_BINDINGS = [
-  [".site-logo-brand", "var(--brand)"],
-  /*
-   * THE TOKEN WENT AND CAME BACK. The measurement behind moving it was right; the CONCLUSION was
-   * not, the question asked being "which token survives this bar" when it was "why did the bar
-   * change". The COUNT is what caught the missing mark.
-   *
-   * THE VALUE CHANGED WITH THE SURFACE, THE BINDING DID NOT (ruling 117): the header is paper, so
-   * the mark is drawn in one ink and follows --text through the brand link. --mark-on-chrome
-   * described a purple bar the public plane no longer has. The binding stays because what it
-   * guards is that the mark renders in the header at all, which is the omission it caught.
-   */
-  [".site-header .site-logo-brand", "currentColor"],
-];
+const EXPECTED_FILL_BINDINGS = [[".site-logo-brand", "var(--brand)"]];
 
 {
-  /* THE WHOLE STYLESHEET SET: the two fill bindings live in different files since the split. */
+  /* THE WHOLE STYLESHEET SET: the binding and the header mark family live in different files. */
   /*
    * CSS through the SHARED helper: in CSS `//` is never a comment, so the line rule can only
    * remove something real. If a protocol-relative url ever appears, THIS call site goes block-only.
@@ -234,6 +226,48 @@ const EXPECTED_FILL_BINDINGS = [
       true,
     );
   }
+
+  /*
+   * THE HEADER MARK IS NOT RE-INKED. Ruling 118.2 lives in the ABSENCE of a rule, and an absence
+   * is what drifts back unseen: the three warm paths carry presentation attributes, which any CSS
+   * rule outranks, so `.site-header-mark path { fill: x }` would repaint the whole mark without
+   * touching `.site-logo-brand` and without moving a character in the set above.
+   *
+   * A count of zero over an empty scope is what a clean sweep reports. The POSITIVE CONTROL is
+   * that the family is found at all: the width rule is `.site-header-mark`, so the selector must
+   * appear before zero fill bindings on it mean anything.
+   */
+  const family = [...css.matchAll(/([^{}]*\.site-header-mark[^{}]*)\{([^}]*)\}/g)].map((m) => ({
+    selector: m[1].replace(/\s+/g, " ").trim(),
+    fill: /(?:^|[;\s])fill\s*:\s*([^;]+)/.exec(m[2])?.[1].trim() ?? null,
+  }));
+  const inked = family.filter((r) => r.fill);
+
+  eq("the stylesheets carry .site-header-mark rules to examine", family.length > 0, true);
+  eq(
+    "no stylesheet binds fill on the header mark" +
+      `\n    found: ${inked.map((r) => `${r.selector} -> ${r.fill}`).join(" | ")}`,
+    inked.length,
+    0,
+  );
+}
+
+/*
+ * THE MARK RENDERS IN THE HEADER, carried over from the fill binding that used to prove it. Read
+ * off the COMPONENT rather than off the cascade, so a repaint cannot satisfy it and a removal
+ * cannot hide behind one.
+ */
+{
+  const header = stripComments(
+    readFileSync(join(ROOT, "app/components/site-header.tsx"), "utf8"),
+  );
+
+  eq(
+    "the header imports the mark",
+    /import\s*\{[^}]*\bSiteLogoHeader\b[^}]*\}\s*from/.test(header),
+    true,
+  );
+  eq("the header renders the mark", /<SiteLogoHeader\b/.test(header), true);
 }
 
 /*
@@ -519,10 +553,10 @@ if (renderFloorBreach) failures.push(`the render section: ${renderFloorBreach}`)
 
 /*
  * WHOLE-GATE EXECUTED-COUNT FLOOR: a section floor cannot see another section stopping, so this
- * floors the geometry, the fixtures and the two CSS fill bindings. MEASURED BY RUNNING IT, never
+ * floors the geometry, the fixtures and the CSS fill bindings. MEASURED BY RUNNING IT, never
  * summed, summing being what went wrong here once already.
  */
-const MINIMUM_CHECKS = 125;
+const MINIMUM_CHECKS = 134;
 const floorBreach = assertFloor("check:logo", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 
@@ -534,6 +568,6 @@ if (failures.length > 0) {
 
 console.log(
   `check:logo ok. ${checks} assertions over ${FIXTURES.length} fixtures, ` +
-    `${EXPECTED_FILL_BINDINGS.length} CSS bindings, the icon suite ` +
+    `${EXPECTED_FILL_BINDINGS.length} CSS binding${EXPECTED_FILL_BINDINGS.length === 1 ? "" : "s"}, the icon suite ` +
     `(${ICON_CHECKS} of them) and the rendered mark (${RENDER_CHECKS}), 0 failures.`,
 );
