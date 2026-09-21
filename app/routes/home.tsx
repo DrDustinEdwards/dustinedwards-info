@@ -28,7 +28,6 @@ import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { doiSlug } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/home";
 
-import "~/styles/blog-index.css";
 import "~/styles/evidence-row.css";
 import "~/styles/home.css";
 
