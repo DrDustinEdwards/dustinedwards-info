@@ -901,8 +901,12 @@
 
 /* Data table */
 
+/* max-content inside its scroll container, not 100%: at 100% the columns squeeze to fit and the
+   container never scrolls, which is how this table put 68px of horizontal scroll on the whole page
+   at 320. The min keeps it filling the width when it does fit. prose.css owns .table-scroll. */
 .pgui .dt {
-  inline-size: 100%;
+  inline-size: max-content;
+  min-inline-size: 100%;
   border-collapse: collapse;
 }
 

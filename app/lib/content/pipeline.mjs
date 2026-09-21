@@ -1672,6 +1672,37 @@ function remarkChart(file, sink) {
 }
 
 /**
+ * Wraps every table in a scroll container, so a table wider than the reading column scrolls
+ * ITSELF instead of scrolling the document.
+ *
+ * MEASURED, not assumed: at 320 the table in ten-years-on-cloudflare is 431px against a 320px
+ * viewport and put 135px of horizontal scroll on the whole page. Ruling 118 item 4 is the rule it
+ * breaks, and 6f259704 is the last time this shape shipped.
+ *
+ * WHY A WRAPPER RATHER THAN `display: block` ON THE TABLE, which needs no markup at all: display
+ * is what the implicit table role is mapped from, so blocking the table can strip its semantics
+ * from a screen reader. The wrapper leaves the table a table.
+ *
+ * `tabindex` is on the wrapper because a scroll container reachable only by pointer is a keyboard
+ * trap in reverse. It carries no `role="region"`: an unnamed region announces itself and says
+ * nothing, which is worse than a plain focusable box.
+ */
+function rehypeTableScroll() {
+  return (/** @type {import("hast").Root} */ tree) => {
+    visit(tree, "element", (node, index, parent) => {
+      if (node.tagName !== "table" || !parent || index === undefined) return;
+      if (parent.type === "element" && parent.properties?.className?.includes?.("table-scroll")) return;
+      parent.children[index] = {
+        type: "element",
+        tagName: "div",
+        properties: { className: ["table-scroll"], tabIndex: 0 },
+        children: [node],
+      };
+    });
+  };
+}
+
+/**
  * Replaces each marked figure's children with the rendered chart.
  *
  * @param {any[]} models
@@ -2304,6 +2335,8 @@ export async function renderBody({ file, body, resolveImage }) {
     .use(remarkChart, file, charts)
     .use(remarkDiagram, file, diagrams)
     .use(remarkRehype)
+    /* Before anything that reads table structure, and after remark-rehype has made the tables. */
+    .use(rehypeTableScroll)
     .use(rehypeChart, charts)
     .use(rehypeDiagram, diagrams)
     .use(rehypeSlug)
