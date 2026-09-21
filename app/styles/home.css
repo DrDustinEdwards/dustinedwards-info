@@ -182,3 +182,162 @@
     font-size: 1.125rem;
   }
 }
+
+/*
+ * PLATE I AND THE TWO FIGURES.
+ *
+ * THE LOCAL ALIASES ARE NOT NEW TOKENS. Oxide and cadet each hold a measured pair by using a
+ * DIFFERENT ramp step per theme (oxide 400 light and 300 dark is 5.5:1 and 5.4:1 on paper), and a
+ * component-scoped variable is how this repo swaps a step per theme without inventing a global
+ * name. Ruling 122 assigns the jobs: oxide is series 1 and every annotation, cadet is series 3,
+ * --fig-dust-300 is texture and never a series, --brand appears in no figure at all.
+ */
+.home-plate,
+.home-figure {
+  --plate-annotation: var(--fig-oxide-400);
+  --fig-annotation: var(--fig-oxide-400);
+  --fig-cell: var(--chart-cadet);
+
+  margin: 0 0 var(--s-7);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .home-plate,
+  :root:not([data-theme="light"]) .home-figure {
+    --plate-annotation: var(--fig-oxide-300);
+    --fig-annotation: var(--fig-oxide-300);
+  }
+}
+
+[data-theme="dark"] .home-plate,
+[data-theme="dark"] .home-figure {
+  --plate-annotation: var(--fig-oxide-300);
+  --fig-annotation: var(--fig-oxide-300);
+}
+
+/*
+ * The plate fills the reading column. The handoff caps it near 500px, which is right for the
+ * placement it drew, the intro's RIGHT COLUMN beside the name at 1280; this page sets it below the
+ * evidence row across the whole track, where that cap leaves it in a pool of whitespace with its
+ * labels crowded to one side.
+ *
+ * It never scales below 300px: under that the six specimens stop being distinguishable, and an
+ * indistinct key is worse than none.
+ */
+.plate {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 300px;
+  block-size: auto;
+}
+
+.fig {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+}
+
+/* Mono labels on leaders, which is what a plate's annotation is. */
+.plate-label,
+.plate-scale,
+.fig-label {
+  fill: var(--plate-annotation, var(--fig-annotation));
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.plate-scale {
+  fill: var(--text-secondary);
+}
+
+.fig-label {
+  fill: var(--text-secondary);
+}
+
+/* The caption splits like the rail: mono label, prose sentence (ruling 118 item 6). */
+.home-plate-caption,
+.home-figure-caption {
+  margin-block-start: 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  max-inline-size: 58ch;
+}
+
+.home-plate-num,
+.home-figure-num {
+  margin-inline-end: 0.5rem;
+  color: var(--plate-annotation, var(--fig-annotation));
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+/*
+ * THE KEY STRIP is the plate's key, not a second image: the six drawn small with their names and
+ * sentences as real text, so a reader who cannot see the drawing still gets the taxonomy. Ruled
+ * rows, not cards: one dust rule above the strip and one under each item.
+ */
+.plate-key {
+  margin: 0 0 var(--s-8);
+  padding: 0;
+  border-block-start: var(--line-w) solid var(--dust);
+  list-style: none;
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+}
+
+.plate-key-item {
+  border-block-end: var(--line-w) solid var(--dust);
+  padding: 1rem 1rem 1rem 0;
+}
+
+.plate-key-mark {
+  display: block;
+  inline-size: 3.25rem;
+  block-size: 3.25rem;
+  margin-block-end: 0.5rem;
+}
+
+.plate-key-name {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+
+.plate-key-label {
+  margin-inline-end: 0.375rem;
+  color: var(--plate-annotation, var(--fig-oxide-400));
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.plate-key-reading {
+  margin: 0;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+/* The numbered sections. The numeral is mono and muted: it is an index, not a heading word. */
+.home-section {
+  margin-block-end: 2.75rem;
+}
+
+.home-section-num {
+  margin-inline-end: 0.5rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+.home-section-lede {
+  margin: 0 0 1.25rem;
+  max-inline-size: 62ch;
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+}

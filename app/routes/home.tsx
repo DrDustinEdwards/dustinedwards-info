@@ -20,6 +20,12 @@ import {
   pageMeta,
 } from "~/lib/seo";
 import { EvidenceRow } from "~/components/evidence-row";
+import { PlateI, PlateKey } from "~/components/plate-i";
+import { FigurePapersPerYear, FigureRoster } from "~/components/home-figures";
+import { PUBLICATIONS } from "~/data/publications";
+import { PHAGE_YEARS } from "~/data/phage-hunters";
+import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { doiSlug } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/home";
 
 import "~/styles/blog-index.css";
@@ -120,6 +126,35 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         : "No recent verdict has been recorded. /api/health runs the checks and answers now.";
   const healthAge = health.state === "missing" ? undefined : String(health.ageSeconds);
 
+  /*
+   * EVERY FIGURE IN SECTIONS 2 AND 3 IS COUNTED HERE, not typed into the prose. The handoff's own
+   * sentences carry numbers (36 papers, 157 researchers, nine cohorts, six in one year), and a
+   * typed number beside a computed chart is the exact shape rule 17 refuses: two owners for one
+   * fact, drifting the first time a paper lands.
+   */
+  const years = PUBLICATIONS.map((p) => p.year).filter((y) => Number.isFinite(y));
+  const earliestYear = Math.min(...years);
+  const latestYear = Math.max(...years);
+  const perYear = new Map<number, number>();
+  for (const y of years) perYear.set(y, (perYear.get(y) ?? 0) + 1);
+  const peak = [...perYear.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]).at(0) ?? [
+    latestYear,
+    0,
+  ];
+  const [peakYear, peakCount] = peak;
+  /* Newest first, and the deposited date breaks a tie inside a year. */
+  const recentPapers = [...PUBLICATIONS]
+    .sort((a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""))
+    .slice(0, 3);
+
+  const cohortSizes = PHAGE_YEARS.map((c) => c.researchers.length);
+  const researcherCount = cohortSizes.reduce((n, c) => n + c, 0);
+  const cohortYears = PHAGE_YEARS.map((c) => c.year);
+  const firstCohort = Math.min(...cohortYears);
+  const lastCohort = Math.max(...cohortYears);
+  const smallestCohort = Math.min(...cohortSizes);
+  const largestCohort = Math.max(...cohortSizes);
+
   return (
     <>
       <SiteHeader />
@@ -177,10 +212,34 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           />
         </section>
 
+        {/*
+         * THE ABSTRACT IS NOT HERE, deliberately. The handoff carries one, and its text is a
+         * session's words about Dustin rather than his own: vol 19 records that it is his to
+         * write. Shipping a stranger's sentence about a person, on that person's home page, is
+         * the one thing this section must not do, so the intro carries `SITE.tagline` alone until
+         * he supplies it. The label went with it; an "Abstract" heading over nothing is worse
+         * than no heading, and vol 19 says that label is sentence case or dropped.
+         */}
+
+        {/*
+         * PLATE I. A drawing, not data: it does not change with the corpus. It sits under the
+         * evidence row because the row is what can be checked and the plate is what is being
+         * taught, and a teaching object that arrives before the evidence reads as decoration.
+         */}
+        <figure className="home-plate">
+          <PlateI />
+          <figcaption className="home-plate-caption">
+            <span className="home-plate-num">Plate I</span> Plaque morphology, drawn as a key: one
+            specimen of each type on a single lawn. Every plaque a phage hunter has to learn to
+            call, at one magnification.
+          </figcaption>
+        </figure>
+        <PlateKey />
+
         {featured ? (
           <section className="home-featured" aria-labelledby="featured-heading">
             <h2 id="featured-heading" className="home-section-heading">
-              Start here
+              <span className="home-section-num">1</span> Writing
             </h2>
             {/*
              * THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not `PostCard`. It
@@ -230,13 +289,86 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         ) : null}
 
         {/*
+         * 2 · PUBLICATIONS. Three rows and a figure, both read from `app/data/publications.ts`,
+         * so the count in the sentence and the rules in the chart cannot disagree with the list
+         * at /publications. Titles and journals go through `decodeEntities` because the deposited
+         * records carry HTML entities and React would otherwise print `&amp;` as four characters.
+         */}
+        <section className="home-section" aria-labelledby="publications-heading">
+          <h2 id="publications-heading" className="home-section-heading">
+            <span className="home-section-num">2</span> Publications
+          </h2>
+          <p className="home-section-lede">
+            Peer-reviewed work on retroviruses, bacteriophage genomics and science education,{" "}
+            {earliestYear} to {latestYear}. The corpus is uneven on purpose: {peakCount} papers
+            landed in {peakYear}, which is what a sequencing year looks like beside a teaching one.
+          </p>
+          <ol className="home-rows">
+            {recentPapers.map((paper) => (
+              <li key={paper.id} className="home-row">
+                <span className="home-row-date">{paper.year}</span>
+                <span className="home-row-body">
+                  <span className="home-row-title">
+                    <Link to={`/publications/${doiSlug(paper.doi)}/`}>
+                      {decodeEntities(paper.title)}
+                    </Link>
+                  </span>
+                  {paper.journal ? (
+                    <span className="home-row-summary">{decodeEntities(paper.journal)}</span>
+                  ) : null}
+                </span>
+              </li>
+            ))}
+          </ol>
+          <p className="home-more">
+            <Link to="/publications">All {PUBLICATIONS.length} papers</Link>
+          </p>
+          <figure className="home-figure">
+            <FigurePapersPerYear />
+            <figcaption className="home-figure-caption">
+              <span className="home-figure-num">Figure 1</span> Papers per year, {earliestYear} to{" "}
+              {latestYear}. Rule height is the count; the dashed line is six. Years with nothing
+              keep their place on the axis.
+            </figcaption>
+          </figure>
+        </section>
+
+        {/*
+         * 3 · PHAGE DISCOVERY. The roster page carries the names; this is the shape of the
+         * programme. Both numbers in the sentence are counted from `PHAGE_YEARS` rather than
+         * typed, so a new cohort moves the sentence and the figure together.
+         */}
+        <section className="home-section" aria-labelledby="discovery-heading">
+          <h2 id="discovery-heading" className="home-section-heading">
+            <span className="home-section-num">3</span> Phage discovery
+          </h2>
+          <p className="home-section-lede">
+            {researcherCount} undergraduate researchers have isolated and annotated bacteriophage
+            at Tarleton State since {firstCohort}, in {PHAGE_YEARS.length} cohorts of{" "}
+            {smallestCohort} to {largestCohort}. The roster carries their names and nothing else
+            beside them.
+          </p>
+          <figure className="home-figure">
+            <FigureRoster />
+            <figcaption className="home-figure-caption">
+              <span className="home-figure-num">Figure 2</span> One cell per researcher, one row
+              per cohort, newest first. Hexagonal packing is the arrangement, not an ornament: it
+              is how cells sit on a plate.
+            </figcaption>
+          </figure>
+          <p className="home-more">
+            <Link to="/phage-discovery">The roster, {firstCohort} to {lastCohort}</Link>
+          </p>
+        </section>
+
+        {/*
          * FOR READERS WHO ARE NOT PEOPLE, stated plainly rather than left to be
          * discovered in a Link header: an agent that knows this can read the writing
          * without parsing markup at all.
          */}
         <section className="home-machines" aria-labelledby="machines-heading">
           <h2 id="machines-heading" className="home-section-heading">
-            Reading this as a machine
+            <span className="home-section-num">4</span> Reading this as a machine
           </h2>
           <p>
             Every post is also served as its markdown source: add <code>.md</code> to any

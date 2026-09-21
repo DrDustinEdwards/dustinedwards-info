@@ -582,11 +582,26 @@ const NON_PARTICIPATING = new Map([
       "atmosphere and never meaning, so nothing reads it and no pair can be required of it. Its " +
       "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
+  /*
+   * --fig-dust-300 IS PAINTED NOW, and its exemption survives on a different ground. Plate I uses
+   * it for the lawn stipple, the halo ring and the dashed inner margin: 2.33:1 on paper light,
+   * which is correct for texture and would be wrong for anything that carries meaning. Ruling 122
+   * settles the line it sits on: texture only, never a series, never a label. The other names
+   * below are still ramp steps nothing resolves through.
+   */
+  ...(/** @type {Array<[string, string]>} */ (
+    [
+      "--fig-dust-300",
+    ].map((t) => [
+      t,
+      "texture: lawn stipple, a halo ring and a dashed margin on Plate I, which are allowed " +
+        "below the stroke floor because none of them identifies anything",
+    ])
+  )),
   // Unused ramp steps: interiors may sit below 3:1, only edges may not.
   ...(/** @type {Array<[string, string]>} */ (
     [
       "--fig-purple-400",
-      "--fig-dust-300",
       "--fig-leaf-100",
       "--fig-leaf-400",
       "--fig-leaf-500",
