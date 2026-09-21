@@ -1105,72 +1105,74 @@ export default function PlaygroundUi() {
                     Delete
                   </button>
                 </div>
-                <table className="dt">
-                  <thead>
-                    <tr>
-                      <th scope="col" className="dt-pick">
-                        <input
-                          className="check-box"
-                          type="checkbox"
-                          id={ids("all")}
-                          defaultChecked
-                        />
-                        <label className="sr-only" htmlFor={ids("all")}>
-                          Select all posts on this page
-                        </label>
-                      </th>
-                      <th scope="col">Title</th>
-                      <th scope="col">Status</th>
-                      <th scope="col" className="dt-num">
-                        Updated
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { id: "412", title: "Designing phage cocktails that hold", pick: true },
-                      { id: "413", title: "What a titre actually tells you", pick: true },
-                      { id: "414", title: "Counting plaques by hand", pick: true },
-                      { id: "415", title: "Ten years on Cloudflare", pick: false },
-                      { id: "416", title: "A row under the pointer", pick: false, hover: true },
-                    ].map((row) => (
-                      <tr
-                        className="dt-row"
-                        key={row.id}
-                        {...(row.pick ? { "data-selected": "" } : {})}
-                        {...("hover" in row ? { "data-demo": "hover" } : {})}
-                      >
-                        <td className="dt-pick">
+                <div className="table-scroll" tabIndex={0}>
+                  <table className="dt">
+                    <thead>
+                      <tr>
+                        <th scope="col" className="dt-pick">
                           <input
                             className="check-box"
                             type="checkbox"
-                            name="id"
-                            value={row.id}
-                            id={ids(row.id)}
-                            defaultChecked={row.pick}
+                            id={ids("all")}
+                            defaultChecked
                           />
-                          <label className="sr-only" htmlFor={ids(row.id)}>
-                            Select {row.title}
+                          <label className="sr-only" htmlFor={ids("all")}>
+                            Select all posts on this page
                           </label>
-                        </td>
-                        <th scope="row" className="dt-title">
-                          <a
-                            href="/playground/ui"
-                            {...("hover" in row ? { "data-demo": "hover" } : {})}
-                          >
-                            {row.title}
-                          </a>
                         </th>
-                        <td>
-                          <span className="pill pill-live">Published</span>
-                        </td>
-                        <td className="dt-num">
-                          <time dateTime="2026-04-11">11 Apr</time>
-                        </td>
+                        <th scope="col">Title</th>
+                        <th scope="col">Status</th>
+                        <th scope="col" className="dt-num">
+                          Updated
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {[
+                        { id: "412", title: "Designing phage cocktails that hold", pick: true },
+                        { id: "413", title: "What a titre actually tells you", pick: true },
+                        { id: "414", title: "Counting plaques by hand", pick: true },
+                        { id: "415", title: "Ten years on Cloudflare", pick: false },
+                        { id: "416", title: "A row under the pointer", pick: false, hover: true },
+                      ].map((row) => (
+                        <tr
+                          className="dt-row"
+                          key={row.id}
+                          {...(row.pick ? { "data-selected": "" } : {})}
+                          {...("hover" in row ? { "data-demo": "hover" } : {})}
+                        >
+                          <td className="dt-pick">
+                            <input
+                              className="check-box"
+                              type="checkbox"
+                              name="id"
+                              value={row.id}
+                              id={ids(row.id)}
+                              defaultChecked={row.pick}
+                            />
+                            <label className="sr-only" htmlFor={ids(row.id)}>
+                              Select {row.title}
+                            </label>
+                          </td>
+                          <th scope="row" className="dt-title">
+                            <a
+                              href="/playground/ui"
+                              {...("hover" in row ? { "data-demo": "hover" } : {})}
+                            >
+                              {row.title}
+                            </a>
+                          </th>
+                          <td>
+                            <span className="pill pill-live">Published</span>
+                          </td>
+                          <td className="dt-num">
+                            <time dateTime="2026-04-11">11 Apr</time>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </form>
             )}
           </Spec>

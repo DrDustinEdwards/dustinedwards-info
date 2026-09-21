@@ -8,12 +8,17 @@ and every line here is one that has already been broken once.
 Where this file and a stylesheet disagree, **the stylesheet is right**. It is the
 owner; this is a summary.
 
-## The header is not a design problem
+## The header is paper, and that is recent
 
-The header is restored byte-identical to a specific commit by Dustin's order, and
-two standing design rulings are SUSPENDED for it rather than applied. It is not
-redesigned, not modernised, not tidied. If a brief seems to ask for a new header,
-the brief is stale and the answer is no.
+For a month the header was a purple bar restored byte-identical to a specific
+commit by Dustin's order, with two design rulings SUSPENDED for it rather than
+applied. **Ruling 117 lifted that suspension and the paper header shipped:**
+wordmark plus icon-only search and theme on the first line, destinations wrapping
+as text beneath, one dust rule under the whole thing, no breakpoint and no menu
+panel. Both controls are glyphs in `--brand` with no border, no radius and no
+fill in any state.
+
+What survives from the bar is the lesson below, not the bar.
 
 ## Never invent a token
 
@@ -27,10 +32,10 @@ This is not hypothetical. The 2026-09 redesign invented `--bar-fill` while
 substitution invalidated every colour in the header at once, because the
 surrounding tokens were still measured against the token it replaced.
 
-- **The bar is `--surface-chrome`.** Its text is `--on-chrome`, its secondary
-  text `--on-chrome-muted`, its logo fill `--mark-on-chrome`, its focus ring
-  `--focus-ring-on-chrome`.
-- **Those pairings are MEASURED and their numbers are owned by `check:contrast`.**
+- The five chrome role tokens still exist for the social cards and are no longer
+  painted by any public sheet, because the header is paper. They are not a
+  surface to reach for.
+- **Token pairings are MEASURED and their numbers are owned by `check:contrast`.**
   Use the tokens and the measurement holds. Compute a colour yourself, or swap
   one side of a pair, and it does not, and the gate will say so after you have
   done the work rather than before.
@@ -72,9 +77,20 @@ palette. None of the three ever lands on a control. If something is interactive,
 it is purple or it is not signalling interactivity.
 
 Light is atmosphere, never meaning: nothing may depend on a glow to be
-understood. Glass is for small floating controls only (theme toggle, search
-trigger, overflow menus, the Ask frame). The header, sidebar, toolbars, chips,
-form dialogs and the Ask body are solid, and glass is never a reading surface.
+understood. **Glass was retired as a material by ruling 117.** It survives only
+on things that float and then leave: modal dialogs, the image viewer, tooltips.
+Solid first, blur 12px at most, no brand fill, radius 0, opaque under
+`prefers-reduced-transparency` and in print. Never on the header, a well, live
+results, Ask, or anything that stays after the pointer leaves.
+
+## The kill list is five conditions, not five words
+
+A word ban teaches the next session to rename the class and keep the object, so
+ruling 118 replaced the bans with conditions naming the object: CARD, BENTO,
+PILL, CHIP, TRACKED CAPS. They are written out in `conventions.md`, which also
+carries the narrowed rules on fills, radius, the measure and mono density. That
+file is the owner and a gate binds it to the stylesheets; this one does not
+restate its values.
 
 ## The public plane does not hydrate
 
@@ -107,10 +123,13 @@ will ever tell you:
 ## Accessibility floors that are not negotiable
 
 - Both themes are first class. A themed container owes **both**
-  `background: var(--surface)` and `color: var(--text)`; setting only the
+  `background: var(--paper)` and `color: var(--text)`; setting only the
   background inherits the other theme's text colour and has already shipped a
-  preview with invisible body copy.
-- Focus is always visible, and the ring token differs by surface: on the bar it
-  is `--focus-ring-on-chrome`, not the default ring.
+  preview with invisible body copy. `--paper` is the ground of the public plane,
+  and `--bg` and `--surface` are the older pair it is replacing.
+- Focus is always visible: `--focus-ring`, 2px, 2px offset, square corners. The
+  ring token differs by surface, and now that the header is paper the only
+  non-default ring left is `--focus-ring-on-brand`, on a filled brand control,
+  which the public plane no longer has.
 - An icon-only control needs an accessible name and an `aria-hidden` icon.
 - Contrast is measured, not eyeballed, and the thresholds belong to the gate.

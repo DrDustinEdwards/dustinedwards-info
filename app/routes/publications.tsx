@@ -460,7 +460,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
                   key={chip.id}
                   to={chip.href}
                   className={`pub-chip${chip.active ? " pub-chip-active" : ""}`}
-                  aria-pressed={chip.active}
+                  aria-current={chip.active ? "true" : undefined}
                   title={chip.description}
                 >
                   {chip.label} <span className="pub-chip-count">{chip.count}</span>
@@ -470,7 +470,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
                 <Link
                   to={selectedHref}
                   className={`pub-chip${selectedOnly ? " pub-chip-active" : ""}`}
-                  aria-pressed={selectedOnly}
+                  aria-current={selectedOnly ? "true" : undefined}
                 >
                   Selected <span className="pub-chip-count">{selectedCount}</span>
                 </Link>

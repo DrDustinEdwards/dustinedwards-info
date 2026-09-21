@@ -22,9 +22,10 @@
   gap: 0.375rem;
   /* 0.5rem block padding puts the target at 40px, over the 24px minimum. */
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-muted);
+  /* Radius 0 and a dust edge: ruling 118 calls 999px a PILL whatever it wraps. */
+  border: var(--line-w) solid var(--dust);
+  border-radius: 0;
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   /* The narrow exemption app.css states once: this carries a border, so it is
      not leaning on hue to say "link" and does not need the underline too. */
@@ -36,10 +37,15 @@
   color: var(--text);
 }
 
+/*
+ * SELECTED IS WEIGHT AND AN INK EDGE, NOT A FILL. Ruling 118 item 7 names this exact class as
+ * the CHIP condition: a compact selectable token whose selected state is a filled --brand capsule.
+ * The class name may stay; the fill may not. The link carries aria-current, so the state is in the
+ * accessibility tree and not only in the pixels.
+ */
 .pub-chip-active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: var(--on-brand);
+  border-color: var(--text);
+  color: var(--text);
   font-weight: 600;
 }
 
@@ -144,13 +150,15 @@
   color: var(--text-muted);
 }
 
+/* Square, not capsules. These are labels rather than selectable tokens, so they are not the CHIP
+   condition, but 999px is the PILL condition whatever it wraps. */
 .pub-type,
 .pub-badge {
   display: inline-flex;
   align-items: center;
   padding: 0.0625rem 0.4375rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  border: var(--line-w) solid var(--dust);
+  border-radius: 0;
   font-size: 0.6875rem;
   white-space: nowrap;
 }
