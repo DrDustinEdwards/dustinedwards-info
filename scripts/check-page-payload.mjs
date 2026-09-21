@@ -1150,11 +1150,11 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
  */
 const HTML_CEILINGS = {
   "/": { brotli: 12000, measured: 10428 },
-  "/blog": { brotli: 4300, measured: 3700 },
+  "/blog": { brotli: 4300, measured: 3734 },
   /* The LONGEST post in the corpus, which is what this route's worst case means. */
   "/blog/:slug": { brotli: 12300, measured: 10660 },
-  "/blog/tags/:tag": { brotli: 3900, measured: 3391 },
-  "/blog/series/:series": { brotli: 4000, measured: 3404 },
+  "/blog/tags/:tag": { brotli: 3900, measured: 3443 },
+  "/blog/series/:series": { brotli: 4000, measured: 3458 },
   "/projects": { brotli: 6400, measured: 5559 },
   "/colophon": { brotli: 13900, measured: 12043 },
   "/playground": { brotli: 6300, measured: 5435 },
