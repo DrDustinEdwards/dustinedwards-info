@@ -48,6 +48,7 @@
     "check:policy": "node scripts/check-policy.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:design-sheets": "node scripts/check-design-sheets.mjs",
+    "check:design-vocabulary": "node scripts/check-design-vocabulary.mjs",
     "check:slop": "npx --yes aislop@latest ci --changes --base origin/main",
     "check:guidelines": "node scripts/check-guidelines.mjs",
     "check:logo": "node scripts/check-logo.mjs",
