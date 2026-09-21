@@ -1,0 +1,184 @@
+/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
+
+/*
+ * THE HOME PAGE: a name, one sentence, one ruled line of evidence, and the writing.
+ *
+ * Sections take the WIDE column rather than the text track: the rows and the evidence rule run the
+ * full measure between the gutters, and the things that must stay readable (the sentence, a row's
+ * summary) carry their own ch caps instead. Nothing here is a tile, a well or a card.
+ */
+.home-tracks > * {
+  grid-column: wide;
+}
+
+.home-intro {
+  margin-block-start: var(--s-7);
+}
+
+/*
+ * ONE OF THREE PLACES INTER IS ALLOWED AT DISPLAY SETTINGS, the others being the wordmark and a
+ * page label used as a page title. The leading is 0.92 because the name breaks over two lines at
+ * both widths, and two tightly stacked words read as one mark rather than as a headline.
+ */
+.intro-name {
+  margin: 0 0 1.375rem;
+  /*
+   * TWO LINES AT EVERY WIDTH, which is what the 0.92 leading below is for: min-content is the
+   * width of the longest word, so a two-word name wraps at its one space and nowhere else. NOT a
+   * `<br>`: the h-card's `p-name` is this element's text, and a break element with no space around
+   * it parses as one run, so `check:microformats` would read "DustinEdwards".
+   */
+  max-inline-size: min-content;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 4.75rem;
+  font-weight: 800;
+  /* 32, not 48: Inter's opsz axis stops at 32, and 48 is the serif levels' step. check:fonts
+     compares every request against the shipped binary's real range. */
+  font-variation-settings: "opsz" 32, "wght" 800;
+  letter-spacing: -0.052em;
+  line-height: 0.92;
+}
+
+/* The author's own sentence, in the first person. SITE.tagline verbatim, so it stays the string
+   the meta description and the Person record derive from. */
+.intro-line {
+  margin: 0 0 2.125rem;
+  max-width: 34ch;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  line-height: 1.5;
+}
+
+/* The health ratio and its read time travel together, so the fact is one span. */
+.evidence-health {
+  white-space: nowrap;
+}
+
+.home-intro .evidence {
+  margin-block-end: 2.75rem;
+}
+
+/* Section headings are serif and quiet: they label a list rather than open an argument. */
+.home-section-heading {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/*
+ * THE WRITING ROWS. Reverse-chronological order is meaningful, so the list is an `ol`. The date
+ * sits in the SAME rail measure the post page uses, read from the same two variables in shell.css
+ * rather than restated here, so the two pages share one grid instead of resembling each other.
+ */
+.home-rows {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--line-w) solid var(--dust);
+  list-style: none;
+}
+
+.home-row {
+  display: grid;
+  grid-template-columns: var(--rail-w) var(--rail-gap-w) minmax(0, 1fr);
+  align-items: baseline;
+  border-block-end: var(--line-w) solid var(--dust);
+  padding-block: 1rem;
+}
+
+.home-row-date {
+  grid-column: 1;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+  text-align: right;
+}
+
+.home-row-body {
+  grid-column: 3;
+  min-width: 0;
+}
+
+/* Titles are ink, not purple: they are the row, and five purple headlines are five shouts. */
+.home-row-title {
+  display: block;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
+.home-row-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.home-row-title a:hover {
+  color: var(--brand);
+}
+
+/* The feed is a reading list, so a read row should look read. */
+.home-row-title a:visited {
+  color: var(--visited);
+}
+
+.home-row-summary {
+  display: block;
+  margin-block-start: 0.25rem;
+  max-width: 58ch;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.home-more {
+  margin: 1.125rem 0 0;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+
+.home-machines {
+  margin-block-start: var(--s-7);
+}
+
+.home-machines p {
+  max-width: 62ch;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+
+@media (max-width: 47.99rem) {
+  .intro-name {
+    font-size: 2.75rem;
+    font-variation-settings: "opsz" 32, "wght" 800;
+    margin-block-end: 1rem;
+  }
+
+  .intro-line {
+    max-width: none;
+    font-size: 1.1875rem;
+    margin-block-end: 1.5rem;
+  }
+
+  /* One column: the date reads left, above its title, in the same order. */
+  .home-row {
+    display: block;
+  }
+
+  .home-row-date {
+    display: block;
+    margin-block-end: 0.3125rem;
+    text-align: left;
+  }
+
+  .home-row-title {
+    font-size: 1.125rem;
+  }
+}

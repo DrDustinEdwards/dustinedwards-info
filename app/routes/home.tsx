@@ -19,9 +19,12 @@ import {
   webSiteJsonLd,
   pageMeta,
 } from "~/lib/seo";
+import { EvidenceRow } from "~/components/evidence-row";
 import type { Route } from "./+types/home";
 
 import "~/styles/blog-index.css";
+import "~/styles/evidence-row.css";
+import "~/styles/home.css";
 
 /**
  * Publicly cacheable. The hard rule 8 default STAYS and still covers everything
@@ -98,38 +101,6 @@ export async function loader({ context }: Route.LoaderArgs) {
   };
 }
 
-/**
- * A proof tile. The number is always passed in; this component owns none.
- *
- * `age` is emitted as `data-health-age` in SECONDS for `check:browser`. The gate
- * reads the attribute rather than the sentence beside it, because the sentence is
- * prose that will be edited and the attribute is a number that cannot be satisfied
- * by a rewording.
- */
-function Proof({
-  value,
-  label,
-  detail,
-  href,
-  age,
-}: {
-  value: string;
-  label: string;
-  detail: string;
-  href: string;
-  age?: string;
-}) {
-  return (
-    <li className="proof" data-health-age={age}>
-      <Link className="proof-link" to={href}>
-        <span className="proof-value">{value}</span>
-        <span className="proof-label">{label}</span>
-      </Link>
-      <span className="proof-detail muted">{detail}</span>
-    </li>
-  );
-}
-
 export default function Home({ loaderData }: Route.ComponentProps) {
   const jsonLd = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
   const { gates, posts, featured, recent, health } = loaderData;
@@ -152,7 +123,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      <main className="home" id="main" tabIndex={-1}>
+      <main className="tracks home-tracks" id="main" tabIndex={-1}>
         {/*
          * Ruling 50 as amended: microformats only, no `rel="me"`. Only `u-url` had
          * nowhere to go, so the anchor is hidden and it is the ONE hidden element here.
@@ -160,9 +131,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          * NO `u-photo`: a card claiming a photo the site does not publish would be the
          * h-card version of a substituted value.
          */}
-        <div className="home-intro h-card">
-          <p className="eyebrow">{SITE.eyebrow}</p>
-          <h1 className="hero-name p-name">{SITE.name}</h1>
+        {/*
+         * THE EYEBROW IS GONE. An uppercase tracked line above the name is the one typographic
+         * move this direction refuses outright, and the sentence under the name already said it.
+         */}
+        <section className="home-intro h-card" aria-labelledby="intro-h">
+          <h1 className="intro-name p-name" id="intro-h">
+            {SITE.name}
+          </h1>
           <a className="u-url" href="/" hidden>
             {SITE.name}
           </a>
@@ -170,43 +146,35 @@ export default function Home({ loaderData }: Route.ComponentProps) {
            * ONE SENTENCE OF WHO AND WHAT, and it is `SITE.tagline`, the string the Person
            * record and the meta description already derive from.
            */}
-          <p className="hero-role">{SITE.tagline}</p>
+          <p className="intro-line">{SITE.tagline}</p>
           {/*
-           * THE UNIVERSITY, IN TEXT A PERSON CAN READ. `SITE.affiliation`, the SAME
-           * constant the Person record's `worksFor` comes from, so the page and the graph
-           * cannot name different employers. The JOB TITLE is deliberately not repeated
-           * here.
+           * THE THREE PROOF TILES, FLATTENED INTO THE EVIDENCE ROW, each figure linking where its
+           * tile linked. No boxes, no big numerals, no labels under values.
+           *
+           * THE AFFILIATION IS THE ROW'S FIRST FACT and the one hand-written one in any instance
+           * of it: `SITE.affiliation`, the SAME constant the Person record's `worksFor` comes
+           * from, so the page and the graph cannot name different employers. `p-org` moves onto
+           * that span and the row sits inside `.h-card`, so the microformat still parses.
+           *
+           * `data-health-age` rides the health fact, in SECONDS, because `check:browser` and
+           * `verify-live` read the attribute rather than the sentence beside it: prose gets
+           * edited, a number cannot be satisfied by a rewording.
            */}
-          <p className="hero-affiliation">
-            <span className="p-org">{SITE.affiliation}</span>
-          </p>
-        </div>
-
-        <section className="home-proof" aria-labelledby="proof-heading">
-          <h2 id="proof-heading" className="home-section-heading">
-            The evidence, read when this page rendered
-          </h2>
-          <ul className="proof-list">
-            <Proof
-              value={String(gates)}
-              label={gates === 1 ? "automated check" : "automated checks"}
-              detail="every one of them runs before a deploy is allowed out"
-              href="/colophon#gates"
-            />
-            <Proof
-              value={healthValue}
-              label="health checks passing"
-              detail={healthDetail}
-              href="/api/health"
-              age={healthAge}
-            />
-            <Proof
-              value={String(posts)}
-              label={posts === 1 ? "published post" : "published posts"}
-              detail="written about building this, with the measurements in them"
-              href="/blog"
-            />
-          </ul>
+          <EvidenceRow
+            facts={[
+              <span className="p-org">{SITE.affiliation}</span>,
+              <Link to="/colophon#gates">
+                {gates} {gates === 1 ? "check" : "checks"}
+              </Link>,
+              <span className="evidence-health" data-health-age={healthAge}>
+                <Link to="/api/health">{healthValue} passing</Link>
+              </span>,
+              <Link to="/blog">
+                {posts} {posts === 1 ? "post" : "posts"}
+              </Link>,
+            ]}
+            detail={healthDetail}
+          />
         </section>
 
         {featured ? (
@@ -221,38 +189,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
              *
              * NO h-feed: this is a hand-picked three, not the blog's feed.
              */}
-            <ul className="post-list">
-              <li className="post-card h-entry">
-                <h3 className="post-card-title p-name">
-                  <Link className="u-url" to={`/blog/${featured.slug}`}>
-                    {featured.title}
-                  </Link>
-                </h3>
-                <p className="post-card-meta">
-                  {featured.publishAt ? (
-                    <time
-                      className="dt-published"
-                      dateTime={new Date(featured.publishAt).toISOString()}
-                    >
-                      {longDateUTC(featured.publishAt)}
-                    </time>
-                  ) : null}
-                  {featured.readingTimeMinutes
-                    ? ` · ${featured.readingTimeMinutes} min read`
-                    : null}
-                </p>
-                {featured.description ? (
-                  <p className="p-summary">{featured.description}</p>
-                ) : null}
-              </li>
-              {recent.map((post) => (
-                <li key={post.slug} className="post-card h-entry">
-                  <h3 className="post-card-title p-name">
-                    <Link className="u-url" to={`/blog/${post.slug}`}>
-                      {post.title}
-                    </Link>
-                  </h3>
-                  <p className="post-card-meta">
+            {/*
+             * ONE `ol`, HAND-PICKED FIRST. Reverse-chronological order is meaningful for the tail,
+             * and the featured post leads it because it is the way in, which is what the heading
+             * says. `key` guards against the featured post also appearing in `recent`.
+             *
+             * READING TIME IS NOT DRAWN. The date is the only metadata a reader needs to choose;
+             * the field stays upstream for whatever else reads it.
+             */}
+            <ol className="home-rows">
+              {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
+                <li key={post.slug} className="home-row h-entry">
+                  <span className="home-row-date">
                     {post.publishAt ? (
                       <time
                         className="dt-published"
@@ -261,11 +209,20 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                         {longDateUTC(post.publishAt)}
                       </time>
                     ) : null}
-                    {post.readingTimeMinutes ? ` · ${post.readingTimeMinutes} min read` : null}
-                  </p>
+                  </span>
+                  <span className="home-row-body">
+                    <span className="home-row-title p-name">
+                      <Link className="u-url" to={`/blog/${post.slug}`}>
+                        {post.title}
+                      </Link>
+                    </span>
+                    {post.description ? (
+                      <span className="home-row-summary p-summary">{post.description}</span>
+                    ) : null}
+                  </span>
                 </li>
               ))}
-            </ul>
+            </ol>
             <p className="home-more">
               <Link to="/blog">All {posts} posts</Link>
             </p>
