@@ -1,5 +1,6 @@
 import { Form, Link } from "react-router";
 
+import { EvidenceRow } from "~/components/evidence-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
@@ -13,7 +14,7 @@ import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
-import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
+import { PUBLICATIONS_PATH, doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
@@ -26,6 +27,8 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/publications";
 
+import "~/styles/evidence-row.css";
+import "~/styles/listing.css";
 import "~/styles/publications.css";
 
 const SORTS = [
@@ -209,6 +212,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const selectedCount = SHOWCASE.filter((p) => p.selected).length;
   const filtered = topics.length > 0 || q !== "" || selectedOnly;
 
+  /*
+   * THE EVIDENCE ROW'S THREE FACTS, over the list this request renders rather than over the whole
+   * corpus: a reader who has filtered to one topic is looking at that bibliography. Counted here,
+   * never typed, and the venue count is DISTINCT journals, which is the one of the three that
+   * says something a reader could not get by scrolling.
+   */
+  const span = {
+    papers: items.length,
+    firstYear: items.length > 0 ? Math.min(...items.map((p) => p.year)) : null,
+    lastYear: items.length > 0 ? Math.max(...items.map((p) => p.year)) : null,
+    venues: new Set(items.map((p) => p.journal).filter(Boolean)).size,
+  };
+
   // Exactly the four bare single-topic URLs self-canonical. Everything else
   // canonicals to the bare page: those views are re-orderings or subsets of the
   // index, not distinct content, and the URL space is unbounded because q is free
@@ -273,6 +289,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       return s ? `/publications?${s}` : "/publications";
     })(),
     filtered,
+    span,
     total: SHOWCASE.length,
     canonicalPath,
     pageTitle,
@@ -349,65 +366,102 @@ function citation(p: Publication) {
   );
 }
 
+/**
+ * One paper as a RULED ROW in a bibliography, which is the register this page was always in and
+ * never looked like. The machine column carries what a reader scans for and cannot read off the
+ * title: the kind of thing it is, and whether they can get it. Open access as a mono word, not a
+ * badge; a chapter as a mono word, not a box. Neither was a chip by ruling 118's conditions, but
+ * both were little bordered rectangles doing what a word does.
+ */
 function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
+  const slug = doiSlug(p.doi);
   return (
-    <article className="pub-entry">
-      {/* Display only. The stored title stays plain for search and JSON-LD. */}
-      {/* THE TITLE IS THE LINK TO THE PAPER'S OWN PAGE, so every row leads somewhere. */}
-      <h3 className="pub-title">
-        <Link to={paperPath(doiSlug(p.doi))}>
-          {italicizeOrganisms(decodeEntities(p.title))}
-        </Link>
-      </h3>
-      <AuthorList authors={p.authors} />
-      <p className="pub-meta">
-        {citation(p)}
-        {p.type !== "article" ? <span className="pub-type">{p.type}</span> : null}
-        {p.isOpenAccess ? <span className="pub-badge">Open access</span> : null}
+    <article className="paper-row">
+      <p className="paper-marks">
+        {p.type !== "article" ? <span className="paper-kind">{p.type}</span> : null}
+        {p.isOpenAccess ? <span className="paper-open">open access</span> : null}
       </p>
-      <p className="pub-links">
-        {p.access === "self-hosted" && p.pdfPath ? (
-          <a href={p.pdfPath}>PDF</a>
-        ) : null}
-        <a href={`https://doi.org/${p.doi}`}>DOI</a>
-        {p.pmcUrl ? <a href={p.pmcUrl}>PMC</a> : null}
-        {p.externalUrl && (p.type === "teaching-resource" || p.type === "abstract") ? (
-          <a href={p.externalUrl}>Resource</a>
-        ) : null}
-        {p.preprintDoi ? (
-          <a href={`https://doi.org/${p.preprintDoi}`}>Preprint</a>
-        ) : null}
+      <div className="paper-body">
+        {/* Display only. The stored title stays plain for search and JSON-LD. */}
+        {/* THE TITLE IS THE LINK TO THE PAPER'S OWN PAGE, so every row leads somewhere. */}
+        <h3 className="paper-row-title">
+          <Link to={paperPath(slug)}>{italicizeOrganisms(decodeEntities(p.title))}</Link>
+        </h3>
+        <AuthorList authors={p.authors} />
+        {/* The journal in italic serif, which is what a bibliography does and what tells a
+            reader at a glance that this line is a venue rather than a sentence. */}
+        <p className="paper-venue">{citation(p)}</p>
+        <p className="paper-row-links">
+          {p.access === "self-hosted" && p.pdfPath ? <a href={p.pdfPath}>PDF</a> : null}
+          <a href={`https://doi.org/${p.doi}`}>DOI</a>
+          {p.pmcUrl ? <a href={p.pmcUrl}>PMC</a> : null}
+          {p.externalUrl && (p.type === "teaching-resource" || p.type === "abstract") ? (
+            <a href={p.externalUrl}>Resource</a>
+          ) : null}
+          {p.preprintDoi ? (
+            <a href={`https://doi.org/${p.preprintDoi}`}>Preprint</a>
+          ) : null}
+          {/*
+           * THE CITATION EXPORTS ON THE ROW. They existed per paper and were reachable only from
+           * the paper's own page, so a reader assembling a reading list had to open every one.
+           * Plain links, because they are URLs: a reference manager can be pointed at one.
+           */}
+          <a href={`${PUBLICATIONS_PATH}/${slug}.bib`}>BibTeX</a>
+          <a href={`${PUBLICATIONS_PATH}/${slug}.ris`}>RIS</a>
+          {/*
+           * Only at 1 or more, so a zero is never rendered as though it were a real count.
+           * A link rather than plain text because the work page carries the provenance a
+           * title attribute cannot show on a touch device. The URL comes from the response,
+           * never constructed.
+           */}
+          {cited && cited.count >= 1 && cited.url ? (
+            <a
+              className="paper-cited-link"
+              href={cited.url}
+              title={`OpenAlex, retrieved ${cited.fetchedAt}`}
+            >
+              Cited by {cited.count}
+            </a>
+          ) : null}
+        </p>
         {/*
-         * Only at 1 or more, so a zero is never rendered as though it were a real count.
-         * A link rather than plain text because the work page carries the provenance a
-         * title attribute cannot show on a touch device. The URL comes from the response,
-         * never constructed.
+         * COinS, INDEX ONLY: Highwire `citation_*` tags describe the document they sit
+         * in, and a page is one document, so 33 records cannot each have a
+         * `citation_title`. This is what fills that gap. The per-paper pages carry the
+         * citation tags instead, so it is deliberately not repeated there. Ruling 63.
          */}
-        {cited && cited.count >= 1 && cited.url ? (
-          <a
-            className="pub-cited"
-            href={cited.url}
-            title={`OpenAlex, retrieved ${cited.fetchedAt}`}
-          >
-            Cited by {cited.count}
-          </a>
+        <span className="Z3988" title={coinsTitle(p)} />
+        {p.abstract ? (
+          <details className="paper-abstract-peek">
+            <summary>Abstract</summary>
+            <p>{italicizeOrganisms(decodeEntities(p.abstract))}</p>
+          </details>
         ) : null}
-      </p>
-      {/*
-       * COinS, INDEX ONLY: Highwire `citation_*` tags describe the document they sit
-       * in, and a page is one document, so 33 records cannot each have a
-       * `citation_title`. This is what fills that gap. The per-paper pages carry the
-       * citation tags instead, so it is deliberately not repeated there. Ruling 63.
-       */}
-      <span className="Z3988" title={coinsTitle(p)} />
-      {p.abstract ? (
-        <details className="pub-abstract">
-          <summary>Abstract</summary>
-          <p>{italicizeOrganisms(decodeEntities(p.abstract))}</p>
-        </details>
-      ) : null}
+      </div>
     </article>
   );
+}
+
+/**
+ * The three facts the evidence row states, formatted from the numbers the loader counted. A null
+ * is not a zero: an empty filter has no span, and `EvidenceRow` omits itself below three facts
+ * rather than printing a range nothing occupies.
+ */
+function bibliographyFacts(span: {
+  papers: number;
+  firstYear: number | null;
+  lastYear: number | null;
+  venues: number;
+}) {
+  return [
+    `${span.papers} paper${span.papers === 1 ? "" : "s"}`,
+    span.firstYear && span.lastYear
+      ? span.firstYear === span.lastYear
+        ? String(span.firstYear)
+        : `${span.firstYear} to ${span.lastYear}`
+      : null,
+    span.venues > 0 ? `${span.venues} venue${span.venues === 1 ? "" : "s"}` : null,
+  ];
 }
 
 export default function Publications({ loaderData }: Route.ComponentProps) {
@@ -422,6 +476,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
     selectedCount,
     selectedHref,
     filtered,
+    span,
     total,
     citations,
   } = loaderData;
@@ -443,106 +498,116 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
        * `id="main"` is root's unconditional skip-link target. Without it the skip link
        * moves focus nowhere.
        */}
-      <main id="main" className="page" tabIndex={-1}>
-        <div className="page-inner">
-          <h1 className="page-title">Publications</h1>
-          <p className="page-intro">
+      <main id="main" className="tracks list-tracks" tabIndex={-1}>
+        <header className="list-head">
+          <h1 className="list-label">Publications</h1>
+          <p className="list-dek">
             Peer-reviewed work on retroviruses, bacteriophage genomics, and how
-            undergraduate research is taught. Full text is hosted here where I
-            have the publisher version, with links out to the record of version
-            otherwise.
+            undergraduate research is taught. Full text is hosted here where I have the
+            publisher version, with links out to the record of version otherwise.
           </p>
+          {/* Three counted facts about THIS list, in the slot every page carries one. */}
+          <EvidenceRow facts={bibliographyFacts(span)} />
+        </header>
 
-          <div className="pub-controls">
-            <nav className="pub-chips" aria-label="Filter by topic">
-              {chips.map((chip) => (
-                <Link
-                  key={chip.id}
-                  to={chip.href}
-                  className={`pub-chip${chip.active ? " pub-chip-active" : ""}`}
-                  aria-current={chip.active ? "true" : undefined}
-                  title={chip.description}
-                >
-                  {chip.label} <span className="pub-chip-count">{chip.count}</span>
-                </Link>
+        {/*
+         * THE TOPIC FILTERS ARE TEXT LINKS. They were bordered tokens with a current state, which
+         * is the chip shape whatever the border is doing; the state is weight and ink now, and
+         * `aria-current` carries it into the accessibility tree either way. Still links, so the
+         * URL remains the state with script or without it.
+         */}
+        <nav className="list-filter" aria-label="Filter by topic">
+          <span className="list-filter-label">Topics</span>
+          {chips.map((chip) => (
+            <Link
+              key={chip.id}
+              to={chip.href}
+              aria-current={chip.active ? "true" : undefined}
+              title={chip.description}
+            >
+              {chip.label} <span className="filter-count">{chip.count}</span>
+            </Link>
+          ))}
+          {selectedCount > 0 ? (
+            <Link to={selectedHref} aria-current={selectedOnly ? "true" : undefined}>
+              Selected <span className="filter-count">{selectedCount}</span>
+            </Link>
+          ) : null}
+        </nav>
+
+        {/* GET form, so search and sort both survive scripting being off. */}
+        <Form method="get" className="list-search paper-search" role="search">
+          {topics.map((t) => (
+            <input key={t} type="hidden" name="topic" value={t} />
+          ))}
+          {selectedOnly ? <input type="hidden" name="selected" value="1" /> : null}
+          <label className="paper-field">
+            {/* Sentence case. It was tracked caps, which ruling 118 item 7 names. */}
+            <span className="paper-field-label">Search</span>
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Title, author, or journal"
+            />
+          </label>
+          <label className="paper-field">
+            <span className="paper-field-label">Sort</span>
+            <select name="sort" defaultValue={sort}>
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
               ))}
-              {selectedCount > 0 ? (
-                <Link
-                  to={selectedHref}
-                  className={`pub-chip${selectedOnly ? " pub-chip-active" : ""}`}
-                  aria-current={selectedOnly ? "true" : undefined}
-                >
-                  Selected <span className="pub-chip-count">{selectedCount}</span>
-                </Link>
-              ) : null}
-            </nav>
+            </select>
+          </label>
+          <button type="submit">Apply</button>
+        </Form>
 
-            {/* GET form, so search and sort both survive scripting being off. */}
-            <Form method="get" className="pub-form" role="search">
-              {topics.map((t) => (
-                <input key={t} type="hidden" name="topic" value={t} />
-              ))}
-              {selectedOnly ? <input type="hidden" name="selected" value="1" /> : null}
-              <label className="pub-field">
-                <span className="pub-field-label">Search</span>
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={q}
-                  placeholder="Title, author, or journal"
-                />
-              </label>
-              <label className="pub-field">
-                <span className="pub-field-label">Sort</span>
-                <select name="sort" defaultValue={sort}>
-                  {SORTS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit" className="btn-ghost pub-apply">
-                Apply
-              </button>
-            </Form>
-          </div>
-
-          <p className="pub-count muted">
-            {filtered ? `${items.length} of ${total} publications` : `${total} publications`}
+        {/*
+         * THE COUNT AND THE EXPORTS ARE TWO FACTS, so they are two spans separated by the row's
+         * column gap rather than by punctuation, which is how the evidence row does it: a wrapped
+         * line then reads as a list and not as a broken sentence.
+         */}
+        <p className="list-feeds paper-feeds">
+          <span>
+            {filtered ? `${items.length} of ${total} shown` : `${total} publications`}
             {filtered ? (
               <>
                 {" "}
-                <Link to="/publications" className="pub-clear">
-                  Clear
-                </Link>
+                <Link to="/publications">Clear</Link>
               </>
             ) : null}
-          </p>
-
+          </span>
           {/*
            * Always the FULL list regardless of the current filter: a citation file that
-           * silently carried only what a chip happened to be showing would be a subset nobody
-           * asked for.
+           * silently carried only what a filter happened to be showing would be a subset nobody
+           * asked for. Per-paper exports are on each row.
            */}
-          <p className="pub-exports muted">
-            Export all: <a href="/publications.bib">BibTeX</a>{" "}
-            <a href="/publications.ris">RIS</a>{" "}
-            <a href="/publications.json">CSL JSON</a>
-          </p>
+          <span>
+            Export all <a href="/publications.bib">BibTeX</a>{" "}
+            <a href="/publications.ris">RIS</a> <a href="/publications.json">CSL JSON</a>
+          </span>
+        </p>
 
-          {items.length === 0 ? (
-            <p className="muted">No publications match this filter.</p>
-          ) : (
-            groups.map((group) => (
+        {items.length === 0 ? (
+          <p className="list-empty">No publications match this filter.</p>
+        ) : (
+          <div className="paper-list">
+            {groups.map((group) => (
               <section
                 key={group.year ?? "all"}
                 {...(group.year !== null
                   ? { "aria-labelledby": `pub-year-${group.year}` }
                   : { "aria-label": "Publications" })}
               >
+                {/*
+                 * THE YEAR IS THE ROW'S LEADING COLUMN, at the same rail measure the post page
+                 * and the blog rows use, rather than a heading across the page. A bibliography
+                 * is read down its years.
+                 */}
                 {group.year !== null ? (
-                  <h2 id={`pub-year-${group.year}`} className="pub-year-heading">
+                  <h2 id={`pub-year-${group.year}`} className="paper-year">
                     {group.year}
                   </h2>
                 ) : null}
@@ -550,9 +615,10 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
                   <Entry key={p.id} p={p} cited={citations[p.doi]} />
                 ))}
               </section>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
+
         {/*
          * `jsonLd`, NOT a bare `JSON.stringify`: a `<script>` element's contents are
          * raw text and the only thing that ends one is the literal `</script`. This route
