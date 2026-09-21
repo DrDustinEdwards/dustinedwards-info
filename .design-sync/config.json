@@ -12,14 +12,8 @@
     "docs/ADMIN-DESIGN.md"
   ],
   "componentSrcMap": {
-    "PostCard": "app/components/post-card.tsx",
-    "Pagination": "app/components/post-card.tsx",
     "SiteLogo": "app/components/site-logo.tsx",
-    "SiteLogoHeader": "app/components/site-logo.tsx",
-    "MemoryRouter": null
-  },
-  "provider": {
-    "component": "MemoryRouter"
+    "SiteLogoHeader": "app/components/site-logo.tsx"
   },
   "readmeHeader": ".design-sync/readme-header.md",
   "projectId": "111e462b-4598-479e-9455-c420f8da3a8d"

@@ -9,6 +9,11 @@ as the only structure, purple as ink rather than as a surface. Every value below
 exists in the stylesheet; `check:design-vocabulary` fails the build if this file
 names one that does not.
 
+The system is called **Paper and Plate**, and that name is internal: it never
+appears on the site. Two halves, and they have different rules. **The page is
+paper**, which is everything below. **The drawings are plates**, which is the
+figures section near the end.
+
 ## Setup
 
 Load `styles.css` (it imports the fonts and the whole stylesheet closure).
@@ -37,10 +42,25 @@ render nearly invisible. This cost a preview cycle; it will cost you one too.
 | Code ground | `--surface-code` | the one permitted departure from paper, so code survives print |
 
 `--dust` is a **line colour** and is deliberately below the contrast floor. It
-rules and separates; it may never be the thing that identifies a control.
+rules and separates; it may never be the thing that identifies a control, and it
+never sets type.
 
 Purple is ink. There is no purple header, footer, ground or filled public
 surface.
+
+**The colour system is CLOSED, and each colour has one job.** This is the part
+a session is most likely to break by reaching for a colour that looks right.
+
+- **`--brand` means you can click it.** Links, focus, the mark. Never a fill on
+  a public surface, and never a chart series: in light it is the link colour, so
+  a purple series reads as a row of links.
+- **Oxide belongs to figures.** Figure and plate numbers, leaders, labels,
+  strokes, and series 1. Never a link, never a rule, never chrome.
+- **`--dust` is rules.** Paper and ink are ground and text.
+
+Error may fill. Warning and success never paint on the public plane; they are
+admin colours, and they exist as named tokens so nobody borrows oxide for an
+error.
 
 ## Type
 
@@ -132,12 +152,66 @@ small named radius, `--radius-control`. Never a pill.
 weight, never a filled capsule. Error may fill. Admin may fill. The logo's own
 fills are the logo.
 
-**Glass only on dialogs, the image viewer and tooltips**: solid first, blur 12px
-at most, no brand fill, radius 0, opaque under `prefers-reduced-transparency`
-and in print. Never on live results, the header, wells, or anything that stays
-after the pointer leaves.
+**Glass is solid first**, blur 12px at most, no brand fill, radius 0, opaque
+under `prefers-reduced-transparency` and in print. Where it is allowed at all is
+one rule with one owner, and it is the "Light touches only glass" section below.
 
 Shadows are not a style. Motion is CSS only, with a reduced-motion equivalent.
+
+## The drawings are plates
+
+A figure here is a **diagrammatic line drawing in the taxonomic-key tradition**:
+outline rather than shading, mono labels on leaders, a scale bar, and a caption
+whose label is mono and whose sentence is prose. Drawing that EXPLAINS is
+content and is welcome: a cross-section, a labelled plaque, a schematic, a
+genome track, a plate grid. Decoration, stock imagery, mascots and texture packs
+are not.
+
+**A figure is never lit.** No gradient, no field, no shadowed rim, no haze
+behind it. A lit diagram is a diagram pretending to be a photograph, and a plate
+shows what is measurable rather than what a camera sees. Figures are flat line
+work: outline, hairlines, stipple, leaders, scale bar.
+
+Three series and one texture, and the texture is not a series:
+
+| Role | Light | Dark |
+|---|---|---|
+| Series 1, and every annotation | `--fig-oxide-400` | `--fig-oxide-300` |
+| Series 2 | `--fig-leaf-400` | `--fig-leaf-300` |
+| Series 3 | `--chart-cadet` | `--chart-cadet` |
+| Texture only: lawn, halo, a dashed plate circle | `--fig-dust-300` | `--fig-dust-300` |
+
+Read the first two rows carefully: oxide and leaf need a DIFFERENT step per
+theme, because the ramp step that reads correctly on limestone is not the one
+that reads on ink. The last two rows name one token that already carries both
+values.
+
+`--fig-dust-300` is 2.33:1 on paper. That is fine for stipple and a dashed
+circle and is never enough to label a series or set body text. No teal, no
+success green, no third brand, and no purple series.
+
+The ruling behind this table collapses the ramps to three names, fig-oxide,
+fig-leaf and fig-cadet. **Those three names do not exist in the stylesheet
+yet**, which is why they are written here without backticks and why the table
+above names the steps that do exist. Use the table.
+
+## Light touches only glass
+
+Light is the one thing on this site that is not paper, and it lands in exactly
+one place. **Glass is the thing physically over the page, briefly:** a modal
+dialog, the image viewer, and a readout held over a figure. Never the header, a
+well, a panel, live results, the rail, or anything sticky, because those are
+part of the page rather than over it.
+
+The pane is `--glass-fill-paper` at 82% with a 12px backdrop blur and a lit edge
+at 124 degrees, brightest at the leading corner. The specimen inside stays flat;
+the pane catches the light. `--lamp-origin` places it, `--lamp-reach` carries
+it, `--surface-catch` is its strength and is already zero under
+`prefers-reduced-transparency`.
+
+That last part is the argument for the whole rule: when light only ever touches
+glass, turning it off costs the page nothing but the glass, and the figure under
+it is byte-identical in print and under reduced transparency.
 
 ## The machine contract, and what script may do
 
