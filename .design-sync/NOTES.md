@@ -151,10 +151,31 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 
 ## THE UPLOAD MUST NEVER DELETE THE CANVAS'S OWN WORK
 
-**`part-a/`, `part-b/`, `references/`, `uploads/` and `github.md` are NEVER
-named in a plan's `deletes`.** Read this before any upload, and especially
+**`part-a/`, `part-b/`, `part-c/`, `references/`, `uploads/` and `github.md` are
+NEVER named in a plan's `deletes`.** Read this before any upload, and especially
 before a no-anchor one, where the skill's own instruction to delete "files this
 build doesn't produce" names exactly those paths by construction.
 
 Ruling 110 carries the grounds and the cost. This line stays here rather than
 only there because this file is what a sync agent reads and that ruling is not.
+
+**`part-c/` was added to that list on 2026-09-21 and was missing from it.** The
+directory did not exist when ruling 110 was written and now holds eight files,
+including `08-lamp-and-glass.html`, which ruling 124 cites as the drawings for
+the glass pane. A safe list that lags the canvas by one directory is how the
+canvas's work gets deleted.
+
+## Where the guidelines land, and why they are nested
+
+`guidelinesGlob` matches repo paths and the upload keeps the repo subpath, so
+`.design-sync/guidelines/chrome-and-bars.md` arrives as
+`guidelines/.design-sync/guidelines/chrome-and-bars.md`. That is three
+directories of noise in front of every file a design agent is meant to read.
+
+The flatten is a WRITE-TIME choice, not a config one: the destination path in the
+plan is what decides where a file lands, so the plan names
+`guidelines/chrome-and-bars.md` and reads from the nested local path. Changing
+`guidelinesGlob` does not fix it, because the glob selects which files go, not
+where they arrive. When the flatten happens, the old nested paths are deleted in
+the same plan; `guidelines/` is not on the safe list above and never held canvas
+work.
