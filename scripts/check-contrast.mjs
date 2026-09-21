@@ -402,8 +402,20 @@ const MATRIX = [
   // The placeholder must sit below the value that replaces it.
   ["--placeholder", "--raised", TEXT, "placeholder in a field"],
 
-  // Brand, its two states, and the second shade a followed link takes.
-  ["--brand", "--paper", TEXT, "link on limestone"],
+  /*
+   * Brand, its two states, and the second shade a followed link takes. THE HEADER MARK RIDES THE
+   * FIRST ROW: ruling 118.2 draws it in the logo's own colours on --paper, and its five purple paths
+   * take --brand, so the pair below measures it at the 4.5 floor rather than the 1.4.11 one it
+   * would be owed. No second row at UI for the mark: a weaker floor over the same pair cannot fail
+   * while this one passes, and an assertion that cannot fail is not coverage (hard rule 10).
+   *
+   * NO ROWS FOR THE MARK'S THREE WARM PATHS, and they would fail: on limestone they measure 2.72,
+   * 1.93 and 1.58 to one. They are the logotype's own ink, which 1.4.11 exempts, the mark is
+   * aria-hidden beside a wordmark that names the link, and the drawing's outline is carried by the
+   * purple at 9.10 to one light and 7.89 dark. Measured 2026-09-21. This is the same reason the
+   * chrome row above measures only --mark-on-chrome.
+   */
+  ["--brand", "--paper", TEXT, "link on limestone, and the header mark"],
   ["--brand", "--raised", TEXT, "link on the raised step"],
   ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
   ["--brand-hover", "--paper", TEXT, "hovered link on limestone"],
