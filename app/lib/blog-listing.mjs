@@ -15,8 +15,8 @@
 /** Posts per page on /blog. */
 export const POSTS_PER_PAGE = 10;
 
-/** Cards the home "Start here" section shows, lead included. See `startHere`. */
-export const HOME_CARDS = 4;
+/** Rows the home "Start here" list shows, lead included. Five, per 02-home.html §4. See `startHere`. */
+export const HOME_CARDS = 5;
 
 /**
  * Which page a post at a 1-based position in the ordered listing lands on.
