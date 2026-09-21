@@ -106,7 +106,8 @@ export const TIERS = {
   "check:urls": "offline",
   // Sees an axis dropped, not wrong SQL.
   "check:media-axes": "offline",
-  // Certifies the last local build, stale or not.
+  /* Certifies the last local build, stale or not. It also RENDERS now, so like
+     check:microformats it needs the stack.json the preflight builds. */
   "check:page-payload": "offline",
   // Reads each route's action as SOURCE and proves every destructive intent
   // calls the confirmation predicate inside its own branch. It runs no action,
