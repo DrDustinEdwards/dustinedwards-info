@@ -3354,12 +3354,12 @@ try {
       );
     }
 
-    /* ------------------------- 6b. the two mark fills, across the split */
+    /* ----------------- 6b. the mark fills: the base binding, and full colour */
 
     /*
-     * The mark's base fill (app.css) and header override (styles/public-chrome.css) sit in two
-     * files; both are asserted as resolved colour against the token, never a hex, because
-     * @import order decides which wins.
+     * The mark's base fill lives in app.css and nothing overrides it on either plane since ruling
+     * 118.2. It is asserted as resolved colour against the token, never a hex, because @import
+     * order decides what wins and a hex here would be a second owner of the palette.
      */
     const rgb = (/** @type {string} */ hex) => {
       const h = hex.trim().replace("#", "");
@@ -3391,26 +3391,43 @@ try {
 
     await admin.goto(`${ADMIN_ORIGIN}/`, { waitUntil: "networkidle0" });
     const publicMark = await admin.evaluate(() => {
-      const el = document.querySelector(".site-header .site-logo-brand");
-      const root = getComputedStyle(document.documentElement);
+      const paths = [...document.querySelectorAll(".site-header .site-header-mark path")];
+      const fill = (/** @type {Element} */ el) => getComputedStyle(el).fill;
       return {
-        present: !!el,
-        fill: el ? getComputedStyle(el).fill : "",
-        onChrome: root.getPropertyValue("--mark-on-chrome").trim(),
+        total: paths.length,
+        brand: paths.filter((el) => el.classList.contains("site-logo-brand")).map(fill),
+        warm: paths.filter((el) => !el.classList.contains("site-logo-brand")).map(fill),
+        token: getComputedStyle(document.documentElement).getPropertyValue("--brand").trim(),
       };
     });
     ok(
       "the public header mark exists to measure",
-      publicMark.present,
-      "no .site-header .site-logo-brand, so the fill assertion below would examine nothing",
+      publicMark.total === 8 && publicMark.brand.length === 5 && publicMark.warm.length === 3,
+      `the header drew ${publicMark.total} paths, ${publicMark.brand.length} of them branded, so ` +
+        `the fill assertions below would examine nothing. check:logo owns the counts.`,
     );
     ok(
-      "the public header mark's fill resolves to --mark-on-chrome, the override in public-chrome.css",
-      publicMark.present && publicMark.fill === rgb(publicMark.onChrome),
-      `fill is ${JSON.stringify(publicMark.fill)} and --mark-on-chrome is ` +
-        `${JSON.stringify(publicMark.onChrome)} (${rgb(publicMark.onChrome || "#000")}). The ` +
-        `(0,2,0) override in styles/public-chrome.css is not beating the (0,1,0) base in app.css, ` +
+      "the public header mark's purple resolves to --brand, the base binding in app.css",
+      publicMark.brand.length > 0 && publicMark.brand.every((f) => f === rgb(publicMark.token)),
+      `fills are ${JSON.stringify(publicMark.brand)} and --brand is ` +
+        `${JSON.stringify(publicMark.token)} (${rgb(publicMark.token || "#000")}). Ruling 118.2 ` +
+        `removed the header override, so the (0,1,0) base in app.css has to reach the mark, ` +
         `which is what the sixteen-file split put at risk.`,
+    );
+    /*
+     * FULL COLOUR, MEASURED AS COLOURS. Asserted by DIFFERENCE rather than against three hexes,
+     * whose one owner is site-logo.tsx: one ink means all eight paths compute to the same fill, so
+     * a warm path equal to the purple is exactly the regression ruling 118.2 reversed. Hex
+     * equality here would be a second owner, and it would pass a mark re-inked to those hexes.
+     */
+    ok(
+      "the public header mark's warm paths keep their own fills, so the mark is not one ink",
+      publicMark.warm.length > 0 &&
+        publicMark.warm.every((f) => f && !publicMark.brand.includes(f)) &&
+        new Set(publicMark.warm).size === publicMark.warm.length,
+      `warm fills are ${JSON.stringify(publicMark.warm)} against purple ` +
+        `${JSON.stringify(publicMark.brand[0])}. A stylesheet is repainting the presentation ` +
+        `attributes site-logo.tsx sets, which is the one-ink header ruling 118.2 retired.`,
     );
 
     /* ----------------------------------------- 6c. the mount class */
