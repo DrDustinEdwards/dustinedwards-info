@@ -244,14 +244,19 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          */}
         <figure className="home-plate" tabIndex={0}>
           <PlateI />
+          {/*
+           * THE CAPTION IS THE KEY. The plate carries numerals; the names and the sentences live
+           * here once, so the two cannot disagree and no reader has to hold eight numerals in
+           * their head to read the drawing.
+           */}
           <figcaption className="home-plate-caption">
             <span className="home-plate-num">Plate I</span> Plaque morphology, drawn as a key: one
-            specimen of each type on a single lawn. Every plaque a phage hunter has to learn to
-            call, at one magnification.
+            specimen of each type on a single lawn, at one magnification, among the unlabelled
+            plaques a plate carries anyway.
+            <PlateKey />
           </figcaption>
         </figure>
         </div>
-        <PlateKey />
 
         {featured ? (
           <section className="home-featured" aria-labelledby="featured-heading">
