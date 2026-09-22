@@ -2,7 +2,7 @@
  * Attribution for a slow route, reported as `Server-Timing`.
  *
  * A real response header rather than a log, because the question is about the LIVE path and a header
- * can be read by whatever is already making the request. Nothing here changes behaviour: the marks
+ * can be read by whatever is already making the request. Nothing here changes behavior: the marks
  * are collected and emitted, and a route that never creates a collector pays nothing.
  */
 

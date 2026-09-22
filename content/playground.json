@@ -4,7 +4,7 @@
     {
       "slug": "contrast",
       "title": "Contrast lab",
-      "lede": "Two colours in, the conformance number out. This is the same arithmetic the build gate runs over every ratified pair in the palette.",
+      "lede": "Two colors in, the conformance number out. This is the same arithmetic the build gate runs over every ratified pair in the palette.",
       "realPath": "app/lib/contrast.mjs, imported by scripts/check-contrast.mjs and by this page",
       "homeArticle": {
         "slug": "color-palette-the-build-can-check",
@@ -15,14 +15,14 @@
           "name": "fg",
           "kind": "hex",
           "label": "Foreground",
-          "cap": "a 3 or 6 digit hex colour",
+          "cap": "a 3 or 6 digit hex color",
           "default": "#2B2320"
         },
         {
           "name": "bg",
           "kind": "hex",
           "label": "Background",
-          "cap": "a 3 or 6 digit hex colour",
+          "cap": "a 3 or 6 digit hex color",
           "default": "#FAF7F2"
         }
       ],
@@ -115,7 +115,7 @@
     {
       "slug": "theme-resolution",
       "title": "Theme resolution",
-      "lede": "A Cookie header in, the theme this site would serve out. This is the function the Worker calls on every single request, before it renders anything, and it is why nothing on this site flashes the wrong colours.",
+      "lede": "A Cookie header in, the theme this site would serve out. This is the function the Worker calls on every single request, before it renders anything, and it is why nothing on this site flashes the wrong colors.",
       "realPath": "app/lib/theme.ts, called by workers/app.ts on every request and by root.tsx to write the first byte of HTML",
       "homeArticle": {
         "slug": "color-palette-the-build-can-check",
@@ -188,7 +188,7 @@
       "expect": { "toc": [], "blockedCount": 0, "throws": true }
     }
   ],
-  "$cookiePresetComment": "The theme demo's presets, and the gate's behavioural fixtures. EVERY EXPECTED ANSWER IS HAND-WRITTEN from the rules in app/lib/theme.ts, never captured from a run: hard rule 10's fixture independence, the same bargain the swatches and the key presets make. `attribute` is the data-theme value or null for the absence that hands the decision to prefers-color-scheme. The set covers every BRANCH rather than being long: both writable values, the legacy value that is honoured as the no-cookie path, no cookie at all, a theme cookie sitting among unrelated ones, the malformed percent-escape that used to throw a URIError on every page for that reader, and a value nothing writes.",
+  "$cookiePresetComment": "The theme demo's presets, and the gate's behavioral fixtures. EVERY EXPECTED ANSWER IS HAND-WRITTEN from the rules in app/lib/theme.ts, never captured from a run: hard rule 10's fixture independence, the same bargain the swatches and the key presets make. `attribute` is the data-theme value or null for the absence that hands the decision to prefers-color-scheme. The set covers every BRANCH rather than being long: both writable values, the legacy value that is honored as the no-cookie path, no cookie at all, a theme cookie sitting among unrelated ones, the malformed percent-escape that used to throw a URIError on every page for that reader, and a value nothing writes.",
   "cookiePresets": [
     {
       "label": "A reader who chose dark",
@@ -233,7 +233,7 @@
       "expect": { "theme": "system", "attribute": null, "colorScheme": "light dark" }
     }
   ],
-  "$keyPresetComment": "The key demo's presets, and the gate's behavioural fixtures. EVERY EXPECTED ANSWER HERE IS HAND-WRITTEN from the grammar in app/lib/media/classify.mjs, never captured from a run of it: hard rule 10's fixture independence, the same rule that keeps scripts/fixtures/icon-suite.json out of the generator's hands. check:features runs the real parsers over each key and compares. `dimensions` is a `<w>x<h>` string or null, `digest` is the sixteen hex digits or null, and `kind` is the classifier's kind or the literal \"refused\" for a key whose extension it throws on. The set is chosen to cover every BRANCH rather than to be long: both content-key forms, the leading-zero dimension the collapsing differential caught, a /media/ path carrying a transform query, an og/ derived key, a brand asset, and an extension the classifier refuses.",
+  "$keyPresetComment": "The key demo's presets, and the gate's behavioral fixtures. EVERY EXPECTED ANSWER HERE IS HAND-WRITTEN from the grammar in app/lib/media/classify.mjs, never captured from a run of it: hard rule 10's fixture independence, the same rule that keeps scripts/fixtures/icon-suite.json out of the generator's hands. check:features runs the real parsers over each key and compares. `dimensions` is a `<w>x<h>` string or null, `digest` is the sixteen hex digits or null, and `kind` is the classifier's kind or the literal \"refused\" for a key whose extension it throws on. The set is chosen to cover every BRANCH rather than to be long: both content-key forms, the leading-zero dimension the collapsing differential caught, a /media/ path carrying a transform query, an og/ derived key, a brand asset, and an extension the classifier refuses.",
   "keyPresets": [
     {
       "label": "An uploaded raster",
@@ -341,7 +341,7 @@
       }
     }
   ],
-  "$swatchComment": "Ratified palette pairs the contrast lab opens on, and the gate's behavioural fixtures. They live here rather than in the route so check:features can compute the expected ratio through app/lib/contrast.mjs and compare it against the pair the page actually offers. A pair here that the page does not render, or a preset on the page that is not here, fails reconciliation.",
+  "$swatchComment": "Ratified palette pairs the contrast lab opens on, and the gate's behavioral fixtures. They live here rather than in the route so check:features can compute the expected ratio through app/lib/contrast.mjs and compare it against the pair the page actually offers. A pair here that the page does not render, or a preset on the page that is not here, fails reconciliation.",
   "swatches": [
     { "label": "Body text on page", "fg": "#2B2320", "bg": "#FAF7F2", "ratio": 14.4 },
     { "label": "Muted text on page", "fg": "#5C5248", "bg": "#FAF7F2", "ratio": 7.1 },
@@ -360,7 +360,7 @@
       "title": "Requests allowed against the ceiling each mechanism was given",
       "alt": "Comparison of allowed requests against the ceiling for three rate limiting mechanisms. The GA ratelimit binding allowed 11 against a limit of 5. A Durable Object using async storage allowed 8 against a ceiling of 3. A Durable Object using the synchronous SQLite API allowed exactly 3 against a ceiling of 3.",
       "csv": "mechanism,allowed,ceiling\nGA ratelimit,11,5\nasync DO storage,8,3\nsync SQLite DO,3,3\n",
-      "note": "Categorical x, two series. The x scale is a band and the series take the first two colours of the chart ladder."
+      "note": "Categorical x, two series. The x scale is a band and the series take the first two colors of the chart ladder."
     },
     "corpus": {
       "label": "Search corpus growth",
@@ -376,7 +376,7 @@
   "deferred": [
     {
       "slug": "cvd-simulation",
-      "title": "Colour vision deficiency simulation",
+      "title": "Color vision deficiency simulation",
       "reason": "No shared implementation exists yet. Simulating protanopia and deuteranopia here before the build gate does it would be a second answer to a question the gate is supposed to own. Queued as its own session, with Vienot and libDaltonLens reference fixtures already decided."
     },
     {

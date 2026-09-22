@@ -6,7 +6,7 @@
       "whyLoadBearing": "The media index lives here because R2 paginates in key order and promises nothing else. Sort by date, filter unused, search by name, count by type: each is a query, and building one over a key-ordered iterator means listing the whole bucket per request. A capability decision, not a scale one."
     },
     "kv:APP_KV": {
-      "what": "Better Auth sessions, and the Ask answer cache keyed by a SHA-256 of the normalised question.",
+      "what": "Better Auth sessions, and the Ask answer cache keyed by a SHA-256 of the normalized question.",
       "whyLoadBearing": "The cache sits in front of the daily ceiling rather than behind it, so a repeated question costs nothing and consumes no budget. The ordering is the design: a hit reaches no model."
     },
     "r2:MEDIA": {

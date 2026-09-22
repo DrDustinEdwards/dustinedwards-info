@@ -48,7 +48,7 @@ So: before running a needle against production, run it against `HEAD~1`. It must
 be present there and absent at `HEAD`. A needle that matches both is not
 evidence.
 
-This generalises past prefix extensions. Any purely additive change has no
+This generalizes past prefix extensions. Any purely additive change has no
 deleted string at all, and the honest report is that a both-directions test is
 unavailable, not a passing one-directional test dressed up.
 
@@ -258,12 +258,12 @@ pin rather than the heading.
 
 **The discipline: a plant names in advance the assertion it expects to fire, and
 the report confirms THAT assertion, not merely a non-zero exit.** When the
-expected assertion cannot be isolated, neutralise the others first.
+expected assertion cannot be isolated, neutralize the others first.
 
 Two earlier instances of the same shape, both 2026-08-07: planting a duplicate
 `isAllowedUrl` as a top-level function exited 1 from a JavaScript SyntaxError
 rather than from the gate; and removing the shared predicate from `cover.src`
-produced exactly ONE failure while 96 behavioural checks stayed green, which is
+produced exactly ONE failure while 96 behavioral checks stayed green, which is
 the result that justified the assertion existing at all.
 
 *Applied in full 2026-08-10 on the `check:head` build:* four plants, each naming
@@ -571,9 +571,9 @@ the population least likely to be in the room when it is tested.
 
 *Recorded from prior research.*
 
-Origin `Vary` is honoured through **Cache Rules**, which shipped 2026-07-02 on
+Origin `Vary` is honored through **Cache Rules**, which shipped 2026-07-02 on
 all plans. It is **zone-gated**: it needs a proxied zone, and `workers.dev` has
-none, which is why the `Vary` behaviour on this site could not be configured
+none, which is why the `Vary` behavior on this site could not be configured
 before DNS cutover.
 
 `cf.vary` is **subrequest-only** and does not apply to a Worker acting as the

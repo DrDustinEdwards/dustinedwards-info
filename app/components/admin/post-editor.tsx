@@ -582,7 +582,7 @@ export function PostEditor({
               </span>
             ) : dirty && bufferTried ? (
               /*
-               * An absent safety net must say so. MUTED, not warning: its neighbour is already
+               * An absent safety net must say so. MUTED, not warning: its neighbor is already
                * warning-tinted whenever this renders, and two warning items side by side read as
                * two problems rather than one fact qualifying another.
                */
@@ -940,7 +940,7 @@ export function PostEditor({
  * The live preview, in a sandboxed frame.
  *
  * The HTML is passed through UNTOUCHED, because the whole claim of ruling 3 is
- * that what you see is what publishes; sanitising here would void it.
+ * that what you see is what publishes; sanitizing here would void it.
  *
  * So the isolation is the FRAME, not the markup. `sandbox` with no
  * `allow-scripts` and no `allow-same-origin` means nothing inside can execute,
@@ -1151,7 +1151,7 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
 }
 
 /**
- * The non-colour channel. Inline because this repo prefers inline SVG to an
+ * The non-color channel. Inline because this repo prefers inline SVG to an
  * icon library, per its bundle-leanness rule.
  */
 function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" }) {

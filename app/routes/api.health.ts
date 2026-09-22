@@ -42,7 +42,7 @@ const HEALTH_HEADERS = {
 /**
  * THE ONLY PLACE THIS ROUTE CONSTRUCTS A RESPONSE. That is the property `check:headers` asserts,
  * and it is asserted structurally rather than by looking for the header near each `new Response`,
- * because a window around an anchor reads its neighbour's compliance.
+ * because a window around an anchor reads its neighbor's compliance.
  */
 function healthJson(body: unknown, status: number, extra: HeadersInit = {}): Response {
   /*
@@ -190,7 +190,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
  * into a 503.
  *
  * `Allow: GET` and not `GET, HEAD`: the platform answers HEAD by running the loader, so HEAD never
- * reaches here and advertising it would be a claim about someone else's behaviour.
+ * reaches here and advertising it would be a claim about someone else's behavior.
  */
 export async function action() {
   return healthJson(

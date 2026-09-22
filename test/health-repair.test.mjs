@@ -93,10 +93,10 @@ test("PLANT: A NON-DRIFT FAILURE MUST NOT TRIGGER REPAIR", () => {
   }
 });
 
-test("PLANT: A MIXED SET REPAIRS NOTHING, not even the class it recognises", () => {
+test("PLANT: A MIXED SET REPAIRS NOTHING, not even the class it recognizes", () => {
   /*
    * The subtle half of the plant above. A compound failure may share a root
-   * cause, so the recognised class is NOT repaired alongside an unrecognised
+   * cause, so the recognized class is NOT repaired alongside an unrecognised
    * one: firing a rebuild into a system broken in an unclassified way is how an
    * incident becomes a bigger one.
    */
@@ -237,7 +237,7 @@ test("content drift repairs BEFORE the ask index when both fail", () => {
  * ===========================================================================
  *
  * `workers/watchdog.ts` is a Cron Trigger. It runs unattended, every fifteen
- * minutes, and the only firings whose behaviour matters are the ones where the
+ * minutes, and the only firings whose behavior matters are the ones where the
  * site is already broken, which is precisely when nobody is watching the run.
  * Everything it DECIDES is here so that something can fail when it changes.
  *

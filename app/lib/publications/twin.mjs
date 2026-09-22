@@ -272,7 +272,7 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
       );
     } else {
       body.push(
-        "Machine-extracted from the PDF linked above. It carries the artefacts " +
+        "Machine-extracted from the PDF linked above. It carries the artifacts " +
           "that come with reading a typeset two-column page: running heads, " +
           "figure captions in the flow of the prose, and words broken across " +
           "line ends. The abstract above is the registry's deposit and is the " +

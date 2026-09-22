@@ -321,7 +321,7 @@ async function main() {
   /*
    * NO SOCIAL CARD MAY EXIST FOR A POST THE PUBLIC CANNOT SEE: a draft had a card answering 200
    * while its page 404d, and the card renders the TITLE. The key is a hash, which is not treated as
-   * a defence: the object is public, immutable and written into D1. THE VISIBILITY RULE IS
+   * a defense: the object is public, immutable and written into D1. THE VISIBILITY RULE IS
    * IMPORTED, a second copy being what put drafts into the Ask index once already.
    */
   {

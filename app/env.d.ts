@@ -48,7 +48,7 @@ declare global {
      *
      * OPTIONAL BY CONTRACT, and the gentlest of the four degradations: `citations.server.ts` serves
      * whatever APP_KV already holds and does not schedule a refresh, so an unset key means counts stop
-     * ageing forward rather than disappearing. Nothing 503s and nothing renders a zero.
+     * aging forward rather than disappearing. Nothing 503s and nothing renders a zero.
      *
      * TWO HOLDERS, ONE CREDENTIAL: the Worker secret, and the gitignored `.dev.vars` the build reads
      * through `scripts/lib/dev-vars.mjs`. Rotate both or neither.

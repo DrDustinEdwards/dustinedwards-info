@@ -29,7 +29,7 @@ const TYPES = new Map([
   ["pdf", { kind: "document", mime: "application/pdf" }],
   ["webmanifest", { kind: "other", mime: "application/manifest+json" }],
   // Added 2026-08-21 with the self-hosted fonts, which is the whole reason:
-  // SIL OFL 1.1 requires the licence to travel with the redistributed font, so
+  // SIL OFL 1.1 requires the license to travel with the redistributed font, so
   // public/fonts/dustin-edwards-ofl.txt has to be served rather than sit beside the binaries
   // unreachable. This map throwing on "txt" is what made that a decision.
   ["txt", { kind: "document", mime: "text/plain; charset=utf-8" }],
@@ -122,7 +122,7 @@ export function classify(pathOrKey) {
  * file with no D1 row, direction 3 of the reconciliation. The cheap way to make
  * that green is an entry here, and it would be WRONG. The `txt` type above was
  * added to the classifier FOR THIS FILE, with the reason recorded at that line:
- * the licence has to be SERVED rather than sit beside the binaries unreachable.
+ * the license has to be SERVED rather than sit beside the binaries unreachable.
  * A file the site is deliberately serving is an asset, and the index exists to
  * describe every asset the site has.
  *
@@ -135,7 +135,7 @@ export function classify(pathOrKey) {
  *
  * Recorded rather than left implicit because the next reader meets a red gate
  * and a two-line fix that silences it, and that fix would quietly stop the
- * licence being indexed at all.
+ * license being indexed at all.
  */
 const NOT_ASSETS = new Map([
   [
@@ -358,7 +358,7 @@ export function roleOf(pathOrKey) {
  *
  * Keyed on the path, which is correct TODAY and will need moving: execution
  * step 11 migrates these nine files into R2 under content-addressed keys, at
- * which point there is no path left to recognise them by and this becomes a
+ * which point there is no path left to recognize them by and this becomes a
  * stored property rather than a derived one. Recorded here so the migration
  * does not silently start cropping faces.
  *

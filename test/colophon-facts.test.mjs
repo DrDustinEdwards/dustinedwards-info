@@ -108,13 +108,13 @@ test("the security section sweeps the tradeoff sentences the page renders", () =
   const facts = colophonFacts(stack, features, "security");
   assert.ok(facts.length >= 4, `expected the tradeoff sentences, got ${facts.length} needle(s)`);
   // Element-delimited, matching how the page renders each sentence as its own
-  // paragraph. A bare substring would pass on a neighbouring node.
+  // paragraph. A bare substring would pass on a neighboring node.
   for (const fact of facts) {
     assert.ok(fact.startsWith(">") && fact.endsWith("<"), `needle is not element-delimited: ${fact}`);
   }
 });
 
-test("el delimits, so a token cannot pass on a neighbour's substring", () => {
+test("el delimits, so a token cannot pass on a neighbor's substring", () => {
   // `react` is a substring of `react-dom`; this is why the needles are wrapped.
   assert.equal(el("react"), ">react<");
   assert.ok(!">react-dom<".includes(el("react")));

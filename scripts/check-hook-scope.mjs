@@ -131,7 +131,7 @@ const CASES = [
      * THE RETURN PATH IS DERIVED FROM THE CHECKOUT: caught on its first run by the gate that replays
      * the tier against a fresh extraction, where the written name lands genuinely outside the repo, so
      * the hook correctly ALLOWED and the fixture was wrong. It had been asserting something about the
-     * checkout's NAME rather than the behaviour under test.
+     * checkout's NAME rather than the behavior under test.
      */
     command: `cd ../dustinedwards-mcp && cd ../${basename(root)} && npm run deploy`,
     cwd: root,
@@ -286,7 +286,7 @@ const CASES = [
     label: "an UNRESOLVABLE variable still fails closed",
     /*
      * THE PAIR FOR THE TILDE CASE, and the one that matters: accepting shell variables is a
-     * loosening, and an unresolved one normalises into a path that is not this repo and unblocks a
+     * loosening, and an unresolved one normalizes into a path that is not this repo and unblocks a
      * deploy. Expanding first and testing the RESULT is what prevents that.
      */
     command: "cd $DUSTINEDWARDS_NO_SUCH_VARIABLE/x && npm run deploy",

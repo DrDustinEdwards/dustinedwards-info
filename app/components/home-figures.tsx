@@ -99,7 +99,7 @@ export function FigurePapersPerYear() {
 /* ---------------------------------------------------------------- Figure 2 */
 
 /**
- * A hexagon centred on (cx, cy), `w` across the flats, drawn slightly inside its cell.
+ * A hexagon centered on (cx, cy), `w` across the flats, drawn slightly inside its cell.
  *
  * THE GAP IS LOAD-BEARING. Packed edge to edge the cells merge into one navy mass and nothing can
  * be counted, which defeats a figure whose whole claim is one cell per researcher. The handoff's
@@ -123,7 +123,7 @@ function hex(cx: number, cy: number, w: number): string {
 /**
  * One cell per researcher, one row per cohort, newest first.
  *
- * The roster page carries their names; this is the shape of the programme, not a substitute for
+ * The roster page carries their names; this is the shape of the program, not a substitute for
  * it. Hexagonal packing is the arrangement, not an ornament: it is how cells sit on a plate.
  */
 export function FigureRoster() {

@@ -23,7 +23,7 @@
  * **THE HEADER NO LONGER NEEDS A RULE OF ITS OWN**, and that is why
  * `HEADER_PATHS` lost its second consumer. A header link is an `<a href>` in
  * the document like any other, so `"/*"` already covers it at the same
- * eagerness the old list used. The header's behaviour is therefore UNCHANGED by
+ * eagerness the old list used. The header's behavior is therefore UNCHANGED by
  * this file; everything else on the page gained.
  *
  * ## THE ACTION IS `prefetch`, AND IT WAS `prerender` UNTIL 2026-08-28

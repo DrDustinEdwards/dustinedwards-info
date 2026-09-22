@@ -169,7 +169,7 @@ for (const probe of fixture.frontmatterCases) {
  * THE SHARED PREDICATE, ASSERTED ON THE SOURCE. Everything above tests BEHAVIOUR, and the rule is
  * not "these fields refuse bad protocols" but "these fields call the same predicate the renderer
  * uses". Those come apart: one field was a regex that blocked the protocol only as a side effect
- * of demanding a leading slash, and every behavioural case was green. The mechanism is what
+ * of demanding a leading slash, and every behavioral case was green. The mechanism is what
  * survives the next edit. COMMENTS ARE STRIPPED FIRST, both docblocks discussing the predicate in
  * prose; only BLOCK comments, the line form truncating a `//host` inside a message string.
  */

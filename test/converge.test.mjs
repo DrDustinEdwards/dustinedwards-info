@@ -137,7 +137,7 @@ test("the message states the writing is safe, because the natural fear is that i
   assert.match(message, /boom/, "and the underlying reason");
 });
 
-test("attempts is honoured, so the retry count is not hardcoded in the loop", async () => {
+test("attempts is honored, so the retry count is not hardcoded in the loop", async () => {
   const w = writerFailing(2);
   const r = recorder();
   const result = await convergeWithRetry({ ...w, ...r, slug: SLUG, commitSha: SHA, attempts: 3 });

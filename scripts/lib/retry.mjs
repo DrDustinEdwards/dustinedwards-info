@@ -26,7 +26,7 @@ export async function retryRead(fn, { label, timeoutMs = DEFAULT_TIMEOUT_MS }) {
         settled = true;
         reject(new Error(`timed out after ${timeoutMs}ms (the hang symptom)`));
       }, timeoutMs);
-      // `fn` may be synchronous, as the wrangler spawns are, and normalising both here avoids forcing
+      // `fn` may be synchronous, as the wrangler spawns are, and normalizing both here avoids forcing
       // every call site to become async.
       Promise.resolve()
         .then(fn)

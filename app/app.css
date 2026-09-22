@@ -76,7 +76,7 @@
 /* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
 /* The stacking scale: one named token per layer. z-index compares by order, so the gaps only leave room.
    Low to high: tile raise, body, action; sticky; dropdown; popover; drawer scrim, drawer; pinned bulk bar;
-   overlay scrim, overlay; progress; transient; skip link last. Not a colour: check:contrast needs hexes. */
+   overlay scrim, overlay; progress; transient; skip link last. Not a color: check:contrast needs hexes. */
 :root {
   --z-tile-raise: 10; /* @kind other */
   --z-tile-body: 20; /* @kind other */
@@ -112,7 +112,7 @@
   --font-serif: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia,
     "Times New Roman", serif;
 
-  /* The elevation shadow, one owner. Not in the colour blocks: check:contrast needs a hex in a measured pair. */
+  /* The elevation shadow, one owner. Not in the color blocks: check:contrast needs a hex in a measured pair. */
   --shadow-popover: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
@@ -122,7 +122,7 @@
    Optical sizing is off, so nothing interpolates on resize. */
 :root {
   /* Prose and UI body at 420, not 400: on limestone Inter's 400 goes thin
-     under greyscale antialiasing. The standfirst is this level at 1.25rem, a
+     under grayscale antialiasing. The standfirst is this level at 1.25rem, a
      size alias, not a ninth level. */
   --t-body-family: var(--font-sans);
   --t-body-size: clamp(1rem, 0.97rem + 0.14vw, 1.0625rem);
@@ -405,7 +405,7 @@
   --success-tint: #e6ecdf;
 
   /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
-     no semantic colour ever appears in one, because a chart series is
+     no semantic color ever appears in one, because a chart series is
      not a state. */
   /* figures sit on paper, never on raised */
   --fig-ground: var(--paper);
@@ -820,7 +820,7 @@
   }
 }
 
-/* forced-colors: the palette yields to system colours and nothing re-asserts a brand colour.
+/* forced-colors: the palette yields to system colors and nothing re-asserts a brand color.
    A transparent outline keeps each control's edge once its fill is gone; focus is already an outline. */
 @media (forced-colors: active) {
   /* The admin topbar and sidebar edges are box-shadows, since a border would shift aligned heights, and
@@ -907,7 +907,7 @@
 html,
 body {
   /* --site-inset: the x of the identity mark on both planes and in both sidebar states. On body, not the
-     token block (check:contrast parses those as colours), and not .admin, because the public chrome reads it. */
+     token block (check:contrast parses those as colors), and not .admin, because the public chrome reads it. */
   --site-inset: 1.5rem;
   /* --header-h: the public header's RENDERED height, sticky since ruling 126. Here for the same reason
      --site-inset is, rather than in the token block. Two consumers read it and neither may restate it:
@@ -927,9 +927,9 @@ body {
 
 /* Rule 2: links are underlined, because brand and visited purples fail CVD simulation on hue alone.
    Only an element with its own border or fill (chips, buttons) opts out, at its own rule.
-   Element-level selectors, so any component rule that sets a colour outranks them. */
-/* v3 amendment 2, element-level so a component heading colour still outranks it.
-   In light it equals the body text value, so it is not a second colour to keep in step. */
+   Element-level selectors, so any component rule that sets a color outranks them. */
+/* v3 amendment 2, element-level so a component heading color still outranks it.
+   In light it equals the body text value, so it is not a second color to keep in step. */
 h1,
 h2,
 h3,

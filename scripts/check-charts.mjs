@@ -75,7 +75,7 @@ const MULTI_CSV = "run,allowed,refused\n1,5,7\n2,8,4\n3,3,9\n4,6,6";
 /**
  * One fixture per mark type, in both the single and multi-series shape, because
  * the two take different code paths (multi-series adds direct labels, and bar
- * facets rather than labelling at a point).
+ * facets rather than labeling at a point).
  */
 export const FIXTURES = ["bar", "line", "dot", "area"].flatMap((type) => [
     {
@@ -247,7 +247,7 @@ async function main() {
     const html = renderFixture(fixture);
     const multi = fixture.attrs.y.includes(",");
 
-    assertThat(!/#[0-9a-fA-F]{3,8}\b/.test(html), `${fixture.name}: chart output contains a hex colour literal`);
+    assertThat(!/#[0-9a-fA-F]{3,8}\b/.test(html), `${fixture.name}: chart output contains a hex color literal`);
     assertThat(
       /<svg[^>]*\srole="img"/.test(html),
       `${fixture.name}: the SVG is missing role="img"`,
@@ -286,12 +286,12 @@ async function main() {
     // scale prints it bare. Both are the label, so the arrow is optional here.
     assertThat(
       new RegExp(`>\\s*${fixture.attrs.x}\\s*→?\\s*<`).test(svg),
-      `${fixture.name}: the x axis is not labelled with the author's column name "${fixture.attrs.x}"`,
+      `${fixture.name}: the x axis is not labeled with the author's column name "${fixture.attrs.x}"`,
     );
     if (!multi) {
       assertThat(
         new RegExp(`>\\s*↑\\s*${fixture.attrs.y}\\s*<`).test(svg),
-        `${fixture.name}: the y axis is not labelled with the author's column name "${fixture.attrs.y}"`,
+        `${fixture.name}: the y axis is not labeled with the author's column name "${fixture.attrs.y}"`,
       );
     }
     assertThat(
@@ -363,7 +363,7 @@ async function main() {
     "more series than palette tokens",
     { type: "bar", x: "x", y: "a,b,c,d,e,f,g", alt: "An alt." },
     "x,a,b,c,d,e,f,g\n1,1,2,3,4,5,6,7",
-    /but the ratified palette has 6 chart colours/,
+    /but the ratified palette has 6 chart colors/,
   );
 
   // 6. The directive inside the real pipeline, since that is how a post reaches it.
@@ -434,7 +434,7 @@ async function main() {
 
   /*
    * And the known ones still render, so the check is not refusing everything. TWO ASSERTIONS RATHER
-   * THAN ONE ADJACENCY: this pinned two tags as neighbours and went red when body images started
+   * THAN ONE ADJACENCY: this pinned two tags as neighbors and went red when body images started
    * being wrapped in a link. A control that pins markup BETWEEN the things it cares about fails on
    * changes it has no opinion about.
    */

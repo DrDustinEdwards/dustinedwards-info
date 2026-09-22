@@ -60,7 +60,7 @@ export default defineConfig({
      * Matched on the EXTENSION rather than on the katex directory, because the
      * rule is about what a webfont is and not about where this one lives: the
      * next face dropped into `app/fonts/` inherits it. Everything else keeps
-     * the default behaviour.
+     * the default behavior.
      */
     assetsInlineLimit: (filePath) => {
       const path = filePath.split("\\").join("/");

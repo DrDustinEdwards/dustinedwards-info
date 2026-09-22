@@ -51,7 +51,7 @@ const SCRIPT = fileURLToPath(new URL("../scripts/health-repair.mjs", import.meta
 /**
  * The refusal the operator API really sends: `EditorError` becomes 422 with the
  * gate's message and its line (`app/lib/operator/api.server.ts`, the
- * `EditorError` branch), serialised by `api.operator.ts` as `{ ok, error,
+ * `EditorError` branch), serialized by `api.operator.ts` as `{ ok, error,
  * detail }`.
  */
 const REFUSAL = {
@@ -153,7 +153,7 @@ test("a 422 names the server's reason, abandons the plan, and still alerts", asy
 /*
  * THE CLASSIFICATION ITSELF, and the guard that keeps both callers on it.
  *
- * The test above drives the script end to end, which is the behaviour that
+ * The test above drives the script end to end, which is the behavior that
  * matters. These cover the half the WATCHDOG runs: it makes the identical
  * operator call on a fifteen minute cron and had its own copy of this logic,
  * so a fix planted only through the script would have left the more frequent

@@ -32,7 +32,7 @@ are the right home for anything that can be expressed as input in, output out.
 **GATES verify the REPO'S SHAPE.** `check:content` byte-compares an artifact.
 `check:invariants` section 15 measures CLAUDE.md's size and section order.
 `check:config` compares two config files to each other. `check:invariants` binds raw SQL column
-names to `schema.ts`. None of these is a behavioural claim, none would fit in a
+names to `schema.ts`. None of these is a behavioral claim, none would fit in a
 test, and each carries an OBSERVATION BOUNDARY note saying what it cannot see.
 
 **PLANTS remain the discipline for NEW assertions.** Before trusting any new
@@ -56,7 +56,7 @@ the bug.
 - **`frontmatter-urls.test.mjs`** the ten-case cover / further_reading table.
   Replays the 2026-08-07 finding that `cover.src` refused `javascript:` only as
   a SIDE EFFECT of a site-absolute path regex, so the mechanism was wrong while
-  every behavioural case passed. The three accepted cover paths are the half
+  every behavioral case passed. The three accepted cover paths are the half
   that would have caught a fix that broke legitimate input.
 - **`status-label.test.mjs`** `statusLabel()` throws and does not substitute.
   Replays the colophon defect where `STATUS_LABEL[s] ?? s` rendered the raw enum

@@ -41,7 +41,7 @@ import { ASSET_PREFIX } from "../media/classify.mjs";
  * The key is what makes the asset safe to serve immutable and what lets
  * `build:diagrams` skip work, and the key is a hash of the SOURCE. The template
  * is not one of those inputs, so restyling a diagram without bumping this leaves
- * every already-rendered asset at the old colours forever, and `build:diagrams`
+ * every already-rendered asset at the old colors forever, and `build:diagrams`
  * will cheerfully report that it had nothing to do.
  *
  * 1: the first cut, 2026-07-30.
@@ -55,7 +55,7 @@ export const DIAGRAM_ASSET_DIR = "diagrams";
 export const DIAGRAM_THEMES = ["light", "dark"];
 
 /**
- * Mermaid theme variables, as TOKEN NAMES rather than colours.
+ * Mermaid theme variables, as TOKEN NAMES rather than colors.
  *
  * Names, deliberately. `build:diagrams` resolves each one against the light and
  * dark blocks of `app/app.css`, so the stylesheet stays the single source of the
@@ -71,9 +71,9 @@ export const DIAGRAM_THEMES = ["light", "dark"];
  * because khroma parses every value in order to derive the ones you did not
  * supply. That is the first of the two reasons there is no single themed asset.
  *
- * There is no diagram colour vocabulary for authors, on purpose. A diagram says
+ * There is no diagram color vocabulary for authors, on purpose. A diagram says
  * what it means with SHAPE and LABEL, which is design-tokens.md rule 3 taken to
- * its conclusion: a refusal is an edge labelled `403`, not a red arrow. The
+ * its conclusion: a refusal is an edge labeled `403`, not a red arrow. The
  * deliberate first cut, exactly like `:::chart` shipping four mark types.
  */
 export const DIAGRAM_THEME_TOKENS = {
@@ -127,7 +127,7 @@ export const DIAGRAM_THEME_TOKENS = {
 };
 
 /**
- * Normalises a diagram source before it is hashed.
+ * Normalizes a diagram source before it is hashed.
  *
  * Line endings and surrounding blank lines are not part of what a diagram MEANS,
  * and this repo checks out `content/posts/*.md` as LF while the rest of the tree

@@ -152,7 +152,7 @@ export const settings = sqliteTable("settings", {
  * never the reverse.
  *
  * It describes the ASSET and never the citations. Those live in `mediaRefs`, so no row here can
- * authorise a delete a fresh count would refuse.
+ * authorize a delete a fresh count would refuse.
  */
 export const media = sqliteTable(
   "media",
@@ -389,7 +389,7 @@ export const zeroResultQueries = sqliteTable(
   "zero_result_queries",
   {
     /**
-     * THE QUERY IS THE KEY, normalised by the writer, so the same miss asked fifty times is one row
+     * THE QUERY IS THE KEY, normalized by the writer, so the same miss asked fifty times is one row
      * counted fifty times rather than fifty rows. It is what makes the table's size a function of
      * the distinct things people look for.
      */

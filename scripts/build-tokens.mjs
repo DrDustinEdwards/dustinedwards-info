@@ -1,5 +1,5 @@
 /**
- * The colour token inventory for /playground/ui, derived from app/app.css.
+ * The color token inventory for /playground/ui, derived from app/app.css.
  *
  * The page renders one swatch per palette token in both themes, and a swatch
  * needs the resolved hex, which a Worker cannot read out of a stylesheet. So
@@ -54,7 +54,7 @@ function tokenBlock(label, selector) {
 
 /**
  * Follow same-block `var()` references to the value they land on. A figure
- * series slot is declared as a ramp step, and the swatch wants the colour.
+ * series slot is declared as a ramp step, and the swatch wants the color.
  *
  * @param {Record<string, string>} block
  * @param {string} name

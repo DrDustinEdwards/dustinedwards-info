@@ -3,7 +3,7 @@
  *
  * WHAT MAKES THIS WORTH A TEST rather than a reading: the rule the directive enforces is a
  * JUDGEMENT ("supplementary material only, never the main argument") and a comment cannot enforce
- * a judgement. The heading refusal is the enforceable half of it, because a heading is how this
+ * a judgment. The heading refusal is the enforceable half of it, because a heading is how this
  * site spells "section of the argument": it goes in the table of contents and it is a link target.
  * If that refusal ever stops firing, the rule goes back to being a sentence nobody reads.
  *

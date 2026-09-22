@@ -25,7 +25,7 @@ export function toast(message: string) {
  * THE TOAST, which exists because a copy that succeeds silently looks broken.
  *
  * `role="status"` with `aria-live="polite"`, because the copy button's own
- * acknowledgement is a `::after` on a data attribute, which a screen reader never
+ * acknowledgment is a `::after` on a data attribute, which a screen reader never
  * sees.
  *
  * IT IS ALWAYS IN THE DOM once mounted, empty until it has something to say: a
@@ -63,7 +63,7 @@ export function MediaToast({ initialMessage = "" }: { initialMessage?: string })
  * second layout engine that disagrees with the real one at exactly the widths
  * nobody tested.
  *
- * So down means "the tile nearest my horizontal centre, one visual row lower",
+ * So down means "the tile nearest my horizontal center, one visual row lower",
  * measured from `getBoundingClientRect`, which keeps working when the grid
  * reflows and when the last row is short.
  *

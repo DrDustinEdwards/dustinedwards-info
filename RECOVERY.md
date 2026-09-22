@@ -608,7 +608,7 @@ propagation, not a bug.
 
 Then check by hand:
 
-- `/` renders and the mark is brand-coloured in both themes
+- `/` renders and the mark is brand-colored in both themes
 - `/blog` lists posts and page 2 exists
 - `/search?q=cloudflare` returns results (D1, no AI involved)
 - `/admin` redirects to Google and then admits only `ADMIN_EMAIL`
@@ -754,7 +754,7 @@ client and setting that URI on it.
 
 **Resource ids.** By design. The D1 `database_id` and KV namespace `id` are not in
 git, so a rebuild creates new resources with new ids. That is the intended
-behaviour, not a gap.
+behavior, not a gap.
 
 **Deployed version history.** Every prior Worker version and the ability to roll
 back to one. The code is in git; the deployment ledger is not.

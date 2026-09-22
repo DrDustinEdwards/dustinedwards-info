@@ -396,7 +396,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
    */
   const rootData = useRouteLoaderData<typeof rootLoader>("root");
   /**
-   * Initialised `false` so the hydration render matches the server's, then
+   * Initialized `false` so the hydration render matches the server's, then
    * corrected in a LAYOUT effect, which runs before paint. The width never depended
    * on this, so what it keeps honest is `aria-expanded`.
    */
@@ -495,7 +495,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             </svg>
           </button>
           {/*
-           * `.muted` is the colour and `.admin-topbar-email` is the box: the truncation
+           * `.muted` is the color and `.admin-topbar-email` is the box: the truncation
            * needs a selector that means THIS element.
            */}
           <span className="muted admin-topbar-email">{loaderData.email}</span>

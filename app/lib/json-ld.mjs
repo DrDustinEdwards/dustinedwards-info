@@ -1,5 +1,5 @@
 /**
- * The one serialiser for JSON that goes inside a `<script>` element.
+ * The one serializer for JSON that goes inside a `<script>` element.
  *
  * ## THE DEFECT THIS CLOSES
  *

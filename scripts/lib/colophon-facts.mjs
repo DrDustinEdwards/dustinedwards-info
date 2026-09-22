@@ -12,7 +12,7 @@
 import { AI_DISCLOSURE, SECURITY_TRADEOFF, statusLabel } from "../../app/lib/colophon-sections.mjs";
 
 /**
- * Element-delimited, so a token cannot pass on a neighbour's substring: one dependency name is a
+ * Element-delimited, so a token cannot pass on a neighbor's substring: one dependency name is a
  * substring of two others, so a bare `includes` survives its entry being dropped entirely.
  *
  * @param {string} v

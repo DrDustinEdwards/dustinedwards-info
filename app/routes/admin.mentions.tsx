@@ -147,7 +147,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "sweep") {
     /*
-     * THE COUNT IS 1, not the rows at risk: the operator is authorising the SWEEP,
+     * THE COUNT IS 1, not the rows at risk: the operator is authorizing the SWEEP,
      * and a typed row count read a moment before the delete would be invented
      * precision about a set that can change underneath it.
      */
@@ -404,7 +404,7 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
        * neither derived nor repo-sourced, so there is nothing for it to find.
        *
        * THE TWO WINDOWS ARE IMPORTED, never typed, which is hard rule 17: a button
-       * labelled with one number beside a sweep that uses another is the drift the rule
+       * labeled with one number beside a sweep that uses another is the drift the rule
        * exists to prevent.
        */}
       <section className="mention-retention" aria-label="Retention">

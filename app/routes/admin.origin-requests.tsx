@@ -61,7 +61,7 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
       result={result}
     >
       {result.status === "error" ? (
-        // Boring and visible. No colour carries the meaning on its own: it is a
+        // Boring and visible. No color carries the meaning on its own: it is a
         // sentence, and the panel chip beside the title already says error.
         <p className="panel-error" role="status">
           {result.message}
@@ -92,7 +92,7 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
                     <td className="origin-bar-cell">
                       {/*
                        * The one inline style on this page, and it is the sanctioned kind: a runtime
-                       * numeric value no token could name. The colour comes from the stylesheet.
+                       * numeric value no token could name. The color comes from the stylesheet.
                        */}
                       <span
                         className="origin-bar"

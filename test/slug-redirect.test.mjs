@@ -52,7 +52,7 @@ test("paths outside /blog/ are declined", () => {
  * point.** Measured 2026-09-09 by replacing the guard with `map[slug] ===
  * undefined`: these keys stayed declined and this test stayed GREEN, because
  * their values are functions and the `typeof target !== "string"` check below
- * them refuses on that instead. Two guards, one observable behaviour, and only
+ * them refuses on that instead. Two guards, one observable behavior, and only
  * the second one was load-bearing for these names. The next test is the one
  * that tells them apart.
  */

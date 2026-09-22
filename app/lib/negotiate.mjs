@@ -86,7 +86,7 @@ function htmlWeight(values) {
  * Compares q-values rather than substring-matching the header. A browser sends
  * `text/html,application/xhtml+xml,...` and must keep getting HTML; an agent
  * sending `Accept: application/json` must get JSON. A client that lists both at
- * equal weight gets HTML, because that is the older behaviour and the safer
+ * equal weight gets HTML, because that is the older behavior and the safer
  * default for anything that guessed.
  *
  * @param {Request} request @param {string} wanted
@@ -107,7 +107,7 @@ export function prefersType(request, wanted) {
  * the resolved theme. Two routes serve more than one representation at ONE
  * URL: `/blog/:slug` answers `Accept: text/markdown` with markdown, and
  * `/search` answers `Accept: application/json` with JSON. Both declare
- * `Vary: Accept`, which the platform in front honours and which
+ * `Vary: Accept`, which the platform in front honors and which
  * `caches.default` cannot: it is keyed by the Request handed to it and carries
  * no headers at all.
  *

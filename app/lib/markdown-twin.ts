@@ -39,7 +39,7 @@ export function prefersMarkdown(request: Request) {
  * `Vary: Accept, Cookie`, and the `Cookie` dimension collapses once a second variant exists under
  * the key: a cookie-bearing request then HITs the stored cookieless variant, the Worker never runs,
  * and the `private, no-store` downgrade in `workers/app.ts` never fires. A response that is never
- * stored cannot become that second variant. Do not "optimise" this back to `SHARED_CACHE_CONTROL`.
+ * stored cannot become that second variant. Do not "optimize" this back to `SHARED_CACHE_CONTROL`.
  *
  * **THE POLICY IS THE CALLER'S**, because the two face different situations. `/blog/:slug`
  * negotiating on Accept is never stored, for the whole reason above. `/blog/:slug.md` at its own URL
@@ -47,7 +47,7 @@ export function prefersMarkdown(request: Request) {
  * dimension to collapse against.
  *
  * **`Vary: Accept` GOES ON THE NEGOTIATED RESPONSE ONLY.** Under `/blog/:slug.md` the body does not
- * depend on Accept at all, and advertising a dimension the Workers Cache key cannot honour is worse
+ * depend on Accept at all, and advertising a dimension the Workers Cache key cannot honor is worse
  * than advertising none. `media.$.ts` records that mistake in full.
  */
 export function markdownResponse(slug: string, body: string, cacheControl: string) {

@@ -7,7 +7,7 @@
  *
  *   - a request with NO Content-Length became 0 and sailed past the check
  *   - a request understating its length did the same
- *   - and `request.text()` then materialised the whole body before `.slice()`
+ *   - and `request.text()` then materialized the whole body before `.slice()`
  *     could shorten it, so the slice bounded what was LOGGED and never what was
  *     received. The comment above it claimed the cap preceded the read.
  *

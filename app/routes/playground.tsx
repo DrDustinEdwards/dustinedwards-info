@@ -174,7 +174,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       const bad = [!fg ? "foreground" : null, !bg ? "background" : null]
         .filter(Boolean)
         .join(" and ");
-      labError = `The ${bad} is not a hex colour. Use three or six hex digits, like #4F2D7F.`;
+      labError = `The ${bad} is not a hex color. Use three or six hex digits, like #4F2D7F.`;
     } else {
       const ratio = contrast(fg, bg);
       lab = {
@@ -404,7 +404,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   };
 }
 
-/** A boring, visible error. Never a toast, never a colour on its own. */
+/** A boring, visible error. Never a toast, never a color on its own. */
 function Problem({ children }: { children: React.ReactNode }) {
   return (
     <p className="playground-error" role="status">
@@ -757,11 +757,11 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                   {datasetLabel}: {datasetNote}
                 </p>
                 <p className="playground-note">
-                  One render serves both themes. The series colours in that SVG
+                  One render serves both themes. The series colors in that SVG
                   are <code>var(--chart-cadet)</code> and its siblings, not
                   literals, so the bytes are identical in light and dark and the
                   browser resolves them per theme. Use the theme switch in the
-                  header and watch this chart recolour without a new request:
+                  header and watch this chart recolor without a new request:
                   that is the proof, and it is why there is no theme control
                   here to press.
                 </p>

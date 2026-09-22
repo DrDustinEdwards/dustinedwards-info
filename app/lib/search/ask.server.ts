@@ -150,7 +150,7 @@ async function parseSseAnswer(
 
 /**
  * Rebuilds a cached answer in the shape the model produces, so one parser and one rendering path
- * serve both. One delta rather than re-simulated typing, which would be theatre.
+ * serve both. One delta rather than re-simulated typing, which would be theater.
  */
 export function replayCachedAnswer(cached: {
   answer: string;
@@ -234,7 +234,7 @@ function askPublishable(post: { draft?: boolean; publishAt?: string | null }): b
  */
 export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   /*
-   * THE CORPUS COMES FROM D1, materialised by the same `records.mjs` both writers run and read back
+   * THE CORPUS COMES FROM D1, materialized by the same `records.mjs` both writers run and read back
    * with `visibilityClause` composed in the SQL, so drafts and future posts never enter the index.
    */
   const records = await askCorpusRecords(env);

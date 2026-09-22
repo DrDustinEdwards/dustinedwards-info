@@ -10,7 +10,7 @@
 import { dirname, join } from "node:path";
 
 /**
- * Module specifiers a source file imports, normalised to absolute paths inside `app/`, plus the
+ * Module specifiers a source file imports, normalized to absolute paths inside `app/`, plus the
  * raw `?url` specifiers, which are assets rather than modules.
  *
  * @param {string} source @param {string} file @param {string} appDir

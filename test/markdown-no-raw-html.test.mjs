@@ -97,7 +97,7 @@ test("an executable URL protocol produces no anchor and is recorded", async () =
 });
 
 test("the pipeline is constructed without allowDangerousHtml", async () => {
-  // The behaviour above IS the contract, and this is the one-word change that
+  // The behavior above IS the contract, and this is the one-word change that
   // would reverse all of it. Read as source because a passing render cannot
   // distinguish "the option is absent" from "the option is present and the
   // input happened not to exercise it".

@@ -177,7 +177,7 @@ function stripCssComments(css) {
  * `--border-strong` already is, so the two tokens arrived at the design agent
  * as THE SAME COLOUR, and hard rule 5, popover elevation and pinned bars take
  * `--border-strong` and never `--border`, became unfollowable: the agent cannot
- * honour a distinction it cannot see.
+ * honor a distinction it cannot see.
  *
  * ## WHY STRIP RATHER THAN REORDER
  *

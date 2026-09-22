@@ -24,8 +24,8 @@ retokenises that subtree, because both selectors are unqualified in the
 stylesheet. With no attribute at all, `prefers-color-scheme` decides.
 
 **A themed container MUST set both `background: var(--paper)` and
-`color: var(--text)`.** Text colour is owned by the `body` rule, so a container
-that only sets a background inherits the *light* text colour and its paragraphs
+`color: var(--text)`.** Text color is owned by the `body` rule, so a container
+that only sets a background inherits the *light* text color and its paragraphs
 render nearly invisible. This cost a preview cycle; it will cost you one too.
 
 ## The materials
@@ -41,25 +41,25 @@ render nearly invisible. This cost a preview cycle; it will cost you one too.
 | Focus | `--brand` | 2px, 2px offset, square corners |
 | Code ground | `--paper` | code sits on the page ground; a rule, not a fill, sets it apart |
 
-`--dust` is a **line colour** and is deliberately below the contrast floor. It
+`--dust` is a **line color** and is deliberately below the contrast floor. It
 rules and separates; it may never be the thing that identifies a control, and it
 never sets type.
 
 Purple is ink. There is no purple header, footer, ground or filled public
 surface.
 
-**The colour system is CLOSED, and each colour has one job.** This is the part
-a session is most likely to break by reaching for a colour that looks right.
+**The color system is CLOSED, and each color has one job.** This is the part
+a session is most likely to break by reaching for a color that looks right.
 
 - **`--brand` means you can click it.** Links, focus, the mark. Never a fill on
-  a public surface, and never a chart series: in light it is the link colour, so
+  a public surface, and never a chart series: in light it is the link color, so
   a purple series reads as a row of links.
 - **Oxide belongs to figures.** Figure and plate numbers, leaders, labels,
   strokes, and series 1. Never a link, never a rule, never chrome.
 - **`--dust` is rules.** Paper and ink are ground and text.
 
 Error may fill. Warning and success never paint on the public plane; they are
-admin colours, and they exist as named tokens so nobody borrows oxide for an
+admin colors, and they exist as named tokens so nobody borrows oxide for an
 error.
 
 ## Type
@@ -163,7 +163,7 @@ Shadows are not a style. Motion is CSS only, with a reduced-motion equivalent.
 A figure here is a **diagrammatic line drawing in the taxonomic-key tradition**:
 outline rather than shading, mono labels on leaders, a scale bar, and a caption
 whose label is mono and whose sentence is prose. Drawing that EXPLAINS is
-content and is welcome: a cross-section, a labelled plaque, a schematic, a
+content and is welcome: a cross-section, a labeled plaque, a schematic, a
 genome track, a plate grid. Decoration, stock imagery, mascots and texture packs
 are not.
 

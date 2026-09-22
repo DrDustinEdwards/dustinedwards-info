@@ -525,7 +525,7 @@ for (const page of INDEX_PAGES) {
 
     /*
      * A LISTING ENTRY CARRIES NO e-content: a consumer finding content on a card has a description
-     * labelled as the article.
+     * labeled as the article.
      */
     assert(
       `/blog page ${page}: ${slug} publishes no e-content`,

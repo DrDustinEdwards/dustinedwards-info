@@ -144,7 +144,7 @@ export function buildCitationTags(paper, urls) {
    */
   tags.push({ name: "citation_abstract_html_url", content: urls.abstractUrl });
   // Only when the file is actually served from this site. A tag pointing at a
-  // publisher's PDF is a claim this site cannot honour and Scholar will not
+  // publisher's PDF is a claim this site cannot honor and Scholar will not
   // follow it across a host anyway.
   if (urls.pdfUrl) tags.push({ name: "citation_pdf_url", content: urls.pdfUrl });
 

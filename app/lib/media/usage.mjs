@@ -43,12 +43,12 @@
  * The three states, with everything the UI needs to render one.
  *
  * **THE COLOURS ARE NOT THE MOCKUP'S.** Its dots are #6E8F62, #4F2D7F and
- * #CE7F44 as literals, and its muted label colour #A79C8A measures 2.34:1. This
+ * #CE7F44 as literals, and its muted label color #A79C8A measures 2.34:1. This
  * table names TOKENS instead, resolved by the stylesheet, so a dot cannot
  * disagree with the palette and the participation assertion can see them.
  *
  * The `title` and `note` are the mockup's own words, kept, because they are the
- * part that does the work: a dot with no sentence beside it is a colour.
+ * part that does the work: a dot with no sentence beside it is a color.
  */
 export const USAGE_STATES = {
   used: {
@@ -265,7 +265,7 @@ export function suggestedTags(key) {
  *
  * The mockup makes this distinction and it is a real one: an image goes in a
  * post as `![alt](src)` and a document goes in as `[title](href)`, so a control
- * labelled HTML has to produce a different thing for each. Offering an `<img>`
+ * labeled HTML has to produce a different thing for each. Offering an `<img>`
  * tag for a PDF produces a broken page, and the label is what stops somebody
  * pressing it.
  *

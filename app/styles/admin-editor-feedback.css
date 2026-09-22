@@ -32,8 +32,8 @@
   margin-top: 0.25rem;
 }
 
-/* The link inherits the banner's on-tint colour rather than the page link
-   colour, which was measured against the page background and not against a
+/* The link inherits the banner's on-tint color rather than the page link
+   color, which was measured against the page background and not against a
    tint. It keeps its underline, so rule 2 is untouched. */
 .editor-feedback a {
   color: inherit;
@@ -63,7 +63,7 @@
 }
 
 /* First publication, the one act reserved to the human, so it does not look like every other save.
-   Weight comes from size and a heavier edge, never a colour alone, so it reads without the hue. */
+   Weight comes from size and a heavier edge, never a color alone, so it reads without the hue. */
 .editor-feedback[data-ceremony] {
   padding: 1.125rem 1.25rem;
   border-width: 1px 1px 1px 4px;
@@ -75,7 +75,7 @@
 
 /* forced-colors: the tint that separated these states is gone, so the edge is
    the only thing left holding the shape, and the glyph plus the words carry the
-   meaning. Nothing here re-asserts a palette colour. */
+   meaning. Nothing here re-asserts a palette color. */
 @media (forced-colors: active) {
   .editor-feedback {
     border-color: currentColor;

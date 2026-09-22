@@ -1,7 +1,7 @@
 /* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 /* /playground: controls and results sit on --paper while prose stays on the canvas (rule 7).
-   No colour carries meaning alone: pass and fail are words. */
+   No color carries meaning alone: pass and fail are words. */
 
 .playground-demo {
   margin: 3.5rem 0 0;
@@ -148,7 +148,7 @@
   color: var(--text-secondary);
 }
 
-/* The only element on the site whose colours are legitimately inline: they are
+/* The only element on the site whose colors are legitimately inline: they are
    the reader's own input, so no token could name them. */
 .playground-sample {
   margin: 0;

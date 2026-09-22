@@ -10,7 +10,7 @@
  * so the feed was out of spec under a sentence saying otherwise.
  *
  * Undefined-valued keys are how an optional field is omitted: the route
- * serialises with JSON.stringify, which drops them. A consumer of this
+ * serializes with JSON.stringify, which drops them. A consumer of this
  * function's return value directly (a test) must judge presence by value,
  * not by `in`.
  *

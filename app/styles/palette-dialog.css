@@ -7,7 +7,7 @@
   background: var(--paper);
   color: var(--text);
   overflow: hidden;
-  /* Sits nearer the top than centred: the list grows downward and a centred
+  /* Sits nearer the top than centered: the list grows downward and a centered
      dialog would jump as results arrive. */
   margin: 6vh auto auto;
 }

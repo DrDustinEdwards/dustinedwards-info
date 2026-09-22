@@ -139,14 +139,14 @@ async function assertSpf(path, name) {
   ok(`[${path}] ${name} publishes exactly one SPF record`, spf.length === 1, `found ${spf.length}`);
   if (spf.length !== 1) return;
   ok(
-    `[${path}] ${name} SPF authorises Cloudflare`,
+    `[${path}] ${name} SPF authorizes Cloudflare`,
     spf[0].includes(CF_INCLUDE),
     `${JSON.stringify(spf[0])} does not carry ${CF_INCLUDE}`,
   );
   ok(
     `[${path}] ${name} SPF ends in a fail or softfail`,
     /[~-]all\s*$/.test(spf[0]),
-    `${JSON.stringify(spf[0])} does not end in -all or ~all, so it authorises everything`,
+    `${JSON.stringify(spf[0])} does not end in -all or ~all, so it authorizes everything`,
   );
 }
 

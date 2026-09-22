@@ -230,7 +230,7 @@ function unanchor(source) {
  * It lives HERE rather than there because the dependency only runs one way:
  * `publish.server.ts` already imports this module, and this module cannot
  * import a `.server` file without dragging the server boundary into the build
- * scripts. Same neighbourhood as `SLUG_PATTERN` on purpose, which is the same
+ * scripts. Same neighborhood as `SLUG_PATTERN` on purpose, which is the same
  * class of rule and was consolidated for the same reason.
  *
  * @param {string} slug
@@ -519,7 +519,7 @@ export function setWasmLoader(loader) {
 }
 
 /**
- * Bumped whenever the card TEMPLATE changes: colours, type, layout.
+ * Bumped whenever the card TEMPLATE changes: colors, type, layout.
  *
  * The key is what makes the object safe to serve immutable, and the key is a
  * hash of the card's inputs. The template was not one of those inputs, so
@@ -534,7 +534,7 @@ export function setWasmLoader(loader) {
  * the real mark, the wordmark and the tags, matching what the site header
  * became at v4; the title stays on the canvas per binding rule 7, at 72px, and
  * it is now the only thing on the canvas. The description was dropped rather
- * than shortened, for the reasons recorded in build-og.mjs. The colours are now
+ * than shortened, for the reasons recorded in build-og.mjs. The colors are now
  * RESOLVED from app.css rather than restated there, so this number is the only
  * thing standing between a retuned token and a fleet of immutable cards still
  * serving the old one.
@@ -584,7 +584,7 @@ const OG_TEMPLATE_VERSION = 4;
  * publication date arrived on the card, so they join it.
  *
  * EVERY TEXT INPUT IS HASHED AS DRAWN, through the very functions the template
- * paints with, which is `slice(0, 3)`'s principle generalised. `cardTitle` and
+ * paints with, which is `slice(0, 3)`'s principle generalized. `cardTitle` and
  * `cardDescription` cut on a word boundary; `longDateUTC` is the one owner of a
  * timestamp as a date a person reads, and it is the STRING it returns that is
  * hashed rather than the timestamp, because two instants in the same UTC day
@@ -827,14 +827,14 @@ function getHighlighter() {
  * --paper, with the highlighted-line band on --surface-popover. That
  * voided the previous verification, and re-running it condemned the plain
  * github themes: against the warm surfaces, github-light failed four token
- * colours (comments 4.06, strings 3.90, keywords 3.86, constants 2.94) and
+ * colors (comments 4.06, strings 3.90, keywords 3.86, constants 2.94) and
  * github-dark failed comments at 3.34. The high-contrast variants clear every
  * one, so the fix is a theme swap rather than hand-mixed hexes.
  *
  * Comments are the single exception, still 4.25 in light after the swap, so
- * they are repointed at the ratified MUTED TEXT colour. That is not a new hex:
+ * they are repointed at the ratified MUTED TEXT color. That is not a new hex:
  * it is --text-secondary from design-tokens.md, which is what a comment is, and it
- * keeps the one hand-set syntax colour inside the ratified palette.
+ * keeps the one hand-set syntax color inside the ratified palette.
  *
  * Measured and gated by `npm run check:contrast`.
  */
@@ -874,7 +874,7 @@ async function buildHighlighter() {
       // The JS engine avoids shipping a WASM binary, which is why it was chosen
       // first, but it is NOT deterministic: measured 2026-07-28, eight renders
       // of the same TypeScript snippet in one process produced two different
-      // outputs, and separate processes coloured the `=` operator #D73A49,
+      // outputs, and separate processes colored the `=` operator #D73A49,
       // #005CC5 and #24292E on different runs. Token boundaries were stable;
       // only scope resolution moved.
       //
@@ -964,12 +964,12 @@ function remarkFigure(file) {
 }
 
 /**
- * The colours `:swatch` accepts, and the enumeration IS the policy.
+ * The colors `:swatch` accepts, and the enumeration IS the policy.
  *
- * `#RGB`, `#RRGGBB`, `#RRGGBBAA` and nothing else. A named colour, `rgb()`,
+ * `#RGB`, `#RRGGBB`, `#RRGGBBAA` and nothing else. A named color, `rgb()`,
  * `color-mix()` and `currentColor` are all refused, because each of them makes
  * the rendered artifact depend on something outside the source: a name resolves
- * through the UA's colour table, `color-mix()` through the cascade,
+ * through the UA's color table, `color-mix()` through the cascade,
  * `currentColor` through whatever the chip happens to inherit. The html this
  * pipeline writes is a pure function of the markdown, and a chip that renders
  * differently in two engines is a chip no gate can hold to anything.
@@ -981,10 +981,10 @@ const SWATCH_HEX = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
 
 /**
  * Turns `:swatch[#6B4FBB]` and `:swatch[Brand purple]{color=#6B4FBB}` into a
- * colour chip beside its own label.
+ * color chip beside its own label.
  *
  * ## VALIDATION IS IN REMARK, which is the placement `remarkMathValidate`
- * states and the reason is the same: a bad colour fails the build naming the
+ * states and the reason is the same: a bad color fails the build naming the
  * file and the line, before anything renders, rather than painting a square
  * nobody chose onto a published page.
  *
@@ -998,7 +998,7 @@ const SWATCH_HEX = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
  *
  * ## THE INLINE STYLE IS THE ONLY PER-INSTANCE VALUE
  *
- * Size, radius and the 1px border live in `prose.css`. The colour cannot: it
+ * Size, radius and the 1px border live in `prose.css`. The color cannot: it
  * differs at every call site and comes from the post. `style-src-attr
  * 'unsafe-inline'` is already the policy for exactly this shape (measured at
  * 117 inline `--shiki-*` attributes on one post, plus the LQIP placeholder),
@@ -1008,14 +1008,14 @@ const SWATCH_HEX = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
  * ## THE HEX IS UPPERCASED, in the attribute and in the label
  *
  * So `#6b4fbb` and `#6B4FBB` are the same bytes downstream. Two spellings of
- * one colour rendering as two different pages would make the html a function of
+ * one color rendering as two different pages would make the html a function of
  * how the author held the shift key, which `check:content`'s determinism pass
  * would be right to call drift.
  *
  * ## THE LABEL IS THE SECOND CHANNEL, which is why the chip is aria-hidden
  *
- * Binding usage rule 1 of the ratified palette: colour is never the only
- * channel. The chip is the colour; the code span beside it is the text. A
+ * Binding usage rule 1 of the ratified palette: color is never the only
+ * channel. The chip is the color; the code span beside it is the text. A
  * screen reader, a forced-colors reader and a reader with any CVD all get the
  * value rather than a square they cannot price. Announcing the empty decorative
  * square as well would be noise on top of the answer.
@@ -1051,15 +1051,15 @@ function remarkSwatch(file) {
       if (raw.length === 0) {
         throw new ContentError(
           file,
-          `${where} carries no colour. Write :swatch[#RRGGBB], or ` +
+          `${where} carries no color. Write :swatch[#RRGGBB], or ` +
             `:swatch[a label]{color=#RRGGBB} when the label is not the hex.`,
         );
       }
       if (!SWATCH_HEX.test(raw)) {
         throw new ContentError(
           file,
-          `${where} cannot use ${JSON.stringify(raw)} as a colour. Only #RGB, ` +
-            `#RRGGBB and #RRGGBBAA are accepted: a named colour, rgb() or ` +
+          `${where} cannot use ${JSON.stringify(raw)} as a color. Only #RGB, ` +
+            `#RRGGBB and #RRGGBBAA are accepted: a named color, rgb() or ` +
             `color-mix() would make the rendered page depend on something ` +
             `outside this file.`,
         );
@@ -1079,7 +1079,7 @@ function remarkSwatch(file) {
         {
           /*
            * `emphasis` carries no meaning here and never reaches the output:
-           * `hName` replaces the tag before it is serialised. It is the inline
+           * `hName` replaces the tag before it is serialized. It is the inline
            * counterpart of the `paragraph`-with-hName that `remarkFigure` uses
            * for its `<img>`, chosen because an inline node type is what belongs
            * inside a text directive's children.
@@ -1117,7 +1117,7 @@ function remarkSwatch(file) {
  * site origin is making a citation nobody should be able to lose by having
  * written it the long way.
  *
- * A path whose extension `classify()` does not recognise returns null, and that
+ * A path whose extension `classify()` does not recognize returns null, and that
  * is the right refusal: `/blog/something` is a page link, not a media citation,
  * and counting it would fill `media_refs` with rows that can never join.
  *
@@ -1828,7 +1828,7 @@ const ALLOWED_PROTOCOLS = new Set(["https:", "http:", "mailto:"]);
  *
  * Every other C0 control and DEL is removed too, which is STRICTER than the
  * spec. That direction is deliberate: removing characters can only turn an
- * unrecognised string into a recognised scheme, so being aggressive can only
+ * unrecognised string into a recognized scheme, so being aggressive can only
  * ever block more, never allow more. A NUL inside the scheme is the case that
  * matters. Left in place it makes the scheme pattern fail to match, and the URL
  * then falls through as "relative", which is the one outcome we cannot afford
@@ -2085,7 +2085,7 @@ function textOf(node) {
  * fetching it at render time (a race against the image it stands in for), and
  * reading it from D1 (which inverts rule 18, the index deriving the artifact).
  *
- * QUEUED, not built: a dominant colour carried in the `/media/` key grammar at
+ * QUEUED, not built: a dominant color carried in the `/media/` key grammar at
  * upload time, which WOULD be pure from the key. That is a change to the key
  * grammar and to every uploaded object, so it is its own decision.
  *

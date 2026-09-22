@@ -112,7 +112,7 @@ export const middleware: Route.MiddlewareFunction[] = [
       {
         headers: {
           "content-type": "application/json; charset=utf-8",
-          // NEVER STORED, and this is not a performance oversight. Do not "optimise" this
+          // NEVER STORED, and this is not a performance oversight. Do not "optimize" this
           // back to a shared cache-control.
           //
           // `/search` varies on Accept and Cookie. With only the HTML representation in

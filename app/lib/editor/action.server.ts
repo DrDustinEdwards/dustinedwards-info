@@ -59,7 +59,7 @@ export async function handleEditorAction(
    * a D1 sync, from a request that never said what it wanted. Hard rule 13 on the worst possible
    * surface, since the substituted value was an action rather than a label.
    *
-   * THE INTENT ALSO CARRIES THE DRAFT FLAG, so an intent this module does not recognise is refused
+   * THE INTENT ALSO CARRIES THE DRAFT FLAG, so an intent this module does not recognize is refused
    * below rather than run as a save. Falling through to one was survivable while `draft` was its own
    * field and is not now: an unknown intent would be a write whose publication state came from a
    * fallback.
@@ -102,7 +102,7 @@ export async function handleEditorAction(
    */
   if (intent !== "preview" && !(intent in DRAFT_BY_INTENT)) {
     return fail(
-      `This form submitted an intent this editor does not recognise ("${intent}"), ` +
+      `This form submitted an intent this editor does not recognize ("${intent}"), ` +
         "so nothing was saved. The intent names the transition, including whether " +
         "the post ends up public, and a request naming one that does not exist is " +
         "refused rather than run with a guess.",

@@ -1,5 +1,5 @@
 /**
- * Gate: run the behavioural test suite, and refuse to believe an empty one.
+ * Gate: run the behavioral test suite, and refuse to believe an empty one.
  *
  *   npm run check:tests
  *
@@ -166,7 +166,7 @@ const TEST_TIMEOUT_MS = 60_000;
 
 /*
  * THE SPAWN BOUND IS LOAD-BEARING, and a plant proved it. Against one file the runner's own bound
- * gets the process out; against the whole suite it did not, because a cancelled test's `finally`
+ * gets the process out; against the whole suite it did not, because a canceled test's `finally`
  * never runs and the child survives. So one names the culprit and the other ends the run.
  */
 const RUN_TIMEOUT_MS = 6 * 60_000;

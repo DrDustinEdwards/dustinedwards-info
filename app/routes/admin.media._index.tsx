@@ -386,7 +386,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const keys = form.getAll("key").map(String).filter(Boolean);
     if (keys.length === 0) return { message: "Nothing selected." };
 
-    // One tag, normalised by its owner. Normalising to nothing is refused, not a clear.
+    // One tag, normalized by its owner. Normalizing to nothing is refused, not a clear.
     const wanted = normaliseTags(String(form.get("tag") ?? ""))[0];
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
@@ -1144,7 +1144,7 @@ export default function AdminMedia({
         <AdminAlert title="Usage could not be determined" headingId="scan-failed">
           <p>
             The reference scan failed ({scanFailed.join(", ")}), so nothing below is
-            labelled unused and every delete will be refused until it succeeds.
+            labeled unused and every delete will be refused until it succeeds.
           </p>
         </AdminAlert>
       ) : null}

@@ -42,7 +42,7 @@ export const CSP_ENDPOINT_NAME = "csp-endpoint";
  * caller can obtain a policy carrying `'nonce-X'` in `style-src`. It buys
  * nothing:
  *
- *   - a 302 HAS NO BODY, so there is no element for the nonce to authorise
+ *   - a 302 HAS NO BODY, so there is no element for the nonce to authorize
  *   - the nonce is single-use by construction, minted per request, and that
  *     response is `private, no-store` (it carries no `Vary`, so it reaches the
  *     uncached default), so it is never stored in a shared cache and never
@@ -57,14 +57,14 @@ export const CSP_ENDPOINT_NAME = "csp-endpoint";
  *
  * **`.data` REQUESTS SPLIT ACROSS THE TEST, and the first version of this note
  * got it wrong in a way `check:headers` caught in the same session it was
- * written.** It claimed both were outside. React Router serialises the layout's
+ * written.** It claimed both were outside. React Router serializes the layout's
  * own fetch as `/admin.data`, which matches neither arm and gets the public
  * policy; but a child route's is `/admin/posts.data`, which DOES match the
  * slash arm and gets the admin policy. So the split is real and it is not the
  * tidy one the note asserted.
  *
  * It does not matter either way, which is why the test is left alone: a `.data`
- * response is JSON, it contains no style element for a nonce to authorise, and
+ * response is JSON, it contains no style element for a nonce to authorize, and
  * it is `private, no-store` on both arms. Recorded rather than smoothed over,
  * because the tidy version of this sentence is the one a later reader would
  * believe.
@@ -98,7 +98,7 @@ export function contentSecurityPolicy(nonce, styleNonce) {
      *
      * **A NONCE ON THE ELEMENT ALONE DOES NOTHING, and that was measured
      * before this was written rather than assumed.** A `<style>` carrying the
-     * page's real nonce was ALSO refused, because a nonce authorises nothing
+     * page's real nonce was ALSO refused, because a nonce authorizes nothing
      * unless the directive lists a nonce source. So permitting the element
      * requires changing `style-src`, and the only question was how widely.
      *

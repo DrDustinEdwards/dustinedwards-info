@@ -61,7 +61,7 @@
  * check at all: every `/admin` action, and `/theme`, where a POST carrying a
  * foreign `Origin` set the theme cookie.
  *
- * That is defence in depth rather than an open hole, and the reason is worth
+ * That is defense in depth rather than an open hole, and the reason is worth
  * stating so nobody upgrades or downgrades it by mistake: `workers.dev` is on
  * the PUBLIC SUFFIX LIST, so the same-site siblings that could reach these are
  * Dustin's own Workers and nothing else. The value here is that the rule is one

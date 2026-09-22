@@ -147,7 +147,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
                   <td className="admin-check-name">
                     <span className="admin-check-title">
                       <strong>{copy.name}</strong>
-                      {/* The word first, then colour, then border style: three
+                      {/* The word first, then color, then border style: three
                           channels, so it still reads under forced-colors. */}
                       <span className="status-pill" data-state={check.ok ? "published" : "draft"}>
                         {check.ok ? "passing" : "failing"}

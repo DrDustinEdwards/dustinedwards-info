@@ -84,7 +84,7 @@ export function OgPreview({ post }: { post: PreviewPost }) {
         {/*
          * The real image, at the real URL, and NOT a placeholder when there is no cover:
          * a post with no cover gets the site mark, so that is what is shown. Inventing a
-         * grey rectangle would hide the one case worth seeing.
+         * gray rectangle would hide the one case worth seeing.
          */}
         <img
           src={social.image}

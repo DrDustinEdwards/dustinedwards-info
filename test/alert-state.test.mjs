@@ -158,7 +158,7 @@ test("a new check joining an existing outage is recorded, not mailed", () => {
   assert.deepEqual(back.email?.checks, ["a", "b"], "recovery names everything that broke");
 });
 
-test("names are normalised, so ordering cannot cause a spurious write", () => {
+test("names are normalized, so ordering cannot cause a spurious write", () => {
   const red = alertTransition({ stored: green, alerting: true, failing: ["b", "a"], now: T1 });
   const same = alertTransition({
     stored: red.state,

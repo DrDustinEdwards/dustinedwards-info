@@ -76,7 +76,7 @@ test("the stored order is SORTED, so typing order cannot change the bytes", () =
   assert.equal(serialiseTags(["zeta", "alpha"]), serialiseTags(["alpha", "zeta"]));
 });
 
-test("normalisation: case, whitespace, and the delimiter itself", () => {
+test("normalization: case, whitespace, and the delimiter itself", () => {
   assert.equal(normaliseTag("  Cloudflare  "), "cloudflare");
   assert.equal(normaliseTag("Two Words"), "two-words");
   assert.equal(normaliseTag("a,b"), "a-b", "a comma inside a part cannot survive");
@@ -104,11 +104,11 @@ test("the list is capped and each tag is capped", () => {
   assert.ok(normaliseTag(long).length <= MAX_TAG_LENGTH);
 });
 
-test("a delimited string and an array normalise identically", () => {
+test("a delimited string and an array normalize identically", () => {
   assert.deepEqual(normaliseTags("alpha,beta"), normaliseTags(["alpha", "beta"]));
 });
 
-test("round trip: serialise then parse returns the same list", () => {
+test("round trip: serialize then parse returns the same list", () => {
   const tags = ["alpha", "beta", "gamma"];
   assert.deepEqual(parseTags(serialiseTags(tags)), tags);
 });

@@ -4,7 +4,7 @@
  *   npm run check:search
  *
  * BOUNDARY: pure functions only, imported from the module the Worker runs. It executes no SQL, so
- * it cannot see an index that is empty, drifted, or tokenising differently from what the parser
+ * it cannot see an index that is empty, drifted, or tokenizing differently from what the parser
  * assumes.
  */
 

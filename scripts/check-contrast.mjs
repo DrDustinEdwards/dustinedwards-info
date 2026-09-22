@@ -1,5 +1,5 @@
 /**
- * Gate over the shipped colour tokens.
+ * Gate over the shipped color tokens.
  *
  *   npm run check:contrast
  *
@@ -75,7 +75,7 @@ function tokenBlock(label, selector) {
 
 /**
  * Composite `color-mix(in srgb, A p%, B)` the way a browser does: sRGB channel
- * interpolation of two opaque colours, which is plain linear interpolation of
+ * interpolation of two opaque colors, which is plain linear interpolation of
  * the 8-bit values.
  *
  * @param {string} expr
@@ -281,7 +281,7 @@ const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
 const MATRIX = [
   // Body and neutrals
   ["--text", "--paper", TEXT, "body text on paper"],
-  // CodeMirror syntax colours, on --paper and the active line's --paper.
+  // CodeMirror syntax colors, on --paper and the active line's --paper.
   ["--text-heading", "--paper", TEXT, "heading text on paper"],
   ["--text-accent", "--paper", TEXT, "accent text on paper"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
@@ -381,7 +381,7 @@ const MATRIX = [
 
   /*
    * Brand, its two states, and the second shade a followed link takes. THE HEADER MARK RIDES THE
-   * FIRST ROW: ruling 118.2 draws it in the logo's own colours on --paper, and its five purple paths
+   * FIRST ROW: ruling 118.2 draws it in the logo's own colors on --paper, and its five purple paths
    * take --brand, so the pair below measures it at the 4.5 floor rather than the 1.4.11 one it
    * would be owed. No second row at UI for the mark: a weaker floor over the same pair cannot fail
    * while this one passes, and an assertion that cannot fail is not coverage (hard rule 10).
@@ -488,7 +488,7 @@ const DECLARED_ELSEWHERE = new Map([
       "Shiki tokens above and for the same reason: the value is per instance and comes " +
       "from the post, so there is no theme block it could live in. It is deliberately " +
       "NOT declared, which is what keeps the participation assertion below untouched " +
-      "and its exemption map empty: the colour being SHOWN is not a colour this system " +
+      "and its exemption map empty: the color being SHOWN is not a color this system " +
       "chose, and no ratio can be asserted about it",
   ],
 ]);
@@ -857,7 +857,7 @@ if (existsSync(assetDir)) {
   } else if (!built) {
     fail("build/client/assets exists but carries no CSS");
   } else {
-    // Compare normalised values: Lightning CSS shortens #ffffff to #fff.
+    // Compare normalized values: Lightning CSS shortens #ffffff to #fff.
     /** @param {string} v */
     const norm = (v) => {
       const h = v.trim().toLowerCase().replace("#", "");

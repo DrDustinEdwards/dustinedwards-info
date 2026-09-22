@@ -62,7 +62,7 @@ export function CopyButton({
     >
       {/* Two rounded rectangles, one behind the other: the copy glyph every
           admin surface uses, drawn in currentColor so it takes the button's
-          own token and adds no colour of its own. */}
+          own token and adds no color of its own. */}
       <svg
         width="14"
         height="14"
