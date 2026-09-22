@@ -429,11 +429,15 @@ const MATRIX = [
   ["--text-secondary", "--fig-ground", TEXT, "figure label"],
   ["--text", "--fig-ground", TEXT, "figure key label"],
   /*
-   * The plate's callout is a stroke that identifies which specimen a numeral belongs to, so 1.4.11
-   * applies and it is measured rather than exempted. Its ground is the LAWN, not paper: that is
-   * why the plate steps oxide down in dark, where oxide 300 on the lawn is 1.25:1.
+   * PLATE I. A leader starts at its plaque's center, so it crosses the LAWN, and it identifies which
+   * label names which plaque: 1.4.11 applies. The plate draws it in oxide 400 light and 300 dark;
+   * 300 is the pair measured in every theme because it is the weaker of the two on the light lawn
+   * (3.2:1 against 400's 4.3:1), so a pass here covers both. The plaque outlines are ink on the
+   * lawn and on the turbid tone.
    */
-  ["--fig-oxide-500", "--fig-dust-300", UI, "plate callout circle and leader on the lawn"],
+  ["--fig-oxide-300", "--fig-lawn", UI, "plate leader on the lawn"],
+  ["--text", "--fig-lawn", UI, "plaque outline on the lawn"],
+  ["--text", "--fig-turbid", UI, "plaque outline on the turbid tone"],
 ];
 
 /** @type {Array<{mode: string, note: string, lc: number, ratio: number}>} */
@@ -559,22 +563,14 @@ const NON_PARTICIPATING = new Map([
       "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
   /*
-   * DUST 200 IS THE PLATE'S TURBID TONE, a large flat FILL between the lawn and the paper a
-   * clearing shows. Step 4 exempts an interior, and it is neither a stroke, a label nor a series
-   * (ruling 122). Whether the three tones separate is a shot, not a ratio: no pair here states it.
-   *
-   * Dust 300, the lawn, is NOT exempt any more: it is the callout stroke's ground in the matrix
-   * above, which is the pair that carries the one ratio on this drawing that has to hold.
+   * DUST 300 IS TEXTURE ON PLATE I: the halo's dashed outer ring, drawn on the turbid tone. It
+   * marks the edge of a diffuse zone rather than identifying anything, which the ink ring inside it
+   * does (ruling 122: texture, never a series). Whether the plate's tones separate is a shot.
    */
-  ...(/** @type {Array<[string, string]>} */ (
-    [
-      "--fig-dust-200",
-    ].map((t) => [
-      t,
-      "texture: the turbid tone on Plate I, a flat fill allowed below the stroke floor because " +
-        "it identifies nothing",
-    ])
-  )),
+  [
+    "--fig-dust-300",
+    "texture: the halo's dashed ring on Plate I, below the stroke floor because it identifies nothing",
+  ],
   // Unused ramp steps: interiors may sit below 3:1, only edges may not.
   ...(/** @type {Array<[string, string]>} */ (
     [
@@ -584,7 +580,9 @@ const NON_PARTICIPATING = new Map([
       "--fig-leaf-500",
       "--fig-oxide-100",
       "--fig-oxide-200",
+      "--fig-oxide-500",
       "--fig-dust-100",
+      "--fig-dust-200",
     ].map((t) => [
       t,
       "a ramp step no series slot resolves through: a fill or a letterbox ground, which step 4 " +

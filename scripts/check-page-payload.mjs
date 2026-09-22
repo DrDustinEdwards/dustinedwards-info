@@ -59,6 +59,9 @@ const ENHANCE_BROTLI_CEILINGS = {
      ruling 126's menu and persistence are buying. */
   "header.js": 700,
   "palette.js": 6000,
+  /* Measured on the first build of this module, at 727 brotli: Plate I's linked highlight and its
+     leader intro, home page only. */
+  "plate.js": 1000,
   /* Measured on the first build of this module, at 1121 brotli. */
   "search.js": 1600,
   "theme.js": 1000,
@@ -652,7 +655,13 @@ const ROUTE_CEILINGS = {
    * before, rounded up to the next hundred. That moves the floor and not the slack, which is the
    * same rule the blog.js raise above states.
    */
-  "/": { id: "routes/home", css: 7100, total: 8300 },
+  /*
+   * RAISED AGAIN FOR PLATE I'S ENHANCEMENT (ruling 119: a ceiling may rise in the commit that states
+   * the reason). plate.js is 727 brotli, the linked highlight and the leader intro the solid-lawn
+   * plate brings. Measured 8876 on the build that raised it; the 397 bytes of slack the last raise
+   * kept are kept again, rounded up. It comes down with the rest of the uplift by UPLIFT_EXPIRES.
+   */
+  "/": { id: "routes/home", css: 7100, total: 9300 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
@@ -725,7 +734,9 @@ const BUNDLE_USE = {
   /* Site-wide: the header is on every public page, so its enhancement is too. */
   "header.js": () => true,
   "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
-  "ask.js": (/** @type {string} */ id) => id === "routes/search",
+  /* Plate I and its key are on the home page and nowhere else. */
+  "plate.js": (/** @type {string} */ id) => id === "routes/home",
+  "ask.js":(/** @type {string} */ id) => id === "routes/search",
   /* The search page's own enhancement: it upgrades that page's form and result list and has
      nothing to do anywhere else. */
   "search.js": (/** @type {string} */ id) => id === "routes/search",

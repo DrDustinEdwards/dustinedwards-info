@@ -432,6 +432,10 @@
   --fig-dust-300: #a89d8d;
   --fig-dust-400: #7d7263;
   --fig-dust-500: #4e463c;
+  /* Plate I's lawn and the one turbid tone between it and a clearing. Figure fills only, never a
+     page surface (seat, 2026-09-22); check:invariants section 32 holds them to fill. */
+  --fig-lawn: #ddd3c4;
+  --fig-turbid: #e9e1d5;
 
   /* The series slots are the interface; the ramps are primitives. A chart reads --fig-s1 to --fig-s5, never a
      hue or tint index, so one markup is correct in both themes. */
@@ -585,6 +589,9 @@
     --fig-dust-300: #ab9f8f;
     --fig-dust-400: #82776a;
     --fig-dust-500: #564e44;
+    /* As in the light block. */
+    --fig-lawn: #383129;
+    --fig-turbid: #2a2520;
 
     /* Series slots: as in the light block. */
     /* As in the light block. */
@@ -735,6 +742,9 @@
   --fig-dust-300: #ab9f8f;
   --fig-dust-400: #82776a;
   --fig-dust-500: #564e44;
+  /* As in the light block. */
+  --fig-lawn: #383129;
+  --fig-turbid: #2a2520;
 
   /* As in the light block. */
   /* As in the light block. */
