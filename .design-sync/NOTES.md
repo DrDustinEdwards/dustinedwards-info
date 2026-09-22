@@ -204,8 +204,8 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 - **The Capsid exports carry design law the repo does not.** Rulings 122, 123
   and 124 (the closed colour system, Paper and Plate, light touches only glass)
   reach the canvas ONLY through
-  `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because
-  `decisions-vol-19.md` is not an exported document and conventions.md does not
+  `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because no
+  `decisions-vol-*.md` is an exported document and conventions.md does not
   restate them. Two consequences: `build-capsid-guidelines.mjs` must run before
   `check:guidelines` or the export directory is missing and the gate fails, and
   a ruling added to the volume after a sync is invisible to the canvas until
