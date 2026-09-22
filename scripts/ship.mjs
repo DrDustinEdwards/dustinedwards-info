@@ -38,6 +38,7 @@ import {
   readinessVerdict,
 } from "./lib/readiness.mjs";
 import { retryRead } from "./lib/retry.mjs";
+import { driftCount, searchCounts } from "./lib/sync-verdict.mjs";
 import {
   ASK_POLL_INTERVAL_MS,
   ASK_POLL_WINDOW_MS,
@@ -781,13 +782,15 @@ announce("Sync content to remote D1");
 let renderDriftMiss = "";
 
 const sync = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
+/** The sync that wrote last, whose output is the verdict: the confirming run when there was one. */
+let standing = sync;
 if (sync.code !== 0) {
   /*
    * Render drift finishes every write and stands as a miss; any other nonzero refuses.
    * Told apart by the drift line's count, since the exit code carries one bit.
    */
-  const driftLine = sync.text.match(/sync:content drift: .*render-drift=(\d+)/);
-  if (driftLine && Number(driftLine[1]) > 0) {
+  const drift = driftCount(sync.text);
+  if (drift !== null && drift > 0) {
     const slugs = sync.text.match(/RENDER DRIFT on \d+ slug\(s\): ([^.]*)\./);
     const named = slugs ? slugs[1] : "unnamed slug(s)";
 
@@ -797,15 +800,19 @@ if (sync.code !== 0) {
      */
     console.log(`  render drift on ${named}: converged, confirming with a second sync`);
     const confirm = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
-    const confirmLine = confirm.text.match(/sync:content drift: .*render-drift=(\d+)/);
+    standing = confirm;
+    const confirmDrift = driftCount(confirm.text);
 
-    if (!confirmLine) {
+    if (confirmDrift === null) {
       refuse(
         "the confirming sync did not report a drift line",
         "The first sync converged D1 and the second could not be read, so whether " +
           "the drift cleared is UNKNOWN. Re-run `npm run ship`.",
       );
-    } else if (Number(confirmLine[1]) === 0) {
+    } else if (confirmDrift === 0) {
+      if (confirm.code !== 0) {
+        refuse("the confirming sync failed", "D1 may be partially written. Re-run `npm run ship`.");
+      }
       console.log(
         `  confirmed benign: the second sync reads render-drift=0, so D1 carried a ` +
           `render from the previously deployed Worker (ruling 30) and the converge ` +
@@ -815,7 +822,7 @@ if (sync.code !== 0) {
       renderDriftMiss =
         `render drift on ${named} SURVIVED a converge write: the first sync wrote ` +
         `the build's render to every row and a second sync still reads ` +
-        `render-drift=${confirmLine[1]}. This is not the ordering artifact of ruling ` +
+        `render-drift=${confirmDrift}. This is not the ordering artifact of ruling ` +
         `30, which clears on the second run. Either the write is not taking or ` +
         `something is rewriting render_hash behind the sync.`;
       console.log(`  MISSED: ${renderDriftMiss}`);
@@ -825,9 +832,12 @@ if (sync.code !== 0) {
   }
 }
 
-/* The counts line is the proof. `COUNT(*)` on an FTS index reads through to its content table. */
-const counts = (sync.text.match(/search_docs=(\d+)\s+identity=(\d+)\s+prose=(\d+)/) ?? []).slice(1);
-if (counts.length !== 3) {
+/*
+ * The counts line is the proof, read from the sync that wrote last. `COUNT(*)` on an FTS index
+ * reads through to its content table.
+ */
+const counts = searchCounts(standing.text);
+if (!counts) {
   refuse(
     "the sync printed no search_docs/identity/prose line",
     "The write may have landed. Verify the index by hand before trusting it.",
