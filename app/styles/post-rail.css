@@ -104,10 +104,12 @@
 
 @media (min-width: 48rem) {
   .post-toc {
-    /* A plain 20px: the header is static and scrolls away, so there is nothing to subtract and
-       `--bar-h` is gone. Do not reintroduce it. */
+    /* THE HEADER IS STICKY SINCE RULING 126, so the rail clears it. The plain 20px that sat
+       here was correct while the header scrolled away, and the sentence it cited is gone from
+       public-chrome.css. `--header-h` is the one owner of the height; this adds the same 20px
+       on top of it rather than restating either number. */
     position: sticky;
-    top: 1.25rem;
+    top: calc(var(--header-h) + 1.25rem);
   }
 }
 
