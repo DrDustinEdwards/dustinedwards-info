@@ -23,15 +23,21 @@
  * PUSH-TRIGGERED RUNS ONLY, derived rather than named: filtering on the workflow file would go
  * stale the day a second push workflow lands.
  *
+ * THE `state` FIELD IS THE REFUSAL, STRUCTURALLY. `ok` says may-it-deploy and every refusal
+ * looks alike through it, but ship treats one of them differently: a run still in flight is worth
+ * WAITING for, and the other three are not. A caller telling those apart by matching `why` would
+ * be reading prose as an interface, and this file's wording would become load-bearing.
+ *
  * @param {unknown} payload the parsed GitHub `actions/runs` response
  * @param {string} sha for the message, short or full
- * @returns {{ ok: boolean, why: string, remedy: string }}
+ * @returns {{ ok: boolean, state: "green" | "running" | "failed" | "no-run" | "unparseable", why: string, remedy: string }}
  */
 export function ciVerdict(payload, sha) {
   const runs = /** @type {any} */ (payload)?.workflow_runs;
   if (!Array.isArray(runs)) {
     return {
       ok: false,
+      state: "unparseable",
       why: `the GitHub API response carried no workflow_runs array for ${sha}`,
       remedy:
         "That is an answer this check did not understand, not an empty result, so it " +
@@ -44,6 +50,7 @@ export function ciVerdict(payload, sha) {
   if (push.length === 0) {
     return {
       ok: false,
+      state: "no-run",
       why: `no CI run exists for ${sha}`,
       remedy:
         `GitHub reports ${runs.length} run(s) for this sha and none triggered by a push. ` +
@@ -56,6 +63,7 @@ export function ciVerdict(payload, sha) {
   if (unfinished.length > 0) {
     return {
       ok: false,
+      state: "running",
       why: `CI is still running for ${sha}`,
       remedy:
         `${unfinished.map((r) => `${r.name} is ${r.status}`).join(", ")}. A run that is ` +
@@ -68,6 +76,7 @@ export function ciVerdict(payload, sha) {
   if (failed.length > 0) {
     return {
       ok: false,
+      state: "failed",
       why: `CI did not pass for ${sha}`,
       remedy:
         `${failed.map((r) => `${r.name} concluded ${r.conclusion}`).join(", ")}. ` +
@@ -78,6 +87,7 @@ export function ciVerdict(payload, sha) {
 
   return {
     ok: true,
+    state: "green",
     why: push.map((r) => `${r.name}: ${r.conclusion}`).join(", "),
     remedy: "",
   };

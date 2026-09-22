@@ -84,6 +84,42 @@ test("a run still in progress refuses: green so far is not green", () => {
   assert.match(v.remedy, /green so far is not a green run/);
 });
 
+/*
+ * THE STATE FIELD IS AN INTERFACE, so it is asserted rather than left to whoever reads `why`.
+ * Ship waits on exactly one of the four refusals, a run in flight, and treats the other three as
+ * reasons to stop waiting. Telling them apart by matching the prose above would make every
+ * sentence in ci-status.mjs load-bearing, and the wording is not the contract.
+ */
+test("every verdict carries the state that names it, refusals included", () => {
+  const cases = [
+    [{ workflow_runs: [green] }, "green", true],
+    [{ workflow_runs: [{ ...green, status: "in_progress", conclusion: null }] }, "running", false],
+    [{ workflow_runs: [{ ...green, conclusion: "failure" }] }, "failed", false],
+    [{ workflow_runs: [] }, "no-run", false],
+    [{ workflow_runs: "nope" }, "unparseable", false],
+  ];
+
+  for (const [payload, state, ok] of cases) {
+    const v = ciVerdict(payload, SHA);
+    assert.equal(v.state, state, `this payload must report state ${state}`);
+    assert.equal(v.ok, ok, `state ${state} must ${ok ? "" : "not "}deploy`);
+  }
+
+  // The five states are distinct. One constant returned everywhere would satisfy each
+  // assertion above taken on its own.
+  const states = cases.map(([payload]) => ciVerdict(payload, SHA).state);
+  assert.equal(new Set(states).size, cases.length);
+});
+
+test("only a run in flight is the waitable refusal", () => {
+  // Ship polls on `running` and stops on the rest. A second refusal reading as `running` would
+  // make ship wait out its whole timeout on a commit that had already failed.
+  const failed = ciVerdict({ workflow_runs: [{ ...green, conclusion: "failure" }] }, SHA);
+  const none = ciVerdict({ workflow_runs: [] }, SHA);
+
+  for (const v of [failed, none]) assert.notEqual(v.state, "running");
+});
+
 test("one green run does not excuse a second failing one", () => {
   const v = ciVerdict(
     { workflow_runs: [green, { ...green, name: "Other", conclusion: "failure" }] },
