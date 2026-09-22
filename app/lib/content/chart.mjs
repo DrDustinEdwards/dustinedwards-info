@@ -32,7 +32,7 @@ import { parseHTML } from "linkedom";
 export const CHART_TYPES = ["bar", "line", "dot", "area"];
 
 /**
- * Series colours, in the ratified ladder order from `dustinedwards/design-tokens.md`.
+ * Series colors, in the ratified ladder order from `dustinedwards/design-tokens.md`.
  *
  * Tokens only, never hexes. One render has to serve both themes: the custom
  * property passes into the SVG verbatim and resolves per theme in the browser,
@@ -135,7 +135,7 @@ function parseChartCsv(text) {
  *
  * Every failure here is a build failure that names the problem. That is the
  * whole point of the directive: an unnamed chart, or one whose series cannot be
- * told apart without colour vision, must not be publishable.
+ * told apart without color vision, must not be publishable.
  *
  * @param {Record<string, string>} attrs
  * @param {string} csv
@@ -200,7 +200,7 @@ export function buildChartModel(attrs, csv) {
   }
   if (yColumns.length > CHART_SERIES_TOKENS.length) {
     throw new Error(
-      `:::chart has ${yColumns.length} series but the ratified palette has ${CHART_SERIES_TOKENS.length} chart colours`,
+      `:::chart has ${yColumns.length} series but the ratified palette has ${CHART_SERIES_TOKENS.length} chart colors`,
     );
   }
 
@@ -272,7 +272,7 @@ export function buildChartModel(attrs, csv) {
  * Builds the Plot marks for a model.
  *
  * Multi-series charts get DIRECT labels rather than a legend: the label sits on
- * the series it names, so the reader never has to match a colour to a key. That
+ * the series it names, so the reader never has to match a color to a key. That
  * is design-tokens.md rule 3, and it is why no legend is emitted anywhere here.
  *
  * @param {ReturnType<typeof buildChartModel>} model
@@ -334,7 +334,7 @@ function marksFor(model) {
  * is the shape of the data structure rather than the name of the thing measured.
  * The labels are put back to the author's own column names here.
  *
- * A multi-series chart gets NO y label, because its series are directly labelled
+ * A multi-series chart gets NO y label, because its series are directly labeled
  * and the columns they came from measure different things; inventing one name
  * for all of them would be a claim the data does not make.
  *
@@ -461,7 +461,7 @@ export function renderChartHast(model, captionChildren) {
   }));
 
   // Plot injects a <style> block per chart carrying `--plot-background: white`,
-  // the one colour literal in its output and the only thing standing between
+  // the one color literal in its output and the only thing standing between
   // this pipeline and a tokens-only rule. The equivalent rules live once in
   // app.css under .chart-figure instead, which also stops N charts on a page
   // shipping N copies of the same stylesheet.

@@ -5,7 +5,7 @@
  *
  * The fragment was dropped, so the scriptless toggle returned a reader to the
  * TOP of whatever they were reading. On a long post that is the worst place to
- * land: the reader was somewhere specific, asked for a colour, and was sent
+ * land: the reader was somewhere specific, asked for a color, and was sent
  * back to the beginning. The scripted path never had the problem, because it
  * never navigates, so the cost fell entirely on the readers the fallback exists
  * for.
@@ -14,7 +14,7 @@
  *
  * This function's other job is refusing a hostile `Referer`. Keeping the hash
  * is a widening, and a widening is exactly when the refusals are worth
- * asserting: the whole file is here rather than only the new behaviour, so a
+ * asserting: the whole file is here rather than only the new behavior, so a
  * later edit cannot trade one for the other. It was private to a TypeScript
  * route until 2026-08-28, which is why none of this was covered.
  *

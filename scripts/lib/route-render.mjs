@@ -146,7 +146,7 @@ export async function renderRoute(mod, options) {
            * DECLARED INITIAL CLIENT STATE, spread last so it can seed a route's own `useState`. The harness
            * renders ONE static pass and dispatches no event, so any UI behind client state is invisible, and
            * an admin mutation surface the gate cannot see is the class this exists to close. The route takes
-           * an OPTIONAL prop with a production default, so shipped behaviour is unchanged; seeding from
+           * an OPTIONAL prop with a production default, so shipped behavior is unchanged; seeding from
            * loader data would put a field in the server contract that no loader returns.
            */
           ...options.props,

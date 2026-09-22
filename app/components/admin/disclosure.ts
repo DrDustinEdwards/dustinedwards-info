@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 /**
- * The three behaviours a bare `<details>` disclosure does not have.
+ * The three behaviors a bare `<details>` disclosure does not have.
  *
  * Shared by `OverflowMenu` and `RowMenu`, because two implementations of Escape, arrow keys and
  * close-on-outside-click would drift the first time one was fixed.

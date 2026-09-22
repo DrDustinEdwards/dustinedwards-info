@@ -1,7 +1,7 @@
 ---
-title: "Swatches in prose: the colours the pipeline has to survive"
+title: "Swatches in prose: the colors the pipeline has to survive"
 slug: swatches-in-prose-fixture
-description: "A pipeline fixture carrying every form the swatch directive accepts: the three hex lengths, a prose label, both spellings of one colour, a chip against each surface, and the directive written inside a code fence where it must stay text."
+description: "A pipeline fixture carrying every form the swatch directive accepts: the three hex lengths, a prose label, both spellings of one color, a chip against each surface, and the directive written inside a code fence where it must stay text."
 date: 2026-09-08
 tags: [design, color]
 draft: true
@@ -23,7 +23,7 @@ Six digits, the ordinary case, and the one every other post will use:
 :swatch[#4F2D7F] is the ratified brand purple.
 
 Three digits, which the directive expands nowhere and passes through as written:
-:swatch[#ABC] is a short hex, and the chip beside it is the colour a browser
+:swatch[#ABC] is a short hex, and the chip beside it is the color a browser
 resolves it to.
 
 Eight digits, carrying alpha: :swatch[#4F2D7FCC] is the same purple at 80
@@ -33,7 +33,7 @@ precomputed solid.
 
 ## A label that is not the hex
 
-When the colour has a name worth reading, the label carries the name and the
+When the color has a name worth reading, the label carries the name and the
 attribute carries the value: :swatch[Bluebonnet purple]{color=#4F2D7F} and
 :swatch[Prairie gold]{color=#E0A428} both render a chip beside a word rather
 than beside a number.
@@ -71,7 +71,7 @@ a string about the directive, not a use of it.
 
 ## What is refused
 
-Not shown, because each one fails the build by design: a named colour, an
+Not shown, because each one fails the build by design: a named color, an
 `rgb()` call, a `color-mix()` expression, `currentColor`, and any hex that is
 not three, six or eight digits. The refusals are exercised by the plants in the
 gate rather than by this file, since a fixture carrying one could not be

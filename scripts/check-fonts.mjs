@@ -191,7 +191,7 @@ function fontFor(file) {
 
 // NAMESPACED FAMILIES are the one case where the declared family and the binary's name table
 // legitimately differ: the serif is namespaced so a reader with the retail family installed
-// cannot put a different file in the resolution path. This map keeps that from being a licence,
+// cannot put a different file in the resolution path. This map keeps that from being a license,
 // the declaration still being pinned to ONE binary family. It polices itself both directions.
 /** @type {Map<string, string>} declared family -> the family its file must report */
 const NAMESPACED = new Map([["Source Serif 4 Web", "Source Serif 4"]]);
@@ -339,7 +339,7 @@ for (const req of variationRequests) {
 
   // A level names its own family, so it is checked against THAT face and no
   // other. A bare `font-variation-settings` names none, so it keeps the older
-  // behaviour of being checked against every carrier of the axis.
+  // behavior of being checked against every carrier of the axis.
   const carriers = faces.filter(
     (f) => f.axes[req.axis] && (wanted === null || f.b.family === wanted),
   );

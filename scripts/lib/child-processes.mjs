@@ -13,7 +13,7 @@ import { dirname } from "node:path";
 const isWindows = process.platform === "win32";
 
 /**
- * Command lines are compared in ONE normalised form: the same process is spelled differently by
+ * Command lines are compared in ONE normalized form: the same process is spelled differently by
  * the two things that report it, and a needle must not miss for a reason unrelated to identity.
  *
  * @param {string | null | undefined} command
@@ -209,7 +209,7 @@ export class ChildRegistry {
 
   /**
    * Record a child. `needles` are what the live command line must STILL contain for a later run to
-   * kill this pid, so they name the process rather than describing it: normalised, and specific
+   * kill this pid, so they name the process rather than describing it: normalized, and specific
    * enough that a process inheriting the pid cannot satisfy them by accident.
    *
    * @param {number | undefined} pid

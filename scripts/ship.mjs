@@ -337,7 +337,7 @@ console.log(`  HEAD is ${sha}`);
  * NEVER PUT THE STATED-ABSENCE PLACEHOLDERS LOOP BACK. It iterated an empty array and printed
  * that nothing had been checked, kept as a mechanism for a successor that never came: a dead
  * loop kept for a hypothetical is a shape, not a mechanism. Writing it again with a real
- * subject in hand produces a better check than reviving a generalisation drawn from one case.
+ * subject in hand produces a better check than reviving a generalization drawn from one case.
  * The property it guarded is not lost, and is asserted on the rendered page by check:admin-ui.
  */
 
@@ -402,10 +402,10 @@ let early = await readCi();
  * A RUN IN FLIGHT IS WORTH WAITING FOR. Falling straight through to the local tier meant racing
  * CI to grade the same commit, on the host where the parallel tier is the thing that dies; CI is
  * read again at the green step regardless, so the local run was work whose result could not
- * authorise anything. Branching on `state` rather than on the wording of `why`, which would make
+ * authorize anything. Branching on `state` rather than on the wording of `why`, which would make
  * ci-status.mjs's prose an interface.
  *
- * Bounded, and the bound expires into the OLD behaviour rather than into a refusal: a slow queue
+ * Bounded, and the bound expires into the OLD behavior rather than into a refusal: a slow queue
  * is not a reason to refuse a deploy that the green step is about to judge anyway.
  */
 const CI_WAIT_MS = 15 * 60 * 1000;
@@ -566,7 +566,7 @@ if (ciGreenEarly) {
 announce("CI must be green for this exact commit");
 
 /*
- * Read fresh on every path, never reused from the early read, so no deploy is authorised by
+ * Read fresh on every path, never reused from the early read, so no deploy is authorized by
  * a stale verdict.
  */
 console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);

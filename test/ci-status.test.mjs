@@ -65,7 +65,7 @@ test("PLANT 2: a fabricated failure conclusion refuses and names it", () => {
   assert.match(v.remedy, /no override/);
 });
 
-test("cancelled and timed_out are not failures and are not passes either", () => {
+test("canceled and timed_out are not failures and are not passes either", () => {
   for (const conclusion of ["cancelled", "timed_out", "action_required", "skipped", "neutral"]) {
     const v = ciVerdict({ workflow_runs: [{ ...green, conclusion }] }, SHA);
     assert.equal(v.ok, false, `${conclusion} must not deploy`);
@@ -172,8 +172,8 @@ test("a non-2xx API answer throws with its status", async () => {
    *
    * Two separate faults, and the second is the one worth naming. It was FLAKY,
    * and it was in the OFFLINE TIER, whose stated contract is "safe on a plane".
-   * A behavioural test that needs the public internet to pass is not offline,
-   * and this is the one gate in the suite that asserts behaviour, so its
+   * A behavioral test that needs the public internet to pass is not offline,
+   * and this is the one gate in the suite that asserts behavior, so its
    * flakiness lands on `ship`, which runs that tier before every deploy. A
    * transient at the wrong moment refuses a deploy for a reason that has
    * nothing to do with the deploy.

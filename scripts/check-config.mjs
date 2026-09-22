@@ -142,14 +142,14 @@ function comparePair({ label, realPath, examplePath, floor, measured, settingKey
   );
 
   /*
-   * AND A FLOOR, not just non-empty: what `> 0` cannot see is `surfaceOf()` ceasing to recognise a
+   * AND A FLOOR, not just non-empty: what `> 0` cannot see is `surfaceOf()` ceasing to recognize a
    * TYPE, so both sides drop it and compare equal.
    */
   assertThat(
     realSurface.size >= floor,
     `${label}'s binding surface parsed to its full size`,
     `surfaceOf() found ${realSurface.size}, floor ${floor}, measured ${measured}. A binding ` +
-      `type it stopped recognising drops out of BOTH sides and compares equal.`,
+      `type it stopped recognizing drops out of BOTH sides and compares equal.`,
   );
 
   for (const [key, settings] of realSurface) {

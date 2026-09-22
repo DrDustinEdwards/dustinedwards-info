@@ -143,7 +143,7 @@ function Authors({ authors }: { authors: string[] }) {
   /*
    * EVERY AUTHOR, VISIBLE. It is what `citation_author` asserts, and a page whose
    * visible content disagrees with its own meta tags is the thing Scholar
-   * penalises.
+   * penalizes.
    */
   return (
     <p className="paper-authors">
@@ -224,7 +224,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
             {paper.isOpenAccess ? (
               <>
                 <b>open access</b>
-                licence
+                license
               </>
             ) : null}
           </p>

@@ -53,7 +53,7 @@ import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
  * is what is available: a delimiter here is not a stronger fence, it is a
  * broken search.
  *
- * The defence that actually closed the audit's finding never depended on the
+ * The defense that actually closed the audit's finding never depended on the
  * fence. An injected question retrieves nothing, and an answer with no chunks
  * behind it is replaced by `guardAnswerStream` and refused by the cache. That
  * is measured too: the audit's own injection question returns zero chunks bare,
@@ -222,7 +222,7 @@ export function citedSlugs(chunks) {
  * through byte for byte. If the chunks event never arrives, the buffer is
  * flushed on close and nothing is substituted, which is the fail-open
  * direction and is deliberate: an upstream that changed its frame order should
- * degrade to the previous behaviour rather than silently answer every question
+ * degrade to the previous behavior rather than silently answer every question
  * with "I could not find anything".
  *
  * It runs BEFORE `teeForCache`, so what the cache accumulates is exactly what

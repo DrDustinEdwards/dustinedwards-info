@@ -4,7 +4,7 @@
     "against what the files themselves contain, so two sources argue and neither",
     "restates the other. This is an EXPECTATION, deliberately not generator",
     "output: if build-icons.mjs also wrote this file, a regeneration with the",
-    "wrong tile would update both sides and the colour probe could never fire.",
+    "wrong tile would update both sides and the color probe could never fire.",
     "",
     "It is NOT content/generated/assets.json. That manifest carries paths only,",
     "on the documented ground (build-assets.mjs) that bytes and dimensions",

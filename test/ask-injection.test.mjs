@@ -108,7 +108,7 @@ test("the substituted answer carries an empty chunks frame, so the client render
 test("a stream that never sends a chunks event is passed through, not swallowed", async () => {
   /*
    * FAIL OPEN, deliberately. If the upstream changes its frame order, the
-   * right degradation is the previous behaviour, not answering every question
+   * right degradation is the previous behavior, not answering every question
    * with "I could not find anything" while every gate stays green.
    */
   const encoder = new TextEncoder();

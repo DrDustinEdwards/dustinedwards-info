@@ -7,10 +7,10 @@
  * attribute shipped `^[a-z0-9]+(?:-[a-z0-9]+)*$` with its anchors intact.
  *
  * WHY NOTHING CAUGHT IT is the part worth holding on to: an HTML `pattern`
- * anchors implicitly, so the extra anchors changed no behaviour at all. It
+ * anchors implicitly, so the extra anchors changed no behavior at all. It
  * typechecked, every gate stayed green, and the rendered form validated exactly
  * the same strings. The only thing that was false was the comment above it. A
- * behavioural assertion could not have found this; the assertion below is about
+ * behavioral assertion could not have found this; the assertion below is about
  * the DERIVATION, which is where the mistake actually was.
  *
  * @see app/lib/content/pipeline.mjs

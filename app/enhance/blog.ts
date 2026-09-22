@@ -359,7 +359,7 @@ function footnotePreviews() {
 function openOverlay(src: string, alt: string, restoreFocus: () => void) {
   /*
    * A NATIVE <dialog>, OPENED WITH showModal(). It gives modality, Escape, focus containment and the
-   * top layer from the platform, which is four hand-rolled behaviours removed rather than four written
+   * top layer from the platform, which is four hand-rolled behaviors removed rather than four written
    * correctly. Focus return is the platform's too, and `restoreFocus` is kept because the OPENER here
    * is not always the element focus should land on.
    */
@@ -368,7 +368,7 @@ function openOverlay(src: string, alt: string, restoreFocus: () => void) {
   /*
    * A NAME, because a dialog announces itself and then has nothing to say. The image's alt is the
    * only description there is; when the author left it empty the image is decorative, so the dialog is
-   * labelled generically rather than with an empty string that announces as "dialog" and nothing.
+   * labeled generically rather than with an empty string that announces as "dialog" and nothing.
    */
   dialog.setAttribute("aria-label", alt || "Full size image");
   if (reduceMotion.matches) dialog.dataset.reduced = "true";
@@ -530,7 +530,7 @@ function selectionLink() {
     button.textContent = SELECTION_LABEL;
     const block = blockOf(selection.getRangeAt(0).endContainer);
     /*
-     * ONLY WHEN IT IS NOT ALREADY THERE, and this is not an optimisation. `insertBefore` REMOVES a
+     * ONLY WHEN IT IS NOT ALREADY THERE, and this is not an optimization. `insertBefore` REMOVES a
      * node that already has a parent before inserting it, so moving the button to the place it is
      * already in detaches it: `pointerup` fires between mousedown and click, and a target detached
      * in that window never receives the click at all. Measured in a browser; the button looked

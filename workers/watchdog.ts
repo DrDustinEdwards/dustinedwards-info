@@ -231,7 +231,7 @@ async function repair(
  * and an HTML part would be a second copy of the same words to keep in step.
  *
  * Returns whether it sent, so a failure to notify is a log line rather than nothing at all. There is
- * no further escalation to reach for: what remains is the ageing health tile and the hourly run.
+ * no further escalation to reach for: what remains is the aging health tile and the hourly run.
  */
 async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
   try {

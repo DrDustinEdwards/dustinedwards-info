@@ -259,7 +259,7 @@ test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping",
 
 test("folder sections render in TABLE order, roster before publications", () => {
   // Not first-row order: the table is written so the sections a reader wants
-  // most come first, and the render honours that.
+  // most come first, and the render honors that.
   const out = groupRows(
     [
       { key: "/publications/a.pdf", uploaded: null },
@@ -430,7 +430,7 @@ test("a document title is the words, without the slug punctuation or extension",
   assert.equal(docTitle("poster_rubric.pdf"), "poster rubric");
 });
 
-test("the title is NOT capitalised, because casing a filename asserts authorship", () => {
+test("the title is NOT capitalized, because casing a filename asserts authorship", () => {
   const out = docTitle("edwards-2024-phage-genomics.pdf");
   assert.equal(out, out.toLowerCase(), "title casing would guess at proper nouns");
 });

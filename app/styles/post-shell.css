@@ -272,7 +272,7 @@
 }
 
 /* Link states, named tokens throughout. Underline on HOVER only, so a paragraph of prose is not a
-   fence; the colour carries the affordance at rest. */
+   fence; the color carries the affordance at rest. */
 .post-body .prose a {
   color: var(--brand);
   text-decoration: none;

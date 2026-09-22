@@ -83,7 +83,7 @@ directions by `check:llms`, so that gate goes RED between 3.1 and this step.
 proxy, not a required step.
 
 **3.8 HTML caching is a DECISION, not a default.** Cache Rules become reachable
-on a proxied zone, which is the only way origin `Vary` is honoured here. See
+on a proxied zone, which is the only way origin `Vary` is honored here. See
 `dustinedwards/workers-cache-vary.md` for what the Workers cache key does and
 does not include.
 

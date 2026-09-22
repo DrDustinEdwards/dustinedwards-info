@@ -22,7 +22,7 @@ export const MEDIA_PAGE_SIZE = 24;
  */
 
 /**
- * Widths the thumbnail route will honour. A CLOSED SET, because the width lands in a cache key and
+ * Widths the thumbnail route will honor. A CLOSED SET, because the width lands in a cache key and
  * an open one lets any caller mint unlimited distinct transforms of the same object, each a billed
  * transformation.
  */

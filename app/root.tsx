@@ -159,7 +159,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
    * hard rule 4's question answered the wrong way.
    *
    * NOT React's stylesheet hoisting, which was tried: a `precedence`-managed sheet
-   * is lifted to the TOP of `<head>`, above the colour-scheme meta, and that signal
+   * is lifted to the TOP of `<head>`, above the color-scheme meta, and that signal
    * is load-bearing exactly because it arrives BEFORE the first stylesheet request.
    *
    * THE ID LIST IS A MIRROR, and `check:page-payload` reconciles it in both
@@ -214,7 +214,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {/*
          * AFTER `<Links />`, so the math rules land last and a site rule wins over the
          * upstream katex rule it overrides. No `precedence`: that attribute makes React
-         * lift the element above the colour-scheme meta.
+         * lift the element above the color-scheme meta.
          */}
         {linksMath ? <link rel="stylesheet" href={katexCssUrl} /> : null}
       </head>

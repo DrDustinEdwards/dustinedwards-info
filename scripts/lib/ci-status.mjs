@@ -16,7 +16,7 @@
  *     what a truthy `every()` over an empty array gets wrong, silently, forever.
  *   - **still running**: the conclusion is null while a run is in flight, and green so far is not
  *     green.
- *   - **not success**: named explicitly, because cancelled, timed out and action required are
+ *   - **not success**: named explicitly, because canceled, timed out and action required are
  *     none of them failures and none of them passes.
  *   - **unparseable payload**: an answer this function did not understand, not an empty result.
  *
@@ -115,7 +115,7 @@ export async function fetchCiRuns({ owner, repo, sha, token = "", apiBase = "htt
      * **THE REPOSITORY IS PRIVATE**, so a 404 here is almost always an authentication problem rather
      * than a missing repo, and saying so is the difference between a one-minute fix and an afternoon:
      * GitHub answers 404 rather than 403 for a private resource you may not see, so an unauthenticated
-     * caller is told the repo does not exist. A token is REQUIRED, not an optimisation.
+     * caller is told the repo does not exist. A token is REQUIRED, not an optimization.
      */
     const hint =
       response.status === 404 && !token

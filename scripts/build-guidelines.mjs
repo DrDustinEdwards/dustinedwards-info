@@ -93,7 +93,7 @@ const FILES = [
     title: "Themes and contrast",
     blurb:
       "Both themes are first class. A themed container owes both a background and a " +
-      "text colour, and the contrast pairs here are measured rather than assumed.",
+      "text color, and the contrast pairs here are measured rather than assumed.",
     needles: [
       /\bdata-theme\b/i,
       /\bprefers-color-scheme\b/i,
@@ -159,7 +159,7 @@ bundles the no-hydration law requires.
 They are described here anyway. Not being able to compose the header is a
 different thing from not being allowed to know what it is, and a redesign that
 did not know produced a header with invented tokens, a wordmark that turned
-visited-coloured, and a search control that did not work.
+visited-colored, and a search control that did not work.
 
 **The header is not open for redesign.** It is restored byte-identical to a
 specific commit on Dustin's order, and two standing design rulings are SUSPENDED

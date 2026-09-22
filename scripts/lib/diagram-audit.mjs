@@ -2,7 +2,7 @@
  * The tokens-only audit over a rendered diagram SVG, run by the build on every asset it writes and
  * by the gate over every asset already committed.
  *
- * BOUNDARY: it asserts that every colour a reader can SEE comes from the palette, computing
+ * BOUNDARY: it asserts that every color a reader can SEE comes from the palette, computing
  * reachability structurally rather than from an allowlist, so what it cannot judge is a rule or an
  * attribute this document never paints with.
  */
@@ -11,7 +11,7 @@ import { parseHTML } from "linkedom";
 
 import { normalizeHex } from "./tokens.mjs";
 
-/** Properties and attributes whose value is a colour. */
+/** Properties and attributes whose value is a color. */
 const COLOUR_PROPERTIES = new Set([
   "fill",
   "stroke",
@@ -27,7 +27,7 @@ const COLOUR_PROPERTIES = new Set([
 ]);
 
 /**
- * Values that name no colour at all. `currentColor` is included because it resolves to the
+ * Values that name no color at all. `currentColor` is included because it resolves to the
  * `color` property, which is itself audited wherever it is set.
  */
 const NON_COLOUR_VALUES = new Set([
@@ -73,7 +73,7 @@ export function cssRules(text) {
 }
 
 /**
- * Every colour-carrying declaration in a rule body or an inline style.
+ * Every color-carrying declaration in a rule body or an inline style.
  *
  * @param {string} body
  * @returns {Array<{ property: string, value: string }>}
@@ -89,12 +89,12 @@ function colourDeclarations(body) {
 }
 
 /**
- * Decides whether one colour value is allowed, fail closed by construction: the value must BE a
- * palette colour, a keyword naming no colour, or a paint reference. Anything else is reported,
+ * Decides whether one color value is allowed, fail closed by construction: the value must BE a
+ * palette color, a keyword naming no color, or a paint reference. Anything else is reported,
  * which is what catches the forms a hex-hunting regex misses.
  *
  * @param {string} value
- * @param {Set<string>} palette normalised hexes
+ * @param {Set<string>} palette normalized hexes
  */
 function colourProblem(value, palette) {
   const cleaned = value.replace(/!important/gi, "").trim();
@@ -105,14 +105,14 @@ function colourProblem(value, palette) {
   if (/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(cleaned)) {
     return palette.has(normalizeHex(cleaned)) ? null : `${cleaned} is not a ratified token value`;
   }
-  return `${cleaned} is not a colour token`;
+  return `${cleaned} is not a color token`;
 }
 
 /**
  * Audits one rendered SVG against one theme's resolved palette.
  *
  * @param {string} svg
- * @param {string[]} paletteHexes every colour this theme is allowed to use
+ * @param {string[]} paletteHexes every color this theme is allowed to use
  * @returns {{ checked: number, skippedRules: number, overridden: number, problems: string[] }}
  */
 export function auditDiagramSvg(svg, paletteHexes) {

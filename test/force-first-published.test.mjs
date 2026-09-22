@@ -107,7 +107,7 @@ test("removes the key when the value is null", () => {
 
 test("an unquoted YAML date survives as the same day", () => {
   // gray-matter hands this back as a Date, not a string, which is why the
-  // comparison in the implementation normalises before comparing.
+  // comparison in the implementation normalizes before comparing.
   const dated = PLAIN.replace("draft: false", "draft: false\ndate: 2026-07-30");
   const out = roundTrip(dated, "2026-08-28");
   assert.equal(fields(out).date, "2026-07-30");

@@ -64,7 +64,7 @@ test("a slug that is nothing but the suffix keeps its own name as the base", () 
   assert.equal(copySlugCandidates("copy")[0], "copy-copy");
 });
 
-test("the limit is honoured, so the caller's probe loop is bounded", () => {
+test("the limit is honored, so the caller's probe loop is bounded", () => {
   assert.equal(copySlugCandidates("a-post", 1).length, 1);
   assert.equal(copySlugCandidates("a-post", 9).length, 9);
 });

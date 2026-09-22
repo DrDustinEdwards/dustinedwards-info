@@ -10,7 +10,7 @@
  * rather than a local run. This is the pass before the push, not a replacement for the suite.
  *
  * UNMAPPED FALLS BACK TO THE WHOLE OFFLINE TIER, which is the one decision that keeps this honest:
- * a mapping that quietly skipped a path it did not recognise would report a clean run over checks
+ * a mapping that quietly skipped a path it did not recognize would report a clean run over checks
  * that never executed, which is hard rule 10's class of failure.
  */
 
@@ -39,7 +39,7 @@ const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx)$/,
-    gates: ["check:types", "check:invariants", "check:features", "check:microformats", "check:urls", "check:asset-names"],
+    gates: ["check:types", "check:invariants", "check:features", "check:microformats", "check:urls", "check:asset-names", "check:spelling"],
   },
   {
     what: "the schema or a migration",
@@ -54,7 +54,7 @@ const MAP = [
   {
     what: "a post or other content",
     test: /^content\/.+/,
-    gates: ["check:content", "check:search", "check:charts", "check:diagrams", "check:llms"],
+    gates: ["check:content", "check:search", "check:charts", "check:diagrams", "check:llms", "check:spelling"],
   },
   {
     what: "publication data",
@@ -89,7 +89,7 @@ const MAP = [
   {
     what: "a skill or a tracked document",
     test: /^(\.claude\/skills\/.+\.md|[A-Z]+\.md|docs\/.+\.md)$/,
-    gates: ["check:invariants"],
+    gates: ["check:invariants", "check:spelling"],
   },
   {
     what: "a test",

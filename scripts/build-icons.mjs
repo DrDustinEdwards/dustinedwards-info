@@ -99,7 +99,7 @@ function ogCard({ width = 1200, height = 630, mark = DARK, tile = TILE } = {}) {
 
 /**
  * favicon.svg, a TILE like everything else, superseding the media-query version. WHAT WAS WRONG
- * WITH IT: the embedded query keyed on the OPERATING SYSTEM's colour scheme while the thing it
+ * WITH IT: the embedded query keyed on the OPERATING SYSTEM's color scheme while the thing it
  * tried to survive is the TAB STRIP's, set by the browser theme, which no media query can see. A
  * tile has no such dependency, and an SVG favicon renders small, so it takes the small-size
  * treatment, from the same padding helper as the rasters.
@@ -133,7 +133,7 @@ function ico(images) {
     dir[o + 1] = size >= 256 ? 0 : size; // height
     dir[o + 2] = 0; // palette size
     dir[o + 3] = 0; // reserved
-    dir.writeUInt16LE(1, o + 4); // colour planes
+    dir.writeUInt16LE(1, o + 4); // color planes
     dir.writeUInt16LE(32, o + 6); // bits per pixel
     dir.writeUInt32LE(data.length, o + 8);
     dir.writeUInt32LE(offset, o + 12);

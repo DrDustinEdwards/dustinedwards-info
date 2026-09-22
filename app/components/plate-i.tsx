@@ -41,7 +41,7 @@ type Plaque = {
   /** The caption's sentence. Stated here so the plate and the caption cannot disagree. */
   reading: string;
   kind: Kind;
-  /** Degrees clockwise from the dish's three o'clock, and distance from its centre. */
+  /** Degrees clockwise from the dish's three o'clock, and distance from its center. */
   ang: number;
   rad: number;
   /** Plaque radius. For `halo` this is the inner clearing and `haloR` the diffuse zone. */
@@ -76,7 +76,7 @@ export const PLAQUES: Plaque[] = [
   {
     label: "iii",
     name: "Bull's-eye",
-    reading: "A clear centre with turbid edges, as lysis slows while the plaque grows.",
+    reading: "A clear center with turbid edges, as lysis slows while the plaque grows.",
     kind: "bullseye",
     ang: -170,
     rad: 145,
@@ -84,7 +84,7 @@ export const PLAQUES: Plaque[] = [
   },
   {
     label: "iv",
-    name: "Turbid centre",
+    name: "Turbid center",
     reading: "A cloudy middle from microcolonies of the earliest lysogens.",
     kind: "turbid-centre",
     ang: 148,
@@ -137,14 +137,14 @@ const DISH_R = 246;
 /** The gap the handoff asks for between a plaque's edge and the circle calling it out. */
 const CALLOUT_GAP = 11;
 /**
- * The inner disc of the bullseye and of the turbid centre, as a fraction of the plaque.
+ * The inner disc of the bullseye and of the turbid center, as a fraction of the plaque.
  *
  * KEPT WELL UNDER THE HALO'S RATIO. A halo is a plaque with a rim around it and a bullseye is a
  * ring with a small middle; drawn at similar fractions the two read as the same object.
  */
 const CORE = 0.42;
 /**
- * Where a leader stops and its numeral sits, both measured from the dish centre.
+ * Where a leader stops and its numeral sits, both measured from the dish center.
  *
  * THE LEADER STOPS AT THE RIM. It is drawn in `--fig-callout`, the step measured against the LAWN,
  * so it never crosses onto a ground it was not measured for; the numeral sits clear of the rim and
@@ -159,7 +159,7 @@ const NUMERAL_AT = 262;
  */
 const VIEW = { x: -44, y: -34, w: 596, h: 606 };
 
-/** Degrees to a unit vector out from the dish centre. */
+/** Degrees to a unit vector out from the dish center. */
 function out(ang: number): { x: number; y: number } {
   const t = (ang * Math.PI) / 180;
   return { x: Math.cos(t), y: Math.sin(t) };
@@ -194,7 +194,7 @@ function mulberry32(seed: number) {
   };
 }
 
-/** A closed polygon through radii sampled around a centre. Straight segments: the edge is jagged. */
+/** A closed polygon through radii sampled around a center. Straight segments: the edge is jagged. */
 function blob(cx: number, cy: number, radii: number[]): string {
   const step = (Math.PI * 2) / radii.length;
   return (

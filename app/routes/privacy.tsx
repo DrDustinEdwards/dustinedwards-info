@@ -63,7 +63,7 @@ export default function Privacy() {
             </p>
             <p>
               It does not hold an IP address, a user agent, a cookie, an identifier of any kind,
-              or anything that would let two visits be recognised as the same person.
+              or anything that would let two visits be recognized as the same person.
             </p>
             <p>
               Two paths carry an identifier in the URL rather than in a parameter: a draft
@@ -119,7 +119,7 @@ export default function Privacy() {
               <code>theme</code>, it holds either <code>light</code> or <code>dark</code>, and it
               lasts a year. You only have it if you have used the theme button; until then the
               site simply follows your device and stores nothing. It exists so the site renders in
-              the colours you chose on the first byte rather than flickering into them. Nothing
+              the colors you chose on the first byte rather than flickering into them. Nothing
               else is stored on your device.
             </p>
             <p>

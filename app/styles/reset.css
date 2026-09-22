@@ -156,7 +156,7 @@ textarea,
   opacity: 1;
 }
 
-/* Placeholder text: a semi-transparent version of the current text colour, only in browsers
+/* Placeholder text: a semi-transparent version of the current text color, only in browsers
    that do not crash on color-mix() with currentcolor. */
 @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
   ::placeholder {

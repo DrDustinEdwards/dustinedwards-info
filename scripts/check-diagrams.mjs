@@ -3,9 +3,9 @@
  *
  *   npm run check:diagrams
  *
- * BOUNDARY: the contract, asset coverage and a colour audit over committed bytes. It does NOT run
+ * BOUNDARY: the contract, asset coverage and a color audit over committed bytes. It does NOT run
  * mermaid and does not open a browser, so a diagram that renders as tangled spaghetti passes as
- * long as its key, its alt and its colours are right.
+ * long as its key, its alt and its colors are right.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -182,7 +182,7 @@ const themeBlocks = {
 };
 
 for (const [key, token] of Object.entries(DIAGRAM_THEME_TOKENS)) {
-  assert(`${key} names a token, not a colour`, /^--[a-z0-9-]+$/.test(token));
+  assert(`${key} names a token, not a color`, /^--[a-z0-9-]+$/.test(token));
   // Both theme blocks land on the same element and do not cascade into one another, so a token
   // forgotten in dark keeps its LIGHT value and the diagram is drawn light on a dark page.
   assert(`${key} (${token}) exists in the light theme`, token in themeBlocks.light);
@@ -217,7 +217,7 @@ assert(
     JSON.stringify(palettes.light) !== JSON.stringify(palettes.dark),
 );
 
-/* 3. Coverage and colour over what is actually committed */
+/* 3. Coverage and color over what is actually committed */
 
 if (!existsSync(ARTIFACT)) {
   failures.push(`the artifact is missing at ${ARTIFACT}; run build:content`);
@@ -264,12 +264,12 @@ if (!existsSync(ARTIFACT)) {
       checks += audit.checked;
       if (audit.problems.length > 0) {
         failures.push(
-          `${fileName(key, theme)} uses colours that are not ratified tokens: ` +
+          `${fileName(key, theme)} uses colors that are not ratified tokens: ` +
             audit.problems.join("; "),
         );
       }
       // An assertion that can pass by reading nothing is not an assertion.
-      assert(`${fileName(key, theme)} had colours to check`, audit.checked > 0);
+      assert(`${fileName(key, theme)} had colors to check`, audit.checked > 0);
     }
   }
 

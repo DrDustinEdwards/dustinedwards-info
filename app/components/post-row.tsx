@@ -31,7 +31,7 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
   return (
     /*
      * A SUMMARY ENTRY, not a truncated full one: no `e-content`, because a consumer that finds
-     * content on a listing entry has been handed a summary labelled as the article. `u-url` is on
+     * content on a listing entry has been handed a summary labeled as the article. `u-url` is on
      * the anchor, which is where the address actually is.
      */
     <li className="entry h-entry">

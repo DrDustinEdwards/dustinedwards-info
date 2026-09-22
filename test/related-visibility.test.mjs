@@ -16,7 +16,7 @@
  * This list is computed at WRITE time and stored on the row. Composing the
  * visibility rule here stops a scheduled post ever entering a list. It cannot
  * stop a post being unpublished AFTER a list naming it was written, because
- * nothing rewrites its neighbours' lists when that happens, so `blog.$slug.tsx`
+ * nothing rewrites its neighbors' lists when that happens, so `blog.$slug.tsx`
  * re-checks the stored list against the live rows before rendering. This file
  * covers the write half; the read half needs a database and is covered by
  * `check:browser` against the preview.
@@ -57,7 +57,7 @@ const relatedFor = (slug) => {
   return out.related.map((r) => r.slug);
 };
 
-test("CONTROL: a published post DOES get its published neighbour", () => {
+test("CONTROL: a published post DOES get its published neighbor", () => {
   /*
    * Without this, every exclusion below could pass on a `withRelated` that
    * returned an empty list for everything, which is a broken feature rather

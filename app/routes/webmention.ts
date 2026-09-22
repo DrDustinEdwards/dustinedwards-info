@@ -115,7 +115,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * THE RATE LIMIT PRECEDES THE BODY READ. Every check below it costs something: a materialised
+   * THE RATE LIMIT PRECEDES THE BODY READ. Every check below it costs something: a materialized
    * body, a form parse, a D1 read. The limiter costs one Durable Object call and is the only thing
    * here that bounds how often the rest can be reached, which is hard rule 19's chain applied to this
    * route: each stage refuses before the next spends anything.

@@ -98,7 +98,7 @@ const UNPUBLISH = {
   wantsDraft: true,
   ceremony: false,
   // Not destructive, but it takes something off the public site, which is the
-  // one secondary action worth colouring.
+  // one secondary action worth coloring.
   danger: true,
 };
 
@@ -106,7 +106,7 @@ const UNPUBLISH = {
  * The ordered transitions for a post, primary first.
  *
  * The primary always NAMES what it does, which is the point of the state
- * machine replacing a checkbox: a tickbox labelled "draft" states a field, and
+ * machine replacing a checkbox: a tickbox labeled "draft" states a field, and
  * the author has to do the mapping to "this goes live" themselves. Saving in
  * place is always available and is never the primary on a draft, because on a
  * draft the interesting transition is publication and burying it under a

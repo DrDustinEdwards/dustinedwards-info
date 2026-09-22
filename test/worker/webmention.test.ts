@@ -23,7 +23,7 @@ import { loader as blogLoader } from "~/routes/blog.$slug";
  *
  * The route module is driven DIRECTLY, on `routes.test.ts`' pattern and for its
  * reason: `virtual:react-router/server-build` is a build artifact this layer
- * does not build, so what is exercised here is the module's own behaviour,
+ * does not build, so what is exercised here is the module's own behavior,
  * which is where every property below actually lives. What this cannot see is
  * that `/webmention` is wired to this module, which is `routes.ts` and the
  * live probe's business.
@@ -767,7 +767,7 @@ describe("the moderation queue", () => {
     /*
      * THE CLAIM `check:destructive` CLASSIFIES THESE TWO INTENTS ON. They are
      * listed REVERSIBLE with the reason "undone by reject", and an entry in
-     * that map is a judgement nobody has to run. This runs it.
+     * that map is a judgment nobody has to run. This runs it.
      */
     const source = "https://elsewhere.example/decided";
     const id = await seedMention(source, "pending", 1);

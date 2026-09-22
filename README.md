@@ -4,7 +4,7 @@ Personal site and Cloudflare showcase for Dustin Edwards. React Router 8 with
 SSR, running natively on Cloudflare Workers through `@cloudflare/vite-plugin`.
 
 Everything the site serves is either committed to this repo or derived from
-something that is. That is the organising idea, and most of what follows is a
+something that is. That is the organizing idea, and most of what follows is a
 consequence of it.
 
 - **Content is code.** Markdown files in `content/posts/` are the source of
@@ -143,7 +143,7 @@ after one fails, because stopping at the first red hides the rest.
 | `check:logo` | the inline mark still reproduces the four SVG fixtures |
 | `check:backup` | the per-table export path covers the live schema |
 | `check:charts` | chart determinism and Node-vs-Worker byte parity |
-| `check:diagrams` | the diagram contract, asset coverage, colour audit |
+| `check:diagrams` | the diagram contract, asset coverage, color audit |
 | `check:admin-ui` | what the admin's forms SUBMIT, against a baseline |
 | `check:urls` | the URL protocol allowlist |
 | `check:llms` | `llms.txt` matches the row it seeds |

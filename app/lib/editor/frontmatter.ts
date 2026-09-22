@@ -261,7 +261,7 @@ export function splitReading(raw: string) {
  *
  * A list control has a genuinely ambiguous empty state: "the author removed every row" and "this
  * form never rendered the control" both arrive as no fields at all. So the control renders a hidden
- * MARKER. Present means an empty result is the author's emptiness and is honoured; absent means
+ * MARKER. Present means an empty result is the author's emptiness and is honored; absent means
  * nothing was offered, so the carried JSON is passed through untouched.
  *
  * The marker is a hidden input rather than an inference from the row fields, because inferring it is

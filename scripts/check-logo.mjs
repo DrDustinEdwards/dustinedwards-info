@@ -168,19 +168,19 @@ for (const { file, purple, viewBox } of FIXTURES) {
 }
 
 /*
- * Where the five purple paths actually get their colour: everything above compares GEOMETRY. It
+ * Where the five purple paths actually get their color: everything above compares GEOMETRY. It
  * names the binding by VALUE and the set is CLOSED, so a second rule setting fill on this class
  * fails rather than quietly winning the cascade. It does NOT resolve the token to a hex.
  */
 
-/** Selector, normalised, to the fill it binds. The COMPLETE set. */
+/** Selector, normalized, to the fill it binds. The COMPLETE set. */
 /*
  * ONE BINDING SINCE RULING 118.2. The second was `.site-header .site-logo-brand -> currentColor`
  * and it did two jobs: it stated the header's ink, and it was the only assertion that the mark
  * RENDERS IN THE HEADER AT ALL, which is the omission it caught when a build replaced the header
  * with a wordmark.
  *
- * The header now draws the mark in the logo's own colours, so the rule is gone and the binding
+ * The header now draws the mark in the logo's own colors, so the rule is gone and the binding
  * with it. THE OMISSION GUARD DOES NOT GO WITH IT, which would be a gate narrowed to fit a change:
  * it moves below, to an assertion that reads the header COMPONENT. That is the property the
  * binding was a proxy for, and it holds whatever the header is painted in next.
@@ -273,7 +273,7 @@ const EXPECTED_FILL_BINDINGS = [[".site-logo-brand", "var(--brand)"]];
 /*
  * The rendered icon suite, in this OFFLINE gate rather than with the assets manifest, which is
  * NETWORK tier. TWO FAILURE SHAPES: a dropped size changes the container, a wrong tile changes
- * nothing structural, so each raster gets one colour probe. THE PROBE POINT IS DERIVED: pixel
+ * nothing structural, so each raster gets one color probe. THE PROBE POINT IS DERIVED: pixel
  * (0, 0) is outside the mark for any padding and outside the inscribed maskable circle.
  */
 
@@ -292,7 +292,7 @@ const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-su
     .render()
     .asPng();
 
-  eq("raster self-test: PNG reader returns the encoded colour", pngCornerPixel(solid), KNOWN);
+  eq("raster self-test: PNG reader returns the encoded color", pngCornerPixel(solid), KNOWN);
   eq("raster self-test: PNG reader returns the encoded size", pngSize(solid), { width: 4, height: 4 });
 
   // And an ICO wrapped around that same PNG, so the container reader is tested
@@ -314,7 +314,7 @@ const icons = JSON.parse(readFileSync(join(ROOT, "scripts", "fixtures", "icon-su
   eq("raster self-test: ICO reader reports the entry's size", parsed[0].size, 4);
   eq("raster self-test: ICO reader detects PNG encoding", parsed[0].encoding, "PNG");
   eq(
-    "raster self-test: ICO payload round-trips to the same colour",
+    "raster self-test: ICO payload round-trips to the same color",
     pngCornerPixel(icoPayload(synthetic, parsed[0])),
     KNOWN,
   );
@@ -362,7 +362,7 @@ for (const raster of icons.rasters) {
 
 // favicon.svg is a tile like everything else. The superseded assertion policed a mechanism that
 // cannot work: `prefers-color-scheme` reads the OPERATING SYSTEM, while the icon has to survive
-// the TAB STRIP's colour. So the query must now be ABSENT. Comments are stripped first.
+// the TAB STRIP's color. So the query must now be ABSENT. Comments are stripped first.
 
 {
   const svg = stripSvgComments(readFileSync(join(ROOT, icons.svg.file), "utf8"));

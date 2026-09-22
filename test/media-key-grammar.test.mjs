@@ -10,10 +10,10 @@
  * set-alt and empty-trash, hashed to null in the inspector, and was invisible
  * to twin detection. Latent only because R2 held no uploaded originals yet.
  *
- * TWO HALVES. The behavioural half feeds real `contentKey` output to the two
+ * TWO HALVES. The behavioral half feeds real `contentKey` output to the two
  * readers that now own the grammar. The source half asserts the three former
  * copies STAYED deleted, because a reader that regrows a private regex fails
- * exactly when the writer moves, which no behavioural test of the reader's
+ * exactly when the writer moves, which no behavioral test of the reader's
  * module can see (core.server.ts imports `~/db` and cannot be loaded here).
  */
 

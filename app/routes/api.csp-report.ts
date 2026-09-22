@@ -81,7 +81,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /*
-   * READ THE STREAM AND STOP AT THE CAP. `request.text()` materialises the whole body before a
+   * READ THE STREAM AND STOP AT THE CAP. `request.text()` materializes the whole body before a
    * `.slice()` can shorten it, so a slice bounds what is LOGGED and never what is RECEIVED.
    * `readCapped` cancels the stream the moment the count crosses the limit, so a client that omits or
    * understates Content-Length gets the same treatment as one that declares it honestly.

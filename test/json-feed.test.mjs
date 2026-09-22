@@ -63,7 +63,7 @@ test("a full item carries every field the feed emits, and only those", () => {
   assert.equal(item.image, `${ORIGIN}/images/cover.webp`);
 });
 
-test("optional fields serialise away rather than emitting null", () => {
+test("optional fields serialize away rather than emitting null", () => {
   const item = feedItem(
     { ...FULL, description: null, updatedAt: null, coverImage: null, tags: [] },
     ORIGIN,

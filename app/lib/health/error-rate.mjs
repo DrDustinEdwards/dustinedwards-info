@@ -6,8 +6,8 @@
  * The decision half of the watchdog's error-rate check. Pure, dependency-free,
  * never fetches: the same split `repair.mjs` and `alert-state.mjs` use, and for
  * the reason recorded there. A Cron Trigger fires unattended and the only
- * firings whose behaviour matters are the ones nobody is watching, so the
- * judgement has to be exercisable by `check:tests`.
+ * firings whose behavior matters are the ones nobody is watching, so the
+ * judgment has to be exercisable by `check:tests`.
  *
  * ## WHY NOT ANALYTICS ENGINE, WHICH IS WHERE THIS WAS ASKED TO LOOK
  *
