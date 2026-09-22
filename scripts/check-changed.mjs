@@ -217,14 +217,20 @@ if (unmapped.length) {
   );
 }
 
-/* Offline gates only: a network gate needs a deployed database or bucket and CI owns those. */
-const selected = [...wanted.keys()]
-  .filter((g) => TIERS[g] === "offline" && !CI_EXCLUDED[g])
-  .sort();
-const skipped = [...wanted.keys()].filter((g) => !selected.includes(g)).sort();
+/*
+ * OFFLINE GATES RUN HERE, CI_EXCLUDED ONES INCLUDED. An excluded gate is the opposite of one that
+ * can be left to CI: it is excluded BECAUSE CI cannot run it (check:page-payload reads a client
+ * build the CI job never makes), so a local run is the only run it ever gets.
+ *
+ * What is left behind is the network and report tiers, which need a deployed database or bucket.
+ */
+const selected = [...wanted.keys()].filter((g) => TIERS[g] === "offline").sort();
+const deferred = [...wanted.keys()].filter((g) => TIERS[g] !== "offline").sort();
+const onlyHere = selected.filter((g) => CI_EXCLUDED[g]);
 
 console.log(`\n  running ${selected.length} gate(s): ${selected.join(", ")}`);
-if (skipped.length) console.log(`  not offline, left to CI: ${skipped.join(", ")}`);
+if (onlyHere.length) console.log(`  CI cannot run these, so this is their only run: ${onlyHere.join(", ")}`);
+if (deferred.length) console.log(`  needs a deployed resource, not run here: ${deferred.join(", ")}`);
 console.log("");
 
 if (dry) process.exit(0);
