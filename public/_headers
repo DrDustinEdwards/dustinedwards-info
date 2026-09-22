@@ -14,7 +14,7 @@
 # is Vite build output whose filename CONTAINS its content hash, so the URL
 # changes whenever the bytes do and a year is safe by construction.
 #
-# Nothing else gets this. `logo.svg`, `favicon.ico` and the icon suite sit at
+# Nothing else gets this. The logo, `favicon.ico` and the icon suite sit at
 # stable paths with no hash, so an immutable year would make replacing one
 # unshippable, and this repo has already recorded browsers holding a stale
 # favicon hard enough to look like a failed deploy.

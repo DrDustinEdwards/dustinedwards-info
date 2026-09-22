@@ -40,13 +40,13 @@ import {
 
 const MAP = {
   "/publications/edwards-2025-godfather.pdf":
-    "/publications/10-1128-mra-00888-24/10-1128-mra-00888-24.pdf",
+    "/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf",
 };
 
 test("a moved PDF redirects to its new path", () => {
   assert.equal(
     pdfRedirectTarget("/publications/edwards-2025-godfather.pdf", MAP),
-    "/publications/10-1128-mra-00888-24/10-1128-mra-00888-24.pdf",
+    "/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf",
   );
 });
 
@@ -102,7 +102,7 @@ test("paperSlashTarget NEVER claims an asset path", () => {
   // handler; redirecting it would loop, and the loop would only appear for
   // papers whose file had been removed.
   assert.equal(
-    paperSlashTarget("/publications/10-1128-mra-00888-24/10-1128-mra-00888-24.pdf"),
+    paperSlashTarget("/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf"),
     null,
   );
   assert.equal(paperSlashTarget("/publications/anything.pdf"), null);

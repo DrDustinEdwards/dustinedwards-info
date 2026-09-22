@@ -131,7 +131,7 @@ export function makeResolveImage(env: PublishEnv) {
       if (!dimensions) {
         throw new EditorError(
           `Image "${src}" carries no dimensions in its key. Uploaded images ` +
-            `are keyed <hash>-<width>x<height>.<ext>; re-upload it to get a ` +
+            `are keyed dustin-edwards-[<name>-]<hash>-<width>x<height>.<ext>; re-upload it to get a ` +
             `key the build can measure.`,
         );
       }

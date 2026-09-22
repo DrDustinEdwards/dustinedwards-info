@@ -203,14 +203,14 @@
   "media, inspector on a template-placed file": [
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
-    "POST /admin/media?key=/phage-hunters/2019.webp | (none) | ",
-    "POST /admin/media?key=/phage-hunters/2019.webp | alt=2019 | alt,key",
-    "POST /admin/media?key=/phage-hunters/2019.webp | intent=rebuild | ",
-    "POST /admin/media?key=/phage-hunters/2019.webp | intent=set-alt | alt,key",
-    "POST /admin/media?key=/phage-hunters/2019.webp | intent=set-tags | key,tags",
-    "POST /admin/media?key=/phage-hunters/2019.webp | intent=trash | key",
-    "POST /admin/media?key=/phage-hunters/2019.webp | tags=2019 | intent,key",
-    "POST /admin/media?key=/phage-hunters/2019.webp | tags=phage hunters | intent,key"
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | (none) | ",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | alt=2019 | alt,key",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | intent=rebuild | ",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | intent=set-alt | alt,key",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | intent=set-tags | key,tags",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | intent=trash | key",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | tags=2019 | intent,key",
+    "POST /admin/media?key=/phage-hunters/dustin-edwards-2019.webp | tags=phage hunters | intent,key"
   ],
   "media, inspector on a document": [
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
@@ -361,11 +361,11 @@
   "media, detail for a static row": [
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",
     "POST /admin/media/upload | intent=upload-form | file",
-    "POST /admin/media?key=/logo.svg | alt=a picture | alt,key",
-    "POST /admin/media?key=/logo.svg | intent=rebuild | ",
-    "POST /admin/media?key=/logo.svg | intent=set-alt | alt,key",
-    "POST /admin/media?key=/logo.svg | intent=set-tags | key,tags",
-    "POST /admin/media?key=/logo.svg | intent=trash | key"
+    "POST /admin/media?key=/dustin-edwards-logo.svg | alt=a picture | alt,key",
+    "POST /admin/media?key=/dustin-edwards-logo.svg | intent=rebuild | ",
+    "POST /admin/media?key=/dustin-edwards-logo.svg | intent=set-alt | alt,key",
+    "POST /admin/media?key=/dustin-edwards-logo.svg | intent=set-tags | key,tags",
+    "POST /admin/media?key=/dustin-edwards-logo.svg | intent=trash | key"
   ],
   "media, detail for a missing key": [
     "GET /admin/media | (none) | dir,group,lens,q,role,size,sort,tag,trash,view",

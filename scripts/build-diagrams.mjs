@@ -21,7 +21,12 @@ import {
   DIAGRAM_ASSET_DIR,
   DIAGRAM_THEMES,
   DIAGRAM_THEME_TOKENS,
+  diagramAssetPath,
 } from "../app/lib/content/diagram.mjs";
+
+/** The file name the page asks for, from the one function that states it. */
+const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
+  path.basename(diagramAssetPath(key, theme));
 import { ARTIFACT_PATH } from "./build-content.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
@@ -169,7 +174,7 @@ async function main() {
 
   const outstanding = diagrams.flatMap((diagram) =>
     DIAGRAM_THEMES.filter(
-      (theme) => force || !existsSync(path.join(DIAGRAM_DIR, `${diagram.key}-${theme}.svg`)),
+      (theme) => force || !existsSync(path.join(DIAGRAM_DIR, fileName(diagram.key, theme))),
     ).map((theme) => ({ diagram, theme })),
   );
   const skipped = diagrams.length * DIAGRAM_THEMES.length - outstanding.length;
@@ -181,7 +186,7 @@ async function main() {
   let written = 0;
   try {
     for (const { diagram, theme } of outstanding) {
-      const file = path.join(DIAGRAM_DIR, `${diagram.key}-${theme}.svg`);
+      const file = path.join(DIAGRAM_DIR, fileName(diagram.key, theme));
       const label = `${diagram.key}-${theme}`;
       const svg = await render(
         /** @type {import("puppeteer").Browser} */ (browser),
@@ -204,7 +209,7 @@ async function main() {
       await writeFile(file, svg, "utf8");
       written += 1;
       console.log(
-        `  wrote  /${DIAGRAM_ASSET_DIR}/${diagram.key}-${theme}.svg ` +
+        `  wrote  ${diagramAssetPath(diagram.key, theme)} ` +
           `(${Math.round(svg.length / 1024)} kB, ${audit.checked} colours checked, ` +
           `${audit.overridden} attributes overridden, ${audit.skippedRules} unreachable rules)`,
       );
@@ -216,7 +221,7 @@ async function main() {
   // Prune: an upsert keyed by filename leaves a deleted diagram on disk forever, and the write path
   // alone is not enough.
   const live = new Set(
-    diagrams.flatMap((d) => DIAGRAM_THEMES.map((t) => `${d.key}-${t}.svg`)),
+    diagrams.flatMap((d) => DIAGRAM_THEMES.map((t) => fileName(d.key, t))),
   );
   let pruned = 0;
   for (const name of await readdir(DIAGRAM_DIR)) {

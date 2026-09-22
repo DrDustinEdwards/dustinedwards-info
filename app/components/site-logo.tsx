@@ -10,7 +10,7 @@
  * binding them to tokens would make the mark render differently from the ratified
  * assets.
  *
- * GENERATED from public/logo.svg. Path data is verbatim and must never be
+ * GENERATED from public/dustin-edwards-logo.svg. Path data is verbatim and must never be
  * hand-edited: a variant is a rebuild from the construction spec.
  */
 
@@ -39,7 +39,7 @@ export function SiteLogo({ className }: { className?: string }) {
 
 /**
  * The tight 36x50 crop, for the header. The viewBox and the intrinsic size are
- * copied from logo-header.svg.
+ * copied from dustin-edwards-logo-header.svg.
  */
 export function SiteLogoHeader({ className }: { className?: string }) {
   return (

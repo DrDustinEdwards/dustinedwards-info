@@ -34,12 +34,23 @@ const HEX16 = "0001020304050607";
 
 const RASTER_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 });
 const SVG_KEY = contentKey(DIGEST, "svg", null);
+const NAMED_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 }, "Cohort Photo.WEBP");
 
 test("contentKey emits the two documented shapes from the fixed digest", () => {
   // Pinned literally, so a change to the writer's output fails HERE, naming
   // the new shape, rather than surfacing as a mystery in the table below.
-  assert.equal(RASTER_KEY, `${HEX16}-1600x900.webp`);
-  assert.equal(SVG_KEY, `${HEX16}.svg`);
+  assert.equal(RASTER_KEY, `dustin-edwards-${HEX16}-1600x900.webp`);
+  assert.equal(SVG_KEY, `dustin-edwards-${HEX16}.svg`);
+});
+
+test("an upload's filename becomes the descriptive segment, and the prefix is never doubled", () => {
+  assert.equal(NAMED_KEY, `dustin-edwards-cohort-photo-${HEX16}-1600x900.webp`);
+  assert.equal(
+    contentKey(DIGEST, "webp", null, "dustin-edwards-2017.webp"),
+    `dustin-edwards-2017-${HEX16}.webp`,
+  );
+  // Nothing usable in the name leaves the prefix and the digest, never a stray hyphen.
+  assert.equal(contentKey(DIGEST, "svg", null, "..."), `dustin-edwards-${HEX16}.svg`);
 });
 
 /**
@@ -63,6 +74,9 @@ const CASES = [
   { name: "static asset path", input: "/publications/paper.pdf", isContent: false, digest: null },
   { name: "traversal segment", input: `../${SVG_KEY}`, isContent: false, digest: null },
   { name: "bare hex with no extension", input: HEX16, isContent: false, digest: null },
+  { name: "named key with a slug", input: NAMED_KEY, isContent: true, digest: HEX16 },
+  { name: "slug ending in hex, digest is the LAST run", input: `dustin-edwards-a-ffffffffffffffff-${HEX16}.png`, isContent: true, digest: HEX16 },
+  { name: "pre-127 unprefixed key", input: `${HEX16}-1600x900.webp`, isContent: false, digest: null },
 ];
 
 test("isContentKey and digestFromKey agree with the writer on every case", () => {
@@ -74,7 +88,7 @@ test("isContentKey and digestFromKey agree with the writer on every case", () =>
   }
   // The count is the literal table length, restated so a truncated table (or a
   // loop that stopped early) is a failure rather than a smaller clean run.
-  assert.equal(checked, 10, "every case in the table was checked");
+  assert.equal(checked, 13, "every case in the table was checked");
 });
 
 /**

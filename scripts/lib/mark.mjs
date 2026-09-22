@@ -64,8 +64,8 @@ export function readMark() {
 
   // The HEADER crop, because the band this sits in is the header: the square master would sit in a
   // taller band surrounded by its own whitespace.
-  const light = parse("logo-header.svg");
-  const dark = parse("logo-header-dark.svg");
+  const light = parse("dustin-edwards-logo-header.svg");
+  const dark = parse("dustin-edwards-logo-header-dark.svg");
   if (light.viewBox !== dark.viewBox) {
     throw new Error(`mark: ${light.file} and ${dark.file} disagree on the viewBox`);
   }

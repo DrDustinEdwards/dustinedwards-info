@@ -237,8 +237,8 @@
   "keyPresets": [
     {
       "label": "An uploaded raster",
-      "key": "4f2d7f1a9c3b5e07-1600x900.webp",
-      "note": "The ordinary shape: sixteen hex digits of the content digest, the intrinsic dimensions, the extension.",
+      "key": "dustin-edwards-4f2d7f1a9c3b5e07-1600x900.webp",
+      "note": "The ordinary shape: the site prefix, sixteen hex digits of the content digest, the intrinsic dimensions, the extension. An upload with a usable filename also carries a slug of it between the prefix and the digest.",
       "expect": {
         "contentKey": true,
         "digest": "4f2d7f1a9c3b5e07",
@@ -252,7 +252,7 @@
     },
     {
       "label": "A vector, which has no pixel size",
-      "key": "a1b2c3d4e5f60718.svg",
+      "key": "dustin-edwards-a1b2c3d4e5f60718.svg",
       "note": "No dimension segment, because an SVG has no intrinsic pixel size and a zero would be a measurement rather than the absence of one.",
       "expect": {
         "contentKey": true,
@@ -267,7 +267,7 @@
     },
     {
       "label": "A leading zero in the dimension",
-      "key": "4f2d7f1a9c3b5e07-0800x600.webp",
+      "key": "dustin-edwards-4f2d7f1a9c3b5e07-0800x600.webp",
       "note": "Refused outright. A deleted reader spelled this axis loosely and answered 800 by 600 for this key while the other two readers were calling it not a content key at all. One key, three readers, two answers.",
       "expect": {
         "contentKey": false,
@@ -282,7 +282,7 @@
     },
     {
       "label": "A served path with a transform on it",
-      "key": "/media/4f2d7f1a9c3b5e07-1600x900.webp?w=320",
+      "key": "/media/dustin-edwards-4f2d7f1a9c3b5e07-1600x900.webp?w=320",
       "note": "Three different contracts, visible at once. The two extracting readers accept a path and strip the query, because a width is a transform request rather than a different object. The boolean documents a BARE key and refuses a leading slash. And the classifier takes a path or a key, never a URL: it reads everything after the last dot, so the extension here is webp-question-mark-w-equals-320, which is in no table and refuses. Every caller in the codebase hands it an object key or a static path, so the boundary is a contract rather than a defect, and this is the only place you can see it.",
       "expect": {
         "contentKey": false,
@@ -297,7 +297,7 @@
     },
     {
       "label": "A generated social card",
-      "key": "og/ten-years-on-cloudflare-3.png",
+      "key": "og/dustin-edwards-ten-years-on-cloudflare-3.png",
       "note": "The regenerable tier, told apart by prefix because that is what the writer controls. Losing one is an inconvenience rather than a loss.",
       "expect": {
         "contentKey": false,
@@ -312,7 +312,7 @@
     },
     {
       "label": "The site mark",
-      "key": "/logo.svg",
+      "key": "/dustin-edwards-logo.svg",
       "note": "Brand rather than icon, and the test is who fetches it: an icon is declared to the platform and fetched without this code being involved, a brand asset is named by a module.",
       "expect": {
         "contentKey": false,
@@ -327,7 +327,7 @@
     },
     {
       "label": "An extension nobody has classified",
-      "key": "4f2d7f1a9c3b5e07.zip",
+      "key": "dustin-edwards-4f2d7f1a9c3b5e07.zip",
       "note": "The classifier throws rather than returning a default, which is the whole reason it is a function and not a lookup: a new file type has to stop a build instead of acquiring a plausible kind nobody chose.",
       "expect": {
         "contentKey": true,

@@ -45,7 +45,7 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
 
-import { classify } from "../media/classify.mjs";
+import { ASSET_PREFIX, classify } from "../media/classify.mjs";
 import { cardDescription, cardTitle } from "./og-card-text.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
@@ -642,7 +642,7 @@ export function ogImageKey(post) {
     hash ^= input.charCodeAt(i);
     hash = Math.imul(hash, 0x01000193) >>> 0;
   }
-  return `og/${post.slug}-${hash.toString(16).padStart(8, "0")}.png`;
+  return `og/${ASSET_PREFIX}${post.slug}-${hash.toString(16).padStart(8, "0")}.png`;
 }
 
 /** How many related posts each post carries. */

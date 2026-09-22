@@ -165,7 +165,7 @@ describe("savePost", () => {
      * second citation is silently dropped. The assertion below is that both
      * survive, which is the observable form of the same fact.
      */
-    const key = "/media/abcd1234abcd1234-800x600.png";
+    const key = "/media/dustin-edwards-abcd1234abcd1234-800x600.png";
     await savePost(publishEnv(), {
       slug: "cites",
       raw: post("cites", {
@@ -279,7 +279,7 @@ describe("savePost", () => {
 
 describe("deletePost", () => {
   it("lands ONE deletion commit and clears every row the post owned", async () => {
-    const key = "/media/beef1234beef1234-400x300.png";
+    const key = "/media/dustin-edwards-beef1234beef1234-400x300.png";
     await savePost(publishEnv(), {
       slug: "doomed",
       raw: post("doomed", { body: `Body.\n\n![alt](${key})\n` }),

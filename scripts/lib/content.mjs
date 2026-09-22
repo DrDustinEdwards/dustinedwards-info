@@ -66,7 +66,7 @@ export function makeResolveImage(file) {
         throw new ContentError(
           file,
           `media image "${src}" carries no dimensions in its key. ` +
-            `Uploaded images are keyed <hash>-<width>x<height>.<ext>; re-upload ` +
+            `Uploaded images are keyed dustin-edwards-[<name>-]<hash>-<width>x<height>.<ext>; re-upload ` +
             `it in the editor to get a key this build can measure.`,
         );
       }

@@ -19,7 +19,7 @@
  * The mockup's fixture carries `/uploads/`, `/site/`, `/teaching/` and
  * `/talks/`, which this library does not have, and it has no entry for the two
  * shapes this library actually carries most of: the `og/` R2 prefix with no
- * leading slash, and root-level static assets whose key is just `/logo.svg`.
+ * leading slash, and root-level static assets whose key is just `/dustin-edwards-logo.svg`.
  *
  * Measured against production, 2026-08-15: 31 in `/publications/`, 12 in `og/`,
  * 12 at the root, 9 in `/phage-hunters/`, 6 in `/diagrams/`, which is the whole
@@ -53,7 +53,7 @@ const FOLDERS = [
 /**
  * Where a key with no folder goes.
  *
- * ROOT-LEVEL STATIC ASSETS, which is `/logo.svg`, the favicons, the touch icon
+ * ROOT-LEVEL STATIC ASSETS, which is `/dustin-edwards-logo.svg`, the favicons, the touch icon
  * and the manifest. The mockup has no entry for them because its
  * fixture put them under `/brand/`, and its `/brand/` note is exactly true of
  * ours, so it is carried over rather than reworded.

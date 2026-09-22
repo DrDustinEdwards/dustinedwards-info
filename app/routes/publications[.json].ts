@@ -24,6 +24,6 @@ export function loader() {
      * `application/json` would be true and useless: it says the bytes are JSON
      * and nothing about what they mean.
      */
-    headers: exportHeaders("application/vnd.citationstyles.csl+json", SHARED_CACHE_CONTROL),
+    headers: exportHeaders("application/vnd.citationstyles.csl+json", SHARED_CACHE_CONTROL, "publications.json"),
   });
 }

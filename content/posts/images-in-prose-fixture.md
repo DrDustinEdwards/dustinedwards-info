@@ -6,7 +6,7 @@ date: 2026-09-06
 tags: [meta, testing, media]
 draft: true
 cover:
-  src: /phage-hunters/2017.webp
+  src: /phage-hunters/dustin-edwards-2017.webp
   alt: "Group photo of the 2017 Phage Discovery Program cohort"
 ---
 
@@ -40,12 +40,12 @@ exactly where they were.
 
 ## The static form
 
-![Group photo of the 2017 Phage Discovery Program cohort](/phage-hunters/2017.webp)
+![Group photo of the 2017 Phage Discovery Program cohort](/phage-hunters/dustin-edwards-2017.webp)
 
 ## The uploaded form
 
 The same photograph again, as an uploaded object rather than a static file.
 
-![Group photo of the 2017 Phage Discovery Program cohort](/media/c3c4391fff3ce67a-1080x810.webp)
+![Group photo of the 2017 Phage Discovery Program cohort](/media/dustin-edwards-2017-c3c4391fff3ce67a-1080x810.webp)
 
 That is the whole fixture.
