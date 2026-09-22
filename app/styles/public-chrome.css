@@ -4,25 +4,41 @@
  * PUBLIC HEADER: PAPER, NOT CHROME. Ruling 117 retires the purple bar; the header is the page's own
  * ground with one `--dust` rule under the whole thing, and nothing between its rows.
  *
- * Static, so it scrolls away. `--bar-h` stays deleted: there is no fixed bar to subtract, which is
- * why the post page's sticky rail offsets by a plain 20px.
+ * STICKY SINCE RULING 126, and opaque and still: no blur, no shadow, no animation on the way in.
+ * The paragraph here used to say the header was static and scrolled away, and the post page's
+ * sticky rail was written against that sentence; both moved together, and `--header-h` in app.css
+ * is what they now share. A sticky bar that is transparent or that animates is the failure mode
+ * the ruling names, so it is neither.
  *
- * The header wraps, or public pages scroll sideways on a phone. flex-wrap is on both .site-header
- * and .site-header-nav: on either alone, one of them stays an unbreakable row. The only media query
- * touching it is print, so the layout is a property of the label widths rather than of a chosen
- * breakpoint.
+ * ONE LINE AT EVERY WIDTH. It no longer wraps: above the menu breakpoint the destinations are
+ * visible and fit, and below it they move into the menu, which is what keeps the line short enough
+ * to stay one. `flex-wrap` is gone with the wrapping, and the sheet now carries exactly one width
+ * condition, named at its own rule below.
  */
 .site-header {
+  position: sticky;
+  top: 0;
+  /* app.css names this layer: the bar takes --z-pinned-bar. Not a raw number and not
+     --z-dropdown, which sits BELOW the bar; that sheet calls the name the trap. */
+  z-index: var(--z-pinned-bar);
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   column-gap: 1.625rem;
-  row-gap: 0.75rem;
   /* The shared inset. The admin topbar reads this same declaration, so the
      mark sits at the same x on both planes. */
   padding: 1.375rem var(--site-inset) 1.125rem;
   background: var(--paper);
   border-block-end: var(--line-w) solid var(--dust);
+}
+
+/*
+ * A FOCUSED ELEMENT OR AN ANCHOR TARGET IS NEVER HIDDEN BEHIND THE BAR (WCAG 2.2 2.4.11, and the
+ * same reason admin-shell.css carries this). On `html` because that is the scrolling element, and
+ * in this sheet because that scopes it to the public plane, which is the plane with this header.
+ * The height is `--header-h` and is not restated here.
+ */
+html {
+  scroll-padding-top: calc(var(--header-h) + 1rem);
 }
 
 /*
@@ -34,6 +50,10 @@
 .site-header-brand:visited {
   display: inline-flex;
   align-items: center;
+  /* THE WORDMARK NEVER WRAPS. Measured: at 320 and at 768 it broke to two lines, which took the
+     header from 74px to 79px and made its height a function of the viewport. The header is one
+     line at every width, and that includes the name on it. */
+  white-space: nowrap;
   gap: 0.625rem;
   color: var(--text);
   font-family: var(--font-sans);

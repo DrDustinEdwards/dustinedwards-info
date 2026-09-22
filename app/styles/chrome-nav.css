@@ -1,22 +1,21 @@
 /* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 /*
- * THE HEADER'S DESTINATIONS AND ITS TWO CONTROLS, on paper.
+ * THE HEADER'S DESTINATIONS AND ITS CONTROLS, on paper.
  *
- * The nav is LAST in source and takes a full basis at narrow widths, which drops the destinations
- * to their own line while the wordmark and the tools keep line 1. No breakpoint: the layout is a
- * property of the label widths, so the wrap thresholds are MEASURED after a link lands and never
- * reasoned from. The old 537 and 619 figures described a three- and four-link header.
+ * RULING 126 REPLACES THE WRAP WITH A MENU. The nav used to take a full basis at narrow widths and
+ * drop to its own line, and this sheet had no breakpoint at all. It now has ONE, and it is the
+ * only width condition the header has: above it the destinations are visible, below it they move
+ * into a labelled menu so the header stays one line. The threshold is still MEASURED after a link
+ * lands and never reasoned from; the old 537 and 619 figures described a three- and four-link
+ * header and the wrap that is now gone.
  */
 .site-header-nav {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   column-gap: 1.375rem;
-  row-gap: 0.5rem;
   /* Pushed to the far side, so the destinations sit against the tools rather than against the
-     wordmark. When the line runs out the whole nav wraps beneath, which is the only width
-     behaviour the header has: there is no breakpoint and no `print` exception to this rule. */
+     wordmark. */
   margin-inline-start: auto;
   /* The nav type level, whose only reader this is. */
   font-family: var(--t-nav-family);
@@ -109,9 +108,170 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   display: none;
 }
 
-/* Print: the destinations and both controls are ways to go somewhere else, and paper goes
-   nowhere. The wordmark and the mark stay, because they name the page. */
+/*
+ * THE MENU BUTTON. Ruling 126: a WORD, never an icon alone, because the ruling accepts a known
+ * discoverability cost for hiding navigation and the label is what pays for it. Shaped like the
+ * other two controls, which is to say barely: ink, no border, no fill, a square focus ring.
+ *
+ * The marker goes because a disclosure triangle beside the word reads as a third glyph control.
+ * Both spellings: `list-style` covers the standards path and the WebKit pseudo-element covers
+ * Safari, which ignores it.
+ */
+.site-header-menu-button {
+  display: flex;
+  align-items: center;
+  /* 24px minimum target (WCAG 2.2 2.5.8), and the tools' own rhythm. */
+  min-block-size: 1.5rem;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+  list-style: none;
+}
+
+.site-header-menu-button::-webkit-details-marker {
+  display: none;
+}
+
+.site-header-menu-button:hover {
+  color: var(--brand);
+}
+
+.site-header-menu[open] > .site-header-menu-button {
+  color: var(--brand);
+}
+
+/*
+ * THE PANEL: opaque paper, radius 0, ruled rows. Ruling 126 says paper and not glass, so there is
+ * no blur and no translucency here to read the page through.
+ *
+ * Anchored to the header's own block edge rather than to the button, so it spans the full width
+ * and its rows line up with the page's insets. The header is the containing block because it is
+ * sticky, which makes it a positioned ancestor.
+ */
+.site-header-menu-panel {
+  position: absolute;
+  inset-inline: 0;
+  /* The overlay layer, which app.css names for exactly this: the menu must clear the bar it hangs
+     from, and --z-dropdown would put it underneath. */
+  z-index: var(--z-overlay);
+  /* The header's border sits at its block end; the panel starts under it. */
+  top: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  border-block-end: var(--line-w) solid var(--dust);
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+}
+
+.site-header-menu-panel a,
+.site-header-menu-panel a:visited {
+  /* One ruled row each, and the inset is the header's, so a label starts at the wordmark's x. */
+  padding: 0.875rem var(--site-inset);
+  border-block-start: var(--line-w) solid var(--dust);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.site-header-menu-panel a:hover {
+  color: var(--brand);
+}
+
+/* Same signal as the desktop nav: an ink underline says you are here, and colour stays the
+   property of things you click. */
+.site-header-menu-panel a[aria-current="page"] {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 0.25rem;
+}
+
+/*
+ * THE ONE WIDTH CONDITION IN THE HEADER, and the only one this sheet has.
+ *
+ * MEASURED, not chosen: below this the six labels plus the wordmark and the controls stop fitting
+ * on one line, which is the condition ruling 126 buys the menu to solve. Re-measure it when a
+ * destination is added or a label gets longer; the component's docblock says the same thing and
+ * means this number.
+ *
+ * DEFAULT IS THE NARROW STATE, so the menu ships and the nav hides unless the width says
+ * otherwise. The other way round, a browser that failed to match the query would show a header
+ * with six links and no menu on a phone.
+ */
+.site-header-nav {
+  display: none;
+}
+
+@media (min-width: 44rem) {
+  .site-header-nav {
+    display: flex;
+  }
+
+  /* The destinations are visible, so the menu is not a second way to reach them. */
+  .site-header-menu {
+    display: none;
+  }
+}
+
+/*
+ * THE NARROW SIDE OF THE SAME THRESHOLD, tightening the line so it fits the narrowest width the
+ * site supports. MEASURED: at 320 the header wanted 357px of a 320px viewport and scrolled
+ * sideways by 13. The wordmark does not wrap (public-chrome.css) and ruling 126 wants one line, so
+ * the room comes out of the gaps and one type step rather than out of either of those.
+ *
+ * It rides the menu breakpoint rather than adding a second one: at 375 the header already fitted,
+ * so tightening there costs nothing and keeps the header at ONE threshold.
+ *
+ * THE MARK IS NOT SHRUNK HERE, though it was at first: a smaller mark took the narrow header to
+ * 69px against a 74px desktop, which would have made --header-h a second responsive value for
+ * scroll-padding and the post rail to track. The gaps and the one type step are enough on their
+ * own, measured, and the header is one height everywhere.
+ */
+@media (max-width: 43.99rem) {
+  .site-header {
+    column-gap: 0.75rem;
+  }
+
+  .site-header-tools {
+    gap: 0.75rem;
+  }
+
+  .site-header-brand {
+    gap: 0.5rem;
+    font-size: 1.0625rem;
+  }
+}
+
+/*
+ * PARTIAL PERSISTENCE, narrow widths only, and the attribute is written by app/enhance/header.ts.
+ * The stylesheet owns every pixel of what hiding LOOKS like; the module owns only when it is true.
+ *
+ * NOT UNDER REDUCED MOTION. Ruling 126 says static there, and the module never writes the
+ * attribute in that case, so this block is doubly conditioned on purpose: a future caller that
+ * wrote the attribute anyway would still not animate a reader who asked not to be animated.
+ */
+@media (max-width: 43.99rem) and (prefers-reduced-motion: no-preference) {
+  .site-header {
+    transition: transform 350ms ease;
+  }
+
+  html[data-header-hidden] .site-header {
+    transform: translateY(-100%);
+  }
+}
+
+/* Print: the destinations and every control are ways to go somewhere else, and paper goes
+   nowhere. The wordmark and the mark stay, because they name the page. A sticky header would
+   also repeat on every sheet, so it is static here. */
 @media print {
+  .site-header {
+    position: static;
+  }
+
   .site-header-nav,
   .site-header-tools {
     display: none;
