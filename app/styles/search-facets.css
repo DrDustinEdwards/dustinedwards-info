@@ -3,7 +3,7 @@
   font-size: 0.8125rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .search-facets section + section {
@@ -36,7 +36,7 @@
   padding: 0.375rem 0.625rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--paper);
   color: var(--text);
   font-size: 0.8125rem;
   text-decoration: none;
@@ -54,7 +54,7 @@
 }
 
 .search-chip-count {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -81,7 +81,7 @@
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9375rem;
 }
 
@@ -95,7 +95,7 @@
 }
 
 .search-sort-label {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 

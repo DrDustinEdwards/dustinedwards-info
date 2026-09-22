@@ -64,7 +64,7 @@
   /* A shadow, not a border: with border-box a border is subtracted from the width, and the collapsed
      rail's width is the alignment. */
   box-shadow: 1px 0 0 var(--border);
-  background: var(--surface);
+  background: var(--paper);
   /* Tooltips and the collapsed rail's labels need to escape the rail. */
   overflow: visible;
 }
@@ -117,7 +117,7 @@
 .admin-nav-count {
   flex: none;
   margin-left: auto;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
 }
@@ -187,13 +187,13 @@
 .admin-sidebar-toggle {
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: inherit;
   cursor: pointer;
 }
 
 .admin-sidebar-toggle:hover {
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
 }
 
@@ -257,7 +257,7 @@
 
 .admin-nav a,
 .admin-nav a:visited {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
 }
 
@@ -288,7 +288,7 @@
  * and the accessible name says it leaves the plane. */
 .admin-view-site,
 .admin-view-site:visited {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-decoration: none;
 }
 
@@ -314,8 +314,8 @@
   min-height: 0;
 }
 
-/* Surface ladder: --surface is the shell (sidebar and topbar, one L of chrome), --bg the canvas,
- * and --surface again for a card on the canvas behind a border. The sidebar and a card never touch,
+/* Surface ladder: --paper is the shell (sidebar and topbar, one L of chrome), --paper the canvas,
+ * and --paper again for a card on the canvas behind a border. The sidebar and a card never touch,
  * so no fourth neutral is needed; rule 7 allows the one card, the posts index. */
 .admin-topbar {
   /* Row 1, both columns. This is what makes the geometry match by
@@ -338,7 +338,7 @@
      border shrinks the declared height and moves the mark, and device-pixel snapping makes the miss vary
      by display. A shadow keeps the bar exactly --admin-topbar-h, which .editor-canvas subtracts. */
   box-shadow: 0 1px 0 var(--border-strong);
-  background: var(--surface);
+  background: var(--paper);
   /* min-width: 0 on the grid item: its automatic minimum is min-content, so without this the track grows
      the document and no truncation inside the bar ever engages. */
   min-width: 0;
@@ -348,7 +348,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .admin-topbar-user {
@@ -411,7 +411,7 @@
   margin: 0;
   padding: 0.5rem 0.625rem;
   border-bottom: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   /* The panel has a min-width and an address can exceed it. Breaking on any
      character is right here and wrong in the bar: there is no competing content
@@ -623,7 +623,7 @@
   border: 1px solid var(--border);
   border-radius: 999px;
   font-size: 0.6875rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -646,7 +646,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 999px;
-  background: var(--text-muted);
+  background: var(--text-secondary);
 }
 
 /* Every dot is ringed in its family's border token: a fill alone does not reliably clear 3:1 against
@@ -683,7 +683,7 @@
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .stat-card header {
@@ -701,7 +701,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .stat-card-value {
@@ -759,7 +759,7 @@
   text-align: left;
   font-size: 0.8125rem;
   line-height: 1.6;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .origin-table th,
@@ -772,7 +772,7 @@
 .origin-table thead th {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .origin-table tbody th {
@@ -813,7 +813,7 @@
   list-style: none;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .tool-row {
@@ -863,7 +863,7 @@
 
 .tool-row .btn-secondary:disabled,
 .tool-row .btn-ghost:disabled {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: not-allowed;
 }
 
@@ -897,7 +897,7 @@
   padding: 0.25rem 0.625rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--surface);
+  background: var(--paper);
   font-size: 0.8125rem;
   /* Exempt from rule 2 on the same grounds as .btn: the border is already a
      non-colour affordance. */
@@ -930,12 +930,12 @@
 }
 
 .admin-chip-count {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-/* INHERIT, never --text-muted: on the active chip the count sits on
-   --tint-brand, and --text-muted has not been measured against that surface.
+/* INHERIT, never --text-secondary: on the active chip the count sits on
+   --tint-brand, and --text-secondary has not been measured against that surface.
    Inheriting puts it on --brand over --tint-brand, which has. */
 .admin-chip.is-active .admin-chip-count {
   color: inherit;
@@ -990,7 +990,7 @@
   overflow-wrap: anywhere;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .mention-stamps {
@@ -1052,7 +1052,7 @@
   border: 1px solid transparent;
   border-radius: var(--r-control);
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: inherit;
   font-size: 0.8125rem;
   text-decoration: none;
@@ -1147,7 +1147,7 @@
 .admin-page-status {
   margin: 0;
   max-width: 72ch;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9375rem;
 }
 
@@ -1164,7 +1164,7 @@
   border: 1px solid var(--border);
   border-left: 0.25rem solid var(--border);
   border-radius: var(--r-panel);
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .admin-notice[data-tone="warning"] {
@@ -1197,7 +1197,7 @@
 .admin-notice-body p {
   margin: 0;
   max-width: 72ch;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9375rem;
 }
 
@@ -1212,7 +1212,7 @@
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .admin-table {
@@ -1232,7 +1232,7 @@
 }
 
 .admin-table thead th {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -1257,7 +1257,7 @@
    Everything else in the row is a label or a control. */
 .admin-check-finding {
   width: 100%;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   white-space: normal;
 }
 
@@ -1283,7 +1283,7 @@
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: var(--r-panel);
-  background: var(--surface);
+  background: var(--paper);
 }
 
 /* The same 4px semantic edge the notice uses, for the same reason: this is the
@@ -1295,7 +1295,7 @@
 
 .admin-figure-label {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
@@ -1309,13 +1309,13 @@
 
 .admin-figure-hint {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
 .admin-explain {
   margin-top: 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
@@ -1408,7 +1408,7 @@
     width: auto;
     align-self: start;
     border-radius: var(--r-control);
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .admin-notice {

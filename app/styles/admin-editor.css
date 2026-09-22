@@ -38,7 +38,7 @@
   top: 0;
   z-index: var(--z-sticky);
   border-bottom: 1px solid var(--border-strong);
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .editor-bar-group {
@@ -82,7 +82,7 @@
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
@@ -104,7 +104,7 @@
   min-height: 1.75rem;
   padding: 0.25rem 0.5rem 0.25rem 0.25rem;
   border-radius: 0.375rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   text-decoration: none;
 }
@@ -137,7 +137,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.4375rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   white-space: nowrap;
 }
@@ -161,7 +161,7 @@
 /* The buffer age (ruling 3) is quieter than the dirty indicator: muted, not warning, since two
    warning-coloured items read as two problems. It reuses a pair check:contrast already measures. */
 .editor-buffer-age {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   white-space: nowrap;
 }
@@ -280,7 +280,7 @@
   padding: 0.3rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.875rem;
@@ -315,7 +315,7 @@
 }
 
 .count {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   font-weight: 400;
@@ -331,7 +331,7 @@
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.9375rem;
@@ -403,7 +403,7 @@
   min-height: 0;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: var(--bg);
+  background: var(--paper);
 }
 
 .editor-layout-toggle {
@@ -418,7 +418,7 @@
   padding: 0.25rem 0.625rem;
   border: none;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
@@ -466,7 +466,7 @@
   border: 1px solid var(--border);
   border-bottom: none;
   border-radius: 0.5rem 0.5rem 0 0;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 /* WCAG 2.2 target size: 1.75rem is 28px, clear of the 24px minimum. */
@@ -481,7 +481,7 @@
   border: 1px solid transparent;
   border-radius: 0.375rem;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: inherit;
   font-size: 0.8125rem;
   cursor: pointer;
@@ -511,7 +511,7 @@
   min-height: 0;
   border: 1px solid var(--border);
   border-bottom: none;
-  background: var(--bg);
+  background: var(--paper);
   overflow: hidden;
 }
 
@@ -528,7 +528,7 @@
   padding: 0.375rem 0.625rem;
   border: 1px solid var(--border);
   border-radius: 0 0 0.5rem 0.5rem;
-  background: var(--surface);
+  background: var(--paper);
   font-size: 0.75rem;
 }
 
@@ -537,14 +537,14 @@
   align-items: center;
   gap: 0.375rem;
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Word count and reading time: at the far end, tabular so the strip does not twitch as digits change,
    and muted, because it is reference. */
 .md-stats {
   margin: 0 0 0 auto;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -589,7 +589,7 @@
   padding: 0 0.5rem;
   border: 1px solid var(--border-strong);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.875rem;
@@ -643,7 +643,7 @@
 .md-link-note {
   margin: 0.375rem 0 0;
   padding: 0.25rem 0.5rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
@@ -667,7 +667,7 @@
   background: var(--tint-brand);
 }
 
-/* --text-muted is measured on the popover step but not on the brand tint a
+/* --text-secondary is measured on the popover step but not on the brand tint a
    hovered row paints under it, so the hint steps up to body text, which IS
    measured there. Same move the overflow menu makes. */
 .md-slash-item:hover .muted,
@@ -707,7 +707,7 @@
   padding: 0.35rem 0.5rem;
   border: 1px solid var(--border-warning);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.875rem;
@@ -742,7 +742,7 @@
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font-family: var(--font-mono);
   font-size: 0.875rem;
@@ -861,7 +861,7 @@
   margin-top: 1.5rem;
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .post-metadata > summary {
@@ -876,7 +876,7 @@
 }
 
 .post-metadata-hint {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   font-weight: 400;
 }
@@ -904,7 +904,7 @@
 
 .post-metadata-note {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
@@ -916,7 +916,7 @@
 
 .post-metadata-check small {
   display: block;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
@@ -934,7 +934,7 @@
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.9375rem;

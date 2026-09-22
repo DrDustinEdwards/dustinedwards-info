@@ -38,7 +38,7 @@
  * Measured on production by screen capture, no CDP, on this Windows machine.
  * Fourteen runs, both themes, no-dwell clicks plus rapid alternation: with
  * prerendering on, all seven runs showed blank frames, every one of them 100%
- * of the `--bg` token at a luma standard deviation of ZERO, in light and in
+ * of the `--paper` token at a luma standard deviation of ZERO, in light and in
  * dark. With prerendering off at the browser, none of the seven did. Chrome
  * 151.0.7922.172.
  *

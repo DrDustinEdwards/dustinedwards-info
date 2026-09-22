@@ -170,8 +170,9 @@ function stripCssComments(css) {
  * stylesheet WITHOUT media context and taking the last value, so the promoted
  * values were reported as the base palette.
  *
- * MEASURED 2026-09-12 in the uploaded `_ds_manifest.json`: `--text-muted` read
- * `#4a423a` against a base of `#5c5248`, and `--border` read `#6e6459` against
+ * MEASURED 2026-09-12 in the uploaded `_ds_manifest.json`, on the name that has
+ * since collapsed into `--text-secondary` (ruling 128): the promoted value read
+ * `#4a423a` against a base of `#5b5349`, and `--border` read `#6e6459` against
  * a base of `#8a7d6e`. The second one is the expensive half. `#6e6459` is what
  * `--border-strong` already is, so the two tokens arrived at the design agent
  * as THE SAME COLOUR, and hard rule 5, popover elevation and pinned bars take
@@ -305,7 +306,7 @@ const baseOf = (token) => {
   return block?.[1].match(new RegExp(`${token}\\s*:\\s*([^;]+)`))?.[1].trim() ?? "(not in base block)";
 };
 console.error("  token proof (what the manifest scraper will read, beside app.css's base block):");
-for (const token of ["--text-muted", "--border", "--border-strong"]) {
+for (const token of ["--text-secondary", "--border", "--border-strong"]) {
   const flat = flattenedValue(out, token);
   const base = baseOf(token);
   console.error(`    ${token.padEnd(16)} bundle ${flat.padEnd(10)} base ${base.padEnd(10)} ${flat === base ? "match" : "MISMATCH"}`);

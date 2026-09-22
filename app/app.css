@@ -290,15 +290,11 @@
 [data-theme="light"] {
   color-scheme: light;
 
-  --bg: #faf7f2;
-  --surface: #f1ebe1;
   --surface-popover: #ebe2d3;
-  --surface-code: #f1ebe1;
   --text: #241f1b;
   /* No split in light mode: halation is a light-on-dark effect, so the heading
      token exists here only so components can ask for the role unconditionally. */
   --text-heading: #2b2320;
-  --text-muted: #5c5248;
   /* Deliberately below the contrast floor: WCAG 1.4.3 and 1.4.11 exempt inactive controls, and 4.5:1 would
      read as available. The disabled attribute, the recess and text saying why identify it; check:contrast
      carries the exemption. cursor: not-allowed is not a cue: pointer-only, and it arrives too late. */
@@ -310,12 +306,10 @@
   /* Brand: bluebonnet. Brand only. It never signals a state. */
   --brand: #4f2d7f;
   --brand-hover: #412764;
-  --brand-active: #2f1a4d;
   --on-brand: #ffffff;
   --tint-brand: #ede8f5;
   --visited: #5a2b63;
   --selection-bg: #d9ccee;
-  --focus-ring: #4f2d7f;
   --focus-ring-on-brand: #f3e3b8;
 
   /* Chrome role tokens: the header and footer are a brand surface, so text on them is measured against the
@@ -382,7 +376,6 @@
   /* limestone: the page ground, and the footer's */
   --paper: #f4efe6;
   /* one step off paper. LIGHTER in dark, darker in light */
-  --raised: #ece6da;
   /* all muted copy. dust never sets type */
   --text-secondary: #5b5349;
   /* a hint below the value that will replace it, NOT --text-secondary */
@@ -466,15 +459,11 @@
     color-scheme: dark;
 
     /* Neutrals: prairie night. Warm brown-black, never blue-black. */
-    --bg: #1a1614;
-    --surface: #26201c;
     --surface-popover: #322a25;
-    --surface-code: #26201c;
     /* v3 split: body steps one off maximum to reduce halation for astigmatic
        readers, still 13.1:1, and it buys dark mode a heading/body hierarchy. */
     --text: #e9e1d6;
     --text-heading: #ede6dc;
-    --text-muted: #b3a99c;
     --text-disabled: #6f685e;
     --text-disabled: color-mix(in srgb, #b2a898 55%, #1c1916);
     --border: #746a5f;
@@ -482,12 +471,10 @@
 
     --brand: #b7a5e0;
     --brand-hover: #b9a6d9;
-    --brand-active: #c9baea;
     --on-brand: #1a1614;
     --tint-brand: #2b2440;
     --visited: #a898cd;
     --selection-bg: #4a3a6b;
-    --focus-ring: #b7a5e0;
     --focus-ring-on-brand: #2f2410;
 
     /* Dark chrome is the ratified hero surface, so no new surface enters the palette.
@@ -544,7 +531,6 @@
     /* As in the light block. */
     --paper: #1c1916;
     /* As in the light block. */
-    --raised: #232019;
     /* As in the light block. */
     --text-secondary: #b2a898;
     /* As in the light block. */
@@ -623,13 +609,9 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --bg: #1a1614;
-  --surface: #26201c;
   --surface-popover: #322a25;
-  --surface-code: #26201c;
   --text: #e9e1d6;
   --text-heading: #ede6dc;
-  --text-muted: #b3a99c;
   --text-disabled: #6f685e;
   --text-disabled: color-mix(in srgb, #b2a898 55%, #1c1916);
   --border: #746a5f;
@@ -639,12 +621,10 @@
   --brand-hover: #b9a6d9;
   /* The doc specifies no dark brand-active. Reusing the ratified hover hex
      keeps parity with the light block without inventing a value. */
-  --brand-active: #c9baea;
   --on-brand: #1a1614;
   --tint-brand: #2b2440;
   --visited: #a898cd;
   --selection-bg: #4a3a6b;
-  --focus-ring: #b7a5e0;
   --focus-ring-on-brand: #2f2410;
 
   /* Chrome: as in the dark block above. */
@@ -701,7 +681,6 @@
   /* As in the light block. */
   --paper: #1c1916;
   /* As in the light block. */
-  --raised: #232019;
   /* As in the light block. */
   --text-secondary: #b2a898;
   /* As in the light block. */
@@ -824,19 +803,19 @@
 @media (prefers-contrast: more) {
   :root,
   [data-theme="light"] {
-    --text-muted: #4a423a;
+    --text-secondary: #4a423a;
     --border: #6e6459;
   }
 
   [data-theme="dark"] {
-    --text-muted: #c6bdaf;
+    --text-secondary: #c6bdaf;
     --border: #8a8075;
   }
 }
 
 @media (prefers-contrast: more) and (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --text-muted: #c6bdaf;
+    --text-secondary: #c6bdaf;
     --border: #8a8075;
   }
 }
@@ -936,7 +915,7 @@ body {
      the post page's sticky rail, which offset by a plain 20px while the header still scrolled away.
      Re-measured when the header's padding or its contents change, never reasoned from. */
   --header-h: 4.625rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font-family: var(--font-sans);
 }
@@ -1010,7 +989,7 @@ a:hover {
 }
 
 .muted {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .btn-brand,
@@ -1035,7 +1014,7 @@ a:hover {
 }
 
 :focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
 

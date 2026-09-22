@@ -51,7 +51,7 @@
 
 .ask-note,
 .ask-status {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
@@ -94,7 +94,7 @@
 
 .ask-sources-heading {
   margin-bottom: 0.25rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -110,12 +110,12 @@
  * its own: the number and the title are one target.
  */
 .ask-source-index {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
 .ask-source-kind {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 

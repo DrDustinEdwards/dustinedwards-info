@@ -75,7 +75,7 @@
    click landed, so active has its own brand step. */
 .pgui .btn:active,
 .pgui .btn[data-demo="active"] {
-  background: var(--raised);
+  background: var(--paper);
   color: var(--brand-pressed);
   border-color: var(--brand-pressed);
 }
@@ -167,7 +167,7 @@
   font-variation-settings: var(--t-body-vars);
   font-optical-sizing: none;
   color: var(--text);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--line-strong);
   border-radius: var(--radius-control);
   transition: border-color var(--motion-state) var(--ease-state);
@@ -246,7 +246,7 @@
   block-size: var(--control-min-dense);
   margin: 0;
   margin-block-start: var(--s-2);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--line-strong);
   border-radius: var(--radius-control);
   cursor: pointer;
@@ -317,14 +317,14 @@
    at that weight, which is measured against a filled admin button, not paper. */
 .pgui :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible,
 .pgui [data-demo="focus"] {
-  outline: var(--line-w-thick) solid var(--focus-ring);
+  outline: var(--line-w-thick) solid var(--brand);
   outline-offset: var(--s-1);
   transition: none;
 }
 
 .pgui .btn:focus-visible,
 .pgui .btn[data-demo="focus"] {
-  outline: var(--line-w-thick) solid var(--focus-ring);
+  outline: var(--line-w-thick) solid var(--brand);
   outline-offset: var(--s-1);
 }
 
@@ -407,7 +407,7 @@
   min-block-size: var(--control-min);
   padding-inline: var(--s-3);
   color: var(--brand);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--line-strong);
   border-radius: var(--radius-control);
   text-decoration: none;
@@ -571,7 +571,7 @@
   margin-block: var(--s-6);
   padding: var(--s-3) var(--s-4);
   overflow-x: auto;
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--dust);
   border-radius: var(--radius-control);
 }
@@ -695,7 +695,7 @@
   gap: var(--s-3);
   margin-block: var(--s-5);
   padding: var(--s-3) var(--s-4);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--dust);
   border-inline-start: var(--line-w-thick) solid var(--alert-accent);
   border-radius: var(--radius-control);
@@ -793,11 +793,11 @@
   }
 }
 
-/* The Ask frame is solid --raised. It is not a glass surface. */
+/* The Ask frame is solid --paper. It is not a glass surface. */
 .pgui .ask {
   margin-block-start: var(--s-8);
   padding: var(--s-5) var(--s-5) var(--s-6);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--line-strong);
   border-radius: var(--radius-control);
 }
@@ -820,7 +820,7 @@
 
 /* ---- 6c · the Admin kit ------------------------------------------------- */
 
-/* The admin topbar is --raised with a rule beneath, never the purple chrome:
+/* The admin topbar is --paper with a rule beneath, never the purple chrome:
    seeing purple should mean "you are on the public site". */
 .pgui .admin {
   border: var(--line-w) solid var(--dust);
@@ -834,7 +834,7 @@
   gap: var(--s-3);
   block-size: var(--admin-topbar-h);
   padding-inline: var(--s-4);
-  background: var(--raised);
+  background: var(--paper);
   border-block-end: var(--line-w) solid var(--line-strong);
 }
 
@@ -932,15 +932,17 @@
   block-size: var(--admin-row-h);
 }
 
+/* The neutral elevation step, matching .posts-table's real row hover. Ruling 128 collapsed the
+   step this used into the ground, which would have left the hover painting nothing. */
 .pgui .dt-row:hover,
 .pgui .dt-row[data-demo="hover"] {
-  background: var(--raised);
+  background: var(--surface-popover);
 }
 
 /* Surface plus an inset brand bar is the admin's selected treatment, and the
    brand outline is permitted on this plane only. */
 .pgui .dt-row[data-selected] {
-  background: var(--raised);
+  background: var(--paper);
   box-shadow: inset var(--line-w-thick) 0 0 0 var(--brand);
 }
 
@@ -985,7 +987,7 @@
   min-block-size: var(--control-min);
   margin-block-end: var(--s-3);
   padding: var(--s-2) var(--s-3);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--line-strong);
   border-radius: var(--radius-control);
 }
@@ -1099,8 +1101,9 @@
   border-color: var(--error);
 }
 
+/* The same neutral step: a hover that paints the ground is not a hover. */
 .pgui .mq-delete:hover {
-  background: var(--raised);
+  background: var(--surface-popover);
 }
 
 /* Health card: two facts and a state. No sparkline, no gauge. */
@@ -1109,7 +1112,7 @@
   flex-direction: column;
   gap: var(--s-2);
   padding: var(--s-3) var(--s-4);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--dust);
   border-inline-start: var(--line-w-thick) solid var(--hc-accent);
   border-radius: var(--radius-control);
@@ -1246,7 +1249,7 @@
   max-inline-size: var(--measure);
   padding: 0;
   color: var(--text);
-  background: var(--raised);
+  background: var(--paper);
   border: var(--line-w) solid var(--line-strong);
   border-radius: var(--radius-control);
 }

@@ -37,9 +37,9 @@ render nearly invisible. This cost a preview cycle; it will cost you one too.
 | Quiet ink | `--text-secondary` | deks, dates, labels, summaries |
 | Structure | `--dust` | **every** rule, row separator and hairline, at `--line-w` |
 | Clickable ink | `--brand` | links, focus, instrument actions, and nothing else |
-| Link states | `--brand-hover` `--brand-active` `--visited` | |
-| Focus | `--focus-ring` | 2px, 2px offset, square corners |
-| Code ground | `--surface-code` | the one permitted departure from paper, so code survives print |
+| Link states | `--brand-hover` `--brand-pressed` `--visited` | |
+| Focus | `--brand` | 2px, 2px offset, square corners |
+| Code ground | `--paper` | code sits on the page ground; a rule, not a fill, sets it apart |
 
 `--dust` is a **line colour** and is deliberately below the contrast floor. It
 rules and separates; it may never be the thing that identifies a control, and it

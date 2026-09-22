@@ -137,9 +137,9 @@ will ever tell you:
 - Both themes are first class. A themed container owes **both**
   `background: var(--paper)` and `color: var(--text)`; setting only the
   background inherits the other theme's text colour and has already shipped a
-  preview with invisible body copy. `--paper` is the ground of the public plane,
-  and `--bg` and `--surface` are the older pair it is replacing.
-- Focus is always visible: `--focus-ring`, 2px, 2px offset, square corners. The
+  preview with invisible body copy. `--paper` is the ground of BOTH planes: ruling 128 collapsed the four creams
+  into it, so there is no second ground to pick by mistake.
+- Focus is always visible: `--brand`, 2px, 2px offset, square corners. The
   ring token differs by surface, and now that the header is paper the only
   non-default ring left is `--focus-ring-on-brand`, on a filled brand control,
   which the public plane no longer has.
