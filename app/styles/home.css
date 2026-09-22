@@ -234,6 +234,28 @@
 }
 
 /*
+ * THE 300px FLOOR STAYS, AND IT STOPS WIDENING THE PAGE. Below a 348px viewport the reading column
+ * is narrower than the plate is allowed to be, and the figure is a grid item, so its automatic
+ * minimum size was the plate's own 300px: that sized the hero auto column, stretched the intro
+ * beside it to 300, and scrolled the whole document sideways by 4px at 320.
+ *
+ * A scroll container instead, which is what page-shell.css does with the error frame for the same
+ * reason. The plate keeps its 300px and its six specimens stay distinguishable; the caption is a
+ * block child with no minimum, so it stays at the column width and wraps; and the panning is
+ * confined to the figure rather than handed to the page. min-inline-size is stated as well as
+ * implied, because a grid item automatic minimum going to zero under overflow is a rule worth
+ * reading in the sheet rather than recalling from the spec.
+ *
+ * THE PLATE ALONE, not .home-figure with it. Only .plate carries the 300px floor; the figures use
+ * .fig, which has none and was measured at the column width. A scroll container that can never
+ * scroll would still take the tab stop its focusable region needs.
+ */
+.home-plate {
+  min-inline-size: 0;
+  overflow-x: auto;
+}
+
+/*
  * Mono labels on leaders, which is what a plate's annotation is. Sizes are the reference
  * drawing's, part-c/06-morphology-key.html: 10.5px on a leader label and 9.5px on the scale bar,
  * which is smaller than body mono on purpose. A plate's annotation sits under the drawing rather
