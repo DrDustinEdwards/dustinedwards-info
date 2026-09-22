@@ -694,7 +694,7 @@ const ENHANCEMENTS_PATH = join(root, "content", "enhancements.json");
 const ENHANCE_DIR = join(root, "app", "enhance");
 
 /** A tripwire: a new module means walking this list (hard rule 9). */
-const EXPECTED_ENHANCE_MODULES = 6;
+const EXPECTED_ENHANCE_MODULES = 7;
 
 /** Set under measured, to catch a module that stopped being read. */
 const MINIMUM_ENHANCEMENT_ENTRIES = 9;
@@ -2211,7 +2211,7 @@ console.log(
 
 /* Whole-gate floor: section floors cannot see another section stopping. */
 /* Within the tolerance `scripts/check-floors.mjs` owns; re-measure by running the gate. */
-const MINIMUM_CHECKS = 913;
+const MINIMUM_CHECKS = 950;
 const floorBreach = assertFloor(
   "check:features",
   "checks",

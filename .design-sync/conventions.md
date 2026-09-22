@@ -179,12 +179,18 @@ Three series and one texture, and the texture is not a series:
 | Series 1, and every annotation | `--fig-oxide-400` | `--fig-oxide-300` |
 | Series 2 | `--fig-leaf-400` | `--fig-leaf-300` |
 | Series 3 | `--chart-cadet` | `--chart-cadet` |
-| Texture only: lawn, halo, a dashed plate circle | `--fig-dust-300` | `--fig-dust-300` |
+| Texture only: stipple, the halo's dashed ring | `--fig-dust-300` | `--fig-dust-300` |
+| Plate I's lawn, a figure fill only | `--fig-lawn` | `--fig-lawn` |
+| Plate I's turbid tone, a figure fill only | `--fig-turbid` | `--fig-turbid` |
 
 Read the first two rows carefully: oxide and leaf need a DIFFERENT step per
 theme, because the ramp step that reads correctly on limestone is not the one
-that reads on ink. The last two rows name one token that already carries both
-values.
+that reads on ink. The last four rows each name one token that already carries
+both values.
+
+`--fig-lawn` and `--fig-turbid` are the plate's two flat fills (seat,
+2026-09-22). They fill a figure and nothing else, never a page surface, and
+`check:invariants` section 32 fails any use that is not a fill.
 
 `--fig-dust-300` is 2.33:1 on paper. That is fine for stipple and a dashed
 circle and is never enough to label a series or set body text. No teal, no

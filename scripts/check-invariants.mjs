@@ -4192,16 +4192,15 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--on-success-fill",      "component: the success alert"],
   ["--fig-ground",           "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-dust-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  /* --fig-dust-200 left this map with the plate redraw: it is the light theme's turbid tone, the
-     one value between the lawn and the paper a clearing shows. --fig-dust-300 left earlier with
-     Plate I itself and is now the lawn. Texture, never a series: ruling 122. */
-  ["--fig-leaf-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  /* Back on the map with the solid-lawn plate, whose turbid tone is --fig-turbid. */
+  ["--fig-dust-200",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  ["--fig-leaf-100",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-400",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-500",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-oxide-100",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-oxide-200",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  /* --fig-oxide-500 left this map with the plate redraw: it is the dark theme callout stroke,
-     the step that reads against the lawn where oxide 300 does not. */
+  /* Back on the map with the solid-lawn plate, which has no callout circles. */
+  ["--fig-oxide-500",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s1",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s2",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s3",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
@@ -4263,6 +4262,48 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
       `${gateMentions} gate mention(s) not counted as reads), ` +
       `${RUNTIME_INJECTED.size} runtime-injected allowed, ${rawHex.length} raw hex`,
   );
+}
+
+console.log("\n  32. the plate's lawn and turbid tones are figure fills, never a page surface");
+
+/*
+ * The seat approved --fig-lawn and --fig-turbid (2026-09-22) as figure fills only. A token that
+ * reads as a warm neutral is exactly what a later sheet reaches for as a panel background, so the
+ * condition is checked here rather than trusted to a comment: outside its declaration, every use
+ * is an SVG `fill` attribute or a CSS `fill` declaration.
+ */
+{
+  const PLATE_TOKENS = /--fig-(lawn|turbid)\b/;
+  /** @param {string} dir @returns {string[]} */
+  const walk = (dir) =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) return e.name === "node_modules" || e.name === "dist" ? [] : walk(p);
+      return /\.(tsx?|mjs|css)$/.test(e.name) ? [p] : [];
+    });
+  /** @type {string[]} */
+  const misuse = [];
+  let uses = 0;
+  for (const file of walk(join(root, "app"))) {
+    const lines = readFileSync(file, "utf8").split("\n");
+    lines.forEach((line, i) => {
+      if (!PLATE_TOKENS.test(line)) return;
+      if (/^\s*--fig-(lawn|turbid)\s*:/.test(line)) return; // the declaration itself
+      if (/^\s*(\*|\/\/|\/\*|\{\/\*)/.test(line)) return; // prose about it, not a use
+      uses += 1;
+      // A fill context: the text before the token names a fill (an attribute, a declaration, or a
+      // lookup named for fills). A surface would name background, color or border instead.
+      const before = line.slice(0, line.search(PLATE_TOKENS));
+      const asFill = /\bfill\b/i.test(before) && !/\b(background|color|border|outline)\b/i.test(before);
+      if (!asFill) misuse.push(`${file.slice(root.length + 1)}:${i + 1}: ${line.trim().slice(0, 100)}`);
+    });
+  }
+  ok(
+    "--fig-lawn and --fig-turbid are painted only as a fill",
+    misuse.length === 0,
+    `${misuse.length} use(s) outside a fill. They are figure tones, not surfaces:\n      ${misuse.join("\n      ")}`,
+  );
+  ok("the plate tones have at least one fill consumer each", uses >= 2, `${uses} use(s) found`);
 }
 
 /* The offline floor is measured by running this gate. The remote branch needs
