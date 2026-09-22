@@ -1,6 +1,6 @@
 /* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
-/* /playground: controls and results sit on --surface while prose stays on the canvas (rule 7).
+/* /playground: controls and results sit on --paper while prose stays on the canvas (rule 7).
    No colour carries meaning alone: pass and fail are words. */
 
 .playground-demo {
@@ -24,7 +24,7 @@
 .playground-demo-runs {
   margin: 0.5rem 0 0;
   font-size: 0.875rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* The form is a row that wraps on its own, so a narrow viewport needs no
@@ -38,7 +38,7 @@
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .playground-field {
@@ -53,14 +53,14 @@
 
 .playground-field label {
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .playground-field input {
   padding: 0.5rem 0.625rem;
   border: 1px solid var(--border-strong);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   /* 24px minimum target, WCAG 2.2 2.5.8. */
@@ -96,7 +96,7 @@
 .playground-fieldset legend {
   padding: 0 0.25rem;
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .playground-radio {
@@ -112,7 +112,7 @@
   flex: 1 0 100%;
   margin: 0;
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Ratified pairs, as ordinary links: each one is a real URL for that result, so
@@ -145,7 +145,7 @@
   max-width: 42rem;
   font-size: 0.9375rem;
   line-height: 1.6;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* The only element on the site whose colours are legitimately inline: they are
@@ -169,12 +169,12 @@
   padding: 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .playground-metrics dt {
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .playground-metrics dd {
@@ -200,7 +200,7 @@
   text-align: left;
   font-size: 0.875rem;
   line-height: 1.6;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .playground-table th,
@@ -221,12 +221,12 @@
 .playground-row-parent {
   display: block;
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .playground-table thead th {
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .playground-table tbody th {
@@ -244,7 +244,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* The snippet verbatim, deliberately not highlighted: it is the input, and
@@ -256,7 +256,7 @@
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: var(--surface);
+  background: var(--paper);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -269,7 +269,7 @@
   padding: 1rem 1.25rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 /* `.prose` sets a top margin on its first block for body flow; inside a boxed
@@ -306,5 +306,5 @@
   margin: 0.25rem 0 0;
   max-width: 42rem;
   line-height: 1.6;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }

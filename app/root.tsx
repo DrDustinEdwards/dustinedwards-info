@@ -201,8 +201,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
          * because browser chrome does not resolve a custom property, so `check:contrast`
          * asserts they still match the palette.
          */}
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#faf7f2" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1a1614" />
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f4efe6" />
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1c1916" />
         <Meta />
         {/*
          * `<Links>` takes a nonce from the framework context and has no opt-out. That

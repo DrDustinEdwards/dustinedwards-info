@@ -19,7 +19,7 @@
   padding: 1.5rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 /* The metric block. Its own baseline, above the name, separated by a rule so
@@ -49,7 +49,7 @@
    looking authoritative long after it stops being true. */
 .project-metric-asof {
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .project-name {
@@ -68,7 +68,7 @@
   margin: 0.75rem 0 0;
   font-size: 0.9375rem;
   line-height: 1.55;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Technical notes are prose in a card: muted body colour, the description's measure, and no bullets,
@@ -83,7 +83,7 @@
   margin: 0.625rem 0 0;
   font-size: 0.9375rem;
   line-height: 1.55;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .project-meta {
@@ -93,7 +93,7 @@
   gap: 0.5rem;
   margin: 1rem 0 0;
   font-size: 0.8125rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Rule 1: the status is never carried by colour alone. It renders its own
@@ -116,7 +116,7 @@
 }
 
 .project-status[data-status="internal"] {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   border-color: var(--border);
 }
 
@@ -136,7 +136,7 @@
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Pushed to the foot: an auto top margin works only on the last flex child, so the evidence block takes it
@@ -168,7 +168,7 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* Stacked, not a row: these are article titles and a flex row would set two

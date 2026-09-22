@@ -4,7 +4,7 @@
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 0.625rem;
-  background: var(--surface);
+  background: var(--paper);
   color: var(--text);
   overflow: hidden;
   /* Sits nearer the top than centred: the list grows downward and a centred
@@ -57,7 +57,7 @@
 }
 
 .palette-input:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
@@ -66,8 +66,8 @@
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 0.25rem;
-  background: var(--bg);
-  color: var(--text-muted);
+  background: var(--paper);
+  color: var(--text-secondary);
   font: inherit;
   font-size: 0.75rem;
   cursor: pointer;
@@ -77,7 +77,7 @@
 .palette-status {
   margin: 0;
   padding: 0.375rem 0.875rem 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
@@ -95,7 +95,7 @@
 
 .palette-group {
   padding: 0.5rem 0.5rem 0.25rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -120,12 +120,12 @@
 
 .palette-context,
 .palette-why {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
 .palette-snippet {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   line-height: 1.5;
   display: -webkit-box;
@@ -163,7 +163,7 @@
   margin: 0;
   padding: 0.5rem 0.875rem;
   border-top: 1px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
@@ -172,7 +172,7 @@
   margin-right: 0.15rem;
   border: 1px solid var(--border);
   border-radius: 0.2rem;
-  background: var(--bg);
+  background: var(--paper);
   font-size: 0.6875rem;
 }
 
@@ -207,7 +207,7 @@
   border: 1px dashed var(--border);
   border-radius: 0.375rem;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: inherit;
   font-size: 0.8125rem;
   text-align: left;

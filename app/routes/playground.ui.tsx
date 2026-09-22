@@ -1023,7 +1023,7 @@ export default function PlaygroundUi() {
           <Spec
             id="ask"
             title="The Ask frame"
-            note="Solid --raised, not glass, and it sits below the results: a reader who searched wants the results first and the offer to ask second."
+            note="Solid --paper, not glass, and it sits below the results: a reader who searched wants the results first and the offer to ask second."
           >
             {(ids) => (
               <section className="ask" aria-labelledby={ids("h")}>
@@ -1048,7 +1048,7 @@ export default function PlaygroundUi() {
           <Spec
             id="shell"
             title="Topbar and rail"
-            note="The admin topbar is --raised with a rule beneath, never the purple chrome. The current rail item is marked by an inset brand bar, a surface change and weight."
+            note="The admin topbar is --paper with a rule beneath, never the purple chrome. The current rail item is marked by an inset brand bar, a surface change and weight."
           >
             {() => (
               <div className="admin">

@@ -43,7 +43,7 @@
   margin: 1.5rem 0;
   padding: 0.25rem 0 0.25rem 1rem;
   border-left: 3px solid var(--border);
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .prose img {
@@ -74,7 +74,7 @@
 
 .prose figcaption {
   margin-top: 0.5rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.875rem;
   line-height: 1.5;
 }
@@ -100,7 +100,7 @@
   height: auto;
   color: var(--text);
   /* Plot marks that draw text haloes reference this. */
-  --plot-background: var(--bg);
+  --plot-background: var(--paper);
 }
 
 .chart-figure svg text,
@@ -125,7 +125,7 @@
 
 .chart-data summary {
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .chart-data table {
@@ -211,13 +211,13 @@
 }
 
 .prose th {
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .prose :not(pre) > code {
   padding: 0.125rem 0.375rem;
   border-radius: 0.25rem;
-  background: var(--surface);
+  background: var(--paper);
   font-size: 0.9em;
   /* Inline code may break: its contents are single unbreakable tokens, and monospace fallbacks differ in width
      by platform. anywhere, not break-word: only anywhere lowers min-content, so a token cannot widen the page.
@@ -267,7 +267,7 @@
   border-radius: 0.5rem;
   /* Also set here, not only on .shiki, so a fence in an unlisted language
      still lands on a surface instead of the page background. */
-  background: var(--surface-code);
+  background: var(--paper);
   color: var(--text);
   overflow-x: auto;
   font-size: 0.875rem;
@@ -280,7 +280,7 @@
   padding-top: 1.5rem;
   border-top: 1px solid var(--border);
   font-size: 0.9375rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* remark-gfm labels the footnote section with a visually hidden heading. */
@@ -297,11 +297,11 @@
   justify-content: center;
   min-width: 24px;
   margin-left: 0.375rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* The reveal is scoped to hover-capable pointers and goes 0 to 1, never a partial opacity, which composites
-   after check:contrast measures. On touch the anchor is plain --text-muted. focus-visible is safe inside
+   after check:contrast measures. On touch the anchor is plain --text-secondary. focus-visible is safe inside
    the query: outside it the anchor is already visible. */
 @media (hover: hover) {
   .heading-anchor {
@@ -317,7 +317,7 @@
 }
 
 /* Shiki dual themes: both palettes ride as custom properties, so switching needs no script. The theme's own
-   background is dropped; blocks sit on --surface-code, where check:contrast holds every syntax token to
+   background is dropped; blocks sit on --paper, where check:contrast holds every syntax token to
    4.5:1 (and on --surface-popover). With no attribute :root:not([data-theme]) answers; no light override. */
 .prose .shiki,
 .prose .shiki span {
@@ -328,7 +328,7 @@
    this wins cleanly. Checked against real pipeline output: <pre class="shiki
    ..." style="--shiki-light:#...;--shiki-light-bg:#fff;..."> */
 .prose .shiki {
-  background-color: var(--surface-code);
+  background-color: var(--paper);
 }
 
 /* Diff scopes and carriage-return pair a foreground with their own background and are only legible on it,
@@ -364,7 +364,7 @@
  */
 .prose .pull-quote {
   margin: 1.5rem 0 0.5rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 1.25rem;
   line-height: 1.35;
   text-wrap: balance;
