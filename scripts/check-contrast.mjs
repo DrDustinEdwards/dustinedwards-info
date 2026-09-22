@@ -470,6 +470,12 @@ const MATRIX = [
   ["--fig-dust-400", "--fig-ground", UI, "figure axis and grid stroke"],
   ["--text-secondary", "--fig-ground", TEXT, "figure label"],
   ["--text", "--fig-ground", TEXT, "figure key label"],
+  /*
+   * The plate's callout is a stroke that identifies which specimen a numeral belongs to, so 1.4.11
+   * applies and it is measured rather than exempted. Its ground is the LAWN, not paper: that is
+   * why the plate steps oxide down in dark, where oxide 300 on the lawn is 1.25:1.
+   */
+  ["--fig-oxide-500", "--fig-dust-300", UI, "plate callout circle and leader on the lawn"],
 ];
 
 /** @type {Array<{mode: string, note: string, lc: number, ratio: number}>} */
@@ -595,19 +601,20 @@ const NON_PARTICIPATING = new Map([
       "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
   /*
-   * --fig-dust-300 IS PAINTED NOW, and its exemption survives on a different ground. Plate I uses
-   * it for the lawn stipple, the halo ring and the dashed inner margin: 2.33:1 on paper light,
-   * which is correct for texture and would be wrong for anything that carries meaning. Ruling 122
-   * settles the line it sits on: texture only, never a series, never a label. The other names
-   * below are still ramp steps nothing resolves through.
+   * DUST 200 IS THE PLATE'S TURBID TONE, a large flat FILL between the lawn and the paper a
+   * clearing shows. Step 4 exempts an interior, and it is neither a stroke, a label nor a series
+   * (ruling 122). Whether the three tones separate is a shot, not a ratio: no pair here states it.
+   *
+   * Dust 300, the lawn, is NOT exempt any more: it is the callout stroke's ground in the matrix
+   * above, which is the pair that carries the one ratio on this drawing that has to hold.
    */
   ...(/** @type {Array<[string, string]>} */ (
     [
-      "--fig-dust-300",
+      "--fig-dust-200",
     ].map((t) => [
       t,
-      "texture: lawn stipple, a halo ring and a dashed margin on Plate I, which are allowed " +
-        "below the stroke floor because none of them identifies anything",
+      "texture: the turbid tone on Plate I, a flat fill allowed below the stroke floor because " +
+        "it identifies nothing",
     ])
   )),
   // Unused ramp steps: interiors may sit below 3:1, only edges may not.
@@ -619,9 +626,7 @@ const NON_PARTICIPATING = new Map([
       "--fig-leaf-500",
       "--fig-oxide-100",
       "--fig-oxide-200",
-      "--fig-oxide-500",
       "--fig-dust-100",
-      "--fig-dust-200",
     ].map((t) => [
       t,
       "a ramp step no series slot resolves through: a fill or a letterbox ground, which step 4 " +
@@ -1108,12 +1113,11 @@ const buildPresent = existsSync(assetDir);
  * Floors: counts from running the gate with build/ present and absent, one under
  * check:floors' tolerance. Only CI reaches the absent branch.
  *
- * RE-MEASURED 2026-09-20 after the --brand-active pair landed, by RUNNING both branches: the
- * absent count is taken by moving build/ aside, never by reasoning about which assertions skip.
- * The previous 873/679 drifted 47 and 37 over their counts against a 5% tolerance, which is what
- * check:floors failed on rather than this gate.
+ * RE-MEASURED 2026-09-22 after the plate redraw, by RUNNING both branches: the absent count is
+ * taken by moving build/ aside, never by reasoning about which assertions skip. Two exemptions
+ * became one measured pair, so both floors fell by two.
  */
-const MINIMUM_CHECKS = buildPresent ? 920 : 716;
+const MINIMUM_CHECKS = buildPresent ? 918 : 714;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
