@@ -1,0 +1,9 @@
+{
+  "_": [
+    "British forms check:spelling must leave alone, each with its reason: a quoted title of a",
+    "published work, a proper name, or text quoted verbatim from a third party. Publication",
+    "records are outside the gate's scope already (data/ and app/data/publications.ts). An entry",
+    "that no longer matches anything fails the gate, so this list cannot outlive its reasons."
+  ],
+  "entries": []
+}
