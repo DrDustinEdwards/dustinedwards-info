@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # PreToolUse hook on Bash: production writes go through `npm run ship` and
 # nothing else. Blocks wrangler deploy, wrangler versions upload, npm run
-# deploy, and any wrangler d1 execute that is not a plain SELECT.
+# deploy, and any wrangler d1 execute that is neither a SELECT nor a data write
+# made under ruling 131 (readable SQL, fresh backup).
 #
 # ## Why a hook and not a permission rule
 #
@@ -69,9 +70,21 @@
 # wrangler directly by design (CLAUDE.md, Commands), so `d1 migrations` is not
 # `d1 execute` and is not touched.
 #
-# `d1 execute` is allowed ONLY when every statement it carries begins with
-# SELECT. A `--file` is refused: its contents are not on the command line, so
-# the check cannot see them, and an unverifiable write is not a read.
+# `d1 execute` always allows a SELECT. A `--file` is refused: its contents are
+# not on the command line, so the check cannot see them, and an unverifiable
+# write is not a read.
+#
+# ## Writes, under ruling 131, until the domain move
+#
+# A data write (INSERT, UPDATE, DELETE) is allowed when the SQL is on the
+# command line, so the session can report exactly what it ran, AND a per-table
+# backup is under six hours old: `check:backup -- --remote` writes it to
+# `<tmp>/dustinedwards-backup-check/`, and this reads that directory's
+# `media.sql` mtime. BOUNDARY: a `--local` run of check:backup refreshes the same
+# file, so the check proves an export ran recently, not that it was remote.
+# Schema statements (CREATE, DROP, ALTER, PRAGMA, ATTACH, VACUUM) stay refused:
+# hard rule 14 puts schema in migrations. At cutover this arm goes back to
+# SELECT only.
 #
 # ## Fail direction: toward BLOCKING
 #
@@ -127,7 +140,7 @@ SITE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && { pwd -W 2>/dev/null |
 export SITE_ROOT
 
 printf '%s' "$payload" | "$PY" -c '
-import json, os, posixpath, re, sys
+import json, os, posixpath, re, sys, tempfile, time
 
 raw = sys.stdin.buffer.read().decode("utf-8", "replace")
 try:
@@ -341,12 +354,30 @@ for m in re.finditer(SEGMENT, cmd):
             sql = q.group(2) if q.group(2) is not None else q.group(3)
         if sql is None:
             sys.exit(9)   # no readable SQL: unverifiable, so refused
+        writes = False
         for stmt in sql.split(";"):
             s = stmt.strip().lstrip("(").strip()
             if not s:
                 continue
-            if not re.match(r"(?i)^select\b", s):
+            if re.match(r"(?i)^select\b", s):
+                continue
+            # Ruling 131: data writes only. Anything else, schema included, is refused.
+            if not re.match(r"(?i)^(insert|update|delete|replace)\b", s):
                 sys.exit(8)
+            writes = True
+        if writes:
+            # The override exists for the replay in check:hook-scope. It is read from the
+            # hook process environment, which a command string cannot set.
+            backup_dir = os.environ.get("DUSTINEDWARDS_BACKUP_CHECK_DIR") or os.path.join(
+                tempfile.gettempdir(), "dustinedwards-backup-check"
+            )
+            marker = os.path.join(backup_dir, "media.sql")
+            try:
+                age = time.time() - os.path.getmtime(marker)
+            except OSError:
+                sys.exit(10)
+            if age > 6 * 3600:
+                sys.exit(10)
 
 sys.exit(0)
 '
@@ -359,7 +390,8 @@ case "$rc" in
   5) block "Blocked: npm run deploy. It runs wrangler deploy from the working tree, which is a deploy nobody can reproduce. $rule16" ;;
   6) block "Blocked: wrangler deploy. $rule16" ;;
   7) block "Blocked: wrangler versions upload. It puts a version on the account outside the ship contract. $rule16" ;;
-  8) block "Blocked: wrangler d1 execute carrying something other than a SELECT. D1 is a DERIVED store (hard rule 18) and is repaired THROUGH its derivation, never by a hand-written statement. A hand-written row makes the index a second truth. Read-only SELECT is allowed." ;;
+  8) block "Blocked: wrangler d1 execute carrying a statement that is neither a SELECT nor a data write (INSERT, UPDATE, DELETE, REPLACE). Schema changes go through migrations (hard rule 14)." ;;
+  10) block "Blocked: wrangler d1 execute carrying a data write with no per-table backup under six hours old. Ruling 131 lets a driver write to D1 only after confirming the latest backup: run npm run check:backup -- --remote first, then report exactly what the write changed." ;;
   9) block "Blocked: wrangler d1 execute whose SQL this check cannot read (a --file, or no --command). An unverifiable statement is not a read. Pass the SQL inline as --command \"SELECT ...\" if it is a read." ;;
   4) block "no-direct-deploy hook: the payload on stdin was not valid JSON, so the deploy check could not run. Failing closed: BLOCKED (checker exit 4)." ;;
   *) block "no-direct-deploy hook: the deploy check exited with unexpected code $rc. Failing closed rather than passing silently, so this command is BLOCKED. Interpreter used: $PY." ;;
