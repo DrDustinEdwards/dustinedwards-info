@@ -2788,6 +2788,65 @@ try {
     }
 
     /*
+     * THE HEADER MENU, RULE 9's FALLBACK, with JavaScript disabled. Ruling 126 puts the
+     * destinations behind a menu on narrow widths, so with no script that menu IS the navigation:
+     * if it does not open, six destinations are unreachable from the header.
+     *
+     * At a narrow viewport, because that is the only width it is shown at. Asserted by OPENING it
+     * and then FOLLOWING a link: a details element that opens but whose links do not navigate
+     * would satisfy a check that stopped at `open`.
+     */
+    {
+      const noScript = await browser.newPage();
+      try {
+        await noScript.setJavaScriptEnabled(false);
+        await noScript.setViewport({ width: 375, height: 700 });
+        await noScript.goto(BASE, { waitUntil: "networkidle0" });
+
+        const menu = await noScript.evaluate(() => {
+          const details = document.querySelector("[data-header-menu]");
+          if (!details) return null;
+          return {
+            displayed: getComputedStyle(details).display !== "none",
+            open: /** @type {HTMLDetailsElement} */ (details).open,
+            links: details.querySelectorAll("a").length,
+          };
+        });
+
+        ok(
+          "the header menu is present and closed with no script",
+          menu !== null && menu.displayed && !menu.open && menu.links > 0,
+          `menu state ${JSON.stringify(menu)}. At 375 the destinations live behind this control, ` +
+            `so an absent or hidden one is a header with no navigation at all.`,
+        );
+
+        await noScript.click(".site-header-menu-button");
+        ok(
+          "the header menu OPENS with no script, because it is a details element",
+          await noScript.$eval("[data-header-menu]", (d) => /** @type {HTMLDetailsElement} */ (d).open),
+          "clicking the summary did not open it. A menu that needs script to open is not rule " +
+            "9's fallback, it is the enhancement pretending to be one.",
+        );
+
+        const target = await noScript.$eval(".site-header-menu-panel a", (a) =>
+          a.getAttribute("href"),
+        );
+        await Promise.all([
+          noScript.waitForNavigation({ waitUntil: "domcontentloaded" }),
+          noScript.click(".site-header-menu-panel a"),
+        ]);
+        ok(
+          "a header menu link NAVIGATES with no script",
+          new URL(noScript.url()).pathname === target,
+          `landed on ${new URL(noScript.url()).pathname}, expected ${target}. Opening is half the ` +
+            `contract; the other half is that the thing inside goes somewhere.`,
+        );
+      } finally {
+        await noScript.close();
+      }
+    }
+
+    /*
      * The palette: clicking the trigger opens it. The hint is server-rendered `hidden` and
      * unhidden only once the listener exists.
      */
