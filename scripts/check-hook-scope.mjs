@@ -62,6 +62,8 @@ console.log(`  bash: ${BASH_PATH}  (${BASH.source})\n`);
  * Ruling 131's backup precondition, replayed against three directories this gate owns: none holds
  * the marker, one holds it fresh, one holds it seven hours old. The real directory is never read.
  */
+/** @typedef {"none" | "fresh" | "stale"} BackupState */
+/** @type {Record<BackupState, string>} */
 const BACKUP_DIRS = {
   none: mkdtempSync(join(tmpdir(), "hook-backup-none-")),
   fresh: mkdtempSync(join(tmpdir(), "hook-backup-fresh-")),
@@ -79,6 +81,7 @@ utimesSync(stalePath, sevenHoursAgo, sevenHoursAgo);
  *
  * @param {string} command
  * @param {string} cwd
+ * @param {BackupState} [backup] which of the gate's backup directories the hook reads
  * @returns {number} the hook's exit code: 2 blocks, 0 allows
  */
 function runHook(command, cwd, backup = "none") {
@@ -97,9 +100,11 @@ function runHook(command, cwd, backup = "none") {
   return result.status ?? -1;
 }
 
-/*
+/**
  * The cases, each naming the defect it would catch. The parent is DERIVED so this reads correctly
  * from any clone path, and the sibling resolves whether or not it exists.
+ *
+ * @type {Array<{ label: string, command: string, cwd: string, expect: number, why: string, backup?: BackupState }>}
  */
 const CASES = [
   {
