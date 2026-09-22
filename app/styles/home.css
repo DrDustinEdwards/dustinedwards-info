@@ -200,16 +200,47 @@
   margin: 0 0 var(--s-7);
 }
 
+/*
+ * THE PLATE'S THREE FLAT VALUES. The lawn, the paper a clearing shows, and ONE turbid tone between
+ * them, declared here and read wherever turbidity appears in the drawing. Dust for both, because
+ * ruling 122 gives the lawn to --fig-dust and turbidity is the same texture at a different density.
+ *
+ * TURBID SWAPS ITS STEP PER THEME and the lawn does not. Turbid must sit BETWEEN the lawn and the
+ * paper, and the paper moves from the light end of the range to the dark end when the theme flips,
+ * so an in-between tone has to move with it. Dust 200 light, dust 500 dark.
+ */
+/*
+ * ANNOTATION IS TWO OXIDE STEPS BECAUSE IT SITS ON TWO GROUNDS. The numeral is on paper outside
+ * the dish and takes --fig-ink, the pair the figures already measure. The callout circle and its
+ * leader are on the LAWN, which no other figure has: oxide 400 reads 2.37:1 there in light and
+ * oxide 300 reads 1.25:1 in dark, both under the 3:1 a stroke that identifies has to hold. Oxide
+ * 500 clears it in both themes, so the callout takes that step and does not swap. Same hue,
+ * stepped for its ground; ruling 122 gives every one of them to oxide. check:contrast measures it.
+ */
+.home-plate {
+  --fig-lawn: var(--fig-dust-300);
+  --fig-turbid: var(--fig-dust-200);
+  --fig-callout: var(--fig-oxide-500);
+}
+
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .home-plate,
   :root:not([data-theme="light"]) .home-figure {
     --fig-ink: var(--fig-oxide-300);
+  }
+
+  :root:not([data-theme="light"]) .home-plate {
+    --fig-turbid: var(--fig-dust-500);
   }
 }
 
 [data-theme="dark"] .home-plate,
 [data-theme="dark"] .home-figure {
   --fig-ink: var(--fig-oxide-300);
+}
+
+[data-theme="dark"] .home-plate {
+  --fig-turbid: var(--fig-dust-500);
 }
 
 /*
@@ -302,64 +333,41 @@
 }
 
 /*
- * THE KEY STRIP is the plate's key, not a second image: the six drawn small with their names and
- * sentences as real text, so a reader who cannot see the drawing still gets the taxonomy. Ruled
- * rows, not cards: one dust rule above the strip and one under each item.
+ * THE KEY IS THE CAPTION'S. The plate carries numerals; these rows decode them as real text, so a
+ * reader who cannot see the drawing still gets the taxonomy. Ruled rows, not cards.
+ *
+ * ONE COLUMN AT EVERY WIDTH. The rows are prose, and the plate column is 500px at the split: two
+ * columns of sentence inside that is a measure nothing reads comfortably.
  */
 .plate-key {
-  margin: 0 0 var(--s-8);
+  margin: 0.75rem 0 0;
   padding: 0;
   border-block-start: var(--line-w) solid var(--dust);
   list-style: none;
-  display: grid;
-  gap: 0;
-  /* Two columns at 375, which is what the handoff draws. */
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 /*
- * SIX COLUMNS, not auto-fit. An auto-fit track list put five specimens on one row and left the
- * sixth alone underneath, which reads as a list that ran out rather than as a key of six. The
- * count is the point here, so it is written down.
+ * A COLUMN FOR THE NUMERAL, not an indent on the first line. The sentences wrap at this measure,
+ * and a wrapped line returning to the margin runs back under the numerals and loses the list.
  */
-@media (min-width: 68rem) {
-  .plate-key {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-}
-
 .plate-key-item {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
   border-block-end: var(--line-w) solid var(--dust);
-  padding: 1rem 1rem 1rem 0;
-}
-
-.plate-key-mark {
-  display: block;
-  inline-size: 3.25rem;
-  block-size: 3.25rem;
-  margin-block-end: 0.5rem;
-}
-
-.plate-key-name {
-  margin: 0 0 0.25rem;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-weight: 500;
+  padding-block: 0.4375rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
 
 .plate-key-label {
-  margin-inline-end: 0.375rem;
   color: var(--fig-ink);
   font-family: var(--font-mono);
   font-size: 0.75rem;
 }
 
-.plate-key-reading {
-  margin: 0;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
-  line-height: 1.5;
+.plate-key-name {
+  color: var(--text);
+  font-weight: 500;
 }
 
 /* The numbered sections. The numeral is mono and muted: it is an index, not a heading word. */
@@ -410,9 +418,3 @@
   }
 }
 
-/* The key strip spans the same width as the pair above it, so the plate and its key read as one
-   object rather than as a figure and an unrelated list. Written as a child of .tracks because
-   shell.css sets every track child to the text column at (0,1,1), which outranks a bare class. */
-.tracks > .plate-key {
-  grid-column: wide;
-}

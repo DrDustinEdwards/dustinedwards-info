@@ -4192,15 +4192,16 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
   ["--on-success-fill",      "component: the success alert"],
   ["--fig-ground",           "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-dust-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  ["--fig-dust-200",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  /* --fig-dust-300 left this map with Plate I (ruling 124), which paints it as the lawn stipple,
-     the halo ring and the dashed inner margin. Texture, never a series: ruling 122. */
+  /* --fig-dust-200 left this map with the plate redraw: it is the light theme's turbid tone, the
+     one value between the lawn and the paper a clearing shows. --fig-dust-300 left earlier with
+     Plate I itself and is now the lawn. Texture, never a series: ruling 122. */
   ["--fig-leaf-100",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-400",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-leaf-500",         "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-oxide-100",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-oxide-200",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
-  ["--fig-oxide-500",        "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
+  /* --fig-oxide-500 left this map with the plate redraw: it is the dark theme callout stroke,
+     the step that reads against the lawn where oxide 300 does not. */
   ["--fig-s1",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s2",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
   ["--fig-s3",               "component: the :::chart figure system, the --fig-* palette that replaces --chart-*"],
@@ -4267,7 +4268,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 478 : 436;
+const MINIMUM_CHECKS = wantsRemote ? 474 : 432;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

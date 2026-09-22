@@ -1,150 +1,188 @@
 /**
- * Plate I: one drawn lawn carrying one specimen of every plaque morphology a phage hunter has to
- * learn to call, labelled i to vi on leaders out to the rim, with a 1 cm scale bar.
+ * Plate I: one drawn lawn carrying a specimen of eight plaque morphologies, each called out by a
+ * thin oxide circle on a leader to its roman numeral, with a 1 cm scale bar. The caption names and
+ * describes the eight; the plate carries numerals only.
  *
- * THE SIX ROWS BELOW ARE THE FIGURE'S SOURCE. The drawing is generated from them, so changing the
- * taxonomy is changing rows rather than redrawing: add a seventh and a seventh specimen appears in
- * the plate, in the key strip, and in the described alt text. The handoff asks for exactly that.
+ * BOUNDARY: nothing here measures legibility. Whether the three tones separate on a screen is a
+ * shot, not an assertion.
  *
- * FLAT LINE WORK, ruling 124. Outline, hairlines and stipple. No gradient, no field, no shadowed
- * rim, and no lamp: a lit diagram is a diagram pretending to be a photograph, and a plate shows
- * what is measurable rather than what a camera sees.
+ * THREE FLAT VALUES AND NO MORE: the lawn, the paper a clearing shows, and one turbid tone between
+ * them. Flat, never lit (ruling 124). Plaques carry no outline; a clearing is a shape of lighter
+ * tone on the lawn, which is what one looks like.
  *
- * COLOUR, ruling 122. Plaque outlines and the dish rim are `--text`; the lawn stipple, the halo
- * ring and the dashed inner margin are `--fig-dust-300`, which is texture and never a series;
- * leaders and labels are oxide, which is what annotation is for. `--brand` appears nowhere: purple
- * means a reader can click it and nothing in a drawing is clickable.
+ * COLOUR, ruling 122. Lawn and turbidity are dust, texture and never a series; the dish rim is
+ * `--text`; callout circles, leaders and numerals are oxide, which is what annotation is for.
+ * `--brand` appears nowhere: purple means a reader can click it.
  *
- * `--fig-ink` is a LOCAL alias, not a new token. Oxide needs a different ramp step per
- * theme to hold its measured pair (5.5:1 light on `--fig-oxide-400`, 5.4:1 dark on
- * `--fig-oxide-300`), and a component-scoped variable is how this repo swaps a step per theme
- * without inventing a global name. home.css declares it.
+ * `--fig-ink`, `--fig-lawn` and `--fig-turbid` are LOCAL aliases, not new tokens. Each holds a
+ * different ramp step per theme, which is how this repo swaps a step without inventing a global
+ * name. home.css declares them.
  *
- * NOT DATA. It does not change with the corpus: it is a teaching drawing of six morphologies, and
- * the only numbers on the page that move are in the evidence row and the two figures below it.
+ * NOT DATA. It does not change with the corpus, and it carries no citation: it draws established
+ * knowledge (ruling 127).
  */
 
-/** A drawn specimen. Geometry is the handoff's, coordinate for coordinate. */
+/** How a specimen is drawn. The row picks one; the renderer owns the geometry. */
+type Kind =
+  | "clear"
+  | "turbid"
+  | "bullseye"
+  | "turbid-centre"
+  | "halo"
+  | "sectored"
+  | "rough"
+  | "pinpoint";
+
+/** A called-out specimen. Polar, because the callouts read as a ring and the leaders radiate. */
 type Plaque = {
-  /** The roman label, which is also its order in the key. */
+  /** The roman numeral, which is also its order in the caption. */
   label: string;
   name: string;
-  /** One sentence, which the key strip prints as real text beside the drawing. */
+  /** The caption's sentence. Stated here so the plate and the caption cannot disagree. */
   reading: string;
-  /** Centre and radius on the 500 unit dish. */
-  cx: number;
-  cy: number;
+  kind: Kind;
+  /** Degrees clockwise from the dish's three o'clock, and distance from its centre. */
+  ang: number;
+  rad: number;
+  /** Plaque radius. For `halo` this is the inner clearing and `haloR` the diffuse zone. */
   r: number;
-  /** The leader's elbow and its horizontal run out to the label. */
-  elbow: [number, number];
-  tick: [number, number];
-  anchor: "start" | "end";
-  /** A clear centre inside a turbid plaque. */
-  innerR?: number;
-  /** A diffuse ring beyond the plaque, drawn dashed because it has no edge. */
   haloR?: number;
-  /** The lawn survives inside this plaque, so stipple is kept rather than cleared. */
-  lawnInside?: boolean;
-  /** No boundary at all: drawn as a dashed irregular outline rather than a circle. */
-  outline?: string;
 };
 
+/**
+ * THE EIGHT ARE THE FIGURE'S SOURCE. The drawing, the callouts, the caption and the alt text are
+ * generated from these rows, so changing the taxonomy is changing rows rather than redrawing.
+ */
 export const PLAQUES: Plaque[] = [
   {
     label: "i",
     name: "Clear",
-    reading:
-      "Complete lysis edge to edge, a lytic infection with no lawn surviving inside the boundary.",
-    cx: 334.3,
-    cy: 179.3,
-    r: 31.3,
-    elbow: [458.4, 75.2],
-    tick: [482.4, 75.2],
-    anchor: "start",
+    reading: "Complete lysis, typical of lytic phages.",
+    kind: "clear",
+    ang: -62,
+    rad: 150,
+    r: 30,
   },
   {
     label: "ii",
     name: "Turbid",
     reading:
-      "Lawn survives within the plaque. The signature of a temperate phage lysogenising as it spreads.",
-    cx: 311.6,
-    cy: 328.8,
-    r: 28.8,
-    elbow: [417.5, 464.3],
-    tick: [441.5, 464.3],
-    anchor: "start",
-    lawnInside: true,
+      "A cloudy clearing, often from temperate phages where some cells become lysogens.",
+    kind: "turbid",
+    ang: -118,
+    rad: 150,
+    r: 28,
   },
   {
     label: "iii",
-    name: "Bullseye",
-    reading:
-      "A clear centre inside a turbid ring: two behaviours in one plaque, read from the middle out.",
-    cx: 227,
-    cy: 86.6,
-    r: 30,
-    innerR: 13.5,
-    elbow: [212.1, -19.4],
-    tick: [188.1, -19.4],
-    anchor: "end",
-    lawnInside: true,
+    name: "Bull's-eye",
+    reading: "A clear centre with turbid edges, as lysis slows while the plaque grows.",
+    kind: "bullseye",
+    ang: -170,
+    rad: 145,
+    r: 31,
   },
   {
     label: "iv",
-    name: "Halo",
-    reading:
-      "A defined plaque with a diffuse ring beyond it, from a depolymerase moving ahead of the phage.",
-    cx: 399.2,
-    cy: 265.7,
-    r: 23.8,
-    haloR: 41.6,
-    elbow: [520.5, 278.4],
-    tick: [544.5, 278.4],
-    anchor: "start",
+    name: "Turbid centre",
+    reading: "A cloudy middle from microcolonies of the earliest lysogens.",
+    kind: "turbid-centre",
+    ang: 148,
+    rad: 150,
+    r: 27,
   },
   {
     label: "v",
-    name: "Pinpoint",
-    reading:
-      "Under a millimetre. Slow adsorption or a poor host match, and easy to miss on a crowded plate.",
-    cx: 159.7,
-    cy: 343.5,
-    r: 8.5,
-    elbow: [61.1, 445.7],
-    tick: [37.1, 445.7],
-    anchor: "end",
+    name: "Halo",
+    reading: "A semi-transparent zone around the plaque, from diffusing phage enzymes.",
+    kind: "halo",
+    ang: 100,
+    rad: 140,
+    r: 24,
+    haloR: 36,
   },
   {
     label: "vi",
-    name: "Diffuse edge",
-    reading:
-      "No defined boundary: the plaque fades into lawn instead of stopping at one.",
-    cx: 243.9,
-    cy: 424.9,
-    r: 30,
-    elbow: [240.5, 521.8],
-    tick: [216.5, 521.8],
-    anchor: "end",
-    outline:
-      "M272.8 424.9L276.2 430.0L267.8 432.7L266.9 436.6L270.4 444.2L263.2 444.2L257.4 443.5L258.7 453.9L253.6 454.8L247.5 447.5L243.9 454.2L238.7 457.5L236.1 448.8L232.0 448.3L223.8 452.6L224.6 444.2L225.1 438.6L215.8 439.2L215.4 434.1L220.7 428.6L213.9 424.9L212.3 419.9L220.4 417.2L220.5 413.0L217.2 405.5L225.1 406.1L229.5 405.1L229.4 396.5L234.8 397.0L240.3 402.2L243.9 393.4L248.8 394.1L251.4 401.9L256.4 400.3L263.4 398.0L262.1 406.6L264.0 410.3L273.4 409.9L271.4 416.0L266.9 421.3L275.5 424.9Z",
+    name: "Sectored",
+    reading: "A clearing with a notched or starred edge.",
+    kind: "sectored",
+    ang: 52,
+    rad: 150,
+    r: 29,
+  },
+  {
+    label: "vii",
+    name: "Rough border",
+    reading: "Small, with an irregular edge.",
+    kind: "rough",
+    ang: 8,
+    rad: 165,
+    r: 16,
+  },
+  {
+    label: "viii",
+    name: "Pinpoint",
+    reading: "Very small.",
+    kind: "pinpoint",
+    ang: -28,
+    rad: 190,
+    r: 7,
   },
 ];
 
-/**
- * THE VIEWBOX IS WIDER THAN THE DISH, and that is a correction to the handoff rather than a
- * departure from it. Its SVG is 500 by 500 while three of the six labels sit outside that box
- * (`iii` at y -19, `iv` at x 549, `vi` at y 525), so the drawing clips its own key at the frame.
- * The dish geometry is unchanged; the frame grew to hold what the leaders point at.
- */
-const VIEW = { x: -78, y: -40, w: 700, h: 590 };
-
+const CX = 250;
+const CY = 250;
 const DISH_R = 246;
-const MARGIN_R = 235;
+
+/** The gap the handoff asks for between a plaque's edge and the circle calling it out. */
+const CALLOUT_GAP = 11;
+/**
+ * The inner disc of the bullseye and of the turbid centre, as a fraction of the plaque.
+ *
+ * KEPT WELL UNDER THE HALO'S RATIO. A halo is a plaque with a rim around it and a bullseye is a
+ * ring with a small middle; drawn at similar fractions the two read as the same object.
+ */
+const CORE = 0.42;
+/**
+ * Where a leader stops and its numeral sits, both measured from the dish centre.
+ *
+ * THE LEADER STOPS AT THE RIM. It is drawn in `--fig-callout`, the step measured against the LAWN,
+ * so it never crosses onto a ground it was not measured for; the numeral sits clear of the rim and
+ * takes `--fig-ink`, the step measured against paper.
+ */
+const LEADER_END = DISH_R;
+const NUMERAL_AT = 262;
 
 /**
- * Deterministic stipple. A seeded generator rather than 570 hand-placed dots: the coordinates
- * carry no information, only texture, and the same seed gives the same bytes on every render,
- * which is what keeps a cached page and a fresh render byte-identical.
+ * The frame is wider than the dish because the numerals sit outside the rim. The dish geometry is
+ * the handoff's; the box grew to hold what the leaders point at.
+ */
+const VIEW = { x: -44, y: -34, w: 596, h: 606 };
+
+/** Degrees to a unit vector out from the dish centre. */
+function out(ang: number): { x: number; y: number } {
+  const t = (ang * Math.PI) / 180;
+  return { x: Math.cos(t), y: Math.sin(t) };
+}
+
+function centreOf(p: Plaque): { x: number; y: number } {
+  const u = out(p.ang);
+  return { x: CX + u.x * p.rad, y: CY + u.y * p.rad };
+}
+
+/** The circle that calls a specimen out. It clears the halo, not just the plaque. */
+function calloutR(p: Plaque): number {
+  return (p.haloR ?? p.r) + CALLOUT_GAP;
+}
+
+/** One decimal everywhere, so the emitted bytes are stable across renders. */
+function r1(n: number): number {
+  return Math.round(n * 10) / 10;
+}
+
+/**
+ * Deterministic scatter and edges. The same seed gives the same bytes on every render, which is
+ * what keeps a cached page and a fresh one identical.
  */
 function mulberry32(seed: number) {
   let a = seed;
@@ -156,95 +194,184 @@ function mulberry32(seed: number) {
   };
 }
 
-/** Where the lawn has been eaten away, no stipple is drawn. That IS the plaque. */
-function clearedBy(x: number, y: number): boolean {
-  for (const p of PLAQUES) {
-    const d = Math.hypot(x - p.cx, y - p.cy);
-    if (p.lawnInside) {
-      /* Turbid and the bullseye ring keep their lawn; only a bullseye's clear centre is empty. */
-      if (p.innerR !== undefined && d < p.innerR) return true;
-      continue;
-    }
-    if (d < p.r) return true;
-  }
-  return false;
-}
-
-/*
- * Stipple measured off the reference drawing, part-c/06-morphology-key.html: 573 dots over a 245
- * unit dish, which is 3.04 per thousand square units, at radii from 0.7 to 1.4. Matching the
- * DENSITY rather than the count is what carries the style across a different dish size.
- */
-const LAWN_DENSITY = 3.04 / 1000;
-const LAWN_MIN_R = 0.7;
-const LAWN_MAX_R = 1.4;
-
-function lawn(): { x: number; y: number; r: number }[] {
-  const rand = mulberry32(0x5ea1ed);
-  const dots: { x: number; y: number; r: number }[] = [];
-  const target = Math.round(Math.PI * (MARGIN_R - 6) ** 2 * LAWN_DENSITY);
-  /* Rejection sampling inside the dashed margin, so no dot sits on the rim or outside it. */
-  for (let i = 0; i < target * 8 && dots.length < target; i += 1) {
-    const t = rand() * Math.PI * 2;
-    const rr = Math.sqrt(rand()) * (MARGIN_R - 6);
-    const x = 250 + Math.cos(t) * rr;
-    const y = 250 + Math.sin(t) * rr;
-    if (clearedBy(x, y)) continue;
-    dots.push({
-      x: Math.round(x * 10) / 10,
-      y: Math.round(y * 10) / 10,
-      r: Math.round((LAWN_MIN_R + rand() * (LAWN_MAX_R - LAWN_MIN_R)) * 10) / 10,
-    });
-  }
-  return dots;
+/** A closed polygon through radii sampled around a centre. Straight segments: the edge is jagged. */
+function blob(cx: number, cy: number, radii: number[]): string {
+  const step = (Math.PI * 2) / radii.length;
+  return (
+    radii
+      .map((rr, i) => {
+        const t = i * step;
+        return `${i === 0 ? "M" : "L"}${r1(cx + Math.cos(t) * rr)} ${r1(cy + Math.sin(t) * rr)}`;
+      })
+      .join("") + "Z"
+  );
 }
 
 /**
- * The surviving lawn inside a turbid plaque, and inside a bullseye's outer ring.
- *
- * THIS IS THE PLATE'S WHOLE CLAIM, so it is drawn rather than left to the lawn's own density. The
- * handoff fills turbid with `--paper` exactly as it fills clear, which makes i and ii identical on
- * a plate whose caption says it shows every plaque a phage hunter has to learn to call; the
- * difference survives only in the small key beneath. Lawn at the ambient density would not fix it
- * either: a 28.8 unit plaque holds about nine dots at that rate, which reads as empty.
- *
- * So a turbid plaque carries its own haze, denser than the lawn around it. That is also what the
- * thing looks like down a scope: survivors inside the boundary, not a clearing.
+ * Sectored: eleven notches cut into the edge. No randomness, because the form is regular, and the
+ * notches are SHALLOW: cut deeper and it stops reading as a plaque and starts reading as a star.
  */
-function haze(): { x: number; y: number; r: number }[] {
-  const rand = mulberry32(0x7b1d);
-  const dots: { x: number; y: number; r: number }[] = [];
-  for (const p of PLAQUES) {
-    if (!p.lawnInside) continue;
-    const inner = p.innerR ?? 0;
-    /* Per unit of surviving area, about thirteen times the lawn's rate, which is what reads. */
-    const target = Math.round((p.r * p.r - inner * inner) * 0.045);
-    let placed = 0;
-    for (let i = 0; i < target * 20 && placed < target; i += 1) {
-      const t = rand() * Math.PI * 2;
-      const rr = Math.sqrt(rand()) * (p.r - 2);
-      if (rr < inner + 1.5) continue;
-      dots.push({
-        x: Math.round((p.cx + Math.cos(t) * rr) * 10) / 10,
-        y: Math.round((p.cy + Math.sin(t) * rr) * 10) / 10,
-        r: Math.round((0.7 + rand() * 0.5) * 10) / 10,
-      });
-      placed += 1;
-    }
-  }
-  return dots;
+function sectoredPath(cx: number, cy: number, r: number): string {
+  const radii: number[] = [];
+  for (let i = 0; i < 22; i += 1) radii.push(i % 2 === 0 ? r : r * 0.79);
+  return blob(cx, cy, radii);
 }
 
-/** The alt text carries the key in words, in label order, because the figure is information. */
-const LABELS = PLAQUES.map((p) => p.label);
+/** Rough border: twenty sampled radii, none of them equal. */
+function roughPath(cx: number, cy: number, r: number): string {
+  const rand = mulberry32(0x0c7a11);
+  const radii: number[] = [];
+  for (let i = 0; i < 20; i += 1) radii.push(r * (0.74 + rand() * 0.26));
+  return blob(cx, cy, radii);
+}
+
+/** Distance from a point to a segment, used to keep the scatter out from under the leaders. */
+function distToSegment(
+  px: number,
+  py: number,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): number {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len = dx * dx + dy * dy;
+  const t = len === 0 ? 0 : Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len));
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
+}
+
+type Scatter = { x: number; y: number; r: number; turbid: boolean };
+
+/**
+ * The unlabelled plaques. A plate carries many and only some are worth calling out, so the drawing
+ * says so. Rejection sampling keeps them inside the lawn, off each other, and clear of every
+ * callout circle and leader, which is what stops the annotation becoming unreadable.
+ */
+function scatter(): Scatter[] {
+  const rand = mulberry32(0x91a7e5);
+  const rings = PLAQUES.map((p) => ({ c: centreOf(p), r: calloutR(p) }));
+  const leaders = PLAQUES.map((p) => {
+    const u = out(p.ang);
+    const c = centreOf(p);
+    const ring = calloutR(p);
+    return {
+      ax: c.x + u.x * ring,
+      ay: c.y + u.y * ring,
+      bx: CX + u.x * DISH_R,
+      by: CY + u.y * DISH_R,
+    };
+  });
+
+  const placed: Scatter[] = [];
+  for (let i = 0; i < 4000 && placed.length < 30; i += 1) {
+    const t = rand() * Math.PI * 2;
+    const rr = Math.sqrt(rand()) * 214;
+    const x = CX + Math.cos(t) * rr;
+    const y = CY + Math.sin(t) * rr;
+    const size = 4 + rand() * 17;
+    if (rr + size > 228) continue;
+    if (rings.some((g) => Math.hypot(x - g.c.x, y - g.c.y) < g.r + size + 7)) continue;
+    if (leaders.some((l) => distToSegment(x, y, l.ax, l.ay, l.bx, l.by) < size + 6)) continue;
+    if (placed.some((q) => Math.hypot(x - q.x, y - q.y) < q.r + size + 6)) continue;
+    placed.push({ x: r1(x), y: r1(y), r: r1(size), turbid: rand() < 0.22 });
+  }
+  return placed;
+}
+
+/** A caption sentence folded into the alt text's running list. */
+function lower(sentence: string): string {
+  const body = sentence.replace(/\.$/, "");
+  return body.charAt(0).toLowerCase() + body.slice(1);
+}
+
+/** The alt text carries the key in words, in numeral order, because the figure is information. */
 const DESCRIPTION =
-  `Plaque assay drawn as a key: one specimen of each plaque morphology on a single lawn, ` +
-  PLAQUES.map((p) => p.name.toLowerCase()).join(", ").replace(/, ([^,]*)$/, " and $1") +
-  `, each labelled ${LABELS.at(0) ?? ""} to ${LABELS.at(-1) ?? ""} on a leader.`;
+  "A bacterial lawn in a petri dish, cleared in many places by phage plaques of varied size. " +
+  "Eight are circled and numbered on leaders: " +
+  PLAQUES.map((p) => `${p.label}, ${p.name.toLowerCase()}, ${lower(p.reading)}`).join("; ") +
+  ". A scale bar marks 1 cm.";
+
+/** One specimen, drawn from its kind. No stroke on any of them: tone alone makes the clearing. */
+function Specimen({ p }: { p: Plaque }) {
+  const c = centreOf(p);
+  const paper = "var(--paper)";
+  const turbid = "var(--fig-turbid)";
+  const cx = r1(c.x);
+  const cy = r1(c.y);
+  switch (p.kind) {
+    case "turbid":
+      return <circle cx={cx} cy={cy} r={p.r} fill={turbid} />;
+    case "bullseye":
+      return (
+        <>
+          <circle cx={cx} cy={cy} r={p.r} fill={turbid} />
+          <circle cx={cx} cy={cy} r={r1(p.r * CORE)} fill={paper} />
+        </>
+      );
+    case "turbid-centre":
+      return (
+        <>
+          <circle cx={cx} cy={cy} r={p.r} fill={paper} />
+          <circle cx={cx} cy={cy} r={r1(p.r * CORE)} fill={turbid} />
+        </>
+      );
+    case "halo":
+      return (
+        <>
+          <circle cx={cx} cy={cy} r={p.haloR} fill={turbid} />
+          <circle cx={cx} cy={cy} r={p.r} fill={paper} />
+        </>
+      );
+    case "sectored":
+      return <path d={sectoredPath(c.x, c.y, p.r)} fill={paper} />;
+    case "rough":
+      return <path d={roughPath(c.x, c.y, p.r)} fill={paper} />;
+    default:
+      return <circle cx={cx} cy={cy} r={p.r} fill={paper} />;
+  }
+}
+
+/** The circle, the leader and the numeral, all oxide. Only a called-out specimen gets one. */
+function Callout({ p }: { p: Plaque }) {
+  const c = centreOf(p);
+  const u = out(p.ang);
+  const ring = calloutR(p);
+  /* Anchored away from the dish, so a numeral never sits back over the rim it points away from. */
+  const anchor = u.x > 0.3 ? "start" : u.x < -0.3 ? "end" : "middle";
+  const nudge = anchor === "start" ? 3 : anchor === "end" ? -3 : 0;
+  return (
+    <g>
+      <circle
+        cx={r1(c.x)}
+        cy={r1(c.y)}
+        r={r1(ring)}
+        fill="none"
+        stroke="var(--fig-callout)"
+        strokeWidth="1"
+      />
+      <line
+        x1={r1(c.x + u.x * ring)}
+        y1={r1(c.y + u.y * ring)}
+        x2={r1(CX + u.x * LEADER_END)}
+        y2={r1(CY + u.y * LEADER_END)}
+        stroke="var(--fig-callout)"
+        strokeWidth="1"
+      />
+      <text
+        className="plate-label"
+        x={r1(CX + u.x * NUMERAL_AT + nudge)}
+        y={r1(CY + u.y * NUMERAL_AT + 3.6 + u.y * 5.4)}
+        textAnchor={anchor}
+      >
+        {p.label}
+      </text>
+    </g>
+  );
+}
 
 export function PlateI() {
-  const dots = lawn();
-  const survivors = haze();
+  const unlabelled = scatter();
   return (
     <svg
       className="plate"
@@ -255,191 +382,62 @@ export function PlateI() {
       <title id="plate-i-title">Plate I. Plaque morphology drawn as a key.</title>
       <desc id="plate-i-desc">{DESCRIPTION}</desc>
 
-      <circle cx="250" cy="250" r={DISH_R} fill="none" stroke="var(--text)" strokeWidth="1.6" />
+      {/* The lawn is the dish's fill, and the rim is the one ink line on the drawing. */}
       <circle
-        cx="250"
-        cy="250"
-        r={MARGIN_R}
-        fill="none"
-        stroke="var(--fig-dust-300)"
-        strokeDasharray="2 6"
+        cx={CX}
+        cy={CY}
+        r={DISH_R}
+        fill="var(--fig-lawn)"
+        stroke="var(--text)"
+        strokeWidth="1.6"
       />
 
-      {dots.map((d, i) => (
-        <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="var(--fig-dust-300)" />
-      ))}
-
-      {/* Drawn after the lawn and before the outlines, so the haze sits inside its own plaque. */}
-      {survivors.map((d, i) => (
-        <circle key={`h${i}`} cx={d.x} cy={d.y} r={d.r} fill="var(--fig-dust-300)" />
+      {unlabelled.map((s, i) => (
+        <circle
+          key={i}
+          cx={s.x}
+          cy={s.y}
+          r={s.r}
+          fill={s.turbid ? "var(--fig-turbid)" : "var(--paper)"}
+        />
       ))}
 
       {PLAQUES.map((p) => (
-        <g key={p.label}>
-          {p.haloR !== undefined ? (
-            <circle
-              cx={p.cx}
-              cy={p.cy}
-              r={p.haloR}
-              fill="none"
-              stroke="var(--fig-dust-300)"
-              strokeDasharray="3 4"
-            />
-          ) : null}
-          {p.outline ? (
-            <path
-              d={p.outline}
-              fill="var(--paper)"
-              stroke="var(--text)"
-              strokeWidth="1.2"
-              strokeDasharray="4 3"
-            />
-          ) : (
-            <circle
-              cx={p.cx}
-              cy={p.cy}
-              r={p.r}
-              fill={p.lawnInside ? "none" : "var(--paper)"}
-              stroke="var(--text)"
-              strokeWidth="1.4"
-            />
-          )}
-          {p.innerR !== undefined ? (
-            <circle
-              cx={p.cx}
-              cy={p.cy}
-              r={p.innerR}
-              fill="var(--paper)"
-              stroke="var(--text)"
-              strokeWidth="1.1"
-            />
-          ) : null}
-          <line
-            x1={p.cx}
-            y1={p.cy}
-            x2={p.elbow[0]}
-            y2={p.elbow[1]}
-            stroke="var(--fig-ink)"
-            strokeWidth="1"
-          />
-          <line
-            x1={p.elbow[0]}
-            y1={p.elbow[1]}
-            x2={p.tick[0]}
-            y2={p.tick[1]}
-            stroke="var(--fig-ink)"
-            strokeWidth="1"
-          />
-          <text
-            className="plate-label"
-            x={p.anchor === "start" ? p.tick[0] + 5 : p.tick[0] - 5}
-            y={p.tick[1] + 4}
-            textAnchor={p.anchor}
-          >
-            {p.label} · {p.name.toLowerCase()}
-          </text>
-        </g>
+        <Specimen key={p.label} p={p} />
+      ))}
+
+      {/* Annotation last, so no clearing is ever drawn over a leader. */}
+      {PLAQUES.map((p) => (
+        <Callout key={p.label} p={p} />
       ))}
 
       {/* The scale bar. A plate without one is a picture rather than a measurement. */}
-      <line x1="16" y1="486" x2="86" y2="486" stroke="var(--text)" strokeWidth="1.5" />
-      <text className="plate-scale" x="16" y="478">
+      <line x1="-36" y1="552" x2="34" y2="552" stroke="var(--text)" strokeWidth="1.5" />
+      <text className="plate-scale" x="-36" y="544">
         1 cm
       </text>
     </svg>
   );
 }
 
-/** The same surviving lawn as the plate, at strip scale: 76 units across rather than 500. */
-function keyHaze(p: Plaque): { x: number; y: number; r: number }[] {
-  const rand = mulberry32(0x5721 + p.label.length);
-  const outer = p.label === "iii" ? 30 : 30;
-  const inner = p.innerR !== undefined ? 13.5 : 0;
-  const dots: { x: number; y: number; r: number }[] = [];
-  const target = Math.round((outer * outer - inner * inner) * 0.03);
-  for (let i = 0; i < target * 20 && dots.length < target; i += 1) {
-    const t = rand() * Math.PI * 2;
-    const rr = Math.sqrt(rand()) * (outer - 2);
-    if (rr < inner + 1.5) continue;
-    dots.push({
-      x: Math.round((38 + Math.cos(t) * rr) * 10) / 10,
-      y: Math.round((38 + Math.sin(t) * rr) * 10) / 10,
-      r: Math.round((0.7 + rand() * 0.5) * 10) / 10,
-    });
-  }
-  return dots;
-}
-
 /**
- * The key strip: the six drawn again small, each with its name and sentence as REAL TEXT, so a
- * reader who cannot see the drawing still gets the taxonomy rather than a description of a picture.
+ * The caption's key: the eight named and described as real text, in the plate's own numeral order,
+ * so a reader who cannot see the drawing still gets the taxonomy. It sits inside the figcaption,
+ * which is the one place these sentences live.
  */
 export function PlateKey() {
   return (
-    <ul className="plate-key" aria-label="Plaque morphology">
+    <ol className="plate-key">
       {PLAQUES.map((p) => (
         <li key={p.label} className="plate-key-item">
-          <svg className="plate-key-mark" viewBox="0 0 76 76" role="presentation" focusable="false">
-            {p.haloR !== undefined ? (
-              <circle
-                cx="38"
-                cy="38"
-                r="32"
-                fill="none"
-                stroke="var(--fig-dust-300)"
-                strokeDasharray="3 4"
-              />
-            ) : null}
-            {p.outline ? (
-              <circle
-                cx="38"
-                cy="38"
-                r="28"
-                fill="none"
-                stroke="var(--text)"
-                strokeWidth="1.6"
-                strokeDasharray="4 3"
-              />
-            ) : (
-              <circle
-                cx="38"
-                cy="38"
-                r={p.label === "v" ? 6.6 : p.label === "iv" ? 18.6 : 30}
-                fill="none"
-                stroke="var(--text)"
-                strokeWidth="1.6"
-              />
-            )}
-            {/*
-             * The surviving lawn, in the strip as well as on the plate. Without it i and ii are
-             * two identical circles here, which is the same failure the plate had: the key would
-             * be teaching that clear and turbid look alike.
-             */}
-            {p.lawnInside
-              ? keyHaze(p).map((d, i) => (
-                  <circle key={i} cx={d.x} cy={d.y} r={d.r} fill="var(--fig-dust-300)" />
-                ))
-              : null}
-            {p.innerR !== undefined ? (
-              <circle cx="38" cy="38" r="13.5" fill="var(--paper)" stroke="var(--text)" strokeWidth="1.2" />
-            ) : null}
-            {p.label === "v" ? (
-              <circle
-                cx="38"
-                cy="38"
-                r="30"
-                fill="none"
-                stroke="var(--fig-dust-300)"
-                strokeDasharray="1 5"
-              />
-            ) : null}
-          </svg>
-          <p className="plate-key-name">
-            <span className="plate-key-label">{p.label}</span> {p.name}
-          </p>
-          <p className="plate-key-reading">{p.reading}</p>
+          <span className="plate-key-label">{p.label}</span>
+          {/* Name and sentence in ONE element: the row is a two-column grid and a bare text node
+              beside them would become a third grid item on a row of its own. */}
+          <span className="plate-key-text">
+            <span className="plate-key-name">{p.name}.</span> {p.reading}
+          </span>
         </li>
       ))}
-    </ul>
+    </ol>
   );
 }
