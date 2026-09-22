@@ -54,10 +54,10 @@ export function TheTwoSizingClasses() {
 export function BothThemes() {
   return (
     <div style={{ display: "flex", gap: "1rem" }}>
-      <div data-theme="light" style={{ background: "var(--surface)", color: "var(--text)", padding: "1.5rem", flex: 1 }}>
+      <div data-theme="light" style={{ background: "var(--paper)", color: "var(--text)", padding: "1.5rem", flex: 1 }}>
         <SiteLogo className="gate-mark" />
       </div>
-      <div data-theme="dark" style={{ background: "var(--surface)", color: "var(--text)", padding: "1.5rem", flex: 1 }}>
+      <div data-theme="dark" style={{ background: "var(--paper)", color: "var(--text)", padding: "1.5rem", flex: 1 }}>
         <SiteLogo className="gate-mark" />
       </div>
     </div>

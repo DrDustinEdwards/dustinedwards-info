@@ -272,7 +272,7 @@ for (const [text, bg, expected] of APCA_KEYSTONE) {
 
 /* The matrix, from design-tokens.md, as names */
 
-// No --fill-* on --bg row: a fill always carries text.
+// No --fill-* on --paper row: a fill always carries text.
 const TEXT = 4.5; // WCAG 1.4.3 AA, normal text
 const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
 // No disabled floor: WCAG exempts inactive components.
@@ -280,51 +280,40 @@ const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
 /** @type {Array<[string, string, number, string]>} fg, bg, min, note */
 const MATRIX = [
   // Body and neutrals
-  ["--text", "--bg", TEXT, "body text"],
-  ["--text", "--surface", TEXT, "body on surface"],
-  // CodeMirror syntax colours, on --bg and the active line's --surface.
-  ["--text-heading", "--bg", TEXT, "heading text on page"],
-  ["--text-heading", "--surface", TEXT, "heading text on surface"],
-  ["--text-accent", "--surface", TEXT, "accent text on surface"],
+  ["--text", "--paper", TEXT, "body text on paper"],
+  // CodeMirror syntax colours, on --paper and the active line's --paper.
+  ["--text-heading", "--paper", TEXT, "heading text on paper"],
+  ["--text-accent", "--paper", TEXT, "accent text on paper"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
-  // The settings drawer: inputs on --surface inside the popover step.
+  // The settings drawer: inputs on --paper inside the popover step.
   ["--text-heading", "--surface-popover", TEXT, "heading on popover"],
   // No --text-disabled on --surface-popover row: it fails there, nothing ships it.
-  ["--text", "--surface-code", TEXT, "body on code surface"],
   ["--text", "--mark-bg", TEXT, "body on search highlight"],
   ["--text", "--selection-bg", TEXT, "body on selection"],
   ["--text", "--tint-brand", TEXT, "body on brand tint"],
-  ["--text-muted", "--bg", TEXT, "muted text"],
-  ["--text-muted", "--surface", TEXT, "muted on surface"],
-  ["--text-muted", "--surface-popover", TEXT, "muted on popover"],
+  ["--text-secondary", "--paper", TEXT, "quiet ink on paper"],
+  ["--text-secondary", "--surface-popover", TEXT, "muted on popover"],
   // No disabled row: WCAG exempts inactive controls. See NON_PARTICIPATING.
 
   // Borders are non-text UI
-  ["--border", "--bg", UI, "border on page"],
-  ["--border", "--surface", UI, "border on surface"],
+  ["--border", "--paper", UI, "a hairline on paper"],
   // No --border on --surface-popover row: it fails there, so the popover step takes
   // --border-strong.
-  ["--border-strong", "--bg", UI, "strong border"],
-  ["--border-strong", "--surface", UI, "strong border on surface"],
+  ["--border-strong", "--paper", UI, "a control edge on paper"],
   ["--border-strong", "--surface-popover", UI, "strong border on popover"],
 
   // Brand
-  ["--brand", "--bg", TEXT, "brand text"],
-  ["--brand", "--surface", TEXT, "brand on surface"],
-  ["--brand", "--surface-popover", TEXT, "brand on popover"],
+  ["--brand", "--paper", TEXT, "a link, a focus ring and the header mark, all on paper"],
+  ["--brand", "--surface-popover", TEXT, "a link and its focus ring on the popover step"],
   // The cover picker rings the chosen thumbnail in brand, on the drawer.
-  ["--brand", "--surface-popover", UI, "brand ring on popover"],
   ["--brand", "--tint-brand", TEXT, "brand on its own tint"],
-  ["--brand-hover", "--bg", TEXT, "brand hover text"],
+  ["--brand-hover", "--paper", TEXT, "a hovered link on paper"],
   // The admin identity block hovers on the shell surface, not the page.
-  ["--brand-hover", "--surface", TEXT, "brand hover on surface"],
-  ["--brand-active", "--bg", TEXT, "brand active text"],
+  ["--brand-pressed", "--paper", TEXT, "a pressed link on paper"],
   ["--on-brand", "--brand", TEXT, "text on brand fill"],
   ["--on-brand", "--brand-hover", TEXT, "text on brand hover fill"],
-  ["--on-brand", "--brand-active", TEXT, "text on brand active fill"],
-  ["--visited", "--bg", TEXT, "visited link"],
-  ["--focus-ring", "--bg", UI, "focus ring on page"],
-  ["--focus-ring", "--surface", UI, "focus ring on surface"],
+  ["--on-brand", "--brand-pressed", TEXT, "the label on a pressed primary button"],
+  ["--visited", "--paper", TEXT, "a visited link on paper"],
   ["--focus-ring-on-brand", "--brand", UI, "inner ring on brand fill"],
   // No --focus-ring-on-brand against --fill-danger. It measures 1.47:1 in dark,
   // so app.css does not draw that ring and this does not pretend it does.
@@ -343,64 +332,52 @@ const MATRIX = [
   // No --border-strong on --surface-chrome row: a seam has no 3:1 obligation.
 
   // Danger
-  ["--text-danger", "--bg", TEXT, "danger text"],
-  ["--text-danger", "--surface", TEXT, "danger text on surface"],
+  ["--text-danger", "--paper", TEXT, "danger text on paper"],
   // Revert to draft, as a row in the overflow menu on the popover step.
   ["--text-danger", "--surface-popover", TEXT, "danger text on popover"],
   ["--on-tint-danger", "--tint-danger", TEXT, "text on danger tint"],
-  ["--border-danger", "--bg", UI, "danger border"],
+  ["--border-danger", "--paper", UI, "danger border"],
   ["--on-fill-danger", "--fill-danger", TEXT, "text on danger fill"],
   ["--on-fill-danger", "--fill-danger-hover", TEXT, "text on danger hover fill"],
 
   // Warning
-  ["--text-warning", "--bg", TEXT, "warning text"],
-  ["--text-warning", "--surface", TEXT, "warning text on surface"],
+  ["--text-warning", "--paper", TEXT, "warning text on paper, including the command bar dirty state"],
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
-  ["--border-warning", "--bg", UI, "warning border"],
+  ["--border-warning", "--paper", UI, "a warning border on paper, including the dirty dot ring"],
   ["--border-warning", "--tint-warning", UI, "warning border on its own tint"],
   // The dirty-state indicator in the command bar: amber text and an amber fill
   // dot, both on the shell surface rather than on the page.
-  ["--text-warning", "--surface", TEXT, "dirty state on the command bar"],
-  ["--border-warning", "--surface", UI, "dirty dot ring on the command bar"],
   ["--brand", "--tint-warning", UI, "brand fill edge on warning tint"],
   ["--on-fill-warning", "--fill-warning", TEXT, "text on warning fill"],
 
   // Success
-  ["--text-success", "--bg", TEXT, "success text"],
-  ["--text-success", "--surface", TEXT, "success text on surface"],
+  ["--text-success", "--paper", TEXT, "success text on paper"],
   ["--on-tint-success", "--tint-success", TEXT, "text on success tint"],
-  ["--border-success", "--bg", UI, "success border"],
-  ["--border-success", "--surface", UI, "success border on surface"],
+  ["--border-success", "--paper", UI, "a success border on paper"],
   ["--on-fill-success", "--fill-success", TEXT, "text on success fill"],
 
   // Accent, decorative but still read as text
-  ["--text-accent", "--bg", TEXT, "accent text"],
 
   // Charts are graphical objects
-  ["--chart-cadet", "--bg", UI, "chart cadet"],
-  ["--chart-purple", "--bg", UI, "chart purple"],
-  ["--chart-claret", "--bg", UI, "chart claret"],
-  ["--chart-sage", "--bg", UI, "chart sage"],
-  ["--chart-gold", "--bg", UI, "chart gold"],
-  ["--chart-rust", "--bg", UI, "chart rust"],
+  ["--chart-cadet", "--paper", UI, "chart cadet"],
+  ["--chart-purple", "--paper", UI, "chart purple"],
+  ["--chart-claret", "--paper", UI, "chart claret"],
+  ["--chart-sage", "--paper", UI, "chart sage"],
+  ["--chart-gold", "--paper", UI, "chart gold"],
+  ["--chart-rust", "--paper", UI, "chart rust"],
 
   /* Destructive, on every surface it lands on and its own tint. */
-  ["--text-destructive", "--bg", TEXT, "destructive text"],
-  ["--text-destructive", "--surface", TEXT, "destructive text on a card"],
+  ["--text-destructive", "--paper", TEXT, "destructive text on paper"],
   ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
   ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
 
   /* Paper, glass, light: pairs from the handoffs, as names */
 
   // Text on the two paper surfaces, and on the one glass that touches paper.
-  ["--text", "--paper", TEXT, "body on limestone"],
-  ["--text", "--raised", TEXT, "body on the raised step"],
   ["--text", "--glass-fill-paper", TEXT, "body on paper glass, composited"],
-  ["--text-secondary", "--paper", TEXT, "muted copy on limestone"],
-  ["--text-secondary", "--raised", TEXT, "muted copy on the raised step"],
   ["--text-secondary", "--glass-fill-paper", TEXT, "muted copy on paper glass"],
   // The placeholder must sit below the value that replaces it.
-  ["--placeholder", "--raised", TEXT, "placeholder in a field"],
+  ["--placeholder", "--paper", TEXT, "placeholder in a field"],
 
   /*
    * Brand, its two states, and the second shade a followed link takes. THE HEADER MARK RIDES THE
@@ -415,23 +392,8 @@ const MATRIX = [
    * purple at 9.10 to one light and 7.89 dark. Measured 2026-09-21. This is the same reason the
    * chrome row above measures only --mark-on-chrome.
    */
-  ["--brand", "--paper", TEXT, "link on limestone, and the header mark"],
-  ["--brand", "--raised", TEXT, "link on the raised step"],
   ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
-  ["--brand-hover", "--paper", TEXT, "hovered link on limestone"],
-  ["--brand-hover", "--raised", TEXT, "hovered link on the raised step"],
-  ["--brand-pressed", "--paper", TEXT, "pressed link on limestone"],
-  ["--on-brand", "--brand-pressed", TEXT, "label on a pressed primary button"],
-  /*
-   * --brand-active IS NOT --brand-pressed, and the difference only shows in dark: they share
-   * #2f1a4d in light and split to #c9baea against #a08ecd. The post page's `:active` link takes
-   * --brand-active because the Direction D handoff's token table names it, so the pressed pair
-   * above measured a colour no link on limestone was wearing. Its --bg pairing near the top of
-   * this list is the legacy ground, not this one.
-   */
-  ["--brand-active", "--paper", TEXT, "active link on limestone"],
-  ["--visited", "--paper", TEXT, "visited link on limestone"],
-  ["--visited", "--raised", TEXT, "visited link on the raised step"],
+  /* PR #52's measured pair, moved onto the surviving name by ruling 128's collapse. */
   ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
   // A followed link inside an alert tint.
   ["--visited", "--error-tint", TEXT, "visited link on an error tint"],
@@ -441,20 +403,16 @@ const MATRIX = [
   // No bar rows: a pair against a surface nothing paints is not coverage (rule 10's class).
 
   // No --dust row on paper: it cannot identify a control; --line-strong does.
-  ["--line-strong", "--paper", UI, "a control edge on limestone"],
-  ["--line-strong", "--raised", UI, "a control edge on the raised step"],
+  ["--line-strong", "--paper", UI, "a control edge on paper"],
 
   // Semantic, and only where the state is real.
-  ["--error", "--paper", TEXT, "error text on limestone"],
-  ["--error", "--raised", TEXT, "error text on the raised step"],
+  ["--error", "--paper", TEXT, "error text on paper"],
   ["--error", "--error-tint", TEXT, "error text on its own tint"],
   ["--on-error-fill", "--error-fill", TEXT, "label on a destructive fill"],
-  ["--warning", "--paper", TEXT, "warning text on limestone"],
-  ["--warning", "--raised", TEXT, "warning text on the raised step"],
+  ["--warning", "--paper", TEXT, "warning text on paper"],
   ["--warning", "--warning-tint", TEXT, "warning text on its own tint"],
   ["--on-warning-fill", "--warning-fill", TEXT, "label on a warning fill"],
-  ["--success", "--paper", TEXT, "success text on limestone"],
-  ["--success", "--raised", TEXT, "success text on the raised step"],
+  ["--success", "--paper", TEXT, "success text on paper"],
   ["--success", "--success-tint", TEXT, "success text on its own tint"],
   ["--on-success-fill", "--success-fill", TEXT, "label on a success fill"],
 
@@ -737,26 +695,26 @@ function contrastTierBlock(label, selector) {
     ["dark", tierDark, darkAttr],
   ])) {
     // Muted text must clear AA against every surface it can land on, as before.
-    for (const surface of ["--bg", "--surface", "--surface-popover"]) {
+    for (const surface of ["--paper", "--paper", "--surface-popover"]) {
       checks += 1;
-      const ratio = contrast(tier["--text-muted"], base[surface]);
+      const ratio = contrast(tier["--text-secondary"], base[surface]);
       if (ratio < TEXT) {
         fail(
           `${mode} prefers-contrast: muted on ${surface}` +
             `
-    ${tier["--text-muted"]} on ${base[surface]}` +
+    ${tier["--text-secondary"]} on ${base[surface]}` +
             `
     ${ratio.toFixed(2)}:1, needs ${TEXT}:1`,
         );
       }
     }
     checks += 1;
-    const borderRatio = contrast(tier["--border"], base["--bg"]);
+    const borderRatio = contrast(tier["--border"], base["--paper"]);
     if (borderRatio < UI) {
       fail(
-        `${mode} prefers-contrast: border on --bg` +
+        `${mode} prefers-contrast: border on --paper` +
           `
-    ${tier["--border"]} on ${base["--bg"]}` +
+    ${tier["--border"]} on ${base["--paper"]}` +
           `
     ${borderRatio.toFixed(2)}:1, needs ${UI}:1`,
       );
@@ -766,16 +724,16 @@ function contrastTierBlock(label, selector) {
     // or it is not a high-contrast mode, it is a different one.
     assert(
       `${mode} prefers-contrast raises muted text` +
-        ` (${contrast(base["--text-muted"], base["--bg"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--text-muted"], base["--bg"]).toFixed(2)})`,
-      contrast(tier["--text-muted"], base["--bg"]) >
-        contrast(base["--text-muted"], base["--bg"]),
+        ` (${contrast(base["--text-secondary"], base["--paper"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--text-secondary"], base["--paper"]).toFixed(2)})`,
+      contrast(tier["--text-secondary"], base["--paper"]) >
+        contrast(base["--text-secondary"], base["--paper"]),
     );
     assert(
       `${mode} prefers-contrast raises the default border` +
-        ` (${contrast(base["--border"], base["--bg"]).toFixed(2)}` +
-        ` -> ${contrast(tier["--border"], base["--bg"]).toFixed(2)})`,
-      contrast(tier["--border"], base["--bg"]) > contrast(base["--border"], base["--bg"]),
+        ` (${contrast(base["--border"], base["--paper"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--border"], base["--paper"]).toFixed(2)})`,
+      contrast(tier["--border"], base["--paper"]) > contrast(base["--border"], base["--paper"]),
     );
     // The doc says the border promotes to border-strong. Assert the identity,
     // not just that it went up.
@@ -851,7 +809,7 @@ for (const [mode, theme, block] of shikiCases) {
       }
       continue;
     }
-    for (const surfaceName of ["--surface-code", "--surface-popover"]) {
+    for (const surfaceName of ["--paper", "--surface-popover"]) {
       const surface = block[surfaceName];
       checks += 1;
       shikiTokensChecked += 1;
@@ -1098,12 +1056,12 @@ function opacityExempt(selectorGroup) {
     Boolean(declared.light) && Boolean(declared.dark),
   );
   assert(
-    `theme-color light ${declared.light} is the light --bg ${light["--bg"]}`,
-    declared.light === String(light["--bg"]).toLowerCase(),
+    `theme-color light ${declared.light} is the light --paper ${light["--paper"]}`,
+    declared.light === String(light["--paper"]).toLowerCase(),
   );
   assert(
-    `theme-color dark ${declared.dark} is the dark --bg ${darkAttr["--bg"]}`,
-    declared.dark === String(darkAttr["--bg"]).toLowerCase(),
+    `theme-color dark ${declared.dark} is the dark --paper ${darkAttr["--paper"]}`,
+    declared.dark === String(darkAttr["--paper"]).toLowerCase(),
   );
 }
 
@@ -1113,11 +1071,11 @@ const buildPresent = existsSync(assetDir);
  * Floors: counts from running the gate with build/ present and absent, one under
  * check:floors' tolerance. Only CI reaches the absent branch.
  *
- * RE-MEASURED 2026-09-22 after the plate redraw, by RUNNING both branches: the absent count is
- * taken by moving build/ aside, never by reasoning about which assertions skip. Two exemptions
- * became one measured pair, so both floors fell by two.
+ * RE-MEASURED 2026-09-22 after ruling 128 collapsed four grounds into --paper, by RUNNING both
+ * branches: the absent count is taken by moving build/ aside, never by reasoning about which
+ * assertions skip. 36 duplicate pairs merged, so the matrix fell from 117 pairs to 81.
  */
-const MINIMUM_CHECKS = buildPresent ? 918 : 714;
+const MINIMUM_CHECKS = buildPresent ? 818 : 628;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",

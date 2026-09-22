@@ -29,7 +29,7 @@
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   min-height: 2.75rem;
@@ -37,7 +37,7 @@
 
 .search-hint {
   margin: 0.5rem 0 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
@@ -47,7 +47,7 @@
 
 .search-count {
   margin: 0 0 1rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9375rem;
 }
 
@@ -96,7 +96,7 @@
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -104,7 +104,7 @@
 
 .search-result-context {
   margin: 0.25rem 0 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
@@ -124,7 +124,7 @@
 
 .search-why {
   margin: 0.5rem 0 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
 }
 
