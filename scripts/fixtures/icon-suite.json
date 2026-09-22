@@ -23,14 +23,14 @@
     "bpp": 32
   },
   "rasters": [
-    { "file": "public/apple-touch-icon.png", "width": 180, "height": 180 },
-    { "file": "public/android-chrome-192x192.png", "width": 192, "height": 192 },
-    { "file": "public/android-chrome-512x512.png", "width": 512, "height": 512 },
-    { "file": "public/maskable-icon-512x512.png", "width": 512, "height": 512 },
-    { "file": "public/og-image.png", "width": 1200, "height": 630 }
+    { "file": "public/dustin-edwards-apple-touch-icon.png", "width": 180, "height": 180 },
+    { "file": "public/dustin-edwards-android-chrome-192x192.png", "width": 192, "height": 192 },
+    { "file": "public/dustin-edwards-android-chrome-512x512.png", "width": 512, "height": 512 },
+    { "file": "public/dustin-edwards-maskable-icon-512x512.png", "width": 512, "height": 512 },
+    { "file": "public/dustin-edwards-og-image.png", "width": 1200, "height": 630 }
   ],
   "svg": {
-    "file": "public/favicon.svg",
+    "file": "public/dustin-edwards-favicon.svg",
     "mark": "#EDE8F5"
   }
 }

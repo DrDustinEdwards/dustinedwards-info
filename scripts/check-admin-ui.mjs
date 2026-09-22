@@ -667,10 +667,10 @@ const STATES = [
       filter: "brand",
       objects: [
         MEDIA_OBJECT({
-          key: "/logo.svg",
-          url: "/logo.svg",
+          key: "/dustin-edwards-logo.svg",
+          url: "/dustin-edwards-logo.svg",
           // A static asset is its own url; never prefix /media/.
-          thumb: "/logo.svg",
+          thumb: "/dustin-edwards-logo.svg",
           storage: "static",
           role: "brand",
           mime: "image/svg+xml",
@@ -743,9 +743,9 @@ const STATES = [
     loaderData: MEDIA_SHELL({
       objects: [
         MEDIA_OBJECT({
-          key: "/phage-hunters/2019.webp",
-          url: "/phage-hunters/2019.webp",
-          thumb: "/phage-hunters/2019.webp",
+          key: "/phage-hunters/dustin-edwards-2019.webp",
+          url: "/phage-hunters/dustin-edwards-2019.webp",
+          thumb: "/phage-hunters/dustin-edwards-2019.webp",
           storage: "static",
           originalName: null,
           deletable: false,
@@ -777,13 +777,13 @@ const STATES = [
     name: "media, inspector on a template-placed file",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
-    url: "/admin/media?key=/phage-hunters/2019.webp",
+    url: "/admin/media?key=/phage-hunters/dustin-edwards-2019.webp",
     loaderData: MEDIA_SHELL({
       objects: [MEDIA_OBJECT()],
-      view: { ...MEDIA_SHELL().view, key: "/phage-hunters/2019.webp" },
+      view: { ...MEDIA_SHELL().view, key: "/phage-hunters/dustin-edwards-2019.webp" },
       detail: MEDIA_DETAIL({
-        key: "/phage-hunters/2019.webp",
-        url: "/phage-hunters/2019.webp",
+        key: "/phage-hunters/dustin-edwards-2019.webp",
+        url: "/phage-hunters/dustin-edwards-2019.webp",
         originalName: null,
         deletable: false,
         storage: "static",
@@ -1022,15 +1022,15 @@ const STATES = [
     name: "media, detail for a static row",
     entry: "app/routes/admin.media._index.tsx",
     path: "/admin/media",
-    url: "/admin/media?key=/logo.svg",
+    url: "/admin/media?key=/dustin-edwards-logo.svg",
     loaderData: MEDIA_SHELL({
       filter: "brand",
       objects: [],
       roleCounts: [{ role: "brand", n: 1 }],
       detail: MEDIA_DETAIL({
-        key: "/logo.svg",
-        url: "/logo.svg",
-        thumb: "/logo.svg",
+        key: "/dustin-edwards-logo.svg",
+        url: "/dustin-edwards-logo.svg",
+        thumb: "/dustin-edwards-logo.svg",
         storage: "static",
         role: "brand",
         mime: "image/svg+xml",
@@ -1230,7 +1230,7 @@ const STATES = [
       objects: [
         MEDIA_OBJECT({ uploaded: "2026-03-02T10:00:00.000Z" }),
         MEDIA_OBJECT({ key: "second.png", url: "/media/second.png", uploaded: "2026-03-19T10:00:00.000Z" }),
-        MEDIA_OBJECT({ key: "/logo.svg", url: "/logo.svg", storage: "static", uploaded: null, deletable: false }),
+        MEDIA_OBJECT({ key: "/dustin-edwards-logo.svg", url: "/dustin-edwards-logo.svg", storage: "static", uploaded: null, deletable: false }),
       ],
       view: { ...MEDIA_SHELL().view, group: "month" },
       modified: true,

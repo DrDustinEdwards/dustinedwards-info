@@ -34,8 +34,8 @@ import assert from "node:assert/strict";
 
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 
-const STATIC_SRC = "/phage-hunters/2017.webp";
-const MEDIA_SRC = "/media/a1b2c3d4e5f60718-1600x900.webp";
+const STATIC_SRC = "/phage-hunters/dustin-edwards-2017.webp";
+const MEDIA_SRC = "/media/dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 
 /** A stand-in for a real derived value. Its bytes are not the subject here. */
 const LQIP = "data:image/webp;base64,UklGRhoAAABXRUJQ";

@@ -133,8 +133,8 @@ export function isSourceFile(file) {
  * SOURCE WITH ITS COMMENTS REMOVED, because prose about an asset is not a
  * reference to it.
  *
- * **THIS MODULE CAUGHT ITSELF.** The first run reported `/logo.svg`,
- * `/favicon.svg`, `/logo-dark.svg`, `/logo-header.svg`, `/favicon.ico` and
+ * **THIS MODULE CAUGHT ITSELF.** The first run reported `/dustin-edwards-logo.svg`,
+ * `/dustin-edwards-favicon.svg`, `/dustin-edwards-logo-dark.svg`, `/dustin-edwards-logo-header.svg`, `/favicon.ico` and
  * `/site.webmanifest` as referenced by `app/lib/media/template-refs.mjs`, which
  * places no asset anywhere: they appear in the doc comment above, explaining the
  * prefix-collision problem. `folders.mjs` did the same thing. Six brand files
@@ -195,8 +195,8 @@ export function stripComments(text, cssOnly = false) {
  * **THE BOUNDARY CHECK IS WHAT MAKES THIS USABLE, AND IT IS NEEDED ON BOTH
  * SIDES.** Each side was found by a false positive rather than reasoned out.
  *
- * TRAILING, the prefix collision: a bare `indexOf` reports `/logo.svg` as
- * referenced whenever `/logo-dark.svg` appears, because the shorter path is a
+ * TRAILING, the prefix collision: a bare `indexOf` reports `/dustin-edwards-logo.svg` as
+ * referenced whenever `/dustin-edwards-logo-dark.svg` appears, because the shorter path is a
  * prefix of the longer one, and this asset set is full of such pairs.
  *
  * LEADING, the suffix collision, and this one actually fired: the first run with

@@ -800,7 +800,7 @@ const RENDERER_FIXTURE = [
   "",
   "## A heading, which gets an autolink",
   "",
-  "![An image, which gets an anchor to its original](/og-image.png)",
+  "![An image, which gets an anchor to its original](/dustin-edwards-og-image.png)",
 ].join("\n");
 
 const renderedMarkup = await renderBody({

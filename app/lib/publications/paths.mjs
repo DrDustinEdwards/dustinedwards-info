@@ -42,6 +42,8 @@
  * permanent by construction rather than by discipline.
  */
 
+import { ASSET_PREFIX } from "../media/classify.mjs";
+
 /**
  * A DOI reduced to one URL path segment.
  *
@@ -92,12 +94,13 @@ export function paperPath(slug) {
  * pair. A directory named for the DOI holding a file named for the record would
  * be two identifiers for one thing, and the failure mode is the quiet one: the
  * page renders, the link works, and `citation_pdf_url` points into a directory
- * Scholar will not accept.
+ * Scholar will not accept. The file carries ruling 127's prefix ahead of the
+ * slug, which is still the one identifier: a reader's download says whose it is.
  *
  * @param {string} slug from `doiSlug`
  */
 export function paperPdfPath(slug) {
-  return `${PUBLICATIONS_PATH}/${slug}/${slug}.pdf`;
+  return `${PUBLICATIONS_PATH}/${slug}/${ASSET_PREFIX}${slug}.pdf`;
 }
 
 /**
@@ -165,5 +168,5 @@ export function paperAskUrl(title) {
  * @param {string} slug from `doiSlug`
  */
 export function paperPdfDiskPath(slug) {
-  return `public/publications/${slug}/${slug}.pdf`;
+  return `public/publications/${slug}/${ASSET_PREFIX}${slug}.pdf`;
 }

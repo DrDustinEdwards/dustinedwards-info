@@ -159,7 +159,7 @@ function emit(name, data) {
 console.log(`build:icons -> ${OUT}`);
 
 // The adaptive one. Transparent, because it is the variant that can choose.
-emit("favicon.svg", faviconSvg());
+emit("dustin-edwards-favicon.svg", faviconSvg());
 
 // The tiles. Lavender mark on brand purple, because none of these can query.
 // ICO sizes are the MEASURED contents of the shipped container, not a guess.
@@ -175,16 +175,16 @@ emit(
   ),
 );
 
-emit("apple-touch-icon.png", png(square({ size: 180, mark: DARK, tile: TILE, pad: 0.14 }), 180));
-emit("android-chrome-192x192.png", png(square({ size: 192, mark: DARK, tile: TILE, pad: 0.12 }), 192));
-emit("android-chrome-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.12 }), 512));
+emit("dustin-edwards-apple-touch-icon.png", png(square({ size: 180, mark: DARK, tile: TILE, pad: 0.14 }), 180));
+emit("dustin-edwards-android-chrome-192x192.png", png(square({ size: 192, mark: DARK, tile: TILE, pad: 0.12 }), 192));
+emit("dustin-edwards-android-chrome-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.12 }), 512));
 
 // Maskable: the launcher may crop to a CIRCLE, so for ink of this aspect the DIAGONAL has to
 // clear it, which is why the padding is much larger and is NOT a style choice. The tighter
 // candidate left too little headroom for a spec launchers implement loosely.
-emit("maskable-icon-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.19 }), 512));
+emit("dustin-edwards-maskable-icon-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.19 }), 512));
 
-emit("og-image.png", png(ogCard(), 1200));
+emit("dustin-edwards-og-image.png", png(ogCard(), 1200));
 
 /*
  * REGENERATE THE ASSET MANIFEST, everything above writing into `public/` and the manifest being

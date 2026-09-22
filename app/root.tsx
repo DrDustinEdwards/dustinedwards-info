@@ -87,8 +87,8 @@ export const links: Route.LinksFunction = () => [
   // these ride on every page and why the default social card is a constant each
   // public route names for itself.
   { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
-  { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-  { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+  { rel: "icon", href: "/dustin-edwards-favicon.svg", type: "image/svg+xml" },
+  { rel: "apple-touch-icon", href: "/dustin-edwards-apple-touch-icon.png" },
   { rel: "manifest", href: "/site.webmanifest" },
   /*
    * The `type` on the JSON one stays `application/feed+json` even though the

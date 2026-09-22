@@ -30,7 +30,7 @@ const TYPES = new Map([
   ["webmanifest", { kind: "other", mime: "application/manifest+json" }],
   // Added 2026-08-21 with the self-hosted fonts, which is the whole reason:
   // SIL OFL 1.1 requires the licence to travel with the redistributed font, so
-  // public/fonts/OFL.txt has to be served rather than sit beside the binaries
+  // public/fonts/dustin-edwards-ofl.txt has to be served rather than sit beside the binaries
   // unreachable. This map throwing on "txt" is what made that a decision.
   ["txt", { kind: "document", mime: "text/plain; charset=utf-8" }],
   //
@@ -115,7 +115,7 @@ export function classify(pathOrKey) {
  * fails loudly, which is what it should do.
  */
 /*
- * **`/fonts/OFL.txt` DOES NOT BELONG IN THIS MAP, and the temptation to put it
+ * **`/fonts/dustin-edwards-ofl.txt` DOES NOT BELONG IN THIS MAP, and the temptation to put it
  * there is why this note exists.**
  *
  * `check:media --remote` has been failing on it since it was added: a `public/`
@@ -129,7 +129,7 @@ export function classify(pathOrKey) {
  * So the gate is not reporting a defect in itself; it is reporting real drift.
  * A Worker cannot list its own static assets, so `rebuildMediaIndex` is what
  * writes the static rows, it reads `assetManifest.paths`, and that manifest
- * already contains `/fonts/OFL.txt`. The row is missing only because nobody has
+ * already contains `/fonts/dustin-edwards-ofl.txt`. The row is missing only because nobody has
  * run a rebuild since the file landed. **The repair is the rebuild button on
  * `/admin/media`, which needs an admin session**, not a code change here.
  *
@@ -299,12 +299,12 @@ export function bucketFor(env, key) {
  *
  * **`brand` versus `icon` is the one boundary that needs a stated rule**, because
  * both are square images of the mark and eyeballing them decides nothing.
- * `og-image.png` is what forced it: it looks exactly like an icon and is not one.
+ * The OG image is what forced it: it looks exactly like an icon and is not one.
  *
  *   icon   is DECLARED TO THE PLATFORM. Something outside the application asks
  *          for it: a `<link rel>`, or an entry in the webmanifest. The browser
  *          or the OS fetches it without any of this code being involved.
- *   brand  is REFERENCED BY APPLICATION CODE. Some module names it. `og-image.png`
+ *   brand  is REFERENCED BY APPLICATION CODE. Some module names it. The OG image
  *          is `DEFAULT_OG_IMAGE` in `seo.ts`, and the four logo SVGs are the
  *          fixtures `check:logo` reads.
  *
@@ -327,13 +327,17 @@ export function roleOf(pathOrKey) {
   if (pathOrKey.startsWith("og/")) return "generated";
   if (pathOrKey.startsWith("/diagrams/")) return "generated";
 
-  // Identity. `og-image.png` belongs here rather than with the icons: it is the
+  // Identity. The OG image belongs here rather than with the icons: it is the
   // site mark, used as the default social card, and `seo.ts` names it directly.
-  if (/^\/(logo(-[a-z]+)*\.svg|favicon\.svg|og-image\.png)$/.test(pathOrKey)) return "brand";
+  if (/^\/dustin-edwards-(logo(-[a-z]+)*\.svg|favicon\.svg|og-image\.png)$/.test(pathOrKey)) {
+    return "brand";
+  }
 
-  // Chrome. The manifest rides with the icons it declares.
+  // Chrome. The manifest rides with the icons it declares. `favicon.ico` keeps its name because a
+  // browser asks for it unprompted, and the manifest because only a browser ever reads it: ruling
+  // 127's two exceptions, which `check:asset-names` lists.
   if (
-    /^\/(favicon\.ico|apple-touch-icon\.png|android-chrome-[\dx]+\.png|maskable-icon-[\dx]+\.png|site\.webmanifest)$/.test(
+    /^\/(favicon\.ico|site\.webmanifest|dustin-edwards-(apple-touch-icon\.png|android-chrome-[\dx]+\.png|maskable-icon-[\dx]+\.png))$/.test(
       pathOrKey,
     )
   ) {
@@ -399,11 +403,18 @@ export function cropSafe(pathOrKey) {
  * would be a measurement rather than the absence of one. Such a key has no
  * suffix and resolves to no dimensions.
  *
+ * RULING 127: the key opens with `dustin-edwards-` and then, where the upload carried a usable
+ * one, a descriptive slug from the author's filename. THE DIGEST STAYS, so the key is a function
+ * of the bytes and the name, and still immutable: the same image uploaded under two names is two
+ * objects, which is the price of a file that says what it is when it lands on a reader's disk.
+ * A name that slugifies to nothing leaves the prefix and the digest.
+ *
  * @param {ArrayBuffer} digest a SHA-256 digest
  * @param {string} extension
  * @param {{ width: number, height: number } | null} [dimensions]
+ * @param {string | null} [name] the author's filename, for the descriptive segment
  */
-export function contentKey(digest, extension, dimensions = null) {
+export function contentKey(digest, extension, dimensions = null, name = null) {
   const hex = [...new Uint8Array(digest)]
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
@@ -411,7 +422,37 @@ export function contentKey(digest, extension, dimensions = null) {
     dimensions && dimensions.width > 0 && dimensions.height > 0
       ? `-${dimensions.width}x${dimensions.height}`
       : "";
-  return `${hex.slice(0, 16)}${size}.${extension}`;
+  const slug = slugifyName(name);
+  return `${ASSET_PREFIX}${slug ? `${slug}-` : ""}${hex.slice(0, 16)}${size}.${extension}`;
+}
+
+/**
+ * The prefix ruling 127 puts on everything that leaves the site. Stated ONCE and exported: the key
+ * writer, the download-name builder and `check:asset-names` all read this rather than the literal.
+ */
+export const ASSET_PREFIX = "dustin-edwards-";
+
+/**
+ * A filename reduced to a key's descriptive segment: lower case, hyphens, no extension.
+ *
+ * CAPPED AT 48 CHARACTERS, because a key is a URL segment and an uncapped one lets whoever names
+ * the upload decide how long every stored key is. "" is a real answer for a name with no usable
+ * characters, and the key then carries the prefix and the digest alone. A name that already
+ * carries the prefix loses it here, or re-uploading a downloaded file would double it.
+ *
+ * @param {string | null | undefined} name
+ * @returns {string}
+ */
+export function slugifyName(name) {
+  if (typeof name !== "string") return "";
+  return name
+    .replace(/\.[^.]*$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+/, "")
+    .replace(/^(?:dustin-edwards(?:-|$))+/, "")
+    .slice(0, 48)
+    .replace(/-+$/, "");
 }
 
 /**
@@ -423,11 +464,14 @@ export function contentKey(digest, extension, dimensions = null) {
  * path (leading `/`), an `og/` key, and a traversal segment all fail without
  * needing to be named.
  *
- * THREE GROUPS, THREE READERS, since 2026-08-26. `isContentKey` tests it,
- * `digestFromKey` takes group 1, `dimensionsFromKey` takes groups 2 and 3. The
- * dimension groups are what this pattern gained: `dimensionsFromKey` carried
- * its own regex over the same segment, and two spellings of one grammar is the
- * exact defect the three deleted reader-copies produced.
+ * NAMED GROUPS, THREE READERS. `isContentKey` tests it, `digestFromKey` takes `digest`,
+ * `dimensionsFromKey` takes `width` and `height`. The names replaced positional indices when
+ * ruling 127 added the prefix and the slug ahead of the digest: every index would have shifted by
+ * one, silently, and this file already records what one silent shift in this grammar costs.
+ *
+ * THE SLUG IS GREEDY AND THAT IS DELIBERATE. A descriptive segment may itself end in sixteen hex
+ * characters; greedy matching leaves the LAST such run as the digest, which is the one the writer
+ * put there.
  *
  * **THEY HAD ALREADY DRIFTED, and the differential that collapsed them found
  * it rather than predicting it.** The old inline spelling read `\d{1,5}` per
@@ -451,7 +495,7 @@ export function contentKey(digest, extension, dimensions = null) {
  * type is a better guarantee than the arithmetic accident the comment claimed.
  */
 const CONTENT_KEY_SHAPE =
-  /^([0-9a-f]{16})(?:-([1-9]\d{0,4})x([1-9]\d{0,4}))?\.[a-z0-9]+$/;
+  /^dustin-edwards-(?:(?<slug>[a-z0-9][a-z0-9-]*)-)?(?<digest>[0-9a-f]{16})(?:-(?<width>[1-9]\d{0,4})x(?<height>[1-9]\d{0,4}))?\.[a-z0-9]+$/;
 
 /**
  * The bare key inside a value that may be a key, a `/media/` path, or either
@@ -497,11 +541,10 @@ export function dimensionsFromKey(keyOrPath) {
   const key = bareKey(keyOrPath);
   if (key === null) return null;
   const match = CONTENT_KEY_SHAPE.exec(key);
-  // Group 2 is absent for the no-dimension form, which is a key that carries
-  // no measurement rather than a key that failed to parse. Both answer null
-  // here, and the caller wants the same thing from both.
-  if (!match || match[2] === undefined) return null;
-  return { width: Number(match[2]), height: Number(match[3]) };
+  // The width group is absent for the no-dimension form, which is a key carrying no measurement
+  // rather than a key that failed to parse. Both answer null, and the caller wants that from both.
+  if (!match || match.groups?.width === undefined) return null;
+  return { width: Number(match.groups.width), height: Number(match.groups.height) };
 }
 
 /**
@@ -554,5 +597,5 @@ export function digestFromKey(keyOrPath) {
   const match = CONTENT_KEY_SHAPE.exec(key);
   // `?? null` rather than an assertion: the capture group cannot be absent when
   // the match succeeded, and null is already this function's "no digest here".
-  return match?.[1] ?? null;
+  return match?.groups?.digest ?? null;
 }

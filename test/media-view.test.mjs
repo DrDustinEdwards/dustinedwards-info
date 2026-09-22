@@ -280,7 +280,7 @@ test("an unknown folder is titled from its own directory, never mislabelled", ()
 
 test("folders: a static path has one, a content-addressed key says so", () => {
   assert.equal(folderOf("/publications/a-paper.pdf"), "/publications");
-  assert.equal(folderOf("/logo.svg"), "Uploads", "a root-level path has no meaningful folder");
+  assert.equal(folderOf("/dustin-edwards-logo.svg"), "Uploads", "a root-level path has no meaningful folder");
   assert.equal(folderOf("1234abcd5678ef90.png"), "Uploads");
   assert.equal(folderOf("/phage-hunters/2019/x.jpg"), "/phage-hunters/2019");
 });

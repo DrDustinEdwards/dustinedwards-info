@@ -13,6 +13,6 @@ import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 export function loader() {
   const papers = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
   return new Response(toRisAll(papers), {
-    headers: exportHeaders("application/x-research-info-systems", SHARED_CACHE_CONTROL),
+    headers: exportHeaders("application/x-research-info-systems", SHARED_CACHE_CONTROL, "publications.ris"),
   });
 }
