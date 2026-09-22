@@ -50,7 +50,7 @@ export function migrationFiles(migrationsDir) {
  * comparison, because the comment here already said "the runners" in the plural while the filter
  * compared against exactly one name, so the second one would have been counted as a gate.
  */
-export const RUNNERS = new Set(["check:all", "check:ci"]);
+export const RUNNERS = new Set(["check:all", "check:ci", "check:changed"]);
 
 /**
  * Every gate, derived from package.json's `check:*` scripts. ONE DEFINITION, imported by

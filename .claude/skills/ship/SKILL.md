@@ -12,9 +12,10 @@ here: what ship refuses and why lives there. This is the PROCEDURE around it.
 
 1. `git pull --ff-only`. Ship deploys local HEAD, so a seat-side merge you do
    not have is a deploy nobody asked for.
-2. `npm run check` (offline tier) or `npm run check:all` (adds the network
-   gates). Ship runs the offline tier again itself; running it first means you
-   find failures before a commit rather than after a push.
+2. `npm run check:changed`, the gates covering what the branch touched. Ship
+   runs the offline tier again itself and CI runs the full suite, so a local
+   `check:all` is a third derivation of the same answer: reach for it when the
+   change touches a network gate's subject, not by habit (ruling 129).
 3. `npm run lint`. It is a separate CI step and no gate tier runs it.
 4. Scoped commits, one concern each, named paths only.
 5. `git push origin main`.
@@ -25,8 +26,9 @@ here: what ship refuses and why lives there. This is the PROCEDURE around it.
 
 ## Running the long steps detached on this host
 
-`check:all` takes about fifteen minutes and `ship` about ten. Run each in the
-background writing to a log, and watch the LOG rather than the task:
+`check:all` takes about fifteen minutes and `ship` about ten. When you do run
+one, run it in the background writing to a log, and watch the LOG rather than
+the task:
 
 - `npm run check:all > /tmp/checkall.log 2>&1` with `run_in_background: true`.
 - Watch it with a Monitor on `tail -f` filtered to `FAILED|EXIT=|passed, .* failed`.
