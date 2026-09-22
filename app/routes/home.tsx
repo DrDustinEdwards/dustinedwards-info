@@ -20,7 +20,8 @@ import {
   pageMeta,
 } from "~/lib/seo";
 import { EvidenceRow } from "~/components/evidence-row";
-import { PlateI, PlateKey } from "~/components/plate-i";
+import { PlateI, PlateKeyRow } from "~/components/plate-i";
+import { PlateEnhancements } from "~/components/plate-enhancements";
 import { FigurePapersPerYear, FigureRoster } from "~/components/home-figures";
 import { PUBLICATIONS } from "~/data/publications";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
@@ -160,7 +161,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <main className="tracks home-tracks" id="main" tabIndex={-1}>
         {/*
          * Ruling 50 as amended: microformats only, no `rel="me"`. Only `u-url` had
-         * nowhere to go, so the anchor is hidden and it is the ONE hidden element here.
+         * nowhere to go, so the anchor is hidden and it is the ONE hidden element in the card.
          *
          * NO `u-photo`: a card claiming a photo the site does not publish would be the
          * h-card version of a substituted value.
@@ -235,28 +236,22 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          * a reader without the grid meets the name, the sentence and the checkable row before the
          * teaching object, and a screen reader hears them in that order at every width.
          */}
-        {/*
-         * FOCUSABLE BECAUSE IT SCROLLS. Below a 348px viewport the plate is wider than the reading
-         * column and pans inside its own box (home.css), and a region a pointer can scroll has to
-         * be reachable by keyboard too: Chrome does not make scroll containers focusable on its
-         * own. Same shape as the admin tables and the playground code blocks. The figure is named
-         * by its own caption, so it needs no aria-label on top of that.
-         */}
-        <figure className="home-plate" tabIndex={0}>
+        <figure className="home-plate">
           <PlateI />
-          {/*
-           * THE CAPTION IS THE KEY. The plate carries numerals; the names and the sentences live
-           * here once, so the two cannot disagree and no reader has to hold eight numerals in
-           * their head to read the drawing.
-           */}
           <figcaption className="home-plate-caption">
-            <span className="home-plate-num">Plate I</span> Plaque morphology, drawn as a key: one
-            specimen of each type on a single lawn, at one magnification, among the unlabelled
-            plaques a plate carries anyway.
-            <PlateKey />
+            <span className="home-plate-num">Plate I</span>
+            <span className="home-plate-cap">Plaque morphology, drawn. Six types on one lawn.</span>
           </figcaption>
+          {/* Unhidden by the enhancement, because without script there is nothing to select. */}
+          <p className="plate-hint" hidden>
+            Select a plaque to find it in the key.
+          </p>
         </figure>
         </div>
+
+        {/* The specimen row, beneath the whole hero as the canvas places it. */}
+        <PlateKeyRow />
+        <PlateEnhancements />
 
         {featured ? (
           <section className="home-featured" aria-labelledby="featured-heading">

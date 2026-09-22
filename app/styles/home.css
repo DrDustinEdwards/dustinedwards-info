@@ -184,114 +184,80 @@
 }
 
 /*
- * PLATE I AND THE TWO FIGURES.
+ * PLATE I, ITS KEY AND THE TWO FIGURES.
  *
- * THE LOCAL ALIASES ARE NOT NEW TOKENS. Oxide and cadet each hold a measured pair by using a
- * DIFFERENT ramp step per theme (oxide 400 light and 300 dark is 5.5:1 and 5.4:1 on paper), and a
- * component-scoped variable is how this repo swaps a step per theme without inventing a global
- * name. Ruling 122 assigns the jobs: oxide is series 1 and every annotation, cadet is series 3,
- * --fig-dust-300 is texture and never a series, --brand appears in no figure at all.
+ * --fig-ink IS A LOCAL ALIAS, NOT A TOKEN. Oxide holds its measured pair by using a different ramp
+ * step per theme (400 light, 300 dark: 5.5:1 and 5.4:1 on paper), and a component-scoped variable
+ * is how this repo swaps a step per theme. Ruling 122 assigns the jobs: oxide is series 1 and every
+ * annotation, cadet is series 3, --fig-dust-300 is texture, --brand appears in no figure at all.
  */
 .home-plate,
-.home-figure {
+.home-figure,
+.plate-key {
   --fig-ink: var(--fig-oxide-400);
   --fig-cell: var(--chart-cadet);
-
-  margin: 0 0 var(--s-7);
 }
 
-/*
- * THE PLATE'S THREE FLAT VALUES. The lawn, the paper a clearing shows, and ONE turbid tone between
- * them, declared here and read wherever turbidity appears in the drawing. Dust for both, because
- * ruling 122 gives the lawn to --fig-dust and turbidity is the same texture at a different density.
- *
- * TURBID SWAPS ITS STEP PER THEME and the lawn does not. Turbid must sit BETWEEN the lawn and the
- * paper, and the paper moves from the light end of the range to the dark end when the theme flips,
- * so an in-between tone has to move with it. Dust 200 light, dust 500 dark.
- */
-/*
- * ANNOTATION IS TWO OXIDE STEPS BECAUSE IT SITS ON TWO GROUNDS. The numeral is on paper outside
- * the dish and takes --fig-ink, the pair the figures already measure. The callout circle and its
- * leader are on the LAWN, which no other figure has: oxide 400 reads 2.37:1 there in light and
- * oxide 300 reads 1.25:1 in dark, both under the 3:1 a stroke that identifies has to hold. Oxide
- * 500 clears it in both themes, so the callout takes that step and does not swap. Same hue,
- * stepped for its ground; ruling 122 gives every one of them to oxide. check:contrast measures it.
- */
-.home-plate {
-  --fig-lawn: var(--fig-dust-300);
-  --fig-turbid: var(--fig-dust-200);
-  --fig-callout: var(--fig-oxide-500);
+.home-plate,
+.home-figure {
+  margin: 0 0 var(--s-7);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .home-plate,
-  :root:not([data-theme="light"]) .home-figure {
+  :root:not([data-theme="light"]) .home-figure,
+  :root:not([data-theme="light"]) .plate-key {
     --fig-ink: var(--fig-oxide-300);
-  }
-
-  :root:not([data-theme="light"]) .home-plate {
-    --fig-turbid: var(--fig-dust-500);
   }
 }
 
 [data-theme="dark"] .home-plate,
-[data-theme="dark"] .home-figure {
+[data-theme="dark"] .home-figure,
+[data-theme="dark"] .plate-key {
   --fig-ink: var(--fig-oxide-300);
 }
 
-[data-theme="dark"] .home-plate {
-  --fig-turbid: var(--fig-dust-500);
-}
-
-/*
- * The plate fills the reading column. The handoff caps it near 500px, which is right for the
- * placement it drew, the intro's RIGHT COLUMN beside the name at 1280; this page sets it below the
- * evidence row across the whole track, where that cap leaves it in a pool of whitespace with its
- * labels crowded to one side.
- *
- * It never scales below 300px: under that the six specimens stop being distinguishable, and an
- * indistinct key is worse than none.
- */
-.plate,
 .fig {
   display: block;
   inline-size: 100%;
   block-size: auto;
 }
 
-/* Never below 300px: under that the six specimens stop being distinguishable. */
+/*
+ * TWO DRAWINGS, ONE SHOWN (plate-i.tsx). Each viewBox holds its labels, so nothing spills past
+ * the SVG, and each is sized so its user unit is one CSS pixel at the width the canvas drew it for:
+ * that is what makes the labels 14px at 1280 and 12px at 375.
+ */
 .plate {
-  min-inline-size: 300px;
+  display: block;
+  block-size: auto;
+}
+
+.plate--wide {
+  inline-size: 100%;
+  max-inline-size: 704px;
+}
+
+.plate--narrow {
+  display: none;
 }
 
 /*
- * THE 300px FLOOR STAYS, AND IT STOPS WIDENING THE PAGE. Below a 348px viewport the reading column
- * is narrower than the plate is allowed to be, and the figure is a grid item, so its automatic
- * minimum size was the plate's own 300px: that sized the hero auto column, stretched the intro
- * beside it to 300, and scrolled the whole document sideways by 4px at 320.
- *
- * A scroll container instead, which is what page-shell.css does with the error frame for the same
- * reason. The plate keeps its 300px and its six specimens stay distinguishable; the caption is a
- * block child with no minimum, so it stays at the column width and wraps; and the panning is
- * confined to the figure rather than handed to the page. min-inline-size is stated as well as
- * implied, because a grid item automatic minimum going to zero under overflow is a rule worth
- * reading in the sheet rather than recalling from the spec.
- *
- * THE PLATE ALONE, not .home-figure with it. Only .plate carries the 300px floor; the figures use
- * .fig, which has none and was measured at the column width. A scroll container that can never
- * scroll would still take the tab stop its focusable region needs.
+ * THE PHONE PLATE BLEEDS TO THE SCREEN EDGES, as the canvas's 375 frame draws it: its 375-unit box
+ * across a 375px screen is scale 1, and the gutters are where its outer labels sit.
  */
-.home-plate {
-  min-inline-size: 0;
-  overflow-x: auto;
+@media (max-width: 43.99rem) {
+  .plate--wide {
+    display: none;
+  }
+
+  .plate--narrow {
+    display: block;
+    inline-size: calc(100% + 2 * var(--gutter));
+    margin-inline: calc(-1 * var(--gutter));
+  }
 }
 
-/*
- * Mono labels on leaders, which is what a plate's annotation is. Sizes are the reference
- * drawing's, part-c/06-morphology-key.html: 10.5px on a leader label and 9.5px on the scale bar,
- * which is smaller than body mono on purpose. A plate's annotation sits under the drawing rather
- * than competing with it.
- */
 .plate-label,
 .fig-label,
 .plate-scale {
@@ -304,13 +270,27 @@
   font-size: 10.5px;
 }
 
+.plate--wide .plate-label,
+.plate--wide .plate-scale {
+  font-size: 14px;
+}
+
+.plate--narrow .plate-label,
+.plate--narrow .plate-scale {
+  font-size: 12px;
+}
+
 .plate-scale {
   fill: var(--text-secondary);
-  font-size: 9.5px;
 }
 
 .fig-label {
   fill: var(--text-secondary);
+}
+
+.plate-leader line {
+  stroke: var(--fig-ink);
+  stroke-width: 1;
 }
 
 /* The caption splits like the rail: mono label, prose sentence (ruling 118 item 6). */
@@ -324,7 +304,6 @@
   max-inline-size: 58ch;
 }
 
-.home-plate-num,
 .home-figure-num {
   margin-inline-end: 0.5rem;
   color: var(--fig-ink);
@@ -332,43 +311,131 @@
   font-size: 0.75rem;
 }
 
-/*
- * THE KEY IS THE CAPTION'S. The plate carries numerals; these rows decode them as real text, so a
- * reader who cannot see the drawing still gets the taxonomy. Ruled rows, not cards.
- *
- * ONE COLUMN AT EVERY WIDTH. The rows are prose, and the plate column is 500px at the split: two
- * columns of sentence inside that is a measure nothing reads comfortably.
- */
-.plate-key {
-  margin: 0.75rem 0 0;
-  padding: 0;
-  border-block-start: var(--line-w) solid var(--dust);
-  list-style: none;
+/* The canvas stacks the plate's numeral over its sentence. */
+.home-plate-num,
+.home-plate-cap {
+  display: block;
 }
 
-/*
- * A COLUMN FOR THE NUMERAL, not an indent on the first line. The sentences wrap at this measure,
- * and a wrapped line returning to the margin runs back under the numerals and loses the list.
- */
-.plate-key-item {
-  display: grid;
-  grid-template-columns: 2.25rem minmax(0, 1fr);
-  border-block-end: var(--line-w) solid var(--dust);
-  padding-block: 0.4375rem;
-  font-size: 0.8125rem;
-  line-height: 1.5;
-}
-
-.plate-key-label {
+.home-plate-num {
+  margin-block-end: 0.25rem;
   color: var(--fig-ink);
   font-family: var(--font-mono);
   font-size: 0.75rem;
 }
 
-.plate-key-name {
-  color: var(--text);
-  font-weight: 500;
+.plate-hint {
+  margin: 0.5rem 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  line-height: 1.5;
 }
+
+/*
+ * THE SPECIMEN ROW, under the whole hero as the canvas sets it: six across at the split, two on a
+ * phone. Figures, not cards: a rule above, no boxes.
+ */
+.plate-key {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px;
+  border-block-start: var(--line-w) solid var(--dust);
+  padding-block: 22px 4px;
+}
+
+@media (min-width: 44rem) {
+  .plate-key {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 68rem) {
+  .plate-key {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+/*
+ * The row follows the hero directly, as in the canvas: the hero's own bottom margin is the only
+ * space between the plate's caption and the row's rule.
+ */
+.home-hero .home-plate {
+  margin-block-end: 0;
+}
+
+.tracks > .home-hero + .plate-key {
+  margin-block-start: 0;
+}
+
+.plate-key-entry {
+  margin: 0;
+}
+
+.plate-key-art {
+  display: block;
+  margin-block-end: 12px;
+}
+
+.plate-key-num,
+.plate-key-name,
+.plate-key-note {
+  display: block;
+}
+
+.plate-key-num {
+  margin-block-end: 4px;
+  color: var(--fig-ink);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.plate-key-name {
+  margin-block: 2px 5px;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+
+.plate-key-note {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+/*
+ * THE LINKED HIGHLIGHT (app/enhance/plate.ts sets .is-lit). A stroke and weight change in oxide,
+ * never a fill or a glow: the drawing's tones are the specimen, and the highlight only points.
+ */
+.plate-plaque[tabindex],
+.plate-key-entry[tabindex] {
+  cursor: pointer;
+}
+
+.plate-plaque.is-lit :is(circle, path),
+.plate-key-entry.is-lit .plate-key-art :is(circle, path) {
+  stroke: var(--fig-ink);
+  stroke-width: 2.4px;
+}
+
+.plate-leader.is-lit line {
+  stroke-width: 2px;
+}
+
+.plate-leader.is-lit .plate-label,
+.plate-key-entry.is-lit .plate-key-num {
+  font-weight: 700;
+}
+
+/* The highlight is the focus indicator on the drawing; the row keeps the site's ring as well. */
+.plate-plaque:focus-visible {
+  outline: none;
+}
+
 
 /* The numbered sections. The numeral is mono and muted: it is an index, not a heading word. */
 .home-section {
@@ -397,8 +464,12 @@
  * the order a screen reader should hear them in.
  *
  * 68rem, not 1280: the split needs the intro column to still hold the name at display size beside
- * a 500px plate, and 68rem is where that stops being cramped. Below it the grid is one column and
+ * the plate, and 68rem is where that stops being cramped. Below it the grid is one column and
  * nothing else changes.
+ *
+ * 592px IS THE CANVAS'S PLATE COLUMN (part-c/09-solid-lawn.html): the 500px dish plus the 92px its
+ * right-hand labels run into. The drawing's box is 704 wide at scale 1, so it also reaches 72px
+ * left into the 76px gap, where the canvas's left labels sit.
  */
 .home-hero {
   display: grid;
@@ -408,13 +479,19 @@
 
 @media (min-width: 68rem) {
   .home-hero {
-    grid-template-columns: minmax(0, 1fr) 500px;
+    grid-template-columns: minmax(0, 1fr) 592px;
     column-gap: 76px;
     align-items: start;
   }
 
   .home-hero > .home-intro {
     margin-block-end: 0;
+  }
+
+  .home-hero .plate--wide {
+    inline-size: 704px;
+    max-inline-size: none;
+    margin-inline-start: -72px;
   }
 }
 

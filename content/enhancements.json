@@ -122,6 +122,24 @@
       "fallbackKind": "selector",
       "fallbackAt": ".search-form",
       "why": null
+    },
+    {
+      "id": "plate-key-link",
+      "module": "app/enhance/plate.ts",
+      "enhancement": "Selecting a plaque on Plate I (hover, tap or keyboard focus) highlights it and its entry in the specimen row, and selecting a row entry highlights its plaque, with a one-line hint under the plate.",
+      "fallback": "The plate draws every label, and the specimen row beneath it names and describes all six, so the plate and its key read as a still. Only the highlight, the focus stops and the hint are lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".plate-key",
+      "why": null
+    },
+    {
+      "id": "plate-leader-intro",
+      "module": "app/enhance/plate.ts",
+      "enhancement": "On first view Plate I's leaders draw out to their labels once, in under 2.5 seconds, then the plate is still. Skipped under reduced motion; never repeats on scroll.",
+      "fallback": "Nothing. The leaders and labels are drawn from the start, as a still plate.",
+      "fallbackKind": "none",
+      "fallbackAt": null,
+      "why": "The intro is decoration: the still plate carries the same information. Writing the nothing down is what makes it a decision rather than an omission."
     }
   ]
 }
