@@ -1,5 +1,8 @@
 import { Link, NavLink } from "react-router";
 
+import headerEnhanceUrl from "~/enhance/dist/header.js?url";
+
+import { EnhancementScript } from "~/components/enhancement-script";
 import { SearchTrigger } from "~/components/search-trigger";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteSpeculation } from "~/components/site-speculation";
@@ -9,16 +12,19 @@ import { SITE } from "~/lib/seo";
 
 
 /**
- * Public site header. It grows when there is a page to add, not in
- * anticipation, so there is still no disclosure widget and no mobile menu
- * machinery.
+ * Public site header. Ruling 126: sticky and one line at every width, with the destinations
+ * visible on desktop and behind a labelled Menu on narrow widths.
+ *
+ * THE MENU ARRIVED WITH A PAGE COUNT THAT NEEDED IT, not in anticipation. The line that used to
+ * sit here said there was no disclosure widget and no mobile menu machinery; six destinations plus
+ * two tools stopped fitting on one phone line, which is the condition that buys the widget.
  *
  * THE THRESHOLDS ARE RE-MEASURED, NEVER REASONED FROM. They are a property of the
  * current label widths, and a longer word moves them. A simulated element is not
  * the element, so a threshold is measured after the link lands.
  *
- * The header wraps on BOTH the header and the nav, and the only media query
- * touching it is `print`, so nothing here is breakpoint-dependent.
+ * The desktop header is one line and does not wrap. The narrow header takes the ONE width
+ * condition in the sheet, which is where the destinations move into the menu.
  *
  * Roster's LABEL and its PATH deliberately disagree: the path is the indexed
  * legacy URL, the label is what the page is called.
@@ -38,7 +44,7 @@ export function SiteHeader() {
    * and the route table alone and cannot disagree with the document it sits in.
    */
   return (
-    <header className="site-header">
+    <header className="site-header" data-site-header="">
       <Link to="/" className="site-header-brand">
         {/* Decorative: the link's accessible name is the wordmark beside it, so
             naming the mark too would make a screen reader say it twice. Inline
@@ -72,6 +78,32 @@ export function SiteHeader() {
          * substitute when `data` is absent.
          */}
         <ThemeToggle />
+        {/*
+         * THE MENU IS A `<details>`, so it opens with scripting off and the browser owns the
+         * open state. Ruling 126: LABELLED "Menu", never an icon alone, because hidden
+         * navigation is measurably less discoverable and the label is what pays for it.
+         *
+         * It is rendered at every width and hidden by the sheet above the mobile breakpoint,
+         * which is the one place the header takes a width condition. Rendering it only on
+         * narrow widths is not available to us: the server does not know the viewport, and
+         * guessing from a user agent is how a desktop reader gets a phone header.
+         */}
+        <details className="site-header-menu" data-header-menu="">
+          <summary className="site-header-menu-button">Menu</summary>
+          {/*
+           * THE SECOND "Main" LANDMARK IS NOT A DUPLICATE AT ANY MOMENT. Exactly one of the
+           * two navs is displayed at a given width and `display: none` takes the other out of
+           * the accessibility tree, so a screen reader is never offered two. Labelling this
+           * one differently would name the same destinations twice over.
+           */}
+          <nav className="site-header-menu-panel" aria-label="Main">
+            {NAV.map((item) => (
+              <NavLink key={item.to} to={item.to} end={item.end}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </details>
       </div>
       {/*
        * It rides HERE rather than in root's Layout so its scope is exactly the
@@ -79,6 +111,11 @@ export function SiteHeader() {
        * component.
        */}
       <SiteSpeculation />
+      {/*
+       * The menu's keyboard contract and the mobile header's partial persistence. Absent, the
+       * menu still opens and the header simply stays static; see app/enhance/header.ts.
+       */}
+      <EnhancementScript src={headerEnhanceUrl} />
     </header>
   );
 }

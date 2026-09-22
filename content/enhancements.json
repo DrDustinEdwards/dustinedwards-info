@@ -88,6 +88,15 @@
       "why": null
     },
     {
+      "id": "header-nav",
+      "module": "app/enhance/header.ts",
+      "enhancement": "Adds what <details> does not give the menu: Escape closes it, choosing a link or clicking outside closes it, and focus returns to the button. On narrow widths it also makes the header partially persistent, hiding it on scroll down and returning it after a few pixels of scroll up, by writing one attribute the stylesheet reads.",
+      "fallback": "The menu is a <details> with a <summary> labelled Menu, so the browser opens and closes it with no script at all and every destination inside is an ordinary link. The header simply STAYS STATIC: with no script the hide attribute is never written, nothing moves, and no destination is unreachable. The footer carries the full link list as well.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".site-header-menu-panel",
+      "why": null
+    },
+    {
       "id": "command-palette",
       "module": "app/enhance/palette.ts",
       "enhancement": "Upgrades the header's search link into a modal command palette with live results.",
