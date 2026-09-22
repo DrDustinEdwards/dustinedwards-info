@@ -235,7 +235,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          * a reader without the grid meets the name, the sentence and the checkable row before the
          * teaching object, and a screen reader hears them in that order at every width.
          */}
-        <figure className="home-plate">
+        {/*
+         * FOCUSABLE BECAUSE IT SCROLLS. Below a 348px viewport the plate is wider than the reading
+         * column and pans inside its own box (home.css), and a region a pointer can scroll has to
+         * be reachable by keyboard too: Chrome does not make scroll containers focusable on its
+         * own. Same shape as the admin tables and the playground code blocks. The figure is named
+         * by its own caption, so it needs no aria-label on top of that.
+         */}
+        <figure className="home-plate" tabIndex={0}>
           <PlateI />
           <figcaption className="home-plate-caption">
             <span className="home-plate-num">Plate I</span> Plaque morphology, drawn as a key: one
