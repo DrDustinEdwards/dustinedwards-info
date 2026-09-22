@@ -10,9 +10,18 @@ Dustin's decision on 2026-09-12, to **the CSS layer plus the components that
 genuinely render standalone**. Anyone reading a thin component count should read
 that as the scope, not as a shortfall.
 
-- **In:** the 21 public-plane stylesheets (tokens, type, chrome, listings,
-  prose), the two self-hosted Inter faces, and four exports from two files:
-  `PostCard`, `Pagination`, `SiteLogo`, `SiteLogoHeader`.
+- **In:** the public-plane stylesheets (tokens, type, chrome, listings, prose),
+  the self-hosted faces they declare, and the exports `.design-sync/ds-entry.tsx`
+  re-exports, currently `SiteLogo` and `SiteLogoHeader`. Those three sets each
+  have ONE owner and this line names none of their contents: the sheet list is
+  `SHEETS` in `build-inputs.mjs`, held against the site by
+  `check:design-sheets`, which prints the count; the faces are whatever the
+  url() extractor copies into `ds-bundle/fonts/`; the components are the entry's
+  re-exports. This bullet said "21 stylesheets, the two Inter faces, and four
+  exports: PostCard, Pagination, SiteLogo, SiteLogoHeader" until 2026-09-21,
+  by which time the real numbers were 29 sheets and three faces and PostCard and
+  Pagination had been deleted from the repo. A count restated in prose is a
+  second owner (hard rule 17) and this is what it costs.
 - **Out, and why:** `site-header` and `site-footer` are page singletons.
   `theme-toggle`, `ask-panel`, `search-trigger`, `blog-enhancements`,
   `site-speculation` and `enhancement-script` exist to inject the nonced
@@ -22,16 +31,53 @@ that as the scope, not as a shortfall.
 - **Out:** the `admin-*` stylesheets (the admin plane is exempt from the
   progressive enhancement law) and `katex*` (a generated artifact carrying
   twenty font faces whose binaries would have to ship too).
+- **Out, and the one most likely to be re-added by mistake:** `post-row`, whose
+  `PostRow` and `Pager` replaced `PostCard` and `Pagination` in PR #62. The
+  listing reaches the canvas as CSS VOCABULARY ONLY, through `listing.css` and
+  `entry-list.css` in `SHEETS`; neither export is in `ds-entry.tsx`. The two
+  authored previews for the deleted components were orphaned for a while before
+  anyone noticed, because a preview for something the entry does not export is
+  never looked for and so never warns. They were deleted on 2026-09-21. If the
+  listing is ever wanted as components, the entry is what changes first.
 
 ## The build
 
-`cfg.buildCmd` is `node .design-sync/build-inputs.mjs` and it MUST run before
-the converter. It writes two gitignored files the converter reads:
-`ds-styles.css` and `tsconfig.paths.json`. The converter command is
+**RUN `npm run design:resync`. It is the whole command.** It regenerates the
+derived inputs and then runs the staged driver, in that order, stopping if the
+first step fails. Flags pass through, so `npm run design:resync -- --remote
+<sidecar.json>` is the anchored run.
 
-    node .ds-sync/package-build.mjs --config .design-sync/config.json \
+`scripts/ds-resync.mjs` exists because **`cfg.buildCmd` IS NOT A HOOK AND
+NOTHING EXECUTES IT.** In the staged skill that key appears only in
+`lib/common.mjs`'s list of known config names; the driver's build stage spawns
+`package-build.mjs` directly. So `build-inputs.mjs` was a step a human had to
+remember, and on 2026-09-21 a run went green against a `ds-styles.css` fourteen
+hours older than its sheets: a superseded `public-chrome.css` compiled in, the
+light header drew its wordmark white on paper at 1.06:1, and every grade
+downstream measured that CSS and passed it. **A green verdict does not prove the
+CSS entry was regenerated**, which is why the proof is now mechanical rather than
+remembered:
+
+- the wrapper regenerates first, so the forget path is closed by construction;
+- `check:design-inputs` compares CONTENT HASHES of the sheets, the generator and
+  the flatten against a stamp written beside them, so a driver invoked directly
+  still fails on the next offline gate run or `ship`. It skips when the inputs
+  were never generated, since only a sync needs them. Never mtimes: a gate here
+  has already failed as stale on a clean tree because a reverted file kept a new
+  mtime.
+
+The fix could not live in the driver: `.ds-sync/` is gitignored and re-copied
+from the skill bundle every sync, so a patch there is gone at the next skill
+version. If a future skill version does execute `cfg.buildCmd`, the wrapper's
+stage 0 becomes a redundant no-op rather than wrong.
+
+The generator writes three gitignored files: `ds-styles.css`,
+`tsconfig.paths.json` and `readme-header.md`. Underneath, the driver runs
+
+    node .ds-sync/resync.mjs --config .design-sync/config.json \
       --node-modules ./node_modules --entry .design-sync/ds-entry.tsx --out ./ds-bundle
 
+which the wrapper supplies, and a flag given on the command line wins over it.
 `--entry` is required: there is no `dist/`, and without it the converter looks
 for `node_modules/dustinedwards-info`, which does not exist. The entry walks up
 to the repo's own `package.json`, so every `cfg.*` path is repo-root relative.
@@ -122,14 +168,15 @@ Two things follow for the next sync, and neither is obvious from the code:
 
 ## Preview authoring, learned the hard way
 
-- `PostCard` renders an `<li>` and every cell wraps it in
-  `<ul className="post-list">`.
 - `SiteLogo` and `SiteLogoHeader` forward `className` ONLY. They do not spread,
   so a `style` prop is silently dropped: a sizes cell written with inline widths
   rendered three identical marks. Size via a real class.
-- `Pagination` returns `null` at `pageCount <= 1`, so there is deliberately no
-  cell for it; one would look like a broken preview.
 - Post content in the previews is real frontmatter from `content/posts/*.md`.
+- The two entries here for `PostCard` and `Pagination` went on describing how to
+  author their cells for nine days after PR #62 deleted both components, and the
+  previews themselves survived alongside. Nothing warned, for the reason the
+  scope bullet above now gives. A preview note outliving its component is the
+  cheap version of this failure; the expensive version was the header.
 
 ## Verification environment
 
