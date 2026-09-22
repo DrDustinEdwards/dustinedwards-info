@@ -290,7 +290,7 @@
 }
 
 .post-body .prose a:active {
-  color: var(--brand-active);
+  color: var(--brand-pressed);
 }
 
 /* The pull quote: the page quoting itself, between two dust rules, at a measure short enough that
@@ -313,7 +313,7 @@
   }
 }
 
-/* Code: ruled top and bottom rather than boxed. `--surface-code` is the one permitted departure
+/* Code: ruled top and bottom rather than boxed. `--paper` is the one permitted departure
    from the paper ground, because a code block must stay identifiable on paper. */
 .post-body .prose pre {
   border: 0;

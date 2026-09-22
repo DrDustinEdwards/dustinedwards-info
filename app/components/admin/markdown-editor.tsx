@@ -30,7 +30,7 @@ import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
 const houseTheme = EditorView.theme({
   "&": {
     color: "var(--text)",
-    backgroundColor: "var(--bg)",
+    backgroundColor: "var(--paper)",
     fontSize: "0.875rem",
     height: "100%",
   },
@@ -43,13 +43,13 @@ const houseTheme = EditorView.theme({
     padding: "0.75rem 0",
   },
   ".cm-gutters": {
-    backgroundColor: "var(--bg)",
+    backgroundColor: "var(--paper)",
     color: "var(--text-disabled)",
     border: "none",
   },
   "&.cm-focused": { outline: "none" },
-  ".cm-activeLine": { backgroundColor: "var(--surface)" },
-  ".cm-activeLineGutter": { backgroundColor: "var(--surface)" },
+  ".cm-activeLine": { backgroundColor: "var(--paper)" },
+  ".cm-activeLineGutter": { backgroundColor: "var(--paper)" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
     backgroundColor: "var(--selection-bg)",
   },
@@ -59,7 +59,7 @@ const houseTheme = EditorView.theme({
 
 /**
  * Drawn from the ratified ladder and the semantic text tokens rather than a
- * syntax theme of their own. These are admin-only and sit on `--bg`, so they
+ * syntax theme of their own. These are admin-only and sit on `--paper`, so they
  * reuse tokens the contrast matrix already covers.
  */
 const houseHighlight = HighlightStyle.define([
@@ -69,12 +69,12 @@ const houseHighlight = HighlightStyle.define([
   { tag: tags.link, color: "var(--brand)", textDecoration: "underline" },
   { tag: tags.url, color: "var(--brand)" },
   { tag: tags.monospace, color: "var(--text-accent)" },
-  { tag: tags.quote, color: "var(--text-muted)", fontStyle: "italic" },
-  { tag: tags.list, color: "var(--text-muted)" },
-  { tag: tags.meta, color: "var(--text-muted)" },
-  { tag: tags.processingInstruction, color: "var(--text-muted)" },
-  { tag: tags.contentSeparator, color: "var(--text-muted)" },
-  { tag: tags.strikethrough, color: "var(--text-muted)", textDecoration: "line-through" },
+  { tag: tags.quote, color: "var(--text-secondary)", fontStyle: "italic" },
+  { tag: tags.list, color: "var(--text-secondary)" },
+  { tag: tags.meta, color: "var(--text-secondary)" },
+  { tag: tags.processingInstruction, color: "var(--text-secondary)" },
+  { tag: tags.contentSeparator, color: "var(--text-secondary)" },
+  { tag: tags.strikethrough, color: "var(--text-secondary)", textDecoration: "line-through" },
 ]);
 
 /*

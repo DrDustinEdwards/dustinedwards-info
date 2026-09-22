@@ -968,7 +968,7 @@ function PreviewPane({
     setDoc(
       `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}>` +
         `<head><meta charset="utf-8">${styles}` +
-        `<style>body{margin:0;padding:2rem 1.5rem;background:var(--bg)}` +
+        `<style>body{margin:0;padding:2rem 1.5rem;background:var(--paper)}` +
         `.post{margin:0 auto}</style></head>` +
         `<body><div class="post"><article class="prose">${result.html}</article></div></body></html>`,
     );

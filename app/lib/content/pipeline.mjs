@@ -824,7 +824,7 @@ function getHighlighter() {
  * Syntax themes, chosen by measurement against the ratified code surfaces.
  *
  * Code blocks no longer carry a theme's own background: they sit on
- * --surface-code, with the highlighted-line band on --surface-popover. That
+ * --paper, with the highlighted-line band on --surface-popover. That
  * voided the previous verification, and re-running it condemned the plain
  * github themes: against the warm surfaces, github-light failed four token
  * colours (comments 4.06, strings 3.90, keywords 3.86, constants 2.94) and
@@ -833,7 +833,7 @@ function getHighlighter() {
  *
  * Comments are the single exception, still 4.25 in light after the swap, so
  * they are repointed at the ratified MUTED TEXT colour. That is not a new hex:
- * it is --text-muted from design-tokens.md, which is what a comment is, and it
+ * it is --text-secondary from design-tokens.md, which is what a comment is, and it
  * keeps the one hand-set syntax colour inside the ratified palette.
  *
  * Measured and gated by `npm run check:contrast`.

@@ -50,7 +50,7 @@
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 /* The fixed box: an explicit ratio on the wrapper reserves the space before the image arrives,
@@ -99,7 +99,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.875rem;
   letter-spacing: 0.08em;
@@ -119,17 +119,17 @@
 .media-facet-label {
   flex: none;
   width: 4.625rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.65625rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-/* "assigned by the system": mono and muted, an annotation rather than a control. --text-muted, never a
+/* "assigned by the system": mono and muted, an annotation rather than a control. --text-secondary, never a
    lighter grey: this is text a reader must read, so it meets the 4.5:1 text floor. */
 .media-facet-hint {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.65625rem;
 }
@@ -149,8 +149,8 @@
   border: 1px solid var(--border);
   border-left: 3px solid var(--brand);
   border-radius: 0.5rem;
-  background: var(--surface);
-  color: var(--text-muted);
+  background: var(--paper);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   line-height: 1.5;
   text-wrap: pretty;
@@ -257,7 +257,7 @@
    a reader is looking for. */
 .media-meta {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.6875rem;
   font-variant-numeric: tabular-nums;
 }
@@ -281,7 +281,7 @@
   padding: 1rem;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--surface);
+  background: var(--paper);
   /* A left seam only. The other three edges are the viewport. */
   border: 0;
   border-left: 1px solid var(--border-strong);
@@ -299,7 +299,7 @@
   gap: 0.625rem;
   margin: -1rem -1rem 0;
   padding: 0.6875rem 1rem;
-  background: var(--surface);
+  background: var(--paper);
   border-bottom: 1px solid var(--border);
 }
 
@@ -324,10 +324,10 @@
   align-items: center;
   gap: 0.3125rem;
   padding: 0.125rem 0.5rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.625rem;
-  background: var(--bg);
+  background: var(--paper);
   border: 1px solid var(--border);
   border-radius: 1.25rem;
   white-space: nowrap;
@@ -339,7 +339,7 @@
   place-items: center;
   width: 1.5rem;
   height: 1.5rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.9375rem;
   border-radius: 0.375rem;
   text-decoration: none;
@@ -451,7 +451,7 @@
 }
 
 .media-detail-list dt {
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .media-detail-list dd {
@@ -499,7 +499,7 @@
   padding: 0 0.5rem;
   border: 1px solid var(--border);
   border-radius: 0.375rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.8125rem;
@@ -523,7 +523,7 @@
   padding: 0.25rem;
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
-  background: var(--bg);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   cursor: pointer;
@@ -538,7 +538,7 @@
 
 .media-picker-key {
   overflow: hidden;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.625rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -563,12 +563,12 @@
   padding: 0.75rem;
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
-  background: var(--bg);
+  background: var(--paper);
 }
 
 .serp-url {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
@@ -593,7 +593,7 @@
    above. */
 .serp-note {
   margin: 0.5rem 0 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
@@ -606,7 +606,7 @@
    scrapers will not perform. */
 .og-preview-image {
   aspect-ratio: 1200 / 630;
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .og-preview-image img {
@@ -622,7 +622,7 @@
 
 .og-preview-host {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.6875rem;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -637,7 +637,7 @@
 
 .og-preview-description {
   margin: 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.8125rem;
   line-height: 1.4;
 }
@@ -646,7 +646,7 @@
   margin: 0;
   padding: 0.5rem 0.75rem;
   border-top: 1px solid var(--border-strong);
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.75rem;
 }
 
@@ -665,7 +665,7 @@
 .drawer .field input,
 .drawer .field textarea {
   border-color: var(--border-strong);
-  background: var(--surface);
+  background: var(--paper);
 }
 
 .slug-line {
@@ -704,14 +704,14 @@
   padding: 0.4375rem 0.75rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  background: var(--surface);
+  background: var(--paper);
   border: 1px solid var(--border-strong);
   border-radius: 0.5rem;
   cursor: pointer;
 }
 
 .media-upload:focus-within .media-upload-label {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--brand);
   outline-offset: 1px;
 }
 
@@ -738,14 +738,14 @@
 .media-group-count {
   font-size: 0.6875rem;
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
-/* The note: right aligned. --text-muted, the quietest token that still clears the 4.5:1 text floor. */
+/* The note: right aligned. --text-secondary, the quietest token that still clears the 4.5:1 text floor. */
 .media-group-note {
   margin-left: auto;
   font-size: 0.75rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-align: right;
 }
 
@@ -761,13 +761,13 @@
   flex: 1;
   padding: 0.625rem 0.875rem;
   font-size: 0.9375rem;
-  background: var(--bg);
+  background: var(--paper);
   border: 1px solid var(--border);
   border-radius: 0.625rem;
 }
 
 .media-search-input:focus-visible {
-  outline: 2px solid var(--focus-ring);
+  outline: 2px solid var(--brand);
   outline-offset: 1px;
 }
 
@@ -786,12 +786,12 @@
   font-weight: 600;
 }
 
-/* The count says THIS PAGE, and it is muted rather than faint: --text-muted
+/* The count says THIS PAGE, and it is muted rather than faint: --text-secondary
    clears the text floor, the mockup's #a79c8a does not. */
 .media-group-count {
   font-size: 0.6875rem;
   font-weight: 400;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .media-select-all {
@@ -888,12 +888,12 @@
 
 /* The mockup's micro-label, WITHOUT its 2.34:1 grey. The uppercase, the size
    and the tracking are what make it read as a label; the colour does not have
-   to be faint to do that, so it is --text-muted, which clears the floor. */
+   to be faint to do that, so it is --text-secondary, which clears the floor. */
 .media-display-label {
   font-size: 0.6875rem;
   font-weight: 500;
   letter-spacing: 0.09em;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-transform: uppercase;
 }
 
@@ -953,7 +953,7 @@
 
 .media-detail-hash code {
   word-break: break-all;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 /* TILE SIZE, a class on the container and never an inline style. The three
@@ -979,7 +979,7 @@
   width: 100%;
   height: 100%;
   padding: 0.5rem 0.5625rem;
-  background: var(--surface);
+  background: var(--paper);
   overflow: hidden;
   text-align: left;
 }
@@ -1351,7 +1351,7 @@
   padding: 9px 14px;
   /* The header separates by fill plus one --border rule beneath it; rows separate by alternating fill,
      never a rule per row. */
-  background: var(--surface);
+  background: var(--paper);
   border-bottom: 1px solid var(--border);
   border-radius: 0.375rem 0.375rem 0 0;
 }
@@ -1362,7 +1362,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 400;
@@ -1414,15 +1414,17 @@
   border: 0;
   border-radius: 0;
   font-size: 0.8125rem;
-  /* The reset is load-bearing: .media-card paints --surface on every card, so without it the odd-row
-     banding below paints --surface onto --surface and the rows become one slab. */
+  /* The reset is load-bearing: .media-card paints --paper on every card, so without it the odd-row
+     banding below paints --paper onto --paper and the rows become one slab. */
   background: transparent;
 }
 
-/* Rows separate by a full-width tint band, not a hairline: the mockup's hairlines fail their floor.
-   A surface-to-surface seam carries no 3:1 obligation under the palette law. */
-.media-grid[data-view="list"] .media-card:nth-child(odd) {
-  background: var(--surface);
+/* A RULE PER ROW, not a tint band. Ruling 128 collapsed the band's fill into the ground it sat on,
+   so the banding painted paper onto paper and the rows became one slab. --dust is the sanctioned
+   substitute: it is a line colour, deliberately below the contrast floor, and a row seam identifies
+   nothing on its own. */
+.media-grid[data-view="list"] .media-card + .media-card {
+  border-block-start: var(--line-w) solid var(--dust);
 }
 
 .media-grid[data-view="list"] .media-card:hover {
@@ -1484,7 +1486,7 @@
 
 .media-name-dir {
   overflow: hidden;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.65625rem;
   text-overflow: ellipsis;
@@ -1501,7 +1503,7 @@
   display: block;
   min-width: 0;
   overflow: hidden;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   text-overflow: ellipsis;
@@ -1521,7 +1523,7 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--text-secondary);
 }
 
 
@@ -1647,7 +1649,7 @@
   border: none;
   border-radius: 999px;
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font: inherit;
   cursor: pointer;
 }
@@ -1721,7 +1723,7 @@
 .ceremony p {
   margin: 0 0 1rem;
   font-size: 0.9375rem;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .ceremony-choice {
@@ -1742,7 +1744,7 @@
   padding: 0.45rem 0.6rem;
   border: 1px solid var(--border-strong);
   border-radius: 0.375rem;
-  background: var(--surface);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 0.9375rem;
@@ -1797,7 +1799,7 @@
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  background: var(--surface);
+  background: var(--paper);
   font-size: 0.9375rem;
 }
 

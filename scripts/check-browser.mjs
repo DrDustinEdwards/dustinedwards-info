@@ -1733,7 +1733,7 @@ try {
           `empty frame host, so paint holding never runs and the reader gets the themed ` +
           `canvas. Measured on production by screen capture with no CDP, fourteen runs ` +
           `over both themes: every run with prerendering on showed blank frames at 100% ` +
-          `of the --bg token with a luma standard deviation of zero, and no run with it ` +
+          `of the --paper token with a luma standard deviation of zero, and no run with it ` +
           `off did. Prefetch warms the same credentialed response without creating a ` +
           `frame host to activate.`,
       );

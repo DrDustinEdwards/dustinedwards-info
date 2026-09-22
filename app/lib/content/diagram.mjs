@@ -64,7 +64,7 @@ export const DIAGRAM_THEMES = ["light", "dark"];
  * either theme block.
  *
  * Mermaid will not take a custom property. Measured 2026-07-30 against
- * mermaid-cli 11.16.0: `themeVariables: { primaryColor: "var(--surface)" }`
+ * mermaid-cli 11.16.0: `themeVariables: { primaryColor: "var(--paper)" }`
  * fails the render with `Error: Unsupported color format: "var(--surface-2)"`,
  * because khroma parses every value in order to derive the ones you did not
  * supply. That is the first of the two reasons there is no single themed asset.
@@ -76,8 +76,8 @@ export const DIAGRAM_THEMES = ["light", "dark"];
  */
 export const DIAGRAM_THEME_TOKENS = {
   // Shared
-  background: "--bg",
-  primaryColor: "--surface",
+  background: "--paper",
+  primaryColor: "--paper",
   primaryBorderColor: "--border-strong",
   primaryTextColor: "--text",
   secondaryColor: "--surface-popover",
@@ -93,7 +93,7 @@ export const DIAGRAM_THEME_TOKENS = {
   errorTextColor: "--text-danger",
 
   // Flowchart
-  mainBkg: "--surface",
+  mainBkg: "--paper",
   nodeBorder: "--border-strong",
   nodeTextColor: "--text",
   clusterBkg: "--tint-brand",
@@ -101,17 +101,17 @@ export const DIAGRAM_THEME_TOKENS = {
   // The label sits ON an edge, and an edge crosses page background rather than a
   // panel, so the plate behind it has to be the page's own background or the
   // line shows through the text.
-  edgeLabelBackground: "--bg",
+  edgeLabelBackground: "--paper",
   arrowheadColor: "--border-strong",
 
   // Sequence
-  actorBkg: "--surface",
+  actorBkg: "--paper",
   actorBorder: "--border-strong",
   actorTextColor: "--text",
   actorLineColor: "--border",
   signalColor: "--border-strong",
   signalTextColor: "--text",
-  labelBoxBkgColor: "--surface",
+  labelBoxBkgColor: "--paper",
   labelBoxBorderColor: "--border-strong",
   labelTextColor: "--text",
   loopTextColor: "--text",
@@ -121,7 +121,7 @@ export const DIAGRAM_THEME_TOKENS = {
   activationBkgColor: "--surface-popover",
   activationBorderColor: "--border-strong",
   sequenceNumberColor: "--on-brand",
-  altBackground: "--surface",
+  altBackground: "--paper",
 };
 
 /**
