@@ -930,6 +930,12 @@ body {
   /* --site-inset: the x of the identity mark on both planes and in both sidebar states. On body, not the
      token block (check:contrast parses those as colours), and not .admin, because the public chrome reads it. */
   --site-inset: 1.5rem;
+  /* --header-h: the public header's RENDERED height, sticky since ruling 126. Here for the same reason
+     --site-inset is, rather than in the token block. Two consumers read it and neither may restate it:
+     html's scroll-padding-top, so a focused element or an anchor target never lands under the bar, and
+     the post page's sticky rail, which offset by a plain 20px while the header still scrolled away.
+     Re-measured when the header's padding or its contents change, never reasoned from. */
+  --header-h: 4.625rem;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
