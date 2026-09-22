@@ -242,8 +242,9 @@ for (const name of selected) {
   console.log(`  ${mark} ${name} (${Math.round(result.ms / 1000)}s)`);
   if (!result.ok) {
     failed += 1;
-    console.log(result.stdout ?? "");
-    console.log(result.stderr ?? "");
+    /* The gate's own words, not a summary of them: a failure is read, not counted. */
+    console.log(`       ${result.reason}`);
+    console.log(result.output ?? "");
   }
 }
 
