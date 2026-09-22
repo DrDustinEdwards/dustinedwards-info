@@ -23,6 +23,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ciVerdict, fetchCiRuns } from "./lib/ci-status.mjs";
+import { tierOutcome } from "./lib/tier-outcome.mjs";
 import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import {
@@ -155,7 +156,13 @@ function refuse(why, remedy) {
   process.exit(1);
 }
 
-/** @param {string} command @param {string[]} args */
+/**
+ * THE SIGNAL IS RETURNED, not collapsed. `status ?? 1` reads a killed process as exit 1, which is
+ * how a tier that died under memory pressure reached ship as a gate verdict and got reported as
+ * one. A caller that does not care may go on reading `code` alone.
+ *
+ * @param {string} command @param {string[]} args
+ */
 function run(command, args, { capture = false } = {}) {
   const result = spawnSync(command, args, {
     cwd: root,
@@ -163,12 +170,48 @@ function run(command, args, { capture = false } = {}) {
     stdio: capture ? ["inherit", "pipe", "pipe"] : "inherit",
     encoding: "utf8",
   });
+  const signal = result.signal ?? null;
   if (capture) {
     const text = `${result.stdout ?? ""}${result.stderr ?? ""}`;
     process.stdout.write(text);
-    return { code: result.status ?? 1, text };
+    return { code: result.status ?? 1, signal, text };
   }
-  return { code: result.status ?? 1, text: "" };
+  return { code: result.status ?? 1, signal, text: "" };
+}
+
+/**
+ * Runs a long command, streaming its output THROUGH while keeping a copy.
+ *
+ * The tier takes minutes and whoever is watching ship needs to see it move, so `capture`, which
+ * withholds everything until the end, is not usable here. But ship has to READ the output to tell
+ * a tier that reported from one that did not, so streaming and capturing are the same pass.
+ *
+ * @param {string} command @param {string[]} args
+ * @returns {Promise<{ code: number | null, signal: string | null, text: string }>}
+ */
+function runStreaming(command, args) {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, {
+      cwd: root,
+      shell: process.platform === "win32",
+      stdio: ["inherit", "pipe", "pipe"],
+    });
+    let text = "";
+    /** @param {Buffer} chunk */
+    const tee = (chunk) => {
+      const piece = chunk.toString();
+      text += piece;
+      process.stdout.write(piece);
+    };
+    child.stdout?.on("data", tee);
+    child.stderr?.on("data", tee);
+    /* A spawn that never started emits no exit; it must still resolve or ship hangs here. */
+    child.on("error", (error) => {
+      text += `\nship could not spawn ${command}: ${error.message}\n`;
+      resolve({ code: null, signal: null, text });
+    });
+    child.on("close", (code, signal) => resolve({ code, signal, text }));
+  });
 }
 
 /* ---------------------------------------------------------------- 1. tree */
@@ -330,7 +373,10 @@ const ghToken = (() => {
  * One read of GitHub's verdict on HEAD. Returns rather than refuses because the two callers
  * want opposite things; a `shouldRefuse` flag is the shape hard rule 10 names.
  *
- * @returns {Promise<{ verdict: { ok: boolean, why: string, remedy: string } | null, error: string }>}
+ * The verdict shape is `ciVerdict`'s, read off it rather than restated: this copy had already
+ * gone stale against the real one, which is what hard rule 17 is about.
+ *
+ * @returns {Promise<{ verdict: ReturnType<typeof ciVerdict> | null, error: string }>}
  */
 async function readCi() {
   try {
@@ -349,7 +395,34 @@ async function readCi() {
 }
 
 console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);
-const early = await readCi();
+let early = await readCi();
+
+/*
+ * A RUN IN FLIGHT IS WORTH WAITING FOR. Falling straight through to the local tier meant racing
+ * CI to grade the same commit, on the host where the parallel tier is the thing that dies; CI is
+ * read again at the green step regardless, so the local run was work whose result could not
+ * authorise anything. Branching on `state` rather than on the wording of `why`, which would make
+ * ci-status.mjs's prose an interface.
+ *
+ * Bounded, and the bound expires into the OLD behaviour rather than into a refusal: a slow queue
+ * is not a reason to refuse a deploy that the green step is about to judge anyway.
+ */
+const CI_WAIT_MS = 15 * 60 * 1000;
+const CI_POLL_MS = 30 * 1000;
+if (early.verdict?.state === "running") {
+  const deadline = Date.now() + CI_WAIT_MS;
+  console.log(`  ${early.verdict.why}. Waiting up to ${CI_WAIT_MS / 60000} minutes for it.`);
+  console.log("  the local tier is not run in its place: it would grade the same commit twice.");
+  while (early.verdict?.state === "running" && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, CI_POLL_MS));
+    early = await readCi();
+    const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
+    console.log(`  CI is ${early.verdict?.state ?? `unreadable: ${early.error}`} (${left}s left)`);
+  }
+  if (early.verdict?.state === "running") {
+    console.log("  CI did not finish inside the wait. Falling back to the local path.");
+  }
+}
 
 /** Chooses the path only. The step below decides the deploy, on every path. */
 const ciGreenEarly = early.verdict?.ok === true;
@@ -470,11 +543,16 @@ announce("Gates, offline tier");
 if (ciGreenEarly) {
   console.log(`  skipped: CI ran this tier on a clean checkout of ${sha}.`);
   console.log("  re-read below, and a CI that is no longer green refuses there.");
-} else if (run("npm", ["run", "check"]).code !== 0) {
-  refuse(
-    "a gate is red",
-    "Read the table above for the failing gate NAME before retrying. Nothing was deployed.",
-  );
+} else {
+  /*
+   * A RED GATE AND A DEAD TIER BOTH REFUSE, and they are told apart before either is worded.
+   * This refusal used to say "a gate is red, read the table above" on both paths, and on the
+   * crash path there was no table and no gate, the tier having been killed. Same direction,
+   * and the message now matches the fact. The decision is `tierOutcome`, which runs nothing.
+   */
+  const outcome = tierOutcome(await runStreaming("npm", ["run", "check"]));
+  if (outcome.state !== "passed") refuse(outcome.why, outcome.remedy);
+  console.log(`  ${outcome.why}`);
 }
 
 /* ------------------------------------------------------------- 4. CI green */
