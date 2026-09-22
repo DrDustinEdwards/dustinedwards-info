@@ -9,7 +9,8 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, mkdtempSync, utimesSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -57,6 +58,21 @@ if (!BASH) {
 const BASH_PATH = BASH.path;
 console.log(`  bash: ${BASH_PATH}  (${BASH.source})\n`);
 
+/*
+ * Ruling 131's backup precondition, replayed against three directories this gate owns: none holds
+ * the marker, one holds it fresh, one holds it seven hours old. The real directory is never read.
+ */
+const BACKUP_DIRS = {
+  none: mkdtempSync(join(tmpdir(), "hook-backup-none-")),
+  fresh: mkdtempSync(join(tmpdir(), "hook-backup-fresh-")),
+  stale: mkdtempSync(join(tmpdir(), "hook-backup-stale-")),
+};
+writeFileSync(join(BACKUP_DIRS.fresh, "media.sql"), "-- fresh\n");
+const stalePath = join(BACKUP_DIRS.stale, "media.sql");
+writeFileSync(stalePath, "-- stale\n");
+const sevenHoursAgo = (Date.now() - 7 * 3600 * 1000) / 1000;
+utimesSync(stalePath, sevenHoursAgo, sevenHoursAgo);
+
 /**
  * Run the hook against one command, from one working directory. `cwd` is what the payload
  * carries: the SESSION's directory, not the command's, whose own `cd` is this gate's subject.
@@ -65,12 +81,13 @@ console.log(`  bash: ${BASH_PATH}  (${BASH.source})\n`);
  * @param {string} cwd
  * @returns {number} the hook's exit code: 2 blocks, 0 allows
  */
-function runHook(command, cwd) {
+function runHook(command, cwd, backup = "none") {
   const payload = JSON.stringify({ cwd, tool_input: { command } });
   const result = spawnSync(BASH_PATH, [HOOK], {
     input: payload,
     encoding: "utf8",
     cwd: root,
+    env: { ...process.env, DUSTINEDWARDS_BACKUP_CHECK_DIR: BACKUP_DIRS[backup] },
   });
   if (result.error) {
     console.log(`  FAIL  the hook could not be run: ${result.error.message}`);
@@ -186,7 +203,41 @@ const CASES = [
       "If this blocks, the segment regex is splitting inside a quoted string.",
   },
   {
-    label: "a d1 UPDATE ending in a semicolon is STILL blocked",
+    label: "a d1 UPDATE with a fresh backup is allowed (ruling 131)",
+    command: `npx wrangler d1 execute dustinedwards --remote --command "UPDATE posts SET title = 'x';"`,
+    cwd: root,
+    backup: "fresh",
+    expect: 0,
+    why:
+      "ruling 131 lets a driver write to D1 after confirming the latest backup. If this blocks, " +
+      "the backup check is not finding a marker that is there.",
+  },
+  {
+    label: "a d1 UPDATE with a seven-hour-old backup is blocked",
+    command: `npx wrangler d1 execute dustinedwards --remote --command "UPDATE posts SET title = 'x';"`,
+    cwd: root,
+    backup: "stale",
+    expect: 2,
+    why: "the pair of the case above: same write, older marker. If this allows, the age is not read.",
+  },
+  {
+    label: "a d1 DROP is blocked even with a fresh backup",
+    command: `npx wrangler d1 execute dustinedwards --remote --command "DROP TABLE posts"`,
+    cwd: root,
+    backup: "fresh",
+    expect: 2,
+    why: "ruling 131 opens data writes only; schema belongs to migrations under hard rule 14.",
+  },
+  {
+    label: "a d1 --file is blocked even with a fresh backup",
+    command: "npx wrangler d1 execute dustinedwards --remote --file ./changes.sql",
+    cwd: root,
+    backup: "fresh",
+    expect: 2,
+    why: "a write the hook cannot read is a write nobody can report, which ruling 131 requires.",
+  },
+  {
+    label: "a d1 UPDATE ending in a semicolon is STILL blocked without a backup",
     /*
      * THE PAIR: the case above alone would pass on a hook that had stopped reading these statements,
      * which is what a widened segment regex causes. Same shape, one verb different.
@@ -319,8 +370,8 @@ const CASES = [
   },
 ];
 
-for (const { label, command, cwd, expect, why } of CASES) {
-  const code = runHook(command, cwd);
+for (const { label, command, cwd, expect, why, backup } of CASES) {
+  const code = runHook(command, cwd, backup);
   const verdict = expect === 2 ? "blocked" : "allowed";
   const got = code === 2 ? "blocked" : code === 0 ? "allowed" : `exit ${code}`;
   /*
@@ -342,7 +393,7 @@ console.log("");
  * parsing runs zero cases and reports a clean sweep of a security guard. Slack of zero, the set
  * being a fixed enumeration of the ruling's own cases.
  */
-const MINIMUM_CHECKS = 19;
+const MINIMUM_CHECKS = 23;
 const floorBreach = assertFloor(
   "check:hook-scope",
   "checks",
