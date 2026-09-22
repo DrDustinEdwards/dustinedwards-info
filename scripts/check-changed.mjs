@@ -39,7 +39,7 @@ const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx)$/,
-    gates: ["check:types", "check:invariants", "check:features", "check:microformats", "check:urls"],
+    gates: ["check:types", "check:invariants", "check:features", "check:microformats", "check:urls", "check:asset-names"],
   },
   {
     what: "the schema or a migration",
@@ -64,7 +64,7 @@ const MAP = [
   {
     what: "a served asset",
     test: /^public\/.+/,
-    gates: ["check:urls", "check:page-payload"],
+    gates: ["check:urls", "check:page-payload", "check:asset-names"],
   },
   {
     what: "the design-sync inputs",
