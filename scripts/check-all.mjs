@@ -114,6 +114,8 @@ export const TIERS = {
   "check:d1-address": "offline",
   "check:microformats": "offline",
   "check:urls": "offline",
+  /* Offline: walks public/ and reads route source. The R2 half is check:media's (ruling 127). */
+  "check:asset-names": "offline",
   // Sees an axis dropped, not wrong SQL.
   "check:media-axes": "offline",
   /* Certifies the last local build, stale or not. It also RENDERS now, so like
