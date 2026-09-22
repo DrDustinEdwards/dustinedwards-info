@@ -230,8 +230,13 @@ function discoverGates() {
   return names;
 }
 
-/** @param {string} name @param {string[]} args */
-function runGate(name, args) {
+/**
+ * EXPORTED so `check:changed` spawns a gate exactly as this does. The shell behaviour here is
+ * Windows-specific and measured (FAILURES.md); a second copy of it is a second thing to get wrong.
+ *
+ * @param {string} name @param {string[]} args
+ */
+export function runGate(name, args) {
   const started = Date.now();
   const result = spawnSync(`npm run ${name}${args.length ? ` -- ${args.join(" ")}` : ""}`, {
     cwd: root,
