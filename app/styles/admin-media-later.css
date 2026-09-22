@@ -7,7 +7,7 @@
 
 /* Usage states take tokens, not mockup literals: used is --fill-success; in template is --brand (it
  * belongs to the site, not a semantic state, so rule 6 holds); unattached is --text-accent, always beside
- * the word. Every dot is aria-hidden with its sentence in text: colour is never the only channel (rule 1). */
+ * the word. Every dot is aria-hidden with its sentence in text: color is never the only channel (rule 1). */
 
 .media-usage-line {
   display: flex;
@@ -183,7 +183,7 @@
 }
 
 /* A dashed outline means offered, solid means applied: the suggestion and tag chips share size and row,
- * so shape separates them without colour. */
+ * so shape separates them without color. */
 .media-suggestion,
 .media-tag-suggestion {
   padding: 0.1875rem 0.5rem;
@@ -466,7 +466,7 @@
   border-radius: 0.25rem;
 }
 
-/* The toast: bottom centre, over everything, and it never takes pointer events, so it cannot swallow
+/* The toast: bottom center, over everything, and it never takes pointer events, so it cannot swallow
  * a click meant for the grid. --scrim and --on-scrim, a pair check:contrast already measures. */
 .media-toast {
   position: fixed;
@@ -523,7 +523,7 @@
   font-weight: 400;
 }
 
-/* Page head, floating selection bar and type. The mockup's five failing colours stay refused:
+/* Page head, floating selection bar and type. The mockup's five failing colors stay refused:
  * separation is fill, and quietness is size, weight and tracking. */
 
 
@@ -674,7 +674,7 @@
 }
 
 /* The copy cell is a flex box: as a line box, the inline-block button gains a strut descent
-   that pulls the glyph off the row's optical centre. */
+   that pulls the glyph off the row's optical center. */
 .media-grid[data-view="list"] .media-col-copy {
   display: flex;
   align-items: center;
@@ -682,7 +682,7 @@
 }
 
 /* The confirmation modal replaces window.prompt, which is unstyleable, mute to a screen reader and
- * silently disabled in some contexts. Centred, not docked: a confirmation stops everything. */
+ * silently disabled in some contexts. Centered, not docked: a confirmation stops everything. */
 .media-modal-layer {
   position: fixed;
   z-index: var(--z-transient);

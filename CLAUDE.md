@@ -52,7 +52,7 @@ Count assertions that CAN FAIL. Ten named vacuity classes, of which only helper-
 
 ### 11. GATED by check:invariants. `app/db/schema.ts` IS the source of truth.
 
-Section 4 binds schema.ts to the migrations to the live database. Prefer the query builder; `search_docs` is the asserted exception, modelled for the comparison and read only in raw SQL.
+Section 4 binds schema.ts to the migrations to the live database. Prefer the query builder; `search_docs` is the asserted exception, modeled for the comparison and read only in raw SQL.
 
 ### 12. UNGATED. A new gate is tested by REPLAYING THE DEFECT it was written for.
 

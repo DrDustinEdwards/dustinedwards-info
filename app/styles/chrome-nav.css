@@ -6,7 +6,7 @@
  * RULING 126 REPLACES THE WRAP WITH A MENU. The nav used to take a full basis at narrow widths and
  * drop to its own line, and this sheet had no breakpoint at all. It now has ONE, and it is the
  * only width condition the header has: above it the destinations are visible, below it they move
- * into a labelled menu so the header stays one line. The threshold is still MEASURED after a link
+ * into a labeled menu so the header stays one line. The threshold is still MEASURED after a link
  * lands and never reasoned from; the old 537 and 619 figures described a three- and four-link
  * header and the wrap that is now gone.
  */
@@ -37,7 +37,7 @@
   color: var(--brand);
 }
 
-/* The current page takes a 1px ink underline, not a colour: colour is what a link uses to say it
+/* The current page takes a 1px ink underline, not a color: color is what a link uses to say it
    is a link, so reusing it for "you are here" says two things with one signal. */
 .site-header-nav a[aria-current="page"] {
   color: var(--text);
@@ -47,7 +47,7 @@
 
 /*
  * THE THEME TOGGLE IS A GLYPH, NOT A PILL. Ruling 117's kill list takes the border, the radius and
- * the fill: what is left is the icon in --brand, a colour step on hover, and a square focus ring.
+ * the fill: what is left is the icon in --brand, a color step on hover, and a square focus ring.
  * No background change in any state. The search control states the same shape in its own sheet,
  * because that sheet owns that control.
  */
@@ -182,7 +182,7 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   color: var(--brand);
 }
 
-/* Same signal as the desktop nav: an ink underline says you are here, and colour stays the
+/* Same signal as the desktop nav: an ink underline says you are here, and color stays the
    property of things you click. */
 .site-header-menu-panel a[aria-current="page"] {
   color: var(--text);

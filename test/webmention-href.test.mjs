@@ -57,7 +57,7 @@ test("it REFUSES absence without throwing, since a column is nullable", () => {
 test("a leading-whitespace javascript URL is still refused", () => {
   /*
    * `new URL` trims leading control characters and whitespace before parsing,
-   * which is the behaviour that makes a naive `startsWith("javascript:")`
+   * which is the behavior that makes a naive `startsWith("javascript:")`
    * guard useless and is the reason this function asks the PARSER for the
    * protocol instead of reading the string.
    */

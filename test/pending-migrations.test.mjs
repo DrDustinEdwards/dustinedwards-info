@@ -92,7 +92,7 @@ test("FAILS CLOSED: a non-zero exit is unreadable, never clean", () => {
   }
 });
 
-test("FAILS CLOSED: output this parser does not recognise is unreadable", () => {
+test("FAILS CLOSED: output this parser does not recognize is unreadable", () => {
   // An empty parse of CHANGED output looks exactly like a clean database. This
   // is the branch that refuses to let those two be confused.
   const verdict = readMigrationList({ code: 0, text: "wrangler said something new" });

@@ -53,7 +53,7 @@ const UNCACHED = "private, no-store";
  * rides in both the props and the custom key.
  *
  * THE PATH IS WRITTEN IN because a custom `cf.cacheKey` REPLACES the platform's path and query
- * rather than extending them, and is honoured only for same-account loopback calls: a key of
+ * rather than extending them, and is honored only for same-account loopback calls: a key of
  * `theme=dark` alone would collapse every page onto one entry.
  *
  * **THE PLATFORM CACHE IS THE ONLY CACHE.** `caches.default` is used nowhere here, and if you are
@@ -218,7 +218,7 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
  * two files that say so.
  *
  * IT MUST NOT WRITE THE TRAFFIC ROW: on a hit this does not run, so a count here would become a
- * count of MISSES, looking like readership while moving with cache behaviour.
+ * count of MISSES, looking like readership while moving with cache behavior.
  *
  * It owns what belongs to the DOCUMENT, the nonce, render, timing and security headers, the CSP and
  * hard rule 8's uncached default, because a header stamped after the cache is absent from every hit.
@@ -384,7 +384,7 @@ export default {
      *
      * ORDER MATTERS BETWEEN THESE TWO: the PDF map is consulted FIRST because its keys end in `.pdf`,
      * and `paperSlashTarget` refuses anything with a dot in the final segment precisely so it can never
-     * claim an asset path, which makes that refusal a second line of defence rather than the only one.
+     * claim an asset path, which makes that refusal a second line of defense rather than the only one.
      *
      * Neither fires on a file that still exists: the asset handler serves those ahead of this Worker.
      */
@@ -402,7 +402,7 @@ export default {
     /*
      * `/publications/<slug>` to its trailing-slash form. Both spellings render, which is two URLs for
      * one document, and the slash form is canonical because it puts the page in the same subdirectory
-     * as its PDF, which is Scholar's stated condition for honouring `citation_pdf_url`.
+     * as its PDF, which is Scholar's stated condition for honoring `citation_pdf_url`.
      */
     const slashed = paperSlashTarget(url.pathname);
     if (slashed !== null) {

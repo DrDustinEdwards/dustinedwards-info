@@ -415,7 +415,7 @@ assertThat(
   outsideOwnDirectory.length === 0,
   "every hosted PDF is in the same subdirectory as its paper's page",
   outsideOwnDirectory.length
-    ? `${outsideOwnDirectory.join(", ")}. Google Scholar only honours ` +
+    ? `${outsideOwnDirectory.join(", ")}. Google Scholar only honors ` +
         "citation_pdf_url when the file is in the abstract page's own subdirectory."
     : "",
 );
@@ -466,12 +466,12 @@ assertThat(
 /* rights */
 
 /*
- * AN ALLOWLIST, NOT A RULE: every PDF stays up by ruling, so a hosted PDF with no licence and no
+ * AN ALLOWLIST, NOT A RULE: every PDF stays up by ruling, so a hosted PDF with no license and no
  * entry reds. `licenseSource` has three states and the middle is why it exists, tdm-only being
- * terms that licence redistribution to nobody; collapsing it hides that those were checked.
+ * terms that license redistribution to nobody; collapsing it hides that those were checked.
  */
 const HOSTED_WITHOUT_LICENCE = new Map([
-  // Bronze is free to read on the publisher's site with no licence, which they can reverse.
+  // Bronze is free to read on the publisher's site with no license, which they can reverse.
   ["10.1128/jvi.00356-08", "ASM, green OA, crossref:tdm-only"],
   ["10.1128/jvi.01788-13", "ASM, bronze OA, crossref:tdm-only"],
   ["10.1128/jvi.03444-13", "ASM, bronze OA, crossref:tdm-only"],
@@ -485,7 +485,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
 ]);
 
 {
-  /** A licence that permits redistribution, by the shape the registries return. */
+  /** A license that permits redistribution, by the shape the registries return. */
   const permitsRedistribution = (/** @type {string | null} */ licence) =>
     typeof licence === "string" &&
     (licence.startsWith("cc-by") || licence === "cc0" || licence === "public-domain");
@@ -495,7 +495,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   const unlicensed = hostedRecords.filter(([, f]) => !permitsRedistribution(f.license));
 
   console.log(
-    `        (${licensed.length} hosted with a redistribution licence, ` +
+    `        (${licensed.length} hosted with a redistribution license, ` +
       `${unlicensed.length} hosted without one and named below)`,
   );
 
@@ -506,20 +506,20 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   );
   assertThat(
     licensed.length > 0,
-    `some hosted PDFs carry a redistribution licence (${licensed.length})`,
-    "a zero would mean the licence predicate matches nothing and the split below is fake",
+    `some hosted PDFs carry a redistribution license (${licensed.length})`,
+    "a zero would mean the license predicate matches nothing and the split below is fake",
   );
 
   const undeclared = unlicensed.filter(([doi]) => !HOSTED_WITHOUT_LICENCE.has(doi));
   assertThat(
     undeclared.length === 0,
-    `every PDF hosted without a licence is named in this gate (${unlicensed.length})`,
+    `every PDF hosted without a license is named in this gate (${unlicensed.length})`,
     undeclared.length
       ? undeclared
-          .map(([doi, f]) => `${f.id} (${doi}), licence ${f.license ?? "none"}, ` +
+          .map(([doi, f]) => `${f.id} (${doi}), license ${f.license ?? "none"}, ` +
             `source ${f.licenseSource ?? "none"}`)
           .join("; ") +
-          ". Hosting a paper whose licence does not permit it is Dustin's call to " +
+          ". Hosting a paper whose license does not permit it is Dustin's call to " +
           "make and is recorded per DOI, so a NEW one is a new decision rather " +
           "than a precedent."
       : "",
@@ -531,7 +531,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   );
   assertThat(
     stale.length === 0,
-    "every DOI named here is still a PDF hosted without a licence",
+    "every DOI named here is still a PDF hosted without a license",
     stale.length
       ? `${stale.join(", ")}. Either the file is gone or a registry now records ` +
           "terms; check which, then remove the entry."
@@ -544,7 +544,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     unchecked.length === 0,
     `every unlicensed hosted record records what the registries said (${unlicensed.length})`,
     unchecked.length
-      ? `${unchecked.map(([, f]) => f.id).join(", ")} carry neither a licence nor a ` +
+      ? `${unchecked.map(([, f]) => f.id).join(", ")} carry neither a license nor a ` +
           "licenseSource, so it is not possible to tell a closed paper from an " +
           "unchecked one. Re-run pubs-pipeline/refresh.py."
       : "",
@@ -733,7 +733,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
         : "",
     );
 
-    /* A list over the cap means the fetcher stopped honouring it; a short `total` means two reads. */
+    /* A list over the cap means the fetcher stopped honoring it; a short `total` means two reads. */
     const cap = Number(artifact.maxCiting ?? 0);
     assertThat(cap > 0, `the artifact records its own cap (${cap})`);
     const overCap = keys.filter((d) => (works[d].citing?.length ?? 0) > cap);

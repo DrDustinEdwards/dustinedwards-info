@@ -26,7 +26,7 @@
  * client id appears in the authorization URL a browser follows, and
  * `BETTER_AUTH_URL` is a public origin, so neither is a credential. They are
  * guarded anyway because both are read in exactly one `.server` module today,
- * so guarding them costs nothing, and because "arguably public" is a judgement
+ * so guarding them costs nothing, and because "arguably public" is a judgment
  * that should be made in a diff rather than assumed.
  *
  * SEVEN BECAME EIGHT on 2026-08-14 with `ANALYTICS_READ_TOKEN`, the credential
@@ -58,7 +58,7 @@
  * NOT ON THIS LIST: `CLOUDFLARE_ACCOUNT_ID`. It is a plain var in
  * `wrangler.jsonc` and an identifier rather than a credential, so guarding it
  * would spend the gate's signal on a value already published in the core doc.
- * That is a judgement, so it is recorded rather than left to be inferred.
+ * That is a judgment, so it is recorded rather than left to be inferred.
  *
  * @type {readonly string[]}
  */

@@ -90,7 +90,7 @@ function Spec({
   );
 }
 
-/** A labelled specimen, so a shot says which state it is showing. */
+/** A labeled specimen, so a shot says which state it is showing. */
 function State({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="pgui-state">
@@ -299,7 +299,7 @@ export default function PlaygroundUi() {
 
           {/*
             BOTH FORMS OF ONE ACTION, because the rule that allows the first is
-            the one most easily read as a licence. An icon-only control is
+            the one most easily read as a license. An icon-only control is
             allowed where the icon is universally understood: search, menu,
             theme, close, delete. The icon is aria-hidden and the control
             carries the name, which is what makes the two identical to a screen
@@ -307,8 +307,8 @@ export default function PlaygroundUi() {
           */}
           <Spec
             id="icon-only"
-            title="Icon-only and labelled, one action twice"
-            note="Allowed where the icon is universally understood. A primary action stays labelled, whatever icon it carries."
+            title="Icon-only and labeled, one action twice"
+            note="Allowed where the icon is universally understood. A primary action stays labeled, whatever icon it carries."
           >
             {() => (
               <div className="pgui-row">
@@ -333,7 +333,7 @@ export default function PlaygroundUi() {
                     <code className="pgui-aname">aria-label=&quot;Search&quot;</code>
                   </div>
                 </State>
-                <State label="Labelled, the same action">
+                <State label="Labeled, the same action">
                   <div>
                     <button type="button" className="btn">
                       <Icon name="search" />
@@ -625,7 +625,7 @@ export default function PlaygroundUi() {
                 <State label="chevron-down">
                   <Icon name="chevron-down" />
                 </State>
-                <State label="In a button, taking its colour">
+                <State label="In a button, taking its color">
                   <button type="button" className="btn">
                     <Icon name="download" />
                     PDF
@@ -735,7 +735,7 @@ export default function PlaygroundUi() {
                 <article className="post-card">
                   <h4 className="post-card-title">
                     <a href="/playground/ui" data-demo="visited">
-                      A title in the visited colour
+                      A title in the visited color
                     </a>
                   </h4>
                   <p className="post-card-meta">
@@ -1199,7 +1199,7 @@ export default function PlaygroundUi() {
           <Spec
             id="pill"
             title="Status pills"
-            note="A span, never a link, with a dot that is currentColor. The word is the status and the colour confirms it."
+            note="A span, never a link, with a dot that is currentColor. The word is the status and the color confirms it."
           >
             {() => (
               <div className="pgui-row">
@@ -1254,7 +1254,7 @@ export default function PlaygroundUi() {
           <Spec
             id="hc"
             title="Health cards, five states"
-            note="Unknown and checking share an accent: neither is a judgement about the service. Checking keeps the previous reading and relabels every fact as history."
+            note="Unknown and checking share an accent: neither is a judgment about the service. Checking keeps the previous reading and relabels every fact as history."
           >
             {() => (
               <div className="pgui-stack">
@@ -1445,7 +1445,7 @@ export default function PlaygroundUi() {
             <h3>A code block inside prose</h3>
             <p>
               The block below is the prose sheet&rsquo;s, not a lookalike. A post&rsquo;s
-              highlighted code carries its colours inline from the build, so what is measurable
+              highlighted code carries its colors inline from the build, so what is measurable
               here is the block itself: mono type on the code surface, inside a run of body text.
             </p>
             <pre>

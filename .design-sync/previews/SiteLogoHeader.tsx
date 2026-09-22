@@ -22,7 +22,7 @@
 
 import { SiteLogoHeader } from "dustinedwards-info";
 
-/** The shipped header: paper, one dust rule under the whole thing, ink wordmark, colour mark. */
+/** The shipped header: paper, one dust rule under the whole thing, ink wordmark, color mark. */
 export function InTheHeader() {
   return (
     <header

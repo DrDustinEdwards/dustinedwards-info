@@ -17,7 +17,7 @@ import matter from "gray-matter";
  *
  * Three places quote it: this module's refusals, the `/admin` middleware's
  * method gate, and `check:policy`. A second spelling of it would be the rule 17
- * defect in the one place a refusal has to be recognisable, so it is a constant
+ * defect in the one place a refusal has to be recognizable, so it is a constant
  * rather than four string literals that happen to agree today.
  */
 export const SMOKE_READ_ONLY_POLICY = "smoke-is-read-only";
@@ -172,7 +172,7 @@ function comparableFrontmatter(data) {
  * ## THE LINE EDIT STAYS, AND THE PARSER NOW CHECKS IT. 2026-08-28.
  *
  * The cheap path is still a line edit on the frontmatter block, for the reason
- * it always was: re-serialising through gray-matter reformats every other key
+ * it always was: re-serializing through gray-matter reformats every other key
  * and turns a one-field stamp into a whole-frontmatter diff, on every publish,
  * forever.
  *
@@ -199,7 +199,7 @@ function comparableFrontmatter(data) {
  * So the parser decides. The edit is made, the result is parsed back, and it is
  * accepted only if the body is byte-identical and the frontmatter is exactly
  * the input's with this one key set or removed. Anything else falls back to a
- * full re-serialisation, which is correct by construction and noisy, and that
+ * full re-serialization, which is correct by construction and noisy, and that
  * is the right trade for a case that should never happen: correct always, tidy
  * almost always, and never quietly wrong.
  *

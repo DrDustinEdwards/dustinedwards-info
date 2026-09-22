@@ -4,7 +4,7 @@
  * NOTHING HERE MAKES THE HEADER WORK. With this file absent the menu still opens and closes,
  * because it is a `<details>` and the browser owns that; the links still navigate; and the header
  * simply STAYS STATIC, never hiding and never returning. That is the named fallback, and it is the
- * whole of it: no behaviour below is the only way to reach anything.
+ * whole of it: no behavior below is the only way to reach anything.
  *
  * What it adds is what `<details>` does not give: Escape closes the menu, choosing a link closes
  * it, focus returns to the button that opened it, and on narrow widths the header gets out of the
@@ -15,7 +15,7 @@
  * a transition would be worse than one that animated.
  */
 
-/** The narrow-width behaviour is the only part with a width condition, and this is it. */
+/** The narrow-width behavior is the only part with a width condition, and this is it. */
 const MOBILE = "(max-width: 43.99rem)";
 
 /** How far a reader must scroll up before the header comes back. Ruling 126: a few pixels. */

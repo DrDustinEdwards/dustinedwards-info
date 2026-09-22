@@ -262,7 +262,7 @@ async function credentialAuthenticates(origin) {
 function smokeRepair(status) {
   if (status === 401) {
     return (
-      `401: the deployment did not recognise this token. The SMOKE_TOKEN wrangler secret and ` +
+      `401: the deployment did not recognize this token. The SMOKE_TOKEN wrangler secret and ` +
       `${SMOKE_SOURCE} have drifted apart. Re-set it: npx wrangler secret put SMOKE_TOKEN < .smoke-token`
     );
   }
@@ -1311,9 +1311,9 @@ try {
 
       const residue = firstDiff(maskTheme(stranger), maskTheme(dark));
       ok(
-        `${path}: the theme changes ONLY data-theme and the colour-scheme meta`,
+        `${path}: the theme changes ONLY data-theme and the color-scheme meta`,
         residue === null,
-        `with <html> and the colour-scheme meta masked, the dark document still differs ` +
+        `with <html> and the color-scheme meta masked, the dark document still differs ` +
           `from the cookieless one at byte ${residue?.at}. Something else on this ` +
           `page depends on the cookie, so the enumerated diff is incomplete and ` +
           `the cache key would not describe the document.\n        ` +
@@ -1385,7 +1385,7 @@ try {
       );
     }
 
-    /* the browser learns the colour scheme before CSS */
+    /* the browser learns the color scheme before CSS */
 
     /*
      * Without a color-scheme meta the browser paints a light canvas between pages. Screencast
@@ -1419,7 +1419,7 @@ try {
           }
         }
         ok(
-          `${path}: every reader state declares its colour scheme to the browser`,
+          `${path}: every reader state declares its color scheme to the browser`,
           wrong.length === 0,
           `${wrong.join("; ")}. Without this the browser paints its DEFAULT canvas ` +
             `between documents, which is light: measured at 253 of 255 for one ` +
@@ -1431,7 +1431,7 @@ try {
         const atMeta = dark.search(SCHEME);
         const atSheet = dark.search(FIRST_SHEET);
         ok(
-          `${path}: the colour scheme is declared before the first stylesheet`,
+          `${path}: the color scheme is declared before the first stylesheet`,
           atMeta !== -1 && (atSheet === -1 || atMeta < atSheet),
           `the meta is at byte ${atMeta} and the first stylesheet link at ${atSheet}. ` +
             `The point of this meta is that it is read BEFORE any CSS is fetched; ` +
@@ -1452,7 +1452,7 @@ try {
         }));
         await context.close();
         ok(
-          `theme=${theme}: the declared colour scheme is the one the cascade resolves`,
+          `theme=${theme}: the declared color scheme is the one the cascade resolves`,
           seen.meta === theme && seen.computed === theme,
           `the meta says ${JSON.stringify(seen.meta)} and the cascade resolves ` +
             `${JSON.stringify(seen.computed)}, expected both to be "${theme}". These are ` +
@@ -1904,7 +1904,7 @@ try {
         Math.abs(cols.search.right - cols.head.right) <= 2,
       `search is ${cols.search.left}..${cols.search.right} (${cols.search.width}px) and the ` +
         `heading is ${cols.head.left}..${cols.head.right} (${cols.head.width}px). The search ` +
-        `form is full-bleed while everything around it is centred in a 48rem column.`,
+        `form is full-bleed while everything around it is centered in a 48rem column.`,
     );
   }
 
@@ -2031,7 +2031,7 @@ try {
       return { meta: head.indexOf("color-scheme"), sheet: head.indexOf('rel="stylesheet"') };
     });
     ok(
-      `${MATH_PATH}: the colour scheme is declared before the first stylesheet`,
+      `${MATH_PATH}: the color scheme is declared before the first stylesheet`,
       order.meta >= 0 && order.sheet >= 0 && order.meta < order.sheet,
       `color-scheme at ${order.meta}, first stylesheet at ${order.sheet}. A signal that ` +
         `arrives after the stylesheet has been requested arrived too late to matter. A ` +
@@ -2124,12 +2124,12 @@ try {
           "measured wider than the viewport, so it is on an element this scan skipped)"}`,
     );
 
-    /* KaTeX declares no colour, so it must compute to the `.prose` colour. */
+    /* KaTeX declares no color, so it must compute to the `.prose` color. */
     ok(
-      `${MATH_PATH}: maths takes the prose colour rather than declaring one`,
+      `${MATH_PATH}: maths takes the prose color rather than declaring one`,
       math.katexColour !== null && math.katexColour === math.proseColour,
       `.katex computes ${math.katexColour} and .prose computes ${math.proseColour}. A ` +
-        `declared colour would survive a theme change and break both of them.`,
+        `declared color would survive a theme change and break both of them.`,
     );
 
     /* Through CDP: puppeteer's `emulateMediaFeatures` rejects `forced-colors`. */
@@ -2158,7 +2158,7 @@ try {
         };
       });
       ok(
-        `${MATH_PATH}: maths still takes the prose colour under ${mode.label}`,
+        `${MATH_PATH}: maths still takes the prose color under ${mode.label}`,
         colours.katex !== null && colours.katex === colours.prose,
         `.katex computes ${colours.katex} and .prose computes ${colours.prose} under ` +
           `${mode.label}. The two must move together, because that is what makes ` +
@@ -2499,7 +2499,7 @@ try {
         `vacuous without this: the three properties are all about a bubble that exists.`,
     );
 
-    /* Straight to the bubble's centre; a gap step would test the grace period. */
+    /* Straight to the bubble's center; a gap step would test the grace period. */
     const box = await page.evaluate(() => {
       const el = document.querySelector(".footnote-preview");
       if (!el) return null;
@@ -3167,7 +3167,7 @@ try {
 
       /*
        * A real modal dialog, asserted through `matches("dialog:modal")`, which only `showModal()`
-       * satisfies: attributes on a div are a claim, modality is a behaviour.
+       * satisfies: attributes on a div are a claim, modality is a behavior.
        */
       const modal = await page.evaluate(() => {
         const el = document.querySelector(".lightbox");
@@ -3413,11 +3413,11 @@ try {
       );
     }
 
-    /* ----------------- 6b. the mark fills: the base binding, and full colour */
+    /* ----------------- 6b. the mark fills: the base binding, and full color */
 
     /*
      * The mark's base fill lives in app.css and nothing overrides it on either plane since ruling
-     * 118.2. It is asserted as resolved colour against the token, never a hex, because @import
+     * 118.2. It is asserted as resolved color against the token, never a hex, because @import
      * order decides what wins and a hex here would be a second owner of the palette.
      */
     const rgb = (/** @type {string} */ hex) => {

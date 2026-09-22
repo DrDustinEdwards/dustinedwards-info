@@ -276,7 +276,7 @@ export function MediaInspector({
 
                   {/*
                    * THE LABELS CHANGE WITH THE FILE: an image goes into a post as `![alt](src)` and
-                   * a document as `[title](href)`, so a control labelled HTML has to produce a
+                   * a document as `[title](href)`, so a control labeled HTML has to produce a
                    * different thing for each. `copySnippetsFor` owns both the label and the value,
                    * so the two cannot disagree.
                    */}

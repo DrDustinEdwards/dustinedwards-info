@@ -71,7 +71,7 @@
   color: var(--text-secondary);
 }
 
-/* Technical notes are prose in a card: muted body colour, the description's measure, and no bullets,
+/* Technical notes are prose in a card: muted body color, the description's measure, and no bullets,
    which would promise an order the sentences do not have. */
 .project-notable {
   margin: 0.875rem 0 0;
@@ -96,8 +96,8 @@
   color: var(--text-secondary);
 }
 
-/* Rule 1: the status is never carried by colour alone. It renders its own
-   word, and the chip's border is the second non-colour channel. */
+/* Rule 1: the status is never carried by color alone. It renders its own
+   word, and the chip's border is the second non-color channel. */
 .project-status {
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--border);
@@ -130,7 +130,7 @@
 }
 
 /* Chips, so rule 2's underline exemption applies to the shape rather than to
-   the colour. These are not links and carry no affordance beyond the label. */
+   the color. These are not links and carry no affordance beyond the label. */
 .project-stack-tag {
   padding: 0.125rem 0.5rem;
   border: 1px solid var(--border);

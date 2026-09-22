@@ -357,7 +357,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
         {/*
          * 3 · PHAGE DISCOVERY. The roster page carries the names; this is the shape of the
-         * programme. Both numbers in the sentence are counted from `PHAGE_YEARS` rather than
+         * program. Both numbers in the sentence are counted from `PHAGE_YEARS` rather than
          * typed, so a new cohort moves the sentence and the figure together.
          */}
         <section className="home-section" aria-labelledby="discovery-heading">

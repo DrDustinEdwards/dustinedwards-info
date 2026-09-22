@@ -26,7 +26,7 @@ import type { Route } from "./+types/media.$";
  * there, and this route serves it from the SITE'S OWN ORIGIN, so inline a stored SVG is script
  * running as the site.
  *
- * The CSP blocks that today and THIS RULE IS KEPT ANYWAY. Defence in depth, deliberately: it does
+ * The CSP blocks that today and THIS RULE IS KEPT ANYWAY. Defense in depth, deliberately: it does
  * not depend on the CSP, does not move if a directive is loosened, and holds for any client that
  * ignores the policy.
  *
@@ -125,7 +125,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
 
   // ADMIN TILES CROP, CONTENT DOES NOT. A tile is a fixed strip that already crops in CSS, so
   // cropping server-side is strictly better: saliency detection keeps the subject where `object-fit`
-  // keeps the centre. A content image in the prose column has no fixed height and must never be
+  // keeps the center. A content image in the prose column has no fixed height and must never be
   // cropped at all, because the author chose the framing.
   //
   // ROSTER PHOTOS ARE EXEMPT EVEN AT TILE SIZES: they are group photographs, and `fit: "cover"` cuts
@@ -168,7 +168,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   const headers = new Headers(response.headers);
   headers.set("cache-control", "public, max-age=31536000, immutable");
   // NO `Vary` HEADER, deliberately. The body depends on no request header, and advertising a `Vary`
-  // the `caches.default` key cannot honour reads as a guarantee this layer cannot make. The
+  // the `caches.default` key cannot honor reads as a guarantee this layer cannot make. The
   // `x-media-thumb` header makes the transform observable from outside.
   headers.set("x-media-thumb", `w=${width}`);
   const out = new Response(response.body, { headers });

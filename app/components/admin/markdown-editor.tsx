@@ -22,7 +22,7 @@ import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
  */
 
 /*
- * Theme, entirely from tokens. Not one hex in here: every colour is a
+ * Theme, entirely from tokens. Not one hex in here: every color is a
  * `var(--token)` resolving through the same theme selectors as the rest of the
  * site, which is why there is no `dark` variant of this object.
  */
@@ -762,7 +762,7 @@ export default function MarkdownEditor({
                       /blog/{target.slug}
                       {/* Said in WORDS, inside the option's own text, so it is
                           part of what a screen reader announces for the row
-                          rather than a colour or a shape beside it. */}
+                          rather than a color or a shape beside it. */}
                       {target.state !== "published" ? (
                         <span className="md-link-state"> not live yet ({target.state})</span>
                       ) : null}

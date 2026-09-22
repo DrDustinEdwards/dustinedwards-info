@@ -21,7 +21,7 @@
 /* Region 1. Not `position: sticky`: the canvas scrolls, not this, so the bar
    is simply a flex item that never grows. Sticky would be a promise about a
    scroll container it does not live in. */
-/* A three-column grid, not space-between, so the centre group stays centred whatever the sides' widths.
+/* A three-column grid, not space-between, so the center group stays centered whatever the sides' widths.
    Fixed height (--admin-cmdbar-h), because the canvas subtracts it. Nothing in the bar may wrap. */
 .editor-bar {
   display: grid;
@@ -159,7 +159,7 @@
 }
 
 /* The buffer age (ruling 3) is quieter than the dirty indicator: muted, not warning, since two
-   warning-coloured items read as two problems. It reuses a pair check:contrast already measures. */
+   warning-colored items read as two problems. It reuses a pair check:contrast already measures. */
 .editor-buffer-age {
   color: var(--text-secondary);
   font-size: 0.8125rem;
@@ -192,7 +192,7 @@
   gap: 1rem;
   width: 100%;
   /* Wide enough for two panes at a readable measure. The single-pane write view
-     is centred by the panes grid rather than by squeezing this. */
+     is centered by the panes grid rather than by squeezing this. */
   max-width: 84rem;
   height: 100%;
   min-height: 0;
@@ -634,7 +634,7 @@
   color: var(--brand);
 }
 
-/* Not a colour: the words say it. This only keeps them from reading as part of
+/* Not a color: the words say it. This only keeps them from reading as part of
    the slug. */
 .md-link-state {
   font-style: italic;
@@ -787,7 +787,7 @@
 }
 
 .drawer::backdrop {
-  /* A scrim, not a palette colour. It is the one place a literal is honest:
+  /* A scrim, not a palette color. It is the one place a literal is honest:
      it darkens whatever is behind it in either theme, and no token describes
      "less of what is already there". */
   background: rgb(0 0 0 / 45%);

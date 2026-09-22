@@ -287,7 +287,7 @@ export default function Colophon() {
               {stack.notAdopted.map((entry) => (
                 <div key={entry.name}>
                   {/*
-                   * The status is spelled out in TEXT, not carried by colour or position. Usage
+                   * The status is spelled out in TEXT, not carried by color or position. Usage
                    * rule 1: hue is never the sole channel.
                    */}
                   <dt>

@@ -346,7 +346,7 @@ function checkSwatches(posts) {
       problems.push(
         `${post.slug}: the markdown ${sourceSaysSwatch ? "carries" : "carries no"} :swatch ` +
           `directive outside code, and the rendered html ${htmlSaysSwatch ? "carries" : "carries no"} ` +
-          `chip. One of the two is wrong: a directive that renders nothing is a colour the ` +
+          `chip. One of the two is wrong: a directive that renders nothing is a color the ` +
           `reader never sees, and a chip with no directive behind it is markup from somewhere ` +
           `this pipeline does not control.`,
       );
@@ -367,7 +367,7 @@ function checkSwatches(posts) {
     if (htmlSaysSwatch && !post.markdown.includes(":swatch[")) {
       problems.push(
         `${post.slug}: the html carries a chip but the stored markdown has no ":swatch[" in ` +
-          `it, so the .md twin, the feeds and llms-full.txt carry no colour at all.`,
+          `it, so the .md twin, the feeds and llms-full.txt carry no color at all.`,
       );
     }
 
@@ -377,7 +377,7 @@ function checkSwatches(posts) {
       if (match[1] !== match[1].toUpperCase()) {
         problems.push(
           `${post.slug}: a chip carries ${match[1]}, which is not upper case. Two spellings ` +
-            `of one colour would render as two different pages.`,
+            `of one color would render as two different pages.`,
         );
       }
     }

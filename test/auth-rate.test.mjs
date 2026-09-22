@@ -82,6 +82,6 @@ test("the refusal is not an oracle", async () => {
   }
 });
 
-test("a caller-supplied Retry-After is honoured", () => {
+test("a caller-supplied Retry-After is honored", () => {
   assert.equal(authRateRefusal(42).headers.get("retry-after"), "42");
 });

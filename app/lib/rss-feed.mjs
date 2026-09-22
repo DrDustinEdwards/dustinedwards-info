@@ -73,7 +73,7 @@ export function cdata(content) {
  * SCOPED TO ATTRIBUTES, and only to values beginning with a single `/`. A value
  * beginning `//` is protocol-relative and already absolute; anything with a
  * scheme is left alone. `srcset` is handled because a responsive image's
- * candidate list is a comma-separated set of URLs and a reader that honours it
+ * candidate list is a comma-separated set of URLs and a reader that honors it
  * would fetch every one of them from its own host.
  *
  * WHAT THIS DOES NOT DO, stated rather than implied: it does not parse HTML.

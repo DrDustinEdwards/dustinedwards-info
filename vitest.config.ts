@@ -29,7 +29,7 @@ import { defineConfig } from "vitest/config";
  *   the platform cache      `caches.default` in miniflare is not Cloudflare's
  *                           edge. What is asserted here is the key this Worker
  *                           BUILDS and the store/lookup decisions it makes;
- *                           whether the platform in front honours a `Vary` is
+ *                           whether the platform in front honors a `Vary` is
  *                           `check:browser`'s and verify-live's.
  *   GitHub                  stubbed at the outbound fetch layer with recorded
  *                           shapes. A test proves this code sends and reads
@@ -196,7 +196,7 @@ export default defineConfig({
      * paths in `media.test.ts`, which do comparable work. A per-case budget
      * grades the cases somebody already watched fail.
      *
-     * The generalisation also makes the constant a MIRROR: five call sites
+     * The generalization also makes the constant a MIRROR: five call sites
      * carrying a value equal to the default they sit beside, free to drift from
      * it. Hard rule 17, one owner per fact. This is the owner; the constant and
      * its call sites were deleted in the same commit.

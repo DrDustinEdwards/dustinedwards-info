@@ -11,7 +11,7 @@ import { inflateSync } from "node:zlib";
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 /**
- * Bytes per pixel at bit depth 8, by PNG colour type. 3 is palette, unsupported.
+ * Bytes per pixel at bit depth 8, by PNG color type. 3 is palette, unsupported.
  * @type {Record<number, number>}
  */
 const CHANNELS = { 0: 1, 2: 3, 4: 2, 6: 4 };
@@ -70,10 +70,10 @@ export function readPngChunks(buf) {
 }
 
 /**
- * The colour of pixel (0, 0), as an uppercase #RRGGBB string.
+ * The color of pixel (0, 0), as an uppercase #RRGGBB string.
  *
  * WHY ONLY THE FIRST PIXEL, and why it is exact rather than approximate. A PNG scanline is
- * filtered against its left neighbour and the row above, so an arbitrary pixel means
+ * filtered against its left neighbor and the row above, so an arbitrary pixel means
  * reconstructing every row before it. The FIRST pixel of the FIRST row has neither, so all five
  * filter types collapse to the identity there and one inflate answers it with no unfiltering loop
  * to get wrong. A deliberate limit, not an unfinished decoder.
@@ -85,8 +85,8 @@ export function pngCornerPixel(buf) {
   if (png.bitDepth !== 8) throw new Error(`PNG bit depth ${png.bitDepth} unsupported, need 8`);
   if (png.interlace !== 0) throw new Error("interlaced PNG unsupported");
   const channels = CHANNELS[png.colorType];
-  if (!channels) throw new Error(`PNG colour type ${png.colorType} unsupported`);
-  if (channels < 3) throw new Error(`PNG colour type ${png.colorType} carries no RGB`);
+  if (!channels) throw new Error(`PNG color type ${png.colorType} unsupported`);
+  if (channels < 3) throw new Error(`PNG color type ${png.colorType} carries no RGB`);
 
   const raw = inflateSync(png.idat);
   if (raw.length < 1 + channels) throw new Error("PNG scanline shorter than one pixel");

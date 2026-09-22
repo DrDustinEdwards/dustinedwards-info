@@ -51,7 +51,7 @@ export function MediaConfirm({
    *
    * That is what makes the no-script path work. Rendering it disabled on the server
    * would leave a reader without script unable to empty the trash at all, because
-   * `typed` stays "" forever. Initialised false so the hydration render matches.
+   * `typed` stays "" forever. Initialized false so the hydration render matches.
    */
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);

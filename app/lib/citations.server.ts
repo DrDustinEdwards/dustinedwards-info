@@ -119,7 +119,7 @@ export async function getCitationCounts(
    * NO KEY, NO REFRESH, AND THE PAGE IS UNHARMED.
    *
    * Whatever KV already holds is still returned above, so an unset secret
-   * degrades to "counts stop ageing forward", never to a blank page and never
+   * degrades to "counts stop aging forward", never to a blank page and never
    * to a zero. Checked here rather than inside `fetchOne` so a missing secret
    * costs nothing at all: no `waitUntil`, no loop, no request.
    */

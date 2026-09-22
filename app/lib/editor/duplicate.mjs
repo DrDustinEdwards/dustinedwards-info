@@ -45,7 +45,7 @@
  */
 function baseOf(slug) {
   const stripped = slug.replace(/-copy(?:-\d+)?$/, "");
-  // A slug that is nothing BUT the suffix (`copy`, or `-copy` normalised away
+  // A slug that is nothing BUT the suffix (`copy`, or `-copy` normalized away
   // to the empty string) would produce candidates starting with a hyphen, which
   // no slug pattern accepts. The input stands in that case.
   return stripped === "" ? slug : stripped;

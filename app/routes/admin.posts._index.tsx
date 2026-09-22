@@ -391,7 +391,7 @@ export async function action({ request, context }: Route.ActionArgs) {
        * **THE LADDER IS ENFORCED HERE, NOT ONLY IN THE UI**: with scripting off an
        * `onClick` ceremony never runs. An unconfirmed delete is the CONFIRMATION STEP,
        * not an error. The count comes from the slugs in THIS request and never from a
-       * number the form carried, so a stale page cannot authorise a delete of a
+       * number the form carried, so a stale page cannot authorize a delete of a
        * different size than the operator was shown.
        */
       const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
@@ -573,7 +573,7 @@ export default function AdminPosts({
   const cancelHref = cancelQuery ? `/admin/posts?${cancelQuery}` : "/admin/posts";
 
   /**
-   * Initialised false so the hydration render matches the server's. The bulk bar's
+   * Initialized false so the hydration render matches the server's. The bulk bar's
    * count is meaningless without script.
    */
   const [hydrated, setHydrated] = useState(false);
@@ -1019,14 +1019,14 @@ export default function AdminPosts({
                         {post.title}
                       </Link>
                       {/*
-                       * The state is a WORD first. Colour and border-style separate the three again,
+                       * The state is a WORD first. Color and border-style separate the three again,
                        * so the pill still says three things once forced-colors takes the fill away.
                        */}
                       <span className="status-pill" data-state={post.state}>
                         {post.state}
                       </span>
                       {/*
-                       * THE HERO, MARKED WITH A WORD: a mark carried only by colour or an icon says
+                       * THE HERO, MARKED WITH A WORD: a mark carried only by color or an icon says
                        * nothing under forced-colors and nothing to a screen reader.
                        */}
                       {post.featured ? <span className="posts-featured">Featured</span> : null}

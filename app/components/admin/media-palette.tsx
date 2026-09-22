@@ -98,7 +98,7 @@ export function MediaPalette({
         })
         .catch(() => {
           // A failed lookup leaves the form underneath untouched, so pressing Enter still
-          // navigates and still searches. Silence is the right behaviour: an error banner
+          // navigates and still searches. Silence is the right behavior: an error banner
           // over a working control is noise.
           if (id === seq.current) setResults([]);
         });
@@ -106,7 +106,7 @@ export function MediaPalette({
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  /** Copy, with the acknowledgement a copy control owes. */
+  /** Copy, with the acknowledgment a copy control owes. */
   const copy = (value: string) => {
     navigator.clipboard
       .writeText(value)
@@ -162,7 +162,7 @@ export function MediaPalette({
       } else if (event.key === "Enter") {
         /*
          * ENTER COPIES. SHIFT+ENTER OPENS. `preventDefault` matters: without it the form
-         * submits and navigates, which is the unenhanced behaviour and would throw away the
+         * submits and navigates, which is the unenhanced behavior and would throw away the
          * copy. With scripting off there is no handler and the same key does exactly that
          * navigation.
          */

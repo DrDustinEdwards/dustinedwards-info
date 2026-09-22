@@ -374,7 +374,7 @@ function open_() {
 
 function onKeydown(event: KeyboardEvent) {
   // Escape is handled here rather than left to the dialog, and it must come before every other
-  // branch. `<input type="search">` has a NATIVE Escape behaviour: the first press clears the field
+  // branch. `<input type="search">` has a NATIVE Escape behavior: the first press clears the field
   // and stops there, so the keystroke never reaches the dialog and the palette stays open.
   if (event.key === "Escape") {
     event.preventDefault();
@@ -416,7 +416,7 @@ function openPalette() {
   if (!dialog) build();
   if (!dialog || dialog.open) return;
   // showModal, not show: only the modal form makes the rest of the page inert
-  // and traps focus. Native behaviour returns focus to the opener on close.
+  // and traps focus. Native behavior returns focus to the opener on close.
   dialog.showModal();
   if (input) {
     input.value = "";

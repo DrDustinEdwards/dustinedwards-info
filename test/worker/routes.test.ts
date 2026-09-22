@@ -18,7 +18,7 @@ import { action as healthAction, loader as healthLoader } from "~/routes/api.hea
  * bindings in the real runtime. What is not exercised is the routing itself,
  * which is `virtual:react-router/server-build`, a build artifact this layer
  * deliberately does not build. Every claim below is about the module's own
- * behaviour, which is where both of the defects they replay actually lived.
+ * behavior, which is where both of the defects they replay actually lived.
  *
  * ## THE TWO DEFECTS THESE REPLAY
  *
@@ -86,7 +86,7 @@ describe("/theme", () => {
      * stripped, and check:browser measured the real thing on 2026-08-29 and saw
      * the fragment gone.
      *
-     * Kept, because the echo is real behaviour worth pinning and this is the
+     * Kept, because the echo is real behavior worth pinning and this is the
      * only place that pins it. Renamed, because the old name claimed a reader
      * outcome that a constructed input cannot demonstrate. That gap between a
      * test's input and the world's is exactly what let the claim stand for a
@@ -175,7 +175,7 @@ describe("/theme", () => {
 
   it("REFUSES a value no button posts, rather than substituting a default", async () => {
     /*
-     * The route substituted the default for anything it did not recognise,
+     * The route substituted the default for anything it did not recognize,
      * which turned a malformed request into a silent theme change. Both of the
      * control's buttons carry a writable theme, so nothing legitimate arrives
      * here with anything else.
@@ -489,7 +489,7 @@ describe("/api/health", () => {
      * a loader and no action, and it tells the caller the server broke when
      * the caller simply used the wrong verb.
      *
-     * Four claims, because the old behaviour already satisfied one of them:
+     * Four claims, because the old behavior already satisfied one of them:
      * the status was ALREADY 405, so a test asserting only the status would
      * have passed against the defect. The `Allow` header, the body shape and
      * the `no-store` are the three that discriminate.

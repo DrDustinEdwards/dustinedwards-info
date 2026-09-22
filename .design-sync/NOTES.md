@@ -121,7 +121,7 @@ media context and taking the last value, so promoted values were reported as the
 base palette. Measured 2026-09-12 in the uploaded `_ds_manifest.json`:
 `--border` read as `#6e6459`, which is what `--border-strong` already is, so the
 two arrived at the design agent as THE SAME COLOUR and hard rule 5 became
-unfollowable. An agent cannot honour a distinction it cannot see.
+unfollowable. An agent cannot honor a distinction it cannot see.
 
 Do not "fix" this by reordering the tier to win the scraper: a media block adds
 no specificity, so the tier works only because it comes last, and moving it
@@ -134,7 +134,7 @@ under an "On chrome" heading: `--surface-chrome`, `--on-chrome`,
 `--on-chrome-muted`, `--mark-on-chrome`, plus the standing rule that pinned bars
 take `--border-strong`. The 2026-09 redesign invented `--bar-fill` anyway and
 abandoned `--surface-chrome`, and that single substitution invalidated every
-colour in the header at once, because the surrounding tokens are measured
+color in the header at once, because the surrounding tokens are measured
 against the token it replaced. The header was eventually restored
 byte-identical to an earlier commit rather than repaired.
 
@@ -202,7 +202,7 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
   repo's own `check:design-vocabulary` gate is scoped to conventions.md alone
   for exactly the first reason.
 - **The Capsid exports carry design law the repo does not.** Rulings 122, 123
-  and 124 (the closed colour system, Paper and Plate, light touches only glass)
+  and 124 (the closed color system, Paper and Plate, light touches only glass)
   reach the canvas ONLY through
   `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because no
   `decisions-vol-*.md` is an exported document and conventions.md does not

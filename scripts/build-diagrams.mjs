@@ -88,7 +88,7 @@ function mermaidConfig(theme, colours) {
 /**
  * Makes the SVG sizeable by an `<img>`: the renderer emits a percentage width, which inside an
  * `<img>` is an SVG with no intrinsic width, so the viewBox's real size is copied onto the root.
- * A targeted rewrite of the ROOT TAG rather than parsing and re-serialising: an `.svg` is parsed
+ * A targeted rewrite of the ROOT TAG rather than parsing and re-serializing: an `.svg` is parsed
  * strictly, so one unclosed tag produces a file that renders as nothing.
  *
  * @param {string} svg
@@ -196,12 +196,12 @@ async function main() {
         label,
       );
 
-      // Audited before it is written, so a colour mermaid derived rather than
+      // Audited before it is written, so a color mermaid derived rather than
       // took from the palette stops the build instead of shipping.
       const audit = auditDiagramSvg(svg, Object.values(palettes[theme]));
       if (audit.problems.length > 0) {
         throw new Error(
-          `${label} (${diagram.posts.join(", ")}) uses colours that are not ratified tokens:\n` +
+          `${label} (${diagram.posts.join(", ")}) uses colors that are not ratified tokens:\n` +
             audit.problems.map((p) => `    ${p}`).join("\n"),
         );
       }
@@ -210,7 +210,7 @@ async function main() {
       written += 1;
       console.log(
         `  wrote  ${diagramAssetPath(diagram.key, theme)} ` +
-          `(${Math.round(svg.length / 1024)} kB, ${audit.checked} colours checked, ` +
+          `(${Math.round(svg.length / 1024)} kB, ${audit.checked} colors checked, ` +
           `${audit.overridden} attributes overridden, ${audit.skippedRules} unreachable rules)`,
       );
     }

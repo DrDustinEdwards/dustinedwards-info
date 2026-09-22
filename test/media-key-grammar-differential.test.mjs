@@ -204,7 +204,7 @@ test("the collapsed spelling agrees with the old one except where it was wrong",
     }
   }
 
-  assert.deepEqual(surprises, [], "the collapse changed behaviour somewhere it was not meant to");
+  assert.deepEqual(surprises, [], "the collapse changed behavior somewhere it was not meant to");
   assert.equal(agreed, INPUTS.length - EXPECTED_DIFFERENCES.size);
   assert.equal(agreed, 233);
 });

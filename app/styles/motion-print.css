@@ -18,8 +18,8 @@
 }
 
 @media print {
-  /* The print rule colour lives here only. Never a theme token: check:contrast requires every theme token
-     in a measured screen pair, and this colour exists only on paper. */
+  /* The print rule color lives here only. Never a theme token: check:contrast requires every theme token
+     in a measured screen pair, and this color exists only on paper. */
   :root {
     --print-rule: #999;
   }

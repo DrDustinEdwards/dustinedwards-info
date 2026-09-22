@@ -104,7 +104,7 @@ function escapeBibtex(value) {
 /*
  * Organisms, longest first, so a trinomial wins over the binomial inside it.
  * The list is imported rather than restated; it is the same allowlist the page
- * italicises from, and a second copy would be a second answer to "what is an
+ * italicizes from, and a second copy would be a second answer to "what is an
  * organism name here".
  */
 const ORGANISM_PATTERN = new RegExp(

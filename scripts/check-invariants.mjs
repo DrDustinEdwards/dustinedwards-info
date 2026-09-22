@@ -220,7 +220,7 @@ try {
   const { SQLiteSyncDialect } = await import("drizzle-orm/sqlite-core");
   const rendered = new SQLiteSyncDialect().sqlToQuery(dbModule.publiclyVisible());
 
-  /* A `timestamp` binds as epoch seconds; a Date is normalised in case that changes. */
+  /* A `timestamp` binds as epoch seconds; a Date is normalized in case that changes. */
   const drizzleParams = rendered.params.map((p) =>
     p instanceof Date ? Math.floor(p.getTime() / 1000) : p,
   );
@@ -589,7 +589,7 @@ try {
     modelled,
   );
   ok(
-    "every modelled table was actually compared",
+    "every modeled table was actually compared",
     compared === modelled.length - phantom.length,
     `${compared} of ${modelled.length - phantom.length}`,
   );
@@ -710,7 +710,7 @@ try {
   if (unmodelled.length > 0) {
     /* Unmodelled tables have no column check; printed as an exposure. */
     console.log(
-      `     not modelled in drizzle and UNCOVERED since section 5 was removed: ${unmodelled.join(", ")}`,
+      `     not modeled in drizzle and UNCOVERED since section 5 was removed: ${unmodelled.join(", ")}`,
     );
   }
 
@@ -801,7 +801,7 @@ try {
  * So `searchDocs` in a query position is banned. To allow one, teach section 6 first.
  */
 
-console.log("\n  4a. search_docs is modelled for the schema, never read through it");
+console.log("\n  4a. search_docs is modeled for the schema, never read through it");
 
 {
   const SELF = ["app/db/schema.ts"];
@@ -1504,7 +1504,7 @@ try {
     /trashed_at/.test(clause),
     `rendered ${JSON.stringify(clause)}. If the column were renamed and the ` +
       `predicate not, every assertion below would still pass against a fixture ` +
-      `built by this gate, so the NAME is checked before the behaviour.`,
+      `built by this gate, so the NAME is checked before the behavior.`,
   );
 
   const dbSourceForTrash = stripComments(
@@ -1629,7 +1629,7 @@ try {
       "rather than only in the unit test's LIKE emulation",
   );
 
-  /* The delete claim keeps its `NOT EXISTS` guard. The behavioural half runs a model of it. */
+  /* The delete claim keeps its `NOT EXISTS` guard. The behavioral half runs a model of it. */
   const claim = dbSourceForTrash.match(
     /export async function claimMediaKeyForDelete[\s\S]*?\n\}/,
   );
@@ -2242,14 +2242,14 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
   );
 }
 
-/* ------- 15b. four rules are bound to the behaviour they describe -------- */
+/* ------- 15b. four rules are bound to the behavior they describe -------- */
 
 /*
  * Rules 4, 6, 13 and 14 make falsifiable claims about the tree. Each is asserted both ways:
  * the claim is still written, and the code still has the property.
  */
 
-console.log("\n  15b. four rules are bound to the behaviour they describe");
+console.log("\n  15b. four rules are bound to the behavior they describe");
 
 {
   const claudeText = readFileSync(join(root, "CLAUDE.md"), "utf8").replace(/\r\n/g, "\n");
@@ -3146,7 +3146,7 @@ console.log("\n  21. savePost commits before it touches D1");
   );
 
   /*
-   * Bounded by the element, not a character window, which reads a neighbour's compliance.
+   * Bounded by the element, not a character window, which reads a neighbor's compliance.
    *
    * THE ANCHOR MOVED WITH THE FIGURES (ruling 117): the three proof tiles were flattened into the
    * evidence row, so `section.home-proof` no longer exists and this bounded on nothing. The
@@ -3889,7 +3889,7 @@ console.log("\n  29. no tracked text file carries a raw control or invisible cha
       `because that happened three times. Write the escape so the shell cannot expand it, or use ` +
       `the literal character:\n      ${offences.join("\n      ")}`,
   );
-  console.log(`     ${scanned} text file(s) scanned, ${skipped} binary skipped, ${offences.length} offence(s)`);
+  console.log(`     ${scanned} text file(s) scanned, ${skipped} binary skipped, ${offences.length} offense(s)`);
 }
 
 console.log("\n  30. no public control depends on script to be operable");
@@ -3909,7 +3909,7 @@ console.log("\n  30. no public control depends on script to be operable");
     "summary", "details", "label", "dialog", "form", "option",
   ]);
 
-  /** Read one opening tag, honouring braces and quotes so an arrow function cannot end it early. */
+  /** Read one opening tag, honoring braces and quotes so an arrow function cannot end it early. */
   const openingTagAt = (/** @type {string} */ src, /** @type {number} */ start) => {
     let depth = 0;
     let quote = "";
@@ -3954,7 +3954,7 @@ console.log("\n  30. no public control depends on script to be operable");
       if (open === -1) continue;
       const tag = src.slice(open + 1).match(/^([a-zA-Z][a-zA-Z0-9]*)/)?.[1];
       if (!tag) continue;
-      // A capitalised tag is a component; its own file is scanned in its turn.
+      // A capitalized tag is a component; its own file is scanned in its turn.
       if (tag[0] === tag[0].toUpperCase()) continue;
       if (INTERACTIVE.has(tag)) continue;
       faults.push(`${rel}:${lineAt(m.index)} ${m[0].replace(/\s*=\s*\{$/, "")} on <${tag}>, which a keyboard cannot reach`);
@@ -4022,7 +4022,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 
   /** A hex a component sheet may state, with the argument for it. */
   const HEX_ALLOWED = new Map([
-    ["app/styles/motion-print.css", "the print rule colour, print-scoped and deliberately not a theme token: check:contrast requires every declared token to participate in a measured pair and a paper-only colour has no screen pair"],
+    ["app/styles/motion-print.css", "the print rule color, print-scoped and deliberately not a theme token: check:contrast requires every declared token to participate in a measured pair and a paper-only color has no screen pair"],
   ]);
 
   const cssFiles = [
@@ -4074,7 +4074,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 
   /*
    * A mention in `scripts/check-*.mjs` does not make a token consumed. check:contrast requires
-   * every colour token be named there, so counting it made (b) unfailable (Hard rule 10's class).
+   * every color token be named there, so counting it made (b) unfailable (Hard rule 10's class).
    * `referenced` still takes gate mentions for the undefined-name check; `consumed` does not.
    */
   let sourceMentions = 0;
@@ -4247,14 +4247,14 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
     unusedNotCarried.length === 0,
     `${unusedDefs.length} token(s) are declared and PAINTED BY NOTHING, ${unusedNotCarried.length} of them ` +
       `with no row on the carried map, which is what this assertion fails on. A mention in a check-*.mjs is ` +
-      `not a read, so a colour with contrast pairs and no painter counts here. The full unpainted set, ` +
+      `not a read, so a color with contrast pairs and no painter counts here. The full unpainted set, ` +
       `carried rows included, because the carried ones are the deadline and not the exemption:\n      ` +
       `${unusedDefs.join("\n      ")}`,
   );
   ok(
     "no component sheet states a raw hex",
     rawHex.length === 0,
-    `${rawHex.length} raw hex value(s) outside the primitive blocks. A colour stated in a component sheet is a ` +
+    `${rawHex.length} raw hex value(s) outside the primitive blocks. A color stated in a component sheet is a ` +
       `second owner of a palette decision and cannot be retuned with the theme:\n      ${rawHex.join("\n      ")}`,
   );
   console.log(

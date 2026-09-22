@@ -456,7 +456,7 @@ ok(
   `found ${colophonRecords.filter((/** @type {any} */ r) => r.anchor === null).length}`,
 );
 
-/* Every page record lives at a declared route; papers share one parameterised route. */
+/* Every page record lives at a declared route; papers share one parameterized route. */
 const PAPER_ROUTE = "/publications/:slug";
 const paperRecords = pageRecords.filter((/** @type {any} */ r) =>
   String(r.uid).startsWith("paper:"),
@@ -1354,7 +1354,7 @@ const cookiePresets = playgroundDoc.cookiePresets ?? [];
 const snippets = playgroundDoc.markdownSnippets ?? [];
 const playgroundChecksBefore = checks;
 
-/** Serialised exactly as check:charts does, so both see the artifact's HTML. */
+/** Serialized exactly as check:charts does, so both see the artifact's HTML. */
 const serializeHast = (/** @type {any[]} */ children) =>
   unified()
     .use(rehypeStringify)
@@ -1384,17 +1384,17 @@ ok(
 ok(
   "key presets are declared",
   keyPresets.length > 0,
-  "an empty list makes every behavioural key assertion below iterate nothing",
+  "an empty list makes every behavioral key assertion below iterate nothing",
 );
 ok(
   "cookie presets are declared",
   cookiePresets.length > 0,
-  "an empty list makes every behavioural theme assertion below iterate nothing",
+  "an empty list makes every behavioral theme assertion below iterate nothing",
 );
 ok(
   "markdown snippets are declared",
   snippets.length > 0,
-  "an empty list makes every behavioural render assertion below iterate nothing",
+  "an empty list makes every behavioral render assertion below iterate nothing",
 );
 ok(
   "deferred demos are stated rather than omitted",
@@ -1429,7 +1429,7 @@ ok(
   /playgroundData\.swatches/.test(playgroundSource) &&
     /playgroundData\.datasets/.test(playgroundSource) &&
     /playgroundData\.keyPresets/.test(playgroundSource),
-  "if the route restated them, the behavioural checks below would be checking a copy of the input",
+  "if the route restated them, the behavioral checks below would be checking a copy of the input",
 );
 /* Keyed by slug: a position index shifts headers while list checks stay green. */
 ok(
@@ -1742,7 +1742,7 @@ ok(
 ok(
   "media key: the page renders the classifier's refusal rather than swallowing it",
   /classifyRefusal/.test(playgroundSource),
-  "a caught throw that renders nothing turns the module's loudest behaviour into " +
+  "a caught throw that renders nothing turns the module's loudest behavior into " +
     "a blank row",
 );
 ok(
@@ -2033,7 +2033,7 @@ ok(
   /Unknown snippet/.test(playgroundSource),
   "a hand-edited URL must say what happened, the same rule the chart demo follows",
 );
-/* A shipped neighbour does not complete the deferred entry. */
+/* A shipped neighbor does not complete the deferred entry. */
 ok(
   "markdown: the free-text form is still stated as deferred",
   deferredDemos.some(
@@ -2099,14 +2099,14 @@ for (const [key, dataset] of Object.entries(datasets)) {
     );
     // check:contrast never reads this SVG.
     ok(
-      `chart options: ${key}/${type} contains no hex colour literal`,
+      `chart options: ${key}/${type} contains no hex color literal`,
       !/#[0-9a-fA-F]{6}\b/.test(svg),
       `found ${(svg.match(/#[0-9a-fA-F]{6}\b/g) ?? []).join(", ")}`,
     );
     ok(
-      `chart options: ${key}/${type} colours from chart tokens`,
+      `chart options: ${key}/${type} colors from chart tokens`,
       /var\(--chart-/.test(svg),
-      "series colours must be custom properties so one render serves both themes",
+      "series colors must be custom properties so one render serves both themes",
     );
   }
 }

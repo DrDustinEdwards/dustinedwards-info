@@ -44,7 +44,7 @@ const DESTRUCTIVE = new Set([
 ]);
 
 /**
- * REVERSIBLE, with the reason, because "not destructive" is a judgement and an
+ * REVERSIBLE, with the reason, because "not destructive" is a judgment and an
  * unexplained entry here is how something destructive gets waved through.
  */
 const REVERSIBLE = new Map([
@@ -309,7 +309,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    */
   const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention"]);
 
-  /** REVERSIBLE, with the reason, because "not destructive" is a judgement. */
+  /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([
     ["list_posts", "a read"],
     ["get_post", "a read"],

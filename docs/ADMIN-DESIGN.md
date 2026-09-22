@@ -58,7 +58,7 @@ list is drawn from, never from a second query. Zero renders: it is a real answer
 to "how many are pending". Selects are not a second filter pattern; a facet with
 a fixed vocabulary is tabs.
 
-**A menu with nothing in it is not rendered.** An overflow labelled Maintenance
+**A menu with nothing in it is not rendered.** An overflow labeled Maintenance
 holding no items teaches the reader that menus here are not worth opening.
 
 ## One table pattern
@@ -69,7 +69,7 @@ a noun they would say out loud.
 
 **The title comes first and the status pill sits on the title row**, because the
 reader scans names and wants the state of the name they found. The pill carries
-the word first; colour and border style are the second and third channels, so it
+the word first; color and border style are the second and third channels, so it
 reads three ways under forced-colors.
 
 One actions menu per row, at the right edge, holding every action for that row.
@@ -94,7 +94,7 @@ with `tabindex="0"` and a label. The document never scrolls sideways.
   that destroys, and only inside a confirmation. A destructive verb outside one
   takes the secondary weight.
 
-**A disabled danger button keeps its fill at `opacity: 0.4`**, never grey and
+**A disabled danger button keeps its fill at `opacity: 0.4`**, never gray and
 outlined: the reader has to see that the red button is the one they are being
 stopped from pressing. Its label does not change. Menu items are not a fourth
 weight, they are secondary without a border, because the menu's edge is the
@@ -103,7 +103,7 @@ border.
 ## One notice pattern
 
 `--surface` fill, `0.5rem` radius, `var(--s4)` block padding and `var(--s6)`
-inline padding, and a `0.25rem` left edge in the semantic colour. The edge is the
+inline padding, and a `0.25rem` left edge in the semantic color. The edge is the
 variant; the fill never is.
 
 - **Neutral** `--border` for what happened.

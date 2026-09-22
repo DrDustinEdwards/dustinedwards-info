@@ -1,5 +1,5 @@
 /**
- * Colour contrast maths: sRGB parsing, WCAG 2.2 relative luminance and ratio,
+ * Color contrast maths: sRGB parsing, WCAG 2.2 relative luminance and ratio,
  * and APCA signed Lc.
  *
  * A .mjs rather than a .ts for the reason `app/lib/search/query.mjs` is: the
@@ -49,7 +49,7 @@ export function channels(hex) {
           .map((c) => c + c)
           .join("")
       : h;
-  if (!/^[0-9a-fA-F]{6}$/.test(full)) throw new Error(`not a hex colour: ${hex}`);
+  if (!/^[0-9a-fA-F]{6}$/.test(full)) throw new Error(`not a hex color: ${hex}`);
   return [
     parseInt(full.slice(0, 2), 16) / 255,
     parseInt(full.slice(2, 4), 16) / 255,
@@ -111,7 +111,7 @@ export function apca(textHex, bgHex) {
 }
 
 /**
- * Normalises a hex to `#rrggbb` lower case, or returns null if it is not one.
+ * Normalizes a hex to `#rrggbb` lower case, or returns null if it is not one.
  *
  * The lab's input validator. It is here rather than in the route because it must
  * agree with `channels()` about what a hex IS: a route that accepted a string

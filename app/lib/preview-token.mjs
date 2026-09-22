@@ -225,7 +225,7 @@ export function expiresAt(createdAt) {
  * The token, shortened for display. Six characters, per the ratified spec.
  *
  * The full token is a CAPABILITY: anyone who reads it off a screen holds the
- * link. The list is for recognising and revoking, which six characters is
+ * link. The list is for recognizing and revoking, which six characters is
  * enough for, and the whole value is behind the copy action alone.
  *
  * @param {string} token

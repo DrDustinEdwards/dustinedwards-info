@@ -127,7 +127,7 @@
 }
 
 /* "assigned by the system": mono and muted, an annotation rather than a control. --text-secondary, never a
-   lighter grey: this is text a reader must read, so it meets the 4.5:1 text floor. */
+   lighter gray: this is text a reader must read, so it meets the 4.5:1 text floor. */
 .media-facet-hint {
   color: var(--text-secondary);
   font-family: var(--font-mono);
@@ -174,8 +174,8 @@
   gap: 0.25rem;
 }
 
-/* The filename links to the detail view: the no-script route to the address Copy writes. No colour and no
-   resting underline, which rule 2 allows because colour carries nothing alone; it underlines on hover and focus. */
+/* The filename links to the detail view: the no-script route to the address Copy writes. No color and no
+   resting underline, which rule 2 allows because color carries nothing alone; it underlines on hover and focus. */
 .media-name {
   display: block;
   min-width: 0;
@@ -224,7 +224,7 @@
 }
 
 /* A copy button with a visible word is not a 22px square: the square is sized for a tile, and the
- * inspector's labelled snippet buttons overflowed it. :has() because the condition is "contains a label". */
+ * inspector's labeled snippet buttons overflowed it. :has() because the condition is "contains a label". */
 .media-copy:has(.media-copy-label) {
   width: auto;
   height: auto;
@@ -716,7 +716,7 @@
 }
 
 /* The section heading is the spine: small caps, a count, a quiet right-aligned note. The mockup's failing
- * greys do not ship; quietness is size, weight and tracking, and separation is fill. */
+ * grays do not ship; quietness is size, weight and tracking, and separation is fill. */
 .media-group-heading {
   display: flex;
   align-items: baseline;
@@ -804,7 +804,7 @@
 
 /* A selected row is marked by TINT plus a left edge in the brand, so the state
    survives a reader who cannot distinguish the tint. Two signals, per the
-   palette law's stance on colour never being the only carrier. */
+   palette law's stance on color never being the only carrier. */
 .media-card[data-selected] {
   background: var(--tint-brand);
   box-shadow: inset 0.1875rem 0 0 0 var(--brand);
@@ -834,7 +834,7 @@
   border-radius: 0.5rem;
 }
 
-/* The display bar, the two layouts and the destructive accent. The mockup's hairlines and greys fail
+/* The display bar, the two layouts and the destructive accent. The mockup's hairlines and grays fail
  * their floors and do not ship, and no nearest compliant hairline replaces them: calm comes from tint,
  * spacing and weight. */
 
@@ -886,8 +886,8 @@
   gap: 0.375rem;
 }
 
-/* The mockup's micro-label, WITHOUT its 2.34:1 grey. The uppercase, the size
-   and the tracking are what make it read as a label; the colour does not have
+/* The mockup's micro-label, WITHOUT its 2.34:1 gray. The uppercase, the size
+   and the tracking are what make it read as a label; the color does not have
    to be faint to do that, so it is --text-secondary, which clears the floor. */
 .media-display-label {
   font-size: 0.6875rem;
@@ -967,7 +967,7 @@
   grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr));
 }
 
-/* Document card, caption bar and table. The mockup's failing colours stay refused. Where a line is the only
+/* Document card, caption bar and table. The mockup's failing colors stay refused. Where a line is the only
  * honest boundary it is --border, once for the table header, never once per row. */
 
 /* The document card: a label, a title and a foot, each a pair check:contrast already carries. The mockup's
@@ -1018,7 +1018,7 @@
 }
 
 /* The suggestion of text is aria-hidden decoration, so WCAG 1.4.11 does not reach it; it still takes
-   --border, because this sheet never carries a colour nobody can see. */
+   --border, because this sheet never carries a color nobody can see. */
 .media-doc-rules {
   display: flex;
   flex: none;
@@ -1281,7 +1281,7 @@
 
 .media-grid[data-view="grid"] .media-card:hover {
   transform: translateY(-2px);
-  /* A literal rgb() shadow, not a --shadow-tile token: a shadow colour has no contrast pair, and a token
+  /* A literal rgb() shadow, not a --shadow-tile token: a shadow color has no contrast pair, and a token
      with none can never participate in check:contrast's matrix. */
   box-shadow: 0 6px 18px rgb(0 0 0 / 12%), inset 0 0 0 1px var(--border);
 }
@@ -1357,7 +1357,7 @@
 }
 
 /* A column heading is a link, because its sort is a URL. Quiet by size, tracking and uppercase,
-   never by an unreadable grey. */
+   never by an unreadable gray. */
 .media-col-head {
   display: flex;
   align-items: center;
@@ -1379,7 +1379,7 @@
 }
 
 /* THE ACTIVE COLUMN, marked by WEIGHT and by full-strength text, plus the arrow
-   beside it. Two channels, so the sorted column is not identified by colour
+   beside it. Two channels, so the sorted column is not identified by color
    alone. The arrow is the second one and it is what the mockup uses. */
 .media-col-head.is-active {
   color: var(--text);
@@ -1421,7 +1421,7 @@
 
 /* A RULE PER ROW, not a tint band. Ruling 128 collapsed the band's fill into the ground it sat on,
    so the banding painted paper onto paper and the rows became one slab. --dust is the sanctioned
-   substitute: it is a line colour, deliberately below the contrast floor, and a row seam identifies
+   substitute: it is a line color, deliberately below the contrast floor, and a row seam identifies
    nothing on its own. */
 .media-grid[data-view="list"] .media-card + .media-card {
   border-block-start: var(--line-w) solid var(--dust);

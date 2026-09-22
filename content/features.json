@@ -49,7 +49,7 @@
     {
       "component": "Charts",
       "name": "Charts are content, not a widget",
-      "what": "A chart is authored as a container directive over a fenced block of CSV and rendered to SVG as the post is rendered, so it is part of the stored HTML and a reader with JavaScript disabled sees the same chart as everyone else. Colours are CSS custom properties that resolve per theme, which is why one stored SVG serves light and dark with nothing to flash.",
+      "what": "A chart is authored as a container directive over a fenced block of CSV and rendered to SVG as the post is rendered, so it is part of the stored HTML and a reader with JavaScript disabled sees the same chart as everyone else. Colors are CSS custom properties that resolve per theme, which is why one stored SVG serves light and dark with nothing to flash.",
       "anchors": [
         {
           "kind": "gate",
@@ -181,7 +181,7 @@
     {
       "component": "Ask",
       "name": "Three cost gates in front of the only metered endpoint",
-      "what": "A per-IP burst limit, then an answer cache keyed by a hash of the normalised question, then a site-wide daily ceiling. The ordering is load-bearing: the ceiling sits after the cache, so a cache hit costs nothing and consumes no budget. A refusal is a 429 with Retry-After and reaches no model.",
+      "what": "A per-IP burst limit, then an answer cache keyed by a hash of the normalized question, then a site-wide daily ceiling. The ordering is load-bearing: the ceiling sits after the cache, so a cache hit costs nothing and consumes no budget. A refusal is a 429 with Retry-After and reaches no model.",
       "anchors": [
         {
           "kind": "route",
@@ -401,8 +401,8 @@
     },
     {
       "component": "Theming",
-      "name": "Every colour pair is recomputed from the shipped stylesheet",
-      "what": "The gate reads the token values back out of the stylesheet and recomputes the whole contrast matrix, so a tuned hex moves one side of the comparison and fails. The pairs and thresholds are transcribed as token names rather than values, so nothing in the gate restates a colour.",
+      "name": "Every color pair is recomputed from the shipped stylesheet",
+      "what": "The gate reads the token values back out of the stylesheet and recomputes the whole contrast matrix, so a tuned hex moves one side of the comparison and fails. The pairs and thresholds are transcribed as token names rather than values, so nothing in the gate restates a color.",
       "anchors": [
         {
           "kind": "gate",
@@ -512,7 +512,7 @@
     {
       "component": "Safety rails",
       "name": "URL protocols are allowlisted in the schema as well as the renderer",
-      "what": "The render-layer guard only walks nodes the body renderer produced, so frontmatter bypassed it entirely: a curated link field took a generic URL validator, which accepts javascript:, and rendered as a live public anchor. Both that field and the cover path now call the same predicate the renderer uses rather than reimplementing it. That is asserted against the source, not only through behaviour, because the two come apart: the cover path spent a while refusing bad protocols as a side effect of a stricter rule about paths, which every behavioural case passed and no gate could see.",
+      "what": "The render-layer guard only walks nodes the body renderer produced, so frontmatter bypassed it entirely: a curated link field took a generic URL validator, which accepts javascript:, and rendered as a live public anchor. Both that field and the cover path now call the same predicate the renderer uses rather than reimplementing it. That is asserted against the source, not only through behavior, because the two come apart: the cover path spent a while refusing bad protocols as a side effect of a stricter rule about paths, which every behavioral case passed and no gate could see.",
       "anchors": [
         {
           "kind": "gate",

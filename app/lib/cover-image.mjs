@@ -4,7 +4,7 @@
  *
  * **THEY LIVED IN `app/routes/blog.$slug.tsx` AND MOVED HERE 2026-09-11**, in
  * the commit that gave the cover its `width` and `height`. The move is the
- * reason the new behaviour has a test at all: a helper inside a `.tsx` route
+ * reason the new behavior has a test at all: a helper inside a `.tsx` route
  * is reachable only by rendering the route, so the only thing that could have
  * asserted the dimensions was a regex over the source, which reads the
  * markup's spelling rather than the attributes a reader gets.

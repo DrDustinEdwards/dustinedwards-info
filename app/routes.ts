@@ -47,7 +47,7 @@ export default [
   /*
    * ONE PAGE PER PAPER, at a DOI-derived slug, WITH A TRAILING SLASH. The gateway redirects the
    * slashless form so only one is canonical, and the slash is what puts the page and its PDF in one
-   * subdirectory, which is Google Scholar's stated condition for honouring `citation_pdf_url`.
+   * subdirectory, which is Google Scholar's stated condition for honoring `citation_pdf_url`.
    *
    * AFTER the index route, which is one segment where this is two, so they cannot collide.
    */

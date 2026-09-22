@@ -1,5 +1,5 @@
 /**
- * Media tags: normalisation, storage form, and the search clause's needle.
+ * Media tags: normalization, storage form, and the search clause's needle.
  *
  * PURE and `.mjs`, so the delimiter rule is executed by `node --test` rather
  * than trusted. That is not ceremony here. **This repo has already been bitten
@@ -65,10 +65,10 @@ export const MAX_TAG_LENGTH = 32;
 export const MAX_TAGS = 12;
 
 /**
- * One tag, normalised. Lowercase, trimmed, inner whitespace collapsed to a
+ * One tag, normalized. Lowercase, trimmed, inner whitespace collapsed to a
  * single hyphen, delimiter removed, length capped.
  *
- * Returns "" for anything that normalises to nothing, and the callers drop
+ * Returns "" for anything that normalizes to nothing, and the callers drop
  * those rather than storing an empty element that would produce `,,` and make
  * every `%,x,%` needle unreliable.
  *
@@ -97,7 +97,7 @@ export function normaliseTag(raw) {
 }
 
 /**
- * A list of tags, normalised, deduplicated, sorted, and capped.
+ * A list of tags, normalized, deduplicated, sorted, and capped.
  *
  * SORTED, so two authors who typed the same set in different orders produce the
  * same stored bytes. A column whose value depends on typing order would make
@@ -146,7 +146,7 @@ export function parseTags(stored) {
 /**
  * The `LIKE` needle that matches ONE tag exactly.
  *
- * Returns null when the tag normalises to nothing, and the caller must treat
+ * Returns null when the tag normalizes to nothing, and the caller must treat
  * null as "no filter" rather than as a needle: `%,,%` would match every tagged
  * row, which is the vacuous filter this repo keeps finding in other shapes.
  *

@@ -85,7 +85,7 @@
   font-size: 0.9375rem;
 }
 
-/* The sort control. Two links in a labelled nav, sharing the chip shape the facets use, because
+/* The sort control. Two links in a labeled nav, sharing the chip shape the facets use, because
    it is the same affordance: a link that changes one parameter of this URL. */
 .search-sort {
   display: flex;
@@ -109,7 +109,7 @@
 
 /* The CURRENT ordering, marked the way the selected filter chip is marked and for the same
    reason: aria-current carries it to a screen reader, and the border and weight carry it to
-   everyone else, so selection never rests on colour alone. */
+   everyone else, so selection never rests on color alone. */
 .search-chip[aria-current] {
   border-color: var(--brand);
   background: var(--tint-brand);

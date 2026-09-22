@@ -72,7 +72,7 @@ which is what repeats across people and sessions.
   `scripts/check-invariants.mjs` `app/components/site-header.tsx`
 - **Two gates can cancel: one demands a name be written down, the other reads
   the writing as use.** Neither is wrong alone, neither can fail. `af69b45`
-- **A whole-document match is satisfied by a neighbour.** A 900-character window
+- **A whole-document match is satisfied by a neighbor.** A 900-character window
   around the anchor read the next function's compliance. `df99bf1`
 - **A comment can satisfy an assertion about code, and can fail one.** Both
   happened in one week; a needle can also match inside a sentence asserting the

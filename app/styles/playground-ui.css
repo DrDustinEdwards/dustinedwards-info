@@ -192,7 +192,7 @@
 }
 
 /* Error keys off aria-invalid, so the visual state and the announced state
-   cannot drift. The doubled border is what carries it in greyscale. */
+   cannot drift. The doubled border is what carries it in grayscale. */
 .pgui .field-input[aria-invalid="true"] {
   border-color: var(--error);
   border-width: var(--line-w-thick);
@@ -1159,7 +1159,7 @@
   --hc-accent: var(--error);
 }
 
-/* Unknown and checking share an accent. Neither is a judgement about the
+/* Unknown and checking share an accent. Neither is a judgment about the
    service, and a fourth hue would cost the dashboard its glance. */
 .pgui .hc-unknown,
 .pgui .hc-checking {
@@ -1228,7 +1228,7 @@
 }
 
 /* Doubled with an inset shadow so the pressed state does not rest on border
-   colour alone. */
+   color alone. */
 .pgui .ed-tool[aria-pressed="true"] {
   color: var(--text);
   border-color: var(--brand);
@@ -1368,7 +1368,7 @@
   gap: var(--s-4);
 }
 
-/* A themed container owes both a background and a colour: with only the
+/* A themed container owes both a background and a color: with only the
    background it inherits the other theme's ink. */
 .pgui-panel {
   padding: var(--s-4);
@@ -1427,7 +1427,7 @@
   color: var(--text-secondary);
 }
 
-/* Swatches: name, hex and the colour itself, per theme. A token that resolves
+/* Swatches: name, hex and the color itself, per theme. A token that resolves
    to nothing shows as an empty chip rather than as silence. */
 .pgui-swatches {
   display: grid;

@@ -1,5 +1,5 @@
 /**
- * The zero-result query normaliser, which is the privacy boundary of the whole feature.
+ * The zero-result query normalizer, which is the privacy boundary of the whole feature.
  *
  * EVERYTHING THE TABLE WILL EVER CONTAIN PASSES THROUGH THIS FUNCTION. The schema has nowhere to
  * put an IP, a user agent or a session, so the only way a personal fact reaches the database is
@@ -49,7 +49,7 @@ test("a phone-shaped run of digits is refused", () => {
   assert.equal(normalise("+44 20 7946 0958"), null);
 });
 
-test("two capitalised words in a row is refused as a name shape", () => {
+test("two capitalized words in a row is refused as a name shape", () => {
   assert.equal(normalise("Dustin Edwards"), null);
   assert.equal(normalise("papers by Jane Smith"), null);
 });
@@ -80,13 +80,13 @@ test("a non-string is refused rather than coerced", () => {
 
 /*
  * THE CONTROL. These refusals are only worth anything if the function can also SAY YES; a
- * normaliser that returned null for everything would pass every assertion above.
+ * normalizer that returned null for everything would pass every assertion above.
  */
 test("the refusals discriminate: ordinary queries still get through", () => {
   const kept = ["d1 backups", "how do backups work", "phage cocktail", "workers cache"].map(normalise);
   assert.ok(
     kept.every((q) => typeof q === "string" && q.length > 0),
-    "a normaliser that refused everything would satisfy every refusal test above",
+    "a normalizer that refused everything would satisfy every refusal test above",
   );
 });
 

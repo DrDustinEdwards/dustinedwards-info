@@ -14,7 +14,7 @@
  * people to re-run until green. `check:policy` asserts the ordering below by position.
  *
  * This is a `.server` module because hard rule 3 is a PATH rule. Neither function reads `env`, so
- * `check:secrets` has nothing to say about the file, and that is not a licence to move it.
+ * `check:secrets` has nothing to say about the file, and that is not a license to move it.
  */
 
 /**
