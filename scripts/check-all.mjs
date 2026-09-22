@@ -54,6 +54,12 @@ export const CI_EXCLUDED = {
   "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
   /* A CI client build would measure a build nothing deploys. */
   "check:page-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
+  /*
+   * Its whole subject is gitignored, so in CI it can only ever report its skip. Excluded rather
+   * than left to skip green, because a gate that structurally cannot assert in CI reporting a pass
+   * is the vacuity hard rule 10 names.
+   */
+  "check:design-inputs": "its subject is the gitignored .design-sync/ derived inputs, which a clean checkout never generates; in CI it could only ever skip.",
 };
 
 /**
@@ -86,6 +92,10 @@ export const TIERS = {
   "check:fonts": "offline",
   /* Reads its inputs off disk, so `--ci` runs it (ruling 111). */
   "check:design-sheets": "offline",
+  /* Offline: content hashes over the sheets and the flatten they produced, and renders nothing.
+     On the tier `ship` runs, because the staleness it catches is invisible to every other gate:
+     the converter copies ds-styles.css verbatim and reports nothing about its age. */
+  "check:design-inputs": "offline",
   /* Offline: reads conventions.md and the sheets it names, and renders nothing. Ruling 120's
      first item, because the canvas reads that file every time it designs. */
   "check:design-vocabulary": "offline",
