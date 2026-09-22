@@ -24,7 +24,7 @@ export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
  * than written out: hardcoding the apex would point every scraper at the legacy WordPress site
  * until DNS moves.
  */
-export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
 /**
  * The site's identity, split by the job each string does. `role` and `affiliation` are STRUCTURED

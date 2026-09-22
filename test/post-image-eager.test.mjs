@@ -35,7 +35,7 @@ import assert from "node:assert/strict";
 
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 
-const FIRST = "/media/a1b2c3d4e5f60718-1600x900.webp";
+const FIRST = "/media/dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const SECOND = "/publications/measured-latency.png";
 
 /** @param {string} body */

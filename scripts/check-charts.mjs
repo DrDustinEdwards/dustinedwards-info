@@ -438,13 +438,13 @@ async function main() {
    * being wrapped in a link. A control that pins markup BETWEEN the things it cares about fails on
    * changes it has no opinion about.
    */
-  const known = await render(':::figure{src="/og-image.png" alt="x"}\ncap\n:::');
+  const known = await render(':::figure{src="/dustin-edwards-og-image.png" alt="x"}\ncap\n:::');
   assertThat(
     known.html.startsWith("<figure>"),
     `the figure directive stopped producing a figure. Got: ${known.html.slice(0, 80)}`,
   );
   assertThat(
-    /<img[^>]*src="\/og-image\.png"/.test(known.html),
+    /<img[^>]*src="\/dustin-edwards-og-image\.png"/.test(known.html),
     `the figure directive stopped rendering its image. Got: ${known.html.slice(0, 160)}`,
   );
 

@@ -18,6 +18,7 @@ import { classify, roleOf, storageOf } from "../app/lib/media/classify.mjs";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import { listAllObjects } from "./lib/r2.mjs";
+import { objectKeyProblem } from "./lib/asset-names.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import { walkPublic } from "./build-assets.mjs";
@@ -228,6 +229,18 @@ async function main() {
 
   /** @type {string[]} */
   const problems = [];
+
+  // 0. Ruling 127, the half check:asset-names cannot reach offline: every stored object's name.
+  const misnamed = objects
+    .map((o) => objectKeyProblem(o.key))
+    .filter((problem) => problem !== null)
+    .sort();
+  if (misnamed.length > 0) {
+    problems.push(
+      `${misnamed.length} R2 object(s) named without the dustin-edwards- prefix. Re-upload ` +
+        `through the site (a media object) or rebuild the cards (npm run build:og).\n${sample(misnamed)}`,
+    );
+  }
 
   // 1. R2 object with no row.
   const unindexedObjects = [...objectKeys].filter((k) => !rowKeys.has(k)).sort();

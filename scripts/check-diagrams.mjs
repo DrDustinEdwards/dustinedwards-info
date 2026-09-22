@@ -9,7 +9,7 @@
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
@@ -26,6 +26,10 @@ import { KNOWN_DIRECTIVES } from "../app/lib/content/pipeline.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+
+/** The file name a page asks for, from the one function that states it. */
+const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
+  basename(diagramAssetPath(key, theme));
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIAGRAM_DIR = join(root, "public", DIAGRAM_ASSET_DIR);
@@ -109,7 +113,7 @@ assert(
 );
 assert(
   "the asset path is site-absolute and names the theme",
-  diagramAssetPath("abcd1234", "dark") === `/${DIAGRAM_ASSET_DIR}/abcd1234-dark.svg`,
+  diagramAssetPath("abcd1234", "dark") === `/${DIAGRAM_ASSET_DIR}/dustin-edwards-abcd1234-dark.svg`,
 );
 
 // the emitted structure
@@ -237,10 +241,10 @@ if (!existsSync(ARTIFACT)) {
       diagramKey(source) === key,
     );
     for (const theme of DIAGRAM_THEMES) {
-      const file = join(DIAGRAM_DIR, `${key}-${theme}.svg`);
+      const file = join(DIAGRAM_DIR, fileName(key, theme));
       const present = existsSync(file);
       assert(
-        `${posts.join(", ")} references ${key}-${theme}.svg, which is on disk`,
+        `${posts.join(", ")} references ${fileName(key, theme)}, which is on disk`,
         present,
       );
       if (!present) continue;
@@ -248,24 +252,24 @@ if (!existsSync(ARTIFACT)) {
       const svg = readFileSync(file, "utf8");
       // An <img> needs an intrinsic size or the browser falls back to 300x150.
       assert(
-        `${key}-${theme}.svg carries an explicit width and height`,
+        `${fileName(key, theme)} carries an explicit width and height`,
         /<svg\b[^>]*\swidth="\d+"[^>]*\sheight="\d+"/.test(svg.slice(0, 4000)),
       );
       // foreignObject is not rendered when an SVG is loaded through <img>, so a
       // diagram carrying one comes out with blank labels on the page while
       // looking correct in a standalone viewer.
-      assert(`${key}-${theme}.svg has no foreignObject`, !svg.includes("foreignObject"));
+      assert(`${fileName(key, theme)} has no foreignObject`, !svg.includes("foreignObject"));
 
       const audit = auditDiagramSvg(svg, Object.values(palettes[theme]));
       checks += audit.checked;
       if (audit.problems.length > 0) {
         failures.push(
-          `${key}-${theme}.svg uses colours that are not ratified tokens: ` +
+          `${fileName(key, theme)} uses colours that are not ratified tokens: ` +
             audit.problems.join("; "),
         );
       }
       // An assertion that can pass by reading nothing is not an assertion.
-      assert(`${key}-${theme}.svg had colours to check`, audit.checked > 0);
+      assert(`${fileName(key, theme)} had colours to check`, audit.checked > 0);
     }
   }
 
@@ -273,7 +277,7 @@ if (!existsSync(ARTIFACT)) {
     ? readdirSync(DIAGRAM_DIR).filter((n) => n.endsWith(".svg"))
     : [];
   const live = new Set(
-    [...referenced.keys()].flatMap((k) => DIAGRAM_THEMES.map((t) => `${k}-${t}.svg`)),
+    [...referenced.keys()].flatMap((k) => DIAGRAM_THEMES.map((t) => fileName(k, t))),
   );
   for (const name of onDisk) {
     assert(`${name} is referenced by a post (run build:diagrams to prune)`, live.has(name));

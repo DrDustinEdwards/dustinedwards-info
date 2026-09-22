@@ -1,100 +1,100 @@
 {
   "generated": 59,
   "paths": [
-    "/android-chrome-192x192.png",
-    "/android-chrome-512x512.png",
-    "/apple-touch-icon.png",
-    "/diagrams/803ab50b-dark.svg",
-    "/diagrams/803ab50b-light.svg",
-    "/diagrams/b54765cf-dark.svg",
-    "/diagrams/b54765cf-light.svg",
-    "/diagrams/e2394abb-dark.svg",
-    "/diagrams/e2394abb-light.svg",
+    "/diagrams/dustin-edwards-803ab50b-dark.svg",
+    "/diagrams/dustin-edwards-803ab50b-light.svg",
+    "/diagrams/dustin-edwards-b54765cf-dark.svg",
+    "/diagrams/dustin-edwards-b54765cf-light.svg",
+    "/diagrams/dustin-edwards-e2394abb-dark.svg",
+    "/diagrams/dustin-edwards-e2394abb-light.svg",
+    "/dustin-edwards-android-chrome-192x192.png",
+    "/dustin-edwards-android-chrome-512x512.png",
+    "/dustin-edwards-apple-touch-icon.png",
+    "/dustin-edwards-favicon.svg",
+    "/dustin-edwards-logo-dark.svg",
+    "/dustin-edwards-logo-header-dark.svg",
+    "/dustin-edwards-logo-header.svg",
+    "/dustin-edwards-logo.svg",
+    "/dustin-edwards-maskable-icon-512x512.png",
+    "/dustin-edwards-og-image.png",
     "/favicon.ico",
-    "/favicon.svg",
-    "/fonts/OFL.txt",
-    "/logo-dark.svg",
-    "/logo-header-dark.svg",
-    "/logo-header.svg",
-    "/logo.svg",
-    "/maskable-icon-512x512.png",
-    "/og-image.png",
-    "/phage-hunters/2017.webp",
-    "/phage-hunters/2018.webp",
-    "/phage-hunters/2019.webp",
-    "/phage-hunters/2020.webp",
-    "/phage-hunters/2021.webp",
-    "/phage-hunters/2022.webp",
-    "/phage-hunters/2023.webp",
-    "/phage-hunters/2024.webp",
-    "/phage-hunters/2025.webp",
-    "/publications/10-1002-9780470025079-chap06-pub2/10-1002-9780470025079-chap06-pub2.pdf",
-    "/publications/10-1080-07448481-2025-2472184/10-1080-07448481-2025-2472184.pdf",
-    "/publications/10-1128-jmbe-00313-25/10-1128-jmbe-00313-25.pdf",
-    "/publications/10-1128-jvi-00356-08/10-1128-jvi-00356-08.pdf",
-    "/publications/10-1128-jvi-01788-13/10-1128-jvi-01788-13.pdf",
-    "/publications/10-1128-jvi-02150-14/10-1128-jvi-02150-14.pdf",
-    "/publications/10-1128-jvi-03444-13/10-1128-jvi-03444-13.pdf",
-    "/publications/10-1128-mra-00173-22/10-1128-mra-00173-22.pdf",
-    "/publications/10-1128-mra-00174-22/10-1128-mra-00174-22.pdf",
-    "/publications/10-1128-mra-00556-21/10-1128-mra-00556-21.pdf",
-    "/publications/10-1128-mra-00558-21/10-1128-mra-00558-21.pdf",
-    "/publications/10-1128-mra-00778-23/10-1128-mra-00778-23.pdf",
-    "/publications/10-1128-mra-00783-22/10-1128-mra-00783-22.pdf",
-    "/publications/10-1128-mra-00888-24/10-1128-mra-00888-24.pdf",
-    "/publications/10-1128-mra-01039-19/10-1128-mra-01039-19.pdf",
-    "/publications/10-1128-mra-01077-21/10-1128-mra-01077-21.pdf",
-    "/publications/10-1128-mra-01079-21/10-1128-mra-01079-21.pdf",
-    "/publications/10-1128-mra-01242-18/10-1128-mra-01242-18.pdf",
-    "/publications/10-1128-mra-01594-18/10-1128-mra-01594-18.pdf",
-    "/publications/10-1187-cbe-21-03-0057/10-1187-cbe-21-03-0057.pdf",
-    "/publications/10-1371-journal-pone-0042123/10-1371-journal-pone-0042123.pdf",
-    "/publications/10-1371-journal-ppat-1004454/10-1371-journal-ppat-1004454.pdf",
-    "/publications/10-3389-feduc-2023-1279921/10-3389-feduc-2023-1279921.pdf",
-    "/publications/10-3389-feduc-2024-1442306/10-3389-feduc-2024-1442306.pdf",
-    "/publications/10-3389-feduc-2024-1442318/10-3389-feduc-2024-1442318.pdf",
-    "/publications/10-3390-ijerph22071139/10-3390-ijerph22071139.pdf",
-    "/publications/10-3390-v3060861/10-3390-v3060861.pdf",
-    "/publications/10-3390-v3101815/10-3390-v3101815.pdf",
-    "/publications/10-7589-2018-08-187/10-7589-2018-08-187.pdf",
-    "/publications/10-7589-2019-04-088/10-7589-2019-04-088.pdf",
-    "/publications/10-7589-jwd-d-22-00023/10-7589-jwd-d-22-00023.pdf",
+    "/fonts/dustin-edwards-ofl.txt",
+    "/phage-hunters/dustin-edwards-2017.webp",
+    "/phage-hunters/dustin-edwards-2018.webp",
+    "/phage-hunters/dustin-edwards-2019.webp",
+    "/phage-hunters/dustin-edwards-2020.webp",
+    "/phage-hunters/dustin-edwards-2021.webp",
+    "/phage-hunters/dustin-edwards-2022.webp",
+    "/phage-hunters/dustin-edwards-2023.webp",
+    "/phage-hunters/dustin-edwards-2024.webp",
+    "/phage-hunters/dustin-edwards-2025.webp",
+    "/publications/10-1002-9780470025079-chap06-pub2/dustin-edwards-10-1002-9780470025079-chap06-pub2.pdf",
+    "/publications/10-1080-07448481-2025-2472184/dustin-edwards-10-1080-07448481-2025-2472184.pdf",
+    "/publications/10-1128-jmbe-00313-25/dustin-edwards-10-1128-jmbe-00313-25.pdf",
+    "/publications/10-1128-jvi-00356-08/dustin-edwards-10-1128-jvi-00356-08.pdf",
+    "/publications/10-1128-jvi-01788-13/dustin-edwards-10-1128-jvi-01788-13.pdf",
+    "/publications/10-1128-jvi-02150-14/dustin-edwards-10-1128-jvi-02150-14.pdf",
+    "/publications/10-1128-jvi-03444-13/dustin-edwards-10-1128-jvi-03444-13.pdf",
+    "/publications/10-1128-mra-00173-22/dustin-edwards-10-1128-mra-00173-22.pdf",
+    "/publications/10-1128-mra-00174-22/dustin-edwards-10-1128-mra-00174-22.pdf",
+    "/publications/10-1128-mra-00556-21/dustin-edwards-10-1128-mra-00556-21.pdf",
+    "/publications/10-1128-mra-00558-21/dustin-edwards-10-1128-mra-00558-21.pdf",
+    "/publications/10-1128-mra-00778-23/dustin-edwards-10-1128-mra-00778-23.pdf",
+    "/publications/10-1128-mra-00783-22/dustin-edwards-10-1128-mra-00783-22.pdf",
+    "/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf",
+    "/publications/10-1128-mra-01039-19/dustin-edwards-10-1128-mra-01039-19.pdf",
+    "/publications/10-1128-mra-01077-21/dustin-edwards-10-1128-mra-01077-21.pdf",
+    "/publications/10-1128-mra-01079-21/dustin-edwards-10-1128-mra-01079-21.pdf",
+    "/publications/10-1128-mra-01242-18/dustin-edwards-10-1128-mra-01242-18.pdf",
+    "/publications/10-1128-mra-01594-18/dustin-edwards-10-1128-mra-01594-18.pdf",
+    "/publications/10-1187-cbe-21-03-0057/dustin-edwards-10-1187-cbe-21-03-0057.pdf",
+    "/publications/10-1371-journal-pone-0042123/dustin-edwards-10-1371-journal-pone-0042123.pdf",
+    "/publications/10-1371-journal-ppat-1004454/dustin-edwards-10-1371-journal-ppat-1004454.pdf",
+    "/publications/10-3389-feduc-2023-1279921/dustin-edwards-10-3389-feduc-2023-1279921.pdf",
+    "/publications/10-3389-feduc-2024-1442306/dustin-edwards-10-3389-feduc-2024-1442306.pdf",
+    "/publications/10-3389-feduc-2024-1442318/dustin-edwards-10-3389-feduc-2024-1442318.pdf",
+    "/publications/10-3390-ijerph22071139/dustin-edwards-10-3390-ijerph22071139.pdf",
+    "/publications/10-3390-v3060861/dustin-edwards-10-3390-v3060861.pdf",
+    "/publications/10-3390-v3101815/dustin-edwards-10-3390-v3101815.pdf",
+    "/publications/10-7589-2018-08-187/dustin-edwards-10-7589-2018-08-187.pdf",
+    "/publications/10-7589-2019-04-088/dustin-edwards-10-7589-2019-04-088.pdf",
+    "/publications/10-7589-jwd-d-22-00023/dustin-edwards-10-7589-jwd-d-22-00023.pdf",
     "/site.webmanifest"
   ],
   "placeholders": {
-    "/phage-hunters/2017.webp": {
+    "/phage-hunters/dustin-edwards-2017.webp": {
       "sha": "c3c4391fff3ce67a",
       "lqip": "data:image/webp;base64,UklGRiQBAABXRUJQVlA4IBgBAABQBgCdASoUAA8APlEejEQjoaEYBAA4BQSgCdMoMrnGbb7emAbzLLIEQA82fOGqACjkhI6VczFCNto4gADif4zL4yHu4APmFWVgjIPjgVHWv0x0g5615j7kl5/+LlsNxr0YRR0XelbNJ73vEnIv/gpfZ0O/u6zPpZARr/lvb/2lTQB1/klntAJH2al7XNy01Oxt9zsVfb4bFANpuaLlG3vh4jkIw/DKL1nXVS7G8R/BKbH1RCr71kfzvIOLSmN/3ye2kAnFMrX+BXfQP/wv3hyD38f7n4Jnxw51/lXkAxXFxTWPA4Ke/pOOr+XEueof5Jg8/3LLCCiqXW/dIe/xeKEgWH+kSkJ36exetOdVEFINgD3Ss6XoAAAA"
     },
-    "/phage-hunters/2018.webp": {
+    "/phage-hunters/dustin-edwards-2018.webp": {
       "sha": "8dab41b71168a2cc",
       "lqip": "data:image/webp;base64,UklGRvwAAABXRUJQVlA4IPAAAAAwBQCdASoUAA0APlEejEQjoaEYBAA4BQSgCdMoMllqRWyZnU+XRG0zRBLiuGKYZrm8AAD5aqke/vp0/fQvJSc7PHsvieSVXED8VY/3HadtekNNtFjfvnK669Ax9oeX/bkS/r9+0FA8mt46rby+yMu+H6ik67wsbYgpr3mZStEwnvTv3QpdIvrFgRyMA8KrAyp4Gv6+PEB6ttb2Dvx1fzowxcKsZCq22CGRH3lkt/qX/xXaefpbrd4bb+mz76uu5/X+H72vc+Yr+JRnIf+tAaN2PwhIzaeO9p1gGo31XxJSRxwykN+curIo+XycDKSZIAA="
     },
-    "/phage-hunters/2019.webp": {
+    "/phage-hunters/dustin-edwards-2019.webp": {
       "sha": "9927b7908885dfa6",
       "lqip": "data:image/webp;base64,UklGRg4BAABXRUJQVlA4IAIBAABQBQCdASoUAA0APlEejEQjoaEYBAA4BQSgCdMoMlxFWNQCXM9WjznvlYzouUGu9iUsLQAA/m05r7KI9+dmjls1CPkdF/9H8MyKMRLoW7vB/uaFl09Xdzgy9fd9a5Zhx6HQM3nm1+oT3s6EeAuASKbtA/mMjumfDUDbVcdsgXm3aLYlFGvoVU/MxwRDu7bYKukdb0CbFxHfxOtJ5iQ4qx+aESXzEC+Zn5a8ZfF2WxsU/75b+4W3+q+Gg0zKliY1BfrhWi//DlYTVMFVT3rFHD7c8CwsJ7wafp3xCZYZrwbLHFH4Qyvv40810FXm5r9mRvfwau5DWr2MyKKHWhCx/PXYAAA="
     },
-    "/phage-hunters/2020.webp": {
+    "/phage-hunters/dustin-edwards-2020.webp": {
       "sha": "00c19fc0a6b5e591",
       "lqip": "data:image/webp;base64,UklGRuQAAABXRUJQVlA4INgAAABwBACdASoUAA0APlEgjEQjoiEYBAA4BQSgCdMoR3Ac/UrbTk06zdk2cVrvwAD9AqK+tjb38H/5eixO+FnLzOojlG/5Qmy+1+S7KXaH51HnpnXpPR8j6Ym3S1ZE285Lk76FzUD2stIrehl11eML+0n82Eeg4bc3nphkRp5j7Rfho24ummM8V36hn2rOY8VmF6VrVf+H79uRdmf3/g7xL+u3ZJ+Z/KD3ehj8G5xclOpO30bTh2hpG61savWtkuBlX2yo5S2a6AjV283cJPBpUSccCp9cBnJIAAA="
     },
-    "/phage-hunters/2021.webp": {
+    "/phage-hunters/dustin-edwards-2021.webp": {
       "sha": "0f67151a7ba851a6",
       "lqip": "data:image/webp;base64,UklGRvQAAABXRUJQVlA4IOgAAAAwBQCdASoUAA0APlEejEQjoaEYBAA4BQSxgE6ZQjuLkA9f8Wp4trbBXkKB/G0Qcn1uoAD++qEUDR/EMhyIQgdg9LkEMUAMF7Ot1cNDN5XluhUvv3QSr2gZErKcgBjxn3ZD4TMo1/z+Ffo9wNwHaYw6Vq+BTmGRhzLmJWfu3Vj7VqrlvLMapzs+9JAQ6FVMxm77fMdrOZQim55qaBdjbgvIiDRXdmGr/f7ITROopu/Sn6jmw/9VIpCf4Z9hPyV3s5b3t+5aABHsAvnvfnUl79nxShze58oityL8fPDRvRASbpErh51RzQAA"
     },
-    "/phage-hunters/2022.webp": {
+    "/phage-hunters/dustin-edwards-2022.webp": {
       "sha": "8d5b059725de801c",
       "lqip": "data:image/webp;base64,UklGRv4AAABXRUJQVlA4IPIAAAAwBQCdASoUAA0APlEejEQjoaEYBAA4BQS1AE6ZQjubyX8VakANjkfbKwZCacYuv/VAAAD+akAQgRwCeOsGEuZ7GwC+s3r7XEl0zVgxSyOQZA/R2hEPr0dHFrUpQ9ZyU6GHXGQiX/Ru60Cx79sT/v3FnH57n/66SyMAmlEsp3rdNw55/rY7GerHPO1nNTwr4urnt/N8x410100dLC+t4Trhft9+/fbZ2pBU7tpHR2jDs+SsyF4+Rbs67PTWJ/ru7bOiSo1Mv/+u1F//0oZH/M5QV+7vUPmBF9HBen+2JxnUuFYObMQ2ryOhrZ7Y4s+ozgAAAA=="
     },
-    "/phage-hunters/2023.webp": {
+    "/phage-hunters/dustin-edwards-2023.webp": {
       "sha": "6fca55efea37d358",
       "lqip": "data:image/webp;base64,UklGRvwAAABXRUJQVlA4IPAAAABwBQCdASoUAA0APlEejEQjoaEYBAA4BQSyAE6ZQjgbZnUgUUqxQFm3Lt78TaNIqJkEhV8AAP5m2q5F+znd7f35VfPSP8KJ84pL4mMH+6x3GLTvvjyHU+imfdTUnSWtu+t/Cj9sjNX9ObQrHDJ9ixo4b6u110xCp/mZRLAgDfTWhyvudwgx3QSZ/n6bjRt99C9lAn8uT/wofnztOg16Ln+0xK9IeuS5L8ulmjP8W9MqNM1mzbepjZw15QYJIDYvLcxiJeDs2Oci2zv0pVZoZd9B5cywYuY7qhnmHDpFNdoyRGMUWCU8StKodyTE1hmoAAA="
     },
-    "/phage-hunters/2024.webp": {
+    "/phage-hunters/dustin-edwards-2024.webp": {
       "sha": "4c8f1f332bb873be",
       "lqip": "data:image/webp;base64,UklGRggBAABXRUJQVlA4IPwAAACwBACdASoUAA0APlEejEQjoaEYBAA4BQSxgE6ZQBLJfqeLIzKmyGB3ugZ+jAgAAP75QOyKXkmp8exJPlrBbIc8GyCwcmpS/NgGEcx31kQL0HYXYs/bQn8qTcqnbz5xqVJ90W+Ilt80n5fyqV9ZcqQujm78q+f7kcimJVc8Mc+OmKdB0EeDksVFM/e+6WPyX96q4xjH25qFbmeMs166cSZeku5BcEheKF6coyNBWZ5PCrp4mzVvHvkbfPcpnlI4HSgI6Hzvp38dbebsmKn8IsjqXPk2/gP+HDu/nr/b4ascasQxZdpuYVuW8B2Ik3MMb4INI/48rFlHAAgQAAA="
     },
-    "/phage-hunters/2025.webp": {
+    "/phage-hunters/dustin-edwards-2025.webp": {
       "sha": "6d243f322627752a",
       "lqip": "data:image/webp;base64,UklGRv4AAABXRUJQVlA4IPIAAABwBQCdASoUAA0APlEejEQjoaEYBAA4BQSgCdMoHCZ/qAK+48778AYHdIj05mEEpB+g021AAP2df4tzN+4wzYZmsYV4r8LXcf1Vlky98FJhze+L67bXcL8/5r9pUpSu63JfZHsQ95zxUuluqDeeoysJcVzjWXS4TK3yQSBi525T9EpLZWo3PLyVFG6+HWt6F/WRRujMqhI+QXLEvwJwrkICwGSOwdO8vSnkeH4yQo4fwdgP1HqPe2TPo/Amazsc9+APcX4I+dDb797frcOOpI1YCaJ7IXbH38RQzg/82ubX7C4kzfd+plmSDqn3lLeC78AAAA=="
     }

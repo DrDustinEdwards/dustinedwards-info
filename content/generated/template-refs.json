@@ -1,147 +1,147 @@
 {
   "generated": 48,
   "refs": {
-    "/android-chrome-192x192.png": [
+    "/dustin-edwards-android-chrome-192x192.png": [
       "public/site.webmanifest"
     ],
-    "/android-chrome-512x512.png": [
+    "/dustin-edwards-android-chrome-512x512.png": [
       "public/site.webmanifest"
     ],
-    "/apple-touch-icon.png": [
+    "/dustin-edwards-apple-touch-icon.png": [
       "app/root.tsx"
+    ],
+    "/dustin-edwards-favicon.svg": [
+      "app/root.tsx"
+    ],
+    "/dustin-edwards-maskable-icon-512x512.png": [
+      "public/site.webmanifest"
+    ],
+    "/dustin-edwards-og-image.png": [
+      "app/lib/seo.ts",
+      "app/routes/playground.ui.tsx"
     ],
     "/favicon.ico": [
       "app/root.tsx"
     ],
-    "/favicon.svg": [
-      "app/root.tsx"
-    ],
-    "/maskable-icon-512x512.png": [
-      "public/site.webmanifest"
-    ],
-    "/og-image.png": [
-      "app/lib/seo.ts",
-      "app/routes/playground.ui.tsx"
-    ],
-    "/phage-hunters/2017.webp": [
+    "/phage-hunters/dustin-edwards-2017.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2018.webp": [
+    "/phage-hunters/dustin-edwards-2018.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2019.webp": [
+    "/phage-hunters/dustin-edwards-2019.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2020.webp": [
+    "/phage-hunters/dustin-edwards-2020.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2021.webp": [
+    "/phage-hunters/dustin-edwards-2021.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2022.webp": [
+    "/phage-hunters/dustin-edwards-2022.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2023.webp": [
+    "/phage-hunters/dustin-edwards-2023.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/phage-hunters/2024.webp": [
+    "/phage-hunters/dustin-edwards-2024.webp": [
       "app/data/phage-hunters.ts",
       "app/routes/playground.ui.tsx"
     ],
-    "/phage-hunters/2025.webp": [
+    "/phage-hunters/dustin-edwards-2025.webp": [
       "app/data/phage-hunters.ts"
     ],
-    "/publications/10-1002-9780470025079-chap06-pub2/10-1002-9780470025079-chap06-pub2.pdf": [
+    "/publications/10-1002-9780470025079-chap06-pub2/dustin-edwards-10-1002-9780470025079-chap06-pub2.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1080-07448481-2025-2472184/10-1080-07448481-2025-2472184.pdf": [
+    "/publications/10-1080-07448481-2025-2472184/dustin-edwards-10-1080-07448481-2025-2472184.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-jmbe-00313-25/10-1128-jmbe-00313-25.pdf": [
+    "/publications/10-1128-jmbe-00313-25/dustin-edwards-10-1128-jmbe-00313-25.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-jvi-00356-08/10-1128-jvi-00356-08.pdf": [
+    "/publications/10-1128-jvi-00356-08/dustin-edwards-10-1128-jvi-00356-08.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-jvi-01788-13/10-1128-jvi-01788-13.pdf": [
+    "/publications/10-1128-jvi-01788-13/dustin-edwards-10-1128-jvi-01788-13.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-jvi-02150-14/10-1128-jvi-02150-14.pdf": [
+    "/publications/10-1128-jvi-02150-14/dustin-edwards-10-1128-jvi-02150-14.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-jvi-03444-13/10-1128-jvi-03444-13.pdf": [
+    "/publications/10-1128-jvi-03444-13/dustin-edwards-10-1128-jvi-03444-13.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00173-22/10-1128-mra-00173-22.pdf": [
+    "/publications/10-1128-mra-00173-22/dustin-edwards-10-1128-mra-00173-22.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00174-22/10-1128-mra-00174-22.pdf": [
+    "/publications/10-1128-mra-00174-22/dustin-edwards-10-1128-mra-00174-22.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00556-21/10-1128-mra-00556-21.pdf": [
+    "/publications/10-1128-mra-00556-21/dustin-edwards-10-1128-mra-00556-21.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00558-21/10-1128-mra-00558-21.pdf": [
+    "/publications/10-1128-mra-00558-21/dustin-edwards-10-1128-mra-00558-21.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00778-23/10-1128-mra-00778-23.pdf": [
+    "/publications/10-1128-mra-00778-23/dustin-edwards-10-1128-mra-00778-23.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00783-22/10-1128-mra-00783-22.pdf": [
+    "/publications/10-1128-mra-00783-22/dustin-edwards-10-1128-mra-00783-22.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-00888-24/10-1128-mra-00888-24.pdf": [
+    "/publications/10-1128-mra-00888-24/dustin-edwards-10-1128-mra-00888-24.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-01039-19/10-1128-mra-01039-19.pdf": [
+    "/publications/10-1128-mra-01039-19/dustin-edwards-10-1128-mra-01039-19.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-01077-21/10-1128-mra-01077-21.pdf": [
+    "/publications/10-1128-mra-01077-21/dustin-edwards-10-1128-mra-01077-21.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-01079-21/10-1128-mra-01079-21.pdf": [
+    "/publications/10-1128-mra-01079-21/dustin-edwards-10-1128-mra-01079-21.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-01242-18/10-1128-mra-01242-18.pdf": [
+    "/publications/10-1128-mra-01242-18/dustin-edwards-10-1128-mra-01242-18.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1128-mra-01594-18/10-1128-mra-01594-18.pdf": [
+    "/publications/10-1128-mra-01594-18/dustin-edwards-10-1128-mra-01594-18.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1187-cbe-21-03-0057/10-1187-cbe-21-03-0057.pdf": [
+    "/publications/10-1187-cbe-21-03-0057/dustin-edwards-10-1187-cbe-21-03-0057.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1371-journal-pone-0042123/10-1371-journal-pone-0042123.pdf": [
+    "/publications/10-1371-journal-pone-0042123/dustin-edwards-10-1371-journal-pone-0042123.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-1371-journal-ppat-1004454/10-1371-journal-ppat-1004454.pdf": [
+    "/publications/10-1371-journal-ppat-1004454/dustin-edwards-10-1371-journal-ppat-1004454.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-3389-feduc-2023-1279921/10-3389-feduc-2023-1279921.pdf": [
+    "/publications/10-3389-feduc-2023-1279921/dustin-edwards-10-3389-feduc-2023-1279921.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-3389-feduc-2024-1442306/10-3389-feduc-2024-1442306.pdf": [
+    "/publications/10-3389-feduc-2024-1442306/dustin-edwards-10-3389-feduc-2024-1442306.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-3389-feduc-2024-1442318/10-3389-feduc-2024-1442318.pdf": [
+    "/publications/10-3389-feduc-2024-1442318/dustin-edwards-10-3389-feduc-2024-1442318.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-3390-ijerph22071139/10-3390-ijerph22071139.pdf": [
+    "/publications/10-3390-ijerph22071139/dustin-edwards-10-3390-ijerph22071139.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-3390-v3060861/10-3390-v3060861.pdf": [
+    "/publications/10-3390-v3060861/dustin-edwards-10-3390-v3060861.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-3390-v3101815/10-3390-v3101815.pdf": [
+    "/publications/10-3390-v3101815/dustin-edwards-10-3390-v3101815.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-7589-2018-08-187/10-7589-2018-08-187.pdf": [
+    "/publications/10-7589-2018-08-187/dustin-edwards-10-7589-2018-08-187.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-7589-2019-04-088/10-7589-2019-04-088.pdf": [
+    "/publications/10-7589-2019-04-088/dustin-edwards-10-7589-2019-04-088.pdf": [
       "app/data/publications.ts"
     ],
-    "/publications/10-7589-jwd-d-22-00023/10-7589-jwd-d-22-00023.pdf": [
+    "/publications/10-7589-jwd-d-22-00023/dustin-edwards-10-7589-jwd-d-22-00023.pdf": [
       "app/data/publications.ts"
     ],
     "/site.webmanifest": [
