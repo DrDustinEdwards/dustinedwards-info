@@ -19,6 +19,6 @@ export function loader({ params }: Route.LoaderArgs) {
   const paper = BY_SLUG.get(params.slug ?? "");
   if (!paper) throw new Response("Not found", { status: 404 });
   return new Response(`${toBibtex(paper)}\n`, {
-    headers: exportHeaders("application/x-bibtex", SHARED_CACHE_CONTROL),
+    headers: exportHeaders("application/x-bibtex", SHARED_CACHE_CONTROL, `${params.slug}.bib`),
   });
 }

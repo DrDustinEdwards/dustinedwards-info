@@ -30,6 +30,8 @@
  * than stored: an unchanged diagram computes the same key on every writer.
  */
 
+import { ASSET_PREFIX } from "../media/classify.mjs";
+
 /**
  * Bumped whenever the diagram TEMPLATE changes: the token map below, the values
  * those tokens resolve to in `app/app.css`, or the mermaid version that draws
@@ -166,7 +168,7 @@ export function diagramKey(source) {
  * @param {string} theme one of DIAGRAM_THEMES
  */
 export function diagramAssetPath(key, theme) {
-  return `/${DIAGRAM_ASSET_DIR}/${key}-${theme}.svg`;
+  return `/${DIAGRAM_ASSET_DIR}/${ASSET_PREFIX}${key}-${theme}.svg`;
 }
 
 /**

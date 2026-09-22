@@ -40,13 +40,13 @@ import assert from "node:assert/strict";
 import { coverDimensions, coverResponsive } from "../app/lib/cover-image.mjs";
 
 /** An uploaded object. The key is the whole subject: it spells 1600 by 900. */
-const SIZED_KEY = "/media/a1b2c3d4e5f60718-1600x900.webp";
+const SIZED_KEY = "/media/dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 /** A second one, deliberately a DIFFERENT shape, so a constant cannot pass. */
-const OTHER_SIZED_KEY = "/media/00112233445566aa-800x1200.webp";
+const OTHER_SIZED_KEY = "/media/dustin-edwards-00112233445566aa-800x1200.webp";
 /** An uploaded object whose key carries no dimensions: an SVG has none. */
-const UNSIZED_KEY = "/media/a1b2c3d4e5f60718.svg";
+const UNSIZED_KEY = "/media/dustin-edwards-a1b2c3d4e5f60718.svg";
 /** A file under `public/`, served as itself. There is no key to read. */
-const STATIC_SRC = "/phage-hunters/2017.webp";
+const STATIC_SRC = "/phage-hunters/dustin-edwards-2017.webp";
 
 test("a sized media key yields the pair the key spells", () => {
   assert.deepEqual(coverDimensions(SIZED_KEY), { width: 1600, height: 900 });

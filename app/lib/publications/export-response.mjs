@@ -8,6 +8,8 @@
  * filter the corpus and one that does not.
  */
 
+import { ASSET_PREFIX } from "../media/classify.mjs";
+
 /**
  * Types the whole-list exports carry, which is the index's list.
  *
@@ -42,13 +44,25 @@ export const SHOWCASE_TYPES = new Set([
  * Michèle, María Alejandra Mussi) and a reference manager that guesses the
  * encoding gets them wrong. Stated rather than defaulted.
  *
+ * ## `Content-Disposition: inline` WITH A FILENAME (ruling 127)
+ *
+ * Inline, so a citation still opens in the tab for the reader who wants to look at it; the
+ * filename is what a save or a reference manager's import names the file, and ruling 127 says
+ * every file that leaves the site starts `dustin-edwards-`. The prefix is added HERE, so a route
+ * names its file and cannot forget the prefix. `check:asset-names` reads the header off each route.
+ *
  * @param {string} type the media type, without parameters
  * @param {string} cacheControl
+ * @param {string} filename the file's name after the prefix, e.g. `publications.bib`
  */
-export function exportHeaders(type, cacheControl) {
+export function exportHeaders(type, cacheControl, filename) {
+  if (!/^[a-z0-9][a-z0-9.-]*$/.test(filename)) {
+    throw new Error(`exportHeaders: "${filename}" is not a safe download name`);
+  }
   return {
     "content-type": `${type}; charset=utf-8`,
     "cache-control": cacheControl,
+    "content-disposition": `inline; filename="${ASSET_PREFIX}${filename}"`,
     "x-robots-tag": "noindex",
   };
 }

@@ -305,6 +305,6 @@ describe("the atomic delete claim", () => {
     /* A false return means EITHER cited OR absent, and the caller must refuse
      * either way. Both branches are covered so the return is never read as
      * meaning only one of them. */
-    expect(await claimMediaKeyForDelete(mediaEnv(), "0123456789abcdef-1x1.png")).toBe(false);
+    expect(await claimMediaKeyForDelete(mediaEnv(), "dustin-edwards-0123456789abcdef-1x1.png")).toBe(false);
   });
 });

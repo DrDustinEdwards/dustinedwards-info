@@ -77,15 +77,21 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
    * no dimension segment, exactly as the `media` table records a NULL width.
    */
   const dimensions = await measureDimensions(env, file.bytes);
+  /*
+   * The author's filename is an INPUT to the key now (ruling 127): it supplies the descriptive
+   * segment a reader sees on disk. It stays in customMetadata below as well, because the slug is
+   * lossy and the original is what the library shows.
+   */
   const key = contentKey(
     await crypto.subtle.digest("SHA-256", file.bytes),
     extension,
     dimensions,
+    file.name,
   );
 
-  // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the bytes, so re-uploading
-  // the same image overwrites an object with a byte-identical one. There is deliberately no "does it
-  // exist" check first.
+  // Unconditional, and idempotent BY CONSTRUCTION: the key is a function of the bytes and the name, so
+  // re-uploading the same file overwrites an object with a byte-identical one. There is deliberately no
+  // "does it exist" check first.
   await env.MEDIA.put(key, file.bytes, {
     httpMetadata: {
       contentType: file.type,
@@ -121,8 +127,8 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
       role: roleOf(key),
       mime,
       bytes: file.bytes.byteLength,
-      // The ONLY surviving copy of what the author called this file. The key
-      // cannot carry it any more, so losing this loses it outright.
+      // The ONLY exact copy of what the author called this file. The key
+      // carries a lossy slug of it, so losing this loses the original.
       originalName: file.name,
       uploadedAt: new Date().toISOString(),
       width: dimensions?.width ?? null,

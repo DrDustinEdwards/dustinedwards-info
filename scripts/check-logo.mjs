@@ -137,10 +137,10 @@ const [MASTER_BOX, HEADER_BOX] = component.viewBoxes;
 
 /** @type {Array<{ file: string, purple: string, viewBox: string | undefined }>} */
 const FIXTURES = [
-  { file: "public/logo.svg", purple: LIGHT, viewBox: MASTER_BOX },
-  { file: "public/logo-dark.svg", purple: DARK, viewBox: MASTER_BOX },
-  { file: "public/logo-header.svg", purple: LIGHT, viewBox: HEADER_BOX },
-  { file: "public/logo-header-dark.svg", purple: DARK, viewBox: HEADER_BOX },
+  { file: "public/dustin-edwards-logo.svg", purple: LIGHT, viewBox: MASTER_BOX },
+  { file: "public/dustin-edwards-logo-dark.svg", purple: DARK, viewBox: MASTER_BOX },
+  { file: "public/dustin-edwards-logo-header.svg", purple: LIGHT, viewBox: HEADER_BOX },
+  { file: "public/dustin-edwards-logo-header-dark.svg", purple: DARK, viewBox: HEADER_BOX },
 ];
 
 for (const { file, purple, viewBox } of FIXTURES) {
@@ -415,7 +415,7 @@ const checksBeforeRender = checks;
   );
 
   const mark = readMark();
-  const fixture = readFixture("public/logo-header-dark.svg");
+  const fixture = readFixture("public/dustin-edwards-logo-header-dark.svg");
 
   // ACTUAL. The font is required by satori and never used, the mark being paths; the cast is the
   // one build-og.mjs makes, so no caller needs a build step.

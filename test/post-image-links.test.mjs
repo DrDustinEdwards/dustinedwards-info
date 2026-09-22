@@ -40,7 +40,7 @@ import assert from "node:assert/strict";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 
 /** An R2 object key in the content grammar: 16 hex digits, then WxH. */
-const MEDIA_KEY = "a1b2c3d4e5f60718-1600x900.webp";
+const MEDIA_KEY = "dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const MEDIA_SRC = `/media/${MEDIA_KEY}`;
 /** A static asset. Its own path is the original; it never passes the transform route. */
 const STATIC_SRC = "/publications/measured-latency.png";

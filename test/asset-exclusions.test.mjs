@@ -68,7 +68,7 @@ test("the exclusion is anchored at the root of public/", () => {
 test("a real asset is not excluded", () => {
   // The direction that catches an over-broad match: if these ever start
   // returning a reason, the manifest has silently lost files.
-  for (const p of ["/favicon.ico", "/og-image.png", "/site.webmanifest", "/logo.svg"]) {
+  for (const p of ["/favicon.ico", "/dustin-edwards-og-image.png", "/site.webmanifest", "/dustin-edwards-logo.svg"]) {
     assert.equal(excludedFromAssets(p), null, `${p} was excluded from the manifest`);
   }
 });

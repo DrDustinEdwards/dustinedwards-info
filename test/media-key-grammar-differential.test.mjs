@@ -50,6 +50,8 @@ import {
 /** A fixed 32-byte digest, the same one the reader sweep uses. */
 const DIGEST = Uint8Array.from({ length: 32 }, (_, i) => i).buffer;
 const HEX16 = "0001020304050607";
+/** Ruling 127's prefix, restated rather than imported for the same reason as EXTENSIONS below. */
+const P = "dustin-edwards-";
 
 /**
  * Every extension `classify()` accepts, restated here on purpose.
@@ -88,25 +90,27 @@ function generatedInputs() {
  * The negatives, including the two inputs that separated the old spellings.
  *
  * Keeping `-0800x600` and `-800x0600` here is the point of the whole exercise:
- * they are the only inputs in 234 that told the two spellings apart, so a
+ * they are the only inputs in 235 that told the two spellings apart, so a
  * future edit that reintroduces the loose form is caught by exactly these rows
  * and by nothing else.
  */
 const NEGATIVES = [
   "og/some-post-65777080.png",
   "/publications/paper.pdf",
-  HEX16,
+  `${P}${HEX16}`,
   "",
-  `${HEX16}-0800x600.webp`,
-  `${HEX16}-800x0600.webp`,
-  `${HEX16}-0x0.webp`,
-  `${HEX16}-000000x1.webp`,
-  `${HEX16}-100000x1.webp`,
-  `${HEX16}-1600x900.WEBP`,
-  `${HEX16}-1600x900`,
-  `${HEX16.toUpperCase()}-1600x900.webp`,
+  `${P}${HEX16}-0800x600.webp`,
+  `${P}${HEX16}-800x0600.webp`,
+  `${P}${HEX16}-0x0.webp`,
+  `${P}${HEX16}-000000x1.webp`,
+  `${P}${HEX16}-100000x1.webp`,
+  `${P}${HEX16}-1600x900.WEBP`,
+  `${P}${HEX16}-1600x900`,
+  `${P}${HEX16.toUpperCase()}-1600x900.webp`,
   "photo-800x600.webp",
-  `${HEX16}-1600x900.webp?w=1024#frag`,
+  `${P}${HEX16}-1600x900.webp?w=1024#frag`,
+  // The pre-127 key, which the grammar now refuses: an object still under this name is unmigrated.
+  `${HEX16}-1600x900.webp`,
 ];
 
 const INPUTS = [...generatedInputs(), ...NEGATIVES];
@@ -122,7 +126,11 @@ const OLD_DIMENSIONS_REGEX = /^[0-9a-f]{16}-(\d{1,5})x(\d{1,5})\.[a-z0-9]+$/;
 function oldDimensionsFromKey(/** @type {string} */ keyOrPath) {
   if (typeof keyOrPath !== "string") return null;
   const path = keyOrPath.split(/[?#]/)[0];
-  const key = path.startsWith("/media/") ? path.slice("/media/".length) : path;
+  const unprefixed = path.startsWith("/media/") ? path.slice("/media/".length) : path;
+  // The one line that is not verbatim: ruling 127 put a prefix ahead of the digest, and the old
+  // spelling is compared on what follows it. An unprefixed key is not a key at all now.
+  if (!unprefixed.startsWith(P)) return null;
+  const key = unprefixed.slice(P.length);
   const match = key.match(OLD_DIMENSIONS_REGEX);
   if (!match) return null;
   const width = Number(match[1]);
@@ -147,12 +155,12 @@ test("the extension list here still matches the one classify() accepts", () => {
 });
 
 test("the case set is the size the collapse was measured over", () => {
-  // 11 extensions x 4 dimension shapes x 5 forms = 220, plus 14 negatives.
+  // 11 extensions x 4 dimension shapes x 5 forms = 220, plus 15 negatives.
   // Restated so a generator that stopped early is a failure rather than a
   // smaller clean run, which is the pass-count-is-not-coverage rule.
   assert.equal(generatedInputs().length, 220);
-  assert.equal(NEGATIVES.length, 14);
-  assert.equal(INPUTS.length, 234);
+  assert.equal(NEGATIVES.length, 15);
+  assert.equal(INPUTS.length, 235);
 });
 
 test("CONTROL: the comparison can tell two implementations apart", () => {
@@ -176,8 +184,8 @@ test("CONTROL: the comparison can tell two implementations apart", () => {
 test("the collapsed spelling agrees with the old one except where it was wrong", () => {
   /** Inputs where the two are allowed to differ, each with the reason. */
   const EXPECTED_DIFFERENCES = new Map([
-    [`${HEX16}-0800x600.webp`, "leading zero on the width"],
-    [`${HEX16}-800x0600.webp`, "leading zero on the height"],
+    [`${P}${HEX16}-0800x600.webp`, "leading zero on the width"],
+    [`${P}${HEX16}-800x0600.webp`, "leading zero on the height"],
   ]);
 
   let agreed = 0;
@@ -198,13 +206,13 @@ test("the collapsed spelling agrees with the old one except where it was wrong",
 
   assert.deepEqual(surprises, [], "the collapse changed behaviour somewhere it was not meant to");
   assert.equal(agreed, INPUTS.length - EXPECTED_DIFFERENCES.size);
-  assert.equal(agreed, 232);
+  assert.equal(agreed, 233);
 });
 
 test("on the two inputs that differ, all three readers now give one answer", () => {
   // This is what the collapse bought, and it is worth asserting directly rather
   // than inferring from the counts above. Before it, one key got three answers.
-  for (const key of [`${HEX16}-0800x600.webp`, `${HEX16}-800x0600.webp`]) {
+  for (const key of [`${P}${HEX16}-0800x600.webp`, `${P}${HEX16}-800x0600.webp`]) {
     assert.equal(isContentKey(key), false, `isContentKey(${key})`);
     assert.equal(digestFromKey(key), null, `digestFromKey(${key})`);
     assert.equal(dimensionsFromKey(key), null, `dimensionsFromKey(${key})`);
@@ -224,7 +232,7 @@ test("classify.mjs states the key grammar exactly once", () => {
     spellings,
     1,
     `classify.mjs spells the 16-hex key grammar ${spellings} time(s). One statement, ` +
-      `three readers: isContentKey tests CONTENT_KEY_SHAPE, digestFromKey takes group 1, ` +
-      `dimensionsFromKey takes groups 2 and 3.`,
+      `three readers: isContentKey tests CONTENT_KEY_SHAPE, digestFromKey takes the digest group, ` +
+      `dimensionsFromKey takes width and height.`,
   );
 });

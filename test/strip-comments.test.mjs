@@ -76,7 +76,7 @@ const JSONC = [
   "  // the example config carries comments, which is the point of jsonc",
   '  "name": "dustinedwards",',
   '  "docs": "https://developers.cloudflare.com/workers/",',
-  '  "share": "//cdn.example.com/logo.svg",',
+  '  "share": "//cdn.example.com/dustin-edwards-logo.svg",',
   '  "compatibility_date": "2026-01-01"',
   "}",
 ].join("\n");
@@ -101,7 +101,7 @@ test("THE JSONC BOUNDARY MOVED, and it moved because the tokenizer landed", () =
   assert.equal(parsed.name, "dustinedwards");
   assert.equal(
     parsed.share,
-    "//cdn.example.com/logo.svg",
+    "//cdn.example.com/dustin-edwards-logo.svg",
     "the protocol-relative url must survive, which is the whole boundary that moved",
   );
 });
@@ -109,7 +109,7 @@ test("THE JSONC BOUNDARY MOVED, and it moved because the tokenizer landed", () =
 test("the weak form is SUFFICIENT for JSONC, which is why it stays", () => {
   const parsed = JSON.parse(WEAK(JSONC));
   assert.equal(parsed.name, "dustinedwards");
-  assert.equal(parsed.share, "//cdn.example.com/logo.svg", "the url must survive intact");
+  assert.equal(parsed.share, "//cdn.example.com/dustin-edwards-logo.svg", "the url must survive intact");
   // And the reason weak is enough: a surviving comment does not pass silently.
   assert.throws(() => JSON.parse(JSONC), "JSON.parse throws on a comment it was not given");
 });
@@ -150,7 +150,7 @@ test("THE WEAK FORMS STAY, and this says what is left of the reason", () => {
   assert.equal(WEAK(SVG).includes("cdn.example.com/mark.png"), true, "the weak form keeps it too");
   assert.equal(
     JSON.parse(WEAK(JSONC)).share,
-    "//cdn.example.com/logo.svg",
+    "//cdn.example.com/dustin-edwards-logo.svg",
     "and both forms now agree on this fixture, which is what makes the choice a decision",
   );
 });

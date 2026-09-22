@@ -1420,7 +1420,7 @@ export default function PlaygroundUi() {
 
           <figure className="pgui-shot">
             <img
-              src="/phage-hunters/2024.webp"
+              src="/phage-hunters/dustin-edwards-2024.webp"
               alt="The 2024 Phage Hunters cohort in the teaching lab."
               width={1200}
               height={800}
@@ -1434,7 +1434,7 @@ export default function PlaygroundUi() {
 
           <div className="pgui-og">
             <img
-              src="/og-image.png"
+              src="/dustin-edwards-og-image.png"
               alt="The site's default social card: the mark, the site name and a gold rule."
               width={1200}
               height={630}
