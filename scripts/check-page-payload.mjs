@@ -54,6 +54,10 @@ const ENHANCE_BROTLI_CEILINGS = {
    * bundle is kept at what it was, so this moves the floor and not the slack.
    */
   "blog.js": 2500,
+  /* Measured on the first build of this module, at 431 brotli. THE SECOND SITE-WIDE BUNDLE, after
+     theme.js, so it is the one to watch: every public document pays for it, which is the cost
+     ruling 126's menu and persistence are buying. */
+  "header.js": 700,
   "palette.js": 6000,
   /* Measured on the first build of this module, at 1121 brotli. */
   "search.js": 1600,
@@ -638,7 +642,17 @@ const ROUTE_CEILINGS = {
    *
    * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
    */
-  "/": { id: "routes/home", css: 7100, total: 7800 },
+  /*
+   * RAISED FOR header.js, ruling 126, and ONLY the two routes that actually breached were moved.
+   * The site-wide bundles went from 814 to 1245 brotli, so every route pays the same +431; the
+   * other fourteen absorbed it inside slack they already had and keep the ceiling they were
+   * measured at. Raising those too would add slack nobody measured.
+   *
+   * Measured 7903 on the build that raised it, and the route keeps the 328 bytes of slack it had
+   * before, rounded up to the next hundred. That moves the floor and not the slack, which is the
+   * same rule the blog.js raise above states.
+   */
+  "/": { id: "routes/home", css: 7100, total: 8300 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
@@ -673,7 +687,9 @@ const ROUTE_CEILINGS = {
    * `/projects`, the same shape. It does not pay for `PUBLICATIONS`: the loader touches it and the
    * public plane does not hydrate, so the records never reach a payload.
    */
-  "/publications": { id: "routes/publications", css: 7300, total: 8100 },
+  /* RAISED FOR header.js with the home page above, and for the same +431. Measured 8400, keeping
+     the 131 bytes of slack it had, rounded up. The css ceiling is untouched: it measured 7155. */
+  "/publications": { id: "routes/publications", css: 7300, total: 8600 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
    * HTML is the variable part: a long author list is content, not a payload regression.
@@ -706,6 +722,8 @@ const PRELOAD_EXEMPT = {
 /** The palette is `false` everywhere on purpose: a route reaching it has put a search dialog back. */
 const BUNDLE_USE = {
   "theme.js": () => true,
+  /* Site-wide: the header is on every public page, so its enhancement is too. */
+  "header.js": () => true,
   "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
   "ask.js": (/** @type {string} */ id) => id === "routes/search",
   /* The search page's own enhancement: it upgrades that page's form and result list and has
