@@ -57,7 +57,7 @@ function SourceChip({ result }: { result: SourceResult<unknown> }) {
 }
 
 /**
- * Rule 1: colour is never the only channel. The dot carries a shape per status
+ * Rule 1: color is never the only channel. The dot carries a shape per status
  * and the word rides alongside it, visually hidden. Before this the state reached
  * sighted readers as a hue and reached assistive tech not at all.
  */

@@ -28,7 +28,7 @@ const NOT_AUTHORED = new Set(["headSha", "isNew", "firstPublished", "intent"]);
 export function draftKey(slug: string, headSha: string) {
   // A new post has no base commit of its own, so it keys on the repo head it
   // was started from. That still changes when main moves, which is the
-  // behaviour we want.
+  // behavior we want.
   return `post-draft:${slug || "new"}:${headSha || "detached"}`;
 }
 

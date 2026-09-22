@@ -1,6 +1,6 @@
 /**
- * Reads the ratified colour tokens back out of the stylesheet that ships, so anything needing a
- * colour at BUILD time resolves it here rather than restating a hex.
+ * Reads the ratified color tokens back out of the stylesheet that ships, so anything needing a
+ * color at BUILD time resolves it here rather than restating a hex.
  *
  * BOUNDARY: `check:contrast` deliberately keeps its own copy of this parsing, being the gate whose
  * design is that two independent sources argue, so sharing a reader would give the palette one
@@ -155,7 +155,7 @@ export const THEME_SELECTORS = {
  * traps, both already paid for once in `check:contrast`:
  *
  *   1. Comments are stripped FIRST: the token block's own comment spells out all three selectors.
- *   2. CRLF is normalised FIRST: the file is not pinned by `.gitattributes` and this repo runs
+ *   2. CRLF is normalized FIRST: the file is not pinned by `.gitattributes` and this repo runs
  *      autocrlf, so a fresh clone gets CRLF and every multi-line selector match stops matching.
  *
  * @param {string} label
@@ -202,7 +202,7 @@ export function resolveTokens(nameMap, block, label) {
       throw new Error(`${label}: ${key} wants ${token}, which app.css does not declare`);
     }
     if (!/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(value)) {
-      throw new Error(`${label}: ${token} is "${value}", which is not a plain hex colour`);
+      throw new Error(`${label}: ${token} is "${value}", which is not a plain hex color`);
     }
     out[key] = value;
   }
@@ -210,8 +210,8 @@ export function resolveTokens(nameMap, block, label) {
 }
 
 /**
- * Normalises a hex for comparison: the CSS toolchain rewrites long form to short, so a literal
- * comparison reports colours missing from output that carries them.
+ * Normalizes a hex for comparison: the CSS toolchain rewrites long form to short, so a literal
+ * comparison reports colors missing from output that carries them.
  *
  * @param {string} hex
  */

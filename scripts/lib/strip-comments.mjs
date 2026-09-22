@@ -86,7 +86,7 @@ function scan(source, options) {
       continue;
     }
 
-    /* A REGEX LITERAL, copied whole, character classes honoured. */
+    /* A REGEX LITERAL, copied whole, character classes honored. */
     if (c === "/" && source[i + 1] !== "/" && source[i + 1] !== "*" && opensRegex()) {
       let j = i + 1;
       let inClass = false;

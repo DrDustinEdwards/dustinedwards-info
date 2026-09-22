@@ -150,7 +150,7 @@ test("THE ACTION IS PREFETCH, NOT PRERENDER", () => {
    * did.
    *
    * The action is asserted as the payload's own KEY, not as a property of a rule
-   * object, because that key is what selects the browser's behaviour.
+   * object, because that key is what selects the browser's behavior.
    */
   const payload = payloadOn("/blog");
   assert.equal(DOCUMENT_ACTION, "prefetch");
@@ -262,7 +262,7 @@ test("ANY URL CARRYING A QUERY IS EXCLUDED, as a search component", () => {
    * spelling of this exclusion was PLANTED on 2026-08-28: Chrome then resolved
    * ZERO candidates on every page, so it does not leak queries, it collapses
    * the whole rule. The wrong spelling looks correct and fails silently, which
-   * is why the assertion is on the component rather than on behaviour.
+   * is why the assertion is on the component rather than on behavior.
    */
   assert.ok(
     exclusions("/blog").includes("search:(.+)"),
@@ -297,7 +297,7 @@ test("no header link carries a prefetch prop, because none could run", () => {
    * INVERTED 2026-08-26 with the unhydration arc. This test used to require
    * `prefetch="intent"`. The prop works through React event handlers, which
    * attach only on a hydrated page, and the public plane no longer hydrates, so
-   * a prefetch prop here is dead configuration that reads as an optimisation.
+   * a prefetch prop here is dead configuration that reads as an optimization.
    * Speculation rules are declarative and need no script. A prefetch prop
    * reappearing means either someone re-added a dead prop, or the header moved
    * to a hydrated plane and this test's premise changed; both deserve a stop.

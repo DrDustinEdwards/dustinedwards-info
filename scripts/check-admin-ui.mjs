@@ -1,7 +1,7 @@
 /**
  * Gate over what the admin's forms submit: each page reduces to `METHOD action | intent |
  * field names`, so a control may move but must send what it sent before. Server imports are
- * stubbed; no server behaviour, styling or layout is seen. Fails closed: a missing fixture is
+ * stubbed; no server behavior, styling or layout is seen. Fails closed: a missing fixture is
  * an error, and every comparison is paired with a count.
  *
  *   npm run check:admin-ui
@@ -1529,7 +1529,7 @@ const STATES = [
   },
   /*
    * The hidden `intent` stays enabled, so the payload is unchanged; browser submission is not
-   * modelled. The state exists for the label.
+   * modeled. The state exists for the label.
    */
   {
     name: "mentions, nothing expired",
@@ -1752,7 +1752,7 @@ const t = (label, ok, detail) => assert(`transition: ${label}`, ok, detail);
   // An empty table passes the loop.
   t("the intent table was non-empty", intentsChecked >= 6, `${intentsChecked} intents`);
 
-  /* A parser that also honours `draft` is a half-applied revert. */
+  /* A parser that also honors `draft` is a half-applied revert. */
   const withDraftField = (/** @type {string} */ intent) => {
     const form = new FormData();
     form.set("intent", intent);
@@ -2163,7 +2163,7 @@ structural("a withdrawn draft ships no ceremony dialog", "edit, draft that publi
 
 /*
  * Subtracted, not extracted: both render the same button, and an end anchor would match a
- * neighbour.
+ * neighbor.
  */
 /** @param {string} h @returns {string} everything outside the ceremony dialog */
 const withoutCeremonyDialog = (h) =>
@@ -2198,7 +2198,7 @@ structural(
 structural("the featured row is marked", "posts index, clean", (h) =>
   (h.match(/class="posts-featured"/g) ?? []).length === 1,
 );
-structural("the mark is a word, not only a colour", "posts index, clean", (h) =>
+structural("the mark is a word, not only a color", "posts index, clean", (h) =>
   /class="posts-featured">Featured</.test(h),
 );
 structural("an empty corpus marks nothing", "posts index, empty corpus", (h) =>
@@ -2478,7 +2478,7 @@ structural("existing posts do not", "edit, published", (h) => !h.includes('id="f
 /* The document card. */
 
 structural(
-  "a document tile renders a card, not an empty labelled box",
+  "a document tile renders a card, not an empty labeled box",
   "media, document in the grid",
   (h) => h.includes('class="media-doc"') && h.includes('class="media-doc-title"'),
 );
@@ -3173,7 +3173,7 @@ structural(
   (h) => /<a[^>]*class="media-detail-scrim"[^>]*href="|<a[^>]*href="[^"]*"[^>]*class="media-detail-scrim"/.test(h),
 );
 structural(
-  "the drawer is labelled and modal",
+  "the drawer is labeled and modal",
   "media, detail open",
   (h) => /aria-modal="true"/.test(h) && /aria-label="Details for /.test(h),
 );
@@ -3841,7 +3841,7 @@ structural(
 );
 /* The label carries the count. */
 structural(
-  "the sweep button is labelled with what it would remove",
+  "the sweep button is labeled with what it would remove",
   "mentions, populated queue",
   (h) => /<button type="submit" class="btn-secondary">Remove 3 expired<\/button>/.test(h),
 );
@@ -3919,7 +3919,7 @@ const AXIS_CONTROL = {
 };
 
 /**
- * The labelled `<nav>` markup, or "".
+ * The labeled `<nav>` markup, or "".
  * @param {string} html
  * @param {string} ariaLabel
  */
@@ -3960,7 +3960,7 @@ for (const axis of DISPLAY_AXES) {
     .map(([name, html]) => [name, navNamed(html, control.nav)])
     .filter(([, nav]) => nav.length > 0);
   assert(
-    `no-script: the ${axis} control renders a nav labelled "${control.nav}"`,
+    `no-script: the ${axis} control renders a nav labeled "${control.nav}"`,
     owning.length > 0,
     `no rendered state contains <nav aria-label="${control.nav}">, so the ` +
       `control that owns ${axis} is gone and its options cannot be links.`,

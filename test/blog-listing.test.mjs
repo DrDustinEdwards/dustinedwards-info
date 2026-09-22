@@ -141,7 +141,7 @@ test("a short corpus returns what it has rather than padding", () => {
   assert.deepEqual(recent, [], "one post is one card, not one card and three holes");
 });
 
-test("cards is honoured, so the count has one owner", () => {
+test("cards is honored, so the count has one owner", () => {
   const { recent } = startHere([flagship], others, 2);
   assert.deepEqual(
     recent.map((p) => p.slug),

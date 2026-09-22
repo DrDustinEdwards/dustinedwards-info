@@ -340,7 +340,7 @@ async function main() {
   /** @type {string[]} */
   const invalid = [];
   for (const name of assetNames) {
-    // node --check honours the ES-module parse goal only for .mjs, and every
+    // node --check honors the ES-module parse goal only for .mjs, and every
     // asset here is a module.
     const copy = join(scratch, `${name}.mjs`);
     copyFileSync(join(ASSETS_DIR, name), copy);
@@ -985,7 +985,7 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       !/precedence/.test(rootStripped),
     `root.tsx must render it as {linksMath ? <link rel="stylesheet" ` +
       `href={katexCssUrl} /> : null}. Without the guard every page links it; with a ` +
-      `precedence attribute React hoists it above the colour-scheme meta. Neither ` +
+      `precedence attribute React hoists it above the color-scheme meta. Neither ` +
       `failure is visible to the manifest assertions above.`,
   );
 

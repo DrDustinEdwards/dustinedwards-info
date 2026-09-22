@@ -522,7 +522,7 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  *
  * THIS IS NOT A SECOND INDEXER. `records.mjs` remains the only thing that decides what a record is
  * and `keyForUrl` the only thing that turns a URL into an Ask key; these rows were written by
- * `sync:content` from `recordsForPosts`, so this reads that derivation where it was materialised.
+ * `sync:content` from `recordsForPosts`, so this reads that derivation where it was materialized.
  *
  * WHAT IT COSTS: a D1 stale against the artifact would measure drift against a stale baseline. The
  * artifact is byte-gated, `ship` syncs and asserts docsize equality in the same window, and the
@@ -538,7 +538,7 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
 /**
  * The Ask corpus itself: every record the index should hold, with the text to upload. The reading
  * twin of `askExpectedUrls`, and the reason `syncAskCorpus` takes no posts argument: the records
- * were materialised into `search_docs` by the same `records.mjs` both writers run.
+ * were materialized into `search_docs` by the same `records.mjs` both writers run.
  *
  * Visibility is COMPOSED, not restated: `check:invariants` section 8 holds every `search_docs`
  * reader to it.

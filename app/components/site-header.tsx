@@ -13,7 +13,7 @@ import { SITE } from "~/lib/seo";
 
 /**
  * Public site header. Ruling 126: sticky and one line at every width, with the destinations
- * visible on desktop and behind a labelled Menu on narrow widths.
+ * visible on desktop and behind a labeled Menu on narrow widths.
  *
  * THE MENU ARRIVED WITH A PAGE COUNT THAT NEEDED IT, not in anticipation. The line that used to
  * sit here said there was no disclosure widget and no mobile menu machinery; six destinations plus
@@ -34,7 +34,7 @@ import { SITE } from "~/lib/seo";
  *
  * NO `prefetch="intent"`: the prop worked through React event handlers, which
  * exist only on a hydrated page, so on a plane that does not hydrate it was dead
- * configuration that reads as an optimisation. Hover prepayment comes from
+ * configuration that reads as an optimization. Hover prepayment comes from
  * `SiteSpeculation`, which is declarative and needs no script.
  */
 export function SiteHeader() {
@@ -93,7 +93,7 @@ export function SiteHeader() {
           {/*
            * THE SECOND "Main" LANDMARK IS NOT A DUPLICATE AT ANY MOMENT. Exactly one of the
            * two navs is displayed at a given width and `display: none` takes the other out of
-           * the accessibility tree, so a screen reader is never offered two. Labelling this
+           * the accessibility tree, so a screen reader is never offered two. Labeling this
            * one differently would name the same destinations twice over.
            */}
           <nav className="site-header-menu-panel" aria-label="Main">

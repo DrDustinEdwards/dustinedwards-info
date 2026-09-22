@@ -35,7 +35,7 @@ const SPACE_AFTER_OPENING = /([([])\s+/g;
  *
  * THE SPACE IS NOT OPTIONAL AND NEITHER IS CLEANING UP AFTER IT. Tags become a SPACE rather than
  * nothing, an earlier import having welded two words together. The cost is a space that was never
- * in the rendered text, which several titles carry, italicised organism names sitting inside
+ * in the rendered text, which several titles carry, italicized organism names sitting inside
  * parentheses, and a title differing by a space may not match in Google Scholar. So the space is
  * inserted, whitespace collapsed, then the space removed from the two places typography never
  * puts one. The order matters: collapsing first means the cleanup sees a single space.

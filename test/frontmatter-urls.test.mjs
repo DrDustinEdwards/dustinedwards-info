@@ -20,7 +20,7 @@
  *
  * `check:urls` covers the same ground from the other side: it asserts against
  * the SOURCE TEXT that both fields call the predicate, which is the part
- * behaviour cannot see. Neither replaces the other.
+ * behavior cannot see. Neither replaces the other.
  */
 
 import test from "node:test";

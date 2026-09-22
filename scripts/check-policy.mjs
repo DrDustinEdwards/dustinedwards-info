@@ -1171,7 +1171,7 @@ refuses(
   const statusBody = bodyOf(askSource, "askIndexStatus");
 
   // SCOPE, ASSERTED. An extractor returning "" reports a missing binding that
-  // is present; one returning the whole file passes on a neighbour's code.
+  // is present; one returning the whole file passes on a neighbor's code.
   eq(
     "the askIndexStatus body was extracted, and it is that function alone",
     statusBody.length > 80 &&

@@ -566,7 +566,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             <a
               className="post-action"
               href={`https://claude.ai/new?q=${encodeURIComponent(
-                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarise it.`,
+                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarize it.`,
               )}`}
               rel="noopener noreferrer"
             >
@@ -575,7 +575,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             <a
               className="post-action"
               href={`https://chatgpt.com/?q=${encodeURIComponent(
-                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarise it.`,
+                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarize it.`,
               )}`}
               rel="noopener noreferrer"
             >

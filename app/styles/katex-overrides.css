@@ -1,6 +1,6 @@
 /* The site's half of the math stylesheet, hand written; build-katex.mjs appends it to the generated
  * upstream CSS. Run npm run build:katex after editing: check:content byte-compares the output.
- * Ships only with math. Sets no colour: KaTeX draws in currentColor, so themes and forced-colors follow. */
+ * Ships only with math. Sets no color: KaTeX draws in currentColor, so themes and forced-colors follow. */
 
 /* Display math scrolls inside itself: KaTeX sets nowrap, so a long equation is wider than the column.
  * overflow-y: hidden avoids a second scrollbar; the padding keeps subscripts. Not focusable, like

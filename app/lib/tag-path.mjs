@@ -9,7 +9,7 @@
  * instead of the compiler.
  *
  * THE SLUG IS ENCODED AND NOT NORMALISED. `tags.slug` is already the write
- * path's normalisation and re-slugifying here would be a second answer to what
+ * path's normalization and re-slugifying here would be a second answer to what
  * a tag is called; `encodeURIComponent` only makes that answer safe to put in a
  * path segment.
  *

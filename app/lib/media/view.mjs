@@ -42,7 +42,7 @@ export const DIRS = ["desc", "asc"];
  * say; "Largest" ascending is the smallest files under a label promising the
  * opposite, and that is what the page shipped: the Sort group set `sort` alone
  * and left whatever `dir` happened to be in the URL. Choosing Largest while
- * ascending gave you the smallest file first, from a control labelled Largest.
+ * ascending gave you the smallest file first, from a control labeled Largest.
  *
  * So a sort choice carries its direction, and BOTH controls that make one read
  * it from here. That is the whole reason this is a table rather than two
@@ -90,7 +90,7 @@ const CONFIRMS = ["empty-trash"];
  *
  * **LIST, NOT GRID, and that is a measurement rather than a taste.** 31 of the
  * 70 rows are PDFs and 58 are static assets; a document has no thumbnail the
- * Images binding can produce, so a grid renders it as a labelled empty box. A
+ * Images binding can produce, so a grid renders it as a labeled empty box. A
  * PDF in an image-shaped container is the wrong container, and the majority of
  * this library is not images. Grid stays one click away for the case where the
  * pictures are the point.
@@ -185,7 +185,7 @@ export function readView(params) {
     page: Number.isFinite(page) && page >= 1 ? Math.floor(page) : 1,
     trash: params.get("trash") === "1",
     // NOT trimmed or lowercased: a media key is an exact string, 58 of them are
-    // paths, and normalising one would make a bookmarked inspector link miss.
+    // paths, and normalizing one would make a bookmarked inspector link miss.
     key: params.get("key") ?? "",
     confirm: oneOf(params.get("confirm"), CONFIRMS, DEFAULTS.confirm),
   };
@@ -198,7 +198,7 @@ export function readView(params) {
  * the full state and overriding one field is what makes dropping a parameter an
  * act rather than an omission.
  *
- * Defaults are OMITTED from the emitted query, which is not an optimisation. It
+ * Defaults are OMITTED from the emitted query, which is not an optimization. It
  * keeps the bare `/admin/media` URL meaningful as "the default view", so
  * `Reset to defaults` can be a link to it, and it keeps a shared URL readable.
  * A parameter equal to its default is not carried because it does not need to
@@ -479,7 +479,7 @@ export function folderPrefix(key) {
  * prefix and differ only at the end, so nine tiles rendered as nine copies of
  * one string while the distinguishing half was the half thrown away.
  *
- * Dropping the directory rather than de-emphasising it, because a de-emphasised
+ * Dropping the directory rather than de-emphasizing it, because a de-emphasized
  * prefix still spends horizontal space on the segment that fails to tell these
  * rows apart, and at 109px of room there is none to spend. The full key stays a
  * hover away in the `title` and a click away in the detail view, which is also

@@ -15,15 +15,15 @@ import { countWords } from "~/lib/content/reading-time.mjs";
  * Pure, and it reads no clock and no environment, so the two cannot differ by timing either.
  */
 
-/** A neighbouring post in the reading order, or the end of it. */
+/** A neighboring post in the reading order, or the end of it. */
 type Neighbour = { slug: string; title: string } | null;
 
 /**
  * A blog row as either reader hands it over.
  *
- * The neighbours are WIDENED to nullable here rather than taken as `getBlogPost` infers them: its
+ * The neighbors are WIDENED to nullable here rather than taken as `getBlogPost` infers them: its
  * `previous ?? null` narrows back to non-null, because the array destructure it comes from is not
- * index-checked, so the inferred type says a post always has a neighbour. Every post at either end
+ * index-checked, so the inferred type says a post always has a neighbor. Every post at either end
  * of the corpus disproves that, and a draft preview has neither by design.
  */
 type LoadedPost = Omit<
@@ -62,7 +62,7 @@ function parseJson(value: string | null, fallback: unknown) {
   }
 }
 
-/** @param post a blog row with its tags and neighbours @param seriesParts */
+/** @param post a blog row with its tags and neighbors @param seriesParts */
 export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
   /** @see drizzle/0003_post_toc.sql */
   let toc: Array<{ depth: number; id: string; text: string }> = [];

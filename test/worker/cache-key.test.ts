@@ -76,7 +76,7 @@ describe("the cache key the gateway builds", () => {
     expect(a.props).toEqual({ theme: "dark" });
   });
 
-  it("SEPARATES BY THEME, so one reader's colours never reach another", async () => {
+  it("SEPARATES BY THEME, so one reader's colors never reach another", async () => {
     const dark = dimensionsFor(`${ORIGIN}/blog/a-post`, "dark");
     const light = dimensionsFor(`${ORIGIN}/blog/a-post`, "light");
 
@@ -150,7 +150,7 @@ describe("the cache key the gateway builds", () => {
     /*
      * The toggle and the key both go through `app/lib/theme.ts`. Asserted
      * rather than assumed, because a disagreement here would serve one reader's
-     * colours to another, which is the defect the whole dimension exists to
+     * colors to another, which is the defect the whole dimension exists to
      * prevent.
      */
     const cookie = serializeThemeCookie("dark");

@@ -22,21 +22,21 @@ What survives from the bar is the lesson below, not the bar.
 
 ## Never invent a token
 
-Every colour, space, radius, weight and layer already has a custom property, and
+Every color, space, radius, weight and layer already has a custom property, and
 the token table in the conventions header lists the families. A new name is not a
 shortcut: it is a value with no owner, nothing painting it and no gate watching
 it.
 
 This is not hypothetical. The 2026-09 redesign invented `--bar-fill` while
 `--surface-chrome` already existed and was already documented, and that single
-substitution invalidated every colour in the header at once, because the
+substitution invalidated every color in the header at once, because the
 surrounding tokens were still measured against the token it replaced.
 
 - The five chrome role tokens still exist for the social cards and are no longer
   painted by any public sheet, because the header is paper. They are not a
   surface to reach for.
 - **Token pairings are MEASURED and their numbers are owned by `check:contrast`.**
-  Use the tokens and the measurement holds. Compute a colour yourself, or swap
+  Use the tokens and the measurement holds. Compute a color yourself, or swap
   one side of a pair, and it does not, and the gate will say so after you have
   done the work rather than before.
 - Popover elevation and pinned bars take `--border-strong`, never `--border`.
@@ -46,7 +46,7 @@ surrounding tokens were still measured against the token it replaced.
 `.site-header-brand` carries its own `:visited` and `:hover` rules at a higher
 specificity than the base anchor rules, and that is the fix rather than the
 mess. The base `a:visited` outranks the plain class, so without those rules the
-site's own name turns visited-coloured for every returning reader. The comment in
+site's own name turns visited-colored for every returning reader. The comment in
 `app/styles/public-chrome.css` says, in the file: do not "simplify" them away.
 
 An identity element is not somewhere the reader has been. It is who the site is.
@@ -77,8 +77,8 @@ atmosphere** (ruling 122): oxide is series 1 and carries every annotation, the
 figure and plate numbers, leaders, labels and strokes; leaf is series 2; cadet
 is series 3; and the dust step used for lawn and halo texture is never a series
 at all. None of them ever lands on a control, and purple never lands in a
-figure: in light `--brand` IS the link colour, so a purple series reads as a row
-of links. If something is interactive, it is purple or it is not signalling
+figure: in light `--brand` IS the link color, so a purple series reads as a row
+of links. If something is interactive, it is purple or it is not signaling
 interactivity.
 
 **The system is Paper and Plate** (ruling 123), internal only, never printed on
@@ -136,7 +136,7 @@ will ever tell you:
 
 - Both themes are first class. A themed container owes **both**
   `background: var(--paper)` and `color: var(--text)`; setting only the
-  background inherits the other theme's text colour and has already shipped a
+  background inherits the other theme's text color and has already shipped a
   preview with invisible body copy. `--paper` is the ground of BOTH planes: ruling 128 collapsed the four creams
   into it, so there is no second ground to pick by mistake.
 - Focus is always visible: `--brand`, 2px, 2px offset, square corners. The

@@ -41,11 +41,11 @@ const { mark: MARK } = resolveTokens(
  *
  * WHICH PATHS ARE THE BRAND PATHS IS DERIVED, NOT LISTED: the light and dark fixtures are
  * identical except for the fills on the purple paths, so the paths whose fill DIFFERS are exactly
- * the ones that take a brand colour. Nothing here restates a hex or a path index.
+ * the ones that take a brand color. Nothing here restates a hex or a path index.
  *
  * It fails closed on every way the fixtures could stop agreeing: a different viewBox, a different
  * path count, differing geometry, or no differing fill at all, which would silently paint the mark
- * in asset colours.
+ * in asset colors.
  *
  * @returns {Mark}
  */
@@ -92,7 +92,7 @@ export function readMark() {
    * the viewBox's aspect times the height is a squashed mark and satori will not say so. The subtler
    * failure is measured: satori LAYS OUT at integer pixels and writes the embedded svg at the exact
    * aspect, so resvg letterboxes the difference and the mark renders fractionally short and off
-   * centre, which is invisible and is enough to stop it matching the fixture pixel for pixel, which
+   * center, which is invisible and is enough to stop it matching the fixture pixel for pixel, which
    * is how this mark is now proved. So the CROP is padded symmetrically until its aspect is exactly
    * the integer box's: only the empty margin moves and no path is touched.
    */

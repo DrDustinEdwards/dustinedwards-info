@@ -45,7 +45,7 @@ export function pageCount(total, perPage = POSTS_PER_PAGE) {
  * Before 2026-08-21 the route found the featured post inside the page's own
  * array and rendered it above that same array unchanged, so it appeared twice.
  * The route's own comment read "repeating it above a list it already appears in
- * reads as a duplicate", which was the argument against the behaviour the next
+ * reads as a duplicate", which was the argument against the behavior the next
  * three lines introduced.
  *
  * HERE RATHER THAN INLINE IN THE LOADER, so `test/blog-listing.test.mjs` can
@@ -70,7 +70,7 @@ export function pageCount(total, perPage = POSTS_PER_PAGE) {
  * standing claims about the code.
  *
  * MATCHED BY SLUG, not by object identity. The two arrays hold the same objects
- * today, but identity is not a property this should rest on: a serialisation
+ * today, but identity is not a property this should rest on: a serialization
  * boundary anywhere upstream would break it silently, and slug is unique by
  * schema.
  *

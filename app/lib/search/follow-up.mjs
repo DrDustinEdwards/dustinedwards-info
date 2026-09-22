@@ -47,7 +47,7 @@ export function splitFollowUp(raw) {
   const lines = raw.split("\n");
   for (let i = lines.length - 1; i >= 0; i -= 1) {
     /* Indexed access is `string | undefined` under noUncheckedIndexedAccess. The loop bound makes
-       it a string; the fallback satisfies the checker without widening the behaviour. */
+       it a string; the fallback satisfies the checker without widening the behavior. */
     const line = (lines[i] ?? "").trim();
     if (!line.startsWith(FOLLOW_UP_MARKER)) continue;
     const question = line.slice(FOLLOW_UP_MARKER.length).trim();

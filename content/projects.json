@@ -168,11 +168,11 @@
       "slug": "foxing",
       "name": "Foxing",
       "oneLiner": "A reader and reading-social product built on the public domain.",
-      "description": "A reading application carrying a curated public-domain library from Standard Ebooks and Project Gutenberg, with progress tracking and social features around what people are reading. Anyone can have the same books. The work is in the curation, the typography and the reading state rather than in owning the catalogue.",
+      "description": "A reading application carrying a curated public-domain library from Standard Ebooks and Project Gutenberg, with progress tracking and social features around what people are reading. Anyone can have the same books. The work is in the curation, the typography and the reading state rather than in owning the catalog.",
       "notable": [
-        "Cover art is downloaded into the project's own storage rather than linked from wherever it was found, so the catalogue does not rot when an upstream host moves a file or starts refusing hotlinks.",
+        "Cover art is downloaded into the project's own storage rather than linked from wherever it was found, so the catalog does not rot when an upstream host moves a file or starts refusing hotlinks.",
         "The search index breaks the platform's whole-database export, so backups are taken table by table with the hand-written prose first, and the index's internal tables are deliberately left out because restoring them corrupts the index rather than repairing it.",
-        "The hosted catalogue and the books readers merely log share one table, split by where the row came from, and only catalogue rows carry a file the reader can open."
+        "The hosted catalog and the books readers merely log share one table, split by where the row came from, and only catalog rows carry a file the reader can open."
       ],
       "schemaType": "SoftwareApplication",
       "role": "Sole author",
@@ -180,7 +180,7 @@
       "url": "https://foxing.app",
       "repo": null,
       "stack": ["Cloudflare Workers", "D1", "R2", "TypeScript"],
-      "metric": { "label": "public-domain titles offered, per its own catalogue", "value": "1,432", "asOf": "2026-08-30" }
+      "metric": { "label": "public-domain titles offered, per its own catalog", "value": "1,432", "asOf": "2026-08-30" }
     },
     {
       "slug": "germomics",

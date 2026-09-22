@@ -1,5 +1,5 @@
 /**
- * What a zero-result query is normalised to before it is stored, and what is refused outright.
+ * What a zero-result query is normalized to before it is stored, and what is refused outright.
  *
  * `.mjs` so `node --test` imports the same function the Worker does. This is the privacy boundary
  * of the whole feature: everything the table will ever contain passes through here, so it is the
@@ -50,12 +50,12 @@ const PHONE_SHAPE = /(?:\+?\d[\d\s().-]{6,}\d)/;
  * Serif" are dropped too. That is a lost row in a demand list. The alternative, a name list, would
  * be both incomplete and a list of people's names living in the repository.
  *
- * It does not fire on a normal sentence-case query, because the second word is not capitalised.
+ * It does not fire on a normal sentence-case query, because the second word is not capitalized.
  */
 const NAME_SHAPE = /\b[A-Z][a-z]+\s+[A-Z][a-z]+/;
 
 /**
- * Normalise a query for storage, or return null to refuse it.
+ * Normalize a query for storage, or return null to refuse it.
  *
  * LOWERCASED AND COLLAPSED, so "D1  Backups" and "d1 backups" are one gap rather than two rows.
  * The case tests above run on the RAW input, before lowercasing, because lowercasing destroys the
@@ -80,7 +80,7 @@ export function normaliseZeroResultQuery(raw) {
   if (NAME_SHAPE.test(trimmed)) return null;
 
   const normalised = trimmed.toLowerCase().replace(/\s+/g, " ");
-  /* A query of only punctuation normalises to something with no letters or digits in it. */
+  /* A query of only punctuation normalizes to something with no letters or digits in it. */
   if (!/[\p{L}\p{N}]/u.test(normalised)) return null;
 
   return normalised;

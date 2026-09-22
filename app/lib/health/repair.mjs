@@ -142,7 +142,7 @@ export function repairPlan(failingNames, { hasToken }) {
       alertOnly: true,
       reason:
         `no self-repair: ${unknown.join(", ")} ${unknown.length === 1 ? "is" : "are"} not a ` +
-        `known drift class. Repair is not attempted for the recognised classes either, ` +
+        `known drift class. Repair is not attempted for the recognized classes either, ` +
         `because a compound failure may share a root cause.`,
     };
   }
@@ -372,7 +372,7 @@ export function watchdogOutcome({ misses, recheck }) {
  * explanation away, so fixing one and not the other would have left the more
  * important half (the watchdog polls every fifteen minutes) still reporting a
  * bare status code. One owner per fact, and a third caller inherits both
- * behaviours by construction.
+ * behaviors by construction.
  *
  * ## THE SERVER'S OWN SENTENCE
  *

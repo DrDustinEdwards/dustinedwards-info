@@ -92,7 +92,7 @@ function isIpLiteral(hostname) {
  * A hostname that names the machine the Worker is running on.
  *
  * `localhost` and anything under it. RFC 6761 reserves the whole `.localhost`
- * tree for exactly this, and some resolvers honour it, so the subtree is
+ * tree for exactly this, and some resolvers honor it, so the subtree is
  * refused rather than the bare name alone.
  *
  * @param {string} hostname
@@ -203,7 +203,7 @@ export const EXCERPT_MAX_CHARS = 280;
  *
  * Whitespace collapsed, trimmed, cut to the ceiling. PLAIN TEXT BY
  * CONSTRUCTION: the caller hands in `textContent`, so there is no markup left
- * to strip and no sanitiser here that could be believed to be one.
+ * to strip and no sanitizer here that could be believed to be one.
  *
  * @param {string} text
  */

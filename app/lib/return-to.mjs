@@ -68,7 +68,7 @@ export function safeReturnTo(request) {
      *
      * The echo STAYS. It costs nothing, it is validated by the same three lines
      * above that validate everything else, and a caller that one day passes a
-     * URL from somewhere other than a `Referer` gets correct behaviour rather
+     * URL from somewhere other than a `Referer` gets correct behavior rather
      * than a silently truncated one. What is removed is the CLAIM that it does
      * something for the no-script reader today.
      */

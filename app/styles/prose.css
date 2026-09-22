@@ -176,7 +176,7 @@
    ten-years-on-cloudflare was 431px wide and took the whole page sideways with it.
 
    UNSCOPED ON PURPOSE, and this rule is the owner: /playground/ui's inventory table had the same
-   defect (+68 at 320) and takes the same container, so the behaviour is stated once rather than
+   defect (+68 at 320) and takes the same container, so the behavior is stated once rather than
    once per sheet. The margin is scoped to prose, where the pipeline puts it. */
 .table-scroll {
   overflow-x: auto;
@@ -194,7 +194,7 @@
 }
 
 /* Only inside the container, so a table written in JSX rather than produced by the pipeline keeps
-   the old behaviour rather than escaping a parent that has no scroll. max-content, not 100%: at
+   the old behavior rather than escaping a parent that has no scroll. max-content, not 100%: at
    100% a wide table squeezes its cells to fit and the scroll never happens; the min keeps a narrow
    table filling the column as it did before. */
 .prose .table-scroll > table {
@@ -239,16 +239,16 @@
   width: 0.85em;
   height: 0.85em;
   border-radius: 0.15em;
-  /* The border is load-bearing, not trim: a chip near the page surface colour
+  /* The border is load-bearing, not trim: a chip near the page surface color
      (near-white in light, near-black in dark) would otherwise be an invisible
-     square, exactly for the colours a palette article discusses. */
+     square, exactly for the colors a palette article discusses. */
   border: 1px solid var(--border);
   /* The fallback keeps `--swatch` out of the theme blocks: read with a
      default here, it never becomes a token, so check:contrast's participation
      check and its exemption map have nothing new to handle. */
   background: var(--swatch, transparent);
   /* Never absorb the flex line's shrink: the label shrinks, the chip does not,
-     because a chip narrower than it is tall stops being a colour sample. */
+     because a chip narrower than it is tall stops being a color sample. */
   flex: none;
 }
 

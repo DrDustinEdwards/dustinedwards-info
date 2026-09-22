@@ -5,7 +5,7 @@
  * THE DEFECT THIS REPLAYS REACHED PRODUCTION. `workers/app.ts` keys its own
  * `caches.default` entry on the request URL plus the resolved theme plus the
  * build, and `caches.default` carries no headers, so `Vary: Accept` cannot be
- * honoured there. The HTML copy of `/blog/:slug` was stored under a key that
+ * honored there. The HTML copy of `/blog/:slug` was stored under a key that
  * the `Accept: text/markdown` request also matched. MEASURED on the wire after
  * the deploy of 2f0b4d5: 31,869 bytes of `text/html` marked
  * `x-theme-cache: hit` in answer to a markdown request.

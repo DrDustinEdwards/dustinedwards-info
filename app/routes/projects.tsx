@@ -39,7 +39,7 @@ import "~/styles/projects.css";
  */
 
 /**
- * A metric is DATED or DERIVED, never both. Modelled as a union rather than two
+ * A metric is DATED or DERIVED, never both. Modeled as a union rather than two
  * optional fields, so a card cannot be written with a value and a derivation and
  * quietly render one of them.
  */

@@ -405,7 +405,7 @@ export async function listBlogTags(env: Env) {
     .orderBy(asc(tags.slug));
 }
 
-/** One post with its rendered HTML, tags, and neighbours. */
+/** One post with its rendered HTML, tags, and neighbors. */
 export async function getBlogPost(env: Env, slug: string) {
   const db = getDb(env);
   const rows = await db
@@ -419,7 +419,7 @@ export async function getBlogPost(env: Env, slug: string) {
 
   const tagMap = await tagsForPosts(db, [post.id]);
 
-  // Neighbours use the same visibility gate, so prev/next cannot reach a draft.
+  // Neighbors use the same visibility gate, so prev/next cannot reach a draft.
   const [previous] = await db
     .select({ slug: posts.slug, title: posts.title })
     .from(posts)
@@ -459,7 +459,7 @@ export async function getDraftPostForPreview(env: Env, slug: string) {
 
   const tagMap = await tagsForPosts(db, [post.id]);
 
-  // No neighbours: a draft has no place in the visible sequence.
+  // No neighbors: a draft has no place in the visible sequence.
   return {
     ...post,
     tags: tagMap.get(post.id) ?? [],
@@ -506,7 +506,7 @@ export async function listPostCorpusForRelated(env: Env) {
       title: posts.title,
       status: posts.status,
       publishAt: posts.publishAt,
-      // For each neighbour's description in a saved related list; not scored.
+      // For each neighbor's description in a saved related list; not scored.
       description: posts.description,
     })
     .from(posts)
@@ -697,7 +697,7 @@ export async function listMediaPage(
     role?: string;
     unusedOnly?: boolean;
     q?: string;
-    /** An exact tag, already normalised by the caller. */
+    /** An exact tag, already normalized by the caller. */
     tag?: string;
     /** A quality lens: 'unattached' | 'duplicates' | 'no-alt' | 'large'. Else no filter. */
     lens?: string;
@@ -786,7 +786,7 @@ export async function mediaRoleCounts(env: Env) {
 /**
  * Twins by the key's content hash, EXACT IDENTITY ONLY, and that is a boundary rather than a
  * first pass. There is no perceptual comparison, no resize detection, no similarity score, and
- * none is coming: a "these look alike" feature would put a judgement call in front of a delete
+ * none is coming: a "these look alike" feature would put a judgment call in front of a delete
  * button, and this library's whole safety argument is that deletion decisions are answerable
  * from facts.
  *

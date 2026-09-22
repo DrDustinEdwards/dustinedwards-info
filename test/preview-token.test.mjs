@@ -197,7 +197,7 @@ test("PLANT (b): an ORPHANED INDEX ENTRY resolves to nothing", () => {
 });
 
 test("PLANT (b), the other half: a listing SKIPS an orphaned entry", () => {
-  // What the drawer does with the same state, modelled the way the loader
+  // What the drawer does with the same state, modeled the way the loader
   // does it: index keys in, records fetched, entries with no record dropped.
   const live = mintToken();
   const orphan = mintToken();

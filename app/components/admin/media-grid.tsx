@@ -187,7 +187,7 @@ export function MediaGrid({
               {/*
                * The note is the reason this grouping exists: it is what stops somebody deleting
                * nine photographs because a post-level tracker called them unreferenced. Quiet by
-               * SIZE and WEIGHT, never by an unreadable grey.
+               * SIZE and WEIGHT, never by an unreadable gray.
                */}
               {bucket.note ? (
                 <span className="media-group-note">{bucket.note}</span>

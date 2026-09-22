@@ -368,7 +368,7 @@ ok(
   adminStyleSrc.includes("'nonce-" + NONCE + "'"),
   "admin style-src is " +
     JSON.stringify(adminStyleSrc) +
-    ". Without a nonce source the nonce CodeMirror puts on its injected <style> authorises " +
+    ". Without a nonce source the nonce CodeMirror puts on its injected <style> authorizes " +
     "nothing, and the StyleModule is dropped on every editor load, which is the defect " +
     "this branch exists for.",
 );
@@ -653,7 +653,7 @@ if (existsSync(PREVIEW_PATH)) {
   ok(
     "the preview route never references SHARED_CACHE_CONTROL",
     !/\bSHARED_CACHE_CONTROL\b/.test(preview),
-    "blog.$slug.tsx is the neighbouring file and exports a headers() of the same " +
+    "blog.$slug.tsx is the neighboring file and exports a headers() of the same " +
       "shape using it. On this route it would put an unpublished post into a " +
       "shared cache entry keyed by path alone.",
   );
@@ -993,7 +993,7 @@ if (existsSync(HEALTH_PATH)) {
 
   if (helperAt !== -1) {
     // Bounded to the helper's own body: the closing brace at column 0. Not a
-    // character window, which is what read a neighbour's compliance in df99bf1.
+    // character window, which is what read a neighbor's compliance in df99bf1.
     const helperEnd = health.indexOf("\n}", helperAt);
     const helperBody = helperEnd === -1 ? "" : health.slice(helperAt, helperEnd + 2);
 

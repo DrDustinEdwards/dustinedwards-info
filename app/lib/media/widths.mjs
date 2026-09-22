@@ -32,7 +32,7 @@ export const THUMB_WIDTHS = [160, 320, 640];
  */
 const CONTENT_WIDTHS = [640, 1024, 1408];
 
-/** Every width the transform route will honour, from both closed sets. */
+/** Every width the transform route will honor, from both closed sets. */
 export const ALL_WIDTHS = [...new Set([...THUMB_WIDTHS, ...CONTENT_WIDTHS])];
 
 /**

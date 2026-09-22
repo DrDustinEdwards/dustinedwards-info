@@ -111,7 +111,7 @@ test("JSON that is not an object refuses", () => {
 });
 
 test("ok is required to be exactly true, not merely truthy", () => {
-  // A body that said ok:"yes" would be a shape nobody recognises, and coercing
+  // A body that said ok:"yes" would be a shape nobody recognizes, and coercing
   // it is how a step stops being able to fail.
   const verdict = readinessVerdict(200, JSON.stringify({ ok: "yes", checks: [{ name: "a", ok: true }] }));
   assert.equal(verdict.ok, false);
@@ -158,7 +158,7 @@ const DRIFTED_CORPUS = JSON.stringify({
 });
 
 test("THE PLANT: a corpus missing a post from D1 ships, and does not refuse", () => {
-  // The old behaviour, still the behaviour when nothing is deferred: refused.
+  // The old behavior, still the behavior when nothing is deferred: refused.
   const gated = readinessVerdict(503, DRIFTED_CORPUS);
   assert.equal(gated.ok, false, "undeferred, this is still a refusal");
   assert.match(gated.why, /content-drift/);

@@ -3,7 +3,7 @@
  *
  * A static bearer token, held as a wrangler secret. Not Better Auth, whose plane is a Google login
  * with a browser session in KV and an agent has no browser; not OAuth, because there is one caller
- * class and one owner, and an authorization-code dance with nobody to click "allow" is theatre.
+ * class and one owner, and an authorization-code dance with nobody to click "allow" is theater.
  *
  * The token is the whole boundary, so it is compared in constant time and it is never echoed, logged
  * or included in an error. The comparison and the caller label live in `~/lib/bearer.server`.

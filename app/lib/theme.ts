@@ -36,7 +36,7 @@ export function isTheme(value: unknown): value is Theme {
  *
  * The control posts the theme it is switching TO, which is only ever light or
  * dark. A posted "system" would be a client asking for a state no button
- * offers, so it is refused rather than honoured: an endpoint that accepts a
+ * offers, so it is refused rather than honored: an endpoint that accepts a
  * value nothing sends is a surface with no caller and no test.
  */
 export const WRITABLE_THEMES = ["light", "dark"] as const;
@@ -75,7 +75,7 @@ export function themeFromRequest(request: Request): Theme {
       return "system";
     }
     /*
-     * WRITABLE values are honoured as choices; everything else, `system` and junk alike, falls to the
+     * WRITABLE values are honored as choices; everything else, `system` and junk alike, falls to the
      * default. Keyed on the WRITABLE set so "what may be stored" and "what may be posted" are one
      * question with one answer.
      */

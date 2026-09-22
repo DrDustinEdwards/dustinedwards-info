@@ -671,7 +671,7 @@ function readDataUri(value: string): { type: string; payload: string } | null {
 
 /** Base64 to bytes, or null when it is not base64 at all. */
 function decodeBase64(payload: string): Uint8Array | null {
-  // Whitespace is what a base64 blob acquires travelling through a chat or a YAML block, and `atob`
+  // Whitespace is what a base64 blob acquires traveling through a chat or a YAML block, and `atob`
   // throws on it.
   const packed = payload.replace(/\s+/g, "");
   try {

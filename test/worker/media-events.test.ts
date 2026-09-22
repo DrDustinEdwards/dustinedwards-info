@@ -33,7 +33,7 @@ import { handleMediaEvents } from "../../workers/media-events";
  *
  * `MEDIA_BACKUP` is deliberately absent from the test bindings, so the mirror
  * step fails and is swallowed exactly as it is in production. That is the
- * behaviour under test elsewhere; here it only has to not take the row with it.
+ * behavior under test elsewhere; here it only has to not take the row with it.
  */
 
 /** Distinct bytes per case, so distinct content-addressed keys. */
