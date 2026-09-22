@@ -116,6 +116,8 @@ export const TIERS = {
   "check:urls": "offline",
   /* Offline: walks public/ and reads route source. The R2 half is check:media's (ruling 127). */
   "check:asset-names": "offline",
+  /* Offline: reads tracked files and a word list. */
+  "check:spelling": "offline",
   // Sees an axis dropped, not wrong SQL.
   "check:media-axes": "offline",
   /* Certifies the last local build, stale or not. It also RENDERS now, so like
@@ -233,7 +235,7 @@ function discoverGates() {
 }
 
 /**
- * EXPORTED so `check:changed` spawns a gate exactly as this does. The shell behaviour here is
+ * EXPORTED so `check:changed` spawns a gate exactly as this does. The shell behavior here is
  * Windows-specific and measured (FAILURES.md); a second copy of it is a second thing to get wrong.
  *
  * @param {string} name @param {string[]} args
