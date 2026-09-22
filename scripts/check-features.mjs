@@ -2211,7 +2211,7 @@ console.log(
 
 /* Whole-gate floor: section floors cannot see another section stopping. */
 /* Within the tolerance `scripts/check-floors.mjs` owns; re-measure by running the gate. */
-const MINIMUM_CHECKS = 913;
+const MINIMUM_CHECKS = 950;
 const floorBreach = assertFloor(
   "check:features",
   "checks",
