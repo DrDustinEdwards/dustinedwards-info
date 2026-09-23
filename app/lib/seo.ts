@@ -156,32 +156,62 @@ export function personJsonLd(origin: string) {
 }
 
 /**
- * THE STRING THAT PERMITS SHARED CACHING, built from the lifetime below.
+ * THE STRING THAT PERMITS SHARED CACHING, and what a BROWSER is told. The edge's own policy is
+ * `EDGE_CACHE_CONTROL` below, which `workers/app.ts` stamps beside this on every response carrying
+ * it, so this string is the marker a route opts in with as well as the browser policy.
  *
  * HTML MAY USE IT, and needs no `Vary` to be safe. The theme is a dimension of the cache KEY the
  * gateway sets in `workers/app.ts`, so a dark document and a light one are different entries rather
  * than one entry a second reader must be kept away from.
  *
  * What travels with it is `Cache-Tag`, so a response that can be stored can also be purged.
- */
-/**
- * THE LIFETIME ITSELF, and it is the owner rather than a copy of the string. Hard rule 17 gives a
- * measured value one owner, and a page typing the lifetime in prose beside a constant is two owners
- * that agree until the day somebody changes one.
  *
- * NEVER PARSE `s-maxage` BACK OUT OF THE STRING. A parse that stops matching has to substitute
- * something, and a substituted cache lifetime is a false claim rather than a missing one.
+ * **`max-age=0` AND NOTHING THAT REVALIDATES.** A browser holding a page for any time is a page no
+ * purge can reach. `must-revalidate`, `proxy-revalidate`, `no-cache` and `s-maxage` are each left
+ * out on purpose: every one of them DISABLES stale-while-revalidate at Cloudflare (RFC 9111 4.2.4),
+ * and this string must stay harmless if the edge ever reads it. `check:headers` holds that.
  */
-const SHARED_CACHE_SECONDS = 600;
-
-export const SHARED_CACHE_CONTROL =
-  `public, s-maxage=${SHARED_CACHE_SECONDS}, stale-while-revalidate=86400`;
+export const SHARED_CACHE_CONTROL = "public, max-age=0";
 
 /**
- * The same lifetime in minutes, for prose that has to state it. Exported rather than computed
- * there, because the thing being stated is a property of the cache policy and not of the page.
+ * THE EDGE LIFETIMES, in seconds, and they are the owner rather than a copy. Hard rule 17 gives a
+ * measured value one owner. NEVER PARSE A LIFETIME BACK OUT OF A STRING: a parse that stops matching
+ * has to substitute something, and a substituted cache lifetime is a false claim.
+ *
+ * A DAY FRESH, A WEEK STALE. Freshness is long because every write that changes a page purges it by
+ * tag (`cache-purge.server.ts`) and every deploy starts cold (the Worker version is in the cache
+ * key), so the lifetime only bounds how often an untouched page re-renders. Stale-while-revalidate is
+ * what removes the render from the reader's click: past freshness the stored page is served at once
+ * with `UPDATING` and the Worker re-renders behind it.
  */
-export const SHARED_CACHE_MINUTES = SHARED_CACHE_SECONDS / 60;
+const EDGE_FRESH_SECONDS = 86_400;
+const EDGE_STALE_SECONDS = 604_800;
+
+/**
+ * The home page's freshness is SHORT, because it carries the site-health tile, whose age is the
+ * watchdog's liveness (`app/lib/health/snapshot.mjs`). A day-old tile reads as a dead watchdog.
+ * Stale-while-revalidate still applies, so the home page gets the same instant click.
+ */
+const HOME_EDGE_FRESH_SECONDS = 600;
+
+const edgeCacheControl = (fresh: number) =>
+  `max-age=${fresh}, stale-while-revalidate=${EDGE_STALE_SECONDS}`;
+
+/**
+ * THE EDGE'S POLICY, sent as `Cloudflare-CDN-Cache-Control`: highest precedence at Cloudflare, and
+ * consumed there rather than passed to the browser. That is what lets the edge hold a page for a day
+ * while the browser holds it for none.
+ *
+ * WHY NOT `s-maxage`, WHICH THIS WAS UNTIL 2026-09-23: `s-maxage` carries `proxy-revalidate`
+ * semantics, so Cloudflare refused to serve stale and every read past the lifetime BLOCKED on a
+ * render. Measured on production: an entry 11 minutes old answered `EXPIRED` in 0.75 and 0.88 s
+ * with `stale-while-revalidate=86400` sitting right beside it.
+ */
+export const EDGE_CACHE_CONTROL = edgeCacheControl(EDGE_FRESH_SECONDS);
+export const HOME_EDGE_CACHE_CONTROL = edgeCacheControl(HOME_EDGE_FRESH_SECONDS);
+
+/** The header the edge reads its policy from. One spelling, read by the Renderer and the gate. */
+export const EDGE_CACHE_HEADER = "Cloudflare-CDN-Cache-Control";
 
 /**
  * `HTML_VARY` WAS `"Cookie"` AND WAS DELETED. The theme is a dimension of the cache key now, where
@@ -221,10 +251,19 @@ export const PAGES_CACHE_TAG = "pages";
  * visibly. `check:headers` asserts the pairing on every route that names the shared string, in both
  * directions.
  *
+ * The edge policy is NOT set here: the Renderer stamps `EDGE_CACHE_CONTROL` on every response
+ * carrying `SHARED_CACHE_CONTROL`, which reaches the routes that set the string by hand too. A route
+ * passes `edge` only to depart from that default, and the home page is the one that does.
+ *
  * @param tag the cache tag for this response, from `cacheTags` or `PAGES_CACHE_TAG`
+ * @param edge an edge policy other than the default, from this module
  */
-export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG) {
-  return { "Cache-Control": SHARED_CACHE_CONTROL, "Cache-Tag": tag };
+export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG, edge?: string) {
+  return {
+    "Cache-Control": SHARED_CACHE_CONTROL,
+    "Cache-Tag": tag,
+    ...(edge ? { [EDGE_CACHE_HEADER]: edge } : {}),
+  };
 }
 
 /**
