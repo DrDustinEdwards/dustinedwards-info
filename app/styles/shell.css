@@ -109,11 +109,14 @@
   }
 }
 
-/* One row at desktop width. Profiles is wider because ORCID's convention is the whole address. */
+/* One row at desktop width, each column sized to what it holds: Writing carries the feed and
+   machine-format rows, Profiles carries ORCID's whole address, Students and Site are short. */
 @media (min-width: 72rem) {
   .footer-grid {
     grid-template-columns:
-      minmax(9rem, 1.1fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr) minmax(0, 1fr);
+      minmax(8rem, 1fr) minmax(0, 1.2fr) minmax(0, 1.9fr) minmax(0, 1fr) minmax(0, 2.3fr)
+      minmax(0, 0.8fr);
+    column-gap: var(--s-4);
   }
 
   .footer-identity {
