@@ -131,8 +131,13 @@ export default function Privacy() {
             <p>
               <strong>Cloudflare</strong> runs everything: the Worker that serves these pages,
               the database, the file storage, the analytics, and the model that answers Ask
-              questions. No page on this site loads anything from another company&rsquo;s server,
-              which is why there are no third-party scripts to disclose.
+              questions. No page on this site loads anything from another company&rsquo;s server
+              on its own, which is why there are no third-party scripts to disclose.
+            </p>
+            <p>
+              <strong>The Germomics podcast host</strong> is reached only if you play the episode
+              on the home page: playing it loads the audio from the podcast&rsquo;s host, by way of
+              OP3, the download counter the show uses.
             </p>
             <p>
               <strong>Google</strong> is the sign-in provider for the administrator account. It

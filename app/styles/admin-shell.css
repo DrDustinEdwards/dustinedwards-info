@@ -1420,3 +1420,10 @@
     width: 100%;
   }
 }
+
+/* The home podcast picker on /admin/tools. Inherits its colors, so it adds no contrast pair. */
+.tool-select {
+  max-inline-size: 60%;
+  font: inherit;
+  font-size: 0.875rem;
+}

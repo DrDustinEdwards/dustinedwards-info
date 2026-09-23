@@ -1164,6 +1164,13 @@ export async function getSetting(env: Env, key: string) {
   return rows[0]?.value ?? null;
 }
 
+export async function setSetting(env: Env, key: string, value: string) {
+  await getDb(env)
+    .insert(settings)
+    .values({ key, value })
+    .onConflictDoUpdate({ target: settings.key, set: { value } });
+}
+
 /* Webmentions. Section 6 does not see this table; `webmentionTarget` applies visibility. */
 
 /** Statuses the global cap counts, stated once so the cap and the sweep agree. */
