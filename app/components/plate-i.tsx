@@ -1,4 +1,4 @@
-import { KEY_ICONS, NARROW, WIDE, type PlateLayout, type Shape } from "./plate-i-geometry";
+import { KEY_ICONS, NARROW, WIDE, WIDE_VIEW, type PlateLayout, type Shape } from "./plate-i-geometry";
 
 /**
  * Plate I and its specimen row, drawn from the approved canvas file (part-c/09-solid-lawn.html):
@@ -9,8 +9,8 @@ import { KEY_ICONS, NARROW, WIDE, type PlateLayout, type Shape } from "./plate-i
  * gradient or light. COLOR, ruling 122: oxide is annotation and nothing else; purple appears
  * nowhere, because nothing here is a link.
  *
- * TWO DRAWINGS, because the canvas draws two: a 500-unit plate for wide screens and a 300-unit
- * plate for phones, each with its own label placement. CSS shows one; `display: none` removes the
+ * TWO DRAWINGS, because the canvas draws two: a 500-unit plate for wide screens, shown at 0.74 with
+ * its labels at the sides, and a 300-unit plate for phones, each with its own label placement. CSS shows one; `display: none` removes the
  * other from the accessibility tree and the tab order, so a reader meets one plate either way.
  *
  * COMPLETE WITHOUT SCRIPT (ruling 119): every label is always drawn and the row names all six.
@@ -44,7 +44,7 @@ const STROKE = { ink: "var(--text)", dust: "var(--fig-dust-300)", none: "none" }
 
 /** The label box of each layout: the dish plus every label, so nothing spills past the SVG. */
 const VIEW = {
-  wide: { x: -72, y: -30, w: 704, h: 564 },
+  wide: WIDE_VIEW,
   narrow: { x: -14, y: -30, w: 375, h: 364 },
 };
 
