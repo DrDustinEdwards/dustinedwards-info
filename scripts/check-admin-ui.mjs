@@ -365,6 +365,12 @@ const STORES_CLEAN = {
   divergences: { known: true, entries: [] },
 };
 
+/** The home podcast picker's episodes, newest first, as the loader trims them. */
+const PODCAST_EPISODES = [
+  { guid: "ep-10", title: "Antitoxin Togo, Please", publishedAt: "2019-11-19T09:00:30.000Z" },
+  { guid: "ep-2", title: "A Sky Full of SARS", publishedAt: "2019-09-03T09:00:50.000Z" },
+];
+
 /** D1 behind, one commit not applied. */
 const STORES_BEHIND = {
   ...STORES_CLEAN,
@@ -1601,6 +1607,14 @@ const STATES = [
         { query: "d1 backups", count: 7, firstSeen: 0, lastSeen: 0 },
         { query: "workers cache", count: 2, firstSeen: 0, lastSeen: 0 },
       ],
+      /* A featured episode that is still in the feed. */
+      podcast: {
+        slot: { mode: "featured", guid: "ep-2" },
+        episodes: PODCAST_EPISODES,
+        showing: "A Sky Full of SARS",
+        fellBack: false,
+        fetchedAt: "2026-09-23T08:00:00.000Z",
+      },
     },
   },
   {
@@ -1616,6 +1630,25 @@ const STATES = [
       ],
       /* Empty, so the empty state and the DISABLED sweep button are covered. */
       misses: [],
+      /* A featured episode that left the feed, so the fallback notice is rendered. */
+      podcast: {
+        slot: { mode: "featured", guid: "ep-gone" },
+        episodes: PODCAST_EPISODES,
+        showing: "Antitoxin Togo, Please",
+        fellBack: true,
+        fetchedAt: "2026-09-23T08:00:00.000Z",
+      },
+    },
+  },
+  {
+    name: "tools, podcast feed not read yet",
+    entry: "app/routes/admin.tools.tsx",
+    path: "/admin/tools",
+    url: "/admin/tools",
+    loaderData: {
+      secrets: [{ name: "GITHUB_TOKEN", present: true }],
+      misses: [],
+      podcast: { slot: { mode: "latest" }, episodes: [], showing: null, fellBack: false, fetchedAt: null },
     },
   },
 ];

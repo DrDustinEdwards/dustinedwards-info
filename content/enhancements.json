@@ -140,6 +140,15 @@
       "fallbackKind": "none",
       "fallbackAt": null,
       "why": "The intro is decoration: the still plate carries the same information. Writing the nothing down is what makes it a decision rather than an omission."
+    },
+    {
+      "id": "podcast-player",
+      "module": "app/enhance/podcast.ts",
+      "enhancement": "Replaces the home page Germomics episode's native audio controls with the site's own: play and pause, a full-width scrubber with elapsed and total time, and skip back 15 seconds and forward 30. If the audio fails to load, the native controls come back.",
+      "fallback": "The audio element is server-rendered with native controls and plays as it is; the episode page and germomics.com are plain links beside it.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".podcast-audio",
+      "why": null
     }
   ]
 }

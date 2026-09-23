@@ -22,6 +22,8 @@ import { EvidenceRow } from "~/components/evidence-row";
 import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { PlateEnhancements } from "~/components/plate-enhancements";
 import { FigurePapersPerYear, FigureRoster } from "~/components/home-figures";
+import { HomePodcast } from "~/components/home-podcast";
+import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { PUBLICATIONS } from "~/data/publications";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
@@ -82,9 +84,11 @@ export async function loader({ context }: Route.LoaderArgs) {
    * before and after where a renamed mark would look like the instrument was
    * removed.
    */
-  const [start, tile] = await Promise.all([
+  const [start, tile, podcast] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_health", () => readHealthTile(env)),
+    // KV and one settings row; the feed itself is refreshed after the response.
+    timed(timings, "home_podcast", () => homePodcastEpisode(context)),
   ]);
 
   /*
@@ -104,12 +108,13 @@ export async function loader({ context }: Route.LoaderArgs) {
      * computes no timestamp of its own.
      */
     health: tile,
+    podcast,
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const jsonLd = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
-  const { gates, posts, featured, recent, health } = loaderData;
+  const { gates, posts, featured, recent, health, podcast } = loaderData;
 
   /*
    * `missing` and `stale` both refuse to show a ratio: a number beside "health
@@ -348,6 +353,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <Link to="/phage-discovery">The roster, {firstCohort} to {lastCohort}</Link>
           </p>
         </section>
+
+        <HomePodcast episode={podcast} />
 
         {/*
          * FOR READERS WHO ARE NOT PEOPLE, stated plainly rather than left to be

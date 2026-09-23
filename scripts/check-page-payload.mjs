@@ -62,6 +62,9 @@ const ENHANCE_BROTLI_CEILINGS = {
   /* Measured on the first build of this module, at 727 brotli: Plate I's linked highlight and its
      leader intro, home page only. */
   "plate.js": 1000,
+  /* Measured on the first build of this module, at 608 brotli (esbuild output, quality 11): the
+     home page's Germomics player controls, home page only (ruling 134). */
+  "podcast.js": 900,
   /* Measured on the first build of this module, at 1121 brotli. */
   "search.js": 1600,
   "theme.js": 1000,
@@ -736,6 +739,8 @@ const BUNDLE_USE = {
   "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
   /* Plate I and its key are on the home page and nowhere else. */
   "plate.js": (/** @type {string} */ id) => id === "routes/home",
+  /* The Germomics episode is on the home page and nowhere else. */
+  "podcast.js": (/** @type {string} */ id) => id === "routes/home",
   "ask.js":(/** @type {string} */ id) => id === "routes/search",
   /* The search page's own enhancement: it upgrades that page's form and result list and has
      nothing to do anywhere else. */

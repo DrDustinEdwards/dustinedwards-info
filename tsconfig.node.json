@@ -231,6 +231,10 @@
     // of the policy, and because the drift it exists to catch is between the
     // list and the routes.
     "workers/feed-types.mjs",
+    // Listed because csp.mjs IMPORTS it: `media-src` is written from the same
+    // audio host list the podcast feed parser accepts episodes against, so the
+    // policy cannot refuse audio the home page renders. Dependency-free.
+    "app/lib/podcast/feed.mjs",
     // The ONE JavaScript owner of "is this post publicly visible". build:og
     // decides which posts get a social card with it and check:media reconciles
     // the live bucket against it, so both reach the same predicate. A second
