@@ -61,6 +61,36 @@ if printf '%s' "$payload" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]
   exit 0
 fi
 
+# SKIP WHEN NOTHING THE TYPECHECK READS HAS CHANGED SINCE THE LAST PASS. Turns
+# end often and a typecheck costs tens of seconds, so a pass is remembered as a
+# key: HEAD, the diff against it, and every untracked file's content, all over
+# the source paths below. Only a PASS is stored, so a red build re-runs on every
+# stop and still blocks. Any git failure leaves the key empty, which runs the
+# typecheck and stores nothing: the fail direction above still holds.
+source_paths=()
+for dir in app workers scripts test; do
+  for ext in ts tsx mts mjs; do
+    source_paths+=(":(glob)$dir/**/*.$ext")
+  done
+done
+source_paths+=(":(glob)tsconfig*.json" "package.json")
+
+source_key() {
+  local head diff untracked
+  head="$(git rev-parse HEAD 2>/dev/null)" || return 1
+  diff="$(git diff HEAD -- "${source_paths[@]}" 2>/dev/null)" || return 1
+  untracked="$(git ls-files --others --exclude-standard -z -- "${source_paths[@]}" 2>/dev/null |
+    while IFS= read -r -d '' f; do printf '%s %s\n' "$f" "$(git hash-object -- "$f")"; done)" || return 1
+  printf '%s\n%s\n%s' "$head" "$diff" "$untracked" | git hash-object --stdin 2>/dev/null
+}
+
+pass_file="$(git rev-parse --git-path stop-typecheck.pass 2>/dev/null || true)"
+key="$(source_key || true)"
+if [ -n "$key" ] && [ -n "$pass_file" ] && [ "$(cat "$pass_file" 2>/dev/null)" = "$key" ]; then
+  echo "typecheck: no source change since last pass"
+  exit 0
+fi
+
 # TSC WRITES ITS DIAGNOSTICS TO STDOUT, AND A STOP HOOK IS READ ON STDERR.
 #
 # Until 2026-09-06 this was a bare command. The exit code propagated correctly,
@@ -90,4 +120,8 @@ if ! typecheck_out="$(npm run -s typecheck 2>&1)"; then
     echo "tsc writes them to stdout, so this hook captures both streams and re-emits them here. A bare command reports \"No stderr output\" while the build is red."
   } >&2
   exit 2
+fi
+
+if [ -n "$key" ] && [ -n "$pass_file" ]; then
+  printf '%s' "$key" > "$pass_file" 2>/dev/null || true
 fi
