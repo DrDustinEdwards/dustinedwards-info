@@ -6,11 +6,12 @@ import { unified } from "unified";
 import playgroundData from "../../content/playground.json";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { CHART_TYPES, buildChartModel, renderChartHast } from "~/lib/content/chart.mjs";
+import { CHART_TYPES } from "~/lib/content/chart-types.mjs";
 /*
  * Behind a NAMED server export: a side-effect import binds no name and React
- * Router's server-code removal traces NAMES, so a bare import failed the build. NO
- * NEW BYTES IN THE WORKER, which is one bundle.
+ * Router's server-code removal traces NAMES, so a bare import failed the build. It
+ * loads the renderer on first use, and the chart module is imported inside the
+ * loader for the same reason: neither belongs in the chunk a cold isolate evaluates.
  */
 import { renderSnippet } from "~/lib/content/render-snippet.server";
 import { apca, contrast, normalizeHex } from "~/lib/contrast.mjs";
@@ -355,6 +356,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   let chartHtml = "";
   let chartRenderError: string | null = null;
   try {
+    const { buildChartModel, renderChartHast } = await import("~/lib/content/chart.mjs");
     // `renderChartHast` returns the FIGURE'S CHILDREN, not the figure, so the
     // wrapper and its class are this route's responsibility: without `.chart-figure`
     // the stylesheet's chart rules never apply.

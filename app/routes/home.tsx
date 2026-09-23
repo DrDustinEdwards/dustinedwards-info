@@ -11,6 +11,7 @@ import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
   cacheTags,
+  HOME_EDGE_CACHE_CONTROL,
   publicHtmlHeaders,
   personJsonLd,
   SITE,
@@ -37,10 +38,10 @@ import "~/styles/home.css";
  * Publicly cacheable. The hard rule 8 default STAYS and still covers everything
  * unlisted; this route opts in. The theme is a dimension of the cache key rather
  * than a Vary. Tagged `posts`, because the proof tiles and the featured list read
- * the corpus.
+ * the corpus. The short edge policy is for the health tile; see `HOME_EDGE_CACHE_CONTROL`.
  */
 export function headers() {
-  return publicHtmlHeaders(cacheTags());
+  return publicHtmlHeaders(cacheTags(), HOME_EDGE_CACHE_CONTROL);
 }
 
 export function meta() {

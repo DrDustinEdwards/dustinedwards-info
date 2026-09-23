@@ -1,4 +1,4 @@
-import { SLUG_PATTERN } from "../content/pipeline.mjs";
+import { SLUG_PATTERN } from "../content/slug.mjs";
 
 /**
  * What a webmention's `source` and `target` are allowed to be.

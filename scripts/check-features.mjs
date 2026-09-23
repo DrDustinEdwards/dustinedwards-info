@@ -1987,9 +1987,15 @@ ok(
 
 /* markdown demo wiring */
 
-/* Both links of the chain are asserted. */
+/*
+ * Every link of the chain is asserted. The wrapper reaches the pipeline through `loadPipeline()`,
+ * the Worker's one door to the renderer, and that door is where the WASM instantiator is installed.
+ */
 const snippetRendererSource = stripped(
   readFileSync(join(root, "app", "lib", "content", "render-snippet.server.ts"), "utf8"),
+);
+const pipelineDoorSource = stripped(
+  readFileSync(join(root, "app", "lib", "content", "load-pipeline.server.ts"), "utf8"),
 );
 ok(
   "markdown: the page renders through the server wrapper",
@@ -2000,13 +2006,16 @@ ok(
 ok(
   "markdown: the wrapper calls the renderer every post goes through",
   /\brenderBody\b/.test(snippetRendererSource) &&
-    /from\s+["']\.\/pipeline\.mjs["']/.test(snippetRendererSource),
+    /from\s+["']\.\/load-pipeline\.server["']/.test(snippetRendererSource) &&
+    /\bloadPipeline\s*\(/.test(snippetRendererSource) &&
+    /import\(\s*["']\.\/pipeline\.mjs["']\s*\)/.test(pipelineDoorSource),
   "a second renderer here would demonstrate nothing: it would keep working " +
     "while the thing it claims to show was broken",
 );
 ok(
   "markdown: the wrapper loads the Worker's WASM instantiator",
-  /\.\/wasm\.server/.test(snippetRendererSource),
+  /import\(\s*["']\.\/wasm\.server["']\s*\)/.test(pipelineDoorSource) &&
+    /\bsetWasmLoader\s*\(/.test(pipelineDoorSource),
   "without it the highlighter cannot start in a Worker, and the demo answers " +
     "every reader with a render failure",
 );

@@ -4,7 +4,6 @@ import { getEnv, getExecutionContext } from "~/lib/context";
 import { readCapped } from "~/lib/read-capped.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { sourceVerdict, targetSlug } from "~/lib/webmention/urls.mjs";
-import { verifyWebmention } from "~/lib/webmention/verify.server";
 
 import type { Route } from "./+types/webmention";
 
@@ -200,9 +199,14 @@ export async function action({ request, context }: Route.ActionArgs) {
    * VERIFICATION AFTER THE ANSWER. The sender gets 202 immediately, which is what the protocol asks
    * for and what keeps a slow source off the critical path. `waitUntil` rather than a queue, which
    * would be new infrastructure for a load of zero. What a cut-short `waitUntil` leaves behind is on
-   * `verifyWebmention`.
+   * `verifyWebmention`. Imported here rather than at the top because it parses with linkedom, which
+   * has no place in the chunk every cold isolate evaluates.
    */
-  getExecutionContext(context).waitUntil(verifyWebmention(env, id, source, target));
+  getExecutionContext(context).waitUntil(
+    import("~/lib/webmention/verify.server").then(({ verifyWebmention }) =>
+      verifyWebmention(env, id, source, target),
+    ),
+  );
 
   return answer("Accepted. It will be verified and reviewed before it appears.", 202);
 }

@@ -124,8 +124,8 @@ instrument itself contributes before ruling on what it found.
 
 A probe sent during the rollout window can be served by the PREVIOUS version, so
 a fix can look broken and, worse, a bug can look fixed. Force a MISS with a fresh
-cache key; the public routes carry `stale-while-revalidate=86400` and will
-otherwise serve a day-old body.
+cache key; the public routes carry `stale-while-revalidate` at the edge (`app/lib/seo.ts`
+owns the window) and will otherwise serve a stale body.
 
 ---
 

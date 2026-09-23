@@ -113,8 +113,8 @@ ${urls
     headers: {
       "content-type": "application/xml; charset=utf-8",
       /*
-       * THE SAME CONSTANT THE FEEDS USE: `s-maxage`, the SHARED cache only, plus
-       * `stale-while-revalidate`, so a delete converges on the same schedule as `blog.rss[.xml].ts` and
+       * THE SAME CONSTANT THE FEEDS USE, which the Renderer pairs with the edge policy, so a delete
+       * converges on the same schedule and the same purge as `blog.rss[.xml].ts` and
        * `blog.feed[.json].ts`, which list the same posts from the same projection. A local `max-age` with
        * no `Vary` was not bustable by a cookie either.
        *

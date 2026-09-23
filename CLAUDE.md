@@ -40,7 +40,7 @@ Live claims verify on the live path. Method: `VERIFICATION.md`.
 
 ### 8. GATED by check:headers. WORKERS CACHE IS ON, and the Worker's stamp IS the statement.
 
-**The platform caches silence:** a response declaring no `Cache-Control` is cached under heuristic freshness, so `workers/app.ts` stamps `private, no-store` on any response that declares none. A route opts IN to sharing and never opts out of refusal. A route setting `Vary: Cookie` that receives any cookie is downgraded and bypasses the shared cache. What the theme may change is the gate's own `maskTheme`, never this file's.
+**The platform caches silence:** a response declaring no `Cache-Control` is cached under heuristic freshness, so `workers/app.ts` stamps `private, no-store` on any response that declares none. A route opts IN to sharing and never opts out of refusal. **The edge reads `Cloudflare-CDN-Cache-Control`, not `Cache-Control`:** the Renderer stamps the edge policy from `app/lib/seo.ts` on every shared response and strips it from every other, because it outranks `Cache-Control` at Cloudflare. Neither header may carry `s-maxage`, `must-revalidate`, `proxy-revalidate` or `no-cache`, each of which turns stale-while-revalidate into a render the reader waits for. A route setting `Vary: Cookie` that receives any cookie is downgraded and bypasses the shared cache. What the theme may change is the gate's own `maskTheme`, never this file's.
 
 ### 9. GATED by check:features. PROGRESSIVE ENHANCEMENT, not "zero JS".
 
@@ -88,7 +88,7 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ### 20. UNGATED. A MANUAL CACHE KEY CARRIES EVERYTHING THE BODY DEPENDS ON.
 
-`caches.default` carries no headers, so a stored body must be a pure function of the key. A new input to the body goes in the key, or every stored entry stays live, stale and unreachable: there is no purge door and `workers.dev` has no zone. Invalidation is PER-COLO and PARTIAL.
+`caches.default`, which the media thumbnails use, carries no headers, so a stored body must be a pure function of the key. A new input to the body goes in the key, or every stored entry stays live, stale and unreachable: that cache has no purge door and its invalidation is PER-COLO and PARTIAL. The PAGE cache is different: Workers Cache purges by `Cache-Tag`, globally, through `cache.purge()` called from the entrypoint that stored the entry, which `app/lib/cache-purge.server.ts` does on every write, and a deploy starts it cold. Its key is still manual, the gateway's `cf.cacheKey`, and still carries everything the body depends on.
 
 ## How a session works
 

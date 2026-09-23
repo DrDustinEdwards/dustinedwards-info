@@ -1,4 +1,4 @@
-import { SLUG_PATTERN } from "./content/pipeline.mjs";
+import { SLUG_PATTERN } from "./content/slug.mjs";
 
 /**
  * A series name, and the URL it lives at.

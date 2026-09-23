@@ -17,16 +17,8 @@ import { purgePost, purgePosts } from "~/lib/cache-purge.server";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
-import {
-  ContentError,
-  findWideDashes,
-  postPath,
-  renderPost,
-  withBacklinks,
-  withRelated,
-} from "~/lib/content/pipeline.mjs";
-// Side-effect import: installs the Worker WASM loader before anything renders.
-import "~/lib/content/wasm.server";
+import { postPath } from "~/lib/content/slug.mjs";
+import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { ASSET_MANIFEST_PATH } from "~/lib/media/manifest.mjs";
 import {
@@ -165,6 +157,7 @@ export async function validateAndRender(
   slug: string,
   raw: string,
 ) {
+  const { ContentError, findWideDashes, renderPost } = await loadPipeline();
   const dashes = findWideDashes(raw);
   // The first offender is guarded by VALUE rather than by list length, which is what lets the
   // message read its fields.
@@ -199,6 +192,7 @@ export async function validateAndRender(
  * sync, exactly as it did before.
  */
 async function relatedFor(env: PublishEnv, record: any) {
+  const { withRelated } = await loadPipeline();
   const corpus = await listPostCorpusForRelated(env);
   const others = corpus
     .filter((p) => p.slug !== record.slug)
@@ -240,6 +234,7 @@ async function relatedFor(env: PublishEnv, record: any) {
  * goes LAST so `withBacklinks` returns its entry at a position that cannot miss.
  */
 async function backlinksFor(env: PublishEnv, record: any) {
+  const { withBacklinks } = await loadPipeline();
   const corpus = await listPostLinkCorpus(env);
   const others = corpus
     .filter((p) => p.slug !== record.slug)

@@ -104,10 +104,11 @@ export function contentSecurityPolicy(nonce, styleNonce) {
      * unless the directive lists a nonce source. So permitting the element
      * requires changing `style-src`, and the only question was how widely.
      *
-     * Not site-wide. SEVEN public HTML routes are `public, s-maxage=600`, so
-     * for cookieless readers the header and the body are cached together and
-     * one nonce is valid for up to ten minutes. That exposure is accepted, in
-     * writing and publicly on /colophon, for `script-src`. Extending it to
+     * Not site-wide. The public HTML routes are shared-cached (the edge policy
+     * is `EDGE_CACHE_CONTROL` in `app/lib/seo.ts`), so for cookieless readers
+     * the header and the body are cached together and one nonce is valid for as
+     * long as the edge holds the page. That exposure is accepted for
+     * `script-src`. Extending it to
      * styles would widen an accepted exposure to buy something no public route
      * needs: nothing outside the admin plane injects an inline stylesheet.
      *

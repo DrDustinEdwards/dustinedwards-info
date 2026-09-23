@@ -43,8 +43,8 @@
  * ## WHY AGE IS SHOWN RATHER THAN HIDDEN
  *
  * Unchanged from the old design and it is the part worth keeping: this page is
- * `public, s-maxage=600`, so any verdict rendered into it is already old when
- * it is read. "All 5 checks passed at 14:32 UTC" is true when read at 14:41.
+ * shared-cached (`HOME_EDGE_CACHE_CONTROL` in `seo.ts`), so any verdict rendered
+ * into it is already old when it is read. "All 5 checks passed at 14:32 UTC" is true when read at 14:41.
  * "All 5 checks passed" is not. The snapshot adds one more hop of age and the
  * tile now reports the whole of it, measured from the snapshot's own timestamp
  * rather than from the moment the page rendered.

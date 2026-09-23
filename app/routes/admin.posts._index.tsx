@@ -23,7 +23,7 @@ import {
   postReadershipPath,
 } from "~/lib/admin/origin-requests.mjs";
 import { fetchPostReadership } from "~/lib/admin/traffic.server";
-import { postPath } from "~/lib/content/pipeline.mjs";
+import { postPath } from "~/lib/content/slug.mjs";
 import {
   askAvailable,
   askStatusContext,

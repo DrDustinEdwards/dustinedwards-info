@@ -6,7 +6,7 @@ import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
-import { SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { postRedirectStatus, postRedirectTarget } from "~/lib/slug-redirect.mjs";
 import {
   paperSlashTarget,
@@ -47,6 +47,22 @@ const requestHandler = createRequestHandler(
  * served to anyone asking for that path. The default is the refusal and a route opts IN.
  */
 const UNCACHED = "private, no-store";
+
+/**
+ * THE EDGE'S POLICY, stamped here so every shared response carries it, including the feeds and the
+ * sitemap, which set `SHARED_CACHE_CONTROL` by hand rather than through `publicHtmlHeaders`.
+ *
+ * FAIL CLOSED IN THE OTHER DIRECTION TOO: `Cloudflare-CDN-Cache-Control` OUTRANKS `Cache-Control` at
+ * the edge, so an edge header on a response that is NOT marked shared would make a private one
+ * storable. It is removed from anything not marked shared, whatever set it.
+ */
+function applyEdgePolicy(headers: Headers): void {
+  if (headers.get("cache-control") !== SHARED_CACHE_CONTROL) {
+    headers.delete(EDGE_CACHE_HEADER);
+    return;
+  }
+  if (!headers.has(EDGE_CACHE_HEADER)) headers.set(EDGE_CACHE_HEADER, EDGE_CACHE_CONTROL);
+}
 
 /**
  * WHAT THE CACHE KEY IS: the path, and the theme, which is the only thing read off the cookie and
@@ -303,6 +319,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
       if (!response.headers.has("cache-control")) {
         response.headers.set("cache-control", UNCACHED);
       }
+      applyEdgePolicy(response.headers);
     } catch {
       const headers = new Headers(response.headers);
       if (timings) headers.set("Server-Timing", serverTiming(timings));
@@ -312,6 +329,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
         headers.set("Content-Security-Policy", csp);
       }
       if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
+      applyEdgePolicy(headers);
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
