@@ -8,6 +8,24 @@ and every line here is one that has already been broken once.
 Where this file and a stylesheet disagree, **the stylesheet is right**. It is the
 owner; this is a summary.
 
+## Where design work lives (ruling 137, 2026-09-23)
+
+**This project is the design system and nothing else.** It holds what the sync
+writes (the bundle, `styles.css`, components, fonts, guidelines, `_vendor/`, the
+compiled `_preview/*.js` component scripts), plus `templates/visual-system/`,
+the approved visual system, which was made on the canvas and is never
+overwritten by a sync, and `github.md`.
+
+**Page mockups are not made here.** Each one is its own project, started from
+the Claude Design home screen with this design system attached, and it reaches
+the site through **Export, Hand off to Claude Code**. A driver builds a design
+change only from an approved page.
+
+The approved pages so far are in the project **dustinedwards.info pages**
+(`58092e7e-38bf-49fb-8f71-97251ee74445`): *Home page - Plate I, locked system*,
+*The post page - anatomy*, `part-c/09-solid-lawn.html` (the plate, which
+ruling 132's lawn and turbid fills came from) and `uploads/`.
+
 ## The header is paper, and that is recent
 
 For a month the header was a purple bar restored byte-identical to a specific

@@ -21,16 +21,18 @@
  *
  * ## WHAT IT DOES NOT DO
  *
- * It adds no stage and no policy of its own: the four repo-shaped flags below are the ones
- * `.design-sync/NOTES.md` has always specified, and everything else passes through untouched so
- * the driver keeps owning its own CLI. A flag given on the command line WINS over the default
+ * It adds no stage, and ONE policy: the upload scope applied to the driver's verdict (below). The
+ * four repo-shaped flags are the ones `.design-sync/NOTES.md` has always specified, and everything
+ * else passes through untouched so the driver keeps owning its own CLI. A flag given on the command line WINS over the default
  * here, so `--out` elsewhere or an added `--remote` needs no change to this file.
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { enforceVerdict } from "./lib/ds-upload-scope.mjs";
 
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BUILD_INPUTS = ".design-sync/build-inputs.mjs";
@@ -90,4 +92,47 @@ const args = [join(REPO, DRIVER), ...passthrough];
 for (const [flag, value] of DEFAULTS) {
   if (!passthrough.includes(flag)) args.push(flag, resolve(REPO, value));
 }
-run("driver: build -> diff -> validate -> capture", args);
+
+/*
+ * THE DRIVER'S STDOUT IS ITS VERDICT, and it is captured rather than inherited so the upload
+ * scope is applied BEFORE anything downstream reads it: the skill uploads from this verdict, and a
+ * verdict already printed cannot be taken back. A plan that writes or deletes outside what the
+ * build owns comes back refused (ruling 137); see `lib/ds-upload-scope.mjs`.
+ */
+console.log("\n=== driver: build -> diff -> validate -> capture ===");
+const driver = spawnSync(process.execPath, args, {
+  cwd: REPO,
+  stdio: ["inherit", "pipe", "inherit"],
+  encoding: "utf8",
+  maxBuffer: 64 * 1024 * 1024,
+});
+if (driver.error) {
+  console.error(`✗ driver could not start: ${driver.error.message}`);
+  process.exit(2);
+}
+if (driver.status !== 0) {
+  process.stdout.write(driver.stdout ?? "");
+  console.error(`✗ driver exited ${driver.status ?? `on signal ${driver.signal}`}.`);
+  process.exit(driver.status ?? 1);
+}
+
+const outIndex = args.indexOf("--out");
+const outDir = resolve(REPO, args[outIndex + 1]);
+let parsed;
+try {
+  parsed = JSON.parse(driver.stdout);
+} catch {
+  /* An unreadable verdict cannot be checked, so it cannot be uploaded from. */
+  process.stdout.write(driver.stdout ?? "");
+  console.error("✗ the driver's verdict is not JSON, so its upload plan cannot be checked.");
+  process.exit(1);
+}
+const { verdict, violations } = enforceVerdict(parsed, outDir);
+if (violations.length) {
+  writeFileSync(join(outDir, ".resync-verdict.json"), JSON.stringify(verdict, null, 2) + "\n");
+  process.stdout.write(JSON.stringify(verdict, null, 2) + "\n");
+  console.error(`✗ upload plan refused, ${violations.length} path(s) outside the build's scope:`);
+  for (const v of violations) console.error(`  ${v}`);
+  process.exit(1);
+}
+process.stdout.write(driver.stdout);
