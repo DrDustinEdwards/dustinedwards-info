@@ -159,7 +159,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <SiteHeader />
       <main className="tracks home-tracks" id="main" tabIndex={-1}>
         {/*
-         * Ruling 50 as amended: microformats only, no `rel="me"`. Only `u-url` had
+         * The profile `rel="me"` links live in the footer (ruling 135). Only `u-url` had
          * nowhere to go, so the anchor is hidden and it is the ONE hidden element in the card.
          *
          * NO `u-photo`: a card claiming a photo the site does not publish would be the
