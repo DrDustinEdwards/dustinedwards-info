@@ -256,7 +256,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         {featured ? (
           <section className="home-featured" aria-labelledby="featured-heading">
             <h2 id="featured-heading" className="home-section-heading">
-              <span className="home-section-num">1</span> Writing
+              Writing
             </h2>
             {/*
              * THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not `PostCard`. It
@@ -313,7 +313,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          */}
         <section className="home-section" aria-labelledby="publications-heading">
           <h2 id="publications-heading" className="home-section-heading">
-            <span className="home-section-num">2</span> Publications
+            Publications
           </h2>
           <p className="home-section-lede">
             Peer-reviewed work on retroviruses, bacteriophage genomics and science education,{" "}
@@ -357,7 +357,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          */}
         <section className="home-section" aria-labelledby="discovery-heading">
           <h2 id="discovery-heading" className="home-section-heading">
-            <span className="home-section-num">3</span> Phage discovery
+            Phage discovery
           </h2>
           <p className="home-section-lede">
             {researcherCount} undergraduate researchers have isolated and annotated bacteriophage
@@ -385,7 +385,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          */}
         <section className="home-machines" aria-labelledby="machines-heading">
           <h2 id="machines-heading" className="home-section-heading">
-            <span className="home-section-num">4</span> Reading this as a machine
+            Reading this as a machine
           </h2>
           <p>
             Every post is also served as its markdown source: add <code>.md</code> to any
