@@ -215,21 +215,31 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
   there are none. A prop rename in `app/components/` is picked up on rebuild;
   nothing warns that it changed.
 
-## THE UPLOAD MUST NEVER DELETE THE CANVAS'S OWN WORK
+## THE UPLOAD WRITES AND DELETES ONLY WHAT THE BUILD OWNS, AND CODE SAYS SO
 
-**`part-a/`, `part-b/`, `part-c/`, `references/`, `uploads/` and `github.md` are
-NEVER named in a plan's `deletes`.** Read this before any upload, and especially
-before a no-anchor one, where the skill's own instruction to delete "files this
-build doesn't produce" names exactly those paths by construction.
+Since ruling 137 (2026-09-23) the design system project holds only the design
+system; the page mockups moved to their own projects, and where they live is in
+`canvas-constraints.md`, which is what the design agent reads. What the sync
+must never touch in THIS project is `templates/visual-system/`, the approved
+visual system made on the canvas, and `github.md`.
 
-Ruling 110 carries the grounds and the cost. This line stays here rather than
-only there because this file is what a sync agent reads and that ruling is not.
+**That is enforced in code, not by this paragraph.** `scripts/lib/ds-upload-scope.mjs`
+is an allowlist of the paths the build owns; `npm run design:resync` applies it
+to the driver's verdict before printing it, and a plan that writes or deletes
+anything else comes back `ok: false, upload: null` with the refused paths in
+`uploadScopeRefused`, and exits 1. The skill does not upload from that verdict.
 
-**`part-c/` was added to that list on 2026-09-21 and was missing from it.** The
-directory did not exist when ruling 110 was written and now holds eight files,
-including `08-lamp-and-glass.html`, which ruling 124 cites as the drawings for
-the glass pane. A safe list that lags the canvas by one directory is how the
-canvas's work gets deleted.
+**A plan built by hand is checked by hand:** a no-anchor sync takes its deletes
+from a reviewed `list_files` rather than from the diff, and the skill's own
+instruction there, to delete "files this build doesn't produce", would name the
+templates by construction. Put the plan's writes and deletes in a JSON file
+under `.design-sync/` and run `node scripts/lib/ds-upload-scope.mjs <file>`
+before `finalize_plan`; exit 1 names every refused path.
+
+The written list this replaced (`part-a/`, `part-b/`, `part-c/`, `references/`,
+`uploads/`, `github.md`) lagged the canvas by a whole directory for days in
+September, which is why the rule is now "only what the build owns" rather than
+"never these".
 
 ## Where the guidelines land, and why they are nested
 
@@ -252,6 +262,6 @@ directories, and REWRITE `guidelines/index.md`, which the emitter generated with
 the nested hrefs and which otherwise points the design agent at paths that no
 longer exist. The upload then preserves the flat paths verbatim. The eight old
 nested paths were deleted in the same plan, on Dustin's explicit approval, since
-an anchored diff cannot derive them; `guidelines/` is not on the safe list above
-and has never held canvas work. A future converter version that flattens on its
+an anchored diff cannot derive them; `guidelines/**` is build-owned in the upload
+scope above and has never held canvas work. A future converter version that flattens on its
 own makes this step a no-op rather than wrong.
