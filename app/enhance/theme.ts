@@ -220,12 +220,15 @@ function apply(choice: WritableTheme, form: HTMLFormElement) {
    * cascade hides, and `display: none` on the focused element drops focus to `<body>`. So focus moves
    * to the button that replaced it, but ONLY when the hidden one actually held focus: a pointer click
    * leaves focus wherever the browser put it, and stealing it there would be its own defect.
+   *
+   * `preventScroll`, because the control lives in a STICKY header: Chrome scrolls a focused sticky
+   * descendant toward its un-stuck position, which moved a scrolled reader 300px on every toggle.
    */
   const active = document.activeElement;
   if (active instanceof HTMLElement && form.contains(active) && active.offsetParent === null) {
     const shown = [...form.querySelectorAll<HTMLElement>("button[value]")].find(
       (button) => button.offsetParent !== null,
     );
-    shown?.focus();
+    shown?.focus({ preventScroll: true });
   }
 }

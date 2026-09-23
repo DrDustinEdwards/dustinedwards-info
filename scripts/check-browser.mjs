@@ -2668,8 +2668,14 @@ try {
       `${Math.round(control.width)}x${Math.round(control.height)}px, floor 24x24.`,
     );
 
-    await page.evaluate(() => {
+    /*
+     * SCROLLED FIRST, so the flip below also proves the reader keeps their place. At the top of the
+     * page a scroll jump has nowhere to go, which is how a 300px jump on every toggle shipped green.
+     */
+    const scrolledTo = await page.evaluate(() => {
+      window.scrollTo(0, Math.round(document.documentElement.scrollHeight * 0.4));
       /** @type {any} */ (window).__probe = "same-document";
+      return window.scrollY;
     });
     /* Clicked by what is visible; by value could pick the hidden button. */
     const themeClicked = await clickOrFail(
@@ -2685,7 +2691,7 @@ try {
       );
     }
     await new Promise((r) => setTimeout(r, 250));
-    /** @type {{ attr: string | null, sameDocument: boolean, shownValue: string | null, shownCount: number } | null} */
+    /** @type {{ attr: string | null, sameDocument: boolean, shownValue: string | null, shownCount: number, scrollY: number } | null} */
     let flipped = null;
     try {
       flipped = await page.evaluate(() => {
@@ -2697,11 +2703,21 @@ try {
           sameDocument: /** @type {any} */ (window).__probe === "same-document",
           shownValue: shown[0]?.getAttribute("value") ?? null,
           shownCount: shown.length,
+          scrollY: window.scrollY,
         };
       });
     } catch {
       flipped = null;
     }
+    if (themeClicked) ok(
+      "the theme flip keeps the reader's scroll position",
+      scrolledTo > 0 && flipped !== null && flipped.scrollY === scrolledTo,
+      scrolledTo === 0
+        ? `${postForShape} is too short to scroll, so this case measured nothing.`
+        : `scrolled to ${scrolledTo}, after the flip ${flipped?.scrollY ?? "a new document"}. ` +
+            `The focus hand-off in app/enhance/theme.ts lost preventScroll, or something ` +
+            `else on the flip moves the page.`,
+    );
     if (themeClicked) ok(
       "the theme flips in place, without a navigation, and the control turns around",
       flipped !== null &&
