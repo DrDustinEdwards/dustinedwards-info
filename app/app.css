@@ -383,6 +383,9 @@
   --placeholder: color-mix(in srgb, #5b5349 90%, #f4efe6);
   /* lines only: rules, hairlines, disabled outlines. never text, never a functional boundary */
   --dust: #c9c0b4;
+  /* the resting underline of a link in running text: the lightest step from dust toward ink that
+     reaches 3:1 on paper, since the line, not the hue, is what marks the link */
+  --link-underline: #918980;
   /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
   --line-strong: #8a7d6e;
   /* a press is not a hover and is never --visited */
@@ -542,6 +545,8 @@
     --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
     /* As in the light block. */
     --dust: #6f675c;
+    /* Dust itself: it already clears 3:1 on the dark paper. */
+    --link-underline: #6f675c;
     /* As in the light block. */
     --line-strong: #8f857a;
     /* As in the light block. */
@@ -695,6 +700,8 @@
   --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
   /* As in the light block. */
   --dust: #6f675c;
+  /* As in the dark block above. */
+  --link-underline: #6f675c;
   /* As in the light block. */
   --line-strong: #8f857a;
   /* As in the light block. */
@@ -947,15 +954,15 @@ h6 {
 }
 
 /* Rule 2: a link in running text is underlined, because brand and visited purples fail CVD
-   simulation on hue alone. The line is a 1px dust hairline set below the descenders, and it turns
-   purple on hover. A standalone link (title, nav, list row, footer column, "more") is identified by
-   its position, so it opts out at its own rule and changes only color on hover.
+   simulation on hue alone. The line is a 1px hairline set below the descenders, and it turns
+   purple on hover. A standalone link (title, byline, nav, list row, footer column, "more") is
+   identified by its position, so it opts out at its own rule and changes only color on hover.
    Element-level selectors, so any component rule that sets a color outranks them. */
 a {
   color: var(--brand);
   text-decoration: underline;
   text-decoration-thickness: 1px;
-  text-decoration-color: var(--dust);
+  text-decoration-color: var(--link-underline);
   text-underline-offset: 0.25em;
 }
 
