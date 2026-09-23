@@ -178,6 +178,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <h1 className="intro-name p-name" id="intro-h">
             {SITE.name}
           </h1>
+          {/* Three stacked lines; the system is the tier below, so it is set quieter. */}
+          <p className="intro-affil">
+            <span>Professor and virologist</span>
+            <span>{SITE.affiliation}</span>
+            <span className="intro-affil-system">Texas A&amp;M University System</span>
+          </p>
           <a className="u-url" href="/" hidden>
             {SITE.name}
           </a>
