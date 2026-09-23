@@ -515,3 +515,144 @@
   }
 }
 
+
+/*
+ * SCIENCE COMMUNICATION: one Germomics episode, in germomics.com's episode-page order (title, a
+ * line of show, date and length, the description, the player) on this page's terms: the rows'
+ * dust rule above, ink title, mono values, no fills. Purple is only on what a reader can press.
+ */
+.podcast {
+  border-block-start: var(--line-w) solid var(--dust);
+  padding-block-start: 1rem;
+}
+
+.podcast-title {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.podcast-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.podcast-title a:hover {
+  color: var(--brand);
+}
+
+.podcast-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin: 0.375rem 0 0;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+/* A few lines, not the whole blurb: the rest is on the episode page, and in the markup. */
+.podcast-description {
+  display: -webkit-box;
+  margin: 0.625rem 0 0;
+  max-width: 62ch;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+/* The player runs the full measure between two dust rules. */
+.podcast-player {
+  margin-block-start: 1.25rem;
+  border-block: var(--line-w) solid var(--dust);
+  padding-block: 1rem;
+}
+
+.podcast-audio {
+  display: block;
+  inline-size: 100%;
+}
+
+.podcast-controls[hidden] {
+  display: none;
+}
+
+.podcast-scrub {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.podcast-time {
+  min-inline-size: 3.5ch;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.podcast-scrub .podcast-time:last-child {
+  text-align: right;
+}
+
+.podcast-range {
+  inline-size: 100%;
+  margin: 0;
+  accent-color: var(--brand);
+  cursor: pointer;
+}
+
+.podcast-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-start: 0.875rem;
+}
+
+/* Hairline buttons: the word is the control and purple says it can be pressed. No fill. */
+.podcast-btn {
+  min-block-size: 2.75rem;
+  min-inline-size: 5.5rem;
+  border: var(--line-w) solid var(--dust);
+  border-radius: 0;
+  background: transparent;
+  padding: 0 1rem;
+  color: var(--brand);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  cursor: pointer;
+}
+
+.podcast-btn:hover {
+  border-color: var(--brand);
+}
+
+.podcast-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+}
+
+.home-more.podcast-x {
+  margin-block-start: 0.5rem;
+}
+
+/* One row of three at phone width: the buttons share it rather than wrap. */
+@media (max-width: 47.99rem) {
+  .podcast-btn {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    padding-inline: 0.25rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+}

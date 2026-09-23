@@ -16,6 +16,8 @@
  * Worker's boundary and not the router's.
  */
 
+import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
+
 /** Where violation reports are posted. Public and unauthenticated, by design. */
 export const CSP_REPORT_PATH = "/api/csp-report";
 
@@ -149,6 +151,11 @@ export function contentSecurityPolicy(nonce, styleNonce) {
      */
     "font-src 'self'",
     "img-src 'self' data:",
+    /*
+     * THE HOME PAGE'S GERMOMICS PLAYER, and only its hosts: the same array the feed parser checks
+     * every episode against, so an episode the page renders is one this policy lets play.
+     */
+    `media-src 'self' ${PODCAST_AUDIO_HOSTS.map((host) => `https://${host}`).join(" ")}`,
     "connect-src 'self'",
     "object-src 'none'",
     "base-uri 'none'",

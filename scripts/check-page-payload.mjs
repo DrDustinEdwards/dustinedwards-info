@@ -62,6 +62,9 @@ const ENHANCE_BROTLI_CEILINGS = {
   /* Measured on the first build of this module, at 727 brotli: Plate I's linked highlight and its
      leader intro, home page only. */
   "plate.js": 1000,
+  /* Measured on the first build of this module, at 608 brotli (esbuild output, quality 11): the
+     home page's Germomics player controls, home page only (ruling 134). */
+  "podcast.js": 900,
   /* Measured on the first build of this module, at 1121 brotli. */
   "search.js": 1600,
   "theme.js": 1000,
@@ -660,8 +663,12 @@ const ROUTE_CEILINGS = {
    * the reason). plate.js is 727 brotli, the linked highlight and the leader intro the solid-lawn
    * plate brings. Measured 8876 on the build that raised it; the 397 bytes of slack the last raise
    * kept are kept again, rounded up. It comes down with the rest of the uplift by UPLIFT_EXPIRES.
+   *
+   * RAISED AGAIN FOR THE SCIENCE COMMUNICATION SECTION (rulings 119 and 134): podcast.js at 608
+   * brotli and the episode and player rules in home.css. Measured 7313 css / 9862 total on the
+   * build that raised it; both keep the slack they had before (196 and 397), rounded up.
    */
-  "/": { id: "routes/home", css: 7100, total: 9300 },
+  "/": { id: "routes/home", css: 7500, total: 10300 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
@@ -736,6 +743,8 @@ const BUNDLE_USE = {
   "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
   /* Plate I and its key are on the home page and nowhere else. */
   "plate.js": (/** @type {string} */ id) => id === "routes/home",
+  /* The Germomics episode is on the home page and nowhere else. */
+  "podcast.js": (/** @type {string} */ id) => id === "routes/home",
   "ask.js":(/** @type {string} */ id) => id === "routes/search",
   /* The search page's own enhancement: it upgrades that page's form and result list and has
      nothing to do anywhere else. */

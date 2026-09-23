@@ -1,0 +1,112 @@
+import type { RouterContextProvider } from "react-router";
+
+import { getSetting, setSetting } from "~/db";
+import { cloudflareContext } from "~/lib/context";
+import {
+  PODCAST_FEED_URL,
+  PODCAST_SLOT_KEY,
+  chooseEpisode,
+  parsePodcastFeed,
+  parsePodcastSlot,
+  type PodcastEpisode,
+  type PodcastSlot,
+} from "~/lib/podcast/feed.mjs";
+
+/**
+ * The podcast feed, cached in APP_KV, on the citation cache's terms: THE PAGE NEVER WAITS ON THE
+ * PODCAST HOST. The home loader reads KV only, and a missing or stale entry is refreshed in
+ * `waitUntil` after the response is sent. There is no cron on this Worker, so a render is what
+ * notices the age.
+ *
+ * A FAILED REFRESH NEVER REPLACES A GOOD COPY. It keeps the episodes and stamps `checkedAt`, so a
+ * host that is down is asked again after the interval rather than on every render. Hard rule 18: the
+ * cache is derived, the feed is the source, and a failed derivation reverts nothing.
+ */
+
+const CACHE_KEY = "podcast:germomics:v1";
+const REFRESH_AFTER_MS = 3 * 60 * 60 * 1000;
+const FETCH_TIMEOUT_MS = 8000;
+const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
+
+type CachedFeed = {
+  episodes: PodcastEpisode[];
+  /** When the episodes were last fetched successfully. */
+  fetchedAt: string;
+  /** When the feed was last asked, successful or not. */
+  checkedAt: string;
+};
+
+async function readCache(kv: KVNamespace): Promise<CachedFeed | null> {
+  try {
+    return await kv.get<CachedFeed>(CACHE_KEY, "json");
+  } catch {
+    // A KV hiccup must never take the page down.
+    return null;
+  }
+}
+
+async function fetchEpisodes(): Promise<PodcastEpisode[] | null> {
+  try {
+    const res = await fetch(PODCAST_FEED_URL, {
+      headers: { "user-agent": USER_AGENT, accept: "application/rss+xml, application/xml" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const episodes = parsePodcastFeed(await res.text());
+    return episodes.length > 0 ? episodes : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<CachedFeed | null> {
+  const now = new Date().toISOString();
+  const episodes = await fetchEpisodes();
+  const next: CachedFeed | null = episodes
+    ? { episodes, fetchedAt: now, checkedAt: now }
+    : cached && { ...cached, checkedAt: now };
+  if (!next) return null;
+  try {
+    await kv.put(CACHE_KEY, JSON.stringify(next));
+  } catch {
+    // The next render tries again.
+  }
+  return next;
+}
+
+const isStale = (cached: CachedFeed) =>
+  Date.now() - Date.parse(cached.checkedAt) > REFRESH_AFTER_MS;
+
+/**
+ * The cached episodes. `wait` is for the admin, which may block on a cold cache so the picker has
+ * something to list; a public render never passes it.
+ */
+export async function readPodcastFeed(
+  context: Readonly<RouterContextProvider>,
+  { wait = false }: { wait?: boolean } = {},
+): Promise<CachedFeed | null> {
+  const { env, ctx } = context.get(cloudflareContext);
+  const kv = env.APP_KV;
+  const cached = await readCache(kv);
+  if (cached && !isStale(cached)) return cached;
+  if (wait) return refresh(kv, cached);
+  ctx.waitUntil(refresh(kv, cached));
+  return cached;
+}
+
+export async function readPodcastSlot(env: Env): Promise<PodcastSlot> {
+  return parsePodcastSlot(await getSetting(env, PODCAST_SLOT_KEY));
+}
+
+export async function writePodcastSlot(env: Env, slot: PodcastSlot): Promise<void> {
+  await setSetting(env, PODCAST_SLOT_KEY, JSON.stringify(slot));
+}
+
+/** What the home page renders: the chosen episode, or null when nothing is cached yet. */
+export async function homePodcastEpisode(
+  context: Readonly<RouterContextProvider>,
+): Promise<PodcastEpisode | null> {
+  const env = context.get(cloudflareContext).env;
+  const [feed, slot] = await Promise.all([readPodcastFeed(context), readPodcastSlot(env)]);
+  return chooseEpisode(feed?.episodes ?? [], slot).episode;
+}
