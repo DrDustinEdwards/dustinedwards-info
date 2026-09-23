@@ -3,11 +3,10 @@
 // the server build as an already-compiled WebAssembly module.
 import onigModule from "shiki/onig.wasm";
 
-import { setWasmLoader } from "./pipeline.mjs";
-
 /**
- * Teaches the shared pipeline how to load oniguruma inside a Worker. Import for its side effect,
- * before anything renders.
+ * How the shared pipeline loads oniguruma inside a Worker. `loadPipeline()` hands it to the
+ * pipeline before anything renders. It does not import the pipeline itself, so the pipeline has
+ * exactly one importer on the Worker side and the dynamic import there actually splits.
  *
  * Workers refuse `WebAssembly.instantiate()` on raw bytes, which is what `import("shiki/wasm")` ends
  * up doing, so the Node default cannot be used here. A module imported STATICALLY is already
@@ -20,7 +19,5 @@ const wasm = (globalThis as typeof globalThis & {
   WebAssembly: { instantiate: (m: unknown, i: unknown) => Promise<unknown> };
 }).WebAssembly;
 
-const instantiate = (imports: unknown) => wasm.instantiate(onigModule, imports);
-
-setWasmLoader(() => instantiate);
+export const instantiate = (imports: unknown) => wasm.instantiate(onigModule, imports);
 
