@@ -915,7 +915,16 @@ async function operatorSync(tool) {
   const { report, miss } = await operatorSync("sync_ask");
   askMiss = miss;
 
-  if (!askMiss && report.converged !== true) {
+  /*
+   * A NAMED FAILURE IS A MISS NOW, not a drift to wait out: those keys were never written, so the
+   * index will not catch up on its own. It was waited out once, 2026-09-23, and stayed 156 of 157.
+   */
+  if (!askMiss && Array.isArray(report.failed) && report.failed.length > 0) {
+    askMiss =
+      `the Ask upload failed for ${report.failed.length} key(s) after retries: ` +
+      report.failed.map((/** @type {any} */ f) => `${f.key} (${f.error})`).join(", ") +
+      `. Re-run sync_ask once the cause clears`;
+  } else if (!askMiss && report.converged !== true) {
     /*
      * AI Search is eventually consistent, so drift is re-read before it is a miss. The re-read is
      * `/api/health`, which writes nothing; `sync_ask` would repair what it measures. Bounded by

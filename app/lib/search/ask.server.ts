@@ -14,6 +14,7 @@ import {
   writeCachedDrift,
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl } from "./ask-keys.mjs";
+import { uploadTwins } from "./ask-twins.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { PUBLICATIONS } from "~/data/publications";
@@ -168,6 +169,8 @@ export function replayCachedAnswer(cached: {
 export interface CorpusSyncResult {
   uploaded: number;
   keys: string[];
+  /** Keys that did not land after their retries. Non-empty means the sync did NOT converge. */
+  failed: Array<{ key: string; error: string }>;
   /** Cached answers dropped because the corpus they were drawn from moved. */
   cacheDropped: number;
 }
@@ -261,7 +264,8 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
    * which is what keyword search should snippet, and the twin has the text Ask should retrieve over.
    * Uploading both would let the shorter sometimes win a question the longer answers.
    */
-  for (const key of await uploadPaperTwins(env)) keys.push(key);
+  const twins = await uploadPaperTwins(env);
+  keys.push(...twins.keys);
 
   // The corpus just changed, so every cached answer was written against content that may no longer
   // be true. Dropping them at the moment of change is what stops a stale answer outliving the post.
@@ -269,7 +273,12 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   // A delete rather than a write: this path knows the cached value is stale, not what it became.
   await dropCachedDrift(env);
 
-  return { uploaded: keys.length, keys, cacheDropped: dropped };
+  return {
+    uploaded: keys.length - twins.failed.length,
+    keys,
+    failed: twins.failed,
+    cacheDropped: dropped,
+  };
 }
 
 /**
@@ -282,35 +291,27 @@ function paperItemKeys(): string[] {
 }
 
 /**
- * Uploads every paper's markdown twin, and returns the keys it wrote.
+ * Uploads every paper's markdown twin, with retries, through `ask-twins.mjs`, which carries the
+ * grounds: a key that still fails is RETURNED in `failed` rather than logged and dropped, and every
+ * key stays in `keys` so the caller's prune never deletes the copy already indexed.
  *
  * FETCHED THROUGH `ASSETS` because a Worker cannot read a file it does not import, and the twins
  * are gitignored so the extracted text stays out of the bundle. Hard rule 7's property comes with
  * it: what is indexed is the document the site actually serves at that URL.
- *
- * A MISSING TWIN IS REPORTED, NOT INVENTED, and its key is still returned: the caller's prune
- * deletes every key it is not given, so omitting it would turn a missing build into a DELETION.
  */
-async function uploadPaperTwins(env: Env): Promise<string[]> {
-  const keys: string[] = [];
-  for (const paper of PUBLICATIONS) {
+async function uploadPaperTwins(env: Env) {
+  const twins = PUBLICATIONS.map((paper) => {
     const slug = doiSlug(paper.doi);
-    const key = keyForUrl(paperPath(slug));
-    keys.push(key);
-    const url = new URL(paperMarkdownPath(slug), "https://assets.invalid");
-    const response = await env.ASSETS.fetch(new Request(url));
-    if (!response.ok) {
-      console.error("ask twin fetch failed", paperMarkdownPath(slug), response.status);
-      continue;
-    }
-    const body = await response.text();
-    try {
-      await env.AI_SEARCH.items.upload(key, body);
-    } catch (error) {
-      console.error("ask twin upload failed", key, error);
-    }
-  }
-  return keys;
+    return { key: keyForUrl(paperPath(slug)), path: paperMarkdownPath(slug) };
+  });
+  return uploadTwins(twins, {
+    fetchText: async (path: string) => {
+      const response = await env.ASSETS.fetch(new Request(new URL(path, "https://assets.invalid")));
+      if (!response.ok) throw new Error(`twin ${path} answered ${response.status}`);
+      return response.text();
+    },
+    upload: (key: string, body: string) => env.AI_SEARCH.items.upload(key, body),
+  });
 }
 
 /**
