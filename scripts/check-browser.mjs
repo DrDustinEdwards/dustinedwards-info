@@ -2396,7 +2396,9 @@ try {
     [...new Set(
       [...document.querySelectorAll('.entry-list a[href^="/blog/"]')]
         .map((a) => a.getAttribute("href"))
-        .filter((h) => h && !h.endsWith(".md")),
+        /* A POST IS ONE SEGMENT. Each row also links its tags (/blog/tags/x); without this the
+           list was one post and five tag archives, and the bundle case below read a tag page. */
+        .filter((h) => h && /^\/blog\/[^/.]+$/.test(h)),
     )].slice(0, 6),
   );
   /*
@@ -2426,7 +2428,8 @@ try {
   let probedPost = null;
   for (const path of postPaths) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    probedPost = probedPost ?? path;
+    /* The page the bundle is counted on is the LAST one visited, so that is the one named. */
+    probedPost = path;
     const hasCode = await page.evaluate(
       () => document.querySelectorAll(".prose pre[data-lang]").length > 0,
     );
@@ -2950,60 +2953,13 @@ try {
     );
 
     /*
+     * EVERYTHING THAT READS THE OPEN DIALOG RUNS BEFORE ANYTHING THAT SUBMITS IT. The query case
+     * below presses Enter, which navigates to /search; run first, it left these three measuring a
+     * page with no dialog and a fresh resource timeline, so they failed on a palette that worked.
+     *
      * The dialog arrives styled: its CSS loads on demand, and an unstyled `<dialog open>` still
      * passes the open check. Compared against the `--border` token, never a literal.
      */
-    /*
-     * The query survives the gesture: type a real query, submit it, and the resulting URL must
-     * carry it. A control that lands on a bare /search fails here.
-     */
-    if (paletteOpen.open) {
-      const QUERY = "phage cocktail";
-      /* Typed through a handle, not `page.type`, which throws on a missing field and voids the run. */
-      const field = await page.$(".palette-input");
-      if (!field) {
-        ok(
-          "the typed query survives the search gesture and reaches the URL",
-          false,
-          "the palette reported itself open but carries no .palette-input to type into, " +
-            "so the query could not be entered. The dialog opened without its field.",
-        );
-      } else {
-        await field.type(QUERY);
-        await page.keyboard.press("Enter");
-
-      // Polled rather than slept: the submit is a navigation on some paths and
-      // a same-document update on others, and a fixed wait races both.
-      let landed = page.url();
-      for (let i = 0; i < 25; i += 1) {
-        await new Promise((r) => setTimeout(r, 200));
-        landed = page.url();
-        if (/[?&]q=/.test(landed)) break;
-      }
-
-      const carried = (() => {
-        try {
-          return new URL(landed).searchParams.get("q");
-        } catch {
-          return null;
-        }
-      })();
-
-      ok(
-          "the typed query survives the search gesture and reaches the URL",
-          carried === QUERY,
-          `submitted ${JSON.stringify(QUERY)} and landed on ${landed}, whose q is ` +
-            `${JSON.stringify(carried)}. A control that navigates to a bare /search ` +
-            `throws the reader's query away, which is what build 2 shipped and what ` +
-            `no offline gate could see.`,
-        );
-      }
-    } else {
-      skip(
-        "the typed query survives the search gesture and reaches the URL",
-        "the palette never opened, so there was no field to type a query into",
-      );
-    }
     const dialogStyled = await page.evaluate(() => {
       const dialog = document.querySelector("dialog.palette");
       if (!dialog) return null;
@@ -3060,8 +3016,64 @@ try {
         `0 options after 5s; status ${JSON.stringify(paletteResult.status)}. The JSON ` +
           `endpoint or the palette's fetch path broke.`,
       );
-      await page.keyboard.press("Escape");
+      /* Emptied, not closed: the query case below types into this same open field. */
+      await resultsField.evaluate((input) => {
+        /** @type {HTMLInputElement} */ (input).value = "";
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
       }
+    }
+
+    /*
+     * LAST, because it leaves the page. The query survives the gesture: type a real query, submit
+     * it, and the resulting URL must carry it. A control that lands on a bare /search fails here.
+     */
+    if (paletteOpen.open) {
+      const QUERY = "phage cocktail";
+      /* Typed through a handle, not `page.type`, which throws on a missing field and voids the run. */
+      const field = await page.$(".palette-input");
+      if (!field) {
+        ok(
+          "the typed query survives the search gesture and reaches the URL",
+          false,
+          "the palette reported itself open but carries no .palette-input to type into, " +
+            "so the query could not be entered. The dialog opened without its field.",
+        );
+      } else {
+        await field.type(QUERY);
+        await page.keyboard.press("Enter");
+
+        // Polled rather than slept: the submit is a navigation on some paths and
+        // a same-document update on others, and a fixed wait races both.
+        let landed = page.url();
+        for (let i = 0; i < 25; i += 1) {
+          await new Promise((r) => setTimeout(r, 200));
+          landed = page.url();
+          if (/[?&]q=/.test(landed)) break;
+        }
+
+        const carried = (() => {
+          try {
+            return new URL(landed).searchParams.get("q");
+          } catch {
+            return null;
+          }
+        })();
+
+        ok(
+          "the typed query survives the search gesture and reaches the URL",
+          carried === QUERY,
+          `submitted ${JSON.stringify(QUERY)} and landed on ${landed}, whose q is ` +
+            `${JSON.stringify(carried)}. A control that navigates to a bare /search ` +
+            `throws the reader's query away, which is what build 2 shipped and what ` +
+            `no offline gate could see.`,
+        );
+      }
+    } else {
+      skip(
+        "the typed query survives the search gesture and reaches the URL",
+        "the palette never opened, so there was no field to type a query into",
+      );
     }
   }
 
