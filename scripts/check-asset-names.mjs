@@ -107,7 +107,7 @@ for (const path of EXEMPT_ROUTES.keys()) {
 console.log(`  routes: ${extensionRoutes.length} with an extension, ${EXEMPT_ROUTES.size} exempt`);
 
 const floorBreaches = [
-  assertFloor("check:asset-names", "public-files", committed.length, 57),
+  assertFloor("check:asset-names", "public-files", committed.length, 62),
   assertFloor("check:asset-names", "extension-routes", extensionRoutes.length, 17),
 ].filter(Boolean);
 for (const breach of floorBreaches) assert("this gate walked what it claims", false, breach ?? "");

@@ -668,24 +668,32 @@ const ROUTE_CEILINGS = {
    * brotli and the episode and player rules in home.css. Measured 7313 css / 9862 total on the
    * build that raised it; both keep the slack they had before (196 and 397), rounded up.
    */
-  "/": { id: "routes/home", css: 7500, total: 10300 },
-  "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
+  /*
+   * RAISED FOR THE FOOTER REBUILD (ruling 135), and ONLY the fields that breached. The footer's
+   * rules live in shell.css, so root.css went from 5409 to 5677 brotli and every route pays +268;
+   * the routes that absorbed it inside their slack keep their ceilings. A breaching field rises by
+   * that +268 rounded up to +300, which keeps the slack it had rather than adding any. Home, with
+   * the science communication section in, measured 7580 css / 10129 total; its css keeps the 196
+   * bytes of slack the podcast raise kept, rounded up, and its total still fits.
+   */
+  "/": { id: "routes/home", css: 7800, total: 10300 },
+  "/blog": { id: "routes/blog._index", css: 7400, total: 8500 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
    * layout and its own type rules. Measured 8982 css / 12051 total on the build that raised it.
    * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
    */
-  "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 12400 },
+  "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 12700 },
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
-  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7200, total: 8100 },
+  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7200, total: 8400 },
   /* The tag archive's, for the reason above: one bar for one kind of page. */
-  "/blog/series/:series": { id: "routes/blog.series.$series", css: 7200, total: 8100 },
+  "/blog/series/:series": { id: "routes/blog.series.$series", css: 7200, total: 8400 },
   /*
    * The total alone is raised, and by the rail track's share: `.tracks` gained the rail as a
    * third track, which every public route pays for because they all load shell.css. This page
    * had 52 bytes of headroom and was the only one that did not absorb it.
    */
-  "/search": { id: "routes/search", css: 7600, total: 10300 },
+  "/search": { id: "routes/search", css: 7600, total: 10600 },
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
   "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
   "/playground": { id: "routes/playground", css: 8200, total: 9000 },
@@ -705,7 +713,7 @@ const ROUTE_CEILINGS = {
    */
   /* RAISED FOR header.js with the home page above, and for the same +431. Measured 8400, keeping
      the 131 bytes of slack it had, rounded up. The css ceiling is untouched: it measured 7155. */
-  "/publications": { id: "routes/publications", css: 7300, total: 8600 },
+  "/publications": { id: "routes/publications", css: 7600, total: 8900 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
    * HTML is the variable part: a long author list is content, not a payload regression.
@@ -717,8 +725,9 @@ const ROUTE_CEILINGS = {
  * THE MATH VARIANT: `/blog/:slug` with one more sheet, generated from a pinned package.
  *
  * Raised with its parent for Part B page 1, by the same sheets: measured 11801 css / 14870 total.
+ * The total raised again with its parent for the footer rebuild, by the same +300.
  */
-const MATH_CEILING = { css: 12300, total: 15200 };
+const MATH_CEILING = { css: 12300, total: 15500 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
 const MINIMUM_MATH_FACES = 20;
@@ -1188,18 +1197,23 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
  */
 const HTML_CEILINGS = {
   "/": { brotli: 12000, measured: 10428 },
-  "/blog": { brotli: 4300, measured: 3734 },
+  /*
+   * RE-MEASURED FOR THE FOOTER REBUILD (ruling 135): the footer's columns, the X mark and the ORCID
+   * address are on every page, about +800 brotli each. Only the six routes it pushed over moved,
+   * each to its new measurement plus this section's 15%, rounded up.
+   */
+  "/blog": { brotli: 5200, measured: 4495 },
   /* The LONGEST post in the corpus, which is what this route's worst case means. */
   "/blog/:slug": { brotli: 12300, measured: 10660 },
-  "/blog/tags/:tag": { brotli: 3900, measured: 3443 },
-  "/blog/series/:series": { brotli: 4000, measured: 3458 },
+  "/blog/tags/:tag": { brotli: 4900, measured: 4200 },
+  "/blog/series/:series": { brotli: 4900, measured: 4215 },
   "/projects": { brotli: 6400, measured: 5559 },
   "/colophon": { brotli: 13900, measured: 12043 },
   "/playground": { brotli: 6300, measured: 5435 },
   "/playground/ui": { brotli: 13600, measured: 11789 },
-  "/phage-discovery": { brotli: 3400, measured: 2922 },
-  "/privacy": { brotli: 3200, measured: 2772 },
-  "/about": { brotli: 2100, measured: 1817 },
+  "/phage-discovery": { brotli: 4300, measured: 3659 },
+  "/privacy": { brotli: 4100, measured: 3529 },
+  "/about": { brotli: 3100, measured: 2624 },
 };
 
 /** The most a ceiling may sit above the measurement it records. Ruling 119 in one number. */
