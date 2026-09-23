@@ -27,15 +27,33 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
           <h3 className="podcast-title">
             <a href={episode.link}>{episode.title}</a>
           </h3>
+          {/* Real separators, not a CSS gap, so reader mode and agents do not get one run-on word. */}
           <p className="podcast-meta">
-            <span>Germomics</span>
-            {episode.season && episode.episode ? (
-              <span>
-                Season {episode.season}, episode {episode.episode}
-              </span>
-            ) : null}
-            <time dateTime={episode.publishedAt}>{longDateUTC(new Date(episode.publishedAt))}</time>
-            {episode.durationSeconds ? <span>{clockTime(episode.durationSeconds)}</span> : null}
+            {[
+              <span key="show">Germomics</span>,
+              episode.season && episode.episode ? (
+                <span key="number">
+                  Season {episode.season}, episode {episode.episode}
+                </span>
+              ) : null,
+              <time key="date" dateTime={episode.publishedAt}>
+                {longDateUTC(new Date(episode.publishedAt))}
+              </time>,
+              episode.durationSeconds ? (
+                <span key="length">{clockTime(episode.durationSeconds)}</span>
+              ) : null,
+            ]
+              .filter(Boolean)
+              .flatMap((item, i) =>
+                i === 0
+                  ? [item]
+                  : [
+                      <span key={`sep-${i}`} className="podcast-sep" aria-hidden="true">
+                        {" · "}
+                      </span>,
+                      item,
+                    ],
+              )}
           </p>
           {episode.description ? <p className="podcast-description">{episode.description}</p> : null}
           <div className="podcast-player">

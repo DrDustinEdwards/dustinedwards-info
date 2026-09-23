@@ -665,7 +665,7 @@ const ROUTE_CEILINGS = {
    * kept are kept again, rounded up. It comes down with the rest of the uplift by UPLIFT_EXPIRES.
    *
    * RAISED AGAIN FOR THE SCIENCE COMMUNICATION SECTION (rulings 119 and 134): podcast.js at 608
-   * brotli and the episode and player rules in home.css. Measured 7283 css / 9832 total on the
+   * brotli and the episode and player rules in home.css. Measured 7313 css / 9862 total on the
    * build that raised it; both keep the slack they had before (196 and 397), rounded up.
    */
   "/": { id: "routes/home", css: 7500, total: 10300 },
