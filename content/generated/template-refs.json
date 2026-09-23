@@ -1,5 +1,5 @@
 {
-  "generated": 48,
+  "generated": 50,
   "refs": {
     "/dustin-edwards-android-chrome-192x192.png": [
       "public/site.webmanifest"
@@ -13,12 +13,18 @@
     "/dustin-edwards-favicon.svg": [
       "app/root.tsx"
     ],
+    "/dustin-edwards-germomics-mark.svg": [
+      "app/components/shell-footer.tsx"
+    ],
     "/dustin-edwards-maskable-icon-512x512.png": [
       "public/site.webmanifest"
     ],
     "/dustin-edwards-og-image.png": [
       "app/lib/seo.ts",
       "app/routes/playground.ui.tsx"
+    ],
+    "/dustin-edwards-orcid-id.svg": [
+      "app/components/shell-footer.tsx"
     ],
     "/favicon.ico": [
       "app/root.tsx"
@@ -149,5 +155,5 @@
     ]
   },
   "filesRead": 299,
-  "assetsConsidered": 59
+  "assetsConsidered": 61
 }
