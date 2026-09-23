@@ -6,7 +6,6 @@ import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere } from "~/db";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
-import { formatAge } from "~/lib/health/snapshot.mjs";
 import { readHealthTile } from "~/lib/health/snapshot.server";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
@@ -59,9 +58,10 @@ export function meta() {
  * counts with, so a different count here is a visibility bug and not copy.
  *
  * THE CACHED PAGE MUST NOT LIE. This page is shared-cached, so a verdict rendered
- * into it can be minutes old by the time it is read. The tile therefore carries
- * the time it was read and the page stays cached: "All N checks passed at 14:32
- * UTC" is TRUE when read at 14:41, and "All N checks passed" is not.
+ * into it can be minutes old by the time it is read. Only a `fresh` verdict shows a
+ * ratio, and its age in seconds rides `data-health-age`, which the gates read. No
+ * sentence under the row, so the plate and its key fit one screen; `/api/health`
+ * is the live answer.
  *
  * NOTHING HERE CAN START A HEALTH RUN. `/api/health` writes its verdict to KV and
  * this loader reads it: one KV read. The subrequest is refused because a Worker
@@ -118,12 +118,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
    */
   const healthValue =
     health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
-  const healthDetail =
-    health.state === "fresh"
-      ? `Read ${formatAge(health.ageSeconds)}, at ${health.readAt.slice(11, 16)} UTC on ${health.readAt.slice(0, 10)}. This page is cached, so the answer above is at least that old; /api/health answers now.`
-      : health.state === "stale"
-        ? `The last verdict was read ${formatAge(health.ageSeconds)} and is too old to show. That means the scheduled check has stopped, not that the site has failed; /api/health answers now.`
-        : "No recent verdict has been recorded. /api/health runs the checks and answers now.";
   const healthAge = health.state === "missing" ? undefined : String(health.ageSeconds);
 
   /*
@@ -218,7 +212,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 {posts} {posts === 1 ? "post" : "posts"}
               </Link>,
             ]}
-            detail={healthDetail}
           />
         </section>
 
