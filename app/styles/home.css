@@ -152,6 +152,11 @@
   font-size: 0.9375rem;
 }
 
+/* A "more" link stands alone on its line, so it carries no underline, only the hover color. */
+.home-more a {
+  text-decoration: none;
+}
+
 .home-machines {
   margin-block-start: var(--s-7);
 }

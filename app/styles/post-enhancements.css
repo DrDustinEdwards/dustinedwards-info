@@ -228,6 +228,12 @@
   font-size: 0.9375rem;
 }
 
+/* A link list: each item is a standalone link, so color alone marks the hover. */
+.further-reading a,
+.related-posts a {
+  text-decoration: none;
+}
+
 /* A citation is a block, not a line, so the entries need air between them and
    nothing to the left of them. */
 .post-mentions ul {

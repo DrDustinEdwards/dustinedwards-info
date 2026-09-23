@@ -198,17 +198,14 @@
 
 
 /*
- * EVERY HOVER ON THIS SHEET, IN ONE RULE. Four rules were saying the same three declarations,
- * which is the site's one underline: a hairline, offset far enough to clear a descender.
+ * EVERY HOVER ON THIS SHEET, IN ONE RULE: color only. A filter, a pager and a feed link stand
+ * alone, and the underline belongs to links in running text.
  */
 .list-filter a:hover,
 .pager a:hover,
 .list-feeds a:hover,
 .list-search button:hover {
   color: var(--brand-hover);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
 }
 
 @media (max-width: 47.99rem) {

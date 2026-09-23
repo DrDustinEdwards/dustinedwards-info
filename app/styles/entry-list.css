@@ -110,9 +110,6 @@
 
 .entry-tags a:hover {
   color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
 }
 
 .list-empty {
