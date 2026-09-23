@@ -151,6 +151,8 @@ const seo = await importBundled(identity.files[0]);
 
 const SITE = /** @type {any} */ (seo).SITE;
 const SITE_ORIGIN = /** @type {any} */ (seo).SITE_ORIGIN;
+/** The footer's rel="me" set, read from its one owner rather than restated. */
+const OWNER_PROFILES = /** @type {string[]} */ ([...(/** @type {any} */ (seo).OWNER_PROFILES ?? [])]);
 
 assert(
   "the site identity module loaded",
@@ -651,13 +653,22 @@ assert(
     `moved onto an ancestor of the post list.`,
 );
 
-// 4. No rel="me", no social links. Ruling 50.
+// 4. rel="me" is exactly the owner's profiles, and never Mastodon or Bluesky. Rulings 134 and 135.
 
 /*
  * ASSERTED ON THE RENDERED PAGES: the parser's view of every rel catches one however it was
- * written. The social arm is a NAMED LIST, the site linking out constantly.
+ * written. Ruling 50's "no rel=me" is superseded by 134 and 135: the footer's profile links carry
+ * it, and the set must equal `OWNER_PROFILES`, so a stray rel="me" anywhere else fails as surely as
+ * a missing one. The social arm is a NAMED LIST, the site linking out constantly; 134 keeps it.
  */
 const FORBIDDEN_HOSTS = ["bsky.app", "bsky.social", "mastodon.social", "fed.brid.gy"];
+
+assert(
+  "the owner's profile list loaded",
+  OWNER_PROFILES.length >= 3,
+  `app/lib/seo.ts yielded ${OWNER_PROFILES.length} profile(s); the rel="me" comparison below ` +
+    `would pass against an empty expectation.`,
+);
 
 for (const [label, html] of /** @type {Array<[string, string]>} */ ([
   ["/", homeHtml],
@@ -672,11 +683,13 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
   ],
 ])) {
   const parsed = mf2(html, { baseUrl: SITE_ORIGIN });
+  const me = [...(parsed.rels?.me ?? [])].sort();
+  const expected = [...OWNER_PROFILES].sort();
   assert(
-    `${label}: publishes no rel="me"`,
-    parsed.rels?.me === undefined,
-    `rel="me" points at ${JSON.stringify(parsed.rels?.me)}. Ruling 50 as amended: no ` +
-      `rel="me" and no social links on this site; social presence lives with germomics.`,
+    `${label}: rel="me" is exactly the owner's profiles`,
+    me.length === expected.length && me.every((href, i) => href === expected[i]),
+    `rel="me" points at ${JSON.stringify(me)}; OWNER_PROFILES is ${JSON.stringify(expected)}. ` +
+      `The footer's profile links carry rel="me" and nothing else on the page may.`,
   );
   for (const host of FORBIDDEN_HOSTS) {
     assert(
@@ -715,6 +728,6 @@ if (failures.length > 0) {
 
 console.log(
   `check:microformats ok. ${checks} assertions: ${postsParsed} post page(s) as h-entry, ` +
-    `${feedsParsed} index page(s) as h-feed, the home h-card, and ruling 50 on two ` +
+    `${feedsParsed} index page(s) as h-feed, the home h-card, and the rel="me" set on two ` +
     `rendered pages. 0 failures.`,
 );

@@ -73,9 +73,9 @@
   margin-block-start: var(--s-5);
 }
 
-/* 5 · The footer. Tonal: limestone ground, one dust rule above, sentence-case
-   purple links. No purple fill, no logo repeat, no social row, no tracked
-   caps. */
+/* 5 · The footer (ruling 135). Limestone ground, one dust rule above, then the identity block and
+   five link columns on the wide track, left-aligned. Sentence case, purple links, no fills. On a
+   phone everything stacks, identity first. */
 .site-shell-footer {
   margin-block-start: var(--s-8);
   border-block-start: var(--line-w) solid var(--dust);
@@ -89,38 +89,163 @@
   }
 }
 
-.site-shell-footer-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-5);
+.site-shell-footer .tracks > * {
+  grid-column: wide;
 }
 
-.site-shell-footer-nav a {
+.footer-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-6) var(--s-5);
+}
+
+@media (min-width: 48rem) {
+  .footer-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .footer-identity {
+    grid-column: 1 / -1;
+  }
+}
+
+/* One row at desktop width. Profiles is wider because ORCID's convention is the whole address. */
+@media (min-width: 72rem) {
+  .footer-grid {
+    grid-template-columns:
+      minmax(9rem, 1.1fr) repeat(3, minmax(0, 1fr)) minmax(0, 1.9fr) minmax(0, 1fr);
+  }
+
+  .footer-identity {
+    grid-column: auto;
+  }
+}
+
+/* The mark over the name, both one link home. */
+.footer-home {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.footer-logo {
+  inline-size: auto;
+  block-size: 3rem;
+}
+
+.footer-name {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.footer-social {
+  display: flex;
+  gap: var(--s-3);
+  margin-block-start: var(--s-4);
+}
+
+.footer-social-link {
   display: inline-flex;
   align-items: center;
-  min-block-size: var(--control-min);
+  justify-content: center;
+  min-inline-size: var(--control-min-dense);
+  min-block-size: var(--control-min-dense);
+}
+
+/* The same visual height for both marks. */
+.footer-social-mark {
+  display: block;
+  inline-size: auto;
+  block-size: 1.75rem;
+}
+
+/* X's two permitted colors, and nothing else: black on the light theme, white on the dark. */
+.footer-x {
+  color: black;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .footer-x {
+    color: white;
+  }
+}
+
+[data-theme="dark"] .footer-x {
+  color: white;
+}
+
+.footer-heading {
+  margin: 0 0 var(--s-2);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.footer-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.footer-links a {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--control-min-dense);
   color: var(--brand);
   font-family: var(--font-sans);
   /* 14px regular, not the nav scale: these are not destinations, so they do not take the
-     header's weight. Sentence case throughout. */
+     header's weight. */
   font-size: 0.875rem;
   font-weight: 400;
   font-optical-sizing: none;
   text-decoration: none;
 }
 
-.site-shell-footer-nav a:hover {
+.footer-links a:hover {
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: var(--line-w);
 }
 
-.site-shell-footer-nav a:visited {
+.footer-links a:visited {
   color: var(--visited);
 }
 
+/* A label and its formats on one line: "Feeds RSS Atom JSON". */
+.footer-pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--s-3);
+}
+
+.footer-pair > span {
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+}
+
+/* ORCID's display convention: the iD icon, then the full https address. */
+.footer-orcid {
+  gap: var(--s-2);
+  overflow-wrap: anywhere;
+}
+
+.footer-orcid-icon {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
 .site-shell-footer-note {
-  margin-block-start: var(--s-3);
+  margin-block-start: var(--s-6);
   color: var(--text-secondary);
   font-family: var(--font-sans);
   font-size: 0.8125rem;
