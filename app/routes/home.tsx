@@ -216,6 +216,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <PlateKeyRow />
         <PlateEnhancements />
 
+        {/* Research opens with Dustin's own statement; the rest of the section is his to write. */}
+        <section className="home-research" aria-labelledby="research-heading">
+          <h2 id="research-heading" className="home-section-heading">
+            Research
+          </h2>
+          <p className="home-research-line">I study viral genomics.</p>
+        </section>
+
         {featured ? (
           <section className="home-featured" aria-labelledby="featured-heading">
             <h2 id="featured-heading" className="home-section-heading">

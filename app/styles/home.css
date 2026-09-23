@@ -440,6 +440,17 @@
   margin-block-end: 2.75rem;
 }
 
+/* Set like Writing: the heading, the dust rule under it, then the statement at a row title's size. */
+.home-research-line {
+  margin: 0;
+  border-block-start: var(--line-w) solid var(--dust);
+  padding-block-start: 1rem;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 1.35;
+}
+
 .home-section-lede {
   margin: 0 0 1.25rem;
   max-inline-size: 62ch;
