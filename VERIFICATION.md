@@ -492,6 +492,16 @@ inconclusive and fall back to a different subject: here, asserting the
 `@media (hover: none)` rule is present in the shipped CSS bytes, which is a
 weaker claim honestly stated rather than a stronger one invented.
 
+### "ABOVE THE FOLD" MEANS DUSTIN'S SCREEN, IN CSS PIXELS
+
+*Recorded 2026-09-23 (job_6c8048097288).*
+
+A screen size quoted in physical pixels is not the viewport a page lays out in.
+PR #84 took "1920x890" as CSS pixels and reported the key row above the fold; on
+Dustin's Windows 150% display it was not visible at all. **Any fold check measures
+at `FOLD_VIEWPORT` in `scripts/lib/fold-target.mjs`**, which owns the numbers, and
+states the viewport it used in its output.
+
 ---
 
 ## Recording
