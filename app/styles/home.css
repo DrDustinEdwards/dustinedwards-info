@@ -235,7 +235,7 @@
 
 .plate--wide {
   inline-size: 100%;
-  max-inline-size: 704px;
+  max-inline-size: 674px;
 }
 
 .plate--narrow {
@@ -459,9 +459,9 @@
  * the plate, and 68rem is where that stops being cramped. Below it the grid is one column and
  * nothing else changes.
  *
- * 592px IS THE CANVAS'S PLATE COLUMN (part-c/09-solid-lawn.html): the 500px dish plus the 92px its
- * right-hand labels run into. The drawing's box is 704 wide at scale 1, so it also reaches 72px
- * left into the 76px gap, where the canvas's left labels sit.
+ * 592px IS THE CANVAS'S PLATE COLUMN (part-c/09-solid-lawn.html). The drawing is shown at 0.74
+ * with its labels at both sides (plate-i-geometry.ts), a 674px box at scale 1, so it reaches 62px
+ * left into the 76px gap and 20px past the column's right edge.
  */
 .home-hero {
   display: grid;
@@ -481,9 +481,9 @@
   }
 
   .home-hero .plate--wide {
-    inline-size: 704px;
+    inline-size: 674px;
     max-inline-size: none;
-    margin-inline-start: -72px;
+    margin-inline-start: -62px;
   }
 }
 

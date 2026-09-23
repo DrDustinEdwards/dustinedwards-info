@@ -30,7 +30,7 @@ export type PlateLayout = {
   }>;
 };
 
-export const WIDE: PlateLayout = {
+const CANVAS_WIDE: PlateLayout = {
   size: 500,
   dish: {"cx":250,"cy":250,"rim":246,"lawn":235},
   scale: {"line":[16,486,86,486],"label":{"x":16,"y":478,"text":"1 cm"}},
@@ -87,6 +87,74 @@ export const WIDE: PlateLayout = {
     },
   ],
 };
+
+/**
+ * THE WIDE PLATE AS SHOWN: the canvas drawing at 0.74 about the dish center, every label moved to
+ * the dish's left or right side, so the plate and its key row fit one 1440 x 800 screen. Only the
+ * dish, the plaques, the leader starts and the 1 cm bar scale. Labels, tails and strokes keep their
+ * canvas size, so a label is still 14px at scale 1. Units are CSS pixels, origin at the dish center.
+ */
+const K = 0.74;
+const RIM = CANVAS_WIDE.dish.rim * K;
+const at = (x: number, y: number): [number, number] => [
+  +((x - CANVAS_WIDE.dish.cx) * K).toFixed(1),
+  +((y - CANVAS_WIDE.dish.cy) * K).toFixed(1),
+];
+
+/** Which side each label sits on and its elbow height, chosen so no leader crosses a plaque. */
+const SIDE_LABELS: Record<string, { side: 1 | -1; y: number }> = {
+  i: { side: 1, y: -95 },
+  iv: { side: 1, y: 12 },
+  ii: { side: 1, y: 115 },
+  iii: { side: -1, y: -140 },
+  v: { side: -1, y: 62 },
+  vi: { side: -1, y: 150 },
+};
+
+function scaleShape(s: Shape): Shape {
+  if (s.kind === "circle") {
+    const [x, y] = at(s.c[0], s.c[1]);
+    return { ...s, c: [x, y, +(s.c[2] * K).toFixed(1)] };
+  }
+  const d = s.d.replace(/(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)/g, (_, x: string, y: string) =>
+    at(Number(x), Number(y)).join(" "),
+  );
+  return { ...s, d };
+}
+
+export const WIDE: PlateLayout = {
+  size: +(CANVAS_WIDE.size * K).toFixed(1),
+  dish: { cx: 0, cy: 0, rim: +RIM.toFixed(1), lawn: +(CANVAS_WIDE.dish.lawn * K).toFixed(1) },
+  scale: (() => {
+    const [x1, , x2] = CANVAS_WIDE.scale.line;
+    const left = -Math.round(RIM);
+    const y = Math.round(RIM) - 4;
+    return {
+      line: [left, y, +(left + (x2 - x1) * K).toFixed(1), y],
+      label: { x: left, y: y - 8, text: CANVAS_WIDE.scale.label.text },
+    };
+  })(),
+  plaques: CANVAS_WIDE.plaques.map((p) => {
+    const place = SIDE_LABELS[p.id];
+    const start = p.leader[0];
+    if (!place || !start) throw new Error(`Plate I: no label side or leader for plaque "${p.id}"`);
+    const [sx, sy] = at(start[0], start[1]);
+    const elbow = place.side * Math.round(RIM + 8);
+    const tail = place.side * Math.round(RIM + 26);
+    return {
+      id: p.id,
+      shapes: p.shapes.map(scaleShape),
+      leader: [
+        [sx, sy, elbow, place.y],
+        [elbow, place.y, tail, place.y],
+      ],
+      label: { x: tail + place.side * 5, y: place.y + 4, anchor: place.side === 1 ? "start" : "end" },
+    };
+  }),
+};
+
+/** The wide drawing's box: the dish plus the longest label on each side, measured at 14px mono. */
+export const WIDE_VIEW = { x: -362, y: -186, w: 674, h: 372 };
 
 export const NARROW: PlateLayout = {
   size: 300,
