@@ -166,9 +166,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
          */}
         {/*
          * THE SPLIT HERO, and it is the first consumer .u-wide has ever had. The handoff puts the
-         * plate in the intro's RIGHT COLUMN at 1280 with a 76px gutter, and below the evidence
-         * line at 375. Name, sentence and evidence row hold the left; the plate holds the right;
-         * below the breakpoint the grid collapses and the source order is already correct.
+         * plate in the intro's RIGHT COLUMN at 1280 with a 76px gutter, and below the name at 375.
+         * The name holds the left; the plate holds the right; below the breakpoint the grid
+         * collapses and the source order is already correct.
          *
          * The pair takes the wide track because the text track is the prose measure and a 500px
          * plate beside a column of type is not prose (ruling 118 item 4).
@@ -181,46 +181,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <a className="u-url" href="/" hidden>
             {SITE.name}
           </a>
-          {/*
-           * ONE SENTENCE OF WHO AND WHAT, and it is `SITE.tagline`, the string the Person
-           * record and the meta description already derive from.
-           */}
-          <p className="intro-line">{SITE.tagline}</p>
-          {/*
-           * THE THREE PROOF TILES, FLATTENED INTO THE EVIDENCE ROW, each figure linking where its
-           * tile linked. No boxes, no big numerals, no labels under values.
-           *
-           * THE AFFILIATION IS THE ROW'S FIRST FACT and the one hand-written one in any instance
-           * of it: `SITE.affiliation`, the SAME constant the Person record's `worksFor` comes
-           * from, so the page and the graph cannot name different employers. `p-org` moves onto
-           * that span and the row sits inside `.h-card`, so the microformat still parses.
-           *
-           * `data-health-age` rides the health fact, in SECONDS, because `check:browser` and
-           * `verify-live` read the attribute rather than the sentence beside it: prose gets
-           * edited, a number cannot be satisfied by a rewording.
-           */}
-          <EvidenceRow
-            facts={[
-              <span className="p-org">{SITE.affiliation}</span>,
-              <Link to="/colophon#gates">
-                {gates} {gates === 1 ? "check" : "checks"}
-              </Link>,
-              <span className="evidence-health" data-health-age={healthAge}>
-                <Link to="/api/health">{healthValue} passing</Link>
-              </span>,
-              <Link to="/blog">
-                {posts} {posts === 1 ? "post" : "posts"}
-              </Link>,
-            ]}
-          />
         </section>
 
         {/*
          * THE ABSTRACT IS NOT HERE, deliberately. The handoff carries one, and its text is a
          * session's words about Dustin rather than his own: vol 19 records that it is his to
          * write. Shipping a stranger's sentence about a person, on that person's home page, is
-         * the one thing this section must not do, so the intro carries `SITE.tagline` alone until
-         * he supplies it. The label went with it; an "Abstract" heading over nothing is worse
+         * the one thing this section must not do, so the intro carries the name alone until he
+         * supplies it. The label went with it; an "Abstract" heading over nothing is worse
          * than no heading, and vol 19 says that label is sentence case or dropped.
          */}
 
@@ -233,12 +201,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <PlateI />
           <figcaption className="home-plate-caption">
             <span className="home-plate-num">Plate I</span>
-            <span className="home-plate-cap">Plaque morphology, drawn. Six types on one lawn.</span>
+            <span className="home-plate-cap">Plaque morphology, drawn.</span>
           </figcaption>
-          {/* Unhidden by the enhancement, because without script there is nothing to select. */}
-          <p className="plate-hint" hidden>
-            Select a plaque to find it in the key.
-          </p>
         </figure>
         </div>
 
@@ -388,6 +352,30 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             built, and what it costs, is on the <Link to="/colophon">colophon</Link>.
           </p>
         </section>
+
+        {/*
+         * THE EVIDENCE ROW, at the foot of the page rather than in the hero, so the plate and its
+         * key fit one screen. Each figure links where its old tile linked. The affiliation is
+         * `SITE.affiliation`, the constant the Person record's `worksFor` comes from.
+         *
+         * `data-health-age` rides the health fact, in SECONDS, because `check:browser` and
+         * `verify-live` read the attribute rather than the sentence beside it: prose gets edited,
+         * a number cannot be satisfied by a rewording.
+         */}
+        <EvidenceRow
+          facts={[
+            <span>{SITE.affiliation}</span>,
+            <Link to="/colophon#gates">
+              {gates} {gates === 1 ? "check" : "checks"}
+            </Link>,
+            <span className="evidence-health" data-health-age={healthAge}>
+              <Link to="/api/health">{healthValue} passing</Link>
+            </span>,
+            <Link to="/blog">
+              {posts} {posts === 1 ? "post" : "posts"}
+            </Link>,
+          ]}
+        />
 
         {jsonLd.map((data, i) => (
           <script
