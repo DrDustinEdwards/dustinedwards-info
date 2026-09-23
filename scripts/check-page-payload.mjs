@@ -672,9 +672,11 @@ const ROUTE_CEILINGS = {
    * RAISED FOR THE FOOTER REBUILD (ruling 135), and ONLY the fields that breached. The footer's
    * rules live in shell.css, so root.css went from 5409 to 5677 brotli and every route pays +268;
    * the routes that absorbed it inside their slack keep their ceilings. A breaching field rises by
-   * that +268 rounded up to +300, which keeps the slack it had rather than adding any.
+   * that +268 rounded up to +300, which keeps the slack it had rather than adding any. Home, with
+   * the science communication section in, measured 7580 css / 10129 total; its css keeps the 196
+   * bytes of slack the podcast raise kept, rounded up, and its total still fits.
    */
-  "/": { id: "routes/home", css: 7500, total: 10300 },
+  "/": { id: "routes/home", css: 7800, total: 10300 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8500 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
