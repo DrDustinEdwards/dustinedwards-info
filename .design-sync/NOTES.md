@@ -127,6 +127,16 @@ Do not "fix" this by reordering the tier to win the scraper: a media block adds
 no specificity, so the tier works only because it comes last, and moving it
 would trade a wrong manifest for a wrong render.
 
+## The bundle's faces swap; the site's are `optional`
+
+**The sync deliberately ships `font-display: swap` where the site has
+`optional`**, and that difference is not drift to repair. The grounds are the
+comment on `swapFontDisplay` in `build-inputs.mjs`; the generator throws if an
+`optional` face survives. In short: without the site's preload, `optional` kept
+every cold preview on the `Inter Fallback` face (local Arial), and the wordmark
+drew regular-weight Arial while computing Inter 700. Graded `needs-work` on
+2026-09-23 on three cells, and the same cells with `swap` drew Inter.
+
 ## The `--surface-chrome` collision, and what it cost
 
 The bar's token family was documented in `conventions.md` from the first sync,
