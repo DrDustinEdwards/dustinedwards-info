@@ -151,6 +151,7 @@ export function personJsonLd(origin: string) {
       "@type": "CollegeOrUniversity",
       name: SITE.affiliation,
     },
+    sameAs: OWNER_SAME_AS,
   };
 }
 
@@ -361,12 +362,33 @@ export const PUBLICATIONS_URL = "/publications";
 export const PUBLICATIONS_DESCRIPTION =
   "Peer-reviewed work by Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
 
-/** Authority records that identify the site owner, for schema.org sameAs. */
+/**
+ * Authority records that identify the site owner, for schema.org sameAs and the footer. Each was
+ * fetched on 2026-09-23 and names him: the Scholar profile at Tarleton State (the id this file held
+ * before answered 404), the ORCID record, the PubMed author search, and the faculty page the Biology
+ * department links to (the directory URL held before also answered 404).
+ */
 export const OWNER_ORCID = "https://orcid.org/0000-0001-6409-8041";
 export const OWNER_SCHOLAR =
-  "https://scholar.google.com/citations?user=Ej1nNAEAAAAJ";
-export const OWNER_FACULTY_PAGE =
-  "https://www.tarleton.edu/directory/dustin-edwards/";
+  "https://scholar.google.com/citations?user=lfzCCXwAAAAJ";
+export const OWNER_PUBMED =
+  "https://pubmed.ncbi.nlm.nih.gov/?term=Edwards+Dustin%5BAuthor%5D&sort=date";
+export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
+
+/** The podcast and its account (rulings 134 and 135). */
+export const GERMOMICS_URL = "https://germomics.com/";
+export const GERMOMICS_X_URL = "https://x.com/Germomics";
+
+/** The profiles the footer marks `rel="me"`, in its order. `check:microformats` reads this list. */
+export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
+
+/** Every sameAs, one list for both Person records so they cannot disagree. */
+export const OWNER_SAME_AS = [
+  ...OWNER_PROFILES,
+  OWNER_FACULTY_PAGE,
+  GERMOMICS_URL,
+  GERMOMICS_X_URL,
+];
 
 /** Stable `@id` for the owner's Person node, so it is described once per page. */
 export function personId(origin: string) {
@@ -394,7 +416,7 @@ export function personNode(origin: string) {
       "@type": "CollegeOrUniversity",
       name: SITE.affiliation,
     },
-    sameAs: [OWNER_ORCID, OWNER_SCHOLAR, OWNER_FACULTY_PAGE],
+    sameAs: OWNER_SAME_AS,
   };
 }
 
