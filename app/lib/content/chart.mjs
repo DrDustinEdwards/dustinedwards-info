@@ -28,8 +28,9 @@
 import * as Plot from "@observablehq/plot";
 import { parseHTML } from "linkedom";
 
-/** Mark types the directive accepts. */
-export const CHART_TYPES = ["bar", "line", "dot", "area"];
+import { CHART_TYPES } from "./chart-types.mjs";
+
+export { CHART_TYPES };
 
 /**
  * Series colors, in the ratified ladder order from `dustinedwards/design-tokens.md`.
