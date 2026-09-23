@@ -663,8 +663,12 @@ const ROUTE_CEILINGS = {
    * the reason). plate.js is 727 brotli, the linked highlight and the leader intro the solid-lawn
    * plate brings. Measured 8876 on the build that raised it; the 397 bytes of slack the last raise
    * kept are kept again, rounded up. It comes down with the rest of the uplift by UPLIFT_EXPIRES.
+   *
+   * RAISED AGAIN FOR THE SCIENCE COMMUNICATION SECTION (rulings 119 and 134): podcast.js at 608
+   * brotli and the episode and player rules in home.css. Measured 7283 css / 9832 total on the
+   * build that raised it; both keep the slack they had before (196 and 397), rounded up.
    */
-  "/": { id: "routes/home", css: 7100, total: 9300 },
+  "/": { id: "routes/home", css: 7500, total: 10300 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8200 },
   /*
    * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
