@@ -6,7 +6,6 @@
  *                      change in oxide, set in home.css, never a fill or a glow
  *   focus stops        each plaque and each row entry becomes focusable, with its name; added
  *                      here so a reader without script meets no stop that does nothing
- *   the hint line      "Select a plaque to find it in the key." is server-rendered hidden
  *   the leader intro   on first view the leaders draw out to their labels once, under 2.5s, and
  *                      never under reduced motion or on a later scroll
  * Nothing here writes to the network or to storage. Inventory: `content/enhancements.json`.
@@ -49,9 +48,6 @@ for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(".plate-pl
     light(pinned);
   });
 }
-
-const hint = document.querySelector<HTMLElement>(".plate-hint");
-if (hint && byId.size > 0) hint.hidden = false;
 
 /*
  * THE LEADER INTRO: on first view each leader draws out to its label, once, then the plate is

@@ -126,8 +126,8 @@
     {
       "id": "plate-key-link",
       "module": "app/enhance/plate.ts",
-      "enhancement": "Selecting a plaque on Plate I (hover, tap or keyboard focus) highlights it and its entry in the specimen row, and selecting a row entry highlights its plaque, with a one-line hint under the plate.",
-      "fallback": "The plate draws every label, and the specimen row beneath it names and describes all six, so the plate and its key read as a still. Only the highlight, the focus stops and the hint are lost.",
+      "enhancement": "Selecting a plaque on Plate I (hover, tap or keyboard focus) highlights it and its entry in the specimen row, and selecting a row entry highlights its plaque.",
+      "fallback": "The plate draws every label, and the specimen row beneath it names and describes all six, so the plate and its key read as a still. Only the highlight and the focus stops are lost.",
       "fallbackKind": "selector",
       "fallbackAt": ".plate-key",
       "why": null

@@ -89,26 +89,38 @@ const CANVAS_WIDE: PlateLayout = {
 };
 
 /**
- * THE WIDE PLATE AS SHOWN: the canvas drawing at 0.74 about the dish center, every label moved to
- * the dish's left or right side, so the plate and its key row fit one 1440 x 800 screen. Only the
- * dish, the plaques, the leader starts and the 1 cm bar scale. Labels, tails and strokes keep their
- * canvas size, so a label is still 14px at scale 1. Units are CSS pixels, origin at the dish center.
+ * THE WIDE PLATE AS SHOWN: the canvas drawing scaled about the dish center so the whole plate,
+ * labels included, is WIDE_WIDTH px: the hero's right half at 1280 with a desktop scrollbar, plus
+ * the 90px it reaches left into the empty gap beside the name. Every
+ * label sits at the dish's left or right. Only the dish, the plaques, the leader starts and the
+ * 1 cm bar scale; labels, tails and strokes keep canvas size, so a label is 14px at scale 1. The
+ * left labels sit high, leaving the lower left corner for the legend. Units are CSS pixels,
+ * origin at the dish center.
  */
-const K = 0.74;
+export const WIDE_WIDTH = 610;
+/**
+ * The left column holds the longest left label (131 at 14px mono) and, under the labels, the
+ * one-line legend (240), which must clear the rim; the right holds the longest right label (85).
+ */
+const LEFT_LABELS = 198;
+const RIGHT_LABELS = 88;
+/** Leader elbow, tail and label gap on each side of the dish. */
+const LEADER = 31;
+const K = (WIDE_WIDTH - 2 * LEADER - LEFT_LABELS - RIGHT_LABELS) / 2 / CANVAS_WIDE.dish.rim;
 const RIM = CANVAS_WIDE.dish.rim * K;
 const at = (x: number, y: number): [number, number] => [
   +((x - CANVAS_WIDE.dish.cx) * K).toFixed(1),
   +((y - CANVAS_WIDE.dish.cy) * K).toFixed(1),
 ];
 
-/** Which side each label sits on and its elbow height, chosen so no leader crosses a plaque. */
+/** Which side each label sits on and its elbow height as a fraction of the rim, chosen so no leader crosses a plaque. */
 const SIDE_LABELS: Record<string, { side: 1 | -1; y: number }> = {
-  i: { side: 1, y: -95 },
-  iv: { side: 1, y: 12 },
-  ii: { side: 1, y: 115 },
-  iii: { side: -1, y: -140 },
-  v: { side: -1, y: 62 },
-  vi: { side: -1, y: 150 },
+  i: { side: 1, y: -0.52 },
+  iv: { side: 1, y: 0.07 },
+  ii: { side: 1, y: 0.63 },
+  iii: { side: -1, y: -0.77 },
+  v: { side: -1, y: -0.12 },
+  vi: { side: -1, y: 0.32 },
 };
 
 function scaleShape(s: Shape): Shape {
@@ -127,10 +139,11 @@ export const WIDE: PlateLayout = {
   dish: { cx: 0, cy: 0, rim: +RIM.toFixed(1), lawn: +(CANVAS_WIDE.dish.lawn * K).toFixed(1) },
   scale: (() => {
     const [x1, , x2] = CANVAS_WIDE.scale.line;
-    const left = -Math.round(RIM);
+    const right = Math.round(RIM);
     const y = Math.round(RIM) - 4;
+    const left = +(right - (x2 - x1) * K).toFixed(1);
     return {
-      line: [left, y, +(left + (x2 - x1) * K).toFixed(1), y],
+      line: [left, y, right, y],
       label: { x: left, y: y - 8, text: CANVAS_WIDE.scale.label.text },
     };
   })(),
@@ -139,22 +152,24 @@ export const WIDE: PlateLayout = {
     const start = p.leader[0];
     if (!place || !start) throw new Error(`Plate I: no label side or leader for plaque "${p.id}"`);
     const [sx, sy] = at(start[0], start[1]);
+    const y = Math.round(place.y * RIM);
     const elbow = place.side * Math.round(RIM + 8);
     const tail = place.side * Math.round(RIM + 26);
     return {
       id: p.id,
       shapes: p.shapes.map(scaleShape),
       leader: [
-        [sx, sy, elbow, place.y],
-        [elbow, place.y, tail, place.y],
+        [sx, sy, elbow, y],
+        [elbow, y, tail, y],
       ],
-      label: { x: tail + place.side * 5, y: place.y + 4, anchor: place.side === 1 ? "start" : "end" },
+      label: { x: tail + place.side * 5, y: y + 4, anchor: place.side === 1 ? "start" : "end" },
     };
   }),
 };
 
-/** The wide drawing's box: the dish plus the longest label on each side, measured at 14px mono. */
-export const WIDE_VIEW = { x: -362, y: -186, w: 674, h: 372 };
+/** The wide drawing's box: the dish plus the longest label on each side. */
+const R = Math.round(RIM);
+export const WIDE_VIEW = { x: -(R + LEADER + LEFT_LABELS), y: -(R + 4), w: WIDE_WIDTH, h: 2 * R + 8 };
 
 export const NARROW: PlateLayout = {
   size: 300,
