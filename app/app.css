@@ -4,14 +4,18 @@
    Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/ paths
    immutable. unicode-range keeps the italic to pages with italic latin text. font-display differs per face:
    see the next note. */
-/* font-display: optional on the normal face, because swap re-wrapped the /blog chip row and one
-   size-adjust cannot match every weight. The italic keeps swap and is not preloaded: it is needed
-   only with italic text, and optional on a late face means it is almost never used. */
+/* font-display: swap on the normal face. It was optional, and a first visit NEVER used it: measured
+   2026-09-23 with an empty cache, the hero and wordmark drew Arial in 11 of 12 runs, unthrottled
+   included, because optional gives a face ~100 ms from the start of its load and a preloaded 70 KB
+   file does not make that. Returning visitors had it cached, which is why nobody saw it. What made
+   optional attractive, swap re-wrapping the /blog chip row, is answered by the two fallbacks below:
+   one per weight band, so no swap changes a line's width by more than about 1%. The italic keeps
+   swap and is not preloaded: it is needed only with italic text. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
-  font-display: optional;
+  font-display: swap;
   src: url("./fonts/inter-latin-normal.woff2") format("woff2");
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
     U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
@@ -30,18 +34,38 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Arial sized to Inter, tuned at 17px, the prose size. Prose computes font-optical-sizing: auto, so opsz
-   moves with the font size and Inter's advance width varies (ascent and descent do not). Never retune from
-   the usual 1000px sample: that ratio makes body text narrower than plain Arial. Only Arial, which Helvetica
-   and sans-serif resolved to when measured; other local() faces would inherit its numbers. */
+/* Arial sized to Inter at the UI sizes, where Inter's regular weights now live: prose moved to the serif, so
+   the old 17px tuning (103.87%) left the 14px /blog tag row 4% narrow and it re-wrapped when Inter swapped in.
+   opsz follows the font size, so Inter is wider at 14px than at 17px. TUNED BY LAYOUT SHIFT, NOT BY A RATIO,
+   2026-09-23, with the swap forced on the live pages at 1280 and 375: 108% re-wrapped the /blog tag row at
+   1280 (CLS 0.20), 110% and 111% shifted it at 375 (0.016, 0.020), 109% left /, /blog and a post at 0.003 or
+   under. The window is about a point either side, and a new tag can move it: check:browser's /blog CLS case
+   is what notices. Ascent and descent are Inter's (0.969, 0.241) divided by the size-adjust. Only Arial,
+   which Helvetica and sans-serif resolved to when measured; other local() faces would inherit its numbers. */
 @font-face {
   font-family: "Inter Fallback";
   font-style: normal;
-  font-weight: 100 900;
+  font-weight: 100 549;
   src: local("Arial");
-  size-adjust: 103.87%;
-  ascent-override: 93.29%;
-  descent-override: 23.20%;
+  size-adjust: 109%;
+  ascent-override: 88.88%;
+  descent-override: 22.13%;
+  line-gap-override: 0%;
+}
+
+/* Arial Bold sized to Inter's heavy weights. The regular face, when it was declared for every weight, drew
+   the 600 labels, the 700 wordmark and the 800 hero in regular Arial 6 to 9% narrower than Inter, and the
+   range stopped the browser synthesising bold. Measured 2026-09-23: Inter is 98.5 to 101.7% as wide as Arial
+   Bold across 600/14, 620/22, 700/19 and 800/44, so 100.5% holds every heavy weight within about 1.2%.
+   Ascent and descent follow the same relation as the regular face. */
+@font-face {
+  font-family: "Inter Fallback";
+  font-style: normal;
+  font-weight: 550 900;
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  size-adjust: 100.5%;
+  ascent-override: 96.39%;
+  descent-override: 24.00%;
   line-gap-override: 0%;
 }
 
