@@ -437,16 +437,8 @@
 }
 
 
-/* The numbered sections. The numeral is mono and muted: it is an index, not a heading word. */
 .home-section {
   margin-block-end: 2.75rem;
-}
-
-.home-section-num {
-  margin-inline-end: 0.5rem;
-  color: var(--text-secondary);
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
 }
 
 .home-section-lede {
