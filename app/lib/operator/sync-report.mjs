@@ -43,12 +43,20 @@
 /**
  * The report body for one sync_ask call.
  *
+ * A WRITE THAT FAILED IS NOT CONVERGED, WHATEVER THE COUNTS SAY. `failed` names the keys the upload
+ * could not land after its retries. Before it existed, a failed twin upload was logged and dropped,
+ * the read-back showed one short, and ship waited that out as eventual consistency: a failure was
+ * reported as an index catching up (2026-09-23, `ask-twins.mjs`). Now any failed key makes
+ * `converged` false even if the counts happen to agree, and the keys travel so the caller can name
+ * them rather than wait.
+ *
  * @param {{
  *   uploaded: number,
  *   removed: number,
  *   cacheDropped: number,
  *   expected: number,
  *   present: number,
+ *   failed?: Array<{ key: string, error: string }>,
  * }} counts
  * @returns {{
  *   uploaded: number,
@@ -58,15 +66,19 @@
  *   present: number,
  *   drift: number,
  *   converged: boolean,
+ *   failed: Array<{ key: string, error: string }>,
  * }}
  */
 export function askSyncReport(counts) {
   const agreement = convergence(counts.expected, counts.present);
+  const failed = Array.isArray(counts.failed) ? counts.failed : [];
   return {
     uploaded: whole(counts.uploaded),
     removed: whole(counts.removed),
     cacheDropped: whole(counts.cacheDropped),
     ...agreement,
+    converged: agreement.converged && failed.length === 0,
+    failed,
   };
 }
 
@@ -213,6 +225,13 @@ function whole(n) {
  * @returns {string}
  */
 export function askSyncSummary(report) {
+  if (report.failed?.length) {
+    return (
+      `ASK UPLOAD FAILED for ${report.failed.length} key(s) after retries: ` +
+      `${report.failed.map((f) => `${f.key} (${f.error})`).join(", ")}. ` +
+      `${report.expected} expected, ${report.present} present.`
+    );
+  }
   return report.converged
     ? `Ask index converged: ${report.expected} expected, ${report.present} present, ` +
         `${report.uploaded} uploaded, ${report.removed} removed.`
