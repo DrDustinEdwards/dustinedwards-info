@@ -127,15 +127,20 @@ Do not "fix" this by reordering the tier to win the scraper: a media block adds
 no specificity, so the tier works only because it comes last, and moving it
 would trade a wrong manifest for a wrong render.
 
-## The bundle's faces swap; the site's are `optional`
+## The bundle's faces swap, and the rewrite stays as a guard
 
-**The sync deliberately ships `font-display: swap` where the site has
-`optional`**, and that difference is not drift to repair. The grounds are the
-comment on `swapFontDisplay` in `build-inputs.mjs`; the generator throws if an
-`optional` face survives. In short: without the site's preload, `optional` kept
-every cold preview on the `Inter Fallback` face (local Arial), and the wordmark
-drew regular-weight Arial while computing Inter 700. Graded `needs-work` on
-2026-09-23 on three cells, and the same cells with `swap` drew Inter.
+**The sync ships `font-display: swap`, and the generator throws if an `optional`
+face survives.** The grounds are the comment on `swapFontDisplay` in
+`build-inputs.mjs`: `optional` kept every cold preview on the `Inter Fallback`
+face (local Arial), and the wordmark drew regular-weight Arial while computing
+Inter 700. Graded `needs-work` on 2026-09-23 on three cells; with `swap` they
+drew Inter.
+
+**The site moved to `swap` too, the same day**, for the same reason on first
+visits (the comment on the Inter face in `app/app.css`). So the rewrite now
+finds nothing and the generator logs `0 optional face(s) set to swap`. That is
+expected, not a broken step. It stays because it costs nothing and catches the
+site going back to `optional`.
 
 ## The `--surface-chrome` collision, and what it cost
 
