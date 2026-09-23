@@ -28,7 +28,7 @@ const TEST_DIR = join(root, "test");
  * without failing, being asserted directly rather than through `assertFloor`, so the one floor
  * here the meta-gate could not police is the one that drifted.
  */
-const MINIMUM_FILES = 86;
+const MINIMUM_FILES = 92;
 /*
  * RE-MEASURED BY RUNNING THIS GATE. The file floor catches a file LEAVING; this catches one
  * hollowed out in place. Moved when the set grows even if nothing has breached, because waiting
