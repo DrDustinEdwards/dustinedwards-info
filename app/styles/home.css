@@ -1,10 +1,10 @@
 /* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
 
 /*
- * THE HOME PAGE: a name, one sentence, one ruled line of evidence, and the writing.
+ * THE HOME PAGE: a name, Plate I and its key, the writing, and one ruled line of evidence.
  *
  * Sections take the WIDE column rather than the text track: the rows and the evidence rule run the
- * full measure between the gutters, and the things that must stay readable (the sentence, a row's
+ * full measure between the gutters, and the things that must stay readable (a lede, a row's
  * summary) carry their own ch caps instead. Nothing here is a tile, a well or a card.
  */
 .home-tracks > * {
@@ -42,22 +42,14 @@
 
 /* The author's own sentence, in the first person. SITE.tagline verbatim, so it stays the string
    the meta description and the Person record derive from. */
-.intro-line {
-  margin: 0 0 2.125rem;
-  max-width: 34ch;
-  color: var(--text);
-  font-family: var(--font-serif);
-  font-size: 1.375rem;
-  line-height: 1.5;
-}
-
 /* The health ratio and its read time travel together, so the fact is one span. */
 .evidence-health {
   white-space: nowrap;
 }
 
-.home-intro .evidence {
-  margin-block-end: 2.75rem;
+/* The evidence row closes the page, above the footer, clear of the section before it. */
+.home-tracks > .evidence {
+  margin-block-start: var(--s-7);
 }
 
 /* Section headings are serif and quiet: they label a list rather than open an argument. */
@@ -235,7 +227,7 @@
 
 .plate--wide {
   inline-size: 100%;
-  max-inline-size: 674px;
+  max-inline-size: 610px;
 }
 
 .plate--narrow {
@@ -311,24 +303,13 @@
   font-size: 0.75rem;
 }
 
-/* The canvas stacks the plate's numeral over its sentence. */
-.home-plate-num,
-.home-plate-cap {
-  display: block;
-}
-
+/* The plate's numeral sits over its sentence, set like the key row's numerals. */
 .home-plate-num {
-  margin-block-end: 0.25rem;
+  display: block;
+  margin-block-end: 4px;
   color: var(--fig-ink);
   font-family: var(--font-mono);
   font-size: 0.75rem;
-}
-
-.plate-hint {
-  margin: 0.5rem 0 0;
-  color: var(--text-secondary);
-  font-family: var(--font-sans);
-  font-size: 0.8125rem;
   line-height: 1.5;
 }
 
@@ -451,17 +432,18 @@
 
 /*
  * THE SPLIT HERO. The handoff puts the plate in the intro's right column at 1280 with a 76px
- * gutter and below the evidence line at 375, so this is one grid with a single breakpoint rather
- * than two layouts. Source order is name, sentence, evidence, plate at every width, which is also
- * the order a screen reader should hear them in.
+ * gutter and below the name at 375, so this is one grid with a single breakpoint rather than two
+ * layouts. Source order is name, then plate, at every width, which is also the order a screen
+ * reader should hear them in.
  *
- * 68rem, not 1280: the split needs the intro column to still hold the name at display size beside
- * the plate, and 68rem is where that stops being cramped. Below it the grid is one column and
- * nothing else changes.
+ * 80rem: below it the right half is too narrow for the plate's 610px box and its labels would drop
+ * under 14px, so the grid is one column there and the plate shows at full size under the name.
  *
- * 592px IS THE CANVAS'S PLATE COLUMN (part-c/09-solid-lawn.html). The drawing is shown at 0.74
- * with its labels at both sides (plate-i-geometry.ts), a 674px box at scale 1, so it reaches 62px
- * left into the 76px gap and 20px past the column's right edge.
+ * TWO EQUAL HALVES at the split: the name on the left, the plate centered in the right half,
+ * filling it and reaching left into the gap. Its box is 610px at scale 1 (plate-i-geometry.ts): the half at 1280 with a
+ * scrollbar plus 90px reaching left into the empty gap beside the name, so labels are 14px there
+ * and grow with a wider half. The legend sits on one line in
+ * the plate's lower left corner, level with its bottom, so it adds no height under the plate.
  */
 .home-hero {
   display: grid;
@@ -469,21 +451,38 @@
   margin-block-end: var(--s-7);
 }
 
-@media (min-width: 68rem) {
+@media (min-width: 80rem) {
   .home-hero {
-    grid-template-columns: minmax(0, 1fr) 592px;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     column-gap: 76px;
     align-items: start;
-  }
-
-  .home-hero > .home-intro {
     margin-block-end: 0;
   }
 
+  .home-hero > .home-intro {
+    margin-block: var(--s-5) 0;
+  }
+
+  /* Equal space above and below: the plate sits centered between the header rule and the key's. */
+  .home-hero .home-plate {
+    position: relative;
+    align-self: center;
+    margin-block: var(--s-3);
+  }
+
   .home-hero .plate--wide {
-    inline-size: 674px;
+    inline-size: calc(100% + 90px);
     max-inline-size: none;
-    margin-inline-start: -62px;
+    margin-inline-start: -90px;
+  }
+
+  .home-hero .home-plate-caption {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: -90px;
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
   }
 }
 
