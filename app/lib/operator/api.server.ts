@@ -580,12 +580,13 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
     return { ok: false, status: 404, error: "Ask is not enabled on this deployment." };
   }
 
-  const { uploaded, keys, cacheDropped } = await syncAskCorpus(env);
+  const { uploaded, keys, failed, cacheDropped } = await syncAskCorpus(env);
   const removed = await pruneAskCorpus(env, keys);
 
   /*
    * READ BACK AFTER BOTH WRITES. The index is eventually consistent, so drift reported here can be a
-   * moment behind rather than a fault, and the next scheduled poll is the tiebreaker.
+   * moment behind rather than a fault, and the next scheduled poll is the tiebreaker. A key in
+   * `failed` is not that: it was never written, and the report refuses convergence on it.
    */
   const status = await askIndexStatus(env);
 
@@ -597,6 +598,7 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
       cacheDropped,
       expected: status.expected,
       present: status.present,
+      failed,
     }),
   };
 }
