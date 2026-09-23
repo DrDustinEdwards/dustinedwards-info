@@ -40,6 +40,24 @@
   line-height: 0.92;
 }
 
+.intro-affil {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.4;
+}
+
+.intro-affil > span {
+  display: block;
+}
+
+.intro-affil > .intro-affil-system {
+  margin-block-start: 0.125rem;
+  color: var(--text-secondary);
+  font-size: 0.9375rem;
+}
+
 /* The author's own sentence, in the first person. SITE.tagline verbatim, so it stays the string
    the meta description and the Person record derive from. */
 /* The health ratio and its read time travel together, so the fact is one span. */
