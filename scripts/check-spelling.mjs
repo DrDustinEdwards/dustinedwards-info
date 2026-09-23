@@ -61,7 +61,7 @@ for (const e of allowlist.entries) {
   }
 }
 
-const breach = assertFloor("check:spelling", "files", scanned, 530);
+const breach = assertFloor("check:spelling", "files", scanned, 561);
 if (breach) {
   failures += 1;
   console.log(`  FAIL  this gate scanned what it claims\n        ${breach}`);
