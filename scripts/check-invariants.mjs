@@ -4296,6 +4296,66 @@ console.log("\n  32. the plate's lawn and turbid tones are figure fills, never a
   ok("the plate tones have at least one fill consumer each", uses >= 2, `${uses} use(s) found`);
 }
 
+console.log("\n  33. the Worker reaches the markdown renderer only by dynamic import");
+{
+  /*
+   * A cold isolate evaluates every module the entry and the route tree import statically, and the
+   * renderer (shiki, katex, Plot, linkedom, the onig WASM) was most of that: measured 2026-09-23, an
+   * edge-cache miss on `/about`, which does no I/O, took 0.46 to 0.78 s on a cold isolate against
+   * 0.10 to 0.17 s on a warm one. `loadPipeline()` is the one door, and a static import anywhere else
+   * puts the renderer back on every first request with no error to say so. Found by replay: the
+   * admin editor's multi-line import of three slug constants from `pipeline.mjs` did exactly that.
+   */
+  const RENDER_SET = /(?:^|\/)(?:content\/(?:pipeline\.mjs|chart\.mjs|diagram\.mjs|wasm\.server(?:\.ts)?)|webmention\/verify\.server(?:\.ts)?|linkedom|shiki(?:\/.*)?|@shikijs\/.*|katex(?:\/.*)?|@observablehq\/plot)$/;
+  // The render set may import itself. The webmention verifier parses with linkedom and is in the
+  // set for that reason: it may import linkedom, and nothing may import IT statically.
+  const OWN = new Set([
+    ...["pipeline.mjs", "chart.mjs", "diagram.mjs", "wasm.server.ts"].map((f) =>
+      join(root, "app", "lib", "content", f),
+    ),
+    join(root, "app", "lib", "webmention", "verify.server.ts"),
+  ]);
+  const workerFiles = [...files].filter(
+    (f) =>
+      (f.startsWith(join(root, "app") + sep) || f.startsWith(join(root, "workers") + sep)) &&
+      /\.(?:mjs|js|ts|tsx)$/.test(f) &&
+      !/\.test\.|[\\/]enhance[\\/]/.test(f),
+  );
+  // Static forms only: `import ... from "x"`, `import "x"`, `export ... from "x"`. A multi-line
+  // specifier list is the shape that hid the defect, so `[^;]*?` spans newlines.
+  const STATIC = /(?:^|[;\n])\s*(?:import|export)\s+(?:type\s+)?(?:[^;"'`]*?\sfrom\s*)?["']([^"']+)["']/g;
+  const offenders = [];
+  let imports = 0;
+  for (const file of workerFiles) {
+    if (OWN.has(file)) continue;
+    const code = stripComments(readFileSync(file, "utf8"));
+    for (const m of code.matchAll(STATIC)) {
+      imports += 1;
+      if (/^\s*(?:import|export)\s+type\b/.test(m[0].replace(/^[;\n]/, ""))) continue;
+      if (RENDER_SET.test(m[1].replace(/^~\//, "").replace(/\\/g, "/"))) {
+        offenders.push(`${relative(root, file)} imports ${m[1]}`);
+      }
+    }
+  }
+  ok(
+    "the scan read the Worker's own modules and their imports",
+    workerFiles.length >= 200 && imports >= 700,
+    `${workerFiles.length} file(s), ${imports} static import(s): the walk or the pattern broke`,
+  );
+  ok(
+    "no Worker module imports the renderer statically",
+    offenders.length === 0,
+    `${offenders.join("; ")}. Import the light module instead (slug.mjs, chart-types.mjs), or ` +
+      `reach the renderer through loadPipeline() in app/lib/content/load-pipeline.server.ts.`,
+  );
+  const door = readFileSync(join(root, "app", "lib", "content", "load-pipeline.server.ts"), "utf8");
+  ok(
+    "loadPipeline() is a dynamic import of the pipeline, WASM loader first",
+    /import\(\s*["']\.\/wasm\.server["']\s*\)[\s\S]*import\(\s*["']\.\/pipeline\.mjs["']\s*\)[\s\S]*setWasmLoader\(/.test(door),
+    "the one door no longer loads the renderer the way the Worker needs it loaded",
+  );
+}
+
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */

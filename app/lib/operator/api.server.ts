@@ -29,8 +29,8 @@ import {
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
-import { postPath } from "~/lib/content/pipeline.mjs";
-import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/pipeline.mjs";
+import { postPath } from "~/lib/content/slug.mjs";
+import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
 import { listWebmentionsForAdmin } from "~/db";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";

@@ -1,9 +1,8 @@
-import { renderBody } from "~/lib/content/pipeline.mjs";
 import { getEnv } from "~/lib/context";
-import { ContentError } from "~/lib/content/pipeline.mjs";
+import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { normalizeBody } from "~/lib/editor/frontmatter";
 import { EditorError, makeResolveImage } from "~/lib/editor/publish.server";
-import { postPath } from "~/lib/content/pipeline.mjs";
+import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.preview";
 
 /**
@@ -33,6 +32,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   // Only used to label errors, exactly as the save path labels them, so a
   // failing directive reports the same file name it would report on save.
   const slug = String(form.get("slug") ?? "").trim() || "preview";
+  const { ContentError, renderBody } = await loadPipeline();
 
   try {
     const { html, toc } = await renderBody({

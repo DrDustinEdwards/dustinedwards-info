@@ -10,7 +10,7 @@ import {
   readFile,
 } from "~/lib/editor/github.server";
 import { currentHead } from "~/lib/editor/publish.server";
-import { postPath } from "~/lib/content/pipeline.mjs";
+import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.posts.$slug.history";
 
 /**

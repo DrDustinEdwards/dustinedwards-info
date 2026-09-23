@@ -5,7 +5,7 @@ import {
   SLUG_ATTRIBUTE_PATTERN,
   SLUG_MAX_LENGTH,
   SLUG_PATTERN,
-} from "~/lib/content/pipeline.mjs";
+} from "~/lib/content/slug.mjs";
 import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
 
 import {

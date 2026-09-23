@@ -209,6 +209,67 @@ ok(
   `${guardsSettingUncached} of ${guards.length} guards set it`,
 );
 
+/* the EDGE policy, and what keeps stale-while-revalidate alive */
+
+/*
+ * MEASURED 2026-09-23: with `s-maxage` in the shared string, an entry 11 minutes old answered
+ * `EXPIRED` and blocked on a render, because `s-maxage` implies `proxy-revalidate` and Cloudflare
+ * then refuses to serve stale. The edge policy moved to `Cloudflare-CDN-Cache-Control`, and neither
+ * string may carry a directive that switches stale-while-revalidate off. The replay was the old
+ * shared string put back.
+ */
+
+console.log("\n  edge policy");
+
+{
+  const seoCode = stripComments(readFileSync(join(root, "app", "lib", "seo.ts"), "utf8"));
+  const shared = seoCode.match(/export\s+const\s+SHARED_CACHE_CONTROL\s*=\s*"([^"]*)"\s*;/);
+  const edgeTemplate = seoCode.match(/const\s+edgeCacheControl\s*=\s*\([^)]*\)\s*=>\s*`([^`]*)`/);
+  const edgeHeader = seoCode.match(/export\s+const\s+EDGE_CACHE_HEADER\s*=\s*"([^"]*)"\s*;/);
+  const SWR_KILLERS = /\b(?:s-maxage|must-revalidate|proxy-revalidate|no-cache)\b/i;
+  ok(
+    "seo.ts declares the shared string, the edge template and the edge header",
+    Boolean(shared && edgeTemplate && edgeHeader),
+    `found shared=${Boolean(shared)} template=${Boolean(edgeTemplate)} header=${Boolean(edgeHeader)}`,
+  );
+  ok(
+    "the shared string carries nothing that disables stale-while-revalidate",
+    shared !== null && !SWR_KILLERS.test(shared[1]),
+    `SHARED_CACHE_CONTROL is ${JSON.stringify(shared?.[1])}. Each of s-maxage, must-revalidate, ` +
+      `proxy-revalidate and no-cache makes Cloudflare block on a render instead of serving stale.`,
+  );
+  ok(
+    "the edge policy is stale-while-revalidate and nothing that disables it",
+    edgeTemplate !== null &&
+      /stale-while-revalidate=/.test(edgeTemplate[1]) &&
+      /\bmax-age=/.test(edgeTemplate[1]) &&
+      !SWR_KILLERS.test(edgeTemplate[1]),
+    `edge template is ${JSON.stringify(edgeTemplate?.[1])}`,
+  );
+  ok(
+    "the edge header is the Cloudflare-only one, which the browser never sees",
+    edgeHeader !== null && edgeHeader[1].toLowerCase() === "cloudflare-cdn-cache-control",
+    `EDGE_CACHE_HEADER is ${JSON.stringify(edgeHeader?.[1])}. CDN-Cache-Control passes downstream; ` +
+      `Cache-Control would reach the browser and defeat every purge.`,
+  );
+  const stamps = [...code.matchAll(/\bapplyEdgePolicy\(\s*(?:response\.)?headers\s*\)/g)];
+  ok(
+    "the Renderer stamps the edge policy on BOTH exits",
+    stamps.length >= 2,
+    `found ${stamps.length} call(s). A shared response that misses it carries no edge policy and ` +
+      `falls back to Cache-Control, which is max-age=0.`,
+  );
+  const body = code.match(/function\s+applyEdgePolicy\s*\([^)]*\)[^{]*\{([\s\S]*?)\n\}/);
+  ok(
+    "the stamp removes an edge header from anything not marked shared",
+    body !== null &&
+      /!==\s*SHARED_CACHE_CONTROL/.test(body[1]) &&
+      /headers\.delete\(\s*EDGE_CACHE_HEADER\s*\)/.test(body[1]),
+    "the edge header OUTRANKS Cache-Control at Cloudflare, so one left on a private response " +
+      "makes it storable under a cookieless key",
+  );
+}
+
 /* the CSP (Phase B, ENFORCED) */
 
 /*
@@ -840,7 +901,7 @@ ok(`${HEADERS_FILE} exists`, existsSync(headersPath),
 
 /**
  * The longest freshness an UNHASHED path may declare, in seconds. Nothing recalls a stored
- * entry and there is no purge door here, which hard rule 20 records. /assets/* is exempt.
+ * entry: static assets are not in the purgeable page cache (hard rule 20). /assets/* is exempt.
  */
 const MAX_UNHASHED_FRESHNESS = 3600;
 
@@ -1250,7 +1311,7 @@ console.log("  public HTML routes share one headers()");
  * FLOOR RE-MEASURED BY RUNNING THIS GATE, never summed: this one was once far enough under for
  * two sections to stop running while it still cleared, which is hard rule 10's class.
  */
-const MINIMUM_CHECKS = 213;
+const MINIMUM_CHECKS = 230;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
