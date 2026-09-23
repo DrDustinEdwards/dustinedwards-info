@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
 
 import { assertFloor } from "./lib/floor.mjs";
+import { HEALTH_FACT_SELECTOR, freshHealthRatio } from "./lib/health-tile.mjs";
 
 /* The network profile the /blog layout shift was measured on. */
 const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
@@ -903,17 +904,18 @@ try {
       await page.goto(`${BASE}/?browsercase=health-${tag}-${Date.now()}`, {
         waitUntil: "networkidle0",
       });
-      const read = await page.evaluate(() => {
+      const read = await page.evaluate((factSelector) => {
         const el = document.querySelector("[data-health-age]");
-        /* The proof tiles became the evidence row (ruling 117). The ratio is now the health
-           fact's own text and the attribute still rides the element carrying it. */
-        const value = document.querySelector(".evidence [data-health-age]");
+        /* The proof tiles became the evidence row (ruling 117), which now sits at the foot of the
+           page rather than in the hero. The ratio is the health fact's own text, and the attribute
+           still rides the element carrying it. */
+        const value = document.querySelector(factSelector);
         return {
           present: !!el,
           age: el ? Number(el.getAttribute("data-health-age")) : null,
           value: value ? value.textContent.trim() : null,
         };
-      });
+      }, HEALTH_FACT_SELECTOR);
       /* Wall clock at the read, so an age becomes a fixed write time. */
       return { ...read, readAtMs: Date.now() };
     };
@@ -1014,10 +1016,10 @@ try {
 
     ok(
       "the tile renders the verdict and not the stale placeholder",
-      typeof after.value === "string" && /^\d+\/\d+$/.test(after.value),
-      `the tile's value is ${JSON.stringify(after.value)}. A fresh snapshot must ` +
-        `render as a ratio; "--" is what the stale and missing states show, and ` +
-        `seeing it here means the age assertions above passed on the wrong element.`,
+      freshHealthRatio(after.value) !== null,
+      `the health fact at ${HEALTH_FACT_SELECTOR} reads ${JSON.stringify(after.value)}. A fresh ` +
+        `snapshot renders "N/M passing"; "-- passing" is what the stale and missing states ` +
+        `show, and seeing it here means the age assertions above passed on the wrong element.`,
     );
 
     /* Back to /blog: every case below reuses this page. */
@@ -1888,7 +1890,8 @@ try {
       const r = el.getBoundingClientRect();
       return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
     };
-    return { search: box(".blog-search"), head: box(".page-head"), list: box(".post-list") };
+    /* The Paper and Plate /blog (bfed012) renamed all three; the old names matched nothing. */
+    return { search: box(".list-search"), head: box(".list-head"), list: box(".entry-list") };
   });
 
   ok(
@@ -1935,7 +1938,7 @@ try {
   /* `NavLink` without `end` marks Blog current on every `/blog/*` page. */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   const firstPost = await page.evaluate(() => {
-    const a = document.querySelector('.post-list a[href^="/blog/"]');
+    const a = document.querySelector('.entry-list a[href^="/blog/"]');
     return a ? a.getAttribute("href") : null;
   });
 
@@ -2391,7 +2394,7 @@ try {
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   const postPaths = await page.evaluate(() =>
     [...new Set(
-      [...document.querySelectorAll('.post-list a[href^="/blog/"]')]
+      [...document.querySelectorAll('.entry-list a[href^="/blog/"]')]
         .map((a) => a.getAttribute("href"))
         .filter((h) => h && !h.endsWith(".md")),
     )].slice(0, 6),
