@@ -70,11 +70,13 @@
     // its own source, which is how the export assertions iterate real records.
     "app/data/publications.ts",
     "app/lib/content/pipeline.mjs",
+    "app/lib/content/slug.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so
     // this project has to reach it too.
     "app/lib/content/reading-time.mjs",
     "app/lib/content/chart.mjs",
+    "app/lib/content/chart-types.mjs",
     // The operator's words for the five health checks. check:admin-ui asserts
     // the overview names every check, and it reads the mapping from here
     // rather than retyping five strings: a copy in the gate would agree with
