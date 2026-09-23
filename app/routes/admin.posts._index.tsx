@@ -268,13 +268,17 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
 
     try {
-      const { uploaded, keys, cacheDropped } = await syncAskCorpus(env);
+      const { uploaded, keys, failed, cacheDropped } = await syncAskCorpus(env);
       const removed = await pruneAskCorpus(env, keys);
       return {
         message:
           `Uploaded ${uploaded} search records to AI Search` +
           (removed.length > 0 ? `, removed ${removed.length} stale item(s)` : "") +
-          `, dropped ${cacheDropped} cached answer(s).`,
+          `, dropped ${cacheDropped} cached answer(s).` +
+          // Named, so a transient that outlived its retries is not read as a finished sync.
+          (failed.length > 0
+            ? ` FAILED after retries: ${failed.map((f) => f.key).join(", ")}. Run the sync again.`
+            : ""),
       };
     } catch (error) {
       return {
