@@ -23,9 +23,6 @@
 .paper-machine b a:hover,
 .paper-topics a:hover {
   color: var(--brand-hover);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
 }
 
 /* Secondary until hovered: a subject is metadata, and a dozen brand words under every paper

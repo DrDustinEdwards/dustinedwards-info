@@ -935,9 +935,6 @@ body {
   color: var(--text);
 }
 
-/* Rule 2: links are underlined, because brand and visited purples fail CVD simulation on hue alone.
-   Only an element with its own border or fill (chips, buttons) opts out, at its own rule.
-   Element-level selectors, so any component rule that sets a color outranks them. */
 /* v3 amendment 2, element-level so a component heading color still outranks it.
    In light it equals the body text value, so it is not a second color to keep in step. */
 h1,
@@ -949,10 +946,17 @@ h6 {
   color: var(--text-heading);
 }
 
+/* Rule 2: a link in running text is underlined, because brand and visited purples fail CVD
+   simulation on hue alone. The line is a 1px dust hairline set below the descenders, and it turns
+   purple on hover. A standalone link (title, nav, list row, footer column, "more") is identified by
+   its position, so it opts out at its own rule and changes only color on hover.
+   Element-level selectors, so any component rule that sets a color outranks them. */
 a {
   color: var(--brand);
   text-decoration: underline;
-  text-underline-offset: 0.15em;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--dust);
+  text-underline-offset: 0.25em;
 }
 
 a:visited {
@@ -961,6 +965,7 @@ a:visited {
 
 a:hover {
   color: var(--brand-hover);
+  text-decoration-color: var(--brand);
 }
 
 /* Public hero. Leaves room for the header and footer within the first viewport. */

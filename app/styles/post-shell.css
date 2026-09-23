@@ -131,6 +131,11 @@
   line-height: 1.4;
 }
 
+/* A list row: the title is the link, and it takes color on hover rather than an underline. */
+.post-backlinks a {
+  text-decoration: none;
+}
+
 /*
  * The provenance line, under one rule, the last machine-readable thing in the column.
  *
@@ -238,6 +243,15 @@
  * does not own. Each of these moves to prose.css as its page lands.
  */
 
+/* Reading text: Source Serif 400 at 17/29. The leading is a length, not a ratio, so 29px holds
+   wherever the size is inherited. */
+.post-body .prose {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 400;
+  line-height: 1.8125rem;
+}
+
 /* h2 stays Source Serif at EVERY width: size answers the viewport, the typeface is a property of
    the element, and swapping it at a breakpoint would make the same heading a different thing on a
    phone. 32px at 1280, 24px at 375. */
@@ -271,13 +285,10 @@
   }
 }
 
-/* Link states, named tokens throughout. Underline on HOVER only, so a paragraph of prose is not a
-   fence; the color carries the affordance at rest. */
+/* Link colors, named tokens throughout. The underline is the base anchor rule's dust hairline,
+   restated here only because `.prose a` would otherwise outrank the base hover. */
 .post-body .prose a {
   color: var(--brand);
-  text-decoration: none;
-  text-decoration-thickness: var(--line-w);
-  text-underline-offset: 3px;
 }
 
 .post-body .prose a:visited {
@@ -286,7 +297,7 @@
 
 .post-body .prose a:hover {
   color: var(--brand-hover);
-  text-decoration: underline;
+  text-decoration-color: var(--brand);
 }
 
 .post-body .prose a:active {
