@@ -142,6 +142,13 @@ the class and keep the object, so each condition names the object.
 
 The English words are not banned in copy.
 
+**Deliberate, not defaults.** The warm paper ground and the mono value labels
+are Paper and Plate, chosen on purpose. A model's guidance may list a cream
+background or mono labels among generic defaults; here they are the design, and
+they are not to be "corrected". What this site does forbid, because it reads as
+generic, is italic accent words in headlines, numbered section labels
+("01", "02", "03" or "1 Writing"), and pills (the PILL condition above).
+
 ## Radius, fill and glass
 
 **Radius 0** on the page, wells, inputs, login and public buttons. Something
