@@ -18,8 +18,11 @@ let pipeline: Promise<typeof import("./pipeline.mjs")> | undefined;
 
 export function loadPipeline(): Promise<typeof import("./pipeline.mjs")> {
   // A failed load is forgotten rather than cached, so one bad fetch is not every later save's error.
-  pipeline ??= import("./wasm.server")
-    .then(() => import("./pipeline.mjs"))
+  pipeline ??= Promise.all([import("./wasm.server"), import("./pipeline.mjs")])
+    .then(([{ instantiate }, loaded]) => {
+      loaded.setWasmLoader(() => instantiate);
+      return loaded;
+    })
     .catch((error) => {
       pipeline = undefined;
       throw error;

@@ -4351,7 +4351,7 @@ console.log("\n  33. the Worker reaches the markdown renderer only by dynamic im
   const door = readFileSync(join(root, "app", "lib", "content", "load-pipeline.server.ts"), "utf8");
   ok(
     "loadPipeline() is a dynamic import of the pipeline, WASM loader first",
-    /import\(\s*["']\.\/wasm\.server["']\s*\)[\s\S]*import\(\s*["']\.\/pipeline\.mjs["']\s*\)/.test(door),
+    /import\(\s*["']\.\/wasm\.server["']\s*\)[\s\S]*import\(\s*["']\.\/pipeline\.mjs["']\s*\)[\s\S]*setWasmLoader\(/.test(door),
     "the one door no longer loads the renderer the way the Worker needs it loaded",
   );
 }
