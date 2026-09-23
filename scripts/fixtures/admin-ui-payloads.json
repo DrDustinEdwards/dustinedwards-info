@@ -641,9 +641,15 @@
     "POST /admin/media | (none) | intent"
   ],
   "tools, all secrets set": [
+    "POST /admin/tools | (none) | guid,intent,mode",
     "POST /admin/tools | (none) | intent"
   ],
   "tools, one secret missing": [
+    "POST /admin/tools | (none) | guid,intent,mode",
     "POST /admin/tools | (none) | intent"
+  ],
+  "tools, podcast feed not read yet": [
+    "POST /admin/tools | (none) | intent",
+    "POST /admin/tools | (none) | intent,mode"
   ]
 }

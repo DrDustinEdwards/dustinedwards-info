@@ -1,9 +1,12 @@
 import { Form, data } from "react-router";
 
-import { timingsContext } from "~/lib/timing";
+import { timed, timingsContext } from "~/lib/timing";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
+import { purgePosts } from "~/lib/cache-purge.server";
+import { chooseEpisode, parsePodcastSlot } from "~/lib/podcast/feed.mjs";
+import { readPodcastFeed, readPodcastSlot, writePodcastSlot } from "~/lib/podcast/podcast.server";
 import { purgeZeroResults, topZeroResults } from "~/lib/search/zero-result.server";
 /* The window comes from the client-safe module: the component below reads it, and importing it
    from the .server one would pull that module into the client bundle. */
@@ -40,8 +43,29 @@ export async function loader({ context }: Route.LoaderArgs) {
    * the rows carry a query and three counters and there is nowhere in the schema for a reader.
    */
   const misses = await topZeroResults(env);
+  /*
+   * THE HOME PODCAST SLOT. The admin may wait on a cold feed cache so the picker has episodes to
+   * list; the home page never does.
+   */
+  const [feed, slot] = await Promise.all([
+    timed(timings, "tools_podcast_feed", () => readPodcastFeed(context, { wait: true })),
+    timed(timings, "tools_podcast_slot", () => readPodcastSlot(env)),
+  ]);
+  const episodes = (feed?.episodes ?? []).map(({ guid, title, publishedAt }) => ({
+    guid,
+    title,
+    publishedAt,
+  }));
+  const chosen = chooseEpisode(feed?.episodes ?? [], slot);
+  const podcast = {
+    slot,
+    episodes,
+    showing: chosen.episode?.title ?? null,
+    fellBack: chosen.fellBack,
+    fetchedAt: feed?.fetchedAt ?? null,
+  };
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data({ secrets, misses });
+  return data({ secrets, misses, podcast });
 }
 
 /**
@@ -54,6 +78,22 @@ export async function loader({ context }: Route.LoaderArgs) {
  */
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
+  if (form.get("intent") === "podcast-slot") {
+    const env = getEnv(context);
+    const guid = String(form.get("guid") ?? "");
+    const slot = parsePodcastSlot(
+      JSON.stringify(form.get("mode") === "featured" ? { mode: "featured", guid } : { mode: "latest" }),
+    );
+    // Only an episode the feed actually carries can be featured.
+    const feed = await readPodcastFeed(context, { wait: true });
+    if (slot.mode === "featured" && !feed?.episodes.some((e) => e.guid === slot.guid)) {
+      return data({ purged: null }, { status: 400 });
+    }
+    await writePodcastSlot(env, slot);
+    // The home page is tagged with the corpus tag, so this is the door that reaches it.
+    await purgePosts("home podcast slot");
+    return data({ purged: null });
+  }
   if (form.get("intent") !== "purge-zero-results") {
     return data({ purged: null }, { status: 400 });
   }
@@ -63,7 +103,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 
 export default function AdminTools({ loaderData }: Route.ComponentProps) {
-  const { secrets, misses } = loaderData;
+  const { secrets, misses, podcast } = loaderData;
   const missing = secrets.filter((s) => !s.present);
   return (
     <Panel
@@ -134,6 +174,72 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
          */}
         <button type="submit" className="btn-secondary" disabled={misses.length === 0}>
           Remove expired queries
+        </button>
+      </Form>
+
+      {/*
+       * WHICH GERMOMICS EPISODE THE HOME PAGE PLAYS. Latest is the default. A featured episode that
+       * has left the feed is not an error on the home page, which plays the latest instead; it is
+       * said here, where the choice can be made again.
+       */}
+      <h3 className="tool-audit-heading" id="home-podcast">
+        Home podcast
+        <span className={podcast.fellBack ? "chip chip-error" : "chip"}>
+          {podcast.fellBack ? "featured episode gone" : podcast.slot.mode}
+        </span>
+      </h3>
+      <p className="muted" data-podcast-showing>
+        {podcast.showing === null
+          ? "The feed has not been read yet, so the home page links to germomics.com instead."
+          : podcast.fellBack
+            ? `The featured episode is no longer in the feed, so the home page is playing the latest: ${podcast.showing}.`
+            : `The home page is playing: ${podcast.showing}.`}
+      </p>
+      <Form method="post" aria-labelledby="home-podcast">
+        <input type="hidden" name="intent" value="podcast-slot" />
+        <ul className="tool-list">
+          <li className="tool-row">
+            <label className="tool-row-label">
+              <input
+                type="radio"
+                name="mode"
+                value="latest"
+                defaultChecked={podcast.slot.mode === "latest"}
+              />
+              Latest episode
+            </label>
+          </li>
+          <li className="tool-row">
+            <label className="tool-row-label">
+              <input
+                type="radio"
+                name="mode"
+                value="featured"
+                defaultChecked={podcast.slot.mode === "featured"}
+                disabled={podcast.episodes.length === 0}
+              />
+              Featured episode
+            </label>
+            <label className="sr-only" htmlFor="podcast-guid">
+              Featured episode
+            </label>
+            <select
+              id="podcast-guid"
+              name="guid"
+              className="tool-select"
+              defaultValue={podcast.slot.mode === "featured" ? podcast.slot.guid : undefined}
+              disabled={podcast.episodes.length === 0}
+            >
+              {podcast.episodes.map((episode) => (
+                <option key={episode.guid} value={episode.guid}>
+                  {episode.title} ({episode.publishedAt.slice(0, 10)})
+                </option>
+              ))}
+            </select>
+          </li>
+        </ul>
+        <button type="submit" className="btn-secondary">
+          Save the home podcast
         </button>
       </Form>
     </Panel>

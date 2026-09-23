@@ -258,6 +258,7 @@ for (const name of [
   "style-src-attr",
   "font-src",
   "img-src",
+  "media-src",
   "connect-src",
   "object-src",
   "base-uri",
