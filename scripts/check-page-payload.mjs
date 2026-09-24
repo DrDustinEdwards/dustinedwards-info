@@ -1,18 +1,4 @@
-/**
- * Gate: what a reader downloads to see a public page, per route, with ceilings.
- *
- *   npm run check:page-payload
- *
- * BOUNDARY: it reads the BUILD ON DISK and never builds, so a stale build is certified stale.
- *
- * IT NOW RENDERS, which the line above used to deny. The last section renders each public route's
- * components in Node and ceilings the markup they produce, because the three lines this gate
- * printed before it existed added up to a number it called "the whole cold load" and that was
- * false on the home page by a factor of two: four inline drawings, 85% of the markup, and not one
- * byte of them visible to any gate. What it renders is the ROUTE'S OWN MARKUP and not the served
- * document; the section states that difference in bytes, measured against a served page rather
- * than estimated. Three routes cannot be rendered at all and are named with the reason.
- */
+// Reads the build on disk and never builds, so a stale build is certified stale.
 
 import {
   copyFileSync,
@@ -26,10 +12,8 @@ import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
 
-// The gate-side comment stripper, per the one-helper discipline: a gate
-// reading source can be satisfied by a comment, so comments go first.
+// Comments go first: a gate reading source can be satisfied by a comment.
 import { stripComments } from "./lib/strip-comments.mjs";
-// Pure and therefore testable, the footing ci-status.mjs and ask-converge.mjs stand on.
 import {
   fontsIn,
   reachableAssets,
@@ -41,29 +25,19 @@ const ASSETS_DIR = join(root, "build", "client", "assets");
 const DIST_DIR = join(root, "app", "enhance", "dist");
 
 /**
- * CEILINGS AND FLOORS, the only copies, rule 17. Margins are wide because the bundles are tiny:
- * the job is catching a dependency wandering in. A module missing from this map fails.
+ * Margins are wide because the bundles are tiny: the job is catching a dependency wandering in.
  *
  * @type {Record<string, number>}
  */
 const ENHANCE_BROTLI_CEILINGS = {
   "ask.js": 2000,
-  /*
-   * Raised for the selection link, which is a feature and not a dependency: the module
-   * graph is still blog.ts alone plus one local encoder. The margin above the measured
-   * bundle is kept at what it was, so this moves the floor and not the slack.
-   */
   "blog.js": 2500,
-  /* Measured on the first build of this module, at 431 brotli. THE SECOND SITE-WIDE BUNDLE, after
-     theme.js, so it is the one to watch: every public document pays for it, which is the cost
-     ruling 126's menu and persistence are buying. */
+  /* Measured 431 brotli on its first build. Site-wide, so every public document pays for it. */
   "header.js": 700,
   "palette.js": 6000,
-  /* Measured on the first build of this module, at 727 brotli: Plate I's linked highlight and its
-     leader intro, home page only. */
+  /* Measured 727 brotli on its first build; home page only. */
   "plate.js": 1000,
-  /* Measured on the first build of this module, at 608 brotli (esbuild output, quality 11): the
-     home page's Germomics player controls, home page only (ruling 134). */
+  /* Measured 608 brotli on its first build (esbuild output, quality 11); home page only. */
   "podcast.js": 900,
   /* Measured on the first build of this module, at 1121 brotli. */
   "search.js": 1600,
@@ -91,8 +65,8 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * A chunk name with its content hash stripped. Stems, because verify-live may face a deploy
- * whose hashes predate this disk. Anchored on the extension: a Vite hash may contain a dash.
+ * Stems, because verify-live may face a deploy whose hashes predate this disk. Anchored on the
+ * extension: a Vite hash may contain a dash.
  *
  * @param {string} name
  */
@@ -107,7 +81,6 @@ function brotliSize(bytes) {
   }).length;
 }
 
-/** Fails closed in every direction: no build, no manifest, two, or one that does not parse. */
 export function readClientManifest() {
   /** @type {string[]} */
   let entries;
@@ -159,12 +132,7 @@ export function chunkImports(source) {
   return { static: staticTargets, dynamic: dynamicTargets };
 }
 
-/**
- * The set the framework WOULD hand a hydrating page: a structural floor on the manifest. No
- * public page references it; the admin plane and /login do.
- *
- * @returns {{ files: string[], dynamicTargets: Set<string>, manifestFile: string }}
- */
+/** @returns {{ files: string[], dynamicTargets: Set<string>, manifestFile: string }} */
 export function walkHydrationSet() {
   const { manifest, manifestFile } = readClientManifest();
 
@@ -212,11 +180,8 @@ export function walkHydrationSet() {
 }
 
 /**
- * The enhancement bundles as the build serves them, matched by byte equality
- * against app/enhance/dist/.
- *
- * Exported for verify-live: the stems of these asset names are the ONLY
- * script references a live public page may carry.
+ * Exported for verify-live: the stems of these asset names are the only script references a live
+ * public page may carry.
  *
  * @returns {Array<{ module: string, assetName: string | null, matches: number, raw: number, brotli: number }>}
  */
@@ -252,11 +217,8 @@ export function enhancementAssets() {
 }
 
 /**
- * ONE WALKER, ONE ARGUMENT ORDER, the vacuity rule's helper-signature line: two copies agree until
- * one gains an extension.
- *
  * @param {string} dir
- * @returns {string[]} absolute paths
+ * @returns {string[]}
  */
 function walkSource(dir) {
   /** @type {string[]} */
@@ -289,8 +251,6 @@ async function main() {
     `only ${files.length} walked. A route module vanished from the manifest or the ` +
       `walk went vacuous; a smaller number here is a broken walk, not a lean build.`,
   );
-
-  /* every bundle is served verbatim, and its ceiling holds */
 
   for (const b of bundles) {
     ok(
@@ -328,8 +288,6 @@ async function main() {
       `a repo that no longer exists.`,
   );
 
-  /* the syntax pass: every served .js asset actually parses */
-
   const scratch = join(root, "node_modules", ".cache", "check-page-payload");
   rmSync(scratch, { recursive: true, force: true });
   mkdirSync(scratch, { recursive: true });
@@ -362,10 +320,7 @@ async function main() {
     }
   }
   rmSync(scratch, { recursive: true, force: true });
-  /*
-   * NOT an `assertFloor`: this counts BUILT CHUNKS, a SCOPE floor in the sense of the vacuity rule,
-   * and the bundler's splitting would read as drift.
-   */
+  /* Not an `assertFloor`: this counts built chunks, and the bundler's splitting would read as drift. */
   ok(
     `the syntax pass examined at least ${MINIMUM_ASSETS_SYNTAX_CHECKED} asset(s)`,
     assetNames.length >= MINIMUM_ASSETS_SYNTAX_CHECKED,
@@ -378,8 +333,6 @@ async function main() {
     `unparseable asset(s), most likely a ?url import pointed at TypeScript ` +
       `source instead of its dist bundle:\n        ${invalid.join("\n        ")}`,
   );
-
-  /* hydration is opt-in, and only the admin plane and its door opt in */
 
   /* Pinned to admin.tsx and login.tsx by name, so a public route gaining the flag fails HERE. */
   const routesDir = join(root, "app", "routes");
@@ -395,7 +348,6 @@ async function main() {
       `plane lost it.`,
   );
 
-  /* The window is the Layout return, bounded by two literals, comments stripped. */
   const rootSource = stripComments(readFileSync(join(root, "app", "root.tsx"), "utf8"));
   const scriptsAt = rootSource.indexOf("<Scripts");
   const guardAt = rootSource.indexOf("hydrates ? (");
@@ -409,12 +361,9 @@ async function main() {
       `an unconditional <Scripts> hydrates every public page again.`,
   );
 
-  /* no ineffective dynamic import */
-
   /*
-   * **This does NOT read the build log.** The criterion is derived from SOURCE: a dynamic import
-   * splits nothing when some module in the same graph imports it statically. The one it judges is
-   * the CodeMirror split, which the no-framework-script rule names.
+   * Derived from source, not the build log: a dynamic import splits nothing when some module in the
+   * same graph imports it statically.
    */
   const importScopeDirs = [join(root, "app"), join(root, "workers")];
   const importScope = importScopeDirs.flatMap((dir) => walkSource(dir));
@@ -426,12 +375,11 @@ async function main() {
       `nothing reports what a clean scan reports.`,
   );
 
-  /** Pure over its input, so the self-test below can run it on synthetic sources. */
   const findIneffectiveDynamicImports = (/** @type {Array<{path: string, source: string}>} */ files) => {
     // By NORMALISED SPECIFIER, not resolved path, so two spellings of one module do not match.
     const normalise = (/** @type {string} */ spec, /** @type {string} */ from) => {
       if (spec.startsWith("~/")) return spec.slice(2);
-      if (!spec.startsWith(".")) return null; // bare package or virtual module
+      if (!spec.startsWith(".")) return null;
       const parts = dirname(from).split(/[\\/]/);
       for (const segment of spec.split("/")) {
         if (segment === ".") continue;
@@ -487,7 +435,6 @@ async function main() {
 
   const ineffective = findIneffectiveDynamicImports(
     importScope.map((path) => ({
-      // Relative to the repo root, so the failure names a path someone can open.
       path: relative(root, path).split("\\").join("/"),
       source: readFileSync(path, "utf8"),
     })),
@@ -519,9 +466,8 @@ async function main() {
 }
 
 /**
- * A NATIVE BUILD-TIME DEPENDENCY MAY NOT REACH THE WORKER: `workerd` has no filesystem, so
- * this is a Worker that fails to start rather than a size problem. THE THIRD ASSERTION IS THE
- * POINT: a source scan says nothing about what SHIPPED.
+ * `workerd` has no filesystem, so a native build-time dependency reaching the Worker fails to start.
+ * The third assertion is the point: a source scan says nothing about what shipped.
  */
 function gradeBuildOnlyDependencies() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
@@ -540,7 +486,7 @@ function gradeBuildOnlyDependencies() {
       `byte-gated artifact.`,
   );
 
-  /* Comments stripped: a comment naming the module has satisfied an assertion here before. */
+  /* Comments stripped: a comment naming the module could satisfy an assertion. */
   const importers = [];
   for (const dir of ["app", "workers"]) {
     for (const file of walkSource(join(root, dir))) {
@@ -556,10 +502,6 @@ function gradeBuildOnlyDependencies() {
     `${importers.join(", ")} imports sharp. It is a native Node module; workerd has ` +
       `no native modules, so this is a Worker that does not start.`,
   );
-  /*
-   * SCOPE, ASSERTED. A walk that read nothing agrees with a clean tree, which
-   * is the zero-scope class in the vacuity rule.
-   */
   const scanned = walkSource(join(root, "app")).length + walkSource(join(root, "workers")).length;
   ok(
     "the import scan read a plausible number of source files",
@@ -568,16 +510,13 @@ function gradeBuildOnlyDependencies() {
       `broken walk, and a broken walk finds no importer either.`,
   );
 
-  /*
-   * `build/server/index.js` is what wrangler uploads. A bare substring, because a require can
-   * survive as a string, a banner or an external.
-   */
+  /* A bare substring over what wrangler uploads, because a require can survive as a string, a banner
+     or an external. */
   const serverBundle = join(root, "build", "server", "index.js");
   let bundle = "";
   try {
     bundle = readFileSync(serverBundle, "utf8");
   } catch {
-    /* Falls to the assertion below, which names the missing build. */
   }
   ok(
     "the Worker bundle is on disk to be read",
@@ -593,22 +532,14 @@ function gradeBuildOnlyDependencies() {
   );
 }
 
-/**
- * THE WHOLE PAGE, PER ROUTE: rule 4's subject is the stylesheets and fonts too. Resolved offline
- * by reachability, which over-approximates, the safe direction for a ceiling. The speculation
- * self-reference is `test/header-speculation.test.mjs`', named here so it does not read ungated.
- */
+/** Resolved offline by reachability, which over-approximates, the safe direction for a ceiling. */
 
-/*
- * THE REDESIGN UPLIFT, TEMPORARY BY CONSTRUCTION. Both palettes ship at once because the old one
- * still has consumers. Each ceiling kept its headroom, so this moves the floor, not the margin.
- * THE DATE IS THE WHOLE CONTRACT: these come down by UPLIFT_EXPIRES or this gate fails, and
- * moving the date is a ruling.
- */
+/* Both palettes ship at once during the redesign; these widenings come down by UPLIFT_EXPIRES or this
+   gate fails. */
 const UPLIFT_EXPIRES = "2026-11-30";
 /**
- * PER-ROUTE CEILINGS, in BROTLI bytes, the only copies, rule 17. `css` is the stylesheets,
- * `total` adds the bundles; fonts are excluded and asserted separately. A missing route FAILS.
+ * Brotli bytes. A raise keeps the slack the field already had, rounded up to the next hundred,
+ * rather than adding any. Fonts are asserted separately.
  *
  * @type {Record<string, { id: string, css: number, total: number }>}
  */
@@ -633,92 +564,21 @@ const REDESIGN_UPLIFT = new Map([
 ]);
 
 const ROUTE_CEILINGS = {
-  /*
-   * RAISED FOR PART B PAGE 2: home became Plate I. The page gained a drawn morphology key, its
-   * key strip, two computed figures and a split hero grid, which is a ruled feature (117, 123 and
-   * 124) rather than a bundle that grew on its own. Measured 6929 css on the build that raised
-   * it, against a 6900 ceiling.
-   *
-   * TWO CONSOLIDATION PASSES RAN FIRST, because a raise is not the default answer to an overage
-   * (ruling 119): two annotation aliases collapsed into one name, and the plate and figure box
-   * rules merged. Together they moved brotli by a single byte. The repetition was already being
-   * compressed away, so there was nothing left to reclaim and the cost is the feature itself.
-   *
-   * The total ceiling is NOT raised. The whole cold load is 7743 of 7800 and still fits.
-   *
-   * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
-   */
-  /*
-   * RAISED FOR header.js, ruling 126, and ONLY the two routes that actually breached were moved.
-   * The site-wide bundles went from 814 to 1245 brotli, so every route pays the same +431; the
-   * other fourteen absorbed it inside slack they already had and keep the ceiling they were
-   * measured at. Raising those too would add slack nobody measured.
-   *
-   * Measured 7903 on the build that raised it, and the route keeps the 328 bytes of slack it had
-   * before, rounded up to the next hundred. That moves the floor and not the slack, which is the
-   * same rule the blog.js raise above states.
-   */
-  /*
-   * RAISED AGAIN FOR PLATE I'S ENHANCEMENT (ruling 119: a ceiling may rise in the commit that states
-   * the reason). plate.js is 727 brotli, the linked highlight and the leader intro the solid-lawn
-   * plate brings. Measured 8876 on the build that raised it; the 397 bytes of slack the last raise
-   * kept are kept again, rounded up. It comes down with the rest of the uplift by UPLIFT_EXPIRES.
-   *
-   * RAISED AGAIN FOR THE SCIENCE COMMUNICATION SECTION (rulings 119 and 134): podcast.js at 608
-   * brotli and the episode and player rules in home.css. Measured 7313 css / 9862 total on the
-   * build that raised it; both keep the slack they had before (196 and 397), rounded up.
-   */
-  /*
-   * RAISED FOR THE FOOTER REBUILD (ruling 135), and ONLY the fields that breached. The footer's
-   * rules live in shell.css, so root.css went from 5409 to 5677 brotli and every route pays +268;
-   * the routes that absorbed it inside their slack keep their ceilings. A breaching field rises by
-   * that +268 rounded up to +300, which keeps the slack it had rather than adding any. Home, with
-   * the science communication section in, measured 7580 css / 10129 total; its css keeps the 196
-   * bytes of slack the podcast raise kept, rounded up, and its total still fits.
-   */
-  /*
-   * RAISED FOR THE SCIENCE FONTS (Greek, math symbols and the serif italic), and ONLY the fields that
-   * breached. Twelve @font-face rules in root.css cost every route +225 brotli (5745 to 5970), after
-   * the unicode-ranges were cut to whole blocks, which saved 158 of the first 383. A breaching field
-   * rises by +300, keeping the slack it had; the routes that absorbed it keep their ceilings.
-   */
   "/": { id: "routes/home", css: 8100, total: 10600 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8800 },
-  /*
-   * RAISED FOR PART B PAGE 1: the post gained a rail track, an evidence row, a dl head-block
-   * layout and its own type rules. Measured 8982 css / 12051 total on the build that raised it.
-   * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
-   */
   "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 13000 },
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
-  /* The tag archive's, for the reason above: one bar for one kind of page. */
   "/blog/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
-  /*
-   * The total alone is raised, and by the rail track's share: `.tracks` gained the rail as a
-   * third track, which every public route pays for because they all load shell.css. This page
-   * had 52 bytes of headroom and was the only one that did not absorb it.
-   */
   "/search": { id: "routes/search", css: 7600, total: 10900 },
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
   "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
   "/playground": { id: "routes/playground", css: 8200, total: 9000 },
-  /*
-   * The inventory carries the whole kit, so it is the heaviest public sheet on
-   * the site by design. It is also the only page that does, which is what keeps
-   * the number off every other route.
-   */
+  /* The inventory carries the whole kit, so it is the heaviest public sheet on the site by design. */
   "/playground/ui": { id: "routes/playground.ui", css: 10600, total: 11800 },
   "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8200 },
   "/privacy": { id: "routes/privacy", css: 7400, total: 8200 },
-  /* /privacy and /colophon's shape, app.css plus prose.css and one bundle. */
   "/about": { id: "routes/about", css: 7400, total: 8200 },
-  /*
-   * `/projects`, the same shape. It does not pay for `PUBLICATIONS`: the loader touches it and the
-   * public plane does not hydrate, so the records never reach a payload.
-   */
-  /* RAISED FOR header.js with the home page above, and for the same +431. Measured 8400, keeping
-     the 131 bytes of slack it had, rounded up. The css ceiling is untouched: it measured 7155. */
   "/publications": { id: "routes/publications", css: 7900, total: 8900 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
@@ -727,12 +587,6 @@ const ROUTE_CEILINGS = {
   "/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
 };
 
-/**
- * THE MATH VARIANT: `/blog/:slug` with one more sheet, generated from a pinned package.
- *
- * Raised with its parent for Part B page 1, by the same sheets: measured 11801 css / 14870 total.
- * The total raised again with its parent for the footer rebuild, by the same +300.
- */
 const MATH_CEILING = { css: 12300, total: 15800 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
@@ -763,16 +617,11 @@ const PRELOAD_EXEMPT = {
 /** The palette is `false` everywhere on purpose: a route reaching it has put a search dialog back. */
 const BUNDLE_USE = {
   "theme.js": () => true,
-  /* Site-wide: the header is on every public page, so its enhancement is too. */
   "header.js": () => true,
   "blog.js": (/** @type {string} */ id) => id === "routes/blog.$slug",
-  /* Plate I and its key are on the home page and nowhere else. */
   "plate.js": (/** @type {string} */ id) => id === "routes/home",
-  /* The Germomics episode is on the home page and nowhere else. */
   "podcast.js": (/** @type {string} */ id) => id === "routes/home",
   "ask.js":(/** @type {string} */ id) => id === "routes/search",
-  /* The search page's own enhancement: it upgrades that page's form and result list and has
-     nothing to do anywhere else. */
   "search.js": (/** @type {string} */ id) => id === "routes/search",
   "palette.js": () => false,
 };
@@ -785,7 +634,6 @@ function gradeEveryPage() {
   const rootModule = join(appDir, "root.tsx");
   const rootSource = readFileSync(rootModule, "utf8");
 
-  /** Source, or null when the path is not a file this walk can read. */
   const read = (/** @type {string} */ path) => {
     try {
       return readFileSync(path, "utf8");
@@ -794,11 +642,9 @@ function gradeEveryPage() {
     }
   };
 
-  /** An asset path from the manifest to the file on disk. */
   const assetFile = (/** @type {string} */ assetPath) =>
     join(clientDir, assetPath.replace(/^\//, ""));
 
-  /* THE ROUTE SET IS DERIVED, reconciled BOTH directions, by the same rule `check:browser` uses. */
   const publicRoutes = readdirSync(routesDir)
     .filter((name) => name.endsWith(".tsx"))
     .filter((name) => {
@@ -822,13 +668,8 @@ function gradeEveryPage() {
       `ceiling in the same commit, or this gate stops grading the page it added.`,
   );
 
-  /*
-   * THE UPLIFT MAP POLICES ITSELF, in the three directions its comment claims.
-   * A widening that cannot expire is just a higher ceiling with a story
-   * attached.
-   */
+  /* A widening that cannot expire is just a higher ceiling with a story attached. */
   for (const [route, before] of REDESIGN_UPLIFT) {
-    // A second grading of /blog/:slug rather than a route of its own, so its ceiling is MATH_CEILING.
     const now =
       route === "/blog/:slug (math)"
         ? MATH_CEILING
@@ -915,8 +756,6 @@ function gradeEveryPage() {
       );
     }
 
-    /* a reachable font is preloaded, or exempt with a reason */
-
     for (const font of fontsIn(cssText)) {
       const stem = (font.split("/").pop() ?? font).replace(/-[A-Za-z0-9_-]{8}\.woff2$/, "");
       if (PRELOAD_EXEMPT[stem]) continue;
@@ -939,7 +778,6 @@ function gradeEveryPage() {
     }
   }
 
-  /* Asserted rather than assumed, which is what makes its return read as a regression. */
   ok(
     "the search palette is not imported into any page's cold load",
     ![...rootAssets].some((a) => a.includes("enhance/dist/palette")),
@@ -951,9 +789,8 @@ function gradeEveryPage() {
 }
 
 /**
- * THE ONE PAGE THIS GATE'S ROUTE MODEL CANNOT SEE: the math sheet is linked PER POST from the
- * loader's `hasMath`, so it is in no route's manifest. THE FIRST TWO ASSERTIONS ARE A PAIR:
- * "on no route's manifest" passes on a build where the sheet was deleted.
+ * The math sheet is linked per post from the loader's `hasMath`, so it is in no route's manifest.
+ * "On no route's manifest" alone passes on a build where the sheet was deleted.
  *
  * @param {any} manifest @param {Set<string>} rootAssets @param {string} rootSource
  * @param {string} clientDir @param {(p: string) => string} assetFile
@@ -961,7 +798,7 @@ function gradeEveryPage() {
 function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile) {
   console.log("\n  the math variant of /blog/:slug\n");
 
-  /* 2. the sheet is reachable from root, so 1 is not vacuous */
+  /* Reachable from root, so the no-manifest assertion below is not vacuous. */
 
   const read = (/** @type {string} */ path) => {
     try {
@@ -1002,8 +839,6 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
   const mathSheet = /** @type {string} */ (mathSheets[0]);
   const mathBytes = readFileSync(join(clientDir, "assets", mathSheet));
 
-  /* 1. and it is on no route's manifest, which is the mathless cost */
-
   const onRoutes = Object.entries(ROUTE_CEILINGS)
     .filter(([, ceiling]) =>
       stylesheetsFor(manifest, ceiling.id).some((s) => s.endsWith(mathSheet)),
@@ -1018,11 +853,7 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `a plain CSS import puts it back on the whole route.`,
   );
 
-  /*
-   * Three source facts no other instrument can see: the `<link>` is guarded by `linksMath`, it
-   * carries NO `precedence`, which would hoist it above the load-bearing `color-scheme` meta, and
-   * root names TWO ROUTE IDS, reconciled against the routes returning `blogPostView(...)`.
-   */
+  /* The `<link>` carries no `precedence`, which would hoist it above the load-bearing `color-scheme` meta. */
   const rootStripped = stripComments(rootSource);
   ok(
     "root links the math stylesheet only when linksMath, and without precedence",
@@ -1058,7 +889,6 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `pane. Fewer than two means the derivation stopped finding them.`,
   );
 
-  /* A route renders a post exactly when its loader returns the shared projection. */
   const routesDir2 = join(root, "app", "routes");
   const postRoutes = readdirSync(routesDir2)
     .filter((name) => name.endsWith(".tsx"))
@@ -1091,8 +921,6 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `every equation renders unstyled, with no type error anywhere.`,
   );
 
-  /* 3. what a math post actually costs */
-
   const base = ROUTE_CEILINGS["/blog/:slug"];
   const baseSheets = stylesheetsFor(manifest, base.id);
   const baseCss = baseSheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
@@ -1123,8 +951,6 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
     `${mathTotal} bytes: ${mathCss} of stylesheet and ${bundleTotal} of enhancement bundles.`,
   );
 
-  /* 4. the faces, and the one that was inlined */
-
   const faces = fontsIn([mathBytes.toString("utf8")]);
   ok(
     "the math stylesheet still names its whole font set",
@@ -1136,9 +962,8 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
   );
 
   /*
-   * NOT A PREFERENCE: `font-src` is `'self'` with no `data:`, so a base64-inlined face is refused
-   * while the others fetch. `vite.config.ts` refuses to inline `.woff2`; this says so, because a
-   * config edit is invisible until something reads the build.
+   * `font-src` is `'self'` with no `data:`, so a base64-inlined face is refused while the others fetch.
+   * `vite.config.ts` refuses to inline `.woff2`, and a config edit is invisible until something reads the build.
    */
   const inlined = faces.filter((f) => f.startsWith("data:"));
   ok(
@@ -1149,10 +974,7 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `delimiter in a fallback serif. See build.assetsInlineLimit in vite.config.ts.`,
   );
 
-  /*
-   * THE OPPOSITE OF THE RULE ABOVE, stated rather than left an omission: a KaTeX face is used by
-   * an EXPRESSION, so preloading the set is speculative fetching for a page needing a fraction.
-   */
+  /* No preload for KaTeX faces: each is used by an expression, so preloading the set is speculative. */
   const preloadBlock = rootSource.slice(rootSource.indexOf('rel: "preload"'));
   ok(
     "no math face is preloaded, which is the deliberate opposite of the rule above",
@@ -1164,60 +986,16 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
 }
 
 
-/* ------------------------------------------------------------------ the HTML the page ships */
-
 /**
- * THE DOCUMENT'S OWN CEILINGS, in brotli bytes, measured on the build that introduced them.
- *
- * WHY THIS SECTION EXISTS. Until it did, this gate measured stylesheets and enhancement bundles
- * and called the sum "the whole cold load", and on the home page that sentence was false by a
- * factor of two: PR #61 put four inline drawings on it, 85% of its markup, and not one byte of
- * them was visible here. A gate that reports the second largest cost on a page and calls it the
- * total is worse than no gate, because it is believed.
- *
- * WHAT IS MEASURED, EXACTLY. The markup the route's own components render, produced offline by
- * `route-render.mjs`, brotli-compressed at the same quality as everything else here. NOT the
- * served document: the transport wraps this in `<html>`, a `<head>` of meta and link tags, and
- * the nonced module script tags.
- *
- * THAT SHELL WAS MEASURED RATHER THAN ESTIMATED, against three served pages on 2026-09-21:
- *
- *     route     served          this section    the shell between them
- *     /         89,918 / 10,994  86,657 / 10,428  3,261 raw /  566 brotli
- *     /blog     21,288 /  4,285  18,488 /  3,700  2,800 raw /  585 brotli
- *     /about     8,793 /  2,354   6,162 /  1,817  2,631 raw /  537 brotli
- *
- * A fixed 540 to 590 brotli on three routes that share nothing else, which is what a head of
- * meta tags and link tags should look like: no route can change it, so no route's ceiling should
- * carry it. The tags in it point at the stylesheets and bundles the two lines above already
- * ceiling, so those bytes are counted once, in the right place.
- *
- * THE MARGIN IS 15% OVER THE MEASUREMENT, rounded up to the next 100, and it is not slack to
- * spend: a page that grows into it grows because someone added something, and the commit that
- * adds it says so. Ruling 119: a raise is not the default answer to an overage.
- *
- * AND NO EXPIRY MAP, deliberately, where the stylesheet ceilings have one. `REDESIGN_UPLIFT`
- * exists because those raises were TEMPORARY SLACK: a ceiling held above the real number until
- * the old palette left, so it had to carry a date or it would have become the number. An HTML
- * ceiling never holds slack. It is a current measurement plus a fixed margin, both written down,
- * so a page that legitimately grows is re-measured in the commit that grew it and both numbers
- * move together. There is nothing to expire, which is why there is no date to move.
- *
- * EACH ENTRY CARRIES THE MEASUREMENT IT WAS SET FROM, so a later raise is legible as a raise.
- * The `measured` number is provenance and NOT a second ceiling: it is never compared against the
- * page, because /blog and /blog/:slug move with the corpus and publishing a post must not turn a
- * gate red. What IS asserted on it is the MAP: no ceiling may sit more than 25% above the
- * measurement it claims to come from, which is what stops a raise from being unbounded.
+ * Brotli ceilings on the markup the route's own components render, not the served document. The
+ * served shell measured a fixed 540 to 590 brotli on three routes, so no route's ceiling carries it.
+ * Margin is 15% over the measurement, rounded up to the next 100. `measured` is provenance and never
+ * compared with the page, because /blog and /blog/:slug move with the corpus.
  *
  * @type {Record<string, { brotli: number, measured: number }>}
  */
 const HTML_CEILINGS = {
   "/": { brotli: 12000, measured: 10428 },
-  /*
-   * RE-MEASURED FOR THE FOOTER REBUILD (ruling 135): the footer's columns, the X mark and the ORCID
-   * address are on every page, about +800 brotli each. Only the six routes it pushed over moved,
-   * each to its new measurement plus this section's 15%, rounded up.
-   */
   "/blog": { brotli: 5200, measured: 4495 },
   /* The LONGEST post in the corpus, which is what this route's worst case means. */
   "/blog/:slug": { brotli: 12300, measured: 10660 },
@@ -1232,16 +1010,11 @@ const HTML_CEILINGS = {
   "/about": { brotli: 3100, measured: 2624 },
 };
 
-/** The most a ceiling may sit above the measurement it records. Ruling 119 in one number. */
+/** The most a ceiling may sit above the measurement it records. */
 const HTML_CEILING_MARGIN = 1.25;
 /**
- * THE THREE ROUTES THIS SECTION CANNOT MEASURE, each with the reason, because a silent gap is
- * indistinguishable from a page nobody thought about.
- *
- * All three fail the same way and it is structural rather than lazy: `route-render.mjs` stubs
- * server-only modules at resolve time, so a loader that calls into one binds undefined and
- * throws. Fabricating the payload instead would measure the fabrication, which on a page whose
- * whole size is its result list is not a measurement of anything.
+ * `route-render.mjs` stubs server-only modules, so a loader calling into one throws, and a fabricated
+ * payload would measure the fabrication.
  *
  * @type {Record<string, string>}
  */
@@ -1259,23 +1032,14 @@ const HTML_UNMEASURED = {
     "and out of this list.",
 };
 
-/**
- * A floor on the routes this section renders, so a harness that quietly stops working reports a
- * clean sweep of nothing. The vacuity rule: a pass count is not coverage.
- */
+/** A floor, so a harness that quietly stops working cannot report a clean sweep of nothing. */
 const MINIMUM_ROUTES_RENDERED = 12;
 
-/** Inline SVG, which is what made this section necessary and is reported per route. */
 function inlineSvgOf(/** @type {string} */ html) {
   return (html.match(/<svg[^]*?<\/svg>/g) ?? []).join("");
 }
 
-/**
- * Renders every measurable public route offline and grades the markup it produces.
- *
- * THE FIXTURES ARE THE REPOSITORY'S OWN CORPUS, built by `build-content.mjs` from the markdown,
- * not typed into this file: a fixture decides the size, so an invented one measures an invention.
- */
+/** The fixtures are the repository's own corpus: a fixture decides the size, so an invented one measures an invention. */
 async function gradeRenderedHtml() {
   const { buildArtifact, revisedDate } = await import("./build-content.mjs");
   const { bundleRoutes, importBundled, renderRoute } = await import("./lib/route-render.mjs");
@@ -1286,8 +1050,6 @@ async function gradeRenderedHtml() {
 
   console.log("\n  the document each route renders, brotli bytes\n");
 
-  /* BOTH DIRECTIONS, the same reconciliation the ceilings above get: a route is measured or it is
-     named unmeasured, and a name that no longer matches a route is a dead exemption. */
   const graded = Object.keys(ROUTE_CEILINGS);
   const covered = [...Object.keys(HTML_CEILINGS), ...Object.keys(HTML_UNMEASURED)].sort();
   const uncovered = graded.filter((r) => !covered.includes(r));
@@ -1299,11 +1061,6 @@ async function gradeRenderedHtml() {
       `route: ${orphaned.join(", ") || "none"}.`,
   );
 
-  /*
-   * THE MAP POLICES ITSELF. A ceiling is allowed to be raised and the commit that raises it says
-   * why; what it may not be is arbitrary, and a number nobody can trace back to a measurement is
-   * arbitrary however carefully it was chosen.
-   */
   const overwide = Object.entries(HTML_CEILINGS).filter(
     ([, c]) => c.brotli > Math.ceil((c.measured * HTML_CEILING_MARGIN) / 100) * 100,
   );
@@ -1339,11 +1096,7 @@ async function gradeRenderedHtml() {
   );
   if (ordered.length === 0) return;
 
-  /*
-   * THE LONGEST POST, not the newest: a post page's size is its body, and the ceiling on that
-   * route has to be the worst case the corpus actually contains or it is a ceiling on whichever
-   * post happened to be published last.
-   */
+  /* The longest post, not the newest: the ceiling must be the worst case the corpus contains. */
   const longest = [...ordered].sort(
     (/** @type {any} */ a, /** @type {any} */ b) => (b.html ?? "").length - (a.html ?? "").length,
   )[0];
@@ -1393,10 +1146,7 @@ async function gradeRenderedHtml() {
     for (const [i, [route, , url, fixture, params]] of cases.entries()) {
       const mod = await importBundled(bundled.files[i]);
       let loaderData = fixture;
-      /*
-       * ONE ROUTE RUNS ITS OWN LOADER. /playground's is pure over the query string and reaches no
-       * server module, so the real thing is available and a fixture would be a worse copy of it.
-       */
+      /* /playground's loader is pure over the query string and reaches no server module, so it runs for real. */
       if (fixture === "RUN_THE_LOADER") {
         loaderData = await /** @type {any} */ (mod).loader({
           request: new Request(`https://dustinedwards.info${url}`),

@@ -1,13 +1,5 @@
-/**
- * Derives the math stylesheet and its faces from the installed `katex` package.
- *
- *   npm run build:katex
- *
- * BOUNDARY: importing the upstream sheet from a component would land it in one route's stylesheet
- * for every post, most of which carry no math, and the no-framework-script rule asks for the bytes a reader
- * downloads; it would also ship three font formats where every supported browser reads one. The
- * output is committed and `check:content` byte-compares it.
- */
+// Importing the upstream sheet from a component would put it in a route stylesheet for every post,
+// most with no math, and ship three font formats where every supported browser reads one.
 
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -19,13 +11,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const KATEX_DIR = join(root, "node_modules", "katex", "dist");
 export const KATEX_CSS_PATH = join("app", "styles", "katex.generated.css");
 export const KATEX_FONT_DIR = join("app", "fonts", "katex");
-/** The site's hand-written half, appended to the derived upstream CSS. */
 export const KATEX_OVERRIDES_PATH = join("app", "styles", "katex-overrides.css");
 
-/** Where the derived upstream CSS stops and this repo's own rules begin. */
 export const OVERRIDES_MARKER = "/* ---- site overrides ---- */\n";
 
-/** The installed version, read rather than restated. Rule 17. */
 export function installedKatexVersion() {
   const pkg = JSON.parse(
     readFileSync(join(root, "node_modules", "katex", "package.json"), "utf8"),
@@ -34,10 +23,8 @@ export function installedKatexVersion() {
 }
 
 /**
- * A `src:` list with everything but woff2 removed. ANCHORED on the format keyword rather than on
- * the extension, which appears inside the filename too, and the vacuity rule spends a paragraph on
- * the unanchored needle. A face declaring NO woff2 source is left ALONE and reported by the
- * caller: dropping every source it has would be a silent removal of the face.
+ * Anchored on the format keyword, not the extension, which also appears inside the filename. A face
+ * with no woff2 source is left alone: dropping every source would silently remove the face.
  *
  * @param {string} src the contents of one `src:` declaration
  * @returns {string | null} the trimmed list, or null when there is no woff2
@@ -52,19 +39,12 @@ export function woff2Only(src) {
 }
 
 /**
- * The stylesheet, with the legacy formats stripped and the font urls pointed at the copies this
- * script writes.
- *
  * @param {string} css the contents of katex.min.css
  * @returns {{ css: string, faces: string[], untrimmed: string[] }}
  */
 export function trimStylesheet(css) {
-  /** Every woff2 file the trimmed stylesheet still names. */
   const faces = new Set();
-  /**
-   * Faces that declared no woff2 source, so nothing could be trimmed.
-   * @type {string[]}
-   */
+  /** @type {string[]} */
   const untrimmed = [];
 
   const out = css.replace(/@font-face\s*\{([^}]*)\}/g, (block, body) => {
@@ -78,11 +58,7 @@ export function trimStylesheet(css) {
     return block.replace(src[1], trimmed);
   });
 
-  /*
-   * The url rewrite runs over the WHOLE stylesheet after trimming, so a woff2 url surviving outside
-   * an @font-face block is caught too, and every match is recorded, which is what makes the
-   * copied-every-font assertion below a measurement rather than a hope.
-   */
+  // Runs over the whole stylesheet, so a woff2 url surviving outside an @font-face block is caught too.
   const rewritten = out.replace(/url\(\s*["']?fonts\/([^"')]+\.woff2)["']?\s*\)/g, (_m, file) => {
     faces.add(file);
     return `url("../fonts/katex/${file}")`;
@@ -91,10 +67,7 @@ export function trimStylesheet(css) {
   return { css: rewritten, faces: [...faces].sort(), untrimmed };
 }
 
-/**
- * The stylesheet exactly as it should be on disk, header included. Exported so `check:content`
- * can derive it and byte-compare without shelling out to this script.
- */
+/** Exported so `check:content` can derive it and byte-compare without shelling out to this script. */
 export function generateKatexCss() {
   const version = installedKatexVersion();
   const source = readFileSync(join(KATEX_DIR, "katex.min.css"), "utf8");
@@ -130,26 +103,20 @@ export function generateKatexCss() {
     ` * early and lightningcss refused the whole stylesheet (measured 2026-09-06).\n` +
     ` */\n`;
 
-  /*
-   * The overrides are APPENDED rather than left as a second link, so a math post costs one request,
-   * and they are read from their own file so the hand-written rules have one editable home.
-   */
+  // Appended rather than a second link, so a math post costs one request.
   const overrides = readFileSync(join(root, KATEX_OVERRIDES_PATH), "utf8");
 
   return { css: `${header}${css}\n${OVERRIDES_MARKER}${overrides}`, faces, version };
 }
 
-/** sha256 of a buffer, for the copy report. @param {Buffer} buf */
+/** @param {Buffer} buf */
 const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 12);
 
 function main() {
   const { css, faces, version } = generateKatexCss();
 
   const fontDir = join(root, KATEX_FONT_DIR);
-  /*
-   * The font directory is REPLACED, not merged: a face removed upstream would otherwise stay on
-   * disk forever, and the next reader could not tell whether it mattered.
-   */
+  // Replaced, not merged: a face removed upstream would otherwise stay on disk forever.
   rmSync(fontDir, { recursive: true, force: true });
   mkdirSync(fontDir, { recursive: true });
 
@@ -162,10 +129,7 @@ function main() {
 
   writeFileSync(join(root, KATEX_CSS_PATH), css, "utf8");
 
-  /*
-   * BOTH DIRECTIONS: the loop above proves every named face was copied, this proves nothing else is
-   * in the directory, and a one-directional copy is how a stale face survives a version bump.
-   */
+  // Both directions: a one-directional copy is how a stale face survives a version bump.
   const onDisk = readdirSync(fontDir).sort();
   const orphans = onDisk.filter((f) => !faces.includes(f));
   if (orphans.length > 0) {
@@ -179,11 +143,8 @@ function main() {
   );
 }
 
-/*
- * `pathToFileURL`, not a hand-rolled comparison: on this host the two spellings differ in their
- * slashes, so the hand-rolled form is false forever and the build step exits 0 having written
- * nothing.
- */
+// `pathToFileURL`: on this host the two spellings differ in their slashes, so a hand-rolled compare is
+// false forever and the build exits 0 having written nothing.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   try {
     main();

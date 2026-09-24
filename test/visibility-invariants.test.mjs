@@ -1,8 +1,3 @@
-/**
- * Drafts never appear publicly. The visibility predicate is stated twice, as a query-builder
- * condition and as hand-written SQL, and the two are run against a fixture of post states.
- */
-
 import test from "node:test";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -14,10 +9,7 @@ const bundle = bundler("visibility");
 test("drafts never public: publiclyVisible() and visibilityClause() agree", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
-  /**
-   * Every post state, drafts included. `NOW` comes from `publiclyVisible()`'s own params,
-   * because the two halves read the clock differently.
-   */
+  /* `NOW` comes from `publiclyVisible()`'s own params, because the two halves read the clock differently. */
   /** @param {number} NOW @returns {{slug: string, status: string, publish_at: number | null}[]} */
   const POST_STATES_AT = (NOW) => [
     { slug: "published-no-date", status: "published", publish_at: null },

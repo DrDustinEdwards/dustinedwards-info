@@ -1,25 +1,10 @@
-/**
- * Gate for the posts: the corpus and the About page render, render deterministically, and their
- * math, swatches and internal further-reading links are valid.
- *
- *   npm run check:content
- *
- * BOUNDARY: it renders locally, never in a Worker and never against D1, so whether the rows match
- * what it rendered is ship's drift report's. It does not compare committed generated files against
- * a fresh build (ruling 150); the build scripts regenerate them.
- */
-
 import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./build-content.mjs";
 import { internalLinkSlug } from "../app/lib/content/pipeline.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
 import { recordsForPosts } from "../app/lib/search/records.mjs";
 
-/**
- * Names, not a count: "3 file(s) missing" sends the reader to compare two lists by eye.
- *
- * @param {string[]} names
- */
+/** @param {string[]} names */
 function nameThem(names) {
   const shown = names.slice(0, 10).map((n) => `          ${n}`);
   if (names.length > shown.length) shown.push(`          ... and ${names.length - 10} more`);
@@ -27,9 +12,6 @@ function nameThem(names) {
 }
 
 /**
- * Reports the first line that differs, so the failure names a location rather
- * than just asserting inequality.
- *
  * @param {string} committed
  * @param {string} fresh
  */
@@ -50,10 +32,8 @@ function firstDifference(committed, fresh) {
 }
 
 async function main() {
-  /*
-   * TWICE, IN ONE PROCESS: once proves validity, twice proves the render depends on the sources
-   * alone. One process on purpose, so a shared memo makes any difference the render's own.
-   */
+  // Rendered twice in one process: twice proves the render depends on the sources alone, and one
+  // process means a shared memo makes any difference the render's own.
   const first = await buildArtifact();
   const second = await buildArtifact();
 
@@ -103,11 +83,7 @@ async function main() {
   checkSwatches(posts);
 }
 
-/**
- * The About page renders, renders the same way twice, and says something. RENDERING AT ALL IS THE
- * VALIDATION, since `buildAbout` throws. TWICE AND BYTE-COMPARED, because `about.json` is
- * imported statically into the Worker bundle. NOT EMPTY: a blank page renders a valid artifact.
- */
+/** Rendered twice and byte-compared, because `about.json` is imported statically into the Worker bundle. */
 async function checkAbout() {
   const first = await buildAbout();
   const second = await buildAbout();
@@ -143,10 +119,7 @@ async function checkAbout() {
 }
 
 /**
- * THE FOURTH SUBJECT: math. ONE output carries the rendered form and every other the TeX an
- * author typed. THE SCOPE CONTROL COMES FIRST: every claim below is satisfied by a corpus with
- * no math, so one post WITH and one WITHOUT must exist. TWO DERIVATIONS OF `hasMath`, MADE TO
- * ARGUE, one from the mdast and one off the rendered html, which is what the ROUTE uses.
+ * Needs one post with math and one without: every claim below is satisfied by a corpus with no math.
  *
  * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
  *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
@@ -180,7 +153,6 @@ function checkMath(posts) {
       );
     }
 
-    /* NO ERROR BOX, EVER: the validator exists so rehype-katex's `katex-error` path is unreachable. */
     if (post.html.includes("katex-error")) {
       problems.push(
         `${post.slug}: the rendered html carries a katex-error span. An expression ` +
@@ -189,10 +161,6 @@ function checkMath(posts) {
       );
     }
 
-    /*
-     * THE MARKDOWN SIDE, four outputs at once: `posts.body` is what the twin, llms-full, the JSON
-     * feed and the Accept representation all serve unmodified.
-     */
     if (post.markdown.includes("katex")) {
       problems.push(
         `${post.slug}: the stored markdown carries the string "katex". The four outputs ` +
@@ -206,7 +174,7 @@ function checkMath(posts) {
       );
     }
 
-    /* THE HTML SIDE, carrying BOTH trees: a silent drop to html-only takes the MathML away. */
+    // Carrying both trees: a silent drop to html-only takes the MathML away.
     if (astSaysMath) {
       if (!post.html.includes("<math")) {
         problems.push(
@@ -223,7 +191,6 @@ function checkMath(posts) {
       }
     }
 
-    /* THE FEED SIDE, through the transform the feeds call, over the REAL corpus. */
     const feedBody = mathToTex(post.html);
     if (feedBody.includes("katex")) {
       problems.push(
@@ -236,10 +203,7 @@ function checkMath(posts) {
     }
   }
 
-  /*
-   * THE SEARCH AND ASK SIDE: both indexes are built from the MARKDOWN, so markup would be span
-   * soup in a snippet and in the Ask context.
-   */
+  // Both indexes are built from the markdown, so markup would be span soup in a snippet and in Ask.
   const records = recordsForPosts(
     posts.map((post) => ({
       slug: post.slug,
@@ -287,8 +251,7 @@ function checkMath(posts) {
 }
 
 /**
- * REQUIRED, not tidiness: a post DOCUMENTING the directive writes it inside a fence, where it is
- * literal text, so matching raw markdown fails a correct post. The vacuity rule's satisfied anchor.
+ * Required: a post documenting the directive writes it inside a fence, where it is literal text.
  *
  * @param {string} markdown
  */
@@ -297,9 +260,7 @@ function prosePart(markdown) {
 }
 
 /**
- * THE FIFTH SUBJECT: swatches. **The rendered chip exists in the HTML and NOWHERE ELSE**, since
- * `posts.body` is served verbatim to six consumers. TWO DERIVATIONS, MADE TO ARGUE: one checked
- * against itself passes on a pipeline that had stopped running.
+ * Two derivations, made to argue: one checked against itself passes on a pipeline that had stopped running.
  *
  * @param {Array<{ slug: string, markdown: string, html: string }>} posts
  */
@@ -337,10 +298,6 @@ function checkSwatches(posts) {
       );
     }
 
-    /*
-     * THE MARKDOWN SIDE, which is SIX outputs at once: if `posts.body` held chip markup, all six
-     * would.
-     */
     if (post.markdown.includes("swatch-chip") || post.markdown.includes('class="swatch"')) {
       problems.push(
         `${post.slug}: the stored markdown carries the rendered chip's markup. The .md twin, ` +
@@ -356,7 +313,6 @@ function checkSwatches(posts) {
       );
     }
 
-    /* THE CASE FOLD, on the OUTPUT rather than the validator, so it is a property of the artifact. */
     for (const match of post.html.matchAll(/--swatch:(#[0-9A-Fa-f]+)/g)) {
       chips += 1;
       if (match[1] !== match[1].toUpperCase()) {
@@ -368,7 +324,6 @@ function checkSwatches(posts) {
     }
   }
 
-  /* THE SEARCH AND ASK SIDE, same builder, same reason: chip markup is span soup in a snippet. */
   const records = recordsForPosts(
     posts.map((post) => ({
       slug: post.slug,
@@ -414,9 +369,8 @@ function checkSwatches(posts) {
 }
 
 /**
- * EVERY `/blog/` LINK IN `further_reading` NAMES A POST THAT EXISTS: the schema decides a url's
- * SHAPE and not its TARGET. A BUILD FAILURE rather than a warning, and **the examined count is
- * printed**, because no corpus post sets the field.
+ * The schema decides a url's shape, not its target. The examined count is printed because no corpus
+ * post sets the field.
  *
  * @param {Array<{ slug: string, furtherReading?: Array<{ title: string, url: string }> }>} posts
  */

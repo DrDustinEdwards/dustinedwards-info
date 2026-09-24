@@ -1,17 +1,5 @@
-/**
- * Who may spend the Ask budget.
- *
- * The audit's claim, verified TRUE at HEAD before this landed: no origin check
- * existed anywhere on the endpoint, so a POST from any page reached the rate
- * limiter's Durable Object and, past it, Workers AI.
- *
- * The threat is BUDGET, not identity. Ask is anonymous, so there is no ambient
- * authority to borrow and SameSite is irrelevant; what a hostile page can do is
- * make its own readers' browsers spend money the site is paying for. The per-IP
- * limiter is blind to that, because a thousand readers are a thousand IPs.
- *
- * @see app/lib/origin.mjs
- */
+/* The threat is BUDGET, not identity: a hostile page can make its own readers' browsers spend
+ * Ask, and a per-IP limiter is blind to that because a thousand readers are a thousand IPs. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -48,7 +36,6 @@ test("A SUFFIX ATTACK DOES NOT PASS", () => {
 });
 
 test("ABSENT Origin IS ACCEPTED, deliberately", () => {
-  // headers.get() answers JavaScript null when the header is not there.
   for (const absent of [null, undefined, ""]) {
     const v = originVerdict(absent, URL_HTTPS);
     assert.equal(v.ok, true, `${String(absent)} must be accepted`);
@@ -79,9 +66,8 @@ test("PORT IS PART OF THE ORIGIN, so a dev server is not the site", () => {
 });
 
 test("IT COMPARES AGAINST THE REQUEST'S OWN ORIGIN, not a pinned constant", () => {
-  // The site answers on workers.dev today and on the apex after cutover. A
-  // comparison pinned to one constant would refuse every real request from the
-  // other host, at the exact moment everything else is moving.
+  // The site answers on workers.dev and on the apex after cutover, so a comparison pinned to
+  // one constant would refuse every real request from the other host.
   const apex = "https://dustinedwards.info/search/ask";
   assert.equal(originVerdict("https://dustinedwards.info", apex).ok, true);
   assert.equal(

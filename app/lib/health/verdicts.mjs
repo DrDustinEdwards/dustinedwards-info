@@ -1,30 +1,5 @@
 /**
- * The health run's DECISIONS, separated from its bindings.
- *
- * `workers/health.ts` does the I/O: it reads the Ask index, lists the bucket,
- * posts the webhook. Everything that decides whether a reading is a breach, and
- * what a person is told about it, is here, because this half is the half that
- * can be wrong in a way nothing notices.
- *
- * The split is not tidiness. `check:tests` is the one gate in this repo that
- * asserts BEHAVIOUR, it runs `node --test` over pure modules, and a verdict
- * living inside a Worker handler that imports `~/lib/search/ask.server` cannot
- * be reached by it at all. So the rule that produced this file is: if it can be
- * wrong, it must be testable, and in this repo testable means `.mjs` with no
- * binding in sight.
- *
- * @see app/lib/health/checks.server.ts
- * @see test/health-verdicts.test.mjs
- */
-
-/**
- * Is the Ask index in step with D1?
- *
- * **THE DRIFT IS BOTH DIRECTIONS SUMMED, and that is deliberate.** `missing` is
- * a record the index lacks and `stale` is one the corpus no longer knows about;
- * either is a reader getting a wrong answer, so either is a breach. This
- * matches what the admin badge already counts, so the alert and the badge can
- * never disagree about whether there is a problem.
+ * Both directions summed: a missing record and a stale one are each a wrong answer. Matches the admin badge.
  *
  * @param {{ expected: number, present: number, missing: string[], stale: string[] }} status
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -43,32 +18,13 @@ export function askDriftVerdict(status) {
       `Ask index drift ${drift}: ${status.missing.length} missing, ` +
       `${status.stale.length} stale, ${status.expected} expected, ` +
       `${status.present} present. Repair with sync-ask on /admin/posts.`,
-    // THE TWO COUNTS TRAVEL. Grounds are on publicHealthBody.
     counts: { expected: status.expected, present: status.present },
   };
 }
 
 /**
- * Does the media index still describe the assets that actually exist?
- *
- * The sibling of `askDriftVerdict`, added 2026-08-24 when the media index
- * gained a sync at ship. Until then nothing between commits watched this store:
- * the `check:media --remote` gate of the time saw drift only when somebody ran
- * it, and the one instance it did find (`/fonts/OFL.txt`, a public file with no
- * row) sat red for weeks because the repair was a click.
- *
- * DRIFT IS THE SUM OF BOTH DIRECTIONS, for the same reason as the answer index
- * and with a sharper edge here: an asset with no row is a file the library
- * cannot describe, a row with no asset is the library offering something that
- * is gone, and the two can cancel in a count comparison while both are true.
- * `mediaIndexStatus` compares KEY SETS, so this adds their sizes rather than
- * subtracting totals.
- *
- * NOT the same question as `media-backup-drift` below, which asks whether every
- * object has a twin in the mirror. That one guards a recovery acceptance; this
- * one guards a projection. They fail independently, and the difference is which
- * store is the truth: here R2 is, and D1 is the projection being checked; there
- * MEDIA is, and the backup is the copy being checked.
+ * Both directions summed, since they can cancel in a count comparison while both are true. Here R2 is
+ * the truth and D1 the projection; media-backup-drift is the other way round.
  *
  * @param {{ expected: number, present: number, missing: string[], extra: string[] }} status
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -88,36 +44,13 @@ export function mediaDriftVerdict(status) {
       `${status.extra.length} extra, ${status.expected} expected, ` +
       `${status.present} present. Repair with sync_media on the operator API, ` +
       `or the rebuild action on /admin/media.`,
-    // THE TWO COUNTS TRAVEL. Grounds are on publicHealthBody.
     counts: { expected: status.expected, present: status.present },
   };
 }
 
 /**
- * Does every object in MEDIA have a byte-identical twin in MEDIA_BACKUP?
- *
- * **REPLACED `media-unbacked` on 2026-09-01**, ruled in `decisions-vol-13.md`.
- * That check asked whether the MEDIA bucket was still EMPTY, because
- * `RECOVERY.md` section 3 grounded a no-backup acceptance on it holding
- * nothing. It fired correctly on the first object ever put there. The
- * acceptance was re-decided rather than deferred, because a real image-bearing
- * post would have expired it within weeks anyway: the bucket gets a mirror, and
- * this is the question that mirror makes askable.
- *
- * ## THE COUNTS ARE THE POINT
- *
- * `objects`, `twins` and `missing` all travel, so ZERO MISSING CANNOT MEAN ZERO
- * EXAMINED. An empty MEDIA bucket and a perfectly mirrored one both report no
- * missing keys, and they are not the same state: the first is vacuous and this
- * says so rather than reporting health.
- *
- * ## MISMATCHED IS ITS OWN WORD
- *
- * A twin that EXISTS but differs is not a backup of anything, and calling it
- * missing would understate it: a missing key is a copy that never ran, a
- * mismatched one is a copy that is wrong. Both are repaired the same way and
- * both are counted here, separately, because the second is the one that would
- * mean something had rewritten the mirror.
+ * The counts travel so zero missing cannot mean zero examined. Mismatched is counted apart from missing:
+ * a wrong copy, not an absent one, means something rewrote the mirror.
  *
  * @param {{ objects: number, twins: number, missing: string[], mismatched: string[] }} status
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -152,17 +85,12 @@ export function mediaBackupDriftVerdict(status) {
       `First missing: ${status.missing[0] ?? "none"}. ` +
       `First mismatched: ${status.mismatched[0] ?? "none"}. ` +
       `Repair with backup_media on the operator API, which only ever copies.`,
-    // THE TWO COUNTS TRAVEL, on the same grounds as mediaDriftVerdict.
     counts: { expected: status.objects, present: status.twins },
   };
 }
 
 /**
- * The three ways a D1 row and a repository file can part company.
- *
- * Pure and shared: the health check derives its verdict from this, and the
- * `sync_posts` repair derives its work list from the SAME comparison, so what
- * the check calls drift and what the repair repairs cannot disagree.
+ * Shared with the sync_posts repair, so what the check calls drift and what the repair repairs agree.
  *
  *   changed  a slug present on both sides whose blob sha differs: the file
  *            moved and the row has not followed (or a row's provenance was
@@ -201,20 +129,7 @@ export function contentDriftCompare(files, rows) {
 }
 
 /**
- * Does D1 still hold what the repository says?
- *
- * The check half of the arrangement that let the committed corpus artifact
- * leave the repository: git holds markdown, D1 holds the only rendered copy,
- * and THIS is what watches the two converge. A markdown commit from any
- * machine goes live within one health poll with no deploy, BY DESIGN: the
- * scheduled workflow sees the sha mismatch and repairs it through the
- * operator door (`sync_posts`), which fetches the raw file and re-renders it
- * through the one door to a rendered row.
- *
- * `expected` is the repository's file count and `present` is the count of
- * rows in full agreement, so the public body's two counts say how much of
- * the corpus is in step, not merely how big each side is: equal totals with
- * one sha changed is still drift.
+ * present counts rows in full agreement, so equal totals with one sha changed still read as drift.
  *
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
@@ -235,40 +150,13 @@ export function contentDriftVerdict(files, rows) {
       `Content drift ${drift}: ${changed.length} sha-changed, ${unrowed.length} ` +
       `file(s) with no row, ${unfiled.length} row(s) with no file, against ` +
       `${files.length} post file(s). Repair with sync_posts on the operator API.`,
-    // THE TWO COUNTS TRAVEL. Grounds are on publicHealthBody.
     counts: { expected: files.length, present: files.length - changed.length - unrowed.length },
   };
 }
 
 /**
- * Do the FTS indexes still agree with the table they are built from?
- *
- * ## COUNTED ON THE `_docsize` SHADOWS, NEVER ON THE INDEX
- *
- * This is the one trap that makes the whole check worth having. `posts_fts`,
- * `search_identity` and `search_prose` are external-content fts5 tables, so
- * `COUNT(*)` on any of them reads THROUGH to its content table and equals the
- * content table's count no matter how broken the index is. Measured in this
- * repo: after `DELETE FROM posts_fts` the count still read 1 of 1 while MATCH
- * returned nothing, and `posts_fts_docsize` went to 0. The shadow holds one row
- * per INDEXED document, so it is the only number here that can actually fail.
- * `test/worker/publish.test.ts` plants that drift and expects this check to
- * report it.
- *
- * ## FAIL CLOSED ON A COUNT IT CANNOT READ
- *
- * A missing or non-numeric count is a FAILING check, not a skipped one. The
- * query returning no row, or a column renamed out from under this, would
- * otherwise compare `undefined === undefined` and pass, which is the shape of
- * every gate defect this repo has recorded: a check that examined nothing and
- * reported what a clean run reports.
- *
- * ## TWO INDEPENDENT EQUALITIES
- *
- * `posts` against `posts_fts_docsize` is the blog index. `search_docs` against
- * `search_identity_docsize` and `search_prose_docsize` is the three-way the
- * ship asserts after every sync. They are rebuilt by different statements and
- * fail separately, so both are reported rather than collapsed into one boolean.
+ * Counted on the _docsize shadows: COUNT(*) on an external-content fts5 table reads through to its
+ * content table and never fails. A count that cannot be read FAILS rather than comparing undefined.
  *
  * @param {Record<string, unknown>} counts
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
@@ -317,12 +205,7 @@ export function ftsEqualityVerdict(counts) {
       `FTS index drift: ${broken.join("; ")}. ` +
       `Rebuild with INSERT INTO <index>(<index>) VALUES('rebuild'). ` +
       `Do NOT DELETE FROM either index; that corrupts it further.`,
-    /*
-     * THE FIRST DISAGREEING PAIR, not all five counts. `expected` is the
-     * content table's row count and `present` is what its shadow reports,
-     * which is the pair an operator acts on. The full five are in `detail`,
-     * which stays off the wire.
-     */
+    // The first disagreeing pair only; the full five are in detail, which stays off the wire.
     counts:
       posts !== postsFts
         ? { expected: posts, present: postsFts }
@@ -330,39 +213,12 @@ export function ftsEqualityVerdict(counts) {
   };
 }
 
-/**
- * How long any one check may take before it is called failed.
- *
- * Three seconds. The slowest check is `ask-index-drift`, which pages the AI
- * Search index and was measured on production 2026-08-19 at a 208ms median and
- * a 2332ms MAXIMUM across 12 samples. Three seconds clears that measured
- * maximum with room and still bounds the endpoint at roughly nine seconds
- * worst case for three checks, which is inside any sane HTTP client's patience.
- *
- * Tighter would convert the known 2.3-second tail into a false alarm, and a
- * monitor that cries wolf on its own slowest healthy path is a monitor people
- * learn to ignore.
- */
+/** Measured: ask-index-drift maxed at 2332 ms over 12 samples, so 3 s clears it without false alarms. */
 export const CHECK_TIMEOUT_MS = 3000;
 
 /**
- * Races a check against the clock and reports a TIMEOUT AS A FAILURE.
- *
- * ## Why a timeout is a failed check and not a skipped one
- *
- * One hung binding must not hang the response, because the endpoint that
- * cannot answer is indistinguishable to the watcher from the site being down,
- * and the watcher would be right either way. A check that cannot determine an
- * answer is not a passing check.
- *
- * ## WHAT THIS DOES NOT DO, and it matters
- *
- * **It does not cancel the underlying work.** There is no cancellation in a
- * bare promise, so the slow D1 query or R2 listing continues and its result is
- * discarded. What is bounded here is the RESPONSE, not the work. Saying so
- * matters because someone reading "timeout" will otherwise assume the binding
- * was released, and under sustained timeouts the abandoned work is still
- * accumulating behind this.
+ * A timeout is a failed check. It does not cancel the work: only the RESPONSE is bounded, and abandoned
+ * work keeps accumulating under sustained timeouts.
  *
  * @param {Promise<{ ok: boolean, detail: string, counts?: { expected: number, present: number } }>} promise
  * @param {number} ms
@@ -397,41 +253,8 @@ export function withTimeout(promise, ms, name) {
 }
 
 /**
- * The PUBLIC body of `/api/health`. Names and booleans, nothing else.
- *
- * ## THE DETAIL STRINGS ARE DELIBERATELY DROPPED
- *
- * Every `detail` on a failing check is useful and none of it belongs on an
- * unauthenticated endpoint. `ask-index-drift` carries how many records the
- * corpus holds and how many the index has; `fts-equality` carries five row
- * counts and the names of the shadow tables; `media-backup-drift` carries an R2
- * OBJECT KEY, which is a path into the bucket.
- *
- * None of that is catastrophic and none of it is anyone's business, and the
- * endpoint is polled by a workflow that needs to know WHICH check failed, not
- * why. The why is in Workers Logs, behind the dashboard, where the operator
- * already is when they go looking. So the wire carries the minimum that makes
- * the alert actionable.
- *
- * Shape is stable and the workflow parses it: `ok`, and `checks` as an array of
- * `{ name, ok }` in a fixed order. An object keyed by name was the alternative
- * and was rejected because it makes "list the failing names" a key iteration in
- * ## THE TWO COUNTS ON A FAILING DRIFT CHECK DO TRAVEL, since 2026-08-23
- *
- * A health flap at 17:15Z reported `ask-index-drift` false, recovered by
- * itself, and COULD NOT BE DIAGNOSED: the body said which check failed and
- * nothing about how far apart the two sides were. One record apart mid-sync
- * and a hundred apart are the same alert, and only one of them is an
- * incident.
- *
- * So a FAILING check carries `expected` and `present`, and nothing else
- * changes. Two integers are not secrets: the corpus size is already public
- * (every post is on /blog, and llms.txt counts them), and the index size is
- * the same number when healthy. The strings still do not travel, because
- * those carry an R2 object key and the shadow table names.
- *
- * A PASSING check carries name and ok only, so the quiet case stays exactly
- * as narrow as it was.
+ * Detail strings never reach this unauthenticated wire: they carry an R2 object key and shadow table
+ * names. A FAILING check carries its two counts, so a flap can be sized; a passing one, name and ok.
  *
  * @param {{ checks: Array<{ name: string, ok: boolean, counts?: { expected: number, present: number } }> }} run
  * @returns {{ ok: boolean, checks: Array<{ name: string, ok: boolean, expected?: number, present?: number }> }}
@@ -440,9 +263,7 @@ export function publicHealthBody(run) {
   return {
     ok: run.checks.every((c) => c.ok),
     checks: run.checks.map((c) => {
-      // Rebuilt field by field rather than spread, so a field added to
-      // HealthCheck later cannot leak onto the wire by inheritance. The two
-      // counts are opted IN by name, one at a time, for the same reason.
+      // Field by field, not spread, so a field added to HealthCheck later cannot leak onto the wire.
       if (c.ok || !c.counts) return { name: c.name, ok: c.ok };
       return {
         name: c.name,

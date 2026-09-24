@@ -1,31 +1,11 @@
 /**
- * Loader payloads for rendering public routes offline, built from the REPOSITORY'S OWN CORPUS.
- *
- * BOUNDARY: these are inputs, never measurements. A fixture decides how big a rendered page is, so
- * a fabricated one measures the fabrication: every field here is read from the content artifact or
- * from a data file the site itself ships, and nothing is invented to make a page render.
- *
- * WHY A ROUTE NEEDS ONE AT ALL. `route-render.mjs` stubs server-only modules at resolve time, so a
- * route component can be rendered in Node but its loader cannot be run: the stub answers every
- * name with a no-op and a named import from it binds undefined. A route whose loader reaches a
- * `.server` module therefore has no offline payload at all, which is why `check:page-payload`
- * measures twelve routes and names the three it cannot.
- *
- * THE SECOND STATEMENT, NAMED. `machine-readable/microformats.mjs` carries its own `postLoaderData` and its
- * own index fixture, and its comment says out loud that it is "a deliberate SECOND statement of
- * the projection". This is the third, and the duplication is real rather than clever: that gate
- * and this one were being changed by two different open pull requests when this file was written,
- * and an extraction across both would have made the conflict worse than the copy. What keeps them
- * honest in the meantime is that neither fixture can go quietly wrong: a field the component reads
- * and a fixture omits is a crash in the gate that owns it, not a silent hole. Merging the two is a
- * small follow-up once both land.
+ * A fixture decides how big a rendered page is, so a fabricated one measures the fabrication:
+ * every field is read from the content artifact or a data file the site ships.
  */
 
 /**
- * The loader payload one post page renders from, in the shape `blogPostView` produces.
- *
- * @param {any} record a built post record
- * @param {(record: any) => Date | null} revisedDate the sync's own revision rule
+ * @param {any} record
+ * @param {(record: any) => Date | null} revisedDate
  */
 export function postLoaderData(record, revisedDate) {
   return {
@@ -59,8 +39,6 @@ export function postLoaderData(record, revisedDate) {
 }
 
 /**
- * One post as the listings project it, which is `postCard` in app/db plus its tags.
- *
  * @param {any} record
  */
 export function listingCard(record) {
@@ -81,13 +59,9 @@ export function listingCard(record) {
 }
 
 /**
- * The index's payload for page one of the real corpus, tag and year filters listed but none
- * active, which is the page a reader arriving at /blog is served.
+ * Tag and year lists are derived, not stubbed empty: the filter rows are a real part of the weight.
  *
- * THE TAG AND YEAR LISTS ARE DERIVED FROM THE POSTS, not stubbed empty: the filter rows are a
- * per-tag element each and 26 of them is a real part of what this page weighs.
- *
- * @param {any[]} ordered published records, newest first
+ * @param {any[]} ordered
  * @param {number} perPage
  */
 export function indexLoaderData(ordered, perPage) {
@@ -130,11 +104,11 @@ export function indexLoaderData(ordered, perPage) {
 }
 
 /**
- * The home page's payload. `health` is the `missing` state, which is the one state carrying no
- * numbers: a fabricated ratio would be a fabricated string length on a measured page.
+ * `health` is `missing`, the one state carrying no numbers: a fabricated ratio would be a
+ * fabricated string length on a measured page.
  *
- * @param {any[]} ordered published records, newest first
- * @param {number} cards how many the Start here section shows, lead included
+ * @param {any[]} ordered
+ * @param {number} cards
  */
 export function homeLoaderData(ordered, cards) {
   return {

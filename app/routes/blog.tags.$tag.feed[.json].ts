@@ -7,16 +7,7 @@ import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/blog.tags.$tag.feed[.json]";
 
-/**
- * One tag's JSON feed, from `jsonFeedDocument`, the same envelope `/blog/feed.json`
- * uses.
- *
- * `application/json` rather than `application/feed+json`, which is the main
- * feed's ruling and is inherited rather than re-argued: Cloudflare compresses a
- * fixed list of content types and `+json` suffixes are not on it, so obeying
- * that SHOULD costs a subscriber the whole compression saving. The `version`
- * member inside the document is what every reader identifies it by.
- */
+/** `application/json`, not `application/feed+json`: Cloudflare does not compress `+json` suffixes. */
 const FEED_ITEMS = 20;
 
 export async function loader({ params, context }: Route.LoaderArgs) {

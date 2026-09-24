@@ -1,13 +1,4 @@
-/**
- * Gate over the operator publish policy.
- *
- *   npm run check:policy
- *
- * BOUNDARY: the decision function in isolation, and pure. It proves what the policy DECIDES,
- * never that a caller consults it before writing. Every rule here comes with its paired negative,
- * and so does every rule added later: a policy that only refuses has not been shown to permit
- * anything.
- */
+// Every rule has its paired negative: a policy that only refuses has not been shown to permit anything.
 
 import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
@@ -25,7 +16,6 @@ import {
 } from "../app/lib/editor/publish-policy.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
-/** Repo root, so the source assertions below read real files. */
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 let checks = 0;
@@ -91,8 +81,6 @@ const OPERATOR = /** @type {const} */ ({ kind: "operator", id: "abcd1234" });
 const ADMIN = /** @type {const} */ ({ kind: "admin" });
 const SMOKE = /** @type {const} */ ({ kind: "smoke", id: "beef0001" });
 
-// readState
-
 eq("readState reads an unpublished draft", readState(file({ draft: true })), {
   draft: true,
   firstPublished: null,
@@ -108,8 +96,6 @@ eq(
   readState(file({ draft: true, firstPublished: "2026-01-01" })),
   { draft: true, firstPublished: "2026-01-01" },
 );
-
-// forceFirstPublished
 
 eq(
   "forceFirstPublished adds the field when absent",
@@ -129,15 +115,12 @@ eq(
     .firstPublished,
   null,
 );
-// Negative: it must not disturb anything else in the frontmatter or the body.
 {
   const out = forceFirstPublished(file({ draft: false }), "2026-07-28");
   eq("forceFirstPublished keeps the body", out.trimEnd().endsWith("Body."), true);
   eq("forceFirstPublished keeps other keys", out.includes("slug: t"), true);
   eq("forceFirstPublished keeps the draft flag", readState(out).draft, false);
 }
-
-// The policy: operator
 
 refuses(
   "operator cannot publish a post that has never been published",
@@ -174,7 +157,6 @@ refuses(
   "first-publish-requires-admin",
 );
 
-// The paired positives: everything an operator IS allowed to do.
 permits("operator may create a draft", () =>
   decide({ actor: OPERATOR, incomingRaw: file({ draft: true }), priorRaw: null }),
 );
@@ -203,8 +185,6 @@ permits("operator may REpublish a post it withdrew", () =>
   }),
 );
 
-// The policy: admin
-
 permits("admin may publish a post for the first time", () =>
   decide({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: file({ draft: true }) }),
 );
@@ -212,11 +192,6 @@ permits("admin may create an already published post", () =>
   decide({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: null }),
 );
 
-// The policy: smoke, the read-only machine actor
-
-/* The claim: the smoke actor appears in NO WRITE BRANCH, both halves, by two instruments. */
-
-/* Driven off a TABLE, so a refusal list that drifted cannot leave a transition unasserted. */
 const EVERY_TRANSITION = [
   ["create a draft", file({ draft: true }), null],
   ["edit an existing draft", file({ draft: true }), file({ draft: true })],
@@ -231,8 +206,6 @@ const EVERY_TRANSITION = [
   ["create an already published post", file({ draft: false }), null],
 ];
 
-// SCOPE, ASSERTED. An empty table would run this loop zero times and report a
-// clean sweep, which is the zero-scope class the vacuity rule names.
 eq("the transition table is not empty", EVERY_TRANSITION.length >= 7, true);
 
 for (const [what, incomingRaw, priorRaw] of EVERY_TRANSITION) {
@@ -245,7 +218,6 @@ for (const [what, incomingRaw, priorRaw] of EVERY_TRANSITION) {
 
 refuses("smoke cannot delete a post", () => decideDelete({ actor: SMOKE }), SMOKE_READ_ONLY_POLICY);
 
-/* THE FORGERY CASE here too, refused as READ ONLY, the refusal that is true of this actor. */
 refuses(
   "smoke cannot forge first_published to buy itself a write",
   () =>
@@ -265,13 +237,11 @@ refuses(
     eq(`smoke is denied the ${name} capability`, granted, false);
   }
 
-  /* THE PAIRED POSITIVE: every assertion above is satisfied by a table in which nobody writes. */
   eq("admin may still write", WRITE_CAPABILITIES.admin.write, true);
   eq("admin may still publish for the first time", WRITE_CAPABILITIES.admin.firstPublish, true);
   eq("admin may still delete", WRITE_CAPABILITIES.admin.destroy, true);
   eq("operator may still write", WRITE_CAPABILITIES.operator.write, true);
 
-  // And the table covers exactly the kinds that exist, no more.
   eq(
     "the capability table names the three actor kinds",
     Object.keys(WRITE_CAPABILITIES).sort().join(","),
@@ -284,7 +254,6 @@ refuses(
   const adminRoute = readFileSync(join(root, "app", "routes", "admin.tsx"), "utf8");
   const src = stripComments(adminRoute);
 
-  /* The exit is located in comment-stripped source, by the line it sits on, not by first mention. */
   const mentions = [];
   for (let at = src.indexOf("SMOKE_READ_ONLY_POLICY"); at !== -1; at = src.indexOf("SMOKE_READ_ONLY_POLICY", at + 1)) {
     const lineStart = src.lastIndexOf("\n", at) + 1;
@@ -293,7 +262,6 @@ refuses(
   eq("the smoke refusal exists in admin.tsx, outside comments and imports", mentions.length > 0, true);
   const exitAt = mentions[0] ?? -1;
 
-  // Walk BACK to the nearest enclosing `if (`, then take its balanced parens.
   const ifAt = src.lastIndexOf("if (", exitAt);
   let guard = "";
   if (ifAt !== -1) {
@@ -310,7 +278,6 @@ refuses(
     }
   }
 
-  // SCOPE, ASSERTED twice: an empty extract reports a present guard missing, a greedy one passes.
   eq("the guard expression was extracted", guard.length > 10, true);
   eq("and it is a condition, not a span of the file", guard.length < 200, true);
 
@@ -336,7 +303,6 @@ refuses(
   eq("the middleware calls next()", nextAt > 0, true);
   eq("the smoke method gate refuses BEFORE next() is reached", exitAt < nextAt, true);
 
-  /* The other direction: the smoke actor is CONSTRUCTED in one place, and two files are NAMED. */
   /** @type {string[]} */
   const constructors = [];
   const walk = (/** @type {string} */ dir) => {
@@ -353,8 +319,6 @@ refuses(
   };
   walk(join(root, "app"));
 
-  // The scan is proven non-empty before its result is read: a walk that
-  // examined nothing reports exactly what a clean sweep reports.
   eq(
     "the smoke-actor scan found the one construction site it expects",
     constructors.length > 0,
@@ -401,8 +365,6 @@ refuses(
     );
   }
 
-  // Scope, asserted. Zero readers would make the loop above examine nothing and
-  // report exactly what a compliant tree reports.
   eq("the admin-session reader scan found a reader to check", readers.length > 0, true);
   eq(
     "and the readers are the ones this rule was written against",
@@ -410,8 +372,6 @@ refuses(
     "admin.posts.$slug.edit.tsx",
   );
 }
-
-// What decide() stamps
 
 {
   const r = decide({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: file({ draft: true }) });
@@ -422,7 +382,6 @@ refuses(
 }
 
 {
-  // The forged value must be REPLACED by the real one, not merely ignored.
   const r = decide({
     actor: ADMIN,
     incomingRaw: file({ draft: false, firstPublished: "2020-01-01" }),
@@ -433,7 +392,6 @@ refuses(
 }
 
 {
-  // A draft keeps no date, so a post that has never been public stays that way.
   const r = decide({ actor: OPERATOR, incomingRaw: file({ draft: true }), priorRaw: null });
   eq("a new draft is stamped with nothing", r.firstPublished, null);
   eq("and reports itself unpublished", r.published, false);
@@ -450,8 +408,6 @@ refuses(
   eq("unpublishing preserves first_published", r.firstPublished, "2026-01-01");
   eq("and writes it back into the file", readState(r.raw).firstPublished, "2026-01-01");
 }
-
-/* What a save DID, with both negatives: republish is not first publication, edit is not republish. */
 
 {
   /** @param {Parameters<typeof decide>[0]} o */
@@ -481,7 +437,6 @@ refuses(
     outcome({ actor: ADMIN, incomingRaw: file({ draft: false }), priorRaw: null }),
     "published-first",
   );
-  // The negative that matters: a republished post must not read as a first publication.
   eq(
     "republishing a withdrawn post is a republication, not a first publication",
     outcome({
@@ -491,7 +446,6 @@ refuses(
     }),
     "republished",
   );
-  // And its pair: a live post edited again did not become live a second time.
   eq(
     "editing a live post is an ordinary save, not a republication",
     outcome({
@@ -510,7 +464,6 @@ refuses(
     }),
     "unpublished",
   );
-  // Its negative: a draft saved as a draft again withdrew nothing.
   eq(
     "re-saving a withdrawn post as a draft is not a second unpublish",
     outcome({
@@ -521,8 +474,6 @@ refuses(
     "saved",
   );
 }
-
-/* The Ask index is a public surface */
 
 /* OPERATORS CANNOT DELETE: the destructive verb needs more authority than publishing, not less. */
 {
@@ -535,7 +486,6 @@ refuses(
     decideDelete({ actor: { kind: "admin" } }),
   );
 
-  /* Asserted as a PAIR: the defect was delete permissive while publish was not. */
   const operator = /** @type {const} */ ({ kind: "operator", id: "mcp" });
   let publishRefused = false;
   try {
@@ -552,7 +502,6 @@ refuses(
   eq("delete: an actor refused a first publish is refused a delete too",
     [publishRefused, deleteRefused], [true, true]);
 
-  /* AND THE CALL SITE REACHES IT, scoped to its own body, since decide() is imported for savePost. */
   const publishSrc = readFileSync(join(root, "app/lib/editor/publish.server.ts"), "utf8");
   const at = publishSrc.indexOf("export async function deletePost(");
   eq("delete: deletePost exists to be checked", at !== -1, true);
@@ -582,7 +531,6 @@ refuses(
     true,
   );
 
-  /* The loader must exist and REFUSE: absence passes for a route serving GET another way. */
   const loaderAt = askRoute.search(/export\s+function\s+loader\s*\(/);
   eq("ask: the route exports a loader", loaderAt !== -1, true);
   const loaderBody = loaderAt === -1 ? "" : askRoute.slice(loaderAt, loaderAt + 400);
@@ -622,10 +570,8 @@ refuses(
     originAt !== -1 && rateAt !== -1 && originAt < rateAt,
     true,
   );
-  /*
-   * THE REST OF THE CHAIN: RATE, then CACHE, then BUDGET, then MODEL, which is the money-path rule's
-   * order. Presence passes on any arrangement; the ORDER is the property, cheapest refusing first.
-   */
+  /* Rate, then cache, then budget, then model: presence passes on any arrangement, and the ORDER is
+     the property, cheapest refusing first. */
   const cacheAt = actionBody.indexOf("readCachedAnswer(");
   const budgetAt = actionBody.indexOf("reserveAskBudget(");
   const modelAt = actionBody.indexOf("askStream(");
@@ -661,7 +607,6 @@ refuses(
     true,
   );
 
-  /* EVERY MUTATING SURFACE TAKES THE SAME PREDICATE, measured on source rather than assumed. */
   for (const [label, file] of [
     ["theme", "app/routes/theme.ts"],
     ["the admin plane", "app/routes/admin.tsx"],
@@ -692,7 +637,6 @@ refuses(
     );
   }
 
-  /* REFUSED ON LENGTH BEFORE IT IS HASHED, asserted by POSITION, the money-path rule's instrument. */
   {
     const auth = stripComments(
       readFileSync(join(root, "app/lib/operator/auth.server.ts"), "utf8"),
@@ -708,7 +652,6 @@ refuses(
       true,
     );
 
-    /* AND DESCRIBE SPENDS NO RATE UNIT: absence in the loader and presence in the action, both. */
     const route = stripComments(readFileSync(join(root, "app/routes/api.operator.ts"), "utf8"));
     const loader = route.slice(route.indexOf("export async function loader"));
     const action = route.slice(
@@ -720,7 +663,6 @@ refuses(
     eq("operator: GET describe still authenticates", /authenticateOperator\(/.test(loader), true);
   }
 
-  /* EVERY JSON-LD BLOCK GOES THROUGH THE ESCAPING SERIALISER, found by scanning, not from a list. */
   {
     const routeDir = join(root, "app/routes");
     /** @type {string[]} */
@@ -730,7 +672,6 @@ refuses(
       const code = stripComments(readFileSync(join(routeDir, name), "utf8"));
       if (!code.includes("ld+json")) continue;
       scanned += 1;
-      // The window from the ld+json type to the end of that element's props.
       let at = code.indexOf("ld+json");
       while (at !== -1) {
         const window = code.slice(at, at + 400);
@@ -769,7 +710,6 @@ refuses(
     );
   }
 
-  /* WCAG 2.2 1.4.13 on source, each property asserted by its mechanism rather than by a claim. */
   {
     const blog = stripComments(readFileSync(join(root, "app/enhance/blog.ts"), "utf8"));
     const fn = blog.slice(blog.indexOf("function footnotePreviews"));
@@ -796,7 +736,6 @@ refuses(
       true,
     );
 
-    /* 4.1.3: ONE role=status region, not a relabelled control and not a pseudo-element. */
     eq(
       "copy controls: there is a role=status region",
       /setAttribute\("role", "status"\)/.test(blog),
@@ -808,7 +747,6 @@ refuses(
       true,
     );
 
-    /* And the permalink LANDS on the heading: the assertion is on the focus move. */
     const headings = blog.slice(blog.indexOf("function headingLinks"));
     eq(
       "heading permalinks: activating one moves focus to the heading",
@@ -825,9 +763,6 @@ refuses(
   );
 }
 
-/* the Ask index is kept in step by ship */
-
-/* sync:content does not touch AI Search, so the index fell behind on every content ship. */
 {
   const apiSource = stripComments(
     readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),
@@ -862,7 +797,7 @@ refuses(
     true,
   );
 
-  /* THE FAILURE PATH: a step whose result is discarded cannot fail, and stale-index ships did. */
+  /* A step whose result is discarded cannot fail. */
   eq(
     "ask sync: ship reads a converged verdict rather than a status code alone",
     /converged/.test(shipSource),
@@ -880,7 +815,6 @@ refuses(
     /\baskMiss\b/.test(guard),
     true,
   );
-  /* And the deploy STANDS: the record prints before the exit, which is what an operator needs. */
   const recordAt = shipSource.indexOf('announce("Shipped")');
   const exitAt = shipSource.lastIndexOf("process.exit(1)");
   eq(
@@ -910,7 +844,6 @@ refuses(
       readinessAt < syncAt,
     true,
   );
-  /* THE VERDICT IS READ OUT OF THE BODY and ACTED ON; the decision lives in readiness.mjs. */
   const readinessSource = stripComments(
     readFileSync(join(root, "scripts/lib/readiness.mjs"), "utf8"),
   );
@@ -939,12 +872,10 @@ refuses(
   for (const name of ["content-drift", "ask-index-drift", "media-index-drift"]) {
     eq(
       `ruling 56: ${name} is deferred`,
-      // Upper case as well as lower: a lower-only class failed on correct code.
       new RegExp(`"${name}":\\s*"the [A-Za-z0-9 ]+"`).test(readinessSource),
       true,
     );
   }
-  /* EACH NAMES THE STEP THAT REPAIRS IT, which is the test for whether a fourth belongs. */
   eq(
     "ruling 56: every deferred check names the step that repairs it",
     !/"[a-z-]+":\s*"",?\s*$/m.test(readinessSource),
@@ -974,7 +905,6 @@ refuses(
     true,
   );
 
-  /* THE MEDIA INDEX, ASSERTED SEPARATELY, because the two steps fail independently. */
   eq(
     "media sync: the operator API exposes sync_media",
     /"sync_media"/.test(apiSource),
@@ -985,13 +915,11 @@ refuses(
     /mediaSyncReport\(/.test(apiSource),
     true,
   );
-  /* RULE 18, ASSERTED: the repair goes through the derivation, never a hand-written insert. */
   eq(
     "media sync: the tool repairs THROUGH the derivation, not by writing rows",
     /rebuildMediaIndex\(env\)/.test(apiSource),
     true,
   );
-  /* AND THE VERDICT IS READ BACK: only mediaIndexStatus re-enumerates and reads D1 afterwards. */
   eq(
     "media sync: the verdict comes from a read-back reconciliation",
     /mediaIndexStatus\(env\)/.test(apiSource),
@@ -1017,8 +945,6 @@ refuses(
     true,
   );
 }
-
-/* the cache split, in config */
 
 /*
  * WHICH ENTRYPOINT THE PLATFORM MAY CACHE, which a config comparison cannot judge: gateway cache on
@@ -1071,8 +997,6 @@ refuses(
     false,
   );
 
-  // And the source of truth actually enforces it. Read the shipped module
-  // rather than restating the rule, so this fails if the filter is removed.
   const askRaw = readFileSync(
     join(dirname(fileURLToPath(import.meta.url)), "..", "app", "lib", "search", "ask.server.ts"),
     "utf8",
@@ -1082,21 +1006,16 @@ refuses(
     "utf8",
   );
 
-  /*
-   * COMMENTS STRIPPED BEFORE MATCHING: a comment explaining a filter that had been removed kept
-   * the count at two, which is the vacuity rule's comment-satisfied anchor.
-   */
+  /* Comments stripped before matching: a comment describing a removed filter would satisfy the count. */
   const askSource = stripComments(askRaw);
   const searchSource = stripComments(searchRaw);
 
-  // SCOPE, ASSERTED: an over-eager stripper empties the file and every assertion below misreads.
   eq(
     "stripping comments left the module's code behind",
     askSource.length > askRaw.length / 4 && /export async function syncAskCorpus/.test(askSource),
     true,
   );
 
-  /* The BINDING: the uploader sources from askCorpusRecords alone, never its own SELECT. */
   eq(
     "syncAskCorpus sources its records from askCorpusRecords",
     /const records = await askCorpusRecords\(env\)/.test(askSource),
@@ -1120,7 +1039,6 @@ refuses(
     true,
   );
 
-  /* THE FILTER COMPOSES THE SHARED PREDICATE rather than restating it in a third shape. */
   const askAt = askSource.search(/function publishableForAsk\b/);
   eq("publishableForAsk exists in ask.server.ts", askAt !== -1, true);
 
@@ -1157,7 +1075,6 @@ refuses(
     true,
   );
 
-  /* THE EXPECTED SET comes from search_docs, not from recomputing the corpus on every load. */
   const bodyOf = (/** @type {string} */ src, /** @type {string} */ name) => {
     const start = src.indexOf(`export async function ${name}(`);
     if (start === -1) return "";
@@ -1167,11 +1084,8 @@ refuses(
     return end === -1 ? src.slice(start) : src.slice(start, end + 2);
   };
 
-  /* ASSERTED AS THE BINDING, never as a line arrangement a legitimate refactor would break. */
   const statusBody = bodyOf(askSource, "askIndexStatus");
 
-  // SCOPE, ASSERTED. An extractor returning "" reports a missing binding that
-  // is present; one returning the whole file passes on a neighbor's code.
   eq(
     "the askIndexStatus body was extracted, and it is that function alone",
     statusBody.length > 80 &&
@@ -1180,7 +1094,6 @@ refuses(
     true,
   );
 
-  /* Asserted in two halves: the paper half comes from the module, not a query grown here. */
   eq(
     "askIndexStatus takes its expected set from askExpectedUrls",
     /askExpectedUrls\(env\)/.test(statusBody) &&
@@ -1194,7 +1107,6 @@ refuses(
     true,
   );
 
-  /* AND FROM NOTHING ELSE: recordsForPosts, the producer this moved away from, caught anywhere. */
   eq(
     "askIndexStatus builds its expected set from no other producer",
     !/recordsForPosts\(/.test(statusBody),
@@ -1205,13 +1117,9 @@ refuses(
     !/recordsForPosts\(publishableForAsk\(posts\)\)[\s\S]{0,400}listAllAskItems/.test(askSource),
     true,
   );
-  /*
-   * SCOPED TO THE FUNCTION BODY, never a window after its name: zeroState sits below and composes
-   * visibilityClause itself, which is the vacuity rule's unanchored needle.
-   */
+  /* Scoped to the function body: zeroState sits below and composes visibilityClause itself. */
   const expectedUrlsBody = bodyOf(searchSource, "askExpectedUrls");
 
-  // SCOPE, ASSERTED: an empty extract misreads all three below; a whole-file one passes anywhere.
   eq(
     "the askExpectedUrls body was extracted, and it is that function alone",
     expectedUrlsBody.length > 80 &&
@@ -1237,12 +1145,7 @@ refuses(
   );
 }
 
-// Report
-
-/*
- * EXECUTED-COUNT FLOOR. This gate covers the money-path rule's ordered cost chain and the operation
- * reserved for the human, so the floor MOVES WITH THE MEASUREMENT: slack is the defect.
- */
+/* Measured by running this gate, and it moves with the measurement: slack is the defect. */
 const MINIMUM_CHECKS = 184;
 const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);

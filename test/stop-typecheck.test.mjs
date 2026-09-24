@@ -1,8 +1,5 @@
-/**
- * The Stop hook's skip: it runs the typecheck only when a source file changed since the last
- * pass, and a red typecheck still blocks. Each case drives the REAL hook in a scratch repo whose
- * `typecheck` script counts its runs, so a skip is proven by the count, not by the message.
- */
+/* Each case drives the REAL hook in a scratch repo whose `typecheck` script counts its runs, so
+ * a skip is proven by the count, not by the message. */
 
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -1,13 +1,3 @@
-/**
- * Gate: run the behavioral test suite, and refuse to believe an empty one.
- *
- *   npm run check:tests
- *
- * BOUNDARY: it runs `node --test` and reads its SUMMARY, so it knows how many files were
- * discovered and how many tests reported, not whether those tests ASSERT anything and not whether
- * they cover the right modules.
- */
-
 import { spawnSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
@@ -17,23 +7,10 @@ import { assertFloor } from "./lib/floor.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
 
-/**
- * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY by RUNNING it, never summed. TIGHT RATHER
- * THAN SLACK, this gate's own convention: they move UP with a test, a one-line edit in the same
- * commit, and the point is to notice the set SHRINKING. The margin only ever widens on its own.
- */
-/* Re-taken by running the gate whenever a test file lands. */
-/*
- * RE-MEASURED BY RUNNING THIS GATE, never by adding one. This floor once drifted eleven files
- * without failing, being asserted directly rather than through `assertFloor`, so the one floor
- * here the meta-gate could not police is the one that drifted.
- */
+// Measured by running the gate, never summed, and tight: they move up with a test in the same commit,
+// so the set shrinking is noticed.
 const MINIMUM_FILES = 91;
-/*
- * RE-MEASURED BY RUNNING THIS GATE. The file floor catches a file LEAVING; this catches one
- * hollowed out in place. Moved when the set grows even if nothing has breached, because waiting
- * for a breach is waiting for the margin to be gone.
- */
+// Catches a test file hollowed out in place. Measured by running the gate.
 const MINIMUM_TESTS = 790;
 
 let checks = 0;
@@ -49,8 +26,8 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * BY COMMAND LINE, NEVER BY IMAGE NAME: `node.exe` here selects this gate, the language server
- * and the agent harness. Windows only, that being where the leak was measured.
+ * By command line, never by image name: `node.exe` here is also this gate, the language server and
+ * the agent harness.
  *
  * @returns {number[]} the pids killed
  */
@@ -72,9 +49,8 @@ function reapTestRunners() {
 }
 
 /**
- * The five slowest tests, so a creeping hang is visible BEFORE it is a timeout: the suite went
- * from minutes to never in one commit with no duration printed. READS WHATEVER REPORTER RAN,
- * both parsed rather than one assumed, the choice not being this gate's.
+ * The five slowest tests, so a creeping hang is visible before it is a timeout. Both reporters are
+ * parsed, the choice not being this gate's.
  *
  * @param {string} text the runner's combined output
  * @returns {Array<{ ms: number, name: string }>}
@@ -105,10 +81,7 @@ function slowestTests(text) {
     }
   }
 
-  /*
-   * DEDUPED BY NAME, longest reading kept: a FAILING test appears twice in tap output and took two
-   * of the five slots.
-   */
+  // Deduped by name, longest kept: a failing test appears twice in tap output.
   const longest = new Map();
   for (const t of timed) {
     const seen = longest.get(t.name);
@@ -142,11 +115,6 @@ ok(
   "test/ holds no *.test.mjs. node --test exits 0 on an empty match, so without " +
     "this the gate would report PASS while running nothing.",
 );
-/*
- * THROUGH assertFloor, because A SCOPE FLOOR OVER A GROWING SET IS AN EXECUTED-COUNT FLOOR
- * WEARING DIFFERENT CLOTHES: the measured value climbs away by itself. NOT EVERY SCOPE FLOOR
- * BELONGS HERE, or the instrument agrees with everything: GROWING is the property, not SCOPE.
- */
 const filesBreach = assertFloor(
   "check:tests",
   "files",
@@ -157,18 +125,11 @@ const filesBreach = assertFloor(
 ok("the test file set has not shrunk", filesBreach === null, filesBreach ?? "");
 
 /**
- * THE RUN IS BOUNDED, TWICE, AND IT REAPS WHAT IT STARTED: a leaked child once left the runner
- * unable to exit and this gate waited with it forever. `--test-timeout` reports a hang as a
- * FAILING TEST, by name; the spawn timeout is the backstop for what that cannot see, and is what
- * actually happened. `SIGKILL` rather than `SIGTERM`: it has demonstrated it will not leave.
+ * Bounded twice: `--test-timeout` names a hung test, and the spawn timeout is the backstop, because a
+ * canceled test's `finally` never runs and its child survives. `SIGKILL`, because it will not leave.
  */
 const TEST_TIMEOUT_MS = 60_000;
 
-/*
- * THE SPAWN BOUND IS LOAD-BEARING, and a plant proved it. Against one file the runner's own bound
- * gets the process out; against the whole suite it did not, because a canceled test's `finally`
- * never runs and the child survives. So one names the culprit and the other ends the run.
- */
 const RUN_TIMEOUT_MS = 6 * 60_000;
 
 const run = spawnSync(
@@ -185,19 +146,13 @@ const run = spawnSync(
 );
 const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 
-/*
- * WHATEVER THE RUN LEFT BEHIND: `spawnSync`'s timeout kills the shell and nothing below it. By
- * COMMAND LINE, and on EVERY path, because a run that finished can still have leaked.
- */
+// `spawnSync`'s timeout kills the shell and nothing below it, so reap by command line on every path.
 const leaked = reapTestRunners();
 if (leaked.length > 0) {
   console.log(`  reaped ${leaked.length} leftover runner process(es): ${leaked.join(", ")}`);
 }
 
-/*
- * TYPED READ OF THE TIMEOUT: `error` is declared as `Error` and `ETIMEDOUT` lives on `code`,
- * which only `ErrnoException` declares. The honest narrowing rather than a cast to `any`.
- */
+// `ETIMEDOUT` lives on `code`, which only `ErrnoException` declares.
 /** @type {NodeJS.ErrnoException | undefined} */
 const runError = run.error;
 const timedOut = Boolean(runError && /ETIMEDOUT/i.test(String(runError.code ?? runError.message)));
@@ -256,11 +211,6 @@ const testsFloorBreach = assertFloor(
 );
 ok("the executed test count has not shrunk", !testsFloorBreach, testsFloorBreach ?? "");
 
-/*
- * EXECUTED-COUNT FLOOR ON THIS GATE'S OWN ASSERTIONS: if those stopped, the test floor would
- * stop being consulted. MEASURED BY RUNNING IT, with slack of ZERO, justified here and almost
- * nowhere else, this gate asserting a fixed set of properties about one run.
- */
 const MINIMUM_CHECKS = 5;
 const floorBreach = assertFloor("check:tests", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);

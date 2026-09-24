@@ -1,41 +1,25 @@
-/**
- * The UptimeRobot v3 contract, in one place, shared by the writer and the gate.
- *
- * BOUNDARY: every value here was MEASURED against the API rather than read off a description of
- * it, the v3 documentation returning no specification to a fetch, so this is fixture independence
- * applied to a third party and it ages the day the API does.
- */
+/** Every value here was measured against the API: the v3 docs return no specification to a fetch. */
 
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** One base URL. */
 export const API_BASE = "https://api.uptimerobot.com/v3";
 
-/**
- * Where the monitor ids are recorded. IT LIVES HERE because both consumers need it and the writer
- * is a PROGRAM: importing a constant out of it would create monitors as a side effect of checking
- * them. Beside its two consumers, on the precedent that a manifest sits with what it describes.
- */
+/** Here, not in the writer: importing from the writer would create monitors as a side effect. */
 export const MANIFEST_PATH = join(
   dirname(fileURLToPath(import.meta.url)),
   "..",
   "uptime-monitors.json",
 );
 
-/**
- * THE GATE ASSERTS NOT-PAUSED RATHER THAN UP: a DOWN monitor is one doing its job, so a gate
- * demanding UP would go red for the site being down. What this owns is whether the instrument
- * exists, is switched on, and is pointed at the right host.
- */
+/** The gate asserts not-paused rather than up: a down monitor is one doing its job. */
 export const PAUSED = "PAUSED";
 
 /**
- * One authenticated call. NEVER INTERPOLATES THE KEY INTO A MESSAGE: the status and the API's own
- * error text are reported, and that text echoes the offending FIELDS, never the bearer token.
+ * Never interpolates the key into a message; the API's error text echoes fields, not the token.
  *
  * @param {string} key
- * @param {string} path path under the v3 base, leading slash
+ * @param {string} path
  * @param {{ method?: string, body?: unknown }} [options]
  * @returns {Promise<{ ok: boolean, status: number, body: any, text: string }>}
  */
@@ -60,10 +44,6 @@ export async function call(key, path, { method = "GET", body } = {}) {
 }
 
 /**
- * PAGINATES RATHER THAN TAKING THE FIRST PAGE: reading one page would call a monitor missing the
- * day the account grows past the page size, and would let the writer create a duplicate on every
- * run. The loop is bounded so a server that never stops advancing cannot spin.
- *
  * @param {string} key
  * @returns {Promise<Array<Record<string, any>>>}
  */
@@ -83,11 +63,8 @@ export async function listMonitors(key) {
 }
 
 /**
- * THE LIST ENDPOINT IS NOT A RELIABLE READ OF A MONITOR'S STATUS: immediately after a resume the
- * addressed read and the list answered DIFFERENTLY and did not converge monotonically. **THE
- * DANGEROUS DIRECTION IS THE REASON THIS EXISTS**: the list reports NOT PAUSED for a monitor
- * somebody has just switched off, and a monitoring gate whose failure mode is a false green is
- * worse than no gate. Returns `null` for 404, a monitor that is GONE rather than an error.
+ * The list endpoint is not a reliable read of status: it can report not-paused for a monitor just
+ * switched off. Null for 404, a monitor that is gone rather than an error.
  *
  * @param {string} key
  * @param {number|string} id
@@ -103,14 +80,10 @@ export async function getMonitor(key, id) {
 }
 
 /**
- * The monitor shapes this repo asks for, derived from one origin. **`SITE_ORIGIN` IS THE ONE
- * OWNER OF THE HOST**, which is why ship calls the writer. THE KEYWORD IS THE FULL OPENING
- * FRAGMENT, AND THE BARE WORD WOULD HAVE FAILED OPEN: the health endpoint answers the same body
- * shape for every verdict, so the word appears in every response it can produce. Only the leading
- * fragment discriminates, which is a real coupling to key order and is stated rather than left to
- * be discovered. AND IT IS NOT THE ONLY SIGNAL: the accepted status codes exclude the failing one.
+ * The keyword is the full opening fragment: the bare word appears in every health body, so it
+ * would fail open. This couples to the endpoint's key order.
  *
- * @param {string} origin SITE_ORIGIN, no trailing slash
+ * @param {string} origin
  * @returns {Array<{ path: string, key: string, shape: Record<string, unknown> }>}
  */
 export function desiredMonitors(origin) {
@@ -121,18 +94,12 @@ export function desiredMonitors(origin) {
       path: "/",
       shape: {
         friendlyName: "dustinedwards.info home page",
-        /*
-         * NO TRAILING SLASH, an idempotency fix rather than a preference: the account stored the origin
-         * without one, so every run would have written a monitor that needed nothing.
-         */
+        // No trailing slash: the API stores the origin without one, so a slash rewrites it every run.
         url: base,
         type: "HTTP",
         interval: 300,
         timeout: 30,
-        /*
-         * 3xx IS ALLOWED HERE AND NOT ON HEALTH: the home page is what a reader types and the cutover
-         * puts a redirect in front of it. The health endpoint has no reason to redirect ever.
-         */
+        // 3xx allowed here and not on health: the cutover puts a redirect in front of the home page.
         successHttpResponseCodes: ["2xx", "3xx"],
       },
     },
@@ -154,11 +121,7 @@ export function desiredMonitors(origin) {
   ];
 }
 
-/**
- * A SUBSET, DELIBERATELY: comparing all of the API's fields would redden the day UptimeRobot adds
- * one, which teaches everybody to ignore it. These decide whether the monitor watches the right
- * thing in the right way.
- */
+/** A subset: comparing every field would go red the day UptimeRobot adds one. */
 export const COMPARED_FIELDS = [
   "url",
   "type",
@@ -169,39 +132,29 @@ export const COMPARED_FIELDS = [
 ];
 
 /**
- * Fields the API ACCEPTS in one representation and RETURNS in another, caught by running the thing
- * twice: one field is written as a string the API refuses any other spelling of and read back as a
- * number, so the comparison reports drift on a correct monitor forever. The writer would update on
- * every run and the gate would be PERMANENTLY RED. BOTH VALUES WERE MEASURED, NOT INFERRED FROM
- * THE FIRST, by writing each and reading it back.
+ * Written as a string (the API refuses any other spelling) and read back as a number; both values
+ * measured by writing each and reading it back.
  */
 const READ_REPRESENTATION = {
   keywordCaseType: { CaseSensitive: 0, CaseInsensitive: 1 },
 };
 
 /**
- * What the API will RETURN for a field this repo asked to be `value`. ONE FUNCTION, BOTH
- * CONSUMERS: if the writer and the gate disagreed about what "in step" means, one would be wrong
- * on every run. The one-owner rule.
- *
  * @param {string} field
- * @param {unknown} value the value this repo writes
- * @returns {unknown} the value the API is expected to return
+ * @param {unknown} value
+ * @returns {unknown}
  */
 export function expectedReadValue(field, value) {
   const map = /** @type {Record<string, Record<string, unknown>>} */ (READ_REPRESENTATION)[field];
   if (!map) return value;
-  // A value with no mapping falls through UNCHANGED rather than to undefined: a new enum member
-  // should surface as a mismatch naming both sides, which is the no-substitution rule.
+  // Unmapped falls through unchanged, not to undefined, so a new enum member shows as a mismatch.
   return String(value) in map ? map[String(value)] : value;
 }
 
 /**
- * Whether a live monitor's field already says what this repo asked for.
- *
  * @param {string} field
- * @param {unknown} live the value the API returned
- * @param {unknown} want the value this repo writes
+ * @param {unknown} live
+ * @param {unknown} want
  */
 export function fieldInStep(field, live, want) {
   return JSON.stringify(live) === JSON.stringify(expectedReadValue(field, want));

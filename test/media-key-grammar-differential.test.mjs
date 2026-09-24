@@ -1,14 +1,5 @@
-/**
- * What `dimensionsFromKey` measures from a key, and which extensions
- * `classify()` accepts.
- *
- * The strictness matters because a null is a build failure at the call site: a
- * key the delete and set-alt guards refuse must not be one the resolver
- * measures. A loose width like `-0800x600` once read as 800 by 600 while the
- * other two readers called the same key not-a-content-key.
- *
- * @see app/lib/media/classify.mjs, CONTENT_KEY_SHAPE
- */
+/* A null is a build failure at the call site, and a key the delete and set-alt guards refuse
+ * must not be one the resolver measures. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -21,7 +12,6 @@ import {
   isContentKey,
 } from "../app/lib/media/classify.mjs";
 
-/** A fixed 32-byte digest, the same one the reader sweep uses. */
 const DIGEST = Uint8Array.from({ length: 32 }, (_, i) => i).buffer;
 const HEX16 = "0001020304050607";
 const P = "dustin-edwards-";
@@ -41,7 +31,6 @@ test("classify() accepts every served extension and refuses executable ones", ()
 
 const RASTER_KEY = contentKey(DIGEST, "webp", { width: 1600, height: 900 });
 
-/** Key or path in, the dimensions a resolver would render, or null for "cannot tell". */
 const DIMENSION_CASES = [
   [RASTER_KEY, { width: 1600, height: 900 }],
   [`/media/${RASTER_KEY}`, { width: 1600, height: 900 }],
@@ -78,7 +67,6 @@ test("dimensionsFromKey measures exactly the keys the writer emits", () => {
 });
 
 test("on the two inputs that differ, all three readers now give one answer", () => {
-  // Before the grammar had one spelling, each of these keys got three answers.
   for (const key of [`${P}${HEX16}-0800x600.webp`, `${P}${HEX16}-800x0600.webp`]) {
     assert.equal(isContentKey(key), false, `isContentKey(${key})`);
     assert.equal(digestFromKey(key), null, `digestFromKey(${key})`);

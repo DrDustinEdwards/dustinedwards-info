@@ -1,20 +1,5 @@
-/**
- * The `:::sidenote` directive: a short note that renders beside the paragraph it follows.
- *
- * WHAT MAKES THIS WORTH A TEST rather than a reading: the alignment is the whole feature and it is
- * a property of WHERE THE NOTE SITS IN THE DOCUMENT. A note lifted into the rail container would
- * need its paragraph's position measured to line up, which is script on a plane that does not
- * hydrate. So the directive must leave the note in the prose flow, as a sibling of the paragraph
- * it annotates, and the stylesheet floats it into the rail. If that ever changes to "collect the
- * notes and emit them elsewhere", the alignment silently becomes a lie and nothing else would say
- * so.
- *
- * The kind refusal is the other enforceable half: the label is a reader's only cue about what the
- * note is before they decide to read it.
- *
- * @see app/lib/content/pipeline.mjs
- * @see app/styles/post-rail.css
- */
+/* The note must stay in the prose flow as a sibling of its paragraph and the stylesheet floats
+ * it into the rail; hoisting it elsewhere would need script to measure its alignment. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -30,10 +15,7 @@ test("it renders an aside with the kind label first", async () => {
   assert.match(html, /<p>A short note\.<\/p><\/aside>/);
 });
 
-/*
- * THE ID IS THE ANCHOR. A note with no id cannot be referenced, and adding markers later would
- * have to migrate every note already published, so the numbering is asserted rather than assumed.
- */
+/* Ids added later would mean migrating every published note, so the numbering is asserted. */
 test("notes are numbered per document, in source order", async () => {
   const { html } = await render(
     ':::sidenote{kind="One"}\nA.\n:::\n\nBetween.\n\n:::sidenote{kind="Two"}\nB.\n:::\n',
@@ -52,11 +34,6 @@ test("an `aside`, so a screen reader can skip what is tangential", async () => {
   assert.doesNotMatch(html, /<div class="post-note"/);
 });
 
-/*
- * THE ALIGNMENT CONTRACT. The note must stay where the author put it: immediately after its
- * paragraph and before the next one. Anything that hoists notes to the top or the end of the body
- * breaks the float's whole basis.
- */
 test("the note stays between the paragraph it follows and the one after it", async () => {
   const { html } = await render(
     "First paragraph.\n\n:::sidenote{kind=\"Caveat\"}\nThe note.\n:::\n\nSecond paragraph.\n",

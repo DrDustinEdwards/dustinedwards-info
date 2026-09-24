@@ -6,16 +6,9 @@ import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/api.auth.$";
 
 /**
- * Catch-all for Better Auth. Every `/api/auth/*` request is handed to the auth handler, AFTER the
- * rate limit.
- *
- * WHAT IT CAPS IS THE OUTBOUND CALL: every hit on the Google callback makes this Worker exchange a
- * token against Google before `signIn.before` can reject a non-admin address, so an unbounded
- * endpoint is an amplifier pointed at a third party using our OAuth client.
- *
- * BOTH EXPORTS ARE GUARDED, and that is not belt-and-braces: Better Auth routes by method as well as
- * path, so the callback arrives as a GET and reaches `loader` while the sign-in and sign-out POSTs
- * reach `action`. Guarding one would leave the other open, and the callback is the expensive half.
+ * Rate limited because each Google callback makes this Worker exchange a token before a non-admin
+ * is rejected. Both exports are guarded: the callback arrives as a GET (`loader`), sign-in and
+ * sign-out as POSTs (`action`).
  */
 
 export async function loader({ request, context }: Route.LoaderArgs) {

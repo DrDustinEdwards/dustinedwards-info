@@ -1,12 +1,3 @@
-/**
- * Part of check:machine-readable: the publication corpus is internally consistent and its artifact
- * is fresh.
- *
- * BOUNDARY: two committed JSON files, a generated module and `stat` on the PDFs. It cannot see
- * whether the registry data is still true, so the networked assertions stay in the pipeline, and
- * every "no record has property X" carries the count that read it, hard rule 18's shape.
- */
-
 import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -48,9 +39,6 @@ let checks = 0;
 const failures = [];
 
 /**
- * Condition FIRST, and named `ok` as five other gates name it, so a copied call is a
- * ReferenceError rather than a pass with the label in the condition slot.
- *
  * @param {boolean} ok
  * @param {string} label
  * @param {string} [detail]
@@ -70,13 +58,10 @@ const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
 console.log("\n  publications\n");
 
-/* the sources exist at all */
-
 const SITE_PATH = join(root, "data", "publications.site.json");
 const CSL_PATH = join(root, "data", "publications.csl.json");
 const OUT_PATH = join(root, "app", "data", "publications.ts");
 
-/* SCOPE FIRST: every "no record does X" passes over an empty array, the vacuity rule's first line. */
 for (const [label, path] of [
   ["the site file", SITE_PATH],
   ["the CSL file", CSL_PATH],
@@ -101,9 +86,6 @@ if (siteEntries.length === 0 || !Array.isArray(csl) || csl.length === 0) {
   throw new Error("publications: the scope is empty; nothing below would mean anything");
 }
 
-/* the artifact is fresh */
-
-/* FIRST, because only this one catches a hand-edit of the generated file. */
 {
   const committed = readFileSync(OUT_PATH, "utf8").replace(/\r\n/g, "\n");
   const emitted = generate();
@@ -129,8 +111,6 @@ if (siteEntries.length === 0 || !Array.isArray(csl) || csl.length === 0) {
     detail,
   );
 }
-
-/* identity */
 
 const cslByDoi = new Map();
 let duplicateCsl = "";
@@ -171,9 +151,6 @@ assertThat(
   `every record id is unique (${new Set(ids).size} of ${ids.length})`,
 );
 
-/* the PDF set */
-
-/* A PDF the data file still advertises is a 404 on a link the page renders as though it worked. */
 const hosted = siteEntries.filter(([, f]) => f.pdfPath);
 const missingPdfs = hosted
   .filter(([, f]) => !existsSync(join(root, "public", f.pdfPath.replace(/^\//, ""))))
@@ -201,9 +178,6 @@ assertThat(
   emptyPdfs.length ? `empty: ${emptyPdfs.join(", ")}` : "",
 );
 
-/* the extracted text, and its bytes */
-
-/* A committed derivative goes stale one way, so the claim is about bytes rather than existence. */
 const TEXT_PATH = join(root, "data", "publications.text.json");
 assertThat(
   existsSync(TEXT_PATH),
@@ -223,7 +197,6 @@ assertThat(
   "an empty artifact would make every sweep below vacuous",
 );
 
-/* Both directions: a hosted PDF with no text loses its twin, and the reverse serves no source. */
 const untexted = hosted.filter(([doi]) => !extractedKeys.has(doiKey(doi))).map(([doi]) => doi);
 assertThat(
   untexted.length === 0,
@@ -257,7 +230,6 @@ assertThat(
     : "",
 );
 
-/* Internally consistent, which is what catches a hand-edit of this file. */
 const inconsistentText = Object.entries(extractedPapers)
   .filter(([, entry]) => {
     const pages = Array.isArray(entry.text) ? entry.text : [];
@@ -271,7 +243,7 @@ assertThat(
   inconsistentText.length ? `inconsistent: ${inconsistentText.join(", ")}` : "",
 );
 
-/* A scanned PDF extracts to nothing and everything above still passes; this looks for that. */
+/* A scanned PDF extracts to nothing and everything above still passes. */
 const emptyText = Object.entries(extractedPapers)
   .filter(([, entry]) => (entry.chars ?? 0) < 500)
   .map(([doi, entry]) => `${doi} (${entry.chars})`);
@@ -284,7 +256,6 @@ assertThat(
     : "",
 );
 
-/* `access` lets a record move between self-hosted and external; this stops a halfway move. */
 const accessMismatch = siteEntries.filter(
   ([, f]) =>
     (f.access === "self-hosted" && !f.pdfPath) ||
@@ -298,9 +269,7 @@ assertThat(
     : "",
 );
 
-/* external ids */
-
-/* LANDING-PAGE form, a ruling: it answers for every PMCID, including those the API refuses. */
+/* Landing-page form answers for every PMCID, including those the API refuses. */
 const withPmc = siteEntries.filter(([, f]) => f.pmcUrl);
 const badPmcUrls = withPmc
   .filter(([, f]) => !/^https:\/\/pmc\.ncbi\.nlm\.nih\.gov\/articles\/PMC\d+\/$/.test(f.pmcUrl))
@@ -324,8 +293,6 @@ assertThat(
   pmcMismatch.length ? pmcMismatch.map(([, f]) => f.id).join(", ") : "",
 );
 
-/* abstracts */
-
 /* These land in a `<script type="application/ld+json">` block, where `<` ends the element early. */
 const abstracts = csl.filter((c) => typeof c.abstract === "string" && c.abstract.length > 0);
 const withAngle = abstracts.filter((c) => c.abstract.includes("<")).map((c) => c.DOI);
@@ -340,9 +307,7 @@ assertThat(
   "this is the companion the July build added after an assertion passed by reading zero",
 );
 
-/* topics */
-
-/* Out of the GENERATED module's TOPICS block: an indent-anchored matcher swept in every id. */
+/* Only inside the TOPICS block: an indent-anchored matcher over the whole module sweeps in every id. */
 const generated = readFileSync(OUT_PATH, "utf8");
 const topicsBlock = /export const TOPICS: Topic\[\] = \[([\s\S]*?)\n\];/.exec(generated);
 assertThat(
@@ -373,9 +338,7 @@ assertThat(
   untopiced.length ? untopiced.map(([, f]) => f.id).join(", ") : "",
 );
 
-/* slugs, pages and PDFs */
-
-/* The slug is LOSSY, so a collision is two papers on one URL, one of them still in the sitemap. */
+/* The slug is lossy, so a collision is two papers on one URL. */
 const slugs = siteEntries.map(([doi]) => doiSlug(doi));
 const slugCounts = new Map();
 for (const slug of slugs) slugCounts.set(slug, (slugCounts.get(slug) ?? 0) + 1);
@@ -394,7 +357,7 @@ assertThat(
   slugs.filter((s) => !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s)).join(", "),
 );
 
-/* `pdfPath` stays a LITERAL because `build:template-refs` matches asset references as literals. */
+/* `pdfPath` stays a literal because `build:template-refs` matches asset references as literals. */
 const pathMismatch = siteEntries
   .filter(([doi, f]) => f.pdfPath && f.pdfPath !== paperPdfPath(doiSlug(doi)))
   .map(([doi, f]) => `${f.id}: ${f.pdfPath} should be ${paperPdfPath(doiSlug(doi))}`);
@@ -404,7 +367,7 @@ assertThat(
   pathMismatch.join("; "),
 );
 
-/* The PROPERTY Scholar cares about: `paperPdfPath` can move while the equality above passes. */
+/* What Scholar cares about: `paperPdfPath` can move while the equality above passes. */
 const outsideOwnDirectory = siteEntries
   .filter(([doi, f]) => f.pdfPath && !f.pdfPath.startsWith(`/publications/${doiSlug(doi)}/`))
   .map(([, f]) => f.id);
@@ -417,12 +380,7 @@ assertThat(
     : "",
 );
 
-/* the redirect map */
-
-/*
- * BOTH DIRECTIONS: a one-way check passes on an entry pointing at nothing, which is a 301 into
- * a 404.
- */
+/* Both directions: a one-way check passes on an entry pointing at nothing, a 301 into a 404. */
 const redirects = JSON.parse(readFileSync(join(root, "content", "redirects.json"), "utf8"));
 const pdfRedirects = redirects.pdfs ?? {};
 const redirectTargets = new Set(Object.values(pdfRedirects));
@@ -460,12 +418,9 @@ assertThat(
     : "",
 );
 
-/* rights */
-
 /*
- * AN ALLOWLIST, NOT A RULE: every PDF stays up by ruling, so a hosted PDF with no license and no
- * entry reds. `licenseSource` has three states and the middle is why it exists, tdm-only being
- * terms that license redistribution to nobody; collapsing it hides that those were checked.
+ * `licenseSource` has three states: tdm-only is terms that license redistribution to nobody, and
+ * collapsing it would hide that those were checked.
  */
 const HOSTED_WITHOUT_LICENCE = new Map([
   // Bronze is free to read on the publisher's site with no license, which they can reverse.
@@ -482,7 +437,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
 ]);
 
 {
-  /** A license that permits redistribution, by the shape the registries return. */
   const permitsRedistribution = (/** @type {string | null} */ licence) =>
     typeof licence === "string" &&
     (licence.startsWith("cc-by") || licence === "cc0" || licence === "public-domain");
@@ -522,7 +476,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
       : "",
   );
 
-  /* THE OTHER DIRECTION: stale exemptions are how an allowlist stops meaning anything. */
+  /* Stale exemptions are how an allowlist stops meaning anything. */
   const stale = [...HOSTED_WITHOUT_LICENCE.keys()].filter(
     (doi) => !unlicensed.some(([d]) => d === doi),
   );
@@ -535,7 +489,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
       : "",
   );
 
-  /* A null source on an unlicensed record would mean nobody has looked. */
   const unchecked = unlicensed.filter(([, f]) => !f.licenseSource && f.license === null);
   assertThat(
     unchecked.length === 0,
@@ -548,12 +501,9 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   );
 }
 
-/* the Highwire tag set */
-
 /*
  * Not against the render: `createRoutesStub` never mounts `<Meta />`. Both halves, the builder
- * and the route calling it, since either alone is green while the page is wrong; and it THROWS
- * rather than emit a partial set.
+ * and the route calling it, since either alone is green while the page is wrong.
  */
 {
   const ORIGIN = "https://example.invalid";
@@ -583,7 +533,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     }
     const authors = tags.filter((t) => t.name === "citation_author");
     authorTags += authors.length;
-    /* ONE TAG PER AUTHOR: getting this wrong produces a single author whose name is the whole list. */
+    /* One tag per author: otherwise Scholar reads a single author whose name is the whole list. */
     if (authors.length !== paper.authors.length) {
       tagFailures.push(
         `${paper.id}: ${authors.length} citation_author tags for ${paper.authors.length} authors`,
@@ -594,7 +544,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     if (!hosted && pdf) tagFailures.push(`${paper.id}: not hosted but has citation_pdf_url`);
     if (pdf) {
       pdfTags += 1;
-      /* Scholar's rule, asserted on the tag rather than the helper, because that is what ships. */
       const dir = `${ORIGIN}${paperPath(slug)}`;
       if (!pdf.content.startsWith(dir)) {
         tagFailures.push(`${paper.id}: citation_pdf_url is not under ${dir}`);
@@ -639,12 +588,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   );
 }
 
-/* the plain-language line */
-
-/*
- * SHAPE ONLY: a green gate here must not read as "the summaries are fine", and while the field
- * is unfilled everything below passes over an empty set, so the count is reported.
- */
 {
   const summaries = siteEntries
     .map(([, f]) => [f.id, f.summary])
@@ -662,7 +605,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     tooLong.map(([id, v]) => `${id} is ${String(v).length}`).join(", "),
   );
 
-  /* Terminal punctuation, space, capital. Deliberately loose: a nudge, not a grammar checker. */
   const multiSentence = summaries.filter(([, v]) => /[.!?]\s+[A-Z]/.test(String(v)));
   assertThat(
     multiSentence.length === 0,
@@ -670,7 +612,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     multiSentence.map(([id]) => id).join(", "),
   );
 
-  /* The PreToolUse hook cannot reach these, and the escapes keep this file greppable. */
+  /* The PreToolUse hook cannot reach data files, and the escapes keep this file free of the dashes. */
   const WIDE_DASH = new RegExp("[\\u2013\\u2014]");
   const dashed = summaries.filter(([, v]) => WIDE_DASH.test(String(v)));
   assertThat(
@@ -687,9 +629,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   );
 }
 
-/* cited by */
-
-/* DATED EVIDENCE: these assert it describes THIS corpus and says when, never its numbers. */
+/* Asserts the artifact describes this corpus and says when, never its numbers. */
 {
   const citedByPath = join(root, "data", "publications.cited-by.json");
   assertThat(
@@ -730,7 +670,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
         : "",
     );
 
-    /* A list over the cap means the fetcher stopped honoring it; a short `total` means two reads. */
     const cap = Number(artifact.maxCiting ?? 0);
     assertThat(cap > 0, `the artifact records its own cap (${cap})`);
     const overCap = keys.filter((d) => (works[d].citing?.length ?? 0) > cap);
@@ -756,7 +695,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
       `the artifact lists citing works (${citingCount})`,
       "a zero would make the shape assertions below vacuous",
     );
-    /* A BARE NAME: the page builds its own link, so a URL renders a doubled `https://doi.org/`. */
+    /* A bare name: the page builds its own link, so a URL renders a doubled `https://doi.org/`. */
     const urlShaped = keys.flatMap((d) =>
       (works[d].citing ?? []).filter((/** @type {any} */ w) => w.doi?.startsWith("http")),
     );
@@ -768,13 +707,6 @@ const HOSTED_WITHOUT_LICENCE = new Map([
   }
 }
 
-/* exports */
-
-/*
- * DETERMINISTIC, since a timestamp defeats every byte comparison downstream, and COMPLETE, since
- * a writer that dropped a record produces a file that parses.
- */
-/* Read as DATA: an indent-anchored matcher matches whatever else sits there and counts too much. */
 const showcase = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
 
 assertThat(
@@ -783,7 +715,7 @@ assertThat(
   "every export assertion below iterates it",
 );
 
-/* Stated twice because importing the route module would drag React in, so its literal is parsed. */
+/* Stated twice: importing the route module would drag React in, so its literal is parsed. */
 {
   const routeSource = readFileSync(
     join(root, "app", "routes", "publications.tsx"),
@@ -844,10 +776,7 @@ assertThat(
     missingDoi.map((p) => p.id).join(", "),
   );
 
-  /*
-   * The stored corpus keeps them escaped, and a reference manager would show a reader
-   * `p &lt; 0.05`.
-   */
+  /* The stored corpus keeps them escaped, and a reference manager would show `p &lt; 0.05`. */
   const leaked = /&(amp|lt|gt|quot|apos|#\d+);/.exec(bib + ris + csl);
   assertThat(
     leaked === null,
@@ -855,14 +784,13 @@ assertThat(
     leaked ? `found ${leaked[0]}` : "",
   );
 
-  /* Asserted where it MATTERS: a lowercased genus is wrong under the nomenclature codes. */
+  /* A lowercased genus is wrong under the nomenclature codes. */
   const withOrganism = papers.filter((p) => organismsIn(p.title).length > 0);
   assertThat(
     withOrganism.length > 0,
     `some shown titles carry an organism name (${withOrganism.length})`,
     "a zero would make the brace assertion below vacuous",
   );
-  /* Through `organismsIn`, the matcher the code uses, or the gate reports a defect of its own. */
   const unprotected = withOrganism.filter((p) => {
     const entry = toBibtex(p);
     return organismsIn(p.title).some((o) => !entry.includes(`{${o}}`));
@@ -873,7 +801,7 @@ assertThat(
     unprotected.map((p) => p.id).join(", "),
   );
 
-  /* AS DEPOSITED: a lowercasing export would disagree with the registry it came from. */
+  /* As deposited: a lowercasing export would disagree with the registry it came from. */
   const folded = papers.filter(
     (p) => p.doi !== p.doi.toLowerCase() && !bib.includes(`doi = {${p.doi}}`),
   );
@@ -884,12 +812,7 @@ assertThat(
   );
 }
 
-/* preprint */
-
-/*
- * A COUNT, so a second preprint is a decision somebody makes here, and never merged, so every
- * citation figure matches the page a reader lands on.
- */
+/* A count, so a second preprint is a decision somebody makes here. */
 const preprints = siteEntries.filter(([, f]) => f.preprintDoi);
 assertThat(
   preprints.length === 1,
@@ -897,11 +820,9 @@ assertThat(
   preprints.map(([, f]) => `${f.id} -> ${f.preprintDoi}`).join(", "),
 );
 
-/* the markdown twins */
-
 /*
  * Nothing imports the twins, so a build that never ran ships an llms.txt advertising 404s.
- * Compared in this process and never written first: a gate that repairs its subject cannot fail.
+ * Compared in memory and never written first: a gate that repairs its subject cannot fail.
  */
 const twins = await generateTwins();
 
@@ -935,7 +856,7 @@ assertThat(
     : "",
 );
 
-/* Asserts the prune ran: a corrected DOI leaves a file nothing overwrites. */
+/* A corrected DOI leaves a file nothing overwrites. */
 const strayTwins = readdirSync(TWIN_DIR, { withFileTypes: true })
   .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
   .map((entry) => entry.name)
@@ -946,10 +867,7 @@ assertThat(
   strayTwins.length ? `stray: ${strayTwins.join(", ")}` : "",
 );
 
-/*
- * A hand-maintained list beside a generated set, so both directions, and matched on the URL,
- * because a count passes on a list naming the wrong papers.
- */
+/* Matched on the URL, because a count passes on a list naming the wrong papers. */
 const llms = readFileSync(join(root, "content", "llms.txt"), "utf8");
 const advertised = new Set(
   [...llms.matchAll(/^\s{2}(\/publications\/[a-z0-9-]+\.md)$/gm)].map((m) => m[1]),
@@ -975,7 +893,6 @@ assertThat(
   overAdvertised.length ? `advertised with no file: ${overAdvertised.join(", ")}` : "",
 );
 
-/* A twin that lost its text would still generate and be advertised. Against the artifact's count. */
 const textless = [];
 for (const [doi, fields] of hosted) {
   const entry = extractedPapers[doi] ?? extractedPapers[doiKey(doi)];
@@ -983,8 +900,7 @@ for (const [doi, fields] of hosted) {
   if (!entry) continue;
   const marker = "## Full text";
   const at = body.indexOf(marker);
-  // Half the extracted length, because the twin joins pages on a blank line and
-  // trims each: it can be a little shorter than the artifact and never half.
+  // Half: the twin joins pages on a blank line and trims each, so it runs a little short, never half.
   if (at === -1 || body.length - at < entry.chars / 2) {
     textless.push(`${fields.id} (${at === -1 ? "no section" : "short"})`);
   }
@@ -1005,9 +921,6 @@ assertThat(
   entityTwins.length ? `still escaped in: ${entityTwins.join(", ")}` : "",
 );
 
-/* search, the MCP and Ask, all three */
-
-/* Building without reading asserts the builders work; reading without building asserts lines. */
 const paperRecords = recordsForPapers(paperSearchInputs(PUBLICATIONS));
 
 assertThat(
@@ -1049,8 +962,6 @@ assertThat(
       strayRecords.length ? `stray: ${strayRecords.join(", ")}` : "",
     );
 
-    // The URL is the half a reader lands on, so it is compared rather than
-    // assumed equal because the uids matched.
     const wrongUrls = [...expected.entries()]
       .filter(([uid, record]) => inArtifact.has(uid) && inArtifact.get(uid).url !== record.url)
       .map(([uid]) => uid);
@@ -1078,7 +989,7 @@ assertThat(
   );
 }
 
-/* The asymmetry between `keyForUrl` and `urlForKey`: a key that did not round-trip cites a 404. */
+/* `keyForUrl` and `urlForKey` are asymmetric: a key that did not round-trip cites a 404. */
 {
   const brokenKeys = PUBLICATIONS.map((paper) => {
     const slug = doiSlug(paper.doi);
@@ -1095,7 +1006,6 @@ assertThat(
       : "",
   );
 
-  /* Against `paperMarkdownPath`, what the build writes and the uploader fetches through. */
   const keyPathMismatch = PUBLICATIONS.map((paper) => doiSlug(paper.doi)).filter(
     (slug) => `/${keyForUrl(paperPath(slug))}` !== paperMarkdownPath(slug),
   );
@@ -1106,7 +1016,6 @@ assertThat(
   );
 }
 
-/* The one owner must produce a usable URL, and the page must not have grown a second copy. */
 {
   const badAskUrls = PUBLICATIONS.map((paper) => ({
     id: paper.id,
@@ -1118,10 +1027,7 @@ assertThat(
     badAskUrls.length ? badAskUrls.map((b) => `${b.id}: ${b.url.slice(0, 80)}`).join("; ") : "",
   );
 
-  /*
-   * THE QUOTED TITLE AND NOTHING ELSE, because the classic index ANDs its terms, asserted by
-   * DECODING the query back: a shape test passes on any quoted string.
-   */
+  /* The quoted title and nothing else, because the classic index ANDs its terms. */
   const notJustTheTitle = PUBLICATIONS.filter((paper) => {
     const title = decodeEntities(paper.title);
     const q = new URL(paperAskUrl(title), "https://example.invalid").searchParams.get("q");
@@ -1163,9 +1069,6 @@ assertThat(
   );
 }
 
-/* retractions, corrections, versions */
-
-/* The count is in the label, or a scan that read nothing looks exactly like a clean corpus. */
 {
   const noticed = PUBLICATIONS.filter((p) => p.updateNotice);
   assertThat(
@@ -1176,7 +1079,6 @@ assertThat(
       : "",
   );
 
-  /* Vacuous while the set is empty, which is why the count is beside it. */
   const malformed = PUBLICATIONS.map((p) => ({
     id: p.id,
     problem: updateNoticeProblem(p.updateNotice),
@@ -1198,12 +1100,7 @@ assertThat(
   );
 }
 
-/* accessions, from the PDFs */
-
-/*
- * THE DATA-AVAILABILITY STATEMENT IS THE ANCHOR: a plain regex pulls in the comparison phages'
- * accessions. Both directions, a deposit nothing links and a claim the PDF does not support.
- */
+/* Anchored on the data-availability statement: a plain regex pulls in the comparison phages' accessions. */
 {
   const derived = new Map();
   for (const [doi, entry] of Object.entries(extractedPapers)) {

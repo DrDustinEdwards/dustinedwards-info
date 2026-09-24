@@ -1,16 +1,6 @@
 /**
- * D1 convergence after a commit has landed.
- *
- * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, in its database
- * section: "`savePost` writes GitHub first, then D1, with no compensation. A
- * GitHub success followed by a D1 failure leaves the repo ahead of the database
- * with no record." Verified TRUE against the code.
- *
- * The ordering is NOT the defect and is not changed here: the repo is the
- * source of truth and D1 is a derived index, so there is no compensating
- * revert. The half that was a defect is "with no record", and these drive it.
- *
- * @see app/lib/editor/converge.mjs
+ * The repo is the source of truth and D1 a derived index, so a failed D1 write is recorded, never
+ * compensated by reverting the commit.
  */
 
 import test from "node:test";
@@ -21,7 +11,6 @@ import { DIVERGENCE_ERROR_NAME, convergeWithRetry } from "../app/lib/editor/conv
 const SLUG = "agent-write-access-to-a-live-site";
 const SHA = "a1b2c3d";
 
-/** A writer that fails its first `failures` calls, then succeeds. */
 function writerFailing(failures) {
   const state = { calls: 0 };
   return {
@@ -34,7 +23,6 @@ function writerFailing(failures) {
   };
 }
 
-/** A recorder that captures rather than writing. */
 function recorder() {
   const state = { recorded: [] };
   return { state, recordDivergence: async (facts) => void state.recorded.push(facts) };
@@ -93,8 +81,7 @@ test("FAILURE POINT 2: D1 fails twice, the drift IS recorded and the error names
 });
 
 test("a recorder that throws does not swallow the divergence error", async () => {
-  // Losing the status entry is bad. Replacing the operator's explanation with
-  // the failure of the thing meant to explain it is worse.
+  // Replacing the operator's explanation with the recorder's own failure is worse than losing the entry.
   const w = writerFailing(2);
   await assert.rejects(
     () =>

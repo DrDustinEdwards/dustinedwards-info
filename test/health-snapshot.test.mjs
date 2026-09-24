@@ -1,21 +1,5 @@
-/**
- * The health snapshot's classification.
- *
- * REPLAYS THE DEFECT, per the replay rule. The defect is not a wrong verdict; it
- * is that `home.tsx` ran the whole health suite in its loader, so the front
- * door was the slowest page on the site: 1.07 to 3.48 s at origin against 0.32
- * to 0.90 s for `/blog`, measured 2026-08-26 with `/api/health` alone at 0.98
- * to 2.01 s as the control. The replacement is a stored snapshot, and the risk
- * the replacement introduces is a DIFFERENT one: a cached page presenting an
- * old or malformed verdict as the current answer.
- *
- * So these tests are about the second risk. Every uncertain input must resolve
- * to `missing` rather than to a green tile, and the boundary between fresh and
- * stale must sit where the schedule says it does.
- *
- * @see app/lib/health/snapshot.mjs
- * @see app/routes/home.tsx
- */
+/* A stored snapshot risks a cached page presenting an old or malformed verdict as current, so
+ * every uncertain input must resolve to `missing` rather than a green tile. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -27,7 +11,6 @@ import {
   snapshotFromBody,
 } from "../app/lib/health/snapshot.mjs";
 
-/** A fixed instant, so nothing here depends on when it runs. */
 const NOW = Date.parse("2026-08-26T14:00:00.000Z");
 
 /** @param {number} secondsAgo */
@@ -94,9 +77,6 @@ test("A FUTURE TIMESTAMP IS REFUSED, not clamped to zero", () => {
 });
 
 test("the discriminating control: the same snapshot at two ages disagrees", () => {
-  // A classifier that returned one answer for everything would pass every
-  // assertion above that expects `missing`. This is the pair that proves it
-  // can tell two well-formed inputs apart.
   const fresh = healthTile(snapshotAgedBy(60), NOW);
   const stale = healthTile(snapshotAgedBy(60 * 60 * 24), NOW);
   assert.equal(fresh.state, "fresh");
@@ -142,6 +122,5 @@ test("body to snapshot to tile round trips the counts the page renders", () => {
   assert.equal(tile.state, "fresh");
   assert.equal(tile.total, 3);
   assert.equal(tile.failed, 0);
-  // What the tile renders as its value.
   assert.equal(`${tile.total - tile.failed}/${tile.total}`, "3/3");
 });

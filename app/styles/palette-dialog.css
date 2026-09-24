@@ -4,13 +4,12 @@
   padding: 0;
   border: 1px solid var(--border);
   border-radius: 0.625rem;
-  /* Glass (ruling 149): the untinted pane over the scrim, blurred. */
   background: var(--glass-pane);
   backdrop-filter: blur(var(--glass-blur));
   color: var(--text);
   overflow: hidden;
-  /* Sits nearer the top than centered: the list grows downward and a centered
-     dialog would jump as results arrive. */
+  /* Nearer the top than centered: the list grows downward and a centered dialog would jump as results
+     arrive. */
   margin: 6vh auto auto;
 }
 
@@ -22,7 +21,6 @@
 }
 
 .palette::backdrop {
-  /* The ratified scrim, one owner for the role. */
   background: var(--scrim);
   opacity: 0.45;
 }
@@ -59,8 +57,7 @@
   font-size: 1rem;
 }
 
-/* WCAG 2.4.7: the input takes focus when the palette opens, so it needs a ring. :focus-visible, not :focus.
-   The on-surface ring token, so it stays inside what the contrast gate reads. */
+/* The on-surface ring token, so it stays inside what the contrast gate reads. */
 .palette-input:focus {
   outline: none;
 }

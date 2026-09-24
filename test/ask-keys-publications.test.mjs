@@ -1,22 +1,5 @@
-/**
- * The Ask item key mapping, for papers and for the posts it already carried.
- *
- * REPLAYS THE DEFECT the change that added papers to the index nearly shipped,
- * per the replay rule. `keyForUrl` was written for `/blog/<slug>`, which has no
- * trailing slash. A paper's page is `/publications/<slug>/` and the slash is
- * load-bearing (`citation_pdf_url` must sit in the page's own subdirectory), so
- * the untouched function produced `publications/<slug>/.md`: a key that names
- * no document, uploads without complaint, and cites a URL with a doubled slash
- * in it. Nothing in the type system or the linter can see that.
- *
- * The round trip is the property worth testing rather than either direction
- * alone. AI Search carries `item.key` and nothing else about a chunk's origin,
- * so the key IS the citation: the upload path writes it and the client chunk
- * reads it back through this same module, and the only failure that matters is
- * the two disagreeing.
- *
- * @see app/lib/search/ask-keys.mjs
- */
+/* A paper's page is `/publications/<slug>/` and its slash is load-bearing. AI Search carries
+ * only `item.key`, so the key IS the citation and the round trip is the property that matters. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -53,13 +36,8 @@ test("a paper key with a section anchor is refused rather than guessed", () => {
 });
 
 test("a paper contributes no post slug to the visibility replay", () => {
-  /*
-   * The one caller asks D1 whether every cited POST is still public. A paper
-   * has no row in `posts`: without the guard this asserts, the paper's URL fell
-   * through the `/blog/` strip unchanged, was handed to `publiclyVisibleSlugs`
-   * as a slug, matched nothing, and made every cached answer citing a paper
-   * unreplayable forever, on a corpus that cannot be withdrawn.
-   */
+  /* A paper has no row in `posts`: without this guard its URL would reach
+   * `publiclyVisibleSlugs` as a slug and make every cached answer citing a paper unreplayable. */
   assert.equal(slugForKey("publications/10-3390-v3060861.md"), null);
 });
 
@@ -74,9 +52,8 @@ test("a paper's citation label names the identifier and says what it is", () => 
 });
 
 test("posts are unchanged by the trailing-slash strip", () => {
-  // The strip is a general rule now, so the case it was NOT written for is
-  // asserted too: a post URL has no trailing slash and must key and label
-  // exactly as it did before papers existed.
+  // The strip is a general rule, so a post URL, which has no trailing slash, must key and
+  // label exactly as before.
   assert.equal(keyForUrl("/blog/a-post"), "blog/a-post.md");
   assert.equal(keyForUrl("/blog/a-post#a-heading"), "blog/a-post__a-heading.md");
   assert.equal(urlForKey("blog/a-post__a-heading.md"), "/blog/a-post#a-heading");

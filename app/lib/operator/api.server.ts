@@ -1,11 +1,4 @@
-/**
- * The operator publish tools.
- *
- * EVERY WRITE HERE CALLS THE SAME FUNCTIONS THE BROWSER EDITOR'S ACTION CALLS. Nothing in this file
- * talks to GitHub, D1 or the AI index directly, and nothing re-implements a gate. The read tools go
- * through D1 and per-file repository reads the same way the admin surfaces do, so an operator sees
- * what the editor sees.
- */
+// Every write calls the same functions the browser editor's action calls; nothing here re-implements a gate.
 
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 import { listDivergences } from "~/lib/editor/divergence.server";
@@ -51,22 +44,15 @@ import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 import type { OperatorEnv } from "./auth.server";
 
-/**
- * A slug, validated against the SAME predicate the write path enforces, because every one of these
- * is interpolated into a repository path and handed to an API that builds its URL with `encodeURI`,
- * which does NOT escape `.`, `/` or `?`. The WRITE path was always safe; the READ paths ran first
- * with no such check.
- */
+// Validated like the write path: the slug goes into a repository path via `encodeURI`, which does not
+// escape `.`, `/` or `?`.
 function readSlug(args: Record<string, unknown>, tool: string) {
   const slug = String(args.slug ?? "").trim();
   if (!slug) return { slug: "", error: `${tool} requires a slug.` };
   if (!SLUG_PATTERN.test(slug)) {
     return { slug: "", error: `${tool} requires a lowercase kebab-case slug.` };
   }
-  /*
-   * THE LENGTH BOUND IS APPLIED HERE TOO: a read path that accepts what the write schema refuses
-   * interpolates a slug the repository can never hold into an API path. Same constant, imported.
-   */
+  // The length bound too: a read must not accept a slug the write schema refuses.
   if (slug.length > SLUG_MAX_LENGTH) {
     return {
       slug: "",
@@ -105,14 +91,7 @@ export function toolNames(): readonly ToolName[] {
   return TOOLS;
 }
 
-/**
- * What GET /api/operator says about each tool, beside the dispatch that runs it.
- *
- * KEYED BY `ToolName`, the `WRITE_CAPABILITIES` idiom: a tool added without a
- * descriptor is a TYPECHECK failure, and a descriptor for a tool that does not exist is one too, so
- * the self-description cannot drift from the dispatch in either direction. The route carried a
- * hand-written copy and it had already drifted.
- */
+// Keyed by `ToolName`, so a missing or extra descriptor is a typecheck failure.
 export const TOOL_DESCRIPTORS: Readonly<
   Record<ToolName, { args: Record<string, string>; returns: string; policy?: string }>
 > = {
@@ -229,13 +208,7 @@ export const TOOL_DESCRIPTORS: Readonly<
   },
 };
 
-/**
- * The moderation queue, over the operator token, because a step that can only be taken by hand is a
- * step that gets taken late.
- *
- * UNFILTERED BY DEFAULT: a queue that hides its failures cannot tell "nothing arrived" from
- * "everything was refused". Read through the SAME function the admin page reads.
- */
+// Unfiltered by default: a queue that hides its failures cannot tell "nothing arrived" from "all refused".
 async function listMentionsTool(
   env: OperatorEnv,
   args: Record<string, unknown>,
@@ -245,10 +218,7 @@ async function listMentionsTool(
   const rows = await listWebmentionsForAdmin(env);
 
   if (status) {
-    /*
-     * A STATUS THE COLUMN CANNOT HOLD IS A 400, not an empty list: an agent that mistyped one and got
-     * `[]` would conclude the queue was empty, which is indistinguishable from the right answer.
-     */
+    // A 400, not `[]`: an agent that mistyped a status would conclude the queue was empty.
     const allowed = ["unverified", "pending", "approved", "rejected", "failed"];
     if (!allowed.includes(status)) {
       return {
@@ -283,12 +253,7 @@ async function listMentionsTool(
   };
 }
 
-/**
- * Approve, reject or delete one mention, and purge the page it changed. IT CALLS `decideMention` AND
- * NOTHING ELSE: the write and the purge travel together there, so this cannot ship the half that
- * changes the database without the half that makes it visible. The capability check is in that door
- * too, so the refusal is the same whichever caller asks.
- */
+// Calls `decideMention` only: the write and the cache purge travel together there.
 async function decideMentionTool(
   env: OperatorEnv,
   actor: Actor,
@@ -316,11 +281,7 @@ async function decideMentionTool(
 
   const result = await decideMention(env, id, decision, actor);
 
-  /*
-   * `changed: false` IS A REAL ANSWER AND NOT AN ERROR: the row may be one the write refuses for
-   * having no evidence to approve, and reporting that as a 404 would make a caller retry something
-   * that will never succeed.
-   */
+  // `changed: false` is an answer, not a 404, so a caller does not retry something that cannot succeed.
   return {
     ok: true,
     data: {
@@ -333,12 +294,8 @@ async function decideMentionTool(
   };
 }
 
-/**
- * Runs one tool. Errors are TRANSLATED here rather than thrown, and the translation IS the
- * contract: a gate rejection returns the gate's own message with the field and line it named,
- * verbatim, because an agent that gets "invalid frontmatter" and nothing else cannot fix its own
- * mistake.
- */
+// Errors are translated, not thrown: a gate rejection returns its own message, field and line, so an
+// agent can fix its own mistake.
 export async function runTool(
   env: OperatorEnv,
   actor: Actor,
@@ -385,8 +342,7 @@ export async function runTool(
 }
 
 function translate(error: unknown): ToolResult {
-  // Policy refusal. 403, and it names the policy so a caller can branch on it rather than
-  // string-matching the prose.
+  // Names the policy so a caller can branch on it rather than string-match the prose.
   if (error instanceof PolicyError) {
     return {
       ok: false,
@@ -396,7 +352,6 @@ function translate(error: unknown): ToolResult {
     };
   }
 
-  // A content gate. The field and line are the useful part.
   if (error instanceof EditorError) {
     return {
       ok: false,
@@ -406,14 +361,8 @@ function translate(error: unknown): ToolResult {
     };
   }
 
-  // A conflict means main moved under the caller. Retryable after a re-read.
-  /*
-   * DIVERGENCE IS ITS OWN BRANCH, because it means the OPPOSITE of the failures above: the commit
-   * landed, the writing is safe, and retrying is the one response that does not help.
-   *
-   * Matched on `name` rather than `instanceof`, a cross-module identity check through two build
-   * graphs holding only until something duplicates the module. 500: the caller did nothing wrong.
-   */
+  // A divergence means the commit LANDED, so retrying is the one thing that does not help (500: the
+  // caller did nothing wrong). Matched on `name`, not `instanceof`: the module can load in two build graphs.
   if (error instanceof Error && error.name === DIVERGENCE_ERROR_NAME) {
     return {
       ok: false,
@@ -440,10 +389,7 @@ function translate(error: unknown): ToolResult {
 }
 
 async function listPosts(env: OperatorEnv) {
-  /*
-   * D1, not the repository: the rows are what the site serves and they converge to the repo under
-   * rule 18. Field names are the tool's contract and are unchanged.
-   */
+  // D1, not the repository: the rows are what the site serves.
   const rows = await listPostsForOperator(env);
   return {
     headSha: await currentHead(env),
@@ -473,7 +419,6 @@ async function getPost(env: OperatorEnv, args: Record<string, unknown>): Promise
   if (!file) return { ok: false, status: 404, error: `No post exists with slug "${slug}".` };
   const raw = file.content;
 
-  // The rendered half comes from the D1 row: the one rendered copy there is.
   const record = await getAdminPostRow(env, slug);
   const state = readState(raw);
 
@@ -481,12 +426,10 @@ async function getPost(env: OperatorEnv, args: Record<string, unknown>): Promise
     ok: true,
     data: {
       slug,
-      // The full file, so a caller can edit and send it straight back.
       raw,
       headSha: await currentHead(env),
       draft: state.draft,
-      // Whether an operator may publish this post is a question about the FILE, so it is answered from
-      // the file and reported rather than left to be discovered by a 403.
+      // Answered from the file, so a caller learns it before meeting a 403.
       firstPublished: state.firstPublished,
       operatorMayPublish: state.firstPublished !== null,
       html: record?.html ?? null,
@@ -512,9 +455,7 @@ async function savePostTool(
     };
   }
 
-  // Absent `expectedHeadSha` the save is unconditional, deliberately for a non-browser caller: it
-  // has no page to reload, and forcing a read-then-write would make every agent save a two-call
-  // dance. A caller that wants the editor's conflict semantics passes the sha from `get_post`.
+  // No `expectedHeadSha` means unconditional, deliberately: an agent has no page to reload.
   const expectedHeadSha =
     typeof args.expectedHeadSha === "string" && args.expectedHeadSha
       ? args.expectedHeadSha
@@ -565,29 +506,18 @@ async function deletePostTool(
 }
 
 
-/**
- * THE FULL-CORPUS ASK UPLOAD. `savePost` keeps Ask in step for a post published THROUGH the editor,
- * and nothing kept it in step for a post published by COMMIT, which is how most of this site's
- * writing lands.
- *
- * IDEMPOTENT, which is what makes it safe as a pipeline step. THE COUNTS ARE READ BACK, NOT
- * ACCUMULATED, so a caller cannot be told this succeeded by an operation that merely ran.
- */
+// Posts published by COMMIT never pass through `savePost`, so this keeps Ask in step for them.
 async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
   if (!askAvailable(env)) {
-    // Same stance the Ask endpoint takes: an absent binding means the feature is not here, rather than
-    // here and broken.
+    // An absent binding means the feature is not here, rather than here and broken.
     return { ok: false, status: 404, error: "Ask is not enabled on this deployment." };
   }
 
   const { uploaded, keys, failed, cacheDropped } = await syncAskCorpus(env);
   const removed = await pruneAskCorpus(env, keys);
 
-  /*
-   * READ BACK AFTER BOTH WRITES. The index is eventually consistent, so drift reported here can be a
-   * moment behind rather than a fault, and the next scheduled poll is the tiebreaker. A key in
-   * `failed` is not that: it was never written, and the report refuses convergence on it.
-   */
+  // The index is eventually consistent, so drift here may be a moment behind. A key in `failed` was
+  // never written, and the report refuses convergence on it.
   const status = await askIndexStatus(env);
 
   return {
@@ -603,24 +533,7 @@ async function syncAsk(env: OperatorEnv): Promise<ToolResult> {
   };
 }
 
-/**
- * REBUILDS THE MEDIA INDEX, THROUGH THE DERIVATION, AND PROVES IT AFTERWARDS.
- *
- * RULE 18 IS THE WHOLE SHAPE: it takes no arguments describing what to write, and there is
- * deliberately no way to ask it to index one key, which is the shape that turns an index into a
- * second truth. THE VERDICT IS RECONCILED, NEVER SUPPLIED.
- *
- * The manual button is not replaced: it stays as the repair for when something has gone wrong out
- * of band. NO POLL, structurally: the rebuild awaits every write and the read-back is in the SAME
- * request, which reads its own writes.
- */
-/**
- * THE MIRROR REPAIR, deriving its work from the SAME comparison the drift check uses.
- *
- * SAFE TO FIRE UNATTENDED because it has no delete branch in either bucket and never writes to the
- * primary, so the worst a spurious run does is rewrite a twin with the bytes it already had. The
- * counts come from a SECOND comparison after the writes.
- */
+// Safe unattended: no delete branch in either bucket, and it never writes the primary.
 async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
   const { copied, gone, status } = await copyMissingTwins(env);
 
@@ -628,8 +541,7 @@ async function backupMedia(env: OperatorEnv): Promise<ToolResult> {
     ok: true,
     data: {
       copied,
-      // An object that vanished between the comparison and the copy. Not an error: its twin, if it had
-      // one, is exactly what the mirror is for.
+      // Vanished between the comparison and the copy: not an error, the twin is what the mirror is for.
       gone,
       objects: status.objects,
       twins: status.twins,
@@ -658,12 +570,7 @@ async function syncMedia(env: OperatorEnv): Promise<ToolResult> {
   };
 }
 
-/**
- * A `data:` URI's own declaration, or null when this is bare base64. Parsed rather than stripped,
- * because the prefix carries the MIME type. Only base64 payloads are accepted: a percent-encoded
- * URI is a different encoding, and silently mis-decoding one would store rubbish under a digest
- * that looks perfectly valid.
- */
+// Base64 only: silently mis-decoding a percent-encoded URI would store rubbish under a valid-looking digest.
 function readDataUri(value: string): { type: string; payload: string } | null {
   const match = /^data:([^;,]*)(;base64)?,/i.exec(value);
   if (!match) return null;
@@ -671,10 +578,8 @@ function readDataUri(value: string): { type: string; payload: string } | null {
   return { type: (match[1] ?? "").toLowerCase(), payload: value.slice(match[0].length) };
 }
 
-/** Base64 to bytes, or null when it is not base64 at all. */
 function decodeBase64(payload: string): Uint8Array | null {
-  // Whitespace is what a base64 blob acquires traveling through a chat or a YAML block, and `atob`
-  // throws on it.
+  // Base64 picks up whitespace in chats and YAML, and `atob` throws on it.
   const packed = payload.replace(/\s+/g, "");
   try {
     const binary = atob(packed);
@@ -686,11 +591,7 @@ function decodeBase64(payload: string): Uint8Array | null {
   }
 }
 
-/**
- * The response body, up to a cap, READ IN CHUNKS AND ABANDONED AT THE CAP rather than buffered and
- * length-checked: a `Content-Length` is a claim the far end makes and a body can simply not stop,
- * so buffering it whole to discover that lets a remote URL decide how much memory this isolate uses.
- */
+// Read in chunks and abandoned at the cap: `Content-Length` is only a claim, and a body need not stop.
 async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promise<Uint8Array | null> {
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
@@ -716,45 +617,23 @@ async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promis
   return out;
 }
 
-/**
- * What to record when the caller did not say: the URL's last path segment first, that being the
- * closest thing to a name a person chose, and otherwise a default that at least describes the
- * object.
- */
 function defaultName(type: string, url: string): string {
   if (url) {
     try {
       const base = new URL(url).pathname.split("/").filter(Boolean).pop();
       if (base) return decodeURIComponent(base);
     } catch {
-      // An unparseable URL never gets this far, the protocol having been checked already. Caught anyway
-      // rather than thrown out of a naming helper.
+      // Unreachable: the protocol was already checked. Caught rather than thrown from a naming helper.
     }
   }
   const extension = ALLOWED.get(type);
-  // NOT a substituted default: a type outside the allowlist is one statement away from
-  // being refused, so this name is never stored. Returning `upload.bin` would be the substitution.
+  // Never stored: a type outside the allowlist is refused next. `upload.bin` would be a substitution.
   return extension ? `upload.${extension}` : "upload";
 }
 
-/**
- * THE BUCKET, as an operator operation. Ruling 32d.
- *
- * IT IS AN ADAPTER and `storeUpload` is the write: the allowlist, the size limit and the key are the
- * same code the admin upload runs. What is here is only how bytes REACH that door.
- *
- * TWO WAYS IN, AND `url` IS THE LOAD-BEARING ONE. `data` is base64, the obvious shape and the one
- * that does not scale, since no agent carries a photograph's worth of it through a conversation.
- * `url` is what makes the tool usable, and it is why the ruling named both.
- *
- * THE PRIMARY CONTROL IS THE TOKEN AND THE RATE LIMITER, said plainly because the checks below are
- * secondary: HTTPS only, since a fetch is the one place a caller chooses where this Worker goes; a
- * capped read; and the same `validateUpload` contract a form upload meets.
- *
- * THE TYPE THE CALLER DECLARES WINS, deliberately, because a good PNG served as
- * `application/octet-stream` is common. Safe, because it is checked against the allowlist AND the
- * bytes, the same treatment `file.type` gets on the form path.
- */
+// An adapter: `storeUpload` is the write. The token and rate limiter are the primary control; HTTPS only,
+// a capped read and `validateUpload` are secondary. The declared type wins because good PNGs are often
+// served as octet-stream, and it is still checked against the allowlist and the bytes.
 async function uploadMediaTool(
   env: OperatorEnv,
   args: Record<string, unknown>,
@@ -764,11 +643,7 @@ async function uploadMediaTool(
   const declaredType = typeof args.type === "string" ? args.type.trim().toLowerCase() : "";
   const declaredName = typeof args.name === "string" ? args.name.trim() : "";
 
-  /*
-   * EXACTLY ONE SOURCE. Both given is refused rather than resolved by a precedence rule, because a
-   * caller that supplied both has two different images in mind and silently picking one stores the
-   * wrong photograph under a digest that will never look wrong.
-   */
+  // Both sources is refused, not resolved: picking one could store the wrong image under a valid digest.
   if (data && url) {
     return {
       ok: false,
@@ -801,15 +676,9 @@ async function uploadMediaTool(
       };
     }
 
-    // The URI's own type only when the caller named none: an explicit argument is the more deliberate
-    // statement of the two.
     if (!type && uri) type = uri.type;
 
-    /*
-     * REFUSED ON THE ENCODED LENGTH, before `atob` allocates anything: base64 is four characters per
-     * three bytes, so this is arithmetic on the string in hand. Deliberately GENEROUS, since it only
-     * has to stop an absurd payload being decoded and `validateUpload` states the real limit.
-     */
+    // Refused on the encoded length before `atob` allocates. Generous: `validateUpload` states the real limit.
     const packedLength = (uri ? uri.payload : data).replace(/\s+/g, "").length;
     if (packedLength > Math.ceil(MAX_BYTES / 3) * 4 + 4) {
       return {
@@ -851,12 +720,7 @@ async function uploadMediaTool(
         error: `Fetching ${parsed.href} failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
-    /*
-     * THE PROTOCOL IS CHECKED AGAIN, ON WHERE IT LANDED, because `fetch` follows redirects and an
-     * `https://` URL is free to redirect to `http://`. Checking only what the caller typed would make
-     * the rule a check on their typing rather than on where the bytes came from. The fallback keeps it
-     * closed rather than open if the post-redirect URL is ever empty.
-     */
+    // Checked again where it LANDED: `fetch` follows redirects, and https may redirect to http.
     let landed = "";
     try {
       landed = new URL(response.url || parsed.href).protocol;
@@ -896,21 +760,14 @@ async function uploadMediaTool(
     }
     bytes = read;
 
-    // The response's own claim, only when the caller made none. Split on `;`, because a charset
-    // parameter is normal on one of these types and the allowlist holds bare types.
+    // Split on `;`: a charset parameter is normal, and the allowlist holds bare types.
     if (!type) {
       type = (response.headers.get("content-type") ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
     }
   }
 
-  /*
-   * COPIED INTO A FRESH ArrayBuffer rather than handed `bytes.buffer`. Two reasons, and the second is
-   * the one that would have hurt: `.buffer` does not satisfy the door's parameter type at all, and it
-   * is the whole underlying allocation rather than the view. It happens to be exactly the content
-   * today because the two producers size their arrays to what they read, which is a property of those
-   * functions rather than of this call, so a later change to either would hash and store the wrong
-   * bytes under a key that still looks valid.
-   */
+  // A fresh ArrayBuffer, not `bytes.buffer`: that is the whole allocation, not the view, so a later change
+  // to a producer could hash and store the wrong bytes.
   const payload = new ArrayBuffer(bytes.byteLength);
   new Uint8Array(payload).set(bytes);
 
@@ -927,28 +784,19 @@ async function uploadMediaTool(
   return {
     ok: true,
     data: {
-      // The editor's own two keys, from the same function that builds theirs, so the string an agent puts
-      // in markdown and the string the editor inserts are one statement rather than two that agree today.
+      // The editor's own builder, so the string an agent puts in markdown is the one the editor inserts.
       ...uploadSuccessBody(stored.key),
       bytes: stored.bytes,
       width: stored.width,
       height: stored.height,
-      /*
-       * THE ANNOTATION ROW IS REPORTED, not assumed. It is written non-fatally because the object is
-       * already in R2 and a D1 hiccup must not report failure for a write that happened, which leaves an
-       * operator with no way to see it. `false` means the object landed and the row did not; the repair
-       * is `sync_media`, which re-derives it.
-       */
+      // `false` means the object landed and the row did not; `sync_media` re-derives it.
       recorded: stored.recorded,
     },
   };
 }
 
-/**
- * THE CONTENT-DRIFT REPAIR, deriving its work from the SAME comparison the health check uses, which
- * is what makes a markdown commit from any machine live within one poll with no deploy. RULE 18:
- * scoped, but never hand-written, every drifted slug going through the one door.
- */
+// Derives its work from the same comparison the health check uses, and every drifted slug goes through
+// the one render door.
 async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   const readSides = async () => {
     const entries = await listDirectory(env, "content/posts");
@@ -986,8 +834,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
     removed += 1;
   }
 
-  // READ BACK AFTER THE WRITES. D1 reads its own writes in-request, so a correct repair can never
-  // report drift here and a reported drift is real.
+  // D1 reads its own writes in-request, so drift reported here is real.
   const after = await readSides();
   const residual = contentDriftCompare(after.files, after.rows);
   const residualCount =
@@ -1005,33 +852,16 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   };
 }
 
-/**
- * What the operator can see about the state of the pipeline without guessing. The three stores are
- * reported SEPARATELY, because they can disagree and the whole design assumes they fail
- * independently.
- */
-/**
- * EXPORTED because the cockpit renders it: rule 17 says the page renders what an instrument reports
- * rather than computing a second answer, so it calls THIS function and there is no admin-side copy
- * of the store counts to drift from it.
- */
+// Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather
+// than computing a second answer.
 export async function syncStatus(env: OperatorEnv) {
-  /*
-   * The repository's post count, from ONE Contents directory listing. The field name is the tool's
-   * contract and is unchanged; what it has always meant is how many posts the repository holds.
-   */
   const repoEntries = await listDirectory(env, "content/posts");
   const repoPosts = repoEntries.filter(
     (e) => e.type === "file" && e.name.endsWith(".md"),
   ).length;
 
-  // Counted through DRIZZLE, not by interpolating the predicate into a template string, which
-  // stringifies the expression object and makes D1 answer `no such column`. Locally the tool failed
-  // earlier, at a missing token, and never reached the query, so the live round trip was the only
-  // place this could have been found.
-  //
-  // The visibility rule is why the predicate is reused rather than rewritten in SQL: a hand-copied WHERE
-  // clause here would be exactly the drift that rule exists to prevent.
+  // Counted through Drizzle: interpolating the predicate into a template string stringifies the object and
+  // D1 answers `no such column`. `publiclyVisible()` is reused so the visibility rule has one owner.
   const db = getDb(env);
   const totalRow = await db.select({ n: count() }).from(postsTable).get();
   const visibleRow = await db
@@ -1049,19 +879,12 @@ export async function syncStatus(env: OperatorEnv) {
     artifactPosts: repoPosts,
     d1Posts: totalRow?.n ?? 0,
     d1PubliclyVisible: visibleRow?.n ?? 0,
-    // Counted on the docsize shadow table, never `COUNT(*)` on the index itself, which reads THROUGH to
-    // the content table and can never detect drift.
+    // The docsize shadow table: `COUNT(*)` on the index reads through to the content table and never drifts.
     searchIndexDocs: indexed?.n ?? 0,
     askConfigured: askAvailable(env),
     githubConfigured: Boolean(env.GITHUB_TOKEN),
-    /*
-     * COMMITS THAT LANDED WHILE D1 DID NOT FOLLOW: the only store here whose absence is the interesting
-     * state, so an empty list is the normal answer. Read from KV rather than D1, because a record of a
-     * D1 failure kept in D1 is missing exactly when it matters.
-     *
-     * `known: false` is a distinct answer from an empty list: a status tool that cannot read one of its
-     * stores must say so rather than report zero.
-     */
+    // Read from KV: a record of a D1 failure kept in D1 is missing exactly when it matters. `known: false`
+    // is not the same answer as an empty list.
     divergences: await listDivergences(env),
   };
 }

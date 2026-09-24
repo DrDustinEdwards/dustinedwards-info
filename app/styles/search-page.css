@@ -113,8 +113,7 @@
   line-height: 1.6;
 }
 
-/* Prairie gold, the ratified highlight. Purple would read as brand rather than
-   as a match, and rule 6 keeps purple off any signaling job. */
+/* Gold, not purple: purple would read as brand rather than as a match. */
 .search-snippet mark {
   padding: 0 0.125rem;
   border-radius: 0.125rem;

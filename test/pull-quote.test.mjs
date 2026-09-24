@@ -1,15 +1,5 @@
-/**
- * The `:pullquote` directive: visual only, marked in the prose rather than written twice.
- *
- * WHAT MAKES THIS WORTH A TEST: the rule is "never a second copy", and the obvious implementation
- * breaks it invisibly. A pull quote authored as its own block puts the sentence in the source
- * twice, and the markdown twin serves the source verbatim, so the twin would carry a duplicate that
- * nothing on the rendered page shows. Marking the sentence where it already lives is the fix, and
- * the assertions below are all about that: one copy in the source, one in the accessibility tree,
- * two on screen.
- *
- * @see app/lib/content/pipeline.mjs
- */
+/* A pull quote authored as its own block would put the sentence in the source twice, and the
+ * markdown twin serves the source verbatim, so the sentence is marked where it already lives. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -39,11 +29,8 @@ test("it is hidden from assistive technology, as the literal string", async () =
 test("the paragraph renders exactly as it would have without the marker", async () => {
   const marked = await render(PARAGRAPH);
   const plain = await render(PARAGRAPH.replace(`:pullquote[${SENTENCE}]`, SENTENCE));
-  /*
-   * THE DIFFERENTIAL. Strip the raised copy from the marked output and what is left must be
-   * byte-identical to the unmarked render: the marker leaves the prose untouched or it is editing
-   * the post.
-   */
+  /* Strip the raised copy and the rest must be byte-identical to the unmarked render, or the
+   * marker is editing the post. */
   const stripped = marked.html.replace(/<p class="pull-quote"[^>]*>[^<]*<\/p>\n?/, "");
   assert.equal(stripped, plain.html);
 });

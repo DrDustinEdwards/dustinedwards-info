@@ -1,11 +1,3 @@
-/*
- * The three optional author-set blocks at the top of a post, as ruled `dl` rows.
- *
- * TOKENS ONLY, no raw hex: every value here is a token from app.css.
- *
- * A 150px label column at 1280 and label-above-value at 375, which is the one thing that changes
- * across widths. Rows are separated by dust hairlines and nothing is boxed.
- */
 .post-blocks {
   margin: 0 0 var(--s-6);
   border-block-start: var(--line-w) solid var(--dust);

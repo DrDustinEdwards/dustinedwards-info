@@ -1,19 +1,6 @@
-/**
- * One client for Capsid's MCP endpoint, and one list of the documents the canvas is given.
- *
- * BOUNDARY: the list has one owner here, because an exporter and a gate each carrying their own
- * would eventually check a set the exporter no longer writes and still pass, which is the
- * alias-blind failure the vacuity rule names. Credential handling is deliberately the caller's.
- */
-
 export const NAMESPACE = "dustinedwards";
 export const CAPSID_MCP = "https://capsid.dustin-edwards.workers.dev/ops/mcp";
 
-/**
- * The Capsid documents the design agent is given, and why each one earns a place in a budget the
- * canvas actually reads. Deliberately NOT here: the inventory that answers what to build rather
- * than how it should look, and the runbook, which is operational procedure with no design content.
- */
 export const EXPORTED_DOCS = [
   {
     path: "design-rules-researched-2026-09.md",
@@ -30,8 +17,7 @@ export const EXPORTED_DOCS = [
 ];
 
 /**
- * One JSON-RPC call against Capsid's MCP endpoint. The endpoint may answer as SSE and this takes
- * the LAST `data:` line, because a stream can carry progress frames ahead of the result.
+ * The endpoint may answer as SSE: take the LAST `data:` line, as progress frames can precede it.
  *
  * @param {string} token
  * @param {string} name
@@ -63,12 +49,6 @@ export async function callTool(token, name, args) {
   return JSON.parse(content ?? "{}");
 }
 
-/**
- * The stamp an exported file carries, and the parser that reads it back. The gate compares it to
- * Capsid's CURRENT value, which is the whole mechanism: an export is a copy, a copy has no way of
- * knowing its source moved, and hard rule 18's stamp is what makes the drift visible rather than
- * silent.
- */
 export const STAMP_PREFIX = "capsid-source:";
 
 /** @param {{namespace: string, path: string, updated_at: string}} doc */

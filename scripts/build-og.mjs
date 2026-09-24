@@ -1,12 +1,5 @@
-/**
- * Generates the social card for every post and uploads it to R2.
- *
- *   npm run build:og -- --local|--remote
- *
- * BOUNDARY: BUILD TIME ONLY, in Node, because satori and resvg cannot run in the Worker, and it
- * uploads AND prunes against the keys the CURRENT artifact references while the live site serves
- * what is in D1, so run outside a ship window it deletes every card production points at.
- */
+// Build time only: satori and resvg cannot run in the Worker. It prunes against the keys the current
+// artifact references while the live site serves D1, so run outside a ship window it deletes live cards.
 
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -41,10 +34,8 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 
 /**
- * Hill Country tokens RESOLVED FROM app.css rather than restated, this being Node. TAKEN
- * ENTIRELY FROM THE DARK BLOCK, which is the property: `--on-chrome` and its siblings are
- * ratified against `--surface-chrome` within a theme, so mixing blocks leaves every measured
- * pair. The mark is the exception, sound only because its token is one hex in both by ruling.
+ * Taken entirely from the dark block: the chrome tokens are ratified against `--surface-chrome`
+ * within a theme, so mixing blocks leaves every measured pair.
  */
 const CHROME_BLOCK = tokenBlock("build:og", THEME_SELECTORS.dark);
 const {
@@ -64,17 +55,12 @@ const {
 );
 
 /**
- * THE WORDMARK, READ OUT OF `app/lib/seo.ts`: a card disagreeing with the page it opens is two
- * identities. Parsed as TEXT, because TypeScript refuses the cross-project specifier, and it
- * fails closed three ways: declaration renamed, block reshaped, or `name` not a plain string.
+ * Parsed as text, because TypeScript refuses the cross-project specifier.
  *
  * @returns {string}
  */
 function siteName() {
-  /*
-   * THE SHARED STRIPPER: the anchor below is an indexOf on a declaration this file is exactly the
-   * kind to quote in prose, and a planted comment was read as the site name.
-   */
+  // Stripped first: prose quoting this declaration would satisfy the indexOf below.
   const source = stripComments(readFileSync(path.join("app", "lib", "seo.ts"), "utf8"));
   const at = source.indexOf("export const SITE = {");
   if (at === -1) {
@@ -92,9 +78,7 @@ function siteName() {
 const SITE_NAME = siteName();
 
 /**
- * The card layout as satori's element objects rather than JSX, so this file needs no build step.
- * EVERYTHING IS DERIVED except WHERE things sit. TWO ANCHORS, ONE AT EACH END: the title block
- * grows UPWARD into the gap, so a long title eats air rather than the meta line.
+ * The title block grows upward into the gap, so a long title eats air rather than the meta line.
  *
  * @param {{
  *   title: string,
@@ -118,10 +102,8 @@ export function card(post) {
   const title = cardTitle(post.title);
   const description = cardDescription(post.description);
 
-  /*
-   * Through the ONE owner of a timestamp as a date a person reads. It returns null rather than
-   * "Invalid Date", which would be permanent on an immutable object, so the line is filtered.
-   */
+  // Filtered, because the formatter returns null rather than "Invalid Date", which would be permanent
+  // on an immutable object.
   const date = longDateUTC(post.publishAt);
 
   /*
@@ -144,13 +126,7 @@ export function card(post) {
         fontFamily: "Inter",
       },
     },
-    /*
-     * The mark from `scripts/lib/mark.mjs`, the same node the site renders, derived from the committed
-     * logo files rather than restated.
-     */
     el("div", { style: { display: "flex" } }, markElement()),
-    // The gap. Everything below hangs off the foot, so a long title grows up
-    // into this and never down into the meta line.
     el("div", { style: { display: "flex", flex: 1 } }),
     el(
       "div",
@@ -162,19 +138,13 @@ export function card(post) {
           color: ON_GROUND,
           lineHeight: 1.1,
           letterSpacing: "-0.02em",
-          /*
-           * SATORI DOES HONOUR `wordBreak`; `overflowWrap` is the one it ignores. It does not replace the
-           * character cap, which governs how much text there is rather than one unbreakable word.
-           */
+          // Satori honours `wordBreak` but ignores `overflowWrap`.
           wordBreak: "break-word",
         },
       },
       title,
     ),
-    /*
-     * Two lines of muted type is a TEXTURE, not something to read; a third would be prose asking to
-     * be read at a size it cannot be.
-     */
+    // Two lines of muted type is texture; a third would be prose asking to be read at a size it cannot be.
     description
       ? el(
           "div",
@@ -193,14 +163,9 @@ export function card(post) {
           description,
         )
       : null,
-    /*
-     * THE ONE ACCENT, A MEASURED PAIR: `--focus-ring-on-chrome` against `--surface-chrome` is a
-     * check:contrast row at the graphical-object floor. THE NAME IS A DELIBERATE WART: this card
-     * draws no focus ring, but that is the only pale gold with a ratified pair against this surface,
-     * and a decorative gold wanted as its own thing is a NEW token, not a literal hex here.
-     */
+    // The only pale gold with a ratified pair against this surface. A decorative gold would be a new
+    // token, not a literal hex here.
     el("div", { style: { display: "flex", width: 84, height: 5, marginTop: 40, background: ACCENT } }),
-    /* ASSEMBLED FROM A FILTERED LIST, so an absent date takes its separator with it. */
     el(
       "div",
       {
@@ -219,10 +184,7 @@ export function card(post) {
   );
 }
 
-/**
- * The keys the DEPLOYED site is serving, read from D1, prefix STRIPPED rather than rebuilt.
- * FAILS CLOSED BY CONSTRUCTION: not knowing what is live is a reason to delete nothing.
- */
+/** Fails closed by construction: not knowing what is live is a reason to delete nothing. */
 async function liveCardKeys() {
   const raw = execSync(
     `npx wrangler d1 execute ${databaseFor("DB")} --remote --json ` +
@@ -253,10 +215,6 @@ async function main() {
   const target = process.argv.includes("--local") ? "--local" : "--remote";
   const dryRun = process.argv.includes("--dry-run");
 
-  /*
-   * LOCAL RENDER MODE touches R2 with nothing and returns BEFORE the prune, since after a template
-   * bump every existing object is an orphan and those are what the live site serves.
-   */
   const outFlag = process.argv.indexOf("--out");
   const outDir = outFlag >= 0 ? process.argv[outFlag + 1] : null;
   if (outFlag >= 0 && !outDir) {
@@ -287,18 +245,14 @@ async function main() {
   const cards = [];
   let skipped = 0;
   for (const post of posts) {
-    /*
-     * A DRAFT NEVER GETS A CARD: the card RENDERS THE TITLE, so an unpublished headline was public
-     * while its page 404d. The rule is IMPORTED, and the prune uses the same list, so a post that
-     * stops being visible has its card DELETED rather than merely not rewritten.
-     */
+    // A draft never gets a card, because the card renders the title. The prune uses the same list, so a
+    // post that stops being visible has its card deleted.
     if (!isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt })) {
       skipped += 1;
       console.log(`  skip   ${post.slug} (not publicly visible)`);
       continue;
     }
 
-    // A post with its own cover never gets a generated card.
     if (post.cover) {
       skipped += 1;
       console.log(`  skip   ${post.slug} (has a cover)`);
@@ -329,8 +283,6 @@ async function main() {
         .render()
         .asPng();
 
-      // LOCAL RENDER MODE stops here: written to the review directory, and R2
-      // is not contacted at all.
       if (outDir) {
         const sample = path.join(outDir, path.basename(key));
         await writeFile(sample, png);
@@ -359,10 +311,8 @@ async function main() {
     await rm(workDir, { recursive: true, force: true });
   }
 
-  /*
-   * LOCAL RENDER MODE RETURNS HERE, and the ordering is the safety property: after a template bump
-   * every existing object is an orphan, and those are what the deployed site is still serving.
-   */
+  // Local render mode returns here, before the prune: after a template bump every existing object is
+  // an orphan, and those are what the deployed site still serves.
   if (outDir) {
     console.log(
       `\n  ${written} card(s) rendered to ${outDir}. ` +
@@ -371,9 +321,8 @@ async function main() {
     return;
   }
 
-  // Prune. The key hashes template version, slug, title and description, so any change abandons the
-  // old object. **It will not act on a listing it cannot trust:** `listForPrune` refuses an empty
-  // one and one missing a key the corpus still references.
+  // The key hashes template version, slug, title and description. `listForPrune` refuses an empty
+  // listing, and one missing a key the corpus still references.
   const live = new Set(cards.map((card) => card.key));
   const present = await listForPrune({
     bucket: BUCKET,
@@ -389,20 +338,13 @@ async function main() {
       `${live.size} referenced by the corpus, ${orphans.length} orphaned`,
   );
 
-  /*
-   * THE OG COUPLING LAW, ENFORCED RATHER THAN WRITTEN DOWN. `live` is the keys the CURRENT
-   * ARTIFACT references and the deployed site serves what is in D1, so between a retitle and the
-   * next sync every key the site serves is an orphan here, and running it 404s every card with no
-   * deploy to roll back. The PROPERTY is checkable directly and is stronger than any flag a
-   * hurried operator would pass. BOUNDARY: a row pointing at an object already gone looks live.
-   */
+  // Between a retitle and the next sync every key the site serves is an orphan here, so a prune then
+  // 404s every card with no deploy to roll back. A row pointing at an object already gone looks live.
   if (target === "--remote" && !dryRun && orphans.length > 0) {
     const liveKeys = await liveCardKeys();
 
-    /*
-     * SCOPE, ASSERTED: an empty read makes the comparison pass on nothing, and an artifact naming
-     * cards while D1 names none IS the unsynced state this guards.
-     */
+    // Scope: an empty read passes on nothing, and an artifact naming cards while D1 names none is the
+    // unsynced state this guards.
     if (live.size > 0 && liveKeys.size === 0) {
       throw new Error(
         `build:og REFUSED to prune. The artifact references ${live.size} card(s) ` +

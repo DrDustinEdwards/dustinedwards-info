@@ -1,27 +1,11 @@
-/**
- * THE ONLY PATHS A DESIGN-SYNC UPLOAD MAY WRITE OR DELETE in the design system project.
- *
- * Ruling 137: the design system project's authoritative files are the canvas's, and the sync only
- * mirrors what the build produces. A written "never delete these" list lagged the canvas by one
- * directory once (NOTES.md: `part-c/` was missing from it for days), so the rule is now an
- * allowlist in code: a path is uploadable only because the build owns it, never because nobody
- * remembered to forbid it.
- *
- * `scripts/ds-resync.mjs` applies it to the driver's verdict before any caller sees the verdict,
- * and `node scripts/lib/ds-upload-scope.mjs <plan.json>` applies it to a hand-built plan (the
- * no-anchor case, where the deletes come from a reviewed `list_files`, not from the diff).
- */
+// An allowlist, not a deny list: the design system project's files are the canvas's, and a path is
+// uploadable only because the build owns it.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/**
- * Build-owned paths. `_ds_needs_recompile` is the sentinel the upload writes FIRST and re-arms
- * LAST (the /design-sync skill's upload sequence), so a list without it fails every sync.
- * `_preview/` is build-owned only for the compiled component scripts directly in it: the
- * screenshots that used to sit beside them were canvas work.
- */
+// `_ds_needs_recompile` is the sentinel the upload writes first and re-arms last, so it must be here.
 const BUILD_OWNED = [
   /^_ds_bundle\.[a-z]+$/,
   /^styles\.css$/,
@@ -35,29 +19,18 @@ const BUILD_OWNED = [
   /^guidelines\/.+/,
   /^_vendor\/.+/,
   /^_preview\/[^/]+\.js$/,
-  // The preview cards `.design-sync/build-cards.mjs` renders: one HTML file per directory, three
-  // deep, and nothing else, so the folder cannot become a place the sync writes anything.
   /^cards\/[a-z]+\/[a-z0-9-]+\/[a-z0-9-]+\.html$/,
 ];
 
-/**
- * Never written or deleted, whatever the list above ever grows to hold. `templates/visual-system/`
- * is the approved visual system made on the canvas (ruling 137), and `github.md` is the canvas's.
- */
+// Canvas-made, so protected whatever BUILD_OWNED grows to hold.
 const NEVER = [/^templates(\/|$)/, /^github\.md$/];
 
-/**
- * What stays local in the output folder and is never uploaded: dot-prefixed entries at the root,
- * `_screenshots/` and `_sb/` (the skill's "What stays local").
- */
 const STAYS_LOCAL = [/^\./, /^_screenshots(\/|$)/, /^_sb(\/|$)/];
 
 /**
- * One path's verdict. A path that is not a plain relative path is refused rather than normalized:
- * `..` or an absolute path in an upload plan is a defect, and guessing what it meant is how it
- * would land somewhere unintended.
+ * Refused, not normalized: guessing what a `..` or absolute path meant is how it lands elsewhere.
  *
- * @param {string} path a project-relative path
+ * @param {string} path
  * @returns {string | null} why it is refused, or null when the build owns it
  */
 export function refusal(path) {
@@ -74,9 +47,6 @@ export function refusal(path) {
 }
 
 /**
- * Check a whole plan. Every path is checked, not just the first bad one, so a refusal names all
- * of them at once.
- *
  * @param {{ writes?: string[], deletes?: string[] }} plan
  * @returns {string[]} one line per refused path; empty when the plan is inside scope
  */
@@ -94,10 +64,7 @@ export function planViolations({ writes = [], deletes = [] }) {
 }
 
 /**
- * The files an atomic upload writes: everything under the output folder that does not stay local.
- * Paths come back project-relative with forward slashes, as the upload names them.
- *
- * @param {string} outDir the driver's `--out` folder
+ * @param {string} outDir
  * @returns {string[]}
  */
 export function plannedWrites(outDir) {
@@ -118,14 +85,11 @@ export function plannedWrites(outDir) {
 }
 
 /**
- * Apply the scope to the driver's verdict. When the verdict plans an upload, its writes are the
- * output folder's uploadable files and its deletes are `upload.deletePaths` verbatim. A plan with
- * any path outside scope comes back REFUSED: `ok: false` and `upload: null`, which is the shape the
- * driver itself uses for "do not upload", so the skill stops on it without knowing this check
- * exists.
+ * A refusal reuses the driver's own do-not-upload shape (`ok: false`, `upload: null`), so the
+ * skill stops on it without knowing this check exists.
  *
- * @param {any} verdict the driver's parsed verdict
- * @param {string} outDir the driver's `--out` folder
+ * @param {any} verdict
+ * @param {string} outDir
  * @returns {{ verdict: any, violations: string[] }}
  */
 export function enforceVerdict(verdict, outDir) {
@@ -140,10 +104,6 @@ export function enforceVerdict(verdict, outDir) {
   };
 }
 
-/*
- * The hand-built-plan check: `node scripts/lib/ds-upload-scope.mjs plan.json`, where plan.json is
- * `{ "writes": [...], "deletes": [...] }`. Exit 1 names every refused path.
- */
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const file = process.argv[2];
   if (!file) {

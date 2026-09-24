@@ -1,28 +1,3 @@
-/**
- * Draft preview links: the token shape, the key shapes, and the verdict.
- *
- * These are the rules that decide whether a stranger holding a URL sees an
- * unpublished post. Every one of them is a pure function of its arguments, so
- * every one of them is exercised here rather than only on a deployed Worker.
- *
- * TWO OF THE PLANTS FROM THE RATIFIED SPEC LIVE HERE, and they are tests rather
- * than gate assertions because the state they describe cannot be reached by
- * editing a file:
- *
- *   (b) THE ORPHANED INDEX ENTRY. `preview:token:<t>` and
- *       `preview:post:<slug>:<t>` are written together and deleted together, but
- *       KV expiry is per key and the two are not transactional. An index entry
- *       whose authority record is gone must resolve to nothing and must be
- *       SKIPPED by the drawer's list, never rendered as a live link.
- *
- *   (c) THE STATUS FLIP. A save that publishes a post revokes its tokens. That
- *       revocation is a write, and writes fail. The read path therefore re-asks
- *       the database on every request instead of trusting that it happened, so a
- *       token that survives publication still stops working.
- *
- * @see app/lib/preview-token.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
@@ -53,7 +28,6 @@ registerHooks({
 });
 const { createPreviewLink, listPreviewLinks } = await import("../app/lib/preview-links.server.ts");
 
-/** The slice of KV the preview links use, held in a Map. */
 function memoryKv() {
   const store = new Map();
   return {
@@ -81,8 +55,6 @@ const RECORD = makeRecord({
 
 const DRAFT = { slug: "a-draft", status: "draft" };
 
-/* ---------------------------------------------------------------- the token */
-
 test("a token is 32 bytes of randomness, base64url, 43 characters", () => {
   assert.equal(TOKEN_BYTES, 32);
   assert.equal(TOKEN_LENGTH, 43, "32 bytes is 43 unpadded base64 characters");
@@ -93,9 +65,7 @@ test("a token is 32 bytes of randomness, base64url, 43 characters", () => {
 });
 
 test("tokens do not repeat", () => {
-  // Not a randomness test, which this cannot be. It catches the failure that
-  // has actually happened to people: a generator that returns a constant, or
-  // one seeded once per process.
+  // Not a randomness test: it catches a generator that returns a constant or is seeded once.
   const seen = new Set();
   for (let i = 0; i < 200; i += 1) seen.add(mintToken());
   assert.equal(seen.size, 200);
@@ -122,8 +92,6 @@ test("the well-formed check is anchored and length-exact", () => {
   assert.ok(!isWellFormedToken(42));
 });
 
-/* ------------------------------------------------------------- the key shapes */
-
 test("the index prefix scopes a list to exactly one slug", () => {
   const prefix = postIndexPrefix("a-draft");
   assert.ok(postIndexKey("a-draft", mintToken()).startsWith(prefix));
@@ -147,8 +115,6 @@ test("a token is recovered from its index key, and a foreign key is refused", ()
   );
   assert.equal(tokenFromIndexKey("something:else", "a-draft"), null);
 });
-
-/* ---------------------------------------------------------------- the record */
 
 test("a record round-trips through the store's text form", () => {
   const parsed = parseRecord(JSON.stringify(RECORD));
@@ -188,18 +154,12 @@ test("the URL is absolute and carries the whole token", () => {
   );
 });
 
-/* --------------------------------------------------------------- the verdict */
-
 test("the whole story: a live token on a draft resolves", () => {
   const verdict = resolvePreview({ token: mintToken(), record: RECORD, post: DRAFT });
   assert.deepEqual(verdict, { ok: true, reason: "ok" });
 });
 
 test("PLANT (b): an ORPHANED INDEX ENTRY resolves to nothing", () => {
-  // The state: `preview:post:a-draft:<token>` still exists, its authority
-  // record `preview:token:<token>` does not. That is what a partial revoke or
-  // an unlucky expiry ordering leaves behind. The lister hands the verdict a
-  // null record, and the verdict must refuse.
   const verdict = resolvePreview({ token: mintToken(), record: null, post: DRAFT });
   assert.equal(verdict.ok, false);
   assert.equal(verdict.reason, "unknown");

@@ -1,18 +1,11 @@
 /**
- * What a cold load of one public route actually fetches, resolved offline from the browser
- * manifest and a walk of the route's import graph.
- *
- * BOUNDARY: reachability is not rendering, so a bundle imported inside a branch the route never
- * takes still counts, which over-approximates in the safe direction for a byte ceiling, and a
- * bundle fetched at runtime rather than imported is correctly not part of any cold load.
+ * Reachability is not rendering: a bundle imported inside a branch the route never takes still
+ * counts, which over-approximates in the safe direction for a byte ceiling.
  */
 
 import { dirname, join } from "node:path";
 
 /**
- * Module specifiers a source file imports, normalized to absolute paths inside `app/`, plus the
- * raw `?url` specifiers, which are assets rather than modules.
- *
  * @param {string} source @param {string} file @param {string} appDir
  */
 export function importsOf(source, file, appDir) {
@@ -20,14 +13,8 @@ export function importsOf(source, file, appDir) {
   const modules = [];
   /** @type {string[]} */
   const assets = [];
-  /*
-   * A `?url` IMPORT IS NOT A FETCH, and conflating the two was this walk's first bug: a component
-   * imports the palette bundle's URL so it can put it on a data attribute, and a gesture fetches it,
-   * so counting the import made every route look like it served a search dialog. What puts a bundle
-   * on a page is the component that renders the script tag, so an `enhance/dist` asset counts only
-   * when the file naming it also renders that component. Every other `?url` asset is collected
-   * unconditionally and the callers filter.
-   */
+  // A `?url` import is not a fetch: a component may import a bundle URL only to put it on a data
+  // attribute, so an `enhance/dist` asset counts only when the same file renders the script tag.
   const rendersScript = source.includes("<EnhancementScript");
 
   for (const m of source.matchAll(/(?:from\s*|import\s*\(?\s*)["']([^"']+)["']/g)) {
@@ -45,13 +32,12 @@ export function importsOf(source, file, appDir) {
 }
 
 /**
- * Every `?url` asset specifier reachable from `entry`, following imports inside `app/`.
- * Cycle-safe by construction, and a specifier that resolves to nothing is SKIPPED rather than
- * thrown on, the walk deliberately not knowing about node_modules or the vite alias table.
+ * A specifier that resolves to nothing is skipped rather than thrown on: the walk deliberately
+ * does not know about node_modules or the vite alias table.
  *
- * @param {string} entry absolute path to a route or root module
+ * @param {string} entry
  * @param {string} appDir
- * @param {(path: string) => string | null} read returns source or null
+ * @param {(path: string) => string | null} read
  */
 export function reachableAssets(entry, appDir, read) {
   const seen = new Set();
@@ -74,8 +60,6 @@ export function reachableAssets(entry, appDir, read) {
 }
 
 /**
- * A specifier to a real file, trying the extensions a TypeScript project omits.
- *
  * @param {string} path @param {(path: string) => string | null} read
  */
 function resolveModule(path, read) {
@@ -94,24 +78,21 @@ function resolveModule(path, read) {
 }
 
 /**
- * The stylesheets a route's document links, root's first then its own. The order is the
- * manifest's: root is the parent match, which is the cascade the site depends on since the split.
+ * Root's sheets first: root is the parent match, and the cascade depends on that order.
  *
- * @param {any} manifest React Router's browser manifest
+ * @param {any} manifest
  * @param {string} routeId
  */
 export function stylesheetsFor(manifest, routeId) {
   const routes = manifest?.routes ?? {};
   const rootCss = routes.root?.css ?? [];
   const routeCss = routes[routeId]?.css ?? [];
-  /** Deduplicated, because a sheet imported by both is linked once. */
   return [...new Set([...rootCss, ...routeCss])];
 }
 
 /**
- * Font files a set of stylesheets reference from `@font-face`, deliberately only there: a
- * `url()` elsewhere is fetched only if something matches, while a face is fetched whenever the
- * family is used, which on this site is every page.
+ * Only `@font-face` urls: a `url()` elsewhere is fetched only if something matches, while a face
+ * is fetched whenever the family is used, which here is every page.
  *
  * @param {string[]} cssText
  */

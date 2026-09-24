@@ -3,24 +3,8 @@ import { useNavigate } from "react-router";
 
 import { byteSize } from "~/lib/media/byte-size.mjs";
 
-/**
- * THE COMMAND PALETTE, LAYERED OVER THE SEARCH FORM RATHER THAN REPLACING IT.
- *
- * THIS COMPONENT RENDERS NOTHING ON THE SERVER. It mounts, finds the search input
- * already in the DOM, and attaches to it. With scripting off the page is
- * byte-for-byte what it was. That is also why it takes the input by ID rather than
- * owning it: an enhanced control that REPLACES the unenhanced one has to
- * reimplement everything the platform gave the original, and the first thing it
- * loses is the no-script path.
- *
- * THE RESULTS COME FROM THE SAME QUERY THE FORM RUNS. A client-side filter would
- * be a SECOND answer to "what matches this", which this page has already paid for
- * once.
- *
- * CLIENT STATE, DECLARED: five pieces, all transient, none in a URL.
- */
+// Attaches to the existing search input by id rather than replacing it, so the no-script page is unchanged.
 
-/** What `?palette=1` returns. Named so the fetch is typed rather than `any`. */
 type PalettePayload = { results: PaletteResult[]; hasMore: boolean };
 
 type PaletteResult = {
@@ -34,11 +18,7 @@ type PaletteResult = {
 
 export function MediaPalette({
   inputId = "media-q",
-  /**
-   * HARNESS SEAM: an optional prop with a production default. A static render dispatches
-   * no events, so without this the panel never opens in one. Wire-unreachable: React
-   * Router never supplies it.
-   */
+  /** Test seam: a static render dispatches no events, so without this the panel never opens. */
   initialResults,
 }: {
   inputId?: string;
@@ -52,9 +32,7 @@ export function MediaPalette({
   const [open, setOpen] = useState(Boolean(initialResults));
   const [copied, setCopied] = useState("");
 
-  /** The real input, which lives in the form and is never re-created here. */
   const inputRef = useRef<HTMLInputElement | null>(null);
-  /** Ignore a response that arrives after a newer one. */
   const seq = useRef(0);
 
   useEffect(() => {
@@ -71,12 +49,7 @@ export function MediaPalette({
     return () => input.removeEventListener("input", onInput);
   }, [inputId]);
 
-  /*
-   * THE FETCH, DEBOUNCED, AND ORDERED BY SEQUENCE NUMBER. The sequence number is
-   * the half that gets forgotten: two requests in flight can complete in either
-   * order, so a slow response to a shorter query can land after a fast one and
-   * replace the right answer with a stale one.
-   */
+  // Sequenced: a slow response to a shorter query can land after a fast one and replace the right answer.
   useEffect(() => {
     const trimmed = query.trim();
     if (!trimmed) {
@@ -97,16 +70,12 @@ export function MediaPalette({
           setCursor(0);
         })
         .catch(() => {
-          // A failed lookup leaves the form underneath untouched, so pressing Enter still
-          // navigates and still searches. Silence is the right behavior: an error banner
-          // over a working control is noise.
           if (id === seq.current) setResults([]);
         });
     }, 130);
     return () => window.clearTimeout(timer);
   }, [query]);
 
-  /** Copy, with the acknowledgment a copy control owes. */
   const copy = (value: string) => {
     navigator.clipboard
       .writeText(value)
@@ -117,12 +86,7 @@ export function MediaPalette({
       .catch(() => setCopied(""));
   };
 
-  /*
-   * On the window, because two bindings are global. Everything else applies only
-   * while the search box has focus, and the guard is what keeps arrow keys working
-   * in the alt textarea: a palette that stole ArrowDown from every field would break
-   * typing to fix finding.
-   */
+  // Only Cmd+K and / are global; the rest applies in the search box alone, so arrows keep working in fields.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -135,8 +99,6 @@ export function MediaPalette({
         inputRef.current?.select();
         return;
       }
-      // Slash focuses search, but only from OUTSIDE a field, or it would be
-      // impossible to type a slash into the alt text of a file called and/or.
       if (event.key === "/" && !inField) {
         event.preventDefault();
         inputRef.current?.focus();
@@ -160,19 +122,12 @@ export function MediaPalette({
         event.preventDefault();
         setCursor((c) => Math.max(0, c - 1));
       } else if (event.key === "Enter") {
-        /*
-         * ENTER COPIES. SHIFT+ENTER OPENS. `preventDefault` matters: without it the form
-         * submits and navigates, which is the unenhanced behavior and would throw away the
-         * copy. With scripting off there is no handler and the same key does exactly that
-         * navigation.
-         */
+        // preventDefault: otherwise the form submits and navigates, throwing away the copy.
         event.preventDefault();
         const hit = results[Math.min(cursor, results.length - 1)];
         if (!hit) return;
         if (event.shiftKey) {
-          // A ROUTER navigation, not `window.location`: the destination is this same route
-          // with a `key` in the query, and assigning to `location` tore the document down
-          // and rebuilt it to show a panel.
+          // Router navigation: assigning window.location rebuilds the whole document just to show a panel.
           navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
             preventScrollReset: true,
           });
@@ -198,11 +153,7 @@ export function MediaPalette({
         <ul className="media-palette-list">
           {results.map((r, i) => (
             <li key={r.key}>
-              {/*
-               * A LINK, not a button. The pointer path and the keyboard path differ on
-               * purpose: clicking a row opens it, because that is what clicking a row means
-               * everywhere, while Enter copies, because that is what the reader came for.
-               */}
+              {/* A link, not a button: clicking a row opens it, while Enter copies. */}
               <a
                 href={`/admin/media?key=${encodeURIComponent(r.key)}`}
                 className="media-palette-row"
@@ -228,11 +179,7 @@ export function MediaPalette({
         </ul>
       )}
 
-      {/*
-       * THE HINTS, which are the only documentation these shortcuts get: a keyboard
-       * affordance nobody can discover is one nobody uses. The count says "6+ matches"
-       * when the cap was hit, so six never reads as the whole answer.
-       */}
+      {/* The count says "6+" when the cap was hit, so six never reads as the whole answer. */}
       <p className="media-palette-hints">
         <span>
           <b>up down</b> move

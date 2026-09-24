@@ -76,23 +76,15 @@ import {
 } from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media._index";
 
-/**
- * The media library: search, browse, copy an address, and manage one asset.
- *
- * Without script the copy button is inert; the filename links to `?key=`, which shows the address.
- */
-
 export function meta() {
   return [{ title: "Media · Admin" }, { name: "robots", content: "noindex" }];
 }
 
-/** The filter vocabulary: `?role=` values, verbatim from the role column. */
 const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 
 /** About six rows fit under the search bar before the arrow keys scroll the highlight away. */
 const PALETTE_RESULTS = 6;
 
-/** Shortcuts as data. Each row's `evidence` token names the code that wires it. */
 const MEDIA_SHORTCUTS = [
   { keys: "cmd K", what: "Focus search from anywhere", evidence: "metaKey" },
   { keys: "/", what: "Focus search", evidence: 'event.key === "/"' },
@@ -109,7 +101,6 @@ const MEDIA_SHORTCUTS = [
   { keys: "escape", what: "Clear the search or the selection", evidence: 'event.key === "Escape"' },
 ] as const;
 
-/** Each lens with its question. `unattached` warns most: it reads as permission to delete. */
 const LENS_CHIPS = [
   {
     id: "unattached",
@@ -134,20 +125,15 @@ const TEMPLATE_REF_KEYS = Object.keys(TEMPLATE_REFS);
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  /* Set by the /admin middleware on `?timing=1`; when undefined, `timed` is a plain call. */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page") ?? "1") || 1;
 
-  // The picker reads this loader, so it is the same listing, not a second one.
   const picker = url.searchParams.get("picker") === "1";
 
-  /* The palette uses the same `matchesQuery` as the GET form it degrades to. */
   const palette = url.searchParams.get("palette") === "1";
 
-  // Default to content; `?role=all` means everything, and an unknown value means the default.
-  /* Parsed once by the module that builds every link, so no link can drop a parameter. */
   const view = readView(url.searchParams);
 
   const requested = url.searchParams.get("role");
@@ -155,14 +141,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ? requested
     : "content";
 
-  /** Free text. Trimmed once here so every reader downstream sees the same q. */
   const q = view.q;
 
   const listed = await timed(timings, "d1_list_media", () =>
     listMedia(env, {
     page,
     limit: picker ? 200 : MEDIA_PAGE_SIZE,
-    // The reader's Display choices. The picker ignores them: it is a fixed insertion surface.
     ...(picker
       ? {}
       : {
@@ -171,7 +155,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           tag: view.tag,
           trashed: view.trash,
           lens: view.lens,
-          // Unattached: no post cites it and no repository code places it. In SQL, for full pages.
           templateKeys: TEMPLATE_REF_KEYS,
         }),
     // In SQL, never merged with `role`: a `?role=` must not widen what may be inserted.
@@ -179,7 +162,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     ...(picker
       ? {}
       : {
-          // No role filter in the trash view, whose job is finding anything thrown away.
           ...(!view.trash && ROLE_IDS.has(filter) ? { role: filter } : {}),
           ...(q ? { q } : {}),
         }),
@@ -216,7 +198,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     };
   }
 
-  // Usage asked two ways, either can refuse: `media_refs` (rendered) and the markdown scan (superset).
   /* Starts here, not at the loader top: earlier branches return and would leave a promise unawaited. */
   const [resolution, refs, twins, trashedCount, tagCounts, lensCounts] = await timed(
     timings,
@@ -225,7 +206,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       Promise.all([
         timed(timings, "resolve_citations", () => resolveCitations(env, keys)),
         timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
-        // Exact content identity only; see `mediaTwins`.
         timed(timings, "d1_media_twins", () => mediaTwins(env)),
         timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
         timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
@@ -233,7 +213,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       ]),
   );
 
-  /* A parameter, not a route: static keys contain `/`. Read by key, so a bookmark works anywhere. */
+  /* A parameter, not a route: static keys contain `/`. */
   const detailKey = url.searchParams.get("key");
   let detail = null;
   if (detailKey) {
@@ -262,33 +242,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         caption: row.caption,
         uploadedAt: row.uploadedAt,
         placeholder: row.placeholder,
-        /** Rows the pipeline wrote, which is the precise half of usage. */
         refs: (detailRefs.get(row.key) ?? []).map((ref) => ({
           sourceType: ref.sourceType,
           sourceId: ref.sourceId,
           form: ref.form,
           detail: ref.detail,
         })),
-        /** The corpus scan, which is the conservative superset. */
         citations: detailResolution.citations.get(row.key) ?? [],
         scanComplete: detailResolution.complete,
         tags: parseTags(row.tags ?? ""),
         trashedAt: row.trashedAt,
-        /** The content hash, read off the key by `digestFromKey`. Static keys are paths and have none. */
         hash: digestFromKey(row.key),
-        /** Rows carrying identical bytes. Exact identity only. */
         twins: twins.get(row.key) ?? [],
-        /** The third state, from the same three pieces of evidence as a tile. */
         usage: usageStateOf({
           postRefs: (detailRefs.get(row.key) ?? []).length,
           citations: (detailResolution.citations.get(row.key) ?? []).length,
           templateRefs: (TEMPLATE_REFS[row.key] ?? []).length,
         }),
-        /** The source files that place it, repo-relative. */
         templateRefs: TEMPLATE_REFS[row.key] ?? [],
         /** Suggested, never applied: a filename posing as alt hides a defect an empty field shows. */
         altSuggestion: suggestedAlt(row.originalName ?? row.key.split("/").pop() ?? row.key),
-        /** Tags the path implies, minus the ones already applied. */
         tagSuggestions: suggestedTags(row.key).filter(
           (t) => !parseTags(row.tags ?? "").includes(t),
         ),
@@ -298,11 +271,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     }
   }
 
-  /* Built here so the component needs only loader data. */
   const uploaded = url.searchParams.get("uploaded");
   const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
 
-  /* After the read, so `mediaTwins` stays the one definition of twin; a page may run short. */
   const shown =
     view.lens === "duplicates"
       ? listed.objects.filter((o) => (twins.get(o.key) ?? []).length > 0)
@@ -314,48 +285,33 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     objects: shown.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
-      /** Decided here, so the component never calls into `core.server`. */
       viewable: isViewable(object.kind),
       citations: resolution.citations.get(object.key) ?? [],
-      /** Rows the pipeline wrote. The refcount that makes a shared blob safe. */
       refCount: (refs.get(object.key) ?? []).length,
-      /** Parsed HERE, so the component never sees the delimited storage form. */
       tags: parseTags(object.tags ?? ""),
-      /** How many other rows carry the same bytes. Zero for almost everything. */
       twinCount: (twins.get(object.key) ?? []).length,
-      /** `usageStateOf` owns the precedence, so tile, row, lens and inspector cannot disagree. */
       usage: usageStateOf({
         postRefs: (refs.get(object.key) ?? []).length,
         citations: (resolution.citations.get(object.key) ?? []).length,
         templateRefs: (TEMPLATE_REFS[object.key] ?? []).length,
       }),
-      /** Source files that place it, as repo-relative paths a reader can open. */
       templateRefs: TEMPLATE_REFS[object.key] ?? [],
     })),
     page,
     hasMore: listed.hasMore,
-    /** Which chip is active. Echoed back so the chips render without re-parsing. */
     filter,
-    /** Echoed for the same reason: the input, the chips and the pager all carry it. */
     q,
     detail,
     uploaded,
     uploadError,
-    /** False when a resolver threw. The page says so and delete refuses. */
     scanComplete: resolution.complete,
     scanFailed: resolution.failed,
-    /** Whole, so the component builds every link with `hrefWith(view, ...)`. */
     view,
-    /** Whether `Reset to defaults` has anything to reset. */
     modified: isModified(view),
-    /** How many rows are in the bin, for the Trash lens. */
     trashedCount,
-    /** Tags in use, with counts. Excludes trashed rows, so no chip leads to an empty grid. */
     tagCounts,
 
-    /** One query sharing the filters' predicates; `duplicates` comes from `mediaTwins`. */
     lensCounts: {
-      // The list the listing got, so the chip and the grid cannot disagree.
       ...lensCounts,
       duplicates: twins.size,
     },
@@ -371,7 +327,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   /* Not timing serialization: the framework encodes turbo-stream, so a stringify would mislead. */
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
 
-  // No header unless asked, so the default response carries no timing data.
   return data(payload);
 }
 
@@ -380,13 +335,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const intent = form.get("intent");
 
-  /* `setMediaTags` owns the storage form. No `isManagedKey` gate: this never writes the bucket. */
-  /* Posts index grammar: one tag, skip rows in state, name both counts. Only `setMediaTags` writes. */
   if (intent === "bulk-add-tag" || intent === "bulk-remove-tag") {
     const keys = form.getAll("key").map(String).filter(Boolean);
     if (keys.length === 0) return { message: "Nothing selected." };
 
-    // One tag, normalized by its owner. Normalizing to nothing is refused, not a clear.
     const wanted = normaliseTags(String(form.get("tag") ?? ""))[0];
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
@@ -404,8 +356,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         }
         const current = parseTags(row.tags);
         const has = current.includes(wanted);
-        // Already in the target state: SKIPPED, not rewritten. Writing anyway
-        // would touch updated_at on rows nothing changed about.
+        // Rows already in the target state are skipped, so updated_at is not touched for nothing.
         if (adding === has) {
           skipped += 1;
           continue;
@@ -453,8 +404,6 @@ export async function action({ request, context }: Route.ActionArgs) {
     };
   }
 
-  /* Trash and restore touch neither R2 nor a public URL, and the messages say so. */
-  /* Reversible, so a plain confirmation. Iterates `trashMediaRecord`; no bulk SQL writer. */
   if (intent === "bulk-trash") {
     const keys = form.getAll("key").map(String).filter(Boolean);
     if (keys.length === 0) return { message: "Nothing selected." };
@@ -503,7 +452,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === "empty-trash") {
     const keys = await trashedMediaKeys(env);
 
-    /* Checked here: the confirm button renders enabled without script. Uses this request's count. */
+    /* Checked here: the confirm button renders enabled without script. */
     const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
     if (!confirmationSatisfied(typed, keys.length)) {
       return {
@@ -515,8 +464,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const deleted: string[] = [];
     const refused: string[] = [];
     for (const key of keys) {
-      // Static rows have no object to remove, so emptying leaves them binned
-      // rather than pretending to delete a file the site ships.
+      // Static rows have no object to remove, so emptying leaves them binned.
       if (!isManagedKey(key)) {
         refused.push(`${key} (static, nothing to delete)`);
         continue;
@@ -549,7 +497,6 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   if (intent === "rebuild") {
-    // Row count says the rebuild ran; role split says `roleOf()` works. Report both, read from D1.
     /* A rebuild prunes rows whose source is gone. Count 1: the rows at risk are unknowable beforehand. */
     const typed = String(form.get(CONFIRM_FIELD) ?? "").trim();
     if (!confirmationSatisfied(typed, 1)) {
@@ -575,14 +522,11 @@ export async function action({ request, context }: Route.ActionArgs) {
     const parts = [
       `Rebuilt from ${report.scannedObjects} R2 object(s) and ${report.scannedFiles} static ` +
         `file(s). The index now holds ${total} row(s): ${breakdown}`,
-      // Alongside the row count, never instead of it: see above.
       `By role: ${roleBreakdown}`,
     ];
     if (report.removed > 0) {
       parts.push(`${report.removed} row(s) removed for sources that no longer exist`);
     }
-    // Reported, never swallowed. A rebuild that quietly skipped assets would be
-    // indistinguishable from one that had nothing to do.
     if (report.failures.length > 0) {
       parts.push(
         `${report.failures.length} could not be derived: ${report.failures.slice(0, 3).join("; ")}` +
@@ -654,7 +598,6 @@ export async function action({ request, context }: Route.ActionArgs) {
   return { message: null };
 }
 
-/** A refusal that names what is citing the object and how. */
 function describeCitations(citations: MediaCitation[]) {
   const byItem = new Map<string, MediaCitation[]>();
   for (const citation of citations) {
@@ -664,13 +607,11 @@ function describeCitations(citations: MediaCitation[]) {
   }
   const parts = [...byItem.entries()].map(([id, list]) => {
     const forms = [...new Set(list.map((c) => c.form))].join(", ");
-    // The first entry always exists; the empty title is unreachable.
     return `${list[0]?.title ?? ""} (${id}: ${forms}, ${list.map((c) => c.detail).join("; ")})`;
   });
   return `Still cited by ${parts.length} post${parts.length === 1 ? "" : "s"}: ${parts.join(" and ")}.`;
 }
 
-/** Display-only changes (`view`, `size`, `group`) skip the loader; a `sort` change revalidates. */
 export function shouldRevalidate({
   currentUrl,
   nextUrl,
@@ -686,36 +627,21 @@ export function shouldRevalidate({
 export default function AdminMedia({
   loaderData,
   actionData,
-  /*
-   * Harness seam (admin queue ruling 8): an optional prop with a production default, never
-   * loaderData. Harness seams are capped at three.
-   */
   initialSelection = [],
-  /* The third and last harness seam: the bulk-trash confirmation, which a static render cannot open. */
   initialConfirmingTrash = false,
 }: Route.ComponentProps & {
   initialSelection?: string[];
   initialConfirmingTrash?: boolean;
 }) {
-  /*
-   * EVERY HOOK FIRST, then the early return. The JSON branches below return null, and a return
-   * above a hook makes the hook conditional: React reads hooks by call order, so a render that
-   * takes the short branch and one that does not disagree about which state belongs to which
-   * call. None of these reads loaderData, so hoisting them costs nothing.
-   */
+  /* Every hook before the early return: the JSON branches below return null. */
   const [displayParams] = useSearchParams();
   const navigation = useNavigation();
   const here = useLocation();
-  /* The only client state: transient, so never in the URL. */
   const [selected, setSelected] = useState<string[]>(initialSelection);
-  /** Whether the bulk-trash confirmation is open. Transient by nature. */
   const [confirmingTrash, setConfirmingTrash] = useState(initialConfirmingTrash);
-  /* Shift-range anchor. A ref, so it never renders and cannot differ between server and client. */
   const anchor = useRef<string | null>(null);
-  /** The real file input, so the drop enhancement fills it rather than a copy. */
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Both JSON branches render nothing: they are data for a fetch, not a page.
   if (loaderData.picker || loaderData.palette) return null;
   const {
     objects,
@@ -739,7 +665,6 @@ export default function AdminMedia({
   /* From the URL: `shouldRevalidate` skips the loader for these, so its copy is stale. */
   const view = { ...loadedView, ...readDisplayAxes(displayParams) };
 
-  /* From `useNavigation`, so a slow request does not invite a second press. Display changes excluded. */
   const pending =
     navigation.state === "loading" &&
     navigation.location != null &&
@@ -753,7 +678,6 @@ export default function AdminMedia({
   const activeLens = LENS_CHIPS.find((l) => l.id === view.lens);
 
   const visible = objects.map((o) => o.key);
-  /** Selection survives a filter change only for rows still on screen. */
   const chosen = selected.filter((key) => visible.includes(key));
   const allShown = visible.length > 0 && chosen.length === visible.length;
   const toggle = (key: string) =>
@@ -773,24 +697,18 @@ export default function AdminMedia({
       return;
     }
     const span = visible.slice(Math.min(a, b), Math.max(a, b) + 1);
-    // ADDS the span rather than replacing the selection, which is what every
-    // file manager does and what makes two separate ranges possible.
     setSelected((was) => [...new Set([...was, ...span])]);
   };
 
 
-  /* `hrefWith` starts from the whole state, so no link can drop a parameter. */
   const linkTo = (over: Parameters<typeof hrefWith>[1] = {}) => hrefWith(view, over);
 
-  /** A tag chip toggles: pressing the active one clears it. */
   const tagHref = (tag: string) => linkTo({ tag: view.tag === tag ? "" : tag, page: 1 });
 
   return (
     <Panel
       title="Media"
-      /* A count line: the size of what the reader is about to search. */
       description={`${loaderData.lensCounts.all} file${loaderData.lensCounts.all === 1 ? "" : "s"}, ${loaderData.trashedCount} in trash`}
-      /* Actions sit on the heading of the thing they act on. */
       actions={
         <>
         {/* The hidden `intent` alone selects the upload redirect branch. Images only. */}
@@ -800,8 +718,6 @@ export default function AdminMedia({
           encType="multipart/form-data"
           className="media-upload"
         >
-          {/* One button: the label is the affordance. */}
-          {/* The input stays a real input and the keyboard path. */}
           <label className="media-upload-label" htmlFor="media-file">
             Drop files anywhere, or browse
           </label>
@@ -813,13 +729,11 @@ export default function AdminMedia({
             accept={ACCEPT_ATTRIBUTE}
           />
           <DropAnywhere inputRef={fileRef} />
-          {/* Intent on the button, so the submission names the token, not a bare field name. */}
           <button type="submit" name="intent" value={UPLOAD_FORM_INTENT} className="btn">
             Upload
           </button>
         </Form>
 
-        {/* A repair; its form is unchanged. */}
         <OverflowMenu label="Maintenance">
           <Form method="post">
             <button
@@ -840,8 +754,6 @@ export default function AdminMedia({
       }
     >
 
-      {/* A plain GET form: the URL is the state and it works without script. */}
-      {/* No label or button: the placeholder carries the library's count and Enter submits. */}
       <Form method="get" action="/admin/media" className="media-search" role="search">
         <input
           id="media-q"
@@ -867,17 +779,13 @@ export default function AdminMedia({
             Clear
           </Link>
         ) : null}
-        {/* aria-hidden: the binding is listed in the shortcuts popover. */}
         <span className="media-search-kbd" aria-hidden="true">
           {"⌘K"}
         </span>
       </Form>
-      {/* Attaches to the input by id and renders nothing on the server, so the form still navigates. */}
       <MediaPalette inputId="media-q" />
 
-      {/* `roleOf()` derives role, so the hint says no editor exists. */}
       <div className="media-facet">
-        {/* Lenses ask what folder headings cannot. Role stays reachable as `?role=`. */}
         <span className="media-facet-label" id="media-facet-lens">
           Show
         </span>
@@ -899,7 +807,6 @@ export default function AdminMedia({
                 aria-current={view.lens === lens.id ? "page" : undefined}
                 title={lens.hint}
               >
-                {/* Only on a non-zero count; decorative, so hidden. */}
                 {n > 0 ? (
                   <span className="media-lens-dot" data-lens={lens.id} aria-hidden="true" />
                 ) : null}
@@ -907,7 +814,6 @@ export default function AdminMedia({
               </Link>
             );
           })}
-          {/* Trash is a state, like the other lenses. */}
           <Link
             to={linkTo({ trash: !view.trash, lens: "", page: 1, key: "" })}
             className={`admin-chip${view.trash ? " is-active" : ""}`}
@@ -922,7 +828,6 @@ export default function AdminMedia({
         </span>
       </div>
 
-      {/* Tags narrow the view; settings live in Display. Rendered only when tags exist. */}
       {tagCounts.length > 0 ? (
         <div className="media-facet">
           <span className="media-facet-label" id="media-facet-tag">
@@ -944,9 +849,8 @@ export default function AdminMedia({
         </div>
       ) : null}
 
-      {/* Every control is a link; `<details>` gives the platform's open, close and Escape. */}
       <div className="media-display-bar">
-        {/* No `name`, so outside the bulk form. Never the bare word "all": it reaches only rows shown. */}
+        {/* No `name`, so it stays out of the bulk form's submission. */}
         {objects.length > 0 ? (
           <label className="media-select-all">
             <input
@@ -1000,7 +904,6 @@ export default function AdminMedia({
                 ["usage", "Usage"],
               ]}
               current={view.sort}
-              /* Through `sortHref`, so each sort key carries its direction. */
               hrefFor={(id) => sortHref(view, id)}
             />
             <MediaDisplayGroup
@@ -1022,7 +925,6 @@ export default function AdminMedia({
               current={view.size}
               hrefFor={(id) => linkTo({ size: id })}
             />
-            {/* A link: the default view has an address. */}
             {modified ? (
               <Link to="/admin/media" className="row-action">
                 Reset to defaults
@@ -1031,7 +933,6 @@ export default function AdminMedia({
           </div>
         </details>
 
-        {/* `<details>`, so it needs no script. Rows derive from `MEDIA_SHORTCUTS`. */}
         <details className="media-display media-shortcuts">
           <summary className="row-action" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
             ?
@@ -1050,11 +951,8 @@ export default function AdminMedia({
             </dl>
           </div>
         </details>
-
-        {/* Trash lives in the lens row. */}
       </div>
 
-      {/* Each lens states its boundary before the reader acts. `Show everything` is a link. */}
       {!view.trash && lensNoteFor(view.lens) ? (
         <div className="media-lens-note">
           <p>{lensNoteFor(view.lens)}</p>
@@ -1064,7 +962,6 @@ export default function AdminMedia({
         </div>
       ) : null}
 
-      {/* Shown whenever the bin is open, even when empty. */}
       {view.trash ? (
         <p className="media-usage-note">
           This is a library view, not a takedown. A trashed file keeps its
@@ -1075,7 +972,6 @@ export default function AdminMedia({
         </p>
       ) : null}
 
-      {/* Many objects at once, so the bulk-delete friction: type the count. */}
       {view.trash && trashedCount > 0 ? (
         <p className="media-empty-trash">
           {/* A link, not `prompt()`, so the confirmation holds without script. */}
@@ -1088,7 +984,6 @@ export default function AdminMedia({
         </p>
       ) : null}
 
-      {/* Server-rendered from `?confirm=empty-trash`; the action checks the typed count. */}
       <MediaConfirm
         open={view.confirm === "empty-trash" && trashedCount > 0}
         title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
@@ -1112,9 +1007,7 @@ export default function AdminMedia({
       </MediaConfirm>
 
       {/* Usage is what the renderer emitted, so a route-referenced asset reads as uncited. */}
-      {/* The head's count line states the total. */}
 
-      {/* Unconditional: the caveat stands between a reader and deleting a served file. */}
       {scanComplete ? (
         <p className="media-usage-note">
           {usageNote}{" "}
@@ -1139,7 +1032,6 @@ export default function AdminMedia({
         </p>
       ) : null}
 
-      {/* When usage cannot be trusted, say so rather than invite a delete. */}
       {!scanComplete ? (
         <AdminAlert title="Usage could not be determined" headingId="scan-failed">
           <p>
@@ -1168,9 +1060,6 @@ export default function AdminMedia({
         />
       )}
 
-      {/* Page numbers in the URL, carrying filter and search, so paging keeps the view. */}
-      {/* Both islands render nothing on the server. */}
-      {/* Client state: it acts on the selection, which a URL cannot carry. */}
       <MediaConfirm
         open={confirmingTrash && chosen.length > 0}
         title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
@@ -1190,8 +1079,6 @@ export default function AdminMedia({
         ))}
       </MediaConfirm>
 
-      {/* Opened by the action refusing an unconfirmed delete. Cancel is a link, so it needs no script. */}
-      {/* Opened by the action refusing an unconfirmed rebuild. */}
       <MediaConfirm
         open={Boolean(actionData?.confirmRebuild !== undefined)}
         title="Re-derive the whole media index"

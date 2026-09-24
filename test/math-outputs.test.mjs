@@ -1,27 +1,5 @@
-/**
- * What a feed reader is shown for an expression, asserted where a comment
- * could not be.
- *
- * WHAT THIS PROTECTS. RSS and Atom carry the RENDERED post, by the ruling in
- * `rss-feed.mjs`, and math is the one construction where rendered markup is
- * unreadable off this site: KaTeX's `htmlAndMathml` output is two trees for one
- * expression, and both of them are only legible because `katex.css` clips one
- * and positions the other. A feed reader has neither stylesheet nor any way to
- * get one, so the untransformed item shows the expression twice and garbled
- * both times.
- *
- * `mathToTex` is the transform that fixes it, and every one of these cases is
- * about a string operation that is wrong the moment nobody exercises it: a
- * wrapper whose end tag is found by counting, an escaped `<` that must survive
- * unescaped, a display block that must not be left inside an empty wrapper.
- *
- * THE FIXTURES ARE REAL KaTeX OUTPUT, produced by the pipeline's own options
- * rather than transcribed. A hand-written approximation of KaTeX markup would
- * be a test of the approximation.
- *
- * @see app/lib/rss-feed.mjs
- * @see test/rss-feed.test.mjs
- */
+/* KaTeX's `htmlAndMathml` output is two trees legible only with `katex.css`, so a feed reader
+ * shows the expression twice and garbled. The fixtures are real KaTeX output, not transcribed. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -34,11 +12,11 @@ import { mathToTex, rssItem } from "../app/lib/rss-feed.mjs";
 
 const ORIGIN = "https://example.test";
 
-/** Real KaTeX markup for one expression. @param {string} tex @param {boolean} display */
+/** @param {string} tex @param {boolean} display */
 const render = (tex, display) =>
   katex.renderToString(tex, { ...KATEX_OPTIONS, displayMode: display, throwOnError: true });
 
-/** A row shape both feed builders accept. @param {string} html */
+/** @param {string} html */
 const row = (html) => ({
   slug: "a-post",
   title: "A post",

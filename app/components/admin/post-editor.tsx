@@ -30,21 +30,9 @@ import { PublishActions } from "./publish-actions";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
 
-/**
- * The three-region post editor: a sticky command bar, a writing canvas, and a
- * settings drawer holding everything that is not writing. The body is still a
- * textarea.
- *
- * THERE IS NO `draft` FIELD. The transition rides in the submitter's `intent`,
- * because a payload assembled by click handlers cannot be sent by a browser that
- * is not running them.
- */
+// There is no `draft` field: the transition rides in the submitter's `intent`, which a scriptless browser still sends.
 
-/**
- * Ruling 6: editor machinery never reaches a public-plane bundle, and this
- * dynamic import is the chunk boundary that makes it true. It also means the
- * first paint is the textarea below, which is what a reader with no script keeps.
- */
+// The dynamic import keeps editor machinery out of public bundles; first paint is the textarea, which no-script readers keep.
 const MarkdownEditor = lazy(() => import("./markdown-editor"));
 
 /** Type-only, so importing it does not pull the CodeMirror chunk in eagerly. */
@@ -53,38 +41,21 @@ type LinkTarget = import("./markdown-editor").LinkTarget;
 const TITLE_LIMIT = 70;
 const AUTOSAVE_DELAY_MS = 800;
 const PREVIEW_DELAY_MS = 600;
-/**
- * Thirty seconds against a value that reads in whole minutes: the label can lag
- * its own truth by at most half the smallest unit it shows, and a one-second tick
- * would re-render the bar sixty times to change the text once.
- */
+// The label reads in whole minutes, so 30s lags by at most half a unit; a 1s tick would re-render sixty times per change.
 const BUFFER_AGE_TICK_MS = 30_000;
 const FORM_ID = "post-editor";
 const LAYOUT_KEY = "post-editor:layout";
 
-/**
- * Ruling 3's copy, as a pure function so it cannot drift into the JSX.
- *
- * Rendered ONLY beside "Unsaved changes". That adjacency is what stops it reading
- * as a save: the buffer is local and uncommitted, and nothing here uses the word
- * saved. Under a minute is "just now", the honest form for a value that rounds
- * down.
- */
+// Rendered only beside "Unsaved changes", so the local buffer never reads as a save.
 function bufferAgeLabel(savedAt: string, now: number): string {
   const minutes = Math.floor((now - new Date(savedAt).getTime()) / 60_000);
   if (!Number.isFinite(minutes) || minutes < 1) return "just now";
   return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
 }
 
-/** @see LAYOUT_KEY. Remembered per browser, never on the server. */
 type Layout = "write" | "split" | "preview";
 
-/**
- * Title to slug, matching the shape the save gate accepts and nothing more.
- * Deliberately conservative: it strips rather than transliterates, because a wrong
- * guess at a non-ASCII character lands in a permanent URL. The field stays
- * editable.
- */
+// Strips rather than transliterates: a wrong guess at a non-ASCII character lands in a permanent URL.
 function slugify(title: string) {
   return title
     .toLowerCase()
@@ -129,30 +100,17 @@ export function PostEditor({
   state: PostState;
   everPublished: boolean;
   tagOptions: string[];
-  /** The site's own posts, for the body editor's Cmd+K link search. */
   linkTargets?: LinkTarget[];
-  /** Commits touching this post, for the drawer's revision list. */
   revisions?: Revision[];
-  /** Slugs already taken, so the new-post flow can say so before the save does. */
   existingSlugs?: string[];
-  /** The drawer's draft preview-link section. Absent on a published post. */
   previewLinkSlot?: React.ReactNode;
   historySlot?: React.ReactNode;
   dangerSlot?: React.ReactNode;
-  /**
-   * Whether the action refused an unconfirmed first publication. Server state, so
-   * the step exists in the first byte of HTML and needs nothing to run to appear.
-   */
   awaitingPublishConfirmation?: boolean;
 }) {
   const [title, setTitle] = useState(fields.title);
   const [slug, setSlug] = useState(fields.slug);
-  /**
-   * Whether the author has taken the slug over. Until they do it tracks the title,
-   * which is what makes the new-post flow one field. The moment they type in it, it
-   * stops moving: silently rewriting a slug somebody chose would change a URL they
-   * had already decided on.
-   */
+  // Once the author types a slug it stops tracking the title, so a chosen URL is never silently rewritten.
   const [slugPinned, setSlugPinned] = useState(fields.slug !== "");
   const [description, setDescription] = useState(fields.description);
   const [tags, setTags] = useState(fields.tags);
@@ -162,26 +120,12 @@ export function PostEditor({
   const [body, setBody] = useState(fields.body);
   const [dirty, setDirty] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(null);
-  /**
-   * The clock the buffer age is measured against, ticked ONLY while dirty. A
-   * relative time needs a second input that changes on its own, which is this.
-   */
   const [ageNow, setAgeNow] = useState(() => Date.now());
-  /**
-   * Whether a persist has been ATTEMPTED, which `savedAt` alone cannot say:
-   * `writeBuffer` returns null both before it has ever run and when storage refuses
-   * it, and saying so beats pretending.
-   */
+  // writeBuffer returns null both before it has run and when storage refuses, so the attempt is tracked separately.
   const [bufferTried, setBufferTried] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [offer, setOffer] = useState<DraftBuffer | null>(null);
-  /**
-   * The sha a revision was loaded from, or null. Loading old content changes what
-   * the buffer and the save mean, and an author who walked away mid-task must not
-   * come back to a document that silently is not the current one.
-   */
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
-  /** True once CodeMirror has mounted and taken over from the textarea. */
   const [richBody, setRichBody] = useState(false);
   const [layout, setLayout] = useState<Layout>("write");
   const [preview, setPreview] = useState<{ html: string } | { error: string } | null>(null);
@@ -189,34 +133,23 @@ export function PostEditor({
 
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
-  /** Enabled for one submit by the Cmd+S handler; see the field and the handler. */
   const keyboardIntentRef = useRef<HTMLInputElement>(null);
   const autosaveTimer = useRef<number>(0);
   const storageKey = draftKey(fields.slug, headSha);
 
-  /**
-   * The crash net. This NEVER commits: the save path is the only writer, and
-   * this is a browser-local copy so a closed tab does not cost an afternoon.
-   */
+  // Never commits: a browser-local crash net. The save path is the only writer.
   const persist = useCallback(() => {
     const form = formRef.current;
     if (!form) return;
-    // `bufferTried` separates "the net failed" from "the net has not run yet". Both
-    // leave `savedAt` null, and without it the bar would stay silent through a real
-    // storage failure to avoid crying wolf before the first persist.
     setBufferTried(true);
     setSavedAt(writeBuffer(storageKey, readForm(form)));
   }, [storageKey]);
 
-  // Housekeeping. Buffers written under the pre-Session-2 key scheme can never
-  // be matched by a lookup, so without this they sit in storage forever.
   useEffect(() => {
     purgeLegacyBuffers();
   }, []);
 
-  // Offered only when the buffer differs from what the server just handed back.
-  // Restoring is never automatic: silently replacing committed content with older
-  // local text is the surprise this exists to prevent.
+  // Restoring is never automatic: replacing committed content with older local text is the surprise this prevents.
   useEffect(() => {
     const form = formRef.current;
     if (!form) return;
@@ -229,16 +162,12 @@ export function PostEditor({
     setOffer(stored);
   }, [storageKey, fields.slug]);
 
-  // A save that landed makes every buffer for this post obsolete, including
-  // ones written against earlier heads that would otherwise sit there forever.
   useEffect(() => {
     if (!feedback || feedback.state === "failed") return;
     clearAllBuffersFor(fields.slug);
     if (isNew) clearAllBuffersFor("");
     setOffer(null);
     setDirty(false);
-    // The revision has been committed, so the editor is no longer holding old
-    // content: it is holding the current content, which is what it just became.
     setRestoredFrom(null);
   }, [feedback, fields.slug, isNew]);
 
@@ -249,32 +178,17 @@ export function PostEditor({
     return () => window.removeEventListener("beforeunload", onLeave);
   }, [dirty]);
 
-  /**
-   * An ENHANCEMENT, not a gate: nothing here refuses a save, and with scripting off
-   * none of it runs. The pathname comparison lets a save's own redirect through,
-   * which the flag it is about to clear would otherwise block. It is not enough on
-   * its own: a NEW post's save redirects to a DIFFERENT path, and what lets that one
-   * through is `onSubmit` clearing `dirty` before the request leaves.
-   */
+  // The pathname check lets a save's own redirect through. A new post redirects to a different path,
+  // which onSubmit clearing `dirty` before the request leaves handles.
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       dirty && currentLocation.pathname !== nextLocation.pathname,
   );
 
-  /*
-   * A block that is no longer warranted is RELEASED rather than left standing: the
-   * state is the router's, so a `dirty` that goes false underneath would leave the
-   * author answering a question about changes that no longer exist.
-   */
   useEffect(() => {
     if (blocker.state === "blocked" && !dirty) blocker.reset();
   }, [blocker, dirty]);
 
-  /*
-   * Ticks ONLY while dirty. A clean editor's bar already reads "Saved <sha>", and a
-   * second freshness line there would leave the reader working out which one is
-   * about the file.
-   */
   useEffect(() => {
     if (!dirty || !savedAt) return;
     setAgeNow(Date.now());
@@ -282,9 +196,7 @@ export function PostEditor({
     return () => window.clearInterval(id);
   }, [dirty, savedAt]);
 
-  // A browser preference, not a fact about the post, so it lives in localStorage
-  // and never reaches the server. Read after mount rather than during render, so the
-  // server and the first client paint agree.
+  // Read after mount, not during render, so the server and the first client paint agree.
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem(LAYOUT_KEY);
@@ -303,15 +215,7 @@ export function PostEditor({
     }
   };
 
-  /**
-   * The exact preview, debounced. It posts the body to an admin-only route that
-   * renders it through `pipeline.mjs`, the module the build and the Worker import,
-   * so this is not an approximation of the published page; it IS the published
-   * markup.
-   *
-   * A sequence number guards the response, because a fast typist can have two
-   * renders in flight and the slower one can land last.
-   */
+  // A sequence number guards the response: with two renders in flight the slower can land last.
   const previewSeq = useRef(0);
   useEffect(() => {
     if (layout === "write") return;
@@ -336,17 +240,7 @@ export function PostEditor({
     return () => window.clearTimeout(timer);
   }, [body, layout, fields.slug, slug]);
 
-  /**
-   * Cmd+S SAVES, and it can never do anything else: it submits the form directly,
-   * naming the transition that preserves publication status rather than changing it.
-   *
-   * IT SENDS THE IN-PLACE INTENT EXPLICITLY, by enabling a disabled hidden field
-   * just before submitting. An absent intent on a WRITE path would let a malformed
-   * POST perform a write, which is the no-substitution rule. The field is DISABLED at rest, so a
-   * button submit sends only the submitter's own intent.
-   *
-   * No keyboard shortcut opens the ceremony.
-   */
+  // Sends the in-place intent explicitly by enabling a disabled hidden field: an absent intent on a write path is refused.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
@@ -356,7 +250,6 @@ export function PostEditor({
       const intentField = keyboardIntentRef.current;
       if (intentField) intentField.disabled = false;
       form.requestSubmit();
-      // Re-disable so a later button submit sends only the submitter's intent.
       if (intentField) intentField.disabled = true;
     };
     window.addEventListener("keydown", onKey);
@@ -387,15 +280,10 @@ export function PostEditor({
     setDirty(true);
   };
 
-  /**
-   * Ruling 1: a revision LOADS, it does not write, and everything below is
-   * `setState`. The buffer is rewritten immediately, so a tab closed after a restore
-   * cannot offer to recover the author out of it.
-   */
+  // The buffer is rewritten at once, so a tab closed after a restore cannot offer to recover out of it.
   const applyRevision = (revision: PostFields, sha: string) => {
     setTitle(revision.title);
-    // Pinned, so the title arriving from the revision does not immediately
-    // rewrite the slug that came with it.
+    // Pinned, so the revision's title does not rewrite its slug.
     setSlugPinned(true);
     setSlug(revision.slug);
     setDescription(revision.description);
@@ -422,11 +310,8 @@ export function PostEditor({
 
   return (
     <div className="editor-shell">
-      {/*
-       * `role="alert"` rather than a `<dialog>`: the navigation is already stopped by
-       * the router, so nothing needs modality, and a modal would trap focus around a
-       * question the author can answer by continuing to type.
-       */}
+      {/* `role="alert"`, not a modal: the router already stopped the navigation, and a modal would
+          trap focus around a question the author can answer by typing on. */}
       {blocker.state === "blocked" ? (
         <div className="editor-leave-guard" role="alert">
           <p>
@@ -434,15 +319,6 @@ export function PostEditor({
             them in this browser's crash net, and they are not committed.
           </p>
           <div className="editor-leave-actions">
-            {/*
-              "Stay here", NOT "Stay and save". Found in the live replay of this
-              guard: the label read "Stay and save" and the handler only calls
-              `reset()`, so the button returned the author to the editor with the
-              changes still uncommitted while promising it had saved them. A
-              control that names an action it does not take is worse than one
-              with no label at all, and on the one screen whose whole subject is
-              whether the work is committed.
-            */}
             <button type="button" className="btn" onClick={() => blocker.reset()}>
               Stay here
             </button>
@@ -462,25 +338,9 @@ export function PostEditor({
       >
         <input type="hidden" name="headSha" value={headSha} />
         <input type="hidden" name="isNew" value={isNew ? "1" : "0"} />
-        {/*
-          The keyboard save's intent, DISABLED at rest.
-
-          Cmd+S submits with no submitter, so without this the request would
-          carry no `intent` at all and would depend on the server defaulting a
-          missing one to "save". That default is gone: an absent intent on a
-          write path is refused, per the no-substitution rule. The shortcut handler enables
-          this field for the duration of one submit.
-
-          Disabled rather than absent so a normal button submit is untouched: a
-          disabled control is not in the submission set, so the submitter's own
-          `intent` remains the only one sent.
-
-          The VALUE is the in-place transition for this post's state, off the
-          same table the buttons read: `save-draft` on a draft, `save` on
-          anything already public. It was the literal "save" while the draft
-          flag was a separate field; now that the intent carries the flag, a
-          literal here would publish a draft on Cmd+S.
-        */}
+        {/* Cmd+S submits with no submitter, and an absent intent is refused, so the shortcut enables
+            this for one submit. Disabled at rest so a button's own intent is the only one sent. The
+            value follows the post's state: a literal "save" would publish a draft on Cmd+S. */}
         <input
           ref={keyboardIntentRef}
           type="hidden"
@@ -488,24 +348,14 @@ export function PostEditor({
           value={saveInPlaceIntent(state)}
           disabled
         />
-        {/*
-         * Server-owned, carried only so a browser save PRESERVES it: `serializePost`
-         * writes exactly the keys it is handed, so a value this form did not carry would
-         * be dropped and a published post would read as never published.
-         */}
+        {/* Carried so a browser save preserves it: `serializePost` writes exactly the keys it is
+            handed, so a dropped value would make a published post read as never published. */}
         <input type="hidden" name="firstPublished" value={fields.firstPublished} />
-        {/*
-         * `updated` stays a hidden input because it is the one key the author does not
-         * own: the build derives it from the last commit and the editor stamps it on save.
-         */}
+        {/* The build derives `updated` from the last commit and the editor stamps it on save. */}
         <input type="hidden" name="updated" value={fields.updated} />
-        {/*
-         * THERE IS NO `draft` FIELD, and its absence is the fix. Flipped by an onClick,
-         * it meant a scriptless request carried the post's current state instead of the
-         * transition the author pressed, and all three transitions were wrong.
-         */}
+        {/* No `draft` field on purpose: the intent carries the transition, so a scriptless request
+            cannot send the post's current state instead of the one the author pressed. */}
 
-        {/* Region 1: the command bar */}
         <header className="editor-bar">
           <div className="editor-bar-group editor-bar-left">
             <Link to="/admin/posts" className="editor-back">
@@ -532,11 +382,8 @@ export function PostEditor({
             </span>
           </div>
 
-          {/*
-           * Gated on CodeMirror having mounted, and not for tidiness: in the preview layout
-           * the write pane is `display:none`, and a REQUIRED control that is not displayed
-           * blocks submission with a message the author can neither see nor reach.
-           */}
+          {/* Gated on CodeMirror mounting: in the preview layout the write pane is `display:none`, and a
+              required control that is not displayed blocks submission unreachably. */}
           <div className="editor-bar-group editor-bar-center">
             {richBody ? (
               <div className="editor-layout-toggle" role="group" aria-label="Editor layout">
@@ -556,10 +403,6 @@ export function PostEditor({
           </div>
 
           <div className="editor-bar-group editor-bar-right">
-            {/*
-             * Dirty state as a first-class element rather than a line of prose at the bottom
-             * of a form: it is the one thing the author checks before closing the tab.
-             */}
             <span className={dirty ? "editor-dirty is-dirty" : "editor-dirty"}>
               <span className="editor-dirty-dot" aria-hidden="true" />
               {!headSha
@@ -571,31 +414,20 @@ export function PostEditor({
                     : `Saved ${shortHead}`}
             </span>
 
-            {/*
-             * Renders only while dirty and only once a persist has happened, so the clean
-             * state keeps saying "Saved <sha>" alone. Nothing renders on the server, so the
-             * static harness render is unchanged and this adds no submission.
-             */}
+            {/* Nothing renders on the server, so the static harness render is unchanged. */}
             {dirty && savedAt ? (
               <span className="editor-buffer-age" aria-live="polite">
                 last written {bufferAgeLabel(savedAt, ageNow)}
               </span>
             ) : dirty && bufferTried ? (
-              /*
-               * An absent safety net must say so. MUTED, not warning: its neighbor is already
-               * warning-tinted whenever this renders, and two warning items side by side read as
-               * two problems rather than one fact qualifying another.
-               */
+              /* Muted, not warning: its neighbor is already warning-tinted, and two would read as two problems. */
               <span className="editor-buffer-age" aria-live="polite">
                 Not backed up: browser storage unavailable
               </span>
             ) : null}
 
-            {/*
-             * The zero-JS render: with no script the layout toggle cannot render and this
-             * submit is the ONLY way to see rendered output. REMOVED rather than hidden
-             * because, unlike the textarea, it carries no value the save path needs.
-             */}
+            {/* The zero-JS preview path. Removed rather than hidden once scripted: it carries no value
+                the save path needs. */}
             {!richBody ? (
               <button
                 type="submit"
@@ -608,9 +440,6 @@ export function PostEditor({
               </button>
             ) : null}
 
-            {/* A 32 by 32 icon button. The gear is decorative; the accessible
-                name is a real word, and the expanded state is on the control
-                that owns the drawer. */}
             <button
               type="button"
               className="editor-icon-button"
@@ -652,7 +481,6 @@ export function PostEditor({
           </div>
         </header>
 
-        {/* Region 2: the canvas */}
         <div className="editor-canvas" data-layout={layout}>
           <div className="editor-page">
             {!headSha ? (
@@ -665,20 +493,13 @@ export function PostEditor({
               </div>
             ) : null}
 
-            {/*
-             * Always in the DOM so the live region exists before its content does, polite
-             * because every message follows a submit the author just made, and persistent
-             * until the next action.
-             */}
+            {/* Always in the DOM so the live region exists before its content does. */}
             <div className="editor-feedback-slot" role="status" aria-live="polite">
               {feedback ? <FeedbackMessage feedback={feedback} /> : null}
             </div>
 
-            {/*
-             * INSIDE the editing form: a publish re-sends the whole post. Scheduling is
-             * script-only rather than silently wrong, because a datetime-local reads as the
-             * author's local time in the browser and as UTC on the server.
-             */}
+            {/* Inside the editing form: a publish re-sends the whole post. Scheduling is script-only
+                because datetime-local reads as local time in the browser and UTC on the server. */}
             {awaitingPublishConfirmation ? (
               <div className="editor-confirm-publish">
                 <h2>Publish this post</h2>
@@ -718,11 +539,7 @@ export function PostEditor({
               />
             ) : null}
 
-            {/*
-             * The editor is holding old content and nothing has been written, so it says
-             * both: an author returning to this tab must not mistake a loaded revision for the
-             * live post.
-             */}
+            {/* An author returning to this tab must not mistake a loaded revision for the live post. */}
             {restoredFrom ? (
               <p className="editor-notice">
                 Loaded revision <code>{restoredFrom.slice(0, 7)}</code> into the
@@ -770,16 +587,8 @@ export function PostEditor({
                       setSlug(event.target.value);
                     }}
                     required
-                    /*
-                     * DERIVED FROM SLUG_PATTERN, never a third spelling, and the anchors are
-                     * stripped at the constant rather than here.
-                     */
                     pattern={SLUG_ATTRIBUTE_PATTERN}
-                    /*
-                     * The other half of the rule, from the same module. An HTML pattern cannot carry
-                     * a length without a lookahead, so the bound is its own attribute, which is also
-                     * what makes it work with scripting off.
-                     */
+                    /* An HTML pattern cannot carry a length without a lookahead, so the bound is its own attribute. */
                     maxLength={SLUG_MAX_LENGTH}
                     aria-invalid={slugProblem !== null}
                     aria-describedby={slugProblem ? "slug-problem" : undefined}
@@ -805,11 +614,8 @@ export function PostEditor({
                 <label className="sr-only" htmlFor="field-body">
                   Body, markdown
                 </label>
-                {/*
-                 * THE SUBMITTED FIELD, always, and it stays in the DOM because it is also the
-                 * no-script path: with nothing loaded, this IS the editor. `required` drops once
-                 * CodeMirror mounts, since a hidden required control blocks submission unreachably.
-                 */}
+                {/* Always submitted, and the no-script editor. `required` drops once CodeMirror mounts,
+                    since a hidden required control blocks submission unreachably. */}
                 <textarea
                   id="field-body"
                   ref={bodyRef}
@@ -841,11 +647,7 @@ export function PostEditor({
               ) : null}
             </div>
 
-            {/*
-             * The zero-JS image path, and ONLY that: once CodeMirror is mounted the same job
-             * is done by drag-drop, paste and the toolbar. It contributes nothing to the
-             * payload in either state.
-             */}
+            {/* The zero-JS image path only; once CodeMirror mounts, drag-drop, paste and the toolbar do it. */}
             {!richBody ? (
               <ImageUploader
                 onInsert={(snippet) => {
@@ -859,11 +661,7 @@ export function PostEditor({
             ) : null}
           </div>
 
-          {/* Region 2b: the frontmatter controls */}
-          {/*
-           * IN THE PAGE, not in the drawer, because the drawer is a `<dialog>` that only
-           * opens with script and these have to be usable without it.
-           */}
+          {/* In the page, not the drawer: the drawer is a `<dialog>` that only opens with script. */}
           <PostMetadata
             formId={FORM_ID}
             featured={fields.featured}
@@ -879,7 +677,6 @@ export function PostEditor({
           />
         </div>
 
-        {/* Region 3: the settings drawer */}
         <SettingsDrawer
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
@@ -936,17 +733,8 @@ export function PostEditor({
   );
 }
 
-/**
- * The live preview, in a sandboxed frame.
- *
- * The HTML is passed through UNTOUCHED, because the whole claim of ruling 3 is
- * that what you see is what publishes; sanitizing here would void it.
- *
- * So the isolation is the FRAME, not the markup. `sandbox` with no
- * `allow-scripts` and no `allow-same-origin` means nothing inside can execute,
- * reach this document or navigate the parent. That is not belt and braces: the
- * pipeline passes `javascript:` URLs through from ordinary markdown links.
- */
+// The HTML is passed through unsanitized, so the preview is what publishes. The sandbox is the isolation,
+// and it matters: the pipeline passes javascript: URLs through from ordinary markdown links.
 function PreviewPane({
   result,
   busy,
@@ -962,9 +750,6 @@ function PreviewPane({
       .map((link) => `<link rel="stylesheet" href="${link.href}">`)
       .join("");
     const theme = document.documentElement.getAttribute("data-theme");
-    // `.post` and `.prose` come from the site stylesheet linked above, so the
-    // preview cannot drift from the published page: there is no second copy of either
-    // rule to keep in step. Only the frame's own padding is declared here.
     setDoc(
       `<!doctype html><html lang="en"${theme ? ` data-theme="${theme}"` : ""}>` +
         `<head><meta charset="utf-8">${styles}` +
@@ -976,10 +761,6 @@ function PreviewPane({
 
   return (
     <section className="editor-pane editor-pane-preview" aria-label="Preview">
-      {/*
-       * The pane says only what the command bar cannot: the save state lives in the
-       * bar, and this reports only the two TRANSIENT conditions, saying nothing at rest.
-       */}
       <div className="editor-pane-head">
         <span className="field-label">Preview</span>
         <span className="muted" aria-live="polite">
@@ -1006,11 +787,6 @@ function PreviewPane({
   );
 }
 
-/**
- * The recovery banner. Both ways out are explicit and neither is the default: an
- * automatic restore would overwrite committed content with older local text, and an
- * automatic discard would throw away the thing this exists to save.
- */
 function RestoreOffer({
   buffer,
   onRestore,
@@ -1056,11 +832,6 @@ function RestoreOffer({
   );
 }
 
-/**
- * The four things a save can have done, said in words. Every state carries the
- * commit sha, because that is the fact that makes the claim checkable: the author
- * can look the save up in `git log` rather than take the page's word for it.
- */
 function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
   if (feedback.state === "failed") {
     return (
@@ -1069,11 +840,7 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
         <div>
           <strong>{feedback.conflict ? "Conflict. Not saved." : "Not saved."}</strong>
           <p>{feedback.message}</p>
-          {/*
-           * Each is shown only when present, because most refusals carry neither and a
-           * location invented for the ones that do not would be worse than none. A second
-           * line, so the message stays the sentence the gate wrote.
-           */}
+          {/* Shown only when present: an invented location would be worse than none. */}
           {feedback.field || feedback.line !== undefined ? (
             <p className="muted">
               {feedback.field ? <>Field <code>{feedback.field}</code></> : null}
@@ -1150,10 +917,6 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
   );
 }
 
-/**
- * The non-color channel. Inline because this repo prefers inline SVG to an
- * icon library, per its bundle-leanness rule.
- */
 function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" }) {
   const shape =
     tone === "published" ? (
@@ -1196,11 +959,6 @@ function Glyph({ tone }: { tone: "success" | "published" | "warning" | "danger" 
   );
 }
 
-/**
- * Uploads an image to R2 and hands back a markdown snippet. Alt text is required
- * at insert time rather than left for later, because an image inserted without it
- * is the one that ships without it.
- */
 function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
   const [alt, setAlt] = useState("");
   const [message, setMessage] = useState<string | null>(null);

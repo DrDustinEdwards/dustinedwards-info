@@ -1,9 +1,3 @@
-/**
- * Runs every gate and reports one table: `npm run check` (offline) or `npm run check:all`.
- * It sees exit codes only, runs every gate even after a failure, and derives the list from
- * package.json so a new gate cannot be forgotten.
- */
-
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
@@ -16,85 +10,50 @@ import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/**
- * The previous run's samples are read before truncation: after an OS kill they are the only
- * record of what it held.
- */
+/** Read before truncation: after an OS kill the previous run's samples are its only record. */
 const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
 
 /** Fails closed below this. Moves only to the count a run printed, never to a sum. */
 const MINIMUM_GATES = 19;
 
-/**
- * Gates a clean checkout cannot run, each with its reason.
- * @type {Record<string, string>}
- */
+/** @type {Record<string, string>} */
 export const CI_EXCLUDED = {
   /* Provisioning a CI D1 would invent the state the backup path is checked against. */
   "check:backup": "needs the gitignored .wrangler/ miniflare state, absent from a checkout.",
-  /*
-   * Public cases need gitignored local D1 content. Kept off ship: a slow preview boot on a loaded
-   * machine would fail a ship for a reason that is not the site.
-   */
+  /* Needs gitignored local D1 content. Kept off ship: a slow preview boot on a loaded machine would
+     fail a ship for a reason that is not the site. */
   "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
   /* A CI client build would measure a build nothing deploys. */
   "check:page-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
 };
 
-/**
- * Every discovered gate must be tiered here or the runner refuses to start. Ruling 150 cut the
- * list to the checks that have caught real mistakes, and the guards against harm that cannot be
- * undone.
- *
- * @type {Record<string, "offline" | "network" | undefined>}
- */
+/** @type {Record<string, "offline" | "network" | undefined>} */
 export const TIERS = {
-  /* Delegates to `npm run typecheck`, so check:changed and CI typecheck through the tier. */
   "check:types": "offline",
-  // node:test over test/, including the visibility, schema and write-path invariants.
   "check:tests": "offline",
-  /*
-   * Runs the Worker's modules in workerd against local bindings. `test/worker/setup.ts` makes any
-   * outbound fetch throw, so offline is enforced.
-   */
+  // Offline: test/worker/setup.ts makes any outbound fetch throw.
   "check:worker": "offline",
   "check:content": "offline",
-  // llms.txt, microformats and the publication twins. Pure by default; `--remote` adds D1.
   "check:machine-readable": "offline",
   "check:features": "offline",
-  /* Offline: reads font binaries and their stylesheets. */
   "check:fonts": "offline",
   "check:diagrams": "offline",
   "check:contrast": "offline",
-  /* Certifies the last local build, stale or not, and renders, so it needs stack.json. */
   "check:page-payload": "offline",
-  // The guards: none of these has caught a defect yet, and each guards harm that can't be undone.
-  // Cannot see a secret inlined into a client chunk.
   "check:secrets": "offline",
-  // Live database drift is the schema test with SCHEMA_LIVE=1, which check:all sets.
   "check:migrations": "offline",
   "check:policy": "offline",
-  // Reads workers/app.ts. It asserts what the SOURCE declares and cannot see the wire.
   "check:headers": "offline",
   "check:urls": "offline",
-  // Reads each route's action as SOURCE and proves every destructive intent calls the
-  // confirmation predicate inside its own branch. It sees a guard ABSENT, not one present and wrong.
   "check:destructive": "offline",
-  // Defaults to --local, which reads miniflare state on disk. `check:all` re-runs it against --remote.
   "check:backup": "offline",
-  /*
-   * Network: the preview server's AI_SEARCH binding reaches a real instance. Ship does not run
-   * it, so layout defects can ship.
-   */
+  // Network: the preview server's AI_SEARCH binding reaches a real instance.
   "check:browser": "network",
   /* A local form would compare two empty databases. Weekly, because it is the slowest gate. */
   "check:restore": "network",
 };
 
-/**
- * Extra arguments for the `check:all` run, where the network is available.
- * @type {Record<string, string[] | undefined>}
- */
+/** @type {Record<string, string[] | undefined>} */
 const REMOTE_ARGS = {
   "check:backup": ["--remote"],
   "check:machine-readable": ["--remote"],
@@ -103,13 +62,11 @@ const REMOTE_ARGS = {
 const all = process.argv.includes("--all");
 /* The schema test compares the live database only when asked; every spawned gate inherits this. */
 if (all) process.env.SCHEMA_LIVE = "1";
-/** `--ci` runs the offline tier minus what a clean checkout cannot run. */
 const ci = process.argv.includes("--ci");
 
-/** Every `check:*` script package.json declares, minus the runners themselves. */
 function discoverGates() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-  /* Shared with build-stack.mjs; excluding the runners stops this one invoking itself. */
+  /* Excluding the runners stops this one invoking itself. */
   const names = gateNames(pkg);
 
   const gatesFloorBreach = assertFloor(
@@ -137,9 +94,8 @@ function discoverGates() {
 }
 
 /**
- * EXPORTED so `check:changed` spawns a gate exactly as this does. The shell behavior here is
- * Windows-specific and measured (FAILURES.md); a second copy of it is a second thing to get wrong.
- *
+ * Exported so `check:changed` spawns a gate exactly as this does: the shell behavior is
+ * Windows-specific and measured, and a second copy would be a second thing to get wrong.
  * @param {string} name @param {string[]} args
  */
 export function runGate(name, args) {
@@ -150,16 +106,12 @@ export function runGate(name, args) {
     shell: true,
     maxBuffer: 64 * 1024 * 1024,
   });
-  /*
-   * A gate that could not run is not a gate that failed. The test is both streams empty: every
-   * gate here prints on a pass, and an exit-code list missed a real cascade after passing its
-   * plant. An errored gate is still not `ok`.
-   */
+  /* A gate that could not run is not a gate that failed. Both streams empty is the test, because every
+     gate here prints on a pass. */
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";
   const errored = stdout.length === 0 && stderr.length === 0;
 
-  /* The reason reports the disposition; it never decides it. */
   const seen = [
     `status ${result.status === null ? "null" : result.status}`,
     result.signal ? `signal ${result.signal}` : null,
@@ -172,13 +124,12 @@ export function runGate(name, args) {
     name,
     ok: !errored && result.status === 0,
     errored,
-    /* A number, so the classifier does not parse the reason sentence. */
     status: typeof result.status === "number" ? result.status : null,
     reason: errored ? `wrote nothing to either stream (${seen})` : "",
     ms: Date.now() - started,
     output: `${stdout}${stderr}`,
     /*
-     * Filled in by the caller. Null means not sampled, not zero.
+     * Null means not sampled, not zero.
      * @type {number | null}
      */
     peakRss: /** @type {number | null} */ (null),
@@ -186,18 +137,13 @@ export function runGate(name, args) {
 }
 
 /*
- * Environment failure: one machine fact, not N repo facts. All four must hold: both streams
- * empty (the only condition that keeps a real failure out), an NTSTATUS-range status, under one
- * second, and more than one gate with that status. It changes the exit code (2), never the
- * verdict. A classifier that calls everything the machine is the vacuity rule's unfailable class.
+ * Environment failure needs all four: both streams empty (the condition that keeps a real failure out),
+ * an NTSTATUS-range status, under one second, and more than one gate with that status.
  */
 const NTSTATUS_FAILURE_FLOOR = 0xc0000000;
 const ENVIRONMENT_MAX_MS = 1000;
 
-/**
- * Known on this host; anything else prints as bare hex.
- * @type {Record<number, string>}
- */
+/** @type {Record<number, string>} */
 const NTSTATUS_NAMES = {
   0xc0000005: "STATUS_ACCESS_VIOLATION",
   0xc0000017: "STATUS_NO_MEMORY",
@@ -212,8 +158,7 @@ export function ntstatusName(status) {
 
 /**
  * @param {Array<{name: string, errored: boolean, status: number | null, ms: number}>} results
- * @returns {{status: number, names: string[]} | null} the correlated group, or
- *   null when nothing in this run meets all four conditions.
+ * @returns {{status: number, names: string[]} | null}
  */
 export function classifyEnvironmentFailure(results) {
   const candidates = results.filter(
@@ -236,7 +181,6 @@ export function classifyEnvironmentFailure(results) {
   /** @type {{status: number, names: string[]} | null} */
   let group = null;
   for (const [status, names] of byStatus) {
-    // Condition 4. A single gate is not a machine fact, however it died.
     if (names.length < 2) continue;
     if (group === null || names.length > group.names.length) group = { status, names };
   }
@@ -246,7 +190,7 @@ export function classifyEnvironmentFailure(results) {
 function main() {
   const gates = discoverGates();
 
-  /* Built first: `build:content` reads stack.json. Not a gate. */
+  /* Built first: `build:content` reads stack.json. */
   process.stdout.write("  build:stack (the colophon artifact build:content reads) ... ");
   const stacked = runGate("build:stack", []);
   if (!stacked.ok) {
@@ -258,10 +202,7 @@ function main() {
     );
   }
   console.log(`ok (${(stacked.ms / 1000).toFixed(1)}s)`);
-  /*
-   * Built before any gate reads it (posts.json is gitignored), and refused here: a broken build
-   * is not a red gate.
-   */
+  /* Refused here, before any gate reads it: a broken build is not a red gate. */
   process.stdout.write("  build:content (the local build product the tier reads) ... ");
   const built = runGate("build:content", []);
   if (!built.ok) {
@@ -273,7 +214,6 @@ function main() {
     );
   }
   console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
-  /* Gitignored; check:machine-readable compares it against a fresh generation. */
   process.stdout.write("  build:publication-twins (the twins check:machine-readable compares) ... ");
   const twinned = runGate("build:publication-twins", []);
   if (!twinned.ok) {
@@ -297,7 +237,6 @@ function main() {
     );
   }
   console.log(`ok (${(enhanced.ms / 1000).toFixed(1)}s)`);
-  /* Derived, so a new gate is in CI unless argued out. */
   const offline = gates.filter((name) => TIERS[name] === "offline");
   const selected = all
     ? gates
@@ -307,12 +246,8 @@ function main() {
   const skipped = gates.filter((name) => !selected.includes(name));
 
   if (ci) {
-    /*
-     * SCOPE, ASSERTED. An exclusion map that named a gate nobody declares would
-     * silently exclude nothing, and this would report a full CI run while
-     * quietly being the plain offline tier. Same fail-closed shape as the
-     * untiered check above.
-     */
+    /* An exclusion naming a gate nobody declares would silently exclude nothing and report a full CI
+       run while being the plain offline tier. */
     const unknown = Object.keys(CI_EXCLUDED).filter((name) => !gates.includes(name));
     if (unknown.length > 0) {
       throw new Error(
@@ -320,11 +255,6 @@ function main() {
           `${unknown.join(", ")}. Refusing to run rather than excluding nothing.`,
       );
     }
-    /*
-     * APPLIED, not declared. Printing every CI_EXCLUDED key named entries that could not have
-     * been excluded here because they were never in the offline tier to be removed from, which
-     * reads as a longer exclusion list than the run actually had.
-     */
     const applied = offline.filter((name) => CI_EXCLUDED[name]);
     console.log(
       `  CI tier: ${selected.length} of ${offline.length} offline gate(s). ` +
@@ -337,10 +267,7 @@ function main() {
       `${all ? " (offline + network)" : " (offline tier)"}\n`,
   );
 
-  /*
-   * Preflight: tree-kill what the previous run left alive. By pid, never by name: a name match
-   * for `node` or `chrome` reaches Dustin's own editor and browser.
-   */
+  /* By pid, never by name: a name match for `node` or `chrome` reaches Dustin's own editor and browser. */
   const recorded = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
   if (recorded.length > 0) {
     /* One process table read: a `taskkill` per dead pid makes later gates fail to start. */
@@ -354,13 +281,8 @@ function main() {
     );
   }
 
-  /*
-   * THE SAMPLER, and the cleanup that owns it.
-   *
-   * `spawnSync` blocks this process for the whole of every gate, so nothing in
-   * this event loop can measure anything while a gate runs. The sampler is a
-   * separate process writing to a file; grounds on `scripts/lib/rss.mjs`.
-   */
+  /* `spawnSync` blocks this event loop for the whole of every gate, so the sampler is a separate
+     process writing to a file. */
   mkdirSync(join(root, ".gate-pids"), { recursive: true });
   writeFileSync(RSS_FILE, "");
   const sampler = startRssSampler(RSS_FILE);
@@ -390,11 +312,9 @@ function main() {
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
   for (const name of selected) {
-    // JUSTIFIED SUBSTITUTION. Partial on purpose: absence means no extra args.
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
-    // EVERY gate runs, including after a failure. Stopping at the first red hides
-    // every gate behind it, which is how one failure masks a second.
+    // Every gate runs even after a failure: stopping at the first red lets one failure mask a second.
     const from = Date.now();
     const result = runGate(name, args);
     /* Closes after the gate returns, so its dying children count against it. */
@@ -411,26 +331,21 @@ function main() {
     );
   }
 
-  // Three outcomes, counted apart. See runGate: an errored gate produced no
-  // verdict, so calling it a failure invents one and calling it a pass hides one.
+  // An errored gate produced no verdict: calling it a failure invents one, calling it a pass hides one.
   const errored = results.filter((r) => r.errored);
   const failed = results.filter((r) => !r.ok && !r.errored);
 
-  // Failing output in full, after the run, where it is read.
   for (const result of failed) {
     console.log(`\n${"=".repeat(72)}\n${result.name}\n${"=".repeat(72)}`);
     console.log(result.output.trimEnd());
   }
 
-  /* Correlated first, so one machine event is not buried under its own banners. */
   const environment = classifyEnvironmentFailure(results);
   const environmentNames = new Set(environment ? environment.names : []);
 
-  // Errored gates get their own block; a correlated event is listed once under its banner.
   for (const result of errored.filter((r) => !environmentNames.has(r.name))) {
     console.log(`\n${"=".repeat(72)}\n${result.name}  (ERRORED, no verdict)\n${"=".repeat(72)}`);
     console.log(`  ${result.reason}`);
-    /* An errored gate has no output by definition; a branch for it could not fire. */
   }
 
   console.log(`\n${"-".repeat(52)}`);
@@ -442,13 +357,10 @@ function main() {
     );
   }
   for (const name of skipped) {
-    // Named, not omitted. A gate that silently did not run is the thing this
-    // file exists to prevent, and that includes the ones it skipped on purpose.
     console.log(`  SKIP  ${name.padEnd(18)} needs the network, run: npm run check:all`);
   }
   console.log(`${"-".repeat(52)}`);
 
-  /* Peak memory and the gate holding it are what an out-of-memory kill needs. */
   /** @type {{ name: string, peakRss: number } | null} */
   let worst = null;
   for (const result of results) {
@@ -504,7 +416,6 @@ function main() {
     );
   }
 
-  // An errored run exits nonzero: a ship must never read "0 failed" off it.
   /*
    * Exit code set, not taken: process.exit() can cut the report short. cleanUp() is explicit
    * because the live sampler would keep the exit handler from ever running.

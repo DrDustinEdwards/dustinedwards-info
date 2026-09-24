@@ -1,90 +1,13 @@
-/**
- * The health SNAPSHOT: what the home page reads instead of running the suite.
- *
- * `.mjs` and dependency-free for the reason `verdicts.mjs` is: the decision
- * "is this snapshot still worth showing" is pure arithmetic over a timestamp,
- * and it is the half that has to be tested. The KV read and write live in
- * `snapshot.server.ts`, which imports this.
- *
- * ## WHY THIS EXISTS
- *
- * `home.tsx` called `runHealthChecks` in its loader. Its docblock argued that
- * this was affordable because it is paid on a cache MISS only, and that
- * argument was wrong about the cost rather than about the frequency.
- *
- * MEASURED 2026-08-26 against a control, unthrottled, six samples each:
- *
- *   `/` origin render        1.07 to 3.48 s   (median ~2.27 s)
- *   `/blog` origin render    0.32 to 0.90 s   (median ~0.55 s)
- *   `/api/health` alone      0.98 to 2.01 s   (median ~1.18 s)
- *
- * The gap between the home page and the control is the health suite, and the
- * endpoint measured alone accounts for essentially all of it. On a throttled
- * mobile profile that arrived as an LCP of 3.8 to 5.2 seconds against 1.4 for
- * every other page. A cache miss is not rare: `s-maxage` is 600 and the entry
- * is per location, so every colo pays it every ten minutes, and the first
- * reader in each window pays all of it.
- *
- * ## THE SNAPSHOT IS A BYPRODUCT, NEVER ITS OWN JOB
- *
- * Nothing runs the suite in order to fill this. `/api/health` runs it because
- * that is what it is for, and writes the verdict on the way out; the watchdog
- * Worker's poll every fifteen minutes goes through that same endpoint, so the
- * schedule is what keeps the snapshot fresh without a second timer existing. If
- * the endpoint stops being polled the snapshot ages and the tile says so, which
- * is the honest failure and is strictly better than a page that recomputes.
- *
- * THE CONSEQUENCE IS LOAD BEARING AND IS USED AS AN INSTRUMENT: because this is
- * written by the health call and by nothing else, the tile's AGE is the
- * watchdog's liveness. That is what the production freshness assertion checks
- * after a deploy, and it is why nothing may ever stamp this key directly. A
- * watchdog that wrote its own snapshot would be manufacturing its own alibi.
- *
- * ## WHY AGE IS SHOWN RATHER THAN HIDDEN
- *
- * Unchanged from the old design and it is the part worth keeping: this page is
- * shared-cached (`HOME_EDGE_CACHE_CONTROL` in `seo.ts`), so any verdict rendered
- * into it is already old when it is read. "All 5 checks passed at 14:32 UTC" is true when read at 14:41.
- * "All 5 checks passed" is not. The snapshot adds one more hop of age and the
- * tile now reports the whole of it, measured from the snapshot's own timestamp
- * rather than from the moment the page rendered.
- */
+// Written only by /api/health, which the watchdog polls, so the tile's AGE is the watchdog's liveness:
+// nothing else may stamp this key. Measured: running the suite in the home loader cost about 1.2 s.
 
-/**
- * The one KV key. A single key rather than a prefix: there is one site and one
- * verdict, and a prefix would invite a second writer.
- */
+/** One key, not a prefix: a prefix would invite a second writer. */
 export const HEALTH_SNAPSHOT_KEY = "health:snapshot";
 
-/**
- * How often the snapshot is expected to be refreshed, in seconds.
- *
- * The SECOND statement of the WATCHDOG's cron, declared in
- * `wrangler.watchdog.jsonc`, and it cannot be derived at runtime because a
- * Worker cannot read another Worker's config. Change the two together: nothing
- * checks that the cron still means this many seconds.
- *
- * THE OWNER MOVED 2026-08-29. It was the GitHub workflow's cron, which was
- * correct while that workflow was the only thing polling. Measured 2026-08-28,
- * that schedule fired 2 times in a day against 96 expected, so the watchdog
- * Worker took the fifteen-minute poll and the workflow dropped to hourly as the
- * off-platform second opinion. The tile's staleness rule follows whichever
- * watcher is actually setting the pace, which is now the one on this account.
- */
+/** Restates the watchdog cron in wrangler.watchdog.jsonc, which a Worker cannot read. Change both together. */
 export const HEALTH_POLL_INTERVAL_SECONDS = 15 * 60;
 
-/**
- * How old a snapshot may be before the tile stops presenting it as a verdict.
- *
- * THREE intervals, not one. A single missed poll is normal, and the tolerance
- * is KEPT at three even though the watchdog's Cron Trigger should be far more
- * reliable than the GitHub schedule it replaced. Two reasons, and neither is
- * inertia: a Cron Trigger is still best effort and may be delayed under load,
- * and the tolerance is what stops the tile flapping for a reason that has
- * nothing to do with the site's health, which is the noise that gets monitors
- * muted. Tightening it is a decision to make after the new cadence has been
- * observed, not on the day it lands.
- */
+/** Three intervals: a Cron Trigger is best effort, and a tile that flaps on one missed poll gets muted. */
 export const HEALTH_SNAPSHOT_STALE_AFTER_SECONDS = 3 * HEALTH_POLL_INTERVAL_SECONDS;
 
 /**
@@ -100,18 +23,8 @@ export const HEALTH_SNAPSHOT_STALE_AFTER_SECONDS = 3 * HEALTH_POLL_INTERVAL_SECO
  */
 
 /**
- * Turns a stored snapshot into what the tile renders.
- *
- * FAILS TO "missing" IN EVERY UNCERTAIN DIRECTION, and the list is long on
- * purpose because this value arrives from KV as untyped JSON: absent, not an
- * object, a timestamp that does not parse, a timestamp in the FUTURE, or a
- * verdict whose counts are not numbers. Presenting any of those as a verdict
- * would be the cached page telling a lie, which is the one thing the old
- * design got right and this must not lose.
- *
- * A future timestamp is refused rather than clamped: it means the writer's
- * clock or the shape is wrong, and neither is a state to render a green tile
- * from.
+ * Fails to "missing" in every uncertain direction, including a FUTURE timestamp: this is untyped KV JSON,
+ * and a cached page presenting a bad value as a verdict would be lying.
  *
  * @param {unknown} snapshot the parsed KV value, or null
  * @param {number} nowMs
@@ -144,12 +57,7 @@ export function healthTile(snapshot, nowMs) {
 }
 
 /**
- * The age, for a person, in the shortest form that is still honest.
- *
- * Whole minutes below an hour and whole hours above it. Seconds are omitted
- * deliberately: the snapshot is refreshed on a fifteen minute schedule and a
- * page that reports "read 47 seconds ago" claims a precision the arrangement
- * does not have.
+ * No seconds: on a fifteen minute schedule "47 seconds ago" claims a precision the arrangement lacks.
  *
  * @param {number} ageSeconds
  * @returns {string}
@@ -165,13 +73,7 @@ export function formatAge(ageSeconds) {
 }
 
 /**
- * The snapshot to store, built from a finished run.
- *
- * Takes the SAME shape `publicHealthBody` produces rather than a `HealthRun`,
- * so the endpoint stores exactly what it answered with and the two cannot
- * disagree about how many checks there were. Nothing but counts and a
- * timestamp is stored: the per-check detail strings carry an R2 object key and
- * shadow table names, and the home page is as public as the endpoint is.
+ * Counts only: per-check details carry an R2 key and shadow table names, and the home page is public.
  *
  * @param {{ ok: boolean, checks: Array<{ ok: boolean }> }} body
  * @param {string} readAt an ISO 8601 timestamp

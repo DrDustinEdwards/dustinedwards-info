@@ -6,16 +6,8 @@ import { PODCAST_SITE_URL, clockTime, type PodcastEpisode } from "~/lib/podcast/
 
 const X_URL = "https://x.com/Germomics";
 
-/**
- * SCIENCE COMMUNICATION (ruling 134): one Germomics episode, laid out the way germomics.com lays out
- * an episode page (title, a line of date and length, the description, then the player) and redrawn
- * in Paper and Plate. No eyebrow above the title, which this direction refuses; the show's name
- * leads the meta line instead.
- *
- * COMPLETE WITHOUT SCRIPT. The audio element carries native controls and plays as it is. The
- * hand-drawn controls are server markup marked `hidden`, and `app/enhance/podcast.ts` swaps them in,
- * so a reader without script never meets a button that does nothing. No third-party player.
- */
+// The hand-drawn controls are server markup marked `hidden` that the bundle swaps in, so a
+// reader without script gets the native audio controls and never a button that does nothing.
 export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
   return (
     <section className="home-section home-scicomm" aria-labelledby="scicomm-heading">

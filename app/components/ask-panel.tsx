@@ -2,17 +2,8 @@ import askEnhanceUrl from "~/enhance/dist/ask.js?url";
 
 import { EnhancementScript } from "~/components/enhancement-script";
 
-/**
- * The Ask affordance on /search. Server-rendered markup and a script tag, no
- * React island: the button ships HIDDEN and the prebuilt bundle unhides and binds
- * it, so a reader without script never sees an inert control that looks live and
- * does nothing. Classic results are already rendered by the loader, and nothing
- * here can delay them.
- *
- * `search.tsx` renders this only when the binding exists and the query is a real
- * question, so the bundle's own empty-question guard is a backstop, not the rule's
- * home.
- */
+// The button ships hidden and the bundle unhides it, so a reader without script
+// never sees an inert control that looks live.
 export function AskMount({ question }: { question: string }) {
   return (
     <div className="ask-mount" data-ask-mount="" data-ask-question={question}>

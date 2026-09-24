@@ -5,11 +5,6 @@ import { describe, expect, it } from "vitest";
 import { cloudflareContext } from "~/lib/context";
 import { loader } from "~/routes/api.auth.$";
 
-/**
- * The `/api/auth/*` rate limit, through the route's own loader and the real
- * Durable Object limiter.
- */
-
 const authRequest = (ip: string) =>
   new Request("https://example.com/api/auth/ok", { headers: { "cf-connecting-ip": ip } });
 

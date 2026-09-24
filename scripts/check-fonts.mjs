@@ -1,13 +1,3 @@
-/**
- * Gate: every `@font-face` DECLARATION must be true of the BINARY it names.
- *
- *   npm run check:fonts [-- --update]
- *
- * BOUNDARY: it reads DISK, never the wire. Per block that names a file it compares the declared
- * weight range, style, stretch and family against the file's own tables, and pins each binary by
- * digest so a re-subset with its axes intact cannot pass.
- */
-
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
@@ -25,10 +15,6 @@ let failures = 0;
 let checks = 0;
 
 /**
- * The first argument is named `ok` as the other gates spell it, with one argument order for one
- * name: a copied assertion in the other order would put a truthy STRING in the condition slot and
- * still increment the count.
- *
  * @param {boolean} ok
  * @param {string} label
  * @param {string} [detail]
@@ -43,11 +29,6 @@ function assertThat(ok, label, detail) {
 
 console.log("\ncheck:fonts\n");
 
-/**
- * The stylesheets that may declare a face. `app/app.css` holds the site's own,
- * `app/styles/*.css` holds the generated katex sheet; both are read, so a face
- * added to any sheet is in scope without this list being edited.
- */
 const SHEETS = [
   join(root, "app", "app.css"),
   ...readdirSync(join(root, "app", "styles"))
@@ -56,8 +37,6 @@ const SHEETS = [
 ];
 
 /**
- * Comments are stripped BEFORE matching, the vacuity rule: prose about a face is not a face.
- *
  * @param {string} css
  * @returns {string}
  */
@@ -98,23 +77,16 @@ for (const sheet of SHEETS) {
     }
   }
 
-  /*
-   * AND THE TYPE LEVELS, which spell `font-variation-settings` nowhere: the scale carries a level's
-   * axes and its family in separate tokens, so the regex above sees neither. THE FAMILY IS CARRIED
-   * WITH THE REQUEST: two shipped families carry `opsz` on different ranges, so checking against
-   * every carrier fails a legitimate value and checking against none lets a level be clamped.
-   */
+  // Type levels carry axes and family in separate tokens, so the regex above sees neither. The family
+  // travels with the request: two shipped families carry `opsz` on different ranges.
   const levelFamilies = new Map();
   for (const m of css.matchAll(/--t-([a-z0-9-]+)-family\s*:\s*([^;]+);/gi)) {
     levelFamilies.set(m[1], m[2].trim());
   }
   for (const m of css.matchAll(/--t-([a-z0-9-]+)-vars\s*:\s*([^;]+);/gi)) {
     const [, level, value] = m;
-    // A VARIANT INHERITS ITS LEVEL'S FAMILY: a heavier spelling of a level is not a ninth level, so a
-    // family token of its own would be a second owner. The base is the level name minus its last
-    // segment, and only when no exact token exists. The variant is NOT spelled in full here: section
-    // 31's token scan reads `scripts/` without stripping comments, so naming it would mark it
-    // referenced and then fail it for being referenced.
+    // A variant inherits its level's family: the base is the level name minus its last segment, used only
+    // when no exact token exists.
     const base = level.includes("-") ? level.slice(0, level.lastIndexOf("-")) : null;
     const family =
       levelFamilies.get(level) ?? (base ? (levelFamilies.get(base) ?? null) : null);
@@ -124,16 +96,8 @@ for (const sheet of SHEETS) {
   }
 }
 
-/*
- * SCOPE, ASSERTED BEFORE ANY PER-BLOCK ASSERTION: a regex that stopped matching iterates nothing
- * and every loop reports a clean sweep. Low bars, existing to prove the parse happened at all.
- */
-/*
- * Split rather than filtered, so `file` is a string in the half that has one: filtering leaves
- * the type nullable and every use needs a cast, which tells the typechecker to stop looking at
- * the field this gate cares about. The annotation below is a DOUBLE-STAR block on purpose:
- * written `/*` the `@type` is not JSDoc, the array infers `any[]`, and nothing is checked.
- */
+// Split rather than filtered, so `file` is non-nullable. The annotation below must be a double-star
+// block: written with a single star, the `@type` is not JSDoc and nothing is checked.
 /** @type {{sheet: string, family: string, weight: string|null, style: string|null, stretch: string|null, file: string, raw: string}[]} */
 const withFile = [];
 /** @type {typeof blocks} */
@@ -145,10 +109,8 @@ for (const b of blocks) {
 assertThat(blocks.length >= 20, "the sheets parsed into @font-face blocks", `${blocks.length} parsed, expected at least 20`);
 assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile.length} name a file`);
 
-/*
- * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future file-backed block cannot
- * fall into the skip path unnoticed. Exact rather than a count: WHICH faces is the assertion.
- */
+// The local()-only faces are skipped explicitly and listed exactly, so a file-backed block cannot fall
+// into the skip path unnoticed.
 /* "Inter Fallback" twice: a regular face and a bold one, one per weight band. The serif's twice: roman and italic. */
 const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback", "Source Serif 4 Web Fallback"];
 {
@@ -161,7 +123,6 @@ const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallba
   );
 }
 
-/** Every font binary that ships, so the reverse direction can be asserted. */
 const shipped = [];
 for (const dir of [join(root, "app", "fonts"), join(root, "app", "fonts", "katex")]) {
   for (const f of readdirSync(dir, { withFileTypes: true })) {
@@ -178,7 +139,6 @@ for (const file of shipped) {
   );
 }
 
-/** Cache: one parse per file however many blocks name it. */
 /** @type {Map<string, import("fontkit").Font>} */
 const parsed = new Map();
 /** @param {string} file */
@@ -190,10 +150,8 @@ function fontFor(file) {
   return font;
 }
 
-// NAMESPACED FAMILIES are the one case where the declared family and the binary's name table
-// legitimately differ: the serif is namespaced so a reader with the retail family installed
-// cannot put a different file in the resolution path. This map keeps that from being a license,
-// the declaration still being pinned to ONE binary family. It polices itself both directions.
+// Namespaced families legitimately differ from the binary's name table: the serif is namespaced so a
+// reader with the retail family installed cannot put a different file in the resolution path.
 /** @type {Map<string, string>} declared family -> the family its file must report */
 const NAMESPACED = new Map([["Source Serif 4 Web", "Source Serif 4"]]);
 
@@ -207,10 +165,7 @@ for (const b of withFile) {
   const font = fontFor(b.file);
   const axes = font.variationAxes ?? {};
 
-  // The family the file calls itself. KaTeX's name table carries the family
-  // without the style suffix, which is what the CSS declares too.
-  //
-  // A namespaced declaration is still pinned to one binary family; see the map.
+  // KaTeX's name table carries the family without the style suffix, which is what the CSS declares too.
   const expected = NAMESPACED.get(b.family) ?? b.family;
   assertThat(
     font.familyName === expected || font.postscriptName?.startsWith(expected.replace(/\s+/g, "")),
@@ -288,11 +243,7 @@ for (const [declared, binary] of NAMESPACED) {
   );
 }
 
-/*
- * AXIS REQUESTS FROM THE SHEETS, IN RANGE: a browser clamps silently, so the level renders at
- * the wrong optical size with nothing reporting it.
- */
-/* A ZERO-SCOPE SEARCH REPORTS A CLEAN SWEEP. The floor proves the parse happened at all. */
+// A browser clamps an out-of-range axis silently, so the level renders at the wrong optical size.
 assertThat(
   variationRequests.length >= 16,
   "axis requests were found in the sheets",
@@ -301,9 +252,7 @@ assertThat(
 );
 
 /**
- * `--t-*-family` holds `var(--font-sans)` or `var(--font-serif)`. Resolve the
- * indirection to the first family in that stack, which is the face the level
- * actually sets in.
+ * Resolves `var(--font-sans)` to the first family in that stack, the face the level actually sets in.
  *
  * @param {string|null} value
  * @returns {string|null}
@@ -338,9 +287,8 @@ for (const req of variationRequests) {
     );
   }
 
-  // A level names its own family, so it is checked against THAT face and no
-  // other. A bare `font-variation-settings` names none, so it keeps the older
-  // behavior of being checked against every carrier of the axis.
+  // A level is checked against its own family only; a bare `font-variation-settings` names none, so it
+  // is checked against every carrier of the axis.
   const carriers = faces.filter(
     (f) => f.axes[req.axis] && (wanted === null || f.b.family === wanted),
   );
@@ -364,23 +312,13 @@ for (const req of variationRequests) {
   }
 }
 
-/*
- * THE SATORI FACES, which are in no stylesheet: the cards are drawn from static TTFs that are the
- * same typeface as the served woff2 and a DIFFERENT BUILD of it, and nothing reconciled them.
- * THE SERVED woff2 BUILD IS CANONICAL, cards being a secondary artifact of that identity, and
- * THE TWO CANNOT CHEAPLY BE ALIGNED, satori not reading woff2. So the difference STANDS, and what
- * was refused with it was an instancing pipeline: a dependency, a build step and a gate.
- */
+// The satori faces are a different build of the served typeface, because satori cannot read woff2.
+// The served woff2 build is canonical, and the difference stands.
 const OG_FACES = [
   { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
   { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
 ];
-/*
- * THE FAMILY THE SITE SERVES, read from the `--font-sans` token rather than the FIRST
- * `@font-face` block, which was true only while one family lived there: a second made that a
- * statement about source ORDER. The token is an independent declaration and the right source
- * anyway, the cards drawing body-weight text.
- */
+// Read from the `--font-sans` token, not the first `@font-face` block, which is a statement about source order.
 const servedFamily = (() => {
   const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
   const decl = /--font-sans:\s*([^;]+);/.exec(sheet);
@@ -416,10 +354,7 @@ for (const face of OG_FACES) {
   );
 }
 
-/*
- * THE BASELINE. Every assertion above is satisfied by a file re-subsetted with
- * its axes intact, so the bytes themselves are pinned.
- */
+// Every assertion above is satisfied by a file re-subsetted with its axes intact, so the bytes are pinned.
 /** @param {string} file */
 const digest = (file) => createHash("sha256").update(readFileSync(file)).digest("hex");
 const allBinaries = [...shipped, ...OG_FACES.map((f) => f.file)].filter(existsSync).sort();
@@ -452,13 +387,7 @@ if (update) {
   }
 }
 
-/*
- * THE FLOOR, measured by RUNNING this gate: a hand-counted floor is a second owner of a number
- * the gate already knows. MEASURED ON A PLAIN RUN, and that distinction cost a wrong floor once:
- * `--update` SKIPS the per-binary baseline comparisons.
- */
-/* RE-MEASURED 2026-09-20 on a plain run: home.css added axis requests, and 240 then sat 28 under
-   its count against a 5% tolerance. */
+// Measured on a plain run: `--update` skips the per-binary baseline comparisons.
 const MINIMUM_CHECKS = 520;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);

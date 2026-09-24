@@ -1,21 +1,3 @@
-/**
- * The CI-must-be-green check that stands in front of the deploy.
- *
- * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, section 8: "CI
- * runs on push to main, after the fact. Nothing prevents a push that fails CI
- * from being deployed, because deploy is manual and local. The gate tier runs in
- * `ship`, so in practice the same checks run, but CI is advisory only."
- * Verified TRUE against the code on 2026-08-23: nothing in ship consulted CI.
- *
- * Each case below is a state that a naive check reads as success. The
- * no-run case is the one that matters most: an empty array satisfies `every()`,
- * so the obvious implementation deploys an unpushed commit while reporting that
- * CI passed.
- *
- * @see scripts/lib/ci-status.mjs
- * @see scripts/ship.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -24,7 +6,6 @@ import { ciVerdict, fetchCiRuns } from "../scripts/lib/ci-status.mjs";
 
 const SHA = "e15b883";
 
-/** A completed, successful push run, as GitHub reports it. */
 const green = {
   name: "CI",
   event: "push",
@@ -84,12 +65,8 @@ test("a run still in progress refuses: green so far is not green", () => {
   assert.equal(v.state, "running");
 });
 
-/*
- * THE STATE FIELD IS AN INTERFACE, so it is asserted rather than left to whoever reads `why`.
- * Ship waits on exactly one of the four refusals, a run in flight, and treats the other three as
- * reasons to stop waiting. Telling them apart by matching the prose above would make every
- * sentence in ci-status.mjs load-bearing, and the wording is not the contract.
- */
+/* The state field is the interface: ship waits only on `running` and stops on the rest.
+ * Matching the `why` prose instead would make its wording load-bearing. */
 test("every verdict carries the state that names it, refusals included", () => {
   const cases = [
     [{ workflow_runs: [green] }, "green", true],
@@ -105,8 +82,7 @@ test("every verdict carries the state that names it, refusals included", () => {
     assert.equal(v.ok, ok, `state ${state} must ${ok ? "" : "not "}deploy`);
   }
 
-  // The five states are distinct. One constant returned everywhere would satisfy each
-  // assertion above taken on its own.
+  // One constant returned everywhere would satisfy each assertion above taken on its own.
   const states = cases.map(([payload]) => ciVerdict(payload, SHA).state);
   assert.equal(new Set(states).size, cases.length);
 });
@@ -138,9 +114,7 @@ test("an unparseable payload refuses rather than reading as empty", () => {
 });
 
 test("PLANT 3: an unreachable API throws rather than returning a pass", async () => {
-  // A host that cannot resolve. The caller in ship.mjs turns this into a
-  // refusal; what matters here is that it does NOT resolve to a value that
-  // ciVerdict could read as success.
+  // What matters is that a network failure does NOT resolve to a value ciVerdict could read as success.
   await assert.rejects(
     () =>
       fetchCiRuns({
@@ -157,30 +131,8 @@ test("PLANT 3: an unreachable API throws rather than returning a pass", async ()
 });
 
 test("a non-2xx API answer throws with its status", async () => {
-  /*
-   * A 404 must throw rather than read as an empty run list, which is the
-   * dangerous reading: no runs for this sha and a refused request look
-   * identical to a caller that only counts.
-   *
-   * ## THIS ASKED GITHUB UNTIL 2026-08-24, AND THAT WAS THE DEFECT
-   *
-   * It called the real API with a nonsense repo path and asserted `4\d\d`,
-   * relying on GitHub to answer 404. On 2026-08-24 GitHub answered **504** for
-   * that path, repeatably, and the assertion failed: the code under test was
-   * behaving perfectly, throwing with the status it received, and the only
-   * broken thing was the test's assumption about a third party.
-   *
-   * Two separate faults, and the second is the one worth naming. It was FLAKY,
-   * and it was in the OFFLINE TIER, whose stated contract is "safe on a plane".
-   * A behavioral test that needs the public internet to pass is not offline,
-   * and this is the one gate in the suite that asserts behavior, so its
-   * flakiness lands on `ship`, which runs that tier before every deploy. A
-   * transient at the wrong moment refuses a deploy for a reason that has
-   * nothing to do with the deploy.
-   *
-   * `apiBase` was always the seam. The status is now chosen by a local server,
-   * so the test asserts what it always meant to assert and nothing else.
-   */
+  /* A 404 must throw rather than read as an empty run list. The status comes from a local
+   * server, so this offline-tier test never depends on GitHub answering. */
   const server = createServer((_request, response) => {
     response.writeHead(404, { "content-type": "application/json" });
     response.end(JSON.stringify({ message: "Not Found" }));
@@ -205,12 +157,8 @@ test("a non-2xx API answer throws with its status", async () => {
 });
 
 test("a 5xx is thrown with ITS status, not flattened into the 404 hint", async () => {
-  /*
-   * The paired negative, and the case that exposed the flake above. A gateway
-   * error must be reported as what it is: the 404 branch carries a private-repo
-   * hint that would be actively misleading here, sending a reader to run
-   * `gh auth login` over an upstream outage.
-   */
+  /* The 404 branch carries a private-repo hint that would send a reader to `gh auth login`
+   * over an upstream outage. */
   const server = createServer((_request, response) => {
     response.writeHead(504, { "content-type": "text/plain" });
     response.end("gateway timeout");

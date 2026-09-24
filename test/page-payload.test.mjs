@@ -1,29 +1,5 @@
-/**
- * What a cold load of a route resolves to, and the two mistakes this resolver
- * made before it worked.
- *
- * `check:page-payload` grades bytes per public route, and everything it grades
- * depends on this resolution being right. The gate itself reads the disk, so it
- * can only be exercised against whatever the tree happens to contain; these are
- * the cases the tree does not currently produce, which is the half that goes
- * stale silently.
- *
- * ## THE TWO DEFECTS, both found by running the gate and reading its output
- *
- * 1. A `?url` IMPORT IS NOT A FETCH. `bar-search-submit.tsx` imports the palette
- *    bundle's URL to put on a data attribute; the page does not fetch it, a
- *    gesture does. Counting the import made every route look like it served a
- *    search dialog, which is the exact opposite of what the split achieved, and
- *    the gate failed eight routes for a defect that did not exist.
- *
- * 2. THE WALK MUST NOT INVENT NAMES. Not tested here because it is the gate's
- *    own code, but recorded beside its sibling: the font assertion derived a
- *    binding name from a filename, guessed `interLatinNormalUrl` against the
- *    real `interNormalUrl`, and failed a font that IS preloaded.
- *
- * @see scripts/lib/page-payload.mjs
- * @see scripts/check-page-payload.mjs
- */
+/* A `?url` import is not a fetch: the page puts the URL on an attribute and only a gesture
+ * fetches it, so counting it would charge every route for the search dialog. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -32,7 +8,6 @@ import { fontsIn, importsOf, reachableAssets, stylesheetsFor } from "../scripts/
 
 const APP = "/app";
 
-/** A tiny in-memory module tree, so the walk can be driven without a disk. */
 const tree = (/** @type {Record<string, string>} */ files) => (path) =>
   Object.hasOwn(files, path.split("\\").join("/")) ? files[path.split("\\").join("/")] : null;
 
@@ -121,12 +96,8 @@ test("a route the manifest does not list still gets root's sheets", () => {
 });
 
 test("fonts come from @font-face only, not from every url()", () => {
-  /*
-   * A url() elsewhere is a background or a mask and is fetched only if
-   * something matches it; a @font-face src is fetched whenever the family is
-   * used, which on this site is every page. Counting both would make the gate
-   * demand a preload for decoration.
-   */
+  /* A @font-face src is fetched whenever the family is used (every page here); another url()
+   * only when something matches it. Counting both would demand a preload for decoration. */
   const css = [
     `@font-face{font-family:Inter;src:url(/assets/inter-normal-AAAAAAAA.woff2)format("woff2")}`,
     `.hero{background-image:url(/assets/texture-BBBBBBBB.png)}`,

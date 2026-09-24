@@ -52,17 +52,14 @@
   border-radius: 0.375rem;
 }
 
-/* The blurred placeholder behind a prose image: the pipeline writes has-lqip and an inline background image;
-   everything shared is here. No transition or cleanup: the opaque image covers it (exclude transparent
-   images at derivation). width and height are always set, so the box is final before paint. */
+/* The opaque image covers the placeholder, so no transition or cleanup; width and height make the box
+   final before paint. */
 .prose img.has-lqip {
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
 }
 
-/* Body images link to their original. Exempt from rule 2's underline, since the whole content is an image.
-   zoom-in is honest with or without the lightbox. */
 .prose a.image-link {
   text-decoration: none;
   cursor: zoom-in;
@@ -83,23 +80,21 @@
   margin: 0;
 }
 
-/* No opacity on this text: opacity composites after check:contrast reads the token, so a passing pair can
-   ship below the 4.5:1 floor. Size separates the credit from the caption. */
+/* No opacity on this text: it composites after check:contrast reads the token, so a passing pair can
+   ship below 4.5:1. */
 .figure-credit {
   display: block;
   margin-top: 0.25rem;
   font-size: 0.8125rem;
 }
 
-/* Charts: the renderer strips Plot's injected <style>, which carried a white literal per chart; these rules
-   replace it once. Axes inherit --text via currentColor; series use var(--chart-*), so one SVG serves both
+/* The renderer strips Plot's injected <style>; these rules replace it once, so one SVG serves both
    themes. */
 .chart-figure svg {
   display: block;
   max-width: 100%;
   height: auto;
   color: var(--text);
-  /* Plot marks that draw text haloes reference this. */
   --plot-background: var(--paper);
 }
 
@@ -115,9 +110,7 @@
   color: var(--text);
 }
 
-/* The equivalent data table, collapsed because it repeats the chart. It is
-   still real content: the accessible name is on the SVG, never on this
-   figure, so nothing here is presentational. */
+/* The accessible name is on the SVG, never on this figure. */
 .chart-data {
   margin-top: 0.75rem;
   font-size: 0.875rem;
@@ -132,9 +125,7 @@
   margin: 0.75rem 0 0;
 }
 
-/* Diagrams are build-time <img> assets (mermaid needs a real browser; see dustinedwards/chart-stack.md).
-   Two images, one per theme, since custom properties never reach an SVG in <img>. display: none, which
-   also drops the hidden one from the accessibility tree. Selectors follow the site's theme resolution. */
+/* Two images, one per theme: custom properties never reach an SVG in <img>. */
 .diagram-image {
   display: block;
   max-width: 100%;
@@ -142,10 +133,8 @@
   margin: 0 auto;
 }
 
-/* Which diagram shows, and which Shiki palette paints, is chosen on the theme scopes, as app.css
-   chooses every token. --shiki-on-light and --shiki-on-dark are a switch pair: the one that is on is
-   empty, and the one that is off is `initial`, so var(--off, X) yields X and var(--on, X) yields
-   nothing. One color survives in the declaration below, in either theme. */
+/* --shiki-on-light and --shiki-on-dark are a switch pair: the on one is empty and the off one is
+   initial, so var(--off, X) yields X and var(--on, X) yields nothing. */
 :root,
 [data-theme="light"] {
   --diagram-light-display: block;
@@ -185,13 +174,8 @@
   color: var(--text);
 }
 
-/* The scroll container the pipeline wraps every table in. A table whose columns do not fit the
-   reading column scrolls here instead of scrolling the document: measured at 320, the table in
-   ten-years-on-cloudflare was 431px wide and took the whole page sideways with it.
-
-   UNSCOPED ON PURPOSE, and this rule is the owner: /playground/ui's inventory table had the same
-   defect (+68 at 320) and takes the same container, so the behavior is stated once rather than
-   once per sheet. The margin is scoped to prose, where the pipeline puts it. */
+/* Unscoped on purpose: every table the pipeline wraps, and /playground/ui's, scrolls here instead of
+   the document. */
 .table-scroll {
   overflow-x: auto;
 }
@@ -207,10 +191,8 @@
   font-size: 0.9375rem;
 }
 
-/* Only inside the container, so a table written in JSX rather than produced by the pipeline keeps
-   the old behavior rather than escaping a parent that has no scroll. max-content, not 100%: at
-   100% a wide table squeezes its cells to fit and the scroll never happens; the min keeps a narrow
-   table filling the column as it did before. */
+/* Only inside the container. max-content, not 100%: at 100% a wide table squeezes its cells and never
+   scrolls. */
 .prose .table-scroll > table {
   inline-size: max-content;
   min-inline-size: 100%;
@@ -233,14 +215,10 @@
   border-radius: 0.25rem;
   background: var(--paper);
   font-size: 0.9em;
-  /* Inline code may break: its contents are single unbreakable tokens, and monospace fallbacks differ in width
-     by platform. anywhere, not break-word: only anywhere lowers min-content, so a token cannot widen the page.
-     It breaks only when it must, so short spans are unchanged. */
+  /* anywhere, not break-word: only anywhere lowers min-content, so a token cannot widen the page. */
   overflow-wrap: anywhere;
 }
 
-/* The :swatch chip. The label is a real <code>, so the inline-code rule already styles it; a second
-   declaration would drift. No per-theme block: the border is --border and the fill is the post's own hex. */
 .prose .swatch {
   display: inline-flex;
   align-items: center;
@@ -248,27 +226,19 @@
 }
 
 .prose .swatch-chip {
-  /* Sized in em so the chip tracks the text it sits beside rather than a fixed
-     pixel size that is wrong at one of the two type scales. */
   width: 0.85em;
   height: 0.85em;
   border-radius: 0.15em;
-  /* The border is load-bearing, not trim: a chip near the page surface color
-     (near-white in light, near-black in dark) would otherwise be an invisible
-     square, exactly for the colors a palette article discusses. */
+  /* The border is load-bearing: a chip near the page color would otherwise be an invisible square. */
   border: 1px solid var(--border);
-  /* The fallback keeps `--swatch` out of the theme blocks: read with a
-     default here, it never becomes a token, so check:contrast's participation
-     check and its exemption map have nothing new to handle. */
+  /* Read with a default here, --swatch never becomes a token, so check:contrast has nothing new to
+     handle. */
   background: var(--swatch, transparent);
-  /* Never absorb the flex line's shrink: the label shrinks, the chip does not,
-     because a chip narrower than it is tall stops being a color sample. */
   flex: none;
 }
 
 @media (forced-colors: active) {
-  /* Flattened in forced-colors on purpose (the palette yields, per v3). Never forced-color-adjust: none.
-     The hex survives as text beside the chip; the border is repainted in CanvasText. */
+  /* Never forced-color-adjust: none. The hex survives as text beside the chip. */
   .prose .swatch-chip {
     border-color: CanvasText;
   }
@@ -279,8 +249,7 @@
   padding: 1rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  /* Also set here, not only on .shiki, so a fence in an unlisted language
-     still lands on a surface instead of the page background. */
+  /* Also set here, so a fence in an unlisted language still lands on a surface. */
   background: var(--paper);
   color: var(--text);
   overflow-x: auto;
@@ -288,7 +257,6 @@
   line-height: 1.6;
 }
 
-/* Footnotes, as emitted by remark-gfm. */
 .prose .footnotes {
   margin-top: 3rem;
   padding-top: 1.5rem;
@@ -297,14 +265,10 @@
   color: var(--text-secondary);
 }
 
-/* remark-gfm labels the footnote section with a visually hidden heading. */
-/* .sr-only lives only in reset.css: a second copy here would make the class behave differently on pages
-   with and without prose. One owner, rule 17. */
+/* .sr-only lives only in reset.css: a copy here would make it behave differently on pages with and
+   without prose. */
 
-/* Heading anchors. Hidden until the heading is hovered or the link is focused,
-   so they never clutter the page but stay reachable by keyboard. */
-/* WCAG 2.2 2.5.8 and 1.4.3. inline-flex with a min-width, not padding, which would push the anchor away
-   from its heading; the heading's line box gives the height. */
+/* inline-flex with a min-width, not padding, which would push the anchor away from its heading. */
 .heading-anchor {
   display: inline-flex;
   align-items: center;
@@ -315,9 +279,7 @@
   text-decoration: none;
 }
 
-/* The reveal is scoped to hover-capable pointers and goes 0 to 1, never a partial opacity, which composites
-   after check:contrast measures. On touch the anchor is plain --text-secondary. focus-visible is safe inside
-   the query: outside it the anchor is already visible. */
+/* 0 to 1, never a partial opacity, which composites after check:contrast measures. */
 @media (hover: hover) {
   .heading-anchor {
     opacity: 0;
@@ -331,39 +293,30 @@
   }
 }
 
-/* Shiki dual themes: both palettes ride as custom properties, so switching needs no script. The theme's own
-   background is dropped; blocks sit on --paper, where check:contrast holds every syntax token to
-   4.5:1 (and on --surface-popover). With no attribute :root:not([data-theme]) answers; no light override. */
+/* The theme's own background is dropped: check:contrast holds every syntax token to 4.5:1 on --paper
+   and --surface-popover. */
 .prose .shiki,
 .prose .shiki span {
   color: var(--shiki-on-dark, var(--shiki-light)) var(--shiki-on-light, var(--shiki-dark));
 }
 
-/* The pre carries --shiki-light-bg inline but no inline background-color, so
-   this wins cleanly. Checked against real pipeline output: <pre class="shiki
-   ..." style="--shiki-light:#...;--shiki-light-bg:#fff;..."> */
+/* The pre carries --shiki-light-bg inline but no inline background-color, so this wins cleanly. */
 .prose .shiki {
   background-color: var(--paper);
 }
 
-/* Diff scopes and carriage-return pair a foreground with their own background and are only legible on it,
-   so those spans keep it. The attribute test matters: custom properties inherit. */
+/* Diff scopes pair a foreground with their own background and are only legible on it. The attribute
+   test matters: custom properties inherit. */
 .prose .shiki span[style*="--shiki-light-bg"] {
   background-color: var(--shiki-light-bg);
 }
 
-/* In light this yields what the rule above paints (or nothing, for a span with no light background);
-   in dark, the dark background. */
 .prose .shiki span[style*="--shiki-dark-bg"] {
   background-color: var(--shiki-on-dark, var(--shiki-light-bg, transparent))
     var(--shiki-on-light, var(--shiki-dark-bg));
 }
 
-/*
- * A PULL QUOTE: one clause of the paragraph below it, raised. `aria-hidden` in the markup, so the
- * sentence is heard once, in the prose, in order. Not a blockquote, which is a quotation from
- * somewhere else; this is the page quoting itself, so it takes no quotation mark and no rule.
- */
+/* aria-hidden in the markup, so the sentence is heard once, in the prose. */
 .prose .pull-quote {
   margin: 1.5rem 0 0.5rem;
   color: var(--text-secondary);

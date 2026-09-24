@@ -1,19 +1,6 @@
-/*
- * ONE ROW OF THE DISPLAY POPOVER.
- *
- * Moved out of `app/routes/admin.media._index.tsx` on 2026-08-24, body and
- * comments unchanged. The route now imports it.
- */
-
 import { Link } from "react-router";
 
-/**
- * LINKS, not buttons, and not a `<select>`. Every one is a different URL, so
- * making them links is what lets the whole display state be shared, bookmarked and
- * restored by the back button with no script at all. A select would need an
- * `onChange` to navigate.
- */
-
+// Links, not a select: each option is a URL, so display state is shareable and works with no script.
 export function MediaDisplayGroup({
   label,
   options,

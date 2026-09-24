@@ -1,6 +1,5 @@
-/* The base reset, vendored from Tailwind's preflight, with font tokens swapped in. It is load-bearing:
-   removing it moves computed values on every page. The @layer base wrapper must stay gone: nothing else is
-   layered, so it would only change which rules win. Imported first in app.css, so site rules win by position. */
+/* Vendored from Tailwind's preflight and load-bearing. No @layer base wrapper: nothing else is
+   layered, so it would change which rules win. */
 
 *,
 ::after,
@@ -156,8 +155,7 @@ textarea,
   opacity: 1;
 }
 
-/* Placeholder text: a semi-transparent version of the current text color, only in browsers
-   that do not crash on color-mix() with currentcolor. */
+/* Only in browsers that do not crash on color-mix() with currentcolor. */
 @supports (not (-webkit-appearance: -apple-pay-button)) or (contain-intrinsic-size: 1px) {
   ::placeholder {
     color: color-mix(in oklab, currentcolor 50%, transparent);
@@ -216,14 +214,13 @@ input:where([type="button"], [type="reset"], [type="submit"]),
   height: auto;
 }
 
-/* Hidden stays hidden: the browser's [hidden] loses to a class rule, and the search hint carries both
-   hidden and .sr-only. This one does not lose, so the hint stays out of the accessibility tree. */
+/* The browser's [hidden] loses to a class rule; this one does not, so a hidden .sr-only element stays
+   out of the accessibility tree. */
 [hidden]:where(:not([hidden="until-found"])) {
   display: none !important;
 }
 
-/* .sr-only, the one Tailwind utility the site used, copied so computed values do not move.
-   One edit: border: 0, which is what shipped. */
+/* Copied from Tailwind so computed values do not move. */
 .sr-only {
   clip-path: inset(50%);
   white-space: nowrap;

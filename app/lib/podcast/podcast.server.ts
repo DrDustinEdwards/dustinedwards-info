@@ -12,16 +12,9 @@ import {
   type PodcastSlot,
 } from "~/lib/podcast/feed.mjs";
 
-/**
- * The podcast feed, cached in APP_KV, on the citation cache's terms: THE PAGE NEVER WAITS ON THE
- * PODCAST HOST. The home loader reads KV only, and a missing or stale entry is refreshed in
- * `waitUntil` after the response is sent. There is no cron on this Worker, so a render is what
- * notices the age.
- *
- * A FAILED REFRESH NEVER REPLACES A GOOD COPY. It keeps the episodes and stamps `checkedAt`, so a
- * host that is down is asked again after the interval rather than on every render. Hard rule 18: the
- * cache is derived, the feed is the source, and a failed derivation reverts nothing.
- */
+// The page never waits on the podcast host: loaders read KV only and refresh in `waitUntil` (this Worker
+// has no cron). A failed refresh keeps the episodes and stamps `checkedAt`, so a down host is asked once
+// per interval, not on every render.
 
 const CACHE_KEY = "podcast:germomics:v1";
 const REFRESH_AFTER_MS = 3 * 60 * 60 * 1000;
@@ -30,9 +23,7 @@ const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
 type CachedFeed = {
   episodes: PodcastEpisode[];
-  /** When the episodes were last fetched successfully. */
   fetchedAt: string;
-  /** When the feed was last asked, successful or not. */
   checkedAt: string;
 };
 
@@ -77,10 +68,7 @@ async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<Cach
 const isStale = (cached: CachedFeed) =>
   Date.now() - Date.parse(cached.checkedAt) > REFRESH_AFTER_MS;
 
-/**
- * The cached episodes. `wait` is for the admin, which may block on a cold cache so the picker has
- * something to list; a public render never passes it.
- */
+// `wait` is for the admin's cold cache only; a public render never blocks on the host.
 export async function readPodcastFeed(
   context: Readonly<RouterContextProvider>,
   { wait = false }: { wait?: boolean } = {},
@@ -102,7 +90,6 @@ export async function writePodcastSlot(env: Env, slot: PodcastSlot): Promise<voi
   await setSetting(env, PODCAST_SLOT_KEY, JSON.stringify(slot));
 }
 
-/** What the home page renders: the chosen episode, or null when nothing is cached yet. */
 export async function homePodcastEpisode(
   context: Readonly<RouterContextProvider>,
 ): Promise<PodcastEpisode | null> {

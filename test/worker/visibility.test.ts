@@ -28,13 +28,7 @@ import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as searchLoader, middleware as searchMiddleware } from "~/routes/search";
 
-/**
- * A seeded corpus of one published, one draft and one scheduled post, written
- * through the site's own render door and then read back through every public
- * route module that lists or serves posts. The draft and the scheduled post
- * must appear nowhere; the published one is the control that proves each
- * surface was actually read.
- */
+/* The published post is the control that proves each surface was actually read. */
 
 type Loader = (args: never) => unknown;
 
@@ -96,7 +90,6 @@ function routeContext(overrides: Record<string, unknown> = {}) {
   return context;
 }
 
-/** One loader call, answering with whatever a reader or agent would receive as text. */
 async function read(
   loader: Loader,
   path: string,

@@ -1,17 +1,7 @@
-/**
- * The tokens-only audit over a rendered diagram SVG, run by the build on every asset it writes and
- * by the gate over every asset already committed.
- *
- * BOUNDARY: it asserts that every color a reader can SEE comes from the palette, computing
- * reachability structurally rather than from an allowlist, so what it cannot judge is a rule or an
- * attribute this document never paints with.
- */
-
 import { parseHTML } from "linkedom";
 
 import { normalizeHex } from "./tokens.mjs";
 
-/** Properties and attributes whose value is a color. */
 const COLOUR_PROPERTIES = new Set([
   "fill",
   "stroke",
@@ -26,10 +16,7 @@ const COLOUR_PROPERTIES = new Set([
   "outline-color",
 ]);
 
-/**
- * Values that name no color at all. `currentColor` is included because it resolves to the
- * `color` property, which is itself audited wherever it is set.
- */
+// `currentColor` is safe because it resolves to `color`, which is itself audited.
 const NON_COLOUR_VALUES = new Set([
   "none",
   "transparent",
@@ -41,8 +28,7 @@ const NON_COLOUR_VALUES = new Set([
 ]);
 
 /**
- * Splits a stylesheet into top level rules by BRACE DEPTH, not by splitting on `}`: mermaid's
- * stylesheet opens with at-rules whose bodies a naive split cuts into fragments.
+ * By brace depth, not splitting on `}`: mermaid's stylesheet opens with nested at-rules.
  *
  * @param {string} text
  * @returns {Array<{ selector: string, body: string }>}
@@ -73,8 +59,6 @@ export function cssRules(text) {
 }
 
 /**
- * Every color-carrying declaration in a rule body or an inline style.
- *
  * @param {string} body
  * @returns {Array<{ property: string, value: string }>}
  */
@@ -89,12 +73,10 @@ function colourDeclarations(body) {
 }
 
 /**
- * Decides whether one color value is allowed, fail closed by construction: the value must BE a
- * palette color, a keyword naming no color, or a paint reference. Anything else is reported,
- * which is what catches the forms a hex-hunting regex misses.
+ * Allowlist, not a hex hunt, so rgb(), hsl() and named colors are caught too.
  *
  * @param {string} value
- * @param {Set<string>} palette normalized hexes
+ * @param {Set<string>} palette
  */
 function colourProblem(value, palette) {
   const cleaned = value.replace(/!important/gi, "").trim();
@@ -109,10 +91,8 @@ function colourProblem(value, palette) {
 }
 
 /**
- * Audits one rendered SVG against one theme's resolved palette.
- *
  * @param {string} svg
- * @param {string[]} paletteHexes every color this theme is allowed to use
+ * @param {string[]} paletteHexes
  * @returns {{ checked: number, skippedRules: number, overridden: number, problems: string[] }}
  */
 export function auditDiagramSvg(svg, paletteHexes) {
@@ -129,8 +109,6 @@ export function auditDiagramSvg(svg, paletteHexes) {
     return { checked: 0, skippedRules: 0, overridden: 0, problems: ["no <svg> element"] };
   }
 
-  // The stylesheet mermaid embeds. Kept afterwards as well, so the attribute pass can ask which
-  // properties a rule takes over for a given element.
   /** @type {Array<{ selectors: string[], properties: Set<string> }>} */
   const styling = [];
 
@@ -153,8 +131,7 @@ export function auditDiagramSvg(svg, paletteHexes) {
         try {
           if (document.querySelector(one)) reachable = true;
         } catch {
-          // A selector this parser cannot evaluate is treated as reachable, so an unreadable rule fails
-          // loudly rather than passing by default.
+          // Unparseable selectors count as reachable, so the rule is audited rather than skipped.
           reachable = true;
         }
       }
@@ -171,8 +148,7 @@ export function auditDiagramSvg(svg, paletteHexes) {
   }
 
   /**
-   * Whether a stylesheet rule takes this property over on this element, which is what makes a
-   * presentation attribute dead rather than shipped.
+   * A presentation attribute a stylesheet rule overrides is never painted.
    *
    * @param {any} element
    * @param {string} property
@@ -189,8 +165,7 @@ export function auditDiagramSvg(svg, paletteHexes) {
       });
     });
 
-  // Attributes and inline styles on drawn elements. Anything inside a `<defs>` subtree nothing
-  // points at is never painted; the markers that draw arrowheads ARE pointed at, so they are audited.
+  // Unreferenced `<defs>` children are never painted; arrowhead markers are referenced, so audited.
   const serialized = root.toString();
   /** @type {Set<Element>} */
   const dead = new Set();

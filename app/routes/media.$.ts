@@ -5,42 +5,20 @@ import { ALL_WIDTHS, THUMB_WIDTHS } from "~/lib/media/widths.mjs";
 import type { Route } from "./+types/media.$";
 
 /**
- * Serves editor-uploaded media from R2, and derives thumbnails from it. Keys are immutable by
- * construction, so responses carry a one year immutable cache and an ETag.
- *
- * `?w=` returns a transform of the ORIGINAL, computed on request. NOTHING IS EVER WRITTEN BACK TO
- * THE BUCKET: one object, every size derived from it, which is what keeps R2 free of variant sprawl.
- *
- * It uses the Images BINDING rather than the `/cdn-cgi/image/` URL syntax, and that is forced rather
- * than preferred: the URL interface requires a customer zone and this site is served from
- * workers.dev.
- *
- * The transform is CACHED explicitly through the Cache API, because the binding's own responses are
- * not cached and every uncached call is a full decode and re-encode and a billed transformation.
+ * `?w=` transforms the original on request and never writes back to the bucket. The Images binding,
+ * not `/cdn-cgi/image/`, because the URL interface needs a customer zone and this is workers.dev.
+ * Cached explicitly: the binding's responses are not cached, and each miss is a billed transform.
  */
 /**
- * SVG IS SERVED AS AN ATTACHMENT, NEVER INLINE.
- *
- * An SVG is a document, not a picture: it can carry `<script>`, `<foreignObject>` and external
- * references. Anything in this bucket arrived through the upload form, `image/svg+xml` is allowed
- * there, and this route serves it from the SITE'S OWN ORIGIN, so inline a stored SVG is script
- * running as the site.
- *
- * The CSP blocks that today and THIS RULE IS KEPT ANYWAY. Defense in depth, deliberately: it does
- * not depend on the CSP, does not move if a directive is loosened, and holds for any client that
- * ignores the policy.
- *
- * `attachment` rather than a sandbox or a nonce, because nothing legitimately renders an R2 SVG
- * inline. Applied by the STORED content type, so a file renamed to `.png` on the way in is caught.
- *
- * @param {Headers} headers Headers already carrying the object's metadata.
+ * SVG is served as an attachment, never inline: from the site's own origin a stored SVG is script
+ * running as the site. Kept although the CSP blocks it today. Keyed on the stored content type, so a
+ * file renamed to `.png` is caught.
  */
 function attachIfActive(headers: Headers) {
   const type = (headers.get("content-type") ?? "").toLowerCase();
   if (!type.startsWith("image/svg+xml")) return;
   headers.set("content-disposition", "attachment");
-  // Belt and braces: an attachment that a browser sniffs back to SVG would
-  // defeat the disposition on its own.
+  // An attachment that a browser sniffs back to SVG would defeat the disposition on its own.
   headers.set("x-content-type-options", "nosniff");
 }
 
@@ -53,8 +31,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   if (requested) {
     const width = Number(requested);
-    // TWO closed sets, unioned. An open set lets any caller mint unlimited distinct transforms of one
-    // object, each a separately billed transformation and a separate cache entry.
+    // Closed sets: an open set lets any caller mint unlimited billed transforms and cache entries of one object.
     if (!ALL_WIDTHS.includes(width as (typeof ALL_WIDTHS)[number])) {
       return new Response("Unsupported width", { status: 400 });
     }
@@ -78,29 +55,11 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   return new Response(object.body, { headers });
 }
 
-/*
- * `bucketFor` MOVED to `classify.mjs`. It was one of three copies of one expression with nothing
- * holding them together. Import it; never write a second.
- */
-
 async function serveThumbnail(env: Env, request: Request, key: string, width: number) {
-  // Keyed by the full request URL, so each width is its own entry and the original is untouched.
-  //
-  // WARNING: THIS KEY MUST CARRY EVERYTHING THE BODY DEPENDS ON. It carries no headers, so `Vary`
-  // cannot help: the lookup presents a synthetic Request built from the URL alone, and a stored body
-  // must be a pure function of the key. A new input to the body goes into the key, or every stored
-  // entry stays live, stale and unreachable, because this cache has no purge door and its
-  // invalidation is per colo and partial.
-  //
-  // THE ENCODER SETTINGS ARE THEREFORE IN THE KEY. `WEBP_QUALITY` is an input to the body, and
-  // changing it without moving the key left every entry stored under the old encoder live, reachable
-  // and `immutable` for a year.
-  //
-  // A SYNTHETIC PARAMETER, never served and never linked, the same shape `workers/app.ts` uses to get
-  // the resolved theme into its own key.
-  //
-  // `caches.default` is the Workers runtime's own cache; the DOM lib does not declare it, so the cast
-  // narrows to the runtime that actually serves this.
+  // TRAP: keyed by URL alone, so `Vary` cannot help and a stored body must be a pure function of the
+  // key. This cache has no purge, so every input to the body goes into the key, encoder settings
+  // (`WEBP_QUALITY`) included, as a synthetic parameter never served or linked.
+  // `caches.default` is the Workers runtime's; the DOM lib does not declare it, hence the cast.
   const cache = (caches as typeof caches & { default: Cache }).default;
   const keyUrl = new URL(request.url);
   keyUrl.searchParams.set("__enc", `webp${WEBP_QUALITY}`);
@@ -111,41 +70,25 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
   const object = await bucketFor(env, key).get(key);
   if (!object) return new Response("Not found", { status: 404 });
 
-  // The binding is configured in `wrangler.jsonc`, which this repo does not track, so a clone or a
-  // rebuilt config can be missing it. Named explicitly, or the failure looks like a slow grid rather
-  // than a missing binding.
+  // The binding lives in untracked `wrangler.jsonc`, so a clone can lack it. Named explicitly, or the
+  // failure looks like a slow grid.
   if (!env.IMAGES) {
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set("cache-control", "public, max-age=31536000, immutable");
     headers.set("x-media-thumb", "unavailable-no-images-binding");
-    // The no-Images-binding fallback serves the ORIGINAL bytes, so an SVG
-    // reaches the reader through here too and needs the same treatment.
+    // The fallback serves the original bytes, so an SVG reaches the reader here too.
     attachIfActive(headers);
     return new Response(object.body, { headers });
   }
 
-  // ADMIN TILES CROP, CONTENT DOES NOT. A tile is a fixed strip that already crops in CSS, so
-  // cropping server-side is strictly better: saliency detection keeps the subject where `object-fit`
-  // keeps the center. A content image in the prose column has no fixed height and must never be
-  // cropped at all, because the author chose the framing.
-  //
-  // ROSTER PHOTOS ARE EXEMPT EVEN AT TILE SIZES: they are group photographs, and `fit: "cover"` cuts
-  // faces off the edge of the frame.
+  // Admin tiles crop (saliency keeps the subject); content images never do, the author chose the
+  // framing. Roster photos are exempt even at tile sizes: `fit: "cover"` cuts faces off.
   const isTile = THUMB_WIDTHS.includes(width as (typeof THUMB_WIDTHS)[number]);
   const crop = isTile && cropSafe(key);
 
-  // ONE FORMAT, UNCONDITIONALLY. WebP, for everyone, regardless of `Accept`.
-  //
-  // NEGOTIATION MAY NOT COME BACK HERE. The `caches.default` key above is built from the URL with no
-  // headers, so a body that depended on `Accept` would be stored once and served to every client under
-  // `immutable`, which is what happened for a year.
-  //
-  // It was dropped on the measurement as well as the mechanism: AVIF beat WebP by about a percent on
-  // the same source, which is not worth a second cache layer's worth of subtlety.
-  //
-  // There is no `<picture>` element anywhere in this codebase. Its usual job is exactly this fallback,
-  // and there is now nothing to fall back between.
+  // One format, WebP, regardless of `Accept`: the cache key carries no headers, so a negotiated body
+  // would be stored once and served to every client under `immutable`.
   const format = "image/webp";
 
   let response: Response;
@@ -155,9 +98,7 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
       .output({ format, quality: WEBP_QUALITY });
     response = result.response();
   } catch {
-    // A file the transformer cannot read is not an error worth a 500: the grid should still show
-    // something. Falling back to the original is safe HERE, where it is one tile, and is exactly what
-    // must not happen silently as a general strategy.
+    // Falling back to the original is safe here, for one tile, and must not become a general strategy.
     const original = await bucketFor(env, key).get(key);
     if (!original) return new Response("Not found", { status: 404 });
     const headers = new Headers();
@@ -169,14 +110,11 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
 
   const headers = new Headers(response.headers);
   headers.set("cache-control", "public, max-age=31536000, immutable");
-  // NO `Vary` HEADER, deliberately. The body depends on no request header, and advertising a `Vary`
-  // the `caches.default` key cannot honor reads as a guarantee this layer cannot make. The
-  // `x-media-thumb` header makes the transform observable from outside.
+  // No `Vary`: the body depends on no request header, and the key could not honor one.
   headers.set("x-media-thumb", `w=${width}`);
   const out = new Response(response.body, { headers });
 
-  // Cached after the response is built. The clone is required: a body can only
-  // be read once, and the reader must get the copy that is not consumed here.
+  // The clone is required: a body can be read only once.
   await cache.put(cacheKey, out.clone());
   return out;
 }

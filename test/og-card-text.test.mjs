@@ -1,20 +1,3 @@
-/**
- * The social card's fitted type, as a pure function rather than as a picture.
- *
- * REPLAYS THE DEFECT, per the replay rule. The previous template drew every title
- * at ONE size and cut at ONE length, so the only thing standing between a long
- * headline and the foot of the card was the corpus happening to be short. The
- * cut itself had already been a defect of exactly this shape: the title and the
- * description carried `WebkitLineClamp`, which satori ignores, so a clamp that
- * rendered byte-identical with and without it was believed for two templates.
- *
- * What is asserted here is the property a picture cannot show: that the size
- * DROPS at the boundary. A rendered card proves one title looked fine. This
- * proves the ladder is a ladder.
- *
- * @see app/lib/content/og-card-text.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -29,11 +12,7 @@ import {
 } from "../app/lib/content/og-card-text.mjs";
 
 /**
- * A title of exactly `n` characters made of short words, so the character count
- * and the rendered width stay in the relationship the ladder was measured in.
- * A single run of `x` would be one unbreakable word, which is the case the
- * module's own docblock names as the one characters cannot model.
- *
+ * Short words, so character count tracks rendered width the way the ladder was measured.
  * @param {number} n
  */
 function titleOfLength(n) {
@@ -42,10 +21,6 @@ function titleOfLength(n) {
 }
 
 test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {
-  // The plant, run as a test rather than by hand: feed each rung its exact
-  // bound, then one character more, and assert the size went DOWN. A ladder
-  // whose rungs were mis-ordered, or whose comparison was `<` where it should
-  // be `<=`, fails here and nowhere else.
   for (let i = 0; i < TITLE_SIZES.length - 1; i += 1) {
     const rung = TITLE_SIZES[i];
     const next = TITLE_SIZES[i + 1];
@@ -82,9 +57,6 @@ test("the shortest titles take the largest size", () => {
 });
 
 test("PAST THE LADDER IT THROWS, and does not substitute a size", () => {
-  // The no-substitution rule. A `?? smallest` here would mean an unclamped title rendered
-  // at a size nobody chose, silently, which is the failure mode the whole
-  // module exists to remove.
   assert.throws(
     () => titleFontSize(titleOfLength(TITLE_MAX + 1)),
     /past the last rung/,
@@ -110,16 +82,13 @@ test("an over-long title is cut on a WORD boundary and marked", () => {
 });
 
 test("the cut lands on a real boundary, never inside a word", () => {
-  // The word being cut is "boundary". Anything ending in a fragment of it,
-  // "boun" or "bound", is the mid-word cut this is here to refuse.
   const text = "one two three four five six seven eight boundary";
   const cut = clampWords(text, 44);
   assert.equal(cut, "one two three four five six seven eight…");
 });
 
 test("a single unbreakable word longer than the cap is cut anyway", () => {
-  // There is no boundary to find. Running off the edge of the card is worse
-  // than an abbreviation, and satori has no word-break to fall back on.
+  // satori has no word-break to fall back on, so the alternative is running off the card.
   const cut = clampWords("z".repeat(60), 20);
   assert.equal(cut, `${"z".repeat(20)}…`);
 });
@@ -137,10 +106,8 @@ test("dangling punctuation is dropped before the ellipsis", () => {
 });
 
 test("the em dash and the en dash are dropped too, and neither is in the source", () => {
-  // The module builds its character class from `\u` escapes because this repo
-  // refuses those bytes anywhere, hook-enforced. That spelling is easy to get
-  // wrong in a way nothing else would notice: a mistyped escape makes the class
-  // match something else entirely and the dash survives into the card.
+  // The module spells these dashes as escapes because the repo refuses the raw bytes, and a
+  // mistyped escape would let the dash survive into the card.
   const emDash = String.fromCharCode(0x2014);
   const enDash = String.fromCharCode(0x2013);
   assert.equal(clampWords(`alpha beta${emDash} gamma`, 14), "alpha beta…");
@@ -159,8 +126,6 @@ test("the description is cut at its own cap, not the title's", () => {
 });
 
 test("an absent description is the empty string, never the word null", () => {
-  // The template renders whatever comes back. `String(null)` on a card is the
-  // "Invalid Date" defect wearing different clothes.
   for (const missing of [null, undefined, "", "   "]) {
     assert.equal(cardDescription(missing), "");
   }

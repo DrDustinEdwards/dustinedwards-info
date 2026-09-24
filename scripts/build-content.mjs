@@ -1,12 +1,3 @@
-/**
- * Renders the corpus into the LOCAL build product.
- *
- *   npm run build:content
- *
- * BOUNDARY: gitignored, because git holds the markdown and D1 holds the only rendered copy;
- * everything that reads this file runs after a build.
- */
-
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,16 +17,10 @@ import { ContentError, renderPost } from "./lib/content.mjs";
 export const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
 
-/** The About page's prose. Markdown, so it edits the way a post does. */
 export const ABOUT_SOURCE = path.join("content", "about.md");
 export const ABOUT_ARTIFACT_PATH = path.join("content", "generated", "about.json");
 
-/**
- * Renders every post and returns the artifact exactly as it should sit on disk. Sorted by slug, so
- * the output depends on content alone rather than on filesystem order.
- *
- * @returns {Promise<string>}
- */
+/** @returns {Promise<string>} */
 export async function buildArtifact() {
   /** @type {string[]} */
   let entries;
@@ -66,12 +51,8 @@ export async function buildArtifact() {
     slugs.add(post.slug);
   }
 
-  /*
-   * The page half of the corpus. Read rather than imported, a JSON import needing an attribute this
-   * repo's compiler settings reject; the Worker's copy imports them instead. BUILD ORDER: this
-   * depends on the stack artifact, so that build runs FIRST, a stale one producing page records the
-   * next build will not reproduce.
-   */
+  // Read rather than imported: a JSON import needs an attribute this repo's compiler settings reject.
+  // Depends on the stack artifact, so that build must run first.
   const stack = JSON.parse(
     await readFile(path.join("content", "generated", "stack.json"), "utf8"),
   );
@@ -87,14 +68,8 @@ export async function buildArtifact() {
     await readFile(path.join("content", "playground.json"), "utf8"),
   );
 
-  /*
-   * THE PAPERS COME FROM A COMMITTED MODULE, not the JSON read above: that module is generated from
-   * the two data files and byte-gated against them. Reading the JSON again would be a second
-   * assembly of the same records.
-   */
   return serializeArtifact(
-    // Both run over the COMPLETE corpus, because relatedness and being linked to are properties of
-    // the set. Order between them does not matter: neither reads what the other writes.
+    // Both need the complete corpus: relatedness and being linked to are properties of the set.
     withBacklinks(withRelated(posts)),
     [
       ...colophonPages(stack, features),
@@ -106,8 +81,7 @@ export async function buildArtifact() {
 }
 
 /**
- * The date of the last commit that touched a file. Deliberately NOT written into the build product:
- * a render must be a pure function of the sources, and the Worker writer has no git.
+ * Deliberately not written into the build product: a render must be a pure function of the sources.
  *
  * @param {string} file
  * @returns {string | null}
@@ -121,19 +95,13 @@ export function lastCommitDate(file) {
     ).trim();
     return out || null;
   } catch {
-    // No git, no history, or a shallow clone. Absence is the honest answer.
     return null;
   }
 }
 
 /**
- * The revision date a post's row carries, or null. ONE OWNER for the rule, which decides whether a
- * reader sees an "Updated" line: the gate that renders that markup offline feeds the component the
- * value production would write, and computing it there would be a second statement, where a
- * measured value goes to one place or to nowhere, which is the one-owner rule. A `Date` rather than a
- * string, because returning the string leaves both consumers parsing, which is where a timezone
- * gets in. NULL IS A REAL ANSWER: a shallow clone has no history for most files, so the gate
- * asserts the PAIRING rather than the presence.
+ * Null is a real answer: a shallow clone has no history for most files. A Date, not a string, so
+ * no consumer parses it and lets a timezone in.
  *
  * @param {{ updated?: string | null, sourcePath: string }} post
  * @returns {Date | null}
@@ -144,16 +112,10 @@ export function revisedDate(post) {
 }
 
 /**
- * The About page, rendered from markdown into the shape its route imports.
+ * Rendered at build time so the Worker never ships a second markdown renderer. The image resolver
+ * refuses, because an image here would need a build-time measurement and would render unsized.
  *
- * WHY MARKDOWN AND NOT JSX: this one is a person's description of themselves, revised on taste,
- * and they should not have to edit a component to move a comma. WHY RENDERED HERE AND NOT IN THE
- * WORKER: the public plane must not grow a second markdown renderer, nor pay for the first on a
- * static page. THE SAME RENDERER THE CORPUS USES, or the page drifts from the posts beside it in
- * exactly the ways nobody checks. The image resolver REFUSES: one here would need a build-time
- * measurement this function does not do, and would render unsized.
- *
- * @returns {Promise<string>} the artifact exactly as it should sit on disk
+ * @returns {Promise<string>}
  */
 export async function buildAbout() {
   const raw = await readFile(ABOUT_SOURCE, "utf8");

@@ -1,20 +1,5 @@
-/**
- * The origin-requests source FAILS CLOSED.
- *
- * This is the forced-failure test for the panel's error path, and the path is
- * not hypothetical: the read token is optional by contract and a development
- * machine never carries it, so absence is what this code does every day.
- *
- * WHAT IS ACTUALLY AT STAKE. A loader that THROWS takes out the admin route
- * segment and React Router replaces the cockpit with an error boundary, so one
- * unreachable analytics API would blank the whole admin plane. Returning an
- * error result instead keeps the failure inside the one panel that owns it.
- * These tests assert the difference by calling the real module, not by reading
- * it.
- *
- * `Env` is ambient in the app's tsconfig and absent here, so the fake envs are
- * cast through the call. Node strips the types; nothing is compiled.
- */
+// A loader that THROWS takes out the admin route segment and blanks the whole cockpit, so
+// an unreachable analytics API must come back as an error result, not an exception.
 
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
@@ -90,9 +75,8 @@ test("a good response becomes the live state, sampling weighted", async () => {
   globalThis.fetch = realFetch;
   assert.equal(result.status, "live");
   assert.equal(result.data.rows.length, 1);
-  // Strings from the API become numbers, and the WEIGHTED figure is the one
-  // that lands in originRequests. A regression that read the row count instead
-  // would report 48 here and look entirely plausible.
+  // The WEIGHTED figure lands in originRequests; reading the row count instead would report
+  // 48 here and look entirely plausible.
   assert.equal(result.data.rows[0].originRequests, 96);
   assert.equal(result.data.rows[0].rows, 48);
   assert.equal(result.data.totalOriginRequests, 940);

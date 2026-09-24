@@ -1,13 +1,5 @@
-/**
- * The text-fragment builder behind "copy link to selection".
- *
- * WHAT MAKES THIS WORTH A TEST: every failure mode here produces a URL that works. A mis-encoded
- * directive, a passage that crosses a paragraph, a hyphen left bare: each one loads the post and
- * highlights nothing, which looks exactly like a reader whose browser does not support fragments.
- * So the assertions are on the STRING, not on a rendered outcome.
- *
- * @see app/lib/text-fragment.mjs
- */
+/* Every failure mode here still produces a URL that works and highlights nothing, which looks
+ * like an unsupported browser, so the assertions are on the STRING. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -26,7 +18,6 @@ test("a short selection is refused rather than encoded", () => {
   assert.equal(textFragment("too short"), null);
   assert.equal(textFragment("   "), null);
   assert.equal(textFragment(""), null);
-  /* The control: one character past the floor is accepted, so the floor is a floor and not a wall. */
   const atFloor = "x".repeat(FRAGMENT_MIN_CHARS);
   assert.equal(textFragment(atFloor), atFloor);
 });
@@ -36,10 +27,8 @@ test("an ordinary passage takes the exact form", () => {
 });
 
 test("the three reserved characters are all escaped", () => {
-  /*
-   * The hyphen is the one `encodeURIComponent` leaves behind, and it is the one that changes what
-   * the directive MEANS: `a-,b` is a prefix match. This asserts the escape rather than the intent.
-   */
+  /* The hyphen is the one `encodeURIComponent` leaves behind, and it changes what the
+   * directive MEANS: `a-,b` is a prefix match. */
   assert.equal(textFragment("first-class, and cheap & fast"), "first%2Dclass%2C%20and%20cheap%20%26%20fast");
   assert.ok(!textFragment("first-class, and cheap & fast").includes("-"));
 });
@@ -54,16 +43,12 @@ test("a passage over the ceiling becomes a start,end range", () => {
 });
 
 test("a selection crossing a block takes the range form however short it is", () => {
-  /*
-   * The discriminating case. This passage is well under the ceiling, so a length test alone would
-   * emit the exact form, and the exact form can never match: the directive is matched within one
-   * block and this text spans two.
-   */
+  /* Well under the ceiling, so a length test alone would emit the exact form, which can never
+   * match: the directive is matched within one block and this text spans two. */
   const crossing = "the end of one paragraph\nthe start of the next";
   assert.ok(crossing.length < FRAGMENT_MAX_CHARS);
   const fragment = textFragment(crossing);
   assert.equal(fragment, "the%20end%20of%20one%20paragraph,the%20start%20of%20the%20next");
-  /* And the control: the same words on one line do NOT get a range. */
   assert.ok(!textFragment(crossing.replace("\n", " ")).includes(","));
 });
 

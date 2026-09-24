@@ -1,13 +1,4 @@
-/**
- * Plaintext requests, and why the redirect must not be cacheable.
- *
- * The audit's claim, verified TRUE on the wire at HEAD before this landed:
- * http:// returned 200 with the full page, and the first plaintext request to a
- * path already warmed over HTTPS came back CF-Cache-Status: HIT carrying the
- * same CSP nonce. The schemes shared a cache entry.
- *
- * @see app/lib/https-redirect.mjs
- */
+// Without the redirect, http:// and https:// share a cache entry, CSP nonce included.
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -26,8 +17,6 @@ test("HTTPS is left alone, or every request would loop", () => {
 });
 
 test("LOOPBACK IS EXEMPT, or local development breaks", () => {
-  // `npm run dev` serves http://localhost:5173. Redirecting it sends the
-  // developer to a port where nothing is listening.
   for (const url of [
     "http://localhost:5173/",
     "http://127.0.0.1:8787/admin",
@@ -39,8 +28,6 @@ test("LOOPBACK IS EXEMPT, or local development breaks", () => {
 });
 
 test("a loopback-LOOKING public host is NOT exempt", () => {
-  // The exemption is an exact hostname set plus a .localhost suffix, not a
-  // substring test, so this must still redirect.
   assert.equal(
     httpsRedirectTarget("http://localhost.evil.com/"),
     "https://localhost.evil.com/",

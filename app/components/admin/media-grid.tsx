@@ -1,9 +1,3 @@
-/*
- * THE LIBRARY ITSELF: one markup tree, two layouts. Grid and list are the same
- * elements under different data attributes, so the layout cannot change which
- * submissions the page can issue.
- */
-
 import { Form, Link } from "react-router";
 
 import { CopyButton } from "~/components/admin/media-copy-button";
@@ -24,11 +18,6 @@ import type { hrefWith, sortHref } from "~/lib/media/view.mjs";
 
 import type { Route } from "../../routes/+types/admin.media._index";
 
-/*
- * The loader returns a UNION of three shapes and only the listing carries these
- * fields, so the member is selected rather than the property read off the union.
- * One owner: the loader.
- */
 type Listing = Extract<Route.ComponentProps["loaderData"], { detail: unknown }>;
 
 export function MediaGrid({
@@ -55,31 +44,14 @@ export function MediaGrid({
   tagCounts: Listing["tagCounts"];
 }) {
   return (
-        // A plain list. NOT `role="grid"`: positional information is meaningless to a
-        // screen reader here, because the column count depends on the container width and
-        // directional navigation does not help anyone find a picture. SEMANTIC ELEMENTS
-        // FIRST, and ARIA only where no element carries the meaning.
-        /*
-         * ONE MARKUP TREE, TWO LAYOUTS, selected by data attributes. A second branch of
-         * JSX is a second place for a control to go missing, and both would have to
-         * carry the same submissions.
-         */
+        // Not role="grid": the column count follows the container width, so positions mean nothing to a screen reader.
         <Form method="post">
-      {/*
-       * THE FORM WRAPS THE GRID so the checkboxes are part of the same submission.
-       * Nesting it inside the toolbar would put a form inside a form, which the browser
-       * drops. Rendered only when something is selected, which is why the two bulk
-       * intents appear in the fixture only under the seeded-selection state.
-       */}
+      {/* The form wraps the grid so the checkboxes submit with it; nested in the toolbar it would be
+          a form inside a form, which the browser drops. */}
         {chosen.length > 0 ? (
           <div className="posts-bulk" role="group" aria-label="Bulk actions">
             <p className="posts-bulk-count" aria-live="polite">
               {chosen.length} selected
-              {/*
-               * THE SIZE OF WHAT IS SELECTED, which is the question somebody selecting a dozen
-               * files is actually asking: a count of twelve says nothing about whether they are
-               * thumbnails or a conference poster.
-               */}
               <span className="posts-bulk-size">
                 {byteSize(
                   objects
@@ -88,11 +60,7 @@ export function MediaGrid({
                 )}
               </span>
             </p>
-            {/*
-             * `type="button"` so it never submits the form it sits inside, and the only
-             * client-side control in this bar. One address per line, because that is what
-             * pastes usefully and a comma-separated list is not.
-             */}
+            {/* `type="button"` so it never submits the form it sits in. One address per line: that pastes usefully. */}
             <button
               type="button"
               className="btn-ghost"
@@ -123,8 +91,6 @@ export function MediaGrid({
                 placeholder="tag name"
               />
             </label>
-            {/* The vocabulary already in use, offered rather than enforced: a
-                new tag is legitimate. */}
             <datalist id="media-bulk-tags">
               {tagCounts.map((t) => (
                 <option key={t.tag} value={t.tag} />
@@ -136,12 +102,7 @@ export function MediaGrid({
             <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
               Remove tag
             </button>
-            {/*
-             * Reversible, touches no object and no public URL, so it takes a plain
-             * confirmation rather than the type-the-count ceremony reserved for the
-             * irreversible delete. A `type="button"` opens the modal, because submitting from
-             * here would skip it.
-             */}
+            {/* A `type="button"` opens the modal, because submitting from here would skip it. */}
             <button
               type="button"
               className="btn"
@@ -149,7 +110,6 @@ export function MediaGrid({
             >
               Move to trash
             </button>
-            {/* Escape clears too, and nobody discovers Escape. */}
             <button
               type="button"
               className="btn-ghost"
@@ -160,18 +120,7 @@ export function MediaGrid({
           </div>
         ) : null}
 
-        {/*
-         * GROUPED PAGE-LOCAL: each page buckets the rows IT HAS and a group never spans a
-         * page boundary, so the heading counts THIS PAGE and says so.
-         *
-         * BRACED. Without the braces this is JSX CHILDREN TEXT and the whole paragraph
-         * renders on the page.
-         */}
-        {/*
-         * THE HEADER ROW, ONCE, above every group: column headings describe the TABLE,
-         * and one per folder would say the same five words four times while making each
-         * group look like a table of its own.
-         */}
+        {/* Grouped page-locally: a group never spans a page, so the heading counts this page. */}
         {view.view === "list" && objects.length > 0 ? (
           <MediaListHeader view={view} />
         ) : null}
@@ -184,11 +133,6 @@ export function MediaGrid({
               <span className="media-group-count">
                 {bucket.rows.length} on this page
               </span>
-              {/*
-               * The note is the reason this grouping exists: it is what stops somebody deleting
-               * nine photographs because a post-level tracker called them unreferenced. Quiet by
-               * SIZE and WEIGHT, never by an unreadable gray.
-               */}
               {bucket.note ? (
                 <span className="media-group-note">{bucket.note}</span>
               ) : null}
@@ -203,13 +147,6 @@ export function MediaGrid({
         >
           {bucket.rows.map((object) => {
             const name = displayName(object);
-            /* `cited` was here and is gone with the two-state meta line that
-               was its only reader. Usage is a three-state descriptor now. */
-            /*
-             * Both come from the pure module: `usage` arrives from the loader and
-             * `flagsFor` is the one definition of what a flag is, so the lens that selects
-             * rows and the badge that labels them cannot drift.
-             */
             const usage = usageDescriptor(object.usage);
             const flags = flagsFor({
               viewable: object.viewable,
@@ -222,34 +159,19 @@ export function MediaGrid({
               usage: object.usage,
               twin: object.twinCount > 0 ? name : null,
             });
-            /*
-             * NO NEW CLIENT STATE: both halves already exist, so the caption is a function of
-             * state the page already holds.
-             *
-             * Deliberately NOT on hover. Hover is not a state the server can render, and
-             * reaching it would mean script or a CSS rule revealing a control the keyboard
-             * cannot get to first.
-             */
+            // Not on hover: the server cannot render hover, and it would reveal a control the keyboard cannot reach first.
             const showCaption =
               view.view === "grid" && (chosen.includes(object.key) || view.key === object.key);
             return (
               <li
                 key={object.key}
                 className="media-card"
-                /*
-                 * The keyboard navigator addresses tiles by this attribute and reads their
-                 * rendered boxes for the geometry. The key rather than an index, so a reflow
-                 * cannot change what it means.
-                 */
+                /* The keyboard navigator addresses tiles by key, not index, so a reflow cannot change what it means. */
                 data-tile={object.key}
                 data-selected={chosen.includes(object.key) || undefined}
                 data-active={view.key === object.key || undefined}
                 data-kind={object.viewable ? "image" : "document"}
               >
-                {/*
-                 * The checkbox carries `key`, which is what the bulk action reads. Same shape as
-                 * the posts index's `slug`, so the two bulk surfaces are one grammar.
-                 */}
                 <label className="media-check-label">
                   <input
                     type="checkbox"
@@ -259,42 +181,23 @@ export function MediaGrid({
                     onChange={(event) =>
                       selectRange(
                         object.key,
-                        // `nativeEvent` carries the modifier a change event does not expose. Keyboard
-                        // activation reports `shiftKey` false, so Space still toggles one row, which is
-                        // what a keyboard reader expects.
+                        // Keyboard activation reports shiftKey false, so Space still toggles one row.
                         (event.nativeEvent as MouseEvent | undefined)?.shiftKey === true,
                       )
                     }
                   />
                   <span className="sr-only">Select {name}</span>
                 </label>
-                {/*
-                 * A FIXED BOX, declared as `aspect-ratio` on the wrapper rather than left to the
-                 * image: it reserves the space before the image arrives, so a lazily-loaded tile
-                 * cannot reflow the rows below it as it lands.
-                 */}
-                {/*
-                 * THE FRAME EXISTS SO THE CAPTION CAN BE A SIBLING OF THE LINK RATHER THAN A
-                 * CHILD OF IT: a `<button>` inside an `<a>` is invalid HTML that browsers
-                 * resolve differently, so the press either navigates or copies depending on who
-                 * you ask.
-                 */}
+                {/* `aspect-ratio` on the wrapper reserves the space, so a lazily-loaded tile cannot reflow the rows below. */}
+                {/* The caption is a sibling of the link, not a child: a `<button>` inside an `<a>` is invalid
+                    HTML that browsers resolve differently. */}
                 <span className="media-thumb-frame">
-                {/*
-                 * `preventScrollReset` is what stops opening a file throwing the reader back to
-                 * the top of the library: `<ScrollRestoration>` treats every new location as a new
-                 * place, and opening an inspector is looking closer at where you already are.
-                 */}
+                {/* Without `preventScrollReset`, `<ScrollRestoration>` throws the reader back to the top. */}
                 <Link
                   to={linkTo({ key: object.key })}
                   className="media-thumb-link"
                   preventScrollReset
-                  /*
-                   * SHIFT OR META CLICK SELECTS INSTEAD OF OPENING. `preventDefault` only inside
-                   * the branch, so an UNMODIFIED click is untouched and still a plain link: with no
-                   * script it navigates as it always did. The range logic is `selectRange`, already
-                   * written for the checkbox.
-                   */
+                  /* preventDefault only on modified clicks, so a plain click stays a link that works without script. */
                   onClick={(event) => {
                     if (!event.shiftKey && !event.metaKey && !event.ctrlKey) return;
                     event.preventDefault();
@@ -303,28 +206,16 @@ export function MediaGrid({
                 >
                   <span
                     className="media-thumb-box"
-                    // LQIP as a CSS background BEHIND the real image, so the tile is never empty and
-                    // the swap needs no script. Set CONDITIONALLY over a token background: the Images
-                    // binding does not rasterize vectors, so an SVG has a null placeholder and
-                    // `url(null)` would render as a black hole.
+                    // Set only when present: the Images binding does not rasterize SVGs, so the placeholder can be null and url(null) renders black.
                     style={
                       object.placeholder
                         ? { backgroundImage: `url("${object.placeholder}")` }
                         : undefined
                     }
                     data-placeholder={object.placeholder ? "lqip" : "none"}
-                    /*
-                     * `DocumentCard` puts a title, a suggestion of text and a size in this space, so
-                     * a squashed card would crush the thing that fixed it. 3:2, the ratio every tile
-                     * has.
-                     */
                     data-kind={object.viewable ? "image" : "document"}
                   >
-                    {/*
-                     * A document has no thumbnail the Images binding can ever produce, so it gets a
-                     * CARD rather than an `<img>` pointed at something that cannot render one. An
-                     * empty box per document read as a loading failure.
-                     */}
+                    {/* The Images binding can never thumbnail a document, so it gets a card, not a broken `<img>`. */}
                     {object.viewable ? (
                       <img
                         className="media-thumb"
@@ -341,11 +232,6 @@ export function MediaGrid({
                   </span>
                 </Link>
 
-                {/*
-                 * `tileFlagFor` picks the single most urgent flag rather than stacking three on a
-                 * small tile. Its `title` is the sentence, the dot is the glance. Outside the
-                 * caption, so a selected tile shows both.
-                 */}
                 {tileFlag ? (
                   <span
                     className="media-tile-flag"
@@ -356,20 +242,11 @@ export function MediaGrid({
                   </span>
                 ) : null}
 
-                {/*
-                 * It is the tile's ONLY copy control when it renders: two buttons with the same
-                 * accessible name on one card is a thing a screen reader reads twice and a pointer
-                 * picks between for no reason.
-                 */}
+                {/* The tile's only copy control when it renders: two same-named buttons would be read twice. */}
                 {showCaption ? (
                   <span className="media-caption">
                     <span className="media-caption-text">
                       <span className="media-caption-name">{name}</span>
-                      {/*
-                       * Dimensions only WHEN THERE ARE ANY: a document has none, and spending the
-                       * caption's second line saying a PDF is not a picture is a phrase in the way. The
-                       * list has a column, where a blank cell is a value.
-                       */}
                       <span className="media-caption-meta">
                         {byteSize(object.size)}
                         {object.width && object.height
@@ -382,64 +259,33 @@ export function MediaGrid({
                 ) : null}
                 </span>
 
-                {/*
-                 * THE BODY IS `display: contents` IN BOTH LAYOUTS, which is what keeps this one
-                 * markup tree while the list becomes a real table: a row's cells have to be grid
-                 * items of the row, and they cannot be if a wrapper sits between them.
-                 */}
+                {/* `display: contents` in both layouts: a row's cells must be grid items of the row, so no
+                    wrapper may sit between them. */}
                 <div className="media-card-body">
-                  {/* THE NAME CELL. In the grid it is the line under the
-                      picture; in the list it is column three, and it carries
-                      the directory underneath, which is the half the grid
-                      cannot afford to show. */}
                   <div className="media-name-row">
-                    {/*
-                     * The LAST SEGMENT, linking to the detail view, which is also the no-script route
-                     * to the address. A content-addressed key is an ADDRESS and reads as noise, so the
-                     * name the author gave identifies it to a human.
-                     */}
+                    {/* Content-addressed keys read as noise, so the author's name identifies the file. */}
                     <Link
                       to={linkTo({ key: object.key })}
                       className="media-name"
                       title={object.key}
                       preventScrollReset
                     >
-                      {/*
-                       * THE CLAMP IS THE GRID'S, AND ONLY THE GRID'S. Every truncation cuts the END,
-                       * which is the half that distinguishes, and a narrow tile genuinely has no room
-                       * where a list row does.
-                       */}
                       {view.view === "list" ? name : middleTruncate(name)}
                     </Link>
-                    {/*
-                     * THE DIRECTORY, LIST ONLY. Without it, two files with the same basename in
-                     * different directories are one row printed twice; the tile drops it because it
-                     * has no width to spend.
-                     */}
+                    {/* Without the directory, two same-named files in different directories read as one row twice. */}
                     <span className="media-name-dir">{folderPrefix(object.key)}</span>
                   </div>
-                  {/*
-                   * **"unused" IS FORBIDDEN HERE.** It is the exact claim the usage ruling says this
-                   * page may never make: the repository scan cannot see a constructed path and
-                   * nothing here can see an external site linking a file. This reads the SAME
-                   * descriptor every other surface reads.
-                   */}
+                  {/* Never say "unused": the repository scan cannot see a constructed path or an external site
+                      linking the file. */}
                   <p className="media-meta">
                     <span className="chip">{object.role}</span> {byteSize(object.size)}
                     {scanComplete ? ` · ${usage.label}` : ""}
                   </p>
                 </div>
 
-                {/*
-                 * Hidden in the grid by CSS rather than omitted from the markup, per the one-tree
-                 * rule. A cell reading "not measured" is doing work: printing 0x0 or an empty cell
-                 * would both read as a value rather than an absence.
-                 */}
-                {/*
-                 * Three states rather than two, because `used` and `unattached` could not
-                 * express the roster photographs. The dot is a SECOND CHANNEL beside a word, never
-                 * the signal itself, so a reader who cannot separate the hues loses nothing.
-                 */}
+                {/* "not measured" rather than 0x0 or blank, which would read as a value, not an absence. */}
+                {/* The dot is a second channel beside the word, never the signal alone, for readers who cannot
+                    separate the hues. */}
                 <span className="media-col media-col-usage">
                   <span className="media-usage-line">
                     <span
@@ -451,8 +297,6 @@ export function MediaGrid({
                       {scanComplete ? usage.label : "unknown"}
                     </span>
                   </span>
-                  {/* duplicate, no alt, over 1 MB. A file can carry all three,
-                      which is why this is a list and not a badge. */}
                   {flags.length > 0 ? (
                     <span className="media-row-flags">
                       {flags.map((f) => f.label).join(" · ")}
@@ -465,11 +309,6 @@ export function MediaGrid({
                 <span className="media-col media-col-size">{byteSize(object.size)}</span>
                 <span className="media-col media-col-added">{formatAdded(object.uploaded)}</span>
 
-                {/*
-                 * THE COPY CONTROL, ONE PER CARD, as the card's last child. Explicit grid
-                 * placement puts it beside the name in the grid view while the row gains its
-                 * column. It renders here only when the caption bar is not already carrying it.
-                 */}
                 {showCaption ? null : (
                   <span className="media-col-copy">
                     <CopyButton value={object.url} label={name} />

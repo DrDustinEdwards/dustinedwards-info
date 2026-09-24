@@ -34,80 +34,35 @@ import type { Route } from "./+types/home";
 import "~/styles/evidence-row.css";
 import "~/styles/home.css";
 
-/**
- * Publicly cacheable. The cache-header rule default STAYS and still covers everything
- * unlisted; this route opts in. The theme is a dimension of the cache key rather
- * than a Vary. Tagged `posts`, because the proof tiles and the featured list read
- * the corpus. The short edge policy is for the health tile; see `HOME_EDGE_CACHE_CONTROL`.
- */
+/** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the health tile. */
 export function headers() {
   return publicHtmlHeaders(cacheTags(), HOME_EDGE_CACHE_CONTROL);
 }
 
 export function meta() {
-  /* The URL people paste, and it carried no canonical and no OG text at all.
-     See pageMeta for what a partial set costs at cutover. */
   return pageMeta({ title: SITE.name, description: SITE.description, path: "/" });
 }
 
 /**
- * THE FRONT DOOR: who, what, and why believe it.
- *
- * This site's proof is that it measures itself continuously and publishes the
- * measurements, so THE THREE NUMBERS ARE READ AT RENDER from the instruments that
- * own them, never typed into this file. A digit here would be a second copy of a
- * number a gate already owns. Rule 17. The writing tile is `total` from
- * `listHomeStartHere`, the same `publiclyVisible()` predicate the blog index
- * counts with, so a different count here is a visibility bug and not copy.
- *
- * THE CACHED PAGE MUST NOT LIE. This page is shared-cached, so a verdict rendered
- * into it can be minutes old by the time it is read. Only a `fresh` verdict shows a
- * ratio, and its age in seconds rides `data-health-age`, which the gates read. No
- * sentence under the row, so the plate and its key fit one screen; `/api/health`
- * is the live answer.
- *
- * NOTHING HERE CAN START A HEALTH RUN. `/api/health` writes its verdict to KV and
- * this loader reads it: one KV read. The subrequest is refused because a Worker
- * fetching its own public URL is a hop out to the edge and back, naming an origin
- * that changes at cutover.
- *
- * THE TILE HAS A THIRD STATE. The snapshot can be absent or old, so the tile must
- * be able to say so instead of showing a verdict; every uncertain input resolves
- * to `missing`.
+ * The cached page must not lie: only a `fresh` verdict shows a ratio, with its age in
+ * `data-health-age`. Nothing here starts a health run: a Worker fetching its own public URL is an
+ * edge round trip naming an origin that changes at cutover.
  */
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
-  /*
-   * CONCURRENT: neither reads the other's result. `home_health` KEEPS ITS NAME
-   * deliberately, because the same name against a different number is a legible
-   * before and after where a renamed mark would look like the instrument was
-   * removed.
-   */
   const [start, tile, podcast] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_health", () => readHealthTile(env)),
-    // KV and one settings row; the feed itself is refreshed after the response.
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
   ]);
 
-  /*
-   * `splitFeatured` IS GONE FROM THIS ROUTE, ruling 57: it searched inside the rows
-   * already fetched, so the lead was only found when it happened to be among them.
-   * `/blog` keeps it, because there the question really is "is the hero on the page
-   * I just fetched".
-   */
   return {
     gates: stack.gates.length,
     posts: start.total,
     featured: start.featured,
     recent: start.recent,
-    /*
-     * HANDED STRAIGHT THROUGH. The classification, the age and the refusal to present
-     * an uncertain snapshot as a verdict all happened in `healthTile`. This route
-     * computes no timestamp of its own.
-     */
     health: tile,
     podcast,
   };
@@ -118,20 +73,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { gates, posts, featured, recent, health, podcast } = loaderData;
 
   /*
-   * `missing` and `stale` both refuse to show a ratio: a number beside "health
-   * checks passing" is read as the CURRENT answer no matter what sentence sits under
-   * it, and a dash is not mistakable for a verdict.
+   * `missing` and `stale` show no ratio: a number beside "health checks passing" is read as the
+   * current answer whatever sentence sits under it.
    */
   const healthValue =
     health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
   const healthAge = health.state === "missing" ? undefined : String(health.ageSeconds);
 
-  /*
-   * EVERY FIGURE IN SECTIONS 2 AND 3 IS COUNTED HERE, not typed into the prose. The handoff's own
-   * sentences carry numbers (36 papers, 157 researchers, nine cohorts, six in one year), and a
-   * typed number beside a computed chart is the exact shape rule 17 refuses: two owners for one
-   * fact, drifting the first time a paper lands.
-   */
+  /* Every figure in sections 2 and 3 is counted here, never typed: a typed number drifts when a paper lands. */
   const years = PUBLICATIONS.map((p) => p.year).filter((y) => Number.isFinite(y));
   const earliestYear = Math.min(...years);
   const latestYear = Math.max(...years);
@@ -142,7 +91,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     0,
   ];
   const [peakYear, peakCount] = peak;
-  /* Newest first, and the deposited date breaks a tie inside a year. */
   const recentPapers = [...PUBLICATIONS]
     .sort((a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""))
     .slice(0, 3);
@@ -159,32 +107,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       <main className="tracks home-tracks" id="main" tabIndex={-1}>
-        {/*
-         * The profile `rel="me"` links live in the footer (ruling 135). Only `u-url` had
-         * nowhere to go, so the anchor is hidden and it is the ONE hidden element in the card.
-         *
-         * NO `u-photo`: a card claiming a photo the site does not publish would be the
-         * h-card version of a substituted value.
-         */}
-        {/*
-         * THE EYEBROW IS GONE. An uppercase tracked line above the name is the one typographic
-         * move this direction refuses outright, and the sentence under the name already said it.
-         */}
-        {/*
-         * THE SPLIT HERO, and it is the first consumer .u-wide has ever had. The handoff puts the
-         * plate in the intro's RIGHT COLUMN at 1280 with a 76px gutter, and below the name at 375.
-         * The name holds the left; the plate holds the right; below the breakpoint the grid
-         * collapses and the source order is already correct.
-         *
-         * The pair takes the wide track because the text track is the prose measure and a 500px
-         * plate beside a column of type is not prose (ruling 118 item 4).
-         */}
+        {/* `rel="me"` links live in the footer; only `u-url` needed a home here. No `u-photo`: the site publishes none. */}
         <div className="home-hero u-wide">
         <section className="home-intro h-card" aria-labelledby="intro-h">
           <h1 className="intro-name p-name" id="intro-h">
             {SITE.name}
           </h1>
-          {/* Three stacked lines; the system is the tier below, so it is set quieter. */}
           <p className="intro-affil">
             <span>Professor and virologist</span>
             <span>{SITE.affiliation}</span>
@@ -196,19 +124,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </section>
 
         {/*
-         * THE ABSTRACT IS NOT HERE, deliberately. The handoff carries one, and its text is a
-         * session's words about Dustin rather than his own: vol 19 records that it is his to
-         * write. Shipping a stranger's sentence about a person, on that person's home page, is
-         * the one thing this section must not do, so the intro carries the name alone until he
-         * supplies it. The label went with it; an "Abstract" heading over nothing is worse
-         * than no heading, and vol 19 says that label is sentence case or dropped.
+         * No abstract: that text is Dustin's to write, and a session's words about him must not ship on
+         * his home page.
          */}
 
-        {/*
-         * PLATE I. A drawing, not data: it does not change with the corpus. Second in source, so
-         * a reader without the grid meets the name, the sentence and the checkable row before the
-         * teaching object, and a screen reader hears them in that order at every width.
-         */}
         <figure className="home-plate">
           <PlateI />
           <figcaption className="home-plate-caption">
@@ -218,11 +137,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </figure>
         </div>
 
-        {/* The specimen row, beneath the whole hero as the canvas places it. */}
         <PlateKeyRow />
         <PlateEnhancements />
 
-        {/* Research opens with Dustin's own statement; the rest of the section is his to write. */}
         <section className="home-research" aria-labelledby="research-heading">
           <h2 id="research-heading" className="home-section-heading">
             Research
@@ -235,21 +152,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <h2 id="featured-heading" className="home-section-heading">
               Writing
             </h2>
-            {/*
-             * THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not `PostCard`. It
-             * IS a second place the property set is written down, which is the cost, and
-             * `check:machine-readable` reads both surfaces so the two cannot quietly diverge.
-             *
-             * NO h-feed: this is a hand-picked three, not the blog's feed.
-             */}
-            {/*
-             * ONE `ol`, HAND-PICKED FIRST. Reverse-chronological order is meaningful for the tail,
-             * and the featured post leads it because it is the way in, which is what the heading
-             * says. `key` guards against the featured post also appearing in `recent`.
-             *
-             * READING TIME IS NOT DRAWN. The date is the only metadata a reader needs to choose;
-             * the field stays upstream for whatever else reads it.
-             */}
+            {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
                 <li key={post.slug} className="home-row h-entry">
@@ -282,12 +185,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </section>
         ) : null}
 
-        {/*
-         * 2 · PUBLICATIONS. Three rows and a figure, both read from `app/data/publications.ts`,
-         * so the count in the sentence and the rules in the chart cannot disagree with the list
-         * at /publications. Titles and journals go through `decodeEntities` because the deposited
-         * records carry HTML entities and React would otherwise print `&amp;` as four characters.
-         */}
+        {/* Titles and journals go through `decodeEntities`: the deposited records carry HTML entities React would print literally. */}
         <section className="home-section" aria-labelledby="publications-heading">
           <h2 id="publications-heading" className="home-section-heading">
             Publications
@@ -327,11 +225,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </figure>
         </section>
 
-        {/*
-         * 3 · PHAGE DISCOVERY. The roster page carries the names; this is the shape of the
-         * program. Both numbers in the sentence are counted from `PHAGE_YEARS` rather than
-         * typed, so a new cohort moves the sentence and the figure together.
-         */}
         <section className="home-section" aria-labelledby="discovery-heading">
           <h2 id="discovery-heading" className="home-section-heading">
             Phage discovery
@@ -357,11 +250,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
         <HomePodcast episode={podcast} />
 
-        {/*
-         * FOR READERS WHO ARE NOT PEOPLE, stated plainly rather than left to be
-         * discovered in a Link header: an agent that knows this can read the writing
-         * without parsing markup at all.
-         */}
         <section className="home-machines" aria-labelledby="machines-heading">
           <h2 id="machines-heading" className="home-section-heading">
             Reading this as a machine
@@ -375,15 +263,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </p>
         </section>
 
-        {/*
-         * THE EVIDENCE ROW, at the foot of the page rather than in the hero, so the plate and its
-         * key fit one screen. Each figure links where its old tile linked. The affiliation is
-         * `SITE.affiliation`, the constant the Person record's `worksFor` comes from.
-         *
-         * `data-health-age` rides the health fact, in SECONDS, because `check:browser` and
-         * `verify-live` read the attribute rather than the sentence beside it: prose gets edited,
-         * a number cannot be satisfied by a rewording.
-         */}
+        {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
         <EvidenceRow
           facts={[
             <span>{SITE.affiliation}</span>,
@@ -403,7 +283,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           <script
             key={i}
             type="application/ld+json"
-            // schema.org data for search and language models
             dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
           />
         ))}

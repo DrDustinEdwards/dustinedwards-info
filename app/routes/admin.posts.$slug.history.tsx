@@ -13,17 +13,6 @@ import { currentHead } from "~/lib/editor/publish.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.posts.$slug.history";
 
-/**
- * Version history for one post. READ ONLY.
- *
- * Git already holds the history, so this is a window onto it. Ruling 1 says a
- * restore LOADS a revision into the editor as unsaved content and that every
- * mutation stays on the one existing write path, so restoring happens in the
- * editor's drawer where the author sees the change before deciding to keep it.
- *
- * This page exports NO action at all. A POST here answers 405.
- */
-
 export function meta({ params }: Route.MetaArgs) {
   return [
     { title: `History: ${params.slug} · Admin` },
@@ -43,8 +32,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   const commits = await timed(timings, "gh_commits", () => listCommitsForPath(env, path));
 
-  // One diff at a time, chosen by query param, so the page stays a plain
-  // link-driven document with no client state.
   const selected = new URL(request.url).searchParams.get("commit");
   const patch =
     selected && commits.some((commit) => commit.sha === selected)
@@ -114,12 +101,6 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
                 >
                   {selected === commit.sha ? "Hide diff" : "View diff"}
                 </Link>
-
-                {/*
-                 * No restore control here. Ruling 1 moved restoring into the editor's drawer,
-                 * where it loads rather than writes, and leaving a second one here would have been
-                 * a second way to commit wearing the same word.
-                 */}
               </div>
 
               {selected === commit.sha ? (

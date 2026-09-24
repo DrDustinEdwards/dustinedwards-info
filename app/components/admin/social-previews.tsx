@@ -6,18 +6,8 @@ import {
   truncateForSerp,
 } from "~/lib/seo";
 
-/**
- * Both read from `postSocial`, the SAME function the post route's `meta()`
- * calls. A preview that derived its own version would eventually disagree with the
- * page, and it would disagree SILENTLY, because no view renders both at once for a
- * human to compare.
- *
- * These are previews of the head tags, not of a search engine's rendering. What
- * they promise is "these are the strings the site emits, cut where they will be
- * cut".
- */
+// Both read from postSocial, the function the post route's meta() calls, so they cannot drift silently.
 
-/** The fields both previews need, which is what the editor already holds. */
 export type PreviewPost = {
   slug: string;
   title: string;
@@ -26,12 +16,7 @@ export type PreviewPost = {
   coverAlt: string;
 };
 
-/**
- * `ogImage` is deliberately NOT supplied and that is not an omission: the
- * build:og card is a fact about R2 discovered at sync time, and the editor cannot
- * know whether one exists for a title the author is still typing. Claiming one
- * would be the preview inventing an image.
- */
+// No ogImage: whether a build:og card exists is a fact about R2 the editor cannot know.
 function fromEditor(post: PreviewPost) {
   return postSocial({
     slug: post.slug,
@@ -41,7 +26,6 @@ function fromEditor(post: PreviewPost) {
   });
 }
 
-/** A search result, cut where a search engine cuts rather than at the field counter. */
 export function SerpPreview({ post }: { post: PreviewPost }) {
   const social = fromEditor(post);
   const title = truncateForSerp(social.pageTitle, SERP_TITLE_LIMIT);
@@ -49,7 +33,6 @@ export function SerpPreview({ post }: { post: PreviewPost }) {
 
   return (
     <div className="serp-preview">
-      {/* The breadcrumb form Google shows, not the raw href. */}
       <p className="serp-url">
         {social.canonical.replace(/^https?:\/\//, "").replace(/\//g, " › ")}
       </p>
@@ -58,8 +41,6 @@ export function SerpPreview({ post }: { post: PreviewPost }) {
 
       {title !== social.pageTitle || description !== social.description ? (
         <p className="serp-note">
-          {/* Named separately, because an author who shortens the description
-              should not have to guess that the title was the problem. */}
           {[
             title !== social.pageTitle ? "title" : null,
             description !== social.description ? "description" : null,
@@ -74,18 +55,13 @@ export function SerpPreview({ post }: { post: PreviewPost }) {
   );
 }
 
-/** The social card, showing what actually gets emitted, including the fallback. */
 export function OgPreview({ post }: { post: PreviewPost }) {
   const social = fromEditor(post);
 
   return (
     <div className="og-preview">
       <div className="og-preview-image">
-        {/*
-         * The real image, at the real URL, and NOT a placeholder when there is no cover:
-         * a post with no cover gets the site mark, so that is what is shown. Inventing a
-         * gray rectangle would hide the one case worth seeing.
-         */}
+        {/* No placeholder when there is no cover: the post gets the site mark, so that is what is shown. */}
         <img
           src={social.image}
           alt={

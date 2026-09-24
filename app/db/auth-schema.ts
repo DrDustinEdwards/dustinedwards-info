@@ -2,10 +2,8 @@ import { sql } from "drizzle-orm";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 /**
- * Better Auth core tables. Column names match Better Auth's default schema so the
- * Drizzle adapter maps fields without extra configuration. Sessions themselves live
- * in KV (secondaryStorage); these tables hold the durable user, account and
- * verification records.
+ * Column names match Better Auth's default schema so the Drizzle adapter needs no field mapping.
+ * Sessions live in KV (secondaryStorage), not here.
  */
 
 export const user = sqliteTable("user", {

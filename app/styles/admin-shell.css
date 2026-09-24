@@ -1,43 +1,23 @@
-/* The admin cockpit frame: sidebar, nav, badges, topbar, panels, origin-requests panel.
- * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
 .admin {
   display: grid;
-  /* auto, not the width: the width lives on .admin-sidebar. Never transition grid-template-columns from a
-     custom property; the computed template freezes. A real element's width interpolates dependably. */
+  /* Never transition grid-template-columns from a custom property; the computed template freezes. */
   grid-template-columns: auto 1fr;
-  /* A header row spanning both columns, so the mark's x never depends on the sidebar's width. */
   grid-template-rows: auto 1fr;
   height: 100dvh;
-  /* The shell's lengths, scoped to .admin because check:contrast parses the token block as colors.
-     The topbar height offsets the narrow breakpoint; the canvas subtracts the command bar height,
-     so it must be a number; one control height serves the whole command bar. */
-  /* 4.25rem, not 4rem: it matches the public header's rendered height, not its declared minimum, so the
-     mark centers at the same y. Load-bearing: the editor canvas and narrow bar offsets read it. */
+  /* Scoped to .admin because check:contrast parses the token block as colors. */
+  /* 4.25rem, not 4rem: the public header's rendered height, so the mark centers at the same y. */
   --admin-topbar-h: 4.25rem;
   --admin-cmdbar-h: 3.5rem;
   --admin-control-h: 2rem;
-  /* The expanded width is from the ruling; the collapsed width is derived from the inset. The inline script
-     sets the attribute before first paint, so the rail never flashes wide. */
+  /* The inline script sets the attribute before first paint, so the rail never flashes wide. */
   --admin-sidebar-w: 15rem;
   --admin-nav-item-h: 2.75rem;
-  /* The shared icon column: the topbar mark and every sidebar icon share one column and gap, so labels and
-   * wordmark start at one x. Its width is the mark's own (2rem at the crop's 36x50 aspect), written as the
-   * arithmetic so the aspect stays visible. */
   --admin-icon-col: calc(2rem * 36 / 50);
   --admin-icon-gap: 0.5rem;
-  /* THE SHARED INSET, taken from the site-wide declaration on `body` rather
-     than restated, which is what keeps the two planes agreeing. Aliased here
-     because everything in this shell reads it under the admin name. */
   --admin-item-inset: var(--site-inset);
-  /* The rail is derived, never a literal: inset + column + inset, so the icons do not move when it closes.
-   * A literal would silently stop matching the first time the inset is tuned. */
+  /* Derived, never a literal, so the icons do not move when the rail closes. */
   --admin-sidebar-rail-w: calc(var(--admin-item-inset) * 2 + var(--admin-icon-col));
-  /* The active item's left rule. Drawn out of flow, so it is a length this
-     alignment never has to subtract. */
   --admin-item-rule: 3px;
-  /* The two radii (ruling 54), and there is no third: --r-control on anything pressed, --r-panel on
-     anything that contains. No stray radius. */
   --r-control: 0.25rem;
   --r-panel: 0.5rem;
 }
@@ -46,9 +26,8 @@
   --admin-sidebar-w: var(--admin-sidebar-rail-w);
 }
 
-/* No width transition, which satisfies ruling 6's reduced-motion ask and is a correctness choice: the
- * sidebar is a grid item in an auto track, so animating its width is circular and stalls. Only the
- * chevron, a transform, animates. */
+/* No width transition: the sidebar is a grid item in an auto track, so animating its width is circular
+ * and stalls. */
 
 .admin-sidebar {
   grid-column: 1;
@@ -58,19 +37,14 @@
   gap: 1rem;
   width: var(--admin-sidebar-w);
   min-width: 0;
-  /* No left padding: the inset lives on the item, so the active rule sits flush against the rail's edge
-     and the item reads as a tab attached to the column. */
   padding: 1rem 0.625rem 1rem 0;
   /* A shadow, not a border: with border-box a border is subtracted from the width, and the collapsed
      rail's width is the alignment. */
   box-shadow: 1px 0 0 var(--border);
   background: var(--paper);
-  /* Tooltips and the collapsed rail's labels need to escape the rail. */
   overflow: visible;
 }
 
-/* The foot is a zone, marked by a hairline. --border, not --border-strong: the sidebar is the shell,
- * not an elevated surface. */
 .admin-sidebar-foot {
   display: flex;
   flex-direction: column;
@@ -80,26 +54,21 @@
   border-top: 1px solid var(--border);
 }
 
-/* One item shape, shared with the topbar brand block: a 44px target, the shared icon column and gap,
-   a label the rail hides. The inset is all padding; the active rule is out of flow. */
 .admin-nav a,
 .admin-view-site,
 .admin-sidebar-toggle {
-  /* The containing block for that rule, and for the rail's badge. */
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--admin-icon-gap);
   min-height: var(--admin-nav-item-h);
-  /* A border may take part in an alignment or be a fixed length, not both: Chrome snaps borders to device
-     pixels, so subtracting the declared width cannot cancel the rendered one. */
+  /* Chrome snaps borders to device pixels, so a border cannot both take part in an alignment and be
+     subtracted exactly. */
   padding: 0 0.625rem 0 var(--admin-item-inset);
   border-radius: 0.5rem;
   white-space: nowrap;
 }
 
-/* The glyph's box is the shared column, so it centers where the mark does; the square viewBox lets
-   preserveAspectRatio center it with no wrapper. */
 .admin-nav-icon {
   flex: none;
   width: var(--admin-icon-col);
@@ -112,8 +81,6 @@
   text-overflow: ellipsis;
 }
 
-/* The section count is a size, not a badge: no fill or pill, just the right edge and muted text, so it
- * never reads as an alarm. margin-left: auto, inboard of any drift badge. Tabular figures. */
 .admin-nav-count {
   flex: none;
   margin-left: auto;
@@ -122,21 +89,14 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Beside a drift badge the count gives up the auto margin, or the two would
-   fight over the same edge and the count would be pushed off it. */
 .admin-nav-count + .admin-nav-badge {
   margin-left: 0.25rem;
 }
 
-/* In the collapsed rail the count goes and the badge stays: a number with no unit is unreadable.
- * The count survives in the aria-label, and title carries it for a pointer. */
 [data-admin-sidebar="collapsed"] .admin-nav-count {
   display: none;
 }
 
-/* Ask index drift, on the item that owns the repair. A fill (interactive semantics take fills, never
- * pastel text); warning, not danger, since a stale corpus degrades an enhancement. The numeral is
- * aria-hidden; the name says it in words. */
 .admin-nav-badge {
   flex: none;
   margin-left: auto;
@@ -151,8 +111,6 @@
   text-align: center;
 }
 
-/* In the rail the badge stays a numeral at the icon's top right: it pulls the eye to Posts, and the rail
- * is when the label is gone. title carries the words. */
 [data-admin-sidebar="collapsed"] .admin-nav-badge {
   position: absolute;
   top: 0.25rem;
@@ -160,15 +118,12 @@
   margin-left: 0;
 }
 
-/* The collapsed rail: labels go, targets stay. The name is an aria-label, so hiding the text is safe;
-   display: none on a label that was the name would leave the item nameless. */
+/* The name is an aria-label, so hiding the text is safe. */
 [data-admin-sidebar="collapsed"] .admin-nav-label {
   display: none;
 }
 
-/* The rail keeps the shared column: it is sized from the inset, so one padding-left serves both states
- * and nothing is centered. Never justify-content: center, which would tie the icon's x to the right
- * padding and border. */
+/* Never justify-content: center, which would tie the icon's x to the right padding and border. */
 [data-admin-sidebar="collapsed"] .admin-nav a,
 [data-admin-sidebar="collapsed"] .admin-view-site,
 [data-admin-sidebar="collapsed"] .admin-sidebar-toggle {
@@ -176,14 +131,10 @@
   padding: 0 0 0 var(--admin-item-inset);
 }
 
-/* The rail's own box must BE the derived width, so nothing inside it is
-   measured against a content box that the padding has already shortened. */
 [data-admin-sidebar="collapsed"] .admin-sidebar {
   padding-inline: 0;
 }
 
-/* The toggle is an item, not an orphan. Everything but the button reset now
-   comes from the shared item shape above. */
 .admin-sidebar-toggle {
   border: none;
   background: transparent;
@@ -197,14 +148,11 @@
   color: var(--text);
 }
 
-/* Height only: the width is the shared column from .admin-nav-icon, and overriding it misaligned the
-   toggle's glyph. Slightly smaller, so it reads as chrome, not a sixth section. */
+/* Height only: overriding the width misaligned the toggle's glyph. */
 .admin-sidebar-chevron {
   height: 1.125rem;
 }
 
-/* One glyph, turned around. The direction names the ACTION: pointing left it
-   collapses, pointing right it expands. */
 [data-admin-sidebar="collapsed"] .admin-sidebar-chevron {
   transform: rotate(180deg);
 }
@@ -215,18 +163,13 @@
   }
 }
 
-/* The identity block, as .site-header-brand. The :visited selector is needed: .admin-brand is (0,1,0)
- * and a:visited is (0,1,1), so without it the wordmark turns claret. Any identity element or filled control
- * worn by a Link needs the same. No underline: identity is not a destination. */
+/* :visited is needed: a:visited (0,1,1) outranks .admin-brand (0,1,0) and turns the wordmark claret. */
 .admin-brand,
 .admin-brand:visited {
   display: inline-flex;
   align-items: center;
-  /* min-width: 0 on the flex item, not just the text: nowrap raises its min-content to the whole wordmark,
-     so truncating the name alone widens the bar. */
+  /* min-width: 0 on the flex item: nowrap raises its min-content to the whole wordmark. */
   min-width: 0;
-  /* The shared gap, so the wordmark and the nav labels start at the same x.
-     It equals .site-header-brand's, so the public parity holds. */
   gap: var(--admin-icon-gap);
   font-weight: 600;
   color: var(--brand);
@@ -237,13 +180,9 @@
   color: var(--brand-hover);
 }
 
-/* Same height, display and width as .site-header-mark, so the mark scales identically on both planes.
-   The component is imported, never copied. */
 .admin-brand-mark {
   display: block;
   flex: none;
-  /* The shared column, stated rather than left to width: auto; it is the mark's natural width, so parity
-     holds and the column is declared once. */
   width: var(--admin-icon-col);
   height: 2rem;
 }
@@ -265,9 +204,6 @@
   color: var(--text);
 }
 
-/* Ruling 5. THREE channels, not one: a left rule, a surface change, and the
-   weight. forced-colors keeps the rule and the weight when it takes the tint
-   and the hue away, so the current page is still findable there. */
 .admin-nav a[aria-current="page"] {
   border-radius: 0 0.5rem 0.5rem 0;
   background: var(--tint-brand);
@@ -275,8 +211,7 @@
   font-weight: 600;
 }
 
-/* The active rule is a border on an absolutely positioned box, out of flow, so items keep their inset.
-   A border, not a background bar: forced-colors overrides backgrounds but re-colors borders (ruling 5). */
+/* A border, not a background bar: forced-colors overrides backgrounds but re-colors borders. */
 .admin-nav a[aria-current="page"]::before {
   content: "";
   position: absolute;
@@ -284,16 +219,12 @@
   border-left: var(--admin-item-rule) solid var(--brand);
 }
 
-/* View site: nav item treatment. No underline: the leaving-arrow glyph is its non-color affordance,
- * and the accessible name says it leaves the plane. */
 .admin-view-site,
 .admin-view-site:visited {
   color: var(--text-secondary);
   text-decoration: none;
 }
 
-/* Desktop: neither of these exists. They are the narrow-viewport drawer's
-   opener and its dismissal surface. */
 .admin-menu-button,
 .admin-drawer-backdrop {
   display: none;
@@ -309,38 +240,27 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  /* Without this a flex child refuses to shrink below its content, and the
-     scroll lands on the document again. */
   min-height: 0;
 }
 
-/* Surface ladder: --paper is the shell (sidebar and topbar, one L of chrome), --paper the canvas,
- * and --paper again for a card on the canvas behind a border. The sidebar and a card never touch,
- * so no fourth neutral is needed; rule 7 allows the one card, the posts index. */
 .admin-topbar {
-  /* Row 1, both columns. This is what makes the geometry match by
-     construction rather than by tuning. */
   grid-column: 1 / -1;
   grid-row: 1;
   display: flex;
   align-items: center;
   gap: 1rem;
   height: var(--admin-topbar-h);
-  /* The shared inset, as .site-header and every sidebar item use, so the mark's left edge matches on both
-     planes. Zero block padding centers the mark where .site-header puts its own. */
   padding: 0 var(--admin-item-inset);
-  /* Ruling 8: on desktop the bar is already pinned, outside the scroller. sticky is for the narrow
-     breakpoint, where the document scrolls and the topbar would otherwise leave. */
+  /* sticky matters only at the narrow breakpoint, where the document scrolls. */
   position: sticky;
   top: 0;
   z-index: var(--z-dropdown);
-  /* --border-strong, since content scrolls beneath this edge. A shadow, not a border: with border-box a
-     border shrinks the declared height and moves the mark, and device-pixel snapping makes the miss vary
-     by display. A shadow keeps the bar exactly --admin-topbar-h, which .editor-canvas subtracts. */
+  /* A shadow, not a border: a border shrinks the declared height, and device-pixel snapping varies the
+     miss. .editor-canvas subtracts --admin-topbar-h. */
   box-shadow: 0 1px 0 var(--border-strong);
   background: var(--paper);
-  /* min-width: 0 on the grid item: its automatic minimum is min-content, so without this the track grows
-     the document and no truncation inside the bar ever engages. */
+  /* min-width: 0: a grid item's automatic minimum is min-content, so the track would grow the
+     document. */
   min-width: 0;
 }
 
@@ -357,15 +277,9 @@
   gap: 1rem;
   margin-left: auto;
   font-size: 0.8125rem;
-  /* The topbar's minimum width is its longest unbreakable token, the operator's email, so min-width: 0 lets
-     it shrink. Three things yield: the email truncates, the wordmark truncates, the scope chip leaves.
-     The mark, drawer toggle and Sign out are controls and stay whole. */
   min-width: 0;
 }
 
-/* The email is INFORMATION, so it yields first and completely. No `title` is
-   set from here: the address is the signed-in account, and the account it
-   belongs to is the only one this plane has. */
 .admin-topbar-email {
   min-width: 0;
   overflow: hidden;
@@ -373,16 +287,13 @@
   white-space: nowrap;
 }
 
-/* The sign-out form is the flex item, so its refusal to shrink is declared here. Direct child only:
-   the folded menu renders a second sign-out form that is not a flex item of this bar. */
+/* Direct child only: the folded menu renders a second sign-out form that is not a flex item of this
+   bar. */
 .admin-topbar-user > form {
   flex: none;
 }
 
-/* The fold: below this width Sign out and the email move into the account menu (the existing overflow menu),
-   because what remains after truncation is controls, and a control must not shrink past its label.
-   Not 576: that existing breakpoint is below the measured 582px floor, so it cannot fold in time; 640 is the
-   nearest existing one above it, with headroom because a longer address moves the floor. */
+/* 640, not 576: 576 is below the measured 582px floor, so it cannot fold in time. */
 .admin-topbar-account {
   display: none;
 }
@@ -397,31 +308,20 @@
     display: block;
   }
 
-  /* The folded block stops shrinking: its two controls would spill out. The wordmark truncates instead,
-     while the mark keeps identifying the plane. */
   .admin-topbar-user {
     flex: none;
   }
 }
 
-/* The signed-in address inside the menu. Not an `.overflow-menu-item`: it is
-   not activatable, and giving it the item's hover affordance would promise a
-   control that is not there. */
 .admin-account-identity {
   margin: 0;
   padding: 0.5rem 0.625rem;
   border-bottom: 1px solid var(--border);
   color: var(--text-secondary);
   font-size: 0.8125rem;
-  /* The panel has a min-width and an address can exceed it. Breaking on any
-     character is right here and wrong in the bar: there is no competing content
-     to protect, and the whole address is worth more than one line of it. */
   overflow-wrap: anywhere;
 }
 
-/* Same treatment, one step later. The wordmark only gives way once the email
-   has nothing left to give, because flex distributes shrinkage by base size and
-   the email's is much the larger of the two. */
 .admin-brand-name {
   min-width: 0;
   overflow: hidden;
@@ -432,11 +332,8 @@
 .admin-signout {
   display: inline-flex;
   align-items: center;
-  /* Sign out is a control: its label never wraps or truncates. white-space, not flex, because the flex
-     item is the wrapping <form>. */
+  /* white-space, not flex: the flex item is the wrapping <form>. */
   white-space: nowrap;
-  /* The secondary button weight (ruling 54), not a fourth shape. --border-strong, since the topbar is a
-     pinned surface (rule 5). */
   gap: 0.25rem;
   padding: 0.25rem 0.75rem;
   border: 1px solid var(--border-strong);
@@ -454,12 +351,9 @@
 
 .admin-content {
   flex: 1;
-  /* WCAG 2.2 2.4.11: scroll-padding-top keeps focused controls from landing under the sticky topbar.
-   * Derived from --admin-topbar-h, never a literal that goes stale when the bar is resized. The editor's
-   * command bar sticks inside the scrollport and stacks below; the extra 1rem is breathing room. */
+  /* scroll-padding-top keeps focused controls from landing under the sticky topbar (WCAG 2.2 2.4.11). */
   scroll-padding-top: calc(var(--admin-topbar-h) + 1rem);
-  /* The scroller is also a containing block: an absolute .sr-only with no positioned ancestor is laid out in
-     document coordinates and escapes this clip. This fixes it for every admin scroller at once. */
+  /* An absolute .sr-only with no positioned ancestor escapes this clip. */
   position: relative;
   width: 100%;
   max-width: 72rem;
@@ -468,8 +362,7 @@
   overflow-y: auto;
 }
 
-/* The editor manages its own height, so the content well stops scrolling and padding.
-   :has(), not a route class, so the rule lives with the layout and no editor route can forget it. */
+/* :has(), not a route class, so no editor route can forget it. */
 .admin-content:has(.editor-shell) {
   display: flex;
   max-width: none;
@@ -478,9 +371,6 @@
 }
 
 @media (max-width: 800px) {
-  /* The sidebar becomes a horizontal bar above the content, so pinning the
-     shell to the viewport would leave the editor a sliver. The document
-     scrolls again at this width, which is the right behavior on a phone. */
   .admin {
     grid-template-columns: 1fr;
     height: auto;
@@ -492,21 +382,16 @@
     overflow: visible;
   }
 
-  /* Here the document is the scrollport and the topbar is genuinely overhead,
-     so the command bar takes the combined offset it does not need above. */
   .editor-bar {
     top: var(--admin-topbar-h);
   }
 
-  /* Ruling 8: the rail is a desktop affordance. Here the sidebar is an off-canvas drawer opened from the
-     topbar and dismissed by Escape or the backdrop; the collapsed attribute is ignored. */
   .admin {
     grid-template-columns: 1fr;
   }
 
-  /* The placement must reset with the track list: .admin-main asks for column 2, and in a one-track grid
-     that creates an implicit auto track a few pixels wide, blanking every admin page on a phone.
-     No gate sees layout. */
+  /* The placement must reset with the track list: column 2 in a one-track grid creates an implicit
+     auto track and blanks every admin page on a phone. */
   .admin-main {
     grid-column: 1;
   }
@@ -522,8 +407,6 @@
     transform: translateX(-100%);
   }
 
-  /* The attribute has no say at this width: the drawer is always the full
-     labeled sidebar, never the rail. */
   [data-admin-sidebar="collapsed"] .admin-nav-label {
     display: block;
   }
@@ -550,8 +433,6 @@
     position: fixed;
     inset: 0;
     z-index: var(--z-drawer-scrim);
-    /* The ratified scrim pattern, not a new literal: opacity on --scrim, for the grounds at
-       .media-detail-scrim in admin-media.css. */
     background: var(--scrim);
     opacity: 0.45;
   }
@@ -576,14 +457,11 @@
     cursor: pointer;
   }
 
-  /* The toggle is the rail's control and the rail does not exist here. */
   .admin-sidebar-toggle {
     display: none;
   }
 
-  /* 576px is where the topbar stops fitting (measured). The scope chip is the only purely ambient item, so it
-     leaves rather than truncating. Nested in the 800px block because the toggle it makes room for exists
-     only there. Never visibility: hidden, which keeps the box. */
+  /* 576px is where the topbar stops fitting (measured). Never visibility: hidden, which keeps the box. */
   @media (max-width: 576px) {
     .admin-topbar-scope {
       display: none;
@@ -591,7 +469,6 @@
   }
 }
 
-/* Panels and cards */
 .panel {
   display: flex;
   flex-direction: column;
@@ -627,8 +504,6 @@
   white-space: nowrap;
 }
 
-/* Chips read "live", "error" or "stubbed" in words, so the hue is the second
-   channel here rather than the only one. */
 .chip-live {
   border-color: var(--border-success);
   color: var(--text-success);
@@ -639,8 +514,6 @@
   color: var(--text-danger);
 }
 
-/* Status dots carry a shape as well as a fill (rule 1): circle healthy, ringed degraded, square failed.
-   The word is in the adjacent hidden label. */
 .status-dot {
   flex: none;
   width: 0.5rem;
@@ -649,8 +522,8 @@
   background: var(--text-secondary);
 }
 
-/* Every dot is ringed in its family's border token: a fill alone does not reliably clear 3:1 against
-   the page, so the fill is the identity and the ring the boundary. */
+/* A fill alone does not reliably clear 3:1 against the page, so each dot is ringed in its border
+   token. */
 .status-dot[data-status="ok"] {
   background: var(--fill-success);
   outline: 2px solid var(--border-success);
@@ -728,10 +601,6 @@
   margin: 0;
 }
 
-/* The origin-requests panel: tokens only, and no color carries meaning alone. */
-
-/* Visible and boring, per rule 1: the words carry it and the border is the
-   second channel. Not a toast, not a color alone. */
 .panel-error {
   margin: 0;
   padding: 0.75rem 1rem;
@@ -742,7 +611,6 @@
   font-size: 0.9375rem;
 }
 
-/* Wide content scrolls in its own box; the panel never scrolls sideways. */
 .origin-table-scroll {
   overflow-x: auto;
 }
@@ -785,7 +653,6 @@
   white-space: nowrap;
 }
 
-/* The bar column takes the slack so the two data columns stay compact. */
 .origin-bar-cell {
   width: 40%;
   min-width: 6rem;
@@ -804,7 +671,6 @@
   font-size: 0.8125rem;
 }
 
-/* Tool rows */
 .tool-list {
   display: flex;
   flex-direction: column;
@@ -832,9 +698,6 @@
   margin: 0;
 }
 
-/* The heading over the audit list on /admin/tools. No color is declared
-   here: it inherits, so it adds no token pair for check:contrast to have to
-   measure, which is the cheapest way to add a heading in this repo. */
 .tool-audit-heading {
   display: flex;
   align-items: center;
@@ -867,18 +730,10 @@
   cursor: not-allowed;
 }
 
-/* The webmention queue. It adds no new contrast pair: filter chips reuse pairs check:contrast already
- * carries. No prefers-contrast rule and no focus rule here: app.css owns both tiers, and a rule here
- * would be a second owner. */
-
-/* Both feedback boxes carry margin: 0, so the gap is declared once here; which box renders is the
-   action's choice and the spacing is the same. */
 .mention-feedback {
   margin: 0 0 1rem;
 }
 
-/* The status filter is a row of links: every state is a URL, so filters need no script and history
-   behaves. Same shape as the media library's lens row. */
 .mention-filters {
   display: flex;
   flex-wrap: wrap;
@@ -887,8 +742,7 @@
   margin: 0 0 1rem;
 }
 
-/* 1.75rem is 28px, clear of the WCAG 2.2 24px target minimum, which a chip
-   sized only by its 0.8125rem text would miss. */
+/* 1.75rem is 28px: a chip sized only by its text would miss the 24px target. */
 .admin-chip {
   display: inline-flex;
   align-items: center;
@@ -899,13 +753,10 @@
   border-radius: 999px;
   background: var(--paper);
   font-size: 0.8125rem;
-  /* Exempt from rule 2 on the same grounds as .btn: the border is already a
-     non-color affordance. */
   text-decoration: none;
 }
 
-/* The (0,1,0) versus (0,1,1) trap: a:visited outranks a class-only color on an anchor, painting an
-   unmeasured pair. Naming the states puts these at (0,2,0). */
+/* a:visited (0,1,1) outranks a class-only color on an anchor; naming the states puts these at (0,2,0). */
 .admin-chip,
 .admin-chip:visited,
 .admin-chip:hover,
@@ -917,8 +768,6 @@
   border-color: var(--brand);
 }
 
-/* Three channels for the current filter (ruling 5): border, surface and weight. forced-colors keeps the
-   weight and edge; aria-current carries it in every mode. */
 .admin-chip.is-active,
 .admin-chip.is-active:visited,
 .admin-chip.is-active:hover,
@@ -934,16 +783,11 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* INHERIT, never --text-secondary: on the active chip the count sits on
-   --tint-brand, and --text-secondary has not been measured against that surface.
-   Inheriting puts it on --brand over --tint-brand, which has. */
+/* Inherit, never --text-secondary: it has not been measured against --tint-brand. */
 .admin-chip.is-active .admin-chip-count {
   color: inherit;
 }
 
-/* The unverified count is NOT a filter, so it is not a link and takes the
-   static .chip badge. Only its geometry is brought up to the row's, so it sits
-   on the same baseline as the chips it is counting beside. */
 .mention-unverified {
   min-height: 1.75rem;
   padding: 0.25rem 0.625rem;
@@ -966,9 +810,6 @@
   gap: 0.25rem;
 }
 
-/* THE EXCERPT LEADS, so it is the only thing on the row rendered at the body
-   size while everything under it is smaller. The rule on the left is what says
-   "somebody else wrote this" without a word of chrome. */
 .mention-quote {
   margin: 0;
   padding-left: 0.75rem;
@@ -977,14 +818,12 @@
   overflow-wrap: anywhere;
 }
 
-/* No color declared: it inherits, so the line adds no pair to measure. */
 .mention-who {
   margin: 0;
   font-size: 0.875rem;
 }
 
-/* A stranger's URL: overflow-wrap: anywhere, not break-all, so ordinary URLs still break at slashes.
-   Monospace, because it is compared character by character. Still not a link. */
+/* overflow-wrap: anywhere, not break-all, so ordinary URLs still break at slashes. */
 .mention-source {
   margin: 0;
   overflow-wrap: anywhere;
@@ -999,9 +838,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The buttons wrap rather than shrinking the row's text side, because a
-   truncated excerpt is the one thing on this row that cannot be recovered by
-   looking harder. */
 .mention-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1010,9 +846,6 @@
   flex-shrink: 0;
 }
 
-/* Approve carries a clause under it, so its form is the one column in a row of
-   buttons. The width is what keeps that clause to two short lines instead of
-   letting it set the whole action column's width. */
 .mention-approve {
   display: flex;
   flex-direction: column;
@@ -1026,8 +859,7 @@
   line-height: 1.4;
 }
 
-/* Reject is the secondary (.btn-ghost), with geometry matched to the primary. Must come after
-   .tool-row .btn-ghost, which has the same specificity and would win on font size. */
+/* Must come after .tool-row .btn-ghost, which has the same specificity. */
 .mention-actions .btn-secondary,
 .mention-actions .btn-ghost {
   margin-top: 0;
@@ -1037,13 +869,11 @@
   font-size: 0.9375rem;
 }
 
-/* Last in the row and the lightest thing on it. */
 .mention-delete {
   margin-left: 0.25rem;
 }
 
-/* The third button weight, text only, named so Delete can sit on a row it is not the point of.
-   1.75rem for the 24px target; a transparent resting border so hover moves nothing. */
+/* A transparent resting border so hover moves nothing. */
 .btn-text {
   display: inline-flex;
   align-items: center;
@@ -1064,16 +894,11 @@
   color: var(--text);
 }
 
-/* One quiet line, no heading and no box. An empty filter is a fact, not a
-   section: the four headings this page used to stack were three announcements
-   of nothing on a table with one row in it. */
 .mention-empty {
   margin: 0 0 2rem;
   font-size: 0.9375rem;
 }
 
-/* Retention is a footnote with a control in it, so it is separated by a rule
-   rather than given the weight of a panel. */
 .mention-retention {
   margin-top: 2rem;
   padding-top: 1rem;
@@ -1090,9 +915,7 @@
   margin-top: 0.75rem;
 }
 
-/* The row stacks on a phone: .mention-actions keeps its max-content width (flex-shrink: 0), which is wider
- * than the column. 640px is this sheet's existing narrow breakpoint. Delete moves to the far edge
- * (ruling 21d) once the actions have their own row. */
+/* .mention-actions keeps its max-content width, which is wider than the column on a phone. */
 @media (max-width: 640px) {
   .mention-row {
     flex-direction: column;
@@ -1104,8 +927,6 @@
     align-items: center;
   }
 
-  /* The clause is under a full-width row now, so capping it at 10rem would
-     break one short sentence across four lines. */
   .mention-approve {
     max-width: none;
   }
@@ -1116,20 +937,15 @@
 }
 
 @media (forced-colors: active) {
-  /* .btn-text's shape comes from a background and a transparent border, which this mode does not keep,
-   * so a transparent outline (resolved to a system color) keeps its edge. */
+  /* A transparent outline keeps .btn-text's edge: this mode drops its background and border color. */
   .btn-text {
     outline: 1px solid transparent;
   }
 
-  /* The active chip loses tint and hue here; the weight survives and the edge is restated in currentColor. */
   .admin-chip.is-active {
     border-color: currentColor;
   }
 }
-
-/* Ruling 54: the admin page head, the one notice pattern, and the overview table. In the shell sheet,
-   because every admin page opens with a title and one status sentence. */
 
 .admin-page-head {
   margin-bottom: 1.5rem;
@@ -1142,8 +958,6 @@
   line-height: 1.2;
 }
 
-/* THE ONE SENTENCE. It is capped at the reading measure rather than the panel
-   width: a status line that runs the full 64rem is a line nobody finishes. */
 .admin-page-status {
   margin: 0;
   max-width: 72ch;
@@ -1151,10 +965,7 @@
   font-size: 0.9375rem;
 }
 
-/* ---- One notice pattern ------------------------------------------------- */
-
-/* The edge is the variant, never the fill: a tint competes on every load and spends rule 4's one tint.
-   A 4px semantic border reads instantly and survives forced-colors. */
+/* The edge is the variant, never the fill: a 4px border survives forced-colors. */
 .admin-notice {
   display: flex;
   align-items: flex-start;
@@ -1206,7 +1017,6 @@
   align-self: center;
 }
 
-/* ---- The overview table ------------------------------------------------- */
 .admin-table-scroll {
   overflow-x: auto;
   max-width: 100%;
@@ -1253,8 +1063,6 @@
   font-weight: 500;
 }
 
-/* THE ONE COLUMN ALLOWED TO WRAP, and it is the sentence the reader came for.
-   Everything else in the row is a label or a control. */
 .admin-check-finding {
   width: 100%;
   color: var(--text-secondary);
@@ -1266,7 +1074,6 @@
   text-align: right;
 }
 
-/* ---- Two figures, and the rest under a disclosure ----------------------- */
 .admin-section-head {
   margin: 2rem 0 0.75rem;
   color: var(--text-heading);
@@ -1286,9 +1093,6 @@
   background: var(--paper);
 }
 
-/* The same 4px semantic edge the notice uses, for the same reason: this is the
-   figure that disagrees with the one beside it, and the disagreement IS the
-   news. Not a fill, so it does not shout on a page that is otherwise calm. */
 .admin-figure[data-status="warn"] {
   border-left: 0.25rem solid var(--border-warning);
 }
@@ -1351,9 +1155,6 @@
     grid-template-columns: 1fr;
   }
 
-  /* Rows stack, and the one control stays in the thumb column. Same shape the
-     posts table takes, stated here because the two tables are different
-     elements rather than one shared component. */
   .admin-table-scroll {
     overflow-x: visible;
   }
@@ -1421,7 +1222,6 @@
   }
 }
 
-/* The home podcast picker on /admin/tools. Inherits its colors, so it adds no contrast pair. */
 .tool-select {
   max-inline-size: 60%;
   font: inherit;

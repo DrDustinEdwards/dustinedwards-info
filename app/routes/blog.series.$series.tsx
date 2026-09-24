@@ -19,23 +19,13 @@ import {
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series";
 
-// One sheet, where the card needed two: `.post-card-series` lived only in the extras sheet. The
-// listing is one object now and an archive is the same object filtered.
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
 /**
- * The archive for one series.
- *
- * ORDERED BY PART, WHICH IS THE ONE LISTING THAT IS NOT NEWEST FIRST. A series is
- * the exception by construction: the author numbered the parts, and part one is
- * where you start. The feeds take the same order, so the page and the subscription
- * agree.
- *
- * 404 RATHER THAN AN EMPTY PAGE, the tag archive's rule inherited rather than
- * re-argued: an empty archive would be a soft 404 and would leak the existence of a
- * series only a draft carries.
+ * Ordered by part, the one listing that is not newest first. 404 rather than an empty page, which
+ * would be a soft 404 and leak a series only a draft carries.
  */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
@@ -47,8 +37,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   const listing = await listSeriesPosts(env, series.name, { page, perPage: POSTS_PER_PAGE });
 
-  // Out of range redirects to the last real page, which is `/blog`'s ruling and
-  // the tag archive's. 302, because the bound moves as parts are published.
   if (page > listing.pageCount) {
     const last = listing.pageCount > 1 ? `?page=${listing.pageCount}` : "";
     throw redirect(`${seriesPath(series.name)}${last}`);
@@ -58,8 +46,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 }
 
 export function headers() {
-  // The tag archive's headers, through the same helper that owns them. This page
-  // negotiates nothing, so it takes the helper rather than writing the pair out.
   return new Headers(publicHtmlHeaders(cacheTags()));
 }
 
@@ -68,9 +54,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { series, page } = loaderData;
-  // `pageMeta` owns the complete social and canonical set, so this page cannot
-  // ship a partial one. The canonical carries `?page=` when there is one, since page
-  // two is different posts.
   const path = page > 1 ? `${seriesPath(series.name)}?page=${page}` : seriesPath(series.name);
   return pageMeta({
     title: `${series.name} | ${SITE.name}`,
@@ -107,7 +90,6 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
             A series in {series.total} part{series.total === 1 ? "" : "s"}, in order.{" "}
             <Link to="/blog">All posts</Link>
           </p>
-          {/* The index's three counted facts, over this series' own list. */}
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
@@ -123,11 +105,6 @@ export default function BlogSeries({ loaderData }: Route.ComponentProps) {
 
         <Pager page={page} pageCount={pageCount} hrefFor={hrefFor} />
 
-        {/*
-         * The same offer the tag archive makes and for the same reason: a reader who wants one
-         * series wants one series in their reader. Under the list, which is where a reader who
-         * has decided to subscribe actually is.
-         */}
         <p className="list-feeds">
           Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
         </p>

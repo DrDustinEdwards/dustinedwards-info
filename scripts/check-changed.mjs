@@ -1,18 +1,5 @@
-/**
- * Runner: run the gates that cover what this branch touched, and nothing else (ruling 129).
- *
- *   npm run check:changed            compares against origin/main
- *   npm run check:changed -- --base <ref>
- *   npm run check:changed -- --dry   print the mapping, run nothing
- *
- * BOUNDARY: it maps PATHS to gates, so it cannot know that editing one file broke a gate whose
- * subject is another file. That is what CI is for, and hard rule 16 already makes ship trust CI
- * rather than a local run. This is the pass before the push, not a replacement for the suite.
- *
- * UNMAPPED FALLS BACK TO THE WHOLE OFFLINE TIER, which is the one decision that keeps this honest:
- * a mapping that quietly skipped a path it did not recognize would report a clean run over checks
- * that never executed, which is the vacuity rule's class of failure.
- */
+// Unmapped paths fall back to the whole offline tier: skipping a path it did not recognize would
+// report a clean run over checks that never executed.
 
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -25,8 +12,7 @@ import { CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * THE MAPPING. Each rule names the paths it owns and the gates that READ those paths. A gate
- * belongs on a rule when the gate would notice the edit, not when it merely runs nearby.
+ * A gate belongs on a rule when it would notice the edit, not when it merely runs nearby.
  *
  * @type {Array<{what: string, test: RegExp, gates: string[]}>}
  */
@@ -77,8 +63,7 @@ const MAP = [
     gates: ["check:tests"],
   },
   {
-    /* Ruling 150 removed the gates that read these, so a change here runs nothing rather than
-       falling through to the whole tier. */
+    /* No gate reads these, so a change here runs nothing rather than falling through to the whole tier. */
     what: "a document, skill or hook, which no gate reads",
     test: /^(\.claude\/.+|[A-Za-z-]+\.md|docs\/.+\.md|\.design-sync\/.+)$/,
     gates: [],
@@ -86,8 +71,7 @@ const MAP = [
 ];
 
 /**
- * A gate's own script is its own subject. Written as a rule rather than a MAP row because the gate
- * name comes OUT of the path: `scripts/check-foo.mjs` is what `check:foo` reads first.
+ * A rule rather than a map row because the gate name comes out of the path.
  *
  * @param {string} file
  * @returns {string[] | null}
@@ -97,11 +81,7 @@ function ownGate(file) {
   return m ? [`check:${m[1]}`] : null;
 }
 
-/**
- * THE TIER'S OWN MACHINERY. A runner, a shared library or the stack builder is read by every gate,
- * so the honest mapping is the whole offline tier. Named here rather than left to fall through the
- * unmapped branch: the two take the same action, and only this one can say WHY.
- */
+// A runner, a shared library or the stack builder is read by every gate, so it maps to the whole tier.
 const TIER_WIDE = /^scripts\/(check-all|check-changed|build-stack)\.mjs$|^scripts\/lib\//;
 
 /** @param {string[]} argv */
@@ -111,8 +91,7 @@ function parseArgs(argv) {
 }
 
 /**
- * Every path this branch touches: committed against the base, plus staged and unstaged, because a
- * gate verifies DISK and the working tree is what is about to be pushed.
+ * Staged and unstaged too, because a gate verifies disk.
  *
  * @param {string} base
  * @returns {{files: string[], baseUsed: string | null}}
@@ -141,10 +120,7 @@ const { base, dry } = parseArgs(process.argv.slice(2));
 const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const declared = new Set(gateNames(pkg));
 
-/*
- * THE MAPPING IS CHECKED AGAINST package.json BEFORE IT IS USED. A row naming a gate that no
- * longer exists would silently contribute nothing, and the run would look narrower than it is.
- */
+// A row naming a gate that no longer exists would silently contribute nothing.
 const named = new Set(MAP.flatMap((r) => r.gates));
 const unknown = [...named].filter((g) => !declared.has(g));
 if (unknown.length) {
@@ -179,7 +155,7 @@ if (tierWide.length) {
   );
 }
 
-/** @type {Map<string, string[]>} gate -> the paths that asked for it */
+/** @type {Map<string, string[]>} */
 const wanted = new Map();
 /** @type {string[]} */
 const unmapped = [];
@@ -209,13 +185,8 @@ if (unmapped.length) {
   );
 }
 
-/*
- * OFFLINE GATES RUN HERE, CI_EXCLUDED ONES INCLUDED. An excluded gate is the opposite of one that
- * can be left to CI: it is excluded BECAUSE CI cannot run it (check:page-payload reads a client
- * build the CI job never makes), so a local run is the only run it ever gets.
- *
- * What is left behind is the network and report tiers, which need a deployed database or bucket.
- */
+// CI-excluded gates run here too: they are excluded because CI cannot run them, so a local run is
+// the only run they get.
 const selected = [...wanted.keys()].filter((g) => TIERS[g] === "offline").sort();
 const deferred = [...wanted.keys()].filter((g) => TIERS[g] !== "offline").sort();
 const onlyHere = selected.filter((g) => CI_EXCLUDED[g]);
@@ -234,7 +205,6 @@ for (const name of selected) {
   console.log(`  ${mark} ${name} (${Math.round(result.ms / 1000)}s)`);
   if (!result.ok) {
     failed += 1;
-    /* The gate's own words, not a summary of them: a failure is read, not counted. */
     console.log(`       ${result.reason}`);
     console.log(result.output ?? "");
   }

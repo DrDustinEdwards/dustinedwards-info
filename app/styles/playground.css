@@ -1,8 +1,3 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/* /playground: controls and results sit on --paper while prose stays on the canvas (rule 7).
-   No color carries meaning alone: pass and fail are words. */
-
 .playground-demo {
   margin: 3.5rem 0 0;
   padding: 0 0 2.5rem;
@@ -27,8 +22,6 @@
   color: var(--text-secondary);
 }
 
-/* The form is a row that wraps on its own, so a narrow viewport needs no
-   breakpoint and no script. */
 .playground-form {
   display: flex;
   flex-wrap: wrap;
@@ -63,7 +56,6 @@
   background: var(--paper);
   color: var(--text);
   font: inherit;
-  /* 24px minimum target, WCAG 2.2 2.5.8. */
   min-height: 2.25rem;
 }
 
@@ -106,8 +98,6 @@
   min-height: 1.5rem;
 }
 
-/* The cap is stated in the UI, not just enforced in the loader. It takes the
-   whole row so it reads as a note about the form rather than a field label. */
 .playground-cap {
   flex: 1 0 100%;
   margin: 0;
@@ -115,8 +105,6 @@
   color: var(--text-secondary);
 }
 
-/* Ratified pairs, as ordinary links: each one is a real URL for that result, so
-   they are shareable and work with scripting off like everything else here. */
 .playground-swatches {
   display: flex;
   flex-wrap: wrap;
@@ -148,8 +136,7 @@
   color: var(--text-secondary);
 }
 
-/* The only element on the site whose colors are legitimately inline: they are
-   the reader's own input, so no token could name them. */
+/* The only legitimately inline colors on the site: they are the reader's own input. */
 .playground-sample {
   margin: 0;
   padding: 1.25rem;
@@ -182,7 +169,6 @@
   font-size: 1.25rem;
 }
 
-/* Wide content scrolls in its own box; the page body never scrolls sideways. */
 .playground-table-scroll {
   margin: 1.25rem 0 0;
   overflow-x: auto;
@@ -205,8 +191,6 @@
 
 .playground-table th,
 .playground-table td {
-  /* Tight padding so the six columns fit the measure and the fused total is never clipped.
-     It still scrolls if a title forces it to. */
   padding: 0.5rem 0.5rem;
   border-bottom: 1px solid var(--border);
   text-align: left;
@@ -235,9 +219,6 @@
   min-width: 14rem;
 }
 
-/* In and Out inside a demo's result: an h3 under the demo's h2 so the outline
-   stays ordered, sized as a label because it separates two panes rather than
-   starting a new topic. */
 .playground-subhead {
   margin: 1.75rem 0 0;
   font-size: 0.75rem;
@@ -247,9 +228,6 @@
   color: var(--text-secondary);
 }
 
-/* The snippet verbatim, deliberately not highlighted: it is the input, and
-   highlighting it would render the demo's subject with the demo's subject. It
-   scrolls in its own box so the page never scrolls sideways. */
 .playground-source {
   margin: 0.5rem 0 0;
   padding: 0.875rem 1rem;
@@ -261,9 +239,6 @@
   line-height: 1.5;
 }
 
-/* The rendered body. `.prose` already styles everything the pipeline emits,
-   so this only adds separation; a rule here would be a second answer to what
-   prose.css owns. */
 .playground-rendered {
   margin: 0.5rem 0 0;
   padding: 1rem 1.25rem;
@@ -272,8 +247,6 @@
   background: var(--paper);
 }
 
-/* `.prose` sets a top margin on its first block for body flow; inside a boxed
-   pane that reads as a stray gap. */
 .playground-rendered > :first-child {
   margin-top: 0;
 }

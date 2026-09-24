@@ -1,22 +1,5 @@
-/**
- * Gate over the colophon's hand-written half: `npm run check:features`.
- *
- * It verifies that what each claim is about still exists, never that the prose is true.
- *
- * The route parser does not compose nested prefixes: anchor a nested route to its declared
- * segment, never to a hardcoded path list, which is the mirror this whole family of gates
- * exists to prevent. The consequence to know about BEFORE it happens: the next feature that
- * anchors to a nested PUBLIC route fails here, and the failure reads like rot in the anchors
- * file when it is really this parser's limit.
- *
- * NO ROUTE PATH, GATE NAME OR SCRIPT FILENAME APPEARS IN THIS FILE AS A LITERAL. Routes are
- * parsed out of app/routes.ts, gates are read from package.json, and assertion text is
- * searched in the script the anchor names.
- *
- * Every feature needs a route, gate or assertion anchor; a decision anchor lives in Capsid and
- * proves nothing offline. Fails closed on zero features, zero anchors, or an unparsed
- * routes.ts.
- */
+// The route parser does not compose nested prefixes: a feature anchored to a nested public route fails
+// here, and the failure reads like rot in the anchors file when it is really this parser's limit.
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -33,10 +16,8 @@ import {
   metricValue,
   projectAnchor,
 } from "../app/lib/projects-page.mjs";
-// Same function the route calls, so the gate cannot agree only with itself.
 import { PHAGE_YEARS } from "../app/data/phage-hunters.ts";
 import { isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
-// The key grammar's readers, so the demos are checked against the real module.
 import {
   classify,
   cropSafe,
@@ -47,9 +28,7 @@ import {
   roleOf,
   storageOf,
 } from "../app/lib/media/classify.mjs";
-// The theme resolver, for the same reason.
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/theme.ts";
-// The demos' real code paths, imported rather than reimplemented.
 import { apca, contrast } from "../app/lib/contrast.mjs";
 import { RRF_K, fuse } from "../app/lib/search/query.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
@@ -71,20 +50,14 @@ const ROUTES_PATH = join(root, "app", "routes.ts");
 let checks = 0;
 let failures = 0;
 
-/** CRLF collapsed to LF, so a match is a property of CONTENT, not of a host. */
 const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n");
 
-/**
- * Comments removed, line structure kept, so a match is a property of code. Every reader here
- * uses it.
- *
- * @param {string} source
- */
+/** @param {string} source */
 const stripped = (/** @type {string} */ source) =>
   stripComments(source, { preserveLines: true });
 
 /**
- * Letter-digit tokens (D1, FTS5) are names, removed before a hard-rule-17 digit scan.
+ * Letter-digit tokens (D1, FTS5) are names, removed before the digit scan.
  *
  * @param {string} text
  */
@@ -106,7 +79,6 @@ function ok(label, condition, detail = "") {
   }
 }
 
-/** Every path `routes.ts` declares, by regex. A route it cannot parse fails, the safe direction. */
 function declaredRoutes() {
   // Comments first: this file's prose names paths.
   const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
@@ -123,11 +95,7 @@ function declaredRoutes() {
   return paths;
 }
 
-/**
- * Path to module file; an unresolvable module is absent and the caller fails it.
- *
- * @returns {Map<string, string>}
- */
+/** @returns {Map<string, string>} */
 function declaredRouteModules() {
   const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
   /** @type {Map<string, string>} */
@@ -142,7 +110,6 @@ function declaredRouteModules() {
   return out;
 }
 
-/** Every gate package.json declares, minus the aggregate runners. */
 function declaredGates() {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   /** @type {Map<string, string>} */
@@ -165,7 +132,6 @@ if (!existsSync(FEATURES_PATH)) {
 
 const features = JSON.parse(readFileSync(FEATURES_PATH, "utf8")).features ?? [];
 
-/** The gated artifact's records, for the page-record section below. */
 const artifactRecords =
   JSON.parse(
     readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
@@ -174,14 +140,11 @@ const routes = declaredRoutes();
 const routeModules = declaredRouteModules();
 const gates = declaredGates();
 
-/* fail closed first */
-
 ok(
   "the feature list is not empty",
   features.length > 0,
   "no features, so every check below would pass vacuously",
 );
-/* Catches a parser that stops seeing nested `route()` calls. */
 ok(
   "routes.ts parsed to a plausible number of routes",
   routes.size >= 33,
@@ -215,10 +178,7 @@ ok(
   "every feature is unanchored, so this gate would examine nothing",
 );
 
-/* the anchors */
-
 const VERIFIABLE = ["route", "gate", "assertion"];
-/** Gates some feature points at, for the coverage report at the end. */
 const referencedGates = new Set();
 let verified = 0;
 
@@ -245,11 +205,6 @@ for (const feature of features) {
         `routes.ts declares no ${anchor.path}`,
       );
 
-      /*
-       * An anchor rendered as a link must answer an anonymous GET, else `anonymousGet: false`.
-       * Derived here: a default export is a page; else no loader, `status: 405` or
-       * `authenticateOperator` means not a page.
-       */
       const routeFile = routeModules.get(anchor.path);
       if (routeFile && existsSync(routeFile)) {
         const routeSource = stripComments(readFileSync(routeFile, "utf8"));
@@ -276,7 +231,6 @@ for (const feature of features) {
                 `The route became a page and the flag outlived it. Remove "anonymousGet": false.`,
         );
       } else {
-        /* A declared route with no module on disk fails rather than skips. */
         ok(
           `${label}: the module for ${anchor.path} is on disk`,
           false,
@@ -345,18 +299,10 @@ ok(
   "every anchor was a decision, so nothing was verified",
 );
 
-/* the one-owner rule, on the prose */
-
-/*
- * The one-owner rule on the feature prose: no digit a gate does not own, no removed-pipeline
- * words. Cannot read tense. Only protocol constants are allowed; a date allowance would cover
- * no field here. Anchor text is exempt.
- */
-
 console.log("\n  the one-owner rule: the prose carries no number a gate does not own");
 
 {
-  /** Bare digits prose may carry. Closed: a protocol constant cannot go stale. */
+  /** Bare digits prose may carry: protocol constants only, which cannot go stale. */
   const PROTOCOL_CONSTANTS = new Map([
     ["403", "HTTP status: the first-publish refusal names it"],
     ["404", "HTTP status: the URL transform interface answers with it"],
@@ -364,11 +310,9 @@ console.log("\n  the one-owner rule: the prose carries no number a gate does not
     ["1042", "Cloudflare error code returned alongside that 404"],
   ]);
 
-  /** The prose fields. `anchors` is machine reference and is exempt above. */
   const PROSE_FIELDS = ["component", "name", "what"];
 
 
-  /** Removed-pipeline phrases; a sentence using one describes nothing real. */
   const REMOVED_VOCABULARY = [
     "committed artifact",
     "byte-comparison gate",
@@ -377,7 +321,6 @@ console.log("\n  the one-owner rule: the prose carries no number a gate does not
     "single commit carrying both",
   ];
 
-  /* Scope asserted below, or an empty list sweeps nothing. */
   let sentencesScanned = 0;
   /** @type {string[]} */
   const numbered = [];
@@ -439,8 +382,6 @@ console.log("\n  the one-owner rule: the prose carries no number a gate does not
       `markdown only, D1 holds the only rendered copy, and a save commits one file.`,
   );
 }
-
-/* page search records */
 
 
 console.log("\n  page records for /colophon");
@@ -556,8 +497,6 @@ console.log(
     `${COLOPHON_ANCHORS.length} descriptor anchor(s), ${rendered.length} rendered`,
 );
 
-/* not-adopted labels */
-
 /* The index carries the page's label, never the raw enum, and no reader holds a copy. */
 
 console.log("\n  not-adopted status labels");
@@ -576,7 +515,6 @@ ok(
 
 const usedStatuses = [...new Set(notAdopted.map((/** @type {any} */ n) => String(n.status)))];
 
-// Direction 1: every status the data uses has a label.
 for (const status of usedStatuses) {
   ok(
     `status "${status}" has a label`,
@@ -585,7 +523,6 @@ for (const status of usedStatuses) {
       `Without a label the page and the index would disagree about what it is called.`,
   );
 }
-// Direction 2: no label for an undeclared status.
 for (const status of Object.keys(STATUS_LABEL)) {
   ok(
     `label "${status}" is used by at least one entry`,
@@ -644,7 +581,6 @@ ok(
   "the page does not call statusLabel, so it is getting the word from somewhere else",
 );
 
-/* Each label declared exactly once keeps the descriptor the single source. */
 const descriptorCode = stripComments(
   readFileSync(join(root, "app", "lib", "colophon-sections.mjs"), "utf8"),
 );
@@ -691,13 +627,6 @@ console.log(
     `${Object.keys(STATUS_LABEL).length} label(s)`,
 );
 
-/* enhancement inventory */
-
-/*
- * The progressive-enhancement rule: every enhancement names a fallback, both directions against `app/enhance/`.
- * Whether it works is a wire claim.
- */
-
 const ENHANCEMENTS_PATH = join(root, "content", "enhancements.json");
 const ENHANCE_DIR = join(root, "app", "enhance");
 
@@ -719,7 +648,6 @@ if (existsSync(ENHANCEMENTS_PATH)) {
   inventory = JSON.parse(readFileSync(ENHANCEMENTS_PATH, "utf8")).enhancements ?? [];
 }
 
-/** Every module file that actually exists, read off disk rather than listed. */
 const enhanceFiles = existsSync(ENHANCE_DIR)
   ? readdirSync(ENHANCE_DIR)
       .filter((name) => name.endsWith(".ts"))
@@ -744,7 +672,6 @@ const inventoryModules = new Set(
   inventory.map((/** @type {any} */ e) => String(e.module ?? "")),
 );
 
-// Direction A: every module on disk is named by at least one entry.
 for (const name of enhanceFiles) {
   const relPath = `app/enhance/${name}`;
   ok(
@@ -754,7 +681,6 @@ for (const name of enhanceFiles) {
   );
 }
 
-// Direction B: every module named by an entry is on disk.
 for (const modulePath of [...inventoryModules].sort()) {
   ok(
     `enhancements: ${modulePath || "(unnamed)"} exists on disk`,
@@ -779,7 +705,6 @@ function serverRenderedSources(/** @type {string} */ dir, /** @type {string[]} *
 
 const serverSources = serverRenderedSources(join(root, "app"));
 
-// Scope asserted so an empty walk fails by name.
 /* Catches a walk that stops descending; re-measure by running the gate. */
 ok(
   "the server-rendered source scope is non-empty and complete",
@@ -793,10 +718,8 @@ const sourceBlobs = serverSources.map((file) =>
   stripped(normalizeEol(readFileSync(file, "utf8"))),
 );
 
-/*
- * Plus what the shared renderer emits (remark-gfm footnotes), from a fixture, since the
- * claim is about the renderer and not the corpus.
- */
+/* Plus the shared renderer's output (remark-gfm footnotes), from a fixture: the claim is about the
+   renderer, not the corpus. */
 const RENDERER_FIXTURE = [
   "A paragraph with a footnote reference[^1].",
   "",
@@ -827,7 +750,7 @@ ok(
 );
 sourceBlobs.push(renderedMarkup);
 
-/** Identifiers worth checking, out of a selector. Short ones are too generic. */
+/** Short tokens are skipped as too generic. */
 function selectorTokens(/** @type {string} */ selector) {
   return (selector.match(/[A-Za-z][\w-]{3,}/g) ?? []).filter(
     (token, index, all) => all.indexOf(token) === index,
@@ -920,8 +843,6 @@ console.log(
     `That is a claim about the wire.`,
 );
 
-/* coverage report */
-
 /* Reported, not failed: failing would invite filler prose. */
 const unreferenced = [...gates.keys()]
   .filter((name) => !referencedGates.has(name))
@@ -947,7 +868,6 @@ const projects = projectsDoc.projects ?? [];
 const vocabulary = projectsDoc.stackVocabulary ?? [];
 const projectsChecksBefore = checks;
 
-/* Metric inputs, from the artifacts that own them; no expected value. */
 const METRIC_INPUTS = {
   stack: JSON.parse(
     readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
@@ -957,7 +877,6 @@ const METRIC_INPUTS = {
 
 // Fail closed: an empty roster passes every loop below.
 const MINIMUM_PROJECTS = 5;
-/* A scope floor over a growing set; see check-tests.mjs. */
 const projectsBreach = assertFloor(
   "check:features",
   "projects",
@@ -972,8 +891,7 @@ ok(
   "an empty vocabulary would make every tag check pass vacuously",
 );
 
-// The route the roster describes must exist, and it must be the one the page
-// module names, not a string typed here.
+// The route must be the one the page module names, not a string typed here.
 ok(
   `routes.ts declares ${PROJECTS_URL}`,
   routes.has(PROJECTS_URL),
@@ -994,15 +912,13 @@ const REQUIRED = [
 const STATUSES = ["live", "building", "internal"];
 /* Closed: the route shapes structured data for these only. */
 const SCHEMA_TYPES = ["SoftwareApplication", "WebPage"];
-/* The kinds this gate verifies; the route refuses others. */
 const EVIDENCE_KINDS = ["post", "page", "repo"];
 const seenSlugs = new Set();
 
-/* The built corpus; a roster edited without a rebuild fails here. */
 const artifactPostRows =
   JSON.parse(readFileSync(join(root, "content", "generated", "posts.json"), "utf8")).posts ??
   [];
-/** slug to title, PUBLISHED only. A draft citation would link the live site to a 404. */
+/** PUBLISHED only: a draft citation would link the live site to a 404. */
 const publishedTitles = new Map(
   artifactPostRows
     .filter((/** @type {any} */ p) => p.draft !== true)
@@ -1029,7 +945,6 @@ for (const project of projects) {
     `got ${project.status}`,
   );
 
-  // Nullable by design; a value must pass the imported rule-6 predicate.
   for (const field of ["url", "repo"]) {
     const value = project[field];
     if (value === null || value === undefined) continue;
@@ -1057,7 +972,6 @@ for (const project of projects) {
       `@type and branches on it, so an unknown value is structured data nobody designed`,
   );
 
-  /* Stored or derived, never both (one owner). */
   const metric = project.metric ?? {};
   ok(`${id} metric has a label`, typeof metric.label === "string" && metric.label.length > 0);
 
@@ -1083,7 +997,6 @@ for (const project of projects) {
       `a date beside a value this build recomputed records when a human last ` +
         `looked, which is the tense-bound claim rule 17 was extended to cover`,
     );
-    /* Runs the route's derivation: producible, not a placeholder. */
     if (Object.hasOwn(METRIC_DERIVATIONS, metric.derived)) {
       const derivedValue = metricValue(metric, METRIC_INPUTS);
       ok(
@@ -1105,7 +1018,6 @@ for (const project of projects) {
     );
   }
 
-  /* Optional; two or three sentences when present. */
   if (project.notable !== undefined) {
     const notable = Array.isArray(project.notable) ? project.notable : [];
     ok(
@@ -1122,7 +1034,6 @@ for (const project of projects) {
     }
   }
 
-  /* Optional; every entry verified against its owner. */
   if (project.evidence !== undefined) {
     const evidence = Array.isArray(project.evidence) ? project.evidence : [];
     ok(
@@ -1199,8 +1110,6 @@ for (const term of vocabulary) {
   );
 }
 
-/* The route must read the roster and derive anchors from the shared helper. */
-/* The one-owner rule on roster prose; evidence and metric labels are exempt. */
 {
   const PROJECT_PROSE_FIELDS = ["oneLiner", "description"];
   let projectFieldsScanned = 0;
@@ -1293,7 +1202,6 @@ ok(
     "one renders its <time>",
 );
 
-/* Parity both ways: catches a roster edited without a rebuild. */
 const projectRecords = artifactRecords.filter(
   (/** @type {any} */ r) => r.docUid === "page:projects",
 );
@@ -1346,10 +1254,6 @@ console.log(
     `${projectRecords.length} artifact record(s), ${projectsChecks} assertion(s)`,
 );
 
-/*
- * The playground: each demo runs the real module against expectations it did not produce.
- * A rendered page is verify-live's claim.
- */
 console.log("\n  playground");
 
 const playgroundDoc = JSON.parse(readFileSync(PLAYGROUND_PATH, "utf8"));
@@ -1374,7 +1278,6 @@ const MARK_ELEMENT = { bar: "rect", line: "path", dot: "circle", area: "path" };
 
 // Fail closed: an empty list passes every loop.
 const MINIMUM_DEMOS = 3;
-/* Scope floor, as for the roster. */
 const demosBreach = assertFloor(
   "check:features",
   "demos",
@@ -1416,8 +1319,6 @@ ok(
 );
 
 const playgroundSource = stripped(readFileSync(PLAYGROUND_ROUTE_PATH, "utf8"));
-
-/* manifest and page */
 
 ok(
   "the page imports the manifest rather than restating it",
@@ -1471,7 +1372,6 @@ for (const anchor of renderedAnchors) {
   );
 }
 
-// The chart demo's enum is the RENDERER's list, argued both directions.
 const chartDemo = demos.find((/** @type {any} */ d) => d.slug === "chart-options");
 ok("the chart demo is declared", Boolean(chartDemo), "the enum checks below need it");
 if (chartDemo) {
@@ -1524,8 +1424,6 @@ for (const demo of demos) {
   );
 }
 
-/* contrast lab */
-
 for (const swatch of swatches) {
   const actual = contrast(swatch.fg, swatch.bg);
   ok(
@@ -1551,8 +1449,6 @@ ok(
   apca("#E3DBD0", "#1A1614") < 0,
   "polarity reversed or dropped",
 );
-
-/* fusion arithmetic */
 
 // Fixture lists, real fuse(). "a" ranks 1 in both layers, "c" ranks 2 in one.
 const fusionFixture = fuse([
@@ -1635,9 +1531,6 @@ ok(
   "the sentence explaining why fusion is over ranks is the answer to why there is no score column",
 );
 
-/* media key grammar */
-
-/* Hand-written expectations (the vacuity rule's fixture independence). */
 for (const preset of keyPresets) {
   const label = preset.label ?? preset.key;
   const expect = preset.expect ?? {};
@@ -1707,7 +1600,6 @@ for (const preset of keyPresets) {
   );
 }
 
-/* Presets must cover every branch. */
 const presetKinds = new Set(keyPresets.map((/** @type {any} */ p) => p.expect?.kind));
 const presetStorage = new Set(keyPresets.map((/** @type {any} */ p) => p.expect?.storage));
 const presetRoles = new Set(keyPresets.map((/** @type {any} */ p) => p.expect?.role));
@@ -1734,8 +1626,6 @@ ok(
     "have to be present or the pin is on the easy half",
 );
 
-/* key demo wiring */
-
 ok(
   "media key: the page imports the grammar's readers",
   /from\s+["']~\/lib\/media\/classify\.mjs["']/.test(playgroundSource),
@@ -1759,9 +1649,6 @@ ok(
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
 
-/* theme resolver */
-
-/* Real resolver, real request, hand-written expectations. */
 for (const preset of cookiePresets) {
   const label = preset.label ?? JSON.stringify(preset.cookie);
   const expect = preset.expect ?? {};
@@ -1782,7 +1669,6 @@ for (const preset of cookiePresets) {
     preset.cookie ? { headers: { cookie: preset.cookie } } : undefined,
   );
 
-  /* A throw is this preset's named failure, and the loop continues. */
   let theme;
   try {
     theme = themeFromRequest(request);
@@ -1817,7 +1703,6 @@ for (const preset of cookiePresets) {
   );
 }
 
-/* Branch coverage for the resolver. */
 const cookieValues = cookiePresets.map((/** @type {any} */ p) => String(p.cookie ?? ""));
 ok(
   "theme: a preset sends no cookie at all",
@@ -1851,8 +1736,6 @@ ok(
   "the endpoint accepts exactly these two and both must resolve",
 );
 
-/* theme demo wiring */
-
 /* Word-anchored: a suffixed name contains the shorter one. */
 ok(
   "theme: the page imports the resolver",
@@ -1860,7 +1743,6 @@ ok(
     /\bthemeFromRequest\b/.test(playgroundSource),
   "the demo must call the real resolver, not restate its rules",
 );
-/* The lede's claim about the Worker, checked there. */
 ok(
   "theme: the Worker still resolves the theme through this function",
   /\bthemeFromRequest\b/.test(stripped(readFileSync(join(root, "workers", "app.ts"), "utf8"))),
@@ -1889,9 +1771,6 @@ ok(
   "an empty cell reads as a bug; the absence IS the answer for a reader on system",
 );
 
-/* markdown pipeline */
-
-/* Snippets render through `renderBody`; the image resolver refuses media. */
 {
   const refuseImages = async (/** @type {string} */ src) => {
     throw new Error(`the markdown snippets cite no media, and one cites ${src}`);
@@ -1939,7 +1818,6 @@ ok(
     );
 
     if (expect.throws) {
-      /* A bare throw is not enough; the directive must be named. */
       ok(
         `markdown: ${label} refusal names the unknown directive`,
         typeof refusal === "string" && /unknown directive/i.test(refusal),
@@ -1975,7 +1853,6 @@ ok(
     }
   }
 
-  /* Branches no published article can show. */
   ok(
     "markdown: a snippet is refused outright",
     snippets.some((/** @type {any} */ s) => s.expect?.throws === true),
@@ -1993,12 +1870,8 @@ ok(
   );
 }
 
-/* markdown demo wiring */
-
-/*
- * Every link of the chain is asserted. The wrapper reaches the pipeline through `loadPipeline()`,
- * the Worker's one door to the renderer, and that door is where the WASM instantiator is installed.
- */
+/* The wrapper reaches the pipeline through `loadPipeline()`, the Worker's one door to the renderer,
+   and that door is where the WASM instantiator is installed. */
 const snippetRendererSource = stripped(
   readFileSync(join(root, "app", "lib", "content", "render-snippet.server.ts"), "utf8"),
 );
@@ -2050,7 +1923,6 @@ ok(
   /Unknown snippet/.test(playgroundSource),
   "a hand-edited URL must say what happened, the same rule the chart demo follows",
 );
-/* A shipped neighbor does not complete the deferred entry. */
 ok(
   "markdown: the free-text form is still stated as deferred",
   deferredDemos.some(
@@ -2060,8 +1932,6 @@ ok(
   "the fixed-snippet demo shipping does not settle arbitrary text into the " +
     "highlighter, and the page must keep saying so",
 );
-
-/* chart renderer */
 
 for (const [key, dataset] of Object.entries(datasets)) {
   for (const type of CHART_TYPES) {
@@ -2128,8 +1998,6 @@ for (const [key, dataset] of Object.entries(datasets)) {
   }
 }
 
-/* copy law */
-
 ok(
   "the lab names WCAG 2.2 as the conformance target",
   /WCAG 2\.2/.test(playgroundSource),
@@ -2140,35 +2008,25 @@ ok(
   /not part of any standard/.test(playgroundSource),
   "Lc is advisory and the page must not imply otherwise",
 );
-/*
- * NEVER RESTORE THE BAN ON THE STRING "WCAG 3". The two assertions above say what the page
- * MUST claim, which a real defect falsifies. A banned string says what the page may not SAY,
- * and it made the next TRUE sentence fail the build: WCAG 3.0 is a working draft and APCA is
- * developed in its context, so the most accurate sentence this lab could add was the one the
- * ban refused. The failure it guarded is already impossible, because WCAG 2.2 is required
- * above as THE target.
- */
+/* Never restore a ban on the string "WCAG 3": it refused a true sentence (WCAG 3.0 is the working
+   draft APCA is developed in), and WCAG 2.2 is already required above as the target. */
 ok(
   "the page states the input cap it enforces",
   /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
-/* The claim is that Cache-Control is set, by helper or constant. */
 ok(
   "the route sets an explicit Cache-Control",
   /publicHtmlHeaders|SHARED_CACHE_CONTROL/.test(playgroundSource) &&
     /export function headers/.test(playgroundSource),
   "the cache-header rule: with the Workers cache on, no header means CACHED rather than skipped",
 );
-// The page's own law. A result that depended on anything but the query string
-// would stop being a shareable URL.
+// A result that depended on anything but the query string would stop being a shareable URL.
 ok(
   "the page renders no wall-clock timing",
   !/tookMs/.test(playgroundSource),
   "a timing readout is the one value that differs between two fetches of one URL",
 );
-
-/* artifact parity */
 
 const playgroundRecords = artifactRecords.filter(
   (/** @type {any} */ r) => r.docUid === "page:playground",
