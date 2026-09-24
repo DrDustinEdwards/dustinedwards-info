@@ -3,7 +3,7 @@
  * stripped the comments on the way there.
  *
  * BOUNDARY: a build step that makes no assertion, with gitignored output, a committed copy being
- * a second owner of prose the stylesheets already own (hard rule 17). The strip it compensates
+ * a second owner of prose the stylesheets already own. The strip it compensates
  * for stays, because the converter's validator greps the bundle for `@import` without stripping
  * comments and a stylesheet's prose about a removed `@import` failed that twice. The cap is
  * honest rather than silent: what does not fit is NAMED with its source and line.

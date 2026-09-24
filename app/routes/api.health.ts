@@ -1,7 +1,7 @@
 /**
  * `/api/health`: confirms the `/api/*` plane is wired and the Worker is live.
  *
- * THE CACHE-CONTROL IS LOAD BEARING. Under hard rule 8 a 200 carrying neither `Cache-Control` nor
+ * THE CACHE-CONTROL IS LOAD BEARING. Under the cache-header rule a 200 carrying neither `Cache-Control` nor
  * `Expires` is CACHED under RFC 9111 heuristic freshness, and A HEALTH CHECK THAT CAN BE SERVED
  * FROM CACHE IS NOT A HEALTH CHECK: it manufactures the reassuring silence a monitor exists to break.
  *

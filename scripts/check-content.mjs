@@ -303,7 +303,7 @@ function checkMath(posts) {
 
 /**
  * REQUIRED, not tidiness: a post DOCUMENTING the directive writes it inside a fence, where it is
- * literal text, so matching raw markdown fails a correct post. Hard rule 10's satisfied anchor.
+ * literal text, so matching raw markdown fails a correct post. The vacuity rule's satisfied anchor.
  *
  * @param {string} markdown
  */

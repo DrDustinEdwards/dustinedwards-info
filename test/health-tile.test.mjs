@@ -1,7 +1,7 @@
 /**
  * The home health fact's shape, as `check:browser` asserts it.
  *
- * REPLAYS THE DEFECT, per hard rule 12: the case expected `2/5` while the page renders
+ * REPLAYS THE DEFECT, per the replay rule: the case expected `2/5` while the page renders
  * `2/5 passing`, so it could never pass. The old expectation is here as a value the predicate must
  * now refuse, beside the real text it must accept.
  *

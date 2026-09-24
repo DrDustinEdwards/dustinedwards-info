@@ -56,7 +56,7 @@ export async function handleEditorAction(
    * NO DEFAULT. An absent intent is REFUSED, not treated as a save.
    *
    * Defaulting it meant a malformed POST carrying no intent PERFORMED A WRITE: a commit to GitHub and
-   * a D1 sync, from a request that never said what it wanted. Hard rule 13 on the worst possible
+   * a D1 sync, from a request that never said what it wanted. The no-substitution rule on the worst possible
    * surface, since the substituted value was an action rather than a label.
    *
    * THE INTENT ALSO CARRIES THE DRAFT FLAG, so an intent this module does not recognize is refused

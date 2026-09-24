@@ -45,7 +45,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 /**
  * THE DOOR, WITHOUT SCRIPT. The only way in used to be a `type="button"` with an
  * `onClick`: with scripting off it rendered, it was enabled, and it did nothing.
- * Hard rule 9 decides where the boundary sits, and the DOOR is on the public
+ * The progressive-enhancement rule decides where the boundary sits, and the DOOR is on the public
  * plane.
  *
  * WHY THIS ACTION EXISTS instead of posting straight to Better Auth: that endpoint

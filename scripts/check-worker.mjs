@@ -91,7 +91,7 @@ ok("the worker test file set has not shrunk", filesBreach === null, filesBreach 
  * and the log carried none of the runner's stdout, so the gate read no count and failed closed.
  * **THE CAUSE WAS NOT ESTABLISHED, and this comment does not invent one**; the obvious candidate
  * was REFUTED. Which is why the repair is not a better regex: the needle was pointed at a
- * HUMAN-FACING RENDERING, free to differ per environment, which is hard rule 10's own mistake.
+ * HUMAN-FACING RENDERING, free to differ per environment, which is the vacuity rule's own mistake.
  * BOTH REPORTERS RUN, and IT STILL DELEGATES: package.json defines what this layer's run IS.
  */
 const reportDir = mkdtempSync(join(tmpdir(), "check-worker-"));

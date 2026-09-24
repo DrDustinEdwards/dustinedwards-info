@@ -131,7 +131,7 @@
     // rather than against a copy of the sentence, on exactly the footing
     // CACHE_SENTENCE below is on: a paraphrase in the route that hard-coded 30
     // and 90 would satisfy a text comparison and would be a second owner of a
-    // number hard rule 17 gives to one module. Constants and one pure helper,
+    // number the one-owner rule gives to one module. Constants and one pure helper,
     // no Env and no DOM.
     "app/lib/webmention/retention.mjs",
     "app/lib/media/view.mjs",

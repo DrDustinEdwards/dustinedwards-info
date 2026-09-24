@@ -4,9 +4,9 @@
  *   npm run check:floors
  *
  * BOUNDARY: it compares two numbers a gate PRINTS, so it cannot tell whether the count is honest,
- * which is hard rule 10's half, and it cannot see a gate with NO floor, which is why the absences
+ * which is the vacuity rule's half, and it cannot see a gate with NO floor, which is why the absences
  * are named here. It READS under `check:all` and RUNS standalone, and reading from a pipe rather
- * than a stored log is what keeps hard rule 10's fixture independence.
+ * than a stored log is what keeps the vacuity rule's fixture independence.
  */
 
 import { readFileSync } from "node:fs";

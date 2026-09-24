@@ -7,7 +7,7 @@
  * performed a WRITE: a commit to GitHub and a D1 sync, from a request that
  * never said what it wanted.
  *
- * This is hard rule 13 on its worst surface. A substituting fallback on a LABEL
+ * This is the no-substitution rule on its worst surface. A substituting fallback on a LABEL
  * renders the wrong word; a substituting fallback on an ACTION does the wrong
  * thing to the repository. The colophon defect and this one are the same shape
  * and are not the same severity.

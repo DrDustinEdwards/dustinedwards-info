@@ -27,7 +27,7 @@ import { SLUG_PATTERN } from "../content/slug.mjs";
  *
  * ## THE SLUG IS MATCHED AGAINST `SLUG_PATTERN`, IMPORTED
  *
- * Hard rule 6: one statement of what a slug is. A local regex here would be a
+ * The URL allowlist rule: one statement of what a slug is. A local regex here would be a
  * second one, and the failure would be silent in the permissive direction,
  * which is a lookup key going to D1 from a stranger's POST body.
  */
@@ -220,7 +220,7 @@ export function collapseExcerpt(text) {
  * `sourceVerdict` refused a bad `source` on the way in and `readAuthor` kept an
  * `author_url` only if it parsed as absolute http(s). So every stored value
  * should already pass this. It is applied again at the point of RENDER anyway,
- * and the reason is hard rule 6's: validate where the value enters a context,
+ * and the reason is the URL allowlist rule's: validate where the value enters a context,
  * not where it entered the system. The row can outlive the code that wrote it,
  * a hand-written row skips both earlier checks entirely, and an `href` is the
  * one attribute on this page where being wrong is an executable defect rather

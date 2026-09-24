@@ -5,7 +5,7 @@
  *
  * This used to be `String(form.get("intent") ?? "save")` inline in the action,
  * so a POST carrying no intent PERFORMED A WRITE: a commit to GitHub and a D1
- * sync, from a request that never said what it wanted. Hard rule 13, on the
+ * sync, from a request that never said what it wanted. The no-substitution rule, on the
  * worst surface for it, because the substituted value was an ACTION rather than
  * a label. A missing label renders the wrong word; a missing action writes.
  *

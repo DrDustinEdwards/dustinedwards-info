@@ -37,7 +37,7 @@ const EXCLUDED = {
    * `bootstrap-config.mjs` creates the real config BY COPYING the example, so real == example by
    * construction, and this gate's job is asserting they DIFFER. It can never pass in an extraction,
    * which is the gate being correct rather than a limitation, and is why check:config is
-   * load-bearing on exactly one machine. The list is not restated here, on hard rule 17.
+   * load-bearing on exactly one machine. The list is not restated here, on the one-owner rule.
    */
   "check:config": "cannot pass in any extraction: bootstrap copies the example, so real == example.",
   /* Defaults to `--local`, which reads miniflare state a checkout does not have. */

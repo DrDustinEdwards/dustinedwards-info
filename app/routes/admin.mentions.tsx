@@ -26,7 +26,7 @@ import type { Route } from "./+types/admin.mentions";
  * middleware is a METHOD ALLOWLIST that refuses every write before a child action
  * runs, and none of the three actions below is a publish, so a capability read
  * here would be a SECOND enforcement point for a rule that already has one, which
- * is the shape hard rule 17 refuses: two owners of one fact, free to disagree.
+ * is the shape the one-owner rule refuses: two owners of one fact, free to disagree.
  *
  * EVERY VALUE ON IT CAME FROM A STRANGER. They are rendered as React children,
  * which escapes them, and the source URL is shown as TEXT rather than as a link:
@@ -403,7 +403,7 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
        * store out of step with the repository, under hard rule 18; a webmention is
        * neither derived nor repo-sourced, so there is nothing for it to find.
        *
-       * THE TWO WINDOWS ARE IMPORTED, never typed, which is hard rule 17: a button
+       * THE TWO WINDOWS ARE IMPORTED, never typed, which is the one-owner rule: a button
        * labeled with one number beside a sweep that uses another is the drift the rule
        * exists to prevent.
        */}

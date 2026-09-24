@@ -142,7 +142,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 /**
  * A public HTML route that returns no headers is stamped `private, no-store` by
- * the gateway under hard rule 8, so omitting this would quietly make the most
+ * the gateway under the cache-header rule, so omitting this would quietly make the most
  * static page on the site the only uncacheable one.
  */
 export function headers() {

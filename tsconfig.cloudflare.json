@@ -35,7 +35,7 @@
      * the author's machine and again in CI, before anything ships. The two
      * projects carry different risk, and scoping a rule by plane is the
      * pattern this repo already uses for the public payload ceiling and the
-     * admin exemption in hard rule 9.
+     * admin exemption in the progressive-enhancement rule.
      *
      * Measured 2026-08-28, the day this landed, by turning the flag on for the
      * whole tree and counting what it reported: 91 sites here and 312 under

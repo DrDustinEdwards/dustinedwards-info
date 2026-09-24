@@ -8,7 +8,7 @@
  * `check:features` which asserts the set per page, and the markdown twin which
  * states the same facts in another form. A tag set assembled inline in `meta()`
  * can only be checked by a gate that re-derives it, and a gate that re-derives
- * its own expectation from the code it checks is the vacuity hard rule 10 names.
+ * its own expectation from the code it checks is a vacuous check.
  * This builds the list; the gate calls this and asserts over the RESULT.
  *
  * ## THE THREE THAT ARE HARD FAILURES

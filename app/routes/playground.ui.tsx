@@ -1535,7 +1535,7 @@ export default function PlaygroundUi() {
               because the bar is one rule of seventeen class families in it and a copy of the
               rule would be a second owner free to drift. Measured: the import puts this route
               at 10,689 brotli bytes of stylesheet against a 10,600 ceiling and 11,503 against
-              an 11,500 cold-load ceiling. Raising either is a hard rule 4 decision, so the bar
+              an 11,500 cold-load ceiling. Raising either is a no-framework-script rule decision, so the bar
               waits for one rather than taking it.
             </li>
             <li>

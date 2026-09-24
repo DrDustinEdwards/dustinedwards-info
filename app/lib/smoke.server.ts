@@ -110,7 +110,7 @@ export async function authenticateSmoke(env: Env, request: Request): Promise<Smo
   }
 
   /*
-   * THE EMAIL IS RESOLVED HERE, INSIDE THE BOUNDARY. `admin.tsx` is a ROUTE and hard rule 3 is a PATH
+   * THE EMAIL IS RESOLVED HERE, INSIDE THE BOUNDARY. `admin.tsx` is a ROUTE and the secrets-boundary rule is a PATH
    * rule, so a route reading a ratified secret is a violation whether or not the value ever leaves the
    * server. The session path already resolves the address inside `auth.server.ts`, so neither kind of
    * caller's route touches the secret.

@@ -71,7 +71,7 @@ try {
 const desired = desiredMonitors(SITE_ORIGIN);
 
 /*
- * SCOPE IS PROVEN NON-EMPTY BEFORE ANYTHING IS COMPARED (hard rule 10): an empty desired list or
+ * SCOPE IS PROVEN NON-EMPTY BEFORE ANYTHING IS COMPARED: an empty desired list or
  * an empty manifest would make every loop below report a clean sweep of a set it never looked at.
  */
 ok(
@@ -169,7 +169,7 @@ for (const want of desired) {
 }
 
 /*
- * THE READS ACTUALLY HAPPENED (hard rule 10, prove scope non-empty). Every per-monitor assertion
+ * THE READS ACTUALLY HAPPENED (the vacuity rule, prove scope non-empty). Every per-monitor assertion
  * lives inside a loop, and a loop that iterated nothing reports what a clean sweep reports. Paired
  * with the floor rather than replacing it: that counts ASSERTIONS, this counts what they were about.
  */

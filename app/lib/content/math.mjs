@@ -22,7 +22,7 @@
  * the build fails, and `rehype-katex` renders with them to produce the markup.
  * If the two differed, an expression could pass validation and still reach
  * rehype-katex's error path, which is the exact hole the validator exists to
- * close. Hard rule 10's one-helper discipline, applied to an options object.
+ * close. The vacuity rule's one-helper discipline, applied to an options object.
  *
  * `output: "htmlAndMathml"` is the ruled mode: the MathML tree carries the
  * meaning for a screen reader and the HTML tree carries the layout for a

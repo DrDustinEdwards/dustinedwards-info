@@ -60,7 +60,7 @@ const NO_STORE = "private, no-store";
 /**
  * WHAT A REFUSED SENDER IS TOLD, and it is deliberately one string for four different target
  * problems. Especially the draft: a distinct message would turn this endpoint into an oracle for
- * unpublished slugs, which is hard rule 1's leak arriving through a 400 instead of through a page.
+ * unpublished slugs, which is the visibility rule's leak arriving through a 400 instead of through a page.
  */
 const BAD_TARGET = "target must be a published post on this site";
 
@@ -116,7 +116,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   /*
    * THE RATE LIMIT PRECEDES THE BODY READ. Every check below it costs something: a materialized
    * body, a form parse, a D1 read. The limiter costs one Durable Object call and is the only thing
-   * here that bounds how often the rest can be reached, which is hard rule 19's chain applied to this
+   * here that bounds how often the rest can be reached, which is the money-path rule's chain applied to this
    * route: each stage refuses before the next spends anything.
    *
    * Keyed on the edge-set client IP rather than anything in the body, which the caller controls.

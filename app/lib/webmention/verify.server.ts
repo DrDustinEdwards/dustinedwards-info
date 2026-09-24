@@ -61,12 +61,12 @@ const UNREADABLE = "(unreadable)";
  *
  * BEST EFFORT MEANS THE FALLBACK IS NAMED, NOT INVENTED. With no h-card the name is the source's
  * HOSTNAME and the URL is null, which is a fact about where the mention came from rather than a
- * guess about who wrote it. That is the difference between an honest fallback and hard rule 13's
+ * guess about who wrote it. That is the difference between an honest fallback and the no-substitution rule's
  * substituted value.
  *
  * `u-url` is resolved against the source and kept only if it is absolute http(s). A relative or
  * `javascript:` value becomes null rather than being refused later at render time, which is what
- * hard rule 6 asks: validate where the value enters.
+ * the URL allowlist rule asks: validate where the value enters.
  */
 function readAuthor(
   document: ParsedDocument,

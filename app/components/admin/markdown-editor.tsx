@@ -263,7 +263,7 @@ function looksLikeUrl(text: string) {
  * out of the DOM.
  *
  * FAILS CLOSED. Fabricating a value would satisfy the facet while matching no
- * policy, which is hard rule 13's substituted fallback wearing a different hat.
+ * policy, which is the no-substitution rule's substituted fallback wearing a different hat.
  */
 function documentCspNonce(): string {
   if (typeof document === "undefined") return "";

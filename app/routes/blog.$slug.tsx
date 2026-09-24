@@ -256,7 +256,7 @@ function Mention({
 
   /*
    * THE NAME FALLS BACK TO THE SOURCE URL, not to a word like "Someone": it
-   * substitutes a FACT rather than a placeholder, which is hard rule 13's
+   * substitutes a FACT rather than a placeholder, which is the no-substitution rule's
    * distinction, in a spot where an invented value would be attributed to a real
    * person.
    */

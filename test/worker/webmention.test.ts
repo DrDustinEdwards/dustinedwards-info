@@ -153,7 +153,7 @@ beforeEach(async () => {
   /*
    * THE TABLE IS EMPTIED BETWEEN CASES, because D1 persists for the whole file
    * and the global-cap case asserts an exact count. Not an FTS index and not a
-   * derived store, so hard rules 7 and 18 have nothing to say about it.
+   * derived store, so neither the live-path rule nor hard rule 18 has anything to say about it.
    */
   await env.DB.prepare(`DELETE FROM webmentions`).run();
   await seedPost(TARGET_SLUG, "published");
@@ -333,7 +333,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
 
   it("REFUSES A DRAFT TARGET AND AN UNKNOWN SLUG IDENTICALLY, byte for byte", async () => {
     /*
-     * THE ORACLE THIS CLOSES. Hard rule 1 keeps drafts off every public
+     * THE ORACLE THIS CLOSES. The visibility rule keeps drafts off every public
      * surface, and a 400 that distinguished "that post is not published" from
      * "there is no such post" would put them back on one: a caller could
      * enumerate unpublished slugs by reading the refusals, without ever seeing

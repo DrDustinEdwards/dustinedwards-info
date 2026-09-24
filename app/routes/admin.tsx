@@ -49,7 +49,7 @@ export const middleware: Route.MiddlewareFunction[] = [
     /*
      * Covers RESOURCE ROUTES, which the framework's document check never sees: a
      * route with no default export is not a document request. BEFORE the session
-     * lookup, the cheapest-first order hard rule 19 states. AN ABSENT ORIGIN IS
+     * lookup, the cheapest-first order the money-path rule states. AN ABSENT ORIGIN IS
      * ALLOWED.
      */
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -99,7 +99,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 
       /*
        * READ ONLY FOR THE WHOLE PLANE. AN ALLOWLIST, NOT A DENYLIST, the inversion
-       * hard rule 19 is ordered for: a route answering PUT tomorrow is refused the day it
+       * the money-path rule is ordered for: a route answering PUT tomorrow is refused the day it
        * is written. Refused BEFORE `next()`.
        */
       if (request.method !== "GET" && request.method !== "HEAD") {

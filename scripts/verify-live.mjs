@@ -814,7 +814,7 @@ const ASK_PROBE_LIMIT = 3;
 
 /**
  * Every other section runs cold, so this warms each entry and asks again.
- * Not `get()`: its `no-cache` makes "not a HIT" pass vacuously (hard rule 10).
+ * Not `get()`: its `no-cache` makes "not a HIT" pass vacuously.
  */
 {
   const UA_ONLY = { "user-agent": UA };
@@ -896,7 +896,7 @@ const ASK_PROBE_LIMIT = 3;
         `invites a browser or an intermediary to keep a document that differs per reader.`,
     );
 
-    /* (c) is check:browser's (hard rule 8). */
+    /* (c) is check:browser's. */
 
     /* `Vary: Cookie` would fragment every entry. */
     check(
@@ -1072,7 +1072,7 @@ const ASK_PROBE_LIMIT = 3;
       );
     }
 
-    /* The default arrives only on this 302; source is not wire (hard rule 7). */
+    /* The default arrives only on this 302; source is not wire. */
     if (label === "302") {
       const cc = res.headers.get("cache-control");
       check(

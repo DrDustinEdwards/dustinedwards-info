@@ -1,7 +1,7 @@
 /**
  * Every colophon section has a fact list, asserted OFFLINE.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The colophon has two registration
+ * REPLAYS THE DEFECT, per the replay rule. The colophon has two registration
  * sites. `colophonPageInput` builds each section's indexed body and throws on a
  * section it has no rule for, offline, on every build. `colophonFacts` builds
  * the needles `verify-live` matches against the rendered page and throws the

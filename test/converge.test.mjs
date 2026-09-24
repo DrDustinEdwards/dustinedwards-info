@@ -1,7 +1,7 @@
 /**
  * D1 convergence after a commit has landed.
  *
- * REPLAYS THE FINDING, per hard rule 12. The 2026-08-22 audit, in its database
+ * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, in its database
  * section: "`savePost` writes GitHub first, then D1, with no compensation. A
  * GitHub success followed by a D1 failure leaves the repo ahead of the database
  * with no record." Verified TRUE against the code.

@@ -9,11 +9,11 @@
  *
  * ## BOTH DIRECTIONS, AND THE SECOND IS THE ONE THAT MATTERS
  *
- * Hard rule 12: a new gate is tested by replaying the defect it was written
+ * The replay rule: a new gate is tested by replaying the defect it was written
  * for, and EXIT 1 IS NOT EVIDENCE, both ways. A classifier that answers "the
  * machine" to everything would pass the first half of this file and is exactly
  * the failure this repo spent 2026-09-14 closing: an unfailable condition,
- * hard rule 10's first class.
+ * the vacuity rule's first class.
  *
  * So the second half is the load-bearing half. A gate that GENUINELY FAILED,
  * with a non-empty stderr and status 1, must come back unclassified, and the

@@ -174,7 +174,7 @@ export function personJsonLd(origin: string) {
 export const SHARED_CACHE_CONTROL = "public, max-age=0";
 
 /**
- * THE EDGE LIFETIMES, in seconds, and they are the owner rather than a copy. Hard rule 17 gives a
+ * THE EDGE LIFETIMES, in seconds, and they are the owner rather than a copy. The one-owner rule gives a
  * measured value one owner. NEVER PARSE A LIFETIME BACK OUT OF A STRING: a parse that stops matching
  * has to substitute something, and a substituted cache lifetime is a false claim.
  *
@@ -245,7 +245,7 @@ export const PAGES_CACHE_TAG = "pages";
 
 /**
  * The `headers()` a public HTML route returns. ONE definition, many callers: a route that returns
- * nothing falls through to hard rule 8's uncached default and is never edge-cached.
+ * nothing falls through to the cache-header rule's uncached default and is never edge-cached.
  *
  * A copy that drops `Cache-Tag` is a response nothing can purge, which fails quietly rather than
  * visibly. `check:headers` asserts the pairing on every route that names the shared string, in both
@@ -278,7 +278,7 @@ export const HTML_VARY_ACCEPT = "Accept";
  * intermediary, not the browser.
  *
  * Its two mechanisms matter more than its callers, and both are invisible from a route file. It is
- * hard rule 8's default in `workers/app.ts` for any response declaring no `Cache-Control` of its
+ * the cache-header rule's default in `workers/app.ts` for any response declaring no `Cache-Control` of its
  * own, and it is what a cookie-bearing request gets on the HTML routes after the downgrade there.
  */
 export const NO_STORE_CACHE_CONTROL = "private, no-store";

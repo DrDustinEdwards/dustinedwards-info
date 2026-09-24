@@ -9,7 +9,7 @@
  *
  * `.mjs` for the same reason `publish-policy.mjs` and `intent.mjs` are: the test
  * runner cannot import a `.ts` module, and a rule this repo cannot execute in a
- * test is a rule it verifies by reading. Hard rule 12 is the standing argument.
+ * test is a rule it verifies by reading. The replay rule is the standing argument.
  *
  * ## What a preview link IS
  *

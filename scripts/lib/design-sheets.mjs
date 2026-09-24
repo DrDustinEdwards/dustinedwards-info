@@ -1,8 +1,8 @@
 /**
  * One reader for the design-sync sheet list, and one parser for a stylesheet's comment blocks.
  *
- * BOUNDARY: both callers read the SAME array out of its one owner (hard rule 17) through these
- * names and no local variant, which is hard rule 10's one helper name and one argument order.
+ * BOUNDARY: both callers read the SAME array out of its one owner through these
+ * names and no local variant, which is the vacuity rule's one helper name and one argument order.
  */
 
 import { readFileSync } from "node:fs";

@@ -1,7 +1,7 @@
 /**
  * The one JavaScript owner of "is this post publicly visible".
  *
- * REPLAYS THE DEFECT, per hard rule 12. On 2026-07-29 five unpublished drafts
+ * REPLAYS THE DEFECT, per the replay rule. On 2026-07-29 five unpublished drafts
  * staged through the operator path were uploaded to Ask unconditionally, and the
  * public endpoint answered from one and cited it by slug. The cause was that Ask
  * had its OWN copy of the visibility rule, agreeing with `publiclyVisible()` by

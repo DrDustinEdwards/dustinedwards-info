@@ -182,7 +182,7 @@ const READ_REPRESENTATION = {
 /**
  * What the API will RETURN for a field this repo asked to be `value`. ONE FUNCTION, BOTH
  * CONSUMERS: if the writer and the gate disagreed about what "in step" means, one would be wrong
- * on every run. Hard rule 17.
+ * on every run. The one-owner rule.
  *
  * @param {string} field
  * @param {unknown} value the value this repo writes
@@ -192,7 +192,7 @@ export function expectedReadValue(field, value) {
   const map = /** @type {Record<string, Record<string, unknown>>} */ (READ_REPRESENTATION)[field];
   if (!map) return value;
   // A value with no mapping falls through UNCHANGED rather than to undefined: a new enum member
-  // should surface as a mismatch naming both sides, which is hard rule 13.
+  // should surface as a mismatch naming both sides, which is the no-substitution rule.
   return String(value) in map ? map[String(value)] : value;
 }
 

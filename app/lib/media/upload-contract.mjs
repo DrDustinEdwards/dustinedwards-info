@@ -29,7 +29,7 @@
  * **The rule is the LOADABILITY, not the import count.** This said "with no
  * imports" until 2026-09-07 and then acquired one: `byteSize`, a sibling
  * dependency-free `.mjs`, because `validateUpload` composes the too-large
- * sentence and the formatting has exactly one owner (hard rule 17). What must
+ * sentence and the formatting has exactly one owner. What must
  * never appear here is an import that reaches a binding, a `.server` module or
  * anything React, because any one of those makes this module unloadable by
  * `node:test` and takes the assertions below down with it.

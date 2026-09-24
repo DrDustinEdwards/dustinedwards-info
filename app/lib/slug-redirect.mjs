@@ -56,7 +56,7 @@
  *
  * ## `no-store`, for the reason on the HTTPS redirect
  *
- * Hard rule 8: a response with no `Cache-Control` is CACHED under heuristic
+ * The cache-header rule: a response with no `Cache-Control` is CACHED under heuristic
  * freshness. These redirects are permanent and would be safe to cache, but they
  * are issued from the gateway, which is cache disabled, so a stored copy would
  * be a surprise rather than a saving. The header is stated rather than left to

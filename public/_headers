@@ -20,7 +20,7 @@
 # favicon hard enough to look like a failed deploy.
 #
 # This changes STATIC ASSET caching only. HTML cache policy is untouched: it is
-# set per route in the app and governed by hard rule 8.
+# set per route in the app and governed by the cache-header rule.
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 

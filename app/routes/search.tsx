@@ -256,7 +256,7 @@ function sortHref(params: ReturnType<typeof readParams>, sort: "relevance" | "da
  * Keyed by the UNION, not by `string`, and there is deliberately no fallback: the
  * `Record<string, string>` shape is what shipped the colophon defect, where a new
  * enum member typechecked clean and rendered the raw value to readers.
- * Hard rule 13.
+ * The no-substitution rule.
  *
  * Adding a reason without a label here is a TYPECHECK failure at the point of the
  * omission, which cannot be skipped and fails before anything is built.

@@ -65,7 +65,7 @@ export function pageCount(total, perPage = POSTS_PER_PAGE) {
  * Kept as a dated pair rather than overwritten, because the old number is what
  * makes the reversal legible. This comment went stale the day the flagship was
  * featured and nothing noticed for three weeks; a count in prose is exactly
- * what hard rule 17 says belongs to a gate or to nowhere, and the only reason
+ * what the one-owner rule says belongs to a gate or to nowhere, and the only reason
  * these survive is that they are DATED observations about a corpus rather than
  * standing claims about the code.
  *

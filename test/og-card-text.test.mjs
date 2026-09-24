@@ -1,7 +1,7 @@
 /**
  * The social card's fitted type, as a pure function rather than as a picture.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The previous template drew every title
+ * REPLAYS THE DEFECT, per the replay rule. The previous template drew every title
  * at ONE size and cut at ONE length, so the only thing standing between a long
  * headline and the foot of the card was the corpus happening to be short. The
  * cut itself had already been a defect of exactly this shape: the title and the
@@ -99,7 +99,7 @@ test("the shortest titles take the largest size", () => {
 });
 
 test("PAST THE LADDER IT THROWS, and does not substitute a size", () => {
-  // Hard rule 13. A `?? smallest` here would mean an unclamped title rendered
+  // The no-substitution rule. A `?? smallest` here would mean an unclamped title rendered
   // at a size nobody chose, silently, which is the failure mode the whole
   // module exists to remove.
   assert.throws(
