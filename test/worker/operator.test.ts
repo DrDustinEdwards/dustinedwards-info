@@ -179,42 +179,22 @@ describe("operator metering", () => {
     if (refusal && !refusal.ok) expect(refusal.retryAfter).toBeGreaterThan(0);
   });
 
-  it("RESETS the allowance only when the fixed window ROLLS, not gradually", async () => {
-    /*
-     * THE PROPERTY THE CASE ABOVE DEPENDS ON, stated once rather than assumed
-     * twice. It is here because that dependence used to be on the real clock
-     * and therefore on luck; this replaces it with a statement.
-     *
-     * `AskBudget.hit` keys on `Math.floor(Date.now() / 1000 / windowSeconds)`,
-     * so the window is FIXED rather than sliding: the count does not decay as
-     * time passes, it is dropped whole when the key changes. Both halves are
-     * asserted, because asserting only the reset would pass just as well
-     * against a limiter that had no ceiling at all.
-     *
-     * A LIMIT OF ITS OWN AND AN ID OF ITS OWN, so it neither reads nor moves
-     * the counter any other case is using.
-     */
+  it("SERVES AGAIN once the Retry-After it handed back has passed", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(WINDOW_START);
 
-    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName("op:window-case"));
-
-    for (let i = 0; i < 5; i += 1) {
-      await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: true, used: i + 1 });
+    const id = "retry-after-case";
+    let refusal: Awaited<ReturnType<typeof meterOperator>> | null = null;
+    for (let i = 0; i < 40 && refusal === null; i += 1) {
+      const result = await meterOperator(operatorEnv(), id);
+      if (!result.ok) refusal = result;
     }
-    /* Spent, and the window has not moved: the next one refuses. */
-    await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: false, used: 5 });
+    expect(refusal).toMatchObject({ ok: false, status: 429 });
+    const retryAfter = refusal && !refusal.ok ? (refusal.retryAfter ?? 0) : 0;
+    expect(retryAfter).toBeGreaterThan(0);
 
-    /* ONE SECOND SHORT of the boundary is still the same window. Without this
-     * the case would pass against a limiter that reset on any clock movement
-     * at all. */
-    vi.setSystemTime(WINDOW_START + 59_000);
-    await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: false, used: 5 });
-
-    /* Across it, the count is GONE rather than decremented: the next hit is
-     * the first of a new window, not the sixth of an old one. */
-    vi.setSystemTime(WINDOW_START + 60_000);
-    await expect(limiter.hit(5, 60)).resolves.toMatchObject({ ok: true, used: 1 });
+    vi.setSystemTime(WINDOW_START + retryAfter * 1000);
+    expect(await meterOperator(operatorEnv(), id)).toMatchObject({ ok: true });
   });
 
   it("does NOT serve when the limiter is missing", async () => {

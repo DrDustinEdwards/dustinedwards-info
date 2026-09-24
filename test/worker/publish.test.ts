@@ -1,15 +1,25 @@
 import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { deletePost, savePost } from "~/lib/editor/publish.server";
+import { claimMediaKeyForDelete, upsertMediaRecord } from "~/db";
+import {
+  EditorError,
+  deletePost,
+  renderAndWrite,
+  savePost,
+  syncPostToD1,
+  validateAndRender,
+} from "~/lib/editor/publish.server";
 import { PolicyError } from "~/lib/editor/publish-policy.mjs";
 import { GitHubError } from "~/lib/editor/github.server";
 import { DIVERGENCE_ERROR_NAME } from "~/lib/editor/converge.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
+import { runHealthChecks } from "~/lib/health/checks.server";
+import { runTool } from "~/lib/operator/api.server";
 
 import { post } from "./fixtures";
-import { stubGitHub, STUB_HEAD_SHA, type GitHubStub } from "./github-stub";
+import { stubGitHub, type GitHubStub } from "./github-stub";
 
 /**
  * `savePost` and `deletePost`, end to end, against real D1 and a stubbed
@@ -71,7 +81,14 @@ async function countRows(table: string, where = "", ...binds: unknown[]) {
 }
 
 describe("savePost", () => {
-  it("lands ONE file in the commit, and it is the markdown", async () => {
+  it("lands the markdown at the post's path and changes no other file", async () => {
+    const seed = {
+      [postPath("neighbour")]: post("neighbour"),
+      "README.md": "# A file a save must not touch\n",
+    };
+    gh.restore();
+    gh = stubGitHub(seed);
+
     const raw = post("one-file");
     await savePost(publishEnv(), {
       slug: "one-file",
@@ -80,34 +97,7 @@ describe("savePost", () => {
       actor: { kind: "admin" },
     });
 
-    const trees = gh.calls.filter((c) => c.path.endsWith("/git/trees"));
-    expect(trees).toHaveLength(1);
-    const first = trees[0];
-    if (!first) throw new Error("no tree POST was recorded");
-    const tree = (first.body as { tree: Array<{ path: string }> }).tree;
-    /* ONE ENTRY. Since the artifact arc a save carries markdown and nothing
-     * else; a second entry would mean the corpus artifact was back in git. */
-    expect(tree.map((e) => e.path)).toEqual([postPath("one-file")]);
-
-    /*
-     * THE WHOLE CALL SEQUENCE, in order, asserted as a LIST rather than by
-     * spot-checking one member. The Git Data shape (blob, tree, commit, ref)
-     * exists for the `expectedHeadSha` seam that the Contents write path has
-     * no room for, and the leading Contents READ is the authority on whether
-     * this post has ever existed, which is what `decide()` needs before any
-     * render is paid for. A list is what catches an EXTRA call as well as a
-     * missing one; the second read this repo used to make is gone since the
-     * artifact arc, and nothing but a full list would notice it coming back.
-     */
-    expect(gh.calls.map((c) => `${c.method} ${c.path.split("?")[0]}`)).toEqual([
-      "GET /repos/DrDustinEdwards/dustinedwards-info/contents/content/posts/one-file.md",
-      "GET /repos/DrDustinEdwards/dustinedwards-info/git/ref/heads/main",
-      `GET /repos/DrDustinEdwards/dustinedwards-info/git/commits/${STUB_HEAD_SHA}`,
-      "POST /repos/DrDustinEdwards/dustinedwards-info/git/blobs",
-      "POST /repos/DrDustinEdwards/dustinedwards-info/git/trees",
-      "POST /repos/DrDustinEdwards/dustinedwards-info/git/commits",
-      "PATCH /repos/DrDustinEdwards/dustinedwards-info/git/refs/heads/main",
-    ]);
+    expect(Object.fromEntries(gh.files)).toEqual({ ...seed, [postPath("one-file")]: raw });
   });
 
   it("writes a posts row carrying BOTH provenance hashes", async () => {
@@ -153,39 +143,47 @@ describe("savePost", () => {
     expect(fts?.n ?? 0).toBeGreaterThan(0);
   });
 
-  it("records the media_refs a post's body cites, keyed by the NUL join", async () => {
-    /*
-     * ONE IMAGE CITED TWICE. The primary key is (key, form, detail) and the
-     * pipeline's `detail` for an inline image is its LINE, so two citations of
-     * the same blob produce two rows rather than one deduped row.
-     *
-     * That is the property `mediaRefKey`'s NUL join protects: the dedupe key
-     * is `key \0 form \0 detail`, and under a printable separator two
-     * different (form, detail) pairs can produce one string, at which point the
-     * second citation is silently dropped. The assertion below is that both
-     * survive, which is the observable form of the same fact.
-     */
-    const key = "/media/dustin-edwards-abcd1234abcd1234-800x600.png";
-    await savePost(publishEnv(), {
-      slug: "cites",
-      raw: post("cites", {
-        body: `A paragraph.\n\n![first alt](${key})\n\nAnother paragraph.\n\n![second alt](${key})\n`,
-      }),
-      isNew: true,
-      actor: { kind: "admin" },
-    });
+  it("keeps a cited image from being deleted while any citation of it remains", async () => {
+    const key = "dustin-edwards-abcd1234abcd1234-800x600.png";
+    await env.MEDIA.put(key, "image bytes");
+    await upsertMediaRecord(env as never, { key, alt: "", storage: "r2", kind: "image" });
 
-    const rows = await env.DB.prepare(
-      "SELECT media_key, form, detail FROM media_refs WHERE source_type = 'post' AND source_id = ?1",
-    )
-      .bind("cites")
-      .all<{ media_key: string; form: string; detail: string | null }>();
+    const image = `![alt](/media/${key})`;
+    const save = (body: string, isNew: boolean) =>
+      savePost(publishEnv(), {
+        slug: "cites",
+        raw: post("cites", { body }),
+        isNew,
+        actor: { kind: "admin" },
+      });
 
-    expect(rows.results.length).toBeGreaterThanOrEqual(2);
-    expect(new Set(rows.results.map((r) => r.media_key))).toEqual(new Set([key.slice("/media/".length)]));
-    expect(new Set(rows.results.map((r) => r.form))).toEqual(new Set(["markdown-image"]));
-    /* Two DISTINCT details, so the two rows are two rows. */
-    expect(new Set(rows.results.map((r) => r.detail)).size).toBe(2);
+    await save(`A paragraph.\n\n${image}\n\nAnother paragraph.\n\n${image}\n`, true);
+    expect(await claimMediaKeyForDelete(env as never, key)).toBe(false);
+    expect(await env.MEDIA.get(key)).not.toBeNull();
+
+    await save(`A paragraph.\n\n${image}\n`, false);
+    expect(await claimMediaKeyForDelete(env as never, key)).toBe(false);
+    expect(await env.MEDIA.get(key)).not.toBeNull();
+
+    /* The refusals above were the citations, not a missing row. */
+    await save("A paragraph with no image.\n", false);
+    expect(await claimMediaKeyForDelete(env as never, key)).toBe(true);
+  });
+
+  it("records two citations whose parts collide under a space join as two rows", async () => {
+    /* The pipeline's forms carry no spaces, so no rendered post produces this
+     * pair; the writer is handed it directly to prove the dedup keeps both. */
+    const record = (await validateAndRender(publishEnv(), "collide", post("collide"))) as Record<
+      string,
+      unknown
+    >;
+    record.mediaRefs = [
+      { key: "og/cover-1.png", form: "inline", detail: "line 3 alt" },
+      { key: "og/cover-1.png", form: "inline line", detail: "3 alt" },
+    ];
+    await syncPostToD1(publishEnv(), record);
+
+    expect(await countRows("media_refs", "WHERE source_id = ?1", "collide")).toBe(2);
   });
 
   /* --------------------------------------------------------- refusals --- */
@@ -274,6 +272,84 @@ describe("savePost", () => {
     const stored = await env.APP_KV.get("publish:divergence:diverged");
     expect(stored).toBeTruthy();
     expect(JSON.parse(stored ?? "{}")).toMatchObject({ slug: "diverged" });
+  });
+
+  it("writes nothing to the database when the commit fails", async () => {
+    /* The ref update is the commit's last step, so every other part of the
+     * commit has already been sent when it fails. */
+    gh.failNext("/git/refs/heads/main", 5);
+    const postsBefore = await countRows("posts");
+
+    await expect(
+      savePost(publishEnv(), {
+        slug: "never-committed",
+        raw: post("never-committed", {
+          body: "Body.\n\n![alt](/media/dustin-edwards-feed1234feed1234-400x300.png)\n",
+        }),
+        isNew: true,
+        actor: { kind: "admin" },
+      }),
+    ).rejects.toBeInstanceOf(GitHubError);
+
+    expect(gh.files.has(postPath("never-committed"))).toBe(false);
+    expect(await countRows("posts")).toBe(postsBefore);
+    expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:never-committed")).toBe(0);
+    expect(await countRows("media_refs", "WHERE source_id = ?1", "never-committed")).toBe(0);
+  });
+
+  it("answers the operator with a 500 that says the commit landed when D1 fails twice", async () => {
+    const raw = post("committed-anyway");
+    const result = await runTool(
+      flakyD1(2) as never,
+      { kind: "operator", id: "test" },
+      "save_post",
+      { slug: "committed-anyway", raw, isNew: true },
+    );
+
+    expect(result).toMatchObject({ ok: false, status: 500, detail: { committed: true } });
+    expect(gh.files.get(postPath("committed-anyway"))).toBe(raw);
+  });
+});
+
+describe("renderAndWrite", () => {
+  it("REFUSES to write a row when the rendered bytes are not the committed blob", async () => {
+    await expect(
+      renderAndWrite(publishEnv(), "mismatched", post("mismatched"), "0".repeat(40)),
+    ).rejects.toBeInstanceOf(EditorError);
+
+    expect(await countRows("posts", "WHERE slug = ?1", "mismatched")).toBe(0);
+    expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:mismatched")).toBe(0);
+  });
+});
+
+describe("the FTS indexes", () => {
+  const INDEXES = ["posts_fts", "search_identity", "search_prose"];
+  const ftsEquality = async () =>
+    (await runHealthChecks(publishEnv())).checks.find((c) => c.name === "fts-equality");
+
+  it("stay consistent with their content through a save and a delete, and drift is reported", async () => {
+    for (const slug of ["fts-kept", "fts-gone"]) {
+      await savePost(publishEnv(), {
+        slug,
+        raw: post(slug),
+        isNew: true,
+        actor: { kind: "admin" },
+      });
+    }
+    await deletePost(publishEnv(), { slug: "fts-gone", actor: { kind: "admin" } });
+
+    /* Rank 1 checks each index against its external content table, not only itself. */
+    for (const index of INDEXES) {
+      await env.DB.prepare(`INSERT INTO ${index} (${index}, rank) VALUES ('integrity-check', 1)`).run();
+    }
+    expect(await ftsEquality()).toMatchObject({ ok: true });
+
+    try {
+      await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('delete-all')`).run();
+      expect(await ftsEquality()).toMatchObject({ ok: false });
+    } finally {
+      await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`).run();
+    }
   });
 });
 

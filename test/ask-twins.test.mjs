@@ -108,8 +108,7 @@ test("a twin that cannot be fetched is retried, then reported", async () => {
   assert.equal(failed.length, 1);
 });
 
-test("withRetry backs off by doubling and rethrows the last error", async () => {
-  const slept = [];
+test("withRetry tries exactly as many times as asked and rethrows the last error", async () => {
   let calls = 0;
   await assert.rejects(
     withRetry(
@@ -117,9 +116,23 @@ test("withRetry backs off by doubling and rethrows the last error", async () => 
         calls += 1;
         throw new Error(`attempt ${calls}`);
       },
-      { attempts: 3, backoffMs: 100, sleep: async (ms) => slept.push(ms) },
+      { attempts: 3, backoffMs: 1, sleep: async () => {} },
     ),
     /attempt 3/,
   );
-  assert.deepEqual(slept, [100, 200]);
+  assert.equal(calls, 3);
+});
+
+test("withRetry returns the value when a later attempt succeeds", async () => {
+  let calls = 0;
+  const value = await withRetry(
+    async () => {
+      calls += 1;
+      if (calls === 1) throw transient();
+      return "uploaded";
+    },
+    { attempts: 3, backoffMs: 1, sleep: async () => {} },
+  );
+  assert.equal(value, "uploaded");
+  assert.equal(calls, 2);
 });

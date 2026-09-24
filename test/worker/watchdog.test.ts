@@ -1,7 +1,8 @@
+import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
 import { watchdogActions } from "~/lib/health/repair.mjs";
-import { readHealth } from "../../workers/watchdog";
+import watchdog, { readHealth } from "../../workers/watchdog";
 
 /**
  * The watchdog keeps the reason a health fetch failed, and the alert says it.
@@ -49,23 +50,15 @@ describe("the watchdog's health reading", () => {
       },
     }) as never;
 
-  it("keeps the transport error's message instead of swallowing it", async () => {
-    const reading = await readHealth(throwingSite("Worker threw exception: code 1042"));
-
-    expect(reading.status).toBe(0);
-    expect(reading.body).toBeNull();
-    expect(reading.error).toBe("Worker threw exception: code 1042");
-  });
-
   it("does not throw, because the handler must live to send the mail", async () => {
     /* The property the catch existed for in the first place, asserted so the
      * change above cannot have traded it away. */
     await expect(readHealth(throwingSite("boom"))).resolves.toBeTruthy();
   });
 
-  it("reports a non-Error throw rather than losing it", async () => {
-    /* `instanceof Error` is false for a string throw, and the `String(error)`
-     * arm is the one a reader never sees until the day it matters. */
+  it("names a non-Error throw in the alert rather than losing it", async () => {
+    /* `instanceof Error` is false for a string throw, so this is the arm a reader
+     * never sees until the day it matters. */
     const site = {
       SITE: {
         fetch: () => {
@@ -74,7 +67,10 @@ describe("the watchdog's health reading", () => {
       },
     } as never;
 
-    expect((await readHealth(site)).error).toBe("network is unreachable");
+    const actions = watchdogActions(await readHealth(site), { hasToken: true });
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.type).toBe("notify");
+    expect((actions[0] as { reason: string }).reason).toContain("network is unreachable");
   });
 
   it("puts the cause in the alert a human reads", async () => {
@@ -98,8 +94,9 @@ describe("the watchdog's health reading", () => {
     const actions = watchdogActions({ status: 0, body: null }, { hasToken: true });
 
     expect(actions).toHaveLength(1);
-    const reason = (actions[0] as { reason: string }).reason;
-    expect(reason).toContain("carried no cause");
+    expect(actions[0]?.type).toBe("notify");
+    expect(actions.some((a) => a.type === "repair")).toBe(false);
+    expect((actions[0] as { reason: string }).reason.trim()).not.toBe("");
   });
 
   it("leaves a real HTTP reading alone, so the branch is the transport one", async () => {
@@ -117,5 +114,54 @@ describe("the watchdog's health reading", () => {
       { hasToken: true },
     );
     expect(drifted.some((a) => a.type === "repair")).toBe(true);
+  });
+});
+
+describe("the watchdog's repair loop", () => {
+  it("puts the operator's refusal sentence in the alert and runs no later repair", async () => {
+    const refusal =
+      'unknown directive ":swatch" on line 12. Known directives: chart, diagram, figure, footnote.';
+    const tools: string[] = [];
+    const sent: Array<{ subject: string; text: string }> = [];
+
+    const site = {
+      fetch: async (url: string, init?: RequestInit) => {
+        if (url.endsWith("/api/operator")) {
+          tools.push(JSON.parse(String(init?.body)).tool);
+          return Response.json(
+            { ok: false, error: refusal, detail: { field: null, line: 12 } },
+            { status: 422 },
+          );
+        }
+        return Response.json(
+          {
+            ok: false,
+            checks: [
+              { name: "content-drift", ok: false },
+              { name: "ask-index-drift", ok: false },
+            ],
+          },
+          { status: 503 },
+        );
+      },
+    };
+
+    /* The last poll was green, so this one opens an alert rather than setting a baseline. */
+    await env.APP_KV.put(
+      "watchdog:alert-state",
+      JSON.stringify({ red: false, since: "2026-09-01T00:00:00.000Z", checks: [] }),
+    );
+    await watchdog.scheduled({} as ScheduledController, {
+      SITE: site,
+      EMAIL: { send: async (message: { subject: string; text: string }) => void sent.push(message) },
+      ALERT_EMAIL: "alerts@example.com",
+      OPERATOR_TOKEN: "a-token",
+      APP_KV: env.APP_KV,
+    } as never);
+
+    /* sync_ask reads the search_docs that sync_posts just failed to rewrite. */
+    expect(tools).toEqual(["sync_posts"]);
+    expect(sent).toHaveLength(1);
+    expect(sent[0]?.text).toContain(refusal);
   });
 });

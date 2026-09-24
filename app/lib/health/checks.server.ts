@@ -124,7 +124,7 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
        * ONE ROUND TRIP, five subqueries. `search_docs` is the real content table and is counted
        * directly; the three index counts are taken on the `_docsize` shadows, because COUNT(*) on an
        * external-content fts5 table reads through to its content table and can never disagree with it.
-       * `test/write-path-invariants.test.mjs` enforces that distinction on this source.
+       * `test/worker/publish.test.ts` plants index drift and expects this check to report it.
        */
       const row = await env.DB.prepare(
         "SELECT (SELECT COUNT(*) FROM posts) AS posts, " +

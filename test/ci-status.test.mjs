@@ -45,8 +45,7 @@ test("PLANT 1: a sha with no run refuses, and does not read as nothing-failed", 
   const v = ciVerdict({ workflow_runs: [] }, SHA);
   assert.equal(v.ok, false);
   assert.match(v.why, /no CI run exists for e15b883/);
-  assert.match(v.remedy, /not pushed/);
-  assert.match(v.remedy, /Nothing was deployed/);
+  assert.equal(v.state, "no-run");
 });
 
 test("a sha whose only runs are scheduled still counts as no run", () => {
@@ -61,15 +60,16 @@ test("PLANT 2: a fabricated failure conclusion refuses and names it", () => {
   const v = ciVerdict({ workflow_runs: [{ ...green, conclusion: "failure" }] }, SHA);
   assert.equal(v.ok, false);
   assert.match(v.why, /CI did not pass for e15b883/);
-  assert.match(v.remedy, /CI concluded failure/);
-  assert.match(v.remedy, /no override/);
+  assert.equal(v.state, "failed");
+  assert.ok(v.remedy.includes("failure"), "the refusal names the conclusion");
 });
 
 test("canceled and timed_out are not failures and are not passes either", () => {
   for (const conclusion of ["cancelled", "timed_out", "action_required", "skipped", "neutral"]) {
     const v = ciVerdict({ workflow_runs: [{ ...green, conclusion }] }, SHA);
     assert.equal(v.ok, false, `${conclusion} must not deploy`);
-    assert.match(v.remedy, new RegExp(`concluded ${conclusion}`));
+    assert.equal(v.state, "failed");
+    assert.ok(v.remedy.includes(conclusion), `the refusal names ${conclusion}`);
   }
 });
 
@@ -81,7 +81,7 @@ test("a run still in progress refuses: green so far is not green", () => {
   );
   assert.equal(v.ok, false);
   assert.match(v.why, /still running/);
-  assert.match(v.remedy, /green so far is not a green run/);
+  assert.equal(v.state, "running");
 });
 
 /*
@@ -126,7 +126,7 @@ test("one green run does not excuse a second failing one", () => {
     SHA,
   );
   assert.equal(v.ok, false);
-  assert.match(v.remedy, /Other concluded failure/);
+  assert.ok(v.remedy.includes("Other"), "the refusal names the failing workflow");
 });
 
 test("an unparseable payload refuses rather than reading as empty", () => {

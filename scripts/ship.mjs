@@ -38,7 +38,7 @@ import {
   readinessVerdict,
 } from "./lib/readiness.mjs";
 import { retryRead } from "./lib/retry.mjs";
-import { driftCount, searchCounts } from "./lib/sync-verdict.mjs";
+import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import {
   ASK_POLL_INTERVAL_MS,
   ASK_POLL_WINDOW_MS,
@@ -782,8 +782,8 @@ announce("Sync content to remote D1");
 let renderDriftMiss = "";
 
 const sync = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
-/** The sync that wrote last, whose output is the verdict: the confirming run when there was one. */
-let standing = sync;
+/** @type {typeof sync | null} The second sync, run only to confirm render drift. */
+let confirm = null;
 if (sync.code !== 0) {
   /*
    * Render drift finishes every write and stands as a miss; any other nonzero refuses.
@@ -799,8 +799,7 @@ if (sync.code !== 0) {
      * sync reads zero unless the converge write did not take, so only confirmed drift fails.
      */
     console.log(`  render drift on ${named}: converged, confirming with a second sync`);
-    const confirm = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
-    standing = confirm;
+    confirm = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
     const confirmDrift = driftCount(confirm.text);
 
     if (confirmDrift === null) {
@@ -836,7 +835,7 @@ if (sync.code !== 0) {
  * The counts line is the proof, read from the sync that wrote last. `COUNT(*)` on an FTS index
  * reads through to its content table.
  */
-const counts = searchCounts(standing.text);
+const counts = searchCounts(standingRun(sync, confirm).text);
 if (!counts) {
   refuse(
     "the sync printed no search_docs/identity/prose line",

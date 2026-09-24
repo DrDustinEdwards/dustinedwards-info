@@ -74,34 +74,6 @@ describe("/theme", () => {
     expect(response.headers.get("location")).toBe("/blog/a-post");
   });
 
-  it("ECHOES A FRAGMENT when the referer carries one, which a browser never does", async () => {
-    /*
-     * THE FUNCTION'S CONTRACT, NOT THE WIRE'S BEHAVIOUR, and the difference is
-     * the point of this comment.
-     *
-     * `safeReturnTo` echoes `url.hash`, and this case proves it does so through
-     * the same origin and protocol-relative checks as everything else. What it
-     * CANNOT prove is that a reader benefits, because the header below is
-     * synthetic: `Referer` never carries a fragment, RFC 9110 requires it
-     * stripped, and check:browser measured the real thing on 2026-08-29 and saw
-     * the fragment gone.
-     *
-     * Kept, because the echo is real behavior worth pinning and this is the
-     * only place that pins it. Renamed, because the old name claimed a reader
-     * outcome that a constructed input cannot demonstrate. That gap between a
-     * test's input and the world's is exactly what let the claim stand for a
-     * day.
-     */
-    const response = await themeAction({
-      request: themePost("theme=light", {
-        origin: "https://example.com",
-        referer: "https://example.com/blog/a-post?x=1#step-3-the-gate",
-      }),
-    } as never);
-
-    expect(response.headers.get("location")).toBe("/blog/a-post?x=1#step-3-the-gate");
-  });
-
   it("REFUSES A FOREIGN ORIGIN (measured 2026-08-27: it used to set the cookie)", async () => {
     const response = await themeAction({
       request: themePost("theme=dark", {

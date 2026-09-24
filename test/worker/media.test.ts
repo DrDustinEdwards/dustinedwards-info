@@ -1,9 +1,16 @@
-import { env } from "cloudflare:test";
+import { createExecutionContext, env } from "cloudflare:test";
+import { RouterContextProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { claimMediaKeyForDelete, mediaRefsFor, upsertMediaRecord } from "~/db";
-import { classify, contentKey, roleOf } from "~/lib/media/classify.mjs";
+import { cloudflareContext } from "~/lib/context";
+import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
+import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
+import { ALLOWED } from "~/lib/media/upload-contract.mjs";
+import { action as adminAction } from "~/routes/admin.media._index";
+import { action as uploadAction } from "~/routes/admin.media.upload";
+import { loader as mediaLoader } from "~/routes/media.$";
 
 /**
  * The media path: what an upload puts where, and what a delete is allowed to
@@ -68,100 +75,109 @@ async function uploadKey(seed: string, dimensions: { width: number; height: numb
   return { bytes, measured, key };
 }
 
+type Dimensions = { width: number; height: number } | null;
+
+function routeContext(routeEnv: object) {
+  const context = new RouterContextProvider();
+  context.set(cloudflareContext, { env: routeEnv as never, ctx: createExecutionContext() });
+  return context;
+}
+
+/** Posts one file to the upload endpoint the way the editors do, and reads the JSON reply. */
+async function upload(
+  file: { name: string; type: string; body: string },
+  dimensions: Dimensions,
+  overrides: Record<string, unknown> = {},
+) {
+  const form = new FormData();
+  form.append("file", new File([file.body], file.name, { type: file.type }));
+  const response = (await uploadAction({
+    request: new Request("https://example.com/admin/media/upload", { method: "POST", body: form }),
+    context: routeContext({ ...envWithImages(dimensions), ...overrides }),
+  } as never)) as Response;
+  const body = (await response.json()) as { url?: string; key?: string };
+  return { status: response.status, url: body.url, key: body.key ?? "" };
+}
+
+async function adminMediaAction(fields: Record<string, string>) {
+  const form = new FormData();
+  for (const [name, value] of Object.entries(fields)) form.append(name, value);
+  return adminAction({
+    request: new Request("https://example.com/admin/media", { method: "POST", body: form }),
+    context: routeContext(env),
+  } as never);
+}
+
+async function serve(key: string) {
+  return (await mediaLoader({
+    params: { "*": key },
+    request: new Request(`https://example.com/media/${key}`),
+    context: routeContext(env),
+  } as never)) as Response;
+}
+
+const mediaRow = (key: string) =>
+  env.DB.prepare("SELECT width, height, original_name, alt FROM media WHERE key = ?1")
+    .bind(key)
+    .first<{ width: number | null; height: number | null; original_name: string; alt: string }>();
+
 describe("media upload", () => {
   it("puts the object in R2 under a CONTENT-ADDRESSED key carrying its dimensions", async () => {
-    const { bytes, measured, key } = await uploadKey("addressed", { width: 800, height: 600 });
+    const first = await upload(
+      { name: "a photo.png", type: "image/png", body: "raster bytes: addressed" },
+      { width: 800, height: 600 },
+    );
+    expect(first.status).toBe(200);
+    expect(first.url).toBe(`/media/${first.key}`);
 
-    /*
-     * THE KEY IS A DIGEST OF THE BYTES, which is the security argument that
-     * decided content addressing: the old key was derivable from public
-     * information, so a draft post's images were reachable by guessing a slug
-     * the sitemap publishes plus eight hex characters. A digest is a function
-     * of bytes nobody outside has.
-     */
-    expect(key).not.toContain("posts/");
-    expect(key).not.toContain("addressed");
-    /*
-     * AND IT CARRIES THE MEASUREMENT. Finding B002: dimensions are baked into
-     * the gated HTML and the two writers measured them from two different
-     * stores, one of which a clone cannot reach. The key carries `-<w>x<h>` so
-     * both resolvers parse rather than fetch.
-     */
-    expect(measured).toEqual({ width: 800, height: 600 });
-    expect(key).toContain("-800x600.png");
+    /* A digest of the bytes, so nothing public predicts it: the same name with
+     * other bytes is another key. */
+    const second = await upload(
+      { name: "a photo.png", type: "image/png", body: "raster bytes: addressed, other bytes" },
+      { width: 800, height: 600 },
+    );
+    expect(second.key).not.toBe(first.key);
+    expect(first.key).not.toContain("posts/");
 
-    await env.MEDIA.put(key, bytes.buffer as ArrayBuffer, {
-      httpMetadata: {
-        contentType: "image/png",
-        cacheControl: "public, max-age=31536000, immutable",
-      },
-      customMetadata: { originalName: "a photo.png" },
-    });
+    expect(dimensionsFromKey(first.key)).toEqual({ width: 800, height: 600 });
 
-    const object = await env.MEDIA.get(key);
-    expect(object).toBeTruthy();
-    /*
-     * THE FILENAME LIVES ON THE OBJECT, not only in the row. A content-addressed
-     * key cannot carry it and the D1 write is deliberately non-fatal, so the row
-     * was the single source of a fact that could be lost silently.
-     */
+    /* The filename lives on the object too, because the row write is non-fatal. */
+    const object = await env.MEDIA.get(first.key);
     expect(object?.customMetadata?.originalName).toBe("a photo.png");
     expect(object?.httpMetadata?.cacheControl).toContain("immutable");
   });
 
-  it("keys a source with NO intrinsic size without a dimension segment", async () => {
-    /* Null is a real answer and not a failure: an SVG has no pixel size, and
-     * the `media` table records a NULL width for the same reason. */
-    const { measured, key } = await uploadKey("vector", null);
-    expect(measured).toBeNull();
-    expect(key).not.toMatch(/-\d+x\d+\./);
+  it("stores and serves a source with NO intrinsic size, recording no dimensions", async () => {
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>';
+    const { status, key } = await upload({ name: "vector.svg", type: "image/svg+xml", body: svg }, null);
+    expect(status).toBe(200);
+    expect(dimensionsFromKey(key)).toBeNull();
+
+    const served = await serve(key);
+    expect(served.status).toBe(200);
+    expect(await served.text()).toBe(svg);
+
+    const row = await mediaRow(key);
+    expect(row).toBeTruthy();
+    expect(row?.width).toBeNull();
+    expect(row?.height).toBeNull();
   });
 
   it("writes the annotation row from the SAME measurement the key was built from", async () => {
-    const { bytes, measured, key } = await uploadKey("annotated", { width: 1200, height: 675 });
-    const { kind, mime } = classify(key);
+    const { key } = await upload(
+      { name: "annotated.png", type: "image/png", body: "raster bytes: annotated" },
+      { width: 1200, height: 675 },
+    );
 
-    await upsertMediaRecord(mediaEnv(), {
-      key,
-      alt: "",
-      storage: "r2",
-      kind,
-      role: roleOf(key),
-      mime,
-      bytes: bytes.byteLength,
-      originalName: "annotated.png",
-      uploadedAt: new Date().toISOString(),
-      width: measured?.width ?? null,
-      height: measured?.height ?? null,
-    });
-
-    const row = await env.DB.prepare(
-      "SELECT key, width, height, original_name, alt FROM media WHERE key = ?1",
-    )
-      .bind(key)
-      .first<{ key: string; width: number; height: number; original_name: string; alt: string }>();
-
-    /* ONE MEASUREMENT MEANS THE ROW AND THE KEY CANNOT DISAGREE. */
+    const row = await mediaRow(key);
+    expect({ width: row?.width, height: row?.height }).toEqual(dimensionsFromKey(key));
     expect(row?.width).toBe(1200);
-    expect(row?.height).toBe(675);
-    expect(key).toContain(`-${row?.width}x${row?.height}.`);
     expect(row?.original_name).toBe("annotated.png");
     expect(row?.alt).toBe("");
   });
 
   it("keeps the object when the annotation write fails, because the upload already succeeded", async () => {
-    /*
-     * THE ROW WRITE IS NON-FATAL BY DESIGN: the object is in R2, the upload HAS
-     * succeeded, and a D1 hiccup must not report failure for a write that
-     * happened. The library lists from the BUCKET and treats a missing row as
-     * empty metadata, so the worst case is an un-annotated object.
-     *
-     * Asserted at the stores rather than by reading the try/catch around the
-     * call: the put lands, the row write throws, and the object is still there.
-     */
-    const { bytes, key } = await uploadKey("non-fatal", { width: 10, height: 10 });
-    await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
-
     const brokenDb = new Proxy(env.DB, {
       get(target, property, receiver) {
         if (property === "prepare") {
@@ -172,14 +188,57 @@ describe("media upload", () => {
         return Reflect.get(target, property, receiver);
       },
     });
-    await expect(
-      upsertMediaRecord(
-        { ...env, DB: brokenDb } as unknown as Parameters<typeof upsertMediaRecord>[0],
-        { key, alt: "" },
-      ),
-    ).rejects.toThrow();
+    const { status, key } = await upload(
+      { name: "non-fatal.png", type: "image/png", body: "raster bytes: non-fatal" },
+      { width: 10, height: 10 },
+      { DB: brokenDb },
+    );
 
+    expect(status).toBe(200);
     expect(await env.MEDIA.get(key)).toBeTruthy();
+  });
+
+  it("lets set-alt and delete act on the raster key an upload produced", async () => {
+    /* A managed-key guard that predated the dimension segment once refused
+     * every uploaded raster while looking correct. */
+    const { key } = await upload(
+      { name: "managed.png", type: "image/png", body: "raster bytes: managed" },
+      { width: 640, height: 480 },
+    );
+
+    await adminMediaAction({ intent: "set-alt", key, alt: "a wheat field at dusk" });
+    expect((await mediaRow(key))?.alt).toBe("a wheat field at dusk");
+
+    await adminMediaAction({ intent: "delete", key, [CONFIRM_FIELD]: "1" });
+    expect(await env.MEDIA.get(key)).toBeNull();
+    expect(await mediaRow(key)).toBeNull();
+  });
+});
+
+describe("serving an allowed type that can carry script", () => {
+  const SCRIPT_CAPABLE = [
+    "image/svg+xml",
+    "text/html",
+    "application/xhtml+xml",
+    "text/xml",
+    "application/xml",
+  ];
+
+  it("serves every one as a nosniff attachment, never inline", async () => {
+    const capable = [...ALLOWED].filter(([type]) => SCRIPT_CAPABLE.includes(type));
+    expect(capable.length).toBeGreaterThan(0);
+
+    for (const [type, extension] of capable) {
+      const key = `dustin-edwards-script-${extension}-00000000000000aa.${extension}`;
+      await env.MEDIA.put(key, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', {
+        httpMetadata: { contentType: type },
+      });
+
+      const served = await serve(key);
+      expect(served.status, type).toBe(200);
+      expect(served.headers.get("content-disposition"), type).toContain("attachment");
+      expect(served.headers.get("x-content-type-options"), type).toBe("nosniff");
+    }
   });
 });
 

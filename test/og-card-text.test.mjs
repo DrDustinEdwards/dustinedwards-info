@@ -41,15 +41,6 @@ function titleOfLength(n) {
   return word.repeat(Math.ceil(n / word.length)).slice(0, n).trimEnd().padEnd(n, "z");
 }
 
-test("the fixture builds titles of exactly the length asked for", () => {
-  // The instrument before the measurement. Every boundary test below is
-  // meaningless if this is off by one, and off by one is precisely what a
-  // boundary test is looking for.
-  for (const n of [1, 5, 71, 72, 73, 110, 111, 150]) {
-    assert.equal(titleOfLength(n).length, n, `titleOfLength(${n})`);
-  }
-});
-
 test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {
   // The plant, run as a test rather than by hand: feed each rung its exact
   // bound, then one character more, and assert the size went DOWN. A ladder
@@ -76,21 +67,13 @@ test("THE SIZE DROPS ONE CHARACTER PAST EVERY BREAKPOINT", () => {
   }
 });
 
-test("the ladder is ordered, so the first match is the right match", () => {
-  // `titleFontSize` returns the FIRST rung whose bound the title fits inside.
-  // That is only correct while the bounds ascend. A table sorted the other way
-  // would return the smallest type for every title and never throw.
-  for (let i = 1; i < TITLE_SIZES.length; i += 1) {
-    assert.ok(
-      TITLE_SIZES[i].maxChars > TITLE_SIZES[i - 1].maxChars,
-      "maxChars must ascend down the ladder",
-    );
+test("a longer title never takes larger type, and a drawn title always has a size", () => {
+  let previous = Infinity;
+  for (let n = 0; n <= TITLE_MAX + 100; n += 1) {
+    const size = titleFontSize(cardTitle(titleOfLength(n)));
+    assert.ok(size <= previous, `${n} characters took ${size}px after ${previous}px`);
+    previous = size;
   }
-  assert.equal(
-    TITLE_SIZES[TITLE_SIZES.length - 1].maxChars,
-    TITLE_MAX,
-    "the last rung must be bounded by TITLE_MAX, or a clamped title can still fall off the end",
-  );
 });
 
 test("the shortest titles take the largest size", () => {

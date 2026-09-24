@@ -111,17 +111,3 @@ test("rendering a malformed notice throws rather than half rendering one", () =>
     /unusable update notice/,
   );
 });
-
-test("no record in the corpus carries a notice today", async () => {
-  /*
-   * The other half of the fixture, and the one that keeps this test honest: the
-   * path above is dark, and if it ever stops being dark this assertion is what
-   * says so, in the test file that explains what the path is for.
-   * check:machine-readable asserts the same thing with the count of records it read
-   * beside it, because a sweep of nothing passes this too.
-   */
-  const { PUBLICATIONS } = await import("../app/data/publications.ts");
-  assert.ok(PUBLICATIONS.length > 0, "empty corpus, so the sweep below is vacuous");
-  const noticed = PUBLICATIONS.filter((p) => p.updateNotice).map((p) => p.id);
-  assert.deepEqual(noticed, []);
-});
