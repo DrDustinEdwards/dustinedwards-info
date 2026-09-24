@@ -1,6 +1,7 @@
-import { Form, Link, data, redirect } from "react-router";
+import { Form, data, redirect } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
+import { FilterLink } from "~/components/filter-link";
 import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -185,17 +186,15 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         {tags.length > 0 && (
           <nav className="list-filter" aria-label="Filter posts by tag">
             <span className="list-filter-label">Tags</span>
-            <Link to={filterHref({ tag: null })} aria-current={activeTag ? undefined : "true"}>
-              All
-            </Link>
+            <FilterLink to={filterHref({ tag: null })} label="All" active={!activeTag} />
             {tags.map((tag) => (
-              <Link
+              <FilterLink
                 key={tag.slug}
                 to={filterHref({ tag: tag.slug })}
-                aria-current={activeTag === tag.slug ? "true" : undefined}
-              >
-                {tag.name} <span className="filter-count">{tag.total}</span>
-              </Link>
+                label={tag.name}
+                count={tag.total}
+                active={activeTag === tag.slug}
+              />
             ))}
           </nav>
         )}
@@ -203,17 +202,15 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         {years.length > 1 && (
           <nav className="list-filter" aria-label="Filter posts by year">
             <span className="list-filter-label">Years</span>
-            <Link to={filterHref({ year: null })} aria-current={activeYear ? undefined : "true"}>
-              All
-            </Link>
+            <FilterLink to={filterHref({ year: null })} label="All" active={!activeYear} />
             {years.map((entry) => (
-              <Link
+              <FilterLink
                 key={entry.year}
                 to={filterHref({ year: String(entry.year) })}
-                aria-current={activeYear === entry.year ? "true" : undefined}
-              >
-                {entry.year} <span className="filter-count">{entry.total}</span>
-              </Link>
+                label={String(entry.year)}
+                count={entry.total}
+                active={activeYear === entry.year}
+              />
             ))}
           </nav>
         )}
