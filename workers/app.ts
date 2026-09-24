@@ -196,8 +196,11 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
   }
 }
 
-// Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme; the
-// traffic row last, so hits are counted too.
+/*
+ * THE GATEWAY. Cache disabled, so it runs on every request (check:urls reads this phrase).
+ * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme; the
+ * traffic row last, so hits are counted too.
+ */
 export default {
   async fetch(request, env, ctx) {
     // `no-store` is load-bearing: the scheme is not in the cache key, so a stored redirect would loop

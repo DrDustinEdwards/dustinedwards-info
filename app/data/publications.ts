@@ -1,6 +1,12 @@
 /**
- * PDFs are static assets under public/publications/, so they cost the Worker bundle nothing.
- * `year` is the Crossref published-print year, which disagrees with ORCID on some records.
+ * Publication record for the CV and publications surfaces.
+ *
+ * Structured content edited by commit, following phage-hunters.ts. PDFs are committed under
+ * public/publications/ and served as static assets, which cost the Worker bundle nothing.
+ *
+ * Every record carries `access` even though most are self-hosted, so one can be switched to an
+ * external link without a schema change. Year is the Crossref published-print year, which is
+ * authoritative here and disagrees with ORCID on some records.
  */
 
 export type TopicId =
@@ -30,7 +36,10 @@ export type Publication = {
   authors: string[];
   journal: string | null;
   year: number;
-  /** The deposited date at its own precision (YYYY-MM-DD, YYYY-MM or YYYY), for `citation_publication_date`. */
+  /**
+   * The deposited date at its own precision: YYYY-MM-DD, YYYY-MM or YYYY. `year` stays the grouping
+   * key; this is what `citation_publication_date` needs.
+   */
   publishedDate: string | null;
   volume: string | null;
   issue: string | null;
@@ -49,22 +58,37 @@ export type Publication = {
   pdfPath: string | null;
   /** Set when access is "external". */
   externalUrl: string | null;
+  /** Preprint of this record, where one exists. */
   preprintDoi: string | null;
   isOpenAccess: boolean;
   license: string | null;
   /**
-   * Which registry said so, and at what content-version. `crossref:tdm-only` is a measured answer:
-   * the terms were text-mining terms, which license redistribution to nobody. Null means none found.
+   * WHICH registry said so, and at what content-version. `crossref:tdm-only`
+   * is a measured answer and not an absence: it means the publisher deposited
+   * terms and they were text-mining terms, which license redistribution to
+   * nobody. A null means no terms were found at either registry.
    */
   licenseSource: string | null;
   /**
-   * One hand-written sentence under 200 characters saying what the paper found, for a non-specialist;
-   * not a summary of the abstract. `check:machine-readable` enforces the length, not the quality.
+   * A PLAIN-LANGUAGE LINE, written by hand, or null.
+   *
+   * One sentence, under 200 characters, saying what the paper found in words a non-specialist reads.
+   * NOT a summary of the abstract, which is already on the page.
+   *
+   * Null until one is written, and the page renders it only where it exists, so an empty field is a
+   * state rather than a gap. `check:machine-readable` enforces the length, the single sentence and the
+   * house dash rule; IT CANNOT ENFORCE THAT THE SENTENCE IS ANY GOOD.
    */
   summary: string | null;
   /**
-   * A retraction, correction or expression of concern. `doi` is the NOTICE's DOI, not the paper's.
-   * The shape belongs to `app/lib/publications/update-notice.mjs`.
+   * A RETRACTION, CORRECTION OR EXPRESSION OF CONCERN, or null.
+   *
+   * Null on every record. The field exists so that the day one arrives is a data change and not a code
+   * change, which is the day nobody wants to be writing this. `doi` is the NOTICE's DOI: a paper
+   * carries `updated-by` pointing at the notice, and the notice carries `update-to` pointing back.
+   *
+   * The shape and the sentence belong to `app/lib/publications/update-notice.mjs`, which
+   * `check:machine-readable` validates every record through.
    */
   updateNotice: {
     type: "retraction" | "correction" | "expression-of-concern";
@@ -72,8 +96,12 @@ export type Publication = {
     date: string | null;
   } | null;
   /**
-   * Accessions this paper deposited, read only from its own data-availability statement: a bare
-   * regex over the PDF returns the comparison organisms' deposits, a wrong citation.
+   * SEQUENCE ACCESSIONS THIS PAPER DEPOSITED, read from its own data-availability statement and from
+   * nowhere else.
+   *
+   * A bare accession regex over a PDF returns the COMPARISON organisms' deposits, which is a wrong
+   * citation rather than a missing one: the grounds are on `app/lib/publications/accessions.mjs`.
+   * `check:machine-readable` reconciles this against the extracted text in both directions.
    */
   accessions: { kind: string; id: string }[];
   selected: boolean;
