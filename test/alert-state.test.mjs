@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { alertTransition, formatDuration } from "../app/lib/health/alert-state.mjs";
+import {
+  alertTransition,
+  deliverTransition,
+  formatDuration,
+} from "../app/lib/health/alert-state.mjs";
 
 const T0 = "2026-09-02T10:00:00.000Z";
 const T1 = "2026-09-02T10:15:00.000Z";
@@ -171,4 +175,40 @@ test("a clock that went backwards is unknown, not negative", () => {
     now: T0,
   });
   assert.equal(out.email?.durationMs, null);
+});
+
+test("PLANT: a failed unhealthy mail leaves the state green, so the next firing mails again", async () => {
+  let stored = green;
+  const firing = async (sendWorks) => {
+    const transition = alertTransition({ stored, alerting: true, failing: ["fts-equality"], now: T1 });
+    let sent = 0;
+    const delivered = await deliverTransition(transition, {
+      send: async () => {
+        sent++;
+        return sendWorks;
+      },
+      write: async () => {
+        stored = transition.state;
+      },
+    });
+    return { delivered, sent };
+  };
+
+  assert.deepEqual(await firing(false), { delivered: false, sent: 1 });
+  assert.equal(stored.red, false, "an unsent alert must not be recorded as reported");
+  assert.deepEqual(await firing(true), { delivered: true, sent: 1 }, "the next firing retries the mail");
+  assert.equal(stored.red, true);
+});
+
+test("a transition with nothing to mail still records its state", async () => {
+  const transition = alertTransition({ stored: null, alerting: true, failing: ["x"], now: T1 });
+  let wrote = false;
+  const delivered = await deliverTransition(transition, {
+    send: async () => assert.fail("a baseline mails nothing"),
+    write: async () => {
+      wrote = true;
+    },
+  });
+  assert.equal(delivered, true);
+  assert.equal(wrote, true);
 });
