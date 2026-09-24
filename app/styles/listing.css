@@ -108,6 +108,15 @@
   font-weight: 600;
 }
 
+/* Inter's width, set per link by FilterLink, so the row wraps the same before and after the font swap;
+   the fallback's text may run a pixel short or long inside it. */
+.filter-name {
+  --name-w: auto;
+  display: inline-block;
+  inline-size: var(--name-w);
+  white-space: nowrap;
+}
+
 /* A token, never opacity: opacity on text hides a failing composite behind a passing pair. */
 .filter-count {
   margin-inline-start: 0.25rem;
