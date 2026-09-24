@@ -4,7 +4,7 @@ import { PostHistory } from "~/components/post-history";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ENHANCE_GZIP_BYTES } from "~/lib/enhance-sizes.generated";
 
-import { BlogEnhancements } from "~/components/blog-enhancements";
+import { Enhance } from "~/components/enhance";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
@@ -479,7 +479,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         </article>
       </main>
       <ShellFooter />
-      <BlogEnhancements />
+      <Enhance module="blog" />
     </>
   );
 }

@@ -1,8 +1,6 @@
 import { Link, NavLink } from "react-router";
 
-import headerEnhanceUrl from "~/enhance/dist/header.js?url";
-
-import { EnhancementScript } from "~/components/enhancement-script";
+import { Enhance } from "~/components/enhance";
 import { SearchTrigger } from "~/components/search-trigger";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SiteSpeculation } from "~/components/site-speculation";
@@ -55,7 +53,7 @@ export function SiteHeader() {
       {/* Here rather than in root's Layout, so it never reaches the admin plane. */}
       <SiteSpeculation />
       {/* Absent, the menu still opens and the header stays static; see app/enhance/header.ts. */}
-      <EnhancementScript src={headerEnhanceUrl} />
+      <Enhance module="header" />
     </header>
   );
 }
