@@ -206,30 +206,32 @@
  * is how this repo swaps a step per theme. Ruling 122 assigns the jobs: oxide is series 1 and every
  * annotation, cadet is series 3, --fig-dust-300 is texture, --brand appears in no figure at all.
  */
+/* The per-theme step is chosen on the theme scopes, as app.css chooses every token. */
+:root,
+[data-theme="light"] {
+  --plate-ink: var(--fig-oxide-400);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --plate-ink: var(--fig-oxide-300);
+  }
+}
+
+[data-theme="dark"] {
+  --plate-ink: var(--fig-oxide-300);
+}
+
 .home-plate,
 .home-figure,
 .plate-key {
-  --fig-ink: var(--fig-oxide-400);
+  --fig-ink: var(--plate-ink);
   --fig-cell: var(--chart-cadet);
 }
 
 .home-plate,
 .home-figure {
   margin: 0 0 var(--s-7);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .home-plate,
-  :root:not([data-theme="light"]) .home-figure,
-  :root:not([data-theme="light"]) .plate-key {
-    --fig-ink: var(--fig-oxide-300);
-  }
-}
-
-[data-theme="dark"] .home-plate,
-[data-theme="dark"] .home-figure,
-[data-theme="dark"] .plate-key {
-  --fig-ink: var(--fig-oxide-300);
 }
 
 .fig {
