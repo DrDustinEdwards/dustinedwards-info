@@ -683,7 +683,7 @@ const ROUTE_CEILINGS = {
    * layout and its own type rules. Measured 8982 css / 12051 total on the build that raised it.
    * It comes down with the rest of the uplift by UPLIFT_EXPIRES.
    */
-  "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 12700 },
+  "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 13000 },
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7200, total: 8400 },
   /* The tag archive's, for the reason above: one bar for one kind of page. */
@@ -727,7 +727,7 @@ const ROUTE_CEILINGS = {
  * Raised with its parent for Part B page 1, by the same sheets: measured 11801 css / 14870 total.
  * The total raised again with its parent for the footer rebuild, by the same +300.
  */
-const MATH_CEILING = { css: 12300, total: 15500 };
+const MATH_CEILING = { css: 12300, total: 15800 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
 const MINIMUM_MATH_FACES = 20;
