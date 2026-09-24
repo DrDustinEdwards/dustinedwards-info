@@ -14,8 +14,7 @@ that as the scope, not as a shortfall.
   the self-hosted faces they declare, and the exports `.design-sync/ds-entry.tsx`
   re-exports, currently `SiteLogo` and `SiteLogoHeader`. Those three sets each
   have ONE owner and this line names none of their contents: the sheet list is
-  `SHEETS` in `build-inputs.mjs`, held against the site by
-  `check:design-sheets`, which prints the count; the faces are whatever the
+  `SHEETS` in `build-inputs.mjs`; the faces are whatever the
   url() extractor copies into `ds-bundle/fonts/`; the components are the entry's
   re-exports. This bullet said "21 stylesheets, the two Inter faces, and four
   exports: PostCard, Pagination, SiteLogo, SiteLogoHeader" until 2026-09-21,
@@ -61,12 +60,9 @@ CSS entry was regenerated**, which is why the proof is now mechanical rather tha
 remembered:
 
 - the wrapper regenerates first, so the forget path is closed by construction;
-- `check:design-inputs` compares CONTENT HASHES of the sheets, the generator and
-  the flatten against a stamp written beside them, so a driver invoked directly
-  still fails on the next offline gate run or `ship`. It skips when the inputs
-  were never generated, since only a sync needs them. Never mtimes: a gate here
-  has already failed as stale on a clean tree because a reverted file kept a new
-  mtime.
+- the stamp beside the inputs records CONTENT HASHES of the sheets, the
+  generator and the flatten. No gate reads it since ruling 150, so a driver
+  invoked directly around the wrapper is no longer caught; use the wrapper.
 
 The fix could not live in the driver: `.ds-sync/` is gitignored and re-copied
 from the skill bundle every sync, so a patch there is gone at the next skill
@@ -205,27 +201,24 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 
 ## Re-sync risks
 
-- **`SHEETS` is held against `root.tsx` and the non-admin imports by
-  `check:design-sheets`, in both directions and including cascade order**, so
-  the list is an instrument rather than a diff somebody remembers to run. Its
-  one named exclusion is `katex.generated.css`. Ruling 111 has the grounds.
+- **`SHEETS` must match `root.tsx` and the non-admin imports, in both
+  directions and including cascade order.** No gate holds it since ruling 150,
+  so check it by hand when a route gains a sheet. Its one named exclusion is
+  `katex.generated.css`. Ruling 111 has the grounds.
 - The conventions header enumerates real token and class names. They were all
   verified against the built stylesheet on 2026-09-12 and again on 2026-09-21
   (34 tokens, 33 classes, all resolving); re-run that validation rather than
   assuming, since a renamed token would send the design agent vocabulary that
   resolves to nothing. **Two names fail that check ON PURPOSE and are not
   drift**: `--bar-fill`, which canvas-constraints.md names as the invented
-  token that broke the header, and `aria-hidden`, which is an attribute. The
-  repo's own `check:design-vocabulary` gate is scoped to conventions.md alone
-  for exactly the first reason.
+  token that broke the header, and `aria-hidden`, which is an attribute.
 - **The Capsid exports carry design law the repo does not.** Rulings 122, 123
   and 124 (the closed color system, Paper and Plate, light touches only glass)
   reach the canvas ONLY through
   `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because no
   `decisions-vol-*.md` is an exported document and conventions.md does not
   restate them. Two consequences: `build-capsid-guidelines.mjs` must run before
-  `check:guidelines` or the export directory is missing and the gate fails, and
-  a ruling added to the volume after a sync is invisible to the canvas until
+  a sync or the export directory is missing, and a ruling added to the volume after a sync is invisible to the canvas until
   someone patches the brief. That is how a job built a figure haze in PR #57
   that ruling 124 forbids.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because

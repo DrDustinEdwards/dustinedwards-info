@@ -64,8 +64,8 @@
 	// cold-audit rule in capsid/conventions.md: "an upstream default is not a
 	// decision. Where a default is load-bearing for a security or growth
 	// property, set it explicitly to the value you want, even when that value is
-	// the default." `check:config` asserts this stays false in both files, so
-	// turning it on is a diff somebody has to argue for.
+	// the default." Keep it false in both files, so turning it on is a diff
+	// somebody has to argue for.
 	"observability": {
 		"enabled": true,
 		"logs": {
@@ -138,15 +138,14 @@
 	// to 44 per day on every day from 08-23 onward. The cron's creation date and
 	// the defect's start date are the same day.
 	//
-	// Nothing caught it because nothing could: `check:config` compared this file
-	// against `wrangler.jsonc` and the two agreed, both by saying nothing. A
-	// trigger that exists only on the platform is invisible to a gate that reads
+	// Nothing caught it because nothing could: this file and `wrangler.jsonc`
+	// agreed, both by saying nothing. A trigger that exists only on the platform is invisible to a gate that reads
 	// only files, which is FAILURES.md's "a construct the scan does not reach is
 	// not exempt; it is a subject with no gate".
 	//
 	// So the empty array is load bearing twice. It makes this file the OWNER of
-	// the cron set, and it gives `check:config --remote` something to compare the
-	// live schedules against in both directions. The watchdog is the Worker that
+	// the cron set, and it gives the live schedules something to be compared
+	// against in both directions. The watchdog is the Worker that
 	// has a cron; this one is driven by requests and by its queue consumer.
 	"triggers": { "crons": [] },
 	// Static assets, so the Worker can read them through a binding. The Vite
@@ -237,8 +236,8 @@
 	// being placeholders while another value in the same file is real is a rule
 	// somebody has to remember rather than a rule.
 	//
-	// `check:config` reads the REAL id out of the real config and refuses to find
-	// it anywhere tracked, so this cannot quietly come back.
+	// The REAL id stays in the real config and nowhere tracked; nothing checks
+	// that any more, so do not paste it back.
 	"vars": {
 		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000"
 	},

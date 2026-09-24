@@ -247,7 +247,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
              * ASK, AS A LINK. `/search` renders classic results from its loader and mounts
              * Ask as an enhancement, so a link with the query in `q` works with scripting and
              * without it. The query is the quoted title alone, because the classic index ANDs
-             * its terms. `check:publications` asserts this route calls that function.
+             * its terms. `check:machine-readable` asserts this route calls that function.
              */}
             <a href={paperAskUrl(decodeEntities(paper.title))}>Ask about this paper</a>
           </p>

@@ -29,9 +29,9 @@
  * NOT drive a browser, so it cannot see a script blocked by a real policy, and
  * it does not prove any particular component mounts. The general case, a
  * component that renders server-side and fails to appear in a browser, is seen
- * by NO gate in this repo: `check:admin-ui` renders with
- * `renderToStaticMarkup`, which renders a Suspense FALLBACK and moves on, so
- * the editor is invisible to it in exactly the state this defect produced.
+ * by NO offline gate in this repo: `renderToStaticMarkup` renders a Suspense
+ * FALLBACK and moves on, so the editor is invisible to it in exactly the state
+ * this defect produced.
  *
  * @see app/entry.server.tsx, workers/app.ts (contentSecurityPolicy)
  */

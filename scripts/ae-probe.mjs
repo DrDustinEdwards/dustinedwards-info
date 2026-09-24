@@ -18,7 +18,7 @@ import { SITE_ORIGIN } from "../app/lib/seo.ts";
  * being the one that goes stale at the DNS cutover and then probes a host nobody is serving. The
  * account id is read off the environment and refused if absent, on the portfolio rule that
  * account-scoped identifiers stay out of git: an identifier rather than a credential, which is why
- * it is a config var and not a secret, and `check:config` refuses to find it anywhere tracked.
+ * it is a config var and not a secret, and never appears in a tracked file.
  */
 const ORIGIN = SITE_ORIGIN;
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;

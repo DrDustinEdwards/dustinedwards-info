@@ -12,7 +12,8 @@
  * installed on the same path, because it has to be in place before the first highlight and has no
  * other reason to load. The build scripts import `pipeline.mjs` directly and are unaffected.
  *
- * `check:invariants` holds the property: no app or worker module imports the pipeline statically.
+ * The property: no app or worker module imports the pipeline statically. Nothing checks it, so a
+ * static import puts the renderer back on every cold start with no error to say so.
  */
 let pipeline: Promise<typeof import("./pipeline.mjs")> | undefined;
 

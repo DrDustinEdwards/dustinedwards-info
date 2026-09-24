@@ -24,7 +24,7 @@ import {
 
 // Imported so section 12b matches the index's own section leads.
 import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
-// Owner: the watchdog cron, bound by check:invariants section 25.
+// Owner: the watchdog cron.
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 import { colophonFacts } from "./lib/colophon-facts.mjs";
 // Shared with the offline gate, so section 16 compares the same set.

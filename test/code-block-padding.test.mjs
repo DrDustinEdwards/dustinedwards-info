@@ -23,9 +23,8 @@
  *
  * This reads the STYLESHEET. It does not render, so it cannot see the computed
  * padding, and it says nothing about whether the button attaches or survives.
- * That half needs a browser and NO GATE IN THIS REPO HAS ONE: `check:admin-ui`
- * renders markup with no stylesheet by design, and `verify-live` matches
- * strings in server HTML, so neither can see a script-added node at all. The
+ * That half needs a browser, which only `check:browser` has: `verify-live`
+ * matches strings in server HTML, so it cannot see a script-added node at all. The
  * copy button was measured absent on production while every gate was green.
  *
  * @see app/app.css, app/enhance/blog.ts
@@ -63,7 +62,7 @@ import { allSourceCss } from "../scripts/lib/tokens.mjs";
  *
  * So the walk is gone and `allSourceCss()` from `scripts/lib/tokens.mjs` is
  * the one owner. That function had to learn about the second entry anyway,
- * because `check:contrast` and `check:logo` read it; re-implementing the walk
+ * because `check:contrast` reads it; re-implementing the walk
  * here is what made this the THIRD place to fix rather than the second. One
  * derivation, several readers, which is the rule this repo applies to the CSP
  * nonce and had not applied to its own stylesheet list.

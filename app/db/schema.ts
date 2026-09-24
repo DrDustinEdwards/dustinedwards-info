@@ -147,7 +147,7 @@ export const settings = sqliteTable("settings", {
  * The media INDEX. Grounds are in `drizzle/0009_media_index.sql`.
  *
  * DERIVED, never authoritative. R2 and `public/` are the truth for what exists and this is the
- * queryable surface over them, reconciled by `check:media` in both directions. The conflict rule is
+ * queryable surface over them, rebuilt from them and compared by the health check's media-index-drift. The conflict rule is
  * not negotiable: R2 WINS. A row with no object is deleted, an object with no row is backfilled,
  * never the reverse.
  *
@@ -219,7 +219,7 @@ export const media = sqliteTable(
     /*
      * Partial in the migration (`WHERE trashed_at IS NOT NULL`), because the only question asked of it
      * is which rows ARE trashed. Drizzle models the index and the predicate lives in the SQL that runs.
-     * Section 4 of `check:invariants` compares columns, not index predicates, so this asymmetry is
+     * `test/schema-invariants.test.mjs` compares columns, not index predicates, so this asymmetry is
      * invisible to it and is stated here instead.
      */
     index("media_trashed_idx").on(t.trashedAt),

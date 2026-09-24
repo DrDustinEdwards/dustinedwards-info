@@ -238,7 +238,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             {/*
              * THE SAME FOUR PROPERTIES AS `PostCard`, on markup that is not `PostCard`. It
              * IS a second place the property set is written down, which is the cost, and
-             * `check:microformats` reads both surfaces so the two cannot quietly diverge.
+             * `check:machine-readable` reads both surfaces so the two cannot quietly diverge.
              *
              * NO h-feed: this is a hand-picked three, not the blog's feed.
              */}

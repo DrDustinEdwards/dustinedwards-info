@@ -6,8 +6,8 @@ repository and a fresh Cloudflare account.
 This document exists because there is no infrastructure-as-code here.
 **Terraform was considered and rejected** (`dustinedwards/decisions.md`,
 2026-08-02): it would mean restating `compatibility_date` and every binding in a
-second file, which recreates exactly the drift class `check:config` was written
-to close, and its real value (multi-person orgs, DNS, account access management)
+second file, which recreates exactly the drift class the example config exists
+to avoid, and its real value (multi-person orgs, DNS, account access management)
 does not apply to a single-operator account. The gap Terraform would have covered
 is documentation. This is that documentation.
 
@@ -48,8 +48,8 @@ to typecheck and deliberately not enough to deploy. You will replace two of thos
 ids below.
 
 **Real resource ids never go in git.** `wrangler.jsonc` is gitignored; the tracked
-`wrangler.jsonc.example` differs from it in exactly two values. `check:config`
-enforces that and fails if the example ever starts carrying a real id.
+`wrangler.jsonc.example` differs from it in exactly two values, and the example
+never carries a real id.
 
 ---
 
@@ -116,8 +116,8 @@ migrations (2026-08-02); three migrations landed and it was corrected to ten and
 57 (2026-08-04, finding B005); two more have landed since, `0011_media_trash_tags`
 and `0012_drop_posts_category`, so "ten" was wrong again by 2026-08-22. The count
 is `drizzle/*.sql`. `check:migrations` hashes every file against the manifest in
-both directions and `check:invariants` section 4 binds schema to migrations to
-the live database, so a number here is a copy that nothing reads and nothing can
+both directions and `test/schema-invariants.test.mjs` binds schema to migrations
+to the live database (with `SCHEMA_LIVE=1`), so a number here is a copy that nothing reads and nothing can
 fail on. **The 57-object figure is kept as a dated record of one measurement, not
 as a live claim**: re-derive it rather than cite it.
 
@@ -129,7 +129,7 @@ new numbered file; never edit an applied one.
 thing that ever wrote the row, so a rebuild used to produce a stale, wrong
 `llms.txt`. Since 2026-08-02 the source of truth is the tracked file
 `content/llms.txt` and `sync:content` writes the row from it, so the migration's
-seed is overwritten by step 9 below. `check:llms` fails if the two ever disagree.
+seed is overwritten by step 9 below. `check:machine-readable` fails if the two ever disagree.
 
 ---
 
@@ -315,9 +315,9 @@ In the order it would be done, and none of it is a restore from a backup:
    `public/` are tracked, verified 2026-08-22 by `git ls-files public`.
 2. **OG cards** (12 objects): `npm run build:og -- --remote`, after step 9's
    content sync, because it renders from the artifact.
-3. **The `media` index rows**: rebuilt from R2 and `public/`, then reconciled by
-   `check:media --remote`, which is the gate that would report any of the above
-   being incomplete.
+3. **The `media` index rows**: rebuilt from R2 and `public/`, then compared by
+   the health endpoint's `media-index-drift` check, which would report any of the
+   above being incomplete.
 4. **Uploaded originals**: none exist. If that has changed since 2026-08-22, this
    step is a real gap and this section is stale.
 
@@ -571,9 +571,9 @@ is no CI", which stopped being true while its conclusion stayed true.
 
 ```sh
 npm run build:content                  # regenerate the artifact from content/posts
-npm run check:content                  # gate: artifact must match a fresh generation
+npm run check:content                  # gate: every post validates
 npm run sync:content -- --remote       # posts, the llms.txt row, both FTS indexes
-npm run check:llms -- --remote         # gate: the row must match content/llms.txt
+npm run check:machine-readable -- --remote  # gate: the row must match content/llms.txt
 ```
 
 `sync:content` writes three things: the posts and their tags, the `llms.txt`
@@ -714,7 +714,7 @@ time, so it is recovered as long as git history is intact. `first_published` liv
 in frontmatter and is recovered with the file.
 
 **The `llms.txt` settings row.** Source of truth is `content/llms.txt`, tracked
-and pinned to LF. `sync:content` writes the row from it and `check:llms` fails if
+and pinned to LF. `sync:content` writes the row from it and `check:machine-readable` fails if
 they disagree. Until 2026-08-02 this was a permanent loss, because the only
 writer was a migration seeding copy retired in July; that is what prompted this
 document's own gap analysis to be turned into a fix.
@@ -797,7 +797,7 @@ Verified on 2026-08-02 against the live account or the installed toolchain
   multipart-abort and no lock rules.
 - The `llms.txt` divergence, since FIXED: the live row was captured byte-exact
   into `content/llms.txt` and is now written by `sync:content` and gated by
-  `check:llms`.
+  `check:machine-readable`.
 - Durable Object wiring: the config block, `workers/ask-budget.ts` and the
   re-export in `workers/app.ts`.
 - Row counts: queried directly.

@@ -1021,7 +1021,7 @@ refuses(
 /* the cache split, in config */
 
 /*
- * WHICH ENTRYPOINT THE PLATFORM MAY CACHE, which check:config cannot judge: gateway cache on
+ * WHICH ENTRYPOINT THE PLATFORM MAY CACHE, which a config comparison cannot judge: gateway cache on
  * hides readership, Renderer cache off renders every request, cross_version on serves stale.
  */
 {

@@ -37,7 +37,7 @@
      alignment never has to subtract. */
   --admin-item-rule: 3px;
   /* The two radii (ruling 54), and there is no third: --r-control on anything pressed, --r-panel on
-     anything that contains. check:admin-ui refuses a stray radius. */
+     anything that contains. No stray radius. */
   --r-control: 0.25rem;
   --r-panel: 0.5rem;
 }
@@ -238,7 +238,7 @@
 }
 
 /* Same height, display and width as .site-header-mark, so the mark scales identically on both planes.
-   The component is imported, so check:logo covers it. */
+   The component is imported, never copied. */
 .admin-brand-mark {
   display: block;
   flex: none;
@@ -506,7 +506,7 @@
 
   /* The placement must reset with the track list: .admin-main asks for column 2, and in a one-track grid
      that creates an implicit auto track a few pixels wide, blanking every admin page on a phone.
-     No gate sees layout (check:admin-ui renders without a stylesheet). */
+     No gate sees layout. */
   .admin-main {
     grid-column: 1;
   }

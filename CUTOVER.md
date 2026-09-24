@@ -8,9 +8,8 @@ that cut that document by 87 percent deleted most of it. What survived did so in
 version history. A checklist that is only reachable by knowing which version to
 ask for is not a checklist, and Capsid cannot be gated, so it is here.
 
-`check:invariants` section 18 holds this file against the code: every item below
-must still be named, and the `SITE_ORIGIN` line must match what `app/lib/seo.ts`
-actually says. Change the origin and this document goes red until it follows.
+No gate holds this file against the code any more (ruling 150): when the origin
+changes, re-read every item below against `app/lib/seo.ts` by hand.
 
 ---
 
@@ -76,7 +75,7 @@ step, and the checklist saying it did was the kind of false work that turns a
 cutover into a search.
 
 **3.6 `content/llms.txt`.** Its contact URL is bound to `SITE_ORIGIN` in both
-directions by `check:llms`, so that gate goes RED between 3.1 and this step.
+directions by `check:machine-readable`, so that gate goes RED between 3.1 and this step.
 **That is by design and is the reminder**, not a defect to work around.
 
 **3.7 `103 Early Hints` becomes available.** A capability that arrives with the

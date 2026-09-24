@@ -34,67 +34,54 @@ const MAP = [
   {
     what: "a stylesheet",
     test: /^app\/(app\.css|styles\/.+\.css)$/,
-    gates: ["check:contrast", "check:design-sheets", "check:page-payload", "check:design-vocabulary"],
+    gates: ["check:contrast", "check:page-payload"],
   },
   {
     what: "a route, component or other app source",
-    test: /^app\/.+\.(ts|tsx)$/,
-    gates: ["check:types", "check:invariants", "check:features", "check:microformats", "check:urls", "check:asset-names", "check:spelling"],
+    test: /^app\/.+\.(ts|tsx|mjs)$/,
+    gates: ["check:types", "check:tests", "check:features", "check:machine-readable", "check:urls"],
   },
   {
     what: "the schema or a migration",
     test: /^(app\/db\/schema\.ts|drizzle\/.+)$/,
-    gates: ["check:migrations", "check:invariants"],
+    gates: ["check:migrations", "check:tests"],
   },
   {
     what: "a Worker entry",
     test: /^workers\/.+\.ts$/,
-    gates: ["check:types", "check:headers", "check:policy", "check:secrets"],
+    gates: ["check:types", "check:worker", "check:headers", "check:policy", "check:secrets"],
   },
   {
     what: "a post or other content",
     test: /^content\/.+/,
-    gates: ["check:content", "check:search", "check:charts", "check:diagrams", "check:llms", "check:spelling"],
+    gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features"],
   },
   {
     what: "publication data",
     test: /^data\/.+/,
-    gates: ["check:publications", "check:content"],
+    gates: ["check:machine-readable", "check:content"],
   },
   {
     what: "a served asset",
     test: /^public\/.+/,
-    gates: ["check:urls", "check:page-payload", "check:asset-names"],
-  },
-  {
-    what: "the design-sync inputs",
-    test: /^\.design-sync\/.+/,
-    gates: ["check:design-inputs", "check:design-sheets", "check:guidelines"],
+    gates: ["check:urls", "check:page-payload", "check:fonts"],
   },
   {
     what: "the wrangler config example",
     test: /^wrangler\..*jsonc?(\.example)?$/,
-    gates: ["check:config", "check:invariants"],
-  },
-  {
-    what: "the package manifest",
-    test: /^package(-lock)?\.json$/,
-    gates: ["check:stack", "check:floors", "check:config"],
-  },
-  {
-    what: "a hook or harness setting",
-    test: /^\.claude\/.+\.json$/,
-    gates: ["check:hook-matchers", "check:hook-scope", "check:hook-syntax"],
-  },
-  {
-    what: "a skill or a tracked document",
-    test: /^(\.claude\/skills\/.+\.md|[A-Z]+\.md|docs\/.+\.md)$/,
-    gates: ["check:invariants", "check:spelling"],
+    gates: ["check:types", "check:secrets"],
   },
   {
     what: "a test",
     test: /^test\/.+/,
     gates: ["check:tests"],
+  },
+  {
+    /* Ruling 150 removed the gates that read these, so a change here runs nothing rather than
+       falling through to the whole tier. */
+    what: "a document, skill or hook, which no gate reads",
+    test: /^(\.claude\/.+|[A-Za-z-]+\.md|docs\/.+\.md|\.design-sync\/.+)$/,
+    gates: [],
   },
 ];
 
@@ -202,7 +189,12 @@ for (const file of files) {
   const rules = MAP.filter((r) => r.test.test(file));
   const gates = [...(own ?? []), ...rules.flatMap((r) => r.gates)].filter((g) => declared.has(g));
   if (gates.length === 0) {
-    unmapped.push(file);
+    /* A row with no gates is a path argued safe to skip; only a path no row names is unmapped. */
+    if (!own && rules.length > 0 && rules.every((r) => r.gates.length === 0)) {
+      console.log(`  ${file}\n    ${rules.map((r) => r.what).join(", ")} -> nothing to run`);
+    } else {
+      unmapped.push(file);
+    }
     continue;
   }
   const what = own ? "its own gate" : rules.map((r) => r.what).join(", ");

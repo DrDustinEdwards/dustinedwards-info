@@ -16,7 +16,7 @@ import { ASSET_PREFIX } from "../media/classify.mjs";
  * The same set `publications.tsx` calls SHOWCASE_TYPES, and it is HERE rather
  * than imported from the route because a route module drags React and a loader
  * into anything that imports it. This is the second statement of the set and it
- * is deliberate; `check:publications` asserts the two agree, so they cannot
+ * is deliberate; `check:machine-readable` asserts the two agree, so they cannot
  * come apart silently.
  *
  * @type {Set<string>}
@@ -49,7 +49,7 @@ export const SHOWCASE_TYPES = new Set([
  * Inline, so a citation still opens in the tab for the reader who wants to look at it; the
  * filename is what a save or a reference manager's import names the file, and ruling 127 says
  * every file that leaves the site starts `dustin-edwards-`. The prefix is added HERE, so a route
- * names its file and cannot forget the prefix. `check:asset-names` reads the header off each route.
+ * names its file and cannot forget the prefix.
  *
  * @param {string} type the media type, without parameters
  * @param {string} cacheControl

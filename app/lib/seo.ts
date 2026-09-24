@@ -102,8 +102,8 @@ export function pageMeta(page: {
   /**
    * The Open Graph type. `website` for a hand-written page, `article` for a page that IS a work.
    *
-   * `check:invariants` section 13 refuses a hand-assembled social set, so a page needing one thing
-   * differently teaches this helper rather than exempting itself. The `citation_*` tags stay appended
+   * A page never hand-assembles a social set: a page needing one thing differently teaches this
+   * helper rather than exempting itself. The `citation_*` tags stay appended
    * by the route: they are not social metadata and no other page has them.
    */
   ogType?: "website" | "article";
@@ -418,7 +418,7 @@ export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 export const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
-/** The profiles the footer marks `rel="me"`, in its order. `check:microformats` reads this list. */
+/** The profiles the footer marks `rel="me"`, in its order. `check:machine-readable` reads this list. */
 export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
 
 /** Every sameAs, one list for both Person records so they cannot disagree. */

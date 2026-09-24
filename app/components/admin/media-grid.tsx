@@ -61,8 +61,8 @@ export function MediaGrid({
         // FIRST, and ARIA only where no element carries the meaning.
         /*
          * ONE MARKUP TREE, TWO LAYOUTS, selected by data attributes. A second branch of
-         * JSX is a second place for a control to go missing, and `check:admin-ui` would
-         * then have to prove both carry the same submissions.
+         * JSX is a second place for a control to go missing, and both would have to
+         * carry the same submissions.
          */
         <Form method="post">
       {/*

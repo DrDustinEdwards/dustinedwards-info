@@ -2,23 +2,9 @@
  * One owner for the floor comparison, and for the line that proves it ran.
  *
  * BOUNDARY: it owns the COMPARISON and both MESSAGES and asserts nothing itself, returning a
- * string so each call site keeps its own reporter, and the success line it prints on a HOLDING
- * floor is what `check:floors` reads back. Making a shared helper assert instead would be the
- * tenth vacuity class of the vacuity rule.
+ * string so each call site keeps its own reporter. Making a shared helper assert instead would
+ * hide which gate's count fell short.
  */
-
-/**
- * The machine-readable success line. One owner, so writer and reader cannot drift apart, and
- * anchored at the start of a line by `check:floors`, so this is never indented at a call site.
- */
-/*
- * THE GATE IS THE FIRST TWO SEGMENTS, NOT A GREEDY RUN. With `\S+` a floor NAME containing a
- * colon split in the wrong place, so `check:browser`'s floors parsed under a gate name of three
- * segments. The count comparison still read the right numbers; what broke was the assertion that
- * every floored gate PRINTED a floor, which reported that gate silent on every run. Non-greedy
- * alone would not do either: it would take the first segment as the gate.
- */
-export const FLOOR_LINE = /^floor ([a-z]+:[a-z0-9-]+):(\S+) executed=(\d+) minimum=(\d+)$/;
 
 /**
  * Compare an executed count against its floor.

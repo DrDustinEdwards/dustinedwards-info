@@ -35,8 +35,8 @@
 #
 # Hourly is an honest request rather than a fiction. It also stops the two
 # watchers polling together, which would double the load on a rate-limited
-# endpoint for no extra coverage; `check:invariants` section 25 asserts this
-# workflow is SLOWER than the watchdog rather than a duplicate of it.
+# endpoint for no extra coverage. Keep this workflow SLOWER than the watchdog
+# rather than a duplicate of it.
 #
 # ## THE EMAIL IS UNCHANGED AND IS STILL THE DELIVERY MECHANISM
 #

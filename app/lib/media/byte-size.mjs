@@ -16,9 +16,8 @@
  * ## WHAT THIS DOES NOT OWN
  *
  * The LIMIT'S own rendering. `MAX_BYTES / (1024 * 1024)` stays spelled out
- * where it appears, because `check:admin-ui` asserts the exact refusal string
- * "That image is over the 10 MB limit." and this function would make it
- * "10.0 MB". The limit is a round number chosen by a person; a file's size is a
+ * where it appears, because the refusal reads exactly "That image is over the
+ * 10 MB limit." and this function would make it "10.0 MB". The limit is a round number chosen by a person; a file's size is a
  * measurement. Formatting them with one function would be a coincidence of
  * units, not one fact.
  *

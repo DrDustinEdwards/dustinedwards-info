@@ -63,8 +63,7 @@ export type MediaSource = { key: string; size: number; uploaded: string };
  *
  * The static half comes from the committed manifest because A WORKER CANNOT LIST ITS OWN STATIC
  * ASSETS: the assets binding has exactly one method, `fetch()`. What keeps that list honest is
- * `build:assets`, which writes it from `public/`, and `check:media`, which compares it against the
- * filesystem so a stale manifest is named as stale.
+ * `build:assets`, which writes it from `public/`.
  */
 async function enumerateMediaSources(
   env: Env,

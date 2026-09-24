@@ -27,8 +27,8 @@ const LIST_COLUMNS: Array<[sortKey: string | null, label: string, align: "start"
  * by the back button, and working with scripting off.
  *
  * BOTH CONTROLS CALL `sortHref`. A header and a popover that build their own URLs
- * are two implementations of one destination; `check:admin-ui` asserts the two
- * hrefs are byte-equal per column.
+ * are two implementations of one destination; the two hrefs must be byte-equal
+ * per column.
  *
  * DIMS IS NOT SORTABLE AND SAYS SO BY BEING A SPAN: half the library has no
  * dimensions, so they would collapse into one undifferentiated block at whichever

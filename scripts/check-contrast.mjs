@@ -1068,8 +1068,8 @@ function opacityExempt(selectorGroup) {
 const buildPresent = existsSync(assetDir);
 
 /*
- * Floors: counts from running the gate with build/ present and absent, one under
- * check:floors' tolerance. Only CI reaches the absent branch.
+ * Floors: counts from running the gate with build/ present and absent, a little
+ * under each. Only CI reaches the absent branch.
  *
  * RE-MEASURED 2026-09-22 after ruling 128 collapsed four grounds into --paper, by RUNNING both
  * branches: the absent count is taken by moving build/ aside, never by reasoning about which

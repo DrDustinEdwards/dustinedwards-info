@@ -13,16 +13,8 @@
 # CI reaches a typechecking state with no secrets at all, and this workflow
 # declares none.
 #
-# Two of those four failures are real and permanent and are excluded in
-# CI_EXCLUDED in scripts/check-all.mjs, each with its measured reason:
-# check:config cannot pass in any checkout, and check:backup needs gitignored
-# miniflare state. check:head is excluded for a different reason, that it is
-# VACUOUS here rather than broken.
-#
-# The other two failures were artifacts of the measurement, not of CI:
-# `git archive` produces no .git, so check:content's gitignore tripwire and
-# check:head's worktree both failed on "not a git repository". actions/checkout
-# provides a real repository, so check:content runs here and is not excluded.
+# What a clean checkout cannot run is excluded in CI_EXCLUDED in
+# scripts/check-all.mjs, each with its reason.
 
 name: CI
 
@@ -55,9 +47,7 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      # No fetch-depth override. The default shallow clone is a real repository,
-      # which is all check:content's `git check-ignore` needs, and a full history
-      # buys this workflow nothing.
+      # No fetch-depth override: a full history buys this workflow nothing.
       # PINNED BY COMMIT SHA, not by tag. A tag is a moving pointer the upstream
       # owner can repoint at any commit, so a tag ref means "whatever that
       # account publishes next" running with this repository's token. Audit
@@ -106,15 +96,11 @@ jobs:
       # derived, and a future gate that reads them should find them built
       # rather than silently absent.
       #
-      # build:stack joined this step on 2026-09-08, ruling 39a.
-      # content/generated/stack.json was committed and byte-gated, so every
-      # package.json change was a two-file change, and Renovate, which cannot
-      # run a build, opened three PRs that were red on check:stack with no
-      # defect in them. Deriving it here is what lets a dependency PR be
-      # judged on its dependency.
+      # content/generated/stack.json is derived here rather than committed, so
+      # a dependency PR is judged on its dependency.
       #
       # build:publication-twins is here for the plainest reason of the four:
-      # check:publications compares the twins on disk against a fresh
+      # check:machine-readable compares the twins on disk against a fresh
       # generation, and a checkout has no twins at all, so without this step
       # that comparison reads an empty directory.
       - name: Migrations, stack and content build, publication twins, enhancement bundles, local sync
@@ -148,37 +134,6 @@ jobs:
       # tolerated once is a warning nobody reads again.
       - name: Lint
         run: npm run lint
-
-      # THE SLOP REPORT. It scores the DIFF rather than the tree, and as of
-      # ruling 116 it does not block: `continue-on-error` is set, and the gate
-      # is on the report tier so `check:ci` no longer runs it either.
-      #
-      # BOTH HALVES WERE NEEDED. The comment here used to claim the gate was
-      # "NOT in check:ci", and it was wrong: the tier said offline and
-      # `check:ci` is the offline tier minus CI_EXCLUDED, so the gate ran twice
-      # in CI and the second run did block a deploy.
-      #
-      # Why it reads as a preference rather than a defect: the audit opened all
-      # 83 in-scope ai-slop findings and every one was a false positive here.
-      # console.log is the Workers logging API, todo-stub matches the word
-      # PLACEHOLDER in prose, and one hit is a comment recording that a TODO was
-      # removed by Dustin's ruling. Pointed at the tree it would be permanently
-      # red, so `--changes --base origin/main` scores what the branch adds.
-      #
-      # THE FETCH IS LOAD-BEARING and is why this step is two lines. The first
-      # run of this gate failed with `Could not resolve base ref "origin/main"`:
-      # actions/checkout clones shallow and single-branch, so a diff gate has
-      # no base to diff against. The explicit refspec creates
-      # `refs/remotes/origin/main` rather than only FETCH_HEAD, which is the
-      # name `--base origin/main` resolves, and it is unshallowed so a merge
-      # base exists. Running the gate LOCALLY cannot catch this: a developer
-      # worktree always has origin/main already.
-      - name: Slop (report, does not block)
-        continue-on-error: true
-        run: |
-          git fetch --no-tags --unshallow origin +refs/heads/main:refs/remotes/origin/main || \
-            git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
-          npm run check:slop
 
       - name: Gates
         run: npm run check:ci

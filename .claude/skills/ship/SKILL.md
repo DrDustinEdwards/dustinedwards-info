@@ -35,8 +35,8 @@ the task:
 
 Two hazards, both measured:
 
-- **A background task that goes silent long enough gets killed.** `check:head`
-  runs for over three minutes printing nothing, and a run was reaped there.
+- **A background task that goes silent long enough gets killed.** A gate that
+  prints nothing for minutes can be reaped mid-run.
   A killed task is not a failed gate; re-run and read the log.
 - **A trailing `echo` after a pipe masks the exit code.** Write the exit code
   into the log itself, or read the log; never trust the notification's status.

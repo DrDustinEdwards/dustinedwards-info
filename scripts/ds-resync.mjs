@@ -17,7 +17,7 @@
  * wordmark white on paper at 1.06:1, and every grade downstream measured that CSS and passed it.
  * The fix cannot live in the driver itself, which is gitignored under `.ds-sync/` and re-copied
  * from the skill bundle on every sync, so a patch there is gone at the next skill version. It
- * lives here, where it is tracked, and `check:design-inputs` catches a run that went around it.
+ * lives here, where it is tracked. A run that goes around it is not caught.
  *
  * ## WHAT IT DOES NOT DO
  *

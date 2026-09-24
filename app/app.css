@@ -338,7 +338,7 @@
 
   /* Chrome role tokens: the header and footer are a brand surface, so text on them is measured against the
      chrome. --mark-on-chrome is the dark brand hex in both themes, by ruling (the light logo reads on purple).
-     check:logo binds it; change both in one commit, never silently. */
+     The logo's fills read it; change both in one commit, never silently. */
   --surface-chrome: #4f2d7f;
   --on-chrome: #ffffff;
   --on-chrome-muted: #ede8f5;
@@ -460,7 +460,7 @@
   --fig-dust-400: #7d7263;
   --fig-dust-500: #4e463c;
   /* Plate I's lawn and the one turbid tone between it and a clearing. Figure fills only, never a
-     page surface (seat, 2026-09-22); check:invariants section 32 holds them to fill. */
+     page surface (seat, 2026-09-22). */
   --fig-lawn: #ddd3c4;
   --fig-turbid: #e9e1d5;
 

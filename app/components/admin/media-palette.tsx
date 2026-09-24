@@ -35,9 +35,9 @@ type PaletteResult = {
 export function MediaPalette({
   inputId = "media-q",
   /**
-   * HARNESS SEAM: an optional prop with a production default. `check:admin-ui`
-   * renders one static pass and dispatches no events, so without this the panel never
-   * opens. Wire-unreachable: React Router never supplies it.
+   * HARNESS SEAM: an optional prop with a production default. A static render dispatches
+   * no events, so without this the panel never opens in one. Wire-unreachable: React
+   * Router never supplies it.
    */
   initialResults,
 }: {

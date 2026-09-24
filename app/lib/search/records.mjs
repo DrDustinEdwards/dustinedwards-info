@@ -249,8 +249,7 @@ export function recordsForPosts(posts) {
  *
  * **It lives here, beside `recordsForPost`, because this module's rule is that
  * there must not be a second indexer.** A page emitter in a build script or in
- * its own module would be exactly the mirror `check:invariants` exists to
- * prevent: two things deriving the same record shape, drifting the first time
+ * its own module would be exactly the mirror this repo refuses: two things deriving the same record shape, drifting the first time
  * one gains a column.
  *
  * Section-grained for the same reason posts are. A reader searching for

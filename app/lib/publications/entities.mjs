@@ -18,7 +18,7 @@
  * ## WHY THE FIX IS HERE AND NOT IN THE STORED DATA
  *
  * The obvious repair is to decode on the way in and store `<`. That is the one
- * repair not available, and the reason is gated: `check:publications` asserts
+ * repair not available, and the reason is gated: `check:machine-readable` asserts
  * NO STORED ABSTRACT CONTAINS A LEFT ANGLE BRACKET, paired with a count of the
  * abstracts it read. That invariant is what keeps a registry string safe in the
  * `<script type="application/ld+json">` block, in the CSL export, and in any

@@ -512,8 +512,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
  * EXECUTED-COUNT FLOOR, MEASURED BY RUNNING THIS GATE, unlike the first value here, counted by
  * eye, which failed on its own first green run. THE FLOOR IS DELIBERATELY NOT RAISED ON EVERY
  * ADDITION: its job is to catch a whole BLOCK being skipped, and the slack lets an intent be
- * retired without a second edit. It is raised when `check:floors` says the slack has stopped
- * being slack.
+ * retired without a second edit. Raise it when the slack has stopped being slack.
  */
 const MINIMUM_CHECKS = 99;
 const floorBreach = assertFloor("check:destructive", "checks", checks, MINIMUM_CHECKS);

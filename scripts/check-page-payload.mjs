@@ -364,7 +364,7 @@ async function main() {
   rmSync(scratch, { recursive: true, force: true });
   /*
    * NOT an `assertFloor`: this counts BUILT CHUNKS, a SCOPE floor in the sense of the vacuity rule,
-   * and the bundler's splitting would read to `check:floors` as drift.
+   * and the bundler's splitting would read as drift.
    */
   ok(
     `the syntax pass examined at least ${MINIMUM_ASSETS_SYNTAX_CHECKED} asset(s)`,

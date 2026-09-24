@@ -74,9 +74,8 @@ const SAVE_DRAFT = {
  * 4 asks of every primary. It read "Save changes" until 2026-08-01, and that
  * was the one label in this table that named what the button does to the
  * REPOSITORY rather than what it does to the site. The plumbing was already
- * right: the component renders `primary.label` and check:admin-ui derives its
- * expectation from this same table, so correcting the string here corrects both
- * without touching either.
+ * right: the component renders `primary.label`, so correcting the string here
+ * corrects the button without touching it.
  *
  * The id stays `save`, so the payload, the policy weld and the gate fixture are
  * all untouched.
@@ -220,8 +219,7 @@ export function saveInPlaceIntent(state) {
   // passed because a fresh draft is the state with the fewest assumptions.
   const list = transitionsFor(state, false);
   const match = list.find((transition) => transition.wantsDraft === wantsDraft);
-  // Non-null by construction: every arm above offers both. Asserted rather
-  // than assumed by check:admin-ui, which calls this for every state.
+  // Non-null by construction: every arm above offers both.
   return match ? match.id : SAVE_DRAFT.id;
 }
 

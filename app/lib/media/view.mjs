@@ -16,9 +16,7 @@
  * the only function that builds links, which is a visible thing to do rather
  * than an invisible omission.
  *
- * `check:admin-ui` gains an assertion over the rendered markup that every
- * pagination link and every chip carries the full set, which is the instrument
- * the two previous incidents did not have.
+ * Every pagination link and every chip must carry the full set.
  */
 
 import { folderFor, folderRank } from "./folders.mjs";
@@ -48,8 +46,7 @@ export const DIRS = ["desc", "asc"];
  * it from here. That is the whole reason this is a table rather than two
  * literals: the Display popover and the list header must produce the SAME URL
  * for the same column, and the only way to guarantee that is to give them one
- * source for the pair. `check:admin-ui` asserts the two URLs are identical, per
- * key, over the rendered markup.
+ * source for the pair.
  *
  * The values are the mockup's own, verified in its source (`sortOpts` and the
  * `column(key, label, align, dir)` calls): name ascending, usage ascending,
@@ -615,7 +612,7 @@ export function displaySummary(state) {
  *
  * `view` picks list or grid over one markup tree, `size` is a CSS class hook on
  * the grid, and `group` buckets rows already in hand. None of the three reaches
- * SQL, which `check:media-display-axes` asserts by reading `listMediaPage`.
+ * SQL, and `test/media-display-axes.test.mjs` asserts which URL changes may skip the server.
  *
  * Standing ruling, 2026-08-16: anything that does not change which data comes
  * back must not touch the server at all. These three are the whole set on this
