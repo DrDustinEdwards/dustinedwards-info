@@ -17,7 +17,7 @@ import { stripComments } from "./lib/strip-comments.mjs";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
 import { CONFIRM_FIELD } from "../app/lib/destructive.mjs";
-// Asserted against the constants: a copy would be a second owner (hard rule 17).
+// Asserted against the constants: a copy would be a second owner.
 import {
   FAILED_RETENTION_DAYS,
   REJECTED_RETENTION_DAYS,
@@ -1885,7 +1885,7 @@ const raw = (draft, firstPublished) =>
   for (const situation of SITUATIONS) {
     const prior = raw(situation.priorDraft, situation.priorFirst);
     for (const transition of transitionsFor(situation.state, situation.ever)) {
-      /* One varying condition: a literal `true` on the success path cannot fail (hard rule 10). */
+      /* One varying condition: a literal `true` on the success path cannot fail. */
       let result;
       /** @type {unknown} */
       let thrown = null;
@@ -2042,7 +2042,7 @@ for (const name of Object.keys(actual)) {
 
 /*
  * Empty baselines equal a render with no forms. The floor is measured by running this gate,
- * never summed (hard rule 10).
+ * never summed.
  */
 assert(
   "the comparison actually read submissions",
@@ -2254,7 +2254,7 @@ structural("the draft row is offered a duplicate and NOT an unpublish", "posts i
 structural("every row-action control pairs with the form it names", "posts index, clean", (h) => {
   const targets = [...h.matchAll(/form="(row-(?:duplicate|unpublish)-[a-z0-9-]+)"/g)].map((m) => m[1]);
   const ids = [...h.matchAll(/id="(row-(?:duplicate|unpublish)-[a-z0-9-]+)"/g)].map((m) => m[1]);
-  // Scope first: an empty page satisfies every vacuously (hard rule 10).
+  // Scope first: an empty page satisfies every vacuously.
   if (targets.length === 0 || ids.length === 0) return false;
   return (
     new Set(ids).size === ids.length &&
@@ -3257,7 +3257,7 @@ structural(
 );
 
 /**
- * The modal's own form; tiles carry the same `key` fields (hard rule 10).
+ * The modal's own form; tiles carry the same `key` fields.
  * @param {string} h
  * @returns {string}
  */
@@ -3942,7 +3942,7 @@ console.log(`  ${STATES.length} state(s) rendered, ${submissionsCompared} submis
 
 /*
  * Scoped to each axis nav: every link preserves the view state, so a page-wide search
- * passes a toggle that became a button (hard rule 10).
+ * passes a toggle that became a button.
  */
 /** @type {Record<string, { nav: string, values: string[] }>} */
 const AXIS_CONTROL = {
@@ -4285,7 +4285,7 @@ assert(
  * Measured by running this gate, never summed; the slack absorbs a retired state.
  */
 const MINIMUM_CHECKS = 682;
-/* `assertFloor` prints the live count (hard rule 17). */
+/* `assertFloor` prints the live count. */
 const floorBreach = assertFloor("check:admin-ui", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) fail(`this gate executed its assertions: ${floorBreach}`);
 

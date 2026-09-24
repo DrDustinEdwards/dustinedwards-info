@@ -1,7 +1,7 @@
 /**
  * The CSP report sink's body cap counts BYTES, not the client's claim.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The endpoint is public, unauthenticated
+ * REPLAYS THE DEFECT, per the replay rule. The endpoint is public, unauthenticated
  * and POST. Its only cap was `Number(request.headers.get("content-length") ?? "0")`
  * compared against 8 KB, so:
  *

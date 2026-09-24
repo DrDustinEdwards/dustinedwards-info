@@ -156,7 +156,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   /*
    * LINKED ONLY BY A PAGE THAT HAS MATH. A CSS import would put the math bytes and
    * a twenty-face font set on every post to serve the one that needs them, which is
-   * hard rule 4's question answered the wrong way.
+   * the no-framework-script rule's question answered the wrong way.
    *
    * NOT React's stylesheet hoisting, which was tried: a `precedence`-managed sheet
    * is lifted to the TOP of `<head>`, above the color-scheme meta, and that signal

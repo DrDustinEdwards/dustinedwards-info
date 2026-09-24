@@ -1,7 +1,7 @@
 /**
  * `joinConcatenatedLiterals()`, replaying the two defects it was written for.
  *
- * Hard rule 12: a new gate must be tested by REPLAYING THE DEFECT it was
+ * The replay rule: a new gate must be tested by REPLAYING THE DEFECT it was
  * written for, not only by planted variants, because plants get written to
  * match the implementation rather than the bug. These two are the real ones.
  *

@@ -198,7 +198,7 @@ export default defineConfig({
      *
      * The generalization also makes the constant a MIRROR: five call sites
      * carrying a value equal to the default they sit beside, free to drift from
-     * it. Hard rule 17, one owner per fact. This is the owner; the constant and
+     * it. The one-owner rule, one owner per fact. This is the owner; the constant and
      * its call sites were deleted in the same commit.
      */
     testTimeout: 30_000,

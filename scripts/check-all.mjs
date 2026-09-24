@@ -57,7 +57,7 @@ export const CI_EXCLUDED = {
   /*
    * Its whole subject is gitignored, so in CI it can only ever report its skip. Excluded rather
    * than left to skip green, because a gate that structurally cannot assert in CI reporting a pass
-   * is the vacuity hard rule 10 names.
+   * is a vacuous check.
    */
   "check:design-inputs": "its subject is the gitignored .design-sync/ derived inputs, which a clean checkout never generates; in CI it could only ever skip.",
 };
@@ -251,7 +251,7 @@ export function runGate(name, args) {
   /*
    * A gate that could not run is not a gate that failed. The test is both streams empty: every
    * gate here prints on a pass, and an exit-code list missed a real cascade after passing its
-   * plant (hard rule 12). An errored gate is still not `ok`.
+   * plant. An errored gate is still not `ok`.
    */
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";
@@ -287,7 +287,7 @@ export function runGate(name, args) {
  * Environment failure: one machine fact, not N repo facts. All four must hold: both streams
  * empty (the only condition that keeps a real failure out), an NTSTATUS-range status, under one
  * second, and more than one gate with that status. It changes the exit code (2), never the
- * verdict. A classifier that calls everything the machine is hard rule 10's unfailable class.
+ * verdict. A classifier that calls everything the machine is the vacuity rule's unfailable class.
  */
 const NTSTATUS_FAILURE_FLOOR = 0xc0000000;
 const ENVIRONMENT_MAX_MS = 1000;
@@ -498,7 +498,7 @@ function main() {
   const spawnable = selected.filter((name) => name !== FLOOR_READER);
 
   for (const name of spawnable) {
-    // JUSTIFIED SUBSTITUTION (hard rule 13). Partial on purpose: absence means no extra args.
+    // JUSTIFIED SUBSTITUTION. Partial on purpose: absence means no extra args.
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
     // EVERY gate runs, including after a failure. Stopping at the first red hides
@@ -583,7 +583,7 @@ function main() {
   for (const result of errored.filter((r) => !environmentNames.has(r.name))) {
     console.log(`\n${"=".repeat(72)}\n${result.name}  (ERRORED, no verdict)\n${"=".repeat(72)}`);
     console.log(`  ${result.reason}`);
-    /* An errored gate has no output by definition; a branch for it could not fire (hard rule 10). */
+    /* An errored gate has no output by definition; a branch for it could not fire. */
   }
 
   console.log(`\n${"-".repeat(52)}`);

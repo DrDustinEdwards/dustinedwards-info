@@ -289,7 +289,7 @@
 }
 
 /* The palette, hung under its bar. --surface-popover with --border-strong: the elevated step never takes
- * --border (hard rule 5). */
+ * --border. */
 .media-palette {
   position: absolute;
   z-index: var(--z-popover);
@@ -716,7 +716,7 @@
   max-width: 27rem;
   padding: 1.3125rem;
   background: var(--surface-popover);
-  /* Popover elevation, so hard rule 5 applies: --border-strong, never --border. */
+  /* Popover elevation, so the border-strong rule applies: --border-strong, never --border. */
   border: 1px solid var(--border-strong);
   border-radius: 0.8125rem;
 }

@@ -4,7 +4,7 @@
  *
  *   node scripts/build-capsid-guidelines.mjs
  *
- * BOUNDARY: the honest version of a forced copy is a DERIVED one, so hard rule 17's owner stays
+ * BOUNDARY: the honest version of a forced copy is a DERIVED one, so the one-owner rule's owner stays
  * Capsid, every file carries the stamp it was taken at, and the drift is the gate's to see, which
  * is hard rule 18's shape. Absent a credential it REFUSES rather than writing a partial directory.
  */

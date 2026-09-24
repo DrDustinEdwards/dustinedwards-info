@@ -8,7 +8,7 @@
  *
  * THE BOUNDARY IS ASSERTED HERE RATHER THAN DESCRIBED. The reconciliation ruled
  * this helper must never be fed JSONC or SVG. A comment saying so is a claim
- * that ages, per hard rule 7; the tests below FEED it those and assert the
+ * that ages, per the live-path rule; the tests below FEED it those and assert the
  * damage, so the day someone points it at wrangler.jsonc the reason is already
  * written as an executable fact.
  *
@@ -159,7 +159,7 @@ test("THE WEAK FORMS STAY, and this says what is left of the reason", () => {
 
 test("A COMMENT OPENER INSIDE A STRING is not a comment", () => {
   /*
-   * REPLAYS THE DEFECT, per hard rule 12.
+   * REPLAYS THE DEFECT, per the replay rule.
    *
    * Block comments were removed with a regex, which cannot know what a string
    * is. A slash-star inside a string literal opened a comment that ran to the

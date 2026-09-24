@@ -2,7 +2,7 @@
  * How long a mention that will never render is kept.
  *
  * ONE OWNER, and the admin page IMPORTS these rather than writing the numbers
- * into its own prose. Hard rule 17: a measured value lives where it is applied
+ * into its own prose. The one-owner rule: a measured value lives where it is applied
  * or nowhere, and a button labeled "older than 30 days" beside a sweep that
  * uses a different constant is the drift that rule exists to prevent.
  *

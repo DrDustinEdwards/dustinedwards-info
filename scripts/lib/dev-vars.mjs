@@ -24,7 +24,7 @@ export function readDevVar(name) {
 
   /*
    * ANCHORED TO THE LINE AND TO THE NAME: an unanchored needle would match a longer variable whose
-   * name ends with this one and hand back the wrong credential, which is hard rule 10's anchoring
+   * name ends with this one and hand back the wrong credential, which is the vacuity rule's anchoring
    * discipline applied to a value rather than to a count. The name is escaped, a caller being able
    * to pass anything.
    */

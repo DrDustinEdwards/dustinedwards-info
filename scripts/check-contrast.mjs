@@ -384,7 +384,7 @@ const MATRIX = [
    * FIRST ROW: ruling 118.2 draws it in the logo's own colors on --paper, and its five purple paths
    * take --brand, so the pair below measures it at the 4.5 floor rather than the 1.4.11 one it
    * would be owed. No second row at UI for the mark: a weaker floor over the same pair cannot fail
-   * while this one passes, and an assertion that cannot fail is not coverage (hard rule 10).
+   * while this one passes, and an assertion that cannot fail is not coverage.
    *
    * NO ROWS FOR THE MARK'S THREE WARM PATHS, and they would fail: on limestone they measure 2.72,
    * 1.93 and 1.58 to one. They are the logotype's own ink, which 1.4.11 exempts, the mark is
@@ -956,7 +956,7 @@ const OPACITY_EXEMPT = [
   },
   { test: /-scrim/, why: "a scrim, not text" },
   {
-    /* Anchored at the end, per hard rule 10: a bare `backdrop` matches `.backdrop-blur`. */
+    /* Anchored at the end, per the vacuity rule: a bare `backdrop` matches `.backdrop-blur`. */
     test: /(?:::backdrop|-backdrop)$/,
     why:
       "a modal veil, not text. Nothing is drawn on this layer: it exists to dim " +

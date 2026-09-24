@@ -94,7 +94,7 @@ for (const [label, field, value, expected] of CASES) {
 
 /*
  * FAIL CLOSED on the table itself. A suite that lost its refusals would pass
- * while asserting nothing that matters, which is the shape hard rule 10 is
+ * while asserting nothing that matters, which is the shape the vacuity rule is
  * about: count the assertions that can fail, not the ones that ran.
  */
 test("the table still carries both outcomes for both fields", () => {

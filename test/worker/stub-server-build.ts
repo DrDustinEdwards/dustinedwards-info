@@ -21,7 +21,7 @@ import {
  *
  * The SUBJECT of the cases that reach for this is `workers/app.ts`: the cache
  * key the gateway builds, the negotiation bypass, the security header stamp and
- * hard rule 8's uncached default. None of that is about which routes exist. So
+ * the cache-header rule's uncached default. None of that is about which routes exist. So
  * the route table is the part that gets replaced, and the transport around it is
  * real.
  *
@@ -50,7 +50,7 @@ export const STUB_PATHS = {
   page: "/stub-page",
   /** The negotiated pair: HTML or markdown at ONE url, `Vary: Accept, Cookie`. */
   negotiated: "/stub-negotiated",
-  /** Declares nothing, so hard rule 8's default in `workers/app.ts` decides. */
+  /** Declares nothing, so the cache-header rule's default in `workers/app.ts` decides. */
   silent: "/stub-silent",
   /** Sets a cookie while declaring the shared string. Must never be stored. */
   cookieSetter: "/stub-cookie-setter",

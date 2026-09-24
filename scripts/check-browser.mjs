@@ -511,7 +511,7 @@ if (DRIVES_PREVIEW) {
 
 /*
  * The draft math fixture is reached through a seeded `/preview/:token`, since
- * offline markup cannot prove rendering (hard rule 7). `--file`, because the
+ * offline markup cannot prove rendering. `--file`, because the
  * HTML's double quotes would break a cmd command string.
  */
 const MATH_SLUG = "math-typesetting-fixture";
@@ -1164,7 +1164,7 @@ try {
         .replace(/<html[^>]*>/, "<html>")
         /* The color-scheme meta carries the theme by design; its own case asserts the value. */
         .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"');
-    /* The age sentence is not here: hard rule 8 scopes this to what the theme may change. */
+    /* The age sentence is not here: the cache-header rule scopes this to what the theme may change. */
 
     /**
      * The footer's link order, recorded on the first page and asserted on every later one.
@@ -1765,7 +1765,7 @@ try {
       "/blog: the candidate list is non-empty, so the assertions below are about something",
       fromBlog.candidates.length > 0,
       "Chrome resolved no candidates at all. Every exclusion assertion below would " +
-        "then pass on an empty set, which is the zero-scope class of hard rule 10.",
+        "then pass on an empty set, which is the zero-scope class of the vacuity rule.",
     );
     for (const destination of ["/colophon", "/privacy", "/search", "/blog/ten-years-on-cloudflare"]) {
       ok(
@@ -2002,7 +2002,7 @@ try {
 
   /*
    * Paired controls: the box must really overflow and the sheet be linked. A mathless
-   * post links no sheet, which is hard rule 4's half on the wire.
+   * post links no sheet, which is the no-framework-script rule's half on the wire.
    */
   if (!mathPreviewSeeded) {
     skip(
@@ -2193,7 +2193,7 @@ try {
   /* 4b. the playground demos answer on the wire */
 
   /*
-   * check:features cannot see the transport (Hard rule 7), such as the Worker's WASM
+   * check:features cannot see the transport, such as the Worker's WASM
    * instantiator. Expectations come from the manifest.
    */
   await page.setViewport({ width: 1280, height: 900 });
@@ -2789,7 +2789,7 @@ try {
           after.attr === before.value && after.path === postForShape,
           `asked for ${JSON.stringify(before.value)}, came back with ` +
             `data-theme=${JSON.stringify(after.attr)} at ` +
-            `${after.path}${after.hash}. The no-script path is the one hard rule 9 ` +
+            `${after.path}${after.hash}. The no-script path is the one the progressive-enhancement rule ` +
             `requires to work: the enhancement is allowed to fail, this is not.`,
         );
         /*
@@ -2889,7 +2889,7 @@ try {
         titled: /-K\b/.test(trigger.getAttribute("title") ?? ""),
         text: (hint.textContent ?? "").trim(),
         /*
-         * The announced text must name the same key; length alone is hard rule 10's unfailable
+         * The announced text must name the same key; length alone is the vacuity rule's unfailable
          * condition.
          */
         textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
@@ -4045,7 +4045,7 @@ try {
       narrow.details >= 1 && narrow.summary === "SUMMARY",
       `${narrow.details} <details> in the bar, first summary tag ` +
         `${JSON.stringify(narrow.summary)}. The fold has to open with no script, so a ` +
-        `button plus a state hook is not the shape; hard rule 9 and the admin plane's ` +
+        `button plus a state hook is not the shape; the progressive-enhancement rule and the admin plane's ` +
         `own no-script door.`,
     );
 

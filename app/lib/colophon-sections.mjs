@@ -134,7 +134,7 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
      * THE LEAD NAMED TWO KINDS AND ONLY ONE IS LEFT, 2026-09-11.
      *
      * "Two different things are listed here" is a tense-bound state claim
-     * about a list that changes, which hard rule 17 gives to a gate or to
+     * about a list that changes, which the one-owner rule gives to a gate or to
      * nobody, and it went false the moment the last accepted gap left. So the
      * sentence describes what IS here rather than promising a second category
      * the vocabulary no longer carries. See STATUS_LABEL below for where the

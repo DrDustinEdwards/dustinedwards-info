@@ -8,7 +8,7 @@ import { testEnv } from "./test-env";
  *
  * ## THE SCHEMA IS THE MIGRATIONS, NOT A FIXTURE
  *
- * Hard rule 11: `app/db/schema.ts` is the source of truth and
+ * The schema-source rule: `app/db/schema.ts` is the source of truth and
  * `check:invariants` section 4 binds it to `drizzle/` and to the live database.
  * A hand-written CREATE TABLE for the tests would be a FOURTH shape, outside
  * that chain, drifting in the one direction that is invisible: the tests would

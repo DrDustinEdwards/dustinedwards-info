@@ -59,7 +59,7 @@ export const AUTH_RATE_PERIOD_SECONDS = 600;
  *
  * `private, no-store` because a cached 429 would keep refusing a caller who is
  * no longer over the limit. Workers Cache sits in front of this Worker and
- * hard rule 8 is that a response with no `Cache-Control` is CACHED, not
+ * the cache-header rule is that a response with no `Cache-Control` is CACHED, not
  * skipped, so this is stated rather than inherited.
  *
  * @param {number} [retryAfter] seconds, defaults to the window

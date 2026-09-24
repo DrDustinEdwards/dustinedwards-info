@@ -532,7 +532,7 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * deliberately not uploaded, so including them would report every one as permanently stale.
  *
  * The predicate is `visibilityClause(NO_ALIAS)`, composed and never hand copied.
- * That is hard rule 1, and `check:invariants` section 8 binds every `search_docs` reader to it. It
+ * That is the visibility rule, and `check:invariants` section 8 binds every `search_docs` reader to it. It
  * carries the unit as well: `publish_at` is SECONDS.
  */
 /**

@@ -35,7 +35,7 @@ import "~/styles/evidence-row.css";
 import "~/styles/home.css";
 
 /**
- * Publicly cacheable. The hard rule 8 default STAYS and still covers everything
+ * Publicly cacheable. The cache-header rule default STAYS and still covers everything
  * unlisted; this route opts in. The theme is a dimension of the cache key rather
  * than a Vary. Tagged `posts`, because the proof tiles and the featured list read
  * the corpus. The short edge policy is for the health tile; see `HOME_EDGE_CACHE_CONTROL`.

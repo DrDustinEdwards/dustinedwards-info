@@ -1,7 +1,7 @@
 /**
  * The health snapshot's classification.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The defect is not a wrong verdict; it
+ * REPLAYS THE DEFECT, per the replay rule. The defect is not a wrong verdict; it
  * is that `home.tsx` ran the whole health suite in its loader, so the front
  * door was the slowest page on the site: 1.07 to 3.48 s at origin against 0.32
  * to 0.90 s for `/blog`, measured 2026-08-26 with `/api/health` alone at 0.98

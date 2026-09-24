@@ -4,7 +4,7 @@
  * Every expected value here was produced by a tool that is not the module
  * under test: the blob shas by `git hash-object --stdin` and the sha256s by
  * `sha256sum`, both run 2026-08-25 over the same bytes each case encodes.
- * Fixture independence (hard rule 10): a gate's expected values are never
+ * Fixture independence: a gate's expected values are never
  * produced by the process it checks, and re-deriving them here with
  * crypto.subtle would make every case unfailable by construction.
  *

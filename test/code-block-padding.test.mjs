@@ -1,7 +1,7 @@
 /**
  * A reader with NO SCRIPT gets no reserved gap above a code fence.
  *
- * REPLAYS THE DEFECT, per hard rule 12. `.prose pre` carried
+ * REPLAYS THE DEFECT, per the replay rule. `.prose pre` carried
  * `padding-top: 2.25rem` unconditionally, to reserve room for a copy button and
  * a language label that only script can add. So every fence on every post
  * opened with 2.25rem of empty space, and for a reader without script the thing
@@ -44,7 +44,7 @@ import { allSourceCss } from "../scripts/lib/tokens.mjs";
  * The comment written to explain this very fix mentions `[data-enhanced]`, and
  * that alone made the guard below consider the unguarded rule guarded: the
  * planted defect went green. That is the comment-satisfied anchor class from
- * hard rule 10, caught by planting rather than by reading.
+ * the vacuity rule, caught by planting rather than by reading.
  */
 /**
  * THE WHOLE STYLESHEET SET, and it now comes from the SHARED derivation rather

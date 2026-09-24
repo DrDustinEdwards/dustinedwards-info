@@ -4,7 +4,7 @@
  *   npm run build:katex
  *
  * BOUNDARY: importing the upstream sheet from a component would land it in one route's stylesheet
- * for every post, most of which carry no math, and hard rule 4 asks for the bytes a reader
+ * for every post, most of which carry no math, and the no-framework-script rule asks for the bytes a reader
  * downloads; it would also ship three font formats where every supported browser reads one. The
  * output is committed and `check:content` byte-compares it.
  */
@@ -35,7 +35,7 @@ export function installedKatexVersion() {
 
 /**
  * A `src:` list with everything but woff2 removed. ANCHORED on the format keyword rather than on
- * the extension, which appears inside the filename too, and hard rule 10 spends a paragraph on
+ * the extension, which appears inside the filename too, and the vacuity rule spends a paragraph on
  * the unanchored needle. A face declaring NO woff2 source is left ALONE and reported by the
  * caller: dropping every source it has would be a silent removal of the face.
  *

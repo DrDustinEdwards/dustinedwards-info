@@ -203,7 +203,7 @@ wrangler.watchdog.jsonc
 # NOTES.md. Everything below is either a staged copy of the skill's own scripts,
 # regenerated build output, or machine-local verification state, and a committed
 # copy of any of them would be a second owner of something already owned
-# elsewhere (hard rule 17).
+# elsewhere.
 /.ds-sync/
 /ds-bundle/
 /.design-sync/.cache/

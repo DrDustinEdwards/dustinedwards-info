@@ -526,7 +526,7 @@ export function ogImageKey(post) {
   /*
    * An absent or unreadable date contributes NOTHING to the input, because it
    * contributes nothing to the card: the template assembles its byline from a
-   * filtered list and simply omits the date. This is not hard rule 13's
+   * filtered list and simply omits the date. This is not the no-substitution rule's
    * substitution class, which is a fallback standing IN for a value that failed
    * to arrive. There is nothing standing in here; drawn-nothing hashes as
    * nothing, and the two stay in step by saying so out loud rather than by a
@@ -634,7 +634,7 @@ export function withRelated(posts) {
  * THE CAPTURE IS DELIBERATELY LOOSE AND THE CORPUS IS THE FILTER. Anchoring the pattern on a slug
  * grammar would put a second copy of that grammar here; instead this returns whatever sits in the
  * path and `withBacklinks` keeps only what is a post. That is also what makes `/blog/tags/x` and
- * `/blog/some-post.md` fall out for free rather than by exclusion, which is hard rule 10's
+ * `/blog/some-post.md` fall out for free rather than by exclusion, which is the vacuity rule's
  * over-wide-exclusion class.
  *
  * @param {string} html
@@ -873,7 +873,7 @@ function remarkFigure(file) {
  * pipeline writes is a pure function of the markdown, and a chip that renders
  * differently in two engines is a chip no gate can hold to anything.
  *
- * ANCHORED AT BOTH ENDS, per hard rule 10. Without `^` and `$` this accepts
+ * ANCHORED AT BOTH ENDS, per the vacuity rule. Without `^` and `$` this accepts
  * `#6B4FBBZZ` by matching its prefix, which is the unanchored-needle class.
  */
 const SWATCH_HEX = /^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/;
@@ -2115,7 +2115,7 @@ function rehypeImageSources(file, resolveImage, pending) {
                    * `Array.isArray(className)` idiom the two exclusions above
                    * use rather than a fourth spelling of it. A string form is
                    * NOT handled: nothing produces one, and a branch nothing can
-                   * reach is hard rule 10's unfailable condition.
+                   * reach is the vacuity rule's unfailable condition.
                    */
                   className: [
                     ...(Array.isArray(node.properties?.className) ? node.properties.className : []),

@@ -197,7 +197,7 @@ test("EVERY REFUSAL validateUpload can return is a code the form can render", ()
     validateUpload({ type: "image/png", bytes: svg }),
   ];
 
-  // Hard rule 10: the loop below is vacuous over an empty list, and every one
+  // The vacuity rule: the loop below is vacuous over an empty list, and every one
   // of these could start returning null without the assertions noticing.
   assert.equal(refusals.length, 3);
   for (const refusal of refusals) {
@@ -295,7 +295,7 @@ test("the upload allowlist contains no directly executable type", () => {
 });
 
 test("the allowlist is non-empty, so the loop above is not vacuous", () => {
-  // Hard rule 10: every per-entry assertion is vacuous over an empty map, and
+  // The vacuity rule: every per-entry assertion is vacuous over an empty map, and
   // an emptied allowlist would pass the check above while breaking uploads.
   assert.ok(ALLOWED.size >= 6, `allowlist has ${ALLOWED.size} entries`);
 });

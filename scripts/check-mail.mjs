@@ -48,7 +48,7 @@ function ok(label, condition, detail = "") {
 
 /**
  * THE MAIL DOMAIN, read from its one owner, anchored on the DECLARATION rather than an
- * address-shaped string. Hard rule 10: stripping comments is not enough, the needle has to name
+ * address-shaped string. The vacuity rule: stripping comments is not enough, the needle has to name
  * the binding.
  */
 function mailDomain() {

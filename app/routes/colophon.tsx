@@ -42,7 +42,7 @@ export function headers() {
  *
  * FLAT: no filtering, no facets, no taxonomy.
  *
- * NOTHING CLIENT-SIDE, and there is nothing to enhance. Hard rule 9 makes every
+ * NOTHING CLIENT-SIDE, and there is nothing to enhance. The progressive-enhancement rule makes every
  * public reading route server-complete without script; this one is server-complete
  * because it is static markup over a build artifact, so the fallback and the page
  * are the same thing.

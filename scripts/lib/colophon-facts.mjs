@@ -3,7 +3,7 @@
  * against the RENDERED page.
  *
  * BOUNDARY: these are authored independently of the record body rather than derived from it,
- * because hard rule 10 is that a gate whose expected values are produced by the process it checks
+ * because the vacuity rule is that a gate whose expected values are produced by the process it checks
  * cannot fail, so the test asserts COVERAGE of the section set rather than equality of the values.
  *
  * @see app/lib/colophon-sections.mjs, scripts/verify-live.mjs

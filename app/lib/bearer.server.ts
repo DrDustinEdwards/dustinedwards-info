@@ -6,14 +6,14 @@
  * because both spellings return the same booleans for every input a test would think to try.
  *
  * BOTH BODIES WERE LIFTED VERBATIM and proven equivalent by differential over real inputs, with the
- * comparison shown able to discriminate, per hard rule 12.
+ * comparison shown able to discriminate, per the replay rule.
  *
  * `test/bearer.test.mjs` asserts that a PREFIX is refused, and carries the naive prefix-bounded
  * implementation as a control. It does NOT assert constant time: timing a comparison in-process
  * measures the garbage collector, and a flaky assertion in the suite that gates a deploy teaches
  * people to re-run until green. `check:policy` asserts the ordering below by position.
  *
- * This is a `.server` module because hard rule 3 is a PATH rule. Neither function reads `env`, so
+ * This is a `.server` module because the secrets-boundary rule is a PATH rule. Neither function reads `env`, so
  * `check:secrets` has nothing to say about the file, and that is not a license to move it.
  */
 

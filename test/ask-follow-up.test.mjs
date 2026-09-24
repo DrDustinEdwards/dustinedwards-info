@@ -1,7 +1,7 @@
 /**
  * The Ask follow-up: where it is split off, and what must never travel with it.
  *
- * REPLAYS A DEFECT THIS BRANCH CREATED AND CAUGHT, per hard rule 12. The splitter first lived in
+ * REPLAYS A DEFECT THIS BRANCH CREATED AND CAUGHT, per the replay rule. The splitter first lived in
  * `ask-prompt.mjs`, which is where it reads as belonging. `app/enhance/ask.ts` imported it from
  * there, and the built client bundle then carried `SYSTEM_PROMPT` into every reader's browser.
  * Tree-shaking did not remove it; a grep of the built artifact is what said so.

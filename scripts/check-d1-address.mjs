@@ -4,7 +4,7 @@
  *   npm run check:d1-address
  *
  * BOUNDARY: a per-file scan over comment-stripped source, with scope proven non-empty first,
- * which is hard rule 10. `--local` is allowed deliberately, Miniflare keying state by the config
+ * which is the vacuity rule. `--local` is allowed deliberately, Miniflare keying state by the config
  * id, and so are the lookup itself and the migrations path.
  */
 

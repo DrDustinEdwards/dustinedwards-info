@@ -6,7 +6,7 @@
  * Nothing in this corpus is retracted or corrected. Measured 2026-09-12 across
  * all 34 Crossref DOIs: no `updated-by`, no `update-to`, no `relation` of any
  * kind. So the render path has no data behind it, and a path nothing exercises
- * is a path that does not work. Hard rule 12 says a new path is tested by
+ * is a path that does not work. The replay rule says a new path is tested by
  * REPLAYING the case it was written for, and the only way to do that here is a
  * case from outside.
  *

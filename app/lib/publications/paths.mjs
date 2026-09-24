@@ -1,7 +1,7 @@
 /**
  * EVERY URL AND EVERY FILE PATH THE PUBLICATION PAGES USE, STATED ONCE.
  *
- * Hard rule 6's shape, applied to a second corpus: `content/posts/<slug>.md` is
+ * The URL allowlist rule's shape, applied to a second corpus: `content/posts/<slug>.md` is
  * stated once by `postPath()`, and these are stated once here. Five consumers
  * need to agree about where a paper lives (the route, the sitemap, the exports,
  * the markdown twin and the build step that copies the PDFs), and the cost of

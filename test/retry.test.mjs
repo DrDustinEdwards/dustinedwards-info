@@ -1,7 +1,7 @@
 /**
  * `retryRead()`, replaying the two symptoms it was written for.
  *
- * Hard rule 12: a new mechanism is tested by REPLAYING THE DEFECT, not only by
+ * The replay rule: a new mechanism is tested by REPLAYING THE DEFECT, not only by
  * planted variants. The class is five measured transient failures on Cloudflare
  * read paths across four gates, wearing TWO OPPOSITE SYMPTOMS:
  *

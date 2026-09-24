@@ -76,7 +76,7 @@ export const WRITE_CAPABILITIES = {
    * entire admin plane:
    *
    *   - **UNPUBLISHED DRAFTS.** `/admin/posts` lists every post whatever its
-   *     state, and an edit route serves the full markdown. Hard rule 1 keeps
+   *     state, and an edit route serves the full markdown. The visibility rule keeps
    *     drafts off every PUBLIC surface; this is not a public surface, and the
    *     smoke actor is inside the gate rather than outside it.
    *   - **THE OPERATOR EMAIL**, rendered in the topbar on every admin page.

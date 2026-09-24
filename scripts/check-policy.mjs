@@ -232,7 +232,7 @@ const EVERY_TRANSITION = [
 ];
 
 // SCOPE, ASSERTED. An empty table would run this loop zero times and report a
-// clean sweep, which is the zero-scope class hard rule 10 names.
+// clean sweep, which is the zero-scope class the vacuity rule names.
 eq("the transition table is not empty", EVERY_TRANSITION.length >= 7, true);
 
 for (const [what, incomingRaw, priorRaw] of EVERY_TRANSITION) {
@@ -623,7 +623,7 @@ refuses(
     true,
   );
   /*
-   * THE REST OF THE CHAIN: RATE, then CACHE, then BUDGET, then MODEL, which is hard rule 19's
+   * THE REST OF THE CHAIN: RATE, then CACHE, then BUDGET, then MODEL, which is the money-path rule's
    * order. Presence passes on any arrangement; the ORDER is the property, cheapest refusing first.
    */
   const cacheAt = actionBody.indexOf("readCachedAnswer(");
@@ -680,7 +680,7 @@ refuses(
     );
   }
 
-  /* AND THE ABSENT-ORIGIN EXEMPTION SURVIVES: a scriptless form post carries none, hard rule 9. */
+  /* AND THE ABSENT-ORIGIN EXEMPTION SURVIVES: a scriptless form post carries none, the progressive-enhancement rule. */
   {
     const predicate = stripComments(readFileSync(join(root, "app/lib/origin.mjs"), "utf8"));
     eq(
@@ -692,7 +692,7 @@ refuses(
     );
   }
 
-  /* REFUSED ON LENGTH BEFORE IT IS HASHED, asserted by POSITION, hard rule 19's instrument. */
+  /* REFUSED ON LENGTH BEFORE IT IS HASHED, asserted by POSITION, the money-path rule's instrument. */
   {
     const auth = stripComments(
       readFileSync(join(root, "app/lib/operator/auth.server.ts"), "utf8"),
@@ -1084,7 +1084,7 @@ refuses(
 
   /*
    * COMMENTS STRIPPED BEFORE MATCHING: a comment explaining a filter that had been removed kept
-   * the count at two, which is hard rule 10's comment-satisfied anchor.
+   * the count at two, which is the vacuity rule's comment-satisfied anchor.
    */
   const askSource = stripComments(askRaw);
   const searchSource = stripComments(searchRaw);
@@ -1207,7 +1207,7 @@ refuses(
   );
   /*
    * SCOPED TO THE FUNCTION BODY, never a window after its name: zeroState sits below and composes
-   * visibilityClause itself, which is hard rule 10's unanchored needle.
+   * visibilityClause itself, which is the vacuity rule's unanchored needle.
    */
   const expectedUrlsBody = bodyOf(searchSource, "askExpectedUrls");
 
@@ -1240,7 +1240,7 @@ refuses(
 // Report
 
 /*
- * EXECUTED-COUNT FLOOR. This gate covers hard rule 19's ordered cost chain and the operation
+ * EXECUTED-COUNT FLOOR. This gate covers the money-path rule's ordered cost chain and the operation
  * reserved for the human, so the floor MOVES WITH THE MEASUREMENT: slack is the defect.
  */
 const MINIMUM_CHECKS = 184;

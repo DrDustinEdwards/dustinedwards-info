@@ -1,7 +1,7 @@
 /**
  * Pacing the Ask daily ceiling.
  *
- * REPLAYS THE FINDING, per hard rule 12. The 2026-08-22 audit, section 27: "A
+ * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, section 27: "A
  * distributed caller could exhaust the daily cap for $0 and deny the feature to
  * everyone." Verified TRUE in substance against the code on 2026-08-23, and
  * the audit's stated per-IP number is WRONG: it says 6/min, `ASK_RATE_LIMIT` is

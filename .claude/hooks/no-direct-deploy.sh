@@ -83,7 +83,7 @@
 # `media.sql` mtime. BOUNDARY: a `--local` run of check:backup refreshes the same
 # file, so the check proves an export ran recently, not that it was remote.
 # Schema statements (CREATE, DROP, ALTER, PRAGMA, ATTACH, VACUUM) stay refused:
-# hard rule 14 puts schema in migrations. At cutover this arm goes back to
+# the hand-written migration rule puts schema in migrations. At cutover this arm goes back to
 # SELECT only.
 #
 # ## Fail direction: toward BLOCKING
@@ -390,7 +390,7 @@ case "$rc" in
   5) block "Blocked: npm run deploy. It runs wrangler deploy from the working tree, which is a deploy nobody can reproduce. $rule16" ;;
   6) block "Blocked: wrangler deploy. $rule16" ;;
   7) block "Blocked: wrangler versions upload. It puts a version on the account outside the ship contract. $rule16" ;;
-  8) block "Blocked: wrangler d1 execute carrying a statement that is neither a SELECT nor a data write (INSERT, UPDATE, DELETE, REPLACE). Schema changes go through migrations (hard rule 14)." ;;
+  8) block "Blocked: wrangler d1 execute carrying a statement that is neither a SELECT nor a data write (INSERT, UPDATE, DELETE, REPLACE). Schema changes go through migrations." ;;
   10) block "Blocked: wrangler d1 execute carrying a data write with no per-table backup under six hours old. Ruling 131 lets a driver write to D1 only after confirming the latest backup: run npm run check:backup -- --remote first, then report exactly what the write changed." ;;
   9) block "Blocked: wrangler d1 execute whose SQL this check cannot read (a --file, or no --command). An unverifiable statement is not a read. Pass the SQL inline as --command \"SELECT ...\" if it is a read." ;;
   4) block "no-direct-deploy hook: the payload on stdin was not valid JSON, so the deploy check could not run. Failing closed: BLOCKED (checker exit 4)." ;;

@@ -347,7 +347,7 @@ async function main() {
       const out = path.join(dir, `${table}.sql`);
       /*
        * NO STATUS CHECK AFTER THIS: `retryRead` returns what the inner function returned and that
-       * throws on non-zero, so a check would be hard rule 10's unfailable condition. The throw INSIDE
+       * throws on non-zero, so a check would be the vacuity rule's unfailable condition. The throw INSIDE
        * the callback is load-bearing, wrangler returning rather than rejecting on a failed command.
        */
       await retryRead(
@@ -428,7 +428,7 @@ async function main() {
      * MIGRATIONS SEED, AND A SEED COLLIDES WITH A RESTORE: applying them leaves a schema-correct
      * database already carrying a `settings` row, and the dump then trips a UNIQUE constraint,
      * presenting as "the backup is corrupt". REVERSE dependency order, and ONLY REAL TABLES, since
-     * hard rule 2 forbids `DELETE FROM` on an index.
+     * the per-table backup rule forbids `DELETE FROM` on an index.
      */
     const clear = wrangler(
       `d1 execute ${scratch(SCRATCH_DB)} --remote --yes --command ` +
@@ -471,7 +471,7 @@ async function main() {
     );
 
     /*
-     * THE INDEXES ARE REBUILT, NOT RESTORED, hard rule 2: an fts5 virtual table cannot be exported.
+     * THE INDEXES ARE REBUILT, NOT RESTORED, the per-table backup rule: an fts5 virtual table cannot be exported.
      * That is also what makes the equalities below meaningful.
      */
     const rebuild = wrangler(
@@ -484,7 +484,7 @@ async function main() {
       "the three FTS indexes rebuild on the restored database",
       rebuild.status === 0,
       `wrangler d1 execute exited ${rebuild.status}: ${tail(rebuild.stdout)}. ` +
-        `Hard rule 2: the repair is ('rebuild'), never DELETE FROM.`,
+        `The per-table backup rule: the repair is ('rebuild'), never DELETE FROM.`,
     );
     timings.restore = Date.now() - restoreStart;
 
@@ -545,7 +545,7 @@ async function main() {
 
     /*
      * THE ASSERTION `d1_migrations` WAS STANDING IN FOR, made directly and re-runnably, which is
-     * what hard rule 17 asks of a number somebody wants to keep believing. One classifier on both
+     * what the one-owner rule asks of a number somebody wants to keep believing. One classifier on both
      * sides, so the platform's bookkeeping is excluded identically.
      */
     const classify = (/** @type {Array<Record<string, unknown>>} */ rows) => {
@@ -589,7 +589,7 @@ async function main() {
     /* 6. the media mirror, EVERY key */
 
     /*
-     * EVERY KEY, NOT A SAMPLE: a sample from a population this small is hard rule 10's zero-scope
+     * EVERY KEY, NOT A SAMPLE: a sample from a population this small is the vacuity rule's zero-scope
      * vacuity. What this adds over the health poll is that it reads the buckets from OUTSIDE the
      * Worker, so the mirror is asserted by something that is not maintaining it.
      */

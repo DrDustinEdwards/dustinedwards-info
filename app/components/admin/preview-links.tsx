@@ -34,7 +34,7 @@ export interface PreviewLinkView {
 export const CREATE_FORM_ID = "create-preview-link";
 
 /**
- * NOT HARD RULE 13'S CLASS. That rule names a fallback substituting a PLAUSIBLE
+ * NOT THE NO-SUBSTITUTION RULE'S CLASS. That rule names a fallback substituting a PLAUSIBLE
  * value for a failure, so the failure stops being visible. This does the opposite:
  * it says out loud that the date could not be read, nothing downstream consumes it,
  * and no decision is taken on it.

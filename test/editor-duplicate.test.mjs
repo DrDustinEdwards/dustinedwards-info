@@ -7,7 +7,7 @@
  * nobody would choose and the author would have to fix it by hand every time.
  *
  * The pattern assertion here is deliberately made against the EXPORTED
- * `SLUG_PATTERN` rather than against a spelling of it: hard rule 6 makes that
+ * `SLUG_PATTERN` rather than against a spelling of it: the URL allowlist rule makes that
  * constant the owner of what a slug may be, and a test carrying its own regex
  * would be the second copy that rule exists to prevent.
  */

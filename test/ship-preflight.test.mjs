@@ -1,7 +1,7 @@
 /**
  * Ship's step 0: is anything still holding the build directory or the database?
  *
- * REPLAYS THE DEFECT, per hard rule 12. On 2026-09-10 a ship failed with EBUSY
+ * REPLAYS THE DEFECT, per the replay rule. On 2026-09-10 a ship failed with EBUSY
  * on build/client because `vite preview --port 4173` processes, orphaned by
  * killed `check:all` runs, still held the directory. `check:all`'s own preflight
  * reaper cannot see them: it reaps runs it RECORDED, and a run killed by the OS

@@ -56,7 +56,7 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
   /*
    * Present by construction: `validateUpload` refused every type outside ALLOWED one statement ago,
    * and the two read the SAME map. Written as a throw rather than a default extension:
-   * hard rule 13 says a fallback that substitutes a different value is not failing closed, and
+   * the no-substitution rule says a fallback that substitutes a different value is not failing closed, and
    * `"bin"` would put an unclassifiable object in the bucket that `classify()` throws on for every
    * later reader.
    */

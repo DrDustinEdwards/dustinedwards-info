@@ -20,7 +20,7 @@ export async function action({ request }: Route.ActionArgs) {
    *
    * AN ABSENT ORIGIN IS STILL ALLOWED, and that is the whole reason this is a predicate rather than a
    * same-origin comparison written inline: this form is the NO-SCRIPT half of the theme toggle, a
-   * scriptless form post carries no `Origin`, and refusing it would break the fallback hard rule 9
+   * scriptless form post carries no `Origin`, and refusing it would break the fallback the progressive-enhancement rule
    * requires. The literal string "null" is a different thing and is refused.
    */
   const verdict = originVerdict(request.headers.get("origin"), request.url);
@@ -36,7 +36,7 @@ export async function action({ request }: Route.ActionArgs) {
 
   /*
    * ONLY THE WRITABLE THEMES ARE ACCEPTED. Substituting a default is the fail-open direction
-   * hard rule 13 is about: a malformed request becomes a silent theme change rather than an error.
+   * the no-substitution rule is about: a malformed request becomes a silent theme change rather than an error.
    *
    * Nothing legitimate reaches this branch, because the control posts the value of a visible button and
    * both carry a writable theme, so anything else is hand-made and 400 tells its author the truth.

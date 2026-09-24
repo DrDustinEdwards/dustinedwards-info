@@ -4,7 +4,7 @@
  *   npm run check:headers
  *
  * BOUNDARY: IT CANNOT SEE THE WIRE. It asserts what workers/app.ts DECLARES, which is this
- * file's reading of hard rule 7; the wire is verify-live's.
+ * file's reading of the live-path rule; the wire is verify-live's.
  */
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -901,7 +901,7 @@ ok(`${HEADERS_FILE} exists`, existsSync(headersPath),
 
 /**
  * The longest freshness an UNHASHED path may declare, in seconds. Nothing recalls a stored
- * entry: static assets are not in the purgeable page cache (hard rule 20). /assets/* is exempt.
+ * entry: static assets are not in the purgeable page cache. /assets/* is exempt.
  */
 const MAX_UNHASHED_FRESHNESS = 3600;
 
@@ -974,7 +974,7 @@ if (existsSync(headersPath)) {
 
 /*
  * A HEALTH CHECK SERVED FROM CACHE IS NOT A HEALTH CHECK: no Cache-Control means heuristic
- * freshness (hard rule 8). SCOPED STRUCTURALLY by counting the ONE Response construction,
+ * freshness. SCOPED STRUCTURALLY by counting the ONE Response construction,
  * because "the file mentions no-store" passes on a comment.
  */
 
@@ -1136,7 +1136,7 @@ console.log("  plaintext requests are upgraded before anything else runs");
   ok(
     "THE REDIRECT IS no-store, so it cannot be cached under a scheme-blind key",
     /no-store/.test(redirectBlock),
-    "hard rule 8: with no Cache-Control it is CACHED, and a cached redirect loops HTTPS readers",
+    "the cache-header rule: with no Cache-Control it is CACHED, and a cached redirect loops HTTPS readers",
   );
   ok(
     "the redirect predicate is imported rather than restated",
@@ -1148,7 +1148,7 @@ console.log("  plaintext requests are upgraded before anything else runs");
 /* every public HTML route sets the shared policy */
 
 /*
- * A public page exporting no headers() falls through to hard rule 8's uncached default with no
+ * A public page exporting no headers() falls through to the cache-header rule's uncached default with no
  * symptom a human meets. Asserted on the ROUTE FILES, comment-stripped, not on the helper.
  */
 
@@ -1215,7 +1215,7 @@ console.log("  public HTML routes share one headers()");
   /*
    * EVERY SHARED-CACHEABLE ROUTE ALSO SETS A CACHE TAG, or a stored response stays wrong silently
    * at both ends. THE PAIRING is asserted, from the same derived list, and the needle is the CALL
-   * or the header name, never the tag's VALUE, which hard rule 17 gives one owner.
+   * or the header name, never the tag's VALUE, which the one-owner rule gives one owner.
    */
   const TAG_NEEDLE = /publicHtmlHeaders\s*\(|"Cache-Tag"|cacheTags\s*\(/;
   const untagged = [];
@@ -1233,7 +1233,7 @@ console.log("  public HTML routes share one headers()");
 
   /*
    * SCOPE, ASSERTED: an empty walk reports what a compliant tree reports. MEASURED THROUGH THIS
-   * LOOP, having come out wrong by one when counted off the literals, hard rule 10's own example.
+   * LOOP, having come out wrong by one when counted off the literals, the vacuity rule's own example.
    */
   ok(
     "the cache-tag walk examined the shared-cacheable routes",
@@ -1253,7 +1253,7 @@ console.log("  public HTML routes share one headers()");
   /*
    * CLOSURE, WHICH MAKES THESE LISTS AN OWNER RATHER THAN A SECOND COPY: a new shared-cached page
    * cannot ship unlisted, and workers/app.ts can state the nonce exposure without a count, which
-   * once stood in three copies and was wrong in all three; hard rule 8 carries the same lesson.
+   * once stood in three copies and was wrong in all three; the cache-header rule carries the same lesson.
    * Comments stripped, because one route NAMES the constant while explaining why it refuses it.
    */
   {
@@ -1309,7 +1309,7 @@ console.log("  public HTML routes share one headers()");
 }
 /*
  * FLOOR RE-MEASURED BY RUNNING THIS GATE, never summed: this one was once far enough under for
- * two sections to stop running while it still cleared, which is hard rule 10's class.
+ * two sections to stop running while it still cleared, which is the vacuity rule's class.
  */
 const MINIMUM_CHECKS = 230;
 const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);

@@ -1,7 +1,7 @@
 /**
  * One owner for the human date, and the defect the majority copy carried.
  *
- * REPLAYS THE DEFECT, per hard rule 12. Two of the three `formatDate` copies
+ * REPLAYS THE DEFECT, per the replay rule. Two of the three `formatDate` copies
  * handed an unparseable value to `toLocaleDateString`, which answers the STRING
  * "Invalid Date" rather than throwing. Measured against the old body before the
  * change: `formatDate("rubbish")` returned "Invalid Date", so a bad `publishAt`
