@@ -142,11 +142,22 @@
 .lightbox {
   max-width: 100%;
   max-height: 100%;
+  /* The reset zeroes every margin, which removes a modal dialog's own centering. */
+  margin: auto;
   padding: 2rem;
   border: 0;
-  background: transparent;
+  /* Glass (ruling 149), as the search dialog. */
+  background: var(--glass-pane);
+  backdrop-filter: blur(var(--glass-blur));
   overflow: visible;
   animation: lightbox-in 0.15s ease-out;
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .lightbox {
+    background: var(--paper);
+    backdrop-filter: none;
+  }
 }
 
 .lightbox::backdrop {
@@ -158,8 +169,10 @@
   cursor: zoom-out;
 }
 
+/* An illustration sits on solid paper, never on the glass. */
 .lightbox img {
   display: block;
+  background: var(--paper);
   max-width: 100%;
   max-height: 85vh;
   border-radius: 0.375rem;
