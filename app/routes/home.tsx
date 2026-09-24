@@ -21,7 +21,7 @@ import {
 } from "~/lib/seo";
 import { EvidenceRow } from "~/components/evidence-row";
 import { PlateI, PlateKeyRow } from "~/components/plate-i";
-import { PlateEnhancements } from "~/components/plate-enhancements";
+import { Enhance } from "~/components/enhance";
 import { FigurePapersPerYear, FigureRoster } from "~/components/home-figures";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
@@ -138,7 +138,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
 
         <PlateKeyRow />
-        <PlateEnhancements />
+        <Enhance module="plate" />
 
         <section className="home-research" aria-labelledby="research-heading">
           <h2 id="research-heading" className="home-section-heading">

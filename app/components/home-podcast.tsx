@@ -1,6 +1,4 @@
-import podcastEnhanceUrl from "~/enhance/dist/podcast.js?url";
-
-import { EnhancementScript } from "~/components/enhancement-script";
+import { Enhance } from "~/components/enhance";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { PODCAST_SITE_URL, clockTime, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
 
@@ -94,7 +92,7 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
             <a href={episode.link}>Episode page</a>
             <a href={PODCAST_SITE_URL}>germomics.com</a>
           </p>
-          <EnhancementScript src={podcastEnhanceUrl} />
+          <Enhance module="podcast" />
         </article>
       ) : (
         <p className="home-more">

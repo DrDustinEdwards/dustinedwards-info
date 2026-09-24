@@ -1,6 +1,4 @@
-import themeEnhanceUrl from "~/enhance/dist/theme.js?url";
-
-import { EnhancementScript } from "~/components/enhancement-script";
+import { Enhance } from "~/components/enhance";
 
 /**
  * Both buttons ship and CSS shows one: with no cookie the server cannot know the theme in effect.
@@ -40,7 +38,7 @@ export function ThemeToggle() {
           <MoonIcon />
         </button>
       </form>
-      <EnhancementScript src={themeEnhanceUrl} />
+      <Enhance module="theme" />
     </>
   );
 }
