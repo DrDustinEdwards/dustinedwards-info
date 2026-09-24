@@ -1,14 +1,3 @@
-/**
- * The home page's podcast player, drawn by hand over a plain audio element. Home page only, and
- * pure enhancement (ruling 119): the episode, its links and a natively controlled audio element are
- * complete server HTML. This file swaps the native controls for the site's own:
- *   play and pause   one button whose word says what it will do
- *   the scrubber     a full-width range with elapsed and total time either side
- *   skip             back 15 seconds and forward 30, as germomics.com's episode pages have
- * If the audio fails to load, the native controls come back, so a reader is never left with
- * buttons that cannot play. Nothing here writes to storage. Inventory: `content/enhancements.json`.
- */
-
 for (const root of document.querySelectorAll<HTMLElement>("[data-podcast]")) {
   const audio = root.querySelector<HTMLAudioElement>(".podcast-audio");
   const controls = root.querySelector<HTMLElement>("[data-podcast-controls]");
@@ -28,7 +17,6 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-podcast]")) {
   const duration = () =>
     Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(seek.max) || 0;
 
-  /** While a finger or a mouse holds the scrubber, playback must not move it underneath them. */
   let dragging = false;
 
   const paint = () => {

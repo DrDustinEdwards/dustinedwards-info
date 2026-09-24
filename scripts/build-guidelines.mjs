@@ -1,12 +1,6 @@
 /**
- * Extract the stylesheets' reasoning into guidance the design canvas can read, the bundle having
- * stripped the comments on the way there.
- *
- * BOUNDARY: a build step that makes no assertion, with gitignored output, a committed copy being
- * a second owner of prose the stylesheets already own. The strip it compensates
- * for stays, because the converter's validator greps the bundle for `@import` without stripping
- * comments and a stylesheet's prose about a removed `@import` failed that twice. The cap is
- * honest rather than silent: what does not fit is NAMED with its source and line.
+ * The converter's validator greps the bundle for `@import` without stripping comments, and prose about
+ * a removed `@import` failed it, so the bundle strips them and this step extracts the reasoning back out.
  */
 
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
@@ -17,16 +11,12 @@ import { readSheets, commentBlocks, commentProse } from "./lib/design-sheets.mjs
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(REPO, ".design-sync/guidelines");
 
-/** Near 16 KB, per the job that commissioned this. */
 const FILE_CAP_BYTES = 16 * 1024;
 
 /** A block shorter than this is a section marker, not reasoning. */
 const MINIMUM_PROSE_BYTES = 120;
 
-/**
- * The four destinations, in priority order: a block lands in the FIRST file whose needles it
- * hits, so this order decides where an overlapping block goes.
- */
+/** A block lands in the first file whose needles it hits, so this order decides where overlaps go. */
 const FILES = [
   {
     name: "chrome-and-bars.md",
@@ -107,10 +97,7 @@ const FILES = [
   },
 ];
 
-/**
- * Build talk. Present on its own a block is dropped; present alongside a design needle the design
- * needle wins, because a comment often explains a design rule BY naming the gate that holds it.
- */
+/** A design needle beats a build needle: a comment often explains a design rule by naming its gate. */
 const BUILD_NEEDLES = [
   /\bcheck:[a-z-]+/i,
   /\bconverter\b/i,
@@ -131,26 +118,16 @@ function hits(prose, needles) {
   return n;
 }
 
-/**
- * The page singletons: real parts of the site the sync cannot ship as components, described so
- * the canvas at least knows what they ARE. They are excluded from the component sync because
- * nothing there is composable, which is true about INSTANTIATION and says nothing about
- * visibility. The component-to-sheet mapping is HAND-WRITTEN, because nothing in the repo declares
- * it: a sheet does not name the component it styles.
- */
+// Hand-written, because nothing in the repo declares which component a sheet styles.
 const SINGLETONS = [
   { name: "site-header", component: "app/components/site-header.tsx", sheets: ["app/styles/public-chrome.css", "app/styles/chrome-nav.css"] },
-  // The footer's sheet, not the chrome one: it was renamed and moved sheets, so mapping it there
-  // would have sent the canvas the HEADER's tokens as the footer's.
+  // The footer's own sheet, not the chrome one, which carries the header's tokens.
   { name: "site-footer", component: "app/components/shell-footer.tsx", sheets: ["app/styles/shell.css"] },
   { name: "theme-toggle", component: "app/components/theme-toggle.tsx", sheets: ["app/styles/public-chrome.css"] },
   { name: "search-trigger", component: "app/components/search-trigger.tsx", sheets: ["app/styles/search-trigger.css", "app/styles/palette-dialog.css"] },
 ];
 
-/**
- * HAND-WRITTEN: the rulings that bind the singletons cannot be derived from the source, the code
- * carrying a ruling's effect rather than its authority.
- */
+/** Hand-written: the code carries a ruling's effect, not its authority. */
 const SINGLETON_PREAMBLE = `These four are real parts of every public page and are NOT in the component
 library, because none of them can be instantiated by a design agent: they are
 page singletons, and two of them exist only to inject the nonced enhancement
@@ -179,8 +156,7 @@ is right.
 `;
 
 /**
- * A module's leading doc comment: the reasoning a component carries about itself, which the
- * stylesheet extractor never sees because it reads only CSS.
+ * The stylesheet extractor reads only CSS, so a component's own doc comment is read here.
  *
  * @param {string} source
  */
@@ -189,11 +165,7 @@ function leadingDocComment(source) {
   return m ? commentProse(m[0]) : "";
 }
 
-/**
- * Literal className values, which are the vocabulary the canvas composes with.
- *
- * @param {string} source
- */
+/** @param {string} source */
 function classNames(source) {
   const out = new Set();
   for (const m of source.matchAll(/className="([^"{}]+)"/g)) {
@@ -202,11 +174,7 @@ function classNames(source) {
   return [...out].sort();
 }
 
-/**
- * Every custom property a sheet READS, which is what the singleton consumes.
- *
- * @param {string} css
- */
+/** @param {string} css */
 function tokensRead(css) {
   const out = new Set();
   for (const m of css.matchAll(/var\((--[a-z0-9-]+)/gi)) out.add(m[1]);
@@ -355,7 +323,6 @@ function main() {
     console.log(`\nevery classified block fit the ${FILE_CAP_BYTES} byte cap`);
   }
 
-  // The shortlist the seat confirms: which sheet each file drew from.
   console.log("\nprovenance, blocks per sheet per file:");
   for (const spec of FILES) {
     const bySheet = new Map();

@@ -1,12 +1,4 @@
-/**
- * The JSON Feed item shape, asserted where a comment could not be.
- *
- * WHAT THIS PROTECTS. JSON Feed 1.1 requires every item to carry content_html
- * or content_text. The route's comment claimed content_text was carried while
- * the item map emitted neither, and nothing failed: a comment is not an
- * instrument. `feedItem` is now the one producer of the shape and this file is
- * what goes red if a field moves.
- */
+/* JSON Feed 1.1 requires every item to carry content_html or content_text. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -15,7 +7,6 @@ import { feedItem } from "../app/lib/json-feed.mjs";
 
 const ORIGIN = "https://example.test";
 
-/** A fully populated row, so the field-count assertion counts every field. */
 const FULL = {
   slug: "a-post",
   title: "A post",
@@ -35,10 +26,8 @@ test("content_text is the body, verbatim", () => {
 test("a full item carries every field the feed emits, and only those", () => {
   const item = feedItem(FULL, ORIGIN);
 
-  // Sorted and counted, so a field added or dropped fails here by name rather
-  // than shipping silently. Nine fields: the JSON Feed 1.1 REQUIRED pair (id,
-  // content_text) plus url, title, summary, date_published, date_modified,
-  // tags and image.
+  // Sorted and counted, so a field added or dropped fails here by name. The JSON Feed 1.1
+  // REQUIRED pair is id and content_text.
   const fields = Object.keys(item).sort();
   assert.deepEqual(fields, [
     "content_text",

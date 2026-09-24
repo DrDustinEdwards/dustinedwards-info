@@ -1,8 +1,3 @@
-/* The admin posts index: toolbar, filters, overflow menu, disabled affordance, bulk bar.
- * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/* Post editor (admin) ------------------------------------------------------ */
-
 .posts-toolbar {
   display: flex;
   align-items: center;
@@ -10,14 +5,10 @@
   margin-bottom: 1.25rem;
 }
 
-/* The overflow sits at the far end, so the row reads as one primary action and
-   then, separately, a place where the repair operations live. */
 .posts-toolbar .overflow-menu {
   margin-left: auto;
 }
 
-/* Search and filter: a wrapping row, not a grid, because the fields have different natural widths.
- * Only the search field grows. */
 .posts-filters {
   display: flex;
   flex-wrap: wrap;
@@ -33,8 +24,6 @@
   min-width: 0;
 }
 
-/* The search field is the one that takes the slack. `min-width` rather than a
-   percentage so it can still wrap onto its own line on a narrow admin. */
 .posts-filters .posts-filter-field:first-child {
   flex: 1 1 14rem;
 }
@@ -47,14 +36,9 @@
   text-transform: uppercase;
 }
 
-/* The controls sit on the CANVAS behind a border, like the editor's own inputs,
-   rather than on a raised surface: this is a form on the page, not a popover,
-   so --border is correct here and the elevated-surface law does not apply. */
 .posts-filter-input,
 .posts-filter-select {
   min-width: 0;
-  /* The command bar's control height, so the filter row and the editor's chrome
-     agree about how tall a control is. */
   height: var(--admin-control-h);
   padding: 0 0.5rem;
   border: 1px solid var(--border);
@@ -69,20 +53,14 @@
   color: var(--text-disabled);
 }
 
-/* Both buttons align to the CONTROLS, not to the labels above them, which is
-   why the row is `align-items: flex-end`. */
 .posts-filter-submit {
   height: var(--admin-control-h);
 }
 
-/* Aligns to the CONTROLS like its sibling submit, not to the labels above
-   them. It is a .btn-ghost now, so everything but the height comes from that. */
 .posts-filter-clear {
   height: var(--admin-control-h);
 }
 
-/* The scheduled queue note is neutral (rule 4: the view's tint is spent on the drift alert).
-   The clock glyph carries the meaning beside the words. */
 .posts-scheduled-note {
   display: flex;
   align-items: center;
@@ -100,8 +78,6 @@
   color: var(--text-secondary);
 }
 
-/* THE EMPTY RESULT, which is not the empty corpus. It states the question that
-   returned nothing and offers the way out of it. */
 .posts-empty {
   display: flex;
   flex-direction: column;
@@ -118,7 +94,6 @@
   color: var(--text-secondary);
 }
 
-/* Overflow menu. overflow-menu.tsx says why it is a <details> disclosure, not role="menu". */
 .overflow-menu {
   position: relative;
 }
@@ -134,9 +109,7 @@
   color: var(--text-secondary);
   font-size: 0.9375rem;
   cursor: pointer;
-  /* The native marker is replaced by the chevron, which can then rotate with
-     the open state. Both selectors are needed: Safari still uses the WebKit
-     pseudo-element. */
+  /* Both selectors: Safari still uses the WebKit pseudo-element. */
   list-style: none;
 }
 
@@ -166,7 +139,6 @@
   padding: 0.25rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
-  /* Rule 7's popover step, asked for by its own name. */
   background: var(--surface-popover);
 }
 
@@ -195,8 +167,8 @@
   font-size: 0.8125rem;
 }
 
-/* --text-secondary is measured on --surface-popover but not on the brand tint a hovered row paints,
-   so the hovered row drops the hint to body text, which is measured there. */
+/* --text-secondary is not measured on the brand tint a hovered row paints, so the hint steps up to
+   body text. */
 .overflow-menu-item:hover .overflow-menu-item-hint {
   color: var(--text);
 }
@@ -218,16 +190,12 @@
   background: var(--brand);
   color: var(--on-brand);
   font-size: 0.9375rem;
-  /* Exempt from rule 2: a fill is already a non-color affordance. */
   text-decoration: none;
   cursor: pointer;
 }
 
-/* Rule 5: an interactive semantic element takes a FILL, never pastel text on
-   the page background. Delete is the site's one destructive action. */
 .btn-danger {
-  /* The border is the lighter family token, not the fill again: in dark mode a same-color border
-     gives the crimson button no edge, and --border-danger does. */
+  /* Not the fill again: in dark mode a same-color border gives the crimson button no edge. */
   border-color: var(--border-danger);
   background: var(--fill-danger);
   color: var(--on-fill-danger);
@@ -248,9 +216,8 @@
   background: var(--brand-pressed);
 }
 
-/* The specificity trap: anchors wearing these classes are reached by a:visited and a:hover at (0,1,1),
-   which outrank a class at (0,1,0) and paint page-measured text on the fill. Naming the link states puts
-   these at (0,2,0). Any filled or bordered control worn by a Link needs the same; check:contrast owns the pairs. */
+/* The specificity trap: a:visited and a:hover at (0,1,1) outrank a class at (0,1,0) and paint
+   page-measured text on the fill. Naming the link states puts these at (0,2,0). */
 .btn,
 .btn:visited,
 .btn:hover,
@@ -258,8 +225,7 @@
   color: var(--on-brand);
 }
 
-/* Disabled affordance: WCAG exempts a disabled control from contrast, so dimming is allowed here, but the
- * reader must still see it is unavailable. Opacity AND cursor, so it survives forced-colors. */
+/* Opacity AND cursor, so it survives forced-colors. */
 .btn:disabled,
 .btn-brand:disabled,
 .btn-danger:disabled,
@@ -273,7 +239,6 @@
   cursor: default;
 }
 
-/* Hover must not promise anything to a control that will not act. */
 .btn:disabled:hover,
 .btn-danger:disabled:hover,
 .btn-secondary:disabled:hover,
@@ -292,24 +257,18 @@
 .btn-secondary:active,
 .btn-ghost:active {
   color: var(--text);
-  /* Exempt from rule 2, like .btn: the border is the affordance. Without this, ghost controls that are
-     Links underline and buttons do not. */
+  /* Without this, ghost controls that are Links underline and buttons do not. */
   text-decoration: none;
 }
 
-/* The posts index is a card (rule 7: indexes are what cards are for), the third rung of the surface
-   ladder: shell chrome, canvas, card. */
 .posts-card {
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   background: var(--paper);
-  /* The rows run to the card's edge, so the radius has to clip them or the
-     first and last row square off the corners. */
+  /* The radius must clip the rows, or the first and last row square off the corners. */
   overflow: hidden;
 }
 
-/* The bulk bar exists only while something is selected. A pinned bar on the popover step, so its seam is
-   --border-strong, never --border (rule 5); inside the card above the table, so only the bottom edge is drawn. */
 .posts-bulk {
   display: flex;
   flex-wrap: wrap;
@@ -347,16 +306,11 @@
   font-size: 0.8125rem;
 }
 
-/* The checkbox column. Narrow, and the header cell carries select-all for what
-   is CURRENTLY VISIBLE; its label says "shown" whenever a filter is on, so the
-   control never claims more reach than it has. */
 .posts-check {
   width: 1px;
   white-space: nowrap;
 }
 
-/* 24px minimum target (WCAG 2.2 AA, 2.5.8): the label carries the hit area with the input inside,
-   and it also names the control, so no aria-label can drift from it. */
 .posts-check-label {
   display: inline-flex;
   align-items: center;
@@ -366,20 +320,16 @@
   cursor: pointer;
 }
 
-/* Selection is a CHOICE, so it takes the brand tint, matching the command
-   palette's active option. That is the opposite of the hover rule below, and
-   deliberately so: a row under a pointer is not a choice, a selected row is. */
 .posts-table tbody tr[data-selected] {
   background: var(--tint-brand);
 }
 
-/* The table's own scrollport: the document must never scroll sideways; a wide table may, inside its box.
-   min-width: 0 because this is a flex item, and otherwise the scrollport is as wide as the table. */
+/* min-width: 0 because this is a flex item; otherwise the scrollport is as wide as the table. */
 .posts-table-scroll {
   min-width: 0;
   overflow-x: auto;
-  /* A scroller must also be a containing block: .sr-only is absolute with no offsets, and a containing block
-     outside the scroller lets it drag the document sideways. position: relative moves it here. */
+  /* A scroller must also be a containing block: .sr-only is absolute with no offsets and would drag
+     the document sideways. */
   position: relative;
 }
 
@@ -405,29 +355,23 @@
   color: var(--text-secondary);
 }
 
-/* The last row's rule would otherwise draw against the card's own border and
-   read as a double line. */
+/* Otherwise the last row's rule draws against the card's border as a double line. */
 .posts-table tbody tr:last-child th,
 .posts-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Hover is the neutral elevation step, never the brand tint: a row under a pointer is not a choice, and
-   --text-secondary is measured on --surface-popover, not on the brand tint. */
 .posts-table tbody tr:hover {
   background: var(--surface-popover);
 }
 
-/* The separator steps up with the surface: on the popover step --border falls below the 3:1 UI floor
-   in dark, so a hovered row with the default border would fail AA. */
+/* On the popover step --border falls below the 3:1 UI floor in dark. */
 .posts-table tbody tr:hover th,
 .posts-table tbody tr:hover td {
   border-bottom-color: var(--border-strong);
 }
 
-/* Status pill: three states from the two stored (see the loader). The word is the first channel;
- * border style is the second, because forced-colors keeps strokes. Published solid, scheduled dashed,
- * draft dotted. */
+/* Border style is the second channel because forced-colors keeps strokes. */
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -440,8 +384,6 @@
   white-space: nowrap;
 }
 
-/* Rule 5: a state that is true now takes a fill. The ring is the lighter family --border-* token, which
-   gives the pill an edge, as .btn-danger does. */
 .status-pill[data-state="published"] {
   border-style: solid;
   border-color: var(--border-success);
@@ -449,8 +391,6 @@
   color: var(--on-fill-success);
 }
 
-/* The amber family, and the one semantic tint this view spends. It cannot
-   collide with the drift alert, which is the same family by design. */
 .status-pill[data-state="scheduled"] {
   border-style: dashed;
   border-color: var(--border-warning);
@@ -458,8 +398,6 @@
   color: var(--on-tint-warning);
 }
 
-/* Outlined, per the spec. No fill and no tint, because a draft is the absence
-   of a state rather than a state of its own. */
 .status-pill[data-state="draft"] {
   border-style: dotted;
   border-color: var(--border-strong);
@@ -469,9 +407,6 @@
 .posts-title {
   display: block;
   font-weight: 500;
-  /* Exempt from rule 2 only while it is the row's heading line: the slug sits
-     directly under it in a smaller, muted style, so the pair is a title block
-     rather than a link buried in prose. The underline returns on hover. */
   color: var(--text);
   text-decoration: none;
 }
@@ -492,9 +427,6 @@
   font-size: 0.8125rem;
 }
 
-/* The featured mark. A WORD in a chip, not a color: rule 1, and the same
-   reasoning as the status pill beside it. Bordered rather than filled so it
-   reads as a label on the title rather than as a second state. */
 .posts-featured {
   display: inline-block;
   margin-left: 0.5rem;
@@ -514,9 +446,6 @@
   white-space: nowrap;
 }
 
-/* The scheduled row's second line: the ISO date says WHICH day, this says how
-   far away, which is the question the author actually has. Its own line, so the
-   column stays scannable as dates. */
 .posts-date-relative {
   display: block;
   color: var(--text-secondary);
@@ -528,14 +457,13 @@
   gap: 0.5rem;
 }
 
-/* Row-action forms, parked below the table and targeted by form attributes, since forms cannot nest.
-   display: none, as nothing here is content; form association ignores display. */
+/* Parked below the table and targeted by form attributes, since forms cannot nest; form association
+   ignores display. */
 .posts-row-form {
   display: none;
 }
 
-/* Clears the WCAG 2.2 24px target minimum. --border-strong because the row elevates to
-   --surface-popover on hover, where --border fails in dark. */
+/* --border-strong: the row elevates to --surface-popover on hover, where --border fails in dark. */
 .row-action,
 .row-action:visited {
   display: inline-flex;
@@ -547,7 +475,6 @@
   border-radius: var(--r-control);
   color: var(--text);
   font-size: 0.8125rem;
-  /* Exempt from rule 2: the border is the non-color affordance. */
   text-decoration: none;
   white-space: nowrap;
 }
@@ -557,9 +484,6 @@
   color: var(--brand);
 }
 
-/* Standing-condition alert (alert.tsx says why it is a named region, not a live one). Amber: drift is a
- * degradation, not a failure. It is the view's one semantic tint (rule 4), and the scheduled pill shares
- * the family so the two never sit side by side in different ones. */
 .admin-alert {
   display: flex;
   align-items: flex-start;
@@ -583,8 +507,7 @@
 
 .admin-alert-title {
   margin: 0 0 0.25rem;
-  /* Color is inherited from the banner, not taken from --text-heading, which
-     was measured on the page and not on a tint. */
+  /* Inherited from the banner: --text-heading was measured on the page, not on a tint. */
   color: inherit;
   font-size: 1rem;
 }
@@ -608,8 +531,6 @@
   }
 }
 
-/* The quiet line under the table. Reference numbers about the AI layer, sitting
-   with the thing they describe rather than floating above it as body prose. */
 .posts-meta {
   margin: 0;
   padding: 0.625rem 0.875rem;
@@ -618,9 +539,6 @@
   font-size: 0.8125rem;
 }
 
-/* The origin-requests column. Numerals align on the right so a column of
-   counts is scannable; tabular-nums stops the digits shifting width between
-   rows, which is what makes a column of numbers read as a column. */
 .posts-readership {
   text-align: right;
   white-space: nowrap;
@@ -630,8 +548,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* The absence is a sentence, not a number: left-aligned and wrapping, so it never reads as a value.
-   The words carry the meaning without the color. */
 .posts-readership-absent {
   display: inline-block;
   max-width: 22ch;
@@ -641,10 +557,6 @@
   white-space: normal;
 }
 
-/* Ruling 54: the posts list to docs/ADMIN-DESIGN.md. Two radii only, both on .admin in admin-shell.css:
-   --r-control on anything pressed, --r-panel on anything that contains. */
-
-/* ---- One filter row: search on the left, then the status tabs ------------ */
 .posts-filters {
   display: flex;
   flex-wrap: wrap;
@@ -675,8 +587,8 @@
   gap: 1.5rem;
 }
 
-/* The active tab's 2px rule sits ON the row's own hairline, which is why the
-   negative margin is exactly the border it overlaps. */
+/* The negative margin is exactly the border it overlaps, so the active tab's rule sits on the row's
+   hairline. */
 .posts-tab {
   display: inline-flex;
   align-items: baseline;
@@ -687,8 +599,6 @@
   border-bottom: 2px solid transparent;
   color: var(--text-secondary);
   font-size: 0.9375rem;
-  /* Exempt from rule 2: aria-current plus a 2px rule is the non-color
-     channel, and a row of underlines under an underline reads as nothing. */
   text-decoration: none;
 }
 
@@ -725,13 +635,9 @@
   margin-left: auto;
 }
 
-/* ---- The bulk bar is revealed by the browser, not by React --------------- */
-
-/* It is always in the document now. `:has()` asks the browser about its own
-   checkboxes, which is the one way this can work with no script; the previous
-   `chosen.length > 0` guard was client state and rendered nothing at all. */
-/* Specificity matched to the reveal: a bare .posts-bulk { display: none } would win only by source order,
-   and moving one import would show the bar with nothing selected. Both halves are scoped to the card. */
+/* :has() asks the browser about its own checkboxes, the one way this works with no script. */
+/* Specificity matched to the reveal: a bare .posts-bulk { display: none } would win only by source
+   order. */
 .posts-card .posts-bulk {
   display: none;
 }
@@ -740,7 +646,6 @@
   display: flex;
 }
 
-/* ---- Title first, with the state on the title row ------------------------ */
 .posts-title-cell {
   width: 100%;
   white-space: normal;
@@ -758,7 +663,6 @@
   text-align: right;
 }
 
-/* ---- The caveat, as a disclosure rather than a caption ------------------- */
 .posts-explain {
   margin-top: 1rem;
   color: var(--text-secondary);
@@ -777,11 +681,6 @@
   max-width: 72ch;
 }
 
-/* ---- RowMenu: one borderless kebab per row ------------------------------- */
-
-/* Borderless at rest. A bordered box on every row is fifteen more rectangles
-   between the reader and the fifteen names they came for; the affordance
-   arrives on hover and on focus, where it is asked for. */
 .row-menu {
   position: relative;
   display: inline-block;
@@ -810,7 +709,6 @@
   color: var(--text);
 }
 
-/* Rule 5: popover elevation takes --border-strong, never --border. */
 .row-menu-panel {
   position: absolute;
   right: 0;
@@ -835,8 +733,6 @@
   font: inherit;
   font-size: 0.9375rem;
   text-align: left;
-  /* Exempt from rule 2: the panel is the affordance, and every item in it is a
-     control rather than prose with a link in it. */
   text-decoration: none;
   cursor: pointer;
 }
@@ -849,7 +745,6 @@
   background: var(--paper);
 }
 
-/* ---- ConfirmDialog: a real modal, and an inline step without script ------ */
 .confirm-dialog {
   width: min(32rem, calc(100vw - 2rem));
   padding: 1.5rem;
@@ -859,16 +754,14 @@
   color: var(--text);
 }
 
-/* The platform scrim. --scrim is the ratified dark neutral and nothing is
-   drawn on this layer, so dimming the whole element is what is wanted; an
-   rgba() token is unparseable to check:contrast, which is why it is opacity. */
+/* Opacity on --scrim: an rgba() token is unparseable to check:contrast. */
 .confirm-dialog::backdrop {
   background: var(--scrim);
   opacity: 0.45;
 }
 
-/* The no-script step: data-inline is on the server render and removed when showModal() runs.
-   Without it a dialog with no open attribute is display: none, and a scriptless reader loses the confirmation. */
+/* No-script step: data-inline is on the server render and removed when showModal() runs; without it a
+   scriptless reader loses the confirmation. */
 .confirm-dialog[data-inline] {
   display: block;
   position: static;
@@ -920,8 +813,8 @@
   justify-content: flex-end;
 }
 
-/* A disabled danger button keeps its fill (ruling 54): the reader must see which red button they are
-   stopped from pressing. Overrides the shared disabled opacity. */
+/* A disabled danger button keeps its fill: the reader must see which red button they are stopped from
+   pressing. */
 .btn-danger:disabled,
 .btn-danger:disabled:hover {
   opacity: 0.4;
@@ -930,7 +823,6 @@
   color: var(--on-fill-danger);
 }
 
-/* ---- 375: rows stack, the kebab stays in the thumb column ---------------- */
 @media (max-width: 60rem) {
   .posts-filter-select {
     margin-left: 0;
@@ -995,9 +887,6 @@
     text-align: left;
   }
 
-  /* Sticky in its own column so the one control per row stays under the thumb
-     while the text beside it scrolls. --paper behind it, because it is
-     pinned over content. */
   .posts-table td.posts-row-actions {
     position: sticky;
     top: 0.75rem;

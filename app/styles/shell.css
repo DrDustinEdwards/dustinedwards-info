@@ -1,16 +1,9 @@
-/* The track grid and the footer; public-chrome.css and chrome-nav.css own the header. Do not restore the
-   bar padding "just in case": against a static header it is a blank band atop every page. Imported last in
-   root.tsx, a list that is the cascade and must not be sorted; it no longer needs to outrank the chrome sheets. */
+/* Do not restore the bar padding "just in case": it would be a blank band atop every page. */
 
-/* 1 · The track grid, named .tracks, not .page: .page has live consumers, and one name for two jobs drifts.
-   The track is the measure, so a full-bleed figure and a paragraph share one source. At narrow widths the
-   1fr tracks are zero and all three share a column, so no media query. */
-/* The rail is a track of this grid and not a second grid on the post, so a rail item and a
-   paragraph resolve against one column list. It is 0 wide here and a page opts in by setting
-   --rail: every page that does not is laid out exactly as it was before the track existed. */
+/* Named .tracks, not .page: .page has live consumers. At narrow widths the 1fr tracks are zero, so no
+   media query. */
+/* The rail is 0 wide here and a page opts in by setting --rail. */
 .tracks {
-  /* THE RAIL MEASURE, stated once for every page that draws one. The post page puts a rail in the
-     track; home draws a date column of the same width inside its rows. Two pages, one number. */
   --rail-w: 7.5rem;
   --rail-gap-w: 1.5rem;
 
@@ -20,13 +13,10 @@
   display: grid;
   grid-template-columns:
     [full-start] var(--gutter)
-    /* LEFT, NOT CENTRED: this track was a 1fr and the text track floated between two of them.
-       Direction D's frames set both pages against the gutter with the slack all on the right,
-       so the leading track is zero and the trailing one absorbs it. */
     [wide-start] 0
     [rail-start] var(--rail) [rail-end] var(--rail-gap)
-    /* 100% minus the gutters, never 100%: 100% is the whole grid container, so the fixed tracks plus gutters
-       overflowed at narrow widths. The rail subtracts here for the same reason. */
+    /* 100% minus the gutters, never 100%: 100% is the whole container, so the fixed tracks plus
+       gutters overflowed. */
     [text-start] min(var(--measure), 100% - 2 * var(--gutter) - var(--rail) - var(--rail-gap))
     [text-end]
     minmax(0, 1fr) [wide-end]
@@ -49,8 +39,8 @@
   grid-column: full;
 }
 
-/* Single-direction flow spacing: grid does not collapse margins, so only start margins exist.
-   A heading binds to what follows: .tracks > h2 + * is (0,1,2) against .tracks > figure at (0,1,1). */
+/* Grid does not collapse margins, so only start margins exist. .tracks > h2 + * (0,1,2) beats .tracks
+   > figure (0,1,1). */
 .tracks > * + * {
   margin-block-start: var(--s-6);
 }
@@ -73,9 +63,6 @@
   margin-block-start: var(--s-5);
 }
 
-/* 5 · The footer (ruling 135). Limestone ground, one dust rule above, then the identity block and
-   five link columns on the wide track, left-aligned. Sentence case, purple links, no fills. On a
-   phone everything stacks, identity first. */
 .site-shell-footer {
   margin-block-start: var(--s-8);
   border-block-start: var(--line-w) solid var(--dust);
@@ -109,8 +96,6 @@
   }
 }
 
-/* One row at desktop width, each column sized to what it holds: Writing carries the feed and
-   machine-format rows, Profiles carries ORCID's whole address, Students and Site are short. */
 @media (min-width: 72rem) {
   .footer-grid {
     grid-template-columns:
@@ -124,7 +109,6 @@
   }
 }
 
-/* The mark over the name, both one link home. */
 .footer-home {
   display: inline-flex;
   flex-direction: column;
@@ -161,7 +145,6 @@
   text-decoration: none;
 }
 
-/* The same visual height for both marks. */
 .footer-social-mark {
   display: block;
   inline-size: auto;
@@ -204,8 +187,6 @@
   min-block-size: var(--control-min-dense);
   color: var(--brand);
   font-family: var(--font-sans);
-  /* 14px regular, not the nav scale: these are not destinations, so they do not take the
-     header's weight. */
   font-size: 0.875rem;
   font-weight: 400;
   font-optical-sizing: none;
@@ -222,7 +203,6 @@
   color: var(--visited);
 }
 
-/* A label and its formats on one line: "Feeds RSS Atom JSON". */
 .footer-pair {
   display: flex;
   flex-wrap: wrap;

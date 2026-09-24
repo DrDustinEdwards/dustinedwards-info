@@ -21,33 +21,11 @@ import {
 
 import "~/styles/projects.css";
 
-/**
- * /projects, the portfolio index.
- *
- * NO SCRIPT AT ALL, which is stronger than the progressive-enhancement rule asks for and is a property
- * of this route: no loader, no client state, no enhancement, so it is a pure
- * function from committed data to markup.
- *
- * TWO PROVENANCES ARE POSSIBLE AND A METRIC DECLARES EXACTLY ONE: a DATED
- * observation, whose date is rendered because an undated number rots silently, or
- * a DERIVATION this build ran, which cannot rot and carries no date. A dated
- * number that is also derivable is a second copy, which is what the one-owner rule
- * refuses.
- *
- * CARDS ON THE CANVAS ARE LEGAL HERE: binding rule 7 reserves them for indexes,
- * and this is one.
- */
-
-/**
- * A metric is DATED or DERIVED, never both. Modeled as a union rather than two
- * optional fields, so a card cannot be written with a value and a derivation and
- * quietly render one of them.
- */
+/** Dated or derived, never both: an undated observation rots silently, and a derivable one is a second copy. */
 type Metric =
   | { label: string; value: string; asOf: string; derived?: undefined }
   | { label: string; value?: undefined; asOf?: undefined; derived: string };
 
-/** A citation. `kind` decides how the href is built; see EvidenceLink. */
 type Evidence = { kind: string; ref: string; label: string };
 
 type Project = {
@@ -68,34 +46,18 @@ type Project = {
 
 const PROJECTS = projectsData.projects as Project[];
 
-/**
- * Both are already in this Worker. Neither is a measurement taken here, which is
- * the whole property that makes a derived metric worth more than a dated one.
- */
 const METRIC_INPUTS = { stack, phageYears: PHAGE_YEARS };
 
-/*
- * The title, description, intro and anchors come from `projects-page.mjs`, the
- * module the INDEXER also reads, so a search result's title cannot drift from the
- * heading it lands on and a record cannot cite a fragment this page does not
- * render.
- */
+/* Shared with the indexer, so a search result cannot drift from the heading it lands on. */
 const TITLE = PROJECTS_TITLE;
 const DESCRIPTION = PROJECTS_DESCRIPTION;
 
-/**
- * Exporting no `headers()` falls through to the cache-header rule's uncached default, so
- * every reader paid an origin hit for a page whose body is identical for all of
- * them. Using the shared helper rather than a fifth copy is what stops the Vary
- * line being dropped here later.
- */
+/** Without `headers()` the uncached default makes every reader pay an origin hit; the shared helper keeps the Vary line. */
 export function headers() {
   return publicHtmlHeaders();
 }
 
 export function meta() {
-  /* Was canonical plus OG text with NO image and NO twitter card, so a shared
-     link rendered as a bare URL rather than a card. pageMeta carries the set. */
   return pageMeta({
     title: `${TITLE} | Dustin Edwards`,
     description: DESCRIPTION,
@@ -103,11 +65,7 @@ export function meta() {
   });
 }
 
-/**
- * UN-NONCED, deliberately: `script-src` does not gate `application/ld+json`,
- * because it is data rather than an executable script. A nonce here would imply a
- * protection that is not the one doing the work.
- */
+/** Un-nonced: `script-src` does not gate `application/ld+json`. */
 function itemListJsonLd() {
   return {
     "@context": "https://schema.org",
@@ -119,11 +77,6 @@ function itemListJsonLd() {
       "@type": "ListItem",
       position: index + 1,
       item: {
-        /*
-         * THE TYPE IS DECLARED PER ENTRY. A roster page is a page, and telling a machine
-         * it is an application is a lie that costs nothing to avoid. The vocabulary is
-         * closed and the gate holds it closed.
-         */
         "@type": project.schemaType,
         name: project.name,
         description: project.oneLiner,
@@ -137,13 +90,7 @@ function itemListJsonLd() {
   };
 }
 
-/**
- * THE THREE KINDS DIFFER ONLY IN HOW THE HREF IS BUILT. A post ref is a SLUG, not
- * a path, because the gate checks the slug against the built corpus.
- *
- * FAILS CLOSED on an unknown kind: rendering the bare label would leave a citation
- * on the page pointing nowhere.
- */
+/** A post ref is a slug, not a path: the gate checks it against the built corpus. Fails closed on an unknown kind. */
 function EvidenceLink({ item }: { item: Evidence }) {
   if (item.kind === "post") return <Link to={`/blog/${item.ref}`}>{item.label}</Link>;
   if (item.kind === "page") return <Link to={item.ref}>{item.label}</Link>;
@@ -154,19 +101,13 @@ function EvidenceLink({ item }: { item: Evidence }) {
   );
 }
 
-/**
- * ITS OWN COMPONENT so the union narrows: written inline, TypeScript could not
- * discriminate the two shapes through a property of a property. SAME ELEMENT CLASS
- * EITHER WAY, because the two forms are one channel.
- */
+/** Its own component so the union narrows: inline, TypeScript cannot discriminate through a property of a property. */
 function MetricProvenance({ metric }: { metric: Metric }) {
   if (metric.derived !== undefined) {
     return (
       <span className="project-metric-asof">derived from the repository by this build</span>
     );
   }
-  /* A <time> element, so the date is machine-readable as well as rendered.
-     Binding rule 2 does not apply: this is not a link. */
   return (
     <time className="project-metric-asof" dateTime={metric.asOf}>
       measured {formatAsOf(metric.asOf)}
@@ -174,7 +115,6 @@ function MetricProvenance({ metric }: { metric: Metric }) {
   );
 }
 
-/** en-dash-free, and the same formatting the colophon uses for dated claims. */
 function formatAsOf(iso: string) {
   const [year, month, day] = iso.split("-");
   const months = [
@@ -199,25 +139,13 @@ export default function Projects() {
 
           <ul className="project-grid">
             {PROJECTS.map((project) => (
-              // The id IS the search record's anchor, from the one definition in
-              // `projects-page.mjs`. A record citing a fragment the page does not render still
-              // returns a hit and scrolls nowhere, silently.
+              // The id is the search record's anchor; a record citing a fragment the page does not render scrolls nowhere.
               <li key={project.slug} id={projectAnchor(project.slug)} className="project-card">
-                {/*
-                  The metric leads, above the name. That ordering is the whole
-                  argument of the page: the reader meets a number before they
-                  meet a claim.
-                */}
                 <p className="project-metric">
                   <strong className="project-metric-value">
                     {metricValue(project.metric, METRIC_INPUTS)}
                   </strong>
                   <span className="project-metric-label">{project.metric.label}</span>
-                  {/*
-                   * A dated metric gets a `<time>`. A DERIVED metric carries no date: the value
-                   * was computed by this build, so a date would only record when a human last
-                   * looked, which rots while the number beside it stays true.
-                   */}
                   <MetricProvenance metric={project.metric} />
                 </p>
 
@@ -225,11 +153,6 @@ export default function Projects() {
                 <p className="project-oneliner">{project.oneLiner}</p>
                 <p className="project-description">{project.description}</p>
 
-                {/*
-                 * Optional on purpose: several projects here are documented nowhere public, so a
-                 * card with no notable list is the honest shape rather than sentences
-                 * reconstructed from memory.
-                 */}
                 {project.notable && project.notable.length > 0 && (
                   <ul className="project-notable">
                     {project.notable.map((point) => (
@@ -253,10 +176,6 @@ export default function Projects() {
                   ))}
                 </ul>
 
-                {/*
-                 * Bare-text links, so binding rule 2 applies and they underline. A card with
-                 * neither link renders no list at all rather than an empty row.
-                 */}
                 {(project.url || project.repo) && (
                   <ul className="project-links">
                     {project.url && (
@@ -272,11 +191,6 @@ export default function Projects() {
                   </ul>
                 )}
 
-                {/*
-                 * A heading rather than a bare list, because this is a claim about the card above
-                 * it and an unlabelled row of links reads as navigation. An h3 under the card's
-                 * h2, so the outline stays ordered.
-                 */}
                 {project.evidence && project.evidence.length > 0 && (
                   <div className="project-evidence">
                     <h3 className="project-evidence-title">Evidence</h3>

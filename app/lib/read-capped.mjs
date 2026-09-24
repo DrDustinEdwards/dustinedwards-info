@@ -1,39 +1,6 @@
 /**
- * Read a request body, giving up as soon as it exceeds a byte ceiling.
- *
- * ## Why this is a module rather than three lines in the route
- *
- * It guards a PUBLIC, UNAUTHENTICATED POST endpoint, and the route it guards
- * imports `~/lib/context`, which node cannot resolve, so nothing in `test/`
- * could reach it there. A pure function is the only part of a handler a test
- * can hold, which is the same reason `confirmationSatisfied` was extracted.
- *
- * ## The defect it replaces
- *
- * `/api/csp-report` capped its body with
- * `Number(request.headers.get("content-length") ?? "0") > MAX`, then read with
- * `(await request.text()).slice(0, MAX)`. Three things were wrong at once:
- *
- *   1. a request with NO Content-Length became 0 and passed the check
- *   2. a request UNDERSTATING its length passed it too
- *   3. `request.text()` materializes the whole body before `.slice()` runs, so
- *      the slice bounded what was LOGGED and never what was received
- *
- * The comment above it said the cap preceded the read. It did not.
- *
- * **THE CLIENT'S CLAIM ABOUT SIZE MUST NOT PARTICIPATE IN THE DECISION.** A
- * declared length is useful only for refusing early, never for permitting. This
- * counts the chunks as they arrive.
- */
-
-/**
- * ## THE PARAMETER IS A BODY, NOT A REQUEST, SINCE 2026-09-04
- *
- * It was typed `Request` and only ever touched `.body`. The webmention
- * verifier reads a RESPONSE the same way and for the same reason: a stranger's
- * page is exactly as untrustworthy about its size as a stranger's POST, and the
- * two cases must not get two implementations of the same counting loop. Widened
- * to what the function actually uses rather than copied.
+ * Counts chunks as they arrive. The client's declared length must never permit: it can be absent
+ * or understated, and `request.text()` materializes the whole body before any slice runs.
  *
  * @param {{ body: ReadableStream<Uint8Array> | null }} source Anything with a body stream.
  * @param {number} max Hard ceiling in bytes.
@@ -52,14 +19,8 @@ export async function readCapped(source, max) {
       if (!value) continue;
       total += value.byteLength;
       if (total > max) {
-        /*
-         * Stop pulling. The sender may still be writing, and that is the point:
-         * an unauthenticated caller must not be able to make us hold an
-         * arbitrary body in memory by lying about its length.
-         *
-         * NULL rather than a truncated string, so the caller answers 413.
-         * Truncating would log a fragment of a body we should not have taken.
-         */
+        // NULL rather than a truncated string, so the caller answers 413 instead of logging a
+        // fragment of a body we should not have taken.
         await reader.cancel();
         return null;
       }

@@ -1,36 +1,16 @@
-/*
- * THE ONE IMPORT IN THIS FILE. `publicationsJsonLd` decodes character references so the emitted
- * schema.org `headline` and `name` are the strings a human reads, and a builder that left that to
- * its callers would emit a wrong VALUE the first time one forgot.
- */
-/*
- * RELATIVE, not the `~/` alias every route uses. `tsconfig.node.json` carries no path mapping and
- * has to compile this file, so an aliased import here fails the build scripts' project while
- * compiling fine for the Worker.
- */
+// Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { decodeEntities } from "./publications/entities.mjs";
 
 /**
- * The canonical public origin. Every absolute URL the site emits derives from this and never from
- * `request.url`: prerendering runs in Node at build time with no request and no Worker env, and a
- * canonical URL should name the canonical origin whichever host served the response.
- *
- * DNS cutover item: change this with BETTER_AUTH_URL and the Google redirect URI.
+ * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
+ * DNS cutover: change this with BETTER_AUTH_URL and the Google redirect URI.
  */
 export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 
-/**
- * The default social card, for any page without one of its own. Derived from SITE_ORIGIN rather
- * than written out: hardcoding the apex would point every scraper at the legacy WordPress site
- * until DNS moves.
- */
+// Not the apex: until DNS moves, the apex is the legacy WordPress site.
 export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
-/**
- * The site's identity, split by the job each string does. `role` and `affiliation` are STRUCTURED
- * DATA, the jobTitle and worksFor a machine reads, so they stay short, literal and true. `eyebrow`
- * and `tagline` are the homepage's own words and are free to be sentences.
- */
+// `role` and `affiliation` are structured data (jobTitle, worksFor), so they stay short and literal.
 export const SITE = {
   name: "Dustin Edwards",
   role: "Professor",
@@ -41,14 +21,7 @@ export const SITE = {
     "Dustin Edwards, professor and full-stack engineer. Building on Cloudflare Workers, D1, R2 and KV, with the measurements.",
 } as const;
 
-/**
- * Everything a post's head tags are built from, in ONE place. The public route and the admin
- * preview both call this, because a preview that computed it a second way would lie the moment the
- * two disagreed, and it would lie silently.
- *
- * The precedence is ratified and is not this function's to change: a per-post cover wins, then the
- * card `build:og` generated, then the site mark.
- */
+// Shared by the public route and the admin preview, so the preview cannot silently disagree.
 export type PostSocialFields = {
   slug: string;
   title: string;
@@ -65,47 +38,24 @@ export function postSocial(post: PostSocialFields) {
   const socialImage = post.coverImage ?? post.ogImage ?? null;
   return {
     canonical,
-    /** The `<title>`, template included. */
     pageTitle: `${post.title} | ${SITE.name}`,
     description,
     socialTitle: post.ogTitle ?? post.title,
     socialDescription: post.ogDescription ?? description,
     image: socialImage ? `${SITE_ORIGIN}${socialImage}` : DEFAULT_OG_IMAGE,
-    /**
-     * True when the card fell all the way through to the site mark. The editor shows this rather than
-     * a placeholder, because "no cover" is a real and correct outcome the author should see.
-     */
     usingDefaultImage: socialImage === null,
   };
 }
 
 /**
- * Where a search result stops, which is NOT where the description field's own counter stops. Google
- * truncates by rendered PIXEL width, roughly 600px of title and 920px of desktop description, so any
- * character count approximates a measure this site cannot take. A preview cutting at the description
- * field's own 160-character counter would show text the result will actually clip.
- */
-/**
- * The COMPLETE social and canonical set for a hand-authored page.
- *
- * ONE BUILDER, so a page cannot ship a partial set and a property added later reaches every page at
- * once. `summary_large_image` on all of them, because the image argument falls through to the site
- * mark and a `twitter:card` without an image renders as a bare link.
- *
- * @param page `path` is site-absolute and starts with a slash.
+ * `summary_large_image` always: the image falls back to the site mark, and a `twitter:card` without
+ * an image renders as a bare link.
  */
 export function pageMeta(page: {
   title: string;
   description: string;
   path: string;
   image?: string;
-  /**
-   * The Open Graph type. `website` for a hand-written page, `article` for a page that IS a work.
-   *
-   * A page never hand-assembles a social set: a page needing one thing differently teaches this
-   * helper rather than exempting itself. The `citation_*` tags stay appended
-   * by the route: they are not social metadata and no other page has them.
-   */
   ogType?: "website" | "article";
 }) {
   const url = `${SITE_ORIGIN}${page.path}`;
@@ -124,13 +74,13 @@ export function pageMeta(page: {
   ];
 }
 
+/**
+ * Google truncates by pixel width (about 600px title, 920px description), so these approximate it;
+ * the description field's own 160-character counter would show text the result clips.
+ */
 export const SERP_TITLE_LIMIT = 60;
 export const SERP_DESCRIPTION_LIMIT = 155;
 
-/**
- * Cuts at the last WORD boundary before the limit, the way a search engine does. Returns the text
- * unchanged when it fits, so the caller can tell truncation happened by comparing.
- */
 export function truncateForSerp(text: string, limit: number) {
   if (text.length <= limit) return text;
   const cut = text.slice(0, limit);
@@ -138,7 +88,6 @@ export function truncateForSerp(text: string, limit: number) {
   return `${(lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
 }
 
-/** schema.org Person for the site owner. */
 export function personJsonLd(origin: string) {
   return {
     "@context": "https://schema.org",
@@ -156,107 +105,44 @@ export function personJsonLd(origin: string) {
 }
 
 /**
- * THE STRING THAT PERMITS SHARED CACHING, and what a BROWSER is told. The edge's own policy is
- * `EDGE_CACHE_CONTROL` below, which `workers/app.ts` stamps beside this on every response carrying
- * it, so this string is the marker a route opts in with as well as the browser policy.
- *
- * HTML MAY USE IT, and needs no `Vary` to be safe. The theme is a dimension of the cache KEY the
- * gateway sets in `workers/app.ts`, so a dark document and a light one are different entries rather
- * than one entry a second reader must be kept away from.
- *
- * What travels with it is `Cache-Tag`, so a response that can be stored can also be purged.
- *
- * **`max-age=0` AND NOTHING THAT REVALIDATES.** A browser holding a page for any time is a page no
- * purge can reach. `must-revalidate`, `proxy-revalidate`, `no-cache` and `s-maxage` are each left
- * out on purpose: every one of them DISABLES stale-while-revalidate at Cloudflare (RFC 9111 4.2.4),
- * and this string must stay harmless if the edge ever reads it. `check:headers` holds that.
+ * Needs no `Vary`: the theme is part of the cache key in `workers/app.ts`. Never add
+ * must-revalidate, proxy-revalidate, no-cache or s-maxage: each disables stale-while-revalidate at
+ * Cloudflare (RFC 9111 4.2.4). Browser max-age stays 0 because purges cannot reach a browser.
  */
 export const SHARED_CACHE_CONTROL = "public, max-age=0";
 
 /**
- * THE EDGE LIFETIMES, in seconds, and they are the owner rather than a copy. The one-owner rule gives a
- * measured value one owner. NEVER PARSE A LIFETIME BACK OUT OF A STRING: a parse that stops matching
- * has to substitute something, and a substituted cache lifetime is a false claim.
- *
- * A DAY FRESH, A WEEK STALE. Freshness is long because every write that changes a page purges it by
- * tag (`cache-purge.server.ts`) and every deploy starts cold (the Worker version is in the cache
- * key), so the lifetime only bounds how often an untouched page re-renders. Stale-while-revalidate is
- * what removes the render from the reader's click: past freshness the stored page is served at once
- * with `UPDATING` and the Worker re-renders behind it.
+ * A day fresh is safe because every write purges by tag and every deploy starts cold. Never parse a
+ * lifetime back out of a string: a failed parse has to substitute a false lifetime.
  */
 const EDGE_FRESH_SECONDS = 86_400;
 const EDGE_STALE_SECONDS = 604_800;
 
-/**
- * The home page's freshness is SHORT, because it carries the site-health tile, whose age is the
- * watchdog's liveness (`app/lib/health/snapshot.mjs`). A day-old tile reads as a dead watchdog.
- * Stale-while-revalidate still applies, so the home page gets the same instant click.
- */
+// Short because the home page's site-health tile age is the watchdog's liveness.
 const HOME_EDGE_FRESH_SECONDS = 600;
 
 const edgeCacheControl = (fresh: number) =>
   `max-age=${fresh}, stale-while-revalidate=${EDGE_STALE_SECONDS}`;
 
 /**
- * THE EDGE'S POLICY, sent as `Cloudflare-CDN-Cache-Control`: highest precedence at Cloudflare, and
- * consumed there rather than passed to the browser. That is what lets the edge hold a page for a day
- * while the browser holds it for none.
- *
- * WHY NOT `s-maxage`, WHICH THIS WAS UNTIL 2026-09-23: `s-maxage` carries `proxy-revalidate`
- * semantics, so Cloudflare refused to serve stale and every read past the lifetime BLOCKED on a
- * render. Measured on production: an entry 11 minutes old answered `EXPIRED` in 0.75 and 0.88 s
- * with `stale-while-revalidate=86400` sitting right beside it.
+ * Sent as `Cloudflare-CDN-Cache-Control`, not `s-maxage`: `s-maxage` implies proxy-revalidate, so
+ * Cloudflare refuses to serve stale and every read past the lifetime blocks on a render.
  */
 export const EDGE_CACHE_CONTROL = edgeCacheControl(EDGE_FRESH_SECONDS);
 export const HOME_EDGE_CACHE_CONTROL = edgeCacheControl(HOME_EDGE_FRESH_SECONDS);
 
-/** The header the edge reads its policy from. One spelling, read by the Renderer and the gate. */
 export const EDGE_CACHE_HEADER = "Cloudflare-CDN-Cache-Control";
 
-/**
- * `HTML_VARY` WAS `"Cookie"` AND WAS DELETED. The theme is a dimension of the cache key now, where
- * absence is not a special case: a request with no theme cookie resolves to a theme like any other.
- *
- * Nothing replaced it, deliberately. Emitting `Vary: Cookie` here would fragment the cache on every
- * unrelated cookie value.
- */
-
-/**
- * Cache tags for a public HTML response. ONE OWNER of the tag vocabulary, ruling 17.
- *
- *   `post:<slug>`  one post's page, the only per-document tag
- *   `posts`        anything whose content is a function of the corpus
- *   `pages`        the hand-authored pages that do not read the corpus
- *
- * `pages` is inert today and is still sent, so that purgeable by name is a property of every
- * shared-cacheable response rather than of most of them.
- *
- * A SPELLING MISTAKE HERE IS A PURGE THAT SILENTLY DOES NOTHING: `cache.purge` reports success for
- * a tag matching no stored response, because there is nothing for it to report.
- *
- * @param slug when present, the post this response IS
- */
+// A misspelled tag is a purge that silently does nothing: `cache.purge` succeeds on an unmatched tag.
 export function cacheTags(slug?: string): string {
   return slug ? `post:${slug},posts` : "posts";
 }
 
-/** The tag for a page that does not read the corpus. See `cacheTags`. */
 export const PAGES_CACHE_TAG = "pages";
 
 /**
- * The `headers()` a public HTML route returns. ONE definition, many callers: a route that returns
- * nothing falls through to the cache-header rule's uncached default and is never edge-cached.
- *
- * A copy that drops `Cache-Tag` is a response nothing can purge, which fails quietly rather than
- * visibly. `check:headers` asserts the pairing on every route that names the shared string, in both
- * directions.
- *
- * The edge policy is NOT set here: the Renderer stamps `EDGE_CACHE_CONTROL` on every response
- * carrying `SHARED_CACHE_CONTROL`, which reaches the routes that set the string by hand too. A route
- * passes `edge` only to depart from that default, and the home page is the one that does.
- *
- * @param tag the cache tag for this response, from `cacheTags` or `PAGES_CACHE_TAG`
- * @param edge an edge policy other than the default, from this module
+ * The Renderer stamps `EDGE_CACHE_CONTROL` beside `SHARED_CACHE_CONTROL`; pass `edge` only to depart
+ * from that default.
  */
 export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG, edge?: string) {
   return {
@@ -266,20 +152,11 @@ export function publicHtmlHeaders(tag: string = PAGES_CACHE_TAG, edge?: string) 
   };
 }
 
-/**
- * For the routes that negotiate on Accept. `Cookie` left this string and `Accept` stays, because
- * the two were never the same claim: the post page and `/search` genuinely serve more than one
- * representation at one URL, and a shared cache ignoring that hands a markdown request the HTML.
- */
 export const HTML_VARY_ACCEPT = "Accept";
 
 /**
- * THE STRING THAT REFUSES STORAGE. Nothing may keep this response: not a shared cache, not an
- * intermediary, not the browser.
- *
- * Its two mechanisms matter more than its callers, and both are invisible from a route file. It is
- * the cache-header rule's default in `workers/app.ts` for any response declaring no `Cache-Control` of its
- * own, and it is what a cookie-bearing request gets on the HTML routes after the downgrade there.
+ * Also applied by `workers/app.ts` to any response with no `Cache-Control`, and to cookie-bearing
+ * requests on the HTML routes.
  */
 export const NO_STORE_CACHE_CONTROL = "private, no-store";
 
@@ -290,23 +167,14 @@ export type ArticleSeo = {
   publishAt: Date | null;
   updatedAt: Date | null;
   coverImage: string | null;
-  /** The generated social card, when one was built. See postSocial. */
   ogImage?: string | null;
   tags: string[];
 };
 
-/**
- * THE ARTICLE FACTS BOTH VOCABULARIES STATE, derived once. `dateModified` is
- * `updatedAt ?? publishAt` and the author is a shape this file owns, so a second derivation would
- * agree the day it was written and drift the day either rule changed.
- *
- * `articleJsonLd` spreads this into schema.org names and `articleOpenGraph` maps it to `article:*`
- * names. Neither computes a value of its own, and the gate compares the two outputs field by field.
- */
+// Derived once so the JSON-LD and Open Graph outputs cannot drift apart.
 export function articleFacts(origin: string, post: ArticleSeo) {
   return {
     publishedTime: post.publishAt?.toISOString(),
-    /** Falls back to publication: an unrevised article was modified when it appeared. */
     modifiedTime: (post.updatedAt ?? post.publishAt)?.toISOString(),
     authorName: SITE.name,
     authorUrl: origin,
@@ -314,14 +182,7 @@ export function articleFacts(origin: string, post: ArticleSeo) {
   };
 }
 
-/**
- * The `article:*` Open Graph properties, from `articleFacts` and nothing else. `article:tag`
- * REPEATS, one property per tag, which is why this returns a list; the JSON-LD side joins the same
- * array into one `keywords` string, and that difference belongs to the vocabularies.
- *
- * An absent tag or date yields NO property rather than an empty one: an `article:published_time`
- * with no content claims the article has no publication date.
- */
+// An absent date yields no property: an empty `article:published_time` claims there is no date.
 export function articleOpenGraph(origin: string, post: ArticleSeo) {
   const facts = articleFacts(origin, post);
   const tags: Array<{ property: string; content: string }> = [];
@@ -338,7 +199,6 @@ export function articleOpenGraph(origin: string, post: ArticleSeo) {
   return tags;
 }
 
-/** schema.org Article for one post. */
 export function articleJsonLd(origin: string, post: ArticleSeo) {
   const facts = articleFacts(origin, post);
   return {
@@ -348,10 +208,6 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
     description: post.description ?? undefined,
     datePublished: facts.publishedTime,
     dateModified: facts.modifiedTime,
-    /*
-     * ONE RESOLUTION, SHARED WITH THE CARD. Asking `postSocial` rather than restating its chain is
-     * the point: the two cannot disagree, and a fallback added later reaches both.
-     */
     image: postSocial({
       slug: post.slug,
       title: post.title,
@@ -359,8 +215,6 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
       coverImage: post.coverImage,
       ogImage: post.ogImage ?? null,
     }).image,
-    // Same array the OG side emits one property per entry from. Joined here because schema.org wants
-    // one string; that difference is the vocabulary's, not a second opinion about this post's tags.
     keywords: facts.tags.length > 0 ? facts.tags.join(", ") : undefined,
     mainEntityOfPage: { "@type": "WebPage", "@id": `${origin}/blog/${post.slug}` },
     author: { "@type": "Person", name: facts.authorName, url: facts.authorUrl },
@@ -368,7 +222,6 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
   };
 }
 
-/** schema.org BreadcrumbList for a trail of [name, path] pairs. */
 export function breadcrumbJsonLd(origin: string, trail: Array<[string, string]>) {
   return {
     "@context": "https://schema.org",
@@ -382,7 +235,6 @@ export function breadcrumbJsonLd(origin: string, trail: Array<[string, string]>)
   };
 }
 
-/** schema.org WebSite for the domain. */
 export function webSiteJsonLd(origin: string) {
   return {
     "@context": "https://schema.org",
@@ -393,20 +245,11 @@ export function webSiteJsonLd(origin: string) {
   };
 }
 
-/* Publications. Restored by ruling 63. */
-
-/** The route. `pageMeta` builds the absolute form from `SITE_ORIGIN`. */
 export const PUBLICATIONS_URL = "/publications";
 
 export const PUBLICATIONS_DESCRIPTION =
   "Peer-reviewed work by Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";
 
-/**
- * Authority records that identify the site owner, for schema.org sameAs and the footer. Each was
- * fetched on 2026-09-23 and names him: the Scholar profile at Tarleton State (the id this file held
- * before answered 404), the ORCID record, the PubMed author search, and the faculty page the Biology
- * department links to (the directory URL held before also answered 404).
- */
 export const OWNER_ORCID = "https://orcid.org/0000-0001-6409-8041";
 export const OWNER_SCHOLAR =
   "https://scholar.google.com/citations?user=lfzCCXwAAAAJ";
@@ -414,14 +257,12 @@ export const OWNER_PUBMED =
   "https://pubmed.ncbi.nlm.nih.gov/?term=Edwards+Dustin%5BAuthor%5D&sort=date";
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 
-/** The podcast and its account (rulings 134 and 135). */
 export const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
-/** The profiles the footer marks `rel="me"`, in its order. `check:machine-readable` reads this list. */
+// The footer's `rel="me"` profiles, in order. `check:machine-readable` reads this list.
 export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
 
-/** Every sameAs, one list for both Person records so they cannot disagree. */
 export const OWNER_SAME_AS = [
   ...OWNER_PROFILES,
   OWNER_FACULTY_PAGE,
@@ -429,19 +270,13 @@ export const OWNER_SAME_AS = [
   GERMOMICS_X_URL,
 ];
 
-/** Stable `@id` for the owner's Person node, so it is described once per page. */
 export function personId(origin: string) {
   return `${origin}/#person`;
 }
 
 /**
- * schema.org Person for the site owner, carrying the authority links. The sameAs array is the
- * point: another academic works under this name and a citation graph has already merged some of his
- * work into this author record, so the ORCID, the Scholar profile and the faculty page give a
- * consumer three ways to tell them apart without guessing from a name string.
- *
- * `personJsonLd` above is the home page's Person and carries no `@id`. The two are not a duplication
- * to collapse: that one describes the site owner to a reader, this one joins a paper to a human.
+ * Another academic shares this name and citation graphs have merged some of his work, so sameAs is
+ * what disambiguates. Not a duplicate of `personJsonLd`: this `@id` joins papers to a person.
  */
 export function personNode(origin: string) {
   return {
@@ -459,11 +294,7 @@ export function personNode(origin: string) {
   };
 }
 
-/**
- * Match the site owner in an author list. The registries return several spellings of his name and
- * his position in the list varies, so this keys on surname plus a D initial rather than an exact
- * string.
- */
+// Registries spell his name several ways, so this matches surname plus a D initial.
 export function isSiteOwner(name: string) {
   const parts = name.trim().split(/\s+/);
   const surname = parts[parts.length - 1] ?? "";
@@ -471,11 +302,7 @@ export function isSiteOwner(name: string) {
   return surname.toLowerCase() === "edwards" && given.toUpperCase().startsWith("D");
 }
 
-/**
- * One Person node followed by a ScholarlyArticle per publication. Co-authors stay plain Person
- * objects and only the owner's entry becomes an `@id` reference: replacing the whole author array
- * with a single reference would drop the co-authors and misstate authorship on every other record.
- */
+// Only the owner's entry becomes an `@id` reference; replacing the whole array would drop co-authors.
 export function publicationsJsonLd(
   origin: string,
   items: {
@@ -493,12 +320,7 @@ export function publicationsJsonLd(
     ...items.map((p) => ({
       "@context": "https://schema.org",
       "@type": "ScholarlyArticle",
-      /*
-       * DECODED HERE RATHER THAN AT THE CALL SITE: this function owns the node shape, and a caller that
-       * forgot would emit an escaped string as a schema.org `name`, a wrong VALUE rather than a glitch.
-       * Safe for the invariant it looks like it breaks, since `jsonLd()` escapes `<` and `>` on the way
-       * into the script element.
-       */
+      // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
       headline: decodeEntities(p.title),
       author: p.authors.map((name) =>
         isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name },

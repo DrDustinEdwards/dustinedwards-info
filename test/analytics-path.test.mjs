@@ -1,21 +1,3 @@
-/**
- * The analytics path redaction: a preview token never reaches the dataset.
- *
- * REPLAYS THE DEFECT, per the replay rule. Measured on production 2026-08-15, in
- * the first real use of a draft preview link: the capture wrote `url.pathname`
- * verbatim, so the full 43-character capability landed in Analytics Engine and
- * `/admin/origin-requests` printed it as a row label.
- *
- * The token used below is the ACTUAL one from that incident. It was revoked
- * before this file existed and its seven day TTL has it expiring anyway, so it
- * is inert; it is used rather than a synthetic string because a replay should
- * replay, and because a fixture that differs from the real value in some way
- * nobody noticed is how a replay passes without covering the defect.
- *
- * @see app/lib/analytics-path.mjs
- * @see workers/app.ts, the recordTraffic capture
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -26,7 +8,7 @@ import {
 } from "../app/lib/analytics-path.mjs";
 import { mintToken } from "../app/lib/preview-token.mjs";
 
-/** The token from the 2026-08-15 incident. Revoked, and expired by TTL. */
+/** A real token, revoked and expired by TTL, so the fixture cannot differ from the real shape. */
 const INCIDENT_TOKEN = "CPWahe1WuFGSMh0pOltNbJBwYLxzJzAuRvpSyOBLstI";
 
 test("THE DEFECT: the incident path is recorded without its token", () => {

@@ -1,16 +1,5 @@
-/**
- * `copySlugCandidates()`: what a duplicated post is called.
- *
- * Section F item 3 asks for a `-copy` slug. The interesting half is not the
- * first candidate, it is what happens on the second press and on a copy of a
- * copy, because a naive suffix compounds: `a-post-copy-copy-copy` is a URL
- * nobody would choose and the author would have to fix it by hand every time.
- *
- * The pattern assertion here is deliberately made against the EXPORTED
- * `SLUG_PATTERN` rather than against a spelling of it: the URL allowlist rule makes that
- * constant the owner of what a slug may be, and a test carrying its own regex
- * would be the second copy that rule exists to prevent.
- */
+/* A naive suffix compounds into `a-post-copy-copy-copy`. Slugs are checked against the EXPORTED
+ * `SLUG_PATTERN`, never a local spelling of it. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -33,14 +22,10 @@ test("later candidates are numbered from 2, never from 1", () => {
 });
 
 test("THE COMPOUNDING DEFECT: a copy of a copy stays flat", () => {
-  // Duplicating `a-post-copy` offers the SAME family as duplicating `a-post`.
-  // The first candidate is the original copy's own slug, which the caller finds
-  // occupied and steps past, so the result is `a-post-copy-2` rather than a
-  // second suffix. The freeness check belongs to the caller; what is asserted
-  // here is that the family the caller walks never compounds.
+  // The first candidate is the copy's own slug, which the caller finds occupied and steps past;
+  // freeness is the caller's job, and what is asserted is that the family never compounds.
   assert.deepEqual(copySlugCandidates("a-post-copy", 3), copySlugCandidates("a-post", 3));
   assert.deepEqual(copySlugCandidates("a-post-copy-7", 3), copySlugCandidates("a-post", 3));
-  // The family never grows a second suffix, however many times it is pressed.
   for (const slug of ["a-post", "a-post-copy", "a-post-copy-7"]) {
     for (const candidate of copySlugCandidates(slug)) {
       assert.ok(

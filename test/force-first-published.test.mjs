@@ -1,29 +1,5 @@
-/**
- * `forceFirstPublished` round-trips through the YAML parser.
- *
- * The stamp is security-critical: the publish policy asks whether a post has
- * ever been public, the answer must come from the committed file rather than
- * from the request, and this function is what overwrites whatever the request
- * claimed. A stamp that silently corrupted the frontmatter would take the
- * post's other fields with it.
- *
- * ## WHAT IS TESTED, and the last case is the one that matters
- *
- * Every case asserts the ROUND TRIP: parse the output, and compare it against
- * the input's own parse with exactly this one key changed. That is a stronger
- * assertion than string equality on the output, because it does not care how
- * the value was written, only that the document now says the right thing and
- * says everything else unchanged.
- *
- * The last two cases are the ones the line edit gets wrong, and they were FOUND
- * rather than reasoned about. Several likelier-looking candidates did not
- * discriminate: a folded scalar's continuation lines are indented, so the `^`
- * anchor already misses them, and an appended key at column zero correctly ends
- * the scalar above it. YAML's own indentation rules make the line edit safer
- * than it looks.
- *
- * @see app/lib/editor/publish-policy.mjs
- */
+/* Security-critical: the publish policy's "ever public" answer comes from the committed file,
+ * and this is what overwrites whatever the request claimed. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -33,8 +9,7 @@ import matter from "gray-matter";
 import { forceFirstPublished, readState } from "../app/lib/editor/publish-policy.mjs";
 
 /**
- * The frontmatter as YAML understands it, with dates flattened to their ISO day
- * so a `Date` and the string that produced it compare equal.
+ * Dates flattened to their ISO day so a `Date` and the string that produced it compare equal.
  *
  * @param {string} raw
  */
@@ -49,12 +24,9 @@ function fields(raw) {
   return out;
 }
 
-/** The body, as gray-matter separates it. */
 const body = (/** @type {string} */ raw) => matter(raw).content;
 
 /**
- * Asserts the round trip: one key changed, everything else identical.
- *
  * @param {string} input
  * @param {string | null} value
  */
@@ -117,18 +89,6 @@ test("a document with no frontmatter is returned untouched", () => {
   assert.equal(forceFirstPublished(bare, "2026-08-28"), bare);
 });
 
-/*
- * THE TWO DOCUMENTS THE LINE EDIT GETS WRONG.
- *
- * They were FOUND rather than reasoned about, and the first several candidates
- * did not discriminate: a folded scalar's continuation lines are indented, so
- * the `^` anchor already misses them, and an appended key at column zero
- * correctly ends the scalar above it. YAML's own indentation rules make the
- * line edit safer than it looks.
- *
- * These two are real, and the second is the dangerous one.
- */
-
 /** A QUOTED KEY. The anchor misses it, so the edit appends a DUPLICATE. */
 const QUOTED_KEY = `---
 title: "A post"
@@ -153,21 +113,14 @@ Body.
 `;
 
 test("A QUOTED KEY: the edit would append a duplicate and break the document", () => {
-  // The naive edit leaves `"first_published"` in place and adds a second key,
-  // which YAML refuses outright. A post that cannot be parsed is a post the
-  // next build fails on, broken by the stamp itself.
+  // The naive edit leaves `"first_published"` in place and adds a second key, which YAML refuses.
   const out = roundTrip(QUOTED_KEY, "2026-08-28");
   assert.doesNotMatch(out, /2020-01-01/, "the old value survived, which is the security case");
 });
 
 test("A LIST VALUE: the edit would orphan the items onto the key above", () => {
-  /*
-   * THE DANGEROUS ONE, because it does not throw. Removing the
-   * `first_published:` line leaves `  - 2020-01-01` behind, and YAML folds it
-   * into the preceding key: the post's TITLE silently becomes
-   * "A post - 2020-01-01". A stamp that renames a published post is exactly the
-   * failure a security-critical overwrite must not have.
-   */
+  /* Does not throw: removing the key line folds `  - 2020-01-01` into the preceding key, so
+   * the post's TITLE silently becomes "A post - 2020-01-01". */
   const out = roundTrip(LIST_VALUE, "2026-08-28");
   assert.equal(fields(out).title, "A post", "the title was corrupted by the stamp");
 });

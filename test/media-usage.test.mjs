@@ -1,15 +1,5 @@
-/**
- * The three-state usage model, the per-row flags, and the surfaces that depend
- * on knowing which of the three a file is in.
- *
- * The property under test is not "the function returns a string". It is that
- * the model can express the case the old binary could not: a file the SITE
- * places and no POST cites. Nine cohort photographs are that case, and reading
- * them as unattached beside a delete button is the falsehood this exists to
- * correct.
- *
- * @see app/lib/media/usage.mjs
- */
+/* The model must express a file the SITE places and no POST cites: reading those as unattached
+ * beside a delete button is the falsehood this corrects. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -29,16 +19,12 @@ import {
   usageStateOf,
 } from "../app/lib/media/usage.mjs";
 
-/* ---- the three states ---------------------------------------------------- */
-
 test("a post citation makes a file used", () => {
   assert.equal(usageStateOf({ postRefs: 1, citations: 0, templateRefs: 0 }), "used");
   assert.equal(usageStateOf({ postRefs: 0, citations: 1, templateRefs: 0 }), "used");
 });
 
 test("THE CASE THAT DID NOT EXIST: repository code alone makes it in template", () => {
-  // The nine roster photographs. Before this model they returned the same
-  // answer as a genuine orphan.
   assert.equal(usageStateOf({ postRefs: 0, citations: 0, templateRefs: 1 }), "template");
 });
 
@@ -90,8 +76,6 @@ test("the usage sort orders most attached first", () => {
   assert.ok(usageRank("template") < usageRank("unattached"));
 });
 
-/* ---- flags --------------------------------------------------------------- */
-
 const row = (over = {}) => ({ viewable: true, alt: "", size: 100, twinCount: 0, ...over });
 
 test("the three flags fire on their own conditions", () => {
@@ -124,8 +108,6 @@ test("all three can hold at once, which is why flags are a list", () => {
   );
 });
 
-/* ---- the one dot a tile shows -------------------------------------------- */
-
 test("a tile shows ONE flag, in the ruled precedence", () => {
   const flags = flagsFor(row({ twinCount: 1, alt: "", size: LARGE_FILE_BYTES + 1 }));
   assert.equal(tileFlagFor({ flags, usage: "unattached", twin: "/a.png" }).id, "duplicate");
@@ -144,15 +126,11 @@ test("the duplicate dot names its twin when there is one", () => {
   assert.equal(tileFlagFor({ flags, usage: "used", twin: null }).title, "Duplicate");
 });
 
-/* ---- lens notes ---------------------------------------------------------- */
-
 test("every lens that narrows has a note explaining what it claims", () => {
   for (const id of ["unattached", "duplicates", "no-alt", "large"]) {
     assert.ok((LENS_NOTES[id] ?? "").length > 30, `${id} has no usable note`);
   }
 });
-
-/* ---- suggestions --------------------------------------------------------- */
 
 test("suggested alt is the words, matching the document card exactly", () => {
   assert.equal(suggestedAlt("edwards-2024-phage-genomics.pdf"), "edwards 2024 phage genomics");
@@ -179,8 +157,6 @@ test("suggested tags are deduplicated and lowercased", () => {
   assert.deepEqual(out, ["talks", "2026", "fall"]);
   assert.equal(new Set(out).size, out.length);
 });
-
-/* ---- copy snippets, whose labels adapt ----------------------------------- */
 
 test("an image offers an img tag and carries its alt into the snippets", () => {
   const out = copySnippetsFor({ url: "/a.png", viewable: true, alt: "A plate", base: "a.png" });

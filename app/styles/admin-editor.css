@@ -1,8 +1,4 @@
-/* The three-region post editor: bar, panes, CodeMirror, settings drawer.
- * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/* The three-region editor: a fixed command bar, a canvas that is the ONLY scroll context, and a drawer
- * not laid out until opened. A second scroll context is a scrollbar nobody finds. */
+/* The canvas is the ONLY scroll context; a second one is a scrollbar nobody finds. */
 .editor-shell {
   display: flex;
   flex: 1;
@@ -18,11 +14,8 @@
   min-height: 0;
 }
 
-/* Region 1. Not `position: sticky`: the canvas scrolls, not this, so the bar
-   is simply a flex item that never grows. Sticky would be a promise about a
-   scroll container it does not live in. */
-/* A three-column grid, not space-between, so the center group stays centered whatever the sides' widths.
-   Fixed height (--admin-cmdbar-h), because the canvas subtracts it. Nothing in the bar may wrap. */
+/* Not position: sticky: the canvas scrolls, not the document. */
+/* Fixed height (--admin-cmdbar-h), because the canvas subtracts it. Nothing in the bar may wrap. */
 .editor-bar {
   display: grid;
   flex: none;
@@ -31,9 +24,8 @@
   gap: 0.75rem;
   height: var(--admin-cmdbar-h);
   padding: 0 1rem;
-  /* Sticky offsets are measured from the scrollport, and .admin-content already starts below the topbar,
-     so a non-zero top pushes the bar over the title input. Only the narrow breakpoint, where the document
-     scrolls, sets a real offset. */
+  /* Sticky offsets are measured from the scrollport, which already starts below the topbar, so a
+     non-zero top here pushes the bar over the title input. */
   position: sticky;
   top: 0;
   z-index: var(--z-sticky);
@@ -56,8 +48,7 @@
   justify-content: flex-end;
 }
 
-/* One control height for the whole bar; every control opts in here so the row cannot go ragged.
-   2rem clears the 24px WCAG 2.2 target minimum. */
+/* 2rem clears the 24px WCAG 2.2 target minimum. */
 .editor-bar .editor-back,
 .editor-bar .editor-layout-option,
 .editor-bar .editor-icon-button,
@@ -70,8 +61,6 @@
   padding-bottom: 0;
 }
 
-/* A square icon button. Its accessible name is on the element, not in a label
-   beside it, so the box can be exactly as wide as it is tall. */
 .editor-icon-button {
   display: inline-flex;
   align-items: center;
@@ -130,9 +119,6 @@
   white-space: nowrap;
 }
 
-/* Dirty state as a first-class element. It was a line of prose under the form
-   before, which is the wrong place for the one thing an author checks before
-   closing the tab. Rule 1: the dot is never alone, the words are always there. */
 .editor-dirty {
   display: inline-flex;
   align-items: center;
@@ -158,8 +144,6 @@
   background: var(--fill-warning);
 }
 
-/* The buffer age (ruling 3) is quieter than the dirty indicator: muted, not warning, since two
-   warning-colored items read as two problems. It reuses a pair check:contrast already measures. */
 .editor-buffer-age {
   color: var(--text-secondary);
   font-size: 0.8125rem;
@@ -173,8 +157,7 @@
   gap: 0.5rem;
 }
 
-/* Region 2, the only scroll context. The height is declared (viewport less both bars), not left to flex,
-   so nothing added to the column can silently shrink it. Nothing may render below this element. */
+/* The height is declared, not left to flex, so nothing added to the column can silently shrink it. */
 .editor-canvas {
   flex: 1;
   height: calc(100dvh - var(--admin-topbar-h) - var(--admin-cmdbar-h));
@@ -183,16 +166,12 @@
 }
 
 .editor-page {
-  /* Declared once and read by both the panes grid and the title row, so the
-     two cannot disagree about where the left column ends. */
   --editor-pane-gap: 1rem;
   --editor-write-measure: 52rem;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   width: 100%;
-  /* Wide enough for two panes at a readable measure. The single-pane write view
-     is centered by the panes grid rather than by squeezing this. */
   max-width: 84rem;
   height: 100%;
   min-height: 0;
@@ -200,8 +179,6 @@
   padding: 1.25rem 1.5rem 1.5rem;
 }
 
-/* Write view keeps the writing at an article-ish measure instead of stretching
-   a single column across a wide screen. */
 .editor-canvas[data-layout="write"] .editor-panes,
 .editor-canvas[data-layout="write"] .editor-title-row {
   max-width: var(--editor-write-measure);
@@ -209,8 +186,6 @@
   margin: 0 auto;
 }
 
-/* The title tracks the editor pane, not the page, using the grid's gap so the two cannot drift.
-   Preview view has one column and needs no rule. */
 .editor-canvas[data-layout="split"] .editor-title-row {
   max-width: calc((100% - var(--editor-pane-gap)) / 2);
   margin-right: auto;
@@ -222,8 +197,7 @@
   gap: 0.5rem;
 }
 
-/* field-sizing: content puts the counter right after the title text. Without it the input keeps
- * flex: 1 and the counter sits at the row's right edge, already narrowed to the editor pane. */
+/* field-sizing: content puts the counter right after the title text. */
 @supports (field-sizing: content) {
   .editor-title {
     flex: 0 1 auto;
@@ -237,9 +211,6 @@
   }
 }
 
-/* The title is the page's H1 in everything but element name. It is an input
-   because it is edited, and it is styled as the heading it becomes so the
-   canvas reads as the article rather than as a form. */
 .editor-title {
   flex: 1;
   min-width: 0;
@@ -337,14 +308,10 @@
   font-size: 0.9375rem;
 }
 
-/* An invalid field is interactive, so rule 5 sends it to the fill rather than
-   the pastel border. The field also carries an error message in words. */
 .field input[aria-invalid="true"] {
   border-color: var(--fill-danger);
 }
 
-/* Write, split and preview. The panes inherit the canvas's single scroll context: each pane scrolls its own
- * overflow and the page does not. */
 .editor-panes {
   display: grid;
   flex: 1;
@@ -360,9 +327,8 @@
   min-width: 0;
 }
 
-/* Split view is two columns of the SAME height that scroll independently. The
-   grid gives them that for free once the row is not allowed to stretch to the
-   taller child, which `min-height: 0` on the panes is what permits. */
+/* min-height: 0 on the panes stops the row stretching to the taller child, so both scroll
+   independently. */
 .editor-canvas[data-layout="split"] .editor-panes {
   align-items: stretch;
 }
@@ -371,9 +337,7 @@
   grid-template-columns: 1fr 1fr;
 }
 
-/* The write pane is HIDDEN, never unmounted, because the textarea inside it is
-   the field the form submits. Unmounting would drop the body from the payload;
-   display:none changes nothing about what is sent. */
+/* HIDDEN, never unmounted: the textarea inside is the field the form submits. */
 .editor-canvas[data-layout="preview"] .editor-pane-write {
   display: none;
 }
@@ -393,10 +357,8 @@
   font-size: 0.8125rem;
 }
 
-/* A sandboxed frame is a replaced element with no intrinsic height, so it is
-   given one rather than collapsing to the 150px default. */
-/* No min-height: a minimum taller than the canvas gave the preview two stacked scrollbars.
-   The pane fills what it is given, and the iframe scrolls the rest. */
+/* A sandboxed frame has no intrinsic height; without one it collapses to 150px. */
+/* No min-height: a minimum taller than the canvas gave the preview two stacked scrollbars. */
 .editor-preview-frame {
   flex: 1;
   width: 100%;
@@ -432,8 +394,6 @@
   color: var(--text);
 }
 
-/* Rule 1 again: the pressed one carries a fill AND aria-pressed, so the state
-   reaches assistive tech rather than only the eye. */
 .editor-layout-option[aria-pressed="true"] {
   background: var(--brand);
   color: var(--on-brand);
@@ -443,8 +403,6 @@
   outline: 2px solid var(--focus-ring-on-brand);
   outline-offset: -4px;
 }
-
-/* CodeMirror -------------------------------------------------------------- */
 
 .md-editor {
   display: flex;
@@ -456,9 +414,6 @@
 
 .md-toolbar {
   display: flex;
-  /* ONE row. The directive buttons were text, which wrapped the toolbar to two
-     lines at the editor's real width and made the second line read as a
-     separate toolbar. They are icons now and this forbids the wrap. */
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.125rem;
@@ -515,11 +470,6 @@
   overflow: hidden;
 }
 
-/* The foot strip. It replaces the Insert image section this pass removes, and
-   it is the only place drag-drop and paste are advertised. */
-/* The editor's foot: the drop hint on the left, the counts on the right. It
-   carries the border and the corners that .md-hint used to own alone, so the
-   two items read as one strip rather than as two stacked boxes. */
 .md-foot {
   display: flex;
   flex: none;
@@ -540,8 +490,6 @@
   color: var(--text-secondary);
 }
 
-/* Word count and reading time: at the far end, tabular so the strip does not twitch as digits change,
-   and muted, because it is reference. */
 .md-stats {
   margin: 0 0 0 auto;
   color: var(--text-secondary);
@@ -557,7 +505,6 @@
   height: 100%;
 }
 
-/* The slash menu sits at the popover elevation, so --border-strong. */
 .md-slash {
   position: absolute;
   z-index: var(--z-popover);
@@ -570,9 +517,7 @@
   list-style: none;
 }
 
-/* THE LINK PALETTE (Cmd+K). Same popover step as the slash menu, so
-   --border-strong per the elevated-surface law: --border drops to 2.66:1 on
-   --surface-popover in dark and would not clear 3:1. */
+/* --border-strong: --border drops to 2.66:1 on --surface-popover in dark and would not clear 3:1. */
 .md-link-palette {
   position: absolute;
   z-index: var(--z-popover);
@@ -621,9 +566,8 @@
   font-size: 0.75rem;
 }
 
-/* ONE highlight, driven by `data-active`, which both the arrow keys and the
-   pointer write. A separate :hover rule would let the mouse light one row while
-   Enter still pointed at another. */
+/* One highlight, driven by data-active, which arrow keys and pointer both write; a :hover rule would
+   let the mouse light one row while Enter points at another. */
 .md-link-item[data-active],
 .md-link-item:focus-visible {
   background: var(--tint-brand);
@@ -634,8 +578,6 @@
   color: var(--brand);
 }
 
-/* Not a color: the words say it. This only keeps them from reading as part of
-   the slug. */
 .md-link-state {
   font-style: italic;
 }
@@ -667,15 +609,13 @@
   background: var(--tint-brand);
 }
 
-/* --text-secondary is measured on the popover step but not on the brand tint a
-   hovered row paints under it, so the hint steps up to body text, which IS
-   measured there. Same move the overflow menu makes. */
+/* --text-secondary is not measured on the brand tint of a hovered row, so the hint steps up to body
+   text. */
 .md-slash-item:hover .muted,
 .md-slash-item:focus-visible .muted {
   color: var(--text);
 }
 
-/* The alt prompt that stands between an upload and an insertion. */
 .md-upload {
   display: flex;
   align-items: flex-start;
@@ -734,8 +674,6 @@
   }
 }
 
-/* The body fills what is left of the canvas. resize: none, since a resize handle in a flex column fights
-   the layout and the body is already as tall as the room allows. */
 .editor-body {
   flex: 1;
   min-height: 24rem;
@@ -751,24 +689,19 @@
   resize: none;
 }
 
-/* After CodeMirror mounts, the textarea is still the submitted field but not the control, so it leaves
-   view and the accessibility tree rather than being a stale second copy. */
+/* After CodeMirror mounts the textarea is still the submitted field but not the control, so it leaves
+   view and the accessibility tree. */
 .editor-body.is-replaced {
   display: none;
 }
 
-/* An alarm, never a block. The server gates own validity; this only tells the
-   author before they hit one. Text and not a tinted surface, because rule 4
-   spends this view's one tint on the feedback slot. */
 .field-alarm {
   margin: 0;
   color: var(--text-warning);
   font-size: 0.8125rem;
 }
 
-/* Region 3, the settings drawer: a real <dialog> with showModal(), so focus trap, Escape and focus
- * return are the platform's. It sits on the popover step, so every border inside is --border-strong:
- * --border fails 3:1 there in dark. */
+/* On the popover step, so every border inside is --border-strong: --border fails 3:1 there in dark. */
 .drawer {
   position: fixed;
   top: 0;
@@ -787,9 +720,7 @@
 }
 
 .drawer::backdrop {
-  /* A scrim, not a palette color. It is the one place a literal is honest:
-     it darkens whatever is behind it in either theme, and no token describes
-     "less of what is already there". */
+  /* A literal, not a token: it darkens whatever is behind it in either theme. */
   background: rgb(0 0 0 / 45%);
 }
 
@@ -854,8 +785,7 @@
   font-size: 0.9375rem;
 }
 
-/* Frontmatter controls are a <details> in the form, not a drawer section, so they work without script.
-   Its edge is --border-strong (rule 5): it is an elevated surface above the canvas. */
+/* A <details>, not a drawer section, so it works without script. */
 
 .post-metadata {
   margin-top: 1.5rem;

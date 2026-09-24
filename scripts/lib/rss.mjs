@@ -1,34 +1,22 @@
 /**
- * PEAK RESIDENT MEMORY OF A PROCESS TREE, sampled from outside it by a separate process, the
- * tier's blocking spawn leaving no event loop here to sample from.
- *
- * BOUNDARY: it counts the whole descendant tree plus the root, the runner's own resident set
- * included, because the number that matters for an OOM kill is what the machine was holding. It
- * FAILS SOFT, ALWAYS: this is an instrument, not a gate.
+ * Sampled by a separate process because the tier's blocking spawn leaves no event loop here. Fails
+ * soft always: an instrument, not a gate.
  */
 
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-/** Windows only. Everything here degrades to "not measured" elsewhere. */
 const isWindows = process.platform === "win32";
 
-/**
- * BY ABSOLUTE PATH, never by bare name: a gate that spawns a tool by bare name is green in the
- * shell it was written in and absent in the one that ships, which a sibling gate paid for.
- */
+/** By absolute path: a bare name resolves in one shell and is absent in another. */
 function powershellPath() {
   const root = process.env.SystemRoot ?? process.env.windir ?? "C:\\Windows";
   const path = join(root, "System32", "WindowsPowerShell", "v1.0", "powershell.exe");
   return existsSync(path) ? path : null;
 }
 
-/**
- * The sampling loop. The descendant walk happens in the SAMPLER, so the file already holds the
- * answer and a reader that starts late still gets correct history. Appends per line and never
- * truncates: a gap is visible, whereas a rewritten file would be empty in the case worth reading.
- */
+/** Appends and never truncates: a rewritten file would be empty in the case worth reading. */
 const sampler = (
   /** @type {number} */ rootPid,
   /** @type {string} */ outPath,
@@ -70,10 +58,8 @@ while ($true) {
 `;
 
 /**
- * Starts sampling the tree rooted at this process.
- *
- * @param {string} outPath file the samples are appended to
- * @param {number} intervalMs how often to sample
+ * @param {string} outPath
+ * @param {number} intervalMs
  * @returns {{ stop: () => void, available: boolean, pid: number | null }}
  */
 export function startRssSampler(outPath, intervalMs = 400) {
@@ -89,17 +75,12 @@ export function startRssSampler(outPath, intervalMs = 400) {
         "-NonInteractive",
         "-ExecutionPolicy",
         "Bypass",
-        /*
-         * THE VALUES ARE SUBSTITUTED INTO THE SCRIPT, not passed after it, where they are consumed as
-         * arguments to the interpreter. Measured on the first run, which started cleanly and wrote zero
-         * samples.
-         */
+        // Values are substituted into the script: arguments after it go to the interpreter instead.
         "-Command",
         sampler(process.pid, outPath, intervalMs),
       ],
       {
-        // DETACHED IS WRONG HERE: a detached sampler outlives a killed runner and becomes exactly the
-        // orphan the memory work exists to remove. It stays a child, so the tree kill takes it too.
+        // Not detached: a detached sampler outlives a killed runner as an orphan.
         detached: false,
         stdio: "ignore",
       },
@@ -122,12 +103,11 @@ export function startRssSampler(outPath, intervalMs = 400) {
 }
 
 /**
- * The peak sample inside a window, or null when nothing was sampled: zero is a measurement and
- * "nobody looked" is not, a gate faster than the sampling interval landing here legitimately.
+ * Null, not zero, when nothing was sampled: a gate faster than the interval lands here legitimately.
  *
  * @param {string} outPath
- * @param {number} fromMs inclusive, epoch milliseconds
- * @param {number} toMs inclusive, epoch milliseconds
+ * @param {number} fromMs
+ * @param {number} toMs
  * @returns {number | null}
  */
 export function peakBetween(outPath, fromMs, toMs) {
@@ -143,8 +123,6 @@ export function peakBetween(outPath, fromMs, toMs) {
     const comma = line.indexOf(",");
     if (comma === -1) continue;
     const stamp = Number(line.slice(0, comma));
-    // Three fields since the tree membership was added; the pid list is read
-    // by `lastTree` and is not part of the total.
     const rest = line.slice(comma + 1);
     const second = rest.indexOf(",");
     const bytes = Number(second === -1 ? rest : rest.slice(0, second));
@@ -155,16 +133,12 @@ export function peakBetween(outPath, fromMs, toMs) {
   return peak;
 }
 
-/** Bytes as whole megabytes, or a dash when nothing was measured. */
 export function mb(/** @type {number | null | undefined} */ bytes) {
   return bytes === null || bytes === undefined ? "-" : `${Math.round(bytes / (1024 * 1024))}MB`;
 }
 
 /**
- * THE PIDS OF THE MOST RECENT SAMPLED TREE: the sampler already walks the tree every tick, so it
- * writes the membership beside the total and becomes the tree ORACLE as well as the meter, which
- * matters because the blocking spawn leaves this process unable to enumerate anything. PIDS,
- * NEVER NAMES: a sweep matching a process name would reach the user's own browser and editor.
+ * Pids, never names: a sweep matching a process name would reach the user's own browser and editor.
  *
  * @param {string} outPath
  * @returns {number[]}
@@ -192,14 +166,11 @@ export function lastTree(outPath) {
 }
 
 /**
- * EVERY PID SEEN IN THE LAST WINDOW OF SAMPLING, as one set. A single sample is right for "what
- * is the tree right now" and WRONG for cleaning up after a run that died, whose heavy processes
- * were spawned minutes earlier. WHY A WINDOW RATHER THAN THE WHOLE FILE: WINDOWS REUSES PIDS and
- * this list is fed to a KILL. The window bounds the risk rather than proving against it, and the
- * residual is accepted and stated; matching on NAMES is worse by a wide margin.
+ * A window, not one sample, because a dead run's heavy processes were spawned minutes earlier; not
+ * the whole file, because Windows reuses pids and this list is fed to a kill.
  *
  * @param {string} outPath
- * @param {number} windowMs how far back from the last sample to gather
+ * @param {number} windowMs
  * @returns {number[]}
  */
 export function treeSince(outPath, windowMs = 90000) {

@@ -1,9 +1,3 @@
-/**
- * The home health fact's shape, as `check:browser` asserts it.
- *
- * @see scripts/lib/health-tile.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 

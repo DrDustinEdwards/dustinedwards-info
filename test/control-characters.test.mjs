@@ -1,7 +1,3 @@
-/**
- * No tracked text file carries a raw control byte or an invisible character.
- */
-
 import test from "node:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -12,21 +8,14 @@ import { collector, root } from "./lib/invariants-harness.mjs";
 test("no tracked text file carries a raw control or invisible character", async (t) => {
   const { ok, done } = collector();
 
-  /*
-   * No raw control byte or invisible character in a tracked text file: a shell-expanded escape
-   * reaches disk as one byte and still looks right. An intended one is written as an escape,
-   * so a raw byte is a defect anywhere and no language parsing is needed.
-   * Counts below 0x20 except tab, LF and CR; 0x7F; the BOM and the zero-width family.
-   * Tracked files only; binaries skipped by extension.
-   */
+  /* A shell-expanded escape reaches disk as one byte and still looks right. An intended one is
+   * written as an escape, so a raw byte is a defect anywhere. */
   {
     const BINARY = /\.(woff2?|ttf|otf|png|jpe?g|gif|webp|avif|ico|pdf|zip|wasm|mp4|mp3|sqlite|db)$/i;
-    /** Named so a failure says what the byte IS rather than only where it is. */
     const NAMES = new Map([
       [0x00, "NUL"], [0x07, "BEL"], [0x08, "BACKSPACE"], [0x0b, "VERTICAL TAB"],
       [0x0c, "FORM FEED"], [0x1b, "ESC"], [0x7f, "DEL"],
     ]);
-    /** Invisible but not control codes: BOM and the zero-width family. */
     const INVISIBLE = new Map([
       ["\uFEFF", "U+FEFF BYTE ORDER MARK"],
       ["\u200B", "U+200B ZERO WIDTH SPACE"],
@@ -35,10 +24,7 @@ test("no tracked text file carries a raw control or invisible character", async 
       ["\u2060", "U+2060 WORD JOINER"],
     ]);
 
-    /*
-     * No `shell: true`. On Windows that joins argv unquoted, which is the shape
-     * FAILURES.md records for a seed SQL string becoming a program name.
-     */
+    /* No `shell: true`: on Windows that joins argv unquoted. */
     const listed = spawnSync("git", ["ls-files"], { cwd: root, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
     ok(
       "[scope] git ls-files answered",

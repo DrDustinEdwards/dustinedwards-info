@@ -1,7 +1,3 @@
-/**
- * The write paths: the Node and Worker image resolvers agree.
- */
-
 import test from "node:test";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -10,7 +6,7 @@ import { bundler, collector, root } from "./lib/invariants-harness.mjs";
 
 const bundle = bundler("write-paths");
 
-/* Bundling cold took 62s once on a loaded host, past the suite's 60s default. */
+/* Bundling cold took 62s on a loaded host, past the suite's 60s default. */
 test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
@@ -60,7 +56,6 @@ test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180
       typeof workerModule.makeResolveImage === "function"
     ) {
       const nodeResolve = nodeModule.makeResolveImage("content/posts/fixture.md");
-      // Throws if a resolver reaches a binding for a `/media/` src.
       const workerResolve = workerModule.makeResolveImage(
         new Proxy(
           {},
@@ -119,7 +114,6 @@ test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180
         "the fixture produced both resolutions and refusals",
         agreements === MEDIA_SRCS.length,
       );
-      // A count, never an unconditional verdict.
       t.diagnostic(
         `     ${compared} media src(s) compared, ${agreements} in agreement`,
       );

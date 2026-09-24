@@ -1,29 +1,5 @@
-/**
- * Chart rendering for the `:::chart` directive.
- *
- * Pure, and imported by `pipeline.mjs`, so the two writers (the Node build and
- * the Worker's save/preview path) render charts through exactly one definition.
- * Nothing here touches `node:fs`, `node:path` or the network, for the same
- * reason the rest of the pipeline does not: it has to run inside a Worker.
- *
- * Observable Plot renders into a linkedom document. That pairing was chosen by
- * measurement rather than preference (ruling: Capsid `dustinedwards/chart-stack.md`):
- * domino is disqualified because `domino/lib/sloppy.js` uses `with` statements,
- * which are illegal in a strict-mode ESM bundle and fail the Workers build; and
- * Vega-Lite is disqualified because vega-runtime compiles expressions from
- * strings, which workerd refuses with "Code generation from strings disallowed".
- *
- * Two properties this module exists to guarantee:
- *
- *   1. **Deterministic.** The SVG is a pure function of the markdown, so
- *      `check:content`'s double-render pass compares it like everything else,
- *      and the two writers' render hashes agree. Plot's default
- *      class name is a fixed constant and standard marks generate no ids, so
- *      there is nothing random to suppress. `check:content` renders the
- *      corpus twice and fails if the two differ.
- *   2. **Accessible by construction.** A chart that cannot be named or tabulated
- *      fails the build instead of failing an audit later.
- */
+// Must run inside a Worker. Plot renders into linkedom because domino uses `with` (illegal in a
+// strict-mode ESM bundle) and Vega compiles expressions from strings, which workerd refuses.
 
 import * as Plot from "@observablehq/plot";
 import { parseHTML } from "linkedom";
@@ -32,19 +8,8 @@ import { CHART_TYPES } from "./chart-types.mjs";
 
 export { CHART_TYPES };
 
-/**
- * Series colors, in the ratified ladder order from `dustinedwards/design-tokens.md`.
- *
- * Tokens only, never hexes. One render has to serve both themes: the custom
- * property passes into the SVG verbatim and resolves per theme in the browser,
- * so there is no second render and nothing to flash. No hex literal may reach
- * chart output.
- *
- * The sixth (rust) is the EXTENDED slot. design-tokens.md calls core-5 the
- * unlabeled-safe default and requires direct labels beyond it; this directive
- * requires direct labels for every multi-series chart anyway, so the extended
- * slot is safe to use here.
- */
+// Tokens, never hexes: the custom property resolves per theme in the browser, so one render serves
+// both themes. The sixth (extended) slot is safe because multi-series charts are directly labelled.
 export const CHART_SERIES_TOKENS = [
   "var(--chart-cadet)",
   "var(--chart-purple)",
@@ -58,12 +23,6 @@ const DEFAULT_WIDTH = 700;
 const DEFAULT_HEIGHT = 360;
 
 /**
- * Parses the directive's inline CSV.
- *
- * Hand-written rather than pulled from a dependency: the grammar needed here is
- * one page of RFC 4180 (quoted fields, doubled quotes, no embedded newlines) and
- * the Worker bundle already carries Plot.
- *
  * @param {string} text
  * @returns {{ columns: string[], rows: string[][] }}
  */
@@ -74,8 +33,6 @@ function parseChartCsv(text) {
     .filter((line) => line.trim() !== "");
 
   const header = lines[0];
-  // The header is guarded by VALUE, not by the line count. Same refusal on
-  // empty input, and it is what makes the parse below take a string.
   if (header === undefined) throw new Error("chart data is empty");
 
   const parseLine = (/** @type {string} */ line) => {
@@ -132,12 +89,6 @@ function parseChartCsv(text) {
 }
 
 /**
- * Validates the directive's attributes and data into a render-ready model.
- *
- * Every failure here is a build failure that names the problem. That is the
- * whole point of the directive: an unnamed chart, or one whose series cannot be
- * told apart without color vision, must not be publishable.
- *
  * @param {Record<string, string>} attrs
  * @param {string} csv
  */
@@ -150,9 +101,7 @@ export function buildChartModel(attrs, csv) {
     );
   }
 
-  // WCAG 2.2 AA, and the same rule :::figure enforces for images. A chart with
-  // no accessible name is an unlabelled graphic; the data table below is the
-  // long description, not the name.
+  // Required even with the data table: the table is the long description, not the accessible name.
   const alt = (attrs.alt ?? "").trim();
   if (!alt) throw new Error(`:::chart "${attrs.title ?? type}" requires an alt attribute`);
 
@@ -175,9 +124,6 @@ export function buildChartModel(attrs, csv) {
     }
   }
 
-  // Series labels. design-tokens.md rule 3: hue is never the sole channel, and
-  // multi-series charts label their series directly. Wide-format headers supply
-  // the labels by default; `labels=` overrides them for display.
   let labels = yColumns;
   if (attrs.labels) {
     labels = attrs.labels.split(",").map((s) => s.trim());
@@ -207,18 +153,8 @@ export function buildChartModel(attrs, csv) {
 
   const xIndex = columns.indexOf(x);
 
-  // A column of numbers gets a numeric domain, so line, area and dot land on a
-  // LINEAR scale rather than an ordinal point scale. Left as strings, Plot warns
-  // ("strings that appear to be numbers") and spaces the points evenly, which
-  // silently misplots any x that is not evenly sampled.
-  /*
-   * THE X CELL IS READ ONCE PER ROW AND REFUSED IF ABSENT.
-   *
-   * It used to be read twice, here and again inside the points loop, and both
-   * reads were indexes into a row that a short CSV line makes shorter than the
-   * header. A missing x cell is a data error worth naming by row, not a silent
-   * `undefined` that Plot would place somewhere.
-   */
+  // Numeric x gets a linear scale; left as strings, Plot spaces points evenly and misplots
+  // any x that is not evenly sampled.
   const prepared = rows.map((row, i) => {
     const xValue = row[xIndex];
     if (xValue === undefined) {
@@ -242,9 +178,7 @@ export function buildChartModel(attrs, csv) {
         );
       }
       const series = labels[seriesIndex];
-      // Unreachable: `labels` is derived from `yColumns`, which is what this
-      // loop walks. Thrown rather than defaulted, because a point with an
-      // invented series name would render as a real series.
+      // Thrown, not defaulted: a point with an invented series name would render as a real series.
       if (series === undefined) {
         throw new Error(`:::chart has no label for series ${seriesIndex + 1}`);
       }
@@ -262,19 +196,13 @@ export function buildChartModel(attrs, csv) {
     columns,
     rows,
     points,
-    // Band-scale domains are sorted by Plot by default, which silently reorders
-    // an author's rows. Locking the domain to first-appearance order keeps the
-    // chart in the order the markdown reads.
+    // Plot sorts band domains by default, which would reorder the author's rows.
     xDomain: [...new Set(xValues)].map(asX),
   };
 }
 
 /**
- * Builds the Plot marks for a model.
- *
- * Multi-series charts get DIRECT labels rather than a legend: the label sits on
- * the series it names, so the reader never has to match a color to a key. That
- * is design-tokens.md rule 3, and it is why no legend is emitted anywhere here.
+ * Direct labels, never a legend, so hue is never the only channel.
  *
  * @param {ReturnType<typeof buildChartModel>} model
  */
@@ -292,23 +220,20 @@ function marksFor(model) {
   }
 
   if (type === "bar") {
-    // Grouped bars, faceted by the x value. The inner axis prints the series
-    // name against its own bar, which IS the direct label for this mark type.
+    // The inner axis prints each series name against its own bar: that is the direct label.
     return [
       Plot.barY(points, { fx: "x", x: "series", y: "value", fill: "series" }),
       Plot.ruleY([0]),
     ];
   }
 
-  // The label rides the series it names, at its last point.
   const endLabel = (/** @type {any} */ options) =>
     Plot.text(points, Plot.selectLast(options));
 
   const base = { x: "x", y: "value", z: "series", text: "series", textAnchor: "start", dx: 6 };
 
   if (type === "area") {
-    // Stacked, so the label has to be positioned on the STACKED y, not the raw
-    // value, or every label lands at the wrong height.
+    // Stacked, so the label must use the stacked y or it lands at the wrong height.
     return [
       Plot.areaY(points, { x: "x", y: "value", fill: "series" }),
       endLabel(Plot.stackY(base)),
@@ -327,17 +252,8 @@ function marksFor(model) {
 }
 
 /**
- * Axis scales, including the axis LABELS.
- *
- * The model reshapes every chart into `{x, series, value}` so one set of marks
- * serves both the single and multi-series case. Those internal names must not
- * reach the reader: left to itself Plot labels the axes "x" and "value", which
- * is the shape of the data structure rather than the name of the thing measured.
- * The labels are put back to the author's own column names here.
- *
- * A multi-series chart gets NO y label, because its series are directly labeled
- * and the columns they came from measure different things; inventing one name
- * for all of them would be a claim the data does not make.
+ * Puts the author's column names back: Plot would label the reshaped axes x and value. Multi-series
+ * gets no y label because its columns measure different things.
  *
  * @param {ReturnType<typeof buildChartModel>} model
  */
@@ -347,8 +263,6 @@ function scalesFor(model) {
 
   if (model.type === "bar") {
     return multi
-      // Grouped bars: the facet carries the x column, and the inner axis prints
-      // the series names, which are the direct labels.
       ? { fx: { domain: model.xDomain, label: model.x }, x: { label: null }, y }
       : { x: { domain: model.xDomain, label: model.x }, y };
   }
@@ -356,16 +270,8 @@ function scalesFor(model) {
 }
 
 /**
- * Converts a linkedom element into hast.
- *
- * The alternative was `allowDangerousHtml` on remark-rehype plus rehype-stringify,
- * which would have opened raw HTML in EVERY post to get one SVG through. A tree
- * walk keeps the chart a real node, so rehype-stringify escapes text the same
- * way it does for the rest of the document and no post gains an HTML escape
- * hatch it did not have before.
- *
- * `localName` rather than `tagName`: linkedom upper-cases `tagName`, which would
- * emit `<SVG>` and would break SVG's camelCase element names.
+ * A tree walk rather than allowDangerousHtml, which would open raw HTML in every post. localName
+ * because linkedom upper-cases tagName, which breaks SVG's camelCase element names.
  *
  * @param {any} node
  * @returns {any}
@@ -397,16 +303,8 @@ const h = (tagName, properties, children) => ({
 const text = (value) => ({ type: "text", value });
 
 /**
- * The equivalent data table, generated from the same inline data the chart drew.
- *
- * Generated rather than authored so it cannot drift from the chart, and printed
- * from the ORIGINAL CSV cells rather than the parsed numbers so it reproduces
- * what the author wrote instead of a float round-trip.
- *
- * It sits OUTSIDE the element carrying `role="img"`. That is load-bearing:
- * `role="img"` makes its descendants presentational, and the WAI-ARIA spec says
- * user agents SHOULD NOT expose them, so a table nested inside the named element
- * would be generated and then hidden from the readers it exists for.
+ * Printed from the original CSV cells, not parsed numbers, to avoid a float round-trip. Must sit
+ * OUTSIDE the role=img element: its descendants are presentational and hidden from assistive tech.
  *
  * @param {ReturnType<typeof buildChartModel>} model
  */
@@ -433,26 +331,20 @@ function dataTable(model) {
 }
 
 /**
- * Renders a validated model into the hast children of the figure.
- *
  * @param {ReturnType<typeof buildChartModel>} model
  * @param {any[]} captionChildren hast for an author-written caption, may be empty
  */
 export function renderChartHast(model, captionChildren) {
   const { document } = parseHTML("<!DOCTYPE html><html><body></body></html>");
 
-  // Plot's return type is `(SVGSVGElement | HTMLElement) & Plot`, typed against
-  // the DOM lib this project does not load, so the element API is reached
-  // through a cast rather than by widening the whole module's types.
+  // Cast: Plot's return type is written against the DOM lib, which this project does not load.
   const svg = /** @type {any} */ (Plot.plot({
     document,
     width: DEFAULT_WIDTH,
     height: DEFAULT_HEIGHT,
     marginLeft: 56,
     marginBottom: 44,
-    // A faceted bar chart prints the facet's tick labels AND the facet axis
-    // label along the top, and they collide at the middle facet. The extra room
-    // lifts the axis label clear of the group names.
+    // A faceted bar chart's facet labels and axis label collide at the top without the extra room.
     marginTop: model.type === "bar" && model.labels.length > 1 ? 44 : 20,
     marginRight: model.labels.length > 1 && model.type !== "bar" ? 96 : 24,
     style: { fontSize: "12px" },
@@ -461,23 +353,18 @@ export function renderChartHast(model, captionChildren) {
     marks: marksFor(model),
   }));
 
-  // Plot injects a <style> block per chart carrying `--plot-background: white`,
-  // the one color literal in its output and the only thing standing between
-  // this pipeline and a tokens-only rule. The equivalent rules live once in
-  // app.css under .chart-figure instead, which also stops N charts on a page
-  // shipping N copies of the same stylesheet.
+  // Plot's per-chart <style> carries --plot-background: white, a color literal; the equivalent rules
+  // live once in app.css under .chart-figure.
   svg.querySelector("style")?.remove();
 
-  // The accessible name goes on the SVG, NOT on the figure. See dataTable():
-  // naming the figure would make the caption and the table presentational.
+  // The accessible name goes on the SVG, not the figure, or the caption and table become presentational.
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", model.alt);
 
   /** @type {any[]} */
   const children = [];
   if (model.title) {
-    // A <p>, deliberately not a heading: rehypeCollectToc scans h2 and h3, so a
-    // heading here would inject chart titles into the post's table of contents.
+    // A <p>, not a heading: rehypeCollectToc would put chart titles in the table of contents.
     children.push(h("p", { className: ["chart-title"] }, [text(model.title)]));
   }
   children.push(domToHast(svg));

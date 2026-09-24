@@ -1,26 +1,3 @@
-/**
- * The health run's verdicts.
- *
- * REPLAYS THE DEFECT, per the replay rule. The defect is not a wrong verdict; it
- * is that on 31 July 2026 the Ask index lost nine records, `askIndexStatus`
- * computed that number correctly for 21 days, and no verdict existed to turn it
- * into anything. So the replay is the shape of that day's reading: nine
- * missing, and an assertion that it is reported as a breach and that the number
- * nine survives into the sentence a person reads.
- *
- * The second check WAS the R2 acceptance trip-wire, and its replay was the
- * future event rather than a past one. **That future arrived on 2026-09-01**:
- * the first object went into `MEDIA`, `media-unbacked` fired exactly as it was
- * built to, and the acceptance it guarded was re-decided rather than deferred
- * (decisions-vol-13.md). The bucket now has a mirror, and `media-backup-drift`
- * replaces it. So the replay here is no longer hypothetical: the cases below
- * are a missing twin and a mismatched one, and the one that matters most is
- * that zero missing over zero objects must not read as a verified mirror.
- *
- * @see app/lib/health/verdicts.mjs
- * @see app/lib/health/checks.server.ts
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -34,7 +11,6 @@ import {
   publicHealthBody,
 } from "../app/lib/health/verdicts.mjs";
 
-/** The shape a healthy live database returns. Each test perturbs one field. */
 const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
 
 test("nine missing records is a breach, and the nine reaches the message", () => {
@@ -58,9 +34,8 @@ test("an index in step is not a breach", () => {
 });
 
 test("STALE counts as drift too, in the other direction", () => {
-  // A record the corpus no longer knows about is a reader getting a wrong
-  // answer just as much as one the index lacks. A verdict that only counted
-  // `missing` would pass while Ask cited a deleted post.
+  // A record the corpus no longer knows about is a wrong answer too: a verdict that only
+  // counted `missing` would pass while Ask cited a deleted post.
   const verdict = askDriftVerdict({ expected: 12, present: 15, missing: [], stale: ["a", "b", "c"] });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /drift 3\b/);
@@ -73,8 +48,6 @@ test("both directions are summed, not maxed", () => {
   assert.match(verdict.detail, /drift 2\b/, "one missing plus one stale is two problems");
 });
 
-/* ---- the mirror, which replaced the empty-bucket acceptance -------------- */
-
 const mirror = (over = {}) => ({ objects: 0, twins: 0, missing: [], mismatched: [], ...over });
 
 test("a fully mirrored bucket passes and reports all three counts", () => {
@@ -86,9 +59,8 @@ test("a fully mirrored bucket passes and reports all three counts", () => {
 });
 
 test("ZERO MISSING OVER ZERO OBJECTS SAYS IT VERIFIED NOTHING", () => {
-  // The whole reason the counts travel. An empty bucket and a perfectly
-  // mirrored one both have no missing keys and are not the same state, and
-  // "0 missing" alone is exactly how a vacuous pass reads as a real one.
+  // An empty bucket and a perfectly mirrored one both have no missing keys, so "0 missing"
+  // alone is exactly how a vacuous pass reads as a real one.
   const verdict = mediaBackupDriftVerdict(mirror());
   assert.equal(verdict.ok, true, "an empty bucket is not a failure");
   assert.match(verdict.detail, /examined nothing rather than verified anything/);
@@ -105,9 +77,8 @@ test("a missing twin fails, names the key, and names the repair", () => {
 });
 
 test("MISMATCHED IS COUNTED APART FROM MISSING", () => {
-  // A twin that exists but differs is a copy that is WRONG, not one that never
-  // ran. Folding it into `missing` would lose the distinction that says
-  // something rewrote the mirror.
+  // A twin that exists but differs is a copy that is WRONG, not one that never ran, and
+  // folding it into `missing` would hide that something rewrote the mirror.
   const verdict = mediaBackupDriftVerdict(
     mirror({ objects: 2, twins: 1, mismatched: ["abc123.webp (etag differs: a against b)"] }),
   );
@@ -128,8 +99,8 @@ test("agreeing FTS counts are healthy", () => {
 });
 
 test("a drained posts_fts_docsize is a breach, which is the DELETE FROM shape", () => {
-  // The measured defect: after DELETE FROM posts_fts the index count still read
-  // 1 of 1 through the content table while the docsize shadow went to 0.
+  // After DELETE FROM posts_fts the index count still reads 1 of 1 through the content table
+  // while the docsize shadow goes to 0.
   const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, postsFts: 0 });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /posts=12 but posts_fts_docsize=0/);
@@ -161,22 +132,18 @@ test("FAIL CLOSED: a count that could not be read is not a passing check", () =>
 });
 
 test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => {
-  // A string "46" compares unequal to 46 under ===, so a lenient verdict would
-  // report drift; a coercing one would report health. Both are wrong answers to
-  // "can this check determine anything".
+  // A string "46" is unequal to 46 under ===, so a lenient verdict reports drift and a
+  // coercing one reports health; both are wrong answers to "can this check determine anything".
   const verdict = ftsEqualityVerdict({ ...HEALTHY_FTS, identity: "46" });
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /unreadable/);
   assert.match(verdict.detail, /identity/);
 });
 
-/* ---------------- the public body, and what it must never carry ---------- */
-
 test("the wire body carries names and booleans only", async () => {
   const { publicHealthBody } = await import("../app/lib/health/verdicts.mjs");
 
-  // Details as they actually look on a failing run: row counts, index sizes and
-  // an R2 object key. None of it may reach an unauthenticated endpoint.
+  // Row counts, index sizes and an R2 object key: none of it may reach an unauthenticated endpoint.
   const run = {
     checks: [
       { name: "ask-index-drift", ok: false, detail: "Ask index drift 9: 9 missing, 46 expected" },
@@ -192,7 +159,6 @@ test("the wire body carries names and booleans only", async () => {
     assert.ok(!wire.includes(leak), `the wire body leaks ${JSON.stringify(leak)}: ${wire}`);
   }
 
-  // And it still says everything the workflow needs.
   assert.equal(body.ok, false);
   assert.deepEqual(
     body.checks.map((c) => c.name),
@@ -226,8 +192,6 @@ test("a field added to a check later cannot leak by inheritance", async () => {
   assert.deepEqual(Object.keys(body.checks[0]), ["name", "ok"]);
 });
 
-/* ---------------- the per-check timeout --------------------------------- */
-
 test("a check that answers in time is passed through untouched", async () => {
   const { withTimeout } = await import("../app/lib/health/verdicts.mjs");
   const verdict = await withTimeout(Promise.resolve({ ok: true, detail: "fine" }), 50, "quick");
@@ -236,8 +200,8 @@ test("a check that answers in time is passed through untouched", async () => {
 
 test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
   const { withTimeout } = await import("../app/lib/health/verdicts.mjs");
-  // Never settles. Before the timeout this would hang the endpoint, and an
-  // endpoint that cannot answer is indistinguishable from the site being down.
+  // Never settles. Without the timeout this hangs the endpoint, which is indistinguishable
+  // from the site being down.
   const started = Date.now();
   const verdict = await withTimeout(new Promise(() => {}), 30, "wedged");
   assert.equal(verdict.ok, false);
@@ -263,12 +227,9 @@ test("the timeout clears the day's slowest measured healthy path", async () => {
   );
 });
 
-/* ------------------ the two counts on a failing drift check --------------- */
-
 test("A FAILING drift check carries its two counts, and nothing else new", () => {
-  // The 17:15Z flap: ask-index-drift went false and could not be triaged,
-  // because the body said which check failed and not how far apart the sides
-  // were. One record apart mid-rebuild is not the same event as a hundred.
+  // A drift check's body must say how far apart the sides are: one record apart mid-rebuild
+  // is not the same event as a hundred.
   const body = publicHealthBody({
     checks: [
       {
@@ -330,11 +291,6 @@ test("a HEALTHY askDriftVerdict carries no counts to leak", () => {
   assert.equal(v.counts, undefined);
 });
 
-/* -------------------------------------------------------------------------
- * media-index-drift. The check that makes the media self-repair possible, and
- * the one whose drift a count comparison can miss entirely.
- * ---------------------------------------------------------------------- */
-
 test("media drift: agreement is ok and says both counts", () => {
   const v = mediaDriftVerdict({ expected: 69, present: 69, missing: [], extra: [] });
   assert.equal(v.ok, true);
@@ -384,8 +340,6 @@ test("media drift: the detail names a repair a reader can actually run", () => {
   assert.match(v.detail, /admin\/media/);
 });
 
-/* ---- content drift ------------------------------------------------------- */
-
 test("content drift: agreement on every sha is the quiet case", () => {
   const files = [
     { slug: "a", sha: "s1" },
@@ -402,7 +356,6 @@ test("content drift: agreement on every sha is the quiet case", () => {
 });
 
 test("content drift: one sha changed, one file unrowed, one row unfiled, all three counted", () => {
-  // The fixture the check was built against: every drift direction at once.
   const files = [
     { slug: "changed", sha: "new-sha" },
     { slug: "agreeing", sha: "same" },

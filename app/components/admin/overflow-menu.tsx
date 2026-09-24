@@ -2,12 +2,6 @@ import { useRef } from "react";
 
 import { useDisclosure } from "./disclosure";
 
-/**
- * The cockpit's overflow menu: a labeled button that reveals a panel of
- * secondary actions. Its keyboard and dismissal behavior live in
- * `useDisclosure`, shared with `RowMenu`; the grounds for the disclosure pattern
- * and the ARIA choice are beside the hook.
- */
 export function OverflowMenu({
   label,
   children,

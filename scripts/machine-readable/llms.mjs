@@ -1,16 +1,3 @@
-/**
- * Part of check:machine-readable: `content/llms.txt` is the source of truth for the `llms.txt`
- * settings row.
- *
- *   npm run check:machine-readable                 pure checks only
- *   npm run check:machine-readable -- --local      also compare against the local D1 row
- *   npm run check:machine-readable -- --remote     also compare against the remote D1 row
- *
- * BOUNDARY: it compares the committed file against the row it seeds and against the route that
- * serves it, but it does not fetch `/llms.txt`, so it cannot see the route failing to serve what
- * the row holds.
- */
-
 import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { retryRead } from "../lib/retry.mjs";
@@ -48,15 +35,11 @@ if (!existsSync(LLMS_PATH)) {
   throw new Error(`${LLMS_PATH} is missing`);
 }
 
-// Read as BYTES and decode explicitly: this file is compared byte for byte and the platform text
-// layer is not UTF-8 on this host.
+// Read as bytes and decode explicitly: the platform text layer is not UTF-8 on this host.
 const fileBytes = readFileSync(LLMS_PATH);
 const fileText = fileBytes.toString("utf8");
 
-// 1. the file itself
-
 assertThat(fileBytes.length > 0, "content/llms.txt is not empty");
-// An assertion that can pass by reading nothing is not an assertion.
 assertThat(
   fileBytes.length > 200,
   "content/llms.txt is long enough to be the real document",
@@ -70,16 +53,12 @@ assertThat(
 );
 assertThat(fileText.endsWith("\n"), "content/llms.txt ends with a newline");
 
-// 2. the route does not keep its own copy
-
 const route = readFileSync(ROUTE_PATH, "utf8");
 assertThat(
   /import\s+\w+\s+from\s+["']\.\.\/\.\.\/content\/llms\.txt\?raw["']/.test(route),
   "the route imports content/llms.txt",
   "Without the import the fallback is a second copy that will drift.",
 );
-// The specific shape that rotted: a multi-line template literal holding the document. One line is
-// fine; sixty is the bug.
 const literals = route.match(/`[^`]*`/g) ?? [];
 const longLiteral = literals.find((l) => l.split("\n").length > 5);
 assertThat(
@@ -91,8 +70,6 @@ assertThat(
     : undefined,
 );
 
-// 3. the D1 row
-
 const target = process.argv.includes("--remote")
   ? "--remote"
   : process.argv.includes("--local")
@@ -100,8 +77,6 @@ const target = process.argv.includes("--remote")
     : null;
 
 if (target) {
-  // RETRIED ONCE: remote D1 reads have failed transiently and been clean immediately after. Read
-  // only.
   const result = await retryRead(
     () => {
       const r = spawnSync(
@@ -158,14 +133,8 @@ console.log(
   `  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`,
 );
 
-/*
- * THE CONTACT URL IS BOUND TO SITE_ORIGIN, in both directions. A tracked literal cannot import
- * anything, so its contact line was typed by hand and pointed the one machine-readable file whose
- * whole audience is crawlers at a host this site is not served from. The gate is the binding a
- * literal file cannot express, and at DNS cutover it goes red until llms.txt follows, which is the
- * point. The heading is deliberately NOT checked: it is the site's NAME, not a claim about where
- * anything is served from.
- */
+// A tracked text file cannot import SITE_ORIGIN, so this binds its contact line to it. At DNS
+// cutover it goes red until llms.txt follows, which is the point.
 {
   const seoSource = readFileSync("app/lib/seo.ts", "utf8");
   const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";

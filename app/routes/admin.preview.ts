@@ -6,17 +6,8 @@ import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.preview";
 
 /**
- * The exact preview.
- *
- * It renders a submitted body through `app/lib/content/pipeline.mjs`, the same module the build
- * script and the Worker import. There is ONE renderer on this site and this route does not become a
- * second one: it returns what `renderBody` gives back, unmodified, so the preview IS what publishes.
- *
- * READ ONLY, worth being precise about because it is a POST: it touches no database, writes no file,
- * commits nothing, and reaches R2 only to MEASURE images the body already references.
- *
- * It sits under `/admin`, so the layout middleware has already required the single-admin session.
- * There is no unauthenticated way to make the Worker render arbitrary markdown.
+ * Returns what `renderBody` gives back, unmodified, so the preview is what publishes. Read only
+ * although it is a POST: no database, no file, no commit, and R2 only to measure referenced images.
  */
 export async function action({ request, context }: Route.ActionArgs) {
   if (request.method !== "POST") {
@@ -25,12 +16,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const env = getEnv(context);
   const form = await request.formData();
-  // THE SAME transform the save path applies, from the same module, so the two cannot drift again. A
-  // multipart body arrives with every newline normalized to CRLF, and rendering that raw is what made
-  // the preview differ from the published artifact.
+  // The same transform the save path applies: a multipart body arrives with every newline as CRLF.
   const body = normalizeBody(String(form.get("body") ?? ""));
-  // Only used to label errors, exactly as the save path labels them, so a
-  // failing directive reports the same file name it would report on save.
   const slug = String(form.get("slug") ?? "").trim() || "preview";
   const { ContentError, renderBody } = await loadPipeline();
 
@@ -42,10 +29,8 @@ export async function action({ request, context }: Route.ActionArgs) {
     });
     return Response.json({ html, headings: toc.length });
   } catch (error) {
-    // A preview failure is ordinary: the author is mid-sentence and the directive is half typed. It
-    // reports the pipeline's own message and a 200, because the REQUEST succeeded and it is the content
-    // that is not ready. A non-2xx would make the client treat a routine typo as a broken endpoint and
-    // stop previewing.
+    // A 200 carrying the pipeline's message: a half-typed directive is ordinary, and a non-2xx would
+    // make the client treat a typo as a broken endpoint and stop previewing.
     const message =
       error instanceof ContentError || error instanceof EditorError
         ? error.message

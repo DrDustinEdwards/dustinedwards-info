@@ -1,19 +1,3 @@
-/**
- * Pacing the Ask daily ceiling.
- *
- * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, section 27: "A
- * distributed caller could exhaust the daily cap for $0 and deny the feature to
- * everyone." Verified TRUE in substance against the code on 2026-08-23, and
- * the audit's stated per-IP number is WRONG: it says 6/min, `ASK_RATE_LIMIT` is
- * 5. The 200/day is correct.
- *
- * The scenario asserted below is that audit sentence made concrete: 200 units
- * spent in the first minutes of a UTC day, under a flat cap, leaves the rest of
- * the day dead. Paced, it cannot.
- *
- * @see app/lib/search/ask-pacing.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -26,9 +10,7 @@ const BURST = 25;
 const at = (seconds) => new Date(Date.UTC(2026, 7, 23, 0, 0, 0) + seconds * 1000);
 
 test("THE DEFECT: a burst at midnight cannot take the whole day", () => {
-  // Under the flat cap this is exactly what the audit describes: 200 units are
-  // available at 00:00:01, so a distributed caller takes all of them and every
-  // reader for the next 23 hours is refused.
+  // Under a flat cap all 200 units are available at 00:00:01, so a distributed caller takes the whole day.
   const atOpening = pacedAllowance(DAILY, BURST, at(1));
   assert.ok(
     atOpening < DAILY,
@@ -38,9 +20,6 @@ test("THE DEFECT: a burst at midnight cannot take the whole day", () => {
 });
 
 test("the day still recovers continuously after such a burst", () => {
-  // The property that makes this degrade rather than die: having taken the
-  // burst, the attacker has NOT bought the rest of the day. An hour later there
-  // is more allowance than they consumed.
   const anHourLater = pacedAllowance(DAILY, BURST, at(3600));
   assert.ok(
     anHourLater > BURST,
@@ -56,8 +35,6 @@ test("the full ceiling is still the ceiling and is never exceeded", () => {
       `${allowed} at ${seconds}s exceeds the daily cap of ${DAILY}`,
     );
   }
-  // And by the end of the day the whole budget has been released, so pacing
-  // never costs the site answers it was willing to pay for.
   assert.equal(pacedAllowance(DAILY, BURST, at(86399)), DAILY);
 });
 
@@ -71,9 +48,7 @@ test("the allowance never goes backwards as the day advances", () => {
 });
 
 test("the first question of the day is not refused, which is the burst's job", () => {
-  // Without a burst an evenly paced share is 0 at 00:00:01 and the endpoint
-  // would refuse its first honest caller every single day. That would be a
-  // worse bug than the one being fixed.
+  // Without a burst an evenly paced share is 0 at 00:00:01, refusing the first honest caller every day.
   assert.ok(pacedAllowance(DAILY, BURST, at(0)) >= 1);
 });
 
@@ -85,8 +60,6 @@ test("midday has released a real share of the day, and not all of it", () => {
 });
 
 test("Retry-After is minutes, not the rest of the day", () => {
-  // The whole point of the change: telling a reader to come back tomorrow when
-  // budget frees up every few minutes sends them away permanently.
   const wait = secondsPerPacedUnit(DAILY);
   assert.ok(wait > 0);
   assert.ok(wait <= 900, `${wait}s is most of an hour, which reads as "gone for today"`);

@@ -1,12 +1,3 @@
-/**
- * Part of check:machine-readable: the microformats2 annotations on the public plane, parsed rather
- * than grepped.
- *
- * BOUNDARY: it RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node and parses the result, so it
- * sees markup and nothing else, and the live-path rule is why it is not folded into `check:content`.
- * Its expected values come from a separate read of the markdown, which is the vacuity rule.
- */
-
 import { readFile } from "node:fs/promises";
 
 import { bundleRoutes, importBundled, renderRoute } from "../lib/route-render.mjs";
@@ -29,9 +20,6 @@ const failures = [];
 let checks = 0;
 
 /**
- * `assert(label, ok, detail)`, deliberately not the other two shapes here: a call copied out of a
- * gate using `ok(label, condition)` is a ReferenceError rather than a silent pass. The vacuity rule.
- *
  * @param {string} label
  * @param {boolean} passed
  * @param {string} [detail]
@@ -42,15 +30,13 @@ function assert(label, passed, detail = "") {
 }
 
 /**
- * A SECOND, NARROW READ ON PURPOSE: asking the pipeline would make the assertion `x === x`.
- * Bounded to the frontmatter block, and the path comes from `postPath()`, the URL allowlist rule.
+ * A second, narrow read on purpose: asking the pipeline would make the assertion `x === x`.
  *
  * @param {string} slug
- * @returns {Promise<string>} an ISO instant
+ * @returns {Promise<string>}
  */
 async function frontmatterDate(slug) {
   const raw = await readFile(postPath(slug), "utf8");
-  // CRLF-tolerant. Two plants in this repo have already failed for want of it.
   const fence = /^---\r?\n([\s\S]*?)\r?\n---\r?$/m.exec(raw);
   if (!fence) throw new Error(`${slug}.md has no frontmatter block`);
   const line = /^date:[ \t]*(.+?)[ \t]*$/m.exec(fence[1]);
@@ -63,7 +49,6 @@ async function frontmatterDate(slug) {
 }
 
 /**
- * The one property reader, so every section spells a lookup the same way.
  * @param {any} item
  * @param {string} name
  * @returns {string | undefined}
@@ -73,7 +58,7 @@ function prop(item, name) {
   return Array.isArray(value) && value.length > 0 ? value[0] : undefined;
 }
 
-/** Every h-* item in a parse, flattened, so a count cannot miss a nested one.
+/**
  * @param {any[]} items
  * @returns {any[]}
  */
@@ -93,12 +78,8 @@ function flatten(items) {
   return out;
 }
 
-// The corpus, and the scope proof
-
-/*
- * BUILT HERE, not read off disk: the artifact is a gitignored local product, and a stale one
- * would certify a corpus nobody serves. The missing-file failure is NAMED, not an ENOENT.
- */
+// Built here, not read off disk: the artifact is gitignored, and a stale one would certify a
+// corpus nobody serves.
 let artifact;
 try {
   artifact = JSON.parse(await buildArtifact());
@@ -113,10 +94,6 @@ try {
 }
 const published = artifact.posts.filter((/** @type {any} */ p) => !p.draft);
 
-/*
- * SCOPE PROVEN NON-EMPTY FIRST: a sweep over zero posts reports what a clean sweep reports,
- * which is the vacuity rule's first discipline.
- */
 assert(
   "the corpus has published posts to render",
   published.length > 0,
@@ -129,11 +106,8 @@ if (failures.length > 0) {
   throw new Error("microformats: the corpus has no published posts");
 }
 
-/*
- * `app/lib/seo.ts` RIDES THROUGH THE SAME BUNDLER, so expectation and subject share ONE source.
- * IN ITS OWN BUNDLE CALL, because esbuild derives `outbase` from the entry points' common
- * parent, and mixing it with the routes moves every output under a subdirectory.
- */
+// seo.ts gets its own bundle call: esbuild derives `outbase` from the entries' common parent, and
+// mixing it with the routes moves every output under a subdirectory.
 const routes = await bundleRoutes([
   "app/routes/blog.$slug.tsx",
   "app/routes/blog._index.tsx",
@@ -151,7 +125,6 @@ const seo = await importBundled(identity.files[0]);
 
 const SITE = /** @type {any} */ (seo).SITE;
 const SITE_ORIGIN = /** @type {any} */ (seo).SITE_ORIGIN;
-/** The footer's rel="me" set, read from its one owner rather than restated. */
 const OWNER_PROFILES = /** @type {string[]} */ ([...(/** @type {any} */ (seo).OWNER_PROFILES ?? [])]);
 
 assert(
@@ -172,17 +145,12 @@ if (failures.length > 0) {
 const EXPECTED_AUTHOR_URL = `${SITE_ORIGIN}/`;
 
 /**
- * The loader payload one post page renders from, in the shape `blogPostView`
- * produces. Fed from the BUILT record, which is what production feeds it after
- * a sync, so the component sees the values it really sees.
- *
  * @param {any} record
  */
 function postLoaderData(record) {
   return {
     toc: record.toc ?? [],
     seriesParts: [],
-    /* NO MENTIONS: that block carries no microformats class and its text is a stranger's. */
     mentions: [],
     post: {
       slug: record.slug,
@@ -190,12 +158,7 @@ function postLoaderData(record) {
       description: record.description ?? null,
       html: record.html ?? "",
       publishAt: record.publishAt ?? null,
-      /*
-       * THE SAME SOURCE THE SYNC USES. This was the FRONTMATTER field, which no post carries, so the
-       * gate was asserting a property it had arranged never to see. ONE HONEST DIFFERENCE, a bug in
-       * neither place: with no revision date the sync writes `unixepoch()`, so the assertion is the
-       * PAIRING and holds either way.
-       */
+      // With no revision date the sync writes `unixepoch()`, so the assertion is the pairing.
       updatedAt: revisedDate(record),
       coverImage: record.cover?.src ?? null,
       coverAlt: record.cover?.alt ?? null,
@@ -209,19 +172,12 @@ function postLoaderData(record) {
       ogTitle: record.ogTitle ?? null,
       ogDescription: record.ogDescription ?? null,
       related: record.related ?? [],
-      /*
-       * The two lists the artifact now carries beside `related`. Spelled out rather than left
-       * undefined: this fixture is a deliberate SECOND statement of the projection, so a field the
-       * component reads and this object omits is a crash here and a silent hole in the assertion.
-       */
       backlinks: record.backlinks ?? [],
       changelog: record.changelog ?? null,
       furtherReading: record.furtherReading ?? [],
     },
   };
 }
-
-// 1. Every published post page is one complete h-entry
 
 let postsParsed = 0;
 let updatedSeen = 0;
@@ -240,10 +196,7 @@ for (const record of published) {
   const parsed = mf2(html, { baseUrl: canonical });
   const entries = parsed.items.filter((/** @type {any} */ i) => i.type.includes("h-entry"));
 
-  /*
-   * EXACTLY ONE, not at least one: two h-entries publish competing answers and a consumer takes
-   * the first.
-   */
+  // Exactly one: two h-entries publish competing answers and a consumer takes the first.
   assert(
     `${slug}: exactly one top-level h-entry`,
     entries.length === 1,
@@ -268,10 +221,7 @@ for (const record of published) {
       `The class belongs on the Permalink anchor, which already holds that value.`,
   );
 
-  /*
-   * e-content IS ASSERTED AS THE BODY: a class on an empty wrapper still satisfies "has content".
-   * By length rather than byte for byte, or the equality is an assertion about the parser.
-   */
+  // By length, not byte for byte, or the equality becomes an assertion about the parser.
   const content = /** @type {any} */ (entry.properties?.content?.[0]);
   const bodyHtml = typeof content === "object" ? (content?.html ?? "") : "";
   assert(
@@ -282,10 +232,6 @@ for (const record of published) {
       `receives post.html, not on a wrapper around it.`,
   );
 
-  /*
-   * THE FRONTMATTER COMPARISON. The expected value comes from the markdown
-   * file; the actual comes from the rendered attribute. See the header.
-   */
   const expected = await frontmatterDate(slug);
   assert(
     `${slug}: dt-published equals the frontmatter date`,
@@ -315,10 +261,6 @@ for (const record of published) {
     );
   }
 
-  /*
-   * dt-updated IS CONDITIONAL AND THE GATE IS CONDITIONAL WITH IT, both ways: what is asserted is
-   * the pairing, a page showing "Updated" with no `dt-updated` and the reverse.
-   */
   const showsUpdated = />\s*Updated\s*</.test(html) || /·\s*Updated/.test(html);
   const updated = prop(entry, "updated");
   assert(
@@ -328,12 +270,7 @@ for (const record of published) {
       `parse ${updated === undefined ? "found no" : "found a"} dt-updated ` +
       `(${JSON.stringify(updated)}).`,
   );
-  /*
-   * THE VALUE ASSERTION RUNS ON EVERY POST: conditioning it made the count depend on the CHECKOUT,
-   * a full clone resolving a commit date for every post and a shallow one none. The expectation is
-   * derived from what the PAGE rendered, which leaves the one-owner rule's one owner of the threshold
-   * where it belongs, with the route.
-   */
+  // Runs on every post: a full clone resolves a commit date for every post and a shallow one none.
   if (updated === undefined) unrevisedSeen += 1;
   else updatedSeen += 1;
   const expectedUpdated = showsUpdated ? revisedDate(record)?.toISOString() : undefined;
@@ -345,10 +282,7 @@ for (const record of published) {
       `${JSON.stringify(revisedDate(record)?.toISOString())}.`,
   );
 
-  /*
-   * NOTHING ELSE ON THE PAGE IS A MICROFORMAT: annotating the mentions list would republish a
-   * stranger's text as this site's structured data.
-   */
+  // Annotating the mentions list would republish a stranger's text as this site's structured data.
   const all = flatten(parsed.items);
   assert(
     `${slug}: the page publishes exactly one h-entry and one h-card`,
@@ -365,17 +299,12 @@ assert(
   `${postsParsed} of ${published.length} parsed to a single h-entry.`,
 );
 
-/*
- * BOTH dt-updated BRANCHES, COUNTED AND PRINTED, and neither fabricated. Not asserted against a
- * fixed split, because which branch runs is a property of the clone rather than of the code.
- */
+// Printed, not asserted: which branch runs is a property of the clone rather than of the code.
 console.log(
   `  dt-updated: ${updatedSeen} post(s) carried a revision, ${unrevisedSeen} did not, ` +
     `from revisedDate (frontmatter updated:, else the file's last commit). A shallow ` +
     `clone has no history for most files and answers null, which is the absent branch.`,
 );
-
-// 2. The blog index is one h-feed, holding the page it rendered
 
 const ordered = [...published].sort(
   (/** @type {any} */ a, /** @type {any} */ b) =>
@@ -384,9 +313,6 @@ const ordered = [...published].sort(
 const totalPages = pageCount(ordered.length);
 
 /**
- * Built THROUGH the route's own paging helpers rather than by slicing to a literal, which is
- * the vacuity rule's measure-floors-through-the-pipeline: a page size change moves both together.
- *
  * @param {number} page
  */
 function indexLoaderData(page) {
@@ -401,12 +327,7 @@ function indexLoaderData(page) {
     activeYear: null,
     page,
     pageCount: totalPages,
-    /*
-     * THE EVIDENCE ROW'S OWN INPUTS, over the WHOLE corpus rather than this page of it, which is
-     * what `listBlogPosts` answers and what `listingFacts` says the row means. Supplied rather
-     * than omitted: a fixture that leaves them out renders a page missing a block the site ships,
-     * and this gate's whole value is that what it parses is what a reader is served.
-     */
+    // Over the whole corpus, not this page, which is what `listBlogPosts` answers.
     total: ordered.length,
     span: {
       firstYear: year(ordered.at(-1)?.publishAt),
@@ -414,14 +335,11 @@ function indexLoaderData(page) {
       minutes:
         ordered.reduce((n, p) => n + (p.readingTimeMinutes ?? 0), 0) || null,
     },
-    /** The number of entries the page will render, which is what section 2 asserts. */
     expectedEntries: split.posts.length + (split.featured ? 1 : 0),
   };
 }
 
 /**
- * The UTC year of a publish date, or null. `ordered` is newest first, so the last row is oldest.
- *
  * @param {string | number | Date | null | undefined} value
  */
 function year(value) {
@@ -431,10 +349,8 @@ function year(value) {
 
 let feedsParsed = 0;
 
-/*
- * BOTH ENDS OF THE PAGINATION: page 1 is the only one that can carry a featured post and the
- * last the only one not the page size. A SET, because a one-page corpus makes them the same page.
- */
+// Page 1 alone can carry a featured post and the last alone can be short. A set, because a
+// one-page corpus makes them the same page.
 const INDEX_PAGES = new Set([1, totalPages]);
 for (const page of INDEX_PAGES) {
   const payload = indexLoaderData(page);
@@ -469,10 +385,6 @@ for (const page of INDEX_PAGES) {
     c.type.includes("h-entry"),
   );
 
-  /*
-   * THE COUNT IS THE LOADER'S: /blog paginates, so "the index carries every published post" could
-   * only pass while the corpus stayed under the page size. The promise is about what it SHOWS.
-   */
   assert(
     `/blog page ${page}: the feed holds every entry the page rendered`,
     children.length === payload.expectedEntries,
@@ -510,7 +422,6 @@ for (const page of INDEX_PAGES) {
       `entry published is ${JSON.stringify(prop(child, "published"))}, ` +
         `${postPath(slug)} says ${await frontmatterDate(slug)}.`,
     );
-    /* p-summary IS PAIRED WITH THE DESCRIPTION both ways, or the class falls off every card unseen. */
     assert(
       `/blog page ${page}: ${slug} carries p-summary exactly when it has a description`,
       (prop(child, "summary") !== undefined) === Boolean(record.description),
@@ -525,10 +436,6 @@ for (const page of INDEX_PAGES) {
       );
     }
 
-    /*
-     * A LISTING ENTRY CARRIES NO e-content: a consumer finding content on a card has a description
-     * labeled as the article.
-     */
     assert(
       `/blog page ${page}: ${slug} publishes no e-content`,
       child.properties?.content === undefined,
@@ -544,12 +451,6 @@ assert(
   `${feedsParsed} of ${INDEX_PAGES.size} index page(s) parsed to one h-feed.`,
 );
 
-// 3. The home page carries the site author's h-card
-
-/*
- * THE HOME FIXTURE IS DERIVED, NOT SUPPLIED: it was a third statement of which post leads the
- * front page, written by the gate checking it, asserting a section production never rendered.
- */
 const homeFeaturedRows = ordered.filter((/** @type {any} */ p) => p.featured);
 const homeOtherRows = ordered.filter((/** @type {any} */ p) => !p.featured);
 const { featured: homeFeatured, recent: homeRecent } = startHere(
@@ -573,8 +474,6 @@ const homeHtml = await renderRoute(homeModule, {
     posts: ordered.length,
     featured: homeFeatured,
     recent: homeRecent,
-    /* `missing` is the state with no numbers in it, so the tile renders its
-       dash and this gate asserts nothing about a health verdict. */
     health: { state: "missing", total: 0, failed: 0, ageSeconds: 0, readAt: "" },
   },
 });
@@ -598,10 +497,6 @@ if (cards.length === 1) {
     `h-card url is ${JSON.stringify(prop(cards[0], "url"))}, expected ` +
       `${EXPECTED_AUTHOR_URL}.`,
   );
-  /*
-   * NO u-photo, ASSERTED: the site publishes no photograph, so a card claiming one is the
-   * substituted value the no-substitution rule names, wearing an h-card. It INVERTS the day a photo lands.
-   */
   assert(
     "/: the h-card claims no u-photo, because the site publishes none",
     cards[0].properties?.photo === undefined,
@@ -642,10 +537,7 @@ for (const record of homeExpected) {
   );
 }
 
-/*
- * THE h-card MUST NOT SWALLOW THE ENTRIES: on `<main>` every consumer reads three posts as
- * properties of a person.
- */
+// An h-card on `<main>` would make every consumer read the posts as properties of a person.
 assert(
   "/: the Start here entries are siblings of the h-card, not children of it",
   (cards[0]?.children ?? []).length === 0,
@@ -653,14 +545,6 @@ assert(
     `moved onto an ancestor of the post list.`,
 );
 
-// 4. rel="me" is exactly the owner's profiles, and never Mastodon or Bluesky. Rulings 134 and 135.
-
-/*
- * ASSERTED ON THE RENDERED PAGES: the parser's view of every rel catches one however it was
- * written. Ruling 50's "no rel=me" is superseded by 134 and 135: the footer's profile links carry
- * it, and the set must equal `OWNER_PROFILES`, so a stray rel="me" anywhere else fails as surely as
- * a missing one. The social arm is a NAMED LIST, the site linking out constantly; 134 keeps it.
- */
 const FORBIDDEN_HOSTS = ["bsky.app", "bsky.social", "mastodon.social", "fed.brid.gy"];
 
 assert(
@@ -701,10 +585,6 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
 }
 
 await cleanup();
-
-// Report. No count floor: "every published post rendered and parsed" and "both ends of the index
-// pagination parsed" already fail a skipped render, and a floor tied to the corpus size failed on
-// every unpublish.
 
 for (const f of failures) console.log(`  FAIL  ${f}`);
 console.log(

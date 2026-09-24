@@ -1,22 +1,3 @@
-/**
- * The one JavaScript owner of "is this post publicly visible".
- *
- * REPLAYS THE DEFECT, per the replay rule. On 2026-07-29 five unpublished drafts
- * staged through the operator path were uploaded to Ask unconditionally, and the
- * public endpoint answered from one and cited it by slug. The cause was that Ask
- * had its OWN copy of the visibility rule, agreeing with `publiclyVisible()` by
- * inspection and by a grep and by nothing else.
- *
- * The write-quality audit, finding 5: "A fourth shape is how unpublished drafts
- * entered Ask in July. The two-language pair is gated. This third is a grep."
- * Verified at HEAD before the fix: three copies, the Ask one hand-rolled.
- *
- * Each test below flips ONE fact and asserts inclusion flips with it, which is
- * what proves the predicate reads both facts rather than happening to agree.
- *
- * @see app/lib/search/visibility.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -29,8 +10,6 @@ import {
 const NOW = Date.parse("2026-08-23T12:00:00Z");
 const PAST = "2026-08-01T00:00:00Z";
 const FUTURE = "2026-12-01T00:00:00Z";
-
-/* ------------------------------------------------ the two excluded shapes */
 
 test("A DRAFT IS EXCLUDED, which is the July leak", () => {
   assert.equal(
@@ -48,8 +27,6 @@ test("A FUTURE-DATED POST IS EXCLUDED", () => {
   );
 });
 
-/* ---------------------------------- flip each fact, inclusion flips with it */
-
 test("FLIP THE STATUS: draft to published, with the date held, flips inclusion", () => {
   const held = { publishAt: PAST };
   assert.equal(isPubliclyVisible({ ...held, status: "draft" }, NOW), false);
@@ -63,13 +40,9 @@ test("FLIP THE DATE: future to past, with the status held, flips inclusion", () 
 });
 
 test("BOTH facts are required: neither alone admits a post", () => {
-  // The failure this catches is a predicate that reads one fact and happens to
-  // agree with the other on today's corpus.
   assert.equal(isPubliclyVisible({ status: "draft", publishAt: FUTURE }, NOW), false);
   assert.equal(isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt: PAST }, NOW), true);
 });
-
-/* -------------------------------------------------------------- the edges */
 
 test("no publish date means publish immediately, not never", () => {
   // The Drizzle form is isNull(publishAt) OR publishAt <= now. Reading a missing
@@ -104,11 +77,7 @@ test("a Date object and an epoch number are read the same as a string", () => {
   }
 });
 
-/* ------------------------------------------------------------ the mapping */
-
 test("statusForDraft maps the artifact's boolean to the row's string", () => {
-  // The editor writes `record.draft ? "draft" : "published"`. This is the same
-  // fact in the other shape, stated once so Ask can ask the shared predicate.
   assert.equal(statusForDraft(true), "draft");
   assert.equal(statusForDraft(false), PUBLISHED_STATUS);
   assert.equal(statusForDraft(undefined), PUBLISHED_STATUS, "absent means not a draft");

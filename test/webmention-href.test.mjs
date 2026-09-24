@@ -3,25 +3,13 @@ import test from "node:test";
 
 import { safeHttpHref } from "../app/lib/webmention/urls.mjs";
 
-/**
- * The render-time href check, held on its own.
- *
- * `safeHttpHref` decides whether a stranger's URL may become an `href` on a
- * public page. It is the last check in a chain of three (`sourceVerdict` on the
- * way in, `readAuthor` at verification, this at render), and it is the only one
- * of the three that runs on the value that actually reaches the attribute.
- *
- * Held here rather than only in the browser gate because a pure function is the
- * part of a render a test can hold, and because the browser gate can exercise
- * exactly the two rows it seeds while this can enumerate the refusals.
- */
+/* The last of three href checks, and the only one that runs on the value that actually
+ * reaches the attribute. */
 
 test("it accepts http and https and returns the parser's own output", () => {
   assert.equal(safeHttpHref("https://a.example/post"), "https://a.example/post");
   assert.equal(safeHttpHref("http://a.example/post"), "http://a.example/post");
-  /* The PARSER'S output, not the input: a bare origin gains its root path,
-     which is what a browser would resolve it to anyway. Asserted so the choice
-     is a decision rather than a surprise. */
+  /* The PARSER'S output, not the input: a bare origin gains its root path. */
   assert.equal(safeHttpHref("https://a.example"), "https://a.example/");
 });
 
@@ -38,8 +26,6 @@ test("it REFUSES every scheme that is not http or https", () => {
   for (const value of refused) {
     assert.equal(safeHttpHref(value), null, `${value} was not refused`);
   }
-  /* SCOPE, ASSERTED. An empty list passes this test by examining nothing,
-     which is what a clean sweep looks like. */
   assert.equal(refused.length, 7);
 });
 
@@ -55,12 +41,8 @@ test("it REFUSES absence without throwing, since a column is nullable", () => {
 });
 
 test("a leading-whitespace javascript URL is still refused", () => {
-  /*
-   * `new URL` trims leading control characters and whitespace before parsing,
-   * which is the behavior that makes a naive `startsWith("javascript:")`
-   * guard useless and is the reason this function asks the PARSER for the
-   * protocol instead of reading the string.
-   */
+  /* `new URL` trims leading control characters and whitespace, which makes a naive
+   * `startsWith("javascript:")` guard useless, so the PARSER is asked for the protocol. */
   assert.equal(safeHttpHref("  javascript:alert(1)"), null);
   assert.equal(safeHttpHref("\tjavascript:alert(1)"), null);
 });

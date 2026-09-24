@@ -1,21 +1,3 @@
-/**
- * Whether a watchdog firing mails, given what the last one saw.
- *
- * REPLAYS THE DEFECT, per the replay rule. The defect is not a wrong verdict; it
- * is that the handler was STATELESS, so one condition red for an afternoon
- * produced 27 identical emails at four an hour. The replay is therefore a
- * SEQUENCE rather than a single call: red, red, green, asserting one mail, then
- * none, then one. A test that only checked a single transition would pass
- * against the old code on the first poll.
- *
- * The end-to-end replay against the real deployed cron is separate and is what
- * proves the wiring; this covers the decision, which is the half a scheduled
- * handler makes unobservable.
- *
- * @see app/lib/health/alert-state.mjs
- * @see workers/watchdog.ts
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -28,10 +10,7 @@ const T3 = "2026-09-02T13:45:00.000Z";
 
 const green = { red: false, since: T0, checks: [] };
 
-/* ---- THE REPLAY: the 27-email sequence, as a sequence -------------------- */
-
 test("PLANT: red, red, green mails exactly once, never, once", () => {
-  // Poll 1: healthy state stored, now unhealthy. One mail.
   const first = alertTransition({
     stored: green,
     alerting: true,
@@ -43,7 +22,6 @@ test("PLANT: red, red, green mails exactly once, never, once", () => {
   assert.equal(first.state.red, true);
   assert.equal(first.state.since, T1, "the clock starts when it went red");
 
-  // Poll 2: still unhealthy. NO mail. This is the whole defect.
   const second = alertTransition({
     stored: first.state,
     alerting: true,
@@ -54,7 +32,6 @@ test("PLANT: red, red, green mails exactly once, never, once", () => {
   assert.equal(second.write, false, "and with nothing changed there is nothing to store");
   assert.equal(second.state.since, T1, "the episode keeps its original start");
 
-  // Poll 3: recovered. One mail, carrying the duration.
   const third = alertTransition({
     stored: second.state,
     alerting: false,
@@ -68,7 +45,6 @@ test("PLANT: red, red, green mails exactly once, never, once", () => {
 });
 
 test("a long red spell mails once however many polls it takes", () => {
-  // The measured shape: four polls an hour for an afternoon.
   let state = green;
   let mails = 0;
   for (let i = 0; i < 28; i += 1) {
@@ -84,11 +60,7 @@ test("a long red spell mails once however many polls it takes", () => {
   assert.equal(mails, 1, "28 red polls is one alert, not 28");
 });
 
-/* ---- the baseline, which must not fire on a deploy ----------------------- */
-
 test("NO STORED STATE IS A BASELINE, not a change, even when red", () => {
-  // A fresh deploy landing during a red spell must not mail. It has never seen
-  // a previous state, and "I have not looked before" is not "it just broke".
   const out = alertTransition({ stored: null, alerting: true, failing: ["fts-equality"], now: T1 });
   assert.equal(out.email, null);
   assert.equal(out.write, true, "but it must record what it saw");
@@ -112,11 +84,8 @@ test("garbage in the store is treated as absent, never coerced", () => {
   }
 });
 
-/* ---- unreadable is NOT absent ------------------------------------------- */
-
 test("AN UNREADABLE STORE MAILS RATHER THAN GOING QUIET", () => {
-  // Absent means first run. Unreadable means the dedupe is blind, and a blind
-  // dedupe that stays silent is a monitor that quietly stopped monitoring.
+  // Unreadable means the dedupe is blind, and a blind dedupe that stays silent stops monitoring.
   const out = alertTransition({
     stored: null,
     storedReadable: false,
@@ -139,8 +108,6 @@ test("an unreadable store on a HEALTHY poll still mails nothing", () => {
   assert.equal(out.email, null, "nothing is wrong, so there is nothing to say");
   assert.equal(out.write, true);
 });
-
-/* ---- the failing set while red ------------------------------------------ */
 
 test("a new check joining an existing outage is recorded, not mailed", () => {
   const red = alertTransition({ stored: green, alerting: true, failing: ["a"], now: T1 });
@@ -174,8 +141,6 @@ test("healthy to healthy writes nothing at all", () => {
   assert.equal(out.email, null);
   assert.equal(out.write, false);
 });
-
-/* ---- duration ------------------------------------------------------------ */
 
 test("an unparseable since yields NO duration rather than zero", () => {
   // "recovered after 0 seconds" reads as a measurement and is not one.

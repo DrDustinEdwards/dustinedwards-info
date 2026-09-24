@@ -1,9 +1,6 @@
 /**
- * Reads resource names out of the real wrangler config, because nothing that talks to a bucket may
- * name one in a string literal: a stale literal aims a DELETE at whatever still answers to it.
- *
- * BOUNDARY: it reads the REAL file, the example carrying placeholder ids that a build script
- * cannot use. Keep the two describing the same binding surface.
+ * Nothing that talks to a bucket may name one in a string literal: a stale literal aims a DELETE
+ * at whatever still answers to it. Reads the real file; the example carries placeholder ids.
  */
 
 import { readFileSync } from "node:fs";
@@ -14,14 +11,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CONFIG = join(root, "wrangler.jsonc");
 
 /**
- * JSONC to JSON. Comments only; this config has no trailing commas.
+ * Weak on purpose: the strong stripper's line-comment rule eats a protocol-relative url, and
+ * JSON.parse throws on any comment this misses.
  *
  * @returns {any}
- */
-/*
- * WEAK ON PURPOSE, this being JSONC on its way to JSON.parse: the shared strong stripper's
- * line-comment rule eats a protocol-relative url and takes the rest of the line with it. Weak is
- * SUFFICIENT, because JSON.parse throws on any comment this fails to remove.
  */
 export function readWranglerConfig() {
   const raw = readFileSync(CONFIG, "utf8");
@@ -30,8 +23,6 @@ export function readWranglerConfig() {
 }
 
 /**
- * Every R2 bucket name the Worker binds, keyed by binding name.
- *
  * @returns {Record<string, string>}
  */
 export function bucketNames() {
@@ -48,9 +39,6 @@ export function bucketNames() {
 }
 
 /**
- * The D1 database NAME for a binding, or a named failure. DERIVED, not restated: another script
- * carries the same value as a literal, which is the mirror shape this repo keeps paying for.
- *
  * @param {string} binding
  */
 export function databaseFor(binding) {
@@ -70,8 +58,7 @@ export function databaseFor(binding) {
 }
 
 /**
- * One bucket by binding name, or a named failure. Throws rather than returning undefined, so a
- * typo cannot become `undefined` interpolated into a wrangler command line.
+ * Throws rather than returning undefined, so a typo cannot become `undefined` in a wrangler command.
  *
  * @param {string} binding
  */

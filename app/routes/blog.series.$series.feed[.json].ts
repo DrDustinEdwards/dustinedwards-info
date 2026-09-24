@@ -7,15 +7,7 @@ import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series.feed[.json]";
 
-/**
- * One series' JSON feed, from `jsonFeedDocument`, the same envelope the blog
- * feed and the tag feeds use. Ordered by part and uncapped, on the grounds the
- * RSS twin states.
- *
- * `application/json` rather than `application/feed+json`, which is the main
- * feed's ruling inherited: Cloudflare does not compress `+json` suffixes, and
- * the `version` member inside the document is what readers identify it by.
- */
+/** `application/json`, not `application/feed+json`: Cloudflare does not compress `+json` suffixes. */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const series = await getBlogSeries(env, params.series);

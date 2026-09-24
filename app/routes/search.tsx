@@ -36,11 +36,6 @@ import "~/styles/search-facets.css";
 
 const PAGE_SIZE = 10;
 
-/**
- * `type`, `tag` and `year` are separate parameters as well as query operators,
- * so a facet chip can be an ordinary link rather than a second filter language only
- * the form knows how to speak.
- */
 function readParams(url: URL) {
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10);
   return {
@@ -48,23 +43,12 @@ function readParams(url: URL) {
     type: url.searchParams.get("type"),
     tag: url.searchParams.get("tag"),
     year: url.searchParams.get("year"),
-    /*
-     * Parsed to the union HERE, at the edge, so an arbitrary `?sort=` never travels further than
-     * this function. Unknown and absent both resolve to relevance, which is what the page ships.
-     */
     sort: parseSort(url.searchParams.get("sort")),
     page: Number.isFinite(page) && page > 0 ? page : 1,
   };
 }
 
-/**
- * A document route's loader cannot return a raw Response: React Router hands it
- * to the component as `loaderData` and the first property read 500s. Middleware is
- * the layer allowed to short-circuit.
- *
- * The JSON representation is the SAME query against the SAME index. It is an agent
- * affordance, not a second search.
- */
+/** Middleware: a document route's loader cannot return a raw Response. */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
     if (!prefersType(request, "application/json")) return next();
@@ -87,9 +71,6 @@ export const middleware: Route.MiddlewareFunction[] = [
           total: result.total,
           page: result.page,
           pageSize: result.pageSize,
-          // The palette reads it off the response it already makes, so the Ask affordance
-          // costs no extra request and vanishes with the binding rather than needing a second
-          // switch.
           askAvailable: askAvailable(getEnv(context)),
           truncated: result.truncated,
           tookMs: result.tookMs,
@@ -112,22 +93,10 @@ export const middleware: Route.MiddlewareFunction[] = [
       {
         headers: {
           "content-type": "application/json; charset=utf-8",
-          // NEVER STORED, and this is not a performance oversight. Do not "optimize" this
-          // back to a shared cache-control.
-          //
-          // `/search` varies on Accept and Cookie. With only the HTML representation in
-          // play, a cookie-bearing request correctly bypasses and is downgraded. After ONE
-          // request for this JSON representation, that same request gets a HIT and `public`
-          // instead, because the edge answers from the stored cookieless variant and the
-          // Worker never runs: a reader with `theme=dark` then receives the light document.
-          // Accept separates storage correctly; the Cookie dimension is what collapses once
-          // a second variant exists under the key.
-          //
-          // A response that is never stored cannot become that second variant. The trigger
-          // is advertised, because llms.txt tells agents this URL returns JSON.
+          // Never stored; do not "optimize" this back to a shared cache-control. /search varies on Accept and
+          // Cookie, and once this JSON variant is stored the edge answers cookie-bearing requests from the
+          // cookieless variant, so a `theme=dark` reader gets the light document.
           "cache-control": NO_STORE_CACHE_CONTROL,
-          // Still true and still correct to advertise: the body genuinely
-          // depends on Accept. Inert on a response that is never stored.
           vary: "Accept",
         },
       },
@@ -142,54 +111,29 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const result = await search(env, { ...params, pageSize: PAGE_SIZE });
 
-  // Only when there is a query that found nothing. A blank `/search` is a search
-  // box, not a failure, and does not need consoling; a filter that matched nothing
-  // is a failure and does.
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
 
-  /*
-   * A SEARCH THAT FOUND NOTHING IS THE ONE WORTH RECORDING: it names something a reader expected
-   * this site to have. Text queries only, because a filter that matches nothing is a narrow filter
-   * rather than a gap in the writing.
-   *
-   * AFTER THE RESPONSE, and its failure is swallowed. A reader whose search returned nothing must
-   * not then be shown an error about the recording of that fact, and demand signal is worth
-   * strictly less than the page rendering. `waitUntil` also keeps the write off the critical path,
-   * so the empty-results page is no slower than any other.
-   */
+  /* After the response via `waitUntil`, failure swallowed: demand signal is worth less than the page rendering. */
   if (asked && result.total === 0 && !result.parsed.isEmpty) {
     getExecutionContext(context).waitUntil(
       recordZeroResult(env, params.q).catch(() => {}),
     );
   }
 
-  // A boolean computed from the binding's presence. NOT an AI call: the loader that
-  // renders classic results must never wait on the AI layer, so all the server does
-  // here is say whether the affordance exists.
+  // The loader that renders classic results must never wait on the AI layer.
   return { params, result, suggestions, askAvailable: askAvailable(env) };
 }
 
 export function headers() {
   return new Headers({
-    // The theme is a dimension of the cache key rather than a Vary. `Accept` STAYS,
-    // because this URL really does serve a JSON representation and a cache that ignored
-    // that would hand one to the other. Tagged `posts`: the results are the corpus.
+    // `Accept` stays: this URL also serves JSON.
     "Cache-Control": SHARED_CACHE_CONTROL,
     "Cache-Tag": cacheTags(),
     Vary: HTML_VARY_ACCEPT,
   });
 }
 
-/**
- * THE CANONICAL IS `/search`, WITHOUT THE QUERY, DELIBERATELY. Every distinct
- * `?q=` is a distinct URL for what is one page of the site, and there are
- * unboundedly many. Pointing all of them at the bare path says "this is the search
- * page" rather than minting a canonical per query.
- *
- * `noindex, follow` is still the ruling: results pages are not content, and the
- * links out of them are worth following.
- */
 export function meta({ loaderData }: Route.MetaArgs) {
   const q = loaderData?.params.q;
   const title = q ? `Search: ${q} | ${SITE.name}` : `Search | ${SITE.name}`;
@@ -199,12 +143,10 @@ export function meta({ loaderData }: Route.MetaArgs) {
       description: `Search the writing and pages on ${SITE.name}'s site.`,
       path: "/search",
     }),
-    // A search results page is not something a search engine should index.
     { name: "robots", content: "noindex, follow" },
   ];
 }
 
-/** Builds a URL that keeps the current query and changes one facet. */
 function facetHref(
   params: ReturnType<typeof readParams>,
   key: "type" | "tag" | "year",
@@ -217,11 +159,7 @@ function facetHref(
   for (const [k, v] of Object.entries(current)) {
     if (v) next.set(k, v);
   }
-  // A filter change keeps the reader's ordering. Losing it here would silently
-  // return a date-sorted list to relevance on the next chip click.
   if (params.sort === "date") next.set("sort", "date");
-  // Changing a filter always returns to the first page. Staying on page 4 of a
-  // narrower result set is how a filter appears to return nothing.
   return `/search?${next.toString()}`;
 }
 
@@ -236,36 +174,22 @@ function pageHref(params: ReturnType<typeof readParams>, page: number) {
   return `/search?${next.toString()}`;
 }
 
-/**
- * The same URL under the other ordering, page 1. Changing the sort returns to the first page for
- * the reason a filter change does: page 4 of one ordering is not page 4 of the other.
- */
 function sortHref(params: ReturnType<typeof readParams>, sort: "relevance" | "date") {
   const next = new URLSearchParams();
   if (params.q) next.set("q", params.q);
   if (params.type) next.set("type", params.type);
   if (params.tag) next.set("tag", params.tag);
   if (params.year) next.set("year", params.year);
-  // Relevance is the default, so it is the ABSENT value rather than `sort=relevance`.
-  // One state, one URL: two spellings of the default would be two cache entries of one page.
+  // Relevance is the absent value: two spellings of the default would be two cache entries of one page.
   if (sort === "date") next.set("sort", "date");
   return `/search?${next.toString()}`;
 }
 
-/**
- * Keyed by the UNION, not by `string`, and there is deliberately no fallback: the
- * `Record<string, string>` shape is what shipped the colophon defect, where a new
- * enum member typechecked clean and rendered the raw value to readers.
- * The no-substitution rule.
- *
- * Adding a reason without a label here is a TYPECHECK failure at the point of the
- * omission, which cannot be skipped and fails before anything is built.
- */
+/** Keyed by the union with no fallback: a reason without a label is a typecheck failure, not a raw value shown to readers. */
 const WHY_LABEL: Record<MatchReason, string> = {
   title: "title",
   tag: "tag",
   body: "body",
-  // The browse path returned this on filters alone, with no text matched.
   filter: "filter",
 };
 
@@ -281,8 +205,6 @@ function Result({ hit }: { hit: SearchHit }) {
         </h2>
       </div>
 
-      {/* A section hit says which document it came from, so a deep link into
-          the middle of a post is not mistaken for a separate page. */}
       {hit.anchor ? (
         <p className="search-result-context">
           in <Link to={hit.docUrl}>{hit.docTitle}</Link>
@@ -322,9 +244,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
   const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
-  // `isEmpty` means no matchable TEXT, which is not the same as no request: a bare
-  // year or a tag chip clicked from an empty box is a real query answered by the
-  // browse path.
+  // `isEmpty` means no matchable text, not no request: a bare year or tag is answered by the browse path.
   const hasQuery = !result.parsed.isEmpty || hasFilters(result.parsed);
 
   return (
@@ -333,8 +253,6 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
       <main className="search-page" id="main" tabIndex={-1}>
         <h1 className="search-heading">Search</h1>
 
-        {/* A plain GET form. No client script is involved in producing results:
-            the HTML that arrives is already the answer. */}
         <Form method="get" action="/search" role="search" className="search-form">
           <label className="search-label" htmlFor="q">
             Search this site
@@ -353,12 +271,9 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               Search
             </button>
           </div>
-          {/* Active filters ride along as hidden fields so submitting a new
-              query from a filtered page keeps the filter. */}
           {params.type ? <input type="hidden" name="type" value={params.type} /> : null}
           {params.tag ? <input type="hidden" name="tag" value={params.tag} /> : null}
           {params.year ? <input type="hidden" name="year" value={params.year} /> : null}
-          {/* A new query from a date-sorted page stays date-sorted. */}
           {params.sort === "date" ? <input type="hidden" name="sort" value="date" /> : null}
           <p className="search-hint">
             Operators: <code>tag:</code>, <code>type:</code>, a bare year, and
@@ -377,8 +292,6 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </p>
         ) : null}
 
-        {/* Active filters, each removable. Shown before the facets so what is
-            currently narrowing the list is never further away than what could. */}
         {params.type || params.tag || params.year ? (
           <ul className="search-active-filters">
             {params.type ? (
@@ -408,37 +321,13 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </ul>
         ) : null}
 
-        {/*
-         * The page's own enhancement: results as you type and keyboard navigation of them. It
-         * upgrades the form and the list that are already here, so with scripting off the page is
-         * exactly what it was and nothing below depends on it.
-         */}
         <EnhancementScript src={searchEnhanceUrl} />
 
-        {/*
-         * An empty container and a script tag. With scripting off it stays empty and the
-         * page is byte-identical to the pre-Ask page apart from these two inert elements.
-         * With the binding absent it is not rendered at all.
-         */}
-        {/*
-         * ASK NEEDS A QUESTION, NOT A FILTER. On a filter-only query the affordance was
-         * handed an empty string, so the button appeared and returned immediately: a
-         * control that looks live and does nothing. The honest fix for a control with
-         * nothing to do is not to offer it.
-         */}
         {askAvailable && (params.q ?? "").trim().length > 0 ? (
           <AskMount question={params.q ?? ""} />
         ) : null}
 
-        {/*
-         * TWO LINKS, NOT A SELECT, for the reason the facets are links: a select needs script to
-         * do anything, and this page's contract is that the HTML which arrives is the answer.
-         *
-         * ONLY ON THE TEXT PATH. `result.parsed.isEmpty` means nothing to match on, which is the
-         * browse path, and that path is date-ordered in SQL because a filter carries no relevance
-         * signal. Offering "relevance" there would be a control with nothing behind it, and a
-         * disabled one would be a control that has to explain itself.
-         */}
+        {/* Only on the text path: the browse path is date-ordered in SQL, because a filter carries no relevance signal. */}
         {hasQuery && result.total > 1 && !result.parsed.isEmpty ? (
           <nav className="search-sort" aria-label="Sort results">
             <span className="search-sort-label" id="search-sort-label">
@@ -475,11 +364,6 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               ))}
             </ol>
 
-            {/*
-             * Facets are links, never click handlers, and their counts come from the same
-             * query that produced the list, so a chip only ever promises results a click would
-             * actually return.
-             */}
             <aside className="search-facets" aria-label="Filter results">
               {facets.types.length > 1 ? (
                 <section>
@@ -535,7 +419,6 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </div>
         ) : null}
 
-        {/* The zero state suggests rather than dead-ends. */}
         {hasQuery && result.total === 0 && suggestions ? (
           <div className="search-zero">
             <p>

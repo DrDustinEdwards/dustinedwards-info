@@ -1,49 +1,5 @@
-/**
- * WHETHER THIS FIRING SHOULD MAIL, given what the last one saw.
- *
- * ## The defect
- *
- * `workers/watchdog.ts` was stateless: it re-derived everything from one
- * reading and mailed whenever that reading was bad. The cron fires every
- * fifteen minutes, so ONE condition that stayed red for an afternoon produced
- * 27 emails, four an hour, every one of them the same sentence. An alert that
- * repeats itself trains its reader to filter it, which costs the next real
- * alert its only job.
- *
- * ## The rule
- *
- * Mail on a CHANGE OF STATE. Once when it goes red, once when it comes back.
- * Nothing while it stays red, however many polls that takes.
- *
- * ## WHY THIS IS A MODULE AND NOT A BRANCH IN THE HANDLER
- *
- * The same reason `repair.mjs` is: the handler runs on a schedule, only when
- * something is already broken, and is the least observable code in this
- * repository. A decision about whether a human is woken must be exercisable by
- * `check:tests`, so the decision lives here and the Worker does the I/O.
- *
- * DEPENDENCY-FREE, and it NEVER fetches, reads a clock or touches KV. `now` is
- * an argument precisely so a test can hold time still.
- *
- * ## THE THREE CASES THAT ARE NOT A TRANSITION
- *
- * 1. **No stored state is a BASELINE, not a change.** A fresh deploy, a new KV
- *    namespace or a first-ever run has nothing to compare against, and the
- *    honest reading of "I have never seen this before" is not "it just broke".
- *    It records what it saw and mails nothing. Named in the ruling because the
- *    alternative fires an alert on every deploy that lands during a red spell.
- *
- * 2. **State that could not be READ is different from state that is ABSENT**,
- *    and they must not collapse. Absent means first run; unreadable means the
- *    dedupe is blind. A blind dedupe that stays silent is a monitor that has
- *    quietly stopped monitoring, which is this repo's most-repeated failure
- *    shape. So an unreadable store MAILS if the site is red, and says why.
- *
- * 3. **Red to red is not silence about a changed failure set.** The set is
- *    accumulated so the recovery mail can name everything that broke during the
- *    episode rather than only what broke first, but a new check joining an
- *    existing outage is still one outage and does not re-mail.
- */
+// Mails only on a change of state. Absent state is a baseline and mails nothing; UNREADABLE state
+// mails if red, since a blind dedupe that stays silent has quietly stopped monitoring.
 
 /** @param {unknown} list @returns {string[]} sorted, unique, strings only */
 function names(list) {
@@ -57,10 +13,7 @@ function sameNames(a, b) {
 }
 
 /**
- * A stored state that this module is willing to believe.
- *
- * Anything else is treated as absent rather than coerced: a half-parsed record
- * would produce a duration measured from a timestamp nobody wrote.
+ * Anything else is absent, not coerced: a half-parsed record would time a duration from nothing.
  *
  * @param {unknown} value
  * @returns {{ red: boolean, since: string, checks: string[] } | null}
@@ -74,11 +27,7 @@ function readStored(value) {
 }
 
 /**
- * How long an episode lasted, in milliseconds, or null if it cannot be known.
- *
- * NULL IS A REAL ANSWER. An unparseable `since` yields no duration rather than
- * a zero, because "recovered after 0 seconds" is a sentence that reads as a
- * measurement and is not one.
+ * Null, not zero, when unknown: "recovered after 0 seconds" reads as a measurement and is not one.
  *
  * @param {string} since @param {string} now
  */
@@ -90,8 +39,6 @@ function elapsed(since, now) {
 }
 
 /**
- * A duration a person reads at 2am. Largest two units, never more.
- *
  * @param {number | null} ms
  * @returns {string}
  */
@@ -110,8 +57,6 @@ export function formatDuration(ms) {
 }
 
 /**
- * The decision.
- *
  * @param {object} input
  * @param {unknown} input.stored       what KV held, or null when the key is absent
  * @param {boolean} input.storedReadable  false when the read itself FAILED

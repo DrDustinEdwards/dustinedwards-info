@@ -1,18 +1,5 @@
-/**
- * The display axes: which URL changes are allowed to skip the server.
- *
- * `onlyDisplayChanged` is the whole decision behind `/admin/media`'s
- * `shouldRevalidate`. Getting it wrong in one direction spends a round trip on
- * a CSS class change; getting it wrong in the OTHER direction serves stale rows
- * after a filter, which is a correctness bug wearing a performance fix's
- * clothes. Both directions are asserted here.
- *
- * Standing ruling, 2026-08-16: anything that does not change which data comes
- * back must not touch the server at all.
- *
- * @see app/lib/media/view.mjs
- * @see app/routes/admin.media._index.tsx, the shouldRevalidate export
- */
+/* Wrong one way spends a round trip on a CSS change; wrong the other way serves stale rows after
+ * a filter. Both directions are asserted. */
 
 import test from "node:test";
 import assert from "node:assert/strict";

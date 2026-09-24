@@ -11,7 +11,6 @@
   font: inherit;
   font-size: 0.875rem;
   cursor: pointer;
-  /* 24px minimum target, per the accessibility rule. */
   min-height: 1.5rem;
 }
 
@@ -23,8 +22,6 @@
   margin: 0.75rem 0 0;
   padding: 0.875rem 1rem;
   border: 1px solid var(--border);
-  /* A visible left edge so the generated answer is never mistaken for the
-     site's own prose at a glance. */
   border-left: 3px solid var(--brand);
   border-radius: 0.375rem;
   background: var(--tint-brand);
@@ -59,19 +56,9 @@
   margin: 0;
 }
 
-/*
- * THE RESERVED WELL. Ask sits ABOVE the results, so every line the answer gains pushes the whole
- * list down while a reader is reading it. The body holds its height from the moment the panel
- * opens, so the stream fills a box that is already the right size.
- *
- * SIZED IN `lh`, not pixels: the reservation is a number of LINES of this element's own text, so
- * it follows the type scale and the theme instead of being a measurement of one of them.
- *
- * FOUR LINES, because that is what the answer this site asks for occupies. The system prompt says
- * two or three sentences; at this measure that lands in three to four lines. It is deliberately
- * NOT sized to the longest answer the model could emit: reserving for a worst case nothing
- * produces would leave a visibly empty box under every real answer.
- */
+/* Reserved well: Ask sits above the results, so the body holds its height from the start and the
+ * stream never pushes the list down. Four lines, in lh, because the prompt asks for two or three
+ * sentences. */
 .ask-body {
   margin: 0;
   line-height: 1.65;
@@ -79,11 +66,7 @@
   min-block-size: 4lh;
 }
 
-/*
- * NO `:empty { display: none }` ANY MORE, and that rule was the defect: an empty body collapsed to
- * nothing and the panel grew by four lines the instant the first token arrived, which is the jump
- * the well exists to remove. Empty is now simply an empty well of the right height.
- */
+/* No :empty { display: none }: an empty body collapsing is exactly the jump the well removes. */
 
 .ask-sources {
   margin: 0.75rem 0 0;
@@ -105,10 +88,6 @@
   margin-top: 0.25rem;
 }
 
-/*
- * The citation number. Tabular so a two-digit marker does not shift its title, and not a link of
- * its own: the number and the title are one target.
- */
 .ask-source-index {
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
@@ -119,8 +98,6 @@
   font-size: 0.75rem;
 }
 
-/* The suggested follow-up. A link and nothing else: the whole state is its URL, so it
-   right-clicks and opens in a new tab like any other link on the page. */
 .ask-followup {
   margin: 0.75rem 0 0;
   font-size: 0.875rem;

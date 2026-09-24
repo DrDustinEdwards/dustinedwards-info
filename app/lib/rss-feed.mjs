@@ -1,44 +1,10 @@
 /**
- * The RSS 2.0 item shape, in one place `node:test` can reach.
- *
- * `.mjs` and dependency-free for the reason `json-feed.mjs` is: the route
- * imports `~/db` and cannot be loaded by a unit test, and a feed's defects are
- * exactly the kind a unit test catches and a person never does. Nobody reads
- * their own RSS in an actual reader often enough to notice a broken image path.
- *
- * ## WHY `content:encoded` AND NOT `<description>`
- *
- * RSS 2.0 has no element of its own for full content. `<description>` is
- * allowed to carry HTML, and some feeds put the whole post there, but it is
- * also the element every reader shows in the LIST view: overwriting it with the
- * body replaces the summary with the first paragraph and a half of markup.
- *
- * `content:encoded` is from the RSS 1.0 content module,
- * `http://purl.org/rss/1.0/modules/content/`, and it is what every reader
- * implements for exactly this. So `<description>` keeps the summary and
- * `content:encoded` carries the post. That is the shape WordPress emits and the
- * shape readers expect, which is the practical definition of conformant here.
- *
- * ## WHY THE RENDERED HTML, WHEN THE JSON FEED CARRIES MARKDOWN
- *
- * A JSON Feed consumer is usually a program and JSON Feed 1.1 has
- * `content_text` for exactly the case where the source is the honest answer. An
- * RSS reader is a rendering surface: give it markdown and it shows a reader
- * asterisks and pipe tables. Same corpus, same predicate, same cap, different
- * representation, because the consumers are different.
- *
- * ## URLS ARE ABSOLUTISED, and that is not optional
- *
- * The stored HTML carries root-relative paths, `/media/...` and `/blog/...`,
- * because that is what a page needs. A feed item is read on someone else's
- * origin, where a root-relative path resolves against THEIR host and every
- * image is a 404. RSS has no reliable base-URL mechanism, so the paths are
- * rewritten.
+ * `<description>` keeps the summary because readers show it in the LIST view; the post goes in
+ * `content:encoded`. URLs are absolutised because a feed item is read on someone else's origin,
+ * where a root-relative path resolves against THEIR host.
  */
 
 /**
- * XML text escaping. Applied to every interpolated value without exception.
- *
  * @param {unknown} value
  */
 export function escapeXml(value) {
@@ -51,15 +17,8 @@ export function escapeXml(value) {
 }
 
 /**
- * Wraps content in CDATA, surviving a `]]>` inside it.
- *
- * A CDATA section ends at the first `]]>`, so content containing that sequence
- * would terminate the section early and spill the rest into the document as
- * markup. The standard repair is to close and reopen around it, which is
- * transparent to a parser: the two sections concatenate.
- *
- * Rare rather than impossible. A post about XML, or about this function, would
- * contain it in a code block.
+ * A CDATA section ends at the first `]]>`, so it is closed and reopened around one; the two
+ * sections concatenate transparently.
  *
  * @param {string} content
  */
@@ -68,20 +27,8 @@ export function cdata(content) {
 }
 
 /**
- * Root-relative URLs in rendered HTML, made absolute against the site origin.
- *
- * SCOPED TO ATTRIBUTES, and only to values beginning with a single `/`. A value
- * beginning `//` is protocol-relative and already absolute; anything with a
- * scheme is left alone. `srcset` is handled because a responsive image's
- * candidate list is a comma-separated set of URLs and a reader that honors it
- * would fetch every one of them from its own host.
- *
- * WHAT THIS DOES NOT DO, stated rather than implied: it does not parse HTML.
- * A root-relative URL inside a `style` attribute, inside inline CSS, or inside
- * a data attribute some script reads is not rewritten. The corpus has none, the
- * public plane ships no framework script for a feed reader to run anyway, and
- * parsing the whole document to reach three attributes would put an HTML parser
- * on the feed path.
+ * Not an HTML parser: only `href`, `src` and `srcset` values beginning with a single `/` are
+ * rewritten. A `//` value is protocol-relative and already absolute.
  *
  * @param {string} html
  * @param {string} origin no trailing slash
@@ -100,47 +47,12 @@ export function absolutiseUrls(html, origin) {
 }
 
 /**
- * Rendered math, put back to the TeX an author wrote.
+ * A feed reader has no `katex.css`, so KaTeX's two trees (clipped MathML and positioned HTML)
+ * would both show, garbled. The TeX comes from KaTeX's own annotation, taken still XML-escaped,
+ * because unescaping would put a stray `<` into the reader's document.
  *
- * ## WHY A FEED DOES NOT GET THE KaTeX MARKUP
- *
- * The ruling above stands: `content:encoded` carries the RENDERED post, because
- * a feed reader is a rendering surface. Math is the one construction where that
- * argument inverts, and it inverts for a stated reason rather than by taste.
- *
- * KaTeX's `htmlAndMathml` output is TWO trees for one expression: a MathML tree
- * clipped to a 1px box by `katex.css`, and an HTML layout tree marked
- * `aria-hidden` and positioned by 288 inline style attributes on one fixture
- * post. A feed reader has no `katex.css` and cannot be given one: this site's
- * math stylesheet is linked by the DOCUMENT, on the posts that need it. So
- * without this, a reader shows both trees at once, unclipped and unpositioned,
- * which is the expression rendered twice and garbled both times.
- *
- * `$E = mc^2$` is worse typography and better reading, and it is the one thing
- * in the item a person can act on.
- *
- * ## THE SOURCE IS KaTeX'S OWN ANNOTATION, NOT A REVERSE ENGINEERING
- *
- * Every expression carries `<annotation encoding="application/x-tex">` holding
- * the exact TeX it was built from. That is the round trip, and it is taken
- * VERBATIM, still XML-escaped: the annotation stores `a &lt; b`, the feed body
- * is parsed as HTML inside its CDATA section, and unescaping on the way through
- * would put a stray `<` into somebody else's document.
- *
- * ## WHY IT COUNTS SPANS RATHER THAN PARSING
- *
- * Same constraint `absolutiseUrls` states above: no HTML parser on the feed
- * path, and this module stays dependency-free so `node:test` can reach it. The
- * scan is a bracket match over ONE tag name, which is sound here because
- * nothing KaTeX nests inside an expression can close a span it did not open:
- * the only other elements it emits are `math` and its children, and `svg` with
- * `path` and `line`. A `<span` opens, a `</span>` closes, and the depth reaches
- * zero exactly at the wrapper's own end tag.
- *
- * An expression whose wrapper never closes, or which carries no annotation, is
- * LEFT ALONE rather than half-rewritten. That cannot happen from this
- * pipeline's own output, and leaving it is the failure that costs a reader an
- * ugly item instead of a broken one.
+ * Counting spans is sound because nothing KaTeX nests inside an expression can close a span it
+ * did not open. An expression with no closing tag or no annotation is left alone.
  *
  * @param {string} html
  */
@@ -150,11 +62,8 @@ export function mathToTex(html) {
   let cursor = 0;
 
   for (;;) {
-    /*
-     * `katex-display` is matched first at each position because it WRAPS the
-     * `katex` span: finding the inner one first would leave the outer wrapper
-     * behind, empty, around a `$$`.
-     */
+    // `katex-display` WRAPS the `katex` span, so matching the inner one first would leave the
+    // outer wrapper behind, empty, around a `$$`.
     const display = source.indexOf('<span class="katex-display">', cursor);
     const inline = source.indexOf('<span class="katex">', cursor);
     if (display === -1 && inline === -1) break;
@@ -169,14 +78,7 @@ export function mathToTex(html) {
     const annotation = region.match(
       /<annotation encoding="application\/x-tex">([\s\S]*?)<\/annotation>/,
     );
-    /*
-     * The capture group is checked as well as the match, so the "leave it
-     * alone" branch covers an EMPTY annotation too. `annotation[1]` is
-     * `string | undefined` to the compiler because a group can fail to
-     * participate, and the honest handling of an expression whose recorded
-     * source is empty is the same as one with no annotation at all: leave the
-     * markup rather than emit a bare pair of dollar signs.
-     */
+    // An empty annotation is left alone too, rather than emitting a bare pair of dollar signs.
     if (!annotation || !annotation[1]) {
       out += source.slice(cursor, end);
       cursor = end;
@@ -193,10 +95,7 @@ export function mathToTex(html) {
 }
 
 /**
- * The index just past the `</span>` that closes the span opening at `start`.
- *
- * -1 when the depth never returns to zero, which the caller treats as "leave
- * this alone" rather than as a reason to guess.
+ * -1 when the depth never returns to zero.
  *
  * @param {string} source @param {number} start index of the opening `<span`
  */
@@ -222,13 +121,6 @@ function spanEnd(source, start) {
 }
 
 /**
- * One `<item>`, as the lines that make it, indented for the channel.
- *
- * Returns a STRING rather than a structure, unlike `feedItem` next door, and
- * the difference is the format: JSON Feed's shape is the object, RSS's shape is
- * the markup. Asserting on anything else here would be asserting on a model of
- * the feed rather than on the feed.
- *
  * @param {{
  *   slug: string,
  *   title: string,
@@ -251,16 +143,7 @@ export function rssItem(post, origin) {
     `      <link>${escapeXml(url)}</link>`,
     `      <guid isPermaLink="true">${escapeXml(url)}</guid>`,
     post.description ? `      <description>${escapeXml(post.description)}</description>` : null,
-    /*
-     * The body, with math put back to TeX, absolutised, and wrapped. Omitted
-     * rather than emitted empty when a row carries no rendered HTML: an empty
-     * `content:encoded` tells a reader the post IS empty, where an absent one
-     * tells it to follow the link.
-     *
-     * `mathToTex` first, so `absolutiseUrls` scans a body that no longer holds
-     * a tree of positioning spans. Neither pass can affect the other's subject:
-     * KaTeX emits no `href`, `src` or `srcset`.
-     */
+    // Omitted rather than empty: an empty `content:encoded` tells a reader the post IS empty.
     post.html
       ? `      <content:encoded>${cdata(absolutiseUrls(mathToTex(post.html), origin))}</content:encoded>`
       : null,
@@ -273,18 +156,6 @@ export function rssItem(post, origin) {
 }
 
 /**
- * THE WHOLE RSS DOCUMENT, channel and all.
- *
- * `rssItem` was already shared and the CHANNEL was not: the wrapper lived
- * inline in `blog.rss[.xml].ts`, so the tag archive's feed would have had to
- * copy the version string, the two namespace declarations, the language and the
- * `atom:link` self reference. Five literals copied once is five literals that
- * can drift, and a feed reader is the last place a difference gets noticed.
- *
- * `selfUrl` is required rather than derived. It is the one field that genuinely
- * differs per feed, and computing it here would mean this function guessing at
- * a route's own address.
- *
  * @param {{
  *   title: string,
  *   link: string,

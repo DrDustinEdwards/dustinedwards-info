@@ -1,13 +1,6 @@
-/**
- * Post fixtures, and the one rule they follow.
- *
- * They go through `frontmatterSchema` and the whole render pipeline for real,
- * so they carry exactly the fields a real post carries and nothing invented.
- * A fixture that skipped validation would make every case downstream of it a
- * test of a document this site would refuse.
- */
+/* Fixtures go through `frontmatterSchema` and the real render pipeline, so no case downstream
+ * tests a document this site would refuse. */
 
-/** @param overrides frontmatter lines to add or replace, by key */
 export function post(
   slug: string,
   overrides: Partial<{
@@ -46,5 +39,4 @@ export function post(
   return lines.join("\n");
 }
 
-/** Where a post's markdown lives. Stated once, by `postPath`, and mirrored nowhere. */
 export { postPath } from "~/lib/content/pipeline.mjs";

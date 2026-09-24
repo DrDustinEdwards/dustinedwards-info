@@ -1,10 +1,4 @@
-/**
- * Killing a gate's long-running children, and clearing the ones a kill left behind last time.
- *
- * BOUNDARY: a pid in the registry is a claim that the process WAS ours, and Windows reuses pids,
- * so the live command line is read first and must still match. Nothing here kills on a pid alone,
- * and a listing that cannot be taken leaves every entry untouched.
- */
+// Windows reuses pids, so nothing here kills on a pid alone: the live command line must still match.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, appendFileSync, writeFileSync } from "node:fs";
@@ -13,9 +7,6 @@ import { dirname } from "node:path";
 const isWindows = process.platform === "win32";
 
 /**
- * Command lines are compared in ONE normalized form: the same process is spelled differently by
- * the two things that report it, and a needle must not miss for a reason unrelated to identity.
- *
  * @param {string | null | undefined} command
  * @returns {string}
  */
@@ -24,10 +15,8 @@ export function normaliseCommand(command) {
 }
 
 /**
- * Every live process, as `pid -> { ppid, command }`, through PowerShell rather than `wmic`, which
- * is absent on newer builds, or `tasklist`, which reports no command line: a source that cannot
- * supply one is not a fallback. An EMPTY MAP means "cannot verify", and the only thing callers do
- * with an unverifiable entry is leave it alone.
+ * PowerShell, not `wmic` (absent on newer builds) or `tasklist` (no command line).
+ * An empty map means "cannot verify", never "nothing running".
  *
  * @returns {Map<number, { ppid: number, command: string }>}
  */
@@ -57,8 +46,6 @@ export function readProcessTable() {
       if (!row || typeof row.ProcessId !== "number") continue;
       table.set(row.ProcessId, {
         ppid: typeof row.ParentProcessId === "number" ? row.ParentProcessId : 0,
-        // A process with no readable command line still gets an entry, so it can be seen to EXIST, and it
-        // can never satisfy a needle.
         command: normaliseCommand(`${row.CommandLine ?? ""} ${row.ExecutablePath ?? ""}`),
       });
     }
@@ -79,10 +66,7 @@ export function readProcessTable() {
 }
 
 /**
- * Every descendant pid of `rootPid`, from a table already read. Used at ONE moment: recording the
- * wrapper chain, because when the gate node is killed the wrapper DIES with it and the
- * grandchildren survive, so recording only what `spawn()` returned records the one process
- * guaranteed to be gone.
+ * Killing the gate kills the wrapper `spawn()` returned but not its grandchildren, so record those.
  *
  * @param {number} rootPid
  * @param {Map<number, { ppid: number, command: string }>} table
@@ -92,8 +76,7 @@ export function descendantPids(rootPid, table) {
   /** @type {number[]} */
   const found = [];
   let frontier = [rootPid];
-  // Bounded by the table size: a cycle in reported parentage, which a reused pid can manufacture,
-  // would spin here forever.
+  // Bounded: a reused pid can manufacture a parentage cycle.
   for (let depth = 0; depth < table.size && frontier.length > 0; depth += 1) {
     /** @type {number[]} */
     const next = [];
@@ -110,10 +93,7 @@ export function descendantPids(rootPid, table) {
 }
 
 /**
- * Whether a pid is live RIGHT NOW rather than when a table was read. Signal 0 checks existence
- * without delivering anything and `EPERM` is a positive answer. This exists because the preflight
- * loop invalidates its own snapshot: killing one tree removes processes further down the list,
- * and entries already gone were reported as FAILED TO KILL.
+ * Signal 0 checks existence without delivering anything; `EPERM` means it exists.
  *
  * @param {number} pid
  * @returns {boolean}
@@ -129,11 +109,8 @@ export function processExists(pid) {
 }
 
 /**
- * The pids LISTENING on a TCP port, asked of the OPERATING SYSTEM, because the registry is
- * written by the process that dies and cannot record what outlives a hard kill. THE MEASURED
- * GOTCHA: the IPv4 flag DOES NOT LIST THE HOLDER, the server binding an IPv6 loopback, so the
- * listing is taken UNFILTERED and the protocol matched here. THREE STATES, NOT TWO: `null` means
- * no listing could be taken and must never collapse into "nobody is listening".
+ * Unfiltered listing: the IPv4 flag misses the holder, which binds an IPv6 loopback.
+ * `null` means no listing could be taken, never "nobody is listening".
  *
  * @param {number} port
  * @returns {number[] | null} listening pids, or null if no listing could be taken
@@ -152,8 +129,7 @@ export function portListeners(port) {
       if (columns.length < 5) continue;
       const [protocol, local, , state, pid] = columns;
       if (!/^TCP/i.test(protocol) || state.toUpperCase() !== "LISTENING") continue;
-      // Anchored on the LAST colon, so a bracketed IPv6 address cannot be satisfied by one that merely
-      // contains the digits.
+      // Last colon, so an IPv6 address that merely contains the digits cannot match.
       if (local.slice(local.lastIndexOf(":") + 1) !== String(port)) continue;
       const parsed = Number(pid);
       if (Number.isInteger(parsed) && parsed > 0) pids.add(parsed);
@@ -165,7 +141,7 @@ export function portListeners(port) {
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024,
   });
-  // lsof exits 1 when it matched nothing, which is an ANSWER. Only a missing binary is unverifiable.
+  // lsof exits 1 when it matched nothing, which is an answer, not an error.
   if (listed.error) return null;
   if (listed.status !== 0 && listed.status !== 1) return null;
   for (const line of String(listed.stdout ?? "").split("\n")) {
@@ -176,8 +152,7 @@ export function portListeners(port) {
 }
 
 /**
- * Kill a process AND everything under it. The tree flag is load-bearing: the interesting
- * processes are always grandchildren.
+ * The tree flag is load-bearing: the interesting processes are always grandchildren.
  *
  * @param {number} pid
  * @returns {boolean} whether the kill reported success
@@ -188,8 +163,7 @@ export function killTree(pid) {
     if (isWindows) {
       return spawnSync("taskkill", ["/F", "/T", "/PID", String(pid)], { stdio: "ignore" }).status === 0;
     }
-    // The POSIX equivalent needs the child to have been spawned into its own
-    // process group, which is what a negative pid addresses.
+    // Needs the child spawned into its own process group, which a negative pid addresses.
     process.kill(-pid, "SIGKILL");
     return true;
   } catch {
@@ -197,10 +171,7 @@ export function killTree(pid) {
   }
 }
 
-/**
- * The on-disk record of what this gate started, one JSON object per line appended at each spawn,
- * so a gate killed between two spawns still leaves a usable record of the first.
- */
+// Appended per spawn, so a gate killed between two spawns still leaves a record of the first.
 export class ChildRegistry {
   /** @param {string} filePath */
   constructor(filePath) {
@@ -208,9 +179,7 @@ export class ChildRegistry {
   }
 
   /**
-   * Record a child. `needles` are what the live command line must STILL contain for a later run to
-   * kill this pid, so they name the process rather than describing it: normalized, and specific
-   * enough that a process inheriting the pid cannot satisfy them by accident.
+   * `needles` must be specific enough that a process inheriting the pid cannot match them.
    *
    * @param {number | undefined} pid
    * @param {string} kind
@@ -222,8 +191,7 @@ export class ChildRegistry {
       mkdirSync(dirname(this.filePath), { recursive: true });
       appendFileSync(this.filePath, `${JSON.stringify({ pid, kind, needles })}\n`);
     } catch {
-      // A registry that cannot be written costs the NEXT run its cleanup. It must never cost THIS run
-      // its gate result.
+      // An unwritable registry costs the next run its cleanup, never this run its gate result.
     }
   }
 
@@ -254,20 +222,8 @@ export class ChildRegistry {
   }
 
   /**
-   * Clear last run's leftovers, then start this run's record from empty.
-   *
-   * THE THREE OUTCOMES ARE ALL REPORTED, including zero, because a cleanup
-   * nobody can see teaches nobody anything and is indistinguishable from one
-   * that silently does not run.
-   *
-   *   cleared  alive, command line still matches, tree killed
-   *   stale    the pid is gone. Dropped. Nothing killed
-   *   reused   alive, command line does NOT match. Dropped. NOTHING KILLED,
-   *            and this is the branch that protects Dustin's own Chrome
-   *   failed   matched, and the kill did not report success. Counted
-   *            SEPARATELY from cleared, because a cleanup that reports a
-   *            success it did not have is the failure mode this whole file is
-   *            about
+   * `reused` (alive, command line no longer matches) kills nothing: that pid now belongs to
+   * something else, such as Dustin's own Chrome.
    *
    * @param {{ excludePid?: number }} [options]
    * @returns {{ cleared: number, stale: number, reused: number, failed: number, unverifiable: number, notes: string[] }}
@@ -291,8 +247,6 @@ export class ChildRegistry {
 
     const table = readProcessTable();
     if (table.size === 0) {
-      // No listing means no way to tell ours from a stranger's, and killing on the pid alone is the one
-      // thing this module refuses to do, so the entries are KEPT.
       result.unverifiable = entries.length;
       result.notes.push(
         `could not read a process table, so ${entries.length} recorded pid(s) were left alone rather than killed on the pid alone`,
@@ -302,8 +256,7 @@ export class ChildRegistry {
 
     for (const entry of entries) {
       const live = table.get(entry.pid);
-      // Gone when the table was read, or gone since: an earlier entry's tree kill takes its whole
-      // subtree. Both are the same fact.
+      // Re-checked live: an earlier entry's tree kill may have taken this one since the table was read.
       if (!live || !processExists(entry.pid)) {
         result.stale += 1;
         continue;
@@ -330,14 +283,11 @@ export class ChildRegistry {
 }
 
 /**
- * Processes matching any of `needles`, by COMMAND LINE. Ship's preflight refuses when a tier run,
- * a browser run or an orphaned preview server is alive, all three writing the build directory or
- * the database underneath it. BY COMMAND LINE, BY PID, NEVER BY NAME: every one is `node` or a
- * child of it. AN UNREADABLE COMMAND LINE CAN NEVER MATCH.
+ * By command line, never by process name: every one of them is `node`.
  *
  * @param {Map<number, { ppid: number, command: string }>} table
  * @param {Array<{ needle: string, what: string }>} needles
- * @param {number} [self] a pid to exclude, normally `process.pid`
+ * @param {number} [self]
  * @returns {Array<{ pid: number, what: string }>}
  */
 export function busyProcesses(table, needles, self = 0) {
@@ -355,12 +305,7 @@ export function busyProcesses(table, needles, self = 0) {
   return found;
 }
 
-/**
- * What ship's preflight refuses to run alongside. HERE RATHER THAN IN `ship.mjs` so the test can
- * import the real list: a copy would keep passing after somebody removed a needle, and `ship.mjs`
- * cannot be imported by a test because importing it RUNS a ship. The needle is the SHORTER
- * spelling, the process that binds the port being the resolved binary.
- */
+// Here rather than in ship.mjs so a test can import the real list: importing ship.mjs runs a ship.
 export const SHIP_BUSY_NEEDLES = [
   { needle: "scripts/check-all.mjs", what: "a check:all run" },
   { needle: "scripts/check-browser.mjs", what: "a check:browser run" },

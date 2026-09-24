@@ -1,35 +1,11 @@
-/**
- * Uploading the papers' markdown twins to the Ask index, with retries, and a record of what failed.
- *
- * PURE: the fetch, the upload and the sleep are passed in, so `check:tests` drives the failure paths
- * without an AI Search binding. `ask.server.ts` supplies the real bindings.
- *
- * ## WHY FAILURES ARE RETURNED, NOT SWALLOWED
- *
- * Measured 2026-09-23 after shipping e623457: one twin's upload threw
- * `AiSearchInternalError: unable_to_connect_to_ai_search`, a transient, and the loop logged it and
- * carried on. The converge then read 156 of 157 back, which ship waits out as eventual consistency,
- * so a write that had simply failed was reported as an index still catching up, and the drift stayed.
- * Each twin now gets a few attempts, and a key that still fails is RETURNED so the sync report can
- * refuse convergence and name it.
- *
- * ## WHY A FAILED KEY STILL JOINS `keys`
- *
- * The caller prunes every key it is not given, so leaving a failed twin out of `keys` would turn a
- * transient into a DELETION of the copy already indexed. `keys` means "should exist"; `failed` means
- * "was not written this time".
- */
+// A failed key still joins keys: the caller prunes every key it is not given, so leaving it out would
+// turn a transient into a deletion. Failures are returned so the sync report can refuse to converge.
 
-/** How many times one twin is fetched and uploaded before it counts as failed. */
 export const TWIN_ATTEMPTS = 3;
 
-/** The pause before the second attempt; it doubles for each attempt after that. */
 export const TWIN_BACKOFF_MS = 500;
 
 /**
- * Runs `fn` up to `attempts` times, pausing between tries, and returns its value or throws the
- * last error.
- *
  * @template T
  * @param {() => Promise<T>} fn
  * @param {{ attempts?: number, backoffMs?: number, sleep?: (ms: number) => Promise<void> }} [opts]
@@ -53,8 +29,6 @@ export async function withRetry(fn, opts = {}) {
 }
 
 /**
- * Uploads every twin, each with retries.
- *
  * @param {Array<{ key: string, path: string }>} twins the item key and the asset path of each twin
  * @param {{
  *   fetchText: (path: string) => Promise<string>,

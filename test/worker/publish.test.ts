@@ -21,19 +21,9 @@ import { runTool } from "~/lib/operator/api.server";
 import { post } from "./fixtures";
 import { stubGitHub, type GitHubStub } from "./github-stub";
 
-/**
- * `savePost` and `deletePost`, end to end, against real D1 and a stubbed
- * GitHub.
- *
- * OBSERVATION BOUNDARY. The commit shape is asserted against the recorded
- * calls, so this proves what the code SENDS, never that GitHub does what the
- * recorded shape says. D1 is miniflare-local with `drizzle/` applied. Ask and
- * R2 are absent from this file on purpose: `syncAskForPost` returns null with
- * no `AI_SEARCH` binding, which is the documented state of a deployment
- * without it, and the save must succeed anyway.
- */
+/* Ask and R2 are absent on purpose: `syncAskForPost` returns null with no `AI_SEARCH`
+ * binding, and the save must succeed anyway. */
 
-/** The env `publish.server.ts` takes, which adds the editor token to `Env`. */
 const publishEnv = () => env as unknown as Parameters<typeof savePost>[0];
 
 let gh: GitHubStub;
@@ -46,15 +36,8 @@ afterEach(() => {
   gh.restore();
 });
 
-/**
- * The same env with a D1 whose `batch` fails the first `failures` times.
- *
- * A PROXY OVER THE REAL BINDING, so every other method is the real one and the
- * successful retry writes real rows. Wrapping `batch` alone is deliberate:
- * that is the single statement `syncPostToD1` depends on, and failing anything
- * wider would break the corpus read that runs before it, which is a different
- * fault with a different remedy.
- */
+/* Only `batch` fails: it is the one statement `syncPostToD1` depends on, and failing
+ * anything wider would break the corpus read that runs before it. */
 function flakyD1(failures: number) {
   let remaining = failures;
   const db = env.DB;
@@ -116,9 +99,6 @@ describe("savePost", () => {
 
     expect(row?.slug).toBe("provenance");
     expect(row?.status).toBe("draft");
-    /* THE SOURCE SHA IS THE COMMITTED FILE'S, not a value the render invented.
-     * `renderAndWrite` refuses unless they agree, so this asserts the two are
-     * the same fact rather than two hashes that happen to be present. */
     expect(row?.source_blob_sha).toBe(await gitBlobSha(gh.files.get(postPath("provenance")) ?? ""));
     expect(row?.render_hash).toMatch(/^[0-9a-f]{64}$/);
     expect(result.record.slug).toBe("provenance");
@@ -186,8 +166,6 @@ describe("savePost", () => {
     expect(await countRows("media_refs", "WHERE source_id = ?1", "collide")).toBe(2);
   });
 
-  /* --------------------------------------------------------- refusals --- */
-
   it("REFUSES when main moved under the caller (expectedHeadSha)", async () => {
     await expect(
       savePost(publishEnv(), {
@@ -199,9 +177,7 @@ describe("savePost", () => {
       }),
     ).rejects.toBeInstanceOf(GitHubError);
 
-    /* NOTHING WAS WRITTEN, which is the half that matters. The guard runs
-     * before any blob, so a refused save leaves the repository and the
-     * database exactly as they were. */
+    /* The guard runs before any blob, so a refused save writes nothing anywhere. */
     expect(gh.calls.some((c) => c.path.endsWith("/git/blobs"))).toBe(false);
     expect(gh.files.has(postPath("stale"))).toBe(false);
     expect(await countRows("posts", "WHERE slug = ?1", "stale")).toBe(0);
@@ -221,16 +197,8 @@ describe("savePost", () => {
   });
 
   it("RETRIES a failed D1 write once and reports that it retried", async () => {
-    /*
-     * THE ORDER IS THE DESIGN. The commit lands first and there is deliberately
-     * no compensating revert, so a D1 fault must leave the repo ahead and say
-     * so rather than undoing authoritative writing to tidy a derived index.
-     *
-     * The fault is injected at the BATCH, which is the statement
-     * `syncPostToD1` actually depends on, rather than inside
-     * `convergeWithRetry`. Breaking the helper would test the helper; breaking
-     * the store tests the path.
-     */
+    /* The commit lands first with no compensating revert: a D1 fault leaves the repo
+     * ahead rather than undoing authoritative writing to tidy a derived index. */
     const raw = post("retried");
     const result = await savePost(flakyD1(1), {
       slug: "retried",
@@ -240,8 +208,6 @@ describe("savePost", () => {
     });
 
     expect(result.d1Retried).toBe(true);
-    /* THE COMMIT STANDS, and so does the row: one attempt failed, the second
-     * succeeded, and the caller is told rather than left to guess. */
     expect(gh.files.get(postPath("retried"))).toBe(raw);
     expect(await countRows("posts", "WHERE slug = ?1", "retried")).toBe(1);
   });
@@ -256,19 +222,13 @@ describe("savePost", () => {
     }).catch((e: unknown) => e);
 
     expect((error as Error).name).toBe(DIVERGENCE_ERROR_NAME);
-    /* IT NAMES THE POST AND THE COMMIT, because the operator's next action
-     * depends on knowing the writing is safe and a second save is useless. */
     expect((error as Error).message).toContain("diverged");
     expect((error as Error).message).toContain("Do NOT save again");
 
-    /* THE COMMIT LANDED AND STAYS. There is no compensating revert. */
     expect(gh.files.get(postPath("diverged"))).toBe(raw);
     expect(await countRows("posts", "WHERE slug = ?1", "diverged")).toBe(0);
 
-    /*
-     * THE RECORD GOES TO KV, NEVER TO D1. D1 is the store that just failed, and
-     * a record of that failure kept there is absent exactly when it is wanted.
-     */
+    /* The record goes to KV, never D1: D1 is the store that just failed. */
     const stored = await env.APP_KV.get("publish:divergence:diverged");
     expect(stored).toBeTruthy();
     expect(JSON.parse(stored ?? "{}")).toMatchObject({ slug: "diverged" });
@@ -379,12 +339,8 @@ describe("deletePost", () => {
 
     expect(await countRows("posts", "WHERE slug = ?1", "doomed")).toBe(0);
     expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:doomed")).toBe(0);
-    /*
-     * THE `media_refs` DELETE IS FINDING B003, replayed. Leaving these behind
-     * did not produce a stale row, it produced a PERMANENTLY REFUSED media
-     * delete: the resolver reported zero citations while the table still
-     * claimed one, and the union fails closed.
-     */
+    /* Leftover media_refs would permanently refuse a media delete, because the
+     * resolver and the table disagree and the union fails closed. */
     expect(await countRows("media_refs", "WHERE source_id = ?1", "doomed")).toBe(0);
   });
 
@@ -404,11 +360,8 @@ describe("deletePost", () => {
 
     expect(error).toBeInstanceOf(PolicyError);
     expect((error as PolicyError).policy).toBe("delete-requires-admin");
-    /*
-     * NOT ONE REQUEST WAS MADE. The policy decision is the first statement in
-     * the function precisely so a refused caller cannot learn which slugs exist
-     * from the difference between two error messages.
-     */
+    /* The policy check comes first so a refused caller cannot learn which slugs exist
+     * from the difference between two error messages. */
     expect(gh.calls.slice(before)).toHaveLength(0);
     expect(await countRows("posts", "WHERE slug = ?1", "operator-cannot-delete")).toBe(1);
   });

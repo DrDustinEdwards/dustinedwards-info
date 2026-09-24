@@ -1,6 +1,4 @@
-/* The evidence row, a site object rather than a per-page flourish: two dust hairlines with nothing
-   between them but mono text. Facts are separated by the column gap and never by punctuation, so a
-   wrapped row at 375 reads as a list rather than as a broken sentence. */
+/* Facts are separated by the column gap, never punctuation, so a wrapped row reads as a list. */
 .evidence {
   display: flex;
   flex-wrap: wrap;
@@ -24,10 +22,7 @@
   color: var(--brand-hover);
 }
 
-/*
- * UNDER THE ROW, OUTSIDE THE RULES. A health ratio is only true with its read time beside it and
- * this page is shared-cached, so the sentence is part of the claim rather than a footnote to it.
- */
+/* A health ratio is only true beside its read time, and this page is shared-cached. */
 .evidence-detail {
   margin: 0.5rem 0 0;
   color: var(--text-secondary);

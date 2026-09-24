@@ -1,21 +1,3 @@
-/**
- * Media tags: the delimiter rule, which is the whole reason this is a column.
- *
- * The decisive case is `art` versus `chart`. Stored delimiter-wrapped, an exact
- * filter for `art` must match `,art,` and must NOT match `,chart,`, while the
- * free-text box matches both. Without the wrapping there is only one available
- * match and the exact filter silently widens.
- *
- * REPLAYS A DEFECT THIS REPO ALREADY HAS, in this table. `media_refs` is
- * deduplicated with SPACE-joined keys by the two shipped writers and NUL by the
- * tested helper, so `("a|b","c")` and `("a","b|c")` collide and drop a ref,
- * unreachable today only because `form` happens to be a spaceless enum. A joined
- * string with no rule about what may appear inside a part is a defect waiting
- * for its input, so the rule here is executed rather than described.
- *
- * @see app/lib/media/tags.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -50,7 +32,6 @@ test("THE DECISIVE CASE: an exact tag filter separates art from chart", () => {
 });
 
 test("free text still matches both, which is correct for a search box", () => {
-  // The two filters are different questions and the storage form serves both.
   assert.ok(like(serialiseTags(["art"]), "%art%"));
   assert.ok(like(serialiseTags(["chart"]), "%art%"));
 });
@@ -122,8 +103,7 @@ test("FAILS CLOSED: garbage parses to an empty list rather than throwing", () =>
 });
 
 test("an empty needle is NULL, never a pattern that matches everything", () => {
-  // `%,,%` would match every tagged row. Returning null forces the caller to
-  // decide, which is the difference between no filter and a vacuous one.
+  // `%,,%` would match every tagged row.
   assert.equal(exactTagNeedle(""), null);
   assert.equal(exactTagNeedle("   "), null);
   assert.equal(exactTagNeedle("%"), null);

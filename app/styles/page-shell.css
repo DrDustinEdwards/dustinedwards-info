@@ -1,5 +1,3 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
 .page {
   padding: 2rem;
 }
@@ -9,9 +7,6 @@
   margin: 0 auto;
 }
 
-/* The error boundary's dev-only stack. Not `.prose pre`: this is diagnostic
-   output, not writing. `overflow-x: auto` stops a long frame widening the
-   document. */
 .error-stack {
   max-width: 100%;
   overflow-x: auto;
@@ -33,11 +28,9 @@
 
 .page-intro {
   margin: 1rem 0 0;
-  /* Prose keeps its own measure and does not stretch to a wide container. */
   max-width: 42rem;
   font-size: 1.0625rem;
   line-height: 1.6;
 }
 
-/* The shell owns the viewport so the editor owns one scroll context; a scrolling body behind it would be
-   the forbidden double scroll. Other pages scroll .admin-content instead. */
+/* The shell owns the viewport so the editor has one scroll context; other pages scroll .admin-content. */

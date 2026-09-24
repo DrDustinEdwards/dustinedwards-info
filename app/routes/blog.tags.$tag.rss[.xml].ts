@@ -7,14 +7,7 @@ import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/blog.tags.$tag.rss[.xml]";
 
-/**
- * One tag's RSS feed. The SAME document builder as `/blog/rss.xml`, so this route is a query, a
- * title and a self URL. A copied wrapper would be a second place the content namespace or the
- * version string could be wrong, and a feed reader is the last surface where that gets noticed.
- *
- * 404 ON AN UNKNOWN TAG, through `getBlogTag`: a feed and its page must agree about whether a tag
- * exists, or a subscriber holds a working feed URL for an archive that answers 404.
- */
+/** 404 on an unknown tag: a feed and its page must agree about whether a tag exists. */
 const FEED_ITEMS = 20;
 
 export async function loader({ params, context }: Route.LoaderArgs) {

@@ -19,37 +19,17 @@ import {
 import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/blog.tags.$tag";
 
-/*
- * ONE SHEET, where the card needed two: `.post-card-series` lived only in blog-index-extras.css,
- * so importing blog-index.css alone left that element unstyled on this page and on no other, which
- * nothing in a payload gate could see because the weight was merely lower. The listing is one
- * object now, and an archive is the same object filtered.
- */
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
 
-/**
- * The archive for one tag.
- *
- * 404 RATHER THAN AN EMPTY PAGE. `getBlogTag` composes the same predicate the
- * chip list does, so a tag carried only by drafts does not exist here. Rendering an
- * empty archive would be a soft 404, and it would leak the existence of a tag only
- * a draft carries.
- *
- * THE LIST IS THE INDEX'S LIST, the same call `/blog?tag=` makes, so the archive
- * and the filtered view cannot disagree.
- */
+/** 404 rather than an empty page, which would be a soft 404 and leak a tag only drafts carry. */
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
   const page = Number(url.searchParams.get("page")) || 1;
 
-  /*
-   * THE TAG IS RESOLVED BEFORE THE LIST IS READ: asking the list first would make
-   * the 404 decision from a zero-length array, which cannot tell "no such tag" from
-   * "every post using it was unpublished".
-   */
+  /* Resolved before the list: an empty list cannot tell "no such tag" from "every post unpublished". */
   const tag = await getBlogTag(env, params.tag);
   if (!tag) throw data("Not found", { status: 404 });
 
@@ -59,11 +39,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     perPage: POSTS_PER_PAGE,
   });
 
-  /*
-   * OUT OF RANGE REDIRECTS TO THE LAST REAL PAGE, which is `/blog`'s ruling and is
-   * inherited rather than re-argued. 302, because the bound moves as posts are
-   * published.
-   */
   if (page > listing.pageCount) {
     const last = listing.pageCount > 1 ? `?page=${listing.pageCount}` : "";
     throw redirect(`${tagPath(tag.slug)}${last}`);
@@ -73,13 +48,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 }
 
 export function headers() {
-  /*
-   * Through the helper that OWNS the pair, which is stricter than copying two
-   * constants: the helper is the one owner, so this page cannot drift.
-   *
-   * NOT `HTML_VARY_ACCEPT`: the post page and the index negotiate a twin
-   * representation on `Accept` and this page has none.
-   */
+  /* Not `HTML_VARY_ACCEPT`: this page negotiates no twin representation on `Accept`. */
   return new Headers(publicHtmlHeaders(cacheTags()));
 }
 
@@ -88,11 +57,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { tag, page } = loaderData;
-  /*
-   * THE SAME BUILDER THE OTHER PAGES USE, so this page cannot ship the partial set
-   * five pages shipped before it existed: all or none. The canonical carries
-   * `?page=` when there is one, because page two is different posts.
-   */
   const path = page > 1 ? `${tagPath(tag.slug)}?page=${page}` : tagPath(tag.slug);
   return pageMeta({
     title: `Posts tagged ${tag.name} | ${SITE.name}`,
@@ -128,8 +92,6 @@ export default function BlogTag({ loaderData }: Route.ComponentProps) {
           <p className="list-dek">
             Every post on this blog tagged {tag.name}. <Link to="/blog">All posts</Link>
           </p>
-          {/* The same three counted facts the index carries, over this archive's own list. The
-              count is the listing's, not `tag.total`: two owners for one number is one too many. */}
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
@@ -145,11 +107,6 @@ export default function BlogTag({ loaderData }: Route.ComponentProps) {
 
         <Pager page={page} pageCount={pageCount} hrefFor={hrefFor} />
 
-        {/*
-         * A reader who filters to a subject is exactly the reader who wants only that subject in
-         * their reader, and until these existed the only feed on offer was everything. Under the
-         * list now rather than above it: it is what to do after reading, not before.
-         */}
         <p className="list-feeds">
           Subscribe: <a href={`${tagPath(tag.slug)}/rss.xml`}>RSS</a>{" "}
           <a href={`${tagPath(tag.slug)}/feed.json`}>JSON</a>

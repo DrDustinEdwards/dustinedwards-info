@@ -1,8 +1,3 @@
-/**
- * schema.ts is the source of truth: its columns and indexes agree with what the migrations build,
- * and, with SCHEMA_LIVE=1, with the deployed database.
- */
-
 import test from "node:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
@@ -19,10 +14,7 @@ const bundle = bundler("schema");
 test("schema: columns agree across schema.ts, the migrations and the database", { timeout: 180_000 }, async (t) => {
   const { ok, fail, done } = collector();
 
-  /**
-   * The schema-source rule: columns from schema.ts, the migrations on an empty database, and live D1.
-   * All derived, no column list here. Virtual, shadow and `sqlite_%` tables are excluded.
-   */
+  /* All derived, no column list here. Virtual, shadow and `sqlite_%` tables are excluded. */
 
   /** @param {{name: string, sql: string | null}[]} tables */
   function classifyTables(tables) {
@@ -80,7 +72,6 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
   }
 
   try {
-    /* source 1: schema.ts, through drizzle */
     const [schemaModule, authModule, drizzleCore, drizzleOrm] = await Promise.all([
       bundle(join(root, "app", "db", "schema.ts"), "schema.mjs", /^~\/(lib)/),
       bundle(join(root, "app", "db", "auth-schema.ts"), "auth.mjs", /^~\/(lib)/),
@@ -105,7 +96,6 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
       }
     }
 
-    /* source 2: the migrations */
     const fresh = new DatabaseSync(":memory:");
     const migrations = readdirSync(join(root, "drizzle"))
       .filter((f) => f.endsWith(".sql"))
@@ -150,7 +140,6 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
       "no CREATE VIRTUAL TABLE found; the fts5 exclusion is not being exercised",
     );
 
-    /* schema.ts vs migrations */
     const modelled = [...fromSchema.keys()].sort();
     const unmodelled = migrationTables.filter((t) => !fromSchema.has(t));
     const phantom = modelled.filter((t) => !fromMigrations.has(t));
@@ -179,11 +168,9 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
         `${virtual.length} virtual excluded`,
     );
 
-    /* the indexes */
-
     /*
-     * The schema-source rule for indexes: names and ordered columns. Partial predicates, collations and
-     * directions are skipped, drizzle cannot express them. Implicit indexes go by `origin`.
+     * Names and ordered columns only: drizzle cannot express partial predicates, collations or
+     * directions. Implicit indexes go by `origin`.
      */
     {
       /** @type {Map<string, string[]>} */
@@ -295,9 +282,8 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
     }
 
     /*
-     * source 3: the live database, opt-in, because CI holds no Cloudflare credentials. This is
-     * where an unapplied migration or a hand-altered column shows up, and nowhere else. A failure
-     * here is reported by the parent test, whose collector the comparison writes to.
+     * The live database is opt-in because CI holds no Cloudflare credentials, and it is the only
+     * place an unapplied migration or a hand-altered column shows up.
      */
     const live = process.env.SCHEMA_LIVE === "1";
     await t.test(

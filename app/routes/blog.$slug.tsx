@@ -45,24 +45,14 @@ import "~/styles/post-enhancements.css";
 import "~/styles/post-head-blocks.css";
 import "~/styles/post-disclosures.css";
 
-/**
- * Content negotiation runs as middleware rather than in the loader: a document
- * route's loader cannot return a raw Response, because React Router hands it to
- * the component as `loaderData`. Middleware is the layer allowed to
- * short-circuit.
- */
+/** Middleware, not the loader: a document route's loader cannot return a raw Response. */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, params, context }, next) => {
     if (!prefersMarkdown(request)) return next();
 
-    // Same visibility gate as the HTML route, so a draft is not readable here.
     const post = await getBlogPostMarkdown(getEnv(context), params.slug);
     if (!post) return next();
-    /*
-     * NEVER STORED. This representation shares a cache key with the HTML document,
-     * so a stored copy here is the second variant that collapses the Cookie dimension
-     * for both.
-     */
+    /* Never stored: this shares a cache key with the HTML document, so a stored copy collapses the Cookie dimension for both. */
     return markdownResponse(params.slug, post.body, NO_STORE_CACHE_CONTROL);
   },
 ];
@@ -77,29 +67,15 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     ? await listSeriesParts(getEnv(context), post.series)
     : [];
 
-  // The projection lives in `blogPostView`, so the two routes that render a post
-  // cannot drift in what they hand the component.
   const view = blogPostView(post, seriesParts);
 
-  /*
-   * THE RELATED LIST IS RE-CHECKED AGAINST THE LIVE ROWS. The list is stored on the
-   * row, and a post can be unpublished after a list naming it was written, so
-   * without this a stale title and URL keep rendering on a public page. One indexed
-   * query composing `publiclyVisible()`, like every other public read, so there is
-   * no second opinion about what public means.
-   */
+  /* Re-checked against live rows: a stored list can name a post unpublished since it was written. */
   const stillPublic = await publiclyVisibleSlugs(
     getEnv(context),
-    // BOTH LISTS IN ONE QUERY. Backlinks are stored and stale for the same reason and need the same
-    // re-check, and asking twice would be two indexed reads for one answer.
     [...view.post.related, ...view.post.backlinks].map((item) => item.slug),
   );
 
-  /*
-   * READ HERE AND NOT IN `blogPostView`: `/preview/:token` shares that
-   * projection, and a draft preview must not grow a mentions section. A 404 above
-   * means this never runs.
-   */
+  /* Here, not in `blogPostView`: `/preview/:token` shares that projection, and a draft preview must not grow mentions. */
   const mentions = await approvedMentionsFor(getEnv(context), post.slug);
 
   return data(
@@ -113,17 +89,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       },
     },
     {
-      /*
-       * TWO VALUES IN ONE `Link`, comma-joined, which is how RFC 8288 spells a header
-       * carrying more than one relation. Both are built from `SITE_ORIGIN`, so they
-       * cannot come to name different hosts.
-       */
+      /* Comma-joined: RFC 8288's spelling for more than one relation in one `Link`. */
       headers: {
         Link: [linkToMarkdown(post.slug), linkToWebmention()].join(", "),
-        /*
-         * THE CACHE TAG IS SET IN THE LOADER, and that is forced rather than chosen:
-         * `HeadersArgs` carries no `params`, so the slug is not in scope down there.
-         */
+        /* Set in the loader: `HeadersArgs` carries no `params`, so the slug is not in scope there. */
         "Cache-Tag": cacheTags(post.slug),
       },
     },
@@ -132,16 +101,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   const headers = new Headers({
-    // The theme is a dimension of the cache KEY rather than a `Vary`. `Accept`
-    // STAYS, because this URL really does serve a markdown representation too.
-    //
-    // TWO TAGS, and this is the only route with a per-document one.
+    // The theme is a cache-key dimension, not a `Vary`. `Accept` stays: this URL also serves markdown.
     "Cache-Control": SHARED_CACHE_CONTROL,
     Vary: HTML_VARY_ACCEPT,
   });
-  // Both carried through from the loader, which is the only place the slug is
-  // in scope. A header the loader sets and this does not forward simply never
-  // reaches the client.
+  // `headers` does not inherit loader headers, so one not forwarded here never reaches the client.
   const link = loaderHeaders.get("Link");
   if (link) headers.set("Link", link);
   const tag = loaderHeaders.get("Cache-Tag");
@@ -154,9 +118,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { post } = loaderData;
-  // Built by `postSocial` and not here: a preview whose job is to show what this
-  // route emits must not compute it a second way, because the day the two disagree
-  // the preview lies.
   const { canonical, pageTitle, description, socialTitle, socialDescription, image } =
     postSocial(post);
 
@@ -172,17 +133,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { name: "twitter:card", content: "summary_large_image" },
     { name: "twitter:title", content: socialTitle },
     { name: "twitter:description", content: socialDescription },
-    /*
-     * A card type and its image travel together or neither is worth setting. The
-     * value is `postSocial`'s, so this is not a second opinion about which image a
-     * post has.
-     */
     { name: "twitter:image", content: image },
-    /*
-     * Spread from `articleOpenGraph` rather than written out, so the four values
-     * cannot come apart from `articleJsonLd`'s. `article:tag` repeats once per tag,
-     * which is why this is a list.
-     */
     ...articleOpenGraph(SITE_ORIGIN, {
       slug: post.slug,
       title: post.title,
@@ -193,83 +144,46 @@ export function meta({ loaderData }: Route.MetaArgs) {
       ogImage: post.ogImage,
       tags: post.tags,
     }),
-    // The markdown twin, advertised so an agent can fetch source rather than
-    // scrape the rendered page.
     {
       tagName: "link",
       rel: "alternate",
       type: "text/markdown",
       href: `${canonical}.md`,
     },
-    /*
-     * A sender looks in two places and stops at the first, so both are emitted: one
-     * that found only one would have to decide which this site meant.
-     * `WEBMENTION_URL` is the constant the header is built from.
-     */
+    /* A sender looks in two places and stops at the first, so both are emitted. */
     { tagName: "link", rel: "webmention", href: WEBMENTION_URL },
   ];
 }
 
-/**
- * The threshold is one day: a post synced the same day it was published has not
- * been revised, it has just been deployed. Without it every post would carry an
- * "Updated" line from the moment it shipped.
- */
+/** One day: a post synced the day it was published has been deployed, not revised. */
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Fewer entries than this and the contents list is furniture rather than a map, so the rail drops
- * it. Three is the handoff's number and this is its only copy.
- */
+/** Below this, a contents list is furniture rather than a map. */
 const TOC_MIN = 3;
 
-/** The rail's date form: machine data in a mono column, so it is the machine's spelling. */
 function ymd(value: Date | string | number) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
 /**
- * THE ONE PLACE ON THIS PAGE WHERE THE TEXT IS NOT OURS.
- *
- * Every string in a mention was read out of a page this site does not control, so
- * it is RENDERED AS TEXT: React children, escaped by React, no
- * `dangerouslySetInnerHTML`, no image, and no source-supplied attribute except
- * one `href` that `safeHttpHref` has re-parsed.
- *
- * First-party markup is injected because we wrote it; third-party text is escaped
- * because we did not. Reading this as "the body is injected, so this could be too"
- * is the moment the rule is gone.
- *
- * @param mention one approved row, as `approvedMentionsFor` selected it
+ * Mention text is third party: rendered as escaped React children, never `dangerouslySetInnerHTML`,
+ * and the one `href` is re-parsed by `safeHttpHref`.
  */
 function Mention({
   mention,
 }: {
   mention: Route.ComponentProps["loaderData"]["mentions"][number];
 }) {
-  /*
-   * The author's own URL first, the source page second, neither if neither parses.
-   * A row whose URLs BOTH fail still renders as plain text: dropping it would hide
-   * something the admin approved while the queue still showed it as published.
-   */
+  /* A row whose URLs both fail still renders as text: dropping it would hide something the admin approved. */
   const href = safeHttpHref(mention.authorUrl) ?? safeHttpHref(mention.sourceUrl);
 
-  /*
-   * THE NAME FALLS BACK TO THE SOURCE URL, not to a word like "Someone": it
-   * substitutes a FACT rather than a placeholder, which is the no-substitution rule's
-   * distinction, in a spot where an invented value would be attributed to a real
-   * person.
-   */
+  /* Falls back to the source URL, a fact, never an invented name attributed to a real person. */
   const name = mention.authorName ?? mention.sourceUrl;
   const decided = longDateUTC(mention.decidedAt);
 
   return (
     <li>
       {href ? (
-        /*
-         * `ugc` is what this link IS, `nofollow` is what it must not pass on, and the
-         * other two are this site's default on every outbound anchor.
-         */
         <a href={href} rel="nofollow ugc noopener noreferrer">
           {name}
         </a>
@@ -289,18 +203,8 @@ function Mention({
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
   const { post, toc, seriesParts, mentions } = loaderData;
 
-  /*
-   * ONE `postSocial` call, here rather than threaded through the loader, which
-   * would be a third place the same rule could be stated. Pure, so calling it twice
-   * cannot disagree with itself.
-   */
   const { canonical, description: dek } = postSocial(post);
 
-  /*
-   * Derived from the list already on the page rather than queried: a second read
-   * would be a second answer to what "the next part" means, and it would have to
-   * agree with the list rendered beneath it.
-   */
   const partIndex = seriesParts.findIndex((entry) => entry.slug === post.slug);
   const seriesPrevious = partIndex > 0 ? seriesParts[partIndex - 1] : undefined;
   const seriesNext =
@@ -315,15 +219,8 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
       ? longDateUTC(post.updatedAt)
       : null;
 
-  /* The rail maps SECTIONS, so h3s are filtered out here rather than indented in CSS. */
   const sections = toc.filter((entry) => entry.depth === 2);
 
-  /*
-   * THE EVIDENCE ROW'S THREE FACTS, assembled here because this is where all three are in scope.
-   * Each is computed rather than typed: the words and the hash come off the projection, the
-   * bundle size off the module `build:enhance` writes beside the bytes it measured. A null makes
-   * the row omit ITSELF rather than render two facts and a gap.
-   */
   const gzipBytes = ENHANCE_GZIP_BYTES.blog;
   const evidence = [
     post.wordCount > 0 ? `${post.wordCount.toLocaleString("en-US")} words` : null,
@@ -335,10 +232,8 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
     <>
       <SiteHeader />
       {/*
-       * THE h-entry IS ON `main`, NOT ON THE ARTICLE, and that is forced by the layout rather than
-       * chosen: the title and the article are now siblings in the track grid, so an h-entry on the
-       * article alone would publish a post with no p-name and no dt-published. `check:machine-readable`
-       * asserts exactly one h-entry and one h-card on the page.
+       * The h-entry is on `main`: the title and the article are siblings in the track grid, so an
+       * article-scoped h-entry would have no p-name and no dt-published.
        */}
       <main className="tracks post-tracks h-entry" id="main" tabIndex={-1}>
         <script
@@ -364,27 +259,12 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           }}
         />
 
-        {/*
-         * Every microformats2 class here is a CLASS on markup that was already present.
-         * Annotating the first copy cannot go out of step with itself, where a third copy
-         * of the same facts would be a third thing to keep true. Ruling 50 as amended.
-         */}
         <header className="post-head">
           <h1 className="p-name">{post.title}</h1>
-          {/*
-           * The SAME STRING the meta tag carries. `postSocial` falls back to the site
-           * description where a post has none, so the raw column would put a different
-           * sentence on the page than in the head.
-           */}
+          {/* The meta tag's string: `postSocial` falls back to the site description, so the raw column would differ from the head. */}
           <p className="post-dek">{dek}</p>
-          {/* Under the opening block and above the body, which is this object's slot on every
-              page that carries it. Text track, never the rail. */}
           <EvidenceRow facts={evidence} />
-          {/*
-           * `hidden` and not `.sr-only`: `.sr-only` is still announced, and a screen
-           * reader gaining a name and a link on every post IS a change to the page. Every
-           * mf2 parser reads the markup rather than the computed style.
-           */}
+          {/* `hidden`, not `.sr-only`, which is still announced. mf2 parsers read markup, not computed style. */}
           <p className="p-author h-card" hidden>
             <a className="p-name u-url" href="/">
               {SITE.name}
@@ -392,16 +272,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           </p>
         </header>
 
-        {/*
-         * THE RAIL: when the post was published, where its sections are, and nothing else. It
-         * PRECEDES the article in source, so at one column it lands above the body in the order a
-         * reader wants: what this is, then where it goes.
-         *
-         * The chronology carries ONE authored date, not the handoff's two. `date` in frontmatter
-         * is the only one the corpus has and `posts` has no column for a separate written date,
-         * so a "written" line here would be `created_at`, which is when the sync ran. Hard rule
-         * 13: omit the row rather than substitute a different value.
-         */}
+        {/* One authored date: `created_at` is when the sync ran, not when the post was written. */}
         <div className="post-rail u-rail">
           <p className="post-machine">
             {post.publishAt && (
@@ -414,12 +285,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
                 first published
               </>
             )}
-            {/*
-             * STILL CONDITIONAL, deliberately: a post nobody has revised has no updated date, and
-             * emitting the row's `updatedAt` regardless would publish a sync timestamp as if it
-             * were an edit. `check:machine-readable` asserts the pairing in BOTH directions, so the
-             * word and the `dt-updated` move together or the gate fails.
-             */}
+            {/* Conditional: emitting `updatedAt` regardless would publish a sync timestamp as an edit. */}
             {revisedLabel && (
               <>
                 <b>
@@ -432,13 +298,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             )}
           </p>
 
-          {/*
-           * H2s ONLY, and only from three up: the rail is a map of the argument's sections, and a
-           * two-entry map is furniture. `data-depth` is gone with the h3s it indented.
-           *
-           * Server-rendered anchors are the page; `app/enhance/blog.ts` adds `data-current` on
-           * scroll and its fallback is that every entry reads muted.
-           */}
           {sections.length >= TOC_MIN && (
             <nav className="post-toc" aria-labelledby="contents-heading">
               <p id="contents-heading">Contents</p>
@@ -454,23 +313,13 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
         </div>
 
         <article className="post post-body">
-          {/*
-           * BEFORE THE PROSE, because all three qualify the post before it is read: whether it is
-           * finished, who it is for, and what it concludes.
-           */}
           <PostHeadBlocks
             writingStatus={(post.writingStatus as WritingStatus | null) ?? null}
             assumedAudience={post.assumedAudience ?? null}
             keyTakeaways={post.keyTakeaways ?? null}
           />
 
-          {/*
-           * ABSENT, NOT EMPTY, when there is no cover: an empty figure is a landmark a
-           * screen reader announces and a box the layout reserves, for nothing.
-           *
-           * EAGER AND HIGH PRIORITY, against the usual advice: this is the LCP element when
-           * present, so lazy-loading it would defer the paint the metric measures.
-           */}
+          {/* Eager and high priority: this is the LCP element when present. */}
           {post.coverImage && (
             <figure className="post-cover">
               <img
@@ -485,11 +334,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </figure>
           )}
 
-          {/*
-           * THE LIST AND THE PAIR DO DIFFERENT JOBS: the ordered list is the table of
-           * contents, the previous and next targets are the page turn and carry the LABEL so
-           * direction can be read without counting.
-           */}
           {post.series && seriesParts.length > 1 && (
             <nav className="post-series" aria-labelledby="series-heading">
               <h2 id="series-heading">
@@ -526,11 +370,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </nav>
           )}
 
-          {/*
-            The body is rendered at build time from markdown we author and is
-            stored as HTML in D1. It contains no third-party input, which is why
-            it can be injected directly.
-          */}
+          {/* Build-time HTML from markdown we author; no third-party input, so it can be injected. */}
           <div
             className="prose e-content"
             dangerouslySetInnerHTML={{ __html: post.html }}
@@ -551,10 +391,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </section>
           )}
 
-          {/*
-           * Every one is a plain link, so all three work with scripting off. The
-           * enhancement script upgrades the first to a clipboard copy.
-           */}
           <nav className="post-actions" aria-label="Use this post elsewhere">
             <a
               className="post-action"
@@ -583,30 +419,13 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </a>
           </nav>
 
-          {/*
-           * THE PERMALINK IS THE COPY-LINK, and it needs no script at all. A clipboard
-           * button does nothing for a reader without JavaScript and looks identical to one
-           * that works; an anchor is visible, focusable, right-clickable and long-pressable.
-           * NO enhancement is registered for it.
-           */}
-          {/* `.post-share` is also the enhancement's hook for the copy-link-to-selection upgrade,
-              which finds the permalink at `.post-share .u-url`. The class stays if the row moves. */}
+          {/* `.post-share .u-url` is the enhancement's hook for copy-link-to-selection; keep the class if the row moves. */}
           <nav className="post-actions post-share" aria-label="This post's address">
-            {/*
-             * The permalink is also the h-entry's `u-url`: this anchor already holds the
-             * canonical absolute URL, it is visible, and it is the one a reader copies. One
-             * element for a consumer and a human.
-             */}
             <a className="post-action u-url" href={canonical}>
               Permalink
             </a>
           </nav>
 
-          {/*
-           * ABSENT, NOT EMPTY: an empty section is a landmark a screen reader announces and
-           * a heading a reader scrolls to, for nothing. The escaping grounds are on the
-           * `Mention` component.
-           */}
           {mentions.length > 0 && (
             <section className="post-mentions" aria-labelledby="mentions-heading">
               <h2 id="mentions-heading">Mentions</h2>
@@ -618,20 +437,10 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </section>
           )}
 
-          {/*
-           * ONE LINE, in the template. The colophon carries the facts; a post carries a
-           * pointer to them, because twelve post footers restating them is eleven that go
-           * stale.
-           */}
           <p className="post-colophon-note">
             Built on the stack described at <Link to="/colophon">/colophon</Link>.
           </p>
 
-          {/*
-           * THE SAME THRESHOLD, NOT A SECOND ONE. `revisedLabel` is already the answer to "has this
-           * post been revised rather than merely redeployed", so the history hangs off it: a post
-           * cannot claim a revision here and deny it in the rail above.
-           */}
           {revisedLabel && post.changelog && (
             <PostHistory
               entries={post.changelog}
@@ -640,14 +449,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             />
           )}
 
-          {/*
-           * LINKED FROM, WHICH IS NOT MENTIONS. This is this site linking to itself, derived from
-           * every rendered body at build time; the mentions section above is other people's sites
-           * saying they linked here, approved one at a time. Two facts, two sections, two names.
-           *
-           * A `nav`, not a `section`: it is navigation, and a screen reader should be able to skip
-           * it. Omitted when empty and never shown as an empty state.
-           */}
           {post.backlinks.length > 0 && (
             <nav className="post-backlinks" aria-labelledby="backlinks-heading">
               <p id="backlinks-heading">Linked from</p>
@@ -661,11 +462,6 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </nav>
           )}
 
-          {/*
-           * The page turn, as two ruled rows rather than two bordered blocks: radius 0 and no box
-           * is the direction, and the label above the title still lets direction be read before
-           * the title. `rel="prev"` and `rel="next"` are the machine-readable half and are kept.
-           */}
           <nav className="post-nav" aria-label="More posts">
             {post.previous && (
               <Link className="post-nav-target" to={`/blog/${post.previous.slug}`} rel="prev">

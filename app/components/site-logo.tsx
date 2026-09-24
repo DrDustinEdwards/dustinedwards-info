@@ -1,18 +1,7 @@
-/**
- * The site mark, inline and in one place.
- *
- * INLINE rather than an `<img>` because the theme is driven by a data attribute,
- * so a `<picture>` with `prefers-color-scheme` would ignore the manual toggle. The
- * purple paths take a token that already resolves in light, dark and SYSTEM mode.
- * Nothing can flash and nothing can shift.
- *
- * The warm three keep literal fills because they are IDENTICAL in both variants;
- * binding them to tokens would make the mark render differently from the ratified
- * assets.
- *
- * GENERATED from public/dustin-edwards-logo.svg. Path data is verbatim and must never be
- * hand-edited: a variant is a rebuild from the construction spec.
- */
+// Inline, not an `<img>`: the theme is a data attribute, so a `<picture>` with
+// `prefers-color-scheme` would ignore the manual toggle. The warm three keep literal fills
+// because they are identical in both variants. Generated from public/dustin-edwards-logo.svg:
+// never hand-edit the path data.
 
 /** The eight paths, in the spec's paint order: ring, bowl, base, arc, tube, amber, pale, cap. */
 const MARK = (
@@ -28,7 +17,6 @@ const MARK = (
   </>
 );
 
-/** The master mark, square. Used on the login card. */
 export function SiteLogo({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 375 375" aria-hidden="true" focusable="false">
@@ -37,10 +25,7 @@ export function SiteLogo({ className }: { className?: string }) {
   );
 }
 
-/**
- * The tight 36x50 crop, for the header. The viewBox and the intrinsic size are
- * copied from dustin-edwards-logo-header.svg.
- */
+// The viewBox and intrinsic size are copied from dustin-edwards-logo-header.svg.
 export function SiteLogoHeader({ className }: { className?: string }) {
   return (
     <svg

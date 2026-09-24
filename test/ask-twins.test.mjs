@@ -1,14 +1,3 @@
-/**
- * The paper twins' upload: retried, and a failure that outlives its retries is reported.
- *
- * REPLAYS THE FINDING, per the replay rule. After shipping e623457 one twin's upload threw
- * `AiSearchInternalError: unable_to_connect_to_ai_search`; the old loop logged it and carried on, the
- * converge read 156 of 157, and ship waited that out as eventual consistency. These make one upload
- * fail, transiently and then for good, and assert the two outcomes the fix exists for.
- *
- * @see app/lib/search/ask-twins.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -22,14 +11,12 @@ const TWINS = [
 ];
 const FAILING = "publications/10-1128-mra-01077-21.md";
 
-/** The error the production upload threw, by name and message. */
 function transient() {
   const e = new Error("unable_to_connect_to_ai_search");
   e.name = "AiSearchInternalError";
   return e;
 }
 
-/** An io whose upload of FAILING throws `failures` times, then succeeds. No real waiting. */
 function io(failures) {
   const uploads = new Map();
   let thrown = 0;

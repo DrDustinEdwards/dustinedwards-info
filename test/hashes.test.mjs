@@ -1,18 +1,6 @@
-/**
- * The provenance hashes against INDEPENDENTLY derived values.
- *
- * Every expected value here was produced by a tool that is not the module
- * under test: the blob shas by `git hash-object --stdin` and the sha256s by
- * `sha256sum`, both run 2026-08-25 over the same bytes each case encodes.
- * Fixture independence: a gate's expected values are never
- * produced by the process it checks, and re-deriving them here with
- * crypto.subtle would make every case unfailable by construction.
- *
- * The multibyte case is the one that earns its place: the git header frames
- * the BYTE length, and "café ☕\n" is 10 bytes across 8 code points, so an
- * implementation framing `string.length` produces a plausible sha that
- * matches nothing git ever computed.
- */
+/* Every expected value came from `git hash-object` and `sha256sum`, never from the module's own
+ * crypto, or every case would be unfailable. The git header frames the BYTE length, so the
+ * multibyte case catches an implementation framing `string.length`. */
 
 import assert from "node:assert/strict";
 import { test } from "node:test";

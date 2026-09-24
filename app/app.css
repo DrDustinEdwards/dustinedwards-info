@@ -1,16 +1,9 @@
 @import "./styles/reset.css";
 
-/* Inter, self-hosted so style-src and font-src stay 'self': variable latin subsets, weight axis 100 to 900.
-   Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/ paths
-   immutable. unicode-range keeps the italic to pages with italic latin text. font-display differs per face:
-   see the next note. */
-/* font-display: swap on the normal face. It was optional, and a first visit NEVER used it: measured
-   2026-09-23 with an empty cache, the hero and wordmark drew Arial in 11 of 12 runs, unthrottled
-   included, because optional gives a face ~100 ms from the start of its load and a preloaded 70 KB
-   file does not make that. Returning visitors had it cached, which is why nobody saw it. What made
-   optional attractive, swap re-wrapping the /blog chip row, is answered by the two fallbacks below:
-   one per weight band, so no swap changes a line's width by more than about 1%. The italic keeps
-   swap and is not preloaded: it is needed only with italic text. */
+/* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
+   paths immutable. */
+/* swap, not optional: optional gives a face about 100 ms and a preloaded 70 KB file misses it, so
+   first visits drew Arial. The fallbacks below keep the swap from re-wrapping a line. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -34,11 +27,8 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Greek, and the letterlike, arrow and math-operator symbols, for scientific text (IFN-β, Δ, ≤, →).
-   unicode-range keeps each off every page that does not use one of its characters. Greek is Google's
-   subset of the same release as the latin; math is cut from that release with fonttools. The ranges are
-   whole blocks, cheaper to ship than codepoint lists, minus the arrows and minus sign the latin carries,
-   so a page with a minus sign never fetches the math file. */
+/* Whole blocks minus the arrows and minus sign the latin carries, so a page with a minus sign never
+   fetches the math file. */
 @font-face {
   font-family: "Inter";
   font-style: normal;
@@ -75,14 +65,9 @@
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
 
-/* Arial sized to Inter at the UI sizes, where Inter's regular weights now live: prose moved to the serif, so
-   the old 17px tuning (103.87%) left the 14px /blog tag row 4% narrow and it re-wrapped when Inter swapped in.
-   opsz follows the font size, so Inter is wider at 14px than at 17px. TUNED BY LAYOUT SHIFT, NOT BY A RATIO,
-   2026-09-23, with the swap forced on the live pages at 1280 and 375: 108% re-wrapped the /blog tag row at
-   1280 (CLS 0.20), 110% and 111% shifted it at 375 (0.016, 0.020), 109% left /, /blog and a post at 0.003 or
-   under. The window is about a point either side, and a new tag can move it: check:browser's /blog CLS case
-   is what notices. Ascent and descent are Inter's (0.969, 0.241) divided by the size-adjust. Only Arial,
-   which Helvetica and sans-serif resolved to when measured; other local() faces would inherit its numbers. */
+/* 109% tuned by layout shift at 1280 and 375: 108% re-wrapped the /blog tag row, 110% shifted it. A
+   new tag can move the window; check:browser's /blog CLS case notices. Ascent and descent are Inter's
+   (0.969, 0.241) divided by the size-adjust. */
 @font-face {
   font-family: "Inter Fallback";
   font-style: normal;
@@ -94,11 +79,8 @@
   line-gap-override: 0%;
 }
 
-/* Arial Bold sized to Inter's heavy weights. The regular face, when it was declared for every weight, drew
-   the 600 labels, the 700 wordmark and the 800 hero in regular Arial 6 to 9% narrower than Inter, and the
-   range stopped the browser synthesising bold. Measured 2026-09-23: Inter is 98.5 to 101.7% as wide as Arial
-   Bold across 600/14, 620/22, 700/19 and 800/44, so 100.5% holds every heavy weight within about 1.2%.
-   Ascent and descent follow the same relation as the regular face. */
+/* Inter's 600 to 800 weights measure 98.5 to 101.7% of Arial Bold, so 100.5% holds each within about
+   1.2%. Without this face the heavy weights drew in regular Arial, 6 to 9% narrow. */
 @font-face {
   font-family: "Inter Fallback";
   font-style: normal;
@@ -110,9 +92,7 @@
   line-gap-override: 0%;
 }
 
-/* The serif sets public headings at 32px and up, nothing else. Namespaced "Web" so an installed retail
-   copy with other metrics is never used; check:fonts binds the declaration to the file. swap, not
-   optional: this late face is not preloaded, and the fallback below keeps the swap from moving a line. */
+/* Namespaced "Web" so an installed retail copy with other metrics is never used. */
 @font-face {
   font-family: "Source Serif 4 Web";
   font-style: normal;
@@ -124,9 +104,7 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Georgia sized to the serif, tuned to the 2rem h2. Measure against Georgia REGULAR: with
-   font-weight: 200 900 the browser never synthesises bold, so a ratio taken against the bold is wrong.
-   Only Georgia: one face carries one set of overrides, and no second face is guessed. */
+/* Measure against Georgia REGULAR: with font-weight: 200 900 the browser never synthesises bold. */
 @font-face {
   font-family: "Source Serif 4 Web Fallback";
   font-style: normal;
@@ -138,7 +116,6 @@
   line-gap-override: 0%;
 }
 
-/* The real italic, so binomials, species names and journal titles are not a slanted roman. */
 @font-face {
   font-family: "Source Serif 4 Web";
   font-style: italic;
@@ -150,7 +127,6 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-/* Greek and the scientific symbols, as Inter's above. */
 @font-face {
   font-family: "Source Serif 4 Web";
   font-style: normal;
@@ -187,9 +163,8 @@
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
 
-/* Georgia Italic sized to the italic at prose size (opsz 18, weight 400), where the italic is set:
-   the text-width ratio gives the size-adjust, and ascent and descent are the serif's (1.036, 0.335)
-   divided by it. Without it the italic's fallback is a slanted Georgia regular at the roman's size. */
+/* Sized at prose size (opsz 18, weight 400); ascent and descent are the serif's (1.036, 0.335) divided
+   by the size-adjust. */
 @font-face {
   font-family: "Source Serif 4 Web Fallback";
   font-style: italic;
@@ -202,9 +177,7 @@
 }
 
 /* A plain :root, not @theme: an unknown at-rule is dropped whole, and every font fell back to Times. */
-/* The stacking scale: one named token per layer. z-index compares by order, so the gaps only leave room.
-   Low to high: tile raise, body, action; sticky; dropdown; popover; drawer scrim, drawer; pinned bulk bar;
-   overlay scrim, overlay; progress; transient; skip link last. Not a color: check:contrast needs hexes. */
+/* Not in the color blocks: check:contrast requires every token there to be a hex. */
 :root {
   --z-tile-raise: 10; /* @kind other */
   --z-tile-body: 20; /* @kind other */
@@ -222,36 +195,23 @@
   --z-skip-link: 2000; /* @kind other */
 }
 
-/* The header's layers: bar --z-pinned-bar, overlay menu --z-overlay, skip link --z-skip-link.
-   Never --z-dropdown for the menu: it sits below the bar, which the menu must clear. The name is the trap. */
+/* Never --z-dropdown for the header menu: it sits below the bar, which the menu must clear. */
 
 :root {
-  /* "Inter Fallback" sits between the real face and the generic families, so
-     a reader waiting for the download gets Arial at Inter's metrics. It is
-     not a font anyone sees named; it is Arial measured to take Inter's space. */
   --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  /* A token because CodeMirror needs the mono stack a third time, after the
-     editor body and prose code blocks; restating it would make a fourth copy
-     to drift. */
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  /* The serif sets public headings at 32px and up, never a control, chip, logo, header or admin screen.
-     "Source Serif 4 Web Fallback" sits between it and Georgia, so font-display: swap moves no line. */
   --font-serif: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia,
     "Times New Roman", serif;
 
-  /* The elevation shadow, one owner. Not in the color blocks: check:contrast needs a hex in a measured pair. */
+  /* Not in the color blocks: check:contrast needs a hex in a measured pair. */
   --shadow-popover: 0 8px 24px rgb(0 0 0 / 12%);
 }
 
-/* Type levels: a consumer sets all five properties, never the font shorthand, which drops the variation axes.
-   Weight is set twice to one number: font-weight selects the face, wght positions the axis. With only wght a
-   level matches the 400 face and draws it heavier; with only font-weight the browser interpolates the axis.
-   Optical sizing is off, so nothing interpolates on resize. */
+/* Set all five properties, never the font shorthand, which drops the variation axes. Weight is set
+   twice: font-weight selects the face, wght positions the axis. */
 :root {
-  /* Prose and UI body at 420, not 400: on limestone Inter's 400 goes thin
-     under grayscale antialiasing. The standfirst is this level at 1.25rem, a
-     size alias, not a ninth level. */
+  /* 420, not 400: on limestone Inter's 400 goes thin under grayscale antialiasing. */
   --t-body-family: var(--font-sans);
   --t-body-size: clamp(1rem, 0.97rem + 0.14vw, 1.0625rem);
   --t-body-leading: 1.65;
@@ -264,68 +224,48 @@
   --t-small-weight: 440;
   --t-small-vars: "opsz" 14, "wght" 440;
 
-  /* Field labels, buttons, chips. Weight 600, not 560: step 2 set 560 and
-     step 6b restated the level at 600, and the later step wins. */
   --t-label-family: var(--font-sans);
   --t-label-size: 0.8125rem;
   --t-label-leading: 1.35;
   --t-label-weight: 600;
   --t-label-vars: "opsz" 14, "wght" 600;
 
-  /* The header's destinations, its only reader. No leading token: nothing ever set a
-     line-height from it. A level member with no reader is not a scale hole;
-     add the token back in the commit that reads it.
-     WEIGHT 400, not 520: ruling 117 runs Inter at regular settings everywhere except the
-     wordmark, the home name and a page label, and 520 was the weight of a bar that is gone. */
   --t-nav-family: var(--font-sans);
   --t-nav-size: 0.9375rem;
   --t-nav-weight: 400;
   --t-nav-vars: "opsz" 16, "wght" 400;
 
-  /* Subheads inside posts, papers and admin. The last Inter level, and the
-     highest `opsz` any Inter level asks for. */
   --t-h3-family: var(--font-sans);
   --t-h3-size: clamp(1.25rem, 1.16rem + 0.39vw, 1.375rem);
   --t-h3-leading: 1.35;
   --t-h3-weight: 620;
   --t-h3-vars: "opsz" 22, "wght" 620;
 
-  /* Public section headings and archive titles. THE SERIF FLOOR: 2rem fixed,
-     never fluid, because "headings 32px and up" has to stay true at 375 as
-     well as at 1280, and the face is not cut for less. */
+  /* 2rem fixed, never fluid: the serif is not cut for less than 32px. */
   --t-h2-family: var(--font-serif);
   --t-h2-size: 2rem;
   --t-h2-leading: 1.2;
   --t-h2-weight: 600;
   --t-h2-vars: "opsz" 32, "wght" 600;
 
-  /* Page and post titles. Lands on exactly 2rem at 375, so the serif never
-     sets below its floor. */
   --t-h1-family: var(--font-serif);
   --t-h1-size: clamp(2rem, 1.28rem + 2.25vw, 2.5rem);
   --t-h1-leading: 1.15;
   --t-h1-weight: 680;
   --t-h1-vars: "opsz" 32, "wght" 680;
 
-  /* The home name line, once per site. 2rem at 375, 3.25rem at 1280. */
   --t-display-family: var(--font-serif);
   --t-display-size: clamp(2rem, 0.35rem + 5.15vw, 3.25rem);
   --t-display-leading: 1.05;
   --t-display-weight: 700;
   --t-display-vars: "opsz" 32, "wght" 700;
 
-  /* Tracking is declared apart so it is not mistaken for part of a level. A level with none has no token:
-     a 0 every consumer must remember is worse than nothing. */
   --t-h3-tracking: -0.008em;
   --t-h1-tracking: -0.012em;
   --t-display-tracking: -0.012em;
 
-  /* The strong nav weight, a font-weight number: active bar destination, current filter chip, caption lead-in.
-     No 640 level and no opsz companion: a level token with no reader is refused, so it is not carried. */
   --t-nav-strong: 620;
 
-  /* ALIASES, NOT LEVELS. A caption needed a name so a component is not reading
-     `--t-small` and hoping; it did not need a size of its own. */
   --t-caption-family: var(--t-small-family);
   --t-caption-size: var(--t-small-size);
   --t-caption-leading: var(--t-small-leading);
@@ -334,8 +274,7 @@
   --t-caption-strong: var(--t-nav-strong);
 }
 
-/* The only breakpoint in the type scale: at 48rem the two serif levels step to optical size 48.
-   Inter levels never appear here, because Inter's opsz axis stops at 32. */
+/* Only the serif levels step here: Inter's opsz axis stops at 32. */
 @media (min-width: 48rem) {
   :root {
     --t-h1-vars: "opsz" 48, "wght" 680;
@@ -343,11 +282,8 @@
   }
 }
 
-/* Space and dimension scales, declared once in a bare :root no theme overrides:
-   check:contrast requires every token in the theme blocks to be a hex in a measured pair. */
+/* Not in the theme blocks: check:contrast requires every token there to be a hex in a measured pair. */
 :root {
-  /* Nine steps on a 4px base, in rem so a reader's root size scales them.
-     Nothing in the design uses a value off this scale. */
   --s-1: 0.25rem;
   --s-2: 0.5rem;
   --s-3: 0.75rem;
@@ -358,12 +294,9 @@
   --s-8: 4rem;
   --s-9: 6rem;
 
-  /* The measure. The TRACK is the measure, not a max-width on a child, so a
-     full-bleed figure and a paragraph share one source of truth. */
   --measure: 42rem;
 
-  /* Control dimensions are not spacing and sit off the scale. 44px is the header hit target (WCAG 2.5.5,
-     AAA), deliberate for one-handed reading. Never read it as the AA floor: 2.5.8 asks 24px, --control-min-dense. */
+  /* 44px is the header hit target (WCAG 2.5.5, AAA). The AA floor is 24px, --control-min-dense. */
   --control-min: 2.75rem;
   --control-min-dense: 1.5rem;
 
@@ -371,8 +304,6 @@
   --line-w-thick: 0.125rem;
   --radius-control: 0.125rem;
 
-  /* THE THREE GUTTERS, set to the Direction D frames: 24px at 375 and 72px at 1280. They were
-     20 / 32 / 48. Every public route reads them, so this moves all of them. */
   --gutter: 1.5rem;
 }
 
@@ -388,20 +319,12 @@
   }
 }
 
-/* Motion: four durations named by job, never by speed or number, which invites reuse by resemblance.
-   A case that fits none of them usually should not animate. Easings end flat: no overshoot or spring. */
 :root {
-  /* The answer to a pointer: under about 100ms reads as simultaneous with the input.
-     Not 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device. */
+  /* Not 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device. */
   --motion-instant: 90ms;
-  /* A state a reader should notice: between about 120 and 200ms the eye reads
-     a change FROM one state TO another rather than simply being different. */
   --motion-state: 160ms;
-  /* The overlay menu fade: under about 220ms a fade flickers, over about 300ms the reader waits.
-     Not the scroll reveal: a view() timeline ignores duration, so this is --motion-panel, not --motion-reveal. */
+  /* Not --motion-reveal: a view() timeline ignores duration. */
   --motion-panel: 260ms;
-  /* A whole document: the cross-document view transition, the one case where
-     the browser is also doing work. */
   --motion-page: 320ms;
 
   --ease-enter: cubic-bezier(0.16, 0.68, 0.28, 1);
@@ -409,10 +332,8 @@
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
-/* Hill Country tokens: hexes copied from dustinedwards/design-tokens.md, never derived; named by role, never hue.
-   Light is :root and [data-theme="light"]; dark is :root:not([data-theme]) under a dark OS preference, and
-   [data-theme="dark"]. No attribute means system, resolved in CSS, so no blocking script. The blocks do not
-   cascade into each other, so both must declare the same names; check:contrast recomputes and asserts both. */
+/* Hexes copied from design-tokens.md, never derived. The light and dark blocks do not cascade into
+   each other, so both declare every name; check:contrast recomputes and asserts both. */
 
 :root,
 [data-theme="light"] {
@@ -420,18 +341,14 @@
 
   --surface-popover: #ebe2d3;
   --text: #241f1b;
-  /* No split in light mode: halation is a light-on-dark effect, so the heading
-     token exists here only so components can ask for the role unconditionally. */
   --text-heading: #2b2320;
-  /* Deliberately below the contrast floor: WCAG 1.4.3 and 1.4.11 exempt inactive controls, and 4.5:1 would
-     read as available. The disabled attribute, the recess and text saying why identify it; check:contrast
-     carries the exemption. cursor: not-allowed is not a cue: pointer-only, and it arrives too late. */
+  /* Deliberately below the contrast floor: WCAG 1.4.3 and 1.4.11 exempt inactive controls;
+     check:contrast carries the exemption. */
   --text-disabled: #a09990;
   --text-disabled: color-mix(in srgb, #5b5349 55%, #f4efe6);
   --border: #8a7d6e;
   --border-strong: #6e6459;
 
-  /* Brand: bluebonnet. Brand only. It never signals a state. */
   --brand: #4f2d7f;
   --brand-hover: #412764;
   --on-brand: #ffffff;
@@ -440,18 +357,14 @@
   --selection-bg: #d9ccee;
   --focus-ring-on-brand: #f3e3b8;
 
-  /* Chrome role tokens: the header and footer are a brand surface, so text on them is measured against the
-     chrome. --mark-on-chrome is the dark brand hex in both themes, by ruling (the light logo reads on purple).
-     The logo's fills read it; change both in one commit, never silently. */
+  /* The logo's fills read --mark-on-chrome; change both in one commit. */
   --surface-chrome: #4f2d7f;
   --on-chrome: #ffffff;
   --on-chrome-muted: #ede8f5;
   --mark-on-chrome: #b7a5e0;
   --focus-ring-on-chrome: #f3e3b8;
 
-  /* The caption scrim is opaque on purpose: fading to transparent makes the photograph the backdrop, so
-     contrast would vary by image and cross the 4.5:1 text floor. Same value in both themes: a scrim is a hole
-     in the page. check:contrast carries the white-on-scrim pair. */
+  /* Opaque on purpose: a fade makes the photograph the backdrop, so text contrast would vary by image. */
   --scrim: #1a1614;
   --on-scrim: #ffffff;
 
@@ -477,21 +390,17 @@
   --fill-success: #3e5d4b;
   --on-fill-success: #ffffff;
 
-  /* Accent: terracotta. Decorative only; it never signals a state.
-     One token: variants would need contrast pairs of their own, and nothing paints them. */
   --text-accent: #7a3e12;
 
-  /* Destructive: the REVERSIBLE removal (Trash, Empty trash). --*-danger marks the irreversible act
-     and stays rare; danger red here would teach that trash is as final as delete.
-     A peer of --text-danger, not a weaker sibling. */
+  /* The REVERSIBLE removal (Trash). --*-danger marks the irreversible act; red here would teach that
+     trash is final. */
   --text-destructive: #8a3324;
   --tint-destructive: #f5e8e4;
 
-  /* Search highlight. Text on it is --text. */
   --mark-bg: #f3e3b8;
 
-  /* Charts are keyed by hue, not ladder position, which differs between the doc's two ladders and would
-     change hue on a theme flip. Core-5 is the unlabeled-safe set; rust is extended and needs a direct label. */
+  /* Keyed by hue, not ladder position, which differs between the two ladders and would change hue on a
+     theme flip. Core-5 is safe unlabeled; rust needs a direct label. */
   --chart-cadet: #142b42;
   --chart-purple: #4f2d7f;
   --chart-claret: #9b3268;
@@ -499,12 +408,8 @@
   --chart-gold: #9a7a0e;
   --chart-rust: #8a4a1b;
 
-  /* PAPER, GLASS, LIGHT (ruling 65): the redesign's role names.
-     The Hill Country roles above stay until their consumers migrate. */
-  /* limestone: the page ground, and the footer's */
   --paper: #f4efe6;
-  /* one step off paper. LIGHTER in dark, darker in light */
-  /* all muted copy. dust never sets type */
+  /* dust never sets type */
   --text-secondary: #5b5349;
   /* a hint below the value that will replace it, NOT --text-secondary */
   --placeholder: #6a6359;
@@ -516,13 +421,11 @@
   --link-underline: #918980;
   /* edges that IDENTIFY a control. dust is 1.57:1 on limestone and cannot */
   --line-strong: #8a7d6e;
-  /* a press is not a hover and is never --visited */
   --brand-pressed: #2f1a4d;
-  /* What text on the glass pane sits on: --glass-pane (82% paper) over the palette's 45% scrim over
-     paper. Untinted. Measured by check:contrast; the pane itself paints --glass-pane. */
+  /* Text on the glass pane sits on 82% paper over the 45% scrim over paper. The pane itself paints
+     --glass-pane. */
   --glass-fill-paper: #e2ddd5;
   --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #f4efe6);
-  /* error TEXT, and the field border at --line-w-thick */
   --error: #8e1024;
   --error-fill: #8e1024;
   --on-error-fill: #ffffff;
@@ -536,9 +439,7 @@
   --on-success-fill: #ffffff;
   --success-tint: #e6ecdf;
 
-  /* THE FIGURE PALETTE. Four hues, five tints, per theme. Figures only:
-     no semantic color ever appears in one, because a chart series is
-     not a state. */
+  /* Figures only: no semantic color ever appears in one. */
   /* figures sit on paper, never on raised */
   --fig-ground: var(--paper);
   --fig-purple-100: #e3dcf0;
@@ -547,16 +448,13 @@
   --fig-purple-400: #4f2d7f;
   --fig-purple-500: #3a1f5e;
   --fig-leaf-100: #dfe5e0;
-  /* leaf, the brief's primitive, is this step in light */
   --fig-leaf-200: #9aa89c;
   --fig-leaf-300: #6b7a70;
   --fig-leaf-400: #5f6d63;
   --fig-leaf-500: #3b453e;
   --fig-oxide-100: #f0ddd4;
-  /* iron oxide's dark primitive is this step */
   --fig-oxide-200: #c48972;
   --fig-oxide-300: #a8604a;
-  /* iron oxide's light primitive */
   --fig-oxide-400: #8f4e3a;
   --fig-oxide-500: #5e3125;
   --fig-dust-100: #ece6da;
@@ -564,40 +462,28 @@
   --fig-dust-300: #a89d8d;
   --fig-dust-400: #7d7263;
   --fig-dust-500: #4e463c;
-  /* Plate I's lawn and the one turbid tone between it and a clearing. Figure fills only, never a
-     page surface (seat, 2026-09-22). */
+  /* Figure fills only, never a page surface. */
   --fig-lawn: #ddd3c4;
   --fig-turbid: #e9e1d5;
 
-  /* The series slots are the interface; the ramps are primitives. A chart reads --fig-s1 to --fig-s5, never a
-     hue or tint index, so one markup is correct in both themes. */
-  /* purple-500 light, purple-100 dark */
+  /* A chart reads --fig-s1 to --fig-s5, never a hue or tint index, so one markup is correct in both
+     themes. */
   --fig-s1: var(--fig-purple-500);
-  /* dust-500 light, leaf-200 dark */
   --fig-s2: var(--fig-dust-500);
-  /* oxide-400 light, oxide-300 dark */
   --fig-s3: var(--fig-oxide-400);
-  /* leaf-300 light, dust-400 dark */
   --fig-s4: var(--fig-leaf-300);
-  /* purple-200 light, purple-300 dark */
   --fig-s5: var(--fig-purple-200);
 
-  /* The lamp catch hue follows the backdrop, not the theme: one backdrop, one token.
-     A mention in check-contrast.mjs is not a read (ruling 104), so no second token waits for a bar. */
-  /* purple-100 light, purple-400 dark */
+  /* The lamp catch hue follows the backdrop, not the theme. */
   --lamp-chroma-on-paper: var(--fig-purple-100);
 }
 
-/* No attribute and a dark OS preference. This is the no-script path and the
-   "system" setting, which are the same code path by construction. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
     color-scheme: dark;
 
-    /* Neutrals: prairie night. Warm brown-black, never blue-black. */
     --surface-popover: #322a25;
-    /* v3 split: body steps one off maximum to reduce halation for astigmatic
-       readers, still 13.1:1, and it buys dark mode a heading/body hierarchy. */
+    /* Body steps one off maximum to reduce halation for astigmatic readers, still 13.1:1. */
     --text: #e9e1d6;
     --text-heading: #ede6dc;
     --text-disabled: #6f685e;
@@ -613,15 +499,14 @@
     --selection-bg: #4a3a6b;
     --focus-ring-on-brand: #2f2410;
 
-    /* Dark chrome is the ratified hero surface, so no new surface enters the palette.
-       The ring is --focus-ring-on-chrome, never --focus-ring-on-brand, which is invisible on deep purple. */
+    /* The ring is --focus-ring-on-chrome, never --focus-ring-on-brand, which is invisible on deep
+       purple. */
     --surface-chrome: #3d2a5c;
     --on-chrome: #ede6dc;
     --on-chrome-muted: #c9baea;
     --mark-on-chrome: #b7a5e0;
     --focus-ring-on-chrome: #f3e3b8;
 
-    /* Scrim: as in the light block. */
     --scrim: #1a1614;
     --on-scrim: #ffffff;
 
@@ -649,8 +534,6 @@
 
     --text-accent: #ce7f44;
 
-    /* The rust, lifted for dark to mirror the light ratios rather than to look similar,
-       so the control reads with the same weight in both modes. */
     --text-destructive: #e5947f;
     --tint-destructive: #3a201b;
 
@@ -663,27 +546,17 @@
     --chart-gold: #efd99c;
     --chart-rust: #ce7f44;
 
-    /* Paper Glass Light: as in the light block. */
-    /* As in the light block. */
     --paper: #1c1916;
-    /* As in the light block. */
-    /* As in the light block. */
     --text-secondary: #b2a898;
-    /* As in the light block. */
     --placeholder: #a39a8b;
     --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
-    /* As in the light block. */
     --dust: #6f675c;
     /* Dust itself: it already clears 3:1 on the dark paper. */
     --link-underline: #6f675c;
-    /* As in the light block. */
     --line-strong: #8f857a;
-    /* As in the light block. */
     --brand-pressed: #a08ecd;
-    /* As in the light block. */
     --glass-fill-paper: #1c1916;
     --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #1c1916);
-    /* As in the light block. */
     --error: #f0a9b4;
     --error-fill: #e08a98;
     --on-error-fill: #1a1614;
@@ -697,8 +570,6 @@
     --on-success-fill: #1a1614;
     --success-tint: #1b2b28;
 
-    /* Figure palette: as in the light block. */
-    /* As in the light block. */
     --fig-ground: var(--paper);
     --fig-purple-100: #e0d7f2;
     --fig-purple-200: #c0aee6;
@@ -706,16 +577,13 @@
     --fig-purple-400: #7f66a8;
     --fig-purple-500: #5a4479;
     --fig-leaf-100: #dfe5e0;
-    /* As in the light block. */
     --fig-leaf-200: #a9b7ab;
     --fig-leaf-300: #8b9a8e;
     --fig-leaf-400: #6f7e73;
     --fig-leaf-500: #4a5851;
     --fig-oxide-100: #f0ddd4;
-    /* As in the light block. */
     --fig-oxide-200: #d6a189;
     --fig-oxide-300: #c07f66;
-    /* As in the light block. */
     --fig-oxide-400: #a3654d;
     --fig-oxide-500: #74422f;
     --fig-dust-100: #e8e1d5;
@@ -723,30 +591,21 @@
     --fig-dust-300: #ab9f8f;
     --fig-dust-400: #82776a;
     --fig-dust-500: #564e44;
-    /* As in the light block. */
     --fig-lawn: #383129;
     --fig-turbid: #2a2520;
 
-    /* Series slots: as in the light block. */
-    /* As in the light block. */
     --fig-s1: var(--fig-purple-100);
-    /* As in the light block. */
     --fig-s2: var(--fig-leaf-200);
-    /* As in the light block. */
     --fig-s3: var(--fig-oxide-300);
-    /* As in the light block. */
     --fig-s4: var(--fig-dust-400);
-    /* As in the light block. */
     --fig-s5: var(--fig-purple-300);
 
-    /* Lamp catch hue: as in the light block. */
-    /* As in the light block. */
     --lamp-chroma-on-paper: var(--fig-purple-400);
   }
 }
 
-/* Dark, chosen explicitly, with the same values as the block above. Written twice, not shared through a
-   custom property, because check:contrast must read the hex that ships. */
+/* Written twice, not shared through a custom property, because check:contrast must read the hex that
+   ships. */
 [data-theme="dark"] {
   color-scheme: dark;
 
@@ -760,22 +619,19 @@
 
   --brand: #b7a5e0;
   --brand-hover: #b9a6d9;
-  /* The doc specifies no dark brand-active. Reusing the ratified hover hex
-     keeps parity with the light block without inventing a value. */
+  /* No ratified dark brand-active: reuses the hover hex. */
   --on-brand: #1a1614;
   --tint-brand: #2b2440;
   --visited: #a898cd;
   --selection-bg: #4a3a6b;
   --focus-ring-on-brand: #2f2410;
 
-  /* Chrome: as in the dark block above. */
   --surface-chrome: #3d2a5c;
   --on-chrome: #ede6dc;
   --on-chrome-muted: #c9baea;
   --mark-on-chrome: #b7a5e0;
   --focus-ring-on-chrome: #f3e3b8;
 
-  /* As in the light block. */
   --scrim: #1a1614;
   --on-scrim: #ffffff;
 
@@ -803,9 +659,6 @@
 
   --text-accent: #ce7f44;
 
-  /* Mirrors the media-query dark block above. Both are required: one serves the
-     explicit toggle, the other the OS preference, and check:contrast measures
-     all three declarations. */
   --text-destructive: #e5947f;
   --tint-destructive: #3a201b;
 
@@ -818,27 +671,16 @@
   --chart-gold: #efd99c;
   --chart-rust: #ce7f44;
 
-  /* As in the light block. */
-  /* As in the light block. */
   --paper: #1c1916;
-  /* As in the light block. */
-  /* As in the light block. */
   --text-secondary: #b2a898;
-  /* As in the light block. */
   --placeholder: #a39a8b;
   --placeholder: color-mix(in srgb, #b2a898 90%, #1c1916);
-  /* As in the light block. */
   --dust: #6f675c;
-  /* As in the dark block above. */
   --link-underline: #6f675c;
-  /* As in the light block. */
   --line-strong: #8f857a;
-  /* As in the light block. */
   --brand-pressed: #a08ecd;
-  /* As in the light block. */
   --glass-fill-paper: #1c1916;
   --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #1c1916);
-  /* As in the light block. */
   --error: #f0a9b4;
   --error-fill: #e08a98;
   --on-error-fill: #1a1614;
@@ -852,8 +694,6 @@
   --on-success-fill: #1a1614;
   --success-tint: #1b2b28;
 
-  /* As in the light block. */
-  /* As in the light block. */
   --fig-ground: var(--paper);
   --fig-purple-100: #e0d7f2;
   --fig-purple-200: #c0aee6;
@@ -861,16 +701,13 @@
   --fig-purple-400: #7f66a8;
   --fig-purple-500: #5a4479;
   --fig-leaf-100: #dfe5e0;
-  /* As in the light block. */
   --fig-leaf-200: #a9b7ab;
   --fig-leaf-300: #8b9a8e;
   --fig-leaf-400: #6f7e73;
   --fig-leaf-500: #4a5851;
   --fig-oxide-100: #f0ddd4;
-  /* As in the light block. */
   --fig-oxide-200: #d6a189;
   --fig-oxide-300: #c07f66;
-  /* As in the light block. */
   --fig-oxide-400: #a3654d;
   --fig-oxide-500: #74422f;
   --fig-dust-100: #e8e1d5;
@@ -878,38 +715,27 @@
   --fig-dust-300: #ab9f8f;
   --fig-dust-400: #82776a;
   --fig-dust-500: #564e44;
-  /* As in the light block. */
   --fig-lawn: #383129;
   --fig-turbid: #2a2520;
 
-  /* As in the light block. */
-  /* As in the light block. */
   --fig-s1: var(--fig-purple-100);
-  /* As in the light block. */
   --fig-s2: var(--fig-leaf-200);
-  /* As in the light block. */
   --fig-s3: var(--fig-oxide-300);
-  /* As in the light block. */
   --fig-s4: var(--fig-dust-400);
-  /* As in the light block. */
   --fig-s5: var(--fig-purple-300);
 
-  /* As in the light block. */
-  /* As in the light block. */
   --lamp-chroma-on-paper: var(--fig-purple-400);
 }
 
-/* Lamp geometry: a position and two numbers, so not in the palette blocks, whose tokens must be hexes.
-   Must sit after them: check:contrast takes the first matching selector and asserts each carries --paper.
-   --surface-catch is registered with @property so it interpolates; unregistered, the lamp would flicker. */
+/* Must sit after the palette blocks: check:contrast takes the first matching selector. --surface-catch
+   is registered with @property so it interpolates; unregistered, the lamp flickers. */
 @property --surface-catch {
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
 }
 
-/* The glass pane of the two overlays (ruling 149): untinted paper at 82% over a 12px backdrop blur.
-   Outside the palette blocks because it is translucent, and it follows each theme through --paper. */
+/* Outside the palette blocks because it is translucent. */
 :root {
   --glass-pane: color-mix(in srgb, var(--paper) 82%, transparent);
   --glass-blur: 12px;
@@ -917,9 +743,6 @@
 
 :root,
 [data-theme="light"] {
-  /* A percent position along the inline axis. Light sits near the leading
-     edge, where the eye enters the control, because the bar is dark and the
-     catch is high-contrast against it. */
   --lamp-origin: 18%;
   --lamp-reach: 62%;
   --surface-catch: 0.14;
@@ -927,8 +750,6 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    /* Dark sits further in and is stronger: at the edge the catch is lost to the bar's own value,
-       and dark composites sit on a steeper part of the transfer curve. */
     --lamp-origin: 30%;
     --lamp-reach: 58%;
     --surface-catch: 0.22;
@@ -941,8 +762,7 @@
   --surface-catch: 0.22;
 }
 
-/* At zero the gradient still renders as a 0% mix, the backdrop, so the reduced case needs no second path.
-   A reduced-transparency reader loses the lamp and keeps the glass fill. */
+/* At zero the gradient renders as a 0% mix, the backdrop, so the reduced case needs no second path. */
 @media (prefers-reduced-transparency: reduce) {
   :root,
   [data-theme="light"],
@@ -951,8 +771,7 @@
   }
 }
 
-/* prefers-contrast: more is deliberately narrow: two tokens move and the border promotes to its strong
-   twin; nothing else changes. Literal hexes, not var(): check:contrast asserts every token is a hex. */
+/* Literal hexes, not var(): check:contrast asserts every token is a hex. */
 @media (prefers-contrast: more) {
   :root,
   [data-theme="light"] {
@@ -973,11 +792,9 @@
   }
 }
 
-/* forced-colors: the palette yields to system colors and nothing re-asserts a brand color.
-   A transparent outline keeps each control's edge once its fill is gone; focus is already an outline. */
+/* A transparent outline keeps each control's edge once its fill is gone. */
 @media (forced-colors: active) {
-  /* The admin topbar and sidebar edges are box-shadows, since a border would shift aligned heights, and
-     forced-colors strips shadows. Real borders come back here: visible structure beats a sub-pixel. */
+  /* Box-shadow edges vanish in forced-colors, so real borders come back here. */
   .admin-topbar {
     border-bottom: 1px solid;
   }
@@ -994,35 +811,24 @@
   .skip-link,
   .ask-badge,
   .search-chip.is-active,
-  /* The admin chip's active state is a brand fill, which this mode removes,
-     so it takes the same forced outline as the search chip. */
   .admin-chip.is-active,
   .palette-option[aria-selected="true"] {
     outline: 1px solid transparent;
   }
 
-  /* Status dots carried their state in a background, which this mode removes.
-     The word beside them was always the real channel; a forced border keeps
-     the dots visible at all. */
   .status-dot {
     border: 1px solid currentColor;
   }
 
-  /* Selected rows in the palette lose their tint, so the selection is restated
-     as an edge rather than left to disappear. */
   .palette-option[aria-selected="true"] {
     outline-offset: -2px;
   }
 
-  /* The cockpit's surface ladder is all background, so everything resolves to Canvas here. The card keeps
-     its border, and the hovered row is restated as an edge. */
   .posts-table tbody tr:hover {
     outline: 1px solid CanvasText;
     outline-offset: -1px;
   }
 
-  /* The word is the pill's first channel; border-style is the second and survives this mode, so the pills
-     differ by stroke, not only hue. Restated on the outline, since the forced palette may flatten the border. */
   .status-pill {
     outline: 1px solid transparent;
   }
@@ -1035,14 +841,10 @@
     outline-style: dotted;
   }
 
-  /* The alert's tint is gone, so the edge is the only thing left holding it
-     together, and the glyph plus the heading carry the meaning. */
   .admin-alert {
     border-color: currentColor;
   }
 
-  /* Both are shapes made of a background: the panel floats over the page on a
-     popover surface, and a menu item highlights on a tint. */
   .overflow-menu-panel {
     outline: 1px solid transparent;
   }
@@ -1059,14 +861,11 @@
 
 html,
 body {
-  /* --site-inset: the x of the identity mark on both planes and in both sidebar states. On body, not the
-     token block (check:contrast parses those as colors), and not .admin, because the public chrome reads it. */
+  /* On body, not the token block (check:contrast parses those as colors), and not .admin, because the
+     public chrome reads it. */
   --site-inset: 1.5rem;
-  /* --header-h: the public header's RENDERED height, sticky since ruling 126. Here for the same reason
-     --site-inset is, rather than in the token block. Two consumers read it and neither may restate it:
-     html's scroll-padding-top, so a focused element or an anchor target never lands under the bar, and
-     the post page's sticky rail, which offset by a plain 20px while the header still scrolled away.
-     Re-measured when the header's padding or its contents change, never reasoned from. */
+  /* --header-h is the header's RENDERED height, read by scroll-padding-top and the sticky post rail.
+     Re-measure it when the header's padding or contents change. */
   --header-h: 4.625rem;
   background: var(--paper);
   color: var(--text);
@@ -1078,8 +877,6 @@ body {
   color: var(--text);
 }
 
-/* v3 amendment 2, element-level so a component heading color still outranks it.
-   In light it equals the body text value, so it is not a second color to keep in step. */
 h1,
 h2,
 h3,
@@ -1089,11 +886,8 @@ h6 {
   color: var(--text-heading);
 }
 
-/* Rule 2: a link in running text is underlined, because brand and visited purples fail CVD
-   simulation on hue alone. The line is a 1px hairline set below the descenders, and it turns
-   purple on hover. A standalone link (title, byline, nav, list row, footer column, "more") is
-   identified by its position, so it opts out at its own rule and changes only color on hover.
-   Element-level selectors, so any component rule that sets a color outranks them. */
+/* A link in running text is underlined because brand and visited purples fail CVD simulation on hue
+   alone. Element-level selectors, so any component rule that sets a color outranks them. */
 a {
   color: var(--brand);
   text-decoration: underline;
@@ -1111,7 +905,6 @@ a:hover {
   text-decoration-color: var(--brand);
 }
 
-/* Public hero. Leaves room for the header and footer within the first viewport. */
 .hero {
   min-height: calc(100dvh - 8rem);
   display: grid;
@@ -1176,9 +969,8 @@ a:hover {
   outline-offset: 2px;
 }
 
-/* Focus is an outline, never a box-shadow: forced-colors (Windows High Contrast) strips shadows. Filled
-   controls draw it inside with a negative offset, in the ring measured against the brand fill. Never on the
-   danger fill, where that ring is invisible: delete keeps only the outer ring on the page background. */
+/* Focus is an outline, never a box-shadow: forced-colors strips shadows. Never the inner ring on the
+   danger fill, where it is invisible. */
 .btn:focus-visible,
 .btn-brand:focus-visible,
 .skip-link:focus-visible,
@@ -1187,14 +979,10 @@ a:hover {
   outline-offset: -4px;
 }
 
-/* The site mark: the five purple paths take --brand, resolved per theme by the token selectors, so the
-   mark needs no media query and never flashes. The three warm paths keep the ratified literal fills. */
 .site-logo-brand {
   fill: var(--brand);
 }
 
-/* Below this point the sheets are imported by root.tsx, in order: import order is the cascade.
-   The tokens stay in this file because scripts/lib/tokens.mjs and check:contrast parse this path. */
-/* Public sheets only; the admin sheets load through app/admin.css. They are JavaScript imports in
-   root.tsx, in cut order, after this file's rules: CSS drops an @import that follows any rule,
-   and hoisting them to the top would move the cascade. */
+/* The tokens stay in this file because scripts/lib/tokens.mjs and check:contrast parse this path. */
+/* The public sheets are JavaScript imports in root.tsx, after this file's rules: CSS drops an @import
+   that follows any rule. */

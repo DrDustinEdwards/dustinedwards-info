@@ -3,12 +3,6 @@ import { test } from "node:test";
 
 import { splitFeatured, startHere } from "../app/lib/blog-listing.mjs";
 
-/*
- * The defect this covers was LATENT, which is why it is tested rather than
- * looked at: 0 of 12 posts carry `featured: true`, so /blog has never actually
- * rendered the duplicate. A rendered page would have shown nothing either way.
- */
-
 const page = [
   { slug: "a", featured: false },
   { slug: "b", featured: true },
@@ -86,16 +80,6 @@ test("the input array is not mutated", () => {
     "the loader spreads this array elsewhere; mutating it would act at a distance",
   );
 });
-
-/*
- * `startHere`, both branches. Ruling 57.
- *
- * The defect it replaces was NOT latent: the home page's whole "Start here"
- * section was dark in production, because the loader looked for the featured
- * post inside the four newest and the flagship sorts fifth. These cases are the
- * two arrays `listHomeStartHere` fetches, so they exercise the decision without
- * a database, which is the reason the decision is a pure function at all.
- */
 
 const flagship = { slug: "flagship" };
 const others = [{ slug: "n1" }, { slug: "n2" }, { slug: "n3" }, { slug: "n4" }, { slug: "n5" }];

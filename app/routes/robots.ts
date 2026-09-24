@@ -1,6 +1,5 @@
 import { SITE_ORIGIN } from "~/lib/seo";
 
-// AI crawlers we explicitly welcome for training and search.
 const AI_AGENTS = [
   "GPTBot",
   "OAI-SearchBot",
@@ -14,16 +13,8 @@ export function loader() {
   const origin = SITE_ORIGIN;
 
   /*
-   * robots.txt is ADVISORY: anything that ignores it fetches anyway, so neither line below is a
-   * control.
-   *
-   * `/preview` IS HYGIENE. THE CONTROL on draft previews is `X-Robots-Tag: noindex, nofollow` plus
-   * `Cache-Control: private, no-store` on the route itself.
-   *
-   * `/search/ask` is disallowed for a DIFFERENT reason: not private but EXPENSIVE, since every answer
-   * spends a per-IP allowance and one of a capped number of daily generations. THE CONTROL is that the
-   * endpoint takes POST and refuses GET with a 405, so nothing that merely follows a URL can spend
-   * anything.
+   * Advisory only. The real controls: `X-Robots-Tag` and `no-store` on /preview, and POST-only on
+   * /search/ask, which is disallowed because every answer is billed.
    */
   const block = (agent: string) =>
     `User-agent: ${agent}\nAllow: /\nDisallow: /admin\nDisallow: /preview\nDisallow: /search/ask\n`;
