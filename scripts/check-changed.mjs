@@ -1,15 +1,21 @@
 // Unmapped paths fall back to the whole offline tier: skipping a path it did not recognize would
 // report a clean run over checks that never executed.
+// Tests: only those whose imports reach a changed file (ruling 151). Types, the full suites and the
+// browser test run in CI.
 
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { gateNames } from "./build-stack.mjs";
 import { CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
+import { reachableAssets } from "./lib/page-payload.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/** Not a gate: the node tests and worker tests that import a changed file. */
+const RELATED = "related tests";
 
 /**
  * A gate belongs on a rule when it would notice the edit, not when it merely runs nearby.
@@ -25,17 +31,17 @@ const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx|mjs)$/,
-    gates: ["check:types", "check:tests", "check:features", "check:machine-readable", "check:urls"],
+    gates: ["check:features", "check:machine-readable", "check:urls", RELATED],
   },
   {
     what: "the schema or a migration",
     test: /^(app\/db\/schema\.ts|drizzle\/.+)$/,
-    gates: ["check:migrations", "check:tests"],
+    gates: ["check:migrations", RELATED],
   },
   {
     what: "a Worker entry",
     test: /^workers\/.+\.ts$/,
-    gates: ["check:types", "check:worker", "check:headers", "check:policy", "check:secrets"],
+    gates: ["check:headers", "check:policy", "check:secrets", RELATED],
   },
   {
     what: "a post or other content",
@@ -55,12 +61,12 @@ const MAP = [
   {
     what: "the wrangler config example",
     test: /^wrangler\..*jsonc?(\.example)?$/,
-    gates: ["check:types", "check:secrets"],
+    gates: ["check:secrets"],
   },
   {
     what: "a test",
     test: /^test\/.+/,
-    gates: ["check:tests"],
+    gates: [RELATED],
   },
   {
     /* No gate reads these, so a change here runs nothing rather than falling through to the whole tier. */
@@ -110,7 +116,12 @@ function changedFiles(base) {
       if (f.trim()) out.add(f.trim());
     }
   }
-  for (const args of [["diff", "--name-only"], ["diff", "--name-only", "--cached"]]) {
+  // Untracked too: a new file is the most touched file there is.
+  for (const args of [
+    ["diff", "--name-only"],
+    ["diff", "--name-only", "--cached"],
+    ["ls-files", "--others", "--exclude-standard"],
+  ]) {
     for (const f of (git(args) ?? "").split("\n")) if (f.trim()) out.add(f.trim());
   }
   return { files: [...out].sort(), baseUsed: known ? base : null };
@@ -121,7 +132,7 @@ const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const declared = new Set(gateNames(pkg));
 
 // A row naming a gate that no longer exists would silently contribute nothing.
-const named = new Set(MAP.flatMap((r) => r.gates));
+const named = new Set(MAP.flatMap((r) => r.gates).filter((g) => g !== RELATED));
 const unknown = [...named].filter((g) => !declared.has(g));
 if (unknown.length) {
   console.error(`check:changed maps to gate(s) package.json does not declare: ${unknown.join(", ")}`);
@@ -163,7 +174,9 @@ const unmapped = [];
 for (const file of files) {
   const own = ownGate(file);
   const rules = MAP.filter((r) => r.test.test(file));
-  const gates = [...(own ?? []), ...rules.flatMap((r) => r.gates)].filter((g) => declared.has(g));
+  const gates = [...(own ?? []), ...rules.flatMap((r) => r.gates)].filter(
+    (g) => g === RELATED || declared.has(g),
+  );
   if (gates.length === 0) {
     /* A row with no gates is a path argued safe to skip; only a path no row names is unmapped. */
     if (!own && rules.length > 0 && rules.every((r) => r.gates.length === 0)) {
@@ -187,11 +200,49 @@ if (unmapped.length) {
 
 // CI-excluded gates run here too: they are excluded because CI cannot run them, so a local run is
 // the only run they get.
-const selected = [...wanted.keys()].filter((g) => TIERS[g] === "offline").sort();
-const deferred = [...wanted.keys()].filter((g) => TIERS[g] !== "offline").sort();
+const gateKeys = [...wanted.keys()].filter((g) => g !== RELATED);
+const selected = gateKeys.filter((g) => TIERS[g] === "offline").sort();
+const deferred = gateKeys.filter((g) => TIERS[g] !== "offline").sort();
 const onlyHere = selected.filter((g) => CI_EXCLUDED[g]);
 
+/** @param {string} path */
+const readSource = (path) => {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (error) {
+    const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+    if (code === "ENOENT" || code === "EISDIR") return null;
+    throw error;
+  }
+};
+
+/** A node test is related when its import walk reaches a changed file, itself included. */
+function relatedNodeTests() {
+  const changed = new Set(files.map((f) => join(root, f)));
+  return readdirSync(join(root, "test"), { recursive: true })
+    .map(String)
+    .filter((f) => f.endsWith(".test.mjs"))
+    .map((f) => join(root, "test", f))
+    .filter((t) =>
+      [...reachableAssets(t, join(root, "app"), readSource).visited].some((v) => changed.has(v)),
+    )
+    .sort();
+}
+
+// vitest follows its own module graph from these; deleted paths would be an error, not a match.
+const workerSources = wanted.has(RELATED)
+  ? files.filter((f) => /^(app|workers|test\/worker)\//.test(f) && existsSync(join(root, f)))
+  : [];
+const nodeTests = wanted.has(RELATED) ? relatedNodeTests() : [];
+
 console.log(`\n  running ${selected.length} gate(s): ${selected.join(", ")}`);
+if (wanted.has(RELATED)) {
+  console.log(
+    `  related tests: ${nodeTests.length} node test file(s)` +
+      (workerSources.length ? `, and worker tests related to ${workerSources.length} file(s)` : ""),
+  );
+  for (const t of nodeTests) console.log(`    ${t.slice(root.length + 1).replace(/\\/g, "/")}`);
+}
 if (onlyHere.length) console.log(`  CI cannot run these, so this is their only run: ${onlyHere.join(", ")}`);
 if (deferred.length) console.log(`  needs a deployed resource, not run here: ${deferred.join(", ")}`);
 console.log("");
@@ -210,5 +261,20 @@ for (const name of selected) {
   }
 }
 
-console.log(`\n${selected.length} gate(s) run, ${failed} failed`);
+/** @param {string} label @param {string} command @param {string[]} args */
+function runTests(label, command, args) {
+  const started = Date.now();
+  const r = spawnSync(command, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+  const ok = r.status === 0;
+  console.log(`  ${ok ? "ok  " : "FAIL"} ${label} (${Math.round((Date.now() - started) / 1000)}s)`);
+  if (!ok) failed += 1;
+}
+
+if (nodeTests.length) runTests("related node tests", "node", ["--test", ...nodeTests]);
+if (workerSources.length) {
+  runTests("related worker tests", "npx", ["vitest", "related", "--run", "--passWithNoTests", ...workerSources]);
+}
+
+const ran = selected.length + (nodeTests.length ? 1 : 0) + (workerSources.length ? 1 : 0);
+console.log(`\n${ran} gate(s) and test run(s), ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);
