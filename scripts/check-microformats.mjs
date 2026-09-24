@@ -4,8 +4,8 @@
  *   npm run check:microformats
  *
  * BOUNDARY: it RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node and parses the result, so it
- * sees markup and nothing else, and hard rule 7 is why it is not folded into `check:content`.
- * Its expected values come from a separate read of the markdown, which is hard rule 10.
+ * sees markup and nothing else, and the live-path rule is why it is not folded into `check:content`.
+ * Its expected values come from a separate read of the markdown, which is the vacuity rule.
  */
 
 import { readFile } from "node:fs/promises";
@@ -30,7 +30,7 @@ let checks = 0;
 
 /**
  * `assert(label, ok, detail)`, deliberately not the other two shapes here: a call copied out of a
- * gate using `ok(label, condition)` is a ReferenceError rather than a silent pass. Hard rule 10.
+ * gate using `ok(label, condition)` is a ReferenceError rather than a silent pass. The vacuity rule.
  *
  * @param {string} label
  * @param {boolean} passed
@@ -43,7 +43,7 @@ function assert(label, passed, detail = "") {
 
 /**
  * A SECOND, NARROW READ ON PURPOSE: asking the pipeline would make the assertion `x === x`.
- * Bounded to the frontmatter block, and the path comes from `postPath()`, hard rule 6.
+ * Bounded to the frontmatter block, and the path comes from `postPath()`, the URL allowlist rule.
  *
  * @param {string} slug
  * @returns {Promise<string>} an ISO instant
@@ -115,7 +115,7 @@ const published = artifact.posts.filter((/** @type {any} */ p) => !p.draft);
 
 /*
  * SCOPE PROVEN NON-EMPTY FIRST: a sweep over zero posts reports what a clean sweep reports,
- * which is hard rule 10's first discipline.
+ * which is the vacuity rule's first discipline.
  */
 assert(
   "the corpus has published posts to render",
@@ -331,7 +331,7 @@ for (const record of published) {
   /*
    * THE VALUE ASSERTION RUNS ON EVERY POST: conditioning it made the count depend on the CHECKOUT,
    * a full clone resolving a commit date for every post and a shallow one none. The expectation is
-   * derived from what the PAGE rendered, which leaves hard rule 17's one owner of the threshold
+   * derived from what the PAGE rendered, which leaves the one-owner rule's one owner of the threshold
    * where it belongs, with the route.
    */
   if (updated === undefined) unrevisedSeen += 1;
@@ -385,7 +385,7 @@ const totalPages = pageCount(ordered.length);
 
 /**
  * Built THROUGH the route's own paging helpers rather than by slicing to a literal, which is
- * hard rule 10's measure-floors-through-the-pipeline: a page size change moves both together.
+ * the vacuity rule's measure-floors-through-the-pipeline: a page size change moves both together.
  *
  * @param {number} page
  */
@@ -600,7 +600,7 @@ if (cards.length === 1) {
   );
   /*
    * NO u-photo, ASSERTED: the site publishes no photograph, so a card claiming one is the
-   * substituted value hard rule 13 names, wearing an h-card. It INVERTS the day a photo lands.
+   * substituted value the no-substitution rule names, wearing an h-card. It INVERTS the day a photo lands.
    */
   assert(
     "/: the h-card claims no u-photo, because the site publishes none",

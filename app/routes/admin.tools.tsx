@@ -13,7 +13,7 @@ import { purgeZeroResults, topZeroResults } from "~/lib/search/zero-result.serve
 import { ZERO_RESULT_RETENTION_SECONDS } from "~/lib/search/zero-result.mjs";
 import type { Route } from "./+types/admin.tools";
 
-/** Days, derived from the one owner of the window rather than typed beside it. Hard rule 17. */
+/** Days, derived from the one owner of the window rather than typed beside it. The one-owner rule. */
 const RETENTION_DAYS = ZERO_RESULT_RETENTION_SECONDS / 86400;
 
 export function meta() {

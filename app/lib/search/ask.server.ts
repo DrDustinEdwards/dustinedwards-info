@@ -282,7 +282,7 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
 }
 
 /**
- * Every paper's Ask item key, FROM THE MODULE AND NOT FROM D1, on hard rule 1: composing
+ * Every paper's Ask item key, FROM THE MODULE AND NOT FROM D1, on the visibility rule: composing
  * `visibilityClause` here would ask a visibility question about a corpus that has none, and reading
  * the module points the index at the repository, which is rule 18's direction.
  */
@@ -296,7 +296,7 @@ function paperItemKeys(): string[] {
  * key stays in `keys` so the caller's prune never deletes the copy already indexed.
  *
  * FETCHED THROUGH `ASSETS` because a Worker cannot read a file it does not import, and the twins
- * are gitignored so the extracted text stays out of the bundle. Hard rule 7's property comes with
+ * are gitignored so the extracted text stays out of the bundle. The live-path rule's property comes with
  * it: what is indexed is the document the site actually serves at that URL.
  */
 async function uploadPaperTwins(env: Env) {

@@ -1,5 +1,5 @@
 /**
- * Gate: an applied migration is never edited, which is hard rule 14.
+ * Gate: an applied migration is never edited, which is the hand-written migration rule.
  *
  *   npm run check:migrations
  *   node scripts/check-migrations.mjs --write [--force]
@@ -108,7 +108,7 @@ if (WRITE) {
   if (changed.length > 0 && !FORCE) {
     console.log(
       `  REFUSED: ${changed.length} existing hash(es) would CHANGE: ${changed.join(", ")}\n` +
-        `  That means an applied migration was edited, which hard rule 14 forbids.\n` +
+        `  That means an applied migration was edited, which the hand-written migration rule forbids.\n` +
         `  If the edit is genuinely correct, re-run with --force and say why in the commit.\n`,
     );
     process.exit(1);
@@ -339,7 +339,7 @@ if (ledger === null) {
     "the local ledger records nothing that is not on disk",
     unknown.length === 0,
     `the local ledger names ${unknown.join(", ")}, which drizzle/ does not contain. ` +
-      `A migration was renamed or deleted after being applied, which hard rule 14 forbids.`,
+      `A migration was renamed or deleted after being applied, which the hand-written migration rule forbids.`,
   );
 }
 
@@ -348,7 +348,7 @@ if (ledger === null) {
  * an assertion block that stopped running over a full one. MEASURED BY RUNNING IT, both cases.
  * **THE COUNT DEPENDS ON THE ENVIRONMENT and the floor is set for the lower one**, the ledger
  * section emitting no assertion where there is no local database. It steps by a fixed amount per
- * migration, which is append-only by hard rule 14.
+ * migration, which is append-only by the hand-written migration rule.
  */
 /*
  * 65, NOT THE 68 A WORKING TREE RUNS. check:head runs this gate against a FRESH CHECKOUT of HEAD,

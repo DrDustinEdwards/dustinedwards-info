@@ -5,7 +5,7 @@
  *
  * BOUNDARY: `--local` keeps the NAME deliberately, Miniflare having no account-side UUID to
  * resolve, and a lookup that cannot produce one THROWS rather than falling back, which would be
- * hard rule 13's substituted value wearing a passing lookup.
+ * the no-substitution rule's substituted value wearing a passing lookup.
  *
  * @see scripts/check-d1-address.mjs, which refuses the by-name spelling
  */

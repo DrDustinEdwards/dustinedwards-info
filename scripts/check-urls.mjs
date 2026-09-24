@@ -228,7 +228,7 @@ assert(
  * redirects away from. A REDIRECT TO A 404 is invisible because the gateway resolves the map
  * without touching the database; A SLUG THAT IS ALSO A SOURCE is sharper, the redirect running
  * before the router, so the post can never be served while looking fine on disk. READ FROM THE
- * MARKDOWN, NOT THE BUILD PRODUCT, which is the fixture independence hard rule 10 names.
+ * MARKDOWN, NOT THE BUILD PRODUCT, which is the fixture independence the vacuity rule names.
  */
 
 const REDIRECTS_PATH = join(root, "content", "redirects.json");
@@ -246,7 +246,7 @@ const redirectSources = Object.keys(redirects.posts ?? {});
 /*
  * THE RETIRED SET, AND WHY IT IS A SECOND FILE: everything below checks that what is IN the map
  * is coherent, which cannot catch DELETING an entry. So the expected set comes from a file the
- * map cannot edit, reconciled BOTH DIRECTIONS. Not two owners of one fact, which hard rule 17
+ * map cannot edit, reconciled BOTH DIRECTIONS. Not two owners of one fact, which the one-owner rule
  * forbids, but two facts: that a URL was ONCE PUBLIC, and WHERE IT GOES NOW.
  */
 const RETIRED_PATH = join(root, "scripts", "fixtures", "retired-slugs.json");
@@ -303,7 +303,7 @@ for (const file of postFiles) {
   const fm = result.data;
   /*
    * PUBLISHED, on the same three conditions the public read applies. A redirect whose target is a
-   * draft is a 404 for every reader, and hard rule 1 is why this cannot soften to "the file exists".
+   * draft is a 404 for every reader, and the visibility rule is why this cannot soften to "the file exists".
    */
   const scheduled = fm.publish_at ? fm.publish_at.slice(0, 10) > today : false;
   corpus.set(fm.slug, { published: fm.draft !== true && fm.date <= today && !scheduled, file });
@@ -340,7 +340,7 @@ for (const [from, to] of Object.entries(redirects.posts ?? {})) {
     target === undefined
       ? "the target does not exist at all, which the assertion above reports"
       : `${target.file} is a draft or is dated in the future, so a reader following this ` +
-        `redirect gets a 404. Hard rule 1.`,
+        `redirect gets a 404. The visibility rule.`,
   );
   assert(
     `redirects: ${from} is not also a live post slug`,
@@ -490,7 +490,7 @@ console.log(
  * parsed to an empty list runs zero cases and reports a clean sweep. MEASURED BY RUNNING IT, with
  * slack deliberately smaller than one redirect entry's worth, so deleting a redirect cannot hide
  * inside the tolerance. The prose here once claimed a floor the constant disagreed with, which is
- * hard rule 17's rot in its ordinary form.
+ * the one-owner rule's rot in its ordinary form.
  */
 const MINIMUM_CHECKS = 188;
 const floorBreach = assertFloor("check:urls", "checks", checks, MINIMUM_CHECKS);

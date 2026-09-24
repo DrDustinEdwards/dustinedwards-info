@@ -261,7 +261,7 @@ async function main() {
      */
     /*
      * NO STATUS CHECK AFTER THIS. There was one and it could not fire: `retryRead` hands back what
-     * the callback returned and the callback throws on non-zero. Hard rule 10's first class, and it
+     * the callback returned and the callback throws on non-zero. The vacuity rule's first class, and it
      * printed what read as the diagnostic for a failed export.
      */
     await retryRead(

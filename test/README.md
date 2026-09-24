@@ -49,7 +49,7 @@ than the site.
 ## What is here, and which defect each replays
 
 Every case in these files was a real defect or a real plant, not an invented
-example. Hard rule 12: a new gate must be tested by replaying the defect it was
+example. The replay rule: a new gate must be tested by replaying the defect it was
 written for, because plants get written to match the implementation rather than
 the bug.
 

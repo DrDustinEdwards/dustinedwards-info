@@ -6,7 +6,7 @@
  *
  * BOUNDARY: it reconciles KEYS, and except for the social cards it never FETCHES one, so an
  * object that exists with a row and 404s through the serving route passes. A boundary note is a
- * claim that ages, hard rule 7, and this file has aged one twice.
+ * claim that ages, the live-path rule, and this file has aged one twice.
  */
 
 import { spawnSync } from "node:child_process";

@@ -108,7 +108,7 @@ export function toolNames(): readonly ToolName[] {
 /**
  * What GET /api/operator says about each tool, beside the dispatch that runs it.
  *
- * KEYED BY `ToolName`, the `WRITE_CAPABILITIES` idiom (hard rule 13): a tool added without a
+ * KEYED BY `ToolName`, the `WRITE_CAPABILITIES` idiom: a tool added without a
  * descriptor is a TYPECHECK failure, and a descriptor for a tool that does not exist is one too, so
  * the self-description cannot drift from the dispatch in either direction. The route carried a
  * hand-written copy and it had already drifted.
@@ -732,7 +732,7 @@ function defaultName(type: string, url: string): string {
     }
   }
   const extension = ALLOWED.get(type);
-  // NOT a substituted default (hard rule 13): a type outside the allowlist is one statement away from
+  // NOT a substituted default: a type outside the allowlist is one statement away from
   // being refused, so this name is never stored. Returning `upload.bin` would be the substitution.
   return extension ? `upload.${extension}` : "upload";
 }
@@ -1030,7 +1030,7 @@ export async function syncStatus(env: OperatorEnv) {
   // earlier, at a missing token, and never reached the query, so the live round trip was the only
   // place this could have been found.
   //
-  // Hard rule 1 is why the predicate is reused rather than rewritten in SQL: a hand-copied WHERE
+  // The visibility rule is why the predicate is reused rather than rewritten in SQL: a hand-copied WHERE
   // clause here would be exactly the drift that rule exists to prevent.
   const db = getDb(env);
   const totalRow = await db.select({ n: count() }).from(postsTable).get();

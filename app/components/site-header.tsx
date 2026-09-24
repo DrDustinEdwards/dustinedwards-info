@@ -72,7 +72,7 @@ export function SiteHeader() {
       <div className="site-header-tools">
         <SearchTrigger />
         {/*
-         * THE HARD RULE 13 SUBSTITUTION THAT SAT HERE IS GONE, and so is the reason for
+         * THE FALLBACK SUBSTITUTION THAT SAT HERE IS GONE, and so is the reason for
          * it: the control takes no theme at all, both buttons are always rendered, and the
          * cascade chooses between them. There is no value to pass and nothing to
          * substitute when `data` is absent.

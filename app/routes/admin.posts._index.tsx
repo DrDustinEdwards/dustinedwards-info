@@ -551,7 +551,7 @@ export default function AdminPosts({
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
 
   /*
-   * Selection lives in the client, which hard rule 9 exempts for the admin plane.
+   * Selection lives in the client, which the progressive-enhancement rule exempts for the admin plane.
    * Keyed by slug, not row index, so a re-render or filter change cannot re-point it
    * at a different post.
    */

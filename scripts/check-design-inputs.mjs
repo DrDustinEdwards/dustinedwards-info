@@ -18,7 +18,7 @@
  *
  * BOUNDARY: content hashes only, never mtimes. A gate in this repo has already failed as stale on
  * a clean tree because a reverted file kept a new mtime; a revert restores a hash exactly. The
- * recipe is `scripts/lib/design-sheets.mjs`'s and is not restated here (hard rule 17), which is
+ * recipe is `scripts/lib/design-sheets.mjs`'s and is not restated here, which is
  * what makes the writer and this reader agree byte for byte.
  *
  * ## WHY ABSENT INPUTS SKIP RATHER THAN FAIL
@@ -26,8 +26,7 @@
  * The outputs are gitignored and only a sync needs them, so a checkout that has never synced has
  * nothing to be stale. Failing there would block `ship` on an artifact the site does not deploy.
  * What is refused is the half state: an output present with no stamp, or a stamp with no output.
- * The skip prints as a skip and counts no checks, because a pass count is not coverage
- * (hard rule 10).
+ * The skip prints as a skip and counts no checks, because a pass count is not coverage.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -47,7 +46,7 @@ const REGENERATE = "npm run design:inputs (or npm run design:resync, which runs 
 
 /**
  * Below this the gate has stopped reading rather than found a clean tree: a search over an empty
- * scope reports what a clean sweep reports (hard rule 10).
+ * scope reports what a clean sweep reports.
  */
 const MINIMUM_CHECKS = 6;
 
@@ -214,7 +213,7 @@ try {
     process.exitCode = 1;
   } else if (checks === 0) {
     /* Not "0 checks, 0 failures": a verdict that reads like a pass when nothing was measured is
-     * the vacuity hard rule 10 names. */
+     * a vacuous check. */
     console.log("\nSKIPPED: the generator has not run in this checkout, so nothing can be stale");
   } else {
     console.log(`\n${checks} checks, 0 failures`);

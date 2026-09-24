@@ -86,13 +86,15 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 async function serveThumbnail(env: Env, request: Request, key: string, width: number) {
   // Keyed by the full request URL, so each width is its own entry and the original is untouched.
   //
-  // THIS KEY CARRIES NO HEADERS, SO `Vary` CANNOT HELP IT. The lookup presents a synthetic Request
-  // built from the URL alone, so any response served from here must depend on nothing but the KEY.
+  // WARNING: THIS KEY MUST CARRY EVERYTHING THE BODY DEPENDS ON. It carries no headers, so `Vary`
+  // cannot help: the lookup presents a synthetic Request built from the URL alone, and a stored body
+  // must be a pure function of the key. A new input to the body goes into the key, or every stored
+  // entry stays live, stale and unreachable, because this cache has no purge door and its
+  // invalidation is per colo and partial.
   //
   // THE ENCODER SETTINGS ARE THEREFORE IN THE KEY. `WEBP_QUALITY` is an input to the body, and
   // changing it without moving the key left every entry stored under the old encoder live, reachable
-  // and `immutable` for a year. There is no purge door for this cache and workers.dev has no zone to
-  // purge through, so the key is the only lever. Hard rule 20.
+  // and `immutable` for a year.
   //
   // A SYNTHETIC PARAMETER, never served and never linked, the same shape `workers/app.ts` uses to get
   // the resolved theme into its own key.

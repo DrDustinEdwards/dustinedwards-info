@@ -130,7 +130,7 @@ export function lastCommitDate(file) {
  * The revision date a post's row carries, or null. ONE OWNER for the rule, which decides whether a
  * reader sees an "Updated" line: the gate that renders that markup offline feeds the component the
  * value production would write, and computing it there would be a second statement, where a
- * measured value goes to one place or to nowhere, which is hard rule 17. A `Date` rather than a
+ * measured value goes to one place or to nowhere, which is the one-owner rule. A `Date` rather than a
  * string, because returning the string leaves both consumers parsing, which is where a timezone
  * gets in. NULL IS A REAL ANSWER: a shallow clone has no history for most files, so the gate
  * asserts the PAIRING rather than the presence.

@@ -11,7 +11,7 @@
  * The rest of `app/components/` does not: `site-header` and `site-footer` are
  * page singletons, and `theme-toggle`, `ask-panel`, `search-trigger`,
  * `blog-enhancements`, `site-speculation` and `enhancement-script` exist to
- * inject the nonced enhancement bundles hard rule 4 requires, which is not a
+ * inject the nonced enhancement bundles the no-framework-script rule requires, which is not a
  * thing a design agent composes with.
  *
  * WHY `PostCard` AND `Pagination` LEFT, 2026-09-21. The canvas was handed them

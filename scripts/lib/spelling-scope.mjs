@@ -1,7 +1,7 @@
 /**
  * Which tracked files American spelling governs, shared by `check:spelling` and the one-time fix.
  *
- * OUT, each for its reason: applied migrations are never edited (hard rule 14); `data/` and the
+ * OUT, each for its reason: applied migrations are never edited; `data/` and the
  * publication records carry third-party titles; `scratchpad/` is extracted history; the two files
  * capsid's copier owns stay byte-identical across the roster; `.claude/` decides which rules are
  * enforced (hard rule 15); generated artifacts follow their generators. `content/posts/` and

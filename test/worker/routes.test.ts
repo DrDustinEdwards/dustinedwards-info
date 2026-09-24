@@ -121,7 +121,7 @@ describe("/theme", () => {
   it("ALLOWS AN ABSENT ORIGIN, because that is the no-script form post", async () => {
     /*
      * The half that looks like a hole and is not. A scriptless form post carries
-     * no `Origin`, and refusing it would break the fallback hard rule 9
+     * no `Origin`, and refusing it would break the fallback the progressive-enhancement rule
      * requires. The literal string "null" is a different thing and is refused.
      */
     const allowed = await themeAction({
@@ -271,7 +271,7 @@ describe("the default theme, and the legacy cookie that means the same thing", (
  * including the shiki and WASM render paths in `publish.test.ts` and the R2
  * paths in `media.test.ts`, which do comparable work under the same load. The
  * constant was also a mirror: five sites carrying a value that could drift from
- * the default it sat beside, which is hard rule 17.
+ * the default it sat beside, which is the one-owner rule.
  *
  * So the budget is stated once, where vitest reads it, and the grounds are
  * there. This comment records that the measurement happened at this endpoint

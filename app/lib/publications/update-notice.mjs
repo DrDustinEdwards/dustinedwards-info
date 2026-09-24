@@ -20,7 +20,7 @@
  * A path nothing exercises is a path that does not work, so `check:publications`
  * asserts that no record carries a notice today, PAIRED with the count of
  * records it read, and `test/publication-update-notice.test.mjs` drives this
- * module with a real retracted DOI. Hard rule 12: the fixture is the proof, and
+ * module with a real retracted DOI. The replay rule: the fixture is the proof, and
  * the fixture is deliberately not one of ours.
  *
  * ## THE FIELD CROSSREF ACTUALLY CARRIES IS `updated-by`

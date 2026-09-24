@@ -7,7 +7,7 @@ happened again. That is the problem this page exists to solve: a pile of stories
 is not findable, a list is. **If this page grows past one screen it has failed
 at its own job.**
 
-Scope, so it does not become a second copy of something: hard rule 10 carries the
+Scope, so it does not become a second copy of something: it leaves out the
 GATE-WRITING disciplines (anchor needles, strip before matching, enumerate inside
 exclusions, floors through the pipeline). This page carries the REASONING shapes,
 which is what repeats across people and sessions.
@@ -94,5 +94,5 @@ which is what repeats across people and sessions.
   `app/routes/admin.mentions.tsx` `scripts/check-destructive.mjs`
 - **A backslash escape in prose can reach disk as a control byte and still
   render close enough to survive review.** Three: backslash-f left
-  `ont-display` in app.css, backslash-b is hard rule 10 case, backslash-a
+  `ont-display` in app.css, backslash-b broke a gate needle, backslash-a
   ate a separator in a libuv path. `scripts/check-invariants.mjs` section 29

@@ -4,10 +4,10 @@
  *   npm run check:design-sheets
  *
  * BOUNDARY: it reads the list, the root module, the routes and the stylesheets they name, all off
- * disk and both directions, and nothing here restates the list, whose one owner hard rule 17
- * names. Comments are stripped before matching, which is hard rule 10: a stylesheet carries prose
+ * disk and both directions, and nothing here restates the list, whose one owner the one-owner rule
+ * names. Comments are stripped before matching, which is the vacuity rule: a stylesheet carries prose
  * about an `@import` it removed. The one exclusion is named as ONE path rather than a prefix,
- * which is hard rule 10 again, enumerate inside exclusions.
+ * which is the vacuity rule again, enumerate inside exclusions.
  */
 
 import { readFileSync, readdirSync, existsSync } from "node:fs";
@@ -31,7 +31,7 @@ const MAXIMUM_EXCLUSIONS = 2;
 
 /**
  * Below these the scan has stopped reading rather than found a clean tree: a search over an empty
- * scope reports what a clean sweep reports (hard rule 10).
+ * scope reports what a clean sweep reports.
  */
 const MINIMUM_SHEETS = 15;
 const MINIMUM_IMPORTERS = 20;

@@ -1,7 +1,7 @@
 /**
  * The CI-must-be-green check that stands in front of the deploy.
  *
- * REPLAYS THE FINDING, per hard rule 12. The 2026-08-22 audit, section 8: "CI
+ * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, section 8: "CI
  * runs on push to main, after the fact. Nothing prevents a push that fails CI
  * from being deployed, because deploy is manual and local. The gate tier runs in
  * `ship`, so in practice the same checks run, but CI is advisory only."

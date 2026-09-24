@@ -78,7 +78,7 @@ export function coverResponsive(src) {
  * protection. Closing that case means the dimensions reaching D1, which is a
  * schema change and a separate decision.
  *
- * **AND IT IS NOT A FALLBACK.** Returning `{}` is not hard rule 13's
+ * **AND IT IS NOT A FALLBACK.** Returning `{}` is not the no-substitution rule's
  * substitution class: nothing is standing in for a measurement that failed to
  * arrive, because a static path never had one. An invented default here would
  * be the rule-13 defect, and it would be worse than the gap, since a wrong

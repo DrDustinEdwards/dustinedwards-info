@@ -133,7 +133,7 @@ export function cardDescription(description) {
 /**
  * The title's font size in card pixels, fitted to its length.
  *
- * FAILS LOUD rather than substituting, per hard rule 13: the ladder's last rung
+ * FAILS LOUD rather than substituting, per the no-substitution rule: the ladder's last rung
  * is bounded by `TITLE_MAX` and the caller is expected to have clamped, so a
  * string past the end of the ladder means the two constants have come apart
  * and every card would silently take a size nobody chose. There is no `??`

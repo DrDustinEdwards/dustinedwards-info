@@ -1,7 +1,7 @@
 /**
  * The ship guard's predicate: does the deployed database have every migration?
  *
- * REPLAYS SHIP WINDOW 5, per hard rule 12. That deploy went out with every
+ * REPLAYS SHIP WINDOW 5, per the replay rule. That deploy went out with every
  * offline gate green and the media admin page returned a 500 on its first load,
  * because `0011_media_trash_tags.sql` had been pending on the remote database
  * since the session that authored it, four sessions earlier, so `trashed_at`

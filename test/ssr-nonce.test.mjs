@@ -1,7 +1,7 @@
 /**
  * Every inline script the SERVER RENDERER emits carries the CSP nonce.
  *
- * REPLAYS THE DEFECT, per hard rule 12. `app/entry.server.tsx` passed the nonce
+ * REPLAYS THE DEFECT, per the replay rule. `app/entry.server.tsx` passed the nonce
  * as a PROP to `<ServerRouter>` and nothing else. That prop reaches
  * react-router's components and cannot reach react-dom, which writes inline
  * scripts of its own to COMPLETE a Suspense boundary whose content resolves

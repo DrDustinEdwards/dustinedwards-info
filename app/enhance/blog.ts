@@ -226,7 +226,7 @@ function headingLinks() {
       /*
        * BOTH THINGS HAPPEN: the URL is copied AND the reader lands on the heading, which is what an
        * in-page anchor is for and what 2.4.3 expects of a link that changes the URL. The note here once
-       * claimed the anchor still navigated, three lines above a `preventDefault()`, which is hard rule 7's
+       * claimed the anchor still navigated, three lines above a `preventDefault()`, which is the live-path rule's
        * own example of a boundary note that ages.
        *
        * `focus()` on the heading rather than `scrollIntoView`, because moving focus is what a screen

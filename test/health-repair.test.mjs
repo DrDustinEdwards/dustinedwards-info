@@ -241,7 +241,7 @@ test("content drift repairs BEFORE the ask index when both fail", () => {
  * site is already broken, which is precisely when nobody is watching the run.
  * Everything it DECIDES is here so that something can fail when it changes.
  *
- * TWO PLANTS ARE NAMED BELOW, in the shape hard rule 12 requires: each says in
+ * TWO PLANTS ARE NAMED BELOW, in the shape the replay rule requires: each says in
  * advance which assertion must fire, so a non-zero exit is not mistaken for
  * proof.
  */

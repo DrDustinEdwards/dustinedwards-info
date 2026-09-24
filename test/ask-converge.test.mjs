@@ -1,7 +1,7 @@
 /**
  * The Ask convergence window ship waits out before declaring a miss.
  *
- * REPLAYS THE FINDING, per hard rule 12. Ruled 2026-08-24 from a measured false
+ * REPLAYS THE FINDING, per the replay rule. Ruled 2026-08-24 from a measured false
  * alarm: ship read drift 1 at 02:20:18Z, no remedy was applied, and health read
  * ok 75 seconds later and stayed ok. The write-back read was early, not wrong.
  *

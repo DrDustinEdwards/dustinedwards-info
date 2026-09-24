@@ -1,7 +1,7 @@
 /**
  * Whether the watchdog wakes somebody about the Worker throwing.
  *
- * REPLAYS THE DEFECT, per hard rule 12, and the defect here is the one the
+ * REPLAYS THE DEFECT, per the replay rule, and the defect here is the one the
  * whole error-rate check was written for: **nothing alerted on error rate at
  * all**, so an hourly cron registered on a Worker with no `scheduled()` handler
  * threw 24 times a day from 2026-08-23 to 2026-09-07 and the site reported

@@ -56,7 +56,7 @@ const SHEETS = [
 ];
 
 /**
- * Comments are stripped BEFORE matching, hard rule 10: prose about a face is not a face.
+ * Comments are stripped BEFORE matching, the vacuity rule: prose about a face is not a face.
  *
  * @param {string} css
  * @returns {string}
