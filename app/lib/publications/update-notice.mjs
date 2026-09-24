@@ -17,7 +17,7 @@
  * a rushed one. Building it cold means the only thing that day needs is a data
  * change.
  *
- * A path nothing exercises is a path that does not work, so `check:publications`
+ * A path nothing exercises is a path that does not work, so `check:machine-readable`
  * asserts that no record carries a notice today, PAIRED with the count of
  * records it read, and `test/publication-update-notice.test.mjs` drives this
  * module with a real retracted DOI. The replay rule: the fixture is the proof, and
@@ -36,7 +36,7 @@
  * Ruling 63 also asked for a version chain from Crossref relations. There are
  * none: the same sweep found zero `relation` entries across the corpus. What
  * exists is one curated `preprintDoi`, on one record, which the page already
- * links. `check:publications` asserts it is exactly one, so a second arriving
+ * links. `check:machine-readable` asserts it is exactly one, so a second arriving
  * is a decision somebody makes rather than a silent change.
  */
 

@@ -23,8 +23,7 @@ import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/
  * correct key and not a degraded one.
  *
  * What this cannot see is the reconciliation between the live bucket and the
- * live index, which is `check:media` and is network-only for the reason it
- * records.
+ * live index, which the deployed health check's media-index-drift watches.
  *
  * ## KEYS ARE UNIQUE PER CASE
  *

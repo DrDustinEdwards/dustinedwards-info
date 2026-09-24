@@ -16,7 +16,7 @@
  * fails against that implementation and passes against this one, so it is the
  * reason this file exists rather than a courtesy test.
  *
- * The stored corpus keeps its escapes on purpose: `check:publications` asserts
+ * The stored corpus keeps its escapes on purpose: `check:machine-readable` asserts
  * no stored abstract contains a left angle bracket, which is what keeps a
  * registry string safe in the JSON-LD block and in the exports. So the fixture
  * here is deliberately the ESCAPED form, which is what the data file holds.

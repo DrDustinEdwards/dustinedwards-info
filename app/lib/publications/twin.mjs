@@ -132,7 +132,7 @@ function stripControls(value) {
  * The markdown twin of one paper.
  *
  * PURE. No clock, no filesystem, no network: every input is passed in, so the
- * same corpus produces the same bytes on every machine. `check:publications`
+ * same corpus produces the same bytes on every machine. `check:machine-readable`
  * regenerates all 36 and compares them byte for byte against what is on disk,
  * which is only a meaningful comparison because of that.
  *
@@ -151,7 +151,7 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
    * DECODED HERE, like the page and the exports.
    *
    * Six character references survive into the stored corpus on purpose:
-   * `check:publications` asserts no stored abstract contains a left angle
+   * `check:machine-readable` asserts no stored abstract contains a left angle
    * bracket, which is what keeps a registry string safe inside the JSON-LD
    * block and the CSL export. `entities.mjs` carries the full argument and
    * names this file as one of the boundaries where text becomes something a
@@ -261,7 +261,7 @@ export function paperTwin(paper, { pages, citedBy, citedByFetchedAt, pagePath, p
       /*
        * SAYS SO, rather than leaving a heading with nothing under it. A PDF
        * with no text layer (a scan) extracts to nothing, and an empty section
-       * is indistinguishable from a build that half ran. `check:publications`
+       * is indistinguishable from a build that half ran. `check:machine-readable`
        * reds before this can happen in practice, at a threshold of 500
        * characters, so this branch is the second line rather than the first.
        */

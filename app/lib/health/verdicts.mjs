@@ -53,7 +53,7 @@ export function askDriftVerdict(status) {
  *
  * The sibling of `askDriftVerdict`, added 2026-08-24 when the media index
  * gained a sync at ship. Until then nothing between commits watched this store:
- * `check:media --remote` is a GATE, so it sees drift only when somebody runs
+ * the `check:media --remote` gate of the time saw drift only when somebody ran
  * it, and the one instance it did find (`/fonts/OFL.txt`, a public file with no
  * row) sat red for weeks because the repair was a click.
  *
@@ -252,7 +252,7 @@ export function contentDriftVerdict(files, rows) {
  * repo: after `DELETE FROM posts_fts` the count still read 1 of 1 while MATCH
  * returned nothing, and `posts_fts_docsize` went to 0. The shadow holds one row
  * per INDEXED document, so it is the only number here that can actually fail.
- * `check:invariants` section 7 forbids the wrong form in source, both
+ * `test/write-path-invariants.test.mjs` forbids the wrong form in source, both
  * directions.
  *
  * ## FAIL CLOSED ON A COUNT IT CANNOT READ

@@ -288,7 +288,7 @@ export function furtherReadingFromForm(form: FormData, carried: string): string 
   /*
    * The picker submits ONE checked box per chosen post, and the box's VALUE carries the slug and the
    * title as JSON. A parallel hidden title field per post would put one field NAME per corpus post
-   * into the submission tuple `check:admin-ui` pins, so the fixture would grow with the blog.
+   * into the form's submission, so the form would grow with the blog.
    *
    * The title is a SNAPSHOT taken when the box was ticked. Retitling the target does not rewrite links
    * that already point at it; `check:content` guards the link resolving, which is the half that can

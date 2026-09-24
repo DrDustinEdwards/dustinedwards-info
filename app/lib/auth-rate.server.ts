@@ -3,7 +3,7 @@
  *
  * Constants, reasoning and the refusal are in `auth-rate.mjs`, which is pure so
  * `check:tests` can reach them. This file is the binding call and nothing else,
- * the same split `build-assets.mjs` and `check-media.mjs` use.
+ * the same split `build-assets.mjs` uses.
  */
 
 import { AUTH_RATE_LIMIT, AUTH_RATE_PERIOD_SECONDS } from "~/lib/auth-rate.mjs";

@@ -205,8 +205,8 @@ if (OUT === join(ROOT, "public")) {
   }
   console.log(
     "\n  NOTE: the icon assets were rewritten, so the media index is now stale and\n" +
-      '        check:media will fail until it is rebuilt. Press "Rebuild media index"\n' +
-      "        on /admin/media, then re-run check:media.\n",
+      "        the health check's media-index-drift reports it until it is rebuilt.\n" +
+      '        Press "Rebuild media index" on /admin/media.\n',
   );
 } else {
   console.log("\n  NOTE: --out is not public/, so the asset manifest was left alone.\n");

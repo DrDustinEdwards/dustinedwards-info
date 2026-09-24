@@ -247,10 +247,8 @@ export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
  * THE VOCABULARY SHRANK WITH IT RATHER THAN OUTLIVING IT, because
  * `check:features` asserts both directions over this map: a label no entry uses
  * is the mirror-going-stale shape, caught here before it is the one that
- * matters. `STATUSES` in `scripts/check-stack.mjs` is the other owner of this
- * vocabulary and moved in the same commit. Writing down the next real accepted
- * gap means re-adding the value in both places, which is the two-sided edit
- * this repo wants rather than friction.
+ * matters. Writing down the next real accepted gap means re-adding the value
+ * here.
  */
 export const STATUS_LABEL = {
   refused: "Refused",

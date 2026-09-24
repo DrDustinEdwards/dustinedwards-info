@@ -98,7 +98,7 @@ export function splitFeatured(posts, eligible) {
  * `listHomeStartHere` fetches the featured post and the newest non-featured
  * posts as two ordered statements, which is what the `(featured, publish_at)`
  * index is for. Deciding which of those becomes the LEAD is a rule rather than
- * a query, and it has two branches: `check:microformats` renders this section
+ * a query, and it has two branches: `check:machine-readable` renders this section
  * offline and has to produce the same fixture the loader would, and it cannot
  * run SQL. A rule written twice is a rule that disagrees with itself the first
  * time somebody changes one copy.

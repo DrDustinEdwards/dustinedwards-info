@@ -38,9 +38,8 @@
  * a route module is not a place two library modules can import from without
  * dragging a router entry point into the rebuild path.
  *
- * `check:image-weight` is the instrument, in both directions: for every
- * lossy-origin R2 image it asserts that every rung comes back smaller than the
- * origin, and for every stored placeholder it asserts the bytes decode as VP8
+ * The two properties that matter: every rung of a lossy-origin R2 image comes
+ * back smaller than the origin, and every stored placeholder decodes as VP8
  * rather than VP8L.
  */
 export const WEBP_QUALITY = 85;

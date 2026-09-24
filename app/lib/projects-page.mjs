@@ -60,7 +60,7 @@ export function projectAnchor(slug) {
  *
  * **The inputs are ALREADY-OWNED ARTIFACTS, never a fresh measurement taken
  * here.** `content/generated/stack.json` is generated from package.json by
- * `build:stack`, reconciled against its sources by `check:stack`, and already
+ * `build:stack`, and already
  * imported by the colophon, so the gate count reaches this card through the
  * same pipe the colophon reads and costs the Worker nothing new. `PHAGE_YEARS` is the data
  * the roster page itself renders. Neither is a number typed into this file.

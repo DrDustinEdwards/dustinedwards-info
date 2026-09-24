@@ -31,10 +31,9 @@
 # (package.json, wrangler.jsonc.example, drizzle/, .nvmrc, stack-notes.json),
 # so committing it made every change to any of those a two-file change that
 # only a machine running build:stack could complete. Renovate cannot run
-# build:stack, so every dependency PR arrived red on check:stack with no
-# defect in it (#19 to #21, 2026-09-07). build:stack now runs before the gates
-# in check-all, in ship's build step and in CI, exactly where build:content
-# does, and check:stack asserts the file is fresh rather than committed.
+# build:stack, so every dependency PR arrived red with no defect in it.
+# build:stack runs before the gates in check-all, in ship's build step and in
+# CI, exactly where build:content does.
 /content/generated/stack.json
 
 # The enhancement bundles. Same class as posts.json: a build product that
@@ -42,7 +41,7 @@
 # CI and dev all build it before anything reads it). Source is app/enhance/;
 # these are its self-contained bundles, served verbatim by the ?url imports in
 # the loader components, so committing them would be committing minified
-# copies of tracked source. The source scans (template-refs, check:invariants)
+# copies of tracked source. The source scans (template-refs, the invariant tests)
 # exclude this directory by path for the same reason they skip build/.
 /app/enhance/dist/
 
@@ -82,9 +81,8 @@
 #                           a fresh clone (scripts/bootstrap-config.mjs).
 #   .dev.vars               ignored, always. Secrets are `wrangler secret`.
 #
-# `npm run check:config` fails when the two drift apart, in EITHER direction,
-# and fails when the example starts carrying a real id. Adding a binding to
-# wrangler.jsonc means adding it to the example in the same commit.
+# The example never carries a real id. Adding a binding to wrangler.jsonc means
+# adding it to the example in the same commit.
 .mf
 .wrangler
 .dev.vars*
@@ -105,8 +103,8 @@ wrangler.jsonc
 #   wrangler.watchdog.jsonc.example  TRACKED, with the address on example.com,
 #                                    which RFC 2606 reserves so it can never be
 #                                    a real inbox.
-# `check:config` compares this pair in both directions too, and refuses if the
-# example ever starts carrying the real address.
+# Keep this pair in step in both directions too, and never put the real
+# address in the example.
 wrangler.watchdog.jsonc
 
 # The admin session for check:browser, read by scripts/check-browser.mjs.

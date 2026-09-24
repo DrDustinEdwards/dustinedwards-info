@@ -1,5 +1,5 @@
 {
-  "_comment": "The half of the colophon that CANNOT be derived. Every binding this Worker declares needs an entry here, and every entry needs a binding: check:stack fails in both directions. The measurements are transcribed from the specs that ruled them (colophon-page.md, search-architecture.md, media-module-architecture.md, decisions.md) and must not be invented here.",
+  "_comment": "The half of the colophon that CANNOT be derived. Every binding this Worker declares needs an entry here, and every entry needs a binding. The measurements are transcribed from the specs that ruled them (colophon-page.md, search-architecture.md, media-module-architecture.md, decisions.md) and must not be invented here.",
   "bindings": {
     "d1:DB": {
       "what": "SQLite at the edge. Holds every post, the tag graph, the derived search corpus, the media index and the llms.txt row.",

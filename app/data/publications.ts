@@ -76,7 +76,7 @@ export type Publication = {
    * NOT a summary of the abstract, which is already on the page.
    *
    * Null until one is written, and the page renders it only where it exists, so an empty field is a
-   * state rather than a gap. `check:publications` enforces the length, the single sentence and the
+   * state rather than a gap. `check:machine-readable` enforces the length, the single sentence and the
    * house dash rule; IT CANNOT ENFORCE THAT THE SENTENCE IS ANY GOOD.
    */
   summary: string | null;
@@ -88,7 +88,7 @@ export type Publication = {
    * carries `updated-by` pointing at the notice, and the notice carries `update-to` pointing back.
    *
    * The shape and the sentence belong to `app/lib/publications/update-notice.mjs`, which
-   * `check:publications` validates every record through.
+   * `check:machine-readable` validates every record through.
    */
   updateNotice: {
     type: "retraction" | "correction" | "expression-of-concern";
@@ -101,7 +101,7 @@ export type Publication = {
    *
    * A bare accession regex over a PDF returns the COMPARISON organisms' deposits, which is a wrong
    * citation rather than a missing one: the grounds are on `app/lib/publications/accessions.mjs`.
-   * `check:publications` reconciles this against the extracted text in both directions.
+   * `check:machine-readable` reconciles this against the extracted text in both directions.
    */
   accessions: { kind: string; id: string }[];
   selected: boolean;

@@ -5,8 +5,8 @@ import type { ReactNode } from "react";
  * carries it. Home, the post page and the colophon each pass a different set of facts.
  *
  * ITS SHEET IS IMPORTED BY EACH CONSUMING ROUTE, not by this file, which is the house pattern and
- * is what `check:design-sheets` reads: the sheet list is gated against the route imports, so a
- * component-level import would put a sheet on the page that the gate cannot see.
+ * keeps every sheet a page loads visible in the route's own imports; a component-level import
+ * would put a sheet on the page that the route does not show.
  *
  * THREE OR NOTHING, AND NO CEILING. The post page passes exactly three; home passes four, because
  * its affiliation is folded in as the first fact. A page with fewer than three computable facts

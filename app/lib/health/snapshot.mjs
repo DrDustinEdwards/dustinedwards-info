@@ -61,9 +61,8 @@ export const HEALTH_SNAPSHOT_KEY = "health:snapshot";
  *
  * The SECOND statement of the WATCHDOG's cron, declared in
  * `wrangler.watchdog.jsonc`, and it cannot be derived at runtime because a
- * Worker cannot read another Worker's config. Rule 17 is satisfied by binding
- * rather than by deletion: `check:invariants` section 25 parses the cron out of
- * that config and fails if it no longer means this many seconds.
+ * Worker cannot read another Worker's config. Change the two together: nothing
+ * checks that the cron still means this many seconds.
  *
  * THE OWNER MOVED 2026-08-29. It was the GitHub workflow's cron, which was
  * correct while that workflow was the only thing polling. Measured 2026-08-28,

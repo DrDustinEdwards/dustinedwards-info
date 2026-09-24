@@ -20,7 +20,7 @@ import { SITE_ORIGIN } from "../app/lib/seo";
 /**
  * The Worker the error rate is asked about: the SITE, never this watchdog. Written out rather than
  * derived from SITE_ORIGIN, because the origin is a hostname and this is a script name, equal today
- * only by naming. `check:config` binds it to the site config's `name`.
+ * only by naming. Keep it equal to the site config's `name`.
  */
 const SITE_SCRIPT_NAME = "dustinedwards";
 
@@ -58,8 +58,8 @@ const SITE_SCRIPT_NAME = "dustinedwards";
  *
  * `ALERT_EMAIL` is a VAR rather than a secret: an inbox address is not a credential, so making it
  * one would spend `check:secrets`' signal on a value that grants nothing. It is still kept out of
- * git, because this repo is meant to be copied as a template. `check:config` reconciles the real
- * config and the tracked example in both directions.
+ * git, because this repo is meant to be copied as a template. Keep the real config and the tracked
+ * example in step in both directions.
  */
 interface WatchdogEnv {
   /** The site Worker. See the 1042 measurement above for why this is a binding. */

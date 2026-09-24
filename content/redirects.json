@@ -1,6 +1,6 @@
 {
   "comment": "Ruling 47, 2026-09-09. Old post slug to new post slug. Every entry is a URL that was public, so it keeps answering. The gateway turns each into a 301 before any database read; check:urls asserts every target resolves to a published post and that no post claims a slug that is a source here.",
-  "pdfsComment": "Ruling 63 plus the 2026-09-12 relocation. Every publication PDF moved from /publications/<id>.pdf into /publications/<doi-slug>/<doi-slug>.pdf, because Google Scholar only honors citation_pdf_url when the file sits in the same subdirectory as the abstract page. Every old path was public and keeps answering with a 301. Old name is the curated id and new name is derived from the DOI, so there is no function between them and these are data. check:publications binds this map to the corpus in both directions.",
+  "pdfsComment": "Ruling 63 plus the 2026-09-12 relocation. Every publication PDF moved from /publications/<id>.pdf into /publications/<doi-slug>/<doi-slug>.pdf, because Google Scholar only honors citation_pdf_url when the file sits in the same subdirectory as the abstract page. Every old path was public and keeps answering with a 301. Old name is the curated id and new name is derived from the DOI, so there is no function between them and these are data. check:machine-readable binds this map to the corpus in both directions.",
   "posts": {
     "content-is-code-building-the-blog": "posts-in-git-served-from-d1",
     "site-search-fts5-rank-fusion": "site-search-on-d1",

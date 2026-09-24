@@ -125,7 +125,7 @@ test("301 for GET and HEAD, 308 otherwise", () => {
 
 test("the COMMITTED map resolves end to end, for every entry", () => {
   /*
-   * Against the real file, not a fixture. `check:publications` already asserts
+   * Against the real file, not a fixture. `check:machine-readable` already asserts
    * the map against the corpus in both directions; what this adds is that the
    * PREDICATE agrees, so a map that is correct as data and unreachable through
    * the function it feeds is still a failure.

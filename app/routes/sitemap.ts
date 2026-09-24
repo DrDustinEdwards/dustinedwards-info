@@ -11,8 +11,8 @@ import type { Route } from "./+types/sitemap";
  * Static, always-present URLs: the hand-built pages that read typed data files rather than
  * `kind = 'page'` rows, so the D1 filter below cannot find them.
  *
- * DERIVED-BY-GATE. The list stays a literal and `check:invariants` section 14 holds it against
- * `routes.ts`: every public page route must be listed here or exempted BY NAME with a reason. A
+ * The list stays a literal, kept in step with `routes.ts` by hand: every public page route must be
+ * listed here or exempted BY NAME with a reason. A
  * runtime derivation would cost a second generated artifact and could not say WHY a route is absent.
  */
 const STATIC_PATHS = [
@@ -37,8 +37,8 @@ export async function loader({ context }: Route.LoaderArgs) {
    * EXIST: both writers into `posts` hardcode the literal `'post'`, and rule 18 makes
    * `renderAndWrite` the one door to a rendered row.
    *
-   * `check:invariants` section 14 asserts the writers still write only 'post', because deleting a dead
-   * branch is only safe while the thing that made it dead is still true.
+   * The writers still write only 'post'. Deleting a dead branch is only safe while the thing that
+   * made it dead is still true, so recheck that before relying on it.
    */
   /*
    * TAGS RIDE ALONG. `listBlogTags` is the SAME read the chip list makes and it composes
@@ -67,7 +67,7 @@ export async function loader({ context }: Route.LoaderArgs) {
      *
      * The SHOWCASE filter is NOT applied here: the index hides conference abstracts to spare a reader
      * the same work twice, a crawler has no such problem, and a page that exists and is absent from the
-     * sitemap is the gap `check:invariants` section 14 exists to refuse.
+     * sitemap is a gap.
      */
     ...PUBLICATIONS.map((p) => ({
       loc: `${origin}${paperPath(doiSlug(p.doi))}`,

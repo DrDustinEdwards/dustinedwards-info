@@ -85,8 +85,7 @@ export function isViewable(kind: string) {
  * checking, so the rest were accepted by the compiler and dropped on the floor.
  *
  * Deriving the type means a new axis is covered by construction instead of by somebody remembering.
- * `check:media-axes` asserts both halves: that this stays derived, and that the forwarding stays a
- * spread.
+ * Keep both halves: this stays derived, and the forwarding stays a spread.
  */
 type ListMediaOptions = NonNullable<Parameters<typeof listMediaPage>[1]>;
 
@@ -98,7 +97,7 @@ type ListMediaOptions = NonNullable<Parameters<typeof listMediaPage>[1]>;
  * and every question the library asks is a query.
  *
  * D1 is DERIVED, so this is reading a copy, and that is legitimate for one reason: the copy is
- * exhaustively reconcilable against its source and `check:media` reconciles it in both directions.
+ * exhaustively reconcilable against its source, and the health check's media-index-drift watches it.
  * R2 remains the truth for what exists.
  */
 export async function listMedia(
@@ -163,15 +162,14 @@ export async function measureDimensions(
   }
 }
 
-/** The LQIP width, in pixels. What that costs as a data URI is check:image-weight's. */
+/** The LQIP width, in pixels. */
 const PLACEHOLDER_WIDTH = 20;
 
 /**
  * A tiny base64 data URI standing in for the image until it loads.
  *
  * LQIP rather than ThumbHash or BlurHash: both need client-side decoding and the public plane ships
- * no framework script (rule 4). What it costs is MEASURED by `check:image-weight` and stated
- * nowhere else.
+ * no framework script.
  *
  * Returns null rather than throwing: an image the transformer cannot read simply has no placeholder,
  * and that must not fail a rebuild or a queue message.

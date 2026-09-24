@@ -92,7 +92,7 @@ const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 /** About six rows fit under the search bar before the arrow keys scroll the highlight away. */
 const PALETTE_RESULTS = 6;
 
-/** Shortcuts as data. `check:admin-ui` greps for each row's `evidence` token, so an unwired row fails. */
+/** Shortcuts as data. Each row's `evidence` token names the code that wires it. */
 const MEDIA_SHORTCUTS = [
   { keys: "cmd K", what: "Focus search from anywhere", evidence: "metaKey" },
   { keys: "/", what: "Focus search", evidence: 'event.key === "/"' },
@@ -298,7 +298,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     }
   }
 
-  /* Built here so the component needs only loader data, which `check:admin-ui` renders. */
+  /* Built here so the component needs only loader data. */
   const uploaded = url.searchParams.get("uploaded");
   const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
 
@@ -314,7 +314,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     objects: shown.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
-      /** Decided here: `check:admin-ui` stubs `core.server`, so a component calling it throws. */
+      /** Decided here, so the component never calls into `core.server`. */
       viewable: isViewable(object.kind),
       citations: resolution.citations.get(object.key) ?? [],
       /** Rows the pipeline wrote. The refcount that makes a shared blob safe. */
@@ -813,13 +813,13 @@ export default function AdminMedia({
             accept={ACCEPT_ATTRIBUTE}
           />
           <DropAnywhere inputRef={fileRef} />
-          {/* Intent on the button, so `check:admin-ui` pins the token, not a bare field name. */}
+          {/* Intent on the button, so the submission names the token, not a bare field name. */}
           <button type="submit" name="intent" value={UPLOAD_FORM_INTENT} className="btn">
             Upload
           </button>
         </Form>
 
-        {/* A repair; its form is unchanged, which `check:admin-ui` compares. */}
+        {/* A repair; its form is unchanged. */}
         <OverflowMenu label="Maintenance">
           <Form method="post">
             <button

@@ -60,9 +60,8 @@ npm run dev
 
 `wrangler.jsonc` is **gitignored** and `wrangler.jsonc.example` is tracked. That
 is a portfolio-wide rule rather than this repo's choice: real resource ids stay
-out of git. The two files must declare the same binding surface and
-`check:config` fails in both directions if they drift, so **adding a binding
-means editing both files in the same commit.**
+out of git. The two files must declare the same binding surface, so **adding a
+binding means editing both files in the same commit.**
 
 ## The content pipeline
 
@@ -108,8 +107,8 @@ machinery to agents behind a bearer token. There is exactly one write path.
 
 ## Media
 
-R2 is the store and the truth; D1 is a queryable index over it, and
-`check:media` reconciles the two in both directions. **R2 wins every conflict:**
+R2 is the store and the truth; D1 is a queryable index over it, and the health
+endpoint's `media-index-drift` check compares the two. **R2 wins every conflict:**
 a row with no object is deleted, an object with no row is backfilled, never the
 reverse.
 
@@ -125,29 +124,20 @@ moved.
 ## Gates
 
 ```bash
-npm run check       # the twelve that need no network  (~110s)
-npm run check:all   # adds the ones that read deployed resources
+npm run check           # the offline tier
+npm run check:changed   # only the gates that cover what this branch touched
+npm run check:all       # adds the ones that read deployed resources
 ```
 
 The list is derived from the `check:*` scripts in `package.json`, so a new gate
-is picked up automatically and a missing one fails the run. Every gate runs even
-after one fails, because stopping at the first red hides the rest.
+is picked up automatically and an untiered one refuses to run. Every gate runs
+even after one fails, because stopping at the first red hides the rest.
 
-| Gate | What it protects |
-| --- | --- |
-| `check:content` | the corpus renders validly and deterministically; the committed artifacts match fresh scans |
-| `check:config` | the two wrangler files declare the same bindings |
-| `check:search` | the query parser and rank fusion |
-| `check:policy` | the operator publish policy, including first-publish |
-| `check:contrast` | every token pair, both themes, against the ratified spec |
-| `check:logo` | the inline mark still reproduces the four SVG fixtures |
-| `check:backup` | the per-table export path covers the live schema |
-| `check:charts` | chart determinism and Node-vs-Worker byte parity |
-| `check:diagrams` | the diagram contract, asset coverage, color audit |
-| `check:admin-ui` | what the admin's forms SUBMIT, against a baseline |
-| `check:urls` | the URL protocol allowlist |
-| `check:llms` | `llms.txt` matches the row it seeds |
-| `check:media` | D1 against R2 and `public/`, both directions |
+A check earns its place by catching real mistakes, or by guarding against harm
+that can't be undone (ruling 150). The guards are secrets, migrations, backup,
+restore, destructive, policy, headers and urls. The rules that are stated twice and
+cannot merge (drafts never public, the schema matching the database, the write
+paths) are ordinary tests under `test/`.
 
 **Every gate declares an OBSERVATION BOUNDARY in its header: what it does not
 look at.** Read it before trusting a green run. Four separate defects have

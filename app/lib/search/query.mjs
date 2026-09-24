@@ -6,8 +6,8 @@
  * server-rendered page, the JSON endpoint and the palette.
  *
  * A .mjs rather than a .ts for the reason app/lib/content/pipeline.mjs is: the
- * Worker imports it AND `npm run check:search` imports it, so the gate exercises
- * exactly the parser that ships rather than a copy of its rules.
+ * Worker imports it AND the tests can import it, so they exercise exactly the
+ * parser that ships rather than a copy of its rules.
  *
  * Rules apply IN ORDER and each consumes its tokens, so a token cannot be read
  * twice. The order matters: `tag:2019` must stay a tag filter rather than

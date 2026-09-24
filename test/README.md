@@ -29,11 +29,14 @@ assert what it does with a given input. `frontmatterSchema` refuses
 than returning it. These are claims about BEHAVIOUR, they are cheap, and they
 are the right home for anything that can be expressed as input in, output out.
 
-**GATES verify the REPO'S SHAPE.** `check:content` byte-compares an artifact.
-`check:invariants` section 15 measures CLAUDE.md's size and section order.
-`check:config` compares two config files to each other. `check:invariants` binds raw SQL column
-names to `schema.ts`. None of these is a behavioral claim, none would fit in a
-test, and each carries an OBSERVATION BOUNDARY note saying what it cannot see.
+**GATES verify the REPO'S SHAPE.** `check:content` validates every post;
+`check:migrations` hashes the migrations against their manifest. Each carries an
+OBSERVATION BOUNDARY note saying what it cannot see.
+
+**THE INVARIANTS ARE TESTS NOW** (ruling 150): the rules stated twice that cannot
+merge live in `visibility-invariants`, `schema-invariants`, `write-path-invariants`
+and `control-characters`, with their shared helpers in `lib/`. The schema test
+compares the live database only with `SCHEMA_LIVE=1`, which `check:all` sets.
 
 **PLANTS remain the discipline for NEW assertions.** Before trusting any new
 check, break the thing it watches and confirm it goes red, and confirm the
@@ -62,8 +65,8 @@ the bug.
   Replays the colophon defect where `STATUS_LABEL[s] ?? s` rendered the raw enum
   on the page and in the index at once, looking like working output in both.
 - **`sql-literals.test.mjs`** `joinConcatenatedLiterals()` against `og_titl` and
-  `titl`. Replays the two defects that made `check:invariants` section 5 blind
-  to `sync-content.mjs`, which builds its SQL by concatenation.
+  `titl`. Replays the two defects that made a raw-SQL column scan blind to
+  `sync-content.mjs`, which builds its SQL by concatenation.
 
 ## What does NOT belong here
 

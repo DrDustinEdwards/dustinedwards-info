@@ -84,8 +84,7 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
   checks.push(
     await guard("media-backup-drift", async () => {
       /*
-       * NOT a reconciliation of the INDEX. `check:media --remote` owns that and `media-index-drift`
-       * above watches it between gate runs. This asks the question neither can: does a second copy of
+       * NOT a reconciliation of the INDEX. `media-index-drift` above watches that. This asks the question neither can: does a second copy of
        * every byte exist?
        *
        * BOTH BUCKETS ARE LISTED IN FULL, not with `limit: 1`. This compares two key sets and every etag in
@@ -125,7 +124,7 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
        * ONE ROUND TRIP, five subqueries. `search_docs` is the real content table and is counted
        * directly; the three index counts are taken on the `_docsize` shadows, because COUNT(*) on an
        * external-content fts5 table reads through to its content table and can never disagree with it.
-       * `check:invariants` section 7 enforces that distinction on this source.
+       * `test/write-path-invariants.test.mjs` enforces that distinction on this source.
        */
       const row = await env.DB.prepare(
         "SELECT (SELECT COUNT(*) FROM posts) AS posts, " +

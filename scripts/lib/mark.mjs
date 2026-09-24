@@ -1,10 +1,9 @@
 /**
  * The site mark, as anything rendering it at build time embeds it: one definition, with the build
- * and `check:logo` as its two readers.
+ * as its reader.
  *
  * BOUNDARY: NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the
- * Worker renders, and this reads the fixtures `check:logo` binds that component to, which is the
- * same source one hop along a link something else keeps honest.
+ * Worker renders, and this reads the committed logo files that component was drawn from.
  */
 
 import { readFileSync } from "node:fs";
@@ -118,8 +117,7 @@ export function readMark() {
  *
  * satori takes an inline `svg` node and emits it as an `<image>` whose href is the same markup
  * URL-encoded, so the path data reaches resvg VERBATIM: no re-fitting, no simplification, no
- * reinterpretation of the arcs. Asserted by `check:logo` against a rasterisation of the fixture
- * rather than believed.
+ * reinterpretation of the arcs.
  *
  * @param {Record<string, unknown>} [style] layout only. The caller owns where
  *   the mark sits; it does not own how the mark is drawn.

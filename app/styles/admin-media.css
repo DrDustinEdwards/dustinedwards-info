@@ -81,8 +81,7 @@
 }
 
 /* A vector fills its box rather than being cropped: an icon or a logo cropped to
-   3:2 loses the mark, and these are the same files check:logo treats as
-   fixtures. They also carry no LQIP, so there is nothing behind them to hide. */
+   3:2 loses the mark. They also carry no LQIP, so there is nothing behind them to hide. */
 .media-thumb-box[data-placeholder="none"] .media-thumb {
   object-fit: contain;
   padding: 1rem;

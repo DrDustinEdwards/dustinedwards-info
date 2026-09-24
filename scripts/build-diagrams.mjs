@@ -236,8 +236,8 @@ async function main() {
       `${skipped} already current, ${pruned} pruned`,
   );
 
-  // These assets are in the MEDIA INDEX, so rendering or pruning one changes what `check:media`
-  // expects. The manifest is regenerated automatically, being derived from the filesystem; the index
+  // These assets are in the MEDIA INDEX, so rendering or pruning one changes what the index should
+  // hold. The manifest is regenerated automatically, being derived from the filesystem; the index
   // cannot be, needing the Worker's binding, so this can only say so loudly.
   if (written > 0 || pruned > 0) {
     const manifest = spawnSync("node scripts/build-assets.mjs", {
@@ -251,8 +251,8 @@ async function main() {
     }
     console.log(
       `\n  NOTE: ${written + pruned} diagram asset(s) changed, so the media index is now\n` +
-        `        stale and check:media will fail until it is rebuilt. Press\n` +
-        `        "Rebuild media index" on /admin/media, then re-run check:media.\n`,
+        `        stale, and the health check's media-index-drift reports it until it\n` +
+        `        is rebuilt. Press "Rebuild media index" on /admin/media.\n`,
     );
   }
 }

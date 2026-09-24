@@ -162,7 +162,7 @@ async function actualTables(target) {
   if (rows.length === 0) throw new Error("sqlite_master returned no tables");
 
   /*
-   * Classified by the shared module, the same one `check:invariants` reads: the rules were already
+   * Classified by the shared module, the same one the schema test reads: the rules were already
    * identical and a comment said so, and one module makes that a fact. PLATFORM_TABLES stays HERE,
    * being a property of where these rows came from rather than of SQLite.
    */

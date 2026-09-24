@@ -19,8 +19,8 @@
  *      `check:content`'s double-render pass compares it like everything else,
  *      and the two writers' render hashes agree. Plot's default
  *      class name is a fixed constant and standard marks generate no ids, so
- *      there is nothing random to suppress. `check:charts` proves it rather
- *      than trusting it.
+ *      there is nothing random to suppress. `check:content` renders the
+ *      corpus twice and fails if the two differ.
  *   2. **Accessible by construction.** A chart that cannot be named or tabulated
  *      fails the build instead of failing an audit later.
  */
@@ -37,8 +37,8 @@ export { CHART_TYPES };
  *
  * Tokens only, never hexes. One render has to serve both themes: the custom
  * property passes into the SVG verbatim and resolves per theme in the browser,
- * so there is no second render and nothing to flash. `check:charts` fails on any
- * hex literal reaching chart output.
+ * so there is no second render and nothing to flash. No hex literal may reach
+ * chart output.
  *
  * The sixth (rust) is the EXTENDED slot. design-tokens.md calls core-5 the
  * unlabeled-safe default and requires direct labels beyond it; this directive

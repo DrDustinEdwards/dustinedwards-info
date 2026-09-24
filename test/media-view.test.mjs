@@ -4,7 +4,7 @@
  * REPLAYS A DEFECT PAID FOR TWICE. `q` fell off the pagination links once, and
  * `role` fell off the chips once. Both times the page looked correct, one click
  * silently reset the view, and no gate could see it: a dropped query parameter
- * is not a payload difference, so `check:admin-ui`'s tuple for a `GET` link is
+ * is not a payload difference, so a form-payload comparison for a `GET` link is
  * identical whether it carries eight parameters or one.
  *
  * The property under test is therefore not "hrefWith works" but "hrefWith
@@ -315,9 +315,8 @@ test("an empty page groups to nothing rather than to one empty heading", () => {
  * The list header and the Display popover are two link builders aimed at one
  * destination. They agreed by accident before there was a header at all; the
  * moment there are two, "they agree" is a property that needs asserting rather
- * than assuming, and it is asserted HERE on the pure function and again in
- * check:admin-ui over the rendered hrefs. Two instruments, because this one
- * cannot see whether the component actually calls it.
+ * than assuming, and it is asserted HERE on the pure function. This cannot see
+ * whether the component actually calls it.
  * ---------------------------------------------------------------------- */
 
 test("every sort key declares a default direction, and no key is invented", () => {

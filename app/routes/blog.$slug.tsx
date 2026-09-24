@@ -337,7 +337,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
       {/*
        * THE h-entry IS ON `main`, NOT ON THE ARTICLE, and that is forced by the layout rather than
        * chosen: the title and the article are now siblings in the track grid, so an h-entry on the
-       * article alone would publish a post with no p-name and no dt-published. `check:microformats`
+       * article alone would publish a post with no p-name and no dt-published. `check:machine-readable`
        * asserts exactly one h-entry and one h-card on the page.
        */}
       <main className="tracks post-tracks h-entry" id="main" tabIndex={-1}>
@@ -417,7 +417,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             {/*
              * STILL CONDITIONAL, deliberately: a post nobody has revised has no updated date, and
              * emitting the row's `updatedAt` regardless would publish a sync timestamp as if it
-             * were an edit. `check:microformats` asserts the pairing in BOTH directions, so the
+             * were an edit. `check:machine-readable` asserts the pairing in BOTH directions, so the
              * word and the `dt-updated` move together or the gate fails.
              */}
             {revisedLabel && (

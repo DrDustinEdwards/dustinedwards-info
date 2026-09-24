@@ -4,7 +4,6 @@
  * REPLAYS RULING 2 of the blog roadmap, which is the reason this column exists
  * in the shape it does: a readership number that cannot be trusted must be
  * absent and must say why, never a zero and never a dash that reads as one.
- * The rendering half is asserted by `check:admin-ui`'s three readership states.
  * This is the DATA half, and it runs the real function against a real broken
  * source rather than a fixture describing one.
  *

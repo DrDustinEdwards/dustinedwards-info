@@ -4,7 +4,7 @@
  * ## DETERMINISTIC, WHICH IS THE WHOLE CONTRACT
  *
  * Every function here is a pure function of the committed corpus. No clock, no
- * request, no network, no citation count. That is what lets `check:publications`
+ * request, no network, no citation count. That is what lets `check:machine-readable`
  * generate twice and compare bytes, and it is why the citation count is
  * deliberately absent from the exports even though the page shows it: a count
  * moves without a deploy, and an export that changed between two downloads of
@@ -137,7 +137,7 @@ export function protectOrganisms(escaped) {
  * The organism names a string actually CONTAINS, by the same longest-first rule
  * `protectOrganisms` applies.
  *
- * Exported for `check:publications`, and the reason is a bug that gate caught in
+ * Exported for `check:machine-readable`, and the reason is a bug that gate caught in
  * its own first draft. The obvious assertion is
  * `ORGANISMS.filter((o) => title.includes(o))`, and it is wrong: a title
  * carrying "Mycobacterium smegmatis" also contains the bare genus
@@ -309,7 +309,7 @@ export function toCslJson(cslRecords) {
  *
  * NO GENERATION TIMESTAMP, and that is the deliberate part. A timestamp would
  * make two downloads of the same unchanged corpus differ, which defeats the
- * byte comparison `check:publications` makes and, more importantly, makes a
+ * byte comparison `check:machine-readable` makes and, more importantly, makes a
  * saved citation file look modified when nothing about the work changed.
  *
  * @param {string} comment the format's line-comment prefix

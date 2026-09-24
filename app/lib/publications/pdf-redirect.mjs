@@ -28,7 +28,7 @@
  * is derived from the DOI. There is no function from one to the other: the id
  * was chosen by a human against a banned-token list computed from the corpus.
  * So the pairs are data, generated once by the move and gated in both
- * directions by `check:publications`, rather than a transformation somebody
+ * directions by `check:machine-readable`, rather than a transformation somebody
  * would have to keep true.
  *
  * ## THE GATEWAY, NOT A ROUTE

@@ -3,9 +3,9 @@
  *
  * `.mjs` and dependency-free on purpose, for the reason `records.mjs`,
  * `query.mjs` and `chart.mjs` are: the Worker imports it, the build scripts
- * import it, and `check:media` imports it. There must never be a second answer
- * to "what kind of thing is this file", because the gate and the writer
- * disagreeing is precisely the drift the gate exists to catch.
+ * import it, and the index rebuild imports it. There must never be a second
+ * answer to "what kind of thing is this file", because two answers disagreeing
+ * is precisely the drift the index cannot survive.
  */
 
 /**
@@ -118,7 +118,7 @@ export function classify(pathOrKey) {
  * **`/fonts/dustin-edwards-ofl.txt` DOES NOT BELONG IN THIS MAP, and the temptation to put it
  * there is why this note exists.**
  *
- * `check:media --remote` has been failing on it since it was added: a `public/`
+ * The index reconciliation reported it from the day it was added: a `public/`
  * file with no D1 row, direction 3 of the reconciliation. The cheap way to make
  * that green is an entry here, and it would be WRONG. The `txt` type above was
  * added to the classifier FOR THIS FILE, with the reason recorded at that line:
@@ -179,7 +179,7 @@ const NOT_ASSETS = new Map([
  * either. Indexing them would put 36 text files in a picture library.
  *
  * Nothing needs to discover them. `llms.txt` lists all 36 by URL and
- * `check:publications` reconciles that list against the generated set in both
+ * `check:machine-readable` reconciles that list against the generated set in both
  * directions, which is a stronger guarantee than the manifest gives anything.
  */
 const NOT_ASSET_PATTERNS = [
@@ -187,7 +187,7 @@ const NOT_ASSET_PATTERNS = [
     test: /^\/publications\/[a-z0-9-]+\.md$/,
     why:
       "A generated markdown twin of a paper, gitignored build product served " +
-      "as an asset. Listed in llms.txt and reconciled by check:publications; " +
+      "as an asset. Listed in llms.txt and reconciled by check:machine-readable; " +
       "not media, and not committed, so not in this manifest.",
   },
 ];
@@ -197,7 +197,7 @@ const NOT_ASSET_PATTERNS = [
  *
  * Lives here rather than in the walk because this module is the single answer
  * to "what kind of thing is this file", and "not a thing the index carries" is
- * an answer to that question. `walkPublic()` and therefore `check:media` both
+ * an answer to that question. `walkPublic()` and the index rebuild both
  * take the set from here, so the manifest and the reconciler cannot disagree
  * about which files exist.
  *
@@ -255,11 +255,11 @@ export function storageOf(pathOrKey) {
  *
  * It lives here beside `storageOf` because it is a pure function of the key
  * shape and nothing else, and a caller only has to supply the env it already
- * holds. `check:invariants` asserts no second copy reappears, which is the real
- * failure mode now that there is one.
+ * holds. A second copy reappearing is the real failure mode now that there is
+ * one; import this instead.
  *
- * A `static` key resolves to MEDIA, where the miss is loud in `check:media`
- * rather than silent. Static objects are in no bucket and emit no notifications,
+ * A `static` key resolves to MEDIA, where the miss is loud in the index drift
+ * check rather than silent. Static objects are in no bucket and emit no notifications,
  * so reaching here with one is itself the bug.
  *
  * Typed generically over the two bindings rather than against `Env`, because
@@ -293,7 +293,7 @@ export function bucketFor(env, key) {
  *
  * Four roles:
  *   content    insertable into a post. Editor uploads, roster photos, the PDFs.
- *   brand      identity marks. Shown, never inserted; also check:logo FIXTURES.
+ *   brand      identity marks. Shown, never inserted.
  *   generated  build output. Diagrams and OG cards, regenerable by command.
  *   icon       site chrome. Favicons, touch icons, the manifest.
  *
@@ -306,7 +306,7 @@ export function bucketFor(env, key) {
  *          or the OS fetches it without any of this code being involved.
  *   brand  is REFERENCED BY APPLICATION CODE. Some module names it. The OG image
  *          is `DEFAULT_OG_IMAGE` in `seo.ts`, and the four logo SVGs are the
- *          fixtures `check:logo` reads.
+ *          source of the mark's path data.
  *
  * The test is therefore "who fetches it", not "what shape is it". A new asset
  * classifies itself by answering that, with no judgment call left over.
@@ -315,8 +315,7 @@ export function bucketFor(env, key) {
  * unrecognised asset showing up in the picker is a visible nuisance the author
  * corrects in a second; an unrecognised asset silently EXCLUDED from the picker
  * is an image nobody can find and nobody knows is missing. Fail toward being
- * seen. `check:media` verifies every row against this function in both
- * directions, so a misclassification cannot sit unnoticed either way.
+ * seen.
  *
  * @param {string} pathOrKey
  * @returns {"content" | "brand" | "generated" | "icon"}
@@ -335,7 +334,7 @@ export function roleOf(pathOrKey) {
 
   // Chrome. The manifest rides with the icons it declares. `favicon.ico` keeps its name because a
   // browser asks for it unprompted, and the manifest because only a browser ever reads it: ruling
-  // 127's two exceptions, which `check:asset-names` lists.
+  // 127's two exceptions.
   if (
     /^\/(favicon\.ico|site\.webmanifest|dustin-edwards-(apple-touch-icon\.png|android-chrome-[\dx]+\.png|maskable-icon-[\dx]+\.png))$/.test(
       pathOrKey,
@@ -428,7 +427,7 @@ export function contentKey(digest, extension, dimensions = null, name = null) {
 
 /**
  * The prefix ruling 127 puts on everything that leaves the site. Stated ONCE and exported: the key
- * writer, the download-name builder and `check:asset-names` all read this rather than the literal.
+ * writer and the download-name builder both read this rather than the literal.
  */
 export const ASSET_PREFIX = "dustin-edwards-";
 

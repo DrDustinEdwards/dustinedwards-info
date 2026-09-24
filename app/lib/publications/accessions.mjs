@@ -28,7 +28,7 @@
  * ## WHY IT READS THE EXTRACTED TEXT AND NOT THE PDF
  *
  * `data/publications.text.json` is the committed extraction, bound to each
- * PDF's sha256 by `check:publications`. Reading the PDF here would put a parser
+ * PDF's sha256 by `check:machine-readable`. Reading the PDF here would put a parser
  * in the gate and in the build; reading the artifact means the accessions are
  * derived from bytes the gate has already proven are the bytes on disk.
  */
