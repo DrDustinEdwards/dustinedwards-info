@@ -1,7 +1,7 @@
 /**
  * Ship's readiness verdict.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The defect is that ship proved a
+ * REPLAYS THE DEFECT, per the replay rule. The defect is that ship proved a
  * deploy with five 200s from `/colophon` and never asked `/api/health`, so
  * every invariant the site actually watches could be broken while ship
  * reported success and went on to write D1. A drifted Ask index, a media index

@@ -2,7 +2,7 @@
  * WHICH DECISIONS VOLUME IS ACTIVE, AND HAS IT PASSED ITS OWN FREEZE POINT. Pure, so the replay
  * proof can drive it without a network; the fetching lives in the gate.
  *
- * BOUNDARY: the limit is READ from the volume that owns it and never restated here, hard rule 17,
+ * BOUNDARY: the limit is READ from the volume that owns it and never restated here, the one-owner rule,
  * and ACTIVE is the highest NUMBER rather than the title, which is measured: volumes frozen for
  * days still carry "(active)". Everything below the highest is history and is not checked.
  */
@@ -70,7 +70,7 @@ export function classifyVolumes(docs) {
    */
   const staleTitles = volumes
     // The looser word boundary rather than the exact parenthesis: four volumes are titled with a word
-    // after "active", and the tighter needle missed all of them, which is hard rule 10's
+    // after "active", and the tighter needle missed all of them, which is the vacuity rule's
     // anchor-every-needle discipline arriving as a number.
     .filter((v) => v !== top && /\(active\b/i.test(v.title))
     .map((v) => v.path);

@@ -33,7 +33,7 @@ import {
   metricValue,
   projectAnchor,
 } from "../app/lib/projects-page.mjs";
-// Same function the route calls, so the gate cannot agree only with itself (hard rule 10).
+// Same function the route calls, so the gate cannot agree only with itself.
 import { PHAGE_YEARS } from "../app/data/phage-hunters.ts";
 import { isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 // The key grammar's readers, so the demos are checked against the real module.
@@ -337,15 +337,15 @@ ok(
   "every anchor was a decision, so nothing was verified",
 );
 
-/* hard rule 17, on the prose */
+/* the one-owner rule, on the prose */
 
 /*
- * Hard rule 17 on the feature prose: no digit a gate does not own, no removed-pipeline
+ * The one-owner rule on the feature prose: no digit a gate does not own, no removed-pipeline
  * words. Cannot read tense. Only protocol constants are allowed; a date allowance would cover
- * no field here (hard rule 10). Anchor text is exempt.
+ * no field here. Anchor text is exempt.
  */
 
-console.log("\n  hard rule 17: the prose carries no number a gate does not own");
+console.log("\n  the one-owner rule: the prose carries no number a gate does not own");
 
 {
   /** Bare digits prose may carry. Closed: a protocol constant cannot go stale. */
@@ -420,7 +420,7 @@ console.log("\n  hard rule 17: the prose carries no number a gate does not own")
   ok(
     "no feature sentence carries a number the gate does not own",
     numbered.length === 0,
-    `${numbered.join("; ")}. Hard rule 17: a measured value lives in the gate that ` +
+    `${numbered.join("; ")}. The one-owner rule: a measured value lives in the gate that ` +
       `measures it, or nowhere. Point at the gate instead of restating its value.`,
   );
 
@@ -686,14 +686,14 @@ console.log(
 /* enhancement inventory */
 
 /*
- * Hard rule 9: every enhancement names a fallback, both directions against `app/enhance/`.
- * Whether it works is a wire claim (hard rule 7).
+ * The progressive-enhancement rule: every enhancement names a fallback, both directions against `app/enhance/`.
+ * Whether it works is a wire claim.
  */
 
 const ENHANCEMENTS_PATH = join(root, "content", "enhancements.json");
 const ENHANCE_DIR = join(root, "app", "enhance");
 
-/** A tripwire: a new module means walking this list (hard rule 9). */
+/** A tripwire: a new module means walking this list. */
 const EXPECTED_ENHANCE_MODULES = 8;
 
 /** Set under measured, to catch a module that stopped being read. */
@@ -837,7 +837,7 @@ for (const entry of inventory) {
   ok(
     `enhancements ${id}: names a fallback`,
     typeof entry.fallback === "string" && entry.fallback.trim().length > 0,
-    "hard rule 9: an enhancement with no named fallback is a dependency, not an enhancement",
+    "the progressive-enhancement rule: an enhancement with no named fallback is a dependency, not an enhancement",
   );
   if (typeof entry.fallback === "string" && entry.fallback.trim().length > 0) {
     fallbacksNamed += 1;
@@ -909,7 +909,7 @@ console.log(
 );
 console.log(
   `     NOT asserted here: that any route is server-complete with script off. ` +
-    `That is a claim about the wire (hard rule 7).`,
+    `That is a claim about the wire.`,
 );
 
 /* coverage report */
@@ -939,7 +939,7 @@ const projects = projectsDoc.projects ?? [];
 const vocabulary = projectsDoc.stackVocabulary ?? [];
 const projectsChecksBefore = checks;
 
-/* Metric inputs, from the artifacts that own them; no expected value (hard rule 10). */
+/* Metric inputs, from the artifacts that own them; no expected value. */
 const METRIC_INPUTS = {
   stack: JSON.parse(
     readFileSync(join(root, "content", "generated", "stack.json"), "utf8"),
@@ -1049,7 +1049,7 @@ for (const project of projects) {
       `@type and branches on it, so an unknown value is structured data nobody designed`,
   );
 
-  /* Stored or derived, never both (hard rule 17: one owner). */
+  /* Stored or derived, never both (one owner). */
   const metric = project.metric ?? {};
   ok(`${id} metric has a label`, typeof metric.label === "string" && metric.label.length > 0);
 
@@ -1192,7 +1192,7 @@ for (const term of vocabulary) {
 }
 
 /* The route must read the roster and derive anchors from the shared helper. */
-/* Hard rule 17 on roster prose; evidence and metric labels are exempt. */
+/* The one-owner rule on roster prose; evidence and metric labels are exempt. */
 {
   const PROJECT_PROSE_FIELDS = ["oneLiner", "description"];
   let projectFieldsScanned = 0;
@@ -1228,7 +1228,7 @@ for (const term of vocabulary) {
   ok(
     "no roster sentence carries a number outside the metric channel",
     projectNumbers.length === 0,
-    `${projectNumbers.join("; ")}. Hard rule 17: this page has exactly one place ` +
+    `${projectNumbers.join("; ")}. The one-owner rule: this page has exactly one place ` +
       `for a number, the metric, and it carries a date or a derivation beside it.`,
   );
 }
@@ -1339,8 +1339,8 @@ console.log(
 );
 
 /*
- * The playground: each demo runs the real module against expectations it did not produce
- * (hard rule 10). A rendered page is verify-live's claim (hard rule 7).
+ * The playground: each demo runs the real module against expectations it did not produce.
+ * A rendered page is verify-live's claim.
  */
 console.log("\n  playground");
 
@@ -1629,7 +1629,7 @@ ok(
 
 /* media key grammar */
 
-/* Hand-written expectations (hard rule 10's fixture independence). */
+/* Hand-written expectations (the vacuity rule's fixture independence). */
 for (const preset of keyPresets) {
   const label = preset.label ?? preset.key;
   const expect = preset.expect ?? {};
@@ -1845,14 +1845,14 @@ ok(
 
 /* theme demo wiring */
 
-/* Word-anchored: a suffixed name contains the shorter one (hard rule 10). */
+/* Word-anchored: a suffixed name contains the shorter one. */
 ok(
   "theme: the page imports the resolver",
   /from\s+["']~\/lib\/theme["']/.test(playgroundSource) &&
     /\bthemeFromRequest\b/.test(playgroundSource),
   "the demo must call the real resolver, not restate its rules",
 );
-/* The lede's claim about the Worker, checked there (hard rule 7). */
+/* The lede's claim about the Worker, checked there. */
 ok(
   "theme: the Worker still resolves the theme through this function",
   /\bthemeFromRequest\b/.test(stripped(readFileSync(join(root, "workers", "app.ts"), "utf8"))),
@@ -1976,7 +1976,7 @@ ok(
   ok(
     "markdown: a snippet has a URL demoted",
     snippets.some((/** @type {any} */ s) => (s.expect?.blockedCount ?? 0) > 0),
-    "without one, hard rule 6's allowlist is never exercised here",
+    "without one, the URL allowlist is never exercised here",
   );
   ok(
     "markdown: a snippet renders headings into the table of contents",
@@ -2150,7 +2150,7 @@ ok(
   "the route sets an explicit Cache-Control",
   /publicHtmlHeaders|SHARED_CACHE_CONTROL/.test(playgroundSource) &&
     /export function headers/.test(playgroundSource),
-  "hard rule 8: with the Workers cache on, no header means CACHED rather than skipped",
+  "the cache-header rule: with the Workers cache on, no header means CACHED rather than skipped",
 );
 // The page's own law. A result that depended on anything but the query string
 // would stop being a shareable URL.

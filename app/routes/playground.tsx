@@ -69,7 +69,7 @@ import "~/styles/playground.css";
  *    form whose entire input is the query string, so a pasted URL renders
  *    identically for the recipient. This route does not opt into hydration, so no
  *    router runtime ships and the forms submit natively for every reader, which is
- *    what satisfies hard rule 9 here.
+ *    what satisfies the progressive-enhancement rule here.
  *
  * NO USER INPUT IS PERSISTED ANYWHERE. The analytics point carries the bare path
  * and never the query string.
@@ -77,7 +77,7 @@ import "~/styles/playground.css";
  * THE FORMS CARRY HIDDEN FIELDS because three demos share one URL, so submitting
  * one would otherwise wipe the other two.
  *
- * CACHE-CONTROL IS EXPLICIT, per hard rule 8: with the Workers cache on, a
+ * CACHE-CONTROL IS EXPLICIT, per the cache-header rule: with the Workers cache on, a
  * response carrying none is CACHED rather than skipped.
  */
 

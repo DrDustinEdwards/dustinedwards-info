@@ -16,7 +16,7 @@
  *
  * @see test/hashes.test.mjs, whose expected values come from `git
  *   hash-object` and `sha256sum`, never from this module (fixture
- *   independence, hard rule 10).
+ *   independence, the vacuity rule).
  */
 
 const encoder = new TextEncoder();

@@ -197,7 +197,7 @@ describe("the gateway's wire policy", () => {
   });
 
   it("does NOT downgrade a response that never asked to be shared", async () => {
-    /* The downgrade is scoped to the shared string. A route on hard rule 8's
+    /* The downgrade is scoped to the shared string. A route on the cache-header rule's
      * uncached default is already `private, no-store` and must not be rewritten
      * into something else by a cookie. */
     const response = await fetchThrough(
@@ -251,7 +251,7 @@ describe("negotiation", () => {
   });
 });
 
-describe("hard rule 8: the platform caches silence", () => {
+describe("the cache-header rule: the platform caches silence", () => {
   it("stamps `private, no-store` on a response that declared nothing", async () => {
     /*
      * A response with no `Cache-Control` is CACHED under RFC 9111 heuristic

@@ -55,7 +55,7 @@ export function projectAnchor(slug) {
  * The flagship card used to read "24 verification gates in the build", dated,
  * and by 2026-08-30 the build ran twenty-seven. Nothing was wrong with the
  * date; the number was simply a SECOND COPY of something the repository can
- * re-derive, which is precisely what hard rule 17 refuses. So the copy is gone
+ * re-derive, which is precisely what the one-owner rule refuses. So the copy is gone
  * and the value is computed from the one place that owns it.
  *
  * **The inputs are ALREADY-OWNED ARTIFACTS, never a fresh measurement taken
@@ -95,7 +95,7 @@ export const METRIC_DERIVATIONS = {
  *
  * ONE implementation, called by the route that renders the card and by the
  * gate that checks it. A gate computing the expected value its own way would
- * be the mirror hard rule 10 names: two implementations that agree until they
+ * be the mirror the vacuity rule names: two implementations that agree until they
  * do not, with nothing able to tell which one is right.
  *
  * @param {any} metric
@@ -121,7 +121,7 @@ export function metricValue(metric, inputs) {
  * TWO SHAPES, and the index has to describe the one the card renders. A dated
  * metric carries its value and the date it was taken; a DERIVED metric carries
  * no value here at all, because the value is computed at build time and writing
- * one into the record would be the second copy hard rule 17 exists to refuse.
+ * one into the record would be the second copy the one-owner rule exists to refuse.
  * So the derived form indexes what it counts and says it is derived, which is
  * exactly what a reader searching for it can match on.
  *

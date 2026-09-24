@@ -372,10 +372,10 @@ const ghToken = (() => {
 
 /**
  * One read of GitHub's verdict on HEAD. Returns rather than refuses because the two callers
- * want opposite things; a `shouldRefuse` flag is the shape hard rule 10 names.
+ * want opposite things; a `shouldRefuse` flag is the shape the vacuity rule names.
  *
  * The verdict shape is `ciVerdict`'s, read off it rather than restated: this copy had already
- * gone stale against the real one, which is what hard rule 17 is about.
+ * gone stale against the real one, which is what the one-owner rule is about.
  *
  * @returns {Promise<{ verdict: ReturnType<typeof ciVerdict> | null, error: string }>}
  */

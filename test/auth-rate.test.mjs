@@ -1,7 +1,7 @@
 /**
  * The `/api/auth/*` rate limit: its numbers and its refusal.
  *
- * REPLAYS THE FINDING, per hard rule 12. The 2026-08-22 audit, section 3: "No
+ * REPLAYS THE FINDING, per the replay rule. The 2026-08-22 audit, section 3: "No
  * rate limit on `/api/auth/*`. The Ask endpoint has a Durable Object limiter;
  * the auth callback has none." That was verified TRUE against the code on
  * 2026-08-23, which makes this one of the two claims in that batch that
@@ -63,7 +63,7 @@ test("the refusal is a 429 carrying Retry-After", () => {
 
 test("the refusal is not cached, because a cached 429 keeps refusing", () => {
   // Workers Cache sits in front of this Worker and a response with no
-  // Cache-Control is heuristically CACHED, not skipped. Hard rule 8.
+  // Cache-Control is heuristically CACHED, not skipped. The cache-header rule.
   const cc = authRateRefusal().headers.get("cache-control") ?? "";
   assert.match(cc, /no-store/);
   assert.match(cc, /private/);

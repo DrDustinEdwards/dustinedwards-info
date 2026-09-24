@@ -78,7 +78,7 @@ const SITE_PATH = join(root, "data", "publications.site.json");
 const CSL_PATH = join(root, "data", "publications.csl.json");
 const OUT_PATH = join(root, "app", "data", "publications.ts");
 
-/* SCOPE FIRST: every "no record does X" passes over an empty array, hard rule 10's first line. */
+/* SCOPE FIRST: every "no record does X" passes over an empty array, the vacuity rule's first line. */
 for (const [label, path] of [
   ["the site file", SITE_PATH],
   ["the CSL file", CSL_PATH],

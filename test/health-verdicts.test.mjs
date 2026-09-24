@@ -1,7 +1,7 @@
 /**
  * The health run's verdicts.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The defect is not a wrong verdict; it
+ * REPLAYS THE DEFECT, per the replay rule. The defect is not a wrong verdict; it
  * is that on 31 July 2026 the Ask index lost nine records, `askIndexStatus`
  * computed that number correctly for 21 days, and no verdict existed to turn it
  * into anything. So the replay is the shape of that day's reading: nine

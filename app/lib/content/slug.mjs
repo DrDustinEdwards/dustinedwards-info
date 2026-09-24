@@ -94,7 +94,7 @@ function unanchor(source) {
 /**
  * WHERE A POST LIVES IN THE REPOSITORY. Stated once, here.
  *
- * Hard rule 6 says this string is stated ONCE, by the exported `postPath()`.
+ * The URL allowlist rule says this string is stated ONCE, by the exported `postPath()`.
  * It was not: this module built the same path independently at `sourcePath`
  * below while `publish.server.ts` exported the canonical one, so the rule was
  * true of every consumer except the module that produces the artifact.

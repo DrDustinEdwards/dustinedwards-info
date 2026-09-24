@@ -3,7 +3,7 @@
  *
  * BOUNDARY: the list has one owner here, because an exporter and a gate each carrying their own
  * would eventually check a set the exporter no longer writes and still pass, which is the
- * alias-blind failure hard rule 10 names. Credential handling is deliberately the caller's.
+ * alias-blind failure the vacuity rule names. Credential handling is deliberately the caller's.
  */
 
 export const NAMESPACE = "dustinedwards";

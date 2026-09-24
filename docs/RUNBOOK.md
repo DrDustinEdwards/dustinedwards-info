@@ -173,7 +173,7 @@ real. That is a known and accepted gap.
 ### 4b. From a per-table export
 
 `wrangler d1 export` does not work on this database as a whole: it refuses while
-any fts5 virtual table exists, and search needs them permanently (hard rule 2).
+any fts5 virtual table exists, and search needs them permanently.
 So the backup is per table.
 
 **1. Take an export of what is there now**, whatever state it is in. Two minutes,
@@ -207,7 +207,7 @@ npx wrangler d1 execute dustinedwards --remote --command "DELETE FROM webmention
 ```
 
 Never `DELETE FROM` a search index (`posts_fts`, `search_identity`,
-`search_prose`). Hard rule 2: the repair there is `('rebuild')`, which is
+`search_prose`). The per-table backup rule: the repair there is `('rebuild')`, which is
 step 4.
 
 **3. Load the tables back, IN ONE FILE, PARENTS FIRST.**
@@ -239,7 +239,7 @@ wrangler asks you to confirm. **Read the database name in that prompt before you
 say yes.** This is the one moment in this runbook where a typo is unrecoverable.
 
 **4. Rebuild the search indexes.** They cannot be restored, only derived. Never
-`DELETE FROM` any of them (hard rule 2):
+`DELETE FROM` any of them:
 
 ```powershell
 npx wrangler d1 execute dustinedwards --remote --command "INSERT INTO posts_fts (posts_fts) VALUES ('rebuild'); INSERT INTO search_identity (search_identity) VALUES ('rebuild'); INSERT INTO search_prose (search_prose) VALUES ('rebuild');"

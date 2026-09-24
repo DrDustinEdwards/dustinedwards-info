@@ -4,7 +4,7 @@
  * BOUNDARY: it owns the COMPARISON and both MESSAGES and asserts nothing itself, returning a
  * string so each call site keeps its own reporter, and the success line it prints on a HOLDING
  * floor is what `check:floors` reads back. Making a shared helper assert instead would be the
- * tenth vacuity class of hard rule 10.
+ * tenth vacuity class of the vacuity rule.
  */
 
 /**
@@ -28,7 +28,7 @@ export const FLOOR_LINE = /^floor ([a-z]+:[a-z0-9-]+):(\S+) executed=(\d+) minim
  * @param {number} executed the count the gate actually reached
  * @param {number} minimum the floor
  * @param {string} [why] this site's own reasoning, appended to the breach
- *   detail. Hard rule 17: flattening thirty bespoke explanations into one
+ *   detail. The one-owner rule: flattening thirty bespoke explanations into one
  *   generic sentence would destroy the part that tells a reader what broke.
  * @returns {string | null} the breach detail for the caller's own reporter, or
  *   null when the floor holds

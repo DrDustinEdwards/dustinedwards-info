@@ -29,7 +29,7 @@
  * ## WHAT IS LEFT OUT
  *
  * The `admin-*` sheets, because the admin plane is exempt from the progressive
- * enhancement law (hard rule 9) and nothing a design agent builds is an admin
+ * enhancement law and nothing a design agent builds is an admin
  * page. `katex.generated.css` and `katex-overrides.css`, because they are a
  * generated artifact carrying twenty font faces whose binaries would have to
  * ship for the sheet to mean anything, and math typesetting is not a thing
@@ -148,7 +148,7 @@ function stripImports(css, rel) {
  * `@import "tailwindcss"` was REMOVED, and the converter's validator greps
  * `_ds_bundle.css` for `@import` without stripping comments first, so that
  * prose reads as a real import of a package that was never uploaded and fails
- * the gate. This repo's own hard rule 10 names the discipline the validator is
+ * the gate. This repo's own the vacuity rule names the discipline the validator is
  * missing, "strip comments before matching"; doing it on this side is the fix
  * that needs no fork.
  *
@@ -176,7 +176,7 @@ function stripCssComments(css) {
  * `#4a423a` against a base of `#5b5349`, and `--border` read `#6e6459` against
  * a base of `#8a7d6e`. The second one is the expensive half. `#6e6459` is what
  * `--border-strong` already is, so the two tokens arrived at the design agent
- * as THE SAME COLOUR, and hard rule 5, popover elevation and pinned bars take
+ * as THE SAME COLOUR, and the border-strong rule, popover elevation and pinned bars take
  * `--border-strong` and never `--border`, became unfollowable: the agent cannot
  * honor a distinction it cannot see.
  *

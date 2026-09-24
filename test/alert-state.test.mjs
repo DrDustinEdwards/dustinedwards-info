@@ -1,7 +1,7 @@
 /**
  * Whether a watchdog firing mails, given what the last one saw.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The defect is not a wrong verdict; it
+ * REPLAYS THE DEFECT, per the replay rule. The defect is not a wrong verdict; it
  * is that the handler was STATELESS, so one condition red for an afternoon
  * produced 27 identical emails at four an hour. The replay is therefore a
  * SEQUENCE rather than a single call: red, red, green, asserting one mail, then

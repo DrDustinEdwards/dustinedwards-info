@@ -61,7 +61,7 @@ test("the values are NUMBERS, because React drops an attribute it cannot render"
 
 test("a media key with no dimensions yields NOTHING, not a guess", () => {
   /*
-   * Hard rule 13: a fallback that SUBSTITUTES a different value is not failing
+   * The no-substitution rule: a fallback that SUBSTITUTES a different value is not failing
    * closed. An invented default here would be worse than the gap, because a
    * wrong intrinsic size distorts the image. `{}` spreads to no attributes.
    */

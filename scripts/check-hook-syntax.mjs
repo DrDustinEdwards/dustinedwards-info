@@ -103,7 +103,7 @@ for (const name of hookFiles) {
 /* 2. the embedded Python, resolved not named */
 
 /**
- * THE EXTRACTOR RESOLVES BINDINGS RATHER THAN SPELLINGS, hard rule 10. NOT ONE of these hooks
+ * THE EXTRACTOR RESOLVES BINDINGS RATHER THAN SPELLINGS, the vacuity rule. NOT ONE of these hooks
  * contains the obvious literal: every one probes candidates into a variable and calls through it,
  * so a scan for the spelling finds ZERO embedded checkers and reports a clean sweep.
  *

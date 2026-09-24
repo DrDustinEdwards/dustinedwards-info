@@ -95,7 +95,7 @@ export const posts = sqliteTable(
     check("posts_status_check", sql`${t.status} in ('draft', 'published')`),
     /*
      * THE INDEXES, declared here because otherwise they are declared nowhere a reader of this file can
-     * see. Hard rule 11 calls this file the source of truth, and a query planner decision is part of
+     * see. The schema-source rule calls this file the source of truth, and a query planner decision is part of
      * what the table IS: somebody reading only this file would have taken the visibility predicate every
      * public read composes for a table scan. Section 4 compares index NAMES AND COLUMNS against the
      * migrations in both directions.
@@ -257,11 +257,11 @@ export const mediaRefs = sqliteTable(
 /**
  * The site-wide search index. DERIVED, and the only table drizzle did not model.
  *
- * WHY IT IS DECLARED HERE: hard rule 11 makes this file the source of truth for the column schema,
+ * WHY IT IS DECLARED HERE: the schema-source rule makes this file the source of truth for the column schema,
  * and a table absent from it is absent from section 4's comparison against the migrations and the
  * live database. This table's column names live inside hand-written SQL strings.
  *
- * AND WHY EVERY READ STAYS IN RAW SQL: hard rule 1 is enforced here by section 8, which scans the
+ * AND WHY EVERY READ STAYS IN RAW SQL: the visibility rule is enforced here by section 8, which scans the
  * raw SQL for the composed predicate, and section 6's drizzle-shaped scan knows only `posts`, so a
  * query-builder read would be seen by NEITHER. Section 4a asserts there is no such read; if one is
  * ever wanted, teach section 6 about this table FIRST and delete that assertion in the same commit.

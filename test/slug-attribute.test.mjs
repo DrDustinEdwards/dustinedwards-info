@@ -1,7 +1,7 @@
 /**
  * The slug rule in its HTML shape, and the no-op that shipped before it.
  *
- * REPLAYS THE DEFECT, per hard rule 12. The editor derived the input's `pattern`
+ * REPLAYS THE DEFECT, per the replay rule. The editor derived the input's `pattern`
  * inline, stripping the anchors with a regex whose two backslashes did not
  * survive the tool that wrote the file. The strip became a no-op and the
  * attribute shipped `^[a-z0-9]+(?:-[a-z0-9]+)*$` with its anchors intact.

@@ -44,7 +44,7 @@ export type { Actor };
  */
 /*
  * RE-EXPORTED, not defined here: the definition moved beside `SLUG_PATTERN` because the pipeline
- * built the same path independently, which made hard rule 6's "stated ONCE" false by one.
+ * built the same path independently, which made the URL allowlist rule's "stated ONCE" false by one.
  */
 
 /** A save rejected by a gate. `field` and `line` are for pointing at the cause. */

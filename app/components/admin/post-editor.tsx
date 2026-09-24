@@ -342,7 +342,7 @@ export function PostEditor({
    *
    * IT SENDS THE IN-PLACE INTENT EXPLICITLY, by enabling a disabled hidden field
    * just before submitting. An absent intent on a WRITE path would let a malformed
-   * POST perform a write, which is hard rule 13. The field is DISABLED at rest, so a
+   * POST perform a write, which is the no-substitution rule. The field is DISABLED at rest, so a
    * button submit sends only the submitter's own intent.
    *
    * No keyboard shortcut opens the ceremony.
@@ -468,7 +468,7 @@ export function PostEditor({
           Cmd+S submits with no submitter, so without this the request would
           carry no `intent` at all and would depend on the server defaulting a
           missing one to "save". That default is gone: an absent intent on a
-          write path is refused, per hard rule 13. The shortcut handler enables
+          write path is refused, per the no-substitution rule. The shortcut handler enables
           this field for the duration of one submit.
 
           Disabled rather than absent so a normal button submit is untouched: a

@@ -1,7 +1,7 @@
 /**
  * The analytics path redaction: a preview token never reaches the dataset.
  *
- * REPLAYS THE DEFECT, per hard rule 12. Measured on production 2026-08-15, in
+ * REPLAYS THE DEFECT, per the replay rule. Measured on production 2026-08-15, in
  * the first real use of a draft preview link: the capture wrote `url.pathname`
  * verbatim, so the full 43-character capability landed in Analytics Engine and
  * `/admin/origin-requests` printed it as a row label.

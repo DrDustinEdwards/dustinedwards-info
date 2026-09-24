@@ -1,6 +1,6 @@
 /**
  * THE FOLD TARGET: Dustin's screen, as a page lays out on it. Any check that asks "is this above the
- * fold" measures at this viewport and imports it rather than restating it (hard rule 17).
+ * fold" measures at this viewport and imports it rather than restating it.
  *
  * His monitor is 1920x1080 at Windows 150% scaling with a bookmarks bar, so the page gets a 1280x593
  * CSS viewport at device pixel ratio 1.5. PR #84 measured "1920x890" as CSS pixels and reported the

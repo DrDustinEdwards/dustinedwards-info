@@ -141,7 +141,7 @@ export function isSourceFile(file) {
  * would have shipped claiming "placed by page code" on the strength of a
  * sentence describing the scanner.
  *
- * That is hard rule 10's comment-satisfied-anchor class, in the instrument
+ * That is the vacuity rule's comment-satisfied-anchor class, in the instrument
  * rather than in a gate, and it is the reason this is a tokenizer rather than a
  * regex. **A regex CANNOT do this job**: stripping from `//` to end of line
  * destroys every `https://` inside a string literal, and those strings are
@@ -206,7 +206,7 @@ export function stripComments(text, cssOnly = false) {
  * check passed it. What disqualifies it is the character BEFORE, `c`, which is
  * part of a longer path.
  *
- * Both are hard rule 10's unanchored-needle class. A reference is a whole path,
+ * Both are the vacuity rule's unanchored-needle class. A reference is a whole path,
  * so both of its ends have to be ends.
  *
  * @param {string} text the file contents

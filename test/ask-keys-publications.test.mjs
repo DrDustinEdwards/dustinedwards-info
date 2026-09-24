@@ -2,7 +2,7 @@
  * The Ask item key mapping, for papers and for the posts it already carried.
  *
  * REPLAYS THE DEFECT the change that added papers to the index nearly shipped,
- * per hard rule 12. `keyForUrl` was written for `/blog/<slug>`, which has no
+ * per the replay rule. `keyForUrl` was written for `/blog/<slug>`, which has no
  * trailing slash. A paper's page is `/publications/<slug>/` and the slash is
  * load-bearing (`citation_pdf_url` must sit in the page's own subdirectory), so
  * the untouched function produced `publications/<slug>/.md`: a key that names

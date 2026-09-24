@@ -8,7 +8,7 @@
  *
  * ## THIS FILE OWNS NO NUMBERS, AND THAT IS THE WHOLE CONSTRAINT
  *
- * Hard rule 17: a measured value lives in the gate or the function that
+ * The one-owner rule: a measured value lives in the gate or the function that
  * measures it, or nowhere. Every figure the overview prints comes out of the
  * verdict's own `counts`, which the verdict functions already compute and
  * already ship. What lives here is the NOUN and the VERB: what the check is

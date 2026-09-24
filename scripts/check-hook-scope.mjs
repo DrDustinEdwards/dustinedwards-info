@@ -231,7 +231,7 @@ const CASES = [
     cwd: root,
     backup: "fresh",
     expect: 2,
-    why: "ruling 131 opens data writes only; schema belongs to migrations under hard rule 14.",
+    why: "ruling 131 opens data writes only; schema belongs to migrations under the hand-written migration rule.",
   },
   {
     label: "a d1 --file is blocked even with a fresh backup",

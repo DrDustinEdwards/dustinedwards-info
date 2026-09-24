@@ -98,7 +98,7 @@ function isBlogPost() {
  * IT COMPOSES `isBlogPost()` ITSELF and takes only the EXTRA clauses. Written first to take a
  * finished `where` from the caller, which read fine and was wrong twice over: `check:invariants`
  * section 6 could not see a predicate in this body and failed it, correctly, and a future caller
- * could have passed a `where` without one and nothing would have said so. Hard rule 1 is a
+ * could have passed a `where` without one and nothing would have said so. The visibility rule is a
  * chokepoint, not a convention, so the predicate belongs where it cannot be left out.
  *
  * The years come from SQLite rather than from a JavaScript date: `publish_at` is epoch seconds,
@@ -199,7 +199,7 @@ export async function listBlogPosts(
 
   /* Filtered in the query, so the shipped HTML is already narrowed. The two filter clauses are
      kept apart from the predicate because `listingSpanSelect` composes its own: one narrowing,
-     two statements, and neither can be given a where that forgot hard rule 1. */
+     two statements, and neither can be given a where that forgot the visibility rule. */
   const narrowing: (SQL | undefined)[] = [];
   // Via `carriesTag`, shared with the tag archive and its feeds.
   if (tag) narrowing.push(carriesTag(db, tag));
@@ -282,7 +282,7 @@ export async function listBlogPosts(
 
 /**
  * The featured post leads, then the newest others; with nothing featured the newest leads.
- * Unlabelled, so not hard rule 13's substituted value. Hard rule 1: composes `isBlogPost()`.
+ * Unlabelled, so not the no-substitution rule's substituted value. The visibility rule: composes `isBlogPost()`.
  */
 export async function listHomeStartHere(
   env: Env,
@@ -1229,7 +1229,7 @@ export async function receiveWebmention(
       },
     })
     .returning({ id: webmentions.id });
-  /* Unreachable. Not zero, a valid-looking rowid (hard rule 13's shape). */
+  /* Unreachable. Not zero, a valid-looking rowid (the no-substitution rule's shape). */
   return rows[0]?.id ?? -1;
 }
 
@@ -1274,7 +1274,7 @@ export async function recordWebmentionVerdict(
 
 /**
  * Approved mentions, newest first. The EXISTS on `posts` puts this in section 6's scan,
- * so an unpublished post's mentions stay hidden. Hard rule 1 (hard rule 1's second paragraph).
+ * so an unpublished post's mentions stay hidden. The visibility rule (the visibility rule's second paragraph).
  */
 export async function approvedMentionsFor(env: Env, slug: string) {
   const db = getDb(env);

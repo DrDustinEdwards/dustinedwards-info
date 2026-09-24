@@ -5,7 +5,7 @@
  *   npm run check:invariants -- --remote    adds the live database
  *
  * It catches divergence between the two copies, not whether the rule is right.
- * Section 2 carries hard rule 1; section 4 carries hard rule 11.
+ * Section 2 carries the visibility rule; section 4 carries the schema-source rule.
  * Every section asserts its fixture and scan are non-empty.
  */
 
@@ -438,7 +438,7 @@ try {
 console.log("\n  4. columns agree across schema.ts, the migrations and the database");
 
 /**
- * Hard rule 11: columns from schema.ts, the migrations on an empty database, and live D1.
+ * The schema-source rule: columns from schema.ts, the migrations on an empty database, and live D1.
  * All derived, no column list here. Virtual, shadow and `sqlite_%` tables are excluded.
  */
 
@@ -602,7 +602,7 @@ try {
   /* the indexes */
 
   /*
-   * Hard rule 11 for indexes: names and ordered columns. Partial predicates, collations and
+   * The schema-source rule for indexes: names and ordered columns. Partial predicates, collations and
    * directions are skipped, drizzle cannot express them. Implicit indexes go by `origin`.
    */
   {
@@ -671,7 +671,7 @@ try {
     ok(
       "every index a migration creates is declared in schema.ts",
       missingInSchema.length === 0,
-      `schema.ts does not declare ${missingInSchema.join(", ")}. Hard rule 11: a ` +
+      `schema.ts does not declare ${missingInSchema.join(", ")}. The schema-source rule: a ` +
         `reader of the schema would conclude those queries run unindexed.`,
     );
 
@@ -797,7 +797,7 @@ try {
 /* 4a. search_docs is never queried through drizzle */
 
 /*
- * Hard rule 1 for `search_docs` is section 8's raw-SQL scan; section 6 knows only `posts`.
+ * The visibility rule for `search_docs` is section 8's raw-SQL scan; section 6 knows only `posts`.
  * So `searchDocs` in a query position is banned. To allow one, teach section 6 first.
  */
 
@@ -856,13 +856,13 @@ console.log("\n  4a. search_docs is modeled for the schema, never read through i
 
 /*
  * Removed: its literal matcher desyncs on regex literals. No gate checks raw-SQL column names.
- * Sections 7 and 8 guard hard rules 2 and 1.
+ * Sections 7 and 8 guard the per-table backup and visibility rules.
  */
 
 /* 6. every posts reader composes the predicate */
 
 /*
- * Hard rule 1 at the caller: every `.from(posts)` is in `app/db/index.ts`, and each function
+ * The visibility rule at the caller: every `.from(posts)` is in `app/db/index.ts`, and each function
  * there composes the predicate unless exempt by function name. Writes are out of scope.
  */
 
@@ -938,7 +938,7 @@ const VISIBILITY_EXEMPT = {
 };
 
 /**
- * Local names for `posts`, aliases included, so an alias cannot hide a hard rule 1 reader.
+ * Local names for `posts`, aliases included, so an alias cannot hide a visibility rule reader.
  *
  * @param {string} code comment-stripped source
  * @returns {string[]} local binding names
@@ -1068,7 +1068,7 @@ try {
     unexplainedOutside
       .map((f) => `${f.key} queries posts outside the DB layer`)
       .join("\n        ") +
-      "\n        A reader outside the one reviewable file is how hard rule 1 gets bypassed " +
+      "\n        A reader outside the one reviewable file is how the visibility rule gets bypassed " +
       "without anyone deciding to bypass it. If it is deliberate, add it to " +
       "CHOKEPOINT_EXEMPT with the reason.",
   );
@@ -1128,7 +1128,7 @@ try {
     unexplained
       .map((f) => `${CHOKEPOINT}::${f.name} queries posts with no visibility predicate`)
       .join("\n        ") +
-      "\n        Hard rule 1: every public read goes through publiclyVisible(). If this " +
+      "\n        The visibility rule: every public read goes through publiclyVisible(). If this " +
       "reader is deliberately exempt, add it to VISIBILITY_EXEMPT with the reason.",
   );
 
@@ -1155,8 +1155,8 @@ try {
 /* 7. no DELETE FROM or COUNT(*) on an FTS index */
 
 /*
- * Hard rule 2: `DELETE FROM` corrupts an fts5 index, and `COUNT(*)` reads the content table so
- * it cannot see drift. The rest of hard rule 2 is gated elsewhere. The index list is derived.
+ * The per-table backup rule: `DELETE FROM` corrupts an fts5 index, and `COUNT(*)` reads the content table so
+ * it cannot see drift. The rest of the per-table backup rule is gated elsewhere. The index list is derived.
  */
 
 console.log("\n  7. no DELETE FROM an FTS index, and no COUNT(*) on one");
@@ -1191,7 +1191,7 @@ try {
 
   /*
    * Scans whole source, not extracted literals, which desync on regex literals and hid a
-   * hard rule 2 violation. Occurrence is all this needs.
+   * the per-table backup rule violation. Occurrence is all this needs.
    */
   const SQLISH = /\b(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+TABLE|CREATE\s+VIRTUAL)\b/gi;
 
@@ -1259,7 +1259,7 @@ try {
     }
   }
 
-  /* A broken walk reports zero violations. Hard rule 10. */
+  /* A broken walk reports zero violations. The vacuity rule. */
   ok(
     "the source scan examined a plausible number of files",
     filesScanned >= 193,
@@ -1307,7 +1307,7 @@ try {
 /* 8. every search_docs reader composes the predicate */
 
 /*
- * Hard rule 1 for raw-SQL `search_docs` reads, which section 6 cannot see: directly via
+ * The visibility rule for raw-SQL `search_docs` reads, which section 6 cannot see: directly via
  * `visibilityClause(...)` or via `filters.clause`, whose builder is asserted too.
  */
 
@@ -1442,7 +1442,7 @@ try {
     unexplainedBare
       .map((r) => `${r.key} selects from search_docs with no visibility predicate`)
       .join("\n        ") +
-      "\n        Hard rule 1 reaches the search index too. Compose visibilityClause(), " +
+      "\n        The visibility rule reaches the search index too. Compose visibilityClause(), " +
       "passing NO_ALIAS for an unaliased query, or add the reader to " +
       "SEARCH_DOCS_EXEMPT with the reason.",
   );
@@ -1710,7 +1710,7 @@ try {
       "with LIKE, and a hand-built value that gets the empty case wrong produces " +
       "rows no needle matches.",
   );
-  /* No direct `tags` write assertion: its firing could not be shown (hard rule 10). */
+  /* No direct `tags` write assertion: its firing could not be shown. */
 
   console.log(
     `     3 fixture row(s), predicate ${JSON.stringify(clause)}`,
@@ -1823,7 +1823,7 @@ console.log("\n  11. the drift badge reads a cache, not the AI Search index");
    * Position is not reachability: a `continue` in the catch keeps the text order and skips
    * `live.add`, so the assertion reads what lies between the two.
    */
-  /* No backslash here: an escaped boundary can reach disk as a backspace byte (hard rule 12). */
+  /* No backslash here: an escaped boundary can reach disk as a backspace byte. */
   const ESCAPE_BEFORE_LIVE = /(^|[^A-Za-z])(continue|return|break|throw)([^A-Za-z]|$)/;
   const betweenFailAndLive = uploadBody.slice(
     uploadBody.indexOf("failed.push("),
@@ -2065,7 +2065,7 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
   /*
    * Presence and absence, not a read of VALUES, which `sync-content.mjs` builds from fragments.
    * The CHECK constraint (section 4) admits only 'page' or 'post'.
-   * Hard rule 10: the INSERT needle is anchored, or it also matches `posts_fts`.
+   * The vacuity rule: the INSERT needle is anchored, or it also matches `posts_fts`.
    */
   const WRITERS = [
     "app/lib/editor/publish.server.ts",
@@ -2105,14 +2105,14 @@ console.log("\n  14. every public page route is in the sitemap or exempt");
   );
 }
 
-/* ------- 15. every cited hard-rule number resolves to a rule ------------- */
+/* ------- 15. CLAUDE.md's rules are reachable ----------------------------- */
 
 /*
- * Every `hard rule N` citation must resolve to a `### N.` heading in CLAUDE.md. Paraphrases
- * (of hard rule 3, hard rule 9, hard rule 10, hard rule 15) are not checked.
+ * The file fits the context window and its rules come first. Rule numbers are no longer bound to
+ * the citations in comments; rulings 145 and 146 removed most of the rules they pointed at.
  */
 
-console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number resolves");
+console.log("\n  15. CLAUDE.md's rules are reachable");
 
 {
   const claudeMd = readFileSync(join(root, "CLAUDE.md"), "utf8");
@@ -2152,125 +2152,18 @@ console.log("\n  15. CLAUDE.md's rules are reachable, and every cited number res
       `and acts before it reaches the end. This section was LAST until ` +
       `2026-08-07, and therefore past the boundary entirely.`,
   );
-
-  /* Matched on "append-only": the sentence recording the unfreeze contains "frozen". */
-  ok(
-    "CLAUDE.md records that rule numbering is append-only",
-    /append-only/i.test(claudeText),
-    "without that note the next reader has no reason not to renumber.",
-  );
-
-  /** Rule numbers CLAUDE.md actually defines, from its `### N.` headings. */
-  const defined = new Set(
-    [...claudeMd.matchAll(/^### (\d+)\. /gm)].map((m) => Number(m[1])),
-  );
-
-  /* Scope: an empty `defined` set would report every citation as a broken comment. */
-  /*
-   * A floor, since numbering is append-only; one below the defined count is hard rule 10's
-   * over-wide threshold, in the gate that binds hard rule 10.
-   */
-  ok(
-    "CLAUDE.md defines numbered hard rules",
-    defined.size >= 19,
-    `parsed ${defined.size} rule heading(s) of the form "### N.". If this is 0 the ` +
-      `citation check below is measuring the parser, not the comments.`,
-  );
-
-  /** @type {string[]} */
-  const unresolved = [];
-  let cited = 0;
-  let scanned = 0;
-
-  /* Reads lists ("Hard rules 7, 10 and 12"), bounded to digits, commas and "and". */
-  const CITATION = /hard rules? ((?:\d+)(?:\s*(?:,|and)\s*\d+)*)/gi;
-
-  /* Root documents are in scope and named, because `sourceFiles` walks only code. */
-  const rootDocs = ["CLAUDE.md", "VERIFICATION.md", "README.md", "RECOVERY.md"];
-
-  const targets = [
-    ...rootDocs.map((name) => join(root, name)),
-    ...["app", "scripts", "workers", "test"].flatMap((dir) => [
-      ...sourceFiles(join(root, dir)),
-    ]),
-  ];
-
-  /** Citations found per root document, so the scope check can be specific. */
-  const perDoc = new Map(rootDocs.map((name) => [name, 0]));
-
-  for (const file of targets) {
-    const rel = relative(root, file).split(sep).join("/");
-    if (rel.endsWith(".d.ts")) continue;
-    scanned += 1;
-    const text = readFileSync(file, "utf8");
-    for (const m of text.matchAll(CITATION)) {
-      for (const part of m[1].split(/[^\d]+/).filter(Boolean)) {
-        cited += 1;
-        if (perDoc.has(rel)) perDoc.set(rel, (perDoc.get(rel) ?? 0) + 1);
-        const n = Number(part);
-        if (!defined.has(n)) unresolved.push(`${rel}: "hard rule ${n}"`);
-      }
-    }
-  }
-
-  /* Floors come from running this walk, never from counting files on disk. */
-  ok(
-    "the source walk found hard-rule citations to resolve",
-    scanned >= 230 && cited >= 118,
-    `scanned ${scanned} file(s) and found ${cited} citation(s). A zero-scope walk ` +
-      `resolves every citation it did not find. Measured 2026-08-24: 247 and 126.`,
-  );
-
-  /*
-   * The scanned floor cannot see the root documents drop out (hard rule 10's over-wide
-   * threshold). CLAUDE.md defines rules and cites none, so only VERIFICATION.md must cite.
-   */
-  const REQUIRED_CITERS = ["VERIFICATION.md"];
-  ok(
-    "the documents that cite hard rules were actually read, not just listed",
-    REQUIRED_CITERS.every((name) => (perDoc.get(name) ?? 0) > 0),
-    REQUIRED_CITERS.map((name) => `${name}: ${perDoc.get(name) ?? 0}`).join(", ") +
-      ` citation(s). Zero means the walk is not opening the document that cites ` +
-      `these rules most, and every citation in it resolves by not being looked at.`,
-  );
-
-  ok(
-    "every cited hard-rule number is defined in CLAUDE.md",
-    unresolved.length === 0,
-    `${unresolved.join(", ")}. The code cites a rule number CLAUDE.md does not ` +
-      `define, so a reader following the citation lands nowhere.`,
-  );
 }
 
-/* ------- 15b. four rules are bound to the behavior they describe -------- */
+/* ------- 15b. five former rules still hold in the code ---------------- */
 
 /*
- * Rules 4, 6, 13 and 14 make falsifiable claims about the tree. Each is asserted both ways:
- * the claim is still written, and the code still has the property.
+ * Rules 4, 6, 9, 13 and 14 are gone from CLAUDE.md (ruling 145: the check is the rule), so what
+ * remains is the property each described, asserted on the tree.
  */
 
-console.log("\n  15b. four rules are bound to the behavior they describe");
+console.log("\n  15b. five former rules still hold in the code");
 
 {
-  const claudeText = readFileSync(join(root, "CLAUDE.md"), "utf8").replace(/\r\n/g, "\n");
-
-  /** The body of one rule, from its heading to the next one. */
-  const ruleBody = (/** @type {number} */ n) => {
-    const start = claudeText.indexOf(`### ${n}. `);
-    if (start === -1) return "";
-    const next = claudeText.indexOf("\n### ", start + 1);
-    return next === -1 ? claudeText.slice(start) : claudeText.slice(start, next);
-  };
-
-  /* Scope first: a broken extractor would read as four rule defects. */
-  const bodies = [4, 6, 13, 14].map(ruleBody);
-  ok(
-    "the four bound rules were extracted from CLAUDE.md",
-    bodies.every((b) => b.length > 80),
-    `lengths ${bodies.map((b) => b.length).join(", ")}. A short body means the heading ` +
-      `shape moved and the claim assertions below are checking nothing.`,
-  );
-
   const files = (/** @type {string} */ dir) => {
     /** @type {string[]} */
     const out = [];
@@ -2292,31 +2185,26 @@ console.log("\n  15b. four rules are bound to the behavior they describe");
     `app ${appFiles.length}, scripts ${scriptFiles.length}`,
   );
 
-  /* -- rule 4 -------------------------------------------------------------- */
-  ok(
-    "rule 4 still claims client auth is imported by /login alone",
-    /login/.test(bodies[0]) && /auth/i.test(bodies[0]),
-    "rule 4 no longer makes the claim the assertion below checks",
-  );
+  /* -- client auth is imported by /login alone ----------------------------- */
   const authImporters = appFiles.filter((f) =>
     /from\s+["'][^"']*auth-client/.test(readFileSync(f, "utf8")),
   );
   ok(
-    "rule 4 holds: exactly one module imports the client auth helper",
+    "exactly one module imports the client auth helper",
     authImporters.length === 1 && (authImporters[0] ?? "").endsWith("login.tsx"),
     `imported by ${authImporters.map((f) => relative(root, f)).join(", ") || "nothing"}. ` +
-      `Rule 4 keeps the Worker lean by confining the client auth bundle to /login.`,
+      `This keeps the Worker lean by confining the client auth bundle to /login.`,
   );
 
 
-  /* -- rule 9 -------------------------------------------------------------- */
+  /* -- the login door works without script -------------------------------- */
   /*
-   * `/login` is public, so rule 9 applies: a posting form with a submit, and an action to
+   * `/login` is the only way in, so it needs a posting form with a submit, and an action to
    * receive it.
    */
   const loginPath = join(root, "app", "routes", "login.tsx");
   ok(
-    "rule 9's door: login.tsx exists",
+    "the login door: login.tsx exists",
     existsSync(loginPath),
     "the assertions below would examine nothing",
   );
@@ -2324,36 +2212,31 @@ console.log("\n  15b. four rules are bound to the behavior they describe");
     ? stripComments(readFileSync(loginPath, "utf8"))
     : "";
   ok(
-    "rule 9's door: the source was read and comments stripped",
+    "the login door: the source was read and comments stripped",
     loginCode.length > 400,
     `${loginCode.length} chars. This file explains the defect in prose, so an ` +
       `unstripped scan would find "form method post" in the explanation.`,
   );
   ok(
-    "rule 9 HOLDS: the only door posts a real form, so it works with script off",
+    "the login door posts a real form, so it works with script off",
     /<form\s+method="post"/.test(loginCode),
     "the sign-in control is script-only again: with scripting disabled the site " +
       "has no way in at all, which is what README promised was impossible",
   );
   ok(
-    "rule 9's door: something server-side receives that post",
+    "the login door: something server-side receives that post",
     /export\s+async\s+function\s+action\b/.test(loginCode),
     "a form with no action is a door that answers 405",
   );
   ok(
-    "rule 9's door: the control SUBMITS rather than only listening",
+    "the login door: the control SUBMITS rather than only listening",
     /type="submit"/.test(loginCode) && !/type="button"/.test(loginCode),
     "a type=button inside the form is the original defect wearing a form around it",
   );
-  /* -- rule 6 -------------------------------------------------------------- */
-  ok(
-    "rule 6 still claims the post path is stated ONCE by postPath()",
-    /postPath/.test(bodies[1]) && /ONCE/.test(bodies[1]),
-    "rule 6 no longer makes the claim the assertion below checks",
-  );
+  /* -- the post path is stated once, by postPath() ------------------------- */
   /*
    * Counts occurrences, not files: a second construction in the same file is the defect
-   * rule 6 describes.
+   * this describes.
    */
   const pathSites = [];
   for (const f of [...appFiles, ...scriptFiles]) {
@@ -2361,18 +2244,13 @@ console.log("\n  15b. four rules are bound to the behavior they describe");
     for (let i = 0; i < hits; i += 1) pathSites.push(relative(root, f));
   }
   ok(
-    "rule 6 holds: the post path is constructed in exactly one place",
+    "the post path is constructed in exactly one place",
     pathSites.length === 1,
     `constructed ${pathSites.length} time(s): ${pathSites.join(", ")}. ` +
-      `Rule 6 says this string is stated ONCE, by the exported postPath().`,
+      `This string is stated ONCE, by the exported postPath().`,
   );
 
-  /* -- rule 13 ------------------------------------------------------------- */
-  ok(
-    "rule 13 still names its two justified substitutions",
-    /JUSTIFIED SUBSTITUTION|justified/i.test(bodies[2]) && /REMOTE_ARGS/.test(bodies[2]),
-    "rule 13 no longer names the substitutions the assertion below counts",
-  );
+  /* -- the two justified substitutions are marked ------------------------- */
   /* This file's message contains the marker, so it is excluded by exact path, never a pattern. */
   const SELF = join(root, "scripts", "check-invariants.mjs");
   const scanned = [...appFiles, ...scriptFiles].filter((f) => f !== SELF);
@@ -2385,27 +2263,22 @@ console.log("\n  15b. four rules are bound to the behavior they describe");
     readFileSync(f, "utf8").includes("JUSTIFIED SUBSTITUTION"),
   );
   ok(
-    "rule 13 holds: every justified substitution is marked at its call site",
+    "every justified substitution is marked at its call site",
     marked.length === 2,
     `${marked.length} marked: ${marked.map((f) => relative(root, f)).join(", ")}. ` +
-      `Rule 13 names exactly two, so a third is an unrecorded exception and fewer ` +
+      `There are exactly two, so a third is an unrecorded exception and fewer ` +
       `means a marker was dropped. It was THREE until 2026-08-29, when the theme ` +
       `control became one button: the header stopped passing a resolved theme down, ` +
       `so the theme fallback that substitution covered no longer exists.`,
   );
 
-  /* -- rule 14 ------------------------------------------------------------- */
-  ok(
-    "rule 14 still claims drizzle-kit is deliberately absent",
-    /drizzle-kit/.test(bodies[3]),
-    "rule 14 no longer makes the claim the assertion below checks",
-  );
+  /* -- migrations are hand-written ---------------------------------------- */
   const pkg = readFileSync(join(root, "package.json"), "utf8");
   ok(
-    "rule 14 holds: drizzle-kit is absent from package.json",
+    "drizzle-kit is absent from package.json",
     !/drizzle-kit/.test(pkg),
-    "drizzle-kit is declared. Rule 14 says migrations are hand-written and the tool " +
-      "is deliberately absent, so either the tool goes or the rule does.",
+    "drizzle-kit is declared. Migrations are hand-written and the tool " +
+      "is deliberately absent, so either the tool goes or this check does.",
   );
 }
 
@@ -2740,7 +2613,7 @@ console.log("\n  18. the cutover checklist is complete and current");
     ["the 2017 delegation date", /2017-03-20/],
     ["the legacy origin address", /50\.116\.84\.36/],
     /*
-     * The HSTS revisit step. Needles are anchored (hard rule 10's unanchored-needle class), and
+     * The HSTS revisit step. Needles are anchored (the vacuity rule's unanchored-needle class), and
      * `preload` must sit within the HSTS step because the word has other uses here.
      */
     ["the HSTS cutover step", /Strict-Transport-Security/],
@@ -3601,7 +3474,7 @@ console.log("\n  26. CLAUDE.md's binding list is wrangler.jsonc.example's");
 }
 
 /*
- * A stale floor cannot fail (hard rule 10). Re-measure by running both branches, never by
+ * A stale floor cannot fail. Re-measure by running both branches, never by
  * arithmetic: each carried token is two assertions, so the count moves both ways.
  */
 console.log("\n  27. the runbook exists and names every secret");
@@ -3610,7 +3483,7 @@ console.log("\n  27. the runbook exists and names every secret");
  * The runbook's rotation table names every secret in `REQUIRED_SECRETS`, both directions: a
  * missing row costs an outage, an extra row sends someone to set a value nothing reads.
  * The owner is `app/lib/secrets.mjs`; wrangler config holds no secrets.
- * The needle is a backticked cell, never a bare mention (Hard rule 10).
+ * The needle is a backticked cell, never a bare mention.
  */
 {
   const runbookPath = join(root, "docs", "RUNBOOK.md");
@@ -3683,7 +3556,7 @@ console.log("\n  28. every rendered <img> states an intrinsic size, or its class
   const IMG_ROOTS = [join(root, "app", "routes"), join(root, "app", "components")];
 
   /**
-   * The exemption is read from the stylesheet, not a name list (hard rule 5's mirror
+   * The exemption is read from the stylesheet, not a name list (the border-strong rule's mirror
    * anti-pattern): a class rule declaring both `width` and `height` reserves the box.
    * Both, never one: width alone leaves height to the intrinsic ratio.
    * @type {Map<string, string>} class name -> the declaration block
@@ -3795,7 +3668,7 @@ console.log("\n  29. no tracked text file carries a raw control or invisible cha
 
 /*
  * No raw control byte or invisible character in a tracked text file: a shell-expanded escape
- * reaches disk as one byte and still looks right (hard rule 10). An intended one is written as an escape,
+ * reaches disk as one byte and still looks right. An intended one is written as an escape,
  * so a raw byte is a defect anywhere and no language parsing is needed.
  * Counts below 0x20 except tab, LF and CR; 0x7F; the BOM and the zero-width family.
  * Tracked files only; binaries skipped by extension.
@@ -3885,7 +3758,7 @@ console.log("\n  29. no tracked text file carries a raw control or invisible cha
 console.log("\n  30. no public control depends on script to be operable");
 
 /*
- * Hard rule 9 on the markup: a public control must work with scripting off.
+ * The progressive-enhancement rule on the markup: a public control must work with scripting off.
  * Admin is exempt; `/login` is not.
  * A form needs a native submission path: `onSubmit` without `method` fails; `method` without
  * `action` passes. A handler on a keyboard-reachable element is fine; on any other it fails.
@@ -3980,7 +3853,7 @@ console.log("\n  30. no public control depends on script to be operable");
   ok(
     "no public control depends on script to be operable",
     faults.length === 0,
-    `${faults.length} control(s) work only with script. Hard rule 9: works without script, fast with it, and the ` +
+    `${faults.length} control(s) work only with script. The progressive-enhancement rule: works without script, fast with it, and the ` +
       `admin plane is the only exemption:\n      ${faults.join("\n      ")}`,
   );
   console.log(
@@ -4064,7 +3937,7 @@ console.log("\n  31. every token is defined and used, and a component sheet stat
 
   /*
    * A mention in `scripts/check-*.mjs` does not make a token consumed. check:contrast requires
-   * every color token be named there, so counting it made (b) unfailable (Hard rule 10's class).
+   * every color token be named there, so counting it made (b) unfailable (The vacuity rule's class).
    * `referenced` still takes gate mentions for the undefined-name check; `consumed` does not.
    */
   let sourceMentions = 0;
@@ -4359,7 +4232,7 @@ console.log("\n  33. the Worker reaches the markdown renderer only by dynamic im
 /* The offline floor is measured by running this gate. The remote branch needs
    the live database, so its floor moves with the offline one rather than from a
    measurement of its own. */
-const MINIMUM_CHECKS = wantsRemote ? 474 : 432;
+const MINIMUM_CHECKS = wantsRemote ? 464 : 429;
 const floorBreach = assertFloor(
   "check:invariants",
   /*

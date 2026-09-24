@@ -1,7 +1,7 @@
 /**
  * Telling a RED gate from a CRASHED gate tier, in front of the deploy.
  *
- * REPLAYS THE DEFECT, per hard rule 12. On 2026-09-21 at ffd85ee, ship refused at the gate step
+ * REPLAYS THE DEFECT, per the replay rule. On 2026-09-21 at ffd85ee, ship refused at the gate step
  * with "a gate is red. Read the table above for the failing gate NAME before retrying" and
  * printed no table and no gate name; the same tier run standalone passed 35 of 35. The tier had
  * been killed under memory pressure, and `run()` collapsed a null status to exit 1, so ship had

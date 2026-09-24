@@ -5,7 +5,7 @@
  *
  * BOUNDARY: NETWORK TIER and it cannot be otherwise, a decisions volume being a Capsid document
  * with no disk to read, so a volume can pass its freeze point between runs. Nothing here restates
- * a limit, hard rule 17 putting that number in the volume that owns it, and frozen volumes PASS.
+ * a limit, the one-owner rule putting that number in the volume that owns it, and frozen volumes PASS.
  */
 
 import { assertFloor } from "./lib/floor.mjs";

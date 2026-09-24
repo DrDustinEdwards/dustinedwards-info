@@ -74,7 +74,7 @@ test("date does not mutate its input", () => {
  *
  * The first control written here was a null-as-zero sort, asserted to fail. IT DID NOT: 0 is below
  * every timestamp this corpus holds, so `?? 0` and `?? -Infinity` return the identical list and
- * the control agreed with everything. That is the failure hard rule 12 names, caught by running it.
+ * the control agreed with everything. That is the failure the replay rule names, caught by running it.
  *
  * A PRE-EPOCH DATE is what tells them apart, and it is not hypothetical on a site that cites
  * papers: a negative `publishAt` is any date before 1970. Under `?? 0` it sorts BELOW the undated

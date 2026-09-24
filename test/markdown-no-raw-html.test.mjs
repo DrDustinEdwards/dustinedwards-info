@@ -24,7 +24,7 @@
  * `allowDangerousHtml` is false at both stages and an `html` mdast node has no
  * hast equivalent to become. Raw HTML is therefore DROPPED, not escaped: a
  * document that is only a `<script>` renders as the empty string. Dangerous URL
- * protocols are refused separately by `rehypeUrlProtocols` (hard rule 6), which
+ * protocols are refused separately by `rehypeUrlProtocols`, which
  * emits the original text and records the refusal in `blockedUrls`.
  *
  * These are DEFAULTS, which is exactly why they are asserted. Adding

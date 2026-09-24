@@ -10,11 +10,11 @@
  * the module held two internal spellings of one grammar: `CONTENT_KEY_SHAPE`,
  * used by `isContentKey` and `digestFromKey`, and a private regex inside
  * `dimensionsFromKey`. A sweep looking for copies in OTHER files is blind to
- * two copies in the same file, which is the shape hard rule 17 is about.
+ * two copies in the same file, which is the shape the one-owner rule is about.
  *
  * ## The measurement that justified the collapse
  *
- * Hard rule 12: a refactor proves equivalence by DIFFERENTIAL, not by reading.
+ * The replay rule: a refactor proves equivalence by DIFFERENTIAL, not by reading.
  * Run 2026-08-26 over the cases below: 232 agreed, 2 DISAGREED, and the two
  * were real. The old inline spelling read `\d{1,5}` per axis and rejected zero
  * numerically afterwards, so it measured `-0800x600` as 800 by 600 while
@@ -117,7 +117,7 @@ const INPUTS = [...generatedInputs(), ...NEGATIVES];
 
 /**
  * The OLD spelling, lifted VERBATIM from `dimensionsFromKey` as it stood before
- * the collapse, at `f0527a3`. Hard rule 12: lift the old body, do not
+ * the collapse, at `f0527a3`. The replay rule: lift the old body, do not
  * paraphrase it, or the differential compares the new code against a memory of
  * the old code.
  */

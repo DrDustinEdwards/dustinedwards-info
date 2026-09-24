@@ -1,12 +1,12 @@
 /**
- * Gate over the secret-handling boundary hard rule 3 states.
+ * Gate over the secret-handling boundary the secrets-boundary rule states.
  *
  *   npm run check:secrets
  *
  * BOUNDARY: IT READS SOURCE TEXT, NOT THE BUNDLE, so a secret read inside a legitimate `.server`
  * module that a mis-split inlined into a client chunk is invisible here, and it says nothing
  * about whether a secret is USED correctly once read. The boundary is BY PATH, and strictly:
- * loaders and actions are not carved out even though hard rule 3's prose permits it.
+ * loaders and actions are not carved out even though the secrets-boundary rule's prose permits it.
  */
 
 import { spawnSync } from "node:child_process";
@@ -208,7 +208,7 @@ for (const file of files) {
 
 /*
  * ANTI-VACUITY, and it is what makes the one below mean something: a broken matcher finds zero
- * reads and reports zero violations, indistinguishable from a clean repo. Hard rule 10.
+ * reads and reports zero violations, indistinguishable from a clean repo. The vacuity rule.
  */
 ok(
   "the scan actually found secret reads to classify",
@@ -247,7 +247,7 @@ for (const [name, reason] of Object.entries(CLIENT_ALLOWED)) {
 
 /*
  * SELF-TEST on EVERY execution regardless of the allowlist: the map is empty, which is CORRECT,
- * so the loop above iterates zero times and its rules could be inverted unnoticed. Hard rule 10.
+ * so the loop above iterates zero times and its rules could be inverted unnoticed. The vacuity rule.
  * NOT a fixture entry in the real allowlist, which would put a fake permission in the structure
  * that grants them; the rules live in a function the real loop and the self-test both call.
  */
@@ -346,7 +346,7 @@ if (existsSync(examplePath)) {
  * Worker never sees. **It must never reach git.** TWO ASSERTIONS, AND THE FIRST WORKS WITHOUT THE
  * FILE: the SHAPE scan runs everywhere, the EXACT-VALUE scan only where the file exists. The
  * pairing is deliberate, a conditional assertion that could pass by reading nothing being exactly
- * what hard rule 10 warns about.
+ * what the vacuity rule warns about.
  */
 {
   const lsFiles = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
@@ -366,7 +366,7 @@ if (existsSync(examplePath)) {
   );
 
   // REUSES `gitIgnores` rather than spelling check-ignore twice: one helper, one argument order,
-  // which is hard rule 10's ninth discipline.
+  // which is the vacuity rule's ninth discipline.
   ok(
     ".dev.vars is ignored by git",
     gitIgnores(".dev.vars"),
@@ -411,7 +411,7 @@ if (existsSync(examplePath)) {
     }
     if (UPTIMEROBOT_SHAPE.test(text)) shapeHits.push(rel);
     // Guarded on length, or an empty value matches every file and reports a plausible number, which
-    // is hard rule 10's empty needle.
+    // is the vacuity rule's empty needle.
     for (const [what, value] of [
       ["UPTIMEROBOT_API_KEY", uptimeKey],
       ["CLOUDFLARE_API_TOKEN", cloudflareToken],

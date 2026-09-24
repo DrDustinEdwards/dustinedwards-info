@@ -128,7 +128,7 @@ const optBody = dbBare.slice(optOpen + 1, optClose);
 const AXES = [...optBody.matchAll(/^\s*(\w+)\??:/gm)].map((m) => m[1]);
 
 /*
- * SCOPE NON-EMPTINESS, hard rule 10: every per-axis assertion below is vacuous if this list is
+ * SCOPE NON-EMPTINESS, the vacuity rule: every per-axis assertion below is vacuous if this list is
  * empty. The floor is the count MEASURED when this gate was written, so losing an axis from the
  * signature fails here rather than quietly shrinking the gate.
  */

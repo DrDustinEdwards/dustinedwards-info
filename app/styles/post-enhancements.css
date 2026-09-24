@@ -166,7 +166,7 @@
 }
 
 /* The close button makes dismissal discoverable. Positioned against the dialog, which is why the dialog
-   keeps overflow: visible. --border-strong, never --border, which does not hold over a scrim (hard rule 5). */
+   keeps overflow: visible. --border-strong, never --border, which does not hold over a scrim. */
 .lightbox-close {
   position: absolute;
   top: 0;

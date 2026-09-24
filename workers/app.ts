@@ -156,9 +156,9 @@ function applySecurityHeaders(headers: Headers) {
  * comment, a showcase listing only its wins being an advertisement.
  *
  * `style-src-attr 'unsafe-inline'` is deliberate and must not be "fixed"; the measurement is on the
- * directive in `./csp.mjs`, the only copy. **THE ROUTE LIST IS NOT REPEATED HERE**, hard rule 8's
+ * directive in `./csp.mjs`, the only copy. **THE ROUTE LIST IS NOT REPEATED HERE**, the cache-header rule's
  * habit: `check:headers` owns it both ways, and the paragraph that restated it was wrong three
- * times, once calling a route `private, no-store` when it fell through to hard rule 8's default.
+ * times, once calling a route `private, no-store` when it fell through to the cache-header rule's default.
  *
  * THE BUILDER IS IN `./csp.mjs` AS A GATE REQUIREMENT: source text can see two branches exist but
  * not which one a request gets, and a module can be imported and called.
@@ -237,7 +237,7 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
  * count of MISSES, looking like readership while moving with cache behavior.
  *
  * It owns what belongs to the DOCUMENT, the nonce, render, timing and security headers, the CSP and
- * hard rule 8's uncached default, because a header stamped after the cache is absent from every hit.
+ * the cache-header rule's uncached default, because a header stamped after the cache is absent from every hit.
  */
 export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
   override async fetch(request: Request): Promise<Response> {
@@ -305,7 +305,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     /*
      * The three conditions a hand-written store block used to check are the platform's own answers
      * now: the response says whether it is storable, the cache takes GET and HEAD only, and a
-     * `Set-Cookie` response is an automatic bypass. What survives as this file's rule is hard rule 8's
+     * `Set-Cookie` response is an automatic bypass. What survives as this file's rule is the cache-header rule's
      * default below, which is what makes a route that says nothing refuse.
      */
 
@@ -362,7 +362,7 @@ export default {
      * PLAINTEXT GOES TO HTTPS BEFORE ANYTHING ELSE HAPPENS; the grounds are on the predicate.
      *
      * `no-store` is load-bearing: the scheme is NOT in the cache key, so a stored redirect would be
-     * handed to HTTPS readers and send them where they already asked. Hard rule 8 makes an absent
+     * handed to HTTPS readers and send them where they already asked. The cache-header rule makes an absent
      * Cache-Control a CACHED response. It stays even though the gateway is cache disabled, because the
      * property should not depend on which entrypoint somebody moves this to.
      */
@@ -381,7 +381,7 @@ export default {
      *
      * The position is the design: after the HTTPS redirect, and before the cache loopback, because
      * everything past that line either stores a response or renders one. Both representations are
-     * handled by the predicate. `no-store` for the reason the redirect above states, hard rule 8
+     * handled by the predicate. `no-store` for the reason the redirect above states, the cache-header rule
      * making an absent Cache-Control a CACHED response.
      */
     const renamed = postRedirectTarget(url.pathname, redirects.posts);

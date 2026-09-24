@@ -21,11 +21,11 @@ that as the scope, not as a shortfall.
   exports: PostCard, Pagination, SiteLogo, SiteLogoHeader" until 2026-09-21,
   by which time the real numbers were 29 sheets and three faces and PostCard and
   Pagination had been deleted from the repo. A count restated in prose is a
-  second owner (hard rule 17) and this is what it costs.
+  second owner and this is what it costs.
 - **Out, and why:** `site-header` and `site-footer` are page singletons.
   `theme-toggle`, `ask-panel`, `search-trigger`, `blog-enhancements`,
   `site-speculation` and `enhancement-script` exist to inject the nonced
-  enhancement bundles hard rule 4 requires; `theme-toggle` additionally imports
+  enhancement bundles the no-framework-script rule requires; `theme-toggle` additionally imports
   `~/enhance/dist/theme.js?url`, a Vite specifier esbuild does not resolve.
   Nothing there is composable by a design agent. The header and footer still
   reach the pane, as PREVIEW CARDS rather than components; see "The preview
@@ -122,7 +122,7 @@ Claude Design's self-check scrapes tokens by flattening the stylesheet WITHOUT
 media context and taking the last value, so promoted values were reported as the
 base palette. Measured 2026-09-12 in the uploaded `_ds_manifest.json`:
 `--border` read as `#6e6459`, which is what `--border-strong` already is, so the
-two arrived at the design agent as THE SAME COLOUR and hard rule 5 became
+two arrived at the design agent as THE SAME COLOUR and the border-strong rule became
 unfollowable. An agent cannot honor a distinction it cannot see.
 
 Do not "fix" this by reordering the tier to win the scraper: a media block adds

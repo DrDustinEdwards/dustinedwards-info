@@ -24,14 +24,14 @@ import "~/styles/projects.css";
 /**
  * /projects, the portfolio index.
  *
- * NO SCRIPT AT ALL, which is stronger than hard rule 9 asks for and is a property
+ * NO SCRIPT AT ALL, which is stronger than the progressive-enhancement rule asks for and is a property
  * of this route: no loader, no client state, no enhancement, so it is a pure
  * function from committed data to markup.
  *
  * TWO PROVENANCES ARE POSSIBLE AND A METRIC DECLARES EXACTLY ONE: a DATED
  * observation, whose date is rendered because an undated number rots silently, or
  * a DERIVATION this build ran, which cannot rot and carries no date. A dated
- * number that is also derivable is a second copy, which is what hard rule 17
+ * number that is also derivable is a second copy, which is what the one-owner rule
  * refuses.
  *
  * CARDS ON THE CANVAS ARE LEGAL HERE: binding rule 7 reserves them for indexes,
@@ -84,7 +84,7 @@ const TITLE = PROJECTS_TITLE;
 const DESCRIPTION = PROJECTS_DESCRIPTION;
 
 /**
- * Exporting no `headers()` falls through to hard rule 8's uncached default, so
+ * Exporting no `headers()` falls through to the cache-header rule's uncached default, so
  * every reader paid an origin hit for a page whose body is identical for all of
  * them. Using the shared helper rather than a fifth copy is what stops the Vary
  * line being dropped here later.

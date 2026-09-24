@@ -252,7 +252,7 @@ export function enhancementAssets() {
 }
 
 /**
- * ONE WALKER, ONE ARGUMENT ORDER, hard rule 10's helper-signature line: two copies agree until
+ * ONE WALKER, ONE ARGUMENT ORDER, the vacuity rule's helper-signature line: two copies agree until
  * one gains an extension.
  *
  * @param {string} dir
@@ -363,7 +363,7 @@ async function main() {
   }
   rmSync(scratch, { recursive: true, force: true });
   /*
-   * NOT an `assertFloor`: this counts BUILT CHUNKS, a SCOPE floor in the sense of hard rule 10,
+   * NOT an `assertFloor`: this counts BUILT CHUNKS, a SCOPE floor in the sense of the vacuity rule,
    * and the bundler's splitting would read to `check:floors` as drift.
    */
   ok(
@@ -414,7 +414,7 @@ async function main() {
   /*
    * **This does NOT read the build log.** The criterion is derived from SOURCE: a dynamic import
    * splits nothing when some module in the same graph imports it statically. The one it judges is
-   * the CodeMirror split, which hard rule 4 names.
+   * the CodeMirror split, which the no-framework-script rule names.
    */
   const importScopeDirs = [join(root, "app"), join(root, "workers")];
   const importScope = importScopeDirs.flatMap((dir) => walkSource(dir));
@@ -558,7 +558,7 @@ function gradeBuildOnlyDependencies() {
   );
   /*
    * SCOPE, ASSERTED. A walk that read nothing agrees with a clean tree, which
-   * is the zero-scope class in hard rule 10.
+   * is the zero-scope class in the vacuity rule.
    */
   const scanned = walkSource(join(root, "app")).length + walkSource(join(root, "workers")).length;
   ok(
@@ -1245,7 +1245,7 @@ const HTML_UNMEASURED = {
 
 /**
  * A floor on the routes this section renders, so a harness that quietly stops working reports a
- * clean sweep of nothing. Hard rule 10: a pass count is not coverage.
+ * clean sweep of nothing. The vacuity rule: a pass count is not coverage.
  */
 const MINIMUM_ROUTES_RENDERED = 12;
 

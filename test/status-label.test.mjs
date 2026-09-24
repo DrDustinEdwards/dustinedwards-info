@@ -4,7 +4,7 @@
  * Replays the colophon defect. `STATUS_LABEL[s] ?? s` rendered the raw enum
  * when a label was missing, which looked like working output ON THE PAGE and IN
  * THE SEARCH INDEX at the same time, so every surface agreed and every surface
- * was wrong. Hard rule 13: a fallback that substitutes a DIFFERENT VALUE is not
+ * was wrong. The no-substitution rule: a fallback that substitutes a DIFFERENT VALUE is not
  * failing closed.
  *
  * The positive cases matter as much as the throw. A "fix" that threw on

@@ -11,7 +11,7 @@
  *
  * UNMAPPED FALLS BACK TO THE WHOLE OFFLINE TIER, which is the one decision that keeps this honest:
  * a mapping that quietly skipped a path it did not recognize would report a clean run over checks
- * that never executed, which is hard rule 10's class of failure.
+ * that never executed, which is the vacuity rule's class of failure.
  */
 
 import { spawnSync } from "node:child_process";

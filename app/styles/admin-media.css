@@ -853,7 +853,7 @@
 }
 
 /* The popover. `<details>` so it opens with no script; the panel is the
-   elevated step, so it takes --border-strong. Hard rule 5. */
+   elevated step, so it takes --border-strong. The border-strong rule. */
 .media-display {
   position: relative;
 }
@@ -1582,7 +1582,7 @@
   }
 }
 
-/* Draft preview links, in the drawer: popover step, so --border-strong, never --border (hard rule 5).
+/* Draft preview links, in the drawer: popover step, so --border-strong, never --border.
  * Not a .slug-line: the meta column must shrink while two actions keep their width. */
 .preview-link-list {
   display: grid;

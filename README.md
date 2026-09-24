@@ -25,7 +25,7 @@ consequence of it.
   includes the ADMIN DOOR: `/login` is a real form, and the browser client is
   layered on top of it. The admin plane behind that door is exempt, hydrates,
   and does use script. This used to read "zero JavaScript", which was the
-  wrong name for the law (hard rule 9 calls it progressive enhancement) and
+  wrong name for the law (the progressive-enhancement rule calls it progressive enhancement) and
   was also untrue at the door, where the only way in was a button that did
   nothing without script.
 
