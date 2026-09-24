@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import paletteEnhanceUrl from "~/enhance/dist/palette.js?url";
+import { ENHANCE_URLS } from "~/components/enhance";
 import paletteDialogCss from "~/styles/palette-dialog.css?url";
 import askCss from "~/styles/ask.css?url";
 
@@ -20,7 +20,7 @@ export function SearchTrigger() {
         to="/search"
         className="search-trigger"
         data-search-trigger=""
-        data-palette={paletteEnhanceUrl}
+        data-palette={ENHANCE_URLS.palette}
         data-palette-css={`${paletteDialogCss},${askCss}`}
         aria-label="Search"
         aria-describedby={HINT_ID}

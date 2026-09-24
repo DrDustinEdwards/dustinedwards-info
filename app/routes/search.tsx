@@ -1,9 +1,7 @@
 import { Form, Link } from "react-router";
 
-import searchEnhanceUrl from "~/enhance/dist/search.js?url";
-
 import { AskMount } from "~/components/ask-panel";
-import { EnhancementScript } from "~/components/enhancement-script";
+import { Enhance } from "~/components/enhance";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getEnv, getExecutionContext } from "~/lib/context";
@@ -321,7 +319,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </ul>
         ) : null}
 
-        <EnhancementScript src={searchEnhanceUrl} />
+        <Enhance module="search" />
 
         {askAvailable && (params.q ?? "").trim().length > 0 ? (
           <AskMount question={params.q ?? ""} />
