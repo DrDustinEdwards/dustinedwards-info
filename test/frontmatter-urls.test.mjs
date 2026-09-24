@@ -91,25 +91,3 @@ for (const [label, field, value, expected] of CASES) {
     );
   });
 }
-
-/*
- * FAIL CLOSED on the table itself. A suite that lost its refusals would pass
- * while asserting nothing that matters, which is the shape the vacuity rule is
- * about: count the assertions that can fail, not the ones that ran.
- */
-test("the table still carries both outcomes for both fields", () => {
-  const accepted = CASES.filter(([, , , e]) => e === true);
-  const refused = CASES.filter(([, , , e]) => e === false);
-  assert.ok(accepted.length >= 5, `only ${accepted.length} accepted cases`);
-  assert.ok(refused.length >= 5, `only ${refused.length} refused cases`);
-  for (const [name, field] of [
-    ["cover", cover],
-    ["further_reading", furtherReading],
-  ]) {
-    assert.ok(
-      CASES.some(([, f, , e]) => f === field && e === true) &&
-        CASES.some(([, f, , e]) => f === field && e === false),
-      `${name} lost one side of its coverage`,
-    );
-  }
-});

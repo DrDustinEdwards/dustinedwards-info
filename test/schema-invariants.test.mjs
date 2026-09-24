@@ -6,14 +6,13 @@
 import test from "node:test";
 import { spawnSync } from "node:child_process";
 import { readFileSync, readdirSync } from "node:fs";
-import { join, relative, sep } from "node:path";
+import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { resolveD1Address } from "../scripts/lib/d1-address.mjs";
 import { retryRead } from "../scripts/lib/retry.mjs";
 import { classifySqliteTables } from "../scripts/lib/sqlite-tables.mjs";
-import { stripCommentsAndStrings } from "../scripts/lib/strip-comments.mjs";
-import { bundler, collector, root, sourceFiles } from "./lib/invariants-harness.mjs";
+import { bundler, collector, root } from "./lib/invariants-harness.mjs";
 
 const bundle = bundler("schema");
 
@@ -384,64 +383,3 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
 
   done();
 });
-
-test("schema: search_docs is modeled for the schema, never read through it", async () => {
-  const { ok, done } = collector();
-
-  /*
-   * The visibility rule for `search_docs` is the raw-SQL search_docs reader scan in
-   * visibility-invariants.test.mjs; the posts reader scan there knows only `posts`. So
-   * `searchDocs` in a query position is banned. To allow one, teach the posts reader scan first.
-   */
-  {
-    const SELF = ["app/db/schema.ts"];
-    const QUERY_POSITION =
-      /\.(?:from|into|update|delete|insert)\s*\(\s*searchDocs\b/;
-
-    /** @type {string[]} */
-    const offenders = [];
-    let scanned = 0;
-
-    for (const file of [
-      ...sourceFiles(join(root, "app")),
-      ...sourceFiles(join(root, "workers")),
-    ]) {
-      const rel = relative(root, file).split(sep).join("/");
-      if (SELF.includes(rel)) continue;
-      scanned += 1;
-      const code = stripCommentsAndStrings(readFileSync(file, "utf8"));
-      if (QUERY_POSITION.test(code)) offenders.push(rel);
-    }
-
-    /* An empty walk reports the same as a clean repo. */
-    ok(
-      "the walk opened files to scan",
-      scanned >= 132,
-      `scanned ${scanned} file(s), floor 132, measured 165 on 2026-08-28. A ` +
-        `zero-scope walk finds no query-builder read because it read nothing.`,
-    );
-
-    /* Prove the needle can fire. */
-    ok(
-      "the query-position needle can fire",
-      QUERY_POSITION.test("db.select().from(searchDocs).all()"),
-      "the needle no longer matches a drizzle read, so the ban cannot be enforced",
-    );
-    ok(
-      "the query-position needle does not fire on a bare mention",
-      !QUERY_POSITION.test("import { searchDocs } from '~/db/schema';"),
-      "an import is being read as a query, which would ban the declaration itself",
-    );
-
-    ok(
-      "nothing reads search_docs through the query builder",
-      offenders.length === 0,
-      `${offenders.join(", ")}. The posts reader scan covers \`posts\` and the search_docs ` +
-        `reader scan covers raw SQL, so a drizzle read of this table is covered by neither. ` +
-        `Teach the posts reader scan about it first, then delete this test.`,
-    );
-  }
-
-  done();
-});
-

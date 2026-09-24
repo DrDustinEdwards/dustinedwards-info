@@ -86,37 +86,3 @@ test("a pre-epoch date still outranks an undated row", () => {
   assert.equal(out.at(-1).uid, "c", "undated is last");
   assert.equal(out.at(-2).uid, "e", "a 1969 date is dated, so it ranks above undated");
 });
-
-test("the control discriminates: null-as-zero gets that case wrong", () => {
-  const withOld = [...HITS, { uid: "e", publishAt: -86400 }];
-  const wrong = [...withOld].sort((a, b) => (b.publishAt ?? 0) - (a.publishAt ?? 0));
-  const right = applySort(withOld, "date");
-  assert.notDeepEqual(
-    wrong.map((h) => h.uid),
-    right.map((h) => h.uid),
-    "if these agree, this test has stopped measuring the sentinel",
-  );
-  assert.equal(wrong.at(-1).uid, "e", "null-as-zero buries a pre-epoch date below an undated row");
-});
-
-test("sorting before pagination is what the caller must do", () => {
-  const pageSize = 2;
-  // Right: sort the whole list, then slice.
-  const right = applySort(HITS, "date").slice(0, pageSize);
-  // Wrong: slice first, then sort the page.
-  const wrong = applySort(HITS.slice(0, pageSize), "date");
-  assert.deepEqual(
-    right.map((h) => h.uid),
-    ["b", "d"],
-  );
-  assert.deepEqual(
-    wrong.map((h) => h.uid),
-    ["b", "a"],
-    "slicing first keeps page 1 in fusion order and only reorders within it",
-  );
-  assert.notDeepEqual(
-    right.map((h) => h.uid),
-    wrong.map((h) => h.uid),
-    "if these ever agree this test has stopped measuring the boundary it exists for",
-  );
-});

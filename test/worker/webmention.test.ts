@@ -1,14 +1,17 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
-import { RouterContextProvider } from "react-router";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { RouterContextProvider, createRoutesStub } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { approvedMentionsFor } from "~/db";
 import { cloudflareContext } from "~/lib/context";
+import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { FAILURE_REASONS } from "~/lib/webmention/verify.server";
 import { middleware as adminMiddleware } from "~/routes/admin";
-import {
+import AdminMentions, {
   action as mentionsAction,
   loader as mentionsLoader,
 } from "~/routes/admin.mentions";
@@ -147,6 +150,55 @@ async function mentionRow(sourceUrl: string) {
       failure_reason: string | null;
       target_slug: string;
     }>();
+}
+
+/** Insert one row directly, so a case can start from a state it chose. */
+async function seedMention(
+  sourceUrl: string,
+  status: string,
+  receivedDaysAgo: number,
+): Promise<number> {
+  const received = Math.floor((Date.now() - receivedDaysAgo * 24 * 60 * 60 * 1000) / 1000);
+  await env.DB.prepare(
+    `INSERT INTO webmentions (source_url, target_slug, status, received_at, excerpt)
+     VALUES (?1, ?2, ?3, ?4, 'An excerpt.')`,
+  )
+    .bind(sourceUrl, TARGET_SLUG, status, received)
+    .run();
+  const row = await env.DB.prepare(`SELECT id FROM webmentions WHERE source_url = ?1`)
+    .bind(sourceUrl)
+    .first<{ id: number }>();
+  return row?.id ?? -1;
+}
+
+/** The moderation page as the server renders it, from real loader and action data. */
+function renderMentionsPage(url: string, loaderData: unknown, actionData?: unknown) {
+  const Stub = createRoutesStub([
+    {
+      path: "/admin/mentions",
+      Component: () =>
+        createElement(AdminMentions as never, { loaderData, actionData, params: {}, matches: [] }),
+    },
+  ]);
+  return renderToStaticMarkup(createElement(Stub, { initialEntries: [url] }));
+}
+
+/** The text content of every element matching `selector`, in document order. */
+async function textsOf(html: string, selector: string): Promise<string[]> {
+  const texts: string[] = [];
+  await new HTMLRewriter()
+    .on(selector, {
+      element() {
+        texts.push("");
+      },
+      text(chunk) {
+        const last = texts.length - 1;
+        texts[last] = (texts[last] ?? "") + chunk.text;
+      },
+    })
+    .transform(new Response(html))
+    .text();
+  return texts.map((t) => t.replace(/\s+/g, " ").trim());
 }
 
 beforeEach(async () => {
@@ -650,25 +702,28 @@ describe("/webmention bound 3: one row per source and target", () => {
 });
 
 describe("the admin plane refuses the smoke actor", () => {
-  it("REFUSES a POST carrying the smoke credential before any action runs", async () => {
-    /*
-     * THE MECHANISM IS THE LAYOUT MIDDLEWARE'S METHOD ALLOWLIST, and this case
-     * drives it rather than `/admin/mentions`, because that is where the rule
-     * lives. The moderation route deliberately holds no capability read of its
-     * own: the `WRITE_CAPABILITIES` table is consulted by `decide()` and
-     * `decideDelete()` on the publish path, and none of the mention actions is
-     * a publish, so a second check there would be a second owner of one rule.
-     *
-     * Asserted through the middleware with a real SMOKE_TOKEN and no admin
-     * session, which is exactly the state a CI sweep is in. The refusal must
-     * arrive BEFORE `next()`, so the child never runs and nothing has read a
-     * row by the time it is written.
-     */
-    const token = "smoke-token-0123456789abcdef0123456789";
-    expect(token.length).toBeGreaterThanOrEqual(32);
+  /** A request through the admin layout's middleware and then the moderation action, in route order. */
+  async function throughAdminStack(request: Request, context: RouterContextProvider) {
+    const args = { request, context, params: {} } as never;
+    const run = async (index: number): Promise<unknown> => {
+      const handler = adminMiddleware[index] as unknown as
+        | ((a: never, next: () => Promise<unknown>) => Promise<unknown>)
+        | undefined;
+      return handler ? handler(args, () => run(index + 1)) : mentionsAction(args);
+    };
+    try {
+      return await run(0);
+    } catch (thrown) {
+      return thrown;
+    }
+  }
 
+  it("REFUSES a POST carrying the smoke credential, and the row survives", async () => {
+    const source = "https://elsewhere.example/smoke-target";
+    const id = await seedMention(source, "rejected", 1);
+
+    const token = "smoke-token-0123456789abcdef0123456789";
     const ctx = createExecutionContext();
-    const context = routeContext(ctx, { SMOKE_TOKEN: token });
     const request = new Request(`${SITE_ORIGIN}/admin/mentions`, {
       method: "POST",
       headers: {
@@ -676,51 +731,20 @@ describe("the admin plane refuses the smoke actor", () => {
         origin: SITE_ORIGIN,
         "content-type": "application/x-www-form-urlencoded",
       },
-      body: "intent=delete&id=1",
+      body: new URLSearchParams({ intent: "delete", id: String(id), [CONFIRM_FIELD]: "1" }),
     });
 
-    let childRan = false;
-    let thrown: unknown;
-    try {
-      await (adminMiddleware[0] as never as (
-        args: { request: Request; context: RouterContextProvider },
-        next: () => Promise<Response>,
-      ) => Promise<Response>)({ request, context }, async () => {
-        childRan = true;
-        return new Response("the child ran");
-      });
-    } catch (error) {
-      thrown = error;
-    }
+    const outcome = await throughAdminStack(request, routeContext(ctx, { SMOKE_TOKEN: token }));
 
-    expect(childRan).toBe(false);
-    expect(thrown).toBeInstanceOf(Response);
-    const refusal = thrown as Response;
+    expect(outcome).toBeInstanceOf(Response);
+    const refusal = outcome as Response;
     expect(refusal.status).toBe(403);
     expect(await refusal.text()).toContain(SMOKE_READ_ONLY_POLICY);
+    expect(await mentionRow(source)).not.toBeNull();
   });
 });
 
 describe("the moderation queue", () => {
-  /** Insert one row directly, so a case can start from a state it chose. */
-  async function seedMention(
-    sourceUrl: string,
-    status: string,
-    receivedDaysAgo: number,
-  ): Promise<number> {
-    const received = Math.floor((Date.now() - receivedDaysAgo * 24 * 60 * 60 * 1000) / 1000);
-    await env.DB.prepare(
-      `INSERT INTO webmentions (source_url, target_slug, status, received_at, excerpt)
-       VALUES (?1, ?2, ?3, ?4, 'An excerpt.')`,
-    )
-      .bind(sourceUrl, TARGET_SLUG, status, received)
-      .run();
-    const row = await env.DB.prepare(`SELECT id FROM webmentions WHERE source_url = ?1`)
-      .bind(sourceUrl)
-      .first<{ id: number }>();
-    return row?.id ?? -1;
-  }
-
   function adminPost(body: Record<string, string>) {
     return new Request(`${SITE_ORIGIN}/admin/mentions`, {
       method: "POST",
@@ -876,12 +900,15 @@ describe("the moderation queue", () => {
     expect(await statusOf("https://elsewhere.example/ancient-approved")).toBe("approved");
   });
 
-  it("REFUSES an id that is not a positive integer", async () => {
-    for (const id of ["", "0", "-3", "abc", "1.5"]) {
-      const result = await runAction({ intent: "delete", id, "confirm-count": "1" });
-      expect(result.data.message, `id ${JSON.stringify(id)} was not refused`).toContain(
-        "not valid",
-      );
+  it("REFUSES an id that is not a positive integer, and deletes nothing", async () => {
+    const source = "https://elsewhere.example/near-miss-id";
+    const id = await seedMention(source, "rejected", 1);
+
+    /* Each bad id sits one lenient parse away from the real row's id. */
+    for (const bad of ["", "0", `-${id}`, `${id}.5`, `${id}abc`]) {
+      const result = await runAction({ intent: "delete", id: bad, [CONFIRM_FIELD]: "1" });
+      expect(result.data.ok, `id ${JSON.stringify(bad)} was not refused`).toBe(false);
+      expect(await statusOf(source), `id ${JSON.stringify(bad)} reached the row`).toBe("rejected");
     }
   });
 
@@ -927,21 +954,25 @@ describe("the moderation queue", () => {
     expect(badId.data.message).toBeTruthy();
   });
 
-  /* A CONFIRMATION STEP IS NEITHER. It carries no message at all, so the page
-     renders no box and shows the second step instead, which is the whole
-     ceremony `app/lib/destructive.mjs` asks for. */
-  it("LEAVES ok UNSET on a confirmation step, so neither box renders", async () => {
-    const id = await seedMention("https://elsewhere.example/pending-confirm", "rejected", 1);
+  it("A CONFIRMATION STEP renders the second step, no outcome, and keeps the rows", async () => {
+    const source = "https://elsewhere.example/pending-confirm";
+    const id = await seedMention(source, "rejected", 1);
+    await seedMention("https://elsewhere.example/expired-failure", "failed", 40);
 
-    const del = await runAction({ intent: "delete", id: String(id) });
-    expect(del.data.ok).toBeUndefined();
-    expect(del.data.message).toBeUndefined();
-    expect(del.data.confirmDelete).toBe(id);
+    const steps: Record<string, string>[] = [{ intent: "delete", id: String(id) }, { intent: "sweep" }];
+    for (const body of steps) {
+      const step = await runAction(body);
+      const page = renderMentionsPage(
+        "/admin/mentions",
+        (await runLoader()).data,
+        step.data,
+      );
 
-    const sweep = await runAction({ intent: "sweep" });
-    expect(sweep.data.ok).toBeUndefined();
-    expect(sweep.data.message).toBeUndefined();
-    expect(sweep.data.confirmSweep).toBeTruthy();
+      expect(await textsOf(page, "[role=status]"), body.intent).toEqual([]);
+      expect(await textsOf(page, `input[name="${CONFIRM_FIELD}"]`), body.intent).toHaveLength(1);
+    }
+    expect(await statusOf(source)).toBe("rejected");
+    expect(await statusOf("https://elsewhere.example/expired-failure")).toBe("failed");
   });
 
   /*
@@ -976,22 +1007,46 @@ describe("the moderation queue", () => {
     expect((await runLoader("?status=everything")).data.status).toBe("pending");
   });
 
-  /*
-   * THE LOADER HANDS OVER EVERY ROW, and the component filters. That is what
-   * makes the chip counts and the list agree by construction: they are derived
-   * from one array. A loader that filtered in SQL would have to count in a
-   * second query, which is the shape the media library's Unused chip shipped
-   * with and got wrong.
-   */
-  it("RETURNS EVERY ROW INCLUDING UNVERIFIED, whatever the filter says", async () => {
-    await seedMention("https://elsewhere.example/a", "pending", 1);
-    await seedMention("https://elsewhere.example/b", "unverified", 1);
-    await seedMention("https://elsewhere.example/c", "failed", 1);
+  it("EVERY CHIP COUNTS THE ROWS ITS FILTER LISTS, and pending lists the pending rows", async () => {
+    await seedMention("https://elsewhere.example/p1", "pending", 1);
+    await seedMention("https://elsewhere.example/p2", "pending", 1);
+    await seedMention("https://elsewhere.example/u1", "unverified", 1);
+    await seedMention("https://elsewhere.example/f1", "failed", 1);
+    await seedMention("https://elsewhere.example/a1", "approved", 1);
 
-    for (const query of ["", "?status=pending", "?status=all"]) {
-      const result = await runLoader(query);
-      expect(result.data.mentions.length, `filter ${JSON.stringify(query)}`).toBe(3);
-      expect(result.data.mentions.some((m) => m.status === "unverified")).toBe(true);
+    const renderAt = async (query: string) =>
+      renderMentionsPage(`/admin/mentions${query}`, (await runLoader(query)).data);
+    const chipsOf = async (page: string) =>
+      Object.fromEntries(
+        (await textsOf(page, ".mention-filters a")).map((chip) => {
+          const [, label, count] = /^(.*) (\d+)$/.exec(chip) ?? [];
+          return [label ?? chip, Number(count)];
+        }),
+      );
+
+    const pending = await renderAt("?status=pending");
+    expect(await chipsOf(pending)).toEqual({
+      Pending: 2,
+      Failed: 1,
+      Approved: 1,
+      Rejected: 0,
+      All: 5,
+    });
+    expect((await textsOf(pending, ".mention-source")).sort()).toEqual([
+      "https://elsewhere.example/p1",
+      "https://elsewhere.example/p2",
+    ]);
+
+    for (const [filter, label] of [
+      ["pending", "Pending"],
+      ["failed", "Failed"],
+      ["approved", "Approved"],
+      ["rejected", "Rejected"],
+      ["all", "All"],
+    ] as const) {
+      const page = await renderAt(`?status=${filter}`);
+      const chips = await chipsOf(page);
+      expect(await textsOf(page, ".mention-source"), filter).toHaveLength(chips[label] ?? -1);
     }
   });
 

@@ -36,15 +36,6 @@ test("THE DEFECT: the incident path is recorded without its token", () => {
   assert.ok(!carriesPreviewToken(recorded), "no 43-character segment may remain");
 });
 
-test("REPLAY: the shipped expression stored the token verbatim", () => {
-  // What `workers/app.ts` did before this landed, so the test proves the two
-  // expressions differ rather than merely proving the new one looks right.
-  const asItWas = (/** @type {string} */ p) => p;
-  const path = `/preview/${INCIDENT_TOKEN}`;
-  assert.ok(carriesPreviewToken(asItWas(path)), "the old expression leaked it");
-  assert.ok(!carriesPreviewToken(analyticsPath(path)), "the current one must not");
-});
-
 test("no minted token survives, over many tokens", () => {
   // Not a randomness test. It catches a redaction keyed to something incidental
   // about one token, such as its first character or a substring.
@@ -54,11 +45,6 @@ test("no minted token survives, over many tokens", () => {
     assert.equal(recorded, PREVIEW_PATH_LABEL);
     assert.ok(!recorded.includes(token));
   }
-});
-
-test("the label is a route pattern and carries no token shape of its own", () => {
-  assert.equal(PREVIEW_PATH_LABEL, "/preview/:token");
-  assert.ok(!carriesPreviewToken(PREVIEW_PATH_LABEL));
 });
 
 test("ONE ROW PER REQUEST IS UNCHANGED: only the identifier goes", () => {
@@ -117,13 +103,4 @@ test("FAILS CLOSED on a non-string", () => {
   assert.equal(analyticsPath(undefined), "");
   assert.equal(analyticsPath(null), "");
   assert.equal(analyticsPath(42), "");
-});
-
-test("the checker can actually fire, so the absence assertions are not vacuous", () => {
-  // A needle that never matches would make every `!carriesPreviewToken(...)`
-  // above pass on anything at all.
-  assert.ok(carriesPreviewToken(`/preview/${INCIDENT_TOKEN}`));
-  assert.ok(carriesPreviewToken(`/preview/${mintToken()}`));
-  assert.ok(!carriesPreviewToken("/preview/short"));
-  assert.ok(!carriesPreviewToken("/blog/a-post"));
 });

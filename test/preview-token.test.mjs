@@ -25,13 +25,12 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { registerHooks } from "node:module";
 
 import {
   PREVIEW_TTL_SECONDS,
-  POST_PREFIX,
   TOKEN_BYTES,
   TOKEN_LENGTH,
-  TOKEN_PREFIX,
   base64url,
   expiresAt,
   isWellFormedToken,
@@ -44,8 +43,34 @@ import {
   resolvePreview,
   tokenFromIndexKey,
   tokenKey,
-  truncateToken,
 } from "../app/lib/preview-token.mjs";
+
+// The KV half imports through the app's `~/` alias, which only the bundler knows.
+const APP = new URL("../app/", import.meta.url);
+registerHooks({
+  resolve: (specifier, context, next) =>
+    next(specifier.startsWith("~/") ? new URL(specifier.slice(2), APP).href : specifier, context),
+});
+const { createPreviewLink, listPreviewLinks } = await import("../app/lib/preview-links.server.ts");
+
+/** The slice of KV the preview links use, held in a Map. */
+function memoryKv() {
+  const store = new Map();
+  return {
+    async put(key, value) {
+      store.set(key, value);
+    },
+    async get(key) {
+      return store.get(key) ?? null;
+    },
+    async delete(key) {
+      store.delete(key);
+    },
+    async list({ prefix = "" } = {}) {
+      return { keys: [...store.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name })) };
+    },
+  };
+}
 
 const RECORD = makeRecord({
   slug: "a-draft",
@@ -97,23 +122,7 @@ test("the well-formed check is anchored and length-exact", () => {
   assert.ok(!isWellFormedToken(42));
 });
 
-test("the truncation shown in the drawer is six characters of the token", () => {
-  const token = mintToken();
-  assert.equal(truncateToken(token), token.slice(0, 6));
-  assert.equal(truncateToken(token).length, 6);
-  assert.ok(token.startsWith(truncateToken(token)), "the truncation is a prefix of the token");
-});
-
 /* ------------------------------------------------------------- the key shapes */
-
-test("the two keys are written from the same token and are distinguishable", () => {
-  const token = mintToken();
-  assert.equal(tokenKey(token), `preview:token:${token}`);
-  assert.equal(postIndexKey("a-draft", token), `preview:post:a-draft:${token}`);
-  assert.notEqual(tokenKey(token), postIndexKey("a-draft", token));
-  assert.ok(tokenKey(token).startsWith(TOKEN_PREFIX));
-  assert.ok(postIndexKey("a-draft", token).startsWith(POST_PREFIX));
-});
 
 test("the index prefix scopes a list to exactly one slug", () => {
   const prefix = postIndexPrefix("a-draft");
@@ -196,22 +205,19 @@ test("PLANT (b): an ORPHANED INDEX ENTRY resolves to nothing", () => {
   assert.equal(verdict.reason, "unknown");
 });
 
-test("PLANT (b), the other half: a listing SKIPS an orphaned entry", () => {
-  // What the drawer does with the same state, modeled the way the loader
-  // does it: index keys in, records fetched, entries with no record dropped.
-  const live = mintToken();
-  const orphan = mintToken();
-  const keys = [postIndexKey("a-draft", live), postIndexKey("a-draft", orphan)];
-  const store = new Map([[tokenKey(live), JSON.stringify(RECORD)]]);
+test("PLANT (b), the other half: a listing SKIPS an orphaned entry", async () => {
+  const env = { APP_KV: memoryKv() };
+  const live = await createPreviewLink(env, { slug: "a-draft", createdBy: "dustin" });
+  const orphan = await createPreviewLink(env, { slug: "a-draft", createdBy: "dustin" });
+  // A revoke that failed between its two deletes: the authority is gone, the index entry is not.
+  await env.APP_KV.delete(tokenKey(orphan.token));
 
-  const listed = keys
-    .map((key) => tokenFromIndexKey(key, "a-draft"))
-    .filter((token) => token !== null)
-    .map((token) => ({ token, record: parseRecord(store.get(tokenKey(token))) }))
-    .filter((entry) => entry.record !== null);
-
-  assert.equal(listed.length, 1, "the orphan must not be listed");
-  assert.equal(listed[0].token, live);
+  const listed = await listPreviewLinks(env, "a-draft");
+  assert.deepEqual(
+    listed.map((link) => link.token),
+    [live.token],
+    "the orphan must not be listed",
+  );
 });
 
 test("PLANT (c): a token on a post that LEFT DRAFT stops working", () => {

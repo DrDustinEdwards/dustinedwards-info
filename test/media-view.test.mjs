@@ -26,7 +26,6 @@ import {
   SIZES,
   SORTS,
   VIEWS,
-  SORT_DEFAULT_DIR,
   displaySummary,
   docTitle,
   folderOf,
@@ -109,12 +108,6 @@ test("a chip link keeps the whole view and resets the page", () => {
   assert.equal(search.get("role"), "icon");
   assert.ok(!search.has("page"), "page 1 is the default and is omitted");
   assert.ok(search.has("view") && search.has("sort") && search.has("q"));
-});
-
-test("PARAM_NAMES is derived from DEFAULTS, so the two cannot disagree", () => {
-  // The previous incidents were two lists drifting apart. There is one list.
-  assert.deepEqual(PARAM_NAMES, Object.keys(DEFAULTS));
-  assert.ok(PARAM_NAMES.length >= 10);
 });
 
 test("defaults are omitted, so the bare URL is the default view", () => {
@@ -319,29 +312,6 @@ test("an empty page groups to nothing rather than to one empty heading", () => {
  * whether the component actually calls it.
  * ---------------------------------------------------------------------- */
 
-test("every sort key declares a default direction, and no key is invented", () => {
-  // BOTH DIRECTIONS. A missing entry would silently fall back to the state's
-  // current direction, which is the defect this table exists to remove, and an
-  // orphaned entry would be a column nobody can reach.
-  assert.deepEqual(
-    Object.keys(SORT_DEFAULT_DIR).sort(),
-    [...SORTS].sort(),
-    "SORT_DEFAULT_DIR and SORTS must name the same set, both ways",
-  );
-  for (const [key, dir] of Object.entries(SORT_DEFAULT_DIR)) {
-    assert.ok(DIRS.includes(dir), `${key} declares ${dir}, which is not a direction`);
-  }
-});
-
-test("the mockup's directions, verified in its source, are the ones shipped", () => {
-  // Read out of the mockup's own `column(key, label, align, dir)` calls and its
-  // sortOpts table, not from the prompt describing them.
-  assert.equal(SORT_DEFAULT_DIR.name, "asc");
-  assert.equal(SORT_DEFAULT_DIR.usage, "asc");
-  assert.equal(SORT_DEFAULT_DIR.size, "desc");
-  assert.equal(SORT_DEFAULT_DIR.added, "desc");
-});
-
 /**
  * READ THE URL BACK THROUGH `readView`, never off the query string.
  *
@@ -366,6 +336,17 @@ test("a sort choice carries its direction, so Largest is never the smallest", ()
   assert.equal(got.sort, "size");
   assert.equal(got.dir, "desc", "Largest must mean descending");
   assert.equal(got.q, "bio", "and the search still travels");
+});
+
+test("each sort key, chosen fresh, lands on the direction its label promises", () => {
+  const EXPECTED = { name: "asc", usage: "asc", size: "desc", added: "desc" };
+  for (const key of SORTS) {
+    for (const dir of DIRS) {
+      const from = key === "name" ? "size" : "name";
+      const got = resolve(sortHref({ ...DEFAULTS, sort: from, dir }, key));
+      assert.equal(got.dir, EXPECTED[key], `${key} from ${from} ${dir}`);
+    }
+  }
 });
 
 test("the header toggles the column already sorted, and only that one", () => {

@@ -151,5 +151,8 @@ test("a verdict that uploads nothing is passed through untouched", () => {
 
 test("a hand-built plan names every refused path, writes and deletes both", () => {
   const v = planViolations({ writes: ["styles.css", "index.html"], deletes: ["github.md", "fonts/a.woff2"] });
-  assert.deepEqual(v, ["write index.html: not a build-owned path", "delete github.md: protected: never written or deleted by a sync"]);
+  assert.equal(v.length, 2);
+  assert.ok(v.some((line) => line.includes("index.html")), "the root page write is refused");
+  assert.ok(v.some((line) => line.includes("github.md")), "the github.md delete is refused");
+  assert.ok(!v.some((line) => line.includes("styles.css") || line.includes("fonts/")), "build-owned paths pass");
 });

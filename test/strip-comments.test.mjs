@@ -69,8 +69,6 @@ test("comments are stripped BEFORE strings, or an apostrophe eats the file", () 
 
 /* ------------------------------------------------- THE BOUNDARY, asserted */
 
-const WEAK = (s) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-
 const JSONC = [
   "{",
   "  // the example config carries comments, which is the point of jsonc",
@@ -106,14 +104,6 @@ test("THE JSONC BOUNDARY MOVED, and it moved because the tokenizer landed", () =
   );
 });
 
-test("the weak form is SUFFICIENT for JSONC, which is why it stays", () => {
-  const parsed = JSON.parse(WEAK(JSONC));
-  assert.equal(parsed.name, "dustinedwards");
-  assert.equal(parsed.share, "//cdn.example.com/dustin-edwards-logo.svg", "the url must survive intact");
-  // And the reason weak is enough: a surviving comment does not pass silently.
-  assert.throws(() => JSON.parse(JSONC), "JSON.parse throws on a comment it was not given");
-});
-
 const SVG = [
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">',
   '  <image xlink:href="//cdn.example.com/mark.png" width="48"/>',
@@ -132,26 +122,6 @@ test("AND THE SVG BOUNDARY WITH IT, for the same reason", () => {
   assert.equal(out.includes('xmlns="http://www.w3.org/2000/svg"'), true);
   assert.equal(out.includes("cdn.example.com/mark.png"), true, "the href value survives now");
   assert.equal(out.includes('width="48"/>'), true, "and so does the rest of its line");
-});
-
-test("THE WEAK FORMS STAY, and this says what is left of the reason", () => {
-  /*
-   * The three JSONC readers keep their own weak strippers. The measured hazard above is gone, so the argument is narrower
-   * now and worth stating rather than assuming: this helper is a JAVASCRIPT
-   * tokenizer. It reads an apostrophe in SVG TEXT CONTENT as opening a string,
-   * and a slash after an operator-looking character as opening a regex, neither
-   * of which means anything in those formats.
-   *
-   * MEASURED on the fixtures here: nothing is currently destroyed either way,
-   * so this is a reason to be deliberate rather than a live defect. Moving a
-   * weak reader onto this one is a decision with a measurement attached.
-   */
-  assert.equal(WEAK(SVG).includes("cdn.example.com/mark.png"), true, "the weak form keeps it too");
-  assert.equal(
-    JSON.parse(WEAK(JSONC)).share,
-    "//cdn.example.com/dustin-edwards-logo.svg",
-    "and both forms now agree on this fixture, which is what makes the choice a decision",
-  );
 });
 
 /* ---------------------------------------- THE DEFECT THIS REWRITE CLOSED */

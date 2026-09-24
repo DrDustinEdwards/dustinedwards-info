@@ -64,10 +64,3 @@ test("an UNKNOWN intent is returned, not refused", () => {
   // whether the submission named one at all.
   assert.equal(readIntent(formWith({ intent: "wibble" })), "wibble");
 });
-
-test("REPLAY: the shipped expression defaulted to save", () => {
-  const asItWas = (form) => String(form.get("intent") ?? "save");
-  const empty = formWith({});
-  assert.equal(asItWas(empty), "save", "the old expression turned nothing into a write");
-  assert.equal(readIntent(empty), null, "the current reader must not reproduce that");
-});

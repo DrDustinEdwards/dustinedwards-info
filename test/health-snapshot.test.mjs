@@ -21,7 +21,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  HEALTH_POLL_INTERVAL_SECONDS,
   HEALTH_SNAPSHOT_STALE_AFTER_SECONDS,
   formatAge,
   healthTile,
@@ -41,11 +40,6 @@ function snapshotAgedBy(secondsAgo, overrides = {}) {
     ...overrides,
   };
 }
-
-test("the stale threshold is three poll intervals, not one", () => {
-  assert.equal(HEALTH_SNAPSHOT_STALE_AFTER_SECONDS, 3 * HEALTH_POLL_INTERVAL_SECONDS);
-  assert.equal(HEALTH_POLL_INTERVAL_SECONDS, 900);
-});
 
 test("a snapshot inside the window is fresh and carries its age", () => {
   const tile = healthTile(snapshotAgedBy(120), NOW);

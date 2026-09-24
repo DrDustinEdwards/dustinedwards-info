@@ -29,8 +29,7 @@ export default async function handleRequest(
    * RENDER OPTION BELOW STAMPS THOSE. The prop reaches react-router's components; it
    * cannot reach react-dom, which writes its own inline scripts to COMPLETE a
    * Suspense boundary and takes their nonce from `renderToReadableStream`'s OPTIONS.
-   * `test/ssr-nonce.test.mjs` holds that pair, including the no-option control, so
-   * the option cannot be dropped without a named failure.
+   * `test/worker/ssr-nonce.test.ts` fails if the option is dropped.
    */
   const nonce = getNonce(loadContext);
 
