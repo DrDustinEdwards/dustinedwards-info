@@ -9,10 +9,15 @@
 	"name": "dustinedwards",
 	"compatibility_date": "2026-09-01",
 	"main": "./workers/app.ts",
-	// NO `compatibility_flags`, and the absence is the setting. `nodejs_compat`
-	// and `nodejs_compat_v2` are BOTH on by default for a compatibility date of
-	// 2026-08-04 or later, so an explicit `nodejs_compat` here would be a flag
-	// wrangler ignores and a reader would take for a decision. Measured on the
+	// ONE flag: `new_module_registry`, which compiles each module lazily on first
+	// import and shares code caches across isolates (2026-09 module registry; it
+	// has no default-on date, so no compatibility date turns it on). The upload
+	// is already one module per chunk (`no_bundle`), which is the shape it helps.
+	"compatibility_flags": ["new_module_registry"],
+	// `nodejs_compat` stays out: it and `nodejs_compat_v2` are BOTH on by default
+	// for a compatibility date of 2026-08-04 or later, so an explicit
+	// `nodejs_compat` here would be a flag wrangler ignores and a reader would
+	// take for a decision. Measured on the
 	// installed runtime before the flag came out: at this date with no flags,
 	// `Buffer` is a function and `process` is an object.
 	//
