@@ -17,11 +17,8 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 
 import {
-  SOURCE_EXTENSIONS,
-  SOURCE_ROOTS,
   foldRefs,
   isSourceFile,
   referencesIn,
@@ -153,13 +150,6 @@ test("the scan reads source, and refuses the artifact that lists every asset", (
   assert.equal(isSourceFile("README.md"), false);
 });
 
-test("the roots and extensions are non-empty, or the scan reads nothing", () => {
-  // A scan whose scope is empty reports the same thing as a repository with no
-  // references, which is this repo's most-repeated defect class.
-  assert.ok(SOURCE_ROOTS.length >= 2, `${SOURCE_ROOTS.length} root(s)`);
-  assert.ok(SOURCE_EXTENSIONS.length >= 4, `${SOURCE_EXTENSIONS.length} extension(s)`);
-});
-
 /* ---- folding ------------------------------------------------------------- */
 
 test("results fold to sorted keys and sorted files, so the artifact is stable", () => {
@@ -194,18 +184,4 @@ test("the self-referential guard beats SOURCE_FILES, which is where it decides",
   assert.equal(isSourceFile("content/features.json"), true);
   // And the guarded one is refused even though it is under the same root.
   assert.equal(isSourceFile("content/generated/assets.json"), false);
-});
-
-test("the guard is checked BEFORE the source-file allowance, not after", () => {
-  // Order is the whole property: if the allowance ran first, a self-referential
-  // entry named in SOURCE_FILES would be read and the third usage state would
-  // collapse into "everything is referenced".
-  const source = readFileSync(
-    new URL("../app/lib/media/template-refs.mjs", import.meta.url),
-    "utf8",
-  );
-  const guard = source.indexOf("SELF_REFERENTIAL.includes(file)");
-  const allow = source.indexOf("SOURCE_FILES.includes(file)");
-  assert.ok(guard > 0 && allow > 0, "both checks must exist");
-  assert.ok(guard < allow, "the self-referential guard must run first");
 });

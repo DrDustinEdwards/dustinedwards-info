@@ -14,17 +14,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { KNOWN_DIRECTIVES, renderBody } from "../app/lib/content/pipeline.mjs";
+import { renderBody } from "../app/lib/content/pipeline.mjs";
 
 /** @param {string} body */
 const render = (body) => renderBody({ file: "test.md", body, resolveImage: () => null });
 
 const SENTENCE = "the measurement is the argument";
 const PARAGRAPH = `The method matters, but :pullquote[${SENTENCE}] and nothing else settles it.`;
-
-test("the directive is registered", () => {
-  assert.ok(KNOWN_DIRECTIVES.includes("pullquote"));
-});
 
 test("the quote is raised ABOVE the paragraph it was marked in", async () => {
   const { html } = await render(`Intro.\n\n${PARAGRAPH}\n`);

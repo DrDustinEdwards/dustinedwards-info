@@ -6,9 +6,8 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 
-import { driftCount, searchCounts } from "../scripts/lib/sync-verdict.mjs";
+import { driftCount, searchCounts, standingRun } from "../scripts/lib/sync-verdict.mjs";
 
 /** The first run, abridged from the transcript: drift reported, then a failed import, no counts. */
 const FIRST = [
@@ -45,8 +44,8 @@ test("a run with no drift line reads as null, not zero", () => {
 });
 
 test("ship reads the counts from the run that wrote last, not the first", () => {
-  const ship = readFileSync(new URL("../scripts/ship.mjs", import.meta.url), "utf8");
-  assert.match(ship, /standing = confirm;/, "the confirming run must become the standing one");
-  assert.match(ship, /searchCounts\(standing\.text\)/, "the counts must be read from the standing run");
-  assert.doesNotMatch(ship, /searchCounts\(sync\.text\)/, "reading the first run is the defect replayed here");
+  const first = { code: 1, text: FIRST };
+  const confirm = { code: 0, text: CONFIRM };
+  assert.deepEqual(searchCounts(standingRun(first, confirm).text), ["200", "200", "200"]);
+  assert.equal(searchCounts(standingRun(first, null).text), null, "with no confirming run, the first stands");
 });

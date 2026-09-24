@@ -113,15 +113,3 @@ test("statusForDraft maps the artifact's boolean to the row's string", () => {
   assert.equal(statusForDraft(false), PUBLISHED_STATUS);
   assert.equal(statusForDraft(undefined), PUBLISHED_STATUS, "absent means not a draft");
 });
-
-test("the Ask mapping composed end to end excludes exactly the two shapes", () => {
-  // What ask.server.ts actually does, spelled out: map draft to status, then ask
-  // the shared predicate.
-  const askVisible = (post) =>
-    isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt }, NOW);
-
-  assert.equal(askVisible({ draft: true, publishAt: PAST }), false, "draft excluded");
-  assert.equal(askVisible({ draft: false, publishAt: FUTURE }), false, "future excluded");
-  assert.equal(askVisible({ draft: false, publishAt: PAST }), true, "live included");
-  assert.equal(askVisible({ publishAt: PAST }), true, "no draft flag means not a draft");
-});

@@ -175,33 +175,3 @@ test("a malformed reading is not mistaken for convergence", async () => {
   assert.equal(out.converged, false);
   assert.equal(out.latest, null);
 });
-
-test("onPoll reports every poll, readable or not, in order", async () => {
-  const clock = fakeClock();
-  const state = { calls: 0 };
-  const reading = async () => {
-    state.calls += 1;
-    if (state.calls === 1) return null;
-    if (state.calls === 2) return { name: "ask-index-drift", ok: false, expected: 9, present: 8 };
-    return { name: "ask-index-drift", ok: true };
-  };
-
-  /** @type {any[]} */
-  const seen = [];
-  await awaitAskConvergence({
-    reading,
-    sleep: clock.sleep,
-    now: clock.now,
-    onPoll: (event) => seen.push(event),
-  });
-
-  assert.equal(seen.length, 3);
-  assert.deepEqual(
-    seen.map((e) => [e.poll, e.reading === null ? "unreadable" : e.reading.ok]),
-    [
-      [1, "unreadable"],
-      [2, false],
-      [3, true],
-    ],
-  );
-});

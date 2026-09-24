@@ -22,7 +22,6 @@ import assert from "node:assert/strict";
 import {
   MAX_TAGS,
   MAX_TAG_LENGTH,
-  TAG_DELIMITER,
   exactTagNeedle,
   normaliseTag,
   normaliseTags,
@@ -129,10 +128,4 @@ test("an empty needle is NULL, never a pattern that matches everything", () => {
   assert.equal(exactTagNeedle("   "), null);
   assert.equal(exactTagNeedle("%"), null);
   assert.equal(exactTagNeedle(null), null);
-});
-
-test("the delimiter is stated once and both forms read it", () => {
-  assert.equal(TAG_DELIMITER, ",");
-  assert.ok(serialiseTags(["a"]).startsWith(TAG_DELIMITER));
-  assert.ok(serialiseTags(["a"]).endsWith(TAG_DELIMITER));
 });

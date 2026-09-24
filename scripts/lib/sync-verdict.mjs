@@ -27,3 +27,15 @@ export function searchCounts(text) {
   const m = text.match(/search_docs=(\d+)\s+identity=(\d+)\s+prose=(\d+)/);
   return m ? [m[1], m[2], m[3]] : null;
 }
+
+/**
+ * The sync whose output is the verdict: the confirming run when there was one, else the first.
+ *
+ * @template T
+ * @param {T} first
+ * @param {T | null} confirm
+ * @returns {T}
+ */
+export function standingRun(first, confirm) {
+  return confirm ?? first;
+}

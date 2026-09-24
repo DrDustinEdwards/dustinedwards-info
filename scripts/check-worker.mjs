@@ -23,13 +23,13 @@ const TEST_DIR = join(root, "test", "worker");
  * SHRINKING.
  */
 /* One below the measurement, so a single file leaving the pattern trips it. */
-const MINIMUM_FILES = 8;
+const MINIMUM_FILES = 11;
 /*
  * The file floor catches a file LEAVING; this catches one hollowed out in place. Re-run, never
  * adjusted by arithmetic.
  */
 /* Measured by running the gate, a little under the count. */
-const MINIMUM_CASES = 124;
+const MINIMUM_CASES = 130;
 
 let checks = 0;
 let failures = 0;

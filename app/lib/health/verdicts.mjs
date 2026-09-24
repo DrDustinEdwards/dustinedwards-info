@@ -252,8 +252,8 @@ export function contentDriftVerdict(files, rows) {
  * repo: after `DELETE FROM posts_fts` the count still read 1 of 1 while MATCH
  * returned nothing, and `posts_fts_docsize` went to 0. The shadow holds one row
  * per INDEXED document, so it is the only number here that can actually fail.
- * `test/write-path-invariants.test.mjs` forbids the wrong form in source, both
- * directions.
+ * `test/worker/publish.test.ts` plants that drift and expects this check to
+ * report it.
  *
  * ## FAIL CLOSED ON A COUNT IT CANNOT READ
  *

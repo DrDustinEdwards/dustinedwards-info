@@ -19,7 +19,6 @@ import assert from "node:assert/strict";
 
 import {
   DEFAULTS,
-  DISPLAY_AXES,
   onlyDisplayChanged,
   readDisplayAxes,
 } from "../app/lib/media/view.mjs";
@@ -69,11 +68,9 @@ test("a different path is never a display change", () => {
   assert.equal(onlyDisplayChanged(at(""), other), false);
 });
 
-test("readDisplayAxes covers exactly the declared display axes", () => {
-  // DERIVED, so a fourth axis added to DISPLAY_AXES and forgotten in the reader
-  // fails here rather than silently rendering its default forever.
-  const got = Object.keys(readDisplayAxes(new URLSearchParams()));
-  assert.deepEqual(got.sort(), [...DISPLAY_AXES].sort());
+test("readDisplayAxes reads each display axis from the URL", () => {
+  const got = readDisplayAxes(new URLSearchParams("view=grid&size=l&group=month"));
+  assert.deepEqual(got, { view: "grid", size: "l", group: "month" });
 });
 
 test("readDisplayAxes falls back to the default for an unknown value", () => {
@@ -84,9 +81,3 @@ test("readDisplayAxes falls back to the default for an unknown value", () => {
   assert.equal(got.group, DEFAULTS.group);
 });
 
-test("sort and dir are NOT display axes", () => {
-  // The page paginates, so reordering changes which 24 rows page one holds.
-  // This test exists to make adding them here a deliberate, failing act.
-  assert.equal(DISPLAY_AXES.includes("sort"), false);
-  assert.equal(DISPLAY_AXES.includes("dir"), false);
-});

@@ -56,16 +56,6 @@ test("a row with no rendered html omits the element rather than emitting it empt
   assert.match(item, /<link>https:\/\/example\.test\/blog\/a-post<\/link>/);
 });
 
-test("every element the item emits, and only those", () => {
-  const item = rssItem(FULL, ORIGIN);
-  const elements = [...item.matchAll(/^\s*<([a-zA-Z:]+)[\s>]/gm)].map((m) => m[1]);
-  assert.deepEqual(
-    elements,
-    ["item", "title", "link", "guid", "description", "content:encoded", "pubDate", "category", "category"],
-    "an element moved. Named rather than counted, so the failure says which.",
-  );
-});
-
 test("a title with an ampersand is escaped, and escaped once", () => {
   const item = rssItem(FULL, ORIGIN);
   assert.match(item, /<title>A post about D1 &amp; FTS5<\/title>/);

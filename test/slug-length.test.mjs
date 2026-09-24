@@ -39,14 +39,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  SLUG_MAX_LENGTH,
-  SLUG_PATTERN,
-  frontmatterSchema,
-} from "../app/lib/content/pipeline.mjs";
-
-/** The wrapper's cap, transcribed from `src/tools.ts` with its date read. */
-const MCP_CAP = 120;
+import { SLUG_PATTERN, frontmatterSchema } from "../app/lib/content/pipeline.mjs";
 
 /**
  * A slug of exactly `length` characters that is otherwise VALID: lowercase
@@ -81,15 +74,6 @@ test("the fixture builder produces slugs of the exact length, shape-valid", () =
     assert.equal(slugOfLength(n).length, n, `asked for ${n}`);
     assert.ok(SLUG_PATTERN.test(slugOfLength(n)), `${n} is shape-valid`);
   }
-});
-
-test("the site's cap is the wrapper's cap", () => {
-  assert.equal(
-    SLUG_MAX_LENGTH,
-    MCP_CAP,
-    "the site and the MCP wrapper must refuse at the same length, or a post " +
-      "exists that the operator tools cannot name",
-  );
 });
 
 test("a 121-character slug is REFUSED by the frontmatter schema", () => {

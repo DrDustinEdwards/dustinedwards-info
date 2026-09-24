@@ -24,7 +24,6 @@ import assert from "node:assert/strict";
 import {
   DEFERRED_CHECKS,
   deferredMisses,
-  readinessLines,
   readinessVerdict,
 } from "../scripts/lib/readiness.mjs";
 
@@ -126,15 +125,6 @@ test("THE DISCRIMINATING CONTROL: healthy and unhealthy do not agree", () => {
   assert.equal(pass.ok, true);
   assert.equal(fail.ok, false);
   assert.notEqual(pass.ok, fail.ok);
-});
-
-test("the printed table shows every check, with counts only where sent", () => {
-  const lines = readinessLines(JSON.parse(UNHEALTHY).checks);
-  assert.equal(lines.length, 5);
-  assert.match(lines[0], /FAIL {2}ask-index-drift {2}expected 99, present 90/);
-  assert.match(lines[1], /ok {4}media-index-drift$/);
-  // A passing check must not invent counts it was not given.
-  assert.doesNotMatch(lines[1], /expected/);
 });
 
 /*

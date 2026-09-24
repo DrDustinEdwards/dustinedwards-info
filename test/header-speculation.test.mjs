@@ -1,78 +1,41 @@
 /**
- * The speculation rules: the payload a browser will parse.
+ * The speculation rules: the payload a browser will parse, and the header links
+ * those rules act on.
  *
- * ## WHAT CHANGED 2026-08-28, and why this file got stronger rather than longer
- *
- * The rules used to be two literal objects inside two components, so this file
- * could only read their SOURCE and match patterns against it. The payload now
- * comes from `app/lib/speculation.mjs`, which is plain ESM with no react-router
- * import, so `node --test` can CALL it. Every assertion about the rules below is
- * therefore about the object a browser will parse, not about the spelling of the
- * expression that produces it.
- *
- * ## THE MIRROR THIS FILE WAS ORIGINALLY WRITTEN FOR IS GONE
- *
- * It began as a two-directional check between `~/lib/nav`'s `HEADER_PATHS` and a
- * `urls` list in `site-speculation.tsx`, because a list that can disagree with
- * the nav is invisible in a render: a nav link with no speculation entry still
- * navigates, just slower, and an entry whose link was removed speculates a URL
- * nothing points at. Neither produces a visual difference, an error, or a
- * console warning.
- *
- * **The rules are DOCUMENT rules now, so there is no list to disagree with.** A
- * header link is speculated because it is an `<a href>` in the page, and
- * `HEADER_PATHS` was deleted with its last consumer. What remains here about the
- * nav is the one fact still worth pinning: `site-header.tsx` renders its
- * NavLinks from `NAV` rather than from literals, which is what makes the
- * document rule's coverage of the header derived rather than coincidental.
+ * The payload comes from `app/lib/speculation.mjs`, which is plain ESM, so the
+ * rule assertions are about the object a browser will parse. The header half
+ * renders the real `SiteHeader` to a string, because the rules are DOCUMENT
+ * rules: a header link is speculated because it is an `<a href>` in the page.
  *
  * ## OBSERVATION BOUNDARY
  *
- * This holds the PAYLOAD. It does not render the header, and it does not drive a
- * browser, so it cannot see whether Chrome ACCEPTS the rules. `check:browser`
- * owns that on a real page, against Chrome's own resolved candidate list, and it
- * is where a malformed `href_matches` shows up. The nonce half is
- * `check:headers`.
+ * This does not drive a browser, so it cannot see whether Chrome ACCEPTS the
+ * rules. `check:browser` owns that on a real page, and it is where a malformed
+ * `href_matches` shows up. The nonce half is `check:headers`.
  *
  * **AND NOTHING HERE OR ANYWHERE CAN SEE A PRERENDER ACTIVATE.** Chrome refuses
- * to prerender while CDP is attached: measured 2026-08-28, every attempt under
- * Puppeteer reports `PrerenderingDisabledByDevTools` and falls back to prefetch,
- * with or without the Preload domain enabled. So the whole gated claim is "the
- * rules a browser would act on are correct", never "the browser acted".
+ * to prerender while CDP is attached, so the whole gated claim is "the rules a
+ * browser would act on are correct", never "the browser acted".
  *
- * @see app/lib/nav.ts, app/lib/speculation.mjs, app/components/site-speculation.tsx
+ * @see app/lib/nav.ts, app/lib/speculation.mjs, app/components/site-header.tsx
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
-import { stripComments } from "../scripts/lib/strip-comments.mjs";
+import { build } from "vite";
+
 import {
   DOCUMENT_ACTION,
   DOCUMENT_EAGERNESS,
-  EXCLUDED_PATHS,
-  EXCLUDED_PREFIXES,
-  EXCLUDED_SUFFIXES,
   buildSpeculationRules,
 } from "../app/lib/speculation.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-
-/*
- * COMMENTS ARE STRIPPED FIRST, and this test needed it on its own first run.
- * A comment has both satisfied an assertion and failed one in this repo.
- */
-const read = (...parts) => stripComments(readFileSync(join(root, ...parts), "utf8"));
-
-const navSource = read("app", "lib", "nav.ts");
-const headerSource = read("app", "components", "site-header.tsx");
-const componentSource = read("app", "components", "site-speculation.tsx");
-
-/** Every `to: "/path"` in the NAV array. */
-const navPaths = [...navSource.matchAll(/\bto:\s*"([^"]+)"/g)].map((m) => m[1]);
 
 /** The whole payload for one page, so the ACTION KEY itself is assertable. */
 /** @param {string} pathname */
@@ -86,10 +49,10 @@ const rulesOn = (pathname) => payloadOn(pathname)[DOCUMENT_ACTION];
  * Object-form patterns render as `search:(.+)`, so one comparison covers both
  * shapes and a spelling change from one to the other cannot pass silently.
  *
- * @param {string} pathname
+ * @param {object[]} rules
  */
-function exclusions(pathname) {
-  return (rulesOn(pathname)[0].where.and ?? [])
+function exclusionsIn(rules) {
+  return (rules[0].where.and ?? [])
     .filter((clause) => clause.not)
     .map((clause) => {
       const m = clause.not.href_matches;
@@ -97,41 +60,79 @@ function exclusions(pathname) {
     });
 }
 
-test("NAV is not empty, so every assertion about it has a scope", () => {
-  // A zero from a search proves nothing until the scope is proven non-empty.
-  assert.ok(navPaths.length >= 4, `NAV parsed ${navPaths.length} paths`);
-});
+/** @param {string} pathname */
+const exclusions = (pathname) => exclusionsIn(rulesOn(pathname));
 
-test("every NAV path is absolute", () => {
-  for (const path of navPaths) {
-    assert.match(path, /^\//, `${path} is relative, so it would resolve per page`);
+/*
+ * The header is TSX behind `~/` imports and `?url` assets, so Vite bundles it
+ * here with the React that renders it, and the bundle is imported from disk.
+ */
+const ENTRY = "virtual:header-render";
+const built = await build({
+  configFile: false,
+  root,
+  logLevel: "silent",
+  mode: "production",
+  resolve: { alias: [{ find: /^~\//, replacement: `${join(root, "app")}/` }] },
+  ssr: { noExternal: true },
+  plugins: [
+    {
+      name: "header-render-entry",
+      enforce: "pre",
+      resolveId: (id) => (id === ENTRY ? `\0${ENTRY}` : null),
+      load: (id) =>
+        id === `\0${ENTRY}`
+          ? `
+            import { createElement as h } from "react";
+            import { renderToString } from "react-dom/server";
+            import { createMemoryRouter, RouterProvider } from "react-router";
+            import { SiteHeader } from "~/components/site-header";
+            export function render(pathname) {
+              const router = createMemoryRouter([{ path: "*", element: h(SiteHeader) }], {
+                initialEntries: [pathname],
+              });
+              return renderToString(h(RouterProvider, { router }));
+            }`
+          : null,
+    },
+  ],
+  build: {
+    write: false,
+    ssr: true,
+    minify: false,
+    rollupOptions: { input: ENTRY, output: { format: "esm", codeSplitting: false } },
+  },
+});
+const chunk = (Array.isArray(built) ? built[0] : built).output.find((o) => o.type === "chunk");
+const bundleDir = mkdtempSync(join(tmpdir(), "header-render-"));
+writeFileSync(join(bundleDir, "header.mjs"), chunk.code);
+const { render: renderHeader } = await import(pathToFileURL(join(bundleDir, "header.mjs")).href);
+rmSync(bundleDir, { recursive: true, force: true });
+
+/** @param {string} html */
+const anchorHrefs = (html) => [...html.matchAll(/<a\b[^>]*?\shref="([^"]*)"/g)].map((m) => m[1]);
+
+/** The speculation rules the rendered header carries. @param {string} html */
+function renderedRules(html) {
+  const m = html.match(/<script type="speculationrules"[^>]*>([\s\S]*?)<\/script>/);
+  assert.ok(m, "the rendered header carries no speculation rules");
+  return JSON.parse(m[1])[DOCUMENT_ACTION];
+}
+
+test("every header link is site-absolute, so it resolves the same on every page", () => {
+  const hrefs = anchorHrefs(renderHeader("/blog/ten-years-on-cloudflare"));
+  assert.ok(hrefs.length >= 5, `the header rendered ${hrefs.length} links`);
+  for (const href of hrefs) {
+    assert.match(href, /^\/(?!\/)/, `${href} is not a site-absolute path`);
   }
 });
 
-test("HEADER_PATHS IS GONE, and the component does not build a urls list", () => {
-  /*
-   * Both halves, because either alone passes on a half-done revert. A
-   * reintroduced `HEADER_PATHS` with no consumer is dead configuration; a
-   * `urls` list in the component is the mirror this file existed to police,
-   * back without the check that used to police it.
-   */
+test("the brand link goes home, and home is speculated from other pages", () => {
+  const html = renderHeader("/blog");
+  assert.ok(anchorHrefs(html).includes("/"), "the header has no link to /");
   assert.ok(
-    !/export const HEADER_PATHS/.test(navSource),
-    "HEADER_PATHS is exported again. Its last consumer went when the rules became " +
-      "document rules; a derived export nobody reads reads as load-bearing.",
-  );
-  assert.ok(
-    !/urls:\s*\[/.test(componentSource),
-    "the component builds a urls list again, which is a path list that can drift " +
-      "from the links the page actually renders",
-  );
-});
-
-test("the component asks the module for the payload rather than composing one", () => {
-  assert.match(
-    componentSource,
-    /buildSpeculationRules\(\s*\{\s*pathname\s*\}\s*\)/,
-    "a payload composed in the component is a second owner of the rule shape",
+    !exclusionsIn(renderedRules(html)).includes("/"),
+    "/ is excluded from the rule on /blog, so the brand link would not be speculated",
   );
 });
 
@@ -200,37 +201,10 @@ test("THE CURRENT PAGE IS EXCLUDED FROM ITS OWN RULE", () => {
   }
 });
 
-test("every excluded prefix is excluded as a path AND as a subtree", () => {
-  /*
-   * Two patterns, and a rule carrying only one of them leaks the other. The
-   * bare prefix alone would still speculate `/admin/posts`; the subtree alone
-   * would still speculate `/admin` itself.
-   */
-  const found = exclusions("/blog");
-  assert.ok(EXCLUDED_PREFIXES.length > 0, "no prefixes to check");
-  for (const prefix of EXCLUDED_PREFIXES) {
-    assert.ok(found.includes(prefix), `${prefix} itself is not excluded`);
-    assert.ok(found.includes(`${prefix}/*`), `${prefix} subtree is not excluded`);
-  }
-});
-
-test("the named single paths and the non-page extensions are excluded", () => {
-  const found = exclusions("/blog");
-  assert.ok(EXCLUDED_PATHS.length > 0 && EXCLUDED_SUFFIXES.length > 0, "nothing to check");
-  for (const path of EXCLUDED_PATHS) {
-    assert.ok(found.includes(path), `${path} is not excluded`);
-  }
-  for (const suffix of EXCLUDED_SUFFIXES) {
-    assert.ok(found.includes(`/*${suffix}`), `${suffix} is not excluded`);
-  }
-});
-
 test("the routes that must never be speculated are each named by an exclusion", () => {
   /*
-   * The test above checks that the CONSTANTS reached the payload. This one
-   * checks the constants themselves against the routes they exist for, which is
-   * the half a self-referential assertion cannot cover: emptying
-   * `EXCLUDED_PATHS` would pass every assertion above.
+   * Checked against the routes the exclusions exist for, not against the
+   * module's own constants, which would agree by construction.
    *
    * `/search/ask` is the expensive one. It reaches a billed model, so
    * speculating it spends money on a click nobody made.
@@ -267,46 +241,5 @@ test("ANY URL CARRYING A QUERY IS EXCLUDED, as a search component", () => {
   assert.ok(
     exclusions("/blog").includes("search:(.+)"),
     "the query exclusion is not a search-component pattern",
-  );
-});
-
-test("the header renders its NavLinks from NAV, so its links are derived", () => {
-  assert.match(
-    headerSource,
-    /NAV\.map\(\s*\(item\)\s*=>/,
-    "NavLinks written as literals put the paths in two places",
-  );
-  for (const path of navPaths) {
-    assert.ok(
-      !headerSource.includes(`to="${path}"`),
-      `${path} is hard-coded in site-header.tsx as well as in NAV`,
-    );
-  }
-});
-
-test("the brand link is the one header path NAV does not carry", () => {
-  assert.ok(headerSource.includes('to="/"'), "the brand link is gone");
-  assert.ok(
-    !exclusions("/blog").includes("/"),
-    "/ is excluded from the rule on /blog, so the brand link would not be speculated",
-  );
-});
-
-test("no header link carries a prefetch prop, because none could run", () => {
-  /*
-   * INVERTED 2026-08-26 with the unhydration arc. This test used to require
-   * `prefetch="intent"`. The prop works through React event handlers, which
-   * attach only on a hydrated page, and the public plane no longer hydrates, so
-   * a prefetch prop here is dead configuration that reads as an optimization.
-   * Speculation rules are declarative and need no script. A prefetch prop
-   * reappearing means either someone re-added a dead prop, or the header moved
-   * to a hydrated plane and this test's premise changed; both deserve a stop.
-   */
-  const prefetches = [...headerSource.matchAll(/prefetch="([a-z]+)"/g)].map((m) => m[1]);
-  assert.equal(
-    prefetches.length,
-    0,
-    `found prefetch props [${prefetches.join(", ")}] in an unhydrated header, where ` +
-      `the React event handlers that implement them never attach`,
   );
 });

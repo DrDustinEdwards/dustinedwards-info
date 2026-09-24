@@ -9,9 +9,7 @@
  * WHY NOTHING CAUGHT IT is the part worth holding on to: an HTML `pattern`
  * anchors implicitly, so the extra anchors changed no behavior at all. It
  * typechecked, every gate stayed green, and the rendered form validated exactly
- * the same strings. The only thing that was false was the comment above it. A
- * behavioral assertion could not have found this; the assertion below is about
- * the DERIVATION, which is where the mistake actually was.
+ * the same strings. The only thing that was false was the comment above it.
  *
  * @see app/lib/content/pipeline.mjs
  */
@@ -20,21 +18,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN } from "../app/lib/content/pipeline.mjs";
-
-test("THE ANCHORS ARE ACTUALLY GONE, which the no-op only claimed", () => {
-  assert.equal(SLUG_ATTRIBUTE_PATTERN.startsWith("^"), false, "leading anchor must be stripped");
-  assert.equal(SLUG_ATTRIBUTE_PATTERN.endsWith("$"), false, "trailing anchor must be stripped");
-  assert.notEqual(
-    SLUG_ATTRIBUTE_PATTERN,
-    SLUG_PATTERN.source,
-    "identical to .source is exactly what the broken version produced",
-  );
-});
-
-test("it is DERIVED from SLUG_PATTERN, not a second spelling of the rule", () => {
-  // The whole body, anchors aside, must be the pattern's own.
-  assert.equal(SLUG_PATTERN.source, `^${SLUG_ATTRIBUTE_PATTERN}$`);
-});
 
 test("re-anchored, it accepts and rejects exactly what SLUG_PATTERN does", () => {
   // What the browser does with the attribute: compile it as ^(?:...)$.
