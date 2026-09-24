@@ -21,15 +21,16 @@
  *
  * ## WHAT IT DOES NOT DO
  *
- * It adds no stage, and ONE policy: the upload scope applied to the driver's verdict (below). The
+ * It adds no stage, one step and ONE policy: the preview cards copied into the bundle, and the
+ * upload scope applied to the driver's verdict (both below). The
  * four repo-shaped flags are the ones `.design-sync/NOTES.md` has always specified, and everything
  * else passes through untouched so the driver keeps owning its own CLI. A flag given on the command line WINS over the default
  * here, so `--out` elsewhere or an added `--remote` needs no change to this file.
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { cpSync, existsSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { enforceVerdict } from "./lib/ds-upload-scope.mjs";
@@ -37,6 +38,8 @@ import { enforceVerdict } from "./lib/ds-upload-scope.mjs";
 const REPO = join(dirname(fileURLToPath(import.meta.url)), "..");
 const BUILD_INPUTS = ".design-sync/build-inputs.mjs";
 const DRIVER = ".ds-sync/resync.mjs";
+/** Where `.design-sync/build-cards.mjs` writes; stage 0 builds it. */
+const CARDS = join(REPO, ".design-sync", ".cache", "cards");
 
 /**
  * The repo's own answer to the driver's required flags. `--entry` is not optional here: there is
@@ -62,6 +65,33 @@ if (!existsSync(join(REPO, DRIVER))) {
       `bundle; run the skill's staging step before the driver.`,
   );
   process.exit(2);
+}
+
+/**
+ * Replace the bundle's `cards/` with the cards stage 0 built. Fails closed on an empty build: a
+ * pane with no cards is the defect the cards exist to fix, so it must not upload quietly.
+ *
+ * @param {string} outDir
+ * @returns {string[]} bundle-relative paths
+ */
+function copyCards(outDir) {
+  if (!existsSync(CARDS)) {
+    console.error(`✗ ${CARDS} is missing; stage 0 did not build the preview cards.`);
+    process.exit(1);
+  }
+  const dest = join(outDir, "cards");
+  rmSync(dest, { recursive: true, force: true });
+  cpSync(CARDS, dest, { recursive: true });
+  const files = readdirSync(dest, { recursive: true, withFileTypes: true })
+    .filter((e) => e.isFile() && e.name.endsWith(".html"))
+    .map((e) => relative(outDir, join(e.parentPath, e.name)).split(sep).join("/"))
+    .sort();
+  if (files.length === 0) {
+    console.error("✗ no preview cards were built, so the pane would show none.");
+    process.exit(1);
+  }
+  console.error(`cards: ${files.length} copied to ${dest}`);
+  return files;
 }
 
 /** @param {string} label @param {string[]} args */
@@ -127,6 +157,17 @@ try {
   console.error("✗ the driver's verdict is not JSON, so its upload plan cannot be checked.");
   process.exit(1);
 }
+
+/*
+ * THE PREVIEW CARDS join the bundle here, after the driver, which knows nothing about them (see
+ * `.design-sync/build-cards.mjs`). Their digest is in the README header, so a changed card flips
+ * the docs partition (`upload.aux`); the verdict then names the cards beside it, because the
+ * driver's partitions have no slot for them and an upload that follows the partitions alone would
+ * leave them out. Copied before the scope check, so the check sees them as planned writes.
+ */
+const cardFiles = copyCards(outDir);
+if (parsed?.upload?.aux) parsed.upload.cards = cardFiles;
+
 const { verdict, violations } = enforceVerdict(parsed, outDir);
 if (violations.length) {
   writeFileSync(join(outDir, ".resync-verdict.json"), JSON.stringify(verdict, null, 2) + "\n");
@@ -135,4 +176,5 @@ if (violations.length) {
   for (const v of violations) console.error(`  ${v}`);
   process.exit(1);
 }
-process.stdout.write(driver.stdout);
+/* The verdict as amended above, so the skill reads the card list the driver could not write. */
+process.stdout.write(JSON.stringify(verdict, null, 2) + "\n");

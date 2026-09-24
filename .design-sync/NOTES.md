@@ -27,7 +27,9 @@ that as the scope, not as a shortfall.
   `site-speculation` and `enhancement-script` exist to inject the nonced
   enhancement bundles hard rule 4 requires; `theme-toggle` additionally imports
   `~/enhance/dist/theme.js?url`, a Vite specifier esbuild does not resolve.
-  Nothing there is composable by a design agent.
+  Nothing there is composable by a design agent. The header and footer still
+  reach the pane, as PREVIEW CARDS rather than components; see "The preview
+  cards" below.
 - **Out:** the `admin-*` stylesheets (the admin plane is exempt from the
   progressive enhancement law) and `katex*` (a generated artifact carrying
   twenty font faces whose binaries would have to ship too).
@@ -229,6 +231,37 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because
   there are none. A prop rename in `app/components/` is picked up on rebuild;
   nothing warns that it changed.
+
+## The preview cards, and the short README (2026-09-23)
+
+The Design System pane's visual index is built from preview cards, HTML files
+whose FIRST LINE is `<!-- @dsCard group="..." -->`, compiled into
+`_ds_manifest.json`. The converter only emits one per synced component, which
+here is the two logo crops, and the README it generated carried the two long
+notes, so the pane read as text. Two changes fixed that:
+
+- **The README header is `readme.md`**, the approved visual system's own short
+  README plus a pointer. `canvas-constraints.md` and `conventions.md` are copied
+  into `.design-sync/guidelines/` by `build-inputs.mjs` and ship as guidelines.
+- **`build-cards.mjs` renders the cards** from the site's stylesheets and
+  components (`cards.tsx`): Colors, Type and Components, one card per directory
+  under `.design-sync/.cache/cards/`. `design:resync` copies them to
+  `ds-bundle/cards/` after the driver, and `cards/<group>/<slug>/<slug>.html` is
+  build-owned in the upload scope below.
+
+**HOW THE CARDS UPLOAD.** The driver's partitions (components, bundle, styling,
+aux) know nothing about `cards/`. The card digest is written into the README
+header, so a changed card changes the README and flips `upload.aux`, and when
+it does, `ds-resync.mjs` adds `upload.cards` to the verdict: the list of card
+files to upload WITH the docs. An upload that follows the partitions alone
+leaves the cards behind, so when `upload.cards` is present, upload every path in
+it.
+
+**AFTER THE UPLOAD, OPEN THE PANE.** List the project and read
+`_ds_manifest.json`: every card should be under `cards`. A known issue
+(anthropics/claude-code #85733) is that cards uploaded through DesignSync may not
+appear until the manifest is recompiled; the legacy fallback is
+`register_assets`. Record what was needed here when it happens.
 
 ## THE UPLOAD WRITES AND DELETES ONLY WHAT THE BUILD OWNS, AND CODE SAYS SO
 
