@@ -1,13 +1,3 @@
-/**
- * Verifies the per-table backup path against the live schema.
- *
- *   npm run check:backup -- --local
- *   npm run check:backup -- --remote
- *
- * BOUNDARY: it proves the export PATH works and that the table list matches the migrations. It
- * never restores, so it cannot tell you the dump would reconstruct the database.
- */
-
 import { readFile, readdir, mkdir, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
@@ -18,16 +8,10 @@ import os from "node:os";
 
 const DB_NAME = "dustinedwards";
 const MIGRATIONS_DIR = "drizzle";
-/**
- * The irreplaceable bucket. The OG bucket is deliberately NOT pulled: every card is regenerable,
- * and backing up output that has a rebuild door grows a backup set without making it safer.
- */
+/** The OG bucket is deliberately not pulled: every card is regenerable. */
 const MEDIA_BUCKET = "dustinedwards-media";
 
-/**
- * Tables D1 and wrangler create for their own bookkeeping. They are not ours,
- * no migration declares them, and they are not part of a content restore.
- */
+/** D1 and wrangler bookkeeping: no migration declares them and a content restore excludes them. */
 const PLATFORM_TABLES = new Set([
   "_cf_KV",
   "sqlite_sequence",
@@ -37,8 +21,7 @@ const PLATFORM_TABLES = new Set([
 ]);
 
 /**
- * One already-quoted command string: an args array with `shell: true` concatenates without
- * quoting and has split an argument containing a space twice in this repo.
+ * One quoted string: an args array with `shell: true` concatenates without quoting.
  *
  * @param {string} args
  * @returns {{ stdout: string, status: number }}
@@ -49,8 +32,7 @@ function wrangler(args) {
 }
 
 /**
- * The END of wrangler's output, which is where its error is: both throws used the HEAD, which is
- * the banner.
+ * The end of wrangler's output, which is where its error is; the head is the banner.
  *
  * @param {string} text
  * @param {number} [max]
@@ -64,9 +46,8 @@ function tail(text, max = 400) {
 }
 
 /**
- * How this gate ADDRESSES the database, which is not always its name: the export resolves the
- * name through the gitignored config, which a clean checkout bootstraps with a placeholder id.
- * `--local` keeps the NAME deliberately, miniflare state being keyed by the config's id.
+ * The export resolves a name through the gitignored config, which a clean checkout bootstraps with a
+ * placeholder id. `--local` keeps the name, miniflare state being keyed by the config's id.
  *
  * @param {string} target
  * @returns {string}
@@ -78,8 +59,7 @@ function resolveAddress(target) {
   /** @type {Array<{ uuid?: string, name?: string }>} */
   const databases = start === -1 ? [] : JSON.parse(listed.stdout.slice(start));
   const found = databases.find((d) => d.name === DB_NAME);
-  // FAILS CLOSED: falling back to the name substitutes a different value and reintroduces the
-  // lookup failure wearing a passing lookup.
+  // Fails closed: falling back to the name would reintroduce the lookup failure wearing a passing lookup.
   if (typeof found?.uuid !== "string" || found.uuid.length === 0) {
     throw new Error(
       `could not resolve ${DB_NAME} to a UUID from d1 list` +
@@ -91,12 +71,10 @@ function resolveAddress(target) {
   return found.uuid;
 }
 
-/** Set once in `main`, before anything reads the database. */
 let DB_ADDRESS = DB_NAME;
 
 /**
- * Virtual tables are deliberately excluded: they cannot be exported and are rebuilt from their
- * content table, so including them would make the expected set disagree by construction.
+ * Virtual tables are excluded: they cannot be exported and are rebuilt from their content table.
  *
  * @returns {Promise<Set<string>>}
  */
@@ -127,17 +105,13 @@ async function expectedTables() {
 }
 
 /**
- * Shadow tables are found by prefix against the virtual table names rather than by a hardcoded
- * suffix list, so a future fts5 table brings its own shadows along.
+ * Shadow tables are found by prefix, so a future fts5 table brings its own shadows along.
  *
  * @param {string} target
  * @returns {Promise<{ real: Set<string>, virtual: Set<string>, shadow: Set<string> }>}
  */
 async function actualTables(target) {
-  /*
-   * RETRIED ONCE: this read has died with a transient open failure and been clean immediately
-   * after. The per-table export is wrapped too; nothing that WRITES is.
-   */
+  // Retried once: this read has died with a transient open failure. Nothing that writes is wrapped.
   const result = await retryRead(
     () => {
       const r = wrangler(
@@ -161,11 +135,6 @@ async function actualTables(target) {
   const rows = JSON.parse(match[0])[0].results;
   if (rows.length === 0) throw new Error("sqlite_master returned no tables");
 
-  /*
-   * Classified by the shared module, the same one the schema test reads: the rules were already
-   * identical and a comment said so, and one module makes that a fact. PLATFORM_TABLES stays HERE,
-   * being a property of where these rows came from rather than of SQLite.
-   */
   const classified = classifySqliteTables(rows);
   return {
     real: new Set(classified.real.filter((n) => !PLATFORM_TABLES.has(n))),
@@ -198,13 +167,7 @@ async function main() {
   /** @type {string[]} */
   const problems = [];
 
-  /*
-   * SCOPE FLOORS. This gate had none, and it is the one that decides whether this database can be
-   * recovered at all. The two loops are both directions between two independent sources, a strong
-   * shape with one blind spot: they are satisfied by the sources shrinking TOGETHER. MEASURED BOTH
-   * WAYS, the two targets agreeing on every structural count and differing only in bytes, which is
-   * why the floors are on STRUCTURE.
-   */
+  // Both directions are satisfied by the two sources shrinking together, so the structure gets floors.
   const floor = (/** @type {string} */ label, /** @type {number} */ actual, /** @type {number} */ min) => {
     if (actual < min) {
       problems.push(
@@ -246,24 +209,11 @@ async function main() {
   /** @type {string[]} */
   const empty = [];
 
-  /**
-   * Exports one table and reads back what it wrote. LIFTED OUT OF THE LOOP UNCHANGED so the loop
-   * could become a pool: every assertion is the one the serial loop made.
-   *
-   * @param {string} name
-   */
+  /** @param {string} name */
   async function exportTable(name) {
     const out = path.join(dir, `${name}.sql`);
-    /*
-     * RETRIED ONCE. An export is a READ: it pulls rows and writes a LOCAL temp file, so a second
-     * attempt overwrites its own output. The throw is load-bearing, wrangler RETURNING on a failed
-     * command rather than rejecting.
-     */
-    /*
-     * NO STATUS CHECK AFTER THIS. There was one and it could not fire: `retryRead` hands back what
-     * the callback returned and the callback throws on non-zero. The vacuity rule's first class, and it
-     * printed what read as the diagnostic for a failed export.
-     */
+    // Retried once: an export is a read that overwrites its own local file. The throw is load-bearing,
+    // because wrangler returns on a failed command rather than rejecting.
     await retryRead(
       () => {
         const r = wrangler(
@@ -282,12 +232,8 @@ async function main() {
     return { name, bytes, inserts };
   }
 
-  /**
-   * THE EXPORTS RUN CONCURRENTLY, and NOTHING ELSE ABOUT THEM CHANGED: the same commands against
-   * the same target, each writing its own file, each a READ, and the output re-sorted. THE COST WAS
-   * SCHEDULING RATHER THAN WORK, process startup being the cost. THE BOUND IS ARGUED RATHER THAN
-   * TUNED: enough processes to saturate the machine puts the cost back as scheduler contention.
-   */
+  // Concurrent. The bound is argued, not tuned: enough processes to saturate the machine puts the cost
+  // back as scheduler contention.
   const EXPORT_CONCURRENCY = 4;
   const names = sorted(real);
   /** @type {Array<{ name: string, bytes: number, inserts: number }>} */
@@ -305,10 +251,7 @@ async function main() {
     }),
   );
 
-  /*
-   * RE-SORTED BEFORE REPORTING: a pool completes out of order, and output order that depends on
-   * which export finished first is a gate whose diffs are noise.
-   */
+  // Re-sorted: a pool completes out of order, and order-dependent output makes every diff noise.
   results.sort((a, b) => a.name.localeCompare(b.name));
   for (const result of results) {
     totalBytes += result.bytes;
@@ -316,10 +259,7 @@ async function main() {
     if (result.inserts === 0) empty.push(result.name);
   }
 
-  /*
-   * SCOPE, ASSERTED, and new with the pool: a worker that returned early leaves exports unrun, and
-   * every count below is then computed over a smaller set that agrees with itself.
-   */
+  // Scope: a worker that returned early leaves exports unrun, and every count below then agrees with itself.
   if (results.length !== names.length) {
     throw new Error(
       `${results.length} of ${names.length} table(s) were exported. The export pool ` +
@@ -335,10 +275,7 @@ async function main() {
         `not the data.`,
     );
   }
-  /*
-   * AND A FLOOR ON HOW MANY CARRIED ROWS, the check above failing only when every export is empty.
-   * This moves with CONTENT, so it is deliberately the loosest floor in the file.
-   */
+  // Moves with content, so it is deliberately the loosest floor in the file.
   const withRows = real.size - empty.length;
   if (withRows < 4) {
     throw new Error(
@@ -350,12 +287,8 @@ async function main() {
     console.log(`  note: ${empty.length} table(s) exported with no rows: ${empty.join(", ")}`);
   }
 
-  /*
-   * THE MEDIA OBJECTS, to the SAME backup root: the mirror bucket answers this site's own code
-   * deleting an object and NOTHING about account loss, so this is the only copy outside it. REMOTE
-   * ONLY, AND SAID RATHER THAN SKIPPED SILENTLY, `--local` reading a miniflare that holds no
-   * objects. THE FLOOR IS THE LIST, NOT A CONSTANT: downloaded against what R2 listed in the call.
-   */
+  // The mirror bucket covers this site's own code deleting an object, not account loss, so this is the
+  // only copy outside it. Remote only: miniflare holds no objects.
   let mediaNote = "media objects NOT pulled (--local reads miniflare, which holds none)";
   if (target === "--remote") {
     const mediaDir = path.join(dir, "media");

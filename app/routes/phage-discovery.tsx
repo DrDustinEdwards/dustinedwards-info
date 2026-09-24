@@ -7,27 +7,14 @@ import { publicHtmlHeaders, SITE,
 
 import "~/styles/prose.css";
 
-/**
- * Publicly cacheable for COOKIELESS readers only. See home.tsx; same shape,
- * same downgrade in workers/app.ts.
- */
+/** Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. */
 export function headers() {
   return publicHtmlHeaders();
 }
 
 /**
- * Roster. Photos and names, by year, and nothing else.
- *
- * No intro copy, no JSON-LD, no description constant. The bare state is deliberate
- * and temporary rather than something to helpfully fill in.
- *
- * THE URL IS /phage-discovery: the legacy WordPress address, indexed and carrying
- * whatever inbound links this content has, so the Worker takes it over at cutover
- * instead of redirecting it. That also makes this page the correction to a real
- * error in the legacy one.
- *
- * EVERYTHING IS STYLED BY `.prose`, deliberately: it already carries the ratified
- * treatment and `check:contrast` already covers it.
+ * The bare state is deliberate and temporary, not something to fill in. The URL is the legacy
+ * WordPress address, taken over at cutover rather than redirected.
  */
 
 export function meta() {
@@ -58,8 +45,7 @@ export default function Roster() {
                       width={entry.photo.width}
                       height={entry.photo.height}
                       alt={entry.photo.alt}
-                      // The first photo is above the fold on every viewport;
-                      // the rest are not, so only it is worth blocking on.
+                      // Only the first photo is above the fold on every viewport.
                       loading={index === 0 ? "eager" : "lazy"}
                       decoding="async"
                     />
@@ -73,8 +59,7 @@ export default function Roster() {
                     ))}
                   </ul>
                 ) : (
-                  // Kept deliberately, and it is not dead. Each October a new
-                  // year lands with a photo before its roster does.
+                  // Not dead: each October a new year lands with a photo before its roster does.
                   <p className="muted">Roster to be added.</p>
                 )}
               </section>

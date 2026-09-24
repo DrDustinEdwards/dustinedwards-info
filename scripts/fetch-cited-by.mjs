@@ -1,13 +1,4 @@
-/**
- * Who cites each paper, from OpenAlex, into a committed artifact.
- *
- *   node scripts/fetch-cited-by.mjs          report only
- *   node scripts/fetch-cited-by.mjs --write  update the artifact
- *
- * BOUNDARY: NOT A GATE, AND NEVER RUN BY ONE, because a gate that fetches a third party is red on
- * their bad day rather than on ours. A human runs it, the result is committed with the date it was
- * read, and the gate checks the committed file.
- */
+// Not a gate, and never run by one: a gate that fetches a third party is red on their bad day.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -19,10 +10,9 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(root, "data", "publications.cited-by.json");
 const SITE_PATH = join(root, "data", "publications.site.json");
 
-/** Ruling 63. Also the artifact's shape: a longer list would be a bigger page. */
 const MAX_CITING = 50;
 
-/** Identifies the caller. Not an address, for the reason citations.server.ts gives. */
+/** Not an email address, for the reason citations.server.ts gives. */
 const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
 const sleep = (/** @type {number} */ ms) => new Promise((r) => setTimeout(r, ms));
@@ -75,8 +65,6 @@ async function main() {
     list.searchParams.set("filter", `cites:${openalexId}`);
     list.searchParams.set("per-page", String(MAX_CITING));
     list.searchParams.set("sort", "publication_year:desc");
-    // `select` keeps the response to the fields the page renders: the default is a large record per
-    // work and this asks for many of them.
     list.searchParams.set("select", "id,doi,title,publication_year,primary_location");
     const cited = await get(list);
     lists += 1;
@@ -88,8 +76,6 @@ async function main() {
         title: w.title ?? null,
         year: w.publication_year ?? null,
         venue: w.primary_location?.source?.display_name ?? null,
-        // The DOI as OpenAlex gives it is a full URL and the page needs the bare name, stripped here so
-        // the artifact carries one form.
         doi: typeof w.doi === "string" ? w.doi.replace(/^https?:\/\/doi\.org\//, "") : null,
       })),
     };
@@ -118,7 +104,6 @@ async function main() {
   );
 
   if (process.argv.includes("--write")) {
-    // LF and a trailing newline, like every other committed artifact here.
     writeFileSync(OUT_PATH, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");
     console.log(`wrote ${OUT_PATH}`);
   } else {

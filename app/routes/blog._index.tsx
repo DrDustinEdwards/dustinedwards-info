@@ -20,14 +20,7 @@ import {
 } from "~/lib/seo";
 import type { Route } from "./+types/blog._index";
 
-/*
- * ONE SHEET, where there were three. blog-search.css is gone from this page rather than restyled:
- * its remaining rule is `.search-submit`, which is /search's filled button, and /search is its own
- * page with its own job. The listing's own field and word are in entry-list.css.
- *
- * evidence-row.css is imported HERE and not by the component, which is the house pattern:
- * every sheet a page loads is visible in the route's own imports.
- */
+/* evidence-row.css is imported here, not by the component: every sheet a page loads shows in its route's imports. */
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/entry-list.css";
@@ -36,23 +29,15 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const env = getEnv(context);
 
-  // Filter state lives in the URL and is applied in the query, so the HTML that
-  // ships is already the filtered list rather than a client-side narrowing.
   const tag = url.searchParams.get("tag");
   const year = url.searchParams.get("year");
   const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
 
-  // INSTRUMENTATION, OFF BY DEFAULT. `?timing=1` opts in, and root's middleware is
-  // what reads it and creates the collector for every route. This loader used to make
-  // its own.
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
 
   const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
     Promise.all([
-      // ONE round trip now, not three. These two run in parallel with it and were
-      // hidden underneath the old serial chain, so whether they are now the critical path
-      // is the thing to read off the numbers rather than assume.
       listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
       timed(timings, "d1_tag_list", () => listBlogTags(env)),
       timed(timings, "d1_year_list", () => listBlogYears(env)),
@@ -60,13 +45,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   );
 
   /*
-   * The featured post is surfaced only on the unfiltered first page, AND IT IS
-   * REMOVED FROM THE LIST BELOW IT. Filtered here rather than in the component, so
-   * the count the page reports and the items it renders come from one decision.
-   *
-   * PAGINATION IS UNAFFECTED: `pageCount` is computed over the whole corpus.
-   *
-   * KNOWN LIMIT: the hero only appears when the featured post falls on page 1.
+   * Filtered here so the reported count and the rendered items come from one decision.
+   * Known limit: the hero only appears when the featured post falls on page 1.
    */
   const { featured, posts } = splitFeatured(
     listing.posts,
@@ -74,11 +54,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   );
 
   /*
-   * OUT OF RANGE REDIRECTS TO THE LAST REAL PAGE. NOT 404, because the resource
-   * EXISTS and 404 would be wrong the moment enough posts make the page valid. NOT
-   * CLAMPED IN PLACE, because the URL would then disagree with the page and a copied
-   * link would be a lie. 302 rather than 301: the bound moves as posts are
-   * published.
+   * Out of range redirects to the last real page: a 404 would be wrong once posts arrive, and
+   * clamping in place would make the URL lie. 302 because the bound moves.
    */
   if (page > listing.pageCount) {
     const target = new URLSearchParams();
@@ -93,9 +70,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const payload = {
     ...listing,
-    // AFTER the spread, so the filtered array wins over `listing.posts`. Spread first
-    // and this line is the whole fix; spread second and it is a no-op that reads like
-    // one.
+    // After the spread, so the filtered array wins over `listing.posts`.
     posts,
     tags: tagList,
     years: yearList,
@@ -104,39 +79,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     featured,
   };
 
-  /*
-   * The transport writes the header from the same array AFTER the handler returns,
-   * which is the one point where it is complete. Stamping here would emit a header
-   * built from a list still being written to.
-   */
+  /* The transport writes the header from this array after the handler returns, when it is complete. */
   return data(payload);
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
-  // The theme is a dimension of the cache key rather than a Vary, so this page no
-  // longer declares one. Tagged `posts`, because its content is a function of the
-  // corpus and a publish must be able to move it.
+  // Tagged `posts`: a publish must be able to move this page.
   const headers = new Headers(publicHtmlHeaders(cacheTags()));
-  // Carried through from the loader. `headers` does not inherit them, so a
-  // loader header that is not forwarded here simply never reaches the client.
+  // `headers` does not inherit loader headers, so one not forwarded here never reaches the client.
   const timing = loaderHeaders.get("Server-Timing");
   if (timing) headers.set("Server-Timing", timing);
   return headers;
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
-  /* The year names the page too. A reader with three `/blog` tabs open, one per
-     year, otherwise sees three identical titles. */
   const filterLabel = [loaderData?.activeTag, loaderData?.activeYear]
     .filter(Boolean)
     .join(", ");
   const title = filterLabel ? `Blog: ${filterLabel} | ${SITE.name}` : `Blog | ${SITE.name}`;
   const description = "Writing on building for the web, mostly on Cloudflare.";
-  /*
-   * THE CANONICAL CARRIES EVERY AXIS THAT CHANGES THE LIST. Built from the same
-   * axes `filterHref` uses, in the same order, so the canonical of a page is
-   * byte-identical to the link that reaches it.
-   */
+  /* Built from the same axes as `filterHref`, in order, so the canonical is byte-identical to the link. */
   const canonicalParams = new URLSearchParams();
   if (loaderData?.activeTag) canonicalParams.set("tag", loaderData.activeTag);
   if (loaderData?.activeYear) canonicalParams.set("year", loaderData.activeYear);
@@ -145,11 +107,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   }
   const canonicalQuery = canonicalParams.toString();
 
-  /*
-   * A TAG-ONLY FILTER CANONICALISES TO THE ARCHIVE, and ONLY when the tag is the
-   * only filter: `?tag=x&year=2026` is a DIFFERENT list, so naming the archive would
-   * point a crawler at a page whose content it does not share.
-   */
+  /* Only when the tag is the only filter: `?tag=x&year=2026` is a different list. */
   const tagOnly = Boolean(loaderData?.activeTag) && !loaderData?.activeYear;
   const path = tagOnly
     ? `${tagPath(loaderData!.activeTag!)}${
@@ -159,11 +117,6 @@ export function meta({ loaderData }: Route.MetaArgs) {
       ? `/blog?${canonicalQuery}`
       : "/blog";
 
-  /*
-   * `pageMeta` owns the social set. The two feed alternates moved to root's
-   * `links`, which are merged onto every route, so nothing about this page is local
-   * any more.
-   */
   return pageMeta({ title, description, path });
 }
 
@@ -172,13 +125,8 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
     loaderData;
 
   /**
-   * EVERY link on this page, from one builder. The loader ANDs tag and year, so a
-   * reader can be in both at once and a chip that knew only its own axis silently
-   * destroyed the other. An override of `null` clears one axis.
-   *
-   * Page is dropped on any filter change: page 3 of one filter is not page 3 of
-   * another, and carrying it would land a reader on an empty list their own click
-   * created.
+   * Every link from one builder: tag and year AND together, so a chip that knew one axis destroyed
+   * the other. Page is dropped on any filter change.
    */
   const filterHref = (
     override: { tag?: string | null; year?: string | null; page?: number } = {},
@@ -198,13 +146,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
   return (
     <>
       <SiteHeader />
-      {/*
-       * THE h-feed IS THE `<main>` ITSELF, a deliberate refusal to add a wrapper: the
-       * feed has to contain the head, the filters and the list, and those are siblings.
-       *
-       * NOT ON THE TAG ARCHIVE OR THE SERIES PAGE: a filtered view is not this blog's
-       * feed.
-       */}
+      {/* The h-feed is `<main>` itself: head, filters and list are siblings. Not on archives: a filtered view is not this blog's feed. */}
       <main className="tracks list-tracks h-feed" id="main" tabIndex={-1}>
         <script
           type="application/ld+json"
@@ -219,23 +161,12 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         />
 
         <header className="list-head">
-          {/*
-           * MEASURED, because the first version of this comment guessed and was wrong.
-           * Implied properties are skipped for a root containing nested microformats, so the
-           * class is not preventing a bad name, it is supplying the only one.
-           */}
+          {/* Implied properties are skipped for a root containing nested microformats, so this class supplies the only name. */}
           <h1 className="list-label p-name">Blog</h1>
           <p className="list-dek">Writing on building for the web, mostly on Cloudflare.</p>
-          {/* Three counted facts about THIS list, in the slot the evidence row takes on every
-              page that carries one. Never typed; see `listingFacts`. */}
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>
 
-        {/*
-         * Blog-scoped search is site search with type pinned, not a second engine: the
-         * same index, parser and ranking serve both. A `<Form method="get">` emits the
-         * same markup and URL as a plain form, so it works with scripting off.
-         */}
         <Form method="get" action="/search" role="search" className="list-search">
           <label className="sr-only" htmlFor="blog-search-input">
             Search the blog
@@ -251,16 +182,9 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           <button type="submit">Search</button>
         </Form>
 
-        {/*
-         * THE FILTERS ARE TEXT LINKS. They were 26 capsules with a filled --brand current state,
-         * which is ruling 118 item 7's CHIP condition exactly; the state is weight and ink now,
-         * and `aria-current` carries it into the accessibility tree either way. Still links, never
-         * handlers: the URL is the state, with script or without it.
-         */}
         {tags.length > 0 && (
           <nav className="list-filter" aria-label="Filter posts by tag">
             <span className="list-filter-label">Tags</span>
-            {/* Clears the TAG and keeps the year, rather than clearing both. */}
             <Link to={filterHref({ tag: null })} aria-current={activeTag ? undefined : "true"}>
               All
             </Link>
@@ -279,7 +203,6 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         {years.length > 1 && (
           <nav className="list-filter" aria-label="Filter posts by year">
             <span className="list-filter-label">Years</span>
-            {/* Clears the YEAR and keeps the tag. */}
             <Link to={filterHref({ year: null })} aria-current={activeYear ? undefined : "true"}>
               All
             </Link>
@@ -295,16 +218,6 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
           </nav>
         )}
 
-        {/*
-         * THE FEATURED POST IS THE FIRST ROW OF THE LIST, not a well above it. `splitFeatured`
-         * still removes it from the page's own array, so it appears once; what it no longer gets
-         * is a bordered, rounded, filled box with a tracked-caps label on top, which was four of
-         * ruling 117's kill list in one object. Being first, dated and marked is the whole claim.
-         *
-         * It is still an entry in the feed, which is why the feed is the `<main>`: a feed scoped
-         * to the `<ul>` would have omitted it while it was a sibling, and `check:machine-readable`
-         * counts the entries either way.
-         */}
         {posts.length === 0 && !featured ? (
           <p className="list-empty">No posts here yet.</p>
         ) : (
@@ -319,12 +232,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
         <Pager page={page} pageCount={pageCount} hrefFor={pageHref} />
       </main>
       <ShellFooter />
-      {/*
-       * NO BlogEnhancements HERE. Every one of that bundle's enhancements targets
-       * markup the post pipeline renders inside `.prose`, and this page has none of it.
-       * `check:browser` asserts on the resource timeline that it is not fetched here,
-       * which is the half a source reading cannot give you.
-       */}
+      {/* No BlogEnhancements: its enhancements target `.prose` markup, which this page has none of. */}
     </>
   );
 }

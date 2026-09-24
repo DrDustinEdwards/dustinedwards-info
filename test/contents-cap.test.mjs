@@ -1,14 +1,5 @@
-/**
- * The Contents API cap guard, without a GitHub binding in sight.
- *
- * Replays the misdiagnosis the guard was written for: the JSON media type
- * returns a file over 1 MB with `size` set and NO base64 content, and the
- * reader used to decode that to an empty string, surfacing downstream as
- * parse garbage with advice that repaired nothing.
- *
- * Trimmed from test/artifact-limits.test.mjs when the artifact-sized readers
- * were deleted; the cap survives because it governs every per-file read.
- */
+/* The JSON media type returns a file over 1 MB with `size` set and NO base64 content, which
+ * would otherwise decode to an empty string. */
 
 import assert from "node:assert/strict";
 import { test } from "node:test";

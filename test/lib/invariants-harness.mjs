@@ -1,11 +1,5 @@
-/**
- * Shared by the invariant tests: rules stated twice, in different languages or runtimes, that
- * cannot merge (drafts never public, the schema matching the database, the write paths), and the
- * control-byte scan.
- *
- * Every test asserts its fixture is non-empty, because a comparison over nothing reports what a
- * clean tree reports.
- */
+/* Every test asserts its fixture is non-empty, because a comparison over nothing reports what a
+ * clean tree reports. */
 
 import assert from "node:assert/strict";
 import { mkdirSync } from "node:fs";

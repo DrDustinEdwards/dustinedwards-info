@@ -1,15 +1,5 @@
-/**
- * The editor's one feedback slot: what it can say, and how a success survives the redirect.
- *
- * A save is post/redirect/get, so the outcome crosses in the URL rather than a flash cookie: no
- * server state, identical with scripting off, and a reload re-renders rather than re-posting.
- *
- * A FAILURE cannot travel this way, because a redirect would throw away the body the author just
- * typed, so failures stay in the action result. Both feed the same component.
- *
- * Everything parsed here is UNTRUSTED, because the address bar is editable: a value that does not
- * match its shape is dropped rather than rendered.
- */
+// Success crosses the post/redirect/get in the URL; a failure cannot, because the redirect would
+// discard the typed body. The URL is editable, so everything parsed from it is untrusted.
 
 import type { SaveOutcome } from "./publish-policy.mjs";
 
@@ -18,11 +8,6 @@ export type EditorFeedback =
   | { state: "published-first"; sha: string; at: string; slug: string }
   | { state: "republished"; sha: string; slug: string }
   | { state: "unpublished"; sha: string; slug: string }
-  /**
-   * `field` and `line` come from `EditorError`, which has carried both since it was written.
-   * Optional because most refusals have neither; the display renders what it is given and says nothing
-   * when it is given nothing.
-   */
   | { state: "failed"; message: string; conflict: boolean; field?: string; line?: number };
 
 const OUTCOMES: readonly SaveOutcome[] = [
@@ -32,19 +17,10 @@ const OUTCOMES: readonly SaveOutcome[] = [
   "unpublished",
 ];
 
-/** Short form, because the message is read by a human, not resolved by one. */
 function shortSha(sha: string) {
   return sha.slice(0, 7);
 }
 
-/**
- * Where a successful save sends the browser.
- *
- * Always the edit route for the post that was just saved, including on create,
- * so the author lands on the thing they acted on and the message is beside it.
- * Before this, a save redirected to the post list and said nothing at all,
- * which is how a first publication completed in silence.
- */
 export function savedRedirectPath(result: {
   slug: string;
   outcome: SaveOutcome;
@@ -61,15 +37,6 @@ export function savedRedirectPath(result: {
   return `/admin/posts/${result.slug}/edit?${params}`;
 }
 
-/**
- * Reads a success back out of the URL.
- *
- * Returns null for anything that does not match exactly, so a hand-edited query
- * string renders nothing rather than an invented claim about what happened. A
- * first publication with no valid date degrades to the ordinary saved message:
- * the ceremony names a date, and a ceremony without one would be asserting
- * something it cannot show.
- */
 export function feedbackFromSearch(
   search: URLSearchParams,
   slug: string,

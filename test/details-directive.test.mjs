@@ -1,14 +1,5 @@
-/**
- * The `:::details` directive: supplementary material, collapsed, always in the HTML.
- *
- * WHAT MAKES THIS WORTH A TEST rather than a reading: the rule the directive enforces is a
- * JUDGEMENT ("supplementary material only, never the main argument") and a comment cannot enforce
- * a judgment. The heading refusal is the enforceable half of it, because a heading is how this
- * site spells "section of the argument": it goes in the table of contents and it is a link target.
- * If that refusal ever stops firing, the rule goes back to being a sentence nobody reads.
- *
- * @see app/lib/content/pipeline.mjs
- */
+/* The heading refusal is the enforceable half of "supplementary material only": a heading is
+ * how this site spells a section of the argument (it enters the table of contents). */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -25,11 +16,8 @@ test("it renders a native details with the summary first", async () => {
 });
 
 test("the body text is in the HTML whether or not anything runs", async () => {
-  /*
-   * The point of `details` over a scripted panel. The assertion is on the TEXT being present in
-   * a closed disclosure, because that is what a reader with no script, a printer and a crawler
-   * each get. No `open` attribute is emitted: it is closed and the text is still there.
-   */
+  /* The TEXT must be present in a closed disclosure: that is what a reader with no script, a
+   * printer and a crawler each get. */
   const { html } = await render(':::details{summary="Methods"}\nThe sample was 400 rows.\n:::\n');
   assert.ok(html.includes("The sample was 400 rows."));
   assert.ok(!html.includes("<details class=\"post-details\" open"));
@@ -47,10 +35,8 @@ test("a heading inside is refused, and the message says where", async () => {
 });
 
 test("tables, code and lists are all allowed, which is the control on that refusal", async () => {
-  /*
-   * Without this the heading test proves only that SOMETHING is refused. Supplementary material is
-   * mostly data, and data is tables, fences and lists.
-   */
+  /* Without this the heading test proves only that SOMETHING is refused. Supplementary
+   * material is mostly data: tables, fences and lists. */
   const { html } = await render(
     ':::details{summary="Data"}\n| a | b |\n| - | - |\n| 1 | 2 |\n\n- one\n- two\n\n```js\nconst x = 1;\n```\n:::\n',
   );

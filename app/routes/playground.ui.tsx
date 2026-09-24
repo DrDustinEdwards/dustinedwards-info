@@ -4,39 +4,17 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { SITE, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
-/* The swatch inventory, generated from app.css by build:tokens and held against
-   it by check:contrast. A Worker cannot read a stylesheet. */
+/* Generated from app.css by build:tokens: a Worker cannot read a stylesheet. */
 import tokenData from "../../content/tokens.json";
 
-/* The code block in prose is the real prose sheet's, not a lookalike. */
 import "~/styles/prose.css";
 import "~/styles/playground-ui.css";
 
 /**
- * The UI inventory: every component of the foundation, the Paper kit and the
- * Admin kit, in both themes and every state, plus one swatch per palette token.
- *
- * ## IT IS A FIXTURE, AND ITS CONTENTS ARE ITS COVERAGE
- *
- * Three gates measure composited pixels rather than token pairs, and a gate
- * that has nothing to photograph passes by not looking. So the page also
- * carries the three composites nowhere else has together: a roster photograph
- * under a caption scrim, a social card, and a code block inside prose.
- *
- * ## STATES ARE ATTRIBUTES BESIDE THE PSEUDO-CLASS
- *
- * Nothing can force :hover or :focus-visible in a screenshot. Every state rule
- * in the stylesheet carries a `data-demo` selector alongside the real one and
- * shares its declaration block, so a specimen cannot show a state the component
- * does not have.
- *
- * ## THE FORMS GO NOWHERE
- *
- * Every form here is a GET back to this page. The Admin kit's real actions are
- * POSTs to real endpoints, and a public page must not carry one.
- *
- * The header is rendered once, by the shell, because it is a page singleton.
- * Its two breakpoints are the capture widths, not two copies.
+ * A fixture: three gates measure composited pixels, so the page carries the composites (a photo
+ * under a scrim, a social card, code in prose). Nothing can force :hover in a screenshot, so every
+ * state rule also has a `data-demo` selector sharing its block. Every form is a GET: a public page
+ * must not carry the Admin kit's real POSTs.
  */
 export function headers() {
   return new Headers(publicHtmlHeaders());
@@ -90,7 +68,6 @@ function Spec({
   );
 }
 
-/** A labeled specimen, so a shot says which state it is showing. */
 function State({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="pgui-state">
@@ -100,10 +77,7 @@ function State({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/**
- * Lucide geometry, inline. No icon font and no sprite: a font fails to tofu and
- * a sprite is a second request for two lines of path.
- */
+/** Inline: an icon font fails to tofu and a sprite is a second request. */
 function Icon({ name, className = "icon" }: { name: IconName; className?: string }) {
   return (
     <svg
@@ -165,7 +139,6 @@ const ICONS = {
   ),
 } as const;
 
-/** One select, written once: the chevron is the kit's, not the platform's. */
 function Select({ id, disabled }: { id: string; disabled?: boolean }) {
   return (
     <div className="select-wrap">
@@ -297,14 +270,6 @@ export default function PlaygroundUi() {
             )}
           </Spec>
 
-          {/*
-            BOTH FORMS OF ONE ACTION, because the rule that allows the first is
-            the one most easily read as a license. An icon-only control is
-            allowed where the icon is universally understood: search, menu,
-            theme, close, delete. The icon is aria-hidden and the control
-            carries the name, which is what makes the two identical to a screen
-            reader and is the half a capture cannot record. So it is printed.
-          */}
           <Spec
             id="icon-only"
             title="Icon-only and labeled, one action twice"

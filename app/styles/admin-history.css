@@ -1,8 +1,3 @@
-/* Admin version history.
- * Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/* Version history (admin) --------------------------------------------------- */
-
 .history-list {
   margin: 0;
   padding: 0;
@@ -59,8 +54,8 @@
   white-space: pre;
 }
 
-/* The documented exception to rule 4: a diff must tell two states apart, so both tints are load-bearing.
-   Rule 1 still holds: each line keeps its literal + or - prefix. */
+/* Both tints are load-bearing: a diff must tell two states apart. Each line keeps its literal + or -
+   prefix. */
 .history-diff [data-diff="add"] {
   background: var(--tint-success);
   color: var(--on-tint-success);

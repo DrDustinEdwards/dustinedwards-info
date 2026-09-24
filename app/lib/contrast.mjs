@@ -1,42 +1,4 @@
 /**
- * Color contrast maths: sRGB parsing, WCAG 2.2 relative luminance and ratio,
- * and APCA signed Lc.
- *
- * A .mjs rather than a .ts for the reason `app/lib/search/query.mjs` is: the
- * Worker imports it AND `npm run check:contrast` imports it, so the gate
- * computes with exactly the functions that ship rather than a copy of their
- * rules. `/playground`'s contrast lab renders what the gate would compute, and
- * there is no second implementation of the law for the two to drift apart on.
- *
- * EXTRACTED from scripts/check-contrast.mjs, byte-identical. The gate's own
- * assertions are the regression test for the move: it verifies this `apca`
- * against all EIGHT published apca-w3 0.1.9 keystone vectors and recomputes the
- * whole 76-pair matrix from the shipped stylesheet, so a transcription error
- * here fails there. Measured before and after the extraction: 599 checks, 0
- * failures, `apcaWorstDelta` 0.00e+0 both times.
- *
- * WHAT THIS MODULE IS NOT. It does not read the stylesheet, name a token, hold a
- * threshold, or know which pairs the design system ratifies. All of that stays
- * in the gate, which is what keeps `check:contrast` reading TWO INDEPENDENT
- * SOURCES: the hexes come from the stylesheet that ships, the pairs come from
- * the transcribed matrix, and this module is only the arithmetic between them.
- * Fixture independence is therefore untouched by the extraction.
- *
- * Pure: no filesystem, no network, no clock, no module state. Safe in a Worker,
- * in a browser and in a build script.
- */
-
-/**
- * sRGB channels, 0 to 1. Accepts `#rgb`, `#rrggbb`, with or without the hash.
- *
- * A TUPLE rather than an array, and that is a type change with a reason. Every
- * caller destructures three names out of this, and under
- * `noUncheckedIndexedAccess` an array read is `number | undefined`, so each of
- * those names arrived possibly-undefined and the arithmetic below it stopped
- * compiling. The honest repair is to say what this returns, which is exactly
- * three channels or a thrown error, rather than to assert non-null at seven
- * call sites.
- *
  * @param {string} hex
  * @returns {[number, number, number]}
  */
@@ -57,18 +19,16 @@ export function channels(hex) {
   ];
 }
 
-/** WCAG 2.x relative luminance. @param {string} hex */
+/** @param {string} hex */
 export function luminance(hex) {
-  // Destructured BEFORE the transform, not after. `Array.prototype.map` over a
-  // tuple returns a plain array, which throws the length away and puts every
-  // channel back to `number | undefined`. Same formula, same order.
+  // Destructured before the transform: `.map` over a tuple loses its length for the type checker.
   const [r, g, b] = channels(hex);
   /** @param {number} c */
   const linear = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
   return 0.2126 * linear(r) + 0.7152 * linear(g) + 0.0722 * linear(b);
 }
 
-/** WCAG 2.x contrast ratio, 1 to 21. @param {string} a @param {string} b */
+/** @param {string} a @param {string} b */
 export function contrast(a, b) {
   const la = luminance(a);
   const lb = luminance(b);
@@ -76,12 +36,7 @@ export function contrast(a, b) {
 }
 
 /**
- * APCA (SAPC) lightness contrast, W3C draft 0.1.9 constants.
- *
- * Advisory only. It is reported because the dark-mode fills rule was decided on
- * it: the dark semantic pastels clear WCAG comfortably and APCA still rates
- * them around Lc 57 to 60, which is why interactive semantics take fills.
- * Sign carries polarity; magnitude is what is compared.
+ * APCA, W3C draft 0.1.9 constants. Sign carries polarity; magnitude is what is compared.
  *
  * @param {string} textHex
  * @param {string} bgHex
@@ -111,14 +66,6 @@ export function apca(textHex, bgHex) {
 }
 
 /**
- * Normalizes a hex to `#rrggbb` lower case, or returns null if it is not one.
- *
- * The lab's input validator. It is here rather than in the route because it must
- * agree with `channels()` about what a hex IS: a route that accepted a string
- * `channels()` then threw on would render a 500 instead of a boring error, and a
- * route that refused one `channels()` accepts would be a second, stricter rule.
- * Parsing through `channels()` is what keeps the two answers the same one.
- *
  * @param {string} input
  * @returns {string | null}
  */

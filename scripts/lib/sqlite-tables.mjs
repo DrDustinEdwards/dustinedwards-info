@@ -1,10 +1,6 @@
 /**
- * Classifying `sqlite_master` rows into virtual, shadow and real tables. ONE ENUMERATOR RULE, for
- * the callers that read a live database and the one that replays the migrations into memory.
- *
- * BOUNDARY: source-agnostic, so it takes rows rather than a database, and each class is derived
- * from the DDL or the naming rule rather than from a list. Platform bookkeeping is NOT handled
- * here, being a property of where the rows came from rather than of SQLite.
+ * Platform bookkeeping tables are not handled here: they are a property of where the rows came
+ * from, not of SQLite.
  *
  * @param {{ name: string, sql: string | null }[]} rows
  * @returns {{ virtual: string[], shadow: string[], real: string[] }}
@@ -33,10 +29,8 @@ export function classifySqliteTables(rows) {
 }
 
 /**
- * Every table name an FTS index owns, which is the set that must never be written to directly:
- * deleting from any of them corrupts the index and the repair is a rebuild. Counting rows in one
- * is equally wrong in the other direction, a count on an external-content index reading THROUGH to
- * the content table, which is why the health checks count the docsize shadow instead.
+ * Never written directly: deleting from any of them corrupts the index. Never counted either: a
+ * count on an external-content index reads through to the content table.
  *
  * @param {{ virtual: string[], shadow: string[] }} classified
  * @returns {string[]}

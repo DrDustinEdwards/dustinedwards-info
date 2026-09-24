@@ -48,7 +48,6 @@ export function getDb(env: Env) {
 
 export type DB = ReturnType<typeof getDb>;
 
-/** Public visibility: published, publish_at unset or past. Every public read applies it. */
 export function publiclyVisible() {
   return and(
     eq(posts.status, PUBLISHED_STATUS),
@@ -56,7 +55,7 @@ export function publiclyVisible() {
   );
 }
 
-/** Visible subset of these slugs. Ask's cache replay checks it: KV invalidation lags. */
+/** Ask's cache replay re-checks visibility here because KV invalidation lags. */
 export async function publiclyVisibleSlugs(
   env: Env,
   slugs: string[],
@@ -68,8 +67,6 @@ export async function publiclyVisibleSlugs(
     .where(and(inArray(posts.slug, slugs), publiclyVisible()));
   return new Set(rows.map((r) => r.slug));
 }
-
-/* Blog readers. Every one composes publiclyVisible(). */
 
 /** Columns the index and feed need. Deliberately excludes body and html. */
 const postCard = {
@@ -91,19 +88,9 @@ function isBlogPost() {
 }
 
 /**
- * THE COUNT AND THE THREE FACTS BESIDE IT, as ONE statement over a listing's own narrowing, so the
- * evidence row over a list cannot describe a different list than the rows under it. The index, the
- * tag archive and the series archive all state the same three and take them from here.
- *
- * IT COMPOSES `isBlogPost()` ITSELF and takes only the EXTRA clauses. Written first to take a
- * finished `where` from the caller, which read fine and was wrong twice over: the visibility
- * test (`test/visibility-invariants.test.mjs`) could not see a predicate in this body and failed it, correctly, and a future caller
- * could have passed a `where` without one and nothing would have said so. The visibility rule is a
- * chokepoint, not a convention, so the predicate belongs where it cannot be left out.
- *
- * The years come from SQLite rather than from a JavaScript date: `publish_at` is epoch seconds,
- * `listBlogYears` already asks for a year exactly this way, and two spellings of one conversion
- * are two answers waiting to disagree across a new year in a different zone.
+ * Composes `isBlogPost()` itself and takes only the extra clauses, so no caller can pass a `where`
+ * missing the visibility predicate. Years come from SQLite, as in `listBlogYears`, so two
+ * conversions cannot disagree across a new year in another time zone.
  */
 function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
   return db
@@ -121,10 +108,7 @@ function listingSpanSelect(db: DB, ...narrowing: (SQL | undefined)[]) {
     .where(and(isBlogPost(), ...narrowing));
 }
 
-/**
- * The span row as the page reads it. A NULL IS NOT A ZERO: an empty list has no first year and
- * nothing to read, and the row omits itself rather than claiming a span nothing occupies.
- */
+/** A NULL is not a zero: an empty list has no span, and the row omits itself. */
 function spanOf(row: { firstYear: string | null; lastYear: string | null; minutes: number | null } | undefined) {
   return {
     firstYear: row?.firstYear ?? null,
@@ -133,7 +117,7 @@ function spanOf(row: { firstYear: string | null; lastYear: string | null; minute
   };
 }
 
-/** One tag predicate so index, archive and feeds agree. A join would multiply rows. */
+/** A subquery, not a join: a join would multiply rows. */
 function carriesTag(db: DB, tagSlug: string) {
   return inArray(
     posts.id,
@@ -158,7 +142,6 @@ export async function getBlogTag(env: Env, tagSlug: string) {
   return rows[0] ?? null;
 }
 
-/** Tags carried by a set of posts, as a slug-keyed map. */
 async function tagsForPosts(db: DB, postIds: number[]) {
   /** @type Map<number, string[]> */
   const bySlug = new Map<number, string[]>();
@@ -179,7 +162,6 @@ async function tagsForPosts(db: DB, postIds: number[]) {
   return bySlug;
 }
 
-/** Paginated blog index, optionally filtered to one tag, filtered in SQL. */
 export async function listBlogPosts(
   env: Env,
   options: {
@@ -187,7 +169,6 @@ export async function listBlogPosts(
     year?: string | null;
     page?: number;
     perPage?: number;
-    /** Optional collector. Absent means no instrumentation and no cost. */
     timings?: Timings;
   } = {},
 ) {
@@ -197,11 +178,8 @@ export async function listBlogPosts(
   const tag = options.tag?.trim() || null;
   const year = options.year?.trim() || null;
 
-  /* Filtered in the query, so the shipped HTML is already narrowed. The two filter clauses are
-     kept apart from the predicate because `listingSpanSelect` composes its own: one narrowing,
-     two statements, and neither can be given a where that forgot the visibility rule. */
+  /* The filters stay apart from the visibility predicate because `listingSpanSelect` composes its own. */
   const narrowing: (SQL | undefined)[] = [];
-  // Via `carriesTag`, shared with the tag archive and its feeds.
   if (tag) narrowing.push(carriesTag(db, tag));
   if (year) {
     narrowing.push(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch') = ${year}`);
@@ -222,7 +200,6 @@ export async function listBlogPosts(
   // Named one by one: drizzle will not select a subquery as a nested object.
   const [statRows, joined] = await timed(options.timings, "d1_batch", () =>
     db.batch([
-      /* The count and the evidence row's three facts, over the same narrowing as the rows. */
       listingSpanSelect(db, ...narrowing),
       db
         .select({
@@ -250,7 +227,6 @@ export async function listBlogPosts(
     ]),
   );
 
-  // COUNT(*) without GROUP BY always returns one row.
   const stats = statRows[0];
   const total = stats?.total ?? 0;
 
@@ -264,7 +240,6 @@ export async function listBlogPosts(
       entry = { ...post, tags: [] };
       byId.set(post.id, entry);
     }
-    // Null for a post with no tags, which is the LEFT JOIN doing its job.
     if (tagSlug !== null) entry.tags.push(tagSlug);
   }
 
@@ -274,16 +249,12 @@ export async function listBlogPosts(
     page,
     perPage,
     pageCount: Math.max(1, Math.ceil(total / perPage)),
-    /* THE WHOLE FILTERED LIST, not this page of it: a reader on page 2 of a 36-post archive is
-       still reading a 36-post archive. */
+    /* The whole filtered list, not this page of it. */
     span: spanOf(stats),
   };
 }
 
-/**
- * The featured post leads, then the newest others; with nothing featured the newest leads.
- * Unlabelled, so not the no-substitution rule's substituted value. The visibility rule: composes `isBlogPost()`.
- */
+/** The featured post leads, then the newest others; with nothing featured the newest leads. */
 export async function listHomeStartHere(
   env: Env,
   options: { cards?: number; timings?: Timings } = {},
@@ -317,7 +288,6 @@ export async function listHomeStartHere(
   return { featured, recent, total: countRows[0]?.total ?? 0 };
 }
 
-/** Publication years with a post count, newest first, grouped in SQL. */
 export async function listBlogYears(env: Env) {
   return getDb(env)
     .select({
@@ -330,7 +300,6 @@ export async function listBlogYears(env: Env) {
     .orderBy(desc(sql`strftime('%Y', ${posts.publishAt}, 'unixepoch')`));
 }
 
-/** Every part of a series, in order, for the part index on a post. */
 export async function listSeriesParts(env: Env, series: string) {
   return getDb(env)
     .select({ slug: posts.slug, title: posts.title, part: posts.part })
@@ -339,7 +308,6 @@ export async function listSeriesParts(env: Env, series: string) {
     .orderBy(asc(posts.part));
 }
 
-/** Series with a publicly visible post, and its count, via `isBlogPost()`. */
 export async function listBlogSeries(env: Env) {
   return getDb(env)
     .select({ name: posts.series, total: count(posts.id) })
@@ -349,7 +317,7 @@ export async function listBlogSeries(env: Env) {
     .orderBy(asc(posts.series));
 }
 
-/** Series by URL slug, or null; scans `listBlogSeries`. Ambiguous slugs are refused. */
+/** Ambiguous slugs are refused. */
 export async function getBlogSeries(env: Env, slug: string) {
   const all = await listBlogSeries(env);
   const matches = all.filter((row) => row.name !== null && seriesSlug(row.name) === slug);
@@ -370,8 +338,7 @@ export async function listSeriesPosts(
   const where = and(isBlogPost(), eq(posts.series, series));
 
   const [statRows, rows] = await db.batch([
-    /* The same statement the index counts with, so the archive's evidence row states the same
-       three facts about its own list rather than a second set with its own arithmetic. */
+    /* The same statement the index counts with, so every evidence row uses one arithmetic. */
     listingSpanSelect(db, eq(posts.series, series)),
     db
       .select({ ...postCard, id: posts.id })
@@ -393,7 +360,6 @@ export async function listSeriesPosts(
   };
 }
 
-/** Every tag that has at least one publicly visible post, with its count. */
 export async function listBlogTags(env: Env) {
   return getDb(env)
     .select({ slug: tags.slug, name: tags.name, total: count(posts.id) })
@@ -405,7 +371,6 @@ export async function listBlogTags(env: Env) {
     .orderBy(asc(tags.slug));
 }
 
-/** One post with its rendered HTML, tags, and neighbors. */
 export async function getBlogPost(env: Env, slug: string) {
   const db = getDb(env);
   const rows = await db
@@ -442,10 +407,7 @@ export async function getBlogPost(env: Env, slug: string) {
   };
 }
 
-/**
- * One draft by slug for a preview link, else null. Exempt from `publiclyVisible()` in
- * `VISIBILITY_EXEMPT`: matches `status = 'draft'` only, with the slug from a valid token.
- */
+/** Exempt from `publiclyVisible()`: matches `status = 'draft'` only, with the slug from a valid preview token. */
 export async function getDraftPostForPreview(env: Env, slug: string) {
   const db = getDb(env);
   const rows = await db
@@ -468,11 +430,7 @@ export async function getDraftPostForPreview(env: Env, slug: string) {
   };
 }
 
-/** All posts for admin, drafts included; exempt from publiclyVisible(), admin only. */
-/**
- * Admin nav counts. Query builder so invariants section 6 sees `.from(posts)`; a named
- * visibility exemption, admin only. Media via `notTrashed()` to match the media page.
- */
+/** Admin only, so exempt from visibility. Media via `notTrashed()` to match the media page. */
 export async function adminNavCounts(env: Env) {
   const db = getDb(env);
   const [postRow, mediaRow] = await Promise.all([
@@ -490,7 +448,6 @@ export async function listAllPostsForAdmin(env: Env) {
       status: posts.status,
       publishAt: posts.publishAt,
       updatedAt: posts.updatedAt,
-      /* So the admin list shows which post is featured. */
       featured: posts.featured,
     })
     .from(posts)
@@ -520,12 +477,7 @@ export async function listPostCorpusForRelated(env: Env) {
   return [...bySlug.values()];
 }
 
-/**
- * Corpus for `withBacklinks`, drafts included: it filters the LINKING post itself.
- *
- * It carries `html` because a backlink is read out of a rendered body, which is the same reason
- * `listPostSourcesForCitations` below carries `body`. Admin plane only, on a save.
- */
+/** Drafts included: it filters the linking post itself. Carries `html` because a backlink is read out of a rendered body. */
 export async function listPostLinkCorpus(env: Env) {
   return getDb(env)
     .select({
@@ -580,7 +532,6 @@ export async function listPostsForOperator(env: Env) {
   return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
-/** One post's rendered facts for the operator get_post response. */
 export async function getAdminPostRow(env: Env, slug: string) {
   return (
     (await getDb(env)
@@ -605,16 +556,12 @@ export async function listAllPostTagsForAdmin(env: Env) {
     .orderBy(asc(tags.slug));
 }
 
-/* Media annotations. No citations stored here; deletion safety comes from a live scan. */
-
-/** Annotations for a set of keys, as a map the library can index by key. */
 export async function mediaRecordsFor(env: Env, keys: string[]) {
   if (keys.length === 0) return new Map<string, Media>();
   const rows = await getDb(env).select().from(media).where(inArray(media.key, keys));
   return new Map(rows.map((row) => [row.key, row]));
 }
 
-/** Every row, for reconciliation and for the library listing. */
 export async function listMediaRecords(env: Env) {
   return getDb(env).select().from(media);
 }
@@ -640,20 +587,15 @@ function matchesQuery(q: string) {
     OR lower(${media.tags}) LIKE ${needle})`;
 }
 
-/** Not trashed. Reconciliation readers must skip it, or the rebuild restores the rows. */
-/** Large file threshold, stated once for the lens, its count and its label. */
 export const LARGE_FILE_BYTES = 1048576;
 
+/** Reconciliation readers must not use this filter, or a rebuild restores trashed rows. */
 export function notTrashed() {
   return isNull(media.trashedAt);
 }
 
-/**
- * ORDER BY for a listing, minus the caller's tie-break.
- * @param options the listing options, read for sort, dir and trashed
- */
+/** ORDER BY for a listing; the caller adds the tie-break. */
 function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
-  // Trash view: most recently trashed first, whatever the sort says.
   if (options.trashed) return [desc(media.trashedAt)];
 
   const descending = options.dir !== "asc";
@@ -674,11 +616,8 @@ function orderFor(options: { sort?: string; dir?: string; trashed?: boolean }) {
       ];
     default:
       /*
-       * Role rank, then newest. `uploaded_at DESC` alone put every static row last, because a
-       * build-time asset has no upload event and SQLite sorts NULL below everything, which
-       * buried the only insertable images in the corpus. A CASE in this view rather than a
-       * stored sort column: the ordering is a property of the VIEW, and a sort key in the
-       * index would be a UI decision stored in the index.
+       * Role rank, then newest: `uploaded_at DESC` alone sorts static rows (no upload event, so NULL)
+       * last, burying the only insertable images.
        */
       return [
         sql`CASE ${media.role} WHEN 'content' THEN 0 WHEN 'generated' THEN 1 WHEN 'brand' THEN 2 ELSE 3 END`,
@@ -705,7 +644,6 @@ export async function listMediaPage(
     templateKeys?: string[];
     /** 'added' | 'name' | 'size' | 'usage'. Anything else falls back to added. */
     sort?: string;
-    /** 'asc' | 'desc'. */
     dir?: string;
     /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
     trashed?: boolean;
@@ -718,8 +656,7 @@ export async function listMediaPage(
   // `role`, not `storage`: logos, favicons and diagram halves must never be inserted.
   const insertable = and(eq(media.role, "content"), eq(media.kind, "image"));
 
-  /* The library's own filters, as SQL rather than as a post-filter, so a page is
-   * a full page and the pagination means what it says. */
+  /* As SQL, not a post-filter, so a page is a full page. */
   const clauses = [];
   /* A branch, never optional, or trashed assets reappear in the picker. */
   clauses.push(options.trashed ? isNotNull(media.trashedAt) : notTrashed());
@@ -747,10 +684,8 @@ export async function listMediaPage(
     .from(media)
     .where(where)
     /*
-     * The role rank is the DEFAULT ordering and never a prefix on an explicit sort: a reader
-     * who asked for "largest first" wants the largest file, not the largest content file
-     * followed by the largest brand file. `key ASC` always breaks the tie, because an
-     * unstable sort makes offset pagination skip and repeat rows.
+     * The role rank is only the default, never a prefix on an explicit sort. `key ASC` breaks ties,
+     * because an unstable sort makes offset pagination skip and repeat rows.
      */
     .orderBy(...orderFor(options), asc(media.key))
     .limit(limit + 1)
@@ -761,7 +696,6 @@ export async function listMediaPage(
   return { rows: rows.slice(0, limit), page, hasMore };
 }
 
-/** How many rows the index holds, by storage tier. For the rebuild's report. */
 export async function mediaCounts(env: Env) {
   const rows = await getDb(env)
     .select({ storage: media.storage, kind: media.kind, n: count() })
@@ -784,20 +718,10 @@ export async function mediaRoleCounts(env: Env) {
 
 
 /**
- * Twins by the key's content hash, EXACT IDENTITY ONLY, and that is a boundary rather than a
- * first pass. There is no perceptual comparison, no resize detection, no similarity score, and
- * none is coming: a "these look alike" feature would put a judgment call in front of a delete
- * button, and this library's whole safety argument is that deletion decisions are answerable
- * from facts.
- *
- * The hash is READ OFF THE KEY, never recomputed. Keys are content-addressed, so recomputing
- * would mean reading every object out of R2 to learn what the filename already states.
- *
- * NOT A DUPLICATE-DELETION FEATURE. Two rows sharing bytes are two separate objects at two
- * separate public URLs, either of which may be cited. The page offers to TRASH one, which
- * changes what the library shows and leaves both URLs serving.
- *
- * Static rows are excluded: their keys are paths rather than hashes.
+ * Twins by the key's content hash: exact identity only, never perceptual, so any delete decision
+ * stays answerable from facts. The hash is read off the content-addressed key, not recomputed from R2.
+ * Twins are separate objects at separate URLs, either of which may be cited, so the page offers
+ * Trash, not delete. Static rows are excluded: their keys are paths.
  */
 export async function mediaTwins(env: Env) {
   const rows = await getDb(env)
@@ -867,7 +791,6 @@ export async function trashMediaRecord(env: Env, key: string) {
   return { moved: (result.meta?.changes ?? 0) > 0 };
 }
 
-/** Puts it back. Clears the flag; nothing else about the row changes. */
 export async function restoreMediaRecord(env: Env, key: string) {
   const result = await getDb(env)
     .update(media)
@@ -877,7 +800,6 @@ export async function restoreMediaRecord(env: Env, key: string) {
   return { restored: (result.meta?.changes ?? 0) > 0 };
 }
 
-/** Every key currently in the trash, for Empty trash to iterate. */
 export async function trashedMediaKeys(env: Env) {
   const rows = await getDb(env)
     .select({ key: media.key })
@@ -1035,9 +957,8 @@ export async function deleteMediaRecord(env: Env, key: string) {
 }
 
 /**
- * Claims a key for deletion in one statement, so no citation lands between the
- * `NOT EXISTS` check and the removal. False means refuse. Row before object: R2 wins.
- * Query builder, so column names come from the schema.
+ * Claims a key for deletion in one statement, so no citation lands between the `NOT EXISTS`
+ * check and the removal. False means refuse. Row before object: R2 wins.
  */
 export async function claimMediaKeyForDelete(env: Env, key: string) {
   const claimed = await getDb(env)
@@ -1052,15 +973,11 @@ export async function claimMediaKeyForDelete(env: Env, key: string) {
   return claimed.length > 0;
 }
 
-/** Keys that already have a row, so a backfill can skip them. */
 export async function existingMediaKeys(env: Env) {
   const rows = await getDb(env).select({ key: media.key }).from(media);
   return new Set(rows.map((row) => row.key));
 }
 
-/* media_refs: written by the pipeline at render, never by a scan. */
-
-/** Every ref for a set of keys, for the refcount and for a refusal message. */
 export async function mediaRefsFor(env: Env, keys: string[]) {
   if (keys.length === 0) return new Map<string, MediaRef[]>();
   const rows = await getDb(env)
@@ -1072,7 +989,7 @@ export async function mediaRefsFor(env: Env, keys: string[]) {
   return out;
 }
 
-/** Columns both feeds carry, owned once. `id` is for the tag join, stripped after. */
+/** `id` is for the tag join, stripped after. */
 const FEED_COLUMNS = {
   id: posts.id,
   slug: posts.slug,
@@ -1100,7 +1017,6 @@ export async function listBlogPostsFullText(
   if (options.tag) clauses.push(carriesTag(db, options.tag));
   if (options.series) clauses.push(eq(posts.series, options.series));
   const where = and(...clauses);
-  /* By part for a series, oldest first; `id` breaks ties. */
   const order =
     options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
   const query = db
@@ -1126,12 +1042,10 @@ export async function listBlogPostsRendered(
   } = {},
 ) {
   const db = getDb(env);
-  /* Narrowed in the query, as above. */
   const clauses = [isBlogPost()];
   if (options.tag) clauses.push(carriesTag(db, options.tag));
   if (options.series) clauses.push(eq(posts.series, options.series));
   const where = and(...clauses);
-  /* Series order, as above. */
   const order =
     options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
   const query = db
@@ -1145,7 +1059,6 @@ export async function listBlogPostsRendered(
   return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
 }
 
-/** Raw markdown for the .md twin route. */
 export async function getBlogPostMarkdown(env: Env, slug: string) {
   const rows = await getDb(env)
     .select({ body: posts.body, title: posts.title })
@@ -1171,15 +1084,10 @@ export async function setSetting(env: Env, key: string, value: string) {
     .onConflictDoUpdate({ target: settings.key, set: { value } });
 }
 
-/* Webmentions. Section 6 does not see this table; `webmentionTarget` applies visibility. */
-
 /** Statuses the global cap counts, stated once so the cap and the sweep agree. */
 const OPEN_WEBMENTION_STATUSES = ["unverified", "pending"] as const;
 
-/**
- * Can a stranger mention this slug? Composes `isBlogPost()` so drafts cannot be probed.
- * Returns a boolean, never the row.
- */
+/** Composes `isBlogPost()` so drafts cannot be probed. Returns a boolean, never the row. */
 export async function webmentionTarget(env: Env, slug: string): Promise<boolean> {
   const rows = await getDb(env)
     .select({ slug: posts.slug })
@@ -1229,11 +1137,10 @@ export async function receiveWebmention(
       },
     })
     .returning({ id: webmentions.id });
-  /* Unreachable. Not zero, a valid-looking rowid (the no-substitution rule's shape). */
+  /* Unreachable. -1, not a valid-looking rowid. */
   return rows[0]?.id ?? -1;
 }
 
-/** What verification concluded about one row. */
 export type WebmentionVerdict =
   | {
       status: "pending";
@@ -1272,10 +1179,7 @@ export async function recordWebmentionVerdict(
     .where(and(eq(webmentions.id, id), eq(webmentions.status, "unverified")));
 }
 
-/**
- * Approved mentions, newest first. The EXISTS on `posts` puts this in section 6's scan,
- * so an unpublished post's mentions stay hidden. The visibility rule (the visibility rule's second paragraph).
- */
+/** The EXISTS on `posts` keeps an unpublished post's mentions hidden. */
 export async function approvedMentionsFor(env: Env, slug: string) {
   const db = getDb(env);
   return db
@@ -1303,7 +1207,6 @@ export async function approvedMentionsFor(env: Env, slug: string) {
     .orderBy(desc(webmentions.decidedAt));
 }
 
-/** Every mention, unfiltered, for the admin moderation queue. */
 export async function listWebmentionsForAdmin(env: Env) {
   return getDb(env).select().from(webmentions).orderBy(desc(webmentions.receivedAt));
 }
@@ -1355,7 +1258,7 @@ export async function countExpiringWebmentions(
 
 /** Remove one mention outright. The only delete an admin makes by hand. */
 export async function deleteWebmention(env: Env, id: number): Promise<string | null> {
-  // The slug comes back for the purge, on the same grounds as decideWebmention.
+  // The slug comes back for the purge.
   const rows = await getDb(env)
     .delete(webmentions)
     .where(eq(webmentions.id, id))
@@ -1363,10 +1266,7 @@ export async function deleteWebmention(env: Env, id: number): Promise<string | n
   return rows[0]?.targetSlug ?? null;
 }
 
-/**
- * Retention sweep (windows: webmention/retention.mjs), one statement per window.
- * Open statuses never expire: the global cap counts them.
- */
+/** One statement per retention window. Open statuses never expire: the global cap counts them. */
 export async function sweepWebmentions(
   env: Env,
   now: Date = new Date(),

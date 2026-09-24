@@ -1,15 +1,5 @@
-/**
- * Pushes the local content build product into D1, drift report first.
- *
- *   npm run sync:content -- --local
- *   npm run sync:content -- --remote
- *
- * The database is the read path; these files are the source of truth.
- *
- * **THIS SCRIPT DOES NOT RUN ANY GATE. RUN `npm run check:content` YOURSELF FIRST.** It is the
- * one script that writes to production D1, and the bulk path DELETES the search index and
- * replaces the media citations wholesale.
- */
+// This script runs no gate: run `npm run check:content` first. It writes production D1, and the
+// bulk path deletes the search index and replaces the media citations wholesale.
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
@@ -26,13 +16,9 @@ import { resolveD1Address } from "./lib/d1-address.mjs";
 
 const DB_NAME = "dustinedwards";
 
-/** The tracked source of the `llms.txt` settings row. */
 const LLMS_PATH = "content/llms.txt";
 
-/**
- * Escapes a value for a SQLite string literal.
- * @param {string | null} value
- */
+/** @param {string | null} value */
 function sql(value) {
   if (value === null || value === undefined) return "NULL";
   return `'${String(value).replace(/'/g, "''")}'`;
@@ -43,16 +29,12 @@ function num(value) {
   return value === null || value === undefined ? "NULL" : String(value);
 }
 
-/**
- * Builds the whole resync as one script.
- * @param {any[]} posts
- */
+/** @param {any[]} posts */
 function buildSql(posts) {
   /** @type {string[]} */
   const out = [];
 
-  // Posts no longer backed by a file are removed. Scoped to rows that came from
-  // a file, so hand-authored pages are never touched by a content sync.
+  // Scoped to rows that came from a file, so hand-authored pages are never touched by a content sync.
   const keep = posts.map((p) => sql(p.sourcePath)).join(", ");
   out.push(
     keep.length > 0
@@ -63,22 +45,13 @@ function buildSql(posts) {
   for (const post of posts) {
     const publishAt = Math.floor(Date.parse(post.publishAt) / 1000);
     const status = post.draft ? "draft" : "published";
-    // Revision date: explicit frontmatter wins, otherwise the last commit that touched the file.
-    // Applied here because a render must depend on the sources alone, and the Worker has no git.
-    /*
-     * og_image IS SET ONLY WHEN A CARD ACTUALLY EXISTS, the same condition the generator renders
-     * under: two rules, one predicate. NEITHER A COVERED POST NOR ONE THE PUBLIC CANNOT SEE gets one,
-     * after a draft's card was live while the post answered 404. That half matters beyond tidiness:
-     * the prune guard asks D1 which cards the live site points at and refuses to delete them.
-     */
+    // og_image is set only when a card exists, the generator's own condition: the prune guard asks D1
+    // which cards the live site points at and refuses to delete them.
     const hasCard =
       !post.cover &&
       isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt });
     const ogImage = hasCard ? `/media/${ogImageKey(post)}` : null;
-    /*
-     * `revisedDate` OWNS THE RULE, which is what lets `check:machine-readable` feed a component the same
-     * value without restating it. The epoch conversion stays here, being this file's column format.
-     */
+    // The revision date is applied here because the Worker has no git.
     const revised = revisedDate(post);
     const updatedAt = revised ? Math.floor(revised.getTime() / 1000) : null;
     out.push(
@@ -95,12 +68,9 @@ function buildSql(posts) {
         `${sql(JSON.stringify(post.furtherReading))}, ${sql(post.ogTitle)}, ${sql(post.ogDescription)}, ` +
         `${sql(JSON.stringify(post.related))}, ${sql(ogImage)}, ${sql(post.sourceBlobSha ?? null)}, ` +
         `${sql(post.renderHash ?? null)}, ` +
-        // The three optional head blocks. NULL when absent, which is most posts.
         `${sql(post.writingStatus ?? null)}, ${sql(post.assumedAudience ?? null)}, ` +
         `${sql(post.keyTakeaways ? JSON.stringify(post.keyTakeaways) : null)}, ` +
-        // The author-written post history, NULL on the posts nobody has revised.
         `${sql(post.changelog ? JSON.stringify(post.changelog) : null)}, ` +
-        // The posts that link here, NULL when nothing does.
         `${sql(post.backlinks && post.backlinks.length > 0 ? JSON.stringify(post.backlinks) : null)}, ` +
         `${updatedAt === null ? "unixepoch()" : num(updatedAt)}) ` +
         `ON CONFLICT(slug) DO UPDATE SET ` +
@@ -121,8 +91,7 @@ function buildSql(posts) {
     );
   }
 
-  // Tags are additive. A tag that loses its last post keeps its row, which costs
-  // nothing and keeps tag ids stable across syncs.
+  // Tags are additive: keeping an orphaned tag's row keeps tag ids stable across syncs.
   const allTags = new Set();
   for (const post of posts) for (const tag of post.tags) allTags.add(tag);
   for (const tag of [...allTags].sort()) {
@@ -141,15 +110,13 @@ function buildSql(posts) {
     }
   }
 
-  // Media citations, replaced wholesale for posts, because this writer holds the WHOLE corpus: a
-  // per-post delete leaves refs for a post since removed, and that row refuses the delete of an
-  // image nothing cites. The editor's save path scopes to one slug, one post being all it rendered.
+  // Replaced wholesale: a per-post delete leaves refs for a removed post, and that row refuses the
+  // delete of an image nothing cites.
   out.push(`DELETE FROM media_refs WHERE source_type = 'post';`);
   const seenRefs = new Set();
   for (const post of posts) {
     for (const ref of post.mediaRefs ?? []) {
-      // The primary key is (media_key, source_type, source_id, form, detail), so
-      // the same image cited twice on one line in one form is one row. Deduped
+      // The primary key makes the same image cited twice on one line in one form a single row; deduped
       // here rather than left to fail the batch.
       const id = `${ref.key} ${post.slug} ${ref.form} ${ref.detail ?? ""}`;
       if (seenRefs.has(id)) continue;
@@ -168,9 +135,8 @@ function buildSql(posts) {
 }
 
 /**
- * Rewrites the search index from the artifact's records. Fully derived, so replaced outright
- * rather than reconciled, and both FTS tables are rebuilt, the documented bulk pattern for
- * external-content fts5, which does not depend on trigger ordering inside a batch.
+ * Both FTS tables are rebuilt outright, the documented bulk pattern for external-content fts5, which
+ * does not depend on trigger ordering inside a batch.
  *
  * @param {any[]} records
  */
@@ -199,10 +165,9 @@ function buildSearchSql(records) {
 }
 
 /**
- * Runs wrangler through the shell as one command string. Passing an args array
- * alongside shell:true is deprecated, and npx needs a shell on Windows.
+ * One command string: an args array alongside shell:true is deprecated, and npx needs a shell on Windows.
  *
- * @param {string} args already-quoted argument string
+ * @param {string} args
  * @returns {{ stdout: string, status: number }}
  */
 function wrangler(args) {
@@ -214,14 +179,8 @@ function wrangler(args) {
 }
 
 /**
- * A `d1 execute --file` import, RETRIED ONCE.
- *
- * THE NAMED EXEMPTION TO WRITES-ARE-NEVER-WRAPPED. The rule now reads: writes are never wrapped,
- * EXCEPT writes idempotent BY CONSTRUCTION, with the argument stated where the wrapper is
- * applied. Every file this runs deletes-and-replaces or upserts and none appends, and ship
- * re-runs this sync over the existing corpus on EVERY deploy, so the doubled case is the normal
- * case. WHY ALL THREE: same endpoint, same exposure, same argument, and wrapping only the one
- * that failed is the fix that lands in all but one affected site.
+ * Retried once, which is safe only because every file this runs deletes-and-replaces or upserts and
+ * none appends.
  *
  * @param {string} args @param {string} label @returns {Promise<{stdout: string, status: number}>}
  */
@@ -239,7 +198,6 @@ async function wranglerImport(args, label) {
       { label },
     );
   } catch {
-    // Exactly two attempts, and this is the second one's real result.
     return last;
   }
 }
@@ -255,22 +213,8 @@ async function main() {
     );
   }
 
-  /*
-   * THE SHIP-TIME DRIFT REPORT, taken the instant before this write overwrites the evidence. Five
-   * classes per slug:
-   *
-   *   unchanged       same source, same render.
-   *   source-changed  the repository moved and D1 had not caught up; the write is the catch-up.
-   *   RENDER DRIFT    the SAME source with a DIFFERENT render hash, the Worker-versus-Node class.
-   *                   NOT a defect on its own, the commonest cause being the deployed Worker
-   *                   rendering new markdown with the old renderer. The verdict is a SECOND run's.
-   *   missing-in-d1   a file with no row: a new post, or a lost row.
-   *   extra-in-d1     a row with no file: a deleted post; the write cleans it.
-   *
-   * THE WRITE STILL RUNS, whatever this finds, because converging D1 to the build IS the repair,
-   * and the exit goes nonzero at the very END so ship can let the deploy stand. A failed read
-   * THROWS rather than skipping the report, since nothing is what a clean run reports.
-   */
+  // The write runs whatever this finds, because converging D1 to the build is the repair; the exit
+  // goes nonzero at the very end so ship can let the deploy stand.
   /** @type {string[]} */
   const renderDrift = [];
   {
@@ -314,7 +258,7 @@ async function main() {
     const extra = rows.filter((r) => !buildSlugs.has(r.slug));
     for (const row of extra) console.log(`  extra-in-d1: ${row.slug} (the write removes it)`);
 
-    // The counts print EVERY run, greppable, and ship reads this line.
+    // Ship reads this line, so it prints every run.
     console.log(
       `sync:content drift: unchanged=${unchanged} source-changed=${sourceChanged} ` +
         `render-drift=${renderDrift.length} missing-in-d1=${missing} extra-in-d1=${extra.length}`,
@@ -338,10 +282,8 @@ async function main() {
     throw new Error("wrangler d1 execute failed");
   }
 
-  // The llms.txt settings row, from its tracked source file: the FILE is the source of truth. The
-  // only thing that ever wrote this row was the initial migration, seeding copy later retired. Read
-  // as a Buffer and decoded explicitly, this file being compared byte for byte and the platform
-  // text layer not UTF-8 here.
+  // Read as a Buffer and decoded explicitly: it is compared byte for byte, and the platform text layer
+  // is not UTF-8 here.
   const llms = (await readFile(LLMS_PATH)).toString("utf8");
   if (llms.includes("\r")) {
     throw new Error(
@@ -366,9 +308,7 @@ async function main() {
     throw new Error("wrangler d1 execute failed for the llms.txt settings row");
   }
 
-  // Search index second, as its own statement file. Kept separate from the post
-  // sync so a failure here names the search index rather than looking like a
-  // content failure, and so the posts path is unchanged by search work.
+  // A separate statement file, so a failure here names the search index rather than the content.
   const searchPath = path.join(dir, "sync-search.sql");
   await writeFile(searchPath, buildSearchSql(records), "utf8");
 
@@ -382,9 +322,8 @@ async function main() {
     throw new Error("wrangler d1 execute failed for the search index");
   }
 
-  // The index is only useful if it mirrors the table, so assert it. Counts the FTS SHADOW table: on
-  // an external-content fts5 table a count of the index reads through to the content table. The
-  // docsize shadow holds one row per indexed document and goes to zero.
+  // Counts the FTS docsize shadow: a count on an external-content fts5 table reads through to the
+  // content table.
   const verify = wrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
@@ -432,10 +371,7 @@ async function main() {
   }
   console.log("sync:content ok. FTS and search index row counts match.");
 
-  /*
-   * NONZERO LAST, after every write stood: render drift means the shared pipeline is not shared in
-   * practice, and a run that exits green on it is the green light meaning nothing.
-   */
+  // Nonzero last, after every write stood: render drift means the shared pipeline is not shared in practice.
   if (renderDrift.length > 0) {
     console.error(
       `sync:content: RENDER DRIFT on ${renderDrift.length} slug(s): ` +

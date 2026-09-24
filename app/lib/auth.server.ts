@@ -7,14 +7,7 @@ import { getDb } from "~/db";
 import { timed, timedSync, type Timings } from "~/lib/timing";
 import * as authSchema from "~/db/auth-schema";
 
-/**
- * Build a request-scoped Better Auth instance. Bindings and secrets are per request
- * on Workers, so the instance is created from env rather than a module singleton.
- *
- * Sessions live in KV (secondaryStorage); durable user, account and verification
- * records live in D1 through the Drizzle adapter. A single administrator is allowed:
- * the user.create.before hook rejects any sign-in whose email is not ADMIN_EMAIL.
- */
+// Per request, not a module singleton: bindings and secrets are per request on Workers.
 export function createAuth(env: Env) {
   const adminEmail = env.ADMIN_EMAIL?.trim().toLowerCase();
 
@@ -72,22 +65,10 @@ export type AdminSession = NonNullable<
   Awaited<ReturnType<Auth["api"]["getSession"]>>
 >;
 
-/**
- * Resolve the current session and confirm it belongs to the single admin.
- * Returns null otherwise. Used by the admin middleware (one gate for the whole
- * /admin subtree) and by the login screen to bounce a signed-in admin home.
- */
 export async function getAdminSession(
   env: Env,
   request: Request,
-  /**
-   * Optional collector. Absent on every request that did not ask for timing.
-   *
-   * SPLIT INTO TWO MARKS ON PURPOSE. `createAuth` and `getSession` are one line together and two
-   * completely different costs: CPU building an auth instance and a Drizzle adapter from scratch, then
-   * IO against KV. A single `auth_total` would leave the next session guessing which, and guessing is
-   * what the instrument exists to replace.
-   */
+  // Two marks because they are different costs: CPU building the instance, then KV IO.
   timings?: Timings,
 ): Promise<AdminSession | null> {
   const auth = timedSync(timings, "auth_create", () => createAuth(env));
@@ -105,29 +86,15 @@ export async function getAdminSession(
 }
 
 /**
- * Set by the admin middleware after the gate passes, so loaders under /admin read the session
- * without a second KV round trip.
- *
- * **SET FOR THE HUMAN ADMIN ONLY.** The read-only smoke credential has no Better Auth session and
- * never will, so anything reading this context is asserting a human is present. That is the right
- * failure mode for the one remaining reader on a write path: if it were ever reached by a machine
- * actor it would throw rather than attribute a revision to nobody.
- *
- * Anything that only needs to know WHO IS ASKING reads `adminActorContext`.
+ * Set for the human admin only: the smoke credential has no session, so reading this asserts a
+ * human is present, and a write path reached by a machine throws rather than attributing to nobody.
+ * Code that only needs to know who is asking reads `adminActorContext`.
  */
 export const adminSessionContext = createContext<AdminSession>();
 
 /**
- * WHO IS ASKING, for the whole `/admin` subtree. Always set once the gate passes.
- *
- * Separate from `adminSessionContext` because one is a Better Auth SESSION and the other an
- * IDENTITY, and only one kind of caller has a session. Collapsing them means synthesising a fake
- * `AdminSession` for the machine, the stub this repo refuses because it authenticates through a
- * path production does not have.
- *
- * `email` is the SAME address for both kinds, deliberately: the smoke render has to be the page
- * Dustin sees, down to the topbar's widest unbreakable token, or the layout numbers taken through it
- * describe a different page.
+ * `email` is the admin's address for the smoke actor too, so the smoke render is the exact page
+ * Dustin sees and layout numbers measured through it are true.
  */
 export type AdminActor =
   | { kind: "admin"; email: string }

@@ -1,12 +1,5 @@
-/* The post's two tracks and the rail that fills the narrow one. The grid itself is shell.css's
-   `.tracks`; this file only opts the post page into the rail track and dresses what sits in it. */
-
-/*
- * THE OPT-IN, and the whole reason the rail is a variable rather than a second grid: `.tracks`
- * declares the rail at 0 and every other page keeps the layout it had. 64ch is measured in the
- * READING face, which is why the serif is set here and not only on the prose: `ch` resolves against
- * the element's own font, so a sans-serif container would cap the column at the wrong width.
- */
+/* 64ch is measured in the READING face: ch resolves against the element's own font, so the serif is
+ * set here. */
 .post-tracks {
   --measure: 64ch;
 
@@ -19,11 +12,6 @@
     --rail-gap: var(--rail-gap-w);
   }
 
-  /*
-   * The rail and the body share a row, so the rail sits BESIDE the article rather than above it.
-   * The head is row 1 and spans the text track alone, which leaves the rail empty beside the
-   * title exactly as the handoff draws it.
-   */
   .post-tracks > .post-head {
     grid-row: 1;
   }
@@ -34,17 +22,12 @@
   }
 
   .post-rail {
-    /* Right-aligned so the ragged edge faces the text it annotates. */
     text-align: right;
   }
 }
 
-/*
- * ONE COLUMN: THE RAIL GOES BACK TO THE TEXT TRACK. `--rail` is 0 at this width, and a child left
- * in a zero-width track does not stack above the article, it OVERLAPS it: the chronology and the
- * contents list paint straight over the first paragraphs. Measured at 375 before this rule
- * existed. The class stays in the markup and the placement is decided here, per width.
- */
+/* --rail is 0 at this width, and a child left in a zero-width track overlaps the article rather than
+ * stacking. */
 .post-tracks > .post-rail.u-rail {
   grid-column: text;
 }
@@ -55,8 +38,6 @@
   }
 }
 
-/* One column: the rail keeps its source position above the article and reads left like everything
-   else. */
 .post-rail {
   margin-block-start: var(--s-6);
   color: var(--text-secondary);
@@ -66,14 +47,6 @@
   margin-block-start: var(--s-6);
 }
 
-/*
- * 1 · Chronology. ONE MONO CHANNEL PER ROW, AND IT IS THE VALUE (ruling 118 item 6): the date is
- * machine data and takes the mono; the words beside it are a label and stay sans and muted, so a
- * scan reads the dates and not the words.
- *
- * 01-post.html §2 still says `--font-mono` for the whole row and needs correcting on the canvas.
- * Ruling 118 is the later step and wins (ruling 93); both values are recorded here.
- */
 .post-machine {
   margin: 0;
   color: var(--text-secondary);
@@ -93,7 +66,6 @@
   margin-block-start: 0.875rem;
 }
 
-/* 2 · Contents. Sans, because it is navigation a reader reads, and one ruled row per section. */
 .post-toc {
   margin-block-start: var(--s-5);
   font-family: var(--font-sans);
@@ -104,10 +76,7 @@
 
 @media (min-width: 48rem) {
   .post-toc {
-    /* THE HEADER IS STICKY SINCE RULING 126, so the rail clears it. The plain 20px that sat
-       here was correct while the header scrolled away, and the sentence it cited is gone from
-       public-chrome.css. `--header-h` is the one owner of the height; this adds the same 20px
-       on top of it rather than restating either number. */
+    /* The header is sticky, so the rail clears --header-h plus 20px. */
     position: sticky;
     top: calc(var(--header-h) + 1.25rem);
   }
@@ -140,22 +109,13 @@
   color: var(--brand);
 }
 
-/*
- * THE CURRENT SECTION IS THE ENHANCEMENT, the anchors are the page. `app/enhance/blog.ts` sets
- * `data-current` on scroll; with no script every entry reads muted, which is the named fallback.
- */
+/* app/enhance/blog.ts sets data-current on scroll; with no script every entry reads muted. */
 .post-toc a[data-current] {
   color: var(--text);
 }
 
-/*
- * 3 · SIDENOTES. Written in the prose, floated into the rail, which is what makes them line up
- * with the paragraph they follow without anything measuring a position. One dust rule above, the
- * kind as a mono label, the body in muted sans.
- *
- * At one column the float is dropped and the note reads inline where the author put it, which is
- * its reading order anyway.
- */
+/* Floated into the rail from the prose, so a note lines up with its paragraph without measuring a
+ * position. */
 .post-note {
   margin-block: var(--s-4) var(--s-5);
   border-block-start: var(--line-w) solid var(--dust);
@@ -184,11 +144,7 @@
 }
 
 @media (min-width: 48rem) {
-  /*
-   * INTO THE RAIL'S COLUMN, by the rail's own width plus its gutter. The note is a child of the
-   * article, so it cannot be placed in the rail track; floating it left by exactly the track it
-   * would have occupied puts it there and keeps it beside its paragraph.
-   */
+  /* The note is a child of the article, so it floats left by exactly the rail track plus its gutter. */
   .post-body .post-note {
     float: inline-start;
     clear: inline-start;
@@ -199,8 +155,6 @@
   }
 }
 
-/* Print: the rail prints above the article and the contents list goes, because a page number is
-   not a link. The history line stays; it is provenance, and a sidenote is content. */
 @media print {
   .post-toc {
     display: none;

@@ -1,20 +1,3 @@
-/**
- * The repository-reference scan, which is what makes the third usage state
- * possible.
- *
- * Every test here replays something the scan got WRONG on a real run against
- * this repository, before it was fixed. None of them are hypothetical:
- *
- *   - a doc comment naming six brand assets marked all six as placed by page
- *     code, including the scanner's own header describing the problem;
- *   - `"public/site.webmanifest"` in a source array marked `/site.webmanifest`
- *     as referenced by the file that merely lists it;
- *   - a prefix pair (`/dustin-edwards-logo.svg` inside `/dustin-edwards-logo-header.svg`) is the collision
- *     that motivated the boundary check in the first place.
- *
- * @see app/lib/media/template-refs.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -36,8 +19,6 @@ const ASSETS = [
   "/dustin-edwards-og-image.png",
 ];
 
-/* ---- the match itself ---------------------------------------------------- */
-
 test("a real reference in a string literal is found", () => {
   assert.deepEqual(referencesIn('const a = { src: "/phage-hunters/dustin-edwards-2019.webp" };', ASSETS), [
     "/phage-hunters/dustin-edwards-2019.webp",
@@ -52,8 +33,6 @@ test("a PREFIX collision is not a reference", () => {
 });
 
 test("a SUFFIX collision is not a reference, which is the one that fired", () => {
-  // Measured: `SOURCE_FILES = ["public/site.webmanifest"]` marked the asset
-  // `/site.webmanifest` as referenced by the module that only lists the file.
   const found = referencesIn('const SOURCE_FILES = ["public/site.webmanifest"];', ASSETS);
   assert.deepEqual(found, [], "a longer path ENDING with an asset path is not that asset");
 });
@@ -64,8 +43,7 @@ test("the same path in two places is reported once", () => {
 });
 
 test("a collision followed later by a real hit still finds the real hit", () => {
-  // The scanner must keep looking past a rejected match rather than giving up,
-  // which is the bug an early `return false` would have introduced.
+  // The scanner must keep looking past a rejected match rather than giving up.
   const text = 'import "/dustin-edwards-logo-header.svg";\nconst real = "/dustin-edwards-logo.svg";';
   const found = referencesIn(text, ASSETS);
   assert.ok(found.includes("/dustin-edwards-logo.svg"), "the genuine reference after a collision was missed");
@@ -75,8 +53,6 @@ test("a collision followed later by a real hit still finds the real hit", () => 
 test("nothing is invented from an empty file", () => {
   assert.deepEqual(referencesIn("", ASSETS), []);
 });
-
-/* ---- comments are prose, not placement ----------------------------------- */
 
 test("an asset named only in a line comment is NOT a reference", () => {
   const text = '// generated from /dustin-edwards-logo.svg, do not edit\nconst x = 1;';
@@ -89,8 +65,7 @@ test("an asset named only in a block comment is NOT a reference", () => {
 });
 
 test("a URL inside a string survives the comment stripper", () => {
-  // THE REASON THIS IS A TOKENIZER AND NOT A REGEX. Stripping from `//` to end
-  // of line would eat the rest of this line and take the asset with it.
+  // Stripping from `//` to end of line would eat the rest of this line and the asset with it.
   const text = 'const u = "https://example.test/x"; const a = "/dustin-edwards-logo.svg";';
   const stripped = stripComments(text);
   assert.ok(stripped.includes("https://example.test/x"), "the URL was destroyed");
@@ -133,8 +108,6 @@ test("css has block comments and no line comments", () => {
   assert.deepEqual(found, ["/dustin-edwards-logo.svg"], "the commented one must not count");
 });
 
-/* ---- which files are read ------------------------------------------------ */
-
 test("the scan reads source, and refuses the artifact that lists every asset", () => {
   assert.ok(isSourceFile("app/data/phage-hunters.ts"));
   assert.ok(isSourceFile("workers/app.ts"));
@@ -149,8 +122,6 @@ test("the scan reads source, and refuses the artifact that lists every asset", (
   assert.equal(isSourceFile("public/dustin-edwards-logo.svg"), false);
   assert.equal(isSourceFile("README.md"), false);
 });
-
-/* ---- folding ------------------------------------------------------------- */
 
 test("results fold to sorted keys and sorted files, so the artifact is stable", () => {
   const out = foldRefs([
@@ -168,20 +139,10 @@ test("one file naming one asset twice is recorded once", () => {
 });
 
 test("the self-referential guard beats SOURCE_FILES, which is where it decides", () => {
-  /*
-   * A PLANT PROVED THIS GUARD WAS DOING NOTHING. Removing the check entirely
-   * left check:content green, because `content/generated/assets.json` sits under
-   * `content/`, which is not a source root, so the root rule already rejected
-   * it. The guard was an assertion that could not fail.
-   *
-   * It decides in exactly one place: `SOURCE_FILES` entries are named
-   * individually and BYPASS the root rule, so a self-referential file listed
-   * there would be read unless the guard runs first. That ordering is the
-   * property, and this is the only test that can see it.
-   */
+  /* `SOURCE_FILES` entries are named individually and BYPASS the root rule, so a
+   * self-referential file listed there would be read unless the guard runs first. */
   // `content/features.json` IS in SOURCE_FILES and IS read, which is the
   // control: it proves the bypass exists for the guard to beat.
   assert.equal(isSourceFile("content/features.json"), true);
-  // And the guarded one is refused even though it is under the same root.
   assert.equal(isSourceFile("content/generated/assets.json"), false);
 });

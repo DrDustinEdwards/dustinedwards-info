@@ -1,20 +1,9 @@
 import type { HealthStatus, SourceResult } from "~/lib/admin/types";
 
-/**
- * Panel is the frame every cockpit section renders inside: a title row with an
- * optional source chip, then whatever body the section needs. Sections stay
- * uniform without knowing about each other.
- */
 export function Panel({
   title,
   description,
   result,
-  /**
-   * Controls that belong BESIDE the title rather than above the content. A page
-   * whose primary action is a full-width row of its own spends a whole band of
-   * vertical space saying "upload". An action is a thing you do TO the section, so it
-   * belongs on the section heading.
-   */
   actions,
   children,
 }: {
@@ -39,12 +28,6 @@ export function Panel({
   );
 }
 
-/**
- * THE THIRD BRANCH IS GONE with the `stub` arm it rendered, and its removal is
- * the point: a panel can no longer say "this data is not real", because no source
- * produces data that is not real. A `never` in the union is the typecheck refusing
- * to let one back in without a decision.
- */
 function SourceChip({ result }: { result: SourceResult<unknown> }) {
   if (result.status === "live") {
     return <span className="chip chip-live">live</span>;
@@ -56,11 +39,6 @@ function SourceChip({ result }: { result: SourceResult<unknown> }) {
   );
 }
 
-/**
- * Rule 1: color is never the only channel. The dot carries a shape per status
- * and the word rides alongside it, visually hidden. Before this the state reached
- * sighted readers as a hue and reached assistive tech not at all.
- */
 export function StatusDot({ status }: { status: HealthStatus }) {
   return (
     <>
@@ -97,7 +75,6 @@ export function StatCard({
   );
 }
 
-/** The uniform "no data yet" state a panel body shows before its source is wired. */
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
     <div className="empty-state">

@@ -1,11 +1,5 @@
-/**
- * Site search over the two fts5 indexes. Runs the identity index and the prose index as two
- * ranked lists and fuses them by reciprocal rank. Raw D1 rather than drizzle, because bm25(),
- * snippet() and MATCH have no drizzle surface.
- *
- * NOTHING HERE AWAITS A THIRD PARTY. Classic search is D1 and only D1, so it cannot be slowed or
- * broken by the AI layer sitting above it.
- */
+// Raw D1 rather than drizzle: bm25(), snippet() and MATCH have no drizzle surface. Nothing here
+// awaits a third party, so the AI layer cannot slow or break classic search.
 
 import {
   RRF_K,
@@ -16,39 +10,24 @@ import {
 } from "./query.mjs";
 import { applySort, parseSort, type SearchSort } from "./sort.mjs";
 
-/** @see app/lib/search/query.mjs */
 type ParsedQuery = ReturnType<typeof parseQuery>;
 
-/**
- * How many rows each index contributes before fusion. Fusion needs enough of each list for rank to
- * mean something, and facet counts are computed over the fused set, so this bounds facet accuracy
- * too. A truncated result set says so rather than presenting a partial count as a total.
- */
+/** Facet counts are computed over the fused set, so this bounds facet accuracy too. */
 const CANDIDATE_LIMIT = 100;
 
-/** Column weights for the identity index: a title hit beats a tag hit. */
 const IDENTITY_WEIGHTS = { title: 10.0, tags: 4.0 };
 
 /**
- * Snippet markers. snippet() splices these into text it does not escape, so writing `<mark>`
- * directly would mean rendering unescaped content as HTML: a post may legitimately show `<script>`
- * in a code block, and that text reaches the index as prose. The snippet is escaped first and the
- * markers are swapped for real tags afterwards, which is safe because these control characters
- * CANNOT OCCUR IN THE CORPUS.
+ * snippet() does not escape, so it splices control-character markers that the corpus cannot contain;
+ * the snippet is escaped first and the markers become <mark> after. Built at runtime so no control
+ * byte is ever written into this file.
  */
-// Built at runtime so no control byte is ever written into this source file,
-// where it would be invisible in a diff and unguessable in a grep.
 const MARK_START = String.fromCharCode(1);
 const MARK_END = String.fromCharCode(2);
-/** The same two characters as SQL expressions, so no control byte is written
- * into a query string. */
 const MARK_START_SQL = "char(1)";
 const MARK_END_SQL = "char(2)";
 
-/**
- * `filter` is not an index match. It is the label for a record returned by the
- * browse path, where the query carried filters but no text to match on.
- */
+/** "filter" is not an index match: it labels a browse-path record, where there was no text to match. */
 export type MatchReason = "title" | "tag" | "body" | "filter";
 
 export interface SearchHit {
@@ -63,7 +42,6 @@ export interface SearchHit {
   publishAt: number | null;
   /** Escaped HTML with <mark> around matched terms. Safe to render. */
   snippet: string;
-  /** Why this result is here, in the order title, tag, body. */
   why: MatchReason[];
   score: number;
 }
@@ -74,33 +52,22 @@ export interface SearchFacets {
   years: Array<{ value: number; count: number }>;
 }
 
-/**
- * One fused result, decomposed into what each index contributed. There is deliberately NO score
- * field: bm25 values from two differently-tokenized indexes are not comparable, which is why fusion
- * is over ranks, so the value never leaves SQL and `bm25()` appears only in ORDER BY.
- */
+/** No score field: bm25 across differently tokenized indexes is not comparable, so it never leaves SQL. */
 export interface SearchExplainRow {
   uid: string;
   title: string;
-  /**
-   * The parent document's title. Records are SECTION-GRAINED, so a row's own title is frequently a
-   * bare heading that means nothing on its own.
-   */
+  /** Records are section-grained, so a row's own title is often a bare heading. */
   docTitle: string;
   url: string;
-  /** Rank in each layer, or null where that layer did not return the row. */
   identityRank: number | null;
   proseRank: number | null;
-  /** 1/(k + rank) per layer, recorded by fuse() rather than recomputed here. */
   identityContribution: number | null;
   proseContribution: number | null;
-  /** The sum of the contributions above. Identical to the hit's score. */
   score: number;
 }
 
 export interface SearchExplain {
   k: number;
-  /** Layer names, in the order fuse() received the lists. */
   layers: string[];
   identityCount: number;
   proseCount: number;
@@ -116,12 +83,7 @@ export interface SearchResult {
   facets: SearchFacets;
   /** True when a list hit CANDIDATE_LIMIT, so counts are a floor not a total. */
   truncated: boolean;
-  /** Wall-clock milliseconds spent in D1. */
   tookMs: number;
-  /**
-   * Present only when `SearchOptions.explain` is set, which only the playground
-   * route sets. Absent otherwise, so the ordinary search payload is unchanged.
-   */
   explain?: SearchExplain;
 }
 
@@ -146,7 +108,6 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-/** Escapes first, then turns the control markers into real <mark> elements. */
 function renderSnippet(raw: string): string {
   return escapeHtml(raw)
     .split(MARK_START)
@@ -159,7 +120,6 @@ function parseTags(docTags: string): string[] {
   return docTags.split("|").filter(Boolean);
 }
 
-/** Cuts at a word boundary so the browse snippet does not end mid-word. */
 function truncateWords(value: string, limit: number): string {
   if (value.length <= limit) return value;
   const cut = value.slice(0, limit);
@@ -168,32 +128,15 @@ function truncateWords(value: string, limit: number): string {
 }
 
 /**
- * The visibility predicate, and the SQL twin of `publiclyVisible()` in `app/db/index.ts`. BOTH
- * MUST STAY IN STEP: a scheduled post hidden on the blog index and findable in search would be a
- * leak.
- *
- * They cannot be collapsed: that one is a drizzle condition over `posts` and this is a string
- * spliced into a hand-written query over `search_docs`. So the agreement is asserted instead, which
- * is why this is exported: `test/visibility-invariants.test.mjs` runs both against a fixture of post
- * states and fails if they ever admit different rows.
- *
- * THE ALIAS IS A PARAMETER so the aliasless queries below compose it rather than restate it. Pass
- * NO_ALIAS for an unaliased query.
+ * The SQL twin of publiclyVisible() in app/db/index.ts: they cannot be one function, so
+ * test/visibility-invariants.test.mjs asserts they admit the same rows.
  */
 export function visibilityClause(alias = "d"): string {
   const q = alias ? `${alias}.` : "";
   return `${q}status = 'published' AND (${q}publish_at IS NULL OR ${q}publish_at <= ?)`;
 }
 
-/**
- * The unaliased argument, as a NAMED CONSTANT rather than a bare `""`.
- *
- * This is not style. The raw-SQL scans read string literals, and an empty string literal sitting
- * between two SQL literals makes an extractor read across the boundary and report what the query
- * does not have.
- *
- * A named constant keeps every string literal at these call sites SQL. DO NOT INLINE IT BACK.
- */
+/** Named, not a bare "": an empty literal between SQL literals misleads the raw-SQL scans. DO NOT INLINE. */
 const NO_ALIAS = "";
 
 interface FilterSql {
@@ -253,15 +196,8 @@ async function runIndex(
 }
 
 /**
- * The browse path: filters with nothing to match on. A tag, a bare year and a facet chip all parse
- * into filters and leave no text behind, so there is no MATCH expression to give fts5, and the
- * filters are already SQL.
- *
- * DOCUMENT RECORDS ONLY. Section records exist so a text query can land on the heading that answers
- * it; a filter has no such heading in mind, and returning every record of one post separately would
- * present the corpus as a multiple of its real size.
- *
- * Ordered by date, because with no relevance signal recency is the only defensible ordering.
+ * Document records only: returning each section separately would present the corpus as a multiple of
+ * its size. Date-ordered, since with no relevance signal recency is the only defensible order.
  */
 async function runBrowse(db: D1Database, filters: FilterSql): Promise<RawRow[]> {
   const sql = `
@@ -278,11 +214,7 @@ async function runBrowse(db: D1Database, filters: FilterSql): Promise<RawRow[]> 
   return result.results ?? [];
 }
 
-/**
- * Works out why a record matched, for the label shown on the result. Computed in app code from the
- * parsed terms rather than asked of fts5, which reports that a row matched but not which column
- * carried it.
- */
+/** Computed in app code: fts5 reports that a row matched, not which column carried it. */
 function whyMatched(row: RawRow, parsed: ParsedQuery, inProse: boolean): MatchReason[] {
   const needles = [...parsed.terms, ...parsed.phrases].map((t) => t.toLowerCase());
   const why: MatchReason[] = [];
@@ -292,9 +224,7 @@ function whyMatched(row: RawRow, parsed: ParsedQuery, inProse: boolean): MatchRe
   if (needles.some((n) => title.includes(n))) why.push("title");
   if (needles.some((n) => tags.includes(n))) why.push("tag");
   if (inProse) why.push("body");
-  // A record can be fused in from the identity index on a stemmed or diacritic
-  // folded match that plain substring testing does not see. Saying nothing is
-  // worse than saying where it came from.
+  // An identity-index match can be stemmed or diacritic-folded, which substring testing does not see.
   if (why.length === 0) why.push(inProse ? "body" : "title");
   return why;
 }
@@ -306,28 +236,13 @@ export interface SearchOptions {
   year?: string | null;
   page?: number;
   pageSize?: number;
-  /** Prefix-match the last term. Used by the palette while typing. */
   prefix?: boolean;
   now?: Date;
-  /**
-   * Attach the per-layer rank decomposition to the result. Set by the playground's search anatomy
-   * demo and by nothing else. It changes no query, no ordering and no hit: the values are read off
-   * what `fuse()` already recorded, so the flag cannot make the demo and the real search disagree.
-   */
+  /** Read off what fuse() recorded, so the playground demo and real search cannot disagree. */
   explain?: boolean;
   /**
-   * Reader-chosen ordering of the TEXT path. Relevance is the default and stays the default: the
-   * best pages here are old papers, and a date-first list buries them under whatever was written
-   * most recently.
-   *
-   * It re-sorts the FUSED list and never the SQL. `runIndex`'s `ORDER BY` picks which candidates
-   * come back from one index; the order a reader sees is `fuse()`'s, over both. Pushing the choice
-   * into SQL would change the candidate set per sort, so page 2 of one ordering would hold results
-   * page 2 of the other never saw.
-   *
-   * THE BROWSE PATH IGNORES IT, and the route does not offer the control there. A filter with no
-   * text has no relevance signal at all, which is why that path is date-ordered in SQL; offering a
-   * choice between date and nothing would be a control that explains nothing.
+   * Re-sorts the FUSED list, never the SQL: sorting in SQL would change the candidate set per sort, so
+   * pages would disagree. The browse path ignores it.
    */
   sort?: SearchSort;
 }
@@ -339,9 +254,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   const now = options.now ?? new Date();
   const nowSeconds = Math.floor(now.getTime() / 1000);
 
-  // Parameters and operators are merged into one parse, so ?tag=d1 and a typed
-  // `tag:d1` are the same thing downstream and the facet links can be plain
-  // hrefs rather than a second filter language.
+  // ?tag=d1 and a typed tag:d1 merge into one parse, so facet links can be plain hrefs.
   const parsed = parseQuery(options.q ?? "");
   if (options.type) parsed.types.push(options.type.toLowerCase());
   if (options.tag) parsed.tags.push(options.tag.toLowerCase());
@@ -359,7 +272,6 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   };
 
   const match = toMatchExpression(parsed, options.prefix ?? false);
-  // Nothing to match AND nothing to filter by is a genuinely empty query.
   if (!match && !hasFilters(parsed)) return empty;
 
   const filters = buildFilters(parsed, nowSeconds);
@@ -378,8 +290,6 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
       anchor: item.anchor,
       tags: parseTags(item.doc_tags),
       publishAt: item.publish_at,
-      // No MATCH ran, so there is nothing to highlight. Marking anything here would claim a match that
-      // was never made.
       snippet: renderSnippet(truncateWords(item.snippet, 200)),
       why: ["filter"],
       // Rank is the date order this came back in, not a relevance score.
@@ -397,8 +307,6 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     };
   }
 
-  // Both indexes are queried concurrently. They are independent reads, and waiting for one before
-  // starting the other would double the latency of the only part of search that touches the database.
   const [identityRows, proseRows] = await Promise.all([
     runIndex(
       env.DB,
@@ -428,8 +336,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     anchor: item.anchor,
     tags: parseTags(item.doc_tags),
     publishAt: item.publish_at,
-    // Prefer the prose snippet: it is the one with sentences in it. The identity
-    // snippet is a title, which the result already shows on its own line.
+    // The prose snippet has sentences; the identity one is just the title, already shown.
     snippet: renderSnippet(
       (proseUids.has(item.uid)
         ? proseRows.find((r) => r.uid === item.uid)?.snippet
@@ -439,7 +346,6 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     score,
   }));
 
-  /* Sorted BEFORE the slice; `applySort` carries the reasoning and the test. */
   const hits = applySort(fusedHits, sort);
 
   return {
@@ -451,7 +357,6 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     facets: buildFacets(hits),
     truncated,
     tookMs,
-    // Read off what `fuse()` recorded. Nothing is recomputed and no scoring rule is restated.
     ...(options.explain
       ? {
           explain: {
@@ -463,9 +368,6 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
               const at = (list: number) => sources.indexOf(list);
               const i = at(0);
               const p = at(1);
-              // `ranks` and `contributions` are built alongside `sources`, so an index
-              // found in one is present in the others. The `?? null` folds that unreachable
-              // case into the same "this layer did not contribute" the -1 branch means.
               const rank = (n: number) => (n === -1 ? null : (ranks[n] ?? null));
               const contribution = (n: number) =>
                 n === -1 ? null : (contributions[n] ?? null);
@@ -487,11 +389,7 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   };
 }
 
-/**
- * Facet counts over the whole match set, not the current page: a count that only ever promises
- * what a click would actually return. Computed in app code over the fused set, which is already in
- * memory. If `truncated` is true the caller must present these as a floor.
- */
+/** Over the whole match set, not the page. If truncated, the caller must present these as a floor. */
 function buildFacets(hits: SearchHit[]): SearchFacets {
   const types = new Map<string, number>();
   const tags = new Map<string, number>();
@@ -513,35 +411,6 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
   };
 }
 
-/**
- * What to offer when a query returns nothing. A zero state that only says "no results" is a dead
- * end, and these are the two cheapest useful things the database can offer.
- */
-/**
- * Every URL the Ask index is expected to hold, from D1 rather than from git.
- *
- * THIS IS NOT A SECOND INDEXER. `records.mjs` remains the only thing that decides what a record is
- * and `keyForUrl` the only thing that turns a URL into an Ask key; these rows were written by
- * `sync:content` from `recordsForPosts`, so this reads that derivation where it was materialized.
- *
- * WHAT IT COSTS: a D1 stale against the artifact would measure drift against a stale baseline. The
- * artifact is byte-gated, `ship` syncs and asserts docsize equality in the same window, and the
- * editor's save path writes both, so the window is a deploy-time one.
- *
- * `type = 'post'` because the Ask corpus is posts only. Page records exist in `search_docs` and are
- * deliberately not uploaded, so including them would report every one as permanently stale.
- *
- * The predicate is `visibilityClause(NO_ALIAS)`, composed and never hand copied.
- * That is the visibility rule, and it carries the unit as well: `publish_at` is SECONDS.
- */
-/**
- * The Ask corpus itself: every record the index should hold, with the text to upload. The reading
- * twin of `askExpectedUrls`, and the reason `syncAskCorpus` takes no posts argument: the records
- * were materialized into `search_docs` by the same `records.mjs` both writers run.
- *
- * Visibility is COMPOSED, not restated. `test/worker/visibility.test.ts` checks that the Ask index is
- * sent only the published post.
- */
 export async function askCorpusRecords(
   env: Env,
   now = new Date(),
@@ -560,8 +429,7 @@ export async function askCorpusRecords(
 export async function askExpectedUrls(env: Env, now = new Date()): Promise<string[]> {
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const rows = await env.DB.prepare(
-    // CONCATENATED, not interpolated, for the reason stated at NO_ALIAS: a
-    // `${...}` truncates the literal the raw-SQL scans can see.
+    // Concatenated, not interpolated (see NO_ALIAS). Posts only: pages are never uploaded to Ask.
     `SELECT url FROM search_docs WHERE type = 'post' AND ` + visibilityClause(NO_ALIAS),
   )
     .bind(nowSeconds)
@@ -574,9 +442,7 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
   const needles = [...parsed.terms, ...parsed.phrases].map((t) => t.toLowerCase());
 
   const tagRows = await env.DB.prepare(
-    // The predicate comes from `visibilityClause(NO_ALIAS)`, not from a hand-copy. CONCATENATED, not
-    // interpolated: a `${...}` truncates the literal the raw-SQL scans can see, and a `+`
-    // keeps it whole and parseable.
+    // Concatenated, not interpolated: a ${...} truncates the literal the raw-SQL scans can see.
     `SELECT DISTINCT doc_tags FROM search_docs WHERE doc_tags <> '' AND ` +
       visibilityClause(NO_ALIAS),
   )
@@ -588,8 +454,7 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
     for (const tag of parseTags(row.doc_tags)) allTags.add(tag);
   }
 
-  // "Nearest" is a shared-prefix or substring test, deliberately not a fuzzy distance. On a corpus
-  // with a handful of tags, edit distance would surface confident nonsense.
+  // Prefix or substring, not edit distance: on a handful of tags, fuzzy matching surfaces confident nonsense.
   const nearest = [...allTags]
     .filter((tag) => needles.some((n) => n.length >= 2 && (tag.includes(n) || n.includes(tag))))
     .sort()
@@ -614,6 +479,5 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
   };
 }
 
-/* Re-exported so a caller needs one import for the search API. sort.mjs owns both. */
 export { parseSort };
 export type { SearchSort };

@@ -1,23 +1,3 @@
-/**
- * The renamed-post redirect predicate.
- *
- * `check:urls` already drives this against the REAL map and the real corpus,
- * and that is the assertion with teeth: it is what catches a redirect into a
- * 404 or a post claiming a retired slug. This file exists for the half that
- * gate cannot reach.
- *
- * The gate can only ever ask "what does the predicate do with the nine entries
- * that happen to be live today". A map the TEST writes can ask what it does
- * with an entry whose target is empty, a key that is not an own property, or a
- * path that merely starts the same way. Those are the cases that decide whether
- * the predicate is correct rather than merely correct-for-now, and every one of
- * them would need a deliberately broken `content/redirects.json` to express
- * through the gate.
- *
- * @see app/lib/slug-redirect.mjs
- * @see scripts/check-urls.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -42,20 +22,8 @@ test("paths outside /blog/ are declined", () => {
   }
 });
 
-/**
- * PLANT 1: the inherited-key hazard.
- *
- * A bare `map[slug]` lookup answers from `Object.prototype`, so
- * `/blog/constructor` would 301 to `/blog/function Object() { [native code] }`.
- *
- * **This case alone does not isolate `Object.hasOwn`, and saying so is the
- * point.** Measured 2026-09-09 by replacing the guard with `map[slug] ===
- * undefined`: these keys stayed declined and this test stayed GREEN, because
- * their values are functions and the `typeof target !== "string"` check below
- * them refuses on that instead. Two guards, one observable behavior, and only
- * the second one was load-bearing for these names. The next test is the one
- * that tells them apart.
- */
+/* A bare `map[slug]` answers from `Object.prototype`. These values are functions, so the type
+ * check refuses them too; the next test is the one that isolates `Object.hasOwn`. */
 test("PLANT 1: inherited properties are not redirects", () => {
   for (const key of ["constructor", "toString", "hasOwnProperty", "__proto__", "valueOf"]) {
     assert.equal(postRedirectTarget(`/blog/${key}`, MAP), null, key);
@@ -63,19 +31,8 @@ test("PLANT 1: inherited properties are not redirects", () => {
   }
 });
 
-/**
- * PLANT 1b: THE CASE THAT ISOLATES `Object.hasOwn`.
- *
- * A polluted prototype whose value is a STRING passes the type check cleanly,
- * so the own-property test is the only thing standing between it and a live
- * 301 to an attacker-chosen path. Verified to discriminate: with the guard
- * replaced by `map[slug] === undefined` this assertion FAILS, and it is the
- * only one in the file that does.
- *
- * The pollution is undone in a `finally`, because leaving `Object.prototype`
- * modified would silently change every later test in the run, including tests
- * in other files sharing the process.
- */
+/* A polluted STRING passes the type check, so only the own-property test stands between it and
+ * a 301 to an attacker's path. Undone in `finally`: the prototype is shared by every later test. */
 test("PLANT 1b: a string-valued inherited key is still not a redirect", () => {
   try {
     // eslint-disable-next-line no-extend-native
@@ -93,14 +50,8 @@ test("PLANT 1b: a string-valued inherited key is still not a redirect", () => {
   }
 });
 
-/**
- * PLANT 2: a sibling route must not be swallowed.
- *
- * `/blog/tags/:tag` and `/blog/series/:series` live under the same prefix. The
- * predicate refuses anything with a slash in the remainder rather than relying
- * on the lookup to miss, so a future map entry containing a slash cannot start
- * matching another route's URLs.
- */
+/* Any slash in the remainder is refused, so a future map entry with one cannot swallow
+ * `/blog/tags/:tag` or `/blog/series/:series`. */
 test("PLANT 2: nested blog routes are never claimed", () => {
   const hostile = { "tags/cloudflare": "somewhere", "series/x": "elsewhere" };
   assert.equal(postRedirectTarget("/blog/tags/cloudflare", hostile), null);

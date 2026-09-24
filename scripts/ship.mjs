@@ -1,12 +1,5 @@
-/**
- * One command that ships: gates, deploy, prove it, sync.
- *
- *   npm run ship
- *
- * Deploy before sync, so `llms.txt` never advertises unserved pages. `check:content` before
- * sync, because `sync-content.mjs` runs no gate. Every step fails closed. A missing Version ID
- * or sync line exits nonzero. `verify-live` stays separate: its probes are billed.
- */
+// Deploy before sync, so `llms.txt` never advertises unserved pages. `check:content` runs before
+// sync because `sync-content.mjs` runs no gate.
 
 import {
   closeSync,
@@ -47,8 +40,6 @@ import {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/* ------------------------------------------------ ship's own transcript --- */
-
 /**
  * Gitignored: an untracked log would make the next ship refuse a dirty tree, and the log
  * carries account-scoped ids.
@@ -59,11 +50,8 @@ const LOG_DIR = join(root, ".ship-logs");
 const LOG_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 /**
- * Re-execs ship with piped stdio and tees every chunk to the terminal and the log.
  * Children run with inherited stdio, so wrapping `console` would miss their output.
- * Records what was printed only; it proves nothing about the running Worker.
- *
- * @returns {Promise<number>} the child's exit code
+ * @returns {Promise<number>}
  */
 async function teeSelfToLog() {
   mkdirSync(LOG_DIR, { recursive: true });
@@ -147,8 +135,6 @@ function announce(title) {
 }
 
 /**
- * Refuse, naming the step and the remedy, and exit.
- *
  * @param {string} why @param {string} remedy
  * @returns {never}
  */
@@ -158,10 +144,7 @@ function refuse(why, remedy) {
 }
 
 /**
- * THE SIGNAL IS RETURNED, not collapsed. `status ?? 1` reads a killed process as exit 1, which is
- * how a tier that died under memory pressure reached ship as a gate verdict and got reported as
- * one. A caller that does not care may go on reading `code` alone.
- *
+ * The signal is returned, not collapsed: `status ?? 1` would read a killed process as a gate's exit 1.
  * @param {string} command @param {string[]} args
  */
 function run(command, args, { capture = false } = {}) {
@@ -181,12 +164,8 @@ function run(command, args, { capture = false } = {}) {
 }
 
 /**
- * Runs a long command, streaming its output THROUGH while keeping a copy.
- *
- * The tier takes minutes and whoever is watching ship needs to see it move, so `capture`, which
- * withholds everything until the end, is not usable here. But ship has to READ the output to tell
- * a tier that reported from one that did not, so streaming and capturing are the same pass.
- *
+ * Streams and captures in one pass: the tier takes minutes, and ship must read its output to tell
+ * a tier that reported from one that did not.
  * @param {string} command @param {string[]} args
  * @returns {Promise<{ code: number | null, signal: string | null, text: string }>}
  */
@@ -214,8 +193,6 @@ function runStreaming(command, args) {
     child.on("close", (code, signal) => resolve({ code, signal, text }));
   });
 }
-
-/* ---------------------------------------------------------------- 1. tree */
 
 
 /*
@@ -247,8 +224,6 @@ if (OPERATOR_TOKEN.length < 32) {
       "Nothing has been built or deployed.",
   );
 }
-
-/* ------------------------------------------------------------ 0. preflight */
 
 /*
  * Pull `--ff-only`: a merge commit has no CI run. Refuse while another run holds build/client,
@@ -287,7 +262,6 @@ announce("Preflight: up to date, and nothing else holding the tree");
   /* Needles live in `child-processes.mjs` so the test imports the list ship uses. */
   const table = readProcessTable();
   if (table.size === 0) {
-    /* Cannot verify is not clear: say so rather than pass silently. */
     console.log("  could not read the process table, so nothing was proven about orphans.");
   } else {
     const busy = busyProcesses(table, SHIP_BUSY_NEEDLES, process.pid);
@@ -334,16 +308,6 @@ const shaFull = (headFull.stdout ?? "").trim();
 console.log(`  HEAD is ${sha}`);
 
 /*
- * NEVER PUT THE STATED-ABSENCE PLACEHOLDERS LOOP BACK. It iterated an empty array and printed
- * that nothing had been checked, kept as a mechanism for a successor that never came: a dead
- * loop kept for a hypothetical is a shape, not a mechanism. Writing it again with a real
- * subject in hand produces a better check than reviving a generalization drawn from one case.
- * The property it guarded is a property of the rendered admin page.
- */
-
-/* ------------------------------------------------- 1b. CI's verdict, early */
-
-/*
  * Green CI for this sha skips the local tier. This read picks a path, never a deploy:
  * non-green takes the local path, and the read at step 4 decides.
  */
@@ -371,20 +335,11 @@ const ghToken = (() => {
 })();
 
 /**
- * One read of GitHub's verdict on HEAD. Returns rather than refuses because the two callers
- * want opposite things; a `shouldRefuse` flag is the shape the vacuity rule names.
- *
- * The verdict shape is `ciVerdict`'s, read off it rather than restated: this copy had already
- * gone stale against the real one, which is what the one-owner rule is about.
- *
+ * Returns rather than refuses because the two callers want opposite things.
  * @returns {Promise<{ verdict: ReturnType<typeof ciVerdict> | null, error: string }>}
  */
 async function readCi() {
   try {
-    /*
-     * A read, so `retryRead` may retry a transient; the final failure still reaches the catch
-     * so each caller decides.
-     */
     const runs = await retryRead(
       () => fetchCiRuns({ owner, repo, sha: shaFull, token: ghToken }),
       { label: `ship CI read for ${sha}` },
@@ -398,16 +353,8 @@ async function readCi() {
 console.log(`  reading CI for ${owner}/${repo}@${sha} (${ghToken ? "authenticated" : "unauthenticated"})`);
 let early = await readCi();
 
-/*
- * A RUN IN FLIGHT IS WORTH WAITING FOR. Falling straight through to the local tier meant racing
- * CI to grade the same commit, on the host where the parallel tier is the thing that dies; CI is
- * read again at the green step regardless, so the local run was work whose result could not
- * authorize anything. Branching on `state` rather than on the wording of `why`, which would make
- * ci-status.mjs's prose an interface.
- *
- * Bounded, and the bound expires into the OLD behavior rather than into a refusal: a slow queue
- * is not a reason to refuse a deploy that the green step is about to judge anyway.
- */
+// A run in flight is worth waiting for: racing CI on this host is what kills the parallel tier, and CI
+// is read again at the green step anyway. The bound expires into the local path, not a refusal.
 const CI_WAIT_MS = 15 * 60 * 1000;
 const CI_POLL_MS = 30 * 1000;
 if (early.verdict?.state === "running") {
@@ -436,8 +383,6 @@ if (ciGreenEarly) {
   console.log("  taking the local path: the build and the offline tier run below.");
   console.log("  CI is still REQUIRED, and is read again after them.");
 }
-
-/* ------------------------------------------ 1c. the deployed schema is current */
 
 /*
  * No migration may be pending when a deploy goes out. It refuses and never applies: ship cannot
@@ -503,8 +448,6 @@ if (migrations.state === "unreadable") {
 }
 console.log(`  ${migrations.reason}.`);
 
-/* --------------------------------------------------------------- 2. build */
-
 announce("Build");
 /* Gitignored and imported statically by routes, so it is built before the app build. */
 if (run("npm", ["run", "build:stack"]).code !== 0) {
@@ -538,25 +481,16 @@ if (ciGreenEarly) {
   refuse("the build failed", "Fix the build. Nothing was deployed.");
 }
 
-/* --------------------------------------------------------------- 3. gates */
-
 announce("Gates, offline tier");
 if (ciGreenEarly) {
   console.log(`  skipped: CI ran this tier on a clean checkout of ${sha}.`);
   console.log("  re-read below, and a CI that is no longer green refuses there.");
 } else {
-  /*
-   * A RED GATE AND A DEAD TIER BOTH REFUSE, and they are told apart before either is worded.
-   * This refusal used to say "a gate is red, read the table above" on both paths, and on the
-   * crash path there was no table and no gate, the tier having been killed. Same direction,
-   * and the message now matches the fact. The decision is `tierOutcome`, which runs nothing.
-   */
+  // A red gate and a dead tier both refuse, but are told apart first: a killed tier has no gate table.
   const outcome = tierOutcome(await runStreaming("npm", ["run", "check"]));
   if (outcome.state !== "passed") refuse(outcome.why, outcome.remedy);
   console.log(`  ${outcome.why}`);
 }
-
-/* ------------------------------------------------------------- 4. CI green */
 
 /*
  * No run, a run in progress, any non-success, or an unreachable API refuses. No `--force`:
@@ -587,8 +521,6 @@ if (!verdict || !verdict.ok) {
 }
 console.log(`  ${verdict.why}.`);
 
-/* -------------------------------------------------------------- 4. deploy */
-
 announce("Deploy");
 const deploy = run("npm", ["run", "deploy"], { capture: true });
 if (deploy.code !== 0) {
@@ -602,8 +534,6 @@ if (!version) {
       "Check `npx wrangler deployments list` before syncing.",
   );
 }
-
-/* ---------------------------------------------------------------- 5. poll */
 
 announce(`Poll to stability: ${POLL_COUNT} consecutive 200s, ${POLL_GAP_MS / 1000}s apart`);
 
@@ -635,8 +565,6 @@ if (streak !== POLL_COUNT) {
   );
 }
 console.log(`  ${POLL_COUNT} consecutive 200s.`);
-
-/* ------------------------------------------------------- 5b. readiness */
 
 /*
  * A 200 from `/colophon` is not health. Runs after the poll so the new build answers, and
@@ -686,8 +614,6 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
   );
 }
 
-/* ------------------------------------------- 5c. the watchdog Worker */
-
 /*
  * After readiness, so the watchdog is never pointed at an unproven build. A failure is a miss,
  * not a refusal: the site deploy has landed, and ship exits nonzero at the end.
@@ -695,7 +621,6 @@ announce(`Readiness: ${READINESS_PATH} reports ok`);
 
 announce("Deploy the watchdog Worker");
 
-/** Set when the watchdog deploy did not land. Read at the very end. */
 let watchdogMiss = "";
 
 {
@@ -734,7 +659,6 @@ let watchdogMiss = "";
 /* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss. */
 announce("Point the uptime monitors at this deploy");
 
-/** Set when uptime-ensure did not land. Read at the very end. */
 let uptimeMiss = "";
 
 {
@@ -759,8 +683,6 @@ let uptimeMiss = "";
   }
 }
 
-/* ------------------------------------------------------- 6. gate, then sync */
-
 /* Rebuilt so the sync reads this ship's build, not whatever a previous run left. */
 announce("build:content, the local build product the sync reads");
 if (run("npm", ["run", "build:content"]).code !== 0) {
@@ -778,7 +700,6 @@ if (run("npm", ["run", "check:content"]).code !== 0) {
 
 announce("Sync content to remote D1");
 
-/** Set when the sync reported render drift. Read at the very end. */
 let renderDriftMiss = "";
 
 const sync = run("npm", ["run", "sync:content", "--", "--remote"], { capture: true });
@@ -851,8 +772,6 @@ if (!(docs === identity && identity === prose)) {
 }
 
 
-/* ------------------------------------------------- 7. the Ask index, last */
-
 /*
  * `sync:content` does not rebuild AI Search. It uploads through the deployed Worker, so a miss
  * leaves the deploy standing.
@@ -860,16 +779,12 @@ if (!(docs === identity && identity === prose)) {
 
 announce("Bring the Ask index into step");
 
-/** Set when the Ask index did not converge. Read at the very end. */
 let askMiss = "";
 
-/** True when convergence came during the poll window, so the write-back counts are not reported. */
 let askLateConverge = false;
 
 /**
- * One authenticated operator call, shared by the Ask and media steps. Returns a miss string
- * rather than throwing, because every failure here happens after the deploy has landed.
- *
+ * Returns a miss rather than throwing: every failure here happens after the deploy has landed.
  * @param {string} tool
  * @returns {Promise<{ report: any, miss: string }>}
  */
@@ -897,8 +812,7 @@ async function operatorSync(tool) {
   }
 
   if (!miss && response && !response.ok) {
-    // The status is the story. The token is NOT echoed, and neither is the
-    // request; a 401 here means the secret and the file disagree.
+    // The token and the request are never echoed. A 401 here means the secret and the file disagree.
     miss = `the operator API answered ${response.status} to ${tool}`;
   }
 
@@ -914,10 +828,8 @@ async function operatorSync(tool) {
   const { report, miss } = await operatorSync("sync_ask");
   askMiss = miss;
 
-  /*
-   * A NAMED FAILURE IS A MISS NOW, not a drift to wait out: those keys were never written, so the
-   * index will not catch up on its own. It was waited out once, 2026-09-23, and stayed 156 of 157.
-   */
+  // A named failure is a miss, not drift to wait out: those keys were never written, so the index
+  // will not catch up on its own.
   if (!askMiss && Array.isArray(report.failed) && report.failed.length > 0) {
     askMiss =
       `the Ask upload failed for ${report.failed.length} key(s) after retries: ` +
@@ -925,11 +837,9 @@ async function operatorSync(tool) {
       `. Re-run sync_ask once the cause clears`;
   } else if (!askMiss && report.converged !== true) {
     /*
-     * AI Search is eventually consistent, so drift is re-read before it is a miss. The re-read is
-     * `/api/health`, which writes nothing; `sync_ask` would repair what it measures. Bounded by
-     * count and deadline.
+     * AI Search is eventually consistent, so drift is re-read before it is a miss, via `/api/health`,
+     * which writes nothing; `sync_ask` would repair what it measures.
      */
-    /** One read-only reading of the deployed ask-index-drift check. */
     const driftReading = async () => {
       const res = await fetch(`${ORIGIN}/api/health`, {
         headers: { "user-agent": "ship", "cache-control": "no-cache" },
@@ -992,13 +902,10 @@ async function operatorSync(tool) {
   }
 }
 
-/* --------------------------------------------- 8. the media index, likewise */
-
 /* After the deploy, since the rebuild reads the serving build. No poll: D1 reads its own writes. */
 
 announce("Bring the media index into step");
 
-/** Set when the media index did not reconcile. Read at the very end. */
 let mediaMiss = "";
 
 {
@@ -1021,8 +928,6 @@ let mediaMiss = "";
 
   if (mediaMiss) {
     console.log(`  MISSED: ${mediaMiss}`);
-    // The KEYS, not just the counts. A miss naming "1 missing" sends the reader
-    // to run a reconciliation by hand; a miss naming the path is the answer.
     for (const key of (report?.missing ?? []).slice(0, 10)) console.log(`    missing: ${key}`);
     for (const key of (report?.extra ?? []).slice(0, 10)) console.log(`    extra:   ${key}`);
     for (const failure of (report?.failures ?? []).slice(0, 10)) console.log(`    failed:  ${failure}`);
@@ -1034,15 +939,12 @@ let mediaMiss = "";
   }
 }
 
-/* ------------------------------- 8b. the check readiness deferred, asserted */
-
 /*
  * Deferred checks are asserted here, after their repair: refusing before the sync would
  * deadlock. A failure here means the sync did not converge. A miss, not a refusal.
  */
 announce("The drift checks readiness deferred, asserted");
 
-/** Set when any deferred check is still failing after its repair step has run. */
 let deferredMiss = "";
 {
   /* One read for all: more requests risk the per-IP limiter's 429. */
@@ -1065,10 +967,7 @@ let deferredMiss = "";
   }
 
   if (!deferredMiss) {
-    /*
-     * Only deferred rows are consulted; the rest were gated at readiness. `fts-equality` still
-     * gates at readiness: deferring another check needs a ruling.
-     */
+    // Only deferred rows are consulted; the rest, `fts-equality` included, were gated at readiness.
     const verdict = readinessVerdict(status, text, READINESS_PATH);
     const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
     for (const name of converged) console.log(`  ${name} ok, after ${DEFERRED_CHECKS[name]}.`);
@@ -1077,8 +976,6 @@ let deferredMiss = "";
 
   if (deferredMiss) console.log(`  MISS: ${deferredMiss}`);
 }
-
-/* -------------------------------------------------------------- 9. record */
 
 announce("Shipped");
 console.log(`  commit       ${sha}`);

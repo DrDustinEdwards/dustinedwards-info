@@ -1,13 +1,6 @@
 /**
- * The zero-result query normalizer, which is the privacy boundary of the whole feature.
- *
- * EVERYTHING THE TABLE WILL EVER CONTAIN PASSES THROUGH THIS FUNCTION. The schema has nowhere to
- * put an IP, a user agent or a session, so the only way a personal fact reaches the database is
- * inside the query text itself. That makes these refusals the assertion worth having, and it is
- * why they are tested one shape at a time rather than in a loop: a loop that stopped iterating
- * would report a clean sweep.
- *
- * @see app/lib/search/zero-result.mjs
+ * The schema has nowhere to put an IP or session, so the query text is the only way a personal
+ * fact reaches the table. One shape per test: a loop that stopped iterating would report a clean sweep.
  */
 
 import test from "node:test";
@@ -78,10 +71,6 @@ test("a non-string is refused rather than coerced", () => {
   assert.equal(normalise(42), null);
 });
 
-/*
- * THE CONTROL. These refusals are only worth anything if the function can also SAY YES; a
- * normalizer that returned null for everything would pass every assertion above.
- */
 test("the refusals discriminate: ordinary queries still get through", () => {
   const kept = ["d1 backups", "how do backups work", "phage cocktail", "workers cache"].map(normalise);
   assert.ok(
@@ -91,7 +80,6 @@ test("the refusals discriminate: ordinary queries still get through", () => {
 });
 
 test("the case tests run BEFORE lowercasing, or the name shape sees nothing", () => {
-  /* Guards the ordering inside the function: lowercase first and NAME_SHAPE can never match. */
   assert.equal(normalise("Jane Smith"), null);
   assert.equal(normalise("jane smith"), "jane smith");
 });

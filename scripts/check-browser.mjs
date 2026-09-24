@@ -1,16 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
-/**
- * Gate: the site as a browser lays it out, not as markup.
- *
- *   npm run check:browser
- *   npm run check:browser -- --keep    leave the preview server running
- *
- * Chromium only. Public cases drive a preview build of this disk (the dev server
- * serves the page unstyled), or the deployed site when `PUBLIC_ORIGIN` is set.
- * Admin cases always drive `ADMIN_ORIGIN`, because sessions live in production KV;
- * absent credentials skip, unusable ones fail. Nothing is submitted.
- */
+// Public cases drive a preview build because the dev server serves the page unstyled.
+// Admin cases always drive ADMIN_ORIGIN, because sessions live in production KV.
 
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -26,7 +17,6 @@ import { HEALTH_FACT_SELECTOR, freshHealthRatio } from "./lib/health-tile.mjs";
 /* The network profile the /blog layout shift was measured on. */
 const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
 
-/* Imported, never restated. */
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 import {
   ChildRegistry,
@@ -40,38 +30,25 @@ import {
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
 
-/**
- * Needles a live command line must still match before this gate kills it. Declared
- * here because the port preflight needs them before any spawn.
- */
+/** Declared here because the port preflight needs them before any spawn. */
 const VITE_NEEDLES = ["vite", "preview", String(PORT)];
 
-/**
- * What this gate started, so the next run can clear what a hard kill left behind.
- * Gitignored, or `npm run ship` would refuse the dirty tree.
- */
+/** Gitignored, or `npm run ship` would refuse the dirty tree. */
 const registry = new ChildRegistry(join(root, ".gate-pids", "check-browser.jsonl"));
 
-/** Unset: public cases observe this disk. Set: they observe the deployed site. */
 const PUBLIC_ORIGIN = (process.env.PUBLIC_ORIGIN ?? "").replace(/\/+$/, "");
-/** Whether this run builds and serves the working tree. */
 const DRIVES_PREVIEW = !PUBLIC_ORIGIN;
 const BASE = PUBLIC_ORIGIN || `http://localhost:${PORT}`;
 
 /**
- * The admin cookie, `name=value`, from `ADMIN_SESSION_COOKIE` or `.admin-session`. There is no
- * test-only auth bypass: the defects these cases catch live in the real authenticated render.
- * Never infer the name from an `=`: base64 padding puts one in a bare token.
+ * There is no test-only auth bypass: the defects these cases catch live in the real authenticated
+ * render. Never infer the name from an `=`: base64 padding puts one in a bare token.
  */
 const SESSION_COOKIE_NAME = "__Secure-better-auth.session_token";
 const SESSION_FILE = join(root, ".admin-session");
 const SESSION_EXAMPLE = ".admin-session.example";
 
-/**
- * Reads the session file, or null. An unrecognised line is the cookie itself.
- *
- * @param {string} path
- */
+/** @param {string} path */
 function readSessionFile(path) {
   if (!existsSync(path)) return null;
   /** @type {{ cookie: string, origin: string }} */
@@ -91,8 +68,7 @@ function readSessionFile(path) {
 }
 
 /**
- * Turns a pair or a whole `Cookie:` header into one pair, or an error that names
- * cookies and never prints a value.
+ * Never prints a cookie value.
  *
  * @param {string} raw
  * @returns {{ pair: string, error: string }}
@@ -111,7 +87,6 @@ function sessionPair(raw) {
     };
   }
 
-  // The one unambiguous case: no `=` anywhere is a bare token, so name it.
   if (!value.includes("=")) return { pair: `${SESSION_COOKIE_NAME}=${value}`, error: "" };
 
   const pairs = value
@@ -150,7 +125,6 @@ const COOKIE_SOURCE = process.env.ADMIN_SESSION_COOKIE
   : `.admin-session`;
 const { pair: ADMIN_COOKIE, error: COOKIE_ERROR } = sessionPair(RAW_COOKIE);
 
-/** Names the source read: a set `ADMIN_SESSION_COOKIE` overrides the file. */
 const REFILL_HINT = process.env.ADMIN_SESSION_COOKIE
   ? `ADMIN_SESSION_COOKIE is set in this shell and OVERRIDES the file. Update it, or unset ` +
     `it to fall back to .admin-session. ${SESSION_EXAMPLE} has the five Chrome clicks.`
@@ -159,10 +133,6 @@ const REFILL_HINT = process.env.ADMIN_SESSION_COOKIE
 /** The admin origin, not the preview: preview KV cannot hold a production session. */
 const ADMIN_ORIGIN = (process.env.ADMIN_ORIGIN ?? fileSession?.origin ?? "").replace(/\/+$/, "");
 
-/**
- * The read-only smoke token, from `SMOKE_TOKEN_FILE` or `.smoke-token`; never printed.
- * A named file that is missing, or an unusable one, fails rather than falling back.
- */
 const SMOKE_TOKEN_ENV = process.env.SMOKE_TOKEN_FILE;
 const SMOKE_TOKEN_PATH = SMOKE_TOKEN_ENV ?? join(root, ".smoke-token");
 const SMOKE_SOURCE = SMOKE_TOKEN_ENV ? `SMOKE_TOKEN_FILE (${SMOKE_TOKEN_ENV})` : ".smoke-token";
@@ -186,7 +156,6 @@ if (existsSync(SMOKE_TOKEN_PATH)) {
     `request for the smoke path, so this is a failure rather than a fall back to the cookie.`;
 }
 
-/** Whether the smoke path was ASKED for, which is not the same as usable. */
 const SMOKE_REQUESTED = Boolean(SMOKE_TOKEN || SMOKE_ERROR);
 
 /** Smoke wins because it runs unattended; the cookie remains a full fallback. */
@@ -223,8 +192,6 @@ async function applySmoke(page) {
 }
 
 /**
- * Applies whichever credential this run selected. ONE NAME, ONE ARGUMENT ORDER.
- *
  * @param {import("puppeteer").Page} page
  * @param {string} origin
  */
@@ -255,11 +222,7 @@ async function credentialAuthenticates(origin) {
   }
 }
 
-/**
- * The repair a refused smoke credential needs, named from its status.
- *
- * @param {number} status
- */
+/** @param {number} status */
 function smokeRepair(status) {
   if (status === 401) {
     return (
@@ -292,11 +255,7 @@ const skipped = [];
 /** Not `skipped.length`: that cannot tell a rejected session from a completed run. */
 let adminCasesRan = false;
 
-/**
- * The pre-check's full result, so a failure can name a repair.
- *
- * @type {{ ok: boolean, status: number, error?: string }}
- */
+/** @type {{ ok: boolean, status: number, error?: string }} */
 let AUTH_RESULT = { ok: false, status: 0 };
 
 /** @param {string} label @param {boolean} condition @param {string} [detail] */
@@ -311,9 +270,9 @@ function ok(label, condition, detail = "") {
 /**
  * Fails one case on a missing selector, where `page.click` would end the run.
  *
- * @param {any} target a Page or a Frame
+ * @param {any} target
  * @param {string} selector
- * @param {string} label what the click is for, used in the failure line
+ * @param {string} label
  * @returns {Promise<boolean>} whether the click happened
  */
 async function clickOrFail(target, selector, label) {
@@ -337,23 +296,14 @@ function skip(label, why) {
   console.log(`  SKIP  ${label}\n        ${why}`);
 }
 
-/**
- * A measured fact that is neither a pass nor a failure.
- *
- * @param {string} what
- */
+/** @param {string} what */
 function report(what) {
   console.log(`  REPORT  ${what}`);
 }
 
-/* ------------------------------------------------------------- the server */
-
 console.log("\ncheck:browser\n");
 
-/*
- * Preflight: clear the last run's leftovers, reported even at zero. A pid whose
- * command line no longer matches is dropped, never killed: pids are reused.
- */
+/* A pid whose command line no longer matches is dropped, never killed: pids are reused. */
 {
   const swept = registry.preflight();
   const parts = [`${swept.cleared} cleared`, `${swept.stale} stale`, `${swept.reused} reused`];
@@ -363,14 +313,10 @@ console.log("\ncheck:browser\n");
   for (const note of swept.notes) console.log(`    ${note}`);
 }
 
-/*
- * Preflight, second half: ask the OS who holds the port, which the registry may
- * not know. Kill only a `VITE_NEEDLES` match; anything else refuses the run.
- */
+/* The OS may know a port holder the registry does not. Kill only a `VITE_NEEDLES` match. */
 if (DRIVES_PREVIEW) {
   const holders = portListeners(PORT);
   if (holders === null) {
-    // An unreadable listing is reported, not treated as free or as fatal.
     console.log(`  preflight: port ${PORT} could NOT be probed, so a holder would go unseen`);
   } else if (holders.length === 0) {
     console.log(`  preflight: port ${PORT} probed directly, 0 holders`);
@@ -458,24 +404,17 @@ if (DRIVES_PREVIEW) {
     process.exit(1);
   }
 } else {
-  // Said out loud, so a missing "building" line is not misread.
   console.log(`  NOT building: the public cases observe ${PUBLIC_ORIGIN}, a deployed site.`);
 }
 
-/*
- * Seeded mentions give the THEME_CACHED byte-identity case markup to cover.
- * Hand-written: the endpoint refuses the hostile row `safeHttpHref` must render.
- */
+/* Hand-written: the endpoint refuses the hostile row `safeHttpHref` must render. */
 const MENTION_POST_PATH = "/blog/ten-years-on-cloudflare";
 const MENTION_SLUG = MENTION_POST_PATH.slice("/blog/".length);
-/** The seed's own source prefix, so the cleanup below can name its own rows. */
 const MENTION_SEED_PREFIX = "https://gate.example/";
 /** A fixed instant, so the rendered date is the same in every fetch. */
 const MENTION_DECIDED_AT = Math.floor(Date.UTC(2026, 7, 20) / 1000);
-/** The hostile author name. Stored as these characters and rendered as them. */
 const MENTION_HOSTILE_NAME = "<script>alert(1)</script>";
 
-/** How many rows the seed writes. Asserted, so a silent failure is not a pass. */
 const MENTION_SEED_ROWS = 2;
 
 if (DRIVES_PREVIEW) {
@@ -509,18 +448,12 @@ if (DRIVES_PREVIEW) {
   console.log(`  seeded ${MENTION_SEED_ROWS} approved mention(s) on ${MENTION_POST_PATH}`);
 }
 
-/*
- * The draft math fixture is reached through a seeded `/preview/:token`, since
- * offline markup cannot prove rendering. `--file`, because the
- * HTML's double quotes would break a cmd command string.
- */
+/* `--file`, because the HTML's double quotes would break a cmd command string. */
 const MATH_SLUG = "math-typesetting-fixture";
 /** Fixed, so a re-run overwrites one KV record. `isWellFormedToken` is length-exact. */
 const MATH_PREVIEW_TOKEN = "gate0000000000000000000000000000000000math0";
-/** A post with no math, for the paired control. Already driven by other cases. */
 const MATHLESS_POST_PATH = "/blog/ten-years-on-cloudflare";
 
-/** True once both rows are written, so the cases can SKIP rather than fail. */
 let mathPreviewSeeded = false;
 
 if (DRIVES_PREVIEW) {
@@ -648,17 +581,10 @@ server?.on("exit", (code, signal) => {
   serverExit = { code, signal };
 });
 
-/**
- * Polls until the server answers. The bound is generous: a dead server ends the
- * wait at once, so only a live, slow one pays it.
- */
-/** What a deployed origin said, when it said something. Read by the diagnosis. */
 let originStatus = /** @type {number | null} */ (null);
-/** What the readiness probe last saw, so a timeout names what it waited on. */
 /** @type {{ state: string, detail: string }} */
 let readiness = { state: "not-started", detail: "the probe has not run" };
 
-/** What a deployed origin threw, when it could not be reached at all. */
 let originError = "";
 
 async function waitForServer(timeoutMs = 180_000) {
@@ -680,10 +606,7 @@ async function waitForServer(timeoutMs = 180_000) {
   }
 
   const deadline = started + timeoutMs;
-  /*
-   * Survivors are recorded on every poll, since a kill during startup is the case
-   * the registry exists for. Throttled: reading the process table is expensive.
-   */
+  /* A kill during startup is the case the registry exists for. Throttled: reading the process table is expensive. */
   let lastCapture = 0;
   const CAPTURE_INTERVAL_MS = 2000;
   while (Date.now() < deadline) {
@@ -701,7 +624,6 @@ async function waitForServer(timeoutMs = 180_000) {
       // Answered and said no: a wrong probe path, not a slow boot.
       readiness = { state: "answered-not-ok", detail: `HTTP ${res.status} on ${BASE}/blog` };
     } catch (error) {
-      /* ECONNREFUSED is still booting, a timeout is a wedge, anything else verbatim. */
       const cause = /** @type {any} */ (error);
       const code = cause?.cause?.code ?? cause?.name ?? String(error);
       readiness =
@@ -711,7 +633,6 @@ async function waitForServer(timeoutMs = 180_000) {
             ? { state: "bound-silent", detail: "a listener accepted the connection and did not reply" }
             : { state: "unreachable", detail: String(code) };
     }
-    // Gone, so waiting cannot help; the caller prints its output.
     if (serverExit) {
       readiness = {
         state: "exited",
@@ -724,9 +645,7 @@ async function waitForServer(timeoutMs = 180_000) {
   return false;
 }
 
-/** The server's state and last output; an empty capture says so. */
 function serverDiagnosis() {
-  /* The state first: it decides what to do next. */
   const verdict =
     readiness.state === "no-listener"
       ? "STILL BOOTING when the ceiling expired: nothing had bound the port yet. MEASURED on a " +
@@ -742,7 +661,6 @@ function serverDiagnosis() {
             : `UNCLASSIFIED (${readiness.state}).`;
   const stateLine = `  readiness: ${verdict}\n  last observation: ${readiness.detail}\n`;
 
-  // No server was started, so diagnose the deployed origin.
   if (!DRIVES_PREVIEW) {
     if (originStatus !== null) {
       return (
@@ -768,11 +686,7 @@ function serverDiagnosis() {
   return `${stateLine}  ${how}\n  ${tail}`;
 }
 
-/**
- * Records `VITE_NEEDLES`-matching processes that outlive a killed gate. workerd and
- * esbuild are reached by `taskkill /T` from vite.
- */
-/** Pids already written, held in memory because the registry is append-only. */
+/** Held in memory because the registry is append-only. */
 const recorded = new Set();
 
 function recordServerSurvivors() {
@@ -796,11 +710,7 @@ function stopServer() {
   if (server.pid) killTree(server.pid);
 }
 
-/**
- * Stops every child on an orderly exit: `browser.close()`, then a tree kill.
- *
- * @param {import("puppeteer").Browser | undefined} openBrowser
- */
+/** @param {import("puppeteer").Browser | undefined} openBrowser */
 async function cleanupChildren(openBrowser) {
   if (openBrowser) {
     await openBrowser.close().catch(() => {});
@@ -836,7 +746,6 @@ for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIG
   });
 }
 
-/** False when the subject never answered, so nothing below was measured. */
 let subjectReachable = true;
 try {
   if (!(await waitForServer())) {
@@ -856,14 +765,11 @@ try {
   registry.record(browser.process()?.pid, "the Puppeteer browser", [".cache/puppeteer"]);
   const page = await browser.newPage();
 
-  /* Names which build the public cases observe. */
   console.log(
     DRIVES_PREVIEW
       ? `  public cases: observing the PREVIEW BUILD of the working tree (${BASE})`
       : `  public cases: observing ${BASE} (DEPLOYED). This run says nothing about uncommitted work.`,
   );
-
-  /* ------------------------------------------------- the stylesheet itself */
 
   /* Scope first: an unstyled page would pass every layout assertion below. */
   await page.setViewport({ width: 1280, height: 900 });
@@ -877,10 +783,6 @@ try {
       }
     }, 0),
   );
-  /*
-   * A crude per-route floor that catches a page with no stylesheet. Byte ceilings
-   * are `check:page-payload`'s.
-   */
   ok(
     "the blog page's stylesheets are actually applied",
     css >= 144,
@@ -889,26 +791,18 @@ try {
       `and every layout assertion below is measuring browser defaults.`,
   );
 
-  /* ------------------------------------ 0. the home health tile is a READ */
-
   /*
    * `/api/health` is hit first to exercise the snapshot write; the read is
    * cache-busted because the home page is shared-cached.
    */
   {
-    /**
-     * Reads the tile off a cache-busted render of the home page.
-     * @param {string} tag
-     */
+    /** @param {string} tag */
     const readTile = async (tag) => {
       await page.goto(`${BASE}/?browsercase=health-${tag}-${Date.now()}`, {
         waitUntil: "networkidle0",
       });
       const read = await page.evaluate((factSelector) => {
         const el = document.querySelector("[data-health-age]");
-        /* The proof tiles became the evidence row (ruling 117), which now sits at the foot of the
-           page rather than in the hero. The ratio is the health fact's own text, and the attribute
-           still rides the element carrying it. */
         const value = document.querySelector(factSelector);
         return {
           present: !!el,
@@ -916,15 +810,10 @@ try {
           value: value ? value.textContent.trim() : null,
         };
       }, HEALTH_FACT_SELECTOR);
-      /* Wall clock at the read, so an age becomes a fixed write time. */
       return { ...read, readAtMs: Date.now() };
     };
 
-    /**
-     * When the shown snapshot was written, on the local clock.
-     *
-     * @param {{age: number|null, readAtMs: number}} t
-     */
+    /** @param {{age: number|null, readAtMs: number}} t */
     const writtenAtMs = (t) => t.readAtMs - Number(t.age) * 1000;
 
     /*
@@ -943,7 +832,6 @@ try {
         `for a reason that is not about the tile. Body: ${primedBody.slice(0, 200)}`,
     );
 
-    /* The poll stops at the first newer write, so the budget is only a ceiling. */
     const POLL_BUDGET_MS = 90_000;
     const POLL_EVERY_MS = 5_000;
     const STAMP_TOLERANCE_MS = 2_000;
@@ -1026,14 +914,11 @@ try {
     await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
   }
 
-  /* 0b. a public document depends on the theme alone */
-
   /*
    * Keying the public cache on path plus theme is sound only if public bytes depend on
    * the theme alone. The nonce is masked: it differs per request by design.
    */
   {
-    /* Every route exporting the shared cache headers; checked against the source below. */
     const THEME_CACHED = [
       { path: "/", module: "home.tsx" },
       { path: "/blog", module: "blog._index.tsx" },
@@ -1098,11 +983,7 @@ try {
         `carry session bytes into a shared cache entry.`,
     );
 
-    /**
-     * What differs between two renders by design: nonce, report endpoint, health age.
-     *
-     * @param {string} html
-     */
+    /** @param {string} html */
     const mask = (html) =>
       html
         .replace(/nonce="[^"]*"/g, 'nonce="N"')
@@ -1118,18 +999,8 @@ try {
         );
 
     /**
-     * ONE IDENTITY FOR THE WHOLE RUN, never one per fetch.
-     *
-     * This is a cache-buster: the themed `caches.default` entry is keyed on request URL, so a
-     * fresh value is what stops a previous run's body answering this one. Per FETCH it also
-     * made the three reads of a page three different URLs, and a route that echoes its own URL
-     * then differs for that reason alone. `/publications` does: its search `<Form>` carries no
-     * `action`, so React Router renders the request URL into the attribute and the byte-identity
-     * pair failed on the gate's own parameter. One value per run busts the cache across runs and
-     * leaves the reads comparable.
-     *
-     * Masking it instead would be the wrong direction: the mask set only ever shrinks, for the
-     * reason stated above it.
+     * One cache-buster per run, never per fetch: `/publications` renders the request URL into its
+     * search form, so per-fetch values made the three reads of a page differ.
      */
     const RUN_IDENTITY = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
@@ -1143,7 +1014,6 @@ try {
       return mask(await res.text());
     };
 
-    /** The first differing region, so a failure names bytes. */
     const firstDiff = (/** @type {string} */ a, /** @type {string} */ b) => {
       const n = Math.min(a.length, b.length);
       let i = 0;
@@ -1152,24 +1022,15 @@ try {
       return { at: i, a: a.slice(Math.max(0, i - 60), i + 80), b: b.slice(Math.max(0, i - 60), i + 80) };
     };
 
-    /*
-     * What the theme may change; after masking, the documents must be identical.
-     *
-     * THE SET ONLY EVER SHRINKS. A wider mask hides a control that has started varying its
-     * markup by theme and the comparison below still passes, because masking more makes two
-     * documents more alike. Shrinking it is the strict direction.
-     */
+    /* The mask set only ever shrinks: a wider mask hides a control that has started varying by theme. */
     const maskTheme = (/** @type {string} */ html) =>
       html
         .replace(/<html[^>]*>/, "<html>")
         /* The color-scheme meta carries the theme by design; its own case asserts the value. */
         .replace(/<meta name="color-scheme" content="[^"]*"/, '<meta name="color-scheme" content="S"');
-    /* The age sentence is not here: the cache-header rule scopes this to what the theme may change. */
 
     /**
-     * The footer's link order, recorded on the first page and asserted on every later one.
-     * `footerOrderCompared` exists so a THEME_CACHED of one cannot report a clean sweep of
-     * a comparison that never ran.
+     * `footerOrderCompared` exists so a THEME_CACHED of one cannot report a clean sweep.
      *
      * @type {string[] | null}
      */
@@ -1178,19 +1039,10 @@ try {
     let footerOrderCompared = 0;
 
     for (const { path } of THEME_CACHED) {
-      /* The footer assertions below need a rendered page. */
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-      /* consistent help: the privacy link on every public page */
 
-      /*
-       * 3.2.6 asks for the same RELATIVE ORDER on every page, never a fixed index. The
-       * order is recorded on the first page and every later page is held against it.
-       *
-       * The selector sweeps the WHOLE footer, which is three containers: the Elsewhere
-       * nav, the machine-formats nav, and the copyright note. `/colophon` therefore
-       * appears twice, once as a nav link and once as prose, and that is the markup
-       * rather than a defect.
-       */
+      // 3.2.6 asks for the same relative order on every page, never a fixed index. `/colophon`
+      // appears twice in the footer, as a nav link and as prose, and that is the markup.
       const help = await page.evaluate(() => {
         const links = [...document.querySelectorAll(".site-shell-footer a")].map(
           (a) => a.getAttribute("href") ?? "",
@@ -1249,7 +1101,6 @@ try {
           `keyed on theme would be keying on nothing.`,
       );
 
-      /* The document just compared, not a new fetch. Section presence is asserted first. */
       if (path === MENTION_POST_PATH) {
         if (!DRIVES_PREVIEW) {
           skip(
@@ -1331,8 +1182,6 @@ try {
         `and compared none reports a clean sweep of an assertion that never ran.`,
     );
 
-    /* the cache itself is verify-live's */
-
     /* Miniflare does not implement Workers Cache; `verify-live` owns the cache assertions. */
     skip(
       "the cache stores, separates by theme, and refuses a negotiated read",
@@ -1342,9 +1191,6 @@ try {
         "against production. The theme-only-difference assertions above are unaffected.",
     );
 
-    /* negotiated routing, which needs no cache */
-
-    /* Routing only, which needs no cache; `verify-live` measurement (a) owns the cache half. */
     const NEGOTIATED = [
       {
         path: "/blog/ten-years-on-cloudflare",
@@ -1387,8 +1233,6 @@ try {
       );
     }
 
-    /* the browser learns the color scheme before CSS */
-
     /*
      * Without a color-scheme meta the browser paints a light canvas between pages. Screencast
      * and screenshots cannot see that frame, so the document property is asserted.
@@ -1397,7 +1241,6 @@ try {
       const SCHEME = /<meta name="color-scheme" content="([^"]*)"/;
       const FIRST_SHEET = /<link[^>]+rel="stylesheet"/;
 
-      /** No choice resolves to `light dark`, so the machine decides. */
       const READER_STATES = [
         { label: "theme=dark", cookie: "theme=dark", expect: "dark" },
         { label: "theme=light", cookie: "theme=light", expect: "light" },
@@ -1442,7 +1285,7 @@ try {
         );
       }
 
-      /* The meta and the stylesheet state one fact (rule 17), so they are checked to agree. */
+      /* The meta and the stylesheet state one fact, so they are checked to agree. */
       for (const theme of ["dark", "light"]) {
         const context = await browser.createBrowserContext();
         const probe = await context.newPage();
@@ -1464,8 +1307,6 @@ try {
     }
   }
 
-  /* a public navigation runs no view transition */
-
   /*
    * Chrome's root crossfade blinks full-document navigations, so the ViewTransition must
    * be null. `pagereveal` must also fire, or an unattached listener would pass.
@@ -1474,7 +1315,6 @@ try {
     const context = await browser.createBrowserContext();
     const probe = await context.newPage();
 
-    /* An exposed binding, reinstalled per document, rather than sessionStorage. */
     /** @type {Array<{ path: string, hasTransition: boolean }>} */
     const reveals = [];
     await probe.exposeFunction(
@@ -1497,13 +1337,7 @@ try {
     const probeClient = await probe.createCDPSession();
     await probeClient.send("Page.setPrerenderingAllowed", { isAllowed: false });
 
-    /*
-     * The nav is a wrapping row with no breakpoint of its own, so a destination is laid out
-     * at every width. MEASURED 2026-09-17 on the deployed site: `.site-header-nav` computes
-     * `display: flex` at 1280 and its links have boxes. Build 2 shipped a nav that computed
-     * `display: none` at every width; it was reverted on 2026-09-14, and the overflow
-     * fallback below is that build's residue, rendered by nothing in `app/` today.
-     */
+    /* The nav is a wrapping row with no breakpoint of its own, so a destination is laid out at every width. */
     await probe.setViewport({ width: 1280, height: 900 });
 
     await probe.goto(`${BASE}/`, { waitUntil: "networkidle0" });
@@ -1545,7 +1379,6 @@ try {
       const first = await read();
       if (first) return first;
 
-      /* Nothing laid out yet, so open the disclosure and look again. */
       const opened = await probe.evaluate(() => {
         const d = document.querySelector("details.site-shell-overflow");
         if (!(d instanceof HTMLDetailsElement)) return false;
@@ -1573,12 +1406,6 @@ try {
     let arrived = "";
     let reveal = null;
     if (clickable) {
-      /*
-       * Hovered first because a hovered click is the realistic gesture. The dwell is no
-       * longer load-bearing: it was written when a click with no dwell could activate a
-       * PENDING prerender puppeteer cannot follow, and the guard above forbids prerendering
-       * outright now. Kept because it costs nothing.
-       */
       await probe.mouse.move(target.x, target.y);
       await new Promise((r) => setTimeout(r, 350));
       await probe.mouse.click(target.x, target.y);
@@ -1619,8 +1446,6 @@ try {
         `light. The one owner is @view-transition in app/styles/motion-print.css.`,
     );
   }
-
-  /* speculation rules, as Chrome parses them */
 
   /*
    * Chrome refuses to prerender under CDP, so `activationStart` is always 0: never assert
@@ -1666,9 +1491,7 @@ try {
         const blocks = [...document.querySelectorAll('script[type="speculationrules"]')];
         /** @type {string[]} */
         const eagerness = [];
-        /* The payload's own top-level keys ARE the actions. Harvested rather
-           than looked up under one name, so a change of action shows up as a
-           changed action rather than as an empty rule list. */
+        /* Harvested rather than looked up under one name, so a changed action shows up as one, not as an empty list. */
         /** @type {string[]} */
         const actions = [];
         for (const block of blocks) {
@@ -1759,7 +1582,6 @@ try {
       );
     }
 
-    /* `/colophon` is reached from the footer. */
     const fromBlog = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get("/blog"));
     ok(
       "/blog: the candidate list is non-empty, so the assertions below are about something",
@@ -1777,7 +1599,6 @@ try {
       );
     }
 
-    /* Link counts are proven non-empty first. */
     const EXCLUSIONS = [
       {
         label: "a query string",
@@ -1829,8 +1650,6 @@ try {
   /* The cases below read the current page and expect /blog. */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
 
-  /* no layout shift while the font arrives */
-
   /*
    * Throttled, or a local font arrives in time and CLS can never fail. A missing observer
    * returns null, which fails.
@@ -1880,8 +1699,6 @@ try {
     );
   }
 
-  /* 1. the search field and the column */
-
   /* Aligned with a sibling, not the literal 48rem app.css owns. */
   const cols = await page.evaluate(() => {
     const box = (/** @type {string} */ sel) => {
@@ -1890,7 +1707,6 @@ try {
       const r = el.getBoundingClientRect();
       return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
     };
-    /* The Paper and Plate /blog (bfed012) renamed all three; the old names matched nothing. */
     return { search: box(".list-search"), head: box(".list-head"), list: box(".entry-list") };
   });
 
@@ -1911,9 +1727,6 @@ try {
     );
   }
 
-  /* 2. the skip link target */
-
-  /* A skip link with no target is a keyboard trap. */
   for (const path of ["/", "/blog", "/search?q=workers", "/colophon"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const s = await page.evaluate(() => {
@@ -1932,8 +1745,6 @@ try {
         : "there is no .skip-link at all",
     );
   }
-
-  /* 3. aria-current is not on Blog on a post */
 
   /* `NavLink` without `end` marks Blog current on every `/blog/*` page. */
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
@@ -1963,9 +1774,6 @@ try {
     );
   }
 
-  /* 4. no horizontal scroll at 320px */
-
-  /* Every page, since shared chrome can overflow. The failure names the element. */
   /* `/playground` boxes scroll by design; the page must not. */
   await page.setViewport({ width: 320, height: 800 });
   for (const path of [
@@ -1998,12 +1806,7 @@ try {
     );
   }
 
-  /* 4a. maths must not drag the document */
-
-  /*
-   * Paired controls: the box must really overflow and the sheet be linked. A mathless
-   * post links no sheet, which is the no-framework-script rule's half on the wire.
-   */
+  /* Paired controls: the box must really overflow and the sheet be linked. */
   if (!mathPreviewSeeded) {
     skip(
       "the math page cases",
@@ -2104,7 +1907,6 @@ try {
         `with no positioning, which still does not scroll and would pass the case below.`,
     );
 
-    /* The overflow really exists, so the assertion after it is not vacuous. */
     ok(
       `${MATH_PATH}: a display equation really is wider than its own box`,
       Boolean(math.widest) && math.widest.scroll > math.widest.client,
@@ -2172,8 +1974,6 @@ try {
     await emulation.detach();
     await page.deleteCookie({ url: BASE, name: "theme", path: "/" });
 
-    /* control: a mathless post links nothing extra */
-
     await page.goto(`${BASE}${MATHLESS_POST_PATH}`, { waitUntil: "networkidle0" });
     const mathless = await page.evaluate(() => ({
       sheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map(
@@ -2190,23 +1990,16 @@ try {
     );
   }
 
-  /* 4b. the playground demos answer on the wire */
-
-  /*
-   * check:features cannot see the transport, such as the Worker's WASM
-   * instantiator. Expectations come from the manifest.
-   */
+  /* check:features cannot see the transport, such as the Worker's WASM instantiator. */
   await page.setViewport({ width: 1280, height: 900 });
   {
     const manifest = JSON.parse(
       readFileSync(join(root, "content", "playground.json"), "utf8"),
     );
 
-    /** The document's visible text, collapsed, for substring assertions. */
     const visibleText = async () =>
       (await page.evaluate(() => document.body.innerText)).replace(/\s+/g, " ");
 
-    /* The page must be the playground with every declared section. */
     await page.goto(`${BASE}/playground`, { waitUntil: "networkidle0" });
     const sections = await page.evaluate(() =>
       [...document.querySelectorAll("section.playground-demo")].map((s) => s.id),
@@ -2217,8 +2010,6 @@ try {
       declared.every((/** @type {string} */ id) => sections.includes(id)),
       `manifest: ${declared.join(", ")}; rendered: ${sections.join(", ") || "none"}`,
     );
-
-    /* the key grammar, on the wire */
 
     const keyPreset = manifest.keyPresets.find(
       (/** @type {any} */ p) => p.expect?.dimensions !== null && p.expect?.contentKey === true,
@@ -2269,8 +2060,6 @@ try {
       );
     }
 
-    /* the theme resolver, on the wire */
-
     for (const preset of manifest.cookiePresets) {
       await page.goto(`${BASE}/playground?cookie=${encodeURIComponent(preset.cookie)}`, {
         waitUntil: "networkidle0",
@@ -2284,8 +2073,6 @@ try {
         `expected the data-theme row to read ${expected}`,
       );
     }
-
-    /* the markdown pipeline, on the wire */
 
     /* workerd refuses `WebAssembly.instantiate()` on raw bytes; only a Worker sees this. */
     for (const snippet of manifest.markdownSnippets) {
@@ -2326,7 +2113,6 @@ try {
       }
 
       if (snippet.expect.blockedCount > 0) {
-        /* Checked on the DOM's own links. */
         const liveHrefs = await page.evaluate(() =>
           [...document.querySelectorAll(".playground-rendered a")].map((a) =>
             a.getAttribute("href"),
@@ -2340,8 +2126,6 @@ try {
       }
     }
   }
-
-  /* 5. the login skip link */
 
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle0" });
@@ -2359,12 +2143,7 @@ try {
       `carries that id, so keyboard focus goes nowhere`,
   );
 
-  /* 5b. the enhancements run, and nothing else ships */
-
-  /*
-   * Rule 9's "fast with it" half, which fails silently. The Ask stream is not driven
-   * because it bills. Console errors are asserted empty at the end, where CSP refusals show.
-   */
+  /* The Ask stream is not driven because it bills. Console errors are asserted at the end, where CSP refusals show. */
   /** @type {string[]} */
   const publicConsoleErrors = [];
   /** @param {import("puppeteer").Page} p */
@@ -2396,16 +2175,11 @@ try {
     [...new Set(
       [...document.querySelectorAll('.entry-list a[href^="/blog/"]')]
         .map((a) => a.getAttribute("href"))
-        /* A POST IS ONE SEGMENT. Each row also links its tags (/blog/tags/x); without this the
-           list was one post and five tag archives, and the bundle case below read a tag page. */
+        /* A post is one segment: each row also links its tags (/blog/tags/x). */
         .filter((h) => h && /^\/blog\/[^/.]+$/.test(h)),
     )].slice(0, 6),
   );
-  /*
-   * The blog bundle loads on a post and not on the index.
-   *
-   * @param {string} stem
-   */
+  /* @param {string} stem */
   const bundleFetches = (/** @type {string} */ stem) =>
     page.evaluate(
       (/** @type {string} */ s) =>
@@ -2428,7 +2202,6 @@ try {
   let probedPost = null;
   for (const path of postPaths) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    /* The page the bundle is counted on is the LAST one visited, so that is the one named. */
     probedPost = path;
     const hasCode = await page.evaluate(
       () => document.querySelectorAll(".prose pre[data-lang]").length > 0,
@@ -2471,9 +2244,6 @@ try {
     );
   }
 
-  /* WCAG 2.2 1.4.13, on a post with footnotes */
-
-  /* Hoverable, dismissible, persistent (WCAG 1.4.13). The post is found, not named. */
   const footnotePost = await (async () => {
     for (const path of postPaths) {
       await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
@@ -2523,11 +2293,7 @@ try {
         `reference, so reaching it always crosses that boundary.`,
     );
 
-    /*
-     * PERSISTENT. Scrolling must not destroy it. Asserted with the pointer
-     * still inside the bubble, so a failure here is the scroll listener rather
-     * than the pointer having left.
-     */
+    /* Asserted with the pointer still inside the bubble, so a failure is the scroll listener, not the pointer leaving. */
     await page.evaluate(() => window.scrollBy(0, 40));
     await new Promise((r) => setTimeout(r, 150));
     ok(
@@ -2560,8 +2326,6 @@ try {
       `focus went from ${focusBefore} to ${afterEscape.focus}. Dismissing content must ` +
         `not cost the reader their place, which is what 1.4.13 asks for.`,
     );
-
-    /* WCAG 2.2 4.1.3, the copy controls announce */
 
     /* Asserted on the `role="status"` region; speech is not observable. */
     const codePost = await page.evaluate(
@@ -2615,12 +2379,7 @@ try {
         "bundle did not run",
     );
 
-    /*
-     * THEME FLIPS IN PLACE. The sentinel proves no navigation happened: a
-     * fallback form post would land a fresh document where window.__probe is
-     * gone, and the page would still LOOK right, which is why looking is not
-     * the assertion.
-     */
+    /* The sentinel proves no navigation happened: a fallback form post would still look right. */
     /* A dead bundle lets the form navigate; the destroyed-context throw is the finding. */
     /* The hidden twin must be `display: none`, not `.sr-only`, measured via `offsetParent`. */
     const control = await page.evaluate(() => {
@@ -2630,8 +2389,6 @@ try {
       return {
         total: buttons.length,
         shown: shown.length,
-        /* An sr-only twin would be laid out, so it would report a box. A
-         * display:none one reports none. This is what tells the two apart. */
         hiddenAreDisplayNone: hidden.every(
           (b) => getComputedStyle(/** @type {Element} */ (b)).display === "none",
         ),
@@ -2668,10 +2425,7 @@ try {
       `${Math.round(control.width)}x${Math.round(control.height)}px, floor 24x24.`,
     );
 
-    /*
-     * SCROLLED FIRST, so the flip below also proves the reader keeps their place. At the top of the
-     * page a scroll jump has nowhere to go, which is how a 300px jump on every toggle shipped green.
-     */
+    /* Scrolled first: at the top of the page a scroll jump has nowhere to go. */
     const scrolledTo = await page.evaluate(() => {
       window.scrollTo(0, Math.round(document.documentElement.scrollHeight * 0.4));
       /** @type {any} */ (window).__probe = "same-document";
@@ -2723,7 +2477,6 @@ try {
       flipped !== null &&
         flipped.attr === "dark" &&
         flipped.sameDocument &&
-        /* The visible button now offers light: the cascade re-resolved. */
         flipped.shownValue === "light" &&
         flipped.shownCount === 1,
       flipped === null
@@ -2735,10 +2488,7 @@ try {
             `interception broke, or the cascade did not turn the control around.`,
     );
 
-    /*
-     * Rule 9's fallback, with JavaScript disabled. Only the path is asserted: `Referer`
-     * never carries a fragment.
-     */
+    /* With JavaScript disabled. Only the path is asserted: `Referer` never carries a fragment. */
     {
       const scriptless = await browser.newPage();
       try {
@@ -2809,15 +2559,8 @@ try {
       }
     }
 
-    /*
-     * THE HEADER MENU, RULE 9's FALLBACK, with JavaScript disabled. Ruling 126 puts the
-     * destinations behind a menu on narrow widths, so with no script that menu IS the navigation:
-     * if it does not open, six destinations are unreachable from the header.
-     *
-     * At a narrow viewport, because that is the only width it is shown at. Asserted by OPENING it
-     * and then FOLLOWING a link: a details element that opens but whose links do not navigate
-     * would satisfy a check that stopped at `open`.
-     */
+    // With no script the narrow header menu is the navigation. Asserted by opening it and following a
+    // link: a details element that opens but whose links do not navigate would pass a check on `open`.
     {
       const noScript = await browser.newPage();
       try {
@@ -2868,10 +2611,6 @@ try {
       }
     }
 
-    /*
-     * The palette: clicking the trigger opens it. The hint is server-rendered `hidden` and
-     * unhidden only once the listener exists.
-     */
     // The hint must exist and be unhidden (a missing hint makes `!hidden` true), and the anchor's
     // `aria-describedby` must resolve to it, or no screen reader reads it.
     const hintShown = await page.evaluate(() => {
@@ -2888,10 +2627,6 @@ try {
          */
         titled: /-K\b/.test(trigger.getAttribute("title") ?? ""),
         text: (hint.textContent ?? "").trim(),
-        /*
-         * The announced text must name the same key; length alone is the vacuity rule's unfailable
-         * condition.
-         */
         textNamesKey: /-K\b/.test((hint.textContent ?? "").trim()),
         painted: Boolean(trigger.querySelector("kbd")),
       };
@@ -2915,10 +2650,7 @@ try {
             `back, or a surface still advertises a shortcut that was retired.`,
     );
 
-    /*
-     * The palette bundle is fetched only on the first gesture. Counted from the resource timeline,
-     * not the DOM, because a fetch is what rule 4 grades; matched loosely past the content hash.
-     */
+    /* Counted from the resource timeline, not the DOM; matched loosely past the content hash. */
     const paletteFetches = () =>
       page.evaluate(() =>
         performance
@@ -2935,7 +2667,6 @@ try {
         `never opens search should never download the dialog.`,
     );
 
-    /* Clicked, not typed: the click is the gesture every reader has. */
     const triggerClicked = await clickOrFail(
       page,
       "[data-search-trigger]",
@@ -2951,9 +2682,7 @@ try {
           open: Boolean(document.querySelector("dialog.palette[open]")),
           focused: document.activeElement?.classList.contains("palette-input") ?? false,
         }));
-        // THE OTHER LEGAL OUTCOME. With no bundle, theme.ts falls back to
-        // location.assign('/search'), and a reader who lands on the real search
-        // page has been served correctly even though no dialog opened.
+        // The other legal outcome: with no bundle, theme.ts falls back to location.assign('/search').
         navigatedToSearch = /\/search(\?|$)/.test(page.url());
         if ((paletteOpen.open && paletteOpen.focused) || navigatedToSearch) break;
       }
@@ -2968,14 +2697,8 @@ try {
         `else, or nowhere, is not.`,
     );
 
-    /*
-     * EVERYTHING THAT READS THE OPEN DIALOG RUNS BEFORE ANYTHING THAT SUBMITS IT. The query case
-     * below presses Enter, which navigates to /search; run first, it left these three measuring a
-     * page with no dialog and a fresh resource timeline, so they failed on a palette that worked.
-     *
-     * The dialog arrives styled: its CSS loads on demand, and an unstyled `<dialog open>` still
-     * passes the open check. Compared against the `--border` token, never a literal.
-     */
+    // Everything that reads the open dialog runs before anything that submits it, because Enter
+    // navigates to /search. The dialog CSS loads on demand, and an unstyled `<dialog open>` still passes.
     const dialogStyled = await page.evaluate(() => {
       const dialog = document.querySelector("dialog.palette");
       if (!dialog) return null;
@@ -3005,8 +2728,7 @@ try {
         `more than one means the once-only guard in theme.ts stopped holding.`,
     );
     if (paletteOpen.open) {
-      // Guarded for the same reason as the case above: a missing field here
-      // threw and voided the rest of the run.
+      // Guarded: a missing field here throws and voids the rest of the run.
       const resultsField = await page.$(".palette-input");
       if (!resultsField) {
         ok(
@@ -3040,10 +2762,7 @@ try {
       }
     }
 
-    /*
-     * LAST, because it leaves the page. The query survives the gesture: type a real query, submit
-     * it, and the resulting URL must carry it. A control that lands on a bare /search fails here.
-     */
+    /* Last, because it leaves the page. */
     if (paletteOpen.open) {
       const QUERY = "phage cocktail";
       /* Typed through a handle, not `page.type`, which throws on a missing field and voids the run. */
@@ -3093,17 +2812,9 @@ try {
     }
   }
 
-  /*
-   * The image link, both states. Without script the image's parent is an anchor whose href
-   * serves an image (a 200 with an image type, not a well-formed string). With script the
-   * overlay shows the anchor's href, compared raw, attribute to attribute: `currentSrc` is
-   * absolute, so the raw form discriminates on any image.
-   */
+  /* The overlay's href is compared raw, attribute to attribute: `currentSrc` is absolute. */
   {
-    /*
-     * The subject comes from the on-disk artifact, over the whole corpus, not a capped crawl. A
-     * deployed origin may lack a named post, so a candidate without the anchor skips, not fails.
-     */
+    /* A deployed origin may lack a named post, so a candidate without the anchor skips, not fails. */
     const artifact = JSON.parse(
       readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
     );
@@ -3252,11 +2963,7 @@ try {
     }
   }
 
-  /*
-   * THE ASK AFFORDANCE, visible and bound, never clicked (clicking bills; see
-   * the section header). `data-ask-bound` is the bundle's own idempotence
-   * marker, so its presence proves the init ran against this very element.
-   */
+  /* Never clicked: clicking bills. `data-ask-bound` is the bundle's own idempotence marker. */
   await page.goto(`${BASE}/search?q=how+does+search+work`, { waitUntil: "networkidle0" });
   const askState = await page.evaluate(() => {
     const trigger = document.querySelector("[data-ask-trigger]");
@@ -3271,10 +2978,6 @@ try {
       `deployment); hidden or unbound means the ask bundle did not run.`,
   );
 
-  /*
-   * The script set per page: enhancement bundles only, no framework, no modulepreload. The wire
-   * half of check:page-payload.
-   */
   for (const path of ["/", postForShape, "/search?q=workers"].filter(Boolean)) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const shape = await page.evaluate(() => ({
@@ -3307,20 +3010,7 @@ try {
   page.removeAllListeners("console");
   page.removeAllListeners("pageerror");
 
-  /* ------------------------------- 6. the admin plane, opt-in, deployed only */
-
-  /*
-   * Catches markup that renders while a component never mounts. These cases observe
-   * ADMIN_ORIGIN, a deployed Worker; every other case observes the preview build.
-   */
-  /*
-   * Only an absent credential is a skip. A supplied but unusable one fails, with a message
-   * naming the repair:
-   *
-   *   malformed  the cookie cannot be used; fix the format.
-   *   no origin  a session was supplied and there is nowhere to send it.
-   *   rejected   the server said no, usually an expired session; refill the file.
-   */
+  /* Only an absent credential is a skip; a supplied but unusable one fails with a named repair. */
   if (!CREDENTIAL_PRESENT) {
     ok(
       "the admin plane has a credential to observe it with",
@@ -3408,8 +3098,6 @@ try {
     await applyCredential(admin, ADMIN_ORIGIN);
     await admin.setViewport({ width: 1280, height: 900 });
 
-    /* ---------------------------------------- 6a. every surface renders */
-
     /*
      * The shell (sidebar and topbar) is the assertion, not the title, which survives an empty
      * body. The login page is named, because a bounced session renders a complete page.
@@ -3421,10 +3109,6 @@ try {
       ["/admin/media?view=list", "the media library, list"],
       ["/admin/tools", "tools"],
       ["/admin/origin-requests", "origin requests"],
-      /*
-       * Asserts only that the route renders in the shell and fits, not its structure: this observes
-       * a deployed Worker.
-       */
       ["/admin/mentions", "the mentions queue"],
     ];
     for (const [path, what] of SURFACES) {
@@ -3444,13 +3128,7 @@ try {
       );
     }
 
-    /* ----------------- 6b. the mark fills: the base binding, and full color */
-
-    /*
-     * The mark's base fill lives in app.css and nothing overrides it on either plane since ruling
-     * 118.2. It is asserted as resolved color against the token, never a hex, because @import
-     * order decides what wins and a hex here would be a second owner of the palette.
-     */
+    /* Asserted as resolved color against the token, never a hex: @import order decides what wins. */
     const rgb = (/** @type {string} */ hex) => {
       const h = hex.trim().replace("#", "");
       const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
@@ -3504,12 +3182,8 @@ try {
         `removed the header override, so the (0,1,0) base in app.css has to reach the mark, ` +
         `which is what the sixteen-file split put at risk.`,
     );
-    /*
-     * FULL COLOUR, MEASURED AS COLOURS. Asserted by DIFFERENCE rather than against three hexes,
-     * whose one owner is site-logo.tsx: one ink means all eight paths compute to the same fill, so
-     * a warm path equal to the purple is exactly the regression ruling 118.2 reversed. Hex
-     * equality here would be a second owner, and it would pass a mark re-inked to those hexes.
-     */
+    // Asserted by difference, not against hexes whose owner is site-logo.tsx: one ink means all eight
+    // paths compute to the same fill, and hex equality would pass a mark re-inked to those hexes.
     ok(
       "the public header mark's warm paths keep their own fills, so the mark is not one ink",
       publicMark.warm.length > 0 &&
@@ -3519,8 +3193,6 @@ try {
         `${JSON.stringify(publicMark.brand[0])}. A stylesheet is repainting the presentation ` +
         `attributes site-logo.tsx sets, which is the one-ink header ruling 118.2 retired.`,
     );
-
-    /* ----------------------------------------- 6c. the mount class */
 
     await admin.goto(`${ADMIN_ORIGIN}/admin/posts`, { waitUntil: "networkidle0" });
     const slug = await admin.evaluate(() => {
@@ -3552,15 +3224,8 @@ try {
       );
     }
 
-    /* ------------------------------------- 6d. the media interactions --- */
-
-    /*
-     * Four interactions on /admin/media that only a real browser can see. Nothing here submits, under either credential: the cookie path runs as
-     * Dustin. Unreachable confirmations are on the remaining-human list below.
-     */
+    /* Nothing here submits, under either credential: the cookie path runs as Dustin. */
     await admin.setViewport({ width: 1280, height: 900 });
-
-    /* --- (i) the list view renders a header, and it marks the sorted column - */
 
     /* Sorted by size, not the default, so a header that hardcodes its active column fails. */
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=list&sort=size`, {
@@ -3614,7 +3279,6 @@ try {
           `A header cell that is not an anchor does not work with scripting off.`
         : "not measured",
     );
-    /* `aria-sort="none"` on the others tells a screen reader they can be sorted. */
     ok(
       "exactly one column carries a live aria-sort, and it is the sorted one",
       !!listHead &&
@@ -3628,8 +3292,6 @@ try {
           )}. The URL asked for sort=size and size defaults to descending.`
         : "not measured",
     );
-
-    /* --- (ii) the inspector opens on ?key= ---------------------------------- */
 
     /* The key comes off the page, never a fixture: the bucket owns it and may delete it. */
     const firstKey = await admin.evaluate(() => {
@@ -3686,12 +3348,7 @@ try {
       );
     }
 
-    /* --- (iii) the bulk bar counts and sizes the selection ------------------ */
-
-    /*
-     * Selection is client state, so this is a real click. The size is the half worth asserting:
-     * a sum over the wrong subset still renders a plausible number.
-     */
+    /* The size is the half worth asserting: a sum over the wrong subset still renders a plausible number. */
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?view=grid`, { waitUntil: "networkidle0" });
     const beforeSelect = await admin.evaluate(() => !!document.querySelector(".posts-bulk"));
     ok(
@@ -3739,11 +3396,7 @@ try {
         !!bulk && bulk.count.startsWith("1 selected"),
         bulk ? `count reads ${JSON.stringify(bulk.count)} after exactly one click` : "not measured",
       );
-      /*
-       * A SIZE, AND NOT A ZERO. `byteSize` over an empty subset renders "0 B",
-       * which is exactly what a bar summing the wrong array would show, so the
-       * assertion has to exclude it explicitly rather than merely require text.
-       */
+      /* `byteSize` over an empty subset renders "0 B", which is what a bar summing the wrong array shows. */
       ok(
         "the bulk bar sizes the selection rather than rendering an empty sum",
         !!bulk && bulk.size.length > 0 && !/^0\s*B$/i.test(bulk.size),
@@ -3759,13 +3412,8 @@ try {
       );
     }
 
-    /* --- (iv) a destructive delete demands the count typed ------------------ */
-
-    /*
-     * The empty-trash ladder, the one confirmation a GET reaches; the others open from
-     * `actionData` and need a POST. The required string is read off the page, not computed. It
-     * never submits: the enabled state is the assertion. An empty trash is a reported skip.
-     */
+    // The one confirmation a GET reaches; the others open from `actionData` and need a POST.
+    // It never submits: the enabled state is the assertion.
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?confirm=empty-trash`, {
       waitUntil: "networkidle0",
     });
@@ -3857,18 +3505,8 @@ try {
       }
     }
 
-    /* ------------------------- the admin plane does not scroll sideways ---- */
-
-    /*
-     * The admin plane at the widths the public pages are gated at. Several widths, because the
-     * overflow is linear in the viewport; 1280 catches a fix that collapses desktop. Do not narrow
-     * this to pass on a partial fix.
-     */
-    /*
-     * `/admin/*` loads a second sheet, `app/admin.css`, and a layout measurement on an unstyled page
-     * measures browser defaults. A rule count proves bytes arrived; the computed style proves the
-     * cascade applied them.
-     */
+    /* Several widths, because the overflow is linear in the viewport; 1280 catches a fix that collapses desktop. */
+    /* A rule count proves `app/admin.css` arrived; the computed style proves the cascade applied it. */
     await admin.setViewport({ width: 1280, height: 900 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const adminCss = await admin.evaluate(() => {
@@ -3918,7 +3556,6 @@ try {
       for (const [path, what] of [
         ["/admin", "the cockpit"],
         ["/admin/posts", "the posts list"],
-        /* The mentions queue puts chips, an excerpt and three buttons on one line. */
         ["/admin/mentions", "the mentions queue"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
@@ -3987,13 +3624,9 @@ try {
           `controls are being clipped.`,
     );
 
-    /*
-     * The fold keeps every action: narrow may add controls but never lose one. Compared by
-     * accessible name, since a swap holds a count steady. Opened via the `open` property, as a
-     * scriptless `<summary>` click does, because rule 9 is about the markup.
-     */
+    // Compared by accessible name, since a swap holds a count steady. Opened via the `open`
+    // property, as a scriptless `<summary>` click does.
     const NARROW = 375;
-    /** Focusable controls in the topbar, by accessible name, at this width. */
     const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openDetails) => {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
@@ -4030,9 +3663,7 @@ try {
     const wide = await topbarActions(1280, false);
     const narrow = await topbarActions(NARROW, true);
 
-    // Scope, proven before the comparison is read. An empty wide set makes the
-    // subset test vacuously true, which is the shape that passes on a topbar
-    // that has stopped rendering entirely.
+    // An empty wide set makes the subset test vacuously true.
     ok(
       "the wide admin topbar offers actions to compare against",
       wide.names.length >= 2,
@@ -4063,37 +3694,22 @@ try {
   }
 
 } catch (error) {
-  /*
-   * ONLY the sentinel is swallowed. The diagnosis for it is already printed and
-   * the exit code is already set; anything else is a real fault and keeps its
-   * stack, because a harness that eats unknown errors reports a clean failure
-   * for a broken instrument.
-   */
+  // Only the sentinel is swallowed: a harness that eats unknown errors reports a clean failure
+  // for a broken instrument.
   if (!(error instanceof Error) || error.message !== "SUBJECT_UNREACHABLE") throw error;
 } finally {
   await cleanupChildren(browser);
 }
 
-/*
- * Executed-count floor, one per mode, measured by running the gate, never summed. A browser gate
- * has many ways to examine nothing: a 404, a stale selector, an error page.
- */
-/*
- * Only if something was measured: an unreachable subject would print `0 checks, 0 failures`,
- * which reads as a pass. The exit code is already 1.
- */
+/* Only if something was measured: an unreachable subject would print `0 checks, 0 failures`. */
 if (subjectReachable) {
-  /*
-   * Two floors, one per mode, because CI runs both: the preview and the deployed site. Each floor sits
-   * `max(3, ceil(count * 0.05))` under a run; re-measure when touching this file.
-   */
+  /* Each floor sits `max(3, ceil(count * 0.05))` under a measured run; re-measure when touching this file. */
   const MINIMUM_CHECKS = DRIVES_PREVIEW ? 248 : 230;
   console.log(
     `\n${checks} checks, ${failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
       "\n",
   );
-  /* Name what was not covered on the last line, the one that gets read. */
   if (!adminCasesRan) {
     console.log(
       "  NOT COVERED: the admin plane. No surface under /admin was rendered, the editor\n" +
@@ -4106,10 +3722,7 @@ if (subjectReachable) {
     );
   }
 
-  /*
-   * What still needs a human, printed every run. Widening the read-only credential to reach the
-   * by-construction items would grant the authority the design withholds; they stay human.
-   */
+  /* Widening the read-only credential to reach these would grant the authority the design withholds. */
   console.log(
     "  REMAINING HUMAN, and why:\n" +
       "    BY CONSTRUCTION, and deliberately permanent:\n" +
@@ -4128,11 +3741,7 @@ if (subjectReachable) {
       "      - whether any of it LOOKS right. Every assertion here is a number or an\n" +
       "        attribute; a page that lays out correctly and is unreadable passes.\n",
   );
-  /*
-   * The breach is folded into `failures`, which the exit code is computed from; setting
-   * `process.exitCode` alone is overwritten by the assignment below.
-   */
-  /* The floor name carries the mode, so each reading is judged against its own floor. */
+  /* Folded into `failures`: `process.exitCode` alone is overwritten by the assignment below. */
   const floorBreach = assertFloor(
     "check:browser",
     DRIVES_PREVIEW ? "checks:preview" : "checks:deployed",

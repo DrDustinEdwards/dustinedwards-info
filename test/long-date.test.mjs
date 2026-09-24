@@ -1,15 +1,3 @@
-/**
- * One owner for the human date, and the defect the majority copy carried.
- *
- * REPLAYS THE DEFECT, per the replay rule. Two of the three `formatDate` copies
- * handed an unparseable value to `toLocaleDateString`, which answers the STRING
- * "Invalid Date" rather than throwing. Measured against the old body before the
- * change: `formatDate("rubbish")` returned "Invalid Date", so a bad `publishAt`
- * on a public post rendered those words under the title.
- *
- * @see app/lib/long-date.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -20,8 +8,7 @@ test("a date renders as the long form", () => {
 });
 
 test("AN UNPARSEABLE DATE IS NULL, never the words 'Invalid Date'", () => {
-  // The whole reason this module exists. `new Date("rubbish").toLocaleDateString()`
-  // returns the string "Invalid Date", and the two blog copies rendered it.
+  // `new Date("rubbish").toLocaleDateString()` returns the string "Invalid Date", not a throw.
   for (const bad of ["rubbish", "2026-13-45", new Date("nope"), Number.NaN]) {
     const out = longDateUTC(bad);
     assert.equal(out, null, `${String(bad)} must be null`);
@@ -51,7 +38,6 @@ test("a Date object, an ISO string and an epoch number agree", () => {
 });
 
 test("the epoch itself formats rather than reading as absent", () => {
-  // 0 is falsy, and the old blog copies started with `if (!value) return null`,
-  // so they answered null for a real instant.
+  // 0 is falsy, so an `if (!value) return null` guard would answer null for a real instant.
   assert.equal(longDateUTC(0), "January 1, 1970");
 });

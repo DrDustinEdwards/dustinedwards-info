@@ -1,11 +1,4 @@
-/**
- * Refuses a deploy from a working tree that is not clean, because the build reads the WORKING TREE
- * rather than HEAD. Wired as `predeploy`.
- *
- * BOUNDARY: it reads `git status --porcelain` and nothing else. It proves the tree matches HEAD;
- * it does NOT prove HEAD is pushed, or that the deployed Worker corresponds to the commit it
- * names.
- */
+// The build reads the working tree rather than HEAD, so a dirty tree deploys code no commit holds.
 
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -25,10 +18,7 @@ const porcelain = spawnSync("git", ["status", "--porcelain"], {
   encoding: "utf8",
 });
 
-/*
- * FAILS CLOSED on an unreadable answer: a missing git and a directory that is not a repository
- * both mean the tree cannot be compared to anything, and "I could not check" must not deploy.
- */
+// Fails closed: no git, or a directory that is not a repository, means "I could not check", which must not deploy.
 if (porcelain.status !== 0) {
   refuse(
     "git status could not be read, so the tree cannot be compared to HEAD",

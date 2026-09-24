@@ -1,15 +1,8 @@
-/**
- * Ship's reading of `sync:content`, replayed from the ship of 9c2c247 (2026-09-22) that refused a
- * sync which had converged: the first run failed on a network error after reporting render drift,
- * the confirming run succeeded, and ship read the counts line from the first.
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
 import { driftCount, searchCounts, standingRun } from "../scripts/lib/sync-verdict.mjs";
 
-/** The first run, abridged from the transcript: drift reported, then a failed import, no counts. */
 const FIRST = [
   "sync:content drift: unchanged=12 source-changed=0 render-drift=3 missing-in-d1=0 extra-in-d1=0",
   "sync:content applying 15 posts to remote D1",
@@ -18,7 +11,6 @@ const FIRST = [
   "sync:content failed. wrangler d1 execute failed for the search index",
 ].join("\n");
 
-/** The confirming run, verbatim from the transcript. */
 const CONFIRM = [
   "sync:content drift: unchanged=15 source-changed=0 render-drift=0 missing-in-d1=0 extra-in-d1=0",
   "sync:content applying 15 posts to remote D1",

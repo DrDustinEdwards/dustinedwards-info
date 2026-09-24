@@ -1,13 +1,4 @@
-/**
- * Export the Capsid documents the canvas needs into the guidelines directory, a copy being forced
- * because the glob can only point at files inside the workspace while these are database rows.
- *
- *   node scripts/build-capsid-guidelines.mjs
- *
- * BOUNDARY: the honest version of a forced copy is a DERIVED one, so the one-owner rule's owner stays
- * Capsid, every file carries the stamp it was taken at, and the drift is the gate's to see, which
- * is hard rule 18's shape. Absent a credential it REFUSES rather than writing a partial directory.
- */
+// A forced copy: the canvas glob can only point at workspace files, and these are Capsid database rows.
 
 import { writeFileSync, mkdirSync, rmSync, existsSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";

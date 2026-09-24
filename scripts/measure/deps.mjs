@@ -1,12 +1,6 @@
 /**
- * Dependency lean-out measurement. REPORTS, never changes anything.
- *
- *   node scripts/measure/deps.mjs [--json]
- *
- * BOUNDARY: it reports REACHABILITY rather than bytes, because the only precise per-package byte
- * method is a size-by-import diff over the whole dependency count, and a number in that column
- * would be believed. NOT A GATE, and deliberately not in `scripts/`, the runner deriving its gate
- * list from what is there.
+ * Reports reachability rather than bytes: the only precise per-package byte method is a
+ * size-by-import diff over every dependency, and a rough number in that column would be believed.
  */
 
 import { execFileSync } from "node:child_process";
@@ -16,12 +10,7 @@ import { join, relative } from "node:path";
 const ROOT = process.cwd();
 const AS_JSON = process.argv.includes("--json");
 
-/**
- * Directories scanned for imports, and whether code there ships in the Worker. THE ROOT IS IN THE
- * LIST, and leaving it out was the first version's bug: the build configs sit at the repository
- * root, so the build plugins read as NOTHING IMPORTS IT while both are imported by the configs
- * that make the build work.
- */
+/** The root is in the list: the build configs there are what import the build plugins. */
 const CONSUMERS = [
   { dir: "app", ships: true },
   { dir: "workers", ships: true },
@@ -36,13 +25,7 @@ const direct = [
   ...Object.entries(pkg.devDependencies ?? {}).map(([name, pin]) => ({ name, pin, kind: "dev" })),
 ].sort((a, b) => a.name.localeCompare(b.name));
 
-/* the installed tree */
-
-/*
- * `npm ls` EXITS NONZERO ON TREE PROBLEMS and still prints a complete tree, so the exit code is
- * not the gate here. It exited nonzero on the first run because the install was one bump behind,
- * which is exactly the condition that makes every number below describe a tree nobody has.
- */
+// `npm ls` exits nonzero on tree problems and still prints a complete tree.
 let lsRaw = "";
 /** @type {string[]} */
 let lsProblems = [];
@@ -67,7 +50,6 @@ if (!lsRaw.trim()) {
 }
 const tree = JSON.parse(lsRaw);
 
-/** Distinct `name@version` reachable below a node, excluding the node itself. */
 function transitiveCount(/** @type {any} */ node) {
   const seen = new Set();
   const walk = (/** @type {any} */ n) => {
@@ -84,9 +66,6 @@ function transitiveCount(/** @type {any} */ node) {
 
 const wholeTree = transitiveCount(tree);
 
-/* on disk */
-
-/** Recursive byte size of one directory, or null when it is not installed. */
 function dirSize(/** @type {string} */ dir) {
   let total = 0;
   let stack = [dir];
@@ -118,9 +97,6 @@ function dirSize(/** @type {string} */ dir) {
   return total;
 }
 
-/* importers */
-
-/** Every source file under the consumer directories, with its ships flag. */
 function sourceFiles() {
   /** @type {Array<{ path: string, ships: boolean }>} */
   const out = [];
@@ -143,8 +119,7 @@ function sourceFiles() {
       for (const entry of entries) {
         const full = join(current, entry.name);
         if (entry.isDirectory()) {
-          // `shallow` is the root pass: it takes the config files sitting there
-          // and must not descend, or it would re-walk every directory above.
+          // The root pass must not descend, or it would re-walk every directory above.
           if (shallow) continue;
           if (entry.name === "node_modules" || entry.name === "dist") continue;
           stack.push(full);
@@ -159,11 +134,7 @@ function sourceFiles() {
 
 const files = sourceFiles().map((f) => ({ ...f, text: readFileSync(f.path, "utf8") }));
 
-/**
- * The first real import of a package, as file and line. MATCHES THE SPECIFIER, NOT THE NAME
- * ANYWHERE IN THE FILE: a bare name scan finds the package in prose and in a comment arguing
- * against it.
- */
+/** Matches the specifier, not the bare name, which also appears in prose and comments. */
 function findImport(/** @type {string} */ name) {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const needle = new RegExp(
@@ -175,11 +146,7 @@ function findImport(/** @type {string} */ name) {
     const lines = file.text.split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       if (needle.test(lines[i])) {
-        /*
-         * A TYPE-ONLY IMPORT SHIPS NOTHING: counting it as reaching the Worker put a dev dependency in
-         * the shipping column on the strength of a line contributing zero bytes, which is what the first
-         * version reported.
-         */
+        // A type-only import ships nothing.
         const typeOnly = /^\s*import\s+type\b/.test(lines[i]);
         hits.push({
           where: `${relative(ROOT, file.path).replace(/\\/g, "/")}:${i + 1}`,
@@ -192,8 +159,6 @@ function findImport(/** @type {string} */ name) {
   }
   return hits;
 }
-
-/* the rows */
 
 const rows = direct.map(({ name, pin, kind }) => {
   const node = tree.dependencies?.[name];

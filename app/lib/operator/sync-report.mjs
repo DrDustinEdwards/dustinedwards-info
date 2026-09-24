@@ -1,54 +1,8 @@
-/**
- * WHAT A SYNC CALL REPORTS, AND WHEN IT COUNTS AS DONE.
- *
- * Two indexes, one rule. Renamed from `ask-sync-report.mjs` on 2026-08-24 when
- * the media index gained a sync of its own: the file held the only statement of
- * what "converged" means, and a second copy of that beside it would have been a
- * second answer to the question `ship` refuses on.
- *
- * The convergence arithmetic is shared (`convergence`). What is NOT shared is
- * how each index measures drift, and the difference is stated at
- * `mediaSyncReport` rather than smoothed over: Ask drifts by COUNT and media
- * drifts by KEY.
- *
- * ## Why this is a module and not three lines in the tool
- *
- * The whole value of the operation is the pair of counts it returns AFTER the
- * upload, and the only interesting question is whether they agree. That
- * question is pure arithmetic over four integers, so it can be driven by
- * `check:tests` without an AI Search binding, a D1 database or a deploy.
- *
- * ## THE CLASS THIS CLOSES
- *
- * `ship` runs this and fails the run when it does not converge. An operation
- * that answered "ok" by virtue of having been CALLED, rather than by virtue of
- * the index agreeing afterwards, would turn that into a green light that means
- * nothing: the deploy would land, ship would say shipped, and the Ask index
- * would still be short. That is the shape the health alert already caught once
- * by hand, and reporting an unverified success is how it would stop catching it.
- *
- * So `converged` is DERIVED from the counts, never asserted by the caller.
- *
- * ## WHY THE COUNTS ARE READ AFTER, NOT ACCUMULATED DURING
- *
- * `uploaded` is what the upload loop THINKS it wrote. `expected` and `present`
- * are read back from D1 and from AI Search once the writes are done. A loop
- * that ran cleanly over a corpus it had built wrongly reports a healthy
- * `uploaded` and a short `present`, and only the read-back can tell.
- *
- * @see test/sync-report.test.mjs
- * @see app/lib/operator/api.server.ts
- */
+// `converged` is DERIVED from counts read back after the writes, never asserted by the caller: `ship`
+// fails on it, and a loop over a wrongly built corpus still reports a healthy `uploaded`.
 
 /**
- * The report body for one sync_ask call.
- *
- * A WRITE THAT FAILED IS NOT CONVERGED, WHATEVER THE COUNTS SAY. `failed` names the keys the upload
- * could not land after its retries. Before it existed, a failed twin upload was logged and dropped,
- * the read-back showed one short, and ship waited that out as eventual consistency: a failure was
- * reported as an index catching up (2026-09-23, `ask-twins.mjs`). Now any failed key makes
- * `converged` false even if the counts happen to agree, and the keys travel so the caller can name
- * them rather than wait.
+ * Any failed key makes `converged` false, even when the counts happen to agree.
  *
  * @param {{
  *   uploaded: number,
@@ -83,20 +37,9 @@ export function askSyncReport(counts) {
 }
 
 /**
- * WHETHER TWO READ-BACK COUNTS AGREE. The one owner of that arithmetic.
+ * ABSOLUTE drift: an index holding more than its source is stale too, and a negative number would read
+ * as healthy to a caller testing `drift > 0`.
  *
- * Extracted 2026-08-24 when the media index gained a sync of its own. It was
- * inline in `askSyncReport`, and the alternative was a second copy carrying the
- * same four lines: the absolute drift, the unreadable guard, and the rule that
- * `converged` is derived rather than accepted. A second copy of THAT is a
- * second answer to "did the sync work", which is rule 17's subject and, worse
- * than usual here, is the answer `ship` refuses on.
- *
- * ABSOLUTE, because drift runs both ways and both are wrong. An index holding
- * MORE than its source expects is stale entries nobody pruned, which is how a
- * withdrawn post keeps answering and how a deleted object keeps appearing in
- * the library. Reporting that as a negative number would make a caller
- * comparing `drift > 0` read it as healthy.
  *
  * @param {unknown} expectedRaw @param {unknown} presentRaw
  * @returns {{ expected: number, present: number, drift: number, converged: boolean }}
@@ -109,29 +52,14 @@ export function convergence(expectedRaw, presentRaw) {
     expected,
     present,
     drift,
-    // Never taken from the caller. See the docblock at the top of this file.
     converged: unreadable(expectedRaw, presentRaw) ? false : drift === 0,
   };
 }
 
 /**
- * The report body for one sync_media call.
+ * Media drifts by KEY: dropping one file while inventing one row leaves the totals equal, so drift is
+ * `missing` plus `extra`, not a count difference.
  *
- * ## THE COUNTS THAT DECIDE ARE NOT THE COUNTS THE REBUILD RETURNS
- *
- * `indexed` and `removed` are what `rebuildMediaIndex`'s loops think they
- * wrote, and they are carried here for a human to read. `expected` and
- * `present` come from `mediaIndexStatus`, which re-enumerates the buckets and
- * the manifest and reads D1 back AFTERWARDS. Only the second pair decides.
- *
- * ## AND DRIFT IS THE SUM, NOT THE DIFFERENCE
- *
- * This is the one place the media verdict must NOT reuse the answer index's
- * shape unthinkingly. The two indexes fail differently: Ask drifts by count,
- * media drifts by KEY, and a rebuild that dropped one file while inventing one
- * row leaves the two totals identical. `convergence()` would call that
- * converged, correctly for a count comparison and wrongly for this one, so the
- * key sets are compared and `missing` and `extra` are added.
  *
  * @param {{
  *   indexed: number,
@@ -159,14 +87,7 @@ export function mediaSyncReport(counts) {
     missing,
     extra,
     failures,
-    /*
-     * THREE CONDITIONS, and the third is the one a count comparison misses.
-     * The totals must be readable and equal, the key sets must agree in both
-     * directions, and nothing may have FAILED to derive: a key that threw
-     * during the rebuild is absent from the index for a reason the reconciler
-     * cannot see, because a failed derivation leaves no row and no source
-     * change, so both sides agree about a key that is simply wrong.
-     */
+    // A failed derivation leaves no row and no source change, so the key sets can agree while wrong.
     converged: totals.converged && drift === 0 && failures.length === 0,
   };
 }
@@ -177,8 +98,6 @@ function list(v) {
 }
 
 /**
- * One sentence for a human, with the numbers in it.
- *
  * @param {ReturnType<typeof mediaSyncReport>} report
  * @returns {string}
  */
@@ -202,10 +121,7 @@ export function mediaSyncSummary(report) {
 }
 
 /**
- * A count that cannot be read is not a passing count.
- *
- * Same stance `ftsEqualityVerdict` takes: a missing or non-integer number means
- * the read failed, and a failed read must not average out to "agree".
+ * An unreadable count is not a passing count.
  *
  * @param {unknown} a @param {unknown} b
  */
@@ -219,8 +135,6 @@ function whole(n) {
 }
 
 /**
- * One sentence for a human, with the numbers in it.
- *
  * @param {ReturnType<typeof askSyncReport>} report
  * @returns {string}
  */

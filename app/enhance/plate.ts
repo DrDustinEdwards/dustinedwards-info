@@ -1,16 +1,3 @@
-/**
- * Plate I, linked to its key. Home page only, and pure enhancement (ruling 119): the plate and the
- * specimen row are complete server HTML, every label always drawn. This file adds:
- *   linked highlight   selecting a plaque (hover, tap, keyboard focus) lights it and its row
- *                      entry, and selecting a row entry lights its plaque; a stroke and weight
- *                      change in oxide, set in home.css, never a fill or a glow
- *   focus stops        each plaque and each row entry becomes focusable, with its name; added
- *                      here so a reader without script meets no stop that does nothing
- *   the leader intro   on first view the leaders draw out to their labels once, under 2.5s, and
- *                      never under reduced motion or on a later scroll
- * Nothing here writes to the network or to storage. Inventory: `content/enhancements.json`.
- */
-
 const LIT = "is-lit";
 
 const byId = new Map<string, Element[]>();
@@ -29,6 +16,7 @@ function light(id: string | null) {
 for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(".plate-plaque, .plate-key-entry")) {
   const id = el.getAttribute("data-plaque");
   if (!id) continue;
+  // Focus stops are added here so a reader without script meets no stop that does nothing.
   el.setAttribute("tabindex", "0");
   if (el.classList.contains("plate-key-entry")) {
     const name = el.querySelector(".plate-key-name")?.textContent?.toLowerCase() ?? "";
@@ -50,11 +38,9 @@ for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(".plate-pl
 }
 
 /*
- * THE LEADER INTRO: on first view each leader draws out to its label, once, then the plate is
- * still. Script-driven and FILL "backwards" on purpose: when an animation ends the line drops back
- * to its plain base style, a real style change, so the finished line is always repainted. A CSS
- * animation that held its end state left the leaders unpainted in Chrome (measured 2026-09-22),
- * and a reader without script now simply gets the drawn plate.
+ * `fill: "backwards"` on purpose: when the animation ends the line drops back to its base style, a
+ * real style change that forces a repaint. A CSS animation holding its end state left the leaders
+ * unpainted in Chrome.
  */
 function drawLeaders(svg: Element) {
   svg.querySelectorAll(".plate-leader").forEach((leader, i) => {

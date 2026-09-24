@@ -1,12 +1,5 @@
-/**
- * Plate I as drawn in the approved canvas file, part-c/09-solid-lawn.html (Dustin, 2026-09-22):
- * the 500-unit layout of its 1280 frames and the 300-unit layout of its 375 frames, lifted from the
- * file rather than retyped. Coordinates are the canvas SVG user units.
- *
- * ONE DEPARTURE, on Dustin's ruling: the canvas's 375 frame clips three labels past the screen
- * edge (i, iv and v), so in the narrow layout those three leaders fold inward and their labels sit
- * on paper that fits. Every other number is the file's.
- */
+// Coordinates are lifted from the approved canvas file (part-c/09-solid-lawn.html), not retyped.
+// One departure: the canvas's 375 frame clips labels i, iv and v, so in NARROW those leaders fold inward.
 
 export type Fill = "paper" | "lawn" | "turbid" | "none";
 export type Stroke = "ink" | "dust" | "none";
@@ -88,20 +81,11 @@ const CANVAS_WIDE: PlateLayout = {
   ],
 };
 
-/**
- * THE WIDE PLATE AS SHOWN: the canvas drawing scaled about the dish center so the whole plate,
- * labels included, is WIDE_WIDTH px: the hero's right half at 1280 with a desktop scrollbar, plus
- * the 90px it reaches left into the empty gap beside the name. Every
- * label sits at the dish's left or right. Only the dish, the plaques, the leader starts and the
- * 1 cm bar scale; labels, tails and strokes keep canvas size, so a label is 14px at scale 1. The
- * left labels sit high, leaving the lower left corner for the legend. Units are CSS pixels,
- * origin at the dish center.
- */
+// 610 is the hero's right half at 1280 with a desktop scrollbar, plus the 90px gap beside the name.
+// Only the dish, plaques, leader starts and 1 cm bar scale; labels, tails and strokes keep canvas size.
 export const WIDE_WIDTH = 610;
-/**
- * The left column holds the longest left label (131 at 14px mono) and, under the labels, the
- * one-line legend (240), which must clear the rim; the right holds the longest right label (85).
- */
+// Longest left label is 131 at 14px mono and the one-line legend under it (240) must clear the rim;
+// longest right label is 85.
 const LEFT_LABELS = 198;
 const RIGHT_LABELS = 88;
 /** Leader elbow, tail and label gap on each side of the dish. */
@@ -113,7 +97,7 @@ const at = (x: number, y: number): [number, number] => [
   +((y - CANVAS_WIDE.dish.cy) * K).toFixed(1),
 ];
 
-/** Which side each label sits on and its elbow height as a fraction of the rim, chosen so no leader crosses a plaque. */
+// Label side and elbow height (fraction of rim), chosen so no leader crosses a plaque.
 const SIDE_LABELS: Record<string, { side: 1 | -1; y: number }> = {
   i: { side: 1, y: -0.52 },
   iv: { side: 1, y: 0.07 },
@@ -167,7 +151,6 @@ export const WIDE: PlateLayout = {
   }),
 };
 
-/** The wide drawing's box: the dish plus the longest label on each side. */
 const R = Math.round(RIM);
 export const WIDE_VIEW = { x: -(R + LEADER + LEFT_LABELS), y: -(R + 4), w: WIDE_WIDTH, h: 2 * R + 8 };
 

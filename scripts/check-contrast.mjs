@@ -1,24 +1,12 @@
-/**
- * Gate over the shipped color tokens.
- *
- *   npm run check:contrast
- *
- * Hexes come from the stylesheet; pairs and thresholds from design-tokens.md, as names, so
- * an edited hex fails. WCAG 2.x fails a run; APCA is advisory. Renders nothing.
- */
-
 import { readFileSync, readdirSync, existsSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// The same themes the pipeline highlights with, imported from the pipeline so
-// the gate cannot drift from the renderer by checking a theme nothing uses.
+// Imported from the pipeline so the gate cannot check a theme the renderer does not use.
 import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
 
-// Shared with /playground so both compute ratios by one rule. Only arithmetic is shared.
 import { apca, contrast } from "../app/lib/contrast.mjs";
 
-/* File discovery only; palette parsing stays here, independent of `tokens.mjs`. */
 import { allSourceCss, stylesheetPaths } from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
@@ -26,8 +14,6 @@ const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CSS_PATH = join(root, "app", "app.css");
-
-/* Tokens, from the shipped stylesheet */
 
 const cssSource = readFileSync(CSS_PATH, "utf8");
 
@@ -38,10 +24,7 @@ const css = cssSource
   .replace(/\/\*[\s\S]*?\*\//g, "");
 
 /**
- * Pulls the custom properties out of one rule block, located by the literal
- * text of its selector. Blocks carry no nested braces, so the first closing
- * brace ends the block.
- *
+ * Blocks carry no nested braces, so the first closing brace ends the block.
  * @param {string} label
  * @param {string} selector
  */
@@ -74,12 +57,10 @@ function tokenBlock(label, selector) {
 }
 
 /**
- * Composite `color-mix(in srgb, A p%, B)` the way a browser does: sRGB channel
- * interpolation of two opaque colors, which is plain linear interpolation of
- * the 8-bit values.
- *
+ * A browser composites `color-mix(in srgb, ...)` of two opaque colors as plain linear
+ * interpolation of the 8-bit values.
  * @param {string} expr
- * @returns {string|null} the composite as a hex, or null if this is not a mix
+ * @returns {string|null}
  */
 function compositeMix(expr) {
   const m = /^color-mix\(\s*in\s+srgb\s*,\s*(#[0-9a-fA-F]{6})\s+([\d.]+)%\s*,\s*(#[0-9a-fA-F]{6})\s*\)$/.exec(
@@ -114,8 +95,6 @@ for (const [label, block] of PALETTE_BLOCKS) {
   }
 }
 
-/* Assertions */
-
 let checks = 0;
 /** @type {string[]} */
 const failures = [];
@@ -126,7 +105,6 @@ function fail(label) {
 }
 
 /**
- * An assertion that read nothing is not an assertion. Count everything.
  * @param {string} label
  * @param {boolean} ok
  */
@@ -166,11 +144,7 @@ function assert(label, ok) {
   );
 }
 
-// Each token must resolve through same-block `var()` to a literal hex.
-
 /**
- * Follow a chain of same-block `var()` references to the value it lands on.
- *
  * @param {Record<string, string>} block
  * @param {string} name
  * @returns {{value: string|null, chain: string[]}}
@@ -179,7 +153,6 @@ function resolveToken(block, name) {
   /** @type {string[]} */
   const chain = [];
   let current = name;
-  // A cycle cannot outlast the number of tokens in the block.
   for (let i = 0; i <= Object.keys(block).length; i += 1) {
     const raw = block[current];
     if (raw === undefined) return { value: null, chain };
@@ -208,7 +181,6 @@ for (const [mode, block] of MODES) {
   }
 }
 
-/* A mixed fill's recipe must still produce its hex, one unit per channel. */
 for (const [mode, block] of MODES) {
   const decls = /** @type {Record<string, string[]>} */ (
     /** @type {any} */ (block).__decls
@@ -239,8 +211,6 @@ for (const [mode, block] of MODES) {
   }
 }
 
-/* APCA, checked against the published vectors */
-
 /** apca-w3 0.1.9 keystone vectors, both polarities, so the sign is tested. */
 const APCA_KEYSTONE = [
   ["#888", "#fff", 63.056469930209424],
@@ -262,15 +232,12 @@ for (const [text, bg, expected] of APCA_KEYSTONE) {
     `APCA keystone ${text} on ${bg}: expected ${expected}, got ${got}`,
     delta < 1e-9,
   );
-  // The sign is half the assertion. A magnitude-only check would happily pass
-  // an implementation whose polarity was backwards.
+  // The sign is half the assertion: a magnitude-only check passes an implementation with backwards polarity.
   assert(
     `APCA keystone ${text} on ${bg}: sign should be ${Number(expected) >= 0 ? "positive" : "negative"}`,
     Math.sign(got) === Math.sign(Number(expected)),
   );
 }
-
-/* The matrix, from design-tokens.md, as names */
 
 // No --fill-* on --paper row: a fill always carries text.
 const TEXT = 4.5; // WCAG 1.4.3 AA, normal text
@@ -279,13 +246,10 @@ const UI = 3.0; // WCAG 1.4.11, non-text UI and graphical objects
 
 /** @type {Array<[string, string, number, string]>} fg, bg, min, note */
 const MATRIX = [
-  // Body and neutrals
   ["--text", "--paper", TEXT, "body text on paper"],
-  // CodeMirror syntax colors, on --paper and the active line's --paper.
   ["--text-heading", "--paper", TEXT, "heading text on paper"],
   ["--text-accent", "--paper", TEXT, "accent text on paper"],
   ["--text", "--surface-popover", TEXT, "body on popover"],
-  // The settings drawer: inputs on --paper inside the popover step.
   ["--text-heading", "--surface-popover", TEXT, "heading on popover"],
   // No --text-disabled on --surface-popover row: it fails there, nothing ships it.
   ["--text", "--mark-bg", TEXT, "body on search highlight"],
@@ -302,7 +266,6 @@ const MATRIX = [
   ["--border-strong", "--paper", UI, "a control edge on paper"],
   ["--border-strong", "--surface-popover", UI, "strong border on popover"],
 
-  // Brand
   ["--brand", "--paper", TEXT, "a link, a focus ring and the header mark, all on paper"],
   ["--brand", "--surface-popover", TEXT, "a link and its focus ring on the popover step"],
   // The cover picker rings the chosen thumbnail in brand, on the drawer.
@@ -331,7 +294,6 @@ const MATRIX = [
 
   // No --border-strong on --surface-chrome row: a seam has no 3:1 obligation.
 
-  // Danger
   ["--text-danger", "--paper", TEXT, "danger text on paper"],
   // Revert to draft, as a row in the overflow menu on the popover step.
   ["--text-danger", "--surface-popover", TEXT, "danger text on popover"],
@@ -340,7 +302,6 @@ const MATRIX = [
   ["--on-fill-danger", "--fill-danger", TEXT, "text on danger fill"],
   ["--on-fill-danger", "--fill-danger-hover", TEXT, "text on danger hover fill"],
 
-  // Warning
   ["--text-warning", "--paper", TEXT, "warning text on paper, including the command bar dirty state"],
   ["--on-tint-warning", "--tint-warning", TEXT, "text on warning tint"],
   ["--border-warning", "--paper", UI, "a warning border on paper, including the dirty dot ring"],
@@ -350,7 +311,6 @@ const MATRIX = [
   ["--brand", "--tint-warning", UI, "brand fill edge on warning tint"],
   ["--on-fill-warning", "--fill-warning", TEXT, "text on warning fill"],
 
-  // Success
   ["--text-success", "--paper", TEXT, "success text on paper"],
   ["--on-tint-success", "--tint-success", TEXT, "text on success tint"],
   ["--border-success", "--paper", UI, "a success border on paper"],
@@ -366,48 +326,30 @@ const MATRIX = [
   ["--chart-gold", "--paper", UI, "chart gold"],
   ["--chart-rust", "--paper", UI, "chart rust"],
 
-  /* Destructive, on every surface it lands on and its own tint. */
   ["--text-destructive", "--paper", TEXT, "destructive text on paper"],
   ["--text-destructive", "--surface-popover", TEXT, "destructive text in a popover"],
   ["--text-destructive", "--tint-destructive", TEXT, "destructive text on its own tint"],
 
-  /* Paper, glass, light: pairs from the handoffs, as names */
-
-  // Text on the two paper surfaces, and on the one glass that touches paper.
   ["--text", "--glass-fill-paper", TEXT, "body on paper glass, composited"],
   ["--text-secondary", "--glass-fill-paper", TEXT, "muted copy on paper glass"],
   // The placeholder must sit below the value that replaces it.
   ["--placeholder", "--paper", TEXT, "placeholder in a field"],
 
-  /*
-   * Brand, its two states, and the second shade a followed link takes. THE HEADER MARK RIDES THE
-   * FIRST ROW: ruling 118.2 draws it in the logo's own colors on --paper, and its five purple paths
-   * take --brand, so the pair below measures it at the 4.5 floor rather than the 1.4.11 one it
-   * would be owed. No second row at UI for the mark: a weaker floor over the same pair cannot fail
-   * while this one passes, and an assertion that cannot fail is not coverage.
-   *
-   * NO ROWS FOR THE MARK'S THREE WARM PATHS, and they would fail: on limestone they measure 2.72,
-   * 1.93 and 1.58 to one. They are the logotype's own ink, which 1.4.11 exempts, the mark is
-   * aria-hidden beside a wordmark that names the link, and the drawing's outline is carried by the
-   * purple at 9.10 to one light and 7.89 dark. Measured 2026-09-21. This is the same reason the
-   * chrome row above measures only --mark-on-chrome.
-   */
+  // The header mark's purple paths take --brand, measured by the --brand on --paper row. Its three
+  // warm paths would fail (2.72, 1.93, 1.58:1 on limestone) but are logotype ink, which 1.4.11 exempts.
   ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
-  /* PR #52's measured pair, moved onto the surviving name by ruling 128's collapse. */
   ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
-  // A followed link inside an alert tint.
   ["--visited", "--error-tint", TEXT, "visited link on an error tint"],
   ["--visited", "--warning-tint", TEXT, "visited link on a warning tint"],
   ["--visited", "--success-tint", TEXT, "visited link on a success tint"],
 
-  // No bar rows: a pair against a surface nothing paints is not coverage (rule 10's class).
+  // No bar rows: a pair against a surface nothing paints is not coverage.
 
   // No --dust row on paper: it cannot identify a control; --line-strong does.
   ["--line-strong", "--paper", UI, "a control edge on paper"],
   // The underline is what marks a paragraph link, since link and body text sit under 3:1.
   ["--link-underline", "--paper", UI, "a paragraph link's resting underline on paper"],
 
-  // Semantic, and only where the state is real.
   ["--error", "--paper", TEXT, "error text on paper"],
   ["--error", "--error-tint", TEXT, "error text on its own tint"],
   ["--on-error-fill", "--error-fill", TEXT, "label on a destructive fill"],
@@ -418,9 +360,7 @@ const MATRIX = [
   ["--success", "--success-tint", TEXT, "success text on its own tint"],
   ["--on-success-fill", "--success-fill", TEXT, "label on a success fill"],
 
-  // Figures. EVERY SERIES CARRIES LINES AND LABELS, so every series clears the
-  // 1.4.11 floor against the ground: a series' stroke is the thing that has to
-  // be seen. An area FILL may sit lighter and has no row, by the same rule.
+  // Every series carries lines and labels, so its stroke must clear 1.4.11; an area fill may sit lighter.
   ["--fig-s1", "--fig-ground", UI, "figure series 1 stroke"],
   ["--fig-s2", "--fig-ground", UI, "figure series 2 stroke"],
   ["--fig-s3", "--fig-ground", UI, "figure series 3 stroke"],
@@ -430,13 +370,8 @@ const MATRIX = [
   ["--fig-dust-400", "--fig-ground", UI, "figure axis and grid stroke"],
   ["--text-secondary", "--fig-ground", TEXT, "figure label"],
   ["--text", "--fig-ground", TEXT, "figure key label"],
-  /*
-   * PLATE I. A leader starts at its plaque's center, so it crosses the LAWN, and it identifies which
-   * label names which plaque: 1.4.11 applies. The plate draws it in oxide 400 light and 300 dark;
-   * 300 is the pair measured in every theme because it is the weaker of the two on the light lawn
-   * (3.2:1 against 400's 4.3:1), so a pass here covers both. The plaque outlines are ink on the
-   * lawn and on the turbid tone.
-   */
+  // A leader identifies which label names which plaque, so 1.4.11 applies. Oxide 300 is measured in
+  // every theme because it is the weaker on the light lawn (3.2:1 against 400's 4.3:1).
   ["--fig-oxide-300", "--fig-lawn", UI, "plate leader on the lawn"],
   ["--text", "--fig-lawn", UI, "plaque outline on the lawn"],
   ["--text", "--fig-turbid", UI, "plaque outline on the turbid tone"],
@@ -468,12 +403,7 @@ for (const [mode, block] of MODES) {
   }
 }
 
-/* Resolution: a token used and never declared */
-
-/*
- * An undeclared `var()` drops silently, and every pass above walks declarations.
- * DECLARED_ELSEWHERE lists tokens set outside CSS, and polices itself.
- */
+// An undeclared `var()` drops silently, and every pass above walks declarations.
 
 /** @type {Map<string, string>} token -> why it is declared outside app.css */
 const DECLARED_ELSEWHERE = new Map([
@@ -530,7 +460,6 @@ const DECLARED_ELSEWHERE = new Map([
     unresolved.length === 0,
   );
 
-  // The exemption map polices itself in both directions.
   for (const [name, why] of DECLARED_ELSEWHERE) {
     assert(`exemption ${name} names a token app.css still uses (${why})`, used.has(name));
     assert(
@@ -540,12 +469,8 @@ const DECLARED_ELSEWHERE = new Map([
   }
 }
 
-/* Participation: every declared token is measured by some pair */
-
-// Parity proves a token declared, not measured. Exemptions police themselves.
 /** @type {Map<string, string>} token -> why no ratio of its own can be asserted */
 const NON_PARTICIPATING = new Map([
-  // Paper, glass, light tokens with no contrast obligation.
   [
     "--dust",
     "lines only, and deliberately below the floor: 1.57:1 on limestone. It rules, hairlines and " +
@@ -564,11 +489,7 @@ const NON_PARTICIPATING = new Map([
       "atmosphere and never meaning, so nothing reads it and no pair can be required of it. Its " +
       "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
-  /*
-   * DUST 300 IS TEXTURE ON PLATE I: the halo's dashed outer ring, drawn on the turbid tone. It
-   * marks the edge of a diffuse zone rather than identifying anything, which the ink ring inside it
-   * does (ruling 122: texture, never a series). Whether the plate's tones separate is a shot.
-   */
+  // Dust 300 is texture on Plate I, the halo's dashed outer ring: it marks an edge and identifies nothing.
   [
     "--fig-dust-300",
     "texture: the halo's dashed ring on Plate I, below the stroke floor because it identifies nothing",
@@ -627,14 +548,8 @@ const NON_PARTICIPATING = new Map([
   }
 }
 
-/* content/tokens.json: the swatch inventory /playground/ui renders */
-
-/*
- * A Worker cannot read a stylesheet, so the inventory page's swatches come from
- * a committed build product. This re-derives the answer from app.css with the
- * parser above rather than reading the generator's, so agreement means two
- * readings of the sheet agree.
- */
+// A Worker cannot read a stylesheet, so the swatches come from a committed build product. Re-derived
+// here with this parser, not the generator's, so agreement means two readings of the sheet agree.
 {
   const inventory = JSON.parse(readFileSync(join(root, "content", "tokens.json"), "utf8"));
   /** @type {Array<{name: string, light: string, dark: string}>} */
@@ -662,10 +577,7 @@ const NON_PARTICIPATING = new Map([
   );
 }
 
-/* prefers-contrast: more */
-
 /**
- * The high-contrast tier is held to the same matrix, so it cannot lower a value.
  * @param {string} label
  * @param {string} selector
  */
@@ -694,7 +606,6 @@ function contrastTierBlock(label, selector) {
     ["light", tierLight, light],
     ["dark", tierDark, darkAttr],
   ])) {
-    // Muted text must clear AA against every surface it can land on, as before.
     for (const surface of ["--paper", "--paper", "--surface-popover"]) {
       checks += 1;
       const ratio = contrast(tier["--text-secondary"], base[surface]);
@@ -720,8 +631,7 @@ function contrastTierBlock(label, selector) {
       );
     }
 
-    // The whole point of the tier: it must be STRICTLY better than the default,
-    // or it is not a high-contrast mode, it is a different one.
+    // The tier must be strictly better than the default, or it is a different mode, not a high-contrast one.
     assert(
       `${mode} prefers-contrast raises muted text` +
         ` (${contrast(base["--text-secondary"], base["--paper"]).toFixed(2)}` +
@@ -735,8 +645,7 @@ function contrastTierBlock(label, selector) {
         ` -> ${contrast(tier["--border"], base["--paper"]).toFixed(2)})`,
       contrast(tier["--border"], base["--paper"]) > contrast(base["--border"], base["--paper"]),
     );
-    // The doc says the border promotes to border-strong. Assert the identity,
-    // not just that it went up.
+    // Assert the identity, not just that it went up: the doc promotes the border to border-strong.
     assert(
       `${mode} prefers-contrast border equals border-strong`,
       tier["--border"].toLowerCase() === base["--border-strong"].toLowerCase(),
@@ -744,12 +653,7 @@ function contrastTierBlock(label, selector) {
   }
 }
 
-/* Shiki syntax tokens against the code surfaces */
-
-/**
- * Paired rules are measured on their own background; the rest on both code surfaces.
- * @param {any} theme
- */
+/** @param {any} theme */
 function themeRules(theme) {
   /** @type {Array<{fg: string, bg: string | null, scope: string}>} */
   const out = [];
@@ -787,7 +691,6 @@ const shikiUnreachable = [];
 
 for (const [mode, theme, block] of shikiCases) {
   const rules = themeRules(theme);
-  // An assertion that can pass by reading nothing is not an assertion.
   assert(`${mode}: parsed a non-empty shiki theme`, rules.length > 10);
 
   for (const rule of rules) {
@@ -824,12 +727,9 @@ for (const [mode, theme, block] of shikiCases) {
   }
 }
 
-/* The built stylesheet, when present */
-
-/**
- * app.css is what ships, but only after Vite has had it. If a build is present
- * this confirms the values survived it, so "shipped" is measured rather than
- * assumed. Absent a build this is skipped and said so, never silently passed.
+/*
+ * Confirms the values survived the Vite build, so "shipped" is measured rather than assumed.
+ * Absent a build this is skipped and said so, never silently passed.
  */
 const assetDir = join(root, "build", "client", "assets");
 let builtNote = "no build present, skipped";
@@ -853,7 +753,6 @@ if (existsSync(assetDir)) {
   }
   const built = sheets.map((f) => readFileSync(join(assetDir, f), "utf8")).join("\n");
   if (sheets.length === 0) {
-    // Stale build, already reported above.
   } else if (!built) {
     fail("build/client/assets exists but carries no CSS");
   } else {
@@ -904,8 +803,6 @@ if (existsSync(assetDir)) {
   }
 }
 
-/* Report */
-
 console.log("check:contrast");
 console.log(`  tokens        light ${Object.keys(light).length}, dark ${Object.keys(darkAttr).length}`);
 console.log(`  matrix        ${MATRIX.length} pairs x 2 modes`);
@@ -923,8 +820,7 @@ if (shikiUnreachable.length > 0) {
 }
 console.log(`  built CSS     ${builtNote}`);
 
-// APCA, advisory. Report the pairs the ratified rules lean on, lowest first,
-// because the low end is where the two models disagree.
+// APCA is advisory. Lowest first, because the low end is where the two models disagree.
 const worst = advisory
   .filter((a) => Math.abs(a.lc) > 0)
   .sort((a, b) => Math.abs(a.lc) - Math.abs(b.lc))
@@ -937,8 +833,6 @@ for (const a of worst) {
     `    Lc ${lc.padStart(6)}  ${a.ratio.toFixed(2).padStart(5)}:1  ${a.mode.padEnd(5)} ${a.note}`,
   );
 }
-
-/* Partial opacity on text is refused */
 
 /*
  * Refuses 0 < opacity < 1 unless listed (0 and 1 are a reveal pair). A group is exempt only
@@ -971,7 +865,6 @@ const OPACITY_EXEMPT = [
 ];
 
 /**
- * True when every selector in a group is covered by some exemption.
  * @param {string} selectorGroup
  * @returns {boolean}
  */
@@ -1023,7 +916,6 @@ function opacityExempt(selectorGroup) {
     unclassified.length === 0,
   );
 
-  /* An exemption no partial opacity uses is stale and fails. */
   const stale = OPACITY_EXEMPT.filter(
     (entry) =>
       !partial.some((d) =>
@@ -1037,8 +929,6 @@ function opacityExempt(selectorGroup) {
     stale.length === 0,
   );
 }
-
-/* theme-color meta tags copy two tokens */
 
 /* root.tsx copies the background hexes. Matched by media query, as a swap is invisible. */
 {
@@ -1067,14 +957,8 @@ function opacityExempt(selectorGroup) {
 
 const buildPresent = existsSync(assetDir);
 
-/*
- * Floors: counts from running the gate with build/ present and absent, a little
- * under each. Only CI reaches the absent branch.
- *
- * RE-MEASURED 2026-09-22 after ruling 128 collapsed four grounds into --paper, by RUNNING both
- * branches: the absent count is taken by moving build/ aside, never by reasoning about which
- * assertions skip. 36 duplicate pairs merged, so the matrix fell from 117 pairs to 81.
- */
+// Floors: counts from running the gate with build/ present and absent, a little under each. Only CI
+// reaches the absent branch; measure it by moving build/ aside, never by reasoning.
 const MINIMUM_CHECKS = buildPresent ? 818 : 628;
 const floorBreach = assertFloor(
   "check:contrast",

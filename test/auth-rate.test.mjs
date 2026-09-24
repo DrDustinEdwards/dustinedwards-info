@@ -1,12 +1,3 @@
-/**
- * The `/api/auth/*` rate limit's refusal: a 429 carrying `Retry-After`, not
- * cached, and no oracle. The limit itself is exercised against the route in
- * test/worker/auth-rate.test.ts.
- *
- * @see app/lib/auth-rate.mjs
- * @see app/routes/api.auth.$.ts
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -20,7 +11,7 @@ test("the refusal is a 429 carrying Retry-After", () => {
 
 test("the refusal is not cached, because a cached 429 keeps refusing", () => {
   // Workers Cache sits in front of this Worker and a response with no
-  // Cache-Control is heuristically CACHED, not skipped. The cache-header rule.
+  // Cache-Control is heuristically CACHED, not skipped.
   const cc = authRateRefusal().headers.get("cache-control") ?? "";
   assert.match(cc, /no-store/);
   assert.match(cc, /private/);

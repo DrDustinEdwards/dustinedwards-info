@@ -1,30 +1,9 @@
-/**
- * Progressive enhancement for blog reading. One file, loaded only on blog routes, and nothing here
- * is required for the page to work.
- *
- * Every public blog route is fully readable, navigable and linkable with JavaScript disabled. This
- * file only upgrades markup that already functions:
- *
- *   progress bar        decorative, absent without script
- *   scroll-spy TOC      the TOC is anchor links either way
- *   code copy + label   the code is already highlighted and selectable
- *   heading copy-link   the anchors are already navigable
- *   footnote previews   the footnote jump links already work
- *   image lightbox      the image is an anchor to the original file
- *   copy as markdown    the button is an anchor to the .md twin
- *   link to selection   the permalink beside it is the whole-post equivalent
- *
- * Every animation checks prefers-reduced-motion. Nothing here writes to the network or to storage.
- * The machine-readable inventory is `content/enhancements.json`, gated by `check:features`.
- */
-
 import { textFragment } from "../lib/text-fragment.mjs";
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 function onIdle(fn: () => void) {
-  // Not in this tsconfig's DOM lib, so it is named as an optional extra on the same object
-  // rather than asserted through unknown. The `in` guard is still what decides.
+  // Not in this tsconfig's DOM lib, so it is typed as an optional extra; the `in` guard decides.
   const idle = window as typeof window & {
     requestIdleCallback?: (cb: () => void) => void;
   };
@@ -35,25 +14,13 @@ function onIdle(fn: () => void) {
   }
 }
 
-/**
- * How much taller than the viewport a post must be before the bar is worth drawing.
- *
- * LONG POSTS ONLY was always the rule and was never implemented: the bar was created for every
- * post. On one that fits in a viewport there is nothing to scroll, so `height` below is zero or
- * negative and the bar sat permanently at `scaleX(0)`: a decoration that is always empty, telling
- * the reader they have read none of a page they have finished.
- *
- * Two viewports, not one. At exactly one the bar exists to describe a few pixels of scroll and
- * jumps from empty to full, which is worse than absent.
- */
+// Two viewports, not one: at one the bar describes a few pixels of scroll and jumps from empty to full.
 const PROGRESS_MIN_VIEWPORTS = 2;
 
-/** Reading progress. Purely decorative, so it is created by script or not at all. */
 function readingProgress() {
   const article = document.querySelector<HTMLElement>(".post .prose");
   if (!article) return;
 
-  /* Long enough NOW. Re-checked on every frame below, because a rotation changes the answer. */
   const worthDrawing = () => article.offsetHeight >= window.innerHeight * PROGRESS_MIN_VIEWPORTS;
   if (!worthDrawing()) return;
 
@@ -64,11 +31,6 @@ function readingProgress() {
 
   let ticking = false;
   const update = () => {
-    /*
-     * HIDDEN RATHER THAN REMOVED when a resize makes the post short: removing it would mean
-     * rebuilding it on the next rotation, and `hidden` is one property on an element that is
-     * already there.
-     */
     bar.hidden = !worthDrawing();
     const start = article.offsetTop;
     const height = article.offsetHeight - window.innerHeight;
@@ -89,7 +51,6 @@ function readingProgress() {
   update();
 }
 
-/** Marks the TOC entry for the section currently on screen. */
 function scrollSpy() {
   const toc = document.querySelector<HTMLElement>(".post-toc");
   if (!toc) return;
@@ -116,25 +77,8 @@ function scrollSpy() {
 }
 
 /**
- * Language label and a copy button on one code block.
- *
- * IDEMPOTENT, and the guard tests for the BUTTON rather than for the `data-enhanced` attribute it
- * also sets. The attribute is a proxy that can be lost while the thing it stands for survives, so
- * stripping it alone would append a second button to a block that already had one.
- *
- * `data-enhanced` is then purely the CSS hook: the reserved padding and the thing occupying it
- * arrive together, so a reader without script is not left with a gap.
- */
-/**
- * The ONE live region the three copy controls announce through. WCAG 2.2 4.1.3.
- *
- * WHY A SHARED REGION AND NOT ONE PER CONTROL: a live region announces CHANGES to its own contents,
- * so three of them compete, each tied to an element whose visible label changes for another reason.
- *
- * `role="status"`, never assertive: a copy confirmation must not interrupt what is being read.
- *
- * The `::after` text and the button relabel STAY. They are the sighted feedback and they work; this
- * adds the half that was missing. Created lazily and once, hidden with the site's own `.sr-only`.
+ * One shared live region for every copy control: a live region announces changes to its own
+ * contents, so one per control would compete. `role="status"` so it never interrupts reading.
  */
 let statusRegion: HTMLElement | null = null;
 
@@ -145,11 +89,7 @@ function announce(message: string) {
     statusRegion.setAttribute("role", "status");
     document.body.appendChild(statusRegion);
   }
-  /*
-   * CLEARED FIRST, and this is not superstition. A live region announces a CHANGE, so writing the
-   * same string twice in a row would be silent; emptying it and setting it on the next frame makes
-   * every copy an announcement, including an identical one.
-   */
+  // Cleared first: a live region announces a change, so writing the same string twice would be silent.
   statusRegion.textContent = "";
   requestAnimationFrame(() => {
     if (statusRegion) statusRegion.textContent = message;
@@ -157,6 +97,7 @@ function announce(message: string) {
 }
 
 function decorateCodeBlock(pre: HTMLElement) {
+  // Tests for the button, not `data-enhanced`: the attribute can be lost while the button survives.
   if (pre.querySelector(":scope > .code-copy")) return;
 
   const lang = pre.dataset.lang;
@@ -194,15 +135,8 @@ function decorateCodeBlock(pre: HTMLElement) {
 }
 
 /**
- * Language label and a copy button on every code block, AND AGAIN AFTERWARDS.
- *
- * The rewrite this observer was built against is GONE, and the observer is kept anyway: it costs
- * nothing at rest, `decorateCodeBlock` is idempotent, and it makes the decoration independent of
- * WHEN this bundle runs relative to any future subtree rewrite, which is exactly the assumption that
- * broke last time.
- *
- * It terminates. Every write happens inside `decorateCodeBlock`, which does nothing to a `pre`
- * already carrying `data-enhanced`, so the mutations it causes produce a pass that writes nothing.
+ * Keeps observing so decoration does not depend on when this bundle runs relative to a subtree
+ * rewrite. It terminates: `decorateCodeBlock` writes nothing to a `pre` already carrying `data-enhanced`.
  */
 function codeBlocks() {
   const prose = document.querySelector<HTMLElement>(".prose");
@@ -217,23 +151,14 @@ function codeBlocks() {
   new MutationObserver(decorateAll).observe(prose, { childList: true, subtree: true });
 }
 
-/** Turns the existing heading anchors into copy-link buttons on hover. */
 function headingLinks() {
   for (const anchor of document.querySelectorAll<HTMLAnchorElement>(
     ".prose .heading-anchor",
   )) {
     anchor.addEventListener("click", (event) => {
       /*
-       * BOTH THINGS HAPPEN: the URL is copied AND the reader lands on the heading, which is what an
-       * in-page anchor is for and what 2.4.3 expects of a link that changes the URL. The note here once
-       * claimed the anchor still navigated, three lines above a `preventDefault()`, which is the live-path rule's
-       * own example of a boundary note that ages.
-       *
-       * `focus()` on the heading rather than `scrollIntoView`, because moving focus is what a screen
-       * reader announces and what the next Tab continues from; scrolling alone moves the eye and leaves
-       * the keyboard behind. Headings are not focusable by default, so `tabindex="-1"` is set for the
-       * duration and removed afterwards: `-1` and never `0`, because it makes the heading programmatically
-       * focusable without adding it to the tab order.
+       * `focus()` rather than `scrollIntoView`, so a screen reader announces the heading and the next Tab
+       * continues from it. `tabindex="-1"` makes it focusable without adding it to the tab order.
        */
       if (!navigator.clipboard) return;
       event.preventDefault();
@@ -260,16 +185,13 @@ function headingLinks() {
           setTimeout(() => anchor.removeAttribute("data-copied"), 1500);
           announce("Link copied");
         })
-        // A refused clipboard must not cost the reader the navigation they
-        // asked for, so landing happens either way.
+        // A refused clipboard must not cost the reader the navigation, so landing happens either way.
         .catch(() => {})
         .finally(land);
     });
   }
 }
 
-
-/** Hover and focus previews for footnote references. */
 function footnotePreviews() {
   const notes = document.querySelector(".prose .footnotes");
   if (!notes) return;
@@ -289,10 +211,8 @@ function footnotePreviews() {
   };
 
   /*
-   * WCAG 2.2 1.4.13, HOVERABLE. Leaving the reference schedules a hide rather than performing one,
-   * and entering the bubble cancels it. Without that the bubble vanishes the moment the pointer moves
-   * toward it, so nobody can read a footnote longer than a glance or select text from one. The delay
-   * is long enough to cross the gap the bubble is positioned with.
+   * WCAG 1.4.13 hoverable: leaving the reference schedules a hide and entering the bubble cancels it,
+   * so the pointer can cross the gap to the bubble.
    */
   const HOVER_GRACE_MS = 220;
   const scheduleHide = () => {
@@ -313,9 +233,6 @@ function footnotePreviews() {
       bubble.innerHTML = target.innerHTML;
       for (const back of bubble.querySelectorAll("[data-footnote-backref]")) back.remove();
 
-      // The bubble is part of the hover target, not a separate thing that
-      // steals the pointer. Without these two the grace period above would
-      // expire while the reader is inside the bubble reading it.
       bubble.addEventListener("mouseenter", cancelHide);
       bubble.addEventListener("mouseleave", scheduleHide);
 
@@ -330,46 +247,25 @@ function footnotePreviews() {
     ref.addEventListener("blur", scheduleHide);
   }
 
-  /*
-   * DISMISSIBLE. Escape removes the bubble WITHOUT moving focus, which is what 1.4.13 asks for: a
-   * reader who cannot move the pointer away, or whose bubble covers the text, needs a way out that
-   * does not cost them their place.
-   */
+  // Escape dismisses WITHOUT moving focus, as 1.4.13 asks.
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && bubble) {
       event.stopPropagation();
       hide();
     }
   });
-
-  /*
-   * PERSISTENT. Nothing hides the bubble on scroll, and nothing needs to: it is positioned in
-   * DOCUMENT coordinates, so it travels with the reference rather than staying stuck to the viewport.
-   */
 }
 
 
 /**
- * Opens one image over the page. Returns focus where it came from on close.
- *
- * `src` is passed in rather than read off the image on screen: `currentSrc` returns whichever rung
- * of the `srcset` ladder the browser already downloaded, so the overlay would show a resized copy
- * at a larger CSS size and call it full size.
+ * `src` is passed in rather than read from `currentSrc`, which is whichever `srcset` rung the browser
+ * downloaded: a resized copy shown as full size.
  */
 function openOverlay(src: string, alt: string, restoreFocus: () => void) {
-  /*
-   * A NATIVE <dialog>, OPENED WITH showModal(). It gives modality, Escape, focus containment and the
-   * top layer from the platform, which is four hand-rolled behaviors removed rather than four written
-   * correctly. Focus return is the platform's too, and `restoreFocus` is kept because the OPENER here
-   * is not always the element focus should land on.
-   */
+  // `restoreFocus` is kept because the opener is not always the element focus should land on.
   const dialog = document.createElement("dialog");
   dialog.className = "lightbox";
-  /*
-   * A NAME, because a dialog announces itself and then has nothing to say. The image's alt is the
-   * only description there is; when the author left it empty the image is decorative, so the dialog is
-   * labeled generically rather than with an empty string that announces as "dialog" and nothing.
-   */
+  // Empty alt means decorative, so the dialog gets a generic label rather than an empty one.
   dialog.setAttribute("aria-label", alt || "Full size image");
   if (reduceMotion.matches) dialog.dataset.reduced = "true";
 
@@ -378,10 +274,6 @@ function openOverlay(src: string, alt: string, restoreFocus: () => void) {
   full.alt = alt;
   dialog.appendChild(full);
 
-  /*
-   * A VISIBLE CLOSE BUTTON. Escape and a backdrop click are both real ways out and neither is
-   * discoverable, so a touch reader with no keyboard had no announced way to close this at all.
-   */
   const close = document.createElement("button");
   close.type = "button";
   close.className = "lightbox-close";
@@ -391,20 +283,11 @@ function openOverlay(src: string, alt: string, restoreFocus: () => void) {
   const dismiss = () => dialog.close();
   close.addEventListener("click", dismiss);
 
-  /*
-   * The backdrop click. On a `<dialog>` the element itself is the click target for its backdrop, so
-   * this checks the target rather than wrapping the content. Clicking the image must NOT close it,
-   * which is what the target check gives.
-   */
+  // On a `<dialog>` the element itself is the click target for its backdrop.
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) dismiss();
   });
 
-  /*
-   * One teardown, on the platform's own `close` event, so every route out lands here: the button, the
-   * backdrop, Escape, and anything added later. The element is removed rather than reused, because the
-   * next open builds a fresh one with its own src and label.
-   */
   dialog.addEventListener("close", () => {
     dialog.remove();
     restoreFocus();
@@ -414,20 +297,6 @@ function openOverlay(src: string, alt: string, restoreFocus: () => void) {
   dialog.showModal();
 }
 
-
-/**
- * Lightbox for post images.
- *
- * THE ANCHOR IS THE SUBJECT, not the image. The shared pipeline wraps every body image in an
- * `a.image-link` to the unsized file, so the click already did something useful before this file
- * loaded, and this intercepts that navigation rather than being the only way to reach the original.
- *
- * Binding the anchor is what makes the keyboard path free: Enter fires a click on it, and close
- * returns focus to the anchor the reader was already on.
- *
- * DIAGRAMS TAKE THE OTHER PATH. Their image pair is deliberately not wrapped, so they are bound
- * directly, and a diagram asset carries no `srcset`, so its `src` IS the original.
- */
 function lightbox() {
   const links = Array.from(
     document.querySelectorAll<HTMLAnchorElement>(".prose a.image-link"),
@@ -442,6 +311,7 @@ function lightbox() {
     });
   }
 
+  // Diagram images are not wrapped in an anchor, and carry no `srcset`, so their `src` is the original.
   const diagrams = Array.from(
     document.querySelectorAll<HTMLImageElement>(".prose img.diagram-image"),
   );
@@ -453,7 +323,6 @@ function lightbox() {
   }
 }
 
-/** Upgrades the markdown link into a clipboard copy, keeping the link intact. */
 function copyMarkdown() {
   const trigger = document.querySelector<HTMLAnchorElement>("[data-copy-markdown]");
   if (!trigger || !navigator.clipboard) return;
@@ -467,7 +336,6 @@ function copyMarkdown() {
       trigger.textContent = "Copied";
       announce("Markdown copied");
     } catch {
-      // Fall back to what the anchor would have done anyway.
       location.href = trigger.getAttribute("href") ?? "";
       return;
     }
@@ -477,25 +345,12 @@ function copyMarkdown() {
   });
 }
 
-/** The button's resting label, and the one it returns to after a copy. */
 const SELECTION_LABEL = "Copy link to selection";
 
 /**
- * A link to the passage a reader selected, as a URL text fragment.
- *
- * SCRIPT-ONLY WITH NO FALLBACK, AND THE PERMALINK IS WHY THAT IS ALLOWED. There is no scriptless
- * way to ask a reader what they highlighted, so this cannot have a fallback; what it has is an
- * equivalent path that is always present two blocks below, the permalink to the whole post. That
- * permalink is deliberately NOT a clipboard button, so this control does not duplicate one: it does
- * the one thing the permalink cannot say.
- *
- * IT IS PLACED IN THE FLOW AFTER THE SELECTED BLOCK, not floated over the text. A popover needs
- * coordinates, clamping and a scroll listener, and it still arrives at the END of the tab order; an
- * element after the block a reader just selected is the next tab stop for free, because a selection
- * sets the sequential focus navigation starting point.
- *
- * THE CANONICAL ORIGIN COMES FROM THE PERMALINK, never from `location`. The origin a reader is on
- * is not always the origin a link should carry, and the page already states the canonical one once.
+ * Script-only with no fallback: there is no scriptless way to read a selection, and the permalink
+ * is the equivalent path. Placed in the flow after the selected block, it is the next tab stop.
+ * The origin comes from the permalink, never `location`.
  */
 function selectionLink() {
   const article = document.querySelector<HTMLElement>(".post .prose");
@@ -510,7 +365,6 @@ function selectionLink() {
   let url = "";
   let dragging = false;
 
-  /** The article's own child that a node sits under, so the button lands between blocks. */
   const blockOf = (node: Node) => {
     let element = node instanceof Element ? node : node.parentElement;
     while (element && element !== article && element.parentElement !== article) {
@@ -530,27 +384,18 @@ function selectionLink() {
     button.textContent = SELECTION_LABEL;
     const block = blockOf(selection.getRangeAt(0).endContainer);
     /*
-     * ONLY WHEN IT IS NOT ALREADY THERE, and this is not an optimization. `insertBefore` REMOVES a
-     * node that already has a parent before inserting it, so moving the button to the place it is
-     * already in detaches it: `pointerup` fires between mousedown and click, and a target detached
-     * in that window never receives the click at all. Measured in a browser; the button looked
-     * right and did nothing.
-     *
-     * insertBefore, never .after(): the global Element here is HTMLRewriter's, whose after takes a
-     * string or a Response. search.ts records the same trap for prepend.
+     * Only when not already there: `insertBefore` detaches a node that has a parent, and a target
+     * detached between pointerup and click never gets the click. Not `.after()`: the global Element
+     * here is HTMLRewriter's.
      */
     if (block && block.nextSibling !== button) article.insertBefore(button, block.nextSibling);
   };
 
-  /*
-   * The selection has to survive the click. A mousedown on the button collapses it and takes the
-   * button away with it, so the click would land on nothing.
-   */
+  // A mousedown on the button would collapse the selection and take the button away with it.
   button.addEventListener("mousedown", (event) => event.preventDefault());
 
   button.addEventListener("click", () => {
     void navigator.clipboard.writeText(url).then(() => {
-      // The same two words the heading link announces, and one string in the bundle for both.
       button.textContent = "Link copied";
       announce("Link copied");
       setTimeout(() => {
@@ -559,11 +404,7 @@ function selectionLink() {
     });
   });
 
-  /*
-   * `selectionchange` alone fires on every character of a drag, so the button would hop down the
-   * page under the pointer. The pointer pair holds it still until the reader lets go, and keyboard
-   * selection still arrives through `selectionchange` with no pointer down.
-   */
+  // `selectionchange` fires on every character of a drag, so pointer drags update only on release.
   document.addEventListener("selectionchange", () => {
     if (!dragging) update();
   });

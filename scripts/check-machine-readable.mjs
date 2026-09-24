@@ -1,18 +1,3 @@
-/**
- * Gate: what machines read is complete and consistent. One check over three parts (ruling 150):
- *
- *   llms.txt       content/llms.txt is the source of the settings row and the route serves it
- *   microformats   the public pages parse to one h-entry, h-feed and h-card each
- *   publications   the paper corpus, its generated module, its twins and its exports agree
- *
- *   npm run check:machine-readable
- *   npm run check:machine-readable -- --local    also compare the llms.txt row in local D1
- *   npm run check:machine-readable -- --remote   the same against the deployed database
- *
- * Each part is a module whose top level runs on import and exports `outcome`. A part that cannot
- * reach its subject throws, which counts as a failure here, and the later parts still run.
- */
-
 console.log("\ncheck:machine-readable");
 
 const PARTS = ["llms", "microformats", "publications"];

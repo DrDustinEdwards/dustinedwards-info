@@ -1,17 +1,5 @@
-/* See split header, canonical statement is app/app.css:1885 */
-
-/* Command palette, enhancement only. Every rule here styles markup that
-   app/enhance/palette.ts creates, so a reader without script never sees any
-   of it. */
-
-/*
- * Search entry point: ONE GLYPH, no border, no radius, no fill. It was a pill; ruling 117's kill
- * list takes all three, so what identifies it is the icon in --brand and nothing else. No visible
- * "/": the shortcut is announced through title and aria-describedby, written by the enhancement,
- * so it exists only with the listener.
- *
- * WCAG 2.2 2.5.8: the glyph is 18px, so the box carries the target size rather than the icon.
- */
+/* No visible "/": the enhancement announces the shortcut through title and aria-describedby. The glyph
+ * is 18px, so the box carries the 24px target. */
 .search-trigger {
   display: inline-flex;
   align-items: center;

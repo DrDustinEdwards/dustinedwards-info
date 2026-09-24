@@ -1,14 +1,3 @@
-/**
- * Gate over the secret-handling boundary the secrets-boundary rule states.
- *
- *   npm run check:secrets
- *
- * BOUNDARY: IT READS SOURCE TEXT, NOT THE BUNDLE, so a secret read inside a legitimate `.server`
- * module that a mis-split inlined into a client chunk is invisible here, and it says nothing
- * about whether a secret is USED correctly once read. The boundary is BY PATH, and strictly:
- * loaders and actions are not carved out even though the secrets-boundary rule's prose permits it.
- */
-
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
@@ -24,25 +13,17 @@ const ENV_TYPES = join(root, "app", "env.d.ts");
 
 const SECRETS = REQUIRED_SECRETS;
 
-/*
- * THE RATIFIED LIST IS IMPORTED, NOT RESTATED: it was inline here while a page described a
- * different count. **THE INDEPENDENCE ARGUMENT SURVIVES THE MOVE**: what the tree READS and what
- * the declaration file DECLARES are still parsed independently.
- */
-
 /**
- * Names permitted OUTSIDE the server boundary, each with its reason. EMPTY TODAY, and correct:
- * the mechanism exists so the decision is recorded rather than made by deleting an assertion.
+ * Empty, and correct: the mechanism exists so a permission is recorded rather than made by deleting
+ * an assertion.
  *
  * @type {Record<string, string>}
  */
 const CLIENT_ALLOWED = {};
 
 /**
- * Bindings, which are NOT secrets and NOT guarded: a binding is an object the runtime injects,
- * so a client component referencing one gets `undefined`. Listed only to record the env surface.
- * `import.meta.env` is a DIFFERENT namespace, and the matcher is anchored so it cannot confuse
- * the two.
+ * Bindings are not secrets: a client component referencing one gets `undefined`. `import.meta.env` is
+ * a different namespace, and the matcher is anchored so it cannot confuse the two.
  */
 
 let checks = 0;
@@ -59,8 +40,6 @@ function ok(label, condition, detail = "") {
 
 console.log("\ncheck:secrets\n");
 
-/* fail closed first */
-
 ok(
   "the ratified secret list is not empty",
   SECRETS.length > 0,
@@ -72,12 +51,7 @@ if (!existsSync(ENV_TYPES)) {
   process.exit(1);
 }
 
-/* 1. every secret is DECLARED */
-
-/*
- * THE DEFECT THIS GATE WAS WRITTEN FOR: a secret read at a call site and declared nowhere. Not a
- * leak on its own, it is the tell, because a secret nobody declared is a secret nobody reviewed.
- */
+// A secret nobody declared is a secret nobody reviewed.
 const types = readFileSync(ENV_TYPES, "utf8");
 const declaredBlock = types.match(/interface\s+Env\s*\{([\s\S]*?)\n\s*\}/);
 ok(
@@ -98,7 +72,6 @@ for (const name of SECRETS) {
   );
 }
 
-// The other direction: a declared secret nobody ratified.
 for (const name of declared) {
   ok(
     `${name} is a ratified secret`,
@@ -108,15 +81,7 @@ for (const name of declared) {
   );
 }
 
-/* 2. the boundary, by path */
-
 const SCAN_ROOTS = ["app", "workers"];
-
-/*
- * NO SKIP_DIRS: emptying the set produced an IDENTICAL result, none of its directories existing
- * under the scan roots. An exclusion nothing depends on is surface area that reads like
- * protection, which is this gate's own subject.
- */
 
 /** @param {string} dir @param {string[]} out */
 function walk(dir, out = []) {
@@ -128,16 +93,13 @@ function walk(dir, out = []) {
   return out;
 }
 
-/** A file that may read a secret. */
 function isServerOnly(/** @type {string} */ path) {
   return path.startsWith("workers/") || /\.server\.(ts|tsx|mjs|js)$/.test(path);
 }
 
 /**
- * A floor PER ROOT, not one on the total: one root is a hundred and fifty files and the other a
- * handful, so a total-only floor cannot tell that an entire root stopped being scanned. The small
- * one is the outermost layer of the boundary, and its floor is tight because it cannot absorb
- * slack.
+ * A floor per root: one root is about a hundred and fifty files and the other a handful, so a
+ * total-only floor cannot see a whole root stop being scanned.
  *
  * @type {Record<string, number>}
  */
@@ -189,10 +151,8 @@ let serverReads = 0;
 
 for (const file of files) {
   const path = relative(root, file).split(sep).join("/");
-  /*
-   * COMMENTS AND STRING LITERALS BOTH GO: this file's prose names every secret, and strings go
-   * because status fields and operator copy name tokens too.
-   */
+  // Comments and strings both go: this file's prose names every secret, and status fields and operator
+  // copy name tokens too.
   const code = stripCommentsAndStrings(readFileSync(file, "utf8"));
   for (const match of code.matchAll(pattern)) {
     readsFound += 1;
@@ -206,10 +166,7 @@ for (const file of files) {
   }
 }
 
-/*
- * ANTI-VACUITY, and it is what makes the one below mean something: a broken matcher finds zero
- * reads and reports zero violations, indistinguishable from a clean repo. The vacuity rule.
- */
+// A broken matcher finds zero reads and zero violations, indistinguishable from a clean repo.
 ok(
   "the scan actually found secret reads to classify",
   readsFound > 0 && serverReads > 0,
@@ -224,8 +181,7 @@ ok(
 );
 
 /**
- * What makes one allowlist entry acceptable. Returns the problems, so the same
- * rules can be exercised on synthetic input without touching the real list.
+ * Returns the problems, so the rules can be exercised on synthetic input.
  *
  * @param {string} name @param {unknown} reason
  * @returns {string[]} empty when the entry is acceptable
@@ -245,12 +201,8 @@ for (const [name, reason] of Object.entries(CLIENT_ALLOWED)) {
   ok(`allowlisted ${name} is acceptable`, problems.length === 0, problems.join("; "));
 }
 
-/*
- * SELF-TEST on EVERY execution regardless of the allowlist: the map is empty, which is CORRECT,
- * so the loop above iterates zero times and its rules could be inverted unnoticed. The vacuity rule.
- * NOT a fixture entry in the real allowlist, which would put a fake permission in the structure
- * that grants them; the rules live in a function the real loop and the self-test both call.
- */
+// Self-test on every run: the allowlist is empty, so the loop above runs zero times and its rules
+// could be inverted unnoticed.
 const badEntry = validateAllowlistEntry("NOT_A_RATIFIED_SECRET", "short");
 ok(
   "self-test: an unratified name with a stub reason reports BOTH problems",
@@ -277,13 +229,7 @@ ok(
   "the validator rejects an entry it should accept, so a real exception could never be added",
 );
 
-/* 3. the admin session file is REALLY ignored */
-
-/*
- * **A DOCUMENTED IGNORE THAT IS NOT ACTUALLY IGNORING IS A RECORDED FAILURE SHAPE HERE**, so
- * this asks git: reading the file back proves the line exists, not that it MATCHES. BOTH
- * DIRECTIONS, because they fail differently, and the path is checked whether or not it exists.
- */
+// Asks git: reading the file back proves the line exists, not that it matches.
 console.log("\n  3. the admin session file is really ignored");
 
 /** @param {string} path @returns {boolean} */
@@ -316,11 +262,7 @@ ok(
     "the repo and the next expired session has nothing to read.",
 );
 
-/*
- * AND THE EXAMPLE CARRIES NO REAL SESSION. It is committed, so anything pasted
- * into it is published. The placeholder is the tell: a file that still has it
- * cannot also hold a token in the same slot.
- */
+// The example is committed, so anything pasted into it is published; the placeholder is the tell.
 const examplePath = join(root, ".admin-session.example");
 ok(
   ".admin-session.example exists to be checked",
@@ -338,16 +280,8 @@ if (existsSync(examplePath)) {
   );
 }
 
-/* the operator credentials in .dev.vars */
-
-/*
- * THE `.dev.vars` CREDENTIALS ARE NOT WRANGLER SECRETS, AND ARE STILL GUARDED: read by Node
- * programs and never by deployed code, so listing one would demand a declaration for a value the
- * Worker never sees. **It must never reach git.** TWO ASSERTIONS, AND THE FIRST WORKS WITHOUT THE
- * FILE: the SHAPE scan runs everywhere, the EXACT-VALUE scan only where the file exists. The
- * pairing is deliberate, a conditional assertion that could pass by reading nothing being exactly
- * what the vacuity rule warns about.
- */
+// The `.dev.vars` credentials are read by Node programs, never by deployed code, and must never reach
+// git. The shape scan runs everywhere; the exact-value scan only where the file exists.
 {
   const lsFiles = spawnSync("git", ["ls-files", "-z"], { cwd: root, encoding: "utf8" });
   if (lsFiles.status !== 0) {
@@ -365,8 +299,6 @@ if (existsSync(examplePath)) {
       "of a tree they never read.",
   );
 
-  // REUSES `gitIgnores` rather than spelling check-ignore twice: one helper, one argument order,
-  // which is the vacuity rule's ninth discipline.
   ok(
     ".dev.vars is ignored by git",
     gitIgnores(".dev.vars"),
@@ -374,20 +306,9 @@ if (existsSync(examplePath)) {
       "`git add` away from being published.",
   );
 
-  /*
-   * The key shape, deliberately loose on the lengths: a guessed width misses a key of another
-   * vintage, and this scan has to work with no credential in hand.
-   */
-  /*
-   * NO LEADING `\b`, AND THE PLANT IS WHY: a key glued to a prefix ending in `_` did NOT fire,
-   * `_` being a word character. A word boundary is the wrong anchor for a needle that has to find a
-   * credential ANYWHERE in a file.
-   */
-  /*
-   * A `\uXXXX` JSON ESCAPE IS NOT A `u` IN THE TEXT: a committed JSON file of extracted PDF text
-   * holds escaped control characters followed by something long and alphanumeric, so the needle was
-   * reading a file's ENCODING. The lookbehind refuses exactly that, and both directions are plants.
-   */
+  // Loose on lengths: a guessed width misses a key of another vintage. No leading word boundary: `_` is
+  // a word character, so a key glued to a `_` prefix would not fire. The lookbehind refuses a JSON
+  // unicode escape, whose `u` is encoding, not text.
   const UPTIMEROBOT_SHAPE = /(?<!\\)u\d{4,12}-[A-Za-z0-9]{16,64}/;
 
   /** Files that legitimately DISCUSS these names. The VALUE is what is banned. */
@@ -447,16 +368,7 @@ console.log(
     `${readsFound} read(s), ${Object.keys(CLIENT_ALLOWED).length} allowlisted`,
 );
 
-/*
- * EXECUTED-COUNT FLOOR. The per-root scans floor what was READ; this floors what was ASSERTED,
- * and a scope check cannot see an assertion block that stopped running over a full scope.
- * MEASURED BY RUNNING IT, never summed.
- */
-/* Re-taken by running the gate whenever a section or a secret lands. */
-/*
- * The step is the one the comment above predicts, and the arithmetic answer would have been
- * wrong in the direction that matters.
- */
+// Measured by running it, never summed; re-taken whenever a section or a secret lands.
 const MINIMUM_CHECKS = 39;
 const floorBreach = assertFloor("check:secrets", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);

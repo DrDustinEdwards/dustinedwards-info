@@ -1,13 +1,5 @@
-/**
- * SELF-REPAIR FOR A FAILING HEALTH RUN. The I/O half.
- *
- *   node scripts/health-repair.mjs --origin <origin> --body body.json
- *
- * BOUNDARY: it decides through the shared decision module, performs the repairs that decision
- * allows, re-polls ONCE and exits, because a loop here would be a monitor arguing with itself.
- * EXIT CODES ARE THE ALERT: 0 means repaired and healthy, 1 means a person is emailed, and there
- * is no third state.
- */
+// Re-polls once and exits, because a loop here would be a monitor arguing with itself.
+// The exit code is the alert: 0 repaired and healthy, 1 emails a person.
 
 import { readFileSync } from "node:fs";
 
@@ -22,13 +14,7 @@ const flag = (/** @type {string} */ name) => {
 /** GitHub Actions renders this as an annotation, which is what reaches the email. */
 const annotate = (/** @type {string} */ message) => console.log(`::error::${message}`);
 
-/**
- * One repair call.
- *
- * @returns {Promise<{ miss: string, unrepairable: boolean }>} `miss` is empty
- * when the tool converged. `unrepairable` marks a refusal that repeating this
- * call cannot fix, which is a different thing from a repair that did not work.
- */
+/** @returns {Promise<{ miss: string, unrepairable: boolean }>} */
 async function repair(/** @type {string} */ origin, /** @type {string} */ token, /** @type {string} */ tool) {
   let response = null;
   let payload = null;
@@ -50,12 +36,11 @@ async function repair(/** @type {string} */ origin, /** @type {string} */ token,
     };
   }
 
-  // The server's own sentence and the status rule both live in the decision module, because the
-  // watchdog makes the identical call and the two copies of this had already drifted.
+  // The status rule lives in the decision module because the watchdog makes the identical call.
   if (!response.ok) return refusalMiss(tool, response.status, payload);
 
   const report = payload && typeof payload === "object" ? (payload.data ?? payload) : null;
-  // The same rule ship applies: the verdict is READ, never assumed from a 200.
+  // The verdict is read, never assumed from a 200.
   if (!report || typeof report.converged !== "boolean") {
     return {
       miss: `${tool} answered without a converged verdict, so nothing was proven`,
@@ -71,7 +56,7 @@ async function repair(/** @type {string} */ origin, /** @type {string} */ token,
   return { miss: "", unrepairable: false };
 }
 
-/** @returns {Promise<number>} the exit code */
+/** @returns {Promise<number>} */
 async function main() {
   const origin = flag("origin").replace(/\/+$/, "");
   const bodyPath = flag("body");
@@ -115,11 +100,8 @@ async function main() {
     }
     misses.push(outcome.miss);
 
-    /*
-     * A REFUSAL ABANDONS THE REST OF THE PLAN: the Ask upload reads the store the content repair
-     * rewrites, so when the content repair REFUSED the store is not merely stale, it is known-stale,
-     * and uploading it is a write made on a premise the previous call just denied.
-     */
+    // A refusal abandons the rest of the plan: the Ask upload reads the store the content repair
+    // rewrites, so after a refusal that store is known-stale.
     if (outcome.unrepairable) {
       refused = true;
       const skipped = plan.repair.slice(index + 1);
@@ -143,10 +125,6 @@ async function main() {
     return 1;
   }
 
-  /*
-   * THE RE-POLL. The repair proved its own index; this proves the ENDPOINT is healthy, which is a
-   * wider claim and the one the workflow reports on.
-   */
   let status = 0;
   let after = null;
   try {

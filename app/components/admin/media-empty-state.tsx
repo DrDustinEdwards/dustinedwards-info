@@ -1,20 +1,9 @@
-/*
- * THE EMPTY LIBRARY, and there are three of them. Which one renders is decided
- * here rather than by the caller, because the three differ only in what the reader
- * should do next.
- */
-
 import { Link } from "react-router";
 
 import type { hrefWith } from "~/lib/media/view.mjs";
 
 import type { Route } from "../../routes/+types/admin.media._index";
 
-/*
- * The loader returns a UNION of three shapes and only the listing carries these
- * fields, so the member is selected rather than the property read off the union.
- * One owner: the loader.
- */
 type Listing = Extract<Route.ComponentProps["loaderData"], { detail: unknown }>;
 
 export function MediaEmptyState({
@@ -27,15 +16,6 @@ export function MediaEmptyState({
   linkTo: (over?: Parameters<typeof hrefWith>[1]) => string;
 }) {
   return (
-        /*
-         * THREE EMPTY STATES, NOT ONE, because they mean three different things and the
-         * reader needs a different next step from each.
-         *
-         * LIBRARY EMPTY is the only one that gets a heading and a button, because it is
-         * the only one where the reader has nothing to undo. SEARCH MISS names the query
-         * back so a typo can be told from a wrong assumption. LENS EMPTY is GOOD NEWS and
-         * reads as an error unless it says so.
-         */
         <div className="media-empty" data-empty={q ? "search" : lensCounts.all === 0 ? "library" : "lens"}>
           {lensCounts.all === 0 && !q ? (
             <>

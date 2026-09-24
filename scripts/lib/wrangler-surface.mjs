@@ -1,23 +1,11 @@
-/**
- * The Worker's binding surface, derived from a wrangler config. ONE enumerator, so two walkers of
- * the same config cannot disagree about what this Worker binds.
- *
- * BOUNDARY: it knows the binding kinds it enumerates and reports the rest separately, because a
- * kind no reader understands is absent from both sides of every comparison built on this.
- */
-
 import { readFileSync } from "node:fs";
 
 /**
- * JSONC to JSON. Comments only; these configs have no trailing commas.
+ * Weak on purpose: the strong stripper's line-comment rule eats a protocol-relative url, and
+ * JSON.parse throws on any comment this misses.
  *
  * @param {string} path
  * @returns {any}
- */
-/*
- * WEAK ON PURPOSE, this being JSONC on its way to JSON.parse: the shared strong stripper's
- * line-comment rule eats a protocol-relative url and takes the rest of the line with it. Weak is
- * SUFFICIENT, because JSON.parse throws on any comment this fails to remove.
  */
 export function parseJsonc(path) {
   const raw = readFileSync(path, "utf8");
@@ -28,9 +16,7 @@ export function parseJsonc(path) {
 }
 
 /**
- * How each binding kind is read, keyed by the config key that declares it. ONE table, so
- * `surfaceOf` and `unhandledBindingKinds` cannot disagree about what is handled. The settings
- * string omits account-scoped IDENTIFIERS, the tracked example carrying placeholders for those.
+ * Settings omit account-scoped identifiers: the tracked example carries placeholders for those.
  *
  * @type {Record<string, (config: any, out: Map<string, string>) => void>}
  */
@@ -64,8 +50,7 @@ const READERS = {
   images: (config, out) => {
     if (config.images?.binding) out.set(`images:${config.images.binding}`, "");
   },
-  // The dataset NAME is compared rather than omitted as account-scoped: it is the table the SQL
-  // API reads, and two files disagreeing would have the Worker writing where nothing queries.
+  // The dataset name is compared, not omitted: it is the table the SQL API reads.
   analytics_engine_datasets: (config, out) => {
     for (const ae of config.analytics_engine_datasets ?? []) {
       out.set(`analytics_engine:${ae.binding}`, `dataset=${ae.dataset}`);
@@ -74,8 +59,6 @@ const READERS = {
   assets: (config, out) => {
     if (config.assets?.binding) out.set(`assets:${config.assets.binding}`, "");
   },
-  // The SERVICE NAME is compared rather than omitted: it names which Worker is called, and two
-  // files disagreeing would point the watchdog at nothing.
   services: (config, out) => {
     for (const service of config.services ?? []) {
       out.set(
@@ -84,12 +67,7 @@ const READERS = {
       );
     }
   },
-  /*
-   * Email Sending. KEYED BY `name`, NOT `binding`, which every other binding kind uses: that put
-   * it through the detector's array arm unread, so it was invisible to the comparison AND to the
-   * detector meant to catch exactly that. The RESTRICTIONS are settings, not just the name, since a
-   * binding pinned in one file and unrestricted in the other describes a different blast radius.
-   */
+  // Keyed by `name`, not `binding`. Restrictions are compared: they set the blast radius.
   send_email: (config, out) => {
     for (const mail of config.send_email ?? []) {
       const restriction = mail.destination_address
@@ -117,9 +95,6 @@ const READERS = {
 };
 
 /**
- * Every binding the config declares, as `KIND:NAME`, mapped to the settings that are not
- * account-scoped identifiers.
- *
  * @param {any} config
  * @returns {Map<string, string>}
  */
@@ -131,19 +106,8 @@ export function surfaceOf(config) {
 }
 
 /**
- * Config keys that DECLARE BINDINGS and that `surfaceOf` cannot read. **The absence of this was
- * a live hole**: a kind no reader knows about produces no rows on either side of every comparison,
- * and a gate that compares two blind spots agrees with itself.
- *
- * Detection is STRUCTURAL rather than a list of Cloudflare's products, so a binding type that does
- * not exist yet is still caught. A declaration is one of exactly three shapes:
- *
- *   an object with a `binding`                     assets, images, browser
- *   an array of objects carrying `binding` or      d1, kv, r2, vectorize, ai,
- *     `name`                                         services, send_email
- *   an object with a `bindings` array              durable_objects, workflows
- *
- * `queues` matches none of these, correctly: a consumer has no `binding` and is handled above.
+ * A kind no reader knows produces no rows on either side, so a comparison of two blind spots
+ * agrees with itself. Detection is structural so a binding type that does not exist yet is caught.
  *
  * @param {any} config
  * @returns {string[]}

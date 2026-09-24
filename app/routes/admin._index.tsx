@@ -12,37 +12,12 @@ export function meta() {
   return [{ title: "Overview · Admin" }, { name: "robots", content: "noindex" }];
 }
 
-/**
- * THE COCKPIT, REWIRED TO REAL INSTRUMENTS.
- *
- * EVERY NUMBER HERE IS A READ-BACK, NEVER A COPY. Rule 17. `runHealthChecks` is
- * the same function `/api/health` runs and `syncStatus` is the same function the
- * operator tool runs, so this page cannot disagree with the alert that wakes
- * Dustin at 2am: they are reading one instrument.
- *
- * The SENTENCES come from `check-copy.mjs`, which owns nouns and verbs only; the
- * NUMBERS are substituted from each verdict's own counts.
- *
- * The media index and the Ask index are not fetched again here. They are two of
- * the health checks, and reading them separately would be a second reading of the
- * same fact on one page, free to disagree with the first.
- *
- * NOTHING WAS INVENTED TO FILL SPACE. A reader cannot tell a measured card from a
- * decorated one at a glance, so there are no decorated ones.
- *
- * IT COSTS REAL I/O, stated rather than hidden, which is why the two run
- * concurrently and each carries its own mark.
- */
+/** Reads the same instruments as /api/health and the operator tool, so it cannot disagree with them. */
 export async function loader({ context }: Route.LoaderArgs) {
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   const env = getEnv(context);
 
-  /*
-   * CONCURRENT, because they share nothing: the health run touches AI Search, R2
-   * and D1, `syncStatus` touches GitHub and D1, and neither reads the other's
-   * result.
-   */
   const [health, stores] = await Promise.all([
     timed(timings, "overview_health", () => runHealthChecks(env)),
     timed(timings, "overview_stores", () => syncStatus(env)),
@@ -68,17 +43,10 @@ export async function loader({ context }: Route.LoaderArgs) {
 export default function AdminOverview({ loaderData }: Route.ComponentProps) {
   const { checks, stores } = loaderData;
 
-  /*
-   * ONE READ OF THE CHECKS FEEDS THE SENTENCE, THE NOTICE AND THE TABLE. They were
-   * two computations and they drifted, so the notice is rendered from `worst`, the
-   * same element the sentence already described.
-   */
   const failing = checks.filter((check) => !check.ok);
   const worst = failing[0];
   const worstCopy = worst ? humanCheck(worst) : null;
 
-  /* Failing first. Otherwise the order the instruments happen to run in, which
-     is an implementation detail of `runHealthChecks` and not a priority. */
   const ordered = [...checks].sort((a, b) => Number(a.ok) - Number(b.ok));
 
   return (
@@ -88,11 +56,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
         <p className="admin-page-status">{statusSentence(checks)}</p>
       </div>
 
-      {/*
-       * ONE NOTICE, AND ONLY WHEN SOMETHING IS WRONG. A standing condition is not
-       * news, so this is a named region rather than a live one: a `role` would announce
-       * it on every load to a reader who came to do something else.
-       */}
+      {/* A named region, not a live one: a `role` would announce a standing condition on every load. */}
       {worst && worstCopy ? (
         <section className="admin-notice" data-tone="error" aria-labelledby="overview-worst">
           <svg
@@ -114,11 +78,6 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
             <h2 id="overview-worst">{worstCopy.name} needs attention</h2>
             <p>{worstCopy.finding}</p>
           </div>
-          {/*
-           * THE ONE PRIMARY ON THIS PAGE, and only because a repair exists. It posts to
-           * the route that ALREADY owns the intent; `/admin` has a loader and no action, and
-           * this pass does not give it one.
-           */}
           {worstCopy.repair ? (
             <Form method="post" action={worstCopy.repair.action} className="admin-notice-action">
               <input type="hidden" name="intent" value={worstCopy.repair.intent} />
@@ -147,8 +106,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
                   <td className="admin-check-name">
                     <span className="admin-check-title">
                       <strong>{copy.name}</strong>
-                      {/* The word first, then color, then border style: three
-                          channels, so it still reads under forced-colors. */}
+                      {/* Word, color and border style: three channels, so it still reads under forced-colors. */}
                       <span className="status-pill" data-state={check.ok ? "published" : "draft"}>
                         {check.ok ? "passing" : "failing"}
                       </span>
@@ -156,8 +114,6 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
                   </td>
                   <td className="admin-check-finding">{copy.finding}</td>
                   <td className="admin-check-actions">
-                    {/* A menu ONLY where a repair exists. An empty kebab on
-                        every passing row is the empty-Maintenance defect. */}
                     {copy.repair ? (
                       <RowMenu label={`Actions for ${copy.name}`}>
                         <Form method="post" action={copy.repair.action}>
@@ -176,10 +132,6 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
         </table>
       </div>
 
-      {/*
-       * TWO FIGURES: what the repository holds and what the site is serving. Those two
-       * can disagree, and the disagreement is why this panel exists.
-       */}
       <h2 className="admin-section-head">Content</h2>
       <div className="admin-figures">
         <div className="admin-figure">
@@ -220,12 +172,7 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
         </p>
       </details>
 
-      {/*
-       * An EMPTY list is the normal answer, so this renders only when there is
-       * something to say. `known: false` is a third state and is not an empty list: a
-       * store that cannot be read must say so rather than report zero, which is why the
-       * absence of this block is not evidence of health on its own.
-       */}
+      {/* No block is not evidence of health: `known: false` means unreadable, not empty. */}
       {stores.divergences.known && stores.divergences.entries.length > 0 ? (
         <>
           <h2 className="admin-section-head">Changes the site did not pick up</h2>

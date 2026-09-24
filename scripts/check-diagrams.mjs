@@ -1,13 +1,3 @@
-/**
- * Gate over the `:::diagram` directive and the assets it references.
- *
- *   npm run check:diagrams
- *
- * BOUNDARY: the contract, asset coverage and a color audit over committed bytes. It does NOT run
- * mermaid and does not open a browser, so a diagram that renders as tangled spaghetti passes as
- * long as its key, its alt and its colors are right.
- */
-
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,7 +17,6 @@ import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
-/** The file name a page asks for, from the one function that states it. */
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   basename(diagramAssetPath(key, theme));
 
@@ -45,7 +34,6 @@ function assert(label, ok) {
   if (!ok) failures.push(label);
 }
 
-/** Asserts that a call throws, and that the message names the problem. */
 function assertThrows(/** @type {string} */ label, /** @type {() => unknown} */ fn, /** @type {RegExp} */ pattern) {
   checks += 1;
   try {
@@ -61,13 +49,10 @@ function assertThrows(/** @type {string} */ label, /** @type {() => unknown} */ 
 
 const SOURCE = "flowchart LR\n  A[one] --> B[two]\n";
 
-/* 1. The contract */
-
 // The directive has to be KNOWN, or the fail-closed unknown-directive rule rejects the syntax this
 // module implements.
 assert("diagram is in KNOWN_DIRECTIVES", KNOWN_DIRECTIVES.includes("diagram"));
 
-// alt, and its negative
 assertThrows(
   "a diagram with no alt fails",
   () => buildDiagramModel({}, SOURCE),
@@ -83,7 +68,6 @@ assert(
   buildDiagramModel({ alt: "two boxes" }, SOURCE).alt === "two boxes",
 );
 
-// source, and its negative
 assertThrows(
   "an empty diagram source fails",
   () => buildDiagramModel({ alt: "x" }, "   \n  \n"),
@@ -94,7 +78,6 @@ assert(
   buildDiagramModel({ alt: "x" }, SOURCE).source === normalizeDiagramSource(SOURCE),
 );
 
-// keys
 assert("a key is eight hex characters", /^[0-9a-f]{8}$/.test(diagramKey(SOURCE)));
 assert("the same source gives the same key", diagramKey(SOURCE) === diagramKey(SOURCE));
 assert(
@@ -116,7 +99,6 @@ assert(
   diagramAssetPath("abcd1234", "dark") === `/${DIAGRAM_ASSET_DIR}/dustin-edwards-abcd1234-dark.svg`,
 );
 
-// the emitted structure
 {
   const model = buildDiagramModel(
     { alt: "two boxes, one arrow", title: "A title" },
@@ -173,8 +155,6 @@ assert(
   );
 }
 
-/* 2. The token map */
-
 const themeBlocks = {
   light: tokenBlock("light", THEME_SELECTORS.light),
   dark: tokenBlock("dark", THEME_SELECTORS.dark),
@@ -193,12 +173,7 @@ for (const [key, token] of Object.entries(DIAGRAM_THEME_TOKENS)) {
   );
 }
 
-/**
- * Resolution is the same call the build makes, so a map this gate accepts is a map that renders.
- * It THROWS on a bad token, so it is caught here and reported like every other assertion.
- *
- * @param {"light" | "dark"} theme
- */
+/** @param {"light" | "dark"} theme */
 function paletteFor(theme) {
   checks += 1;
   try {
@@ -217,8 +192,6 @@ assert(
     JSON.stringify(palettes.light) !== JSON.stringify(palettes.dark),
 );
 
-/* 3. Coverage and color over what is actually committed */
-
 if (!existsSync(ARTIFACT)) {
   failures.push(`the artifact is missing at ${ARTIFACT}; run build:content`);
 } else {
@@ -234,8 +207,7 @@ if (!existsSync(ARTIFACT)) {
   }
 
   for (const [key, { source, posts }] of referenced) {
-    // The artifact is generated, but it is also COMMITTED and hand-editable,
-    // and a hand-edited key would point at an asset drawn from other source.
+    // Committed and hand-editable, so a hand-edited key would point at an asset drawn from other source.
     assert(
       `${key} is the key its own source hashes to (${posts.join(", ")})`,
       diagramKey(source) === key,
@@ -268,7 +240,6 @@ if (!existsSync(ARTIFACT)) {
             audit.problems.join("; "),
         );
       }
-      // An assertion that can pass by reading nothing is not an assertion.
       assert(`${fileName(key, theme)} had colors to check`, audit.checked > 0);
     }
   }
@@ -283,14 +254,7 @@ if (!existsSync(ARTIFACT)) {
     assert(`${name} is referenced by a post (run build:diagrams to prune)`, live.has(name));
   }
 
-  /*
-   * SCOPE FLOORS. Both counts were PRINTED and neither asserted, which is a number on the console
-   * that no run can fail on. Every loop above iterates one of these, and the executed-count floor
-   * cannot see them empty, the per-diagram assertions being a small share of the total. **These are
-   * the one place where the floor is not set just under the measurement, because these counts are
-   * CONTENT, not scope**: a post may legitimately drop a diagram, and what they must catch is the
-   * walk collapsing.
-   */
+  // Not set just under the measurement: these counts are content, and a post may drop a diagram.
   assert(`the artifact yielded diagrams to check (${referenced.size} referenced)`, referenced.size >= 2);
   assert(`the diagram directory yielded assets to check (${onDisk.length} on disk)`, onDisk.length >= 4);
 
@@ -299,11 +263,7 @@ if (!existsSync(ARTIFACT)) {
   );
 }
 
-/*
- * EXECUTED-COUNT FLOOR. Almost every assertion sits inside a loop over a discovered set, so an
- * empty discovery, a changed extension or a renamed directory all report a clean audit of nothing.
- * MEASURED BY RUNNING IT, never summed.
- */
+// Measured by running it, never summed.
 const MINIMUM_CHECKS = 390;
 const floorBreach = assertFloor("check:diagrams", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);

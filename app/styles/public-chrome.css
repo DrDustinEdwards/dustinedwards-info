@@ -1,58 +1,32 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/*
- * PUBLIC HEADER: PAPER, NOT CHROME. Ruling 117 retires the purple bar; the header is the page's own
- * ground with one `--dust` rule under the whole thing, and nothing between its rows.
- *
- * STICKY SINCE RULING 126, and opaque and still: no blur, no shadow, no animation on the way in.
- * The paragraph here used to say the header was static and scrolled away, and the post page's
- * sticky rail was written against that sentence; both moved together, and `--header-h` in app.css
- * is what they now share. A sticky bar that is transparent or that animates is the failure mode
- * the ruling names, so it is neither.
- *
- * ONE LINE AT EVERY WIDTH. It no longer wraps: above the menu breakpoint the destinations are
- * visible and fit, and below it they move into the menu, which is what keeps the line short enough
- * to stay one. `flex-wrap` is gone with the wrapping, and the sheet now carries exactly one width
- * condition, named at its own rule below.
- */
+/* Sticky and opaque, with no blur, shadow or animation: a transparent or animated sticky bar is the
+ * failure mode. */
 .site-header {
   position: sticky;
   top: 0;
-  /* app.css names this layer: the bar takes --z-pinned-bar. Not a raw number and not
-     --z-dropdown, which sits BELOW the bar; that sheet calls the name the trap. */
+  /* --z-pinned-bar, never --z-dropdown, which sits BELOW the bar. */
   z-index: var(--z-pinned-bar);
   display: flex;
   align-items: center;
   column-gap: 1.625rem;
-  /* The shared inset. The admin topbar reads this same declaration, so the
-     mark sits at the same x on both planes. */
+  /* The admin topbar reads this same declaration, so the mark sits at the same x on both planes. */
   padding: 1.375rem var(--site-inset) 1.125rem;
   background: var(--paper);
   border-block-end: var(--line-w) solid var(--dust);
 }
 
-/*
- * A FOCUSED ELEMENT OR AN ANCHOR TARGET IS NEVER HIDDEN BEHIND THE BAR (WCAG 2.2 2.4.11, and the
- * same reason admin-shell.css carries this). On `html` because that is the scrolling element, and
- * in this sheet because that scopes it to the public plane, which is the plane with this header.
- * The height is `--header-h` and is not restated here.
- */
+/* On html, the scrolling element, so a focused element or anchor target never lands under the bar
+ * (WCAG 2.2 2.4.11). */
 html {
   scroll-padding-top: calc(var(--header-h) + 1rem);
 }
 
-/*
- * Identity exemption: the wordmark never takes :visited. `.site-header-brand` is (0,1,0) and
- * a:visited (0,1,1), so without these it turns claret. Ink, not brand: on paper the wordmark is the
- * page's name rather than a control, and ruling 117 keeps purple for things a reader clicks.
- */
+/* (0,1,0) against a:visited (0,1,1): without these the wordmark turns claret. */
 .site-header-brand,
 .site-header-brand:visited {
   display: inline-flex;
   align-items: center;
-  /* THE WORDMARK NEVER WRAPS. Measured: at 320 and at 768 it broke to two lines, which took the
-     header from 74px to 79px and made its height a function of the viewport. The header is one
-     line at every width, and that includes the name on it. */
+  /* Never wraps: at 320 and 768 it broke to two lines and made the header's height depend on the
+     viewport. */
   white-space: nowrap;
   gap: 0.625rem;
   color: var(--text);
@@ -68,28 +42,15 @@ html {
   color: var(--brand);
 }
 
-/*
- * NO FILL RULE FOR THE MARK HERE, and the absence is the ruling. 118.2: the logo's own fills are the
- * logo, so the header draws it in its own colors. The five purple paths take --brand from app.css
- * and move with the theme; the three warm paths keep the presentation attributes site-logo.tsx
- * gives them, identical in both variants. Any rule here would beat both.
- *
- * The fill bindings on `.site-logo-brand` are a closed set and the `.site-header-mark` family
- * carries none, so re-inking the mark means editing those, not winning quietly here.
- */
+/* No fill rule for the mark: any rule here would beat the logo's own fills. Re-ink it through
+ * .site-logo-brand. */
 
-/* Width follows the 36x50 ratio of the crop in site-logo.tsx. */
 .site-header-mark {
   display: block;
   height: 2.0625rem;
   width: auto;
 }
 
-/*
- * THE TOOLS STAY ON LINE 1. `margin-inline-start: auto` pushes them to the far edge, and because
- * the nav follows them in source with a full basis at narrow widths, the destinations drop beneath
- * without either control moving.
- */
 .site-header-tools {
   display: flex;
   align-items: center;

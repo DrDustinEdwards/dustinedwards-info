@@ -20,32 +20,15 @@ import { publicHtmlHeaders, SITE,
 
 import "~/styles/prose.css";
 
-/**
- * Publicly cacheable for COOKIELESS readers only. See home.tsx; same shape,
- * same downgrade in workers/app.ts.
- */
+/** Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. */
 export function headers() {
   return publicHtmlHeaders();
 }
 
 /**
- * The colophon.
- *
- * THE URL IS /colophon AND THE TITLE IS "How this site is built". A colophon is an
- * IndieWeb convention and machines expect the conventional path, but the word is
- * one many readers do not know, so the title takes the legibility. Do not swap
- * them.
- *
- * EVERYTHING HERE IS READ FROM A GENERATED ARTIFACT. Nothing on this page is typed
- * out. If you find yourself adding a fact here, it belongs in `stack-notes.json`
- * where the gate can reconcile it.
- *
- * FLAT: no filtering, no facets, no taxonomy.
- *
- * NOTHING CLIENT-SIDE, and there is nothing to enhance. The progressive-enhancement rule makes every
- * public reading route server-complete without script; this one is server-complete
- * because it is static markup over a build artifact, so the fallback and the page
- * are the same thing.
+ * The URL is /colophon (the IndieWeb path machines expect) and the title "How this site is built"
+ * (the words readers know). Do not swap them. New facts belong in `stack-notes.json`, where the gate
+ * reconciles them.
  */
 
 export function meta() {
@@ -56,15 +39,9 @@ export function meta() {
   });
 }
 
-/**
- * The heading and lead BOTH read from the descriptor. `recordsForPage` reads the
- * same list, so a record can never point at a fragment the page does not render.
- * That failure would be silent: the hit still appears and scrolls nowhere.
- */
+/** `recordsForPage` reads the same list, so no record can point at a fragment the page does not render. */
 function SectionHead({ id }: { id: string }) {
   const section = COLOPHON_SECTIONS.find((s) => s.id === id);
-  // Fail loudly rather than rendering a headless section. An id the descriptor
-  // does not know is a typo here, and the gate asserts the reverse direction.
   if (!section) throw new Error(`unknown colophon section "${id}"`);
   return (
     <>
@@ -80,20 +57,9 @@ type Anchor = {
   gate?: string;
   text?: string;
   id?: string;
-  /**
-   * False when an anonymous GET does not produce a page: the anchor still NAMES the
-   * route, it just stops pretending to be a destination. `check:features` derives
-   * the same answer and refuses a declaration that disagrees.
-   */
   anonymousGet?: boolean;
 };
 
-/**
- * A Map preserves insertion order, so the grouping is the author's rather than
- * alphabetical. That is deliberately all the structure this page has: facets over a
- * few dozen entries are decoration, and the right axes will be obvious from having
- * the data.
- */
 function byComponent() {
   const groups = new Map<string, typeof features.features>();
   for (const feature of features.features) {
@@ -104,21 +70,10 @@ function byComponent() {
   return [...groups.entries()];
 }
 
-/**
- * Every claim links to its evidence. A route anchor becomes a real link. A gate
- * anchor NAMES the script rather than linking, because the scripts are not served,
- * and `check:features` guarantees the name still resolves. A decision anchor is
- * context and says so.
- */
+/** A gate anchor names the script rather than linking: the scripts are not served. */
 function AnchorItem({ anchor }: { anchor: Anchor }) {
   if (anchor.kind === "route" && anchor.path) {
-    /*
-     * TWO REASONS A ROUTE IS NOT A DESTINATION. A PARAMETER SEGMENT is a declaration
-     * with no one URL it stands for. AN ANONYMOUS GET THAT IS NOT A PAGE is the other.
-     *
-     * A link a reader cannot follow is worse than no link: it reads as evidence until
-     * you click it. The path is still NAMED.
-     */
+    /* A link a reader cannot follow reads as evidence until clicked, so such a path is named, not linked. */
     const followable =
       !anchor.path.includes(":") &&
       !anchor.path.includes("*") &&
@@ -168,11 +123,6 @@ export default function Colophon() {
       <SiteHeader />
       <main className="page" id="main" tabIndex={-1}>
         <div className="page-inner">
-          {/*
-           * THE TITLE IS READ, NOT TYPED. This h1 was the one place it was a literal, so
-           * renaming the page would have changed the tab, the search record and the social
-           * card while the heading kept the old words.
-           */}
           <h1 className="page-title">{COLOPHON_TITLE}</h1>
 
           <div className="prose">
@@ -261,21 +211,11 @@ export default function Colophon() {
               </section>
             ))}
 
-            {/*
-             * Rendered from the SAME constant the search record is built from, so the page
-             * cannot describe it one way and the index another. Prose, not a table: it is an
-             * argument.
-             */}
             <SectionHead id="security" />
             {SECURITY_TRADEOFF.map((sentence) => (
               <p key={sentence.slice(0, 32)}>{sentence}</p>
             ))}
 
-            {/*
-             * Rendered from the SAME constant the search index is built from. Plain
-             * paragraphs: this is the section a reader is most likely to have arrived for, and
-             * it should read as prose rather than a compliance notice.
-             */}
             <SectionHead id="ai" />
             {AI_DISCLOSURE.map((sentence) => (
               <p key={sentence.slice(0, 32)}>{sentence}</p>
@@ -286,10 +226,6 @@ export default function Colophon() {
             <dl>
               {stack.notAdopted.map((entry) => (
                 <div key={entry.name}>
-                  {/*
-                   * The status is spelled out in TEXT, not carried by color or position. Usage
-                   * rule 1: hue is never the sole channel.
-                   */}
                   <dt>
                     {entry.name}{" "}
                     <span className="muted">({statusLabel(entry.status)})</span>
@@ -300,11 +236,6 @@ export default function Colophon() {
             </dl>
           </div>
 
-          {/*
-           * The colophon says how the site is BUILT; /privacy says what it RECORDS. A
-           * reader who found either is likely looking for the other, so each names the other
-           * rather than leaving it to the footer.
-           */}
           <p className="muted">
             For what the site records about a visit, and where each of those facts lives in
             the code, see <Link to="/privacy">privacy</Link>.

@@ -1,30 +1,9 @@
 /**
- * The Contents API 1 MB cap, as a pure decision `node:test` can drive.
- *
- * Renamed from artifact-limits.mjs when the committed artifact left the
- * repository: the artifact-sized readers died with it, and this survived
- * because the cap is a fact about EVERY per-file JSON-media-type read, not
- * about the artifact. `readFile` still guards markdown reads with it; a post
- * crossing 1 MB must fail naming the transport rather than surfacing
- * downstream as parse garbage.
- *
- * @see test/contents-cap.test.mjs
- */
-
-/**
- * Why a Contents API JSON response cannot be decoded, or null if it can.
- *
- * The JSON media type returns files over 1 MB with `size` set and no base64
- * content (GitHub sends `encoding: "none"` and an empty string). `readFile`
- * used to decode that empty content to an empty string, so an oversized file
- * surfaced downstream as garbage with advice that repaired nothing: the file
- * was fine and the transport dropped it.
- *
- * Pure and message-producing rather than throwing, so the caller keeps its own
- * error type and `node:test` can assert the sentence without a GitHub binding.
+ * Over 1 MB the Contents API JSON media type returns `size` with empty content and
+ * `encoding: "none"`, which would otherwise decode silently to an empty file.
  *
  * @param {{ size?: number, content?: string, encoding?: string }} file
- * @param {string} path for the message
+ * @param {string} path
  * @returns {string | null} the failure sentence, or null when the file is readable
  */
 export function contentsCapMessage(file, path) {

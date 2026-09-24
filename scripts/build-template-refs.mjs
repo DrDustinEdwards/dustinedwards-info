@@ -1,24 +1,13 @@
-/**
- * Scans the repository source for asset references into a committed manifest, which is how the
- * media library answers "does the SITE ITSELF place this".
- *
- *   npm run build:template-refs
- *
- * BOUNDARY: it reads SOURCE TEXT and matches asset paths as literal strings, so a constructed path
- * reads as unattached. That is a false negative in the safe direction: this under-claims usage and
- * never invents it, which is why the page says "no reference found" rather than "unused".
- */
+// Constructed paths read as unattached: a false negative in the safe direction, which is why the page
+// says "no reference found" rather than "unused".
 
 import { readFileSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-/*
- * `readFileSync` rather than an import attribute: the attribute form is only legal under a newer
- * module setting than this repo's, and it fails the TYPECHECK rather than the run, so it looks
- * fine until the build.
- */
+// `readFileSync` rather than an import attribute: the attribute needs a newer module setting and fails
+// the typecheck rather than the run.
 const assetManifest = JSON.parse(
   readFileSync(path.join("content", "generated", "assets.json"), "utf8"),
 );
@@ -34,9 +23,7 @@ import {
 export const TEMPLATE_REFS_PATH = path.join("content", "generated", "template-refs.json");
 
 /**
- * Every source file under the scanned roots, repo-relative with forward slashes always, because
- * the artifact is committed and compared: a backslash would make it disagree with itself across
- * machines.
+ * Forward slashes always: the artifact is committed and compared across machines.
  *
  * @param {string} dir
  * @returns {Promise<string[]>}
@@ -57,8 +44,6 @@ async function walk(dir) {
 }
 
 /**
- * The scan, as data, so both the build and the gate run one implementation.
- *
  * @returns {Promise<{ generated: number, refs: Record<string, string[]>, filesRead: number, assetsConsidered: number }>}
  */
 export async function scanTemplateRefs() {
@@ -73,9 +58,8 @@ export async function scanTemplateRefs() {
   const scanned = [];
   for (const file of kept) {
     const raw = await readFile(file, "utf8");
-    // COMMENTS GO FIRST: a doc comment naming an asset is prose about it, not a placement of it, and
-    // this module's own header caught exactly that. JSON has no comments, so it is passed through
-    // rather than run through a tokenizer that would treat a `//` inside a URL string as one.
+    // Comments go first: a doc comment naming an asset is prose, not a placement. JSON is passed through,
+    // because a tokenizer would treat a `//` inside a URL string as a comment.
     const text = file.endsWith(".json") || file.endsWith(".webmanifest")
       ? raw
       : stripComments(raw, file.endsWith(".css"));
@@ -84,19 +68,14 @@ export async function scanTemplateRefs() {
   }
   return {
     ...foldRefs(scanned),
-    // SCOPE, carried in the artifact rather than printed and forgotten: a scan that read zero files
-    // reports the same "no references" as a repository that genuinely has none.
+    // Scope is carried in the artifact: a scan that read zero files reports the same as a repo with none.
     filesRead: kept.length,
     assetsConsidered: assetPaths.length,
   };
 }
 
-/*
- * THROUGH `pathToFileURL`, NEVER BY CONCATENATING A URL SCHEME: the hand-rolled form silently did
- * nothing on this host, the two spellings differing in their slashes, so the script exited 0 and
- * the artifact was never written. A build step that succeeds while producing no output is the
- * worst shape a build step can have.
- */
+// `pathToFileURL`: on this host a hand-built URL differs in its slashes, so the script would exit 0
+// having never written the artifact.
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
   const result = await scanTemplateRefs();
   await writeFile(TEMPLATE_REFS_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");

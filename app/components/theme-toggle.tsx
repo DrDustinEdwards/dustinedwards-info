@@ -3,29 +3,12 @@ import themeEnhanceUrl from "~/enhance/dist/theme.js?url";
 import { EnhancementScript } from "~/components/enhancement-script";
 
 /**
- * ONE theme button. It switches between the two themes; the default is what a
- * reader gets until they touch it.
- *
- * WHY TWO BUTTONS SHIP AND ONE IS EVER SEEN: the control must name the theme it
- * will switch TO, and with no cookie the server cannot know what the reader is
- * seeing. So both are rendered and CSS displays exactly one, picked by
- * `data-theme` or by `prefers-color-scheme`. None of it needs script, and the
- * scripted path is then trivial: set or remove the attribute and the control
- * follows by cascade.
- *
- * THE ICON IS THE THEME IN EFFECT, THE NAME IS THE ACTION. They pull in opposite
- * directions on purpose: the icon is state, the accessible name is the outcome.
- *
- * No `aria-pressed`: this is not a control with an on and an off, it performs an
- * action and the label says which.
+ * Both buttons ship and CSS shows one: with no cookie the server cannot know the theme in effect.
+ * The icon shows the current theme and the name the action, on purpose. No `aria-pressed`: it
+ * performs an action rather than toggling a state.
  */
 export function ThemeToggle() {
-  /*
-   * IT TAKES NO PROPS, and that is the design: the resolved theme reaches this
-   * control through `<html data-theme>` alone. A `theme` prop would be a second
-   * input that could disagree with the attribute, which is how a control ends up
-   * showing one thing and posting another.
-   */
+  // No theme prop: a second input could disagree with `<html data-theme>`.
   return (
     <>
       <form
@@ -62,10 +45,6 @@ export function ThemeToggle() {
   );
 }
 
-/**
- * Inline SVG rather than an icon package, per the repo's bundle-leanness rule.
- * Both are aria-hidden because the button already carries its name.
- */
 const ICON = {
   width: 16,
   height: 16,
@@ -79,7 +58,6 @@ const ICON = {
   focusable: false,
 };
 
-/** Shown while the LIGHT theme is in effect. */
 function SunIcon() {
   return (
     <svg {...ICON}>
@@ -89,7 +67,6 @@ function SunIcon() {
   );
 }
 
-/** Shown while the DARK theme is in effect. */
 function MoonIcon() {
   return (
     <svg {...ICON}>

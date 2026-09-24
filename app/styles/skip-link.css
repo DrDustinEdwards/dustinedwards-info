@@ -1,20 +1,5 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/* Enhancement styles: none are needed to read the page, and every animation is off under
-   prefers-reduced-motion. */
-
-/*
- * Skip link, visible on focus at top 0, over the header.
- *
- * PAPER AND A DUST RULE, NOT AN INVERTED CHROME PAIR. It took `--on-chrome-muted` on
- * `--surface-chrome` with a 6px corner, which described the purple bar ruling 117 retired; against
- * a paper header that pale fill was a patch of another design, and it painted on every public
- * route. It stays OPAQUE because it overlays the header when focused and has to be readable over
- * it, but paper is the page's own ground rather than a fill, and the rule is what separates the
- * two edges that meet.
- *
- * The progress bar keeps --brand: it has width only after the chrome has scrolled away.
- */
+/* Opaque because it overlays the header when focused. The progress bar keeps --brand: it has width
+ * only after the chrome has scrolled away. */
 .skip-link {
   position: absolute;
   left: -9999px;

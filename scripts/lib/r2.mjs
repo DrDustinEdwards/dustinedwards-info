@@ -1,10 +1,6 @@
 /**
- * Listing an R2 bucket from a Node build script, through the platform proxy because the CLI has
- * no `list` verb.
- *
- * BOUNDARY: the remote flag goes on the BINDING and nowhere else, and the config carrying it is
- * built here and thrown away, so it cannot leak into the real config and point local development
- * at production R2.
+ * Through the platform proxy because the CLI has no `list` verb. The remote flag lives only in a
+ * throwaway config, so it cannot leak into the real one and point local development at production R2.
  */
 
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
@@ -14,10 +10,6 @@ import path from "node:path";
 import { getPlatformProxy } from "wrangler";
 
 /**
- * Build the throwaway config that binds ONE bucket, and hand back a proxy. Lifted out when a
- * second caller arrived: a hand-rolled copy is how the remote flag or the discard discipline would
- * quietly stop being true.
- *
  * @param {string} bucket @param {boolean} remote
  */
 async function bucketProxy(bucket, remote) {
@@ -27,8 +19,7 @@ async function bucketProxy(bucket, remote) {
     configPath,
     JSON.stringify({
       name: "r2-list",
-      // Matched to wrangler.jsonc.example, and no flags for its reason: Node
-      // compatibility is on by default at this date.
+      // No compatibility flags: Node compatibility is on by default at this date.
       compatibility_date: "2026-09-01",
       r2_buckets: [{ binding: "BUCKET", bucket_name: bucket, ...(remote ? { remote: true } : {}) }],
     }),
@@ -38,10 +29,8 @@ async function bucketProxy(bucket, remote) {
 }
 
 /**
- * Pull every object in a bucket to disk. THE ONLY COPY OUTSIDE THE ACCOUNT, the same-account
- * mirror doing nothing for account loss. **THE SIZE IS VERIFIED PER OBJECT, not just the count**:
- * a short read writes a file that exists, has a plausible name, and restores to a corrupt image.
- * Keys may carry a separator, so the structure is recreated rather than flattened.
+ * Size is verified per object, not just the count: a short read writes a plausible file that
+ * restores to a corrupt image.
  *
  * @param {object} options
  * @param {string} options.bucket
@@ -65,8 +54,6 @@ export async function downloadAllObjects({ bucket, destDir, remote = true }) {
       for (const listed of page.objects) {
         const object = await handle.get(listed.key);
         if (!object) {
-          // Listed and then gone. Reported rather than skipped: a backup that
-          // silently omits an object it just saw is the failure being guarded.
           mismatched.push(`${listed.key} (listed but could not be read)`);
           continue;
         }
@@ -91,13 +78,10 @@ export async function downloadAllObjects({ bucket, destDir, remote = true }) {
 }
 
 /**
- * Every object under a prefix, PAGED TO THE END. Not a nicety: this repo has already shipped a
- * listing that ignored it, and a prune reported removing nothing for items on a later page.
- *
  * @param {object} options
- * @param {string} options.bucket bucket name
- * @param {string} [options.prefix] "" lists the whole bucket
- * @param {boolean} [options.remote] false reads local state
+ * @param {string} options.bucket
+ * @param {string} [options.prefix]
+ * @param {boolean} [options.remote]
  * @returns {Promise<Array<{ key: string, size: number, uploaded: string, etag: string }>>}
  */
 export async function listAllObjects({ bucket, prefix = "", remote = true }) {
@@ -128,15 +112,11 @@ export async function listAllObjects({ bucket, prefix = "", remote = true }) {
       }
       if (!page.truncated) break;
       cursor = page.cursor;
-      // A truncated page with no cursor would spin forever. Refuse rather than
-      // hand back a partial listing that every caller would treat as total.
       if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
     }
   } finally {
-    // The runtime can throw on teardown after a remote session, and the listing is already in hand.
-    // Note what this does NOT swallow: an error from the listing itself propagates, which is the whole
-    // safety property, a caller that deletes having to tell "the bucket holds nothing" from "the
-    // listing did not finish".
+    // The runtime can throw on teardown after a remote session. Only teardown is swallowed: a
+    // listing error must propagate so a deleting caller can tell "empty" from "did not finish".
     try {
       await proxy.dispose();
     } catch {
@@ -148,23 +128,15 @@ export async function listAllObjects({ bucket, prefix = "", remote = true }) {
 }
 
 /**
- * A listing a destructive caller may act on, or a refusal.
- *
- * **Why this is separate.** A prune once printed a transport error mid-output and carried on to
- * report one orphan. It was correct that time and would have looked EXACTLY THE SAME if the
- * listing had been cut short, and the difference is deleting one dead file or every live one. So
- * a caller states how many objects it expects to still be there:
- *
- *   - an EMPTY listing is always a refusal: a bucket that holds nothing needs no prune.
- *   - a listing missing a key the caller expects is demonstrably missing objects that certainly
- *     exist, so everything else it appears to be missing is unproven too.
+ * A cut-short listing looks identical to a complete one, and a prune acts on what is absent. A
+ * listing missing a key known to exist is incomplete, so everything else it lacks is unproven too.
  *
  * @param {object} options
  * @param {string} options.bucket
  * @param {string} [options.prefix]
  * @param {boolean} [options.remote]
- * @param {Set<string>} options.expected keys the caller knows must be present
- * @param {string} options.label for the message
+ * @param {Set<string>} options.expected
+ * @param {string} options.label
  */
 export async function listForPrune({ bucket, prefix = "", remote = true, expected, label }) {
   const objects = await listAllObjects({ bucket, prefix, remote });

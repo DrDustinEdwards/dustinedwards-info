@@ -2,23 +2,17 @@ import { data } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
 import { EmptyState, Panel } from "~/components/admin/panel";
-// Constants come from the SHARED module, never from the `.server` one. This
-// component renders on the client too, where a `.server` import is stubbed out and
-// every value from it arrives undefined.
+// Constants from the shared module, never the `.server` one: on the client a `.server` import is
+// stubbed out and every value from it arrives undefined.
 import { CACHE_SENTENCE, TOP_N } from "~/lib/admin/origin-requests.mjs";
 import { fetchTraffic } from "~/lib/admin/traffic.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin.origin-requests";
 
 /**
- * WHAT THIS PANEL COUNTS: an edge HIT can serve a reader without the Worker
- * running, so this is a count of ORIGIN REQUESTS, a floor under readership and
- * never a measure of it. The words this panel must not use are asserted by the
- * gate rather than left to reviewer memory.
- *
- * THE ERROR STATE IS THE ORDINARY STATE ON A DEV MACHINE, which is why the loader
- * RETURNS the error rather than throwing: a throw would take out the admin route
- * segment and replace the whole cockpit with an error boundary.
+ * An edge HIT serves without the Worker running, so this counts origin requests: a floor under
+ * readership, never a measure of it. The loader returns errors rather than throwing, because a
+ * throw would replace the whole admin segment with an error boundary.
  */
 
 export function meta() {
@@ -26,10 +20,6 @@ export function meta() {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  /*
-   * `fetchTraffic` is an HTTP call to the Analytics Engine SQL API, so it is a
-   * real network hop to a third party and it was unmarked.
-   */
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   const result = await timed(timings, "ae_fetch_traffic", () => fetchTraffic(getEnv(context)));
@@ -38,7 +28,6 @@ export async function loader({ context }: Route.LoaderArgs) {
 }
 
 
-/** en-dash-free, matching the formatting the rest of the site uses for dates. */
 function formatWindow(days: number) {
   return days === 1 ? "the last day" : `the last ${days} days`;
 }
@@ -47,8 +36,6 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
   const { result } = loaderData;
   const report = result.status === "live" ? result.data : null;
   const rows = report?.rows ?? [];
-  // The bar is proportional to the biggest row, not to the total, so the shape
-  // of the distribution is readable when one path dominates.
   const max = rows.reduce((m, r) => Math.max(m, r.originRequests), 0);
   const shown = rows.reduce((sum, r) => sum + r.originRequests, 0);
   const remainder = report ? Math.max(0, report.totalOriginRequests - shown) : 0;
@@ -61,8 +48,6 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
       result={result}
     >
       {result.status === "error" ? (
-        // Boring and visible. No color carries the meaning on its own: it is a
-        // sentence, and the panel chip beside the title already says error.
         <p className="panel-error" role="status">
           {result.message}
         </p>
@@ -90,10 +75,6 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
                     <th scope="row">{row.path}</th>
                     <td className="origin-count">{row.originRequests.toLocaleString()}</td>
                     <td className="origin-bar-cell">
-                      {/*
-                       * The one inline style on this page, and it is the sanctioned kind: a runtime
-                       * numeric value no token could name. The color comes from the stylesheet.
-                       */}
                       <span
                         className="origin-bar"
                         style={{ width: `${max > 0 ? (row.originRequests / max) * 100 : 0}%` }}
@@ -105,16 +86,8 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
               </tbody>
             </table>
           </div>
-          {/*
-           * ONE STRING, not interpolated JSX children: React SSR splices comment nodes
-           * between adjacent text nodes, so a sentence assembled from several expressions
-           * renders with comments through it.
-           */}
-          {/*
-           * THE CAVEAT, AS A DISCLOSURE. It was this table's `<caption>`, which a screen
-           * reader announces before EVERY row. The closed summary is enough to act on.
-           * Assembled in JS for the one-text-node reason above.
-           */}
+          {/* One string: React SSR splices comment nodes between adjacent text children. */}
+          {/* A disclosure, not a `<caption>`, which screen readers announce before every row. */}
           <details className="admin-explain origin-explain">
             <summary>What these counts include, and what they miss</summary>
             <p>

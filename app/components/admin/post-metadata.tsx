@@ -6,19 +6,8 @@ import {
   splitReading,
 } from "~/lib/editor/frontmatter";
 
-/**
- * The frontmatter keys the editor carried and never offered.
- *
- * WHY THIS IS NOT IN THE SETTINGS DRAWER: the drawer is a `<dialog>` opened with
- * `showModal()`, so its fields can only be EDITED by someone whose browser ran the
- * script that opens it. A control inside a modal nobody can open is a control that
- * does not exist on that path, and the brief is that these work with scripting off.
- *
- * THE RULE EVERY CONTROL HERE OBEYS: an absent field never means cleared. A text
- * input always submits, even empty; the two that are not safe are handled
- * explicitly, and neither adds a way for a missing field to read as an author's
- * decision.
- */
+// Not in the settings drawer: that is a showModal() dialog, and these fields must work without script.
+// An absent field never means cleared.
 export function PostMetadata({
   formId,
   featured,
@@ -39,12 +28,9 @@ export function PostMetadata({
   furtherReading: string;
   ogTitle: string;
   ogDescription: string;
-  /** For the OG fallback notes, which quote the value that would be used. */
   title: string;
   description: string;
-  /** Every post with its state; the picker offers the published ones. */
   linkTargets: { slug: string; title: string; state: string }[];
-  /** The post being edited, so it cannot cite itself. */
   currentSlug: string;
 }) {
   const reading = splitReading(furtherReading);
@@ -52,22 +38,12 @@ export function PostMetadata({
     reading.internal.map((item) => item.url.replace(/^\/blog\//, "")),
   );
 
-  /*
-   * PUBLISHED ONLY, and not the post being edited. Further reading is rendered to
-   * the public, so offering a draft would be offering a link that 404s for every
-   * reader; the palette wants the wider list, so the narrowing is here rather than
-   * there. Nothing enforces the self-citation rule downstream, so it is enforced by
-   * not being offered.
-   */
+  // Published only: further reading is public, so offering a draft would be offering a link that 404s.
   const candidates = linkTargets.filter(
     (target) => target.state === "published" && target.slug !== currentSlug,
   );
 
-  /*
-   * One spare row, always: it is what makes adding a link possible without script,
-   * and saving reveals the next spare. Two spares were rejected as clutter, since the
-   * cost of a second link is one more save rather than a lost one.
-   */
+  // One spare row is what makes adding a link possible without script.
   const rows = [...reading.external, { title: "", url: "" }];
 
   return (
@@ -82,11 +58,8 @@ export function PostMetadata({
       <div className="post-metadata-body">
         <fieldset className="post-metadata-group">
           <legend>Index</legend>
-          {/*
-           * THE HIDDEN "false" IS NOT REDUNDANT: an unticked checkbox is absent from the
-           * submission entirely, so without this the parser would read that absence. It is
-           * rendered BEFORE the checkbox because `fieldsFromForm` takes the LAST value.
-           */}
+          {/* An unticked checkbox submits nothing, so this carries the "false". It comes first
+              because `fieldsFromForm` takes the LAST value. */}
           <input type="hidden" form={formId} name="featured" value="false" />
           <label className="post-metadata-check">
             <input
@@ -174,12 +147,8 @@ export function PostMetadata({
 
         <fieldset className="post-metadata-group">
           <legend>Further reading</legend>
-          {/*
-           * THE MARKER AND THE CARRIED VALUE, together, and neither is optional. The
-           * marker says this control was on the page, so an empty result is the author
-           * clearing the list rather than a form that never offered one. The hidden value is
-           * what the parser falls back to for every caller that is not this section.
-           */}
+          {/* The marker says this control was on the page, so an empty result means the author
+              cleared the list; the hidden value is the fallback for every other caller. */}
           <input type="hidden" form={formId} name={FR_CONTROL} value="1" />
           <input
             type="hidden"
@@ -234,11 +203,7 @@ export function PostMetadata({
                 {candidates.map((target) => (
                   <li key={target.slug}>
                     <label className="post-metadata-check">
-                      {/*
-                       * The VALUE carries the slug and the title together, so the picker contributes
-                       * exactly one field name to the submission tuple no matter how long the blog
-                       * gets.
-                       */}
+                      {/* Slug and title in one value, so the picker adds one field name however long the blog gets. */}
                       <input
                         type="checkbox"
                         form={formId}

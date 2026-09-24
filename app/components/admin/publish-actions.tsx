@@ -7,18 +7,6 @@ import {
 } from "~/lib/editor/publish-transition.mjs";
 import { OverflowMenu } from "./overflow-menu";
 
-/**
- * The publish state machine, as controls. The primary button names the
- * transition rather than stating a field.
- *
- * EVERY BUTTON CARRIES ITS OWN TRANSITION. Each control submits
- * `intent=<transition id>` and the server reads the draft flag off that intent, so
- * nothing is flipped, nothing is armed, and no handler has to run for the request
- * to say what the author asked for.
- *
- * The transitions come from `publish-transition.mjs`: the intent is in the
- * markup, readable off the rendered page rather than hidden in a click handler.
- */
 export function PublishActions({
   state,
   everPublished,
@@ -78,14 +66,8 @@ export function PublishActions({
 
       {primary.ceremony ? (
         <>
-          {/*
-           * A REAL SUBMIT that a script INTERCEPTS. It was `type="button"`, so with
-           * scripting off there was no path to a first publication at all. Unscripted, the
-           * request reaches the server as a plain `publish`, which is the ASK rather than
-           * the answer. The ceremony was never the dialog: it is `savePost` refusing an
-           * unconfirmed first publication, so a click landing before hydration still cannot
-           * publish.
-           */}
+          {/* A real submit, so it works without script. `savePost` refuses an unconfirmed first
+              publication, so a click before hydration still cannot publish. */}
           <button
             type="submit"
             name="intent"
@@ -117,12 +99,7 @@ export function PublishActions({
           >
             {busy ? "Saving" : primary.label}
           </button>
-          {/*
-           * RENDERED ONLY WHERE IT CAN BE OPENED. An unconditional dialog would leave two
-           * submits nothing can reach, and they would not be harmless: the reschedule arm
-           * sends the in-place save, which on a draft means `draft:false`, so the page would
-           * carry a publication nobody can see and the fixture would record it.
-           */}
+          {/* Only where it can be opened: its unreachable reschedule submit would send `draft:false`. */}
           {state !== "draft" ? (
             <PublishCeremony
               open={ceremony}
@@ -138,19 +115,8 @@ export function PublishActions({
   );
 }
 
-/**
- * A `<dialog>` for the platform focus trap. It sits INSIDE the editing form and
- * `showModal()` moves an element to the top layer visually without moving it in
- * the DOM, so form association by containment still holds.
- *
- * BOTH SEND THE CONFIRMED INTENT. A closed `<dialog>` still submits the fields it
- * contains, so a confirmation in a hidden input would have to be armed on click;
- * the submitter is the only part of a form that means "this is the control that
- * was pressed".
- *
- * The RESCHEDULE arm sends the ordinary in-place save: a post already public is
- * not publishing for the first time.
- */
+// Inside the form on purpose: showModal() moves it to the top layer without moving it in the DOM.
+// Both buttons send the confirmed intent as the submitter, since a closed dialog still submits its fields.
 function PublishCeremony({
   open,
   onClose,

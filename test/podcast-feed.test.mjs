@@ -1,13 +1,3 @@
-/**
- * The Germomics feed parser and the home slot choice.
- *
- * The feed is another server's output rendered into this site's home page, so the tests that matter
- * are the refusals: an episode whose audio or page is not on the allowlisted https hosts is dropped,
- * never rendered. The fixture item is the live feed's shape as read on 2026-09-23.
- *
- * @see app/lib/podcast/feed.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 

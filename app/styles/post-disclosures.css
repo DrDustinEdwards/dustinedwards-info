@@ -1,16 +1,3 @@
-/*
- * THE DISCLOSURE ON A POST PAGE: `.post-details`, the `:::details` directive, supplementary
- * material inside the prose.
- *
- * IT USED TO BE TWO. `.post-history` was the second and is no longer a disclosure at all: Direction
- * D turned it into one ruled mono line, so its rules moved to post-shell.css with it. The marker
- * still has one owner because there is now one thing wearing it.
- *
- * TOKENS ONLY, no raw hex: a color invented here would be a color no contrast pair measures.
- */
-
-/* Ruled top and bottom, no box: radius 0 and no fill is the direction. Adjacent disclosures share
-   one rule rather than stacking two. */
 .post-details {
   margin: 1.875rem 0;
   border-block: var(--line-w) solid var(--dust);
@@ -22,11 +9,8 @@
   border-block-start: 0;
 }
 
-/*
- * The marker is the site's own, not the browser's: the default triangle is a different shape and
- * weight in every engine. Mono, because it is the only glyph on the line and a mono plus and minus
- * are the same width, so the summary text does not shift when it opens.
- */
+/* The site's own marker: the default triangle differs in every engine. A mono plus and minus are the
+ * same width, so the summary does not shift when it opens. */
 .post-details > summary {
   display: flex;
   align-items: baseline;
@@ -58,21 +42,12 @@
   color: var(--brand-hover);
 }
 
-/* NO ANIMATION AND NO HEIGHT TRANSITION. The handoff asks for none, so there is none to disable
-   under prefers-reduced-motion either. */
 .post-details > *:not(summary) {
   padding-block-end: 1rem;
 }
 
-/*
- * ON PAPER EVERY DISCLOSURE IS OPEN, because a printed page has nothing to click and a collapsed
- * appendix prints as a heading with no appendix under it.
- *
- * TWO FORMS FOR TWO GENERATIONS OF ENGINE. `::details-content` is the pseudo-element that addresses
- * the hidden part and is how this is done now; the sibling rule is what worked before it existed,
- * when the closed state was a `display: none` in the UA sheet that an author rule could beat. An
- * engine understands one of them.
- */
+/* Every disclosure is open on paper. ::details-content serves current engines; the sibling rule serves
+ * engines from before it. */
 @media print {
   .post-details::details-content {
     content-visibility: visible;

@@ -5,15 +5,6 @@ import { runTool } from "~/lib/operator/api.server";
 import { MENTION_POLICIES } from "~/lib/webmention/decide.server";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 
-/**
- * The moderation queue over the operator token.
- *
- * OBSERVATION BOUNDARY. `runTool` is driven directly rather than through
- * `/api/operator`, on `operator.test.ts`' pattern: the route is a thin shell
- * over it and what is worth asserting is the capability decision and the write,
- * not the JSON envelope, which verify-live reads on the wire.
- */
-
 const OPERATOR: Actor = { kind: "operator", id: "test-operator" };
 const SMOKE: Actor = { kind: "smoke", id: "test-smoke" };
 const ADMIN: Actor = { kind: "admin" };
@@ -31,7 +22,6 @@ async function seedPost() {
     .run();
 }
 
-/** One row, in whatever state the case needs. Returns its id. */
 async function seedMention(source: string, status = "pending"): Promise<number> {
   const now = Math.floor(Date.UTC(2026, 8, 5) / 1000);
   await env.DB.prepare(
@@ -60,13 +50,8 @@ beforeEach(async () => {
 
 describe("decide_mention: who may decide", () => {
   it("REFUSES THE SMOKE ACTOR every decision, because it may not write at all", async () => {
-    /*
-     * `WRITE_CAPABILITIES.smoke` is write:false, and this is the same table the
-     * publish path consults. The smoke credential cannot reach `/api/operator`
-     * in production (that path authenticates a different token), so this asserts
-     * the capability rather than a route: if a future caller hands a smoke actor
-     * to `runTool`, it is refused here rather than by luck.
-     */
+    /* The smoke credential cannot reach `/api/operator` in production, so this asserts the
+     * capability: a smoke actor handed to `runTool` is refused here rather than by luck. */
     const id = await seedMention("https://elsewhere.example/smoke");
 
     for (const decision of ["approve", "reject", "delete"]) {
@@ -75,8 +60,6 @@ describe("decide_mention: who may decide", () => {
       if (!result.ok) expect(result.error, decision).toContain(MENTION_POLICIES.write);
     }
 
-    /* NOTHING MOVED. A refusal that had already written would be a refusal in
-     * name only. */
     expect(await statusOf("https://elsewhere.example/smoke")).toBe("pending");
   });
 
@@ -104,18 +87,14 @@ describe("decide_mention: who may decide", () => {
     expect(await statusOf(source)).toBe("rejected");
     expect(rejected).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
 
-    /* And back again, which is what makes it reversible rather than a claim. */
     const approved = await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "approve" });
     expect(await statusOf(source)).toBe("approved");
     expect(approved).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
   });
 
   it("REFUSES THE OPERATOR a delete, on delete_post's terms", async () => {
-    /*
-     * `WRITE_CAPABILITIES.operator` is destroy:false. A mention row came from a
-     * stranger and converges toward nothing, so there is no derivation that
-     * could produce it again: the same reason `delete_post` is admin-only.
-     */
+    /* A mention row came from a stranger and no derivation could produce it again, so the
+     * operator may not destroy it (the same reason `delete_post` is admin-only). */
     const source = "https://elsewhere.example/operator-delete";
     const id = await seedMention(source);
 
@@ -143,12 +122,8 @@ describe("decide_mention: who may decide", () => {
   });
 
   it("does NOT purge when nothing moved", async () => {
-    /*
-     * A row that is `unverified` or `failed` has no evidence to approve, and the
-     * DB layer's `where` refuses it. Reporting that as success with
-     * `changed: false` is the honest answer; purging for a page that did not
-     * change would spend a rate-limited call on nothing.
-     */
+    /* `changed: false` is the honest answer; purging for a page that did not change would
+     * spend a rate-limited call on nothing. */
     const source = "https://elsewhere.example/unverified";
     const id = await seedMention(source, "unverified");
 
@@ -208,11 +183,7 @@ describe("list_mentions", () => {
   });
 
   it("REFUSES AN UNKNOWN STATUS rather than answering with an empty list", async () => {
-    /*
-     * An agent that typed `pendign` and got `[]` would conclude the queue was
-     * empty, which is the wrong repair and is indistinguishable from the right
-     * one. The refusal names the set it will accept.
-     */
+    /* An agent that typed `pendign` and got `[]` would conclude the queue was empty. */
     await seedMention("https://elsewhere.example/p", "pending");
     const result = await runTool(operatorEnv(), OPERATOR, "list_mentions", { status: "pendign" });
     expect(result).toMatchObject({ ok: false, status: 400 });
