@@ -22,31 +22,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
  */
 const RSS_FILE = join(root, ".gate-pids", "check-all-rss.csv");
 
-/** Fails closed below this. Moves up only to the count a run printed, never to a sum. */
-const MINIMUM_GATES = 40;
-
-/** check:floors reads the other gates' output, so it is not spawned like them. */
-const FLOOR_READER = "check:floors";
-
-/**
- * check:head's stdout carries floor lines measured on a checkout, which would win the dedupe.
- * @type {Record<string, string>}
- */
-const FLOOR_OUTPUT_EXCLUDED = {
-  "check:head": "its stdout carries the whole tier's floor lines, measured against a checkout rather than disk.",
-};
+/** Fails closed below this. Moves only to the count a run printed, never to a sum. */
+const MINIMUM_GATES = 19;
 
 /**
  * Gates a clean checkout cannot run, each with its reason.
  * @type {Record<string, string>}
  */
 export const CI_EXCLUDED = {
-  /* Bootstrap copies the example, so real equals example and the gate fails in any checkout. */
-  "check:config": "cannot pass in any checkout: bootstrap copies the example, so real == example.",
   /* Provisioning a CI D1 would invent the state the backup path is checked against. */
   "check:backup": "needs the gitignored .wrangler/ miniflare state, absent from a checkout.",
-  /* Vacuous in CI: there is only HEAD to compare disk against. */
-  "check:head": "vacuous in CI: it compares disk to HEAD, and CI has only HEAD.",
   /*
    * Public cases need gitignored local D1 content. Kept off ship: a slow preview boot on a loaded
    * machine would fail a ship for a reason that is not the site.
@@ -54,132 +39,54 @@ export const CI_EXCLUDED = {
   "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
   /* A CI client build would measure a build nothing deploys. */
   "check:page-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
-  /*
-   * Its whole subject is gitignored, so in CI it can only ever report its skip. Excluded rather
-   * than left to skip green, because a gate that structurally cannot assert in CI reporting a pass
-   * is a vacuous check.
-   */
-  "check:design-inputs": "its subject is the gitignored .design-sync/ derived inputs, which a clean checkout never generates; in CI it could only ever skip.",
 };
 
 /**
- * Every discovered gate must be tiered here or the runner refuses to start.
+ * Every discovered gate must be tiered here or the runner refuses to start. Ruling 150 cut the
+ * list to the checks that have caught real mistakes, and the guards against harm that cannot be
+ * undone.
  *
- * REPORT is the third value and it is not a weaker tier, it is a different job: a report gate is
- * run by name, by a human or by a CI step that does not block, and no tier selects it. It exists
- * because "leaves CI" and "leaves check:all" are different removals, and a gate that is merely
- * moved to network is still run by check:all. Ruling 116.
- *
- * @type {Record<string, "offline" | "network" | "report" | undefined>}
+ * @type {Record<string, "offline" | "network" | undefined>}
  */
 export const TIERS = {
-  /*
-   * The typecheck is a gate, tiered offline so check:head typechecks an extracted HEAD. It
-   * delegates to `npm run typecheck`, which package.json defines.
-   */
-  /* Report (ruling 116): a decisions volume is a Capsid document, and its length is the seat's
-     business rather than a condition on deploying the site. */
-  "check:volumes": "report",
+  /* Delegates to `npm run typecheck`, so check:changed and CI typecheck through the tier. */
   "check:types": "offline",
-  "check:content": "offline",
-  /* Offline. The network half, `pubs-pipeline`, is never a gate: it would fail on Crossref's bad day. */
-  "check:publications": "offline",
-  "check:config": "offline",
-  "check:search": "offline",
-  "check:policy": "offline",
-  "check:contrast": "offline",
-  /* Offline: reads font binaries and their stylesheets. */
-  "check:fonts": "offline",
-  /* Reads its inputs off disk, so `--ci` runs it (ruling 111). */
-  "check:design-sheets": "offline",
-  /* Offline: content hashes over the sheets and the flatten they produced, and renders nothing.
-     On the tier `ship` runs, because the staleness it catches is invisible to every other gate:
-     the converter copies ds-styles.css verbatim and reports nothing about its age. */
-  "check:design-inputs": "offline",
-  /* Offline: reads conventions.md and the sheets it names, and renders nothing. Ruling 120's
-     first item, because the canvas reads that file every time it designs. */
-  "check:design-vocabulary": "offline",
-  /* Report (ruling 116). It scores the DIFF rather than the tree, so on the tree its findings
-     are false positives, and a score is a preference: 83 of 83 in-scope findings were false
-     positives when the audit opened them. The ci.yml step that runs it does not block. */
-  "check:slop": "report",
-  /* Network: the `updated_at` it compares lives in Capsid (ruling 109). */
-  "check:guidelines": "network",
-  "check:logo": "offline",
-  "check:charts": "offline",
-  "check:diagrams": "offline",
-  "check:admin-ui": "offline",
-  /* Offline because it renders rather than fetches; it needs the stack.json the preflight builds. */
-  /* Offline: reads scripts/ as source and runs no wrangler command. */
-  "check:d1-address": "offline",
-  "check:microformats": "offline",
-  "check:urls": "offline",
-  /* Offline: walks public/ and reads route source. The R2 half is check:media's (ruling 127). */
-  "check:asset-names": "offline",
-  /* Offline: reads tracked files and a word list. */
-  "check:spelling": "offline",
-  // Sees an axis dropped, not wrong SQL.
-  "check:media-axes": "offline",
-  /* Certifies the last local build, stale or not. It also RENDERS now, so like
-     check:microformats it needs the stack.json the preflight builds. */
-  "check:page-payload": "offline",
-  // Reads each route's action as SOURCE and proves every destructive intent
-  // calls the confirmation predicate inside its own branch. It runs no action,
-  // so it sees a guard ABSENT, not a guard present and wrong.
-  "check:destructive": "offline",
-  /* In CI: a guard's scope change fails silently and permissively. */
-  "check:hook-scope": "offline",
-  /* In CI: a hook that stops parsing takes the guards with it. */
-  "check:hook-syntax": "offline",
-  /* In CI it reads only the tracked half of the settings, and says so. */
-  "check:hook-matchers": "offline",
-  /* Runs the counting gates to read their floors; check:head excludes it. */
-  "check:floors": "offline",
-  // Reads the tracked example config, package.json and drizzle/. No network.
-  "check:stack": "offline",
-  // Parses routes.ts and reads gate scripts off disk. No network.
-  "check:features": "offline",
-  // Reads workers/app.ts and nothing else. It asserts what the SOURCE declares
-  // and cannot see the wire; the deployed headers are verify-live's assertions.
-  "check:headers": "offline",
-  // Cannot see a secret inlined into a client chunk.
-  "check:secrets": "offline",
-  // Live database drift is check:invariants --remote.
-  "check:migrations": "offline",
-  // Sees uncommitted work and line endings, never the deployed build.
-  "check:head": "offline",
-  // node:test over test/. The ONE gate here that asserts BEHAVIOUR rather than
-  // the repo's shape: it imports shipped modules and checks what they do with a
-  // given input. See test/README.md for the three-instrument split.
+  // node:test over test/, including the visibility, schema and write-path invariants.
   "check:tests": "offline",
   /*
    * Runs the Worker's modules in workerd against local bindings. `test/worker/setup.ts` makes any
    * outbound fetch throw, so offline is enforced.
    */
   "check:worker": "offline",
-  // Offline by DEFAULT: esbuild plus in-memory SQLite, no network, no bindings.
-  // `--remote` adds the live database as a third schema source, and check:all
-  // passes it. Same shape as check:llms and check:backup.
-  "check:invariants": "offline",
-  // Pure by default; the D1 comparison is opt-in behind --local/--remote.
-  "check:llms": "offline",
-  // Defaults to --local, which reads miniflare state on disk rather than the
-  // deployed database. `check:all` re-runs it against --remote.
+  "check:content": "offline",
+  // llms.txt, microformats and the publication twins. Pure by default; `--remote` adds D1.
+  "check:machine-readable": "offline",
+  "check:features": "offline",
+  /* Offline: reads font binaries and their stylesheets. */
+  "check:fonts": "offline",
+  "check:diagrams": "offline",
+  "check:contrast": "offline",
+  /* Certifies the last local build, stale or not, and renders, so it needs stack.json. */
+  "check:page-payload": "offline",
+  // The guards: none of these has caught a defect yet, and each guards harm that can't be undone.
+  // Cannot see a secret inlined into a client chunk.
+  "check:secrets": "offline",
+  // Live database drift is the schema test with SCHEMA_LIVE=1, which check:all sets.
+  "check:migrations": "offline",
+  "check:policy": "offline",
+  // Reads workers/app.ts. It asserts what the SOURCE declares and cannot see the wire.
+  "check:headers": "offline",
+  "check:urls": "offline",
+  // Reads each route's action as SOURCE and proves every destructive intent calls the
+  // confirmation predicate inside its own branch. It sees a guard ABSENT, not one present and wrong.
+  "check:destructive": "offline",
+  // Defaults to --local, which reads miniflare state on disk. `check:all` re-runs it against --remote.
   "check:backup": "offline",
-  // No meaningful offline mode: `--local` reads an empty bucket. Network, always.
   /*
    * Network: the preview server's AI_SEARCH binding reaches a real instance. Ship does not run
    * it, so layout defects can ship.
    */
   "check:browser": "network",
-  "check:media": "network",
-  /* `--local` would read an empty bucket and report a clean sweep. */
-  "check:image-weight": "network",
-  /* An offline mode could only report that it did not look. */
-  "check:uptime": "network",
-  /* Report (ruling 116). It returns to a tier at the cutover, which is recorded in CUTOVER.md
-     beside the DNS step that makes mail a live path. */
-  "check:mail": "report",
   /* A local form would compare two empty databases. Weekly, because it is the slowest gate. */
   "check:restore": "network",
 };
@@ -190,17 +97,12 @@ export const TIERS = {
  */
 const REMOTE_ARGS = {
   "check:backup": ["--remote"],
-  "check:llms": ["--remote"],
-  "check:media": ["--remote"],
-  // Its schema.ts-against-migrations comparison is pure; --remote adds the
-  // third source, the live database, which is where an unapplied migration or a
-  // hand-altered column would show up and nowhere else.
-  "check:invariants": ["--remote"],
-  /* `--remote` adds the cron triggers registered on the platform. */
-  "check:config": ["--remote"],
+  "check:machine-readable": ["--remote"],
 };
 
 const all = process.argv.includes("--all");
+/* The schema test compares the live database only when asked; every spawned gate inherits this. */
+if (all) process.env.SCHEMA_LIVE = "1";
 /** `--ci` runs the offline tier minus what a clean checkout cannot run. */
 const ci = process.argv.includes("--ci");
 
@@ -226,7 +128,7 @@ function discoverGates() {
   if (untiered.length > 0) {
     throw new Error(
       `${untiered.length} gate(s) are not classified in TIERS: ${untiered.join(", ")}. ` +
-        `Add each as "offline", "network" or "report". Refusing to run rather than silently ` +
+        `Add each as "offline" or "network". Refusing to run rather than silently ` +
         `dropping them from the default tier.`,
     );
   }
@@ -371,8 +273,8 @@ function main() {
     );
   }
   console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
-  /* Gitignored; check:publications compares it against a fresh generation. */
-  process.stdout.write("  build:publication-twins (the twins check:publications compares) ... ");
+  /* Gitignored; check:machine-readable compares it against a fresh generation. */
+  process.stdout.write("  build:publication-twins (the twins check:machine-readable compares) ... ");
   const twinned = runGate("build:publication-twins", []);
   if (!twinned.ok) {
     console.log("FAILED");
@@ -397,10 +299,8 @@ function main() {
   console.log(`ok (${(enhanced.ms / 1000).toFixed(1)}s)`);
   /* Derived, so a new gate is in CI unless argued out. */
   const offline = gates.filter((name) => TIERS[name] === "offline");
-  /* A report gate is selected by no tier, which is the whole of what the value means. */
-  const reported = gates.filter((name) => TIERS[name] === "report");
   const selected = all
-    ? gates.filter((name) => TIERS[name] !== "report")
+    ? gates
     : ci
       ? offline.filter((name) => !CI_EXCLUDED[name])
       : offline;
@@ -430,10 +330,6 @@ function main() {
       `  CI tier: ${selected.length} of ${offline.length} offline gate(s). ` +
         `Excluded, with reasons in CI_EXCLUDED: ${applied.join(", ")}`,
     );
-  }
-
-  if (reported.length > 0) {
-    console.log(`  report tier, run by name and by no tier: ${reported.join(", ")}`);
   }
 
   console.log(
@@ -493,11 +389,7 @@ function main() {
 
   /** @type {ReturnType<typeof runGate>[]} */
   const results = [];
-  /* Runs last and reads the captured output instead of re-running the tier. */
-  const readsFloorLines = selected.includes(FLOOR_READER);
-  const spawnable = selected.filter((name) => name !== FLOOR_READER);
-
-  for (const name of spawnable) {
+  for (const name of selected) {
     // JUSTIFIED SUBSTITUTION. Partial on purpose: absence means no extra args.
     const args = all ? (REMOTE_ARGS[name] ?? []) : [];
     process.stdout.write(`  ${name}${args.length ? ` ${args.join(" ")}` : ""} ... `);
@@ -516,51 +408,6 @@ function main() {
         : result.ok
           ? `ok (${seconds}s${peak})`
           : `FAILED (${seconds}s${peak})`,
-    );
-  }
-
-  /*
-   * Fed only passing gates' output; `gates` is passed separately because a silent gate leaves no
-   * trace in the text.
-   */
-  if (readsFloorLines) {
-    process.stdout.write(`  ${FLOOR_READER} ... `);
-    const usable = results.filter((r) => r.ok && !FLOOR_OUTPUT_EXCLUDED[r.name]);
-    const payload = JSON.stringify({
-      gates: usable.map((r) => r.name),
-      output: usable.map((r) => r.output).join("\n"),
-    });
-    const started = Date.now();
-    const spawned = spawnSync(
-      process.execPath,
-      [join(root, "scripts", "check-floors.mjs"), "--from-stdin"],
-      { cwd: root, encoding: "utf8", input: payload, maxBuffer: 64 * 1024 * 1024 },
-    );
-    const stdout = spawned.stdout ?? "";
-    const stderr = spawned.stderr ?? "";
-    const floorsResult = {
-      name: FLOOR_READER,
-      ok: spawned.status === 0 && (stdout.length > 0 || stderr.length > 0),
-      errored: stdout.length === 0 && stderr.length === 0,
-      status: typeof spawned.status === "number" ? spawned.status : null,
-      reason:
-        stdout.length === 0 && stderr.length === 0
-          ? `wrote nothing to either stream (status ${spawned.status})`
-          : "",
-      ms: Date.now() - started,
-      output: `${stdout}${stderr}`,
-      // Measured on the same terms as every other gate: it is spawned like one,
-      // and a gate excluded from the table is a gate nobody would think to look at.
-      peakRss: peakBetween(RSS_FILE, started, Date.now()),
-    };
-    results.push(floorsResult);
-    const seconds = (floorsResult.ms / 1000).toFixed(1);
-    console.log(
-      floorsResult.errored
-        ? `ERRORED (${seconds}s) ${floorsResult.reason}`
-        : floorsResult.ok
-          ? `ok (${seconds}s)`
-          : `FAILED (${seconds}s)`,
     );
   }
 
@@ -651,9 +498,9 @@ function main() {
 
   if (!all) {
     console.log(
-      "  NOT COVERED by this tier: check:media against the deployed index, and\n" +
-        "  check:backup / check:llms against the remote database. `npm run check:all`\n" +
-        "  adds them. Neither tier covers verify-live, which needs a deploy.\n",
+      "  NOT COVERED by this tier: check:backup, check:machine-readable and the schema\n" +
+        "  test against the remote database. `npm run check:all` adds them. Neither tier\n" +
+        "  covers verify-live, which needs a deploy.\n",
     );
   }
 
@@ -669,7 +516,7 @@ function main() {
 }
 
 /*
- * Main guard, so check:floors can import `TIERS`. `pathToFileURL`, because a hand-built
+ * Main guard, so check:changed can import `TIERS`. `pathToFileURL`, because a hand-built
  * `file://C:\...` URL never equals import.meta.url on Windows.
  */
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

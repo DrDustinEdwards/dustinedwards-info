@@ -889,10 +889,9 @@ describe("the moderation queue", () => {
    * RULING 21c, AND THIS IS THE LAYER THAT OWNS IT.
    *
    * The page renders a message into `editor-notice` or into `panel-error` on
-   * `ok` alone, and `check:admin-ui` asserts that it picks the right box for a
-   * DECLARED `ok`. Nothing there runs the action, so nothing there can say the
-   * action sets the flag correctly. That is this layer's half, and the two
-   * together are what stops a success reappearing in the error box.
+   * `ok` alone. Rendering the page runs no action, so it cannot say the action
+   * sets the flag correctly. That is this layer's job, and it is what
+   * stops a success reappearing in the error box.
    *
    * THE FLAG IS ASSERTED BESIDE THE EFFECT, never on its own: a run that
    * checked `ok === true` and not the row would pass on an action that reported
@@ -948,8 +947,7 @@ describe("the moderation queue", () => {
   /*
    * RULING 21a's DEFAULT, and it is a loader property rather than a component
    * one: the filter is resolved on the server so the page needs no script and
-   * the rendered HTML is the whole answer. `check:admin-ui` DECLARES a status
-   * in its fixture, so it cannot see this; only running the loader can.
+   * the rendered HTML is the whole answer. Only running the loader can see it.
    */
   it("DEFAULTS TO PENDING when anything is pending, and to all when nothing is", async () => {
     await seedMention("https://elsewhere.example/settled", "approved", 1);

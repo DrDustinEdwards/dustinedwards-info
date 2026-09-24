@@ -25,8 +25,8 @@ import type { Route } from "./+types/blog._index";
  * its remaining rule is `.search-submit`, which is /search's filled button, and /search is its own
  * page with its own job. The listing's own field and word are in entry-list.css.
  *
- * evidence-row.css is imported HERE and not by the component, which is the house pattern
- * `check:design-sheets` reads: the sheet list is gated against the route imports.
+ * evidence-row.css is imported HERE and not by the component, which is the house pattern:
+ * every sheet a page loads is visible in the route's own imports.
  */
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
@@ -302,7 +302,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
          * ruling 117's kill list in one object. Being first, dated and marked is the whole claim.
          *
          * It is still an entry in the feed, which is why the feed is the `<main>`: a feed scoped
-         * to the `<ul>` would have omitted it while it was a sibling, and `check:microformats`
+         * to the `<ul>` would have omitted it while it was a sibling, and `check:machine-readable`
          * counts the entries either way.
          */}
         {posts.length === 0 && !featured ? (

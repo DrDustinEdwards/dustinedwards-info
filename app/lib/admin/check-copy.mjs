@@ -100,8 +100,8 @@ export const CHECK_COPY = {
  * FAILS OPEN TO THE INSTRUMENT, never to silence. A check this file has no
  * entry for is a check somebody added without touching this page, and the
  * honest rendering is its own name and its own sentence rather than a blank
- * row: `check:invariants` binds the two lists, so the gap is loud, and until it
- * is closed the operator still sees what the instrument said.
+ * row: until the gap is closed the operator still sees what the instrument
+ * said.
  *
  * @param {{ name: string, ok: boolean, detail: string, counts?: { expected: number, present: number } }} check
  * @returns {{ name: string, finding: string, repair: { action: string, intent: string, label: string } | null }}

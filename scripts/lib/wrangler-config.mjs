@@ -3,7 +3,7 @@
  * name one in a string literal: a stale literal aims a DELETE at whatever still answers to it.
  *
  * BOUNDARY: it reads the REAL file, the example carrying placeholder ids that a build script
- * cannot use, and `check:config` is what keeps the two describing the same binding surface.
+ * cannot use. Keep the two describing the same binding surface.
  */
 
 import { readFileSync } from "node:fs";

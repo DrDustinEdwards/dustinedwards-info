@@ -30,8 +30,8 @@ function extensionLabel(object: { key: string; mime: string | null }) {
  * THERE IS NO BOTTOM LINE, BECAUSE THE FACT IT WOULD CARRY DOES NOT EXIST. Nothing
  * stores a page count, and getting one would mean fetching the object out of R2 per
  * render. The size was tried there and was worse: the body's meta line already
- * prints it, and a fact repeated reads as a bug. `check:admin-ui` holds both
- * halves: no invented page count, and the size stated exactly ONCE per tile.
+ * prints it, and a fact repeated reads as a bug. Both halves hold: no invented
+ * page count, and the size stated exactly ONCE per tile.
  *
  * THE RULED LINES ARE DECORATION and are marked so.
  */

@@ -6,8 +6,8 @@ names**, and that is what you design with.
 
 The look is **Swiss editorial on warm limestone paper**: ink text, 1px hairlines
 as the only structure, purple as ink rather than as a surface. Every value below
-exists in the stylesheet; `check:design-vocabulary` fails the build if this file
-names one that does not.
+exists in the stylesheet, and a value this file names that does not is a bug in
+this file.
 
 The system is called **Paper and Plate**, and that name is internal: it never
 appears on the site. Two halves, and they have different rules. **The page is
@@ -196,8 +196,7 @@ that reads on ink. The last four rows each name one token that already carries
 both values.
 
 `--fig-lawn` and `--fig-turbid` are the plate's two flat fills (seat,
-2026-09-22). They fill a figure and nothing else, never a page surface, and
-`check:invariants` section 32 fails any use that is not a fill.
+2026-09-22). They fill a figure and nothing else, never a page surface.
 
 `--fig-dust-300` is 2.33:1 on paper. That is fine for stipple and a dashed
 circle and is never enough to label a series or set body text. No teal, no

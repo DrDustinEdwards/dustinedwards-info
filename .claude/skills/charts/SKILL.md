@@ -25,7 +25,7 @@ with scripting off. You never write SVG and you never pick a colour.
 
 Ruling and measurements: Capsid `dustinedwards/chart-stack.md`. Editorial rules:
 `dustinedwards/blog-content.md`. Mechanics: the repo CLAUDE.md. Renderer:
-`app/lib/content/chart.mjs`. Gate: `npm run check:charts`.
+`app/lib/content/chart.mjs`. Gate: `npm run check:content`.
 
 ## Syntax
 
@@ -138,14 +138,14 @@ posts.json is a gitignored local build product):
 
     npm run build:content     # regenerate the local build product, SVG included
     npm run check:content     # validity and render determinism
-    npm run check:charts      # determinism, Node/Worker parity, the contract
 
 Commit the markdown alone; `sync:content` or the next ship lands the render in
 D1, and the content-drift health check repairs any gap within one poll.
 
 If you bump `@observablehq/plot` or `linkedom` (pinned to exact versions,
-deliberately), rerun `check:charts`: determinism and Node-versus-workerd byte
-parity are properties of those versions and nothing else proves them.
+deliberately), compare a chart's SVG from `build:content` against the one the
+Worker stores after a save: Node-versus-workerd byte parity is a property of
+those versions, and since ruling 150 no gate proves it.
 
 # Diagrams
 

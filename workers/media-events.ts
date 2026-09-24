@@ -41,7 +41,7 @@ function objectKeyOf(body: unknown): string | null {
  * to agree. THIS MUST ASK, NOT ASSUME: a missing object is treated as a deletion, so reading the
  * wrong bucket for a key does not merely fail to index, it DELETES the row. Both buckets notify this
  * queue, so the rule has to hold in code rather than in dashboard configuration.
- * `check:invariants` fails if a second copy appears anywhere.
+ * Import it; never write a second copy.
  */
 
 export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) {
@@ -60,7 +60,7 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
       message.ack();
     } catch (error) {
       // RETRY, explicitly. A transient D1 or R2 failure must not be acked, or the row silently never
-      // appears and only `check:media` would notice. After the configured attempts the platform moves the
+      // appears and only the health check's media-index-drift would notice. After the configured attempts the platform moves the
       // message to the dead-letter queue.
       console.error(
         `media event failed for ${key}`,

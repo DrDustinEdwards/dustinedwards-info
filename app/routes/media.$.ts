@@ -80,7 +80,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
 /*
  * `bucketFor` MOVED to `classify.mjs`. It was one of three copies of one expression with nothing
- * holding them together, and `check:invariants` now fails if a second reappears.
+ * holding them together. Import it; never write a second.
  */
 
 async function serveThumbnail(env: Env, request: Request, key: string, width: number) {

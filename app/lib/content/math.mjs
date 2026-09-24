@@ -61,7 +61,7 @@ export const KATEX_OPTIONS = /** @type {const} */ ({
  * the route reads a D1 row, and that row's `html` is the only thing on it that
  * knows whether the post has math. A `has_math` column would be a second copy
  * of a fact the body already carries, and would cost a migration, a `schema.ts`
- * entry, a `check:invariants` section 4 comparison and a sync path to keep it
+ * entry, a `test/schema-invariants.test.mjs` comparison and a sync path to keep it
  * true. This costs a substring test.
  *
  * The needle is `class="katex"`, the wrapper KaTeX puts around every expression

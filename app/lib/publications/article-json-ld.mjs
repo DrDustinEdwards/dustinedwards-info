@@ -55,7 +55,7 @@ export function schemaTypeFor(type) {
    * Falls back rather than throwing, and the fallback is the honest one: an
    * unrecognised type is still a scholarly work, and the closed vocabulary is
    * enforced by the TypeScript union on `PublicationType` and by
-   * `check:publications`, not here. A throw would take down a page render over
+   * `check:machine-readable`, not here. A throw would take down a page render over
    * a data question a gate already answers.
    */
   return SCHEMA_TYPE[/** @type {keyof typeof SCHEMA_TYPE} */ (type)] ?? "ScholarlyArticle";

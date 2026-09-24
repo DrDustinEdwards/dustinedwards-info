@@ -57,7 +57,7 @@ import { ASSET_PREFIX } from "../media/classify.mjs";
  * the `.` and the existing `-` all fold to the same separator, which is what
  * makes the result a single path segment with no escaping anywhere in it.
  *
- * THE COLLAPSE IS LOSSY AND THAT IS WHY `check:publications` ASSERTS
+ * THE COLLAPSE IS LOSSY AND THAT IS WHY `check:machine-readable` ASSERTS
  * UNIQUENESS. `10.1234/ab-cd` and `10.1234/ab.cd` produce the same slug. No
  * such pair exists in this corpus and the gate refuses one arriving, rather
  * than this function trying to be clever about a case that has never occurred.
@@ -148,7 +148,7 @@ export function paperMarkdownPath(slug) {
  * quoted run as one exact phrase, which is the most precise query available for
  * a record that carries its own title, and the model receives the paper's name
  * as its subject, which is what the surrounding words were there to supply.
- * No title in this corpus contains a quotation mark, and `check:publications`
+ * No title in this corpus contains a quotation mark, and `check:machine-readable`
  * asserts that rather than trusting it, because one arriving would split the
  * phrase in two.
  *
@@ -162,7 +162,7 @@ export function paperAskUrl(title) {
  * Where the PDF sits on disk, relative to the repository root.
  *
  * The one statement of the `public/` half. `build-publications.mjs` copies into
- * this and `check:publications` reads it back, so a file that did not get
+ * this and `check:machine-readable` reads it back, so a file that did not get
  * copied is a red gate rather than a 404 discovered by a reader.
  *
  * @param {string} slug from `doiSlug`

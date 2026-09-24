@@ -11,7 +11,7 @@
  * `.server` module therefore has no offline payload at all, which is why `check:page-payload`
  * measures twelve routes and names the three it cannot.
  *
- * THE SECOND STATEMENT, NAMED. `check-microformats.mjs` carries its own `postLoaderData` and its
+ * THE SECOND STATEMENT, NAMED. `machine-readable/microformats.mjs` carries its own `postLoaderData` and its
  * own index fixture, and its comment says out loud that it is "a deliberate SECOND statement of
  * the projection". This is the third, and the duplication is real rather than clever: that gate
  * and this one were being changed by two different open pull requests when this file was written,

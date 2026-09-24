@@ -74,8 +74,8 @@ html {
  * and move with the theme; the three warm paths keep the presentation attributes site-logo.tsx
  * gives them, identical in both variants. Any rule here would beat both.
  *
- * check:logo holds the fill bindings on `.site-logo-brand` as a closed set and holds the
- * `.site-header-mark` family at zero, so re-inking the mark fails rather than winning quietly.
+ * The fill bindings on `.site-logo-brand` are a closed set and the `.site-header-mark` family
+ * carries none, so re-inking the mark means editing those, not winning quietly here.
  */
 
 /* Width follows the 36x50 ratio of the crop in site-logo.tsx. */

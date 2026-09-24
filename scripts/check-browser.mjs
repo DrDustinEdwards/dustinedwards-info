@@ -26,7 +26,7 @@ import { HEALTH_FACT_SELECTOR, freshHealthRatio } from "./lib/health-tile.mjs";
 /* The network profile the /blog layout shift was measured on. */
 const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
 
-/* Imported, never restated (`check:invariants` section 25). */
+/* Imported, never restated. */
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 import {
   ChildRegistry,
@@ -1784,7 +1784,7 @@ try {
         matches: (/** @type {string} */ href) => href.includes("?"),
         /*
          * Do not spell the glob here: `stripComments` reads a slash-star in a string as a
-         * comment opener, hiding `ok()` calls from `check:invariants` section 17.
+         * comment opener, hiding the `ok()` calls after it from any comment-stripping reader.
          */
         why:
           "a filtered view is a database read per variant, and /blog renders one chip " +
@@ -3423,7 +3423,7 @@ try {
       ["/admin/origin-requests", "origin requests"],
       /*
        * Asserts only that the route renders in the shell and fits, not its structure: this observes
-       * a deployed Worker, and structure is check:admin-ui's, which renders the working tree.
+       * a deployed Worker.
        */
       ["/admin/mentions", "the mentions queue"],
     ];
@@ -3494,7 +3494,7 @@ try {
       "the public header mark exists to measure",
       publicMark.total === 8 && publicMark.brand.length === 5 && publicMark.warm.length === 3,
       `the header drew ${publicMark.total} paths, ${publicMark.brand.length} of them branded, so ` +
-        `the fill assertions below would examine nothing. check:logo owns the counts.`,
+        `the fill assertions below would examine nothing.`,
     );
     ok(
       "the public header mark's purple resolves to --brand, the base binding in app.css",
@@ -3555,8 +3555,7 @@ try {
     /* ------------------------------------- 6d. the media interactions --- */
 
     /*
-     * Four interactions on /admin/media that check:admin-ui cannot see, since it renders without
-     * scripts or styles. Nothing here submits, under either credential: the cookie path runs as
+     * Four interactions on /admin/media that only a real browser can see. Nothing here submits, under either credential: the cookie path runs as
      * Dustin. Unreachable confirmations are on the remaining-human list below.
      */
     await admin.setViewport({ width: 1280, height: 900 });
@@ -4086,8 +4085,7 @@ try {
 if (subjectReachable) {
   /*
    * Two floors, one per mode, because CI runs both: the preview and the deployed site. Each floor sits
-   * `max(3, ceil(count * 0.05))` under a run; check:floors never sees this network-tier gate,
-   * so re-measure when touching this file.
+   * `max(3, ceil(count * 0.05))` under a run; re-measure when touching this file.
    */
   const MINIMUM_CHECKS = DRIVES_PREVIEW ? 248 : 230;
   console.log(

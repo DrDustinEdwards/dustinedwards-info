@@ -42,7 +42,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:llms"
+          "gate": "check:machine-readable"
         }
       ]
     },
@@ -53,23 +53,7 @@
       "anchors": [
         {
           "kind": "gate",
-          "gate": "check:charts"
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:charts",
-          "text": "worker returned a different fixture count"
-        }
-      ]
-    },
-    {
-      "component": "Charts",
-      "name": "Node and Worker must render byte-identical SVG",
-      "what": "The chart module is bundled for workerd and run under miniflare, and every fixture must hash identically to the Node render. Determinism is checked in-process, and again across separate processes because module-level state and hash-order effects only show up across a process boundary. A renderer that is not deterministic would make the two writers disagree at random. That is not hypothetical: it is what the syntax highlighter's JavaScript regex engine did.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:charts"
+          "gate": "check:content"
         }
       ]
     },
@@ -97,15 +81,6 @@
         {
           "kind": "route",
           "path": "/search"
-        },
-        {
-          "kind": "gate",
-          "gate": "check:search"
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:search",
-          "text": "phrase: a quoted run becomes one phrase"
         }
       ]
     },
@@ -129,10 +104,6 @@
       "name": "A filter with no text takes a different query path",
       "what": "A bare year or a tag chip has nothing to give FTS5, so those queries run the filter SQL straight over the derived table, date ordered, document records only. Returning every section of one post for a bare year would present the corpus at several times its real size. The snippet carries no highlight, because nothing was matched and marking anything would claim a match that never happened.",
       "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:search"
-        },
         {
           "kind": "route",
           "path": "/search"
@@ -215,10 +186,6 @@
           "kind": "route",
           "path": "/search/ask",
           "anonymousGet": false
-        },
-        {
-          "kind": "gate",
-          "gate": "check:charts"
         }
       ]
     },
@@ -227,10 +194,6 @@
       "name": "The markdown is committed before the database is touched",
       "what": "A save commits exactly the markdown, through the Git Data API, and writes D1 only after that commit lands. Files are the source of truth, so nothing reaches the database that is not already in git, and the ordering is the whole guarantee: a database row can always be rebuilt from the repository, and a commit can never be rebuilt from a row. If the repository host is unreachable the save fails whole; there is no database-only write and no reconcile-later queue.",
       "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:admin-ui"
-        },
         {
           "kind": "gate",
           "gate": "check:policy"
@@ -244,7 +207,7 @@
       "anchors": [
         {
           "kind": "gate",
-          "gate": "check:admin-ui"
+          "gate": "check:worker"
         }
       ]
     },
@@ -253,10 +216,6 @@
       "name": "Version history restores by writing a new commit",
       "what": "History lists the commits touching a post's file, shows a diff per commit, and restores by reading the file at an old commit and putting it back through the ordinary save path. A restore is therefore a new commit, never a force push and never a rewrite, and the gates run again on restored content so an old commit cannot bypass a newer rule.",
       "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:admin-ui"
-        },
         {
           "kind": "gate",
           "gate": "check:content"
@@ -271,21 +230,6 @@
         {
           "kind": "gate",
           "gate": "check:policy"
-        },
-        {
-          "kind": "gate",
-          "gate": "check:admin-ui"
-        }
-      ]
-    },
-    {
-      "component": "Admin editor",
-      "name": "Every form's submitted payload is frozen by a gate",
-      "what": "The admin's pages are rendered with stubbed loaders and reduced to the set of requests each one can submit. A control may move anywhere, but pressing it must send exactly what it sent before. No typecheck can see that, because form field names are strings in markup, and no gate can reach the admin over HTTP because it sits behind a real session.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:admin-ui"
         }
       ]
     },
@@ -330,15 +274,6 @@
         {
           "kind": "route",
           "path": "/media/*"
-        },
-        {
-          "kind": "gate",
-          "gate": "check:media"
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:media",
-          "text": "markdown-image aabbccddeeff0011.png"
         }
       ]
     },
@@ -353,7 +288,8 @@
         },
         {
           "kind": "assertion",
-          "gate": "check:invariants",
+          "gate": "check:tests",
+          "file": "test/write-path-invariants.test.mjs",
           "text": "the fixture contains both resolvable and unresolvable keys"
         }
       ]
@@ -366,10 +302,6 @@
         {
           "kind": "route",
           "path": "/media/*"
-        },
-        {
-          "kind": "gate",
-          "gate": "check:media"
         }
       ]
     },
@@ -417,17 +349,12 @@
     },
     {
       "component": "Brand mark",
-      "name": "The mark is inline SVG, proved against its own files",
-      "what": "One component collapses the four SVG files into a path list and a viewBox, because the files differ in exactly two ways. The purple paths carry no fill and take a brand custom property instead, which is the entire dark-mode story for the mark. The files remain as gate fixtures: the expected path data comes from them and the actual from the component, so nothing in the gate restates a path.",
+      "name": "The mark is inline SVG",
+      "what": "One component collapses the four SVG files into a path list and a viewBox, because the files differ in exactly two ways. The purple paths carry no fill and take a brand custom property instead, which is the entire dark-mode story for the mark.",
       "anchors": [
         {
-          "kind": "gate",
-          "gate": "check:logo"
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:logo",
-          "text": "component drives 5 paths from var(--brand)"
+          "kind": "route",
+          "path": "/"
         }
       ]
     },
@@ -458,8 +385,9 @@
         },
         {
           "kind": "assertion",
-          "gate": "check:llms",
-          "text": "content/llms.txt is LF-only"
+          "gate": "check:machine-readable",
+          "text": "content/llms.txt is LF-only",
+          "file": "scripts/machine-readable/llms.mjs"
         },
         {
           "kind": "gate",
@@ -478,7 +406,7 @@
         },
         {
           "kind": "gate",
-          "gate": "check:llms"
+          "gate": "check:machine-readable"
         }
       ]
     },
@@ -533,52 +461,28 @@
     {
       "component": "Safety rails",
       "name": "Rules stated twice are checked against each other",
-      "what": "Some rules cannot be collapsed into one function because they are expressed in two languages: the public visibility predicate exists once as a query-builder condition and once as a hand-written SQL string over a different table. Those are run against a fixture of post states and must admit the same rows. The same gate proves the column schema agrees three ways and that every column named in raw SQL exists, which was added after a statement named a column a migration had renamed and was therefore guaranteed to throw on the one path it existed to protect.",
+      "what": "Some rules cannot be collapsed into one function because they are expressed in two languages: the public visibility predicate exists once as a query-builder condition and once as a hand-written SQL string over a different table. Those are run against a fixture of post states and must admit the same rows. The same suite proves the column schema agrees between the schema module, the migrations and the deployed database.",
       "anchors": [
         {
           "kind": "gate",
-          "gate": "check:invariants"
+          "gate": "check:tests"
         },
         {
           "kind": "assertion",
-          "gate": "check:invariants",
-          "text": "classify.mjs still defines the bucket selection"
-        }
-      ]
-    },
-    {
-      "component": "Safety rails",
-      "name": "The tracked config and the real one must declare the same bindings",
-      "what": "The real Worker configs are not in the repository, because they carry account identifiers and a personal address, and tracked examples with placeholder values stand in their place. Each pair is compared binding by binding in both directions, and the site Worker and the watchdog Worker are both covered. That check exists because an image binding was once added to a real file and not mirrored, so a fresh clone would have built a site whose thumbnails silently fell back to full-resolution originals.",
-      "anchors": [
-        {
-          "kind": "gate",
-          "gate": "check:config"
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:config",
-          "text": "declares at least one binding"
+          "gate": "check:tests",
+          "file": "test/visibility-invariants.test.mjs",
+          "text": "both predicates admit the same posts"
         }
       ]
     },
     {
       "component": "This page",
-      "name": "The stack half is generated and reconciled both ways",
-      "what": "Every binding, migration, gate and dependency above is emitted from the repository's own configuration and compared against it in both directions. A resource added without regenerating fails the build, and so does a row describing something that no longer exists. Nothing in the generator or on this page restates a name.",
+      "name": "The stack half is generated",
+      "what": "Every binding, migration, gate and dependency above is emitted from the repository's own configuration when the site is built. Nothing in the generator or on this page restates a name.",
       "anchors": [
         {
           "kind": "route",
           "path": "/colophon"
-        },
-        {
-          "kind": "gate",
-          "gate": "check:stack"
-        },
-        {
-          "kind": "assertion",
-          "gate": "check:stack",
-          "text": "every binding kind in the config can actually be read"
         }
       ]
     },

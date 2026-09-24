@@ -4,7 +4,7 @@
  * Copy to wrangler.watchdog.jsonc and fill in the real alert address. The real
  * file is gitignored; secrets are set with `wrangler secret put`, never here.
  * `scripts/bootstrap-config.mjs` copies this into place on install, and
- * `npm run check:config` compares the two in both directions.
+ * Keep the two in step in both directions.
  *
  *   npx wrangler deploy -c wrangler.watchdog.jsonc
  *   npx wrangler secret put OPERATOR_TOKEN -c wrangler.watchdog.jsonc
@@ -42,8 +42,7 @@
 	// EVERY FIFTEEN MINUTES, and this cron is now the ONE owner of the poll
 	// interval. `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs
 	// decides when the home page calls its health verdict stale, and
-	// `check:invariants` section 25 parses this line and fails if the two stop
-	// meaning the same number of seconds. It used to parse health.yml's cron;
+	// the two must mean the same number of seconds: change them together. It used to parse health.yml's cron;
 	// that workflow is now the hourly second opinion and no longer sets the pace.
 	"triggers": {
 		"crons": ["*/15 * * * *"]
@@ -104,8 +103,8 @@
 	// config is exactly what leaks on the day it is copied.
 	//
 	// The placeholder is on example.com, which RFC 2606 reserves and which can
-	// therefore never be a real inbox. `check:config` asserts the example
-	// carries that reserved domain and does NOT carry the real value.
+	// therefore never be a real inbox. The example carries that reserved domain
+	// and never the real value.
 	// THE ACCOUNT THE ERROR-RATE QUERY IS ASKED OF.
 	//
 	// Added 2026-09-07 with the error-rate check. A VAR rather than a secret, on

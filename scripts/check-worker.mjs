@@ -20,8 +20,7 @@ const TEST_DIR = join(root, "test", "worker");
 /**
  * Floors, MEASURED THROUGH THIS GATE'S OWN DISCOVERY by RUNNING it. Tight rather than slack, on
  * `check:tests`' convention: they move UP with a case, and the point is to notice the set
- * SHRINKING. HOW FAR UNDER IS `check:floors`' TO SAY: this docblock used to carry a percentage,
- * and the two disagreed by one case on the first run after it was written down.
+ * SHRINKING.
  */
 /* One below the measurement, so a single file leaving the pattern trips it. */
 const MINIMUM_FILES = 8;
@@ -29,11 +28,7 @@ const MINIMUM_FILES = 8;
  * The file floor catches a file LEAVING; this catches one hollowed out in place. Re-run, never
  * adjusted by arithmetic.
  */
-/*
- * SET THROUGH `check:floors`' OWN TOLERANCE, after CI caught the first attempt, which read a
- * percentage out of a comment in another gate: the rule belongs to the gate that enforces it. It
- * went undetected locally because `check:floors` runs LAST and the tier hung before it here.
- */
+/* Measured by running the gate, a little under the count. */
 const MINIMUM_CASES = 124;
 
 let checks = 0;

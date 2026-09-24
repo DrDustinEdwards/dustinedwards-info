@@ -76,7 +76,7 @@ function buildSql(posts) {
       isPubliclyVisible({ status: statusForDraft(post.draft), publishAt: post.publishAt });
     const ogImage = hasCard ? `/media/${ogImageKey(post)}` : null;
     /*
-     * `revisedDate` OWNS THE RULE, which is what lets `check:microformats` feed a component the same
+     * `revisedDate` OWNS THE RULE, which is what lets `check:machine-readable` feed a component the same
      * value without restating it. The epoch conversion stays here, being this file's column format.
      */
     const revised = revisedDate(post);

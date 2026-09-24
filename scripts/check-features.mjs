@@ -301,7 +301,15 @@ for (const feature of features) {
     } else if (anchor.kind === "assertion") {
       verified += 1;
       referencedGates.add(anchor.gate);
-      const file = gates.get(anchor.gate) ?? "";
+      /* `file` names the module or test the gate runs when the text is not in its entry script. */
+      const file = anchor.file
+        ? join(root, String(anchor.file))
+        : (gates.get(anchor.gate) ?? "");
+      ok(
+        `${label}: ${anchor.gate} is a gate that exists`,
+        gates.has(anchor.gate),
+        `package.json declares no ${anchor.gate}`,
+      );
       /* Both sides LF-normalized, or a multi-line anchor passes only on a CRLF disk. */
       const present =
         Boolean(file) && existsSync(file)
@@ -1354,7 +1362,7 @@ const cookiePresets = playgroundDoc.cookiePresets ?? [];
 const snippets = playgroundDoc.markdownSnippets ?? [];
 const playgroundChecksBefore = checks;
 
-/** Serialized exactly as check:charts does, so both see the artifact's HTML. */
+/** Serialized the way the content pipeline does, so this sees the artifact's HTML. */
 const serializeHast = (/** @type {any[]} */ children) =>
   unified()
     .use(rehypeStringify)
@@ -2219,8 +2227,8 @@ console.log(
 );
 
 /* Whole-gate floor: section floors cannot see another section stopping. */
-/* Within the tolerance `scripts/check-floors.mjs` owns; re-measure by running the gate. */
-const MINIMUM_CHECKS = 950;
+/* Re-measure by running the gate. */
+const MINIMUM_CHECKS = 930;
 const floorBreach = assertFloor(
   "check:features",
   "checks",

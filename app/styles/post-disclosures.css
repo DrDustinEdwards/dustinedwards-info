@@ -6,8 +6,7 @@
  * D turned it into one ruled mono line, so its rules moved to post-shell.css with it. The marker
  * still has one owner because there is now one thing wearing it.
  *
- * TOKENS ONLY, no raw hex: check:invariants section 31 refuses a component sheet that states one,
- * and a color invented here would be a color no contrast pair measures.
+ * TOKENS ONLY, no raw hex: a color invented here would be a color no contrast pair measures.
  */
 
 /* Ruled top and bottom, no box: radius 0 and no fill is the direction. Adjacent disclosures share

@@ -338,7 +338,7 @@ console.log(`  HEAD is ${sha}`);
  * that nothing had been checked, kept as a mechanism for a successor that never came: a dead
  * loop kept for a hypothetical is a shape, not a mechanism. Writing it again with a real
  * subject in hand produces a better check than reviving a generalization drawn from one case.
- * The property it guarded is not lost, and is asserted on the rendered page by check:admin-ui.
+ * The property it guarded is a property of the rendered admin page.
  */
 
 /* ------------------------------------------------- 1b. CI's verdict, early */

@@ -25,9 +25,9 @@ let failures = 0;
 let checks = 0;
 
 /**
- * The first argument is named `ok` as six other gates spell it, `check:invariants` section 17
- * refusing two argument orders for one name: a copied assertion would put a truthy STRING in the
- * condition slot and still increment the count.
+ * The first argument is named `ok` as the other gates spell it, with one argument order for one
+ * name: a copied assertion in the other order would put a truthy STRING in the condition slot and
+ * still increment the count.
  *
  * @param {boolean} ok
  * @param {string} label
@@ -458,7 +458,7 @@ if (update) {
  * `--update` SKIPS the per-binary baseline comparisons.
  */
 /* RE-MEASURED 2026-09-20 on a plain run: home.css added axis requests, and 240 then sat 28 under
-   its count against a 5% tolerance, which is what check:floors failed on rather than this gate. */
+   its count against a 5% tolerance. */
 const MINIMUM_CHECKS = 268;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);

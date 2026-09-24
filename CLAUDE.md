@@ -45,7 +45,7 @@ Every gate verifies DISK, not HEAD. `git diff <path>` before `git add <path>`; n
 
 ## Commands
 
-**`package.json` OWNS THE SCRIPT LIST.** Run `npm run` for it. `npm run check:changed` is what a session runs: it maps the branch's diff to the gates that cover it and runs only those, falling back to the offline tier when a changed path maps to nothing. `npm run check` is the OFFLINE tier and is what `ship` runs; `check:all` adds the gates needing a deployed database or bucket; `check:ci` is the tier a clean checkout can run, and `ship` trusts CI rather than a local run of it. `npm run verify-live` is NOT a gate: it needs a deploy and its Ask probes are billed. `check:media` is NETWORK ONLY; `check:backup`, `check:invariants`, `check:llms` and `sync:content` take `--local` or `--remote`. `check-all.mjs` derives the gate list from `package.json` and refuses an untiered gate, so a new gate is tiered in the same commit.
+**`package.json` OWNS THE SCRIPT LIST.** Run `npm run` for it. `npm run check:changed` is what a session runs: it maps the branch's diff to the gates that cover it and runs only those, falling back to the offline tier when a changed path maps to nothing. `npm run check` is the OFFLINE tier and is what `ship` runs; `check:all` adds the gates needing a deployed database or bucket; `check:ci` is the tier a clean checkout can run, and `ship` trusts CI rather than a local run of it. `npm run verify-live` is NOT a gate: it needs a deploy and its Ask probes are billed. `check:backup`, `check:machine-readable` and `sync:content` take `--local` or `--remote`; the schema test compares the live database when `SCHEMA_LIVE=1` is set, which `check:all` does. `check-all.mjs` derives the gate list from `package.json` and refuses an untiered gate, so a new gate is tiered in the same commit.
 
 ## Bindings
 
@@ -53,7 +53,7 @@ Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Ne
 
     DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET  ANALYTICS
 
-`ASK_BUDGET` IS THE WHOLE SITE'S RATE LIMITER, not an Ask-only budget, and is deliberately not renamed before the cutover. What each one is, with that ruling and the queue consumer, is `wrangler.jsonc.example`, which `check:invariants` section 26 binds to this list in both directions. That file is tracked and `wrangler.jsonc` is gitignored, a PORTFOLIO rule; a new binding is added to both in one commit. `workers/watchdog.ts` is a second Worker on the identical split, deployed by a `ship` step and never by `npm run deploy`. `OPERATOR_TOKEN` has three holders, the site Worker, the watchdog and the `gh` repository secret: rotate all three or none.
+`ASK_BUDGET` IS THE WHOLE SITE'S RATE LIMITER, not an Ask-only budget, and is deliberately not renamed before the cutover. What each one is, with that ruling and the queue consumer, is `wrangler.jsonc.example`. That file is tracked and `wrangler.jsonc` is gitignored, a PORTFOLIO rule; a new binding is added to both in one commit. `workers/watchdog.ts` is a second Worker on the identical split, deployed by a `ship` step and never by `npm run deploy`. `OPERATOR_TOKEN` has three holders, the site Worker, the watchdog and the `gh` repository secret: rotate all three or none.
 
 ## Where everything else lives
 

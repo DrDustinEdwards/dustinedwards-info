@@ -11,8 +11,8 @@ import { createHash } from "node:crypto";
 
 /**
  * The hash recipe the input stamp is written with and read back by, in ONE place because the
- * writer (`.design-sync/build-inputs.mjs`) and the reader (`check:design-inputs`) must agree
- * byte for byte: a recipe stated twice is a gate that passes the day the two spellings drift.
+ * writer (`.design-sync/build-inputs.mjs`) and any reader must agree byte for byte: a recipe
+ * stated twice drifts the day the two spellings do.
  *
  * @param {string} text
  */
@@ -31,7 +31,7 @@ export function fileSha(path) {
  *
  * LENGTH-PREFIXED rather than separated by a delimiter. A delimiter has to be a byte the content
  * cannot contain, and the obvious choice is a NUL, which would be a raw control character in a
- * tracked file: `check:invariants` section 29 refuses those, having been added because an escape
+ * tracked file: `test/control-characters.test.mjs` refuses those, having been added because an escape
  * written in prose reached disk as a control byte three times. A byte count cannot collide and
  * cannot be typed by accident.
  *

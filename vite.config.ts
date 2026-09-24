@@ -20,9 +20,8 @@ import { defineConfig } from "vite";
  *
  * A timestamp rather than a content hash, deliberately. The property required
  * is "differs between two builds", not "is derivable from the source", and
- * nothing in this repository byte-compares the server bundle: check:charts
- * compares rendered SVG between node and workerd, and check:content compares
- * the corpus render, neither of which this value can reach.
+ * nothing in this repository byte-compares the server bundle: check:content
+ * compares the corpus render, which this value cannot reach.
  */
 const BUILD_ID = Date.now().toString(36);
 

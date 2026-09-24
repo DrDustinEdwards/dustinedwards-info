@@ -26,7 +26,7 @@
    * TWO LINES AT EVERY WIDTH, which is what the 0.92 leading below is for: min-content is the
    * width of the longest word, so a two-word name wraps at its one space and nowhere else. NOT a
    * `<br>`: the h-card's `p-name` is this element's text, and a break element with no space around
-   * it parses as one run, so `check:microformats` would read "DustinEdwards".
+   * it parses as one run, so `check:machine-readable` would read "DustinEdwards".
    */
   max-inline-size: min-content;
   color: var(--text);

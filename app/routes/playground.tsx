@@ -150,8 +150,8 @@ export function headers() {
 }
 
 /*
- * The hast types, so neither side of this is an escape: `check:slop` makes a
- * type assertion an error, and an assertion here would hide a wrong tree shape.
+ * The hast types, so neither side of this is an escape: a type assertion here
+ * would hide a wrong tree shape.
  */
 const serialize = (children: RootContent[]) =>
   unified().use(rehypeStringify).stringify({ type: "root", children });

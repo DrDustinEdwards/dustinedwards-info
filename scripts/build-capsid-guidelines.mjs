@@ -65,7 +65,7 @@ async function main() {
       `# ${doc.title}\n\n` +
       `> Exported from Capsid \`${NAMESPACE}/${doc.path}\`, last updated ${doc.updated_at}.\n` +
       `> Capsid is the owner. This copy exists because guidelinesGlob can only point at\n` +
-      `> files in this repository, and \`check:guidelines\` fails when the source moves.\n` +
+      `> files in this repository. Re-run the export when the source moves.\n` +
       `> Included because ${doc.why}.\n\n` +
       `${doc.body.trim()}\n`;
     const name = doc.path.replace(/[^A-Za-z0-9._-]/g, "-");
