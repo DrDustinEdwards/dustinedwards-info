@@ -2,12 +2,14 @@
 
 Dustin Edwards's personal site and Cloudflare showcase. React Router 8 on Workers, Drizzle on D1, Better Auth, R2. Also a Capsid CMS consumer.
 
-**This file is the STANDING LAW and nothing else.** Procedure is `.claude/skills/`; design law is Capsid's `TASK-redesign-brief-2026-09.md`; everything retired is in `dustinedwards/retired-2026-09.md` with its reason and the id it merged into, so nothing is lost, only stopped being read.
+**This file is the STANDING LAW and nothing else.** Procedure is `.claude/skills/`; the design is the visual system in Claude Design (the dustinedwards.info design system, `templates/visual-system/`); everything retired is in `dustinedwards/retired-2026-09.md` with its reason and the id it merged into, so nothing is lost, only stopped being read.
 
 ## Principles
 
 - A rule that does not make the site better is changed or deleted.
 - A check earns its place by catching real mistakes; a check that has never caught one is removed, not defended.
+- Before writing new code, search the repo for code that already does the job, and extend or reuse it instead of adding a parallel version. Prefer changing existing code to adding new code.
+- Never swallow an error. A failure is returned or thrown to where it can be seen; it is never logged and ignored while the code carries on or reports success.
 
 ## Hard rules
 
