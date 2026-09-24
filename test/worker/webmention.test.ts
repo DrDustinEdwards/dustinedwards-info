@@ -959,7 +959,8 @@ describe("the moderation queue", () => {
     const id = await seedMention(source, "rejected", 1);
     await seedMention("https://elsewhere.example/expired-failure", "failed", 40);
 
-    for (const body of [{ intent: "delete", id: String(id) }, { intent: "sweep" }]) {
+    const steps: Record<string, string>[] = [{ intent: "delete", id: String(id) }, { intent: "sweep" }];
+    for (const body of steps) {
       const step = await runAction(body);
       const page = renderMentionsPage(
         "/admin/mentions",
