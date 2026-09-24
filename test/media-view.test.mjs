@@ -1,18 +1,6 @@
 /**
- * The media library's view state, and the parameter that must not evaporate.
- *
- * REPLAYS A DEFECT PAID FOR TWICE. `q` fell off the pagination links once, and
- * `role` fell off the chips once. Both times the page looked correct, one click
- * silently reset the view, and no gate could see it: a dropped query parameter
- * is not a payload difference, so a form-payload comparison for a `GET` link is
- * identical whether it carries eight parameters or one.
- *
- * The property under test is therefore not "hrefWith works" but "hrefWith
- * carries EVERY non-default parameter", asserted over the whole parameter list
- * derived from one source rather than over a hand-written list that could go
- * stale in the same way the links did.
- *
- * @see app/lib/media/view.mjs
+ * A dropped query parameter is invisible to every payload gate, so survival is asserted over
+ * `PARAM_NAMES` rather than a hand-written list.
  */
 
 import test from "node:test";
@@ -38,10 +26,8 @@ import {
 } from "../app/lib/media/view.mjs";
 import { confirmationSatisfied } from "../app/lib/destructive.mjs";
 
-/** A stand-in for URLSearchParams with the one method readView uses. */
 const params = (entries) => ({ get: (n) => (n in entries ? entries[n] : null) });
 
-/** A state where EVERY field differs from its default. */
 const FULLY_SET = {
   view: "grid",
   group: "month",
@@ -55,9 +41,6 @@ const FULLY_SET = {
   page: 3,
   trash: true,
   key: "1234abcd5678ef90.png",
-  /* The confirmation modal is a URL like everything else here, so it has to
-     survive a link like everything else. Added when `confirm` landed, and the
-     three evaporation tests above are what demanded it. */
   confirm: "empty-trash",
 };
 
@@ -79,8 +62,6 @@ test("THE DEFECT, the round trip: a link parses back to the state it came from",
 });
 
 test("every override still carries all the others", () => {
-  // One at a time, because the real failure was always one link overriding one
-  // field and rebuilding the rest by hand.
   for (const name of PARAM_NAMES) {
     const href = hrefWith(FULLY_SET, { [name]: DEFAULTS[name] });
     const search = new URLSearchParams(href.split("?")[1] ?? "");
@@ -100,8 +81,6 @@ test("a pagination link keeps the whole view", () => {
 });
 
 test("a chip link keeps the whole view and resets the page", () => {
-  // Changing the filter must go back to page one, or the reader lands on an
-  // empty page three of a narrower result.
   const search = new URLSearchParams(
     hrefWith(FULLY_SET, { role: "icon", page: 1 }).split("?")[1],
   );
@@ -140,8 +119,7 @@ test("readView is total: unrecognised values fall back rather than throwing", ()
 });
 
 test("an absent role is the default and `all` is a real choice", () => {
-  // This distinction predates the module and is load-bearing: an empty ?role=
-  // is not "no filter", it is the absence of the parameter.
+  // An empty ?role= is not "no filter": it is the absence of the parameter, so the default applies.
   assert.equal(readView(params({})).role, "content");
   assert.equal(readView(params({ role: "all" })).role, "all");
 });
@@ -185,9 +163,7 @@ test("the display summary names all three settings it hides", () => {
 });
 
 test("house style: no wide dash reaches the summary separator", () => {
-  // The separator is the one place a dash would be reached for, and the hook
-  // that guards house style cannot see a rendered string. Built with
-  // fromCharCode so this file does not itself carry what it forbids.
+  // Built with fromCharCode so this file does not itself carry what it forbids.
   const WIDE = [0x2014, 0x2013].map((c) => String.fromCharCode(c));
   for (const state of [DEFAULTS, { ...DEFAULTS, group: "month", sort: "usage" }]) {
     for (const dash of WIDE) {
@@ -196,13 +172,7 @@ test("house style: no wide dash reaches the summary separator", () => {
   }
 });
 
-/* ---------------------------------------------------------------- grouping */
-
 test("GROUPING IS PAGE-LOCAL: it arranges the rows it is given and fetches nothing", () => {
-  // The contract, asserted as a property rather than described: every input row
-  // appears exactly once across the groups, and no row appears that was not in
-  // the input. A grouper that reached for more data would break the first half;
-  // one that dropped a row would break the second.
   const rows = [
     { key: "/publications/a.pdf", uploaded: null },
     { key: "aaaa000000000000.png", uploaded: "2026-03-02T10:00:00.000Z" },
@@ -217,14 +187,11 @@ test("GROUPING IS PAGE-LOCAL: it arranges the rows it is given and fetches nothi
 test("flat is one group with no heading, so the component renders no header", () => {
   const rows = [{ key: "a.png", uploaded: null }];
   assert.deepEqual(groupRows(rows, "flat"), [{ label: "", note: "", rows }]);
-  // An unrecognised value falls back to flat rather than producing no groups,
-  // which would render an empty page for a hand-edited URL.
+  // An unrecognised value falls back to flat, or a hand-edited URL would render an empty page.
   assert.deepEqual(groupRows(rows, "galaxy"), [{ label: "", note: "", rows }]);
 });
 
 test("SORT ORDER SURVIVES GROUPING, within a group", () => {
-  // The rows arrive sorted by SQL. Grouping must not resort them WITHIN a
-  // section, or the reader's chosen sort silently stops applying.
   const rows = [
     { key: "/b/3.png", uploaded: null },
     { key: "/a/2.png", uploaded: null },
@@ -246,13 +213,10 @@ test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping",
   const roster = out.find((g) => g.label === "Cohort photographs");
   assert.ok(roster, "the roster section is titled from the table");
   assert.equal(roster.note, "Placed by the roster page template");
-  // The sentence that stops somebody deleting nine photographs.
   assert.ok(roster.note.length > 0);
 });
 
 test("folder sections render in TABLE order, roster before publications", () => {
-  // Not first-row order: the table is written so the sections a reader wants
-  // most come first, and the render honors that.
   const out = groupRows(
     [
       { key: "/publications/a.pdf", uploaded: null },
@@ -264,8 +228,6 @@ test("folder sections render in TABLE order, roster before publications", () => 
 });
 
 test("an unknown folder is titled from its own directory, never mislabelled", () => {
-  // Sweeping unknown folders into the root section would be the design's own
-  // failure mode: a confident wrong label over files it does not describe.
   const out = groupRows([{ key: "/case-studies/x.png", uploaded: null }], "folder");
   assert.equal(out[0].label, "Case studies");
   assert.equal(out[0].note, "", "no invented explanation");
@@ -302,35 +264,14 @@ test("an empty page groups to nothing rather than to one empty heading", () => {
   assert.deepEqual(groupRows([], "month"), []);
 });
 
-/* -------------------------------------------------------------------------
- * SORT DIRECTION, and the two controls that must not disagree about it.
- *
- * The list header and the Display popover are two link builders aimed at one
- * destination. They agreed by accident before there was a header at all; the
- * moment there are two, "they agree" is a property that needs asserting rather
- * than assuming, and it is asserted HERE on the pure function. This cannot see
- * whether the component actually calls it.
- * ---------------------------------------------------------------------- */
-
 /**
- * READ THE URL BACK THROUGH `readView`, never off the query string.
- *
- * `hrefWith` OMITS a parameter equal to its default, deliberately, so the bare
- * `/admin/media` stays meaningful as "the default view". `dir=desc` IS the
- * default and is therefore absent from a descending link. Asserting on the
- * spelling would have made a correct URL fail; this test found that, which is
- * the right way round.
- *
- * So the property is the direction the link MEANS, which is what the loader
- * will see, and the round trip is the only honest way to ask.
- *
+ * Read back through `readView`: `hrefWith` omits a parameter equal to its default, so `dir=desc`
+ * is absent from a descending link and the query string cannot be asserted on.
  * @param {string} href
  */
 const resolve = (href) => readView(new URLSearchParams(href.split("?")[1] ?? ""));
 
 test("a sort choice carries its direction, so Largest is never the smallest", () => {
-  // The state is ASCENDING and sorted by name. Asking for size must not inherit
-  // that ascending, or the reader presses Largest and gets the smallest file.
   const state = { ...DEFAULTS, sort: "name", dir: "asc", q: "bio" };
   const got = resolve(sortHref(state, "size"));
   assert.equal(got.sort, "size");
@@ -357,22 +298,17 @@ test("the header toggles the column already sorted, and only that one", () => {
     "pressing the active column reverses it",
   );
 
-  // A DIFFERENT column ignores the toggle and takes its own default, because
-  // "reverse it" is meaningless for a column you are not sorted by.
   const other = resolve(sortHref(state, "name", { toggle: true }));
   assert.equal(other.dir, "asc", "name's own default, not size's reversal");
   assert.equal(other.sort, "name");
 
-  // And the reverse toggle, so the assertion above cannot pass on a function
-  // that always returns "asc".
+  // The reverse toggle, so the assertion above cannot pass on a function that always returns "asc".
   const ascending = { ...DEFAULTS, sort: "size", dir: "asc" };
   assert.equal(resolve(sortHref(ascending, "size", { toggle: true })).dir, "desc");
 });
 
 test("header and popover produce IDENTICAL urls for any column not sorted", () => {
-  // This is the property the prompt names, asserted mechanically over every
-  // key rather than spot-checked on one. The popover does not toggle; the
-  // header does, so they can only differ on the ACTIVE key.
+  // The popover does not toggle and the header does, so they can only differ on the ACTIVE key.
   const state = { ...DEFAULTS, sort: "added", dir: "desc", q: "phage", tag: "roster", page: 4 };
   let compared = 0;
   for (const key of SORTS) {
@@ -384,8 +320,7 @@ test("header and popover produce IDENTICAL urls for any column not sorted", () =
     );
     compared += 1;
   }
-  // SCOPE, so a SORTS that shrank to one entry cannot make this pass by
-  // comparing nothing.
+  // So a SORTS that shrank to one entry cannot pass by comparing nothing.
   assert.ok(compared >= 3, `only ${compared} column(s) compared`);
 });
 
@@ -396,13 +331,6 @@ test("a sort choice always returns to page one", () => {
     assert.equal(got.has("page"), false, `${key} kept a page number from another sort`);
   }
 });
-
-/* -------------------------------------------------------------------------
- * THE DOCUMENT TITLE. 31 of 70 rows are PDFs and they currently read as
- * damage: five cards showing `edw...omics.pdf`, `edw...lysis.pdf` and so on,
- * which is the middle-elision doing its job on a string that should never have
- * been shown whole in the first place.
- * ---------------------------------------------------------------------- */
 
 test("a document title is the words, without the slug punctuation or extension", () => {
   assert.equal(docTitle("edwards-2024-phage-genomics.pdf"), "edwards 2024 phage genomics");
@@ -416,26 +344,14 @@ test("the title is NOT capitalized, because casing a filename asserts authorship
 });
 
 test("a document title survives the shapes a real key comes in", () => {
-  // No extension at all.
   assert.equal(docTitle("readme"), "readme");
-  // Repeated separators collapse rather than leaving a double space.
   assert.equal(docTitle("a--b__c.pdf"), "a b c");
-  // A dotted name keeps its interior dots: only the trailing extension goes.
   assert.equal(docTitle("v1.2-notes.pdf"), "v1.2 notes");
-  // Empty in, empty out, and no crash: a row with a pathological key must
-  // render a card rather than throw the page away.
+  // A row with a pathological key must render a card rather than throw the page away.
   assert.equal(docTitle(""), "");
   assert.equal(docTitle(".pdf"), "");
 });
 
-/* -------------------------------------------------------------------------
- * THE TYPED-COUNT LADDER.
- *
- * The guard in front of the one irreversible action this page has. It lived
- * inside the route action, where no gate could reach it: the admin-ui harness
- * renders markup and compares submissions, it never runs an action, so deleting
- * the check left every gate green. These are the assertions that were missing.
- * ---------------------------------------------------------------------- */
 test("the confirmation passes only on an exact match", () => {
   assert.equal(confirmationSatisfied("3", 3), true);
   assert.equal(confirmationSatisfied(" 3 ", 3), true, "surrounding space is trimmed");
@@ -452,8 +368,7 @@ test("the confirmation rejects everything adjacent to the count", () => {
 });
 
 test("the confirmation refuses a count that is not a positive whole number", () => {
-  // A blank confirmation against an empty trash must not read as agreement,
-  // which `String(typed) === String(count)` alone would have allowed for "".
+  // `String(typed) === String(count)` alone would accept "" against an empty trash.
   assert.equal(confirmationSatisfied("0", 0), false);
   assert.equal(confirmationSatisfied("", 0), false);
   assert.equal(confirmationSatisfied("-1", -1), false);

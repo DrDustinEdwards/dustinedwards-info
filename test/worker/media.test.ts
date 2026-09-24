@@ -13,49 +13,19 @@ import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
 
 /**
- * The media path: what an upload puts where, and what a delete is allowed to
- * remove.
- *
- * ## OBSERVATION BOUNDARY
- *
- * R2 and D1 are the real miniflare-local stores. `IMAGES` is NOT: it is a
- * Cloudflare platform binding with no local emulation, so `measureDimensions`
- * would answer `null` for every image here and the dimension segment the key
- * carries could never appear. The cases below hand it a binding with a
- * RECORDED shape and say which shape, so what is under test is
- * `contentKey`'s use of the measurement rather than the measuring.
- *
- * The unmeasurable case is covered too, and not as an afterthought: an SVG
- * genuinely has no pixel dimensions, so a key with no dimension segment is a
- * correct key and not a degraded one.
- *
- * What this cannot see is the reconciliation between the live bucket and the
- * live index, which the deployed health check's media-index-drift watches.
- *
- * ## KEYS ARE UNIQUE PER CASE
- *
- * The pool shares one D1 and one R2 across the cases in a file, so two cases
- * uploading identical bytes would share a key by construction, which is exactly
- * what content addressing promises. One case's `media_refs` row would then
- * decide the next case's claim. Every case seeds its own bytes.
+ * `IMAGES` has no local emulation, so cases hand it a binding with a recorded shape. The pool
+ * shares one D1 and R2 across cases, so every case seeds its own bytes or keys would collide.
  */
 
 const mediaEnv = () => env as unknown as Parameters<typeof upsertMediaRecord>[0];
 
-/**
- * The env with an `IMAGES` binding that reports `dimensions`.
- *
- * `null` stands for a source with no intrinsic pixel size: the real binding
- * answers with an object carrying no `width`, which is what an SVG gets, and
- * `measureDimensions` returns null rather than recording a zero.
- */
+/** `null` models an SVG: the real binding answers with no `width`. */
 function envWithImages(dimensions: { width: number; height: number } | null) {
   return {
     ...env,
     IMAGES: {
       info: async (stream: ReadableStream) => {
-        /* Drained, because the real binding consumes the stream and a case that
-         * left it open would not be exercising the same call. */
+        /* Drained, because the real binding consumes the stream. */
         await new Response(stream).arrayBuffer();
         return dimensions ?? { format: "image/svg+xml" };
       },
@@ -63,7 +33,6 @@ function envWithImages(dimensions: { width: number; height: number } | null) {
   } as unknown as Parameters<typeof measureDimensions>[0];
 }
 
-/** Distinct bytes per case, so distinct content-addressed keys. */
 function bytesFor(seed: string) {
   return new TextEncoder().encode(`fake-image-bytes:${seed}`);
 }
@@ -83,7 +52,6 @@ function routeContext(routeEnv: object) {
   return context;
 }
 
-/** Posts one file to the upload endpoint the way the editors do, and reads the JSON reply. */
 async function upload(
   file: { name: string; type: string; body: string },
   dimensions: Dimensions,
@@ -130,8 +98,6 @@ describe("media upload", () => {
     expect(first.status).toBe(200);
     expect(first.url).toBe(`/media/${first.key}`);
 
-    /* A digest of the bytes, so nothing public predicts it: the same name with
-     * other bytes is another key. */
     const second = await upload(
       { name: "a photo.png", type: "image/png", body: "raster bytes: addressed, other bytes" },
       { width: 800, height: 600 },
@@ -199,8 +165,6 @@ describe("media upload", () => {
   });
 
   it("lets set-alt and delete act on the raster key an upload produced", async () => {
-    /* A managed-key guard that predated the dimension segment once refused
-     * every uploaded raster while looking correct. */
     const { key } = await upload(
       { name: "managed.png", type: "image/png", body: "raster bytes: managed" },
       { width: 640, height: 480 },
@@ -245,9 +209,6 @@ describe("serving an allowed type that can carry script", () => {
 describe("set-alt", () => {
   it("updates the ROW on a raster key and leaves every column it did not name", async () => {
     const { key } = await uploadKey("alt-target", { width: 640, height: 480 });
-    /* A RASTER KEY, so this exercises the grammar the guard actually sees: the
-     * predicate that lived on the module predated the dimension segment and
-     * refused every uploaded raster while looking correct. */
     expect(key).toMatch(/-\d+x\d+\.png$/);
     expect(isManagedKey(key)).toBe(true);
 
@@ -267,12 +228,6 @@ describe("set-alt", () => {
       .first<{ alt: string; kind: string; original_name: string }>();
 
     expect(row?.alt).toBe("a wheat field at dusk");
-    /*
-     * RULING 2: alt is contextual as well as intrinsic, so posts keep whatever
-     * alt they were written with and only future insertions pick this up. The
-     * observable half here is that a partial upsert edits one column and blanks
-     * nothing else.
-     */
     expect(row?.kind).toBe("image");
     expect(row?.original_name).toBe("alt-target.png");
   });
@@ -305,41 +260,20 @@ describe("the atomic delete claim", () => {
       .run();
 
     expect(await claimMediaKeyForDelete(mediaEnv(), key)).toBe(false);
-    /* The caller refuses on a lost claim, so the object survives. */
     expect(await env.MEDIA.get(key)).toBeTruthy();
     expect((await mediaRefsFor(mediaEnv(), [key])).get(key)).toHaveLength(1);
   });
 
   it("OBSERVES THE `NOT EXISTS` THROUGH A PLANTED CONCURRENT CITATION (finding B009)", async () => {
-    /*
-     * ## THE DEFECT, replayed rather than described
-     *
-     * The delete action read the citations, found none, and then deleted the
-     * blob. Between those two steps a concurrent save can insert a `media_refs`
-     * row, and the object was removed anyway, leaving the post that had just
-     * cited it rendering a broken image.
-     *
-     * ## WHY THIS CASE IS SHAPED THE WAY IT IS
-     *
-     * The repair made the decisive step ONE statement, so the "is it still
-     * unreferenced" test and the row removal cannot be separated. A case that
-     * merely inserted a ref and then claimed would pass against the OLD code
-     * too, because the old code read refs first as well. What distinguishes the
-     * two is a citation landing AFTER the caller's read and BEFORE the claim:
-     * the old code deleted, this one refuses.
-     *
-     * So the case performs the caller's read, finds nothing, THEN plants the
-     * citation, THEN claims. That interleaving IS the race, made deterministic.
-     */
+    /* A citation landing after the caller's read and before the claim is the race, made
+     * deterministic. A ref inserted before the read would not tell a read-then-delete apart. */
     const { bytes, key } = await uploadKey("raced", { width: 20, height: 20 });
     await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
     await upsertMediaRecord(mediaEnv(), { key, alt: "", storage: "r2", kind: "image" });
 
-    /* Step 1: the caller's check. Nothing cites it, so a delete looks safe. */
     const seenByTheCaller = (await mediaRefsFor(mediaEnv(), [key])).get(key) ?? [];
     expect(seenByTheCaller).toHaveLength(0);
 
-    /* Step 2: a concurrent save lands a citation. This is the window. */
     await env.DB.prepare(
       `INSERT INTO media_refs (media_key, source_type, source_id, form, detail)
        VALUES (?1, 'post', 'raced-in', 'markdown-image', 'line 9')`,
@@ -347,12 +281,9 @@ describe("the atomic delete claim", () => {
       .bind(key)
       .run();
 
-    /* Step 3: the claim. It must LOSE, because the test is evaluated inside the
-     * statement rather than in the caller's now-stale reading. */
+    /* Must lose: the check runs inside the statement, not on the caller's stale read. */
     expect(await claimMediaKeyForDelete(mediaEnv(), key)).toBe(false);
 
-    /* And the object the racing post cites is still there, which is the whole
-     * point: the refusal is what keeps a live post's image alive. */
     expect(await env.MEDIA.get(key)).toBeTruthy();
     expect(
       await env.DB.prepare("SELECT key FROM media WHERE key = ?1").bind(key).first(),
@@ -360,9 +291,7 @@ describe("the atomic delete claim", () => {
   });
 
   it("reports that it lost when the key was already gone", async () => {
-    /* A false return means EITHER cited OR absent, and the caller must refuse
-     * either way. Both branches are covered so the return is never read as
-     * meaning only one of them. */
+    /* false means cited OR absent, and the caller must refuse either way. */
     expect(await claimMediaKeyForDelete(mediaEnv(), "dustin-edwards-0123456789abcdef-1x1.png")).toBe(false);
   });
 });

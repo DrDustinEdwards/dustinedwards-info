@@ -1,17 +1,9 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/*
- * The post's reading column. Direction D: paper ground, ink text, dust hairlines, radius 0, no
- * fills and no boxes. `.post` is the enhancement's hook (`.post .prose` is what the reading
- * progress bar and the copy-link-to-selection upgrade both look for), so the class stays on the
- * article even though the layout now comes from the track grid.
- */
+/* .post stays on the article: the reading progress bar and copy-link-to-selection look for .post
+ * .prose. */
 .post {
   min-width: 0;
 }
 
-/* The title: serif, because Direction D gives the serif the post's own name. 46px at 1280 and
-   30px at 375, which is what --t-h1-size already ramps between. */
 .post-head h1 {
   margin: 0 0 var(--s-4);
   color: var(--text);
@@ -24,8 +16,6 @@
   max-width: 20ch;
 }
 
-/* The dek: larger than body text and quieter than the title. It carries the meta description's
-   sentence, so it reads as a summary and not as the first paragraph. */
 .post-dek {
   margin: 0 0 var(--s-6);
   max-width: 44ch;
@@ -46,8 +36,7 @@
   }
 }
 
-/* The cover: full column width, height left to the image. D1 stores no intrinsic dimensions, so
-   fixing the width limits the layout shift to one axis. Radius 0 with the rest of the page. */
+/* D1 stores no intrinsic dimensions, so fixing the width limits layout shift to one axis. */
 .post-cover {
   margin: 0 0 var(--s-6);
 }
@@ -58,11 +47,6 @@
   height: auto;
 }
 
-/*
- * The series path and the page turn: ruled rows, not bordered blocks. The label sits above the
- * title so direction is read before the title, and the row is a 24px-plus target because the
- * anchor is a block. WCAG 2.2 2.5.8.
- */
 .post-nav,
 .post-series-steps {
   display: grid;
@@ -101,8 +85,6 @@
   margin-block-start: var(--s-6);
 }
 
-/* Backlinks: "Linked from" and one ruled row per post. A nav, so the label is a paragraph and not
-   a heading, which keeps the contents list the article's own sections. */
 .post-backlinks {
   margin-block-start: var(--s-6);
   border-block-start: var(--line-w) solid var(--dust);
@@ -131,18 +113,10 @@
   line-height: 1.4;
 }
 
-/* A list row: the title is the link, and it takes color on hover rather than an underline. */
 .post-backlinks a {
   text-decoration: none;
 }
 
-/*
- * The provenance line, under one rule, the last machine-readable thing in the column.
- *
- * ONE MONO CHANNEL, AND IT IS THE VALUE (ruling 118 item 6): the dates and the source hash take
- * the mono; the label and the revision notes are prose and stay sans and muted. The row used to be
- * mono throughout, which put the author's sentences in a machine face.
- */
 .post-history {
   margin: var(--s-6) 0 0;
   border-block-start: var(--line-w) solid var(--dust);
@@ -164,15 +138,8 @@
   font-family: var(--font-mono);
 }
 
-/*
- * The markdown twin and the permalink: plain links under one dust rule, each a real target. They
- * are not share buttons, which Direction D's kill list removed; they are the ways to take the post
- * somewhere else, and every one works with scripting off.
- *
- * THIS SHEET IS THE ONLY OWNER of `.post-action`. post-enhancements.css used to set the same
- * selector at the same (0,1,0) specificity and is imported AFTER this file, so its filled pill won
- * the tie and shipped while these rules sat inert. Ink and a rule, no fill, no radius, no border.
- */
+/* The only owner of .post-action: another sheet at the same (0,1,0), imported later, would win the tie
+ * silently. */
 .post-actions {
   display: flex;
   flex-wrap: wrap;
@@ -215,8 +182,6 @@
   line-height: 1.5;
 }
 
-/* Mentions: other people's sites, so the text is escaped by React and the treatment is the same
-   ruled row every other list on the page gets. No avatars and no cards. */
 .post-mentions {
   margin-block-start: var(--s-6);
 }
@@ -236,15 +201,10 @@
   font-size: 0.75rem;
 }
 
-/*
- * THE POST'S PROSE, SCOPED TO THE POST. prose.css is shared with about, colophon, privacy,
- * phage-discovery and both playgrounds, and Part B lands one page at a time (ruling 99), so
- * Direction D's type is stated here against `.post-body` rather than moving six pages this job
- * does not own. Each of these moves to prose.css as its page lands.
- */
+/* Scoped to .post-body: prose.css is shared with about, colophon, privacy, phage-discovery and both
+ * playgrounds. */
 
-/* Reading text: Source Serif 400 at 17/29. The leading is a length, not a ratio, so 29px holds
-   wherever the size is inherited. */
+/* The leading is a length, not a ratio, so 29px holds wherever the size is inherited. */
 .post-body .prose {
   font-family: var(--font-serif);
   font-size: 1.0625rem;
@@ -252,9 +212,6 @@
   line-height: 1.8125rem;
 }
 
-/* h2 stays Source Serif at EVERY width: size answers the viewport, the typeface is a property of
-   the element, and swapping it at a breakpoint would make the same heading a different thing on a
-   phone. 32px at 1280, 24px at 375. */
 .post-body .prose h2 {
   margin: 2.875rem 0 0.875rem;
   max-width: 24ch;
@@ -267,7 +224,6 @@
   line-height: var(--t-h2-leading);
 }
 
-/* h3 is Inter, which is the one place the sans appears inside the argument. */
 .post-body .prose h3 {
   margin: 2rem 0 0.625rem;
   color: var(--text);
@@ -285,8 +241,7 @@
   }
 }
 
-/* Link colors, named tokens throughout. The underline is the base anchor rule's dust hairline,
-   restated here only because `.prose a` would otherwise outrank the base hover. */
+/* Restated because .prose a would otherwise outrank the base hover. */
 .post-body .prose a {
   color: var(--brand);
 }
@@ -304,8 +259,6 @@
   color: var(--brand-pressed);
 }
 
-/* The pull quote: the page quoting itself, between two dust rules, at a measure short enough that
-   it cannot be mistaken for a paragraph. */
 .post-body .prose .pull-quote {
   margin: 2.125rem 0;
   max-width: 30ch;
@@ -324,8 +277,6 @@
   }
 }
 
-/* Code: ruled top and bottom rather than boxed. `--paper` is the one permitted departure
-   from the paper ground, because a code block must stay identifiable on paper. */
 .post-body .prose pre {
   border: 0;
   border-block: var(--line-w) solid var(--dust);
@@ -333,14 +284,11 @@
   padding: 1rem 0;
 }
 
-/* A quotation from somewhere else, which the pull quote is not: one dust rule on the inside edge,
-   no fill. */
 .post-body .prose blockquote {
   border-inline-start: var(--line-w) solid var(--dust);
   color: var(--text-secondary);
 }
 
-/* Print: the page turn and the backlinks are links, so they go. The history line stays. */
 @media print {
   .post-nav,
   .post-backlinks,

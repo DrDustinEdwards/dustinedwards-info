@@ -18,57 +18,22 @@ import AdminMentions, {
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
 import { loader as blogLoader } from "~/routes/blog.$slug";
 
-/**
- * The webmention receiver, its four bounds, its verifier and its moderation
- * queue.
- *
- * ## OBSERVATION BOUNDARY
- *
- * The route module is driven DIRECTLY, on `routes.test.ts`' pattern and for its
- * reason: `virtual:react-router/server-build` is a build artifact this layer
- * does not build, so what is exercised here is the module's own behavior,
- * which is where every property below actually lives. What this cannot see is
- * that `/webmention` is wired to this module, which is `routes.ts` and the
- * live probe's business.
- *
- * The outbound fetch is stubbed at the wire, the way `github-stub.ts` does it
- * and for the same stated reason: the verifier's job IS to make an HTTP request
- * and read what comes back, so mocking the verifier would delete the subject
- * and leave a test of its argument list. The stub REFUSES EVERY URL IT DOES NOT
- * KNOW, which is what makes "this layer never reaches the network" a mechanism
- * rather than an intention.
- *
- * ## EVERY CASE CARRIES ITS OWN CLIENT IP
- *
- * `clientIp` falls back to the literal `unknown` off the edge, so without this
- * every case in the file would share one `wm:unknown` rate-limit instance and
- * the twenty-first assertion in the file would fail for the twentieth's reason.
- * Discovered by reading `client-ip.ts`, not by watching it happen.
- */
+/* Every case carries its own client IP: `clientIp` falls back to `unknown` off the edge, so
+ * cases would otherwise share one `wm:unknown` rate-limit instance. */
 
-/** The `context` a loader or action receives, carrying the bindings. */
 function routeContext(ctx: ExecutionContext, overrides: Record<string, unknown> = {}) {
   const context = new RouterContextProvider();
   context.set(cloudflareContext, { env: { ...env, ...overrides } as never, ctx });
   return context;
 }
 
-/**
- * The instant the rate case freezes at. ON A MINUTE BOUNDARY, so a case that
- * advances by the window length lands exactly on the next one and the
- * arithmetic under test is the limiter's rather than this fixture's.
- *
- * The whole family of rate-limit cases in this layer was flaky against the real
- * clock until 2026-09-04: `AskBudget.hit` keys on a FIXED window, so a boundary
- * landing inside a spend loop resets the count and the refusal never arrives.
- * Frozen here for that reason and no other.
- */
+/* On a minute boundary, and frozen: `AskBudget.hit` keys on a FIXED window, so a boundary
+ * landing inside a spend loop resets the count and the refusal never arrives. */
 const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
 
 const TARGET_SLUG = "a-mentioned-post";
 const TARGET = `${SITE_ORIGIN}/blog/${TARGET_SLUG}`;
 
-/** A form POST to the endpoint, from an IP of the case's own choosing. */
 function wm(
   body: string,
   options: { ip?: string; method?: string; contentType?: string | null; headers?: HeadersInit } = {},
@@ -88,23 +53,12 @@ function wm(
 const form = (source: string, target: string) =>
   `source=${encodeURIComponent(source)}&target=${encodeURIComponent(target)}`;
 
-/** One page the stub will serve, or a failure it will produce instead. */
 type StubPage =
   | { body: string; contentType?: string; status?: number }
   | { networkError: true };
 
-/**
- * Install the outbound stub.
- *
- * A URL with no recorded page THROWS AND NAMES ITSELF rather than falling
- * through to the network, which is `github-stub.ts`' one load-bearing property
- * transplanted: a stub that reached the real internet would pass locally
- * against whatever happened to be published that day.
- *
- * `gate`, when given, is awaited before any page is served. It is how the
- * "202 and a row in unverified" case observes the row BEFORE verification
- * overwrites it, without racing the `waitUntil` task.
- */
+/* A URL with no recorded page throws rather than reaching the network. `gate` holds serving
+ * so a case can observe the row BEFORE verification overwrites it. */
 function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
@@ -124,7 +78,6 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
   });
 }
 
-/** A minimal source page that links to `href`. */
 const pageLinkingTo = (href: string, extra = "") =>
   `<!doctype html><html><body>${extra}<p>I read <a href="${href}">this post</a> today and it was useful.</p></body></html>`;
 
@@ -152,7 +105,6 @@ async function mentionRow(sourceUrl: string) {
     }>();
 }
 
-/** Insert one row directly, so a case can start from a state it chose. */
 async function seedMention(
   sourceUrl: string,
   status: string,
@@ -171,7 +123,6 @@ async function seedMention(
   return row?.id ?? -1;
 }
 
-/** The moderation page as the server renders it, from real loader and action data. */
 function renderMentionsPage(url: string, loaderData: unknown, actionData?: unknown) {
   const Stub = createRoutesStub([
     {
@@ -183,7 +134,6 @@ function renderMentionsPage(url: string, loaderData: unknown, actionData?: unkno
   return renderToStaticMarkup(createElement(Stub, { initialEntries: [url] }));
 }
 
-/** The text content of every element matching `selector`, in document order. */
 async function textsOf(html: string, selector: string): Promise<string[]> {
   const texts: string[] = [];
   await new HTMLRewriter()
@@ -202,19 +152,15 @@ async function textsOf(html: string, selector: string): Promise<string[]> {
 }
 
 beforeEach(async () => {
-  /*
-   * THE TABLE IS EMPTIED BETWEEN CASES, because D1 persists for the whole file
-   * and the global-cap case asserts an exact count. Not an FTS index and not a
-   * derived store, so neither the live-path rule nor hard rule 18 has anything to say about it.
-   */
+  /* Emptied between cases: D1 persists for the whole file and the global-cap case asserts an
+   * exact count. */
   await env.DB.prepare(`DELETE FROM webmentions`).run();
   await seedPost(TARGET_SLUG, "published");
 });
 
 afterEach(() => {
-  /* RESTORED HERE rather than at the end of each freezing case: a case that
-   * fails mid-assertion never reaches its own cleanup, and a clock left frozen
-   * would surface as a failure in whatever ran next. */
+  /* Restored here, not per case: a case that fails mid-assertion never reaches its own
+   * cleanup, and a frozen clock would fail whatever ran next. */
   vi.useRealTimers();
 });
 
@@ -229,8 +175,6 @@ describe("/webmention refuses before it reads", () => {
     expect(response.status).toBe(405);
     expect(response.headers.get("allow")).toBe("POST");
     expect(response.headers.get("cache-control")).toBe("private, no-store");
-    /* NOTHING WAS WRITTEN. A 405 that had already touched D1 would mean the
-     * method gate is decoration rather than the first bound. */
     const count = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{
       n: number;
     }>();
@@ -258,11 +202,7 @@ describe("/webmention refuses before it reads", () => {
   });
 
   it("answers 413 on a body that EXCEEDS the cap while UNDERSTATING its length", async () => {
-    /*
-     * THE HALF A Content-Length CHECK CANNOT SEE, and the defect
-     * `read-capped.mjs` was written for: a declared length is useful only for
-     * refusing early, never for permitting. The header below lies.
-     */
+    /* A declared length is useful only for refusing early, never for permitting. The header below lies. */
     const ctx = createExecutionContext();
     const huge = form(`https://elsewhere.example/${"a".repeat(6000)}`, TARGET);
     const response = await webmentionAction({
@@ -298,12 +238,7 @@ describe("/webmention refuses before it reads", () => {
   });
 
   it("does NOT serve when the limiter is missing", async () => {
-    /*
-     * The stance the Ask guards, the CSP sink, `/api/health` and the operator
-     * path all take: an unprotected public write path does not serve unmetered,
-     * it does not serve. Asserted by REMOVING THE BINDING rather than by
-     * reading the source.
-     */
+    /* An unprotected public write path does not serve unmetered; it does not serve. */
     const ctx = createExecutionContext();
     const { ASK_BUDGET: _removed, ...withoutLimiter } = env as unknown as Record<string, unknown>;
     const context = new RouterContextProvider();
@@ -320,18 +255,8 @@ describe("/webmention refuses before it reads", () => {
 
 describe("/webmention bound 1: the per-IP rate limit", () => {
   it("REFUSES past 20 per 60 seconds, with a Retry-After to hand back", async () => {
-    /*
-     * THE CLOCK IS FROZEN FOR THE WHOLE SPEND. `AskBudget.hit` keys its counter
-     * on `Math.floor(Date.now() / 1000 / windowSeconds)`, a FIXED window: a
-     * boundary landing inside this loop drops the count and the refusal arrives
-     * late or never. Measured 2026-09-04 across the operator and health cases,
-     * where it cost a ship.
-     *
-     * The requests below carry a TARGET THIS SITE DOES NOT HAVE, so each one is
-     * refused at 400 after spending its rate unit and before touching D1 or
-     * scheduling a verification. The rate limit is what is under test, not the
-     * write path.
-     */
+    /* The clock is frozen: `AskBudget.hit` keys on a FIXED window. The target is one this site
+     * lacks, so each request spends its rate unit and stops at 400 before touching D1. */
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(WINDOW_START);
 
@@ -384,17 +309,8 @@ describe("/webmention bound 2: the target must be a published post here", () => 
   });
 
   it("REFUSES A DRAFT TARGET AND AN UNKNOWN SLUG IDENTICALLY, byte for byte", async () => {
-    /*
-     * THE ORACLE THIS CLOSES. The visibility rule keeps drafts off every public
-     * surface, and a 400 that distinguished "that post is not published" from
-     * "there is no such post" would put them back on one: a caller could
-     * enumerate unpublished slugs by reading the refusals, without ever seeing
-     * a page.
-     *
-     * Compared as STATUS AND BODY rather than by reading the route's constant,
-     * because the property is that a caller cannot tell them apart, and a
-     * caller reads the wire.
-     */
+    /* A 400 that told a draft from an unknown slug would let a caller enumerate unpublished
+     * slugs from the refusals, so the two are compared on the wire. */
     await seedPost("an-unpublished-draft", "draft");
 
     const ctx = createExecutionContext();
@@ -417,9 +333,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
     expect(draft.status).toBe(unknown.status);
     expect(await draft.text()).toBe(await unknown.text());
 
-    /* And the draft is really there, so this case is not passing because the
-     * seed silently failed and both requests named a slug that does not
-     * exist. */
+    /* The draft is really there, so this is not passing on a seed that silently failed. */
     const seeded = await env.DB.prepare(
       `SELECT status FROM posts WHERE slug = 'an-unpublished-draft'`,
     ).first<{ status: string }>();
@@ -443,19 +357,12 @@ describe("/webmention bound 2: the target must be a published post here", () => 
       } as never);
       expect(response.status, `source ${source} was not refused`).toBe(400);
     }
-    /* SCOPE, ASSERTED. An empty list would pass this case by examining
-     * nothing, which is what a clean sweep looks like. */
     expect(sources.length).toBe(6);
   });
 });
 
 describe("/webmention bound 4: the global cap on open rows", () => {
   it("answers 503 at the cap and writes nothing more", async () => {
-    /*
-     * 500 SEEDED `pending` ROWS, which is the cap. Written with a recursive CTE
-     * rather than 500 round trips, and every value is generated here, so
-     * nothing about this seed is user input.
-     */
     await env.DB.prepare(
       `WITH RECURSIVE seq(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM seq WHERE n < 500)
        INSERT INTO webmentions (source_url, target_slug, status)
@@ -487,14 +394,8 @@ describe("/webmention bound 4: the global cap on open rows", () => {
 
 describe("/webmention accepts and verifies", () => {
   it("answers 202 and leaves the row UNVERIFIED until verification runs", async () => {
-    /*
-     * THE GATE IS WHAT MAKES THIS DETERMINISTIC. Verification is handed to
-     * `ctx.waitUntil`, so without a hold the verdict write races the assertion
-     * below and this case would pass or fail on scheduling. The stub waits on
-     * `release` before serving, so the row is observed in the state the
-     * endpoint left it in, and then the hold is lifted and the same case proves
-     * the transition.
-     */
+    /* Verification runs in `ctx.waitUntil`; the gate holds the stub so the row is observed
+     * before the verdict write, instead of racing the assertion. */
     let release = () => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -536,10 +437,7 @@ describe("/webmention accepts and verifies", () => {
     const row = await mentionRow(source);
     expect(row?.status).toBe("pending");
     expect(row?.failure_reason).toBeNull();
-    /* The excerpt is the CONTAINING element's text, collapsed. */
     expect(row?.excerpt).toBe("I read this post today and it was useful.");
-    /* No h-card, so the name is the source HOSTNAME and the url is null: a
-     * fact about where it came from rather than a guess about who wrote it. */
     expect(row?.author_name).toBe("elsewhere.example");
     expect(row?.author_url).toBeNull();
   });
@@ -578,9 +476,7 @@ describe("/webmention accepts and verifies", () => {
 
   it("FAILS with too-large past 1 MB, without holding the whole body", async () => {
     const source = "https://elsewhere.example/enormous";
-    /* Over the ceiling by a comfortable margin, and the link IS on the page:
-     * the case would pass for the wrong reason if the body carried no link,
-     * because `no-link` is also a failure. */
+    /* The link IS on the page, or this would pass on `no-link`, which is also a failure. */
     const filler = "<p>padding padding padding</p>".repeat(40_000);
     stubSources({ [source]: { body: pageLinkingTo(TARGET, filler) } });
 
@@ -627,17 +523,8 @@ describe("/webmention accepts and verifies", () => {
   });
 
   it("STORES A SCRIPT-SHAPED AUTHOR NAME AS THAT LITERAL TEXT", async () => {
-    /*
-     * The h-card is read out of a document this site does not control, and the
-     * value below is what an attacker would put in it. It must arrive in the
-     * column as the CHARACTERS, unexecuted and unstripped: the H2 render
-     * escapes it, and a column holding markup would make the render the only
-     * thing standing between it and a reader.
-     *
-     * The name is entity-encoded in the source so that `textContent` yields the
-     * literal string rather than a parsed element, which is exactly the shape a
-     * real hostile page would send.
-     */
+    /* Hostile h-card: it must be stored as the CHARACTERS, unexecuted and unstripped. The source
+     * entity-encodes it so `textContent` yields the literal string, as a real hostile page would. */
     const source = "https://elsewhere.example/hostile-card";
     const card =
       `<div class="h-card"><span class="p-name">&lt;script&gt;alert(1)&lt;/script&gt;</span>` +
@@ -654,9 +541,6 @@ describe("/webmention accepts and verifies", () => {
     const row = await mentionRow(source);
     expect(row?.status).toBe("pending");
     expect(row?.author_name).toBe("<script>alert(1)</script>");
-    /* The relative u-url is RESOLVED against the source, so what is stored is
-     * an absolute http(s) URL and never a fragment a render would have to
-     * complete. */
     expect(row?.author_url).toBe("https://elsewhere.example/about");
   });
 });
@@ -674,9 +558,7 @@ describe("/webmention bound 3: one row per source and target", () => {
     await waitOnExecutionContext(first);
     expect((await mentionRow(source))?.status).toBe("pending");
 
-    /* The second send arrives after the source has stopped linking here, which
-     * is the case that matters: the row must be re-decided rather than left
-     * carrying a verdict its evidence no longer supports. */
+    /* The source has stopped linking here, so the row must be re-decided, not left stale. */
     stubSources({ [source]: { body: pageLinkingTo(`${SITE_ORIGIN}/blog/somewhere-else`) } });
     const second = createExecutionContext();
     const response = await webmentionAction({
@@ -696,13 +578,11 @@ describe("/webmention bound 3: one row per source and target", () => {
     const row = await mentionRow(source);
     expect(row?.status).toBe("failed");
     expect(row?.failure_reason).toBe(FAILURE_REASONS.noLink);
-    /* The stale excerpt went with the stale verdict. */
     expect(row?.excerpt).toBeNull();
   });
 });
 
 describe("the admin plane refuses the smoke actor", () => {
-  /** A request through the admin layout's middleware and then the moderation action, in route order. */
   async function throughAdminStack(request: Request, context: RouterContextProvider) {
     const args = { request, context, params: {} } as never;
     const run = async (index: number): Promise<unknown> => {
@@ -768,7 +648,6 @@ describe("the moderation queue", () => {
     };
   }
 
-  /** The loader, at whatever `?status=` the case wants to ask about. */
   async function runLoader(query = "") {
     const ctx = createExecutionContext();
     return (await mentionsLoader({
@@ -788,11 +667,7 @@ describe("the moderation queue", () => {
   }
 
   it("A DECISION IS A TWO-WAY DOOR: approve is undone by reject", async () => {
-    /*
-     * THE CLAIM `check:destructive` CLASSIFIES THESE TWO INTENTS ON. They are
-     * listed REVERSIBLE with the reason "undone by reject", and an entry in
-     * that map is a judgment nobody has to run. This runs it.
-     */
+    /* `check:destructive` lists these intents REVERSIBLE ("undone by reject"); this runs that claim. */
     const source = "https://elsewhere.example/decided";
     const id = await seedMention(source, "pending", 1);
 
@@ -815,20 +690,13 @@ describe("the moderation queue", () => {
     await runAction({ intent: "approve", id: String(a) });
     await runAction({ intent: "approve", id: String(b) });
 
-    /* Neither moved: one has no evidence yet and the other has evidence
-     * against it, and the `where` clause says so rather than the button
-     * layout saying it. */
     expect(await statusOf(unverified)).toBe("unverified");
     expect(await statusOf(failed)).toBe("failed");
   });
 
   it("REFUSES A DELETE WITH NO TYPED CONFIRMATION, in the ACTION", async () => {
-    /*
-     * `app/lib/destructive.mjs`: a guard that runs in a handler is feedback,
-     * not a guard, because with scripting off the handler never runs and the
-     * form posts anyway. So the refusal has to be observable HERE, with no
-     * browser in the picture at all, which is exactly what this case is.
-     */
+    /* With scripting off the handler never runs and the form posts anyway, so the refusal
+     * must be observable in the action itself. */
     const source = "https://elsewhere.example/keep-me";
     const id = await seedMention(source, "rejected", 1);
 
@@ -836,9 +704,7 @@ describe("the moderation queue", () => {
     expect(bare.data.confirmDelete).toBe(id);
     expect(await statusOf(source)).toBe("rejected");
 
-    /* AND A NEAR MISS IS STILL A MISS. "1 " and "01" both read as one to a
-     * human and neither satisfies the predicate, which is the whole reason it
-     * is a strict string compare rather than Number(). */
+    /* "1 " and "01" both read as one to a human, so the predicate is a strict string compare. */
     const near = await runAction({ intent: "delete", id: String(id), "confirm-count": "01" });
     expect(near.data.confirmDelete).toBe(id);
     expect(await statusOf(source)).toBe("rejected");
@@ -849,8 +715,6 @@ describe("the moderation queue", () => {
     const id = await seedMention(source, "rejected", 1);
 
     const done = await runAction({ intent: "delete", id: String(id), "confirm-count": "1" });
-    /* THE ROW FIRST, so a guard whose count drifted fails on the claim that
-     * matters with a legible message, rather than on a missing message field. */
     expect(await mentionRow(source)).toBeNull();
     expect(done.data.message).toContain("deleted");
   });
@@ -869,13 +733,7 @@ describe("the moderation queue", () => {
   });
 
   it("SWEEPS ONLY PAST THE WINDOW, and never an open row at any age", async () => {
-    /*
-     * SIX ROWS STRADDLING BOTH WINDOWS, so the case can fail in both
-     * directions: a sweep that took too much removes a recent failure, and one
-     * that took too little leaves an old rejection. The two ancient OPEN rows
-     * are the assertion that matters most, because expiring them would quietly
-     * raise the endpoint's global cap.
-     */
+    /* Expiring an ancient OPEN row would quietly raise the endpoint's global cap. */
     await seedMention("https://elsewhere.example/failed-old", "failed", 40);
     await seedMention("https://elsewhere.example/failed-recent", "failed", 20);
     await seedMention("https://elsewhere.example/rejected-old", "rejected", 100);
@@ -893,8 +751,7 @@ describe("the moderation queue", () => {
     expect(await statusOf("https://elsewhere.example/ancient-pending")).toBe("pending");
     expect(await statusOf("https://elsewhere.example/ancient-unverified")).toBe("unverified");
 
-    /* An APPROVED row is not swept at any age either: it is the published
-     * record, and H2 renders it. */
+    /* An APPROVED row is the published record and is not swept at any age. */
     await seedMention("https://elsewhere.example/ancient-approved", "approved", 400);
     await runAction({ intent: "sweep", "confirm-count": "1" });
     expect(await statusOf("https://elsewhere.example/ancient-approved")).toBe("approved");
@@ -904,7 +761,6 @@ describe("the moderation queue", () => {
     const source = "https://elsewhere.example/near-miss-id";
     const id = await seedMention(source, "rejected", 1);
 
-    /* Each bad id sits one lenient parse away from the real row's id. */
     for (const bad of ["", "0", `-${id}`, `${id}.5`, `${id}abc`]) {
       const result = await runAction({ intent: "delete", id: bad, [CONFIRM_FIELD]: "1" });
       expect(result.data.ok, `id ${JSON.stringify(bad)} was not refused`).toBe(false);
@@ -912,18 +768,8 @@ describe("the moderation queue", () => {
     }
   });
 
-  /*
-   * RULING 21c, AND THIS IS THE LAYER THAT OWNS IT.
-   *
-   * The page renders a message into `editor-notice` or into `panel-error` on
-   * `ok` alone. Rendering the page runs no action, so it cannot say the action
-   * sets the flag correctly. That is this layer's job, and it is what
-   * stops a success reappearing in the error box.
-   *
-   * THE FLAG IS ASSERTED BESIDE THE EFFECT, never on its own: a run that
-   * checked `ok === true` and not the row would pass on an action that reported
-   * success and did nothing.
-   */
+  /* Rendering runs no action, so only this layer can see the `ok` flag. It is asserted beside
+   * the effect, or an action that reported success and did nothing would pass. */
   it("MARKS AN OUTCOME ok AND A REFUSAL NOT, so the page can pick the right box", async () => {
     const source = "https://elsewhere.example/flagged";
     const id = await seedMention(source, "pending", 1);
@@ -943,8 +789,7 @@ describe("the moderation queue", () => {
     expect(deleted.data.ok).toBe(true);
     expect(await mentionRow(source)).toBeNull();
 
-    /* THE TWO REFUSALS, and neither may be `ok`. Both carry a message, which is
-       exactly why the page cannot classify by reading one. */
+    /* Both refusals carry a message too, so the page cannot classify by reading one. */
     const badIntent = await runAction({ intent: "incinerate" });
     expect(badIntent.data.ok).toBe(false);
     expect(badIntent.data.message).toBeTruthy();
@@ -975,16 +820,10 @@ describe("the moderation queue", () => {
     expect(await statusOf("https://elsewhere.example/expired-failure")).toBe("failed");
   });
 
-  /*
-   * RULING 21a's DEFAULT, and it is a loader property rather than a component
-   * one: the filter is resolved on the server so the page needs no script and
-   * the rendered HTML is the whole answer. Only running the loader can see it.
-   */
+  /* The filter is resolved on the server so the page needs no script; only the loader can see it. */
   it("DEFAULTS TO PENDING when anything is pending, and to all when nothing is", async () => {
     await seedMention("https://elsewhere.example/settled", "approved", 1);
 
-    /* Nothing pending, so the default is the log rather than a quiet line about
-       an empty queue. */
     const quiet = await runLoader();
     expect(quiet.data.status).toBe("all");
 
@@ -996,13 +835,11 @@ describe("the moderation queue", () => {
   it("HONOURS an explicit ?status=, and treats an unrecognised one as absent", async () => {
     await seedMention("https://elsewhere.example/waiting", "pending", 1);
 
-    /* `all` is how a reader asks for everything ON PURPOSE, which is why it
-       cannot be the same thing as the parameter being missing. */
     expect((await runLoader("?status=all")).data.status).toBe("all");
     expect((await runLoader("?status=rejected")).data.status).toBe("rejected");
 
-    /* An empty or unknown value falls back to the default rather than to `all`,
-       so a truncated link cannot silently widen what is on screen. */
+    /* An empty or unknown value falls back to the default rather than to `all`, so a
+       truncated link cannot silently widen what is on screen. */
     expect((await runLoader("?status=")).data.status).toBe("pending");
     expect((await runLoader("?status=everything")).data.status).toBe("pending");
   });
@@ -1050,8 +887,7 @@ describe("the moderation queue", () => {
     }
   });
 
-  /* The sweep button is LABELLED with this count, so the loader owes it on
-     every request rather than only on the confirmation step. */
+  /* The sweep button is labelled with this count, so the loader owes it on every request. */
   it("CARRIES THE EXPIRING COUNT, so the sweep control can name what it removes", async () => {
     const empty = await runLoader();
     expect(empty.data.expiring).toEqual({ failed: 0, rejected: 0 });
@@ -1066,19 +902,8 @@ describe("the moderation queue", () => {
 });
 
 describe("the post loader carries approved mentions and advertises the endpoint", () => {
-  /**
-   * The post route's loader, driven directly.
-   *
-   * OBSERVATION BOUNDARY, and it is narrower than it looks. This layer runs
-   * loaders, not React, so what is asserted here is WHICH ROWS reach the
-   * component and what the response headers carry. Whether those rows render as
-   * escaped text, whether a refused URL renders without an anchor, and whether
-   * the section is absent rather than empty are facts about the RENDER, and
-   * they are asserted in `check:browser` against a real document built from a
-   * seeded row. Splitting them is not a gap: each half is asserted by the only
-   * instrument that can see it.
-   */
-
+  /* This layer runs loaders, not React: which rows reach the component is asserted here, and
+   * how they render is asserted in `check:browser`. */
   const POST_SLUG = "a-mentioned-post";
 
   async function seedApproved(
@@ -1121,11 +946,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   }
 
   it("carries NO mentions when none are approved", async () => {
-    /*
-     * The absence case, and it is the one most posts are in. Every other status
-     * for the same slug is seeded here, so this is not "an empty table returns
-     * nothing": it is the predicate refusing four rows that exist.
-     */
+    /* Every other status is seeded, so this is the predicate refusing four rows that exist. */
     await seedApproved("https://elsewhere.example/pending", { status: "pending" });
     await seedApproved("https://elsewhere.example/rejected", { status: "rejected" });
     await seedApproved("https://elsewhere.example/failed", { status: "failed" });
@@ -1134,8 +955,6 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     const result = await loadPost(POST_SLUG);
     expect(result.data.mentions).toEqual([]);
 
-    /* SCOPE, ASSERTED. Four rows for this slug exist, so an empty result is the
-     * predicate working rather than the seed having failed. */
     const seeded = await env.DB.prepare(
       `SELECT COUNT(*) AS n FROM webmentions WHERE target_slug = ?1`,
     )
@@ -1149,17 +968,15 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     const newer = Math.floor(Date.UTC(2026, 7, 20) / 1000);
     await seedApproved("https://elsewhere.example/older", { decidedAt: older });
     await seedApproved("https://elsewhere.example/newer", { decidedAt: newer });
-    /* And one of every other status, so the ordering assertion is not also
-     * standing in for the filter. */
+    /* One of another status, so the ordering assertion is not also standing in for the filter. */
     await seedApproved("https://elsewhere.example/still-pending", { status: "pending" });
 
     const result = await loadPost(POST_SLUG);
     expect(result.data.mentions).toHaveLength(2);
     expect(result.data.mentions[0]?.sourceUrl).toBe("https://elsewhere.example/newer");
     expect(result.data.mentions[1]?.sourceUrl).toBe("https://elsewhere.example/older");
-    /* The projection is the six columns the render needs and nothing else: a
-     * status or a failure reason reaching the client would be moderation state
-     * on a public page. */
+    /* A status or failure reason reaching the client would be moderation state on a public
+     * page. */
     expect(Object.keys(result.data.mentions[0] ?? {}).sort()).toEqual([
       "authorName",
       "authorUrl",
@@ -1171,17 +988,8 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   });
 
   it("A DRAFT'S APPROVED MENTION IS UNREACHABLE, at the route AND at the reader", async () => {
-    /*
-     * SEEDED DIRECTLY, because the endpoint cannot produce this row: H1 refuses
-     * a draft target at the moment of receipt. What it CAN produce is this row's
-     * successor, a post unpublished after its mentions were approved, and that
-     * is the ordinary case this covers.
-     *
-     * BOTH LEVELS, because either alone is a weaker claim. The route 404s, which
-     * is the positional guarantee. `approvedMentionsFor` also composes
-     * `publiclyVisible()` itself, which is the guarantee that survives somebody
-     * calling it from somewhere else.
-     */
+    /* Seeded directly: the endpoint refuses a draft target, but a post unpublished after its
+     * mentions were approved reaches this state. */
     await env.DB.prepare(
       `INSERT INTO posts (slug, kind, title, body, status) VALUES (?1, 'post', 'A draft', 'Body.', 'draft')
        ON CONFLICT(slug) DO UPDATE SET status = 'draft'`,
@@ -1190,10 +998,8 @@ describe("the post loader carries approved mentions and advertises the endpoint"
       .run();
     await seedApproved("https://elsewhere.example/on-a-draft", { slug: "a-drafted-post" });
 
-    /* The reader refuses it on its own. */
     await expect(approvedMentionsFor(env as never, "a-drafted-post")).resolves.toEqual([]);
 
-    /* And the route never gets that far. */
     let thrown: unknown;
     try {
       await loadPost("a-drafted-post");
@@ -1203,8 +1009,6 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     expect(thrown).toBeTruthy();
     expect((thrown as { init?: { status?: number } })?.init?.status ?? (thrown as Response)?.status).toBe(404);
 
-    /* SCOPE, ASSERTED. The approved row really is there, so both refusals above
-     * are refusals rather than an empty table. */
     const row = await env.DB.prepare(
       `SELECT status FROM webmentions WHERE source_url = 'https://elsewhere.example/on-a-draft'`,
     ).first<{ status: string }>();
@@ -1212,11 +1016,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   });
 
   it("A SCHEDULED POST'S mentions are refused too, on the same predicate", async () => {
-    /*
-     * The other half of `publiclyVisible()`. A post published with a future
-     * `publish_at` is not draft and is not visible, and a predicate that only
-     * checked status would pass this case while leaking it.
-     */
+    /* A predicate that only checked status would pass this case while leaking it. */
     const future = Math.floor((Date.now() + 90 * 24 * 60 * 60 * 1000) / 1000);
     await env.DB.prepare(
       `INSERT INTO posts (slug, kind, title, body, status, publish_at)
@@ -1238,9 +1038,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
 
     expect(link).toContain(`rel="webmention"`);
     expect(link).toContain(`${SITE_ORIGIN}/webmention`);
-    /* BOTH VALUES. The twin has been advertised here since it shipped, and a
-     * header that gained the endpoint by replacing it would be a regression
-     * nothing else would notice. */
+    /* A header that gained the endpoint by replacing the twin would be a silent regression. */
     expect(link).toContain(`rel="alternate"`);
     expect(link).toContain(`/blog/${POST_SLUG}.md`);
     /* One header, two values, comma joined, which is how RFC 8288 spells it. */

@@ -1,13 +1,6 @@
 /**
- * The search page's sort control, which is the one ordering a reader chooses.
- *
- * WHAT MAKES THIS WORTH A TEST rather than a reading: the ordering a reader sees is not the SQL's.
- * `runIndex` orders each index's candidate fetch by bm25 and `fuse()` orders what comes back, so
- * the sort has to act on the fused list, after fusion and before pagination. Every assertion below
- * is about one of those two boundaries, because getting either wrong produces a list that looks
- * plausible on page 1 and is wrong on page 2.
- *
- * @see app/lib/search/sort.mjs
+ * The sort acts on the fused list, after fusion and before pagination; getting either boundary
+ * wrong looks plausible on page 1 and is wrong on page 2.
  */
 
 import test from "node:test";
@@ -70,15 +63,8 @@ test("date does not mutate its input", () => {
 });
 
 /*
- * THE SENTINEL, and the case that actually separates the two implementations.
- *
- * The first control written here was a null-as-zero sort, asserted to fail. IT DID NOT: 0 is below
- * every timestamp this corpus holds, so `?? 0` and `?? -Infinity` return the identical list and
- * the control agreed with everything. That is the failure the replay rule names, caught by running it.
- *
- * A PRE-EPOCH DATE is what tells them apart, and it is not hypothetical on a site that cites
- * papers: a negative `publishAt` is any date before 1970. Under `?? 0` it sorts BELOW the undated
- * row; under `-Infinity` the undated row is still last, which is what "newest" means.
+ * A pre-epoch date separates `?? 0` from `?? -Infinity`: 0 is below every timestamp in the corpus,
+ * so without one the two sorts return identical lists.
  */
 test("a pre-epoch date still outranks an undated row", () => {
   const withOld = [...HITS, { uid: "e", publishAt: -86400 }];

@@ -2,30 +2,12 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { SITE, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
-// This page renders into `.prose`, and prose.css is route-scoped since the
-// per-route CSS split. A page that uses the class and does not import the sheet
-// renders unstyled, which `check:page-payload`'s coverage half catches.
+// prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
 
-/**
- * What this site records, in plain English.
- *
- * EVERY SENTENCE IS DERIVABLE FROM THE CODE. That is the rule this page is written
- * under and the reason it can be short: there is no "we may collect", and each
- * claim names something a reader could go and check.
- *
- * NO RETENTION PERIOD IS STATED THAT THE CODE DOES NOT OWN. The Ask cache has one,
- * because `expirationTtl` is a number in the source; Analytics Engine's is
- * Cloudflare's, so this page says that rather than inventing a figure.
- *
- * NO COMPLIANCE CLAIM: none of it would be a true statement about a personal site.
- *
- * It joins the footer on every page, which is WCAG 2.2 3.2.6 consistent help.
- */
+/** Every sentence is derivable from the code, and no retention period is stated that the code does not own. */
 export function headers() {
-  // The SHARED builder, never a hand-written pair. `check:headers` refuses the
-  // latter by name: a hand-written pair is how the Vary line gets dropped, and the
-  // shared string without it serves one reader's theme to another.
+  // The shared builder: a hand-written pair drops the Vary line and serves one reader's theme to another.
   return new Headers(publicHtmlHeaders());
 }
 

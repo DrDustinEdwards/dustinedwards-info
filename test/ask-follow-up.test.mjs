@@ -1,19 +1,3 @@
-/**
- * The Ask follow-up: where it is split off, and what must never travel with it.
- *
- * REPLAYS A DEFECT THIS BRANCH CREATED AND CAUGHT, per the replay rule. The splitter first lived in
- * `ask-prompt.mjs`, which is where it reads as belonging. `app/enhance/ask.ts` imported it from
- * there, and the built client bundle then carried `SYSTEM_PROMPT` into every reader's browser.
- * Tree-shaking did not remove it; a grep of the built artifact is what said so.
- *
- * That is not a page-weight problem. `answerLeaksPrompt` exists to catch the MODEL repeating its
- * instructions, and publishing those instructions as a static asset makes the guard moot. The last
- * test here is the one that matters: it reads the BUILT bundle, because the defect was invisible
- * in the source and visible only in the artifact.
- *
- * @see app/lib/search/follow-up.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
@@ -71,10 +55,7 @@ test("an answer written the way the prompt asks splits into the right follow-up"
   });
 });
 
-/*
- * THE ONE THAT CAUGHT THE DEFECT. It reads the built artifact, not the source: the import that
- * leaked the prompt was correct-looking TypeScript and only the bundle showed it.
- */
+// Reads the built artifact: the import that leaked the prompt was correct-looking source.
 test("the built client bundle carries NO system prompt text", () => {
   const bundle = join(root, "app/enhance/dist/ask.js");
   /* Scope first: an absent bundle would pass this by having nothing to find. */
@@ -90,7 +71,6 @@ test("the built client bundle carries NO system prompt text", () => {
       "answerLeaksPrompt is guarding a door that is already open",
   );
 
-  /* The control: the marker IS expected there, so a bundle this test cannot read would fail. */
   assert.ok(
     built.includes(FOLLOW_UP_MARKER),
     "the marker is absent too, so this test is reading the wrong file or an empty one",

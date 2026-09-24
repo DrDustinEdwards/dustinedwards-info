@@ -1,14 +1,3 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/*
- * ONE PAPER'S PAGE, in the post page's shape: a title, a rail of machine data beside it, and the
- * text in the text track. publications.css carries the list this page is reached from, and neither
- * sheet ships to the other's route, which is what the split is for.
- */
-
-/*
- * EVERY LINK ON THIS PAGE, IN TWO RULES, with one exception stated below.
- */
 .paper-links a,
 .paper-breadcrumb a,
 .paper-machine b a,
@@ -25,14 +14,10 @@
   color: var(--brand-hover);
 }
 
-/* Secondary until hovered: a subject is metadata, and a dozen brand words under every paper
-   would compete with the title they belong to. */
 .paper-topics a {
   color: var(--text-secondary);
   text-decoration: none;
 }
-
-/* 4 · One paper's page: the post page's shape, with the rail carrying the machine data. */
 
 .paper-head {
   margin-block-start: var(--s-6);
@@ -44,10 +29,6 @@
   font-size: 0.8125rem;
 }
 
-/*
- * Smaller than the post page's h1 on purpose: a paper title is a sentence and runs to several
- * lines, where a post title is a phrase.
- */
 .paper-title {
   margin: 0;
   max-width: 26ch;
@@ -68,7 +49,6 @@
   line-height: 1.6;
 }
 
-/* The rail, in the same type the post page's rail uses: a mono value over a sans label. */
 .paper-machine {
   margin: 0;
   color: var(--text-secondary);
@@ -82,7 +62,6 @@
   color: var(--text);
   font-family: var(--font-mono);
   font-weight: 500;
-  /* A DOI and a journal name both run long and neither may push the rail wider. */
   overflow-wrap: anywhere;
 }
 
@@ -102,8 +81,6 @@
   font-size: 0.8125rem;
 }
 
-/* The author's own sentence: set larger than the abstract and separated by space rather than by
-   a rule or a tint, because it is him speaking plainly and not a pull quote. */
 .paper-summary {
   margin: var(--s-5) 0 0;
   max-width: 54ch;
@@ -164,11 +141,6 @@
   font-size: 0.8125rem;
 }
 
-/*
- * A retraction, correction or concern notice. TINTED, unlike everything else on this page and
- * deliberately so: the publisher is contradicting the document, so it must be seen before the
- * abstract is read. The warning trio is a measured contrast pair in both themes.
- */
 .paper-update-notice {
   margin: var(--s-5) 0 0;
   max-width: 54ch;
@@ -181,13 +153,7 @@
   line-height: 1.6;
 }
 
-/*
- * ONE COLUMN: THE RAIL GOES BACK TO THE TEXT TRACK, which is post-rail.css's rule and its reason,
- * inherited rather than re-derived. `--rail` is 0 below 48rem, and a child left in a zero-width
- * track does not stack, it paints over what follows. Measured here before this rule existed: the
- * DOI and the venue wrapped to 67 lines, one character per line, because `overflow-wrap: anywhere`
- * was doing exactly what it was asked in a column zero pixels wide.
- */
+/* --rail is 0 below 48rem, and a child left in a zero-width track paints over what follows. */
 .paper-tracks > .paper-rail.u-rail {
   grid-column: text;
 }
@@ -198,38 +164,23 @@
   }
 }
 
-/*
- * THE RAIL IS OPTED INTO, exactly as the post page opts in: shell.css declares the track at zero
- * width and a page that wants one sets `--rail`. Below 48rem it stays zero and the rail reads
- * above the body, which is the order a reader wants on a phone.
- */
 @media (min-width: 48rem) {
   .paper-tracks {
     --rail: var(--rail-w);
     --rail-gap: var(--rail-gap-w);
   }
 
-  /*
-   * The rail and the body share a row, so the rail sits BESIDE the paper rather than above it.
-   * The head is row 1 and takes the text track alone, which leaves the rail clear beside the
-   * title: a title and a DOI at the same height would be two things competing to be read first.
-   */
   .paper-tracks > .paper-head {
     grid-row: 1;
   }
 
-  /*
-   * `.paper-text`, NOT `.paper-body`: that name is the ROW's body on the index, where it sits in
-   * column 3 of a three-column row grid. Reused here it put the whole paper page into the rail
-   * track, 120px wide, and nothing failed: the page rendered, in a column the width of a date.
-   * One name, two grids, two meanings.
-   */
+  /* .paper-text, NOT .paper-body: that name is the index row's body in column 3, and reused here it
+   * put the whole page into the 120px rail track. */
   .paper-tracks > .paper-rail,
   .paper-tracks > .paper-text {
     grid-row: 2;
   }
 
-  /* Right-aligned so the ragged edge faces the text it annotates. */
   .paper-rail {
     text-align: right;
   }

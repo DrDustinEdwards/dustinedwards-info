@@ -1,28 +1,5 @@
-/**
- * Registry text reads as text, and escaped-twice text stays escaped once.
- *
- * ## THE DEFECT THIS REPLAYS
- *
- * The publications page rendered `{italicizeOrganisms(p.abstract)}`, React set
- * it as text, and six character references in the corpus reached readers
- * spelt out: `p &lt; 0.05` in the phage therapy abstract, four `&gt;` in phage
- * announcements, and `&amp;` in a journal name. Shipping since July.
- *
- * ## THE HALF THAT IS EASY TO GET WRONG
- *
- * The naive repair is two replacements, `&lt;` then `&amp;`. Against
- * `&amp;lt;` that yields `<`: text somebody escaped twice on purpose comes back
- * as markup, one level too far. The single-pass case below is the one that
- * fails against that implementation and passes against this one, so it is the
- * reason this file exists rather than a courtesy test.
- *
- * The stored corpus keeps its escapes on purpose: `check:machine-readable` asserts
- * no stored abstract contains a left angle bracket, which is what keeps a
- * registry string safe in the JSON-LD block and in the exports. So the fixture
- * here is deliberately the ESCAPED form, which is what the data file holds.
- *
- * @see app/lib/publications/entities.mjs
- */
+/* The stored corpus keeps its escapes on purpose (no stored abstract may contain a left angle
+ * bracket), so the fixtures here are the ESCAPED form the data file holds. */
 
 import test from "node:test";
 import assert from "node:assert/strict";

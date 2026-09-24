@@ -1,35 +1,9 @@
 /**
- * Reading GitHub's verdict on a commit, and deciding whether it may deploy.
+ * Fails closed: no push run (an empty list reads as "nothing failed"), a run in flight, and any
+ * conclusion but success (canceled, timed out) all refuse. Callers branch on `state`, not `why`.
  *
- * BOUNDARY: the decision is pure and the fetch decides nothing, so the refusal paths can be driven
- * by tests rather than by shipping a commit whose CI had deliberately been made to look failed.
- *
- * @see scripts/ship.mjs
- * @see test/ci-status.test.mjs
- */
-
-/**
- * May this commit deploy? FAIL CLOSED IN EVERY DIRECTION, four refusals, each a state a naive
- * check reads as success:
- *
- *   - **no push-triggered run**: an empty list is the same shape as "nothing failed", which is
- *     what a truthy `every()` over an empty array gets wrong, silently, forever.
- *   - **still running**: the conclusion is null while a run is in flight, and green so far is not
- *     green.
- *   - **not success**: named explicitly, because canceled, timed out and action required are
- *     none of them failures and none of them passes.
- *   - **unparseable payload**: an answer this function did not understand, not an empty result.
- *
- * PUSH-TRIGGERED RUNS ONLY, derived rather than named: filtering on the workflow file would go
- * stale the day a second push workflow lands.
- *
- * THE `state` FIELD IS THE REFUSAL, STRUCTURALLY. `ok` says may-it-deploy and every refusal
- * looks alike through it, but ship treats one of them differently: a run still in flight is worth
- * WAITING for, and the other three are not. A caller telling those apart by matching `why` would
- * be reading prose as an interface, and this file's wording would become load-bearing.
- *
- * @param {unknown} payload the parsed GitHub `actions/runs` response
- * @param {string} sha for the message, short or full
+ * @param {unknown} payload
+ * @param {string} sha
  * @returns {{ ok: boolean, state: "green" | "running" | "failed" | "no-run" | "unparseable", why: string, remedy: string }}
  */
 export function ciVerdict(payload, sha) {
@@ -94,9 +68,6 @@ export function ciVerdict(payload, sha) {
 }
 
 /**
- * Fetches the runs for one sha. Throws on anything that is not a 2xx body, deliberately: an
- * unreachable API and a failed CI run are different facts and the caller words them differently.
- *
  * @param {{ owner: string, repo: string, sha: string, token?: string, apiBase?: string }} options
  */
 export async function fetchCiRuns({ owner, repo, sha, token = "", apiBase = "https://api.github.com" }) {
@@ -111,12 +82,7 @@ export async function fetchCiRuns({ owner, repo, sha, token = "", apiBase = "htt
     },
   );
   if (!response.ok) {
-    /*
-     * **THE REPOSITORY IS PRIVATE**, so a 404 here is almost always an authentication problem rather
-     * than a missing repo, and saying so is the difference between a one-minute fix and an afternoon:
-     * GitHub answers 404 rather than 403 for a private resource you may not see, so an unauthenticated
-     * caller is told the repo does not exist. A token is REQUIRED, not an optimization.
-     */
+    // GitHub answers 404, not 403, for a private repo you may not see, so a 404 is usually auth.
     const hint =
       response.status === 404 && !token
         ? " This repository is PRIVATE and no token was available, so GitHub answers 404 " +

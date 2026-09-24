@@ -1,20 +1,6 @@
 /**
- * `joinConcatenatedLiterals()`, replaying the two defects it was written for.
- *
- * The replay rule: a new gate must be tested by REPLAYING THE DEFECT it was
- * written for, not only by planted variants, because plants get written to
- * match the implementation rather than the bug. These two are the real ones.
- *
- * The defect this function closed: `check:invariants` section 5 binds every
- * column named in raw SQL to `schema.ts`. `sync-content.mjs` builds its SQL by
- * concatenating literals across `+` for line length, so the INSERT column list
- * ran three fragments past the extractor's closing paren. The file APPEARED in
- * the scan, because its single-fragment statements matched, so the gate
- * reported healthy coverage while missing the largest write path in the repo.
- * A misspelled column there is guaranteed to throw on the one path it exists
- * to protect.
- *
- * `og_titl` and `titl` are the two names actually measured getting through.
+ * `sync-content.mjs` concatenates SQL literals across `+`, so column names split across fragments
+ * escaped the schema column check without this join.
  */
 
 import test from "node:test";
@@ -50,11 +36,6 @@ test("whitespace and newlines around the + are tolerated", () => {
   assert.match(joinConcatenatedLiterals(source), /`SELECT a, b FROM t`/);
 });
 
-/*
- * The safety argument, asserted rather than trusted. Joining can only make a
- * literal LONGER, so it must not invent or destroy content, and it must leave
- * anything that is not a literal-plus-literal alone.
- */
 test("a lone literal is returned unchanged", () => {
   const source = "`SELECT a FROM t`";
   assert.equal(joinConcatenatedLiterals(source), source);

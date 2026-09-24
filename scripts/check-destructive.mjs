@@ -1,13 +1,3 @@
-/**
- * Gate: every DESTRUCTIVE intent is confirmed in the ACTION, not in a handler.
- *
- *   npm run check:destructive
- *
- * BOUNDARY: a SOURCE gate. It proves the confirmation predicate is called inside the branch that
- * handles the intent; it does not run an action, so it cannot see a guard that is present and
- * wrong.
- */
-
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,7 +6,6 @@ import { assertFloor } from "./lib/floor.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTES = join(root, "app", "routes");
 
-/** The predicate every destructive branch has to reach. */
 const PREDICATE = "confirmationSatisfied";
 
 /**
@@ -28,17 +17,11 @@ const DESTRUCTIVE = new Set([
   "admin.posts.$slug.edit.tsx:delete",
   "admin.media._index.tsx:delete",
   "admin.media._index.tsx:empty-trash",
-  /*
-   * RECLASSIFIED from reversible: both destroy records and neither can know its own removal count
-   * without running, so both confirm on a count of one and state the scale at stake.
-   */
+  // Both destroy records and cannot know their own removal count without running, so both confirm on
+  // a count of one.
   "admin.media._index.tsx:rebuild",
   "admin.posts._index.tsx:sync-ask",
-  /*
-   * BOTH WEBMENTION REMOVALS, the first destructive intents here with NO RECOVERY PATH. A row came
-   * from a stranger's POST and converges toward nothing, so there is no derivation for hard rule 18
-   * to repair it through. Deleted is gone.
-   */
+  // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
   "admin.mentions.tsx:delete",
   "admin.mentions.tsx:sweep",
 ]);
@@ -78,19 +61,14 @@ const REVERSIBLE = new Map([
   ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
 ]);
 
-/*
- * NOT IN THE VOCABULARY, AND THAT IS THE BOUNDARY WORTH STATING: one upload path is selected by
- * a shared predicate rather than an intent string, so this detector cannot see it, nor any future
- * intent routed the same way.
- */
+// One upload path is selected by a shared predicate rather than an intent string, so this detector
+// cannot see it, nor any future intent routed the same way.
 
 let checks = 0;
 let failures = 0;
 
 /**
- * CONDITION FIRST, matching every other gate here. It was label-first for one run and
- * `check:assertions` caught it twice, as helper-signature drift and because a string literal in
- * argument one is always truthy.
+ * Condition first: a string literal in argument one is always truthy.
  *
  * @param {boolean} ok
  * @param {string} label
@@ -105,7 +83,7 @@ function assertThat(ok, label, detail) {
 }
 
 /**
- * Blanks comments and string bodies, PRESERVING length so offsets still index.
+ * Preserves length so offsets still index.
  * @param {string} src
  */
 function strip(src) {
@@ -174,7 +152,6 @@ assertThat(
   `found ${files.length}, floor 34, measured 37 on 2026-08-24; a glob that stops matching would otherwise report zero problems`,
 );
 
-/** Every `file:intent` pair the routes actually handle. */
 const found = new Set();
 let actionFiles = 0;
 
@@ -194,19 +171,13 @@ for (const file of files) {
     const intent = id.slice(file.length + 1);
     if (!DESTRUCTIVE.has(id)) continue;
 
-    /*
-     * THE SMALLEST BRANCH THAT TESTS THIS INTENT, and the smallness is the point: one intent is
-     * tested twice in its file, and the outer compound condition would be satisfied by a guard in a
-     * sibling path while the FILE would be satisfied by any mention anywhere.
-     */
+    // The smallest branch that tests this intent: one intent is tested twice in its file, and the outer
+    // condition would be satisfied by a guard in a sibling path.
     /** @type {{ text: string, size: number } | null} */
     let smallest = null;
     for (const m of raw.matchAll(new RegExp(`intent\\s*===\\s*"${intent}"`, "g"))) {
-      /*
-       * Offsets come from RAW and are used against BARE: `strip` blanks string BODIES and preserves
-       * LENGTH, so the two index the same bytes. Brace matching happens on the stripped text or a brace
-       * inside a string throws it.
-       */
+      // Offsets come from raw and are used against bare, `strip` preserving length. Brace matching runs on
+      // the stripped text, or a brace inside a string throws it.
       const open = bare.indexOf("{", m.index);
       if (open === -1) continue;
       const close = matchBrace(bare, open);
@@ -245,13 +216,7 @@ assertThat(
   `parsed ${found.size} intent(s), floor 17, measured 19 on 2026-08-24; every per-intent assertion above is vacuous if this is empty`,
 );
 
-/*
- * COMPLETENESS, BOTH DIRECTIONS.
- *
- * A new intent nobody classified fails by name rather than defaulting to safe,
- * and a classification whose intent no longer exists fails too, so this file
- * cannot quietly accumulate entries for code that is gone.
- */
+// A new intent nobody classified fails by name rather than defaulting to safe.
 for (const id of found) {
   assertThat(
     DESTRUCTIVE.has(id) || REVERSIBLE.has(id),
@@ -271,21 +236,12 @@ for (const id of [...DESTRUCTIVE, ...REVERSIBLE.keys()]) {
 
 console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTRUCTIVE.size} destructive`);
 
-/* the operator API's own verbs */
-
-/*
- * THE SECOND WRITE SURFACE, WHICH THIS GATE COULD NOT SEE: the operator API spells a verb as a
- * bearer-token POST dispatched on a tool name, so a vocabulary of one string comparison saw NONE
- * of it and a delete authority went unclassified. WHY IT IS NOT A TYPED CONFIRMATION: the admin
- * ceremony is a human typing a count, which is wrong for a machine caller, since an agent typing
- * "1" into its own request proves nothing and the credential IS the ceremony. So the operator's
- * equivalent is a declared POLICY the API serves, learned before the caller tries.
- */
+// The operator API is a bearer-token POST dispatched on a tool name, which the intent vocabulary cannot
+// see. For a machine caller the credential is the ceremony, so each tool declares a policy instead.
 {
   const apiPath = join(root, "app", "lib", "operator", "api.server.ts");
   const apiRaw = readFileSync(apiPath, "utf8");
 
-  /** Every tool name, from the `TOOLS` literal the dispatch is keyed on. */
   const toolsBlock = apiRaw.match(/const TOOLS = \[([\s\S]*?)\] as const;/);
   assertThat(
     toolsBlock !== null,
@@ -296,7 +252,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ? [...toolsBlock[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1])
     : [];
 
-  /* SCOPE, ASSERTED: an empty parse classifies nothing and reports what a compliant surface reports. */
+  /* An empty parse classifies nothing and reports what a compliant surface reports. */
   assertThat(
     toolNames.length >= 9,
     "the operator tool list parsed",
@@ -362,11 +318,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     );
   }
 
-  /*
-   * THE POLICY IS THE OPERATOR'S CEREMONY, read out of the descriptor block by name with comments
-   * left in place: `policy` is a property whose value is a string literal, so prose cannot satisfy
-   * it.
-   */
+  // `policy` is a property with a string-literal value, so prose cannot satisfy it and comments can stay.
   for (const name of OPERATOR_DESTRUCTIVE) {
     const descriptor = apiRaw.match(
       new RegExp(`\\n  ${name}: \\{([\\s\\S]*?)\\n  \\},`),
@@ -387,13 +339,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 }
 
 
-/*
- * THE BACKUP BUCKET IS WRITE-AND-READ ONLY: it exists so this site's own code deleting an object
- * cannot lose the bytes, which is worth exactly as much as the guarantee that nothing here ever
- * deletes from it. WHOLE-SOURCE, not routes: the danger is any line anywhere that reaches the
- * binding with a delete. COMMENTS ARE STRIPPED FIRST, and that is load bearing, because every
- * file touching this binding carries a sentence containing both the name and the word.
- */
+// Whole-source, not routes: any line anywhere that deletes from the binding is the danger. Comments are
+// stripped first because every file touching this binding has a sentence naming both.
 {
   /** @param {string} dir @returns {string[]} */
   const walk = (dir) => {
@@ -413,8 +360,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   };
 
   /**
-   * Does this stripped source delete from the backup binding? The window is what makes it an
-   * anchored needle: a file may name the binding and, far away, delete from something else.
+   * The window makes it an anchored needle: a file may name the binding and, far away, delete from
+   * something else.
    *
    * @param {string} stripped
    * @returns {string[]} offending excerpts
@@ -430,11 +377,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     return hits;
   };
 
-  /*
-   * THE DISCRIMINATION CONTROL, run BEFORE the sweep: a matcher that cannot detect the violation
-   * agrees with every file it reads. The needle is shown to FIRE on a known-bad string and to stay
-   * silent on the two shapes that must not trip it.
-   */
+  // A matcher that cannot detect the violation agrees with every file it reads, so the needle is proven first.
   assertThat(
     backupDeletes("await env.MEDIA_BACKUP.delete(key);").length === 1,
     "the backup-delete needle detects a real delete",
@@ -451,11 +394,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     "deleting a media object is legitimate; only the mirror is protected",
   );
 
-  /*
-   * THIS FILE IS EXCLUDED FROM ITS OWN SWEEP, NAMED rather than globbed so it can never widen: the
-   * control above is a string literal containing exactly the violation being hunted. Obfuscating it
-   * instead would mean it no longer tests the needle that actually runs.
-   */
+  // Excluded by name, never by glob: the control above is a string literal containing the violation hunted.
   const SELF = join(root, "scripts", "check-destructive.mjs");
   const sources = [
     ...walk(join(root, "app")),
@@ -463,10 +402,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ...walk(join(root, "scripts")),
   ].filter((file) => file !== SELF);
 
-  /*
-   * SCOPE FLOOR. A walk that returned nothing reports what a clean sweep
-   * reports, and this whole block would then be a comment.
-   */
+  // A walk that returned nothing would report a clean sweep.
   assertThat(
     sources.length >= 100,
     "the backup sweep read a non-empty source tree",
@@ -485,10 +421,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     }
   }
 
-  /*
-   * AND A FLOOR ON THE SWEEP'S SUBJECT: zero files naming the binding means it was renamed, and
-   * every assertion above would be true of nothing.
-   */
+  // Zero files naming the binding means it was renamed, and every assertion above would be true of nothing.
   assertThat(
     mentioning > 0,
     "at least one source file reaches the MEDIA_BACKUP binding",
@@ -508,12 +441,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   );
 }
 
-/*
- * EXECUTED-COUNT FLOOR, MEASURED BY RUNNING THIS GATE, unlike the first value here, counted by
- * eye, which failed on its own first green run. THE FLOOR IS DELIBERATELY NOT RAISED ON EVERY
- * ADDITION: its job is to catch a whole BLOCK being skipped, and the slack lets an intent be
- * retired without a second edit. Raise it when the slack has stopped being slack.
- */
+// Measured by running this gate. Not raised on every addition: its job is to catch a whole block being skipped.
 const MINIMUM_CHECKS = 99;
 const floorBreach = assertFloor("check:destructive", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);

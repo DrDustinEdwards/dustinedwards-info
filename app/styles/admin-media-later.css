@@ -1,13 +1,8 @@
-/* More media library, separate from admin-media.css because /playground sat between them in the original
- * order. Import order is the cascade: merging the two, moving an import, or moving a rule between files can
- * change what renders. */
+/* Separate from admin-media.css because /playground sat between them in the original order; merging
+ * the two can change what renders. */
 
-/* Admin-only rules that must load after admin-media.css: in the public bundle they would stop
- * overriding it (.media-col-usage). Their position here preserves the cascade exactly. */
-
-/* Usage states take tokens, not mockup literals: used is --fill-success; in template is --brand (it
- * belongs to the site, not a semantic state, so rule 6 holds); unattached is --text-accent, always beside
- * the word. Every dot is aria-hidden with its sentence in text: color is never the only channel (rule 1). */
+/* Must load after admin-media.css: in the public bundle they would stop overriding it
+ * (.media-col-usage). */
 
 .media-usage-line {
   display: flex;
@@ -15,8 +10,6 @@
   gap: 6px;
 }
 
-/* The dot is 5px, so it is a graphical object at the 1.4.11 floor rather than
-   text. It sits beside a word that says the same thing, so it is emphasis. */
 .media-usage-dot {
   flex: none;
   width: 5px;
@@ -37,7 +30,7 @@
   background: var(--text-accent);
 }
 
-/* The usage cell is a column: as a flex row, the flags became a second item and clipped the state. */
+/* A column: as a flex row, the flags became a second item and clipped the state. */
 .media-col-usage {
   flex-direction: column;
   align-items: stretch;
@@ -45,7 +38,6 @@
   gap: 1px;
 }
 
-/* Per-row flags take --text-accent, not a literal. Quiet by size: a flag is a note, not an alarm. */
 .media-row-flags {
   display: block;
   overflow: hidden;
@@ -56,10 +48,8 @@
   white-space: nowrap;
 }
 
-/* THE TILE'S CORNER FLAG. One dot, top right, with a white ring so it reads on
-   any photograph underneath. The ring is the mockup's own device and it is what
-   makes a 7px dot legible over an arbitrary image without knowing the image. */
-/* Grid only: in the list a dot would land on the thumbnail, and the Usage cell already says it in words. */
+/* The white ring makes a 7px dot legible over an arbitrary photograph. */
+/* Grid only: in the list the dot would land on the thumbnail. */
 .media-grid[data-view="list"] .media-tile-flag {
   display: none;
 }
@@ -85,7 +75,6 @@
   background: var(--text-accent);
 }
 
-/* THE LENS CHIP DOT, shown only on a non-zero count. */
 .media-lens-dot {
   display: inline-block;
   width: 5px;
@@ -100,15 +89,12 @@
   background: var(--fill-warning);
 }
 
-/* On the active chip the fill is brand, so a rust dot on it is invisible. The
-   dot inverts to the on-brand token rather than being hidden, because its job
-   there is to say "this lens has a count" and that is still true. */
+/* On the brand fill a rust dot is invisible, so it inverts to the on-brand token. */
 .admin-chip.is-active .media-lens-dot {
   background: var(--on-brand);
 }
 
-/* The lens note keeps a narrowed view from reading as an accusation. --border-warning, since there is no
- * --border-accent: an undeclared token resolves to nothing and check:contrast cannot see it. */
+/* --border-warning: there is no --border-accent, and an undeclared token resolves to nothing. */
 .media-lens-note {
   display: flex;
   align-items: center;
@@ -136,8 +122,6 @@
   font-weight: 500;
 }
 
-/* Three empty states. Only library-empty gets a heading, paragraph and button: it is the only one where
- * the reader must learn what the page is for. */
 .media-empty {
   margin: 1rem 0;
   padding: 3rem 1.5rem;
@@ -147,8 +131,6 @@
   border-radius: 0.75rem;
 }
 
-/* The two recoverable states are quieter: a solid edge and less air, because
-   they are a correction rather than an introduction. */
 .media-empty[data-empty="search"],
 .media-empty[data-empty="lens"] {
   padding: 2.25rem 1.5rem;
@@ -182,8 +164,6 @@
   cursor: pointer;
 }
 
-/* A dashed outline means offered, solid means applied: the suggestion and tag chips share size and row,
- * so shape separates them without color. */
 .media-suggestion,
 .media-tag-suggestion {
   padding: 0.1875rem 0.5rem;
@@ -233,14 +213,10 @@
   border-color: var(--border-danger);
 }
 
-/* An empty alt field on an image that needs one takes the accent edge, which is
-   the mockup's rust border. Only when it is BOTH empty and required: a field
-   that is merely blank on a file nobody has got to yet is not a defect. */
 .media-alt-input[data-missing="yes"] {
   border-color: var(--border-warning);
 }
 
-/* THE USAGE CLAIM in the inspector: the title in bold, its boundary after it. */
 .media-usage-claim {
   display: flex;
   align-items: baseline;
@@ -255,7 +231,6 @@
   align-self: center;
 }
 
-/* The source files that place an asset. Monospace, because they are paths. */
 .media-template-refs code {
   font-size: 0.6875rem;
   overflow-wrap: anywhere;
@@ -268,16 +243,10 @@
   text-wrap: pretty;
 }
 
-/* Palette, shortcuts panel, toast and keyboard marks: all need script and degrade to nothing.
- * Mockup literals resolve to tokens; the toast uses --scrim and --on-scrim, which check:contrast measures. */
-
-/* The search form becomes the positioning context for the dropdown under it. */
 .media-search {
   position: relative;
 }
 
-/* The keyboard badge in the bar. A picture of a key combination, hidden from
-   assistive technology, which reads the binding out of the shortcuts panel. */
 .media-search-kbd {
   flex: none;
   padding: 0.125rem 0.375rem;
@@ -288,8 +257,6 @@
   border-radius: 0.25rem;
 }
 
-/* The palette, hung under its bar. --surface-popover with --border-strong: the elevated step never takes
- * --border. */
 .media-palette {
   position: absolute;
   z-index: var(--z-popover);
@@ -317,9 +284,6 @@
   text-decoration: none;
 }
 
-/* THE HIGHLIGHTED ROW, marked by FILL and by the `enter` chip beside it, which
-   is two channels. A row highlighted by background alone is a row a reader who
-   cannot separate two warm neutrals cannot find. */
 .media-palette-row[data-active="yes"] {
   background: var(--tint-brand);
 }
@@ -392,9 +356,6 @@
   color: var(--text-secondary);
 }
 
-/* THE HINT ROW, which is the only place these bindings are discoverable from
-   the keyboard path itself. It separated from the rows by FILL until ruling 128
-   collapsed that fill into the ground; a --dust rule carries the seam now. */
 .media-palette-hints {
   display: flex;
   flex-wrap: wrap;
@@ -418,7 +379,6 @@
   margin-left: auto;
 }
 
-/* THE SHORTCUTS PANEL, on the Display popover's own grammar. */
 .media-shortcuts > summary {
   display: grid;
   place-items: center;
@@ -466,8 +426,7 @@
   border-radius: 0.25rem;
 }
 
-/* The toast: bottom center, over everything, and it never takes pointer events, so it cannot swallow
- * a click meant for the grid. --scrim and --on-scrim, a pair check:contrast already measures. */
+/* It never takes pointer events, so it cannot swallow a click meant for the grid. */
 .media-toast {
   position: fixed;
   z-index: var(--z-transient);
@@ -494,9 +453,8 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* An EMPTY live region must not be a visible empty box, and must still be in
-   the DOM: a region inserted at the moment it gains content is frequently never
-   announced, because the assistive technology never observed the container. */
+/* An empty live region stays in the DOM, invisible: a region inserted when it gains content is often
+   never announced. */
 .media-toast:not([data-showing="yes"]) {
   visibility: hidden;
 }
@@ -507,14 +465,10 @@
   }
 }
 
-/* THE TILE UNDER THE KEYBOARD CURSOR. A brand ring, which is the mockup's own
-   mark for it, and distinct from selection (a fill) and from the open inspector
-   (a strong border), so all three can be true at once and still be told apart. */
 .media-card[data-active-tile="yes"] {
   box-shadow: inset 0 0 0 2px var(--brand);
 }
 
-/* The selection size, beside the count in the bulk bar. */
 .posts-bulk-size {
   margin-left: 0.5rem;
   color: var(--text-secondary);
@@ -522,9 +476,6 @@
   font-size: 0.75rem;
   font-weight: 400;
 }
-
-/* Page head, floating selection bar and type. The mockup's five failing colors stay refused:
- * separation is fill, and quietness is size, weight and tracking. */
 
 
 
@@ -536,13 +487,10 @@
   flex-wrap: wrap;
 }
 
-/* The head becomes one row: title block on the left, actions on the right. */
 .panel-head {
   align-items: center;
 }
 
-/* The rows above the grid close up; stacked panel gaps were costing the grid height.
- * Scoped to the media panel so no other admin section moves. */
 .panel:has(.media-search) {
   gap: 0.625rem;
 }
@@ -563,17 +511,12 @@
   margin-top: 1.25rem;
 }
 
-/* The upload control shrinks to a control rather than a band. It is still the
-   label-wrapping-an-input pattern, so the file input is still the keyboard path
-   and the whole thing is still one affordance. */
 .media-upload {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-/* The floating selection bar: a selection is a MODE that persists while you scroll, so its controls
- * persist too. --scrim and --on-scrim, a pair check:contrast already measures. */
 .posts-bulk {
   position: fixed;
   z-index: var(--z-pinned-bar);
@@ -583,8 +526,7 @@
   align-items: center;
   gap: 0.625rem;
   width: max-content;
-  /* 64rem, not 56: this bar also carries the bulk tagging controls, and narrower it wraps into a block over
-     the grid. Two rows at 1280 is the honest residue; do not hide a control to fix it. */
+  /* 64rem, not 56: narrower, the bulk tagging controls wrap into a block over the grid. */
   max-width: min(64rem, calc(100vw - 2rem));
   padding: 0.625rem 0.75rem 0.625rem 1.125rem;
   background: var(--scrim);
@@ -608,8 +550,6 @@
   color: var(--on-scrim);
 }
 
-/* The controls invert onto the dark bar. A ghost button drawn for a light
-   surface is invisible here, so both variants take the scrim treatment. */
 .posts-bulk .btn,
 .posts-bulk .btn-ghost {
   color: var(--on-scrim);
@@ -633,14 +573,10 @@
   color: var(--on-scrim);
 }
 
-/* The bar overlaps the last row of the grid, so the scroller gains room to
-   scroll past it. Same reason a fixed footer always needs one. */
+/* The bar overlaps the last row, so the scroller gains room to scroll past it. */
 .media-grid {
   scroll-margin-bottom: 5rem;
 }
-
-/* Type: the families are not changed here. --font-sans is the site's brand face and --font-mono a
- * free system stack; changing either is Dustin's call. Only size, weight and tracking follow the mockup. */
 
 
 .panel-head h2 {
@@ -650,8 +586,6 @@
   line-height: 1.15;
 }
 
-/* The group heading is mono: it is a machine's label for a folder, not prose.
-   Small, medium weight, wide tracking, uppercase. */
 .media-group-title {
   font-family: var(--font-mono);
   font-size: 0.6875rem;
@@ -660,7 +594,6 @@
   text-transform: uppercase;
 }
 
-/* The list row: line height and padding match the mockup, because a taller row shows fewer files. */
 .media-grid[data-view="list"] .media-name {
   line-height: 1.3;
 }
@@ -673,16 +606,15 @@
   line-height: 1.3;
 }
 
-/* The copy cell is a flex box: as a line box, the inline-block button gains a strut descent
-   that pulls the glyph off the row's optical center. */
+/* A flex box: as a line box, the inline-block button gains a strut descent that pulls the glyph off
+   center. */
 .media-grid[data-view="list"] .media-col-copy {
   display: flex;
   align-items: center;
   justify-content: flex-end;
 }
 
-/* The confirmation modal replaces window.prompt, which is unstyleable, mute to a screen reader and
- * silently disabled in some contexts. Centered, not docked: a confirmation stops everything. */
+/* Replaces window.prompt, which is unstyleable, mute to a screen reader and disabled in some contexts. */
 .media-modal-layer {
   position: fixed;
   z-index: var(--z-transient);
@@ -692,8 +624,6 @@
   padding: 1.5rem;
 }
 
-/* The scrim is a real control, so it is a link or a button rather than a div,
-   and it fills the layer behind the panel. */
 .media-modal-scrim {
   position: fixed;
   inset: 0;
@@ -707,8 +637,6 @@
   cursor: pointer;
 }
 
-/* Heavier than the drawer's 0.28: a drawer is meant to be compared against the
-   page behind it, and a confirmation is meant to stop you reading it. */
 .media-modal {
   position: relative;
   z-index: var(--z-tile-raise);
@@ -716,7 +644,6 @@
   max-width: 27rem;
   padding: 1.3125rem;
   background: var(--surface-popover);
-  /* Popover elevation, so the border-strong rule applies: --border-strong, never --border. */
   border: 1px solid var(--border-strong);
   border-radius: 0.8125rem;
 }
@@ -765,14 +692,11 @@
   margin-top: 1rem;
 }
 
-/* A refused control has to LOOK refused, or the reader presses it and concludes
-   the page is broken rather than that they have not typed the count yet. */
 .media-modal-actions .btn-danger[disabled] {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* The empty-trash trigger is a link now, so it needs the button's own box. */
 .media-empty-trash {
   display: flex;
   flex-wrap: wrap;

@@ -11,7 +11,6 @@ import {
   refusal,
 } from "../scripts/lib/ds-upload-scope.mjs";
 
-/** A throwaway output folder holding exactly these files. */
 function outDirWith(files) {
   const dir = mkdtempSync(join(tmpdir(), "ds-scope-"));
   for (const f of files) {
@@ -21,7 +20,6 @@ function outDirWith(files) {
   return dir;
 }
 
-/** The files a real build writes today (ds-bundle, 2026-09-23), locals included. */
 const REAL_BUILD = [
   "_ds_bundle.css",
   "_ds_bundle.js",

@@ -1,31 +1,16 @@
-/**
- * The Germomics podcast feed, parsed, and the choice of which episode the home page plays.
- *
- * Pure: no fetch, no KV, so node:test and the CSP builder can import it. The fetch and the cache
- * are `podcast.server.ts`.
- *
- * THE FEED IS SOMEONE ELSE'S SERVER'S OUTPUT, rendered into a page this site vouches for. So every
- * URL is checked against a host allowlist here, and an episode whose audio or page link fails is
- * dropped rather than rendered. The audio allowlist is the same array `workers/csp.mjs` writes into
- * `media-src`, so the parser cannot accept a host the policy would then refuse to play.
- */
+// Pure, so node:test and the CSP builder can import it. Every feed URL is checked against a host
+// allowlist; the audio list is what workers/csp.mjs writes into `media-src`, so the two cannot disagree.
 
-/** The feed Dustin named (job_83c1543adcfe). */
 export const PODCAST_FEED_URL = "https://germomics.com/feed/podcast/";
 
-/** The show's own site, linked beside every episode. */
 export const PODCAST_SITE_URL = "https://germomics.com/";
 
-/**
- * Where episode audio may come from. `op3.dev` is the feed's analytics prefix, which answers
- * with a 302 to `media.germomics.com`, and CSP checks the redirect target too, so both are here.
- */
+// `op3.dev` is the feed's analytics prefix and 302s to `media.germomics.com`; CSP checks the redirect
+// target too, so both are listed.
 export const PODCAST_AUDIO_HOSTS = ["op3.dev", "media.germomics.com"];
 
-/** Where an episode page may live. */
 const EPISODE_PAGE_HOSTS = ["germomics.com", "www.germomics.com"];
 
-/** The settings row that holds the home slot. */
 export const PODCAST_SLOT_KEY = "home.podcast";
 
 /**
@@ -66,7 +51,6 @@ function decodeEntities(text) {
 }
 
 /**
- * An element's text: CDATA unwrapped, tags stripped, entities decoded, whitespace collapsed.
  * @param {string} xml @param {string} tag
  */
 function textOf(xml, tag) {
@@ -86,7 +70,6 @@ function attrOf(xml, tag, attr) {
 }
 
 /**
- * An https URL on one of `hosts`, or null. Nothing else is rendered.
  * @param {string} value @param {readonly string[]} hosts
  */
 export function allowedHttpsUrl(value, hosts) {
@@ -100,7 +83,6 @@ export function allowedHttpsUrl(value, hosts) {
 }
 
 /**
- * `hh:mm:ss`, `mm:ss` or plain seconds, as the itunes namespace allows.
  * @param {string} value
  */
 export function parseDuration(value) {
@@ -114,7 +96,6 @@ function positiveInt(value) {
 }
 
 /**
- * Every episode the feed carries that passes the URL checks, newest first.
  * @param {string} xml
  * @returns {PodcastEpisode[]}
  */
@@ -147,7 +128,6 @@ export function parsePodcastFeed(xml) {
 }
 
 /**
- * The stored slot, or `latest` for anything absent or malformed: latest is the default Dustin set.
  * @param {string | null} value
  * @returns {PodcastSlot}
  */
@@ -164,8 +144,6 @@ export function parsePodcastSlot(value) {
 }
 
 /**
- * The episode the home page plays. A featured episode that has left the feed falls back to the
- * latest, and `fellBack` says so, which is what the admin shows.
  * @param {PodcastEpisode[]} episodes @param {PodcastSlot} slot
  * @returns {{ episode: PodcastEpisode | null, fellBack: boolean }}
  */
@@ -177,7 +155,6 @@ export function chooseEpisode(episodes, slot) {
 }
 
 /**
- * `21:17` or `1:04:09`, for the total beside the scrubber.
  * @param {number} seconds
  */
 export function clockTime(seconds) {

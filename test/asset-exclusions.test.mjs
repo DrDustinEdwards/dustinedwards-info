@@ -1,27 +1,6 @@
-/**
- * `excludedFromAssets()` names two files and swallows nothing else.
- *
- * WHAT THIS PROTECTS. `public/_headers` landed on 2026-08-16 and jammed
- * `build:assets`, because `classify()` throws on an extension it does not know
- * and a deploy-time control file has no extension at all. The file shipped
- * anyway: `npm run build` is `react-router build` and never regenerates the
- * manifest, so nothing in the offline tier ran the walk. `check:media` named it
- * on the next remote run, which is one deploy too late.
- *
- * THE FIX IS NOT THE INTERESTING PART. The interesting part is the fix that was
- * NOT taken. "Skip anything with no extension" would have cleared the build in
- * one line and would have made every future extensionless file vanish from the
- * manifest silently, which is the failure mode the throw in `classify()` exists
- * to prevent. So the exclusion is a NAMED map with a stated reason, and the
- * cases below are what stop it drifting back into a rule: an unrecognised
- * extensionless path must still be excluded from NOTHING and must still throw.
- *
- * THE ANCHORING CASE IS LOAD-BEARING TOO. Cloudflare reads `_headers` at the
- * ROOT of the assets directory and nowhere else, so a `_headers` in a
- * subdirectory is an ordinary unrecognised file. Matching on the site-absolute
- * path rather than the basename is what makes that true, and it is one
- * character away from being false.
- */
+/* `classify()` throws on an unknown extension on purpose, so exclusions are a NAMED map and never
+ * "skip anything extensionless". Cloudflare reads `_headers` only at the ROOT of the assets
+ * directory, so the match is on the site-absolute path, not the basename. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -43,8 +22,7 @@ test("_redirects is excluded, with a reason", () => {
 });
 
 test("the exclusion is a list, not an extensionless catch-all", () => {
-  // The one-line fix that was refused. Every path here has no extension and
-  // none of them is a Cloudflare control file.
+  // Every path here has no extension and none of them is a Cloudflare control file.
   for (const p of ["/LICENSE", "/robots", "/_worker", "/Dockerfile", "/CNAME"]) {
     assert.equal(excludedFromAssets(p), null, `${p} was quietly excluded`);
   }

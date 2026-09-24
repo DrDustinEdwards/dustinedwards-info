@@ -1,23 +1,5 @@
-/**
- * Which representation a reader asked for, and what the Worker's cache may
- * therefore answer from.
- *
- * THE DEFECT THIS REPLAYS REACHED PRODUCTION. `workers/app.ts` keys its own
- * `caches.default` entry on the request URL plus the resolved theme plus the
- * build, and `caches.default` carries no headers, so `Vary: Accept` cannot be
- * honored there. The HTML copy of `/blog/:slug` was stored under a key that
- * the `Accept: text/markdown` request also matched. MEASURED on the wire after
- * the deploy of 2f0b4d5: 31,869 bytes of `text/html` marked
- * `x-theme-cache: hit` in answer to a markdown request.
- *
- * The wire half of the proof is `check:browser`, which warms the HTML entry
- * and then asks the same URL for markdown. This half is the predicate: the
- * browser strings below are real headers, and the point of them is that every
- * one must stay CACHEABLE. A predicate that fixed the bug by excluding every
- * reader would pass a test that only checked the markdown case.
- *
- * @see app/lib/negotiate.mjs
- */
+/* `caches.default` carries no headers, so `Vary: Accept` cannot be honored there. Every browser
+ * string below must stay CACHEABLE, or excluding every reader would "fix" the markdown case. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -34,10 +16,7 @@ const req = (accept) =>
     headers: accept === undefined ? {} : { accept },
   });
 
-/*
- * REAL BROWSER HEADERS, copied rather than invented. These are the requests
- * the shared cache exists for, and every one of them must stay in it.
- */
+/* Real browser headers, copied rather than invented. */
 const BROWSERS = {
   chrome:
     "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
@@ -81,13 +60,8 @@ test("q=0 is a refusal, not a preference", () => {
 });
 
 test("the predicate is wider than prefersType, never narrower", () => {
-  /*
-   * THE INVARIANT THAT MAKES THE BYPASS SOUND. Every request a route would
-   * answer with an alternate representation must be one the cache declines to
-   * serve; the reverse is allowed and costs only a miss. Both compare against
-   * the same HTML weight, so this holds by construction, and it is asserted
-   * because the construction is two functions in one file rather than one.
-   */
+  /* Every request a route would answer with an alternate representation must be one the cache
+   * declines to serve; the reverse is allowed and costs only a miss. */
   const cases = [
     ...Object.values(BROWSERS),
     "text/markdown",

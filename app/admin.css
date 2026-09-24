@@ -1,6 +1,4 @@
-/* The admin plane's sheets, imported only by routes/admin.tsx and routes/login.tsx,
- * so a public reader never downloads them. Import order is the cascade; do not reorder.
- * No reset here: app.css loads it on every route, and a second import would duplicate it. */
+/* Import order is the cascade; do not reorder. No reset here: app.css loads it on every route. */
 @import "./styles/admin-shell.css";
 @import "./styles/admin-posts.css";
 @import "./styles/admin-editor.css";

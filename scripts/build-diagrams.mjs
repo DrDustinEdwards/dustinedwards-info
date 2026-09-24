@@ -1,13 +1,3 @@
-/**
- * Renders every `:::diagram` in the corpus to a static SVG asset, two per diagram, light and dark.
- *
- *   npm run build:diagrams [-- --force]
- *
- * BOUNDARY: BUILD TIME ONLY, in Node, driving a real browser, and nothing here touches the gated
- * artifact: the SVG bytes come out of a browser engine and are exactly the kind of input a
- * byte-comparison gate must never be handed.
- */
-
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -24,7 +14,6 @@ import {
   diagramAssetPath,
 } from "../app/lib/content/diagram.mjs";
 
-/** The file name the page asks for, from the one function that states it. */
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   path.basename(diagramAssetPath(key, theme));
 import { ARTIFACT_PATH } from "./build-content.mjs";
@@ -33,20 +22,15 @@ import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 
 export const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 
-/**
- * The id written onto the SVG root and prefixed onto every internal id, set explicitly so the
- * bytes do not move if the tool's default does. Two diagrams on one page cannot collide: each
- * asset is its own document behind its own `<img>`.
- */
+/** Set explicitly so the bytes do not move if the tool's default does. */
 const SVG_ID = "diagram";
 
 /** Fixed, so nothing about the output depends on the machine it was built on. */
 const VIEWPORT = { width: 1200, height: 800, deviceScaleFactor: 1 };
 
 /**
- * The font stack the diagram is laid out with, a recorded limitation rather than a solved problem:
- * an SVG inside an `<img>` may not load external resources, so the viewer's font is not guaranteed
- * to be the one this build measured text with, which is why the padding below is generous.
+ * An SVG inside an `<img>` may not load external resources, so the viewer's font may differ from the
+ * one this build measured with, which is why the padding below is generous.
  */
 const FONT_FAMILY = 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
 
@@ -86,10 +70,8 @@ function mermaidConfig(theme, colours) {
 }
 
 /**
- * Makes the SVG sizeable by an `<img>`: the renderer emits a percentage width, which inside an
- * `<img>` is an SVG with no intrinsic width, so the viewBox's real size is copied onto the root.
- * A targeted rewrite of the ROOT TAG rather than parsing and re-serializing: an `.svg` is parsed
- * strictly, so one unclosed tag produces a file that renders as nothing.
+ * Inside an `<img>` a percentage width means no intrinsic width, so the viewBox size is copied onto
+ * the root. A targeted rewrite rather than re-serializing, because an `.svg` is parsed strictly.
  *
  * @param {string} svg
  * @param {string} label
@@ -114,10 +96,8 @@ function sizeRoot(svg, label) {
 }
 
 /**
- * The renderer's own API against a browser this script owns, rather than its command line. Node
- * refuses to spawn the shim without a shell, and a shell concatenates an argument array WITHOUT
- * quoting, which has already split a value containing spaces here; one browser then serves every
- * render, and neither the source nor the config touches a temp file.
+ * The renderer's API rather than its CLI: Node will not spawn the shim without a shell, and a shell
+ * joins an argument array without quoting.
  *
  * @param {import("puppeteer").Browser} browser
  * @param {string} source
@@ -236,9 +216,7 @@ async function main() {
       `${skipped} already current, ${pruned} pruned`,
   );
 
-  // These assets are in the MEDIA INDEX, so rendering or pruning one changes what the index should
-  // hold. The manifest is regenerated automatically, being derived from the filesystem; the index
-  // cannot be, needing the Worker's binding, so this can only say so loudly.
+  // The media index cannot be rebuilt from here, needing the Worker's binding, so this says so loudly.
   if (written > 0 || pruned > 0) {
     const manifest = spawnSync("node scripts/build-assets.mjs", {
       encoding: "utf8",

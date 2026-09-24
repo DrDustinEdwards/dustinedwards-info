@@ -1,11 +1,4 @@
 /**
- * Ship's readiness verdict: does the health endpoint say this deploy is healthy.
- *
- * BOUNDARY: the decision only, pure, so `node:test` can drive every branch and a refusal path is
- * not one that has never been executed. The reading itself is ship's.
- */
-
-/**
  * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number }} HealthCheckRow
  */
 
@@ -16,32 +9,21 @@
  * )} ReadinessVerdict
  */
 
-/** The remedy every refusal here shares. Stated once. */
 const NOTHING_SYNCED =
   "The deploy landed and is serving; this refuses BEFORE the sync, so D1 and the " +
   "indexes still describe the previous build. NOTHING WAS SYNCED.";
 
 /**
- * Reads a readiness verdict out of a response.
+ * Fails closed in every uncertain direction: the endpoint can be rate limited, replaced by a 404
+ * page, or fronted by a proxy, and "could not tell" must never read as healthy.
  *
- * FAILS CLOSED IN EVERY UNCERTAIN DIRECTION, and the list is long because this arrives over a
- * network from an endpoint that can be rate limited, replaced by a 404 page, or fronted by a
- * proxy: "I could not tell" and "it is healthy" must never take the same branch on the last step
- * before a production write. DEFERRED CHECKS name the ones this step REPORTS but does not gate
- * on, because asserting them here blocks the very step that repairs them: a ship once refused at
- * readiness on a drift the later sync converges. A deferred check is still printed.
- *
- * @param {number} status the HTTP status
- * @param {string} text the raw body
- * @param {string} path the path asked, for the messages
- * @param {string[]} deferred check names this step reports but does not gate on
+ * @param {number} status
+ * @param {string} text
+ * @param {string} path
+ * @param {string[]} deferred
  * @returns {ReadinessVerdict}
  */
 export function readinessVerdict(status, text, path = "/api/health", deferred = []) {
-  /*
-   * A rate-limited answer IS CALLED OUT SEPARATELY: "rate limited" and "unhealthy" need completely
-   * different repairs, and collapsing them sends somebody to look for a drifted index that is fine.
-   */
   if (status === 429) {
     return {
       ok: false,
@@ -78,11 +60,7 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
     ? /** @type {HealthCheckRow[]} */ (value.checks)
     : [];
 
-  /*
-   * NO CHECKS IS A REFUSAL: any JSON document on the origin can carry a verdict field by accident,
-   * and only a health report carries a checks array. Requiring it is what stops this passing on the
-   * wrong URL.
-   */
+  // Any JSON on the origin can carry an `ok` field by accident; only a health report has checks.
   if (checks.length === 0) {
     return {
       ok: false,
@@ -96,10 +74,7 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
   const failed = checks.filter((c) => !c.ok).map((c) => c.name ?? "(unnamed)");
   const gatingFailed = failed.filter((name) => !deferredNames.includes(name));
 
-  /*
-   * A GATING CHECK DECIDES THIS STEP, and the endpoint's own verdict field is deliberately NOT the
-   * subject: it reports failure when ANY check fails, deferred ones included.
-   */
+  // Not the endpoint's own `ok`: that is false when any check fails, deferred ones included.
   if (gatingFailed.length > 0) {
     return {
       ok: false,
@@ -109,10 +84,6 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
     };
   }
 
-  /*
-   * The verdict is false and nothing is marked failing: an endpoint disagreeing with itself, which
-   * cannot be trusted on the last step before a write.
-   */
   if (value.ok !== true && failed.length === 0) {
     return {
       ok: false,
@@ -126,9 +97,6 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
 }
 
 /**
- * One printable line per check, so a refusal and a pass show the same table. The counts print only
- * when the endpoint sent them, which it does for a FAILING drift check and nothing else.
- *
  * @param {HealthCheckRow[]} checks
  * @returns {string[]}
  */
@@ -143,19 +111,12 @@ export function readinessLines(checks) {
 }
 
 /**
- * The verdict on the DEFERRED checks, read after their repair steps have run. A function rather
- * than inline, so the plant that proves a body passes readiness and then fails HERE by name is
- * writable at all.
+ * Read after the repair steps: a failing deferred check here means the repair ran and did not work.
+ * The detail string is absent because the public body drops it on purpose (row counts, unauthenticated).
  *
- * THE MEANING INVERTS BETWEEN THE TWO SITES, which is the whole design: at readiness a failing
- * deferred check means the index is behind, the ordinary state of a corpus just committed; here it
- * means THE REPAIR RAN AND DID NOT WORK. A MISSING ROW IS A MISS, NOT A PASS. THE DETAIL STRING
- * IS NOT IN THESE MESSAGES because it is not on the wire: the public body drops it DELIBERATELY,
- * those strings carrying row counts on an unauthenticated endpoint.
- *
- * @param {HealthCheckRow[]} checks every row the endpoint returned
- * @param {Record<string, string>} deferred check name to the step that repairs it
- * @param {string} [path] for the messages
+ * @param {HealthCheckRow[]} checks
+ * @param {Record<string, string>} deferred
+ * @param {string} [path]
  * @returns {{ misses: string[], converged: string[] }}
  */
 export function deferredMisses(checks, deferred, path = "/api/health") {
@@ -188,11 +149,8 @@ export function deferredMisses(checks, deferred, path = "/api/health") {
 }
 
 /**
- * CHECKS THE READINESS STEP REPORTS BUT DOES NOT GATE ON, each with the step that repairs it.
- * THE RULE: readiness gates only on checks whose repair is NOT a later ship step, since a step
- * that refuses before its own remedy is a deadlock. Two checks forced it in turn, the second
- * costing two deploys that both landed, both refused here, and both synced nothing. A VALUE PER
- * KEY, naming the step, which is the test to apply before adding another.
+ * Readiness gates only on checks whose repair is not a later ship step: refusing before its own
+ * remedy is a deadlock. Each value names the repairing step.
  */
 /** @type {Record<string, string>} */
 export const DEFERRED_CHECKS = {

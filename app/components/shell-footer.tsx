@@ -12,17 +12,10 @@ import {
 } from "~/lib/seo";
 
 /**
- * THE FOOTER (ruling 135): the identity block on the left, then five link columns in the order
- * Dustin set, left-aligned on the grid. On a phone they stack, identity first.
- *
- * THE MACHINE LINKS ARE NOT DECORATION. `/llms.txt` and the feeds are how an agent reads this site,
- * so they stay in every page's footer, now under Writing.
- *
- * THE PROFILE LINKS CARRY rel="me", and `check:machine-readable` asserts that set equals
- * `OWNER_PROFILES`. The same URLs are the Person record's sameAs, from the same constants.
- *
- * THE X MARK IS X's OWN PATH, from its brand toolkit's logo.svg, unaltered. Only the fill changes,
- * between the two colors X allows: black on the light theme, white on the dark.
+ * `/llms.txt` and the feeds stay in every footer: they are how an agent reads this site. The
+ * profile links carry rel="me", and `check:machine-readable` asserts that set equals
+ * `OWNER_PROFILES`. The X mark is X's own logo path, unaltered; only the fill changes, between
+ * the two colors X allows.
  */
 export function ShellFooter() {
   return (
@@ -175,11 +168,7 @@ export function ShellFooter() {
           </nav>
         </div>
         <p className="site-shell-footer-note">
-          {/*
-           * A DATED STRING, not a computed year. `new Date()` in a component body differs
-           * between the server render and any later render, and on an unhydrated public page
-           * it would be the only thing that could disagree with the cached copy.
-           */}
+          {/* A dated string, not `new Date()`: a computed year could disagree with the cached copy. */}
           &copy; 2026 {SITE.name}. Built on Cloudflare; the stack is on the{" "}
           <Link to="/colophon">colophon</Link>.
         </p>

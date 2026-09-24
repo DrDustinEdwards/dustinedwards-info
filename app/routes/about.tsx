@@ -5,30 +5,14 @@ import { SITE, SITE_ORIGIN, pageMeta, personJsonLd, publicHtmlHeaders } from "~/
 
 import about from "../../content/generated/about.json";
 
-// This page renders into `.prose`, and prose.css is route-scoped since the
-// per-route CSS split. A page that uses the class and does not import the sheet
-// renders unstyled, which `check:page-payload`'s coverage half catches.
+// prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
 
 /**
- * Who this is, in the first person.
- *
- * WHY THE PROSE IS IN MARKDOWN: `/privacy` and `/colophon` are prose in JSX and
- * that is right for them, because every sentence there is tied to a file a reader
- * can check. This page changes on taste, by the person it is about, and asking him
- * to edit a component to move a comma is how a page like this goes stale.
- *
- * RENDERED AT BUILD TIME AND NOT IN THE WORKER, with the grounds on `buildAbout`:
- * the public plane must not grow a second markdown renderer, and must not pay for
- * the first one on a static page.
- *
- * THE JSON-LD IS THE HOME PAGE'S, THE SAME FUNCTION. Two `Person` objects for one
- * person, differing in a field, is worse for a machine reader than one of them not
- * existing.
+ * The prose is markdown rendered at build time, so the Worker carries no markdown renderer.
+ * The JSON-LD is the home page's: two Person objects for one person confuse machine readers.
  */
 export function headers() {
-  // The SHARED builder, never a hand-written pair. check:headers refuses the
-  // latter by name.
   return new Headers(publicHtmlHeaders());
 }
 
@@ -50,12 +34,7 @@ export default function About() {
             <h1>{about.title}</h1>
           </header>
 
-          {/*
-           * RENDERED HTML FROM THE BUILD, injected the way a post body is: produced at
-           * build time from markdown in this repository, with no third-party input. The URL
-           * allowlist ran over it at build time and `buildAbout` refuses on a blocked link
-           * rather than shipping a demoted one.
-           */}
+          {/* Build-time HTML from repo markdown, URL allowlist already applied; no third-party input. */}
           <div className="prose" dangerouslySetInnerHTML={{ __html: about.html }} />
         </div>
         <script

@@ -1,23 +1,3 @@
-/**
- * The upload endpoint's reply contract, and the branch that must never guess.
- *
- * WHAT THIS PROTECTS. `/admin/media/upload` has two editors reading its JSON:
- * `markdown-editor.tsx` destructures `url` and shows `error` verbatim, and
- * `post-editor.tsx` destructures `url` and inserts it straight into markdown.
- * Neither is typed against the route, so renaming a key breaks an insert with
- * no compile error anywhere. The media library then added a THIRD caller that
- * wants a redirect instead, which is exactly the change most likely to move the
- * other two by accident.
- *
- * So the shapes are objects built by one module, and these are the assertions
- * that fail when one of them moves.
- *
- * WHY THE MODULE IS A PLAIN .mjs. `admin.media.upload.ts` imports `~/db` and a
- * `.server` module, so it cannot be loaded by `node:test` without a bundler.
- * `upload-contract.mjs` imports nothing, which is the same reason
- * `media-ref-key.mjs` exists and is stated at its definition.
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -35,18 +15,15 @@ import {
   validateUpload,
 } from "../app/lib/media/upload-contract.mjs";
 
-/** Bytes from a byte list, as an ArrayBuffer, which is what `validateUpload` takes. */
 function buffer(...values) {
   return new Uint8Array(values).buffer;
 }
 
-/** A PNG's first eight bytes, so a passing case is a plausible image. */
 const PNG_MAGIC = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 test("THE SUCCESS BODY: exactly url and key, and url is the public path", () => {
   const body = uploadSuccessBody("abc123.png");
 
-  // Sorted, so adding a key fails here rather than passing on a lucky order.
   assert.deepEqual(Object.keys(body).sort(), ["key", "url"]);
   assert.equal(body.url, "/media/abc123.png");
   assert.equal(body.key, "abc123.png");
@@ -62,9 +39,6 @@ test("THE ERROR BODY: exactly error, carrying the sentence unchanged", () => {
 test("THE BRANCH IS AN EQUALITY, so the editors keep the JSON path", () => {
   assert.equal(isFormUpload(UPLOAD_FORM_INTENT), true);
 
-  // Everything an editor could plausibly send, or not send, stays on JSON.
-  // A truthiness test would put the first three on the redirect path and hand
-  // an HTML document to `await response.json()`.
   for (const value of [undefined, null, "", "1", "true", "upload", "UPLOAD-FORM", " upload-form"]) {
     assert.equal(isFormUpload(value), false, `${JSON.stringify(value)} must not select the form branch`);
   }
@@ -77,28 +51,13 @@ test("THE REDIRECTS carry the key on success and a code on failure", () => {
     `${UPLOAD_RETURN_PATH}?upload-error=too-large`,
   );
 
-  // A key is a digest plus an extension today, but the encoder is what makes
-  // that a property of the data rather than of the key scheme.
   assert.equal(
     uploadRedirectTo({ ok: true, key: "a b&c.png" }),
     `${UPLOAD_RETURN_PATH}?uploaded=a%20b%26c.png`,
   );
 });
 
-/* ------------------------------------------------------------------ *
- * THE SHARED REFUSAL, since 2026-09-07.
- * ------------------------------------------------------------------ *
- *
- * `validateUpload` is what `storeUpload` calls, and `storeUpload` is the ONE
- * door to MEDIA: the editor's route and the operator's `upload_media` are both
- * adapters over it. So these assertions are the whole statement of what the
- * bucket accepts, for both callers at once, and they are here rather than
- * against either caller because neither is loadable by `node:test`.
- */
-
 test("VALIDATION ACCEPTS a plausible image of an allowed type", () => {
-  // The accepting answer is null, and it is asserted explicitly: a refusal
-  // object is truthy, so a caller's `if (refusal)` and this test agree.
   assert.equal(validateUpload({ type: "image/png", bytes: buffer(...PNG_MAGIC) }), null);
 });
 
@@ -107,12 +66,8 @@ test("VALIDATION REFUSES a type outside the allowlist, naming what arrived", () 
 
   assert.equal(refusal.code, "unsupported-type");
   assert.equal(refusal.status, 415);
-  // The sentence names the type, which is the half a query-string code cannot
-  // carry and the half that tells an agent what to send instead.
   assert.match(refusal.message, /application\/zip/);
 
-  // An empty type is what a multipart part carries when the browser could not
-  // guess one, and "unknown" rather than an empty pair of quotes is the point.
   assert.match(validateUpload({ type: "", bytes: buffer(0) }).message, /"unknown"/);
 });
 
@@ -124,13 +79,10 @@ test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", () => {
 
   assert.equal(refusal.code, "too-large");
   assert.equal(refusal.status, 413);
-  // byteSize's MB form, not the five-figure kilobyte number this sentence
-  // carried before it had an owner. Both halves of the comparison in MB.
   assert.match(refusal.message, /Image is 10\.0 MB, over the 10 MB limit\./);
 
-  // EXACTLY at the limit is accepted: the rule is `>`, and a boundary asserted
-  // only on the refusing side passes for an off-by-one in the safe direction
-  // that silently costs a legitimate 10 MB upload.
+  // Exactly at the limit is accepted: the rule is `>`, and a refusing-side-only
+  // assertion would miss an off-by-one that costs a legitimate 10 MB upload.
   assert.equal(
     validateUpload({ type: "image/png", bytes: new ArrayBuffer(MAX_BYTES) }),
     null,
@@ -138,10 +90,8 @@ test("VALIDATION REFUSES over MAX_BYTES, and the size reads as a size", () => {
 });
 
 test("VALIDATION REFUSES markup declared as a raster, which is the origin rule", () => {
-  // Uploads land on this site's own origin. `media.$.ts` serves an SVG as an
-  // attachment with nosniff and decides that from the STORED content type, so
-  // SVG bytes stored as image/png escape it. Both callers can claim a type:
-  // `file.type` on a multipart part is browser-supplied.
+  // `media.$.ts` serves SVG as an attachment based on the STORED content type,
+  // so SVG bytes stored as image/png would escape it.
   const svg = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>');
   const refusal = validateUpload({ type: "image/png", bytes: svg.buffer });
 
@@ -149,8 +99,7 @@ test("VALIDATION REFUSES markup declared as a raster, which is the origin rule",
   assert.equal(refusal.status, 415);
   assert.match(refusal.message, /image\/png/);
 
-  // The same bytes DECLARED HONESTLY are accepted. SVG is in the allowlist
-  // deliberately and this check must not become a ban on it.
+  // SVG is allowlisted deliberately; this check must not become a ban on it.
   assert.equal(validateUpload({ type: "image/svg+xml", bytes: svg.buffer }), null);
 });
 
@@ -159,37 +108,20 @@ test("beginsAsMarkup sees past a BOM and whitespace, and stops there", () => {
 
   assert.equal(beginsAsMarkup(encode("<svg/>")), true);
   assert.equal(beginsAsMarkup(encode("\n\t  <?xml version=\"1.0\"?>")), true);
-  // A UTF-8 BOM is what a file saved out of a Windows editor carries, and three
-  // bytes in front of the `<` would defeat the check entirely.
+  // A UTF-8 BOM (from a Windows editor) in front of the `<` would defeat the check.
   assert.equal(beginsAsMarkup(buffer(0xef, 0xbb, 0xbf, 0x3c, 0x73)), true);
 
-  // Every raster the allowlist accepts, by its own magic number. None of them
-  // starts with `<`, which is what makes a false positive unavailable rather
-  // than merely unlikely.
   assert.equal(beginsAsMarkup(buffer(...PNG_MAGIC)), false, "PNG");
   assert.equal(beginsAsMarkup(buffer(0xff, 0xd8, 0xff)), false, "JPEG");
   assert.equal(beginsAsMarkup(buffer(0x52, 0x49, 0x46, 0x46)), false, "WebP/RIFF");
   assert.equal(beginsAsMarkup(buffer(0x47, 0x49, 0x46, 0x38)), false, "GIF");
   assert.equal(beginsAsMarkup(buffer(0x00, 0x00, 0x00, 0x20, 0x66, 0x74)), false, "AVIF/ftyp");
 
-  // Empty bytes are not markup. `view[at]` is undefined there, and `=== 0x3c`
-  // is what makes that false rather than a comparison against NaN.
   assert.equal(beginsAsMarkup(new ArrayBuffer(0)), false);
-  // Whitespace all the way to the end runs `at` off the array, same answer.
   assert.equal(beginsAsMarkup(buffer(0x20, 0x20, 0x20)), false);
 });
 
 test("EVERY REFUSAL validateUpload can return is a code the form can render", () => {
-  /*
-   * THE PAIRING, which is the one way these two can drift apart. `storeUpload`
-   * hands the refusal's `message` to the JSON callers and its `code` to
-   * `uploadRedirectTo`, and the library then resolves that code through
-   * UPLOAD_ERRORS on arrival. A code with no sentence renders NOTHING on the
-   * media page, on the one path that has no other way to say what went wrong.
-   *
-   * Driven off actual refusals rather than a written list, so a fourth one
-   * added to `validateUpload` without a sentence fails here.
-   */
   const svg = new TextEncoder().encode("<svg/>").buffer;
   const refusals = [
     validateUpload({ type: "application/zip", bytes: buffer(0x50, 0x4b) }),
@@ -197,8 +129,6 @@ test("EVERY REFUSAL validateUpload can return is a code the form can render", ()
     validateUpload({ type: "image/png", bytes: svg }),
   ];
 
-  // The vacuity rule: the loop below is vacuous over an empty list, and every one
-  // of these could start returning null without the assertions noticing.
   assert.equal(refusals.length, 3);
   for (const refusal of refusals) {
     assert.ok(refusal, "a refusing case returned the accepting answer");
@@ -224,32 +154,9 @@ test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
   assert.equal(uploadErrorSentence("constructor"), null);
 });
 
-/* ------------------------------------------------------------------ *
- * THE ORIGIN INVARIANT: nothing user-writable may serve a script.
- * ------------------------------------------------------------------ *
- *
- * Uploads land on the SITE'S OWN ORIGIN, under `/media/*`. That makes this
- * allowlist a security boundary rather than a convenience: anything it accepts
- * is a file a third party can put on our origin and then link to.
- *
- * The invariant matters most to whatever `script-src` ends up being. A policy
- * that trusts the origin (`'self'`) is only as strong as the promise that the
- * origin cannot serve attacker-authored script. Recorded 2026-08-17 while
- * ruling on the CSP: the allowlist satisfies it today and must not drift.
- *
- * TWO TIERS, because they need different answers:
- *
- *   EXECUTABLE  a browser runs it straight from a URL. Never allowed, at all.
- *   CAPABLE     it can CARRY script (SVG, HTML, XML). Allowed only while it is
- *               served as an attachment, which `check:headers` asserts against
- *               `media.$.ts` because a unit test cannot read that route.
- *
- * SVG is the live case: it is in the allowlist deliberately, and it is safe
- * only because of the Content-Disposition fix. Deleting that fix without
- * removing SVG here reopens a stored-script path.
- */
+// Uploads land on the site's own origin, so this allowlist is a security boundary.
+// SVG can carry script and is safe only because `media.$.ts` serves it as an attachment.
 
-/** Types a browser executes directly. The allowlist must never contain one. */
 const EXECUTABLE_TYPES = [
   "application/javascript",
   "text/javascript",
@@ -260,7 +167,6 @@ const EXECUTABLE_TYPES = [
   "application/wasm",
 ];
 
-/** Extensions the same rule covers, since the map stores those too. */
 const EXECUTABLE_EXTENSIONS = ["js", "mjs", "cjs", "jsx", "ts", "wasm", "html", "htm", "xhtml"];
 
 test("the upload allowlist contains no directly executable type", () => {

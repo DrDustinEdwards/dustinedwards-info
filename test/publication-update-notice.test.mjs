@@ -1,28 +1,5 @@
-/**
- * The retraction path, driven with a real retracted DOI.
- *
- * ## WHY A FIXTURE AND NOT A RECORD
- *
- * Nothing in this corpus is retracted or corrected. Measured 2026-09-12 across
- * all 34 Crossref DOIs: no `updated-by`, no `update-to`, no `relation` of any
- * kind. So the render path has no data behind it, and a path nothing exercises
- * is a path that does not work. The replay rule says a new path is tested by
- * REPLAYING the case it was written for, and the only way to do that here is a
- * case from outside.
- *
- * The fixture is `10.1016/S0140-6736(97)11096-0`, the 1998 Lancet paper linking
- * MMR to autism, retracted in full on 2010-02-02. It is chosen because it is
- * the most thoroughly documented retraction in the literature, so the fixture
- * cannot quietly become wrong, and because it is unambiguously not one of ours:
- * a fixture drawn from this corpus would go stale the moment the corpus moved,
- * and would read as a claim about a real paper here.
- *
- * The DOI in a notice is the NOTICE's DOI. This test uses the retracted
- * paper's own DOI as the stand-in identifier, because what is under test is the
- * shape and the sentence rather than the bibliography of that retraction.
- *
- * @see app/lib/publications/update-notice.mjs
- */
+/* Nothing in this corpus is retracted, so the fixture is a thoroughly documented retraction from
+ * outside it, which cannot quietly become wrong or read as a claim about one of ours. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
@@ -33,7 +10,6 @@ import {
   updateNoticeText,
 } from "../app/lib/publications/update-notice.mjs";
 
-/** The known-retracted DOI. Not one of ours, deliberately. */
 const RETRACTED = "10.1016/S0140-6736(97)11096-0";
 
 test("a real retraction produces the sentence, the label and the notice link", () => {
@@ -89,8 +65,8 @@ test("absence is not a problem, because most records have no notice", () => {
 });
 
 test("a malformed notice is refused, and the reason names the field", () => {
-  // The failure this prevents: `https://doi.org/undefined` rendered as the link
-  // on the most serious sentence this site can print.
+  // Otherwise `https://doi.org/undefined` would render as the link on the most serious
+  // sentence this site can print.
   assert.match(updateNoticeProblem({ type: "retraction", doi: "" }), /doi/);
   assert.match(updateNoticeProblem({ type: "retraction", doi: "not-a-doi" }), /doi/);
   assert.match(

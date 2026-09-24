@@ -1,37 +1,14 @@
-/**
- * `fetchPostReadership`: when the source cannot answer, the answer is ABSENT.
- *
- * REPLAYS RULING 2 of the blog roadmap, which is the reason this column exists
- * in the shape it does: a readership number that cannot be trusted must be
- * absent and must say why, never a zero and never a dash that reads as one.
- * This is the DATA half, and it runs the real function against a real broken
- * source rather than a fixture describing one.
- *
- * Three breaks, because they fail at three different places and a caller that
- * handled one and not the others would still ship a zero:
- *
- *   no token      the earliest return, and the ordinary state on a dev machine
- *   HTTP failure  a nonexistent dataset, which the SQL API answers with a 4xx
- *   malformed     a 200 whose body is not the shape the caller expects
- *
- * `complete` is asserted separately because it is the flag that decides whether
- * an absent path is a measured zero or an unknown, and it is derived from two
- * independent readings that can disagree.
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
 import { fetchPostReadership } from "../app/lib/admin/traffic.server.ts";
 import { READERSHIP_PATH_LIMIT, WINDOW_DAYS } from "../app/lib/admin/origin-requests.mjs";
 
-/** A KV that stores nothing, so every call is a cache miss and reaches the source. */
 const coldKv = () => ({
   get: async () => null,
   put: async () => {},
 });
 
-/** An env with a token and a scripted fetch. `fetch` is replaced per test. */
 const envWith = (fetchImpl) => ({
   ANALYTICS_READ_TOKEN: "test-token",
   CLOUDFLARE_ACCOUNT_ID: "acct",
@@ -39,12 +16,7 @@ const envWith = (fetchImpl) => ({
   __fetch: fetchImpl,
 });
 
-/**
- * The module calls the global `fetch`, so the break is installed there and
- * removed afterwards. Restoring in a `finally` rather than at the end of the
- * body, so one failing assertion cannot leave the global patched for every
- * test after it.
- */
+/** Restored in `finally` so a failing assertion cannot leave the global patched. */
 async function withFetch(impl, run) {
   const original = globalThis.fetch;
   globalThis.fetch = impl;
@@ -60,7 +32,6 @@ test("THE DEFECT: no read token gives an absence with a reason, not a zero", asy
   assert.equal(result.status, "error");
   assert.equal(result.data, null);
   assert.match(result.message, /token/i);
-  // The message has to be usable as the sentence a reader sees.
   assert.ok(result.message.length > 20, "an empty reason is not a reason");
 });
 
@@ -88,8 +59,6 @@ test("a live read indexes by path and reports the window", async () => {
   const result = await withFetch(
     async (_url, init) => {
       const query = String(init.body);
-      // The two statements are the panel's own builders, so the test can tell
-      // them apart the same way the API does: one groups, one does not.
       const data = query.includes("GROUP BY")
         ? [
             { path: "/blog/one", origin_requests: 12, sampled_rows: 12 },
@@ -127,8 +96,6 @@ test("COMPLETE IS FALSE when more paths had activity than came back", async () =
 });
 
 test("COMPLETE IS FALSE when the limit itself was reached", async () => {
-  // The other half of the flag, and it fails independently: a result exactly as
-  // long as the limit was cut whatever the total says, including a stale total.
   const rows = Array.from({ length: READERSHIP_PATH_LIMIT }, (_, i) => ({
     path: `/blog/p${i}`,
     origin_requests: 1,

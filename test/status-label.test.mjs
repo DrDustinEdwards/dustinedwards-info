@@ -1,20 +1,6 @@
-/**
- * `statusLabel()` THROWS and does not substitute.
- *
- * Replays the colophon defect. `STATUS_LABEL[s] ?? s` rendered the raw enum
- * when a label was missing, which looked like working output ON THE PAGE and IN
- * THE SEARCH INDEX at the same time, so every surface agreed and every surface
- * was wrong. The no-substitution rule: a fallback that substitutes a DIFFERENT VALUE is not
- * failing closed.
- *
- * The positive cases matter as much as the throw. A "fix" that threw on
- * everything would satisfy a suite that only asserted the throw, and would take
- * the colophon down instead of mislabelling one row.
- *
- * `check:features` covers the other half, reconciling the label map against the
- * statuses `stack.json` actually uses, in both directions. That is a claim
- * about the DATA; this is a claim about the FUNCTION.
- */
+/* A substituting fallback renders the raw enum, which looks like working output on the page and
+ * in the search index at once. The positive cases matter too: throwing on everything would take
+ * the colophon down. */
 
 import test from "node:test";
 import assert from "node:assert/strict";

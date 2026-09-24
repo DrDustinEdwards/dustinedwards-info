@@ -1,11 +1,3 @@
-/**
- * The site mark, as anything rendering it at build time embeds it: one definition, with the build
- * as its reader.
- *
- * BOUNDARY: NO PATH DATA IS STATED IN THIS FILE. The mark's single source is the component the
- * Worker renders, and this reads the committed logo files that component was drawn from.
- */
-
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,16 +6,9 @@ import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./tokens.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-/**
- * The mark's rendered height, in card pixels. Everything else is derived from
- * it and from the fixture's own viewBox.
- */
 const HEIGHT = 64;
 
-/**
- * The brand fill, RESOLVED from app.css rather than restated. The light block is the one a card
- * takes: a card is rendered once and served into a feed with no idea which theme a reader prefers.
- */
+// Light theme: a card is rendered once and served into feeds with no idea of the reader's theme.
 const { mark: MARK } = resolveTokens(
   { mark: "--mark-on-chrome" },
   tokenBlock("mark", THEME_SELECTORS.light),
@@ -36,15 +21,7 @@ const { mark: MARK } = resolveTokens(
  */
 
 /**
- * The mark, on brand surface, sized and framed for an embedded render.
- *
- * WHICH PATHS ARE THE BRAND PATHS IS DERIVED, NOT LISTED: the light and dark fixtures are
- * identical except for the fills on the purple paths, so the paths whose fill DIFFERS are exactly
- * the ones that take a brand color. Nothing here restates a hex or a path index.
- *
- * It fails closed on every way the fixtures could stop agreeing: a different viewBox, a different
- * path count, differing geometry, or no differing fill at all, which would silently paint the mark
- * in asset colors.
+ * Brand paths are derived, not listed: the light and dark fixtures differ only in the brand fills.
  *
  * @returns {Mark}
  */
@@ -61,8 +38,7 @@ export function readMark() {
     return { file, viewBox, paths };
   };
 
-  // The HEADER crop, because the band this sits in is the header: the square master would sit in a
-  // taller band surrounded by its own whitespace.
+  // The header crop: the square master would sit in its own whitespace.
   const light = parse("dustin-edwards-logo-header.svg");
   const dark = parse("dustin-edwards-logo-header-dark.svg");
   if (light.viewBox !== dark.viewBox) {
@@ -86,15 +62,8 @@ export function readMark() {
     throw new Error("mark: no path changes fill between the fixtures, so none is the brand");
   }
 
-  /*
-   * SIZED FROM THE viewBox, AND THE viewBox PADDED TO THE BOX, never guessed. A width that is not
-   * the viewBox's aspect times the height is a squashed mark and satori will not say so. The subtler
-   * failure is measured: satori LAYS OUT at integer pixels and writes the embedded svg at the exact
-   * aspect, so resvg letterboxes the difference and the mark renders fractionally short and off
-   * center, which is invisible and is enough to stop it matching the fixture pixel for pixel, which
-   * is how this mark is now proved. So the CROP is padded symmetrically until its aspect is exactly
-   * the integer box's: only the empty margin moves and no path is touched.
-   */
+  // satori lays out at integer pixels but writes the svg at the exact aspect, so resvg letterboxes
+  // the mark off center. Pad the viewBox symmetrically until its aspect matches the integer box.
   const [x, y, boxWidth, boxHeight] = light.viewBox.split(/\s+/).map(Number);
   const width = Math.round((HEIGHT * boxWidth) / boxHeight);
   const want = width / HEIGHT;
@@ -113,14 +82,7 @@ export function readMark() {
 }
 
 /**
- * The mark as one satori element node, JSX-free so no caller needs a build step.
- *
- * satori takes an inline `svg` node and emits it as an `<image>` whose href is the same markup
- * URL-encoded, so the path data reaches resvg VERBATIM: no re-fitting, no simplification, no
- * reinterpretation of the arcs.
- *
- * @param {Record<string, unknown>} [style] layout only. The caller owns where
- *   the mark sits; it does not own how the mark is drawn.
+ * @param {Record<string, unknown>} [style]
  * @returns {any}
  */
 export function markElement(style = {}) {

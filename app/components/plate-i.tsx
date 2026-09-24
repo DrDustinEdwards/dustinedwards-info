@@ -1,23 +1,7 @@
 import { KEY_ICONS, NARROW, WIDE, WIDE_VIEW, type PlateLayout, type Shape } from "./plate-i-geometry";
 
-/**
- * Plate I and its specimen row, drawn from the approved canvas file (part-c/09-solid-lawn.html):
- * six plaque types on one solid lawn, each on an oxide leader to its label, a 1 cm scale bar, and
- * the same six beneath as a key.
- *
- * FLAT, ruling 124: three fills (paper, lawn, one turbid tone between them), ink outlines, no
- * gradient or light. COLOR, ruling 122: oxide is annotation and nothing else; purple appears
- * nowhere, because nothing here is a link.
- *
- * TWO DRAWINGS, because the canvas draws two: a 500-unit plate for wide screens, shown at 0.74 with
- * its labels at the sides, and a 300-unit plate for phones, each with its own label placement. CSS shows one; `display: none` removes the
- * other from the accessibility tree and the tab order, so a reader meets one plate either way.
- *
- * COMPLETE WITHOUT SCRIPT (ruling 119): every label is always drawn and the row names all six.
- * `app/enhance/plate.ts` adds the linked highlight and the one-time leader intro on top.
- *
- * NOT DATA. It draws established knowledge and does not change with the corpus.
- */
+// CSS shows one of the two drawings; `display: none` removes the other from the accessibility
+// tree and the tab order, so a reader meets one plate either way.
 
 /** The six, in numeral order. The drawing, its labels and the row all read from this. */
 export const PLAQUES = [
@@ -32,7 +16,6 @@ export const PLAQUES = [
 /** The numerals in row order: the key's icons are drawn in this order. */
 const PLAQUE_IDS: readonly string[] = PLAQUES.map((p) => p.id);
 
-/** A plaque's row, by numeral. A geometry row with no entry here is a broken table, so it throws. */
 function plaque(id: string) {
   const meta = PLAQUES.find((p) => p.id === id);
   if (!meta) throw new Error(`Plate I: no plaque "${id}" in PLAQUES`);
@@ -42,7 +25,6 @@ function plaque(id: string) {
 const FILL = { paper: "var(--paper)", lawn: "var(--fig-lawn)", turbid: "var(--fig-turbid)", none: "none" };
 const STROKE = { ink: "var(--text)", dust: "var(--fig-dust-300)", none: "none" };
 
-/** The label box of each layout: the dish plus every label, so nothing spills past the SVG. */
 const VIEW = {
   wide: WIDE_VIEW,
   narrow: { x: -14, y: -30, w: 375, h: 364 },
@@ -82,7 +64,6 @@ function Drawing({ layout, variant }: { layout: PlateLayout; variant: "wide" | "
       <title id={`plate-i-title-${variant}`}>Plate I. Plaque morphology, drawn.</title>
       <desc id={`plate-i-desc-${variant}`}>{DESCRIPTION}</desc>
 
-      {/* The dish: a paper rim in ink, and the lawn inside it as one flat fill. */}
       <circle cx={cx} cy={cy} r={rim} fill="var(--paper)" stroke="var(--text)" strokeWidth="1.6" />
       <circle cx={cx} cy={cy} r={lawn} fill="var(--fig-lawn)" />
 
@@ -109,7 +90,6 @@ function Drawing({ layout, variant }: { layout: PlateLayout; variant: "wide" | "
         </g>
       ))}
 
-      {/* The scale bar. A plate without one is a picture rather than a measurement. */}
       <line x1={sx1} y1={sy1} x2={sx2} y2={sy2} stroke="var(--text)" strokeWidth="1.5" />
       <text x={layout.scale.label.x} y={layout.scale.label.y} className="plate-scale" aria-hidden="true">
         {layout.scale.label.text}
@@ -118,7 +98,6 @@ function Drawing({ layout, variant }: { layout: PlateLayout; variant: "wide" | "
   );
 }
 
-/** The plate, both layouts. The figure and its caption are the route's. */
 export function PlateI() {
   return (
     <>
@@ -128,10 +107,6 @@ export function PlateI() {
   );
 }
 
-/**
- * The specimen row: the six again, drawn alone and named, so a reader who cannot see the plate
- * still gets the taxonomy in real text.
- */
 export function PlateKeyRow() {
   return (
     <section className="plate-key u-wide" aria-label="Plate I key">

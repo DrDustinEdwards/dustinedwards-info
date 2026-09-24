@@ -1,20 +1,3 @@
-/**
- * What a sync call is allowed to call success. Both indexes.
- *
- * THE DEFECT THIS GUARDS. `ship` runs the operation and fails the run when it
- * does not converge, so an operation that reported ok by virtue of having been
- * CALLED would turn that gate into a green light meaning nothing: the deploy
- * lands, ship says shipped, and the Ask index is still short. That is exactly
- * the state the scheduled health check caught by hand on 2026-08-23, four polls
- * running, expected 91 present 90.
- *
- * So converged is DERIVED from the two counts read back after the writes, never
- * asserted by the caller. The plant for this is an operation that returns
- * success without uploading; these assertions are what refuses it.
- *
- * @see app/lib/operator/sync-report.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -34,9 +17,7 @@ test("a real convergence reports converged and zero drift", () => {
 });
 
 test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () => {
-  // An operation that answered ok having written nothing, while the index is
-  // short. The counts are the only thing that can tell, so they are the only
-  // thing trusted.
+  // The counts are the only thing that can tell, so they are the only thing trusted.
   const r = askSyncReport({ uploaded: 0, removed: 0, cacheDropped: 0, expected: 122, present: 90 });
   assert.equal(r.converged, false, "an untouched short index must never read as converged");
   assert.equal(r.drift, 32);
@@ -44,25 +25,22 @@ test("SUCCESS WITHOUT UPLOADING IS NOT CONVERGED, which is the plant", () => {
 });
 
 test("uploading a lot and still being short is NOT converged either", () => {
-  // The loop ran, it wrote plenty, and the read-back still disagrees. `uploaded`
-  // is what the loop THINKS it did; only the read-back can contradict it.
+  // `uploaded` is what the loop THINKS it did; only the read-back can contradict it.
   const r = askSyncReport({ uploaded: 122, removed: 0, cacheDropped: 0, expected: 122, present: 121 });
   assert.equal(r.converged, false);
   assert.equal(r.drift, 1);
 });
 
 test("DRIFT IS ABSOLUTE, because a too-large index is also wrong", () => {
-  // More present than expected is stale items nobody pruned, which is how a
-  // withdrawn post keeps answering. A negative number here would read as
-  // healthy to any caller comparing drift > 0.
+  // More present than expected is stale items, which is how a withdrawn post keeps answering.
+  // A negative drift would read as healthy to any caller comparing drift > 0.
   const r = askSyncReport({ uploaded: 0, removed: 0, cacheDropped: 0, expected: 90, present: 122 });
   assert.equal(r.drift, 32, "not -32");
   assert.equal(r.converged, false);
 });
 
 test("AN UNREADABLE COUNT FAILS CLOSED", () => {
-  // Same stance ftsEqualityVerdict takes. A count that could not be read must
-  // not average out to agreement.
+  // A count that could not be read must not average out to agreement.
   for (const bad of [null, undefined, Number.NaN, "122", 1.5]) {
     assert.equal(
       askSyncReport({ uploaded: 1, removed: 0, cacheDropped: 0, expected: bad, present: bad }).converged,
@@ -92,11 +70,8 @@ test("the summary carries both counts either way, so a log line is diagnosable",
   assert.match(bad, /drift 2/);
 });
 
-/* -------------------------------------------------------------------------
- * sync_media. Same rule, a different measurement, and the difference is the
- * point of these: the media index drifts by KEY, so a comparison of the two
- * totals can agree while the index is wrong in both directions at once.
- * ---------------------------------------------------------------------- */
+/* The media index drifts by KEY, so the two totals can agree while the index is wrong in
+ * both directions at once. */
 
 const CLEAN = {
   indexed: 69,
@@ -117,13 +92,8 @@ test("media: a real convergence reports converged and zero drift", () => {
 });
 
 test("media: THE CASE A COUNT COMPARISON CANNOT SEE", () => {
-  /*
-   * The totals are identical and the index is wrong twice: one real asset has
-   * no row, and one row describes something that no longer exists. `sync_ask`'s
-   * shape would call this converged, correctly for a count comparison and
-   * wrongly for this one. This assertion is the entire reason the media report
-   * compares key SETS rather than reusing the answer index's verdict.
-   */
+  /* Identical totals and the index wrong twice: this is why the media report compares key
+   * SETS rather than reusing the count comparison. */
   const r = mediaSyncReport({
     ...CLEAN,
     missing: ["/fonts/OFL.txt"],
@@ -136,8 +106,6 @@ test("media: THE CASE A COUNT COMPARISON CANNOT SEE", () => {
 });
 
 test("media: THE OFL.txt CASE, which is the one this door was built for", () => {
-  // One public file with no D1 row: the standing red that waited weeks for a
-  // click. Expected exceeds present by exactly one and the key is named.
   const r = mediaSyncReport({
     ...CLEAN,
     expected: 69,
@@ -150,12 +118,8 @@ test("media: THE OFL.txt CASE, which is the one this door was built for", () => 
 });
 
 test("media: a key that FAILED to derive is not convergence", () => {
-  /*
-   * The subtle one. A key that threw during the rebuild leaves no row, and it
-   * also leaves the source unchanged, so a reconciler that only compared sets
-   * would see the same key on both sides and agree. Both totals match here and
-   * both key sets are empty; only the failure list says anything is wrong.
-   */
+  /* A key that threw leaves no row and an unchanged source, so both key sets agree; only the
+   * failure list says anything is wrong. */
   const r = mediaSyncReport({ ...CLEAN, failures: ["/x.png: IMAGES returned 500"] });
   assert.equal(r.expected, r.present);
   assert.deepEqual(r.missing, []);

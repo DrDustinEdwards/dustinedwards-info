@@ -1,23 +1,3 @@
-/**
- * The RSS item shape, asserted where a comment could not be.
- *
- * WHAT THIS PROTECTS. RSS carries the whole post since 2026-08-28, under the
- * one-feed ruling: the JSON feed had served full content since it shipped while
- * this one served a one-line description, so the same corpus reached a
- * subscriber differently depending on which URL they pasted. Everything that
- * makes the full body safe to put in an XML document is a string operation, and
- * a string operation nobody exercises is a string operation that is wrong.
- *
- * Three of these are about a document a person would never look at closely: a
- * CDATA section terminated early by its own content, a root-relative image path
- * that resolves against the READER'S host, and an ampersand in a title. Nobody
- * subscribes to their own feed in a real reader often enough to find any of
- * them.
- *
- * @see app/lib/rss-feed.mjs
- * @see test/json-feed.test.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -25,7 +5,6 @@ import { absolutiseUrls, cdata, escapeXml, rssItem } from "../app/lib/rss-feed.m
 
 const ORIGIN = "https://example.test";
 
-/** A fully populated row, so the element assertions have every element to find. */
 const FULL = {
   slug: "a-post",
   title: "A post about D1 & FTS5",
@@ -62,27 +41,15 @@ test("a title with an ampersand is escaped, and escaped once", () => {
   assert.doesNotMatch(item, /&amp;amp;/, "double-escaped");
 });
 
-/* ------------------------------------------------------------------ CDATA */
-
 test("CDATA survives a `]]>` inside the content", () => {
-  /*
-   * A CDATA section ends at the FIRST `]]>`. Content carrying that sequence,
-   * which a post about XML or about this very function would, terminates the
-   * section early and spills the rest of the post into the document as markup.
-   */
+  /* A CDATA section ends at the FIRST `]]>`, so content carrying that sequence spills the
+   * rest of the post into the document as markup. */
   const source = "before ]]> after";
   const wrapped = cdata(source);
   assert.equal(wrapped, "<![CDATA[before ]]]]><![CDATA[> after]]>");
 
-  /*
-   * ASSERTED BY READING IT BACK, not by counting characters. What matters is
-   * that a parser recovers the original text, and the repair deliberately
-   * produces TWO sections, so "the first `]]>` is at the end" is false of the
-   * correct output as well as the broken one.
-   *
-   * This is the parse a conforming reader performs: take everything between
-   * each `<![CDATA[` and its own terminator, and concatenate.
-   */
+  /* Read back rather than counted: the repair produces TWO sections, so "the first `]]>` is
+   * at the end" is false of the correct output as well as the broken one. */
   const textOf = (/** @type {string} */ xml) =>
     xml
       .split("<![CDATA[")
@@ -92,12 +59,7 @@ test("CDATA survives a `]]>` inside the content", () => {
 
   assert.equal(textOf(wrapped), source, "a reader would not recover the original text");
 
-  /*
-   * THE CONTROL. Without it the assertion above is satisfied by any wrapper at
-   * all. The naive form is written out and shown to LOSE text: its section ends
-   * at the `]]>` inside the content, so everything after it spills into the
-   * document as markup.
-   */
+  /* The control: the naive form loses text, or any wrapper at all would satisfy the above. */
   const naive = `<![CDATA[${source}]]>`;
   assert.notEqual(
     textOf(naive),

@@ -4,47 +4,18 @@ import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
 import { readCapped } from "~/lib/read-capped.mjs";
 import { collapseExcerpt, sameDocument } from "~/lib/webmention/urls.mjs";
 
-// What `parseHTML` hands back, which is linkedom's document and NOT the DOM's. Naming the real
-// type is what stops the two being asserted equal.
+// linkedom's document, not the DOM's.
 type ParsedDocument = ReturnType<typeof parseHTML>["document"];
 
-/**
- * Does the source page really link to the target?
- *
- * THE CLAIM IS THE SENDER'S UNTIL THIS RUNS. Nothing in the POST is evidence: the body is two
- * strings they typed. So the row is written `unverified`, this fetches the page they named, and the
- * row moves to `pending` only if an anchor on it actually resolves to the target. Without that the
- * endpoint would be a way to publish arbitrary text under an arbitrary URL on someone else's post.
- *
- * IT RUNS IN `ctx.waitUntil`, NOT A QUEUE, and the cost is stated rather than hidden: a
- * `waitUntil` cut short by the runtime leaves the row in `unverified`, where the admin can see it
- * and the global cap still counts it. That is the safe direction, and a systematic failure shows up
- * as a growing open queue rather than as silence.
- *
- * EVERY BOUND ON THE OUTBOUND FETCH:
- *
- *   protocol     http or https only, not this origin, not loopback, not an IP literal
- *   timeout      via `AbortSignal.timeout`; a slow source must not hold a `waitUntil` open
- *   credentials  none. There is nothing to send and nothing to leak
- *   body         capped through `readCapped`, so the sender's claim about size does not participate
- *
- * NOTHING FROM THE SOURCE IS STORED AS MARKUP. The name and the excerpt come off `textContent` and
- * the URL is re-parsed and kept only if it is absolute http(s), so there is no path from this
- * function to injected HTML.
- */
+// The row is written `unverified` and moves to `pending` only if an anchor on the source resolves to the
+// target. Runs in `waitUntil`, not a queue: a run cut short leaves the row `unverified`, visible and still
+// counted by the cap. Nothing from the source is stored as markup.
 
-/** Bytes of source HTML that will be read. Beyond it the mention fails. */
 const MAX_SOURCE_BYTES = 1024 * 1024;
 
-/** Milliseconds before the source fetch is abandoned. */
 const SOURCE_TIMEOUT_MS = 5000;
 
-/**
- * THE FIXED SET OF FAILURE REASONS, exported so the admin page and the tests name the same
- * strings. A FIXED SET RATHER THAN A MESSAGE, because the column is shown to the admin and a
- * free-text reason built from an error would put a remote server's prose into this site's own admin
- * plane. Each word names a different repair.
- */
+// A fixed set, not a message: free text would put a remote server's prose into the admin plane.
 export const FAILURE_REASONS = {
   fetchError: "fetch-error",
   timeout: "timeout",
@@ -53,21 +24,11 @@ export const FAILURE_REASONS = {
   noLink: "no-link",
 } as const;
 
-/** What `readCapped` returns when the stream itself errored. */
+// The sentinel `readCapped` returns when the stream itself errored.
 const UNREADABLE = "(unreadable)";
 
-/**
- * Best-effort author, from an h-card if the page publishes one.
- *
- * BEST EFFORT MEANS THE FALLBACK IS NAMED, NOT INVENTED. With no h-card the name is the source's
- * HOSTNAME and the URL is null, which is a fact about where the mention came from rather than a
- * guess about who wrote it. That is the difference between an honest fallback and the no-substitution rule's
- * substituted value.
- *
- * `u-url` is resolved against the source and kept only if it is absolute http(s). A relative or
- * `javascript:` value becomes null rather than being refused later at render time, which is what
- * the URL allowlist rule asks: validate where the value enters.
- */
+// No h-card: the name is the source's hostname, a fact rather than a guess. `u-url` is kept only if it
+// resolves to absolute http(s).
 function readAuthor(
   document: ParsedDocument,
   sourceUrl: string,
@@ -103,21 +64,13 @@ function readAuthor(
   return { authorName: name.length > 0 ? name : hostname, authorUrl };
 }
 
-/**
- * Fetch the source and decide. Pure of the database: the caller records it. Split so a test can
- * drive the decision over a stubbed fetch without also asserting a row write.
- */
+// Pure of the database, so a test can drive the decision over a stubbed fetch.
 export async function inspectSource(
   sourceUrl: string,
   targetUrl: string,
 ): Promise<WebmentionVerdict> {
-  /*
-   * ONE SIGNAL, READ TWICE. `AbortSignal.timeout` fires during the fetch OR during the body read,
-   * and the two produce different shapes: the first throws, the second makes `readCapped` return its
-   * unreadable sentinel. So the signal is what separates `timeout` from `fetch-error` at both sites.
-   * Reading the sentinel alone would misreport a timed-out read as `no-link`, which is the reason a
-   * sender would act on and the wrong one.
-   */
+  // One signal, read at both sites: a timeout during the body read yields the unreadable sentinel, which
+  // would otherwise be misreported as `no-link`.
   const signal = AbortSignal.timeout(SOURCE_TIMEOUT_MS);
 
   let response: Response;
@@ -139,11 +92,7 @@ export async function inspectSource(
     return { status: "failed", failureReason: FAILURE_REASONS.fetchError };
   }
 
-  /*
-   * THE CONTENT TYPE IS CHECKED BEFORE THE BODY IS READ, so a source that announces a video does not
-   * cost a megabyte to refuse. An ABSENT content-type is treated as not-HTML rather than assumed: a
-   * server that will not say what it sent is not one whose bytes this Worker should hand to a parser.
-   */
+  // Checked before the body is read, so a video costs nothing to refuse. An absent content-type is not HTML.
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
   if (!contentType.includes("text/html") && !contentType.includes("application/xhtml+xml")) {
     return { status: "failed", failureReason: FAILURE_REASONS.notHtml };
@@ -162,11 +111,7 @@ export async function inspectSource(
 
   const { document } = parseHTML(body);
 
-  /*
-   * EVERY ANCHOR IS RESOLVED AGAINST THE SOURCE before it is compared, and `sameDocument` compares
-   * with and without a trailing slash, because both spell the same post here. The FIRST match wins and
-   * is what the excerpt is taken from: a page that links here twice is one mention.
-   */
+  // Resolved against the source before comparing. The first match wins: a page linking here twice is one mention.
   const anchors = [...document.querySelectorAll("a[href]")];
   const match = anchors.find((a) => {
     const href = a.getAttribute("href");
@@ -184,12 +129,7 @@ export async function inspectSource(
 
   const { authorName, authorUrl } = readAuthor(document, sourceUrl);
 
-  /*
-   * THE EXCERPT IS THE CONTAINING ELEMENT'S TEXT, not the whole page and not the anchor's label. The
-   * anchor alone is usually the post's title; the page is unbounded; the parent is the sentence
-   * somebody wrote about the post. `textContent`, so the value is plain text at the moment it is
-   * produced rather than markup the render is the only thing standing between.
-   */
+  // The containing element's text: the anchor alone is usually the title; the parent is the sentence.
   const container = match.parentElement ?? match;
   const excerpt = collapseExcerpt(container.textContent ?? "");
 
@@ -201,11 +141,7 @@ export async function inspectSource(
   };
 }
 
-/**
- * Verify one received mention and write the verdict. NEVER THROWS: it is handed to
- * `ctx.waitUntil`, and an unhandled rejection there is a log line nobody reads plus a row left in
- * `unverified` with no reason on it. Anything unexpected becomes `fetch-error`.
- */
+// NEVER THROWS: a rejection inside `waitUntil` is an unread log line and a row stuck `unverified`.
 export async function verifyWebmention(
   env: Env,
   id: number,
@@ -229,10 +165,7 @@ export async function verifyWebmention(
   try {
     await recordWebmentionVerdict(env, id, verdict);
   } catch (error) {
-    /*
-     * A FAILED WRITE NEVER REVERTS ANYTHING, per hard rule 18's second clause. The row stays
-     * `unverified`, which is a visible state rather than a fabricated verdict.
-     */
+    // The row stays `unverified`, a visible state rather than a fabricated verdict.
     console.error(
       JSON.stringify({
         alert: "webmention-verdict-write-failed",

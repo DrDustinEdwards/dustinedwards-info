@@ -1,46 +1,9 @@
-/**
- * Atom 1.0, from the same rendered rows RSS reads.
- *
- * `.mjs` and dependency-free for the reason `rss-feed.mjs` is: `node:test` can
- * reach it, and the escaping it needs is already exported there rather than
- * reimplemented here. One XML escaper on the site, not two.
- *
- * ## WHY A SECOND DIALECT AT ALL
- *
- * RSS stays the ADVERTISED feed, and root's `links` are unchanged. Atom exists
- * because a handful of readers and most feed-validating tooling prefer it, and
- * because the cost is this file: the query, the visibility predicate, the cap
- * and the row shape are all the ones RSS already uses, so the two cannot carry
- * different posts. Nothing chooses between them at runtime.
- *
- * ## WHAT ATOM REQUIRES THAT RSS DOES NOT
- *
- * Three things, and each is a real constraint rather than a formality:
- *
- *   1. `<id>` must be a permanent, unique IRI. The post URL is used, which is
- *      the same value RSS puts in `guid isPermaLink="true"`.
- *   2. `<updated>` is REQUIRED on the feed and on every entry, and it is
- *      RFC 3339, not RFC 822. `toISOString()` is already RFC 3339.
- *   3. The feed itself needs an `<updated>`, which is the newest entry's. An
- *      empty feed has no such value, so it falls back to the epoch rather than
- *      emitting an invalid empty element: a validator rejects the latter and
- *      accepts the former, and an empty feed is a real state (a tag whose posts
- *      were all unpublished between two crawls).
- */
-
 import { absolutiseUrls, cdata, escapeXml, mathToTex } from "./rss-feed.mjs";
 
 /**
- * One `<entry>`.
- *
- * The body is `type="html"` in a CDATA section rather than escaped inline, the
- * same representation `content:encoded` gets in RSS and for the same reason:
- * the rendered HTML is the post, and double-escaping it is how a feed ends up
- * showing tags as text.
- *
- * A row with no rendered HTML emits NO content element, exactly as RSS omits
- * `content:encoded`. An empty `<content>` asserts the post is empty; an absent
- * one tells the reader to follow the link.
+ * The body is CDATA rather than escaped inline: double-escaping is how a feed
+ * ends up showing tags as text. No rendered HTML means no `<content>` at all,
+ * since an empty one asserts the post is empty.
  *
  * @param {{
  *   slug: string,
@@ -50,8 +13,8 @@ import { absolutiseUrls, cdata, escapeXml, mathToTex } from "./rss-feed.mjs";
  *   publishAt: unknown,
  *   updatedAt: unknown,
  *   tags: string[],
- * }} post one row of `listBlogPostsRendered`
- * @param {string} origin the site origin, no trailing slash
+ * }} post
+ * @param {string} origin
  * @returns {string}
  */
 export function atomEntry(post, origin) {
@@ -64,16 +27,10 @@ export function atomEntry(post, origin) {
     `      <title>${escapeXml(post.title)}</title>`,
     `      <link href="${escapeXml(url)}" rel="alternate" type="text/html" />`,
     `      <id>${escapeXml(url)}</id>`,
-    // Required by the spec. Falls back to publication, and then to the epoch,
-    // because an entry with no `updated` is invalid rather than merely thin.
+    // An entry with no `updated` is invalid Atom, hence the epoch fallback.
     `      <updated>${(updated ?? new Date(0)).toISOString()}</updated>`,
     published ? `      <published>${published.toISOString()}</published>` : null,
     post.description ? `      <summary>${escapeXml(post.description)}</summary>` : null,
-    /*
-     * Math goes back to TeX before absolutising, exactly as it does for RSS and
-     * for the reason `mathToTex` states there. Same function, so the two
-     * dialects cannot differ about what a feed reader is shown.
-     */
     post.html
       ? `      <content type="html">${cdata(absolutiseUrls(mathToTex(post.html), origin))}</content>`
       : null,
@@ -85,13 +42,6 @@ export function atomEntry(post, origin) {
 }
 
 /**
- * The whole Atom document.
- *
- * `selfUrl` and `alternateUrl` are both required and both passed in, for the
- * reason `rssDocument` states: they are the fields that genuinely differ per
- * feed, and deriving them here would be this module guessing at a route's
- * address.
- *
  * @param {{
  *   title: string,
  *   subtitle: string,
@@ -105,13 +55,9 @@ export function atomEntry(post, origin) {
  */
 export function atomDocument(feed) {
   const entries = feed.posts.map((post) => atomEntry(post, feed.origin)).join("\n");
-  /*
-   * The feed's own `updated` is the NEWEST entry's, which is the first row
-   * because every caller orders by `publishAt` descending. Reading it off the
-   * list rather than taking a clock keeps the document a pure function of its
-   * rows, so two renders of the same corpus are byte-identical and the edge can
-   * cache one of them.
-   */
+  // Derived from the rows rather than a clock, so two renders of the same corpus
+  // are byte-identical and the edge can cache them. An empty feed gets the epoch,
+  // which validates where an empty `<updated>` does not.
   const newest = feed.posts
     .map((post) => post.updatedAt ?? post.publishAt)
     .filter(Boolean)

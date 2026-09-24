@@ -7,19 +7,7 @@ import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series.rss[.xml]";
 
-/**
- * One series' RSS feed, through `rssDocument`, which owns the channel, the namespaces and the item
- * markup.
- *
- * ORDERED BY PART, not by date, which is the one way this differs from every other feed here and is
- * the whole point of a series: a subscriber should receive part one first.
- *
- * NO CAP. A series is a finite thing an author numbered, and truncating it would drop the later
- * parts, which are the ones a reader following along has not read.
- *
- * 404 ON AN UNKNOWN SERIES, through `getBlogSeries`: a feed and its page must agree about whether a
- * series exists.
- */
+/** Ordered by part, not date, and uncapped: a subscriber receives part one first and loses no later part. */
 export async function loader({ params, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const series = await getBlogSeries(env, params.series);

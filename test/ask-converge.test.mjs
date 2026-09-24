@@ -1,21 +1,3 @@
-/**
- * The Ask convergence window ship waits out before declaring a miss.
- *
- * REPLAYS THE FINDING, per the replay rule. Ruled 2026-08-24 from a measured false
- * alarm: ship read drift 1 at 02:20:18Z, no remedy was applied, and health read
- * ok 75 seconds later and stayed ok. The write-back read was early, not wrong.
- *
- * These drive the loop with an injected clock, sleep and reading, so the two
- * minute window costs nothing to test and the BOUND is asserted rather than
- * assumed. A poll loop that only runs inside a deploy script is a poll loop
- * nothing exercises, and this repo already records what hides there: "a poll
- * loop that is a single fetch wearing a loop", which breaks out on a
- * not-yet-converged response and defeats the wait it exists for. The
- * `stops on ok, and only on ok` pair below is the assertion for exactly that.
- *
- * @see scripts/lib/ask-converge.mjs
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
@@ -26,11 +8,7 @@ import {
   awaitAskConvergence,
 } from "../scripts/lib/ask-converge.mjs";
 
-/**
- * A fake clock that only advances when the loop sleeps, so the loop's own
- * waiting is what moves time. A test that used the real clock would either take
- * two minutes or prove nothing about the deadline.
- */
+/* Time moves only when the loop sleeps, so the two-minute deadline is tested without waiting. */
 function fakeClock() {
   const state = { t: 1_000_000, slept: [] };
   return {
@@ -43,7 +21,6 @@ function fakeClock() {
   };
 }
 
-/** A reading that reports not-ok `misses` times, then ok forever. */
 function readingAfter(misses, { expected = 99, present = 90 } = {}) {
   const state = { calls: 0 };
   return {
@@ -122,10 +99,8 @@ test("THE BOUND: no poll begins after the window has elapsed", async () => {
 });
 
 test("THE BOUND: a clock that never advances still terminates", async () => {
-  // The mirror of the test above: here the deadline can never be reached, so
-  // the attempt limit is the only thing that can stop the loop. Each bound is
-  // asserted with the other one disabled, because a bound that is only ever
-  // exercised alongside a second one has not been shown to do anything.
+  // Each bound is asserted with the other disabled: a bound only ever exercised alongside a
+  // second one has not been shown to do anything.
   const { reading, state } = readingAfter(Infinity);
   const out = await awaitAskConvergence({
     reading,
@@ -167,8 +142,7 @@ test("a reading that throws is an unreadable poll, not a crash", async () => {
 
 test("a malformed reading is not mistaken for convergence", async () => {
   const clock = fakeClock();
-  // `ok` absent entirely. A truthy object whose shape changed must not read as
-  // a pass: that is the shape of every silent-pass defect in this repo.
+  // `ok` absent entirely: a truthy object whose shape changed must not read as a pass.
   const reading = async () => ({ name: "ask-index-drift", status: "fine" });
 
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });

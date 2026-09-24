@@ -1,18 +1,5 @@
-/**
- * Query parsing and rank fusion for site search.
- *
- * Platform independent on purpose: it turns a string a person typed into a
- * structure, and knows nothing about fts5 or D1. The same parse drives the
- * server-rendered page, the JSON endpoint and the palette.
- *
- * A .mjs rather than a .ts for the reason app/lib/content/pipeline.mjs is: the
- * Worker imports it AND the tests can import it, so they exercise exactly the
- * parser that ships rather than a copy of its rules.
- *
- * Rules apply IN ORDER and each consumes its tokens, so a token cannot be read
- * twice. The order matters: `tag:2019` must stay a tag filter rather than
- * becoming a year, which only holds because the operator rule runs first.
- */
+// Rules apply IN ORDER and each consumes its tokens: tag:2019 stays a tag filter only because the
+// operator rule runs before the year rule.
 
 /** Reciprocal rank fusion constant. See fuse(). */
 export const RRF_K = 60;
@@ -34,11 +21,7 @@ export const RRF_K = 60;
  * @property {number} [maxYear] latest year the corpus contains
  */
 
-/**
- * The corpus range defaults wide enough to cover anything this site will hold
- * and narrow enough that a number like 1024 or 8080 stays a search term rather
- * than silently filtering every result away.
- */
+/** Narrow enough that 1024 or 8080 stays a search term rather than silently filtering everything. */
 const DEFAULT_MIN_YEAR = 2000;
 
 /**
@@ -64,7 +47,6 @@ export function parseQuery(input, options = {}) {
     return " ";
   });
 
-  // 2. Field operators.
   /** @type {string[]} */
   const tags = [];
   /** @type {string[]} */
@@ -81,12 +63,7 @@ export function parseQuery(input, options = {}) {
     },
   );
 
-  // 3. A bare year becomes a date filter and leaves the text query.
-  //
-  // The highest-value rule in the parser. Treating a year as literal text is
-  // the single most common reason a site search feels stupid: the query goes
-  // looking for the string "2019" in prose that never spells its own date out,
-  // and returns nothing at all.
+  // 3. A bare year becomes a date filter: prose rarely spells out its own date, so as text it matches nothing.
   /** @type {number | null} */
   let year = null;
   const tokens = rest.split(/\s+/).filter(Boolean);
@@ -115,16 +92,7 @@ export function parseQuery(input, options = {}) {
 }
 
 /**
- * True when the query carries something to narrow by, independent of any text.
- *
- * This is the browse-path predicate. `tag:cloudflare`, a bare `2026`, and a
- * facet chip clicked from an empty box all parse into filters and leave no text
- * behind, so `toMatchExpression` correctly returns null and there is nothing to
- * hand fts5. Without this, those queries fall through the index path and return
- * nothing, which is how the parser's best rule ends up looking like a bug.
- *
- * Lives here rather than in search.server.ts so the pure gate can assert it.
- * Found live on 2026-07-28: every filter-only query returned 0 on the deploy.
+ * Filter-only queries (tag:x, a bare year) leave no text for fts5, so they take the browse path.
  *
  * @param {ParsedQuery} parsed
  * @returns {boolean}
@@ -134,13 +102,8 @@ export function hasFilters(parsed) {
 }
 
 /**
- * Quotes one token as an fts5 string literal.
- *
- * Everything a visitor types is quoted rather than filtered. fts5 has its own
- * query language (AND, OR, NOT, NEAR, `*`, `^`, column filters), so an unquoted
- * user string is not merely a bad search: it is a syntax error the moment
- * someone types a hyphen, and the word NEAR would silently change what the
- * query means. Doubling embedded quotes is the whole escape.
+ * Every token is quoted: fts5 has its own query language, so unquoted input breaks on a hyphen and NEAR
+ * silently changes the meaning. Doubling embedded quotes is the whole escape.
  *
  * @param {string} token
  * @returns {string}
@@ -150,11 +113,6 @@ function literal(token) {
 }
 
 /**
- * Builds the fts5 MATCH expression for a parsed query.
- *
- * Terms are ANDed, which is what a person means by typing two words. A
- * multi-word literal is already a phrase query to fts5.
- *
  * @param {ParsedQuery} parsed
  * @param {boolean} [prefix] when true the LAST term also matches as a prefix,
  *   so "cloudf" finds "cloudflare" while someone is still typing. Only the last
@@ -175,30 +133,8 @@ export function toMatchExpression(parsed, prefix = false) {
 }
 
 /**
- * Reciprocal rank fusion over any number of ranked lists.
- *
- * RANK BASED, NEVER SCORE BASED, and that is the reason the two indexes can
- * exist at all. bm25 values from two tables with different tokenizers and
- * different average document lengths are not comparable on value: the identity
- * index scores prose-free titles, the prose index scores paragraphs, and the
- * same document legitimately scores an order of magnitude apart in the two.
- * Adding or averaging them would let whichever index happens to produce larger
- * magnitudes decide every result. Rank is the one thing the two lists agree on
- * the meaning of.
- *
- * k damps the top of each list so that being first in one index does not
- * automatically beat being second in both. 60 is the value from the original
- * RRF paper and the constant the architecture ratified.
- *
- * `ranks` and `contributions` are RECORDED RATHER THAN RECOMPUTED. Both were
- * already computed here as per-iteration locals and thrown away; keeping them is
- * what lets `/playground`'s search anatomy show the k=60 arithmetic without a
- * second implementation of fusion anywhere. They are positionally parallel to
- * `sources`, so `sources[i]`, `ranks[i]` and `contributions[i]` describe the same
- * appearance of the item in one list, and `contributions` sums to `score`.
- *
- * Additive on purpose: no existing field changed meaning or position, so every
- * current caller reads exactly what it read before.
+ * Rank based, never score based: bm25 from two indexes with different tokenizers is not comparable on
+ * value. k = 60 is the original RRF paper's constant. ranks and contributions are parallel to sources.
  *
  * @template {{ uid: string }} T
  * @param {T[][]} lists

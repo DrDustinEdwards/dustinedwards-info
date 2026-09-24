@@ -1,15 +1,4 @@
-/**
- * The color token inventory for /playground/ui, derived from app/app.css.
- *
- * The page renders one swatch per palette token in both themes, and a swatch
- * needs the resolved hex, which a Worker cannot read out of a stylesheet. So
- * the list is generated here and committed, the same shape as the other
- * content/*.json build products.
- *
- * app.css is the owner. `check:contrast` parses the same three blocks with its
- * own parser and refuses a tokens.json that disagrees, so this file cannot go
- * stale unnoticed.
- */
+// Generated and committed because a Worker cannot read the resolved hex out of a stylesheet.
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,19 +7,16 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const CSS_PATH = join(root, "app", "app.css");
 const OUT_PATH = join(root, "content", "tokens.json");
 
-/* Comments are stripped before anything is located: the palette's own comment
-   names both theme selectors, so a raw search finds the prose first. CRLF goes
-   with them, because a Windows clone breaks the multi-line light selector. */
+// Comments are stripped first: the palette's own comment names both theme selectors. CRLF goes too,
+// because a Windows clone breaks the multi-line light selector.
 const css = readFileSync(CSS_PATH, "utf8")
   .replace(/\r\n/g, "\n")
   .replace(/\/\*[\s\S]*?\*\//g, "");
 
 /**
- * The custom properties of one rule block, found by the literal text of its
- * selector. Palette blocks carry no nested braces, so the first closing brace
- * ends the block. The FIRST declaration of a name wins: a mixed value ships its
- * hex first and its color-mix recipe second, and the hex is what a browser that
- * cannot mix paints.
+ * Palette blocks carry no nested braces, so the first closing brace ends the block. The first
+ * declaration of a name wins: a mixed value ships its hex first, which is what a browser that cannot
+ * mix paints.
  *
  * @param {string} label
  * @param {string} selector
@@ -53,8 +39,7 @@ function tokenBlock(label, selector) {
 }
 
 /**
- * Follow same-block `var()` references to the value they land on. A figure
- * series slot is declared as a ramp step, and the swatch wants the color.
+ * A figure series slot is declared as a ramp step, and the swatch wants the color.
  *
  * @param {Record<string, string>} block
  * @param {string} name

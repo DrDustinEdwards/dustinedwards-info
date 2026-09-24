@@ -8,19 +8,12 @@ import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { CHART_TYPES } from "~/lib/content/chart-types.mjs";
 /*
- * Behind a NAMED server export: a side-effect import binds no name and React
- * Router's server-code removal traces NAMES, so a bare import failed the build. It
- * loads the renderer on first use, and the chart module is imported inside the
- * loader for the same reason: neither belongs in the chunk a cold isolate evaluates.
+ * Behind a named server export: React Router's server-code removal traces names, so a bare
+ * side-effect import failed the build.
  */
 import { renderSnippet } from "~/lib/content/render-snippet.server";
 import { apca, contrast, normalizeHex } from "~/lib/contrast.mjs";
 import { getEnv } from "~/lib/context";
-/*
- * IMPORTED, never restated: that module is the only statement of the key grammar
- * in the repository, and the last time there were more they had already drifted
- * into two answers for one key.
- */
 import {
   classify,
   cropSafe,
@@ -40,11 +33,6 @@ import {
   demoAnchor,
 } from "~/lib/playground-page.mjs";
 import { search } from "~/lib/search/search.server";
-/*
- * The theme resolver, IMPORTED: it is the function `workers/app.ts` calls to
- * build its cache key and `root.tsx` calls to write `data-theme`, so a demo that
- * reimplemented it would keep agreeing with itself while the site disagreed.
- */
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import {
   publicHtmlHeaders,
@@ -57,39 +45,14 @@ import "~/styles/prose.css";
 import "~/styles/playground.css";
 
 /**
- * /playground, the interactive index of this site's own machinery.
- *
- * TWO LAWS GOVERN THIS FILE.
- *
- * 1. EVERY DEMO RUNS THE REAL CODE PATH. Nothing here reimplements a rule,
- *    because a demo of a reimplementation would keep working while the thing it
- *    claims to show was broken.
- *
- * 2. EVERY RESULT STATE IS A URL, AND THE SERVER RENDERS IT. Every demo is a GET
- *    form whose entire input is the query string, so a pasted URL renders
- *    identically for the recipient. This route does not opt into hydration, so no
- *    router runtime ships and the forms submit natively for every reader, which is
- *    what satisfies the progressive-enhancement rule here.
- *
- * NO USER INPUT IS PERSISTED ANYWHERE. The analytics point carries the bare path
- * and never the query string.
- *
- * THE FORMS CARRY HIDDEN FIELDS because three demos share one URL, so submitting
- * one would otherwise wipe the other two.
- *
- * CACHE-CONTROL IS EXPLICIT, per the cache-header rule: with the Workers cache on, a
- * response carrying none is CACHED rather than skipped.
+ * Every demo runs the real code path, and every result is a server-rendered GET URL. No user input
+ * is persisted. Hidden fields because three demos share one URL. Cache-Control is explicit: with the
+ * Workers cache on, a response carrying none is cached.
  */
 
 const DEMOS = playgroundData.demos;
 
-/**
- * Presets and fixtures come from the MANIFEST, not from this file.
- * `content/playground.json` is the one source: this route renders from it and
- * `check:features` asserts against it. If the data lived here the gate would have
- * to restate it, and a gate whose expected values come from a copy of the input is
- * checking itself.
- */
+/** From `content/playground.json`, which `check:features` asserts against; a copy here would let the gate check itself. */
 const SWATCHES = playgroundData.swatches;
 const DATASETS = playgroundData.datasets;
 const KEY_PRESETS = playgroundData.keyPresets;
@@ -97,47 +60,27 @@ const COOKIE_PRESETS = playgroundData.cookiePresets;
 const SNIPPETS = playgroundData.markdownSnippets;
 
 /**
- * AN ENUM, NOT A TEXT BOX, and an unknown value is REPORTED with the default
- * rendered. There is no way to put a character of your own into this renderer: the
- * pipeline runs a highlighter over a WebAssembly regex engine, which needs a
- * threat model of its own before it opens to the public plane.
+ * An enum, not a text box: the highlighter runs a WebAssembly regex engine that needs its own threat
+ * model before it takes public input.
  */
 const SNIPPET_SLUGS = SNIPPETS.map((s) => s.slug);
 
 
 type DatasetKey = keyof typeof DATASETS;
 
-/**
- * The mark enum, IMPORTED from the module that owns it, so the demo can never
- * offer a mark the renderer would reject. `check:features` argues the manifest's
- * list against it.
- */
 const MARKS = CHART_TYPES;
 type MarkKey = string;
 
 const QUERY_CAP = 100;
 
-/**
- * The loader cuts at this length and SAYS SO, because a cap enforced in the
- * loader and unstated in the UI is a silent truncation. There is no other bound:
- * every function this demo calls is pure string work over one argument.
- */
+/** Cut at this length and said so in the UI: an unstated cap is a silent truncation. */
 const KEY_CAP = 120;
 
-/**
- * TWO, and the second is not a length. SHAPE: printable ASCII only, a REFUSAL
- * rather than a cut, because a control character in a header value makes
- * `new Request` throw and a demo whose input can crash its own loader answers some
- * readers with a stack trace.
- */
+/** Printable ASCII only, refused rather than cut: a control character in a header value makes `new Request` throw. */
 const COOKIE_CAP = 200;
 const PRINTABLE_ASCII = /^[\x20-\x7E]*$/;
 
 export function meta() {
-  /*
-   * `pageMeta` carries the whole set, so a shared link renders as a card rather
-   * than a bare URL.
-   */
   return pageMeta({
     title: `${PLAYGROUND_TITLE} | Dustin Edwards`,
     description: PLAYGROUND_DESCRIPTION,
@@ -149,10 +92,6 @@ export function headers() {
   return publicHtmlHeaders();
 }
 
-/*
- * The hast types, so neither side of this is an escape: a type assertion here
- * would hide a wrong tree shape.
- */
 const serialize = (children: RootContent[]) =>
   unified().use(rehypeStringify).stringify({ type: "root", children });
 
@@ -160,15 +99,12 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams;
 
-  /* lab */
   const fgRaw = (params.get("fg") ?? "").trim();
   const bgRaw = (params.get("bg") ?? "").trim();
   let lab = null;
   let labError: string | null = null;
 
   if (fgRaw || bgRaw) {
-    // Validated through the SAME parser that computes, so the page cannot accept a
-    // string the maths would throw on, or refuse one it would have taken.
     const fg = normalizeHex(fgRaw);
     const bg = normalizeHex(bgRaw);
     if (!fg || !bg) {
@@ -191,7 +127,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     }
   }
 
-  /* search */
   const qRaw = params.get("q") ?? "";
   const q = qRaw.trim().slice(0, QUERY_CAP);
   let anatomy = null;
@@ -202,8 +137,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       anatomyError = `That query is ${qRaw.trim().length} characters. The cap is ${QUERY_CAP}, so it was cut.`;
     }
     const env = getEnv(context);
-    // The real search, with the flag that attaches what `fuse()` already recorded.
-    // No query changes, no ordering changes, and no scoring rule restated.
     const result = await search(env, { q, pageSize: 10, explain: true });
     anatomy = {
       q,
@@ -212,8 +145,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
       browse: result.explain === undefined && result.total > 0,
     };
   }
-
-  /* key */
 
   const keyRaw = params.get("key") ?? "";
   const keyTrimmed = keyRaw.trim();
@@ -225,12 +156,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     if (keyTrimmed.length > KEY_CAP) {
       keyError = `That key is ${keyTrimmed.length} characters. The cap is ${KEY_CAP}, so it was cut.`;
     }
-    /*
-     * THE CLASSIFIER'S REFUSAL IS A RESULT, not an error page. `classify()` throws on
-     * an unknown extension deliberately, so a new file type stops a build rather than
-     * acquiring a plausible kind nobody chose. Catching it here does not soften it:
-     * every other caller still gets the throw.
-     */
+    /* `classify()` throws on an unknown extension deliberately; catching it here softens nothing for other callers. */
     let classification: { kind: string; mime: string; extension: string } | null = null;
     let classifyRefusal: string | null = null;
     try {
@@ -255,13 +181,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     };
   }
 
-  /* theme */
-
-  /*
-   * PRESENCE, NOT TRUTHINESS. The empty cookie header is a REAL case: the reader
-   * who has chosen nothing, which is the default branch the whole anti-flash design
-   * rests on, and keying on `params.has` is what lets it have a URL.
-   */
+  /* Presence, not truthiness: an empty cookie header is a real case, the reader who has chosen nothing. */
   const cookieAsked = params.has("cookie");
   const cookieRaw = params.get("cookie") ?? "";
   const cookie = cookieRaw.slice(0, COOKIE_CAP);
@@ -278,11 +198,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         "control character, which no browser can send and which would make the " +
         "request itself refuse to be built, so nothing was resolved.";
     } else {
-      /*
-       * A REAL REQUEST, because the real function takes one. Constructed with no cookie
-       * header at all when the input is empty, which is a different thing from an empty
-       * one and is the state a first-time reader arrives in.
-       */
+      /* No cookie header at all when the input is empty, which differs from an empty one. */
       const request = new Request(
         "https://example.invalid/",
         cookie ? { headers: { cookie } } : undefined,
@@ -297,14 +213,9 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     }
   }
 
-  /* markdown */
-
   const mdParam = params.get("md");
   const snippetSlug =
     mdParam && SNIPPET_SLUGS.includes(mdParam) ? mdParam : SNIPPET_SLUGS[0];
-  // Reported rather than silently corrected, the same rule the chart demo follows:
-  // a hand-edited URL says what happened instead of quietly rendering something
-  // else.
   const snippetError =
     mdParam && mdParam !== snippetSlug
       ? `Unknown snippet "${mdParam}", showing ${snippetSlug}.`
@@ -315,11 +226,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   let markdownRefusal: string | null = null;
   if (snippet) {
     try {
-      /*
-       * THE REAL RENDERER, through the server wrapper: the same `renderBody` call the
-       * deploy build makes for every post. The wrapper adds the WASM instantiator and an
-       * image resolver that REFUSES, and nothing else.
-       */
       const rendered = await renderSnippet(snippet.slug, snippet.source);
       markdown = {
         slug: snippet.slug,
@@ -329,16 +235,10 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         blockedUrls: rendered.blockedUrls,
       };
     } catch (error) {
-      /*
-       * A REFUSAL IS A RESULT. One of the three snippets exists to earn this, and it is
-       * the branch a published article can never show: an article carrying an unknown
-       * directive would never have been published.
-       */
       markdownRefusal = error instanceof Error ? error.message : String(error);
     }
   }
 
-  /* chart */
   const markParam = params.get("mark");
   const dataParam = params.get("data");
   const mark: MarkKey = markParam && MARKS.includes(markParam) ? markParam : "bar";
@@ -346,8 +246,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     dataParam && Object.hasOwn(DATASETS, dataParam)
       ? (dataParam as DatasetKey)
       : "limiter";
-  // An out-of-enum value is reported rather than silently corrected. This is the
-  // only place the demo can disagree with its input.
   const chartError =
     (markParam && markParam !== mark ? `Unknown mark type "${markParam}", showing ${mark}. ` : "") +
     (dataParam && dataParam !== dataset ? `Unknown dataset "${dataParam}", showing ${dataset}.` : "");
@@ -357,9 +255,8 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   let chartRenderError: string | null = null;
   try {
     const { buildChartModel, renderChartHast } = await import("~/lib/content/chart.mjs");
-    // `renderChartHast` returns the FIGURE'S CHILDREN, not the figure, so the
-    // wrapper and its class are this route's responsibility: without `.chart-figure`
-    // the stylesheet's chart rules never apply.
+    // `renderChartHast` returns the figure's children, so the wrapper is this route's: without
+    // `.chart-figure` no chart rules apply.
     const model = buildChartModel(
       {
         type: mark,
@@ -406,7 +303,6 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   };
 }
 
-/** A boring, visible error. Never a toast, never a color on its own. */
 function Problem({ children }: { children: React.ReactNode }) {
   return (
     <p className="playground-error" role="status">
@@ -415,17 +311,7 @@ function Problem({ children }: { children: React.ReactNode }) {
   );
 }
 
-/**
- * A demo input's declared default, read out of the manifest rather than restated.
- * The manifest is the JS-side owner of these token values, because a Worker cannot
- * read the stylesheet.
- *
- * Throws rather than defaulting: an input rendered with no value is a form that
- * silently stops demonstrating anything.
- *
- * @param {string} demoSlug the demo's slug in the manifest
- * @param {string} inputName
- */
+/** Throws rather than defaulting: an input rendered with no value silently stops demonstrating. */
 function inputDefault(demoSlug: string, inputName: string): string {
   const demo = DEMOS.find((d) => d.slug === demoSlug);
   const input = demo?.inputs?.find((i) => i.name === inputName);
@@ -436,18 +322,9 @@ function inputDefault(demoSlug: string, inputName: string): string {
   return value;
 }
 
-/**
- * KEYED BY SLUG, not a positional index. An index couples the page's ORDER to the
- * manifest's silently: insert a demo anywhere but the end and every section below
- * renders another demo's title over its own form, with nothing failing.
- */
+/** Keyed by slug: a positional index would silently put another demo's title over this form. */
 function DemoHeader({ slug }: { slug: string }) {
   const demo = DEMOS.find((d) => d.slug === slug);
-  /*
-   * FAIL CLOSED ON A MISSING DEMO rather than rendering an empty header: a heading
-   * with no title reads as a styling bug and sends the next reader to the
-   * stylesheet.
-   */
   if (!demo) return null;
   return (
     <>
@@ -471,17 +348,13 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
     chartHtml, chartRenderError, chartError, mark, dataset, datasetNote, datasetLabel,
   } = loaderData;
 
-  // Hidden fields keep the other demos' results alive across a submit.
   const carry = (except: "lab" | "search" | "key" | "theme" | "markdown" | "chart") => (
     <>
       {except !== "lab" && fgRaw && <input type="hidden" name="fg" value={fgRaw} />}
       {except !== "lab" && bgRaw && <input type="hidden" name="bg" value={bgRaw} />}
       {except !== "search" && qRaw && <input type="hidden" name="q" value={qRaw} />}
       {except !== "key" && keyRaw && <input type="hidden" name="key" value={keyRaw} />}
-      {/*
-       * Carried on PRESENCE, matching the loader: an empty cookie is a real result
-       * here, so dropping it would lose that demo's state on any other demo's submit.
-       */}
+      {/* Carried on presence, matching the loader: an empty cookie is a real result here. */}
       {except !== "theme" && cookieAsked && (
         <input type="hidden" name="cookie" value={cookieRaw} />
       )}
@@ -507,7 +380,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             and every palette token, in both themes.
           </p>
 
-          {/* contrast */}
           <section id={demoAnchor("contrast")} className="playground-demo">
             <DemoHeader slug="contrast" />
 
@@ -600,7 +472,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             )}
           </section>
 
-          {/* search */}
           <section id={demoAnchor("search-anatomy")} className="playground-demo">
             <DemoHeader slug="search-anatomy" />
 
@@ -640,11 +511,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
             {anatomy?.explain && anatomy.total > 0 && (
               <div className="playground-result">
-{/*
- * NO TIMING HERE, deliberately. A wall-clock reading is the one value that would
- * differ between two fetches of the same URL, and this page's contract is that a
- * result URL renders identically wherever it is opened.
- */}
+{/* No timing: a wall-clock value would make one result URL render differently on each fetch. */}
                 <p className="playground-note">
                   {anatomy.explain.identityCount} row(s) from{" "}
                   <code>search_identity</code>, {anatomy.explain.proseCount} from{" "}
@@ -676,9 +543,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                         <tr key={row.uid}>
                           <th scope="row">
                             <a href={row.url}>{row.title}</a>
-                            {/* Records are section-grained, so a bare heading
-                                like "Limitations" needs its article to mean
-                                anything. Shown only when they differ. */}
                             {row.docTitle && row.docTitle !== row.title && (
                               <span className="playground-row-parent">
                                 in {row.docTitle}
@@ -709,7 +573,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             )}
           </section>
 
-          {/* chart */}
           <section id={demoAnchor("chart-options")} className="playground-demo">
             <DemoHeader slug="chart-options" />
 
@@ -746,11 +609,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
             {chartHtml && (
               <div className="playground-result">
-                {/*
-                  The chart is produced by the pipeline from data committed in
-                  this file, and contains no third-party input, which is why it
-                  can be injected the way an article body is.
-                */}
+                {/* Pipeline output from data committed in this file; no third-party input, so it can be injected. */}
                 <figure
                   className="chart-figure"
                   dangerouslySetInnerHTML={{ __html: chartHtml }}
@@ -771,7 +630,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             )}
           </section>
 
-          {/* media key */}
           <section id={demoAnchor("media-key")} className="playground-demo">
             <DemoHeader slug="media-key" />
 
@@ -794,8 +652,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
               </p>
             </Form>
 
-            {/* Real URLs, exactly as the contrast lab's swatches are, so each
-                preset is a shareable result rather than a control to press. */}
             <ul className="playground-swatches">
               {KEY_PRESETS.map((preset) => (
                 <li key={preset.key}>
@@ -851,11 +707,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                   </div>
                 </dl>
 
-                {/*
-                 * THE REFUSAL, verbatim, and it is a result rather than a fault: shown in the
-                 * ordinary error block because that is what a refusal looks like everywhere else
-                 * on this page.
-                 */}
                 {keyResult.classifyRefusal && (
                   <>
                     <Problem>{keyResult.classifyRefusal}</Problem>
@@ -905,7 +756,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             )}
           </section>
 
-          {/* theme */}
           <section id={demoAnchor("theme-resolution")} className="playground-demo">
             <DemoHeader slug="theme-resolution" />
 
@@ -955,11 +805,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
                   </div>
                   <div>
                     <dt>data-theme</dt>
-                    {/*
-                     * THE ABSENCE IS THE ANSWER for a reader on system, so it is spelled out rather
-                     * than rendered as an empty cell: an empty cell reads as a bug, "omitted" reads as
-                     * the mechanism it is.
-                     */}
                     <dd>{themeResult.attribute ?? "omitted"}</dd>
                   </div>
                   <div>
@@ -999,7 +844,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             )}
           </section>
 
-          {/* markdown */}
           <section id={demoAnchor("markdown-render")} className="playground-demo">
             <DemoHeader slug="markdown-render" />
 
@@ -1031,11 +875,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
             <div className="playground-result">
               <h3 className="playground-subhead">In</h3>
-              {/*
-               * The snippet verbatim, in a plain `<pre>`. NOT run through the highlighter:
-               * this is the INPUT, and highlighting it would render the demo's subject with the
-               * demo's subject.
-               */}
               <pre className="playground-source">
                 <code>{markdown?.source ?? SNIPPETS.find((s) => s.slug === snippetSlug)?.source}</code>
               </pre>
@@ -1058,11 +897,7 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
 
               {markdown && (
                 <>
-                  {/*
-                   * Rendered into `.prose`, the same treatment an article body gets, because it IS
-                   * an article body: it came out of the same call. Injected for the same reason the
-                   * chart is, which is that it contains no third-party input.
-                   */}
+                  {/* The same `renderBody` output an article gets; no third-party input, so it can be injected. */}
                   <div
                     className="prose playground-rendered"
                     dangerouslySetInnerHTML={{ __html: markdown.html }}
@@ -1119,7 +954,6 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
             </div>
           </section>
 
-          {/* ------------------------------------------------ deferred --- */}
           <section className="playground-deferred">
             <h2>Not here yet</h2>
             <p>

@@ -1,13 +1,4 @@
-/**
- * Bundles every module in app/enhance/ into a self-contained asset, because a `?url` import copies
- * bytes verbatim and the thing it points at has to be finished JavaScript.
- *
- *   npm run build:enhance
- *
- * BOUNDARY: it builds and then reads back its OWN output, proving each bundle is import-free and
- * parses. It cannot prove the app build serves these files, which `check:page-payload` asserts,
- * and it cannot see the wire.
- */
+// A `?url` import copies bytes verbatim, so what it points at must be finished JavaScript.
 
 import { readFileSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -19,12 +10,8 @@ import { build, parseAst } from "vite";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENHANCE_DIR = join(root, "app", "enhance");
 const DIST_DIR = join(ENHANCE_DIR, "dist");
-/**
- * The evidence row publishes a bundle's transfer size, and the Worker has no filesystem to measure
- * it in, so it is measured HERE, beside the build that produced the bytes, and emitted as a module.
- * Same class as the bundles themselves: a build product, gitignored, written before anything reads
- * it. Level 9 because that is what a reader checking the number with `gzip -9` will get.
- */
+// Measured here because the Worker has no filesystem. Level 9, because that is what a reader
+// checking the number with `gzip -9` gets.
 const SIZES_FILE = join(root, "app", "lib", "enhance-sizes.generated.ts");
 
 /** @param {Buffer} bytes @returns {number} */
@@ -33,11 +20,8 @@ function gzipSize(bytes) {
 }
 
 /**
- * True when the AST contains any statement that would reach the network for another module. A
- * plain `export {}` has no source and is fine in a module script.
- *
  * @param {any} node
- * @returns {string | null} a description of the offending node, or null
+ * @returns {string | null}
  */
 function findModuleDependency(node) {
   if (node === null || typeof node !== "object") return null;
@@ -85,7 +69,6 @@ async function main() {
       build: {
         outDir: DIST_DIR,
         emptyOutDir: false,
-        // public/ has no business inside a per-module bundle directory.
         copyPublicDir: false,
         minify: "esbuild",
         sourcemap: false,

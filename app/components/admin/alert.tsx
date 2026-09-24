@@ -1,15 +1,5 @@
-/**
- * A standing condition the operator has to act on, with the action that fixes it
- * attached.
- *
- * THE ROLE IS THE POINT. `role="alert"` and `role="status"` are LIVE regions:
- * they exist to interrupt with something that just happened. Drift is not an event,
- * it is a state the site is in, rendered into the first byte of HTML on every
- * visit, so announcing it as news would be wrong twice over.
- *
- * So it is a named region instead, which puts it in the landmark list where a
- * screen reader user can find it on purpose and leaves it silent until they do.
- */
+// A named region, not role="alert" or "status": drift is a standing state, not an event,
+// so it sits in the landmark list and stays silent until a screen reader user looks for it.
 export function AdminAlert({
   title,
   headingId,

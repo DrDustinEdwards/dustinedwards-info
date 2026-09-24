@@ -1,37 +1,17 @@
-/**
- * The /playground page as the generic page shape `recordsForPage` consumes.
- *
- * ONE ordered list, two readers, exactly as `projects-page.mjs` and
- * `colophon-sections.mjs` are. The ordered list is `content/playground.json`:
- * the route RENDERS the demos from it and this module INDEXES them from it, so
- * neither hardcodes the other's roster.
- *
- * **The anchors are the reason this module exists rather than living in the
- * route.** A section record carries a fragment, and a record pointing at a
- * fragment the page does not render still returns a hit, still looks correct in
- * a result list, and scrolls nowhere. That failure is SILENT.
- *
- * Nothing here reads the clock, the filesystem or git. Records must be a pure
- * function of committed data to live in the gated artifact.
+/*
+ * Shared by the route and the search index so a record never points at a
+ * fragment the page does not render. No clock, filesystem or git: records are pure.
  */
 
-/** The route. Asserted against `routes.ts` by the gate. */
 export const PLAYGROUND_URL = "/playground";
 
 export const PLAYGROUND_TITLE = "Playground";
 
-/*
- * "with no JavaScript" stood here until 2026-08-16 and was FALSE the whole
- * time: `root.tsx` renders `<Scripts />` on every route, so this page has
- * always shipped the router runtime. What is actually true, and is what the
- * demos are for, is that each one runs real production code on the server and
- * every result state is a shareable URL. Both survive scripting being off.
- */
+// Do not claim "no JavaScript": root.tsx renders <Scripts /> on every route.
 export const PLAYGROUND_DESCRIPTION =
   "Interactive demos of this site's own machinery. Each one runs the same code " +
   "the site runs, server-side, and every result is a shareable URL.";
 
-/** The lead paragraph above the demos, indexed with the document. */
 export const PLAYGROUND_INTRO =
   "Every demo here runs the real thing. The contrast lab computes with the " +
   "module the build gate computes with, the search demo runs the query through " +
@@ -41,8 +21,6 @@ export const PLAYGROUND_INTRO =
   "plain GET, rendered on the server, at a URL you can paste to someone.";
 
 /**
- * The fragment for one demo. ONE definition, read by the page and the index.
- *
  * @param {string} slug
  */
 export function demoAnchor(slug) {
@@ -50,12 +28,6 @@ export function demoAnchor(slug) {
 }
 
 /**
- * The indexable body for one demo.
- *
- * The REAL PATH IS INDEXED, deliberately: the page's argument is that each demo
- * runs production code, so a reader searching for the module name should land on
- * the demo that exercises it.
- *
  * @param {any} demo
  */
 function bodyFor(demo) {
@@ -75,9 +47,6 @@ function bodyFor(demo) {
 export function playgroundPages(playgroundJson) {
   const demos = playgroundJson.demos ?? [];
   if (demos.length === 0) {
-    // Fail closed, for the reason projectsPages does: an empty roster would
-    // index as a lone document record and lose every deep link, and naming the
-    // cause here beats `recordsForPage` throwing on an empty section list.
     throw new Error(
       "content/playground.json declares no demos, so /playground would index " +
         "with no sections and every deep link would be lost.",

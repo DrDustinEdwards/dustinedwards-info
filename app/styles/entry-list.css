@@ -1,16 +1,3 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
-
-/*
- * THE BLOG'S ROW. listing.css carries everything a listing page shares (the page label, the
- * filters, the search line, the pager) and this file carries only the row itself, because
- * /publications is a listing too and its rows are a bibliography's, not a blog's: a year in the
- * machine column, a journal in italic, and citation exports on the row.
- *
- * Both sheets are imported together by the three blog listings. Nothing here styles a page.
- */
-
-/* 4 · The rows. */
-
 .entry-list {
   margin: 0;
   margin-block-start: var(--s-6);
@@ -19,10 +6,6 @@
   list-style: none;
 }
 
-/*
- * THE SAME RAIL MEASURE THE POST PAGE AND HOME USE, read from shell.css rather than restated, so
- * four pages share one grid instead of resembling each other.
- */
 .entry {
   display: grid;
   grid-template-columns: var(--rail-w) var(--rail-gap-w) minmax(0, 1fr);
@@ -54,8 +37,6 @@
   min-width: 0;
 }
 
-/* Titles are ink, not purple: they are the row, and a screen of purple headlines is a screen of
-   shouts. The list is a reading list, so a read row should look read. */
 .entry-title {
   margin: 0;
   font-family: var(--font-serif);
@@ -121,7 +102,6 @@
 
 
 @media (max-width: 47.99rem) {
-  /* One column: the date reads left, above its title, in the same order. */
   .entry {
     display: block;
   }
@@ -129,7 +109,6 @@
     margin-block-end: 0.3125rem;
     text-align: left;
   }
-  /* The three machine facts sit on one line when they are not a column. */
   .entry-minutes,
   .entry-mark {
     display: inline;

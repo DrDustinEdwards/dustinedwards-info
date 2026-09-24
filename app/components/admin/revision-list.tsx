@@ -9,16 +9,7 @@ export type Revision = {
   date: string;
 };
 
-/**
- * Version history, in the drawer, under ruling 1.
- *
- * RESTORE LOADS. IT DOES NOT WRITE, AND IT CANNOT. The only network calls are GETs
- * to a route that exports no action, and the only commit the editor can produce is
- * the ordinary save on the one existing write path.
- *
- * Diffs load on demand rather than with the drawer, because a post with fifty
- * commits would otherwise pull fifty patches to show none of them.
- */
+// Diffs load on demand: a post with fifty commits would otherwise pull fifty patches to show none.
 export function RevisionList({
   slug,
   revisions,
@@ -26,7 +17,6 @@ export function RevisionList({
 }: {
   slug: string;
   revisions: Revision[];
-  /** Hands the loaded revision to the editor. The editor decides what dirty means. */
   onRestore: (fields: PostFields, sha: string) => void;
 }) {
   const [openSha, setOpenSha] = useState<string | null>(null);
@@ -41,8 +31,6 @@ export function RevisionList({
       return;
     }
     setOpenSha(sha);
-    // Cached by sha: a diff of a commit cannot change, so re-expanding a
-    // revision already fetched costs nothing.
     if (sha in patches) return;
     setBusy(sha);
     try {
@@ -107,11 +95,7 @@ export function RevisionList({
               <span className="muted">
                 {revision.author}
                 {" · "}
-                {/*
-                 * UTC, and formatted from the ISO string the API returned. Fixed zone so the
-                 * server render and the hydration cannot disagree about which day a commit landed
-                 * on.
-                 */}
+                {/* UTC, so the server render and hydration agree on which day a commit landed. */}
                 {new Date(revision.date).toLocaleString("en-US", { timeZone: "UTC" })}
                 {index === 0 ? " · current" : ""}
               </span>
@@ -127,10 +111,7 @@ export function RevisionList({
                 {openSha === revision.sha ? "Hide diff" : "View diff"}
               </button>
 
-              {/*
-               * Never offered for the newest commit: that revision IS the editor's current
-               * content, so loading it would mark the post dirty while changing nothing.
-               */}
+              {/* Not for the newest commit: that revision is the editor's current content. */}
               {index > 0 ? (
                 <button
                   type="button"
@@ -147,10 +128,6 @@ export function RevisionList({
               busy === revision.sha ? (
                 <p className="muted">Loading diff...</p>
               ) : patches[revision.sha] ? (
-                /*
-                 * The EXISTING diff presentation, the same attributes the standalone page uses.
-                 * One diff convention on this site, not two.
-                 */
                 <pre className="history-diff">
                   {(patches[revision.sha] ?? "").split("\n").map((line, i) => (
                     <span key={i} data-diff={diffKind(line)}>
@@ -170,7 +147,6 @@ export function RevisionList({
   );
 }
 
-/** Same classification the standalone history page uses. */
 function diffKind(line: string) {
   if (line.startsWith("+") && !line.startsWith("+++")) return "add";
   if (line.startsWith("-") && !line.startsWith("---")) return "del";

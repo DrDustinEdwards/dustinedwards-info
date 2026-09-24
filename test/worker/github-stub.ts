@@ -2,46 +2,11 @@ import { vi } from "vitest";
 
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 
-/**
- * The GitHub boundary, stubbed at the OUTBOUND FETCH LAYER.
- *
- * ## WHY HERE AND NOT AT THE MODULE
- *
- * `github.server.ts` is the subject, not a dependency to be swapped out. Its
- * job is to build the four-call Git Data commit (blob, tree, commit, ref), send
- * the `expectedHeadSha` guard, and read back the per-path blob shas that
- * `renderAndWrite` then checks the rendered bytes against. Mocking the module
- * would delete exactly that and leave a test of the caller's argument list.
- *
- * Every function in it calls the bare global `fetch`, resolved at call time, so
- * replacing the global intercepts the wire and nothing else.
- *
- * ## IT REFUSES EVERY HOST IT DOES NOT KNOW
- *
- * The one property that makes "never hit live" a mechanism rather than an
- * intention. A request to anything but `api.github.com`, or to a github path
- * with no recorded shape, THROWS and names what was asked for. A stub that fell
- * through to the real network would pass locally against a live repository and
- * be one token away from writing to it.
- *
- * ## THE SHAPES ARE RECORDED, AND THE BLOB SHA IS REAL
- *
- * `blobShas` from `commitFiles` comes off the tree entries, and `savePost`
- * hands the markdown's entry to `renderAndWrite`, which refuses unless the
- * bytes it rendered hash to it. So this stub computes a REAL `gitBlobSha` over
- * the content it is handed rather than returning a placeholder. A fixed fake
- * would make the provenance assertion unfailable, which is the class hard rule
- * 10 names first.
- *
- * ## THE REPOSITORY CHANGES ONLY WHEN THE REF MOVES
- *
- * A tree POST is held; the PATCH on `refs/heads/main` is what applies it. That
- * is not decoration: `savePost`'s conflict case refuses at `expectedHeadSha`
- * before any blob is written, and a stub that applied the tree eagerly would
- * report a repository that had changed after a refusal.
- */
+/* Stubbed at the outbound fetch, not the module, because `github.server.ts` is the subject.
+ * An unknown host or path THROWS, so nothing can fall through to the live repository. Blob
+ * shas are REAL `gitBlobSha`s, or the provenance check in `renderAndWrite` could not fail. A
+ * tree applies only when the ref moves, so a refused save leaves the repository unchanged. */
 
-/** One recorded call, for a test to assert what the code actually sent. */
 export type RecordedCall = {
   method: string;
   path: string;
@@ -49,44 +14,25 @@ export type RecordedCall = {
 };
 
 export type GitHubStub = {
-  /** Every api.github.com request, in order. */
   calls: RecordedCall[];
-  /** The files the repository holds, by path. A landed commit mutates it. */
   files: Map<string, string>;
-  /** What `main` points at. A landed commit moves it. */
   head: { commitSha: string; treeSha: string };
-  /**
-   * Fail the next `times` requests whose path contains `fragment`, with a 500.
-   *
-   * For the divergence path: the D1 retry is exercised by making a write fail
-   * once, and the honest place to do that is the boundary rather than inside
-   * the retry helper.
-   */
+  /** Fail the next `times` requests whose path contains `fragment`, with a 500. */
   failNext: (fragment: string, times: number) => void;
-  /** Restores the real global `fetch`. */
   restore: () => void;
 };
 
 const API = "https://api.github.com";
 const REPO_PREFIX = "/repos/DrDustinEdwards/dustinedwards-info";
 
-/** The commit sha `main` starts at, so a conflict test has something to disagree with. */
 export const STUB_HEAD_SHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-/**
- * Installs the stub over `globalThis.fetch` and returns the handle.
- *
- * @param seed files the repository already holds, by path
- */
 export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
   const files = new Map(Object.entries(seed));
   const calls: RecordedCall[] = [];
   const head = { commitSha: STUB_HEAD_SHA, treeSha: "tree-initial" };
-  /** Pending forced failures, by path fragment. */
   const failures = new Map<string, number>();
-  /** sha -> the bytes the blob POST that created it carried. */
   const blobBodies = new Map<string, string>();
-  /** The tree of a commit that has not landed on the ref yet. */
   let pendingTree: Array<{ path: string; content: string | null }> = [];
   let commitCounter = 0;
 
@@ -118,8 +64,6 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
       }
     }
 
-    /* ---------------------------------------------------------- reads --- */
-
     if (method === "GET" && path === `${REPO_PREFIX}/git/ref/heads/main`) {
       return json({ object: { sha: head.commitSha } });
     }
@@ -129,12 +73,8 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
     if (method === "GET" && path.startsWith(`${REPO_PREFIX}/contents/`)) {
       const target = decodeURI(path.slice(`${REPO_PREFIX}/contents/`.length).split("?")[0] ?? "");
 
-      /*
-       * A DIRECTORY answers with an ARRAY and a file with an OBJECT, and
-       * `listDirectory` refuses anything that is not an array. Both shapes are
-       * here because `regenerateAllFromRepo` reads the first and `readFile`
-       * the second, and collapsing them would make the rebuild door untestable.
-       */
+      /* A directory answers with an ARRAY and a file with an OBJECT, and `listDirectory`
+       * refuses anything that is not an array. */
       const children = [...files.keys()].filter((p) => p.startsWith(`${target}/`));
       if (!files.has(target) && children.length > 0) {
         return json(
@@ -162,8 +102,6 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
         size: bytes.byteLength,
       });
     }
-
-    /* --------------------------------------------------------- writes --- */
 
     if (method === "POST" && path === `${REPO_PREFIX}/git/blobs`) {
       const { content } = body as { content: string };

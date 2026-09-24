@@ -1,35 +1,19 @@
-/**
- * Does a CACHED serve reach the Worker, and therefore Analytics Engine?
- *
- *   npm run ae-probe
- *
- * BOUNDARY: the write is fire and forget and a throw is swallowed, so a point that APPEARS is
- * strong evidence the Worker ran while one that does NOT is weaker evidence that it did not, and
- * the report states that ambiguity whenever a fetch produces no point. It never prints the token,
- * any request header, or any URL carrying a credential.
- */
+// The AE write is fire and forget and swallows a throw, so a missing point is only weak evidence
+// that the Worker did not run.
 
 import { setTimeout as sleep } from "node:timers/promises";
 
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 
-/*
- * NEITHER OF THESE IS WRITTEN OUT HERE. The origin is imported from its one owner, a second copy
- * being the one that goes stale at the DNS cutover and then probes a host nobody is serving. The
- * account id is read off the environment and refused if absent, on the portfolio rule that
- * account-scoped identifiers stay out of git: an identifier rather than a credential, which is why
- * it is a config var and not a secret, and never appears in a tracked file.
- */
+// The account id comes from the environment: account-scoped identifiers never go in a tracked file.
 const ORIGIN = SITE_ORIGIN;
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const DATASET = "dustinedwards_traffic";
 const PATH = "/playground";
 const UA = "dustinedwards-ae-probe";
 
-/** Poll cadence and cap, stated rather than implied. */
 const POLL_SECONDS = 10;
 const CAP_SECONDS = 240;
-/** Consecutive equal readings that count as settled. */
 const STABLE_READS = 2;
 
 if (!ACCOUNT) {
@@ -57,8 +41,6 @@ const SQL_URL = `https://api.cloudflare.com/client/v4/accounts/${ACCOUNT}/analyt
 let shapeShown = false;
 
 /**
- * Runs one read-only statement against the SQL API.
- *
  * @param {string} query
  * @returns {Promise<Array<Record<string, unknown>>>}
  */
@@ -83,11 +65,7 @@ async function sql(query) {
   return json.data ?? [];
 }
 
-/**
- * Sampling-weighted origin requests for PATH, plus the raw row count.
- *
- * @returns {Promise<{ weighted: number, rows: number }>}
- */
+/** @returns {Promise<{ weighted: number, rows: number }>} */
 async function counts() {
   const data = await sql(
     `SELECT SUM(_sample_interval) AS origin_requests, COUNT() AS rows ` +
@@ -101,11 +79,7 @@ async function counts() {
   };
 }
 
-/**
- * Polls until the weighted count settles, so the experiment does not start mid flight.
- *
- * @returns {Promise<{ weighted: number, rows: number, waited: number }>}
- */
+/** @returns {Promise<{ weighted: number, rows: number, waited: number }>} */
 async function settle() {
   let last = await counts();
   let same = 1;
@@ -121,11 +95,9 @@ async function settle() {
 }
 
 /**
- * One fetch. `bypass` sends the verify-live no-cache header.
- *
  * @param {string} label
  * @param {boolean} bypass
- * @returns {Promise<string>} the cf-cache-status
+ * @returns {Promise<string>}
  */
 async function fetchOnce(label, bypass) {
   /** @type {Record<string, string>} */
@@ -139,8 +111,6 @@ async function fetchOnce(label, bypass) {
 }
 
 /**
- * Polls until the weighted count rises above `from`, or the cap elapses.
- *
  * @param {number} from
  * @returns {Promise<{ weighted: number, rows: number, lag: number | null }>}
  */

@@ -1,48 +1,10 @@
-/**
- * Every body image is a link to its ORIGINAL file.
- *
- * ## The defect this replays
- *
- * `srcset` hands the browser a closed ladder of widths, so what a reader has
- * downloaded is a resized copy, never the file the author uploaded. The
- * lightbox opened `image.currentSrc`, which is exactly that resized copy, so
- * the one control promising "full size" delivered the size already on screen,
- * and a reader with script off had no route to the original at all. Recorded
- * as false in `content/enhancements.json` on 2026-08-11 with the measurement
- * that found it: 6 images across 12 posts, ZERO wrapped in an anchor.
- *
- * The repair is markup, not script: the pipeline wraps the image, and the
- * lightbox intercepts a link that already worked. That puts the fix in the ONE
- * place both writers share, which is the property that matters here. The Node
- * build and the Worker's save path both call `renderBody`, so an anchor added
- * to one is an anchor added to both by construction, and this file asserts
- * against that shared module rather than against either caller.
- *
- * ## Why the assertions are shaped this way
- *
- * The href is asserted EXACTLY, not by "contains the key". `/media/<key>?w=640`
- * contains the key too, and it is the precise value the defect produced, so a
- * substring match would agree with the bug.
- *
- * The image's own attributes are asserted alongside, because "the anchor is
- * present" is satisfied by a wrap that dropped `srcset` on the way through, and
- * a wrap that costs the responsive ladder is a worse page than the one it
- * replaced.
- *
- * @see app/lib/content/pipeline.mjs, rehypeImageSources
- * @see app/enhance/blog.ts, lightbox
- * @see content/enhancements.json, image-lightbox
- */
-
 import test from "node:test";
 import assert from "node:assert/strict";
 
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 
-/** An R2 object key in the content grammar: 16 hex digits, then WxH. */
 const MEDIA_KEY = "dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const MEDIA_SRC = `/media/${MEDIA_KEY}`;
-/** A static asset. Its own path is the original; it never passes the transform route. */
 const STATIC_SRC = "/publications/measured-latency.png";
 
 /** @param {string} body */
@@ -55,7 +17,6 @@ const render = (body) =>
     resolveImage: async () => ({ width: 1280, height: 720 }),
   });
 
-/** The anchor wrapping `src`, as a raw tag string, or null. */
 function anchorFor(/** @type {string} */ html, /** @type {string} */ src) {
   for (const match of html.matchAll(/<a\b[^>]*>\s*<img\b[^>]*>/g)) {
     if (match[0].includes(`src="${src}"`)) return match[0];
@@ -63,7 +24,6 @@ function anchorFor(/** @type {string} */ html, /** @type {string} */ src) {
   return null;
 }
 
-/** One attribute off a tag string, or null. */
 function attr(/** @type {string} */ tag, /** @type {string} */ name) {
   const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
   return match ? match[1] : null;
@@ -79,8 +39,6 @@ const FIXTURE = [
 ].join("\n");
 
 test("CONTROL: the fixture renders both images", async () => {
-  // Without this every assertion below could pass by examining nothing: a
-  // pipeline that stopped emitting images at all has no wrong href to find.
   const { html } = await render(FIXTURE);
   assert.equal(
     (html.match(/<img\b/g) ?? []).length,
@@ -135,8 +93,7 @@ test("the wrap costs the image none of its own attributes", async () => {
 });
 
 test("an image the author already linked keeps the author's href", async () => {
-  // Their href is a decision; the wrap is a default, and a default that
-  // overrode a decision would silently retarget every linked figure.
+  // The author's href is a decision; the wrap is a default and must not retarget it.
   const { html } = await render(`[![Linked by hand](${MEDIA_SRC})](https://example.com/paper)`);
   assert.equal((html.match(/<a\b/g) ?? []).length, 1, `expected one anchor:\n${html}`);
   assert.match(html, /<a href="https:\/\/example\.com\/paper"><img/);
@@ -144,14 +101,8 @@ test("an image the author already linked keeps the author's href", async () => {
 });
 
 test("a diagram's image pair is NOT wrapped", async () => {
-  /*
-   * Excluded for an accessibility reason rather than a tidiness one. A diagram
-   * renders as two images with one hidden by `display: none`, chosen in
-   * post.css precisely so the hidden half leaves the accessibility tree.
-   * `display: none` on a child does not hide its parent, so an anchor around
-   * the hidden image would be a focusable link with no accessible name in
-   * every article carrying a diagram.
-   */
+  // `display: none` on the hidden half does not hide its parent, so an anchor around it
+  // would be a focusable link with no accessible name.
   const { html } = await render(
     [
       ':::diagram{title="Two steps" alt="A flowchart with two boxes, one arrow from the first to the second."}',

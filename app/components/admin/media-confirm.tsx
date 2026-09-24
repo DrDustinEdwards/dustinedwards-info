@@ -3,32 +3,13 @@ import { Form, Link } from "react-router";
 
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 
-/**
- * A DESTRUCTIVE CONFIRMATION, as a real modal rather than `window.prompt`.
- *
- * WHY prompt() HAD TO GO: it was called from an `onSubmit` handler, so WITH
- * SCRIPTING OFF THE HANDLER NEVER RAN AND THE FORM SUBMITTED STRAIGHT THROUGH,
- * deleting every trashed object with no confirmation at all. It is also
- * unstyleable, blocks the browser, and is silently disabled in some contexts.
- *
- * THE TYPE-THE-COUNT LADDER IS PRESERVED EXACTLY: the count is the thing a
- * distracted person gets wrong, and the confirm button stays DISABLED until the
- * typed value matches, which `prompt()` could not express.
- *
- * TWO TRIGGERS, ONE APPEARANCE: empty-trash opens from a URL and works with no
- * script; bulk trash opens from client state, because the selection it acts on IS
- * client state.
- */
 export function MediaConfirm({
   open,
   title,
   body,
-  /** When set, the operator must type this exact string to enable confirm. */
   requireTyped,
   confirmLabel,
-  /** Rendered inside the form: the intent and any keys being acted on. */
   children,
-  /** A link for the no-script cancel path, or a handler for the client one. */
   cancelHref,
   onCancel,
   method = "post",
@@ -44,15 +25,7 @@ export function MediaConfirm({
   method?: "post";
 }) {
   const [typed, setTyped] = useState("");
-  /*
-   * THE SERVER IS THE AUTHORITY EITHER WAY: the action re-reads the typed count and
-   * refuses on a mismatch, so disabling the button is EARLIER FEEDBACK, not the
-   * check.
-   *
-   * That is what makes the no-script path work. Rendering it disabled on the server
-   * would leave a reader without script unable to empty the trash at all, because
-   * `typed` stays "" forever. Initialized false so the hydration render matches.
-   */
+  // Enabled on the server: without script `typed` stays "" forever, and the action re-checks the count.
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const panel = useRef<HTMLDivElement | null>(null);
@@ -81,8 +54,6 @@ export function MediaConfirm({
       ];
       const firstStop = stops[0];
       const last = stops[stops.length - 1];
-      // The values are guarded rather than the length. Same early return on an
-      // empty list, and it is what tells the compiler these two are elements.
       if (!firstStop || !last) return;
       if (!el.contains(document.activeElement)) {
         event.preventDefault();
@@ -103,8 +74,6 @@ export function MediaConfirm({
 
   return (
     <div className="media-modal-layer">
-      {/* The scrim. A link when there is a URL to go back to, a button when the
-          trigger was client state; either way clicking outside cancels. */}
       {cancelHref ? (
         <Link
           to={cancelHref}
@@ -134,10 +103,7 @@ export function MediaConfirm({
           {requireTyped ? (
             <label className="media-modal-typed">
               <span className="sr-only">Type {requireTyped} to confirm</span>
-              {/*
-               * NAMED FROM THE CONSTANT, because the server reads the same one: two spellings
-               * of one wire name would split silently on a rename.
-               */}
+              {/* From the constant the server also reads, so a rename cannot split the wire name. */}
               <input
                 name={CONFIRM_FIELD}
                 value={typed}

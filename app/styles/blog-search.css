@@ -1,16 +1,5 @@
-/* Import order is the cascade: moving an import, or a rule between files, can change what renders. */
+/* Layer 0 must work fully with scripting off, so nothing here depends on a class a script adds. */
 
-/* Search. Layer 0 is server rendered and must work fully with scripting off,
-   so nothing here depends on a class a script adds. */
-
-/*
- * ONE RULE AND ONE CONSUMER, /search. `.blog-search` and its field left with /blog, which is now
- * ruled rows and a field that is a hairline: the form's whole styling is in entry-list.css beside
- * the list it sits over. What stays is the submit button /search still renders, a filled --brand
- * control that ruling 117 names and that this file is not the place to argue with: /search is its
- * own page with its own job, and restyling it from here would be a second page redesigned behind
- * its job's back.
- */
 .search-submit {
   padding: 0.5rem 1rem;
   border: 1px solid var(--brand);
@@ -19,6 +8,5 @@
   color: var(--on-brand);
   font: inherit;
   cursor: pointer;
-  /* WCAG 2.2 target size. */
   min-height: 2.75rem;
 }

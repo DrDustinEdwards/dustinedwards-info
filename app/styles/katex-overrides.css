@@ -1,10 +1,8 @@
-/* The site's half of the math stylesheet, hand written; build-katex.mjs appends it to the generated
- * upstream CSS. Run npm run build:katex after editing: check:content byte-compares the output.
- * Ships only with math. Sets no color: KaTeX draws in currentColor, so themes and forced-colors follow. */
+/* Appended to katex.generated.css by build-katex.mjs: run npm run build:katex after editing, since
+ * check:content byte-compares the output. */
 
-/* Display math scrolls inside itself: KaTeX sets nowrap, so a long equation is wider than the column.
- * overflow-y: hidden avoids a second scrollbar; the padding keeps subscripts. Not focusable, like
- * .prose pre; change both together or neither. Margin matches .prose pre, since upstream's em is wider. */
+/* KaTeX sets nowrap, so display math scrolls inside itself; overflow-y: hidden avoids a second
+ * scrollbar. Not focusable, like .prose pre; change both together or neither. */
 .prose .katex-display {
   margin: 1.5rem 0;
   overflow-x: auto;

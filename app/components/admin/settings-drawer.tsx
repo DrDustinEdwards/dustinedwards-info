@@ -3,25 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
 
-/*
- * ONE DESCRIPTION LIMIT, and it is the SERP number. This file carried its own
- * while the preview beside it truncated at another, so the drawer told an author
- * they were inside the limit and the preview cut the sentence. The preview is the
- * surface the author believes.
- */
 import { SERP_DESCRIPTION_LIMIT } from "~/lib/seo";
 
-
-/**
- * Built on a real `<dialog>` opened with `showModal()`, so the focus trap, the
- * Escape handling and the focus return are the platform's rather than a
- * hand-rolled keydown handler that will be subtly wrong.
- *
- * The controls belong to the EDITING form, which is outside the dialog, so each
- * carries `form={formId}`: association in HTML is by attribute, not containment. A
- * closed dialog is `display: none`, which has no bearing on whether a control is
- * submitted, so the fields ride along whether or not it was opened.
- */
+// Each control carries form={formId}: the editing form is outside the dialog, and association is by
+// attribute. A closed dialog is display:none, which does not stop its fields submitting.
 export function SettingsDrawer({
   open,
   onClose,
@@ -62,14 +47,8 @@ export function SettingsDrawer({
   date: string;
   publishAt: string;
   onPublishAtChange: (value: string) => void;
-  /** Live editor state, for the SERP and social-card previews. */
   previewPost: PreviewPost;
-  /**
-   * ABSENT is the whole contract. A published post is handed no slot, so neither
-   * the create control nor any revoke control exists on the page: the ruling is held
-   * by there being nothing to press rather than by a disabled button, which submits
-   * nothing but still reads as an offer.
-   */
+  /** Absent on a published post, so there is nothing to press rather than a disabled button that reads as an offer. */
   previewLinkSlot?: React.ReactNode;
   historySlot?: React.ReactNode;
   dangerSlot?: React.ReactNode;
@@ -83,8 +62,7 @@ export function SettingsDrawer({
     if (!open && dialog.open) dialog.close();
   }, [open]);
 
-  // Escape and the backdrop both fire `close`, so the parent's state is synced
-  // from the element rather than from every path that can shut it.
+  // Escape and the backdrop both fire `close`, so the parent syncs from the element.
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
@@ -139,8 +117,7 @@ export function SettingsDrawer({
             aria-invalid={overLimit}
             aria-describedby={overLimit ? "description-alarm" : undefined}
           />
-          {/* Alarms, never blocks. The server gates own validity; this only
-              makes the author aware before they hit one. */}
+          {/* Alarms, never blocks: the server gates own validity. */}
           {overLimit ? (
             <p className="field-alarm" id="description-alarm">
               {description.length - SERP_DESCRIPTION_LIMIT} over. Search results
@@ -149,12 +126,6 @@ export function SettingsDrawer({
           ) : null}
         </div>
 
-        {/*
-         * Directly under the field they are about, because the description is the one
-         * input whose effect is completely invisible from inside it. Both render from
-         * `postSocial`, the same function the post route's `meta()` calls, so they cannot
-         * drift from what the site emits.
-         */}
         <section className="drawer-section">
           <h3>How this appears</h3>
           <SerpPreview post={previewPost} />
@@ -209,11 +180,7 @@ export function SettingsDrawer({
   );
 }
 
-/**
- * It is the public URL and the filename, so changing it after the first save
- * would be a rename plus a redirect, which is not what a text input implies. Only
- * the new-post flow gets an input.
- */
+// Only the new-post flow gets an input: changing the slug later would be a rename plus a redirect.
 function SlugField({
   formId,
   slug,
@@ -226,8 +193,6 @@ function SlugField({
   const [copied, setCopied] = useState(false);
 
   if (isNew) {
-    // The new-post route renders the editable slug beside the title, where the
-    // author is actually looking. Nothing to show here but the rule.
     return (
       <p className="field-hint muted">
         The slug is set once, next to the title, and becomes the public URL.
@@ -253,11 +218,8 @@ function SlugField({
           {copied ? "Copied" : "Copy"}
         </button>
       </div>
-      {/*
-       * Still submitted, because the save path reads it. Read-only rather than
-       * disabled: a disabled field submits nothing, and dropping the slug would make
-       * every save look like a new post.
-       */}
+      {/* Read-only, not disabled: a disabled field submits nothing, and without the slug every save
+          looks like a new post. */}
       <input type="hidden" form={formId} name="slug" value={slug} />
       <span className="field-hint muted">
         Fixed after the first save. It is the filename and the public URL.
@@ -266,11 +228,6 @@ function SlugField({
   );
 }
 
-/**
- * The submitted field is unchanged: one `tags` input holding a comma separated
- * list, exactly what `parseTags` has always split. The chips are a view of that
- * string, so the payload cannot drift from what the checkbox era sent.
- */
 function TagField({
   formId,
   tags,
@@ -325,15 +282,11 @@ function TagField({
         autoComplete="off"
         onChange={(event) => {
           const value = event.target.value;
-          // Picking from the datalist fires change with the full value, and so
-          // does typing a comma. Both mean "commit this one".
           if (value.endsWith(",")) add(value.slice(0, -1));
           else setEntry(value);
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {
-            // Enter in a text input submits the form. Here it means "finish
-            // this tag", so the submit is suppressed.
             event.preventDefault();
             add(entry);
           }
@@ -350,13 +303,11 @@ function TagField({
             <option key={option} value={option} />
           ))}
       </datalist>
-      {/* The field the server reads. Unchanged in name and format. */}
       <input type="hidden" form={formId} name="tags" value={tags.join(", ")} />
     </div>
   );
 }
 
-/** Cover image, picked from what is already in the bucket. */
 function CoverField({
   formId,
   src,
@@ -399,12 +350,8 @@ function CoverField({
         {src ? "Choose a different image" : "Choose an image"}
       </button>
 
-      {/*
-       * THE PICKER COMPONENT, not picker logic: the drawer renders it and takes a
-       * chosen object back, so the listing and the empty state are the media module's.
-       * Picking pre-fills ALT only when the field is empty, because a description already
-       * written for this cover outranks the stored one.
-       */}
+      {/* Picking pre-fills alt only when the field is empty: an alt already written for this cover
+          outranks the stored one. */}
       {picking ? (
         <div className="cover-picker">
           <MediaPicker
@@ -442,16 +389,8 @@ function CoverField({
   );
 }
 
-/**
- * What replaced the raw ISO input writes the SAME field in the SAME format: a
- * `datetime-local` the author touches, and a hidden `publishAt` carrying the ISO
- * string the server has always received. The visible control is deliberately
- * unnamed so it cannot join the payload.
- *
- * THE COST, stated rather than hidden: with scripting off a schedule cannot be
- * CHANGED. The hidden field still renders with the committed value, so an existing
- * schedule is preserved rather than silently cleared.
- */
+// The visible control is unnamed so it stays out of the payload; the hidden publishAt carries the ISO.
+// With scripting off a schedule cannot be changed, but the hidden field preserves an existing one.
 function ScheduleField({
   formId,
   date,
@@ -473,12 +412,8 @@ function ScheduleField({
       <input id="field-date" form={formId} name="date" type="date" defaultValue={date} required />
 
       <span className="field-label">Publication</span>
-      {/*
-       * A single UNNAMED checkbox, and both halves matter: a control with no `name` is
-       * never submitted, which keeps the toggle out of the payload entirely. A radio pair
-       * needs a shared `name` to be a group, and that name went straight into the
-       * request.
-       */}
+      {/* Unnamed on purpose: a control with no `name` is never submitted, so the toggle stays out
+          of the payload. */}
       <label className="schedule-option">
         <input
           type="checkbox"
@@ -507,7 +442,6 @@ function ScheduleField({
         </>
       ) : null}
 
-      {/* The field the server reads, in the format it has always read. */}
       <input type="hidden" form={formId} name="publishAt" value={publishAt} />
     </div>
   );

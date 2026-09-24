@@ -1,13 +1,3 @@
-/**
- * Renders the icon suite from the ratified mark geometry.
- *
- *   node scripts/build-icons.mjs --out <dir>
- *
- * BOUNDARY: a GENERATOR, not a gate. It asserts nothing about what is already on disk, and
- * nothing in this repo sees the SHAPE of a rendered raster, so an icon whose mark is clipped,
- * mirrored or drawn in the wrong purple passes every assertion here.
- */
-
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -17,27 +7,16 @@ import { Resvg } from "@resvg/resvg-js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/**
- * The ratified dark-mode purple, transcribed from the spec. Its light twin is not a separate
- * constant: since the SVG favicon became a tile, every use of that hex here is the TILE.
- */
 const DARK = "#B7A5E0";
-/** The chrome tile. --surface-chrome light, which is brand. */
 const TILE = "#4F2D7F";
 
 /**
- * The mark hex for the FAVICON tiles only. The tile was adopted partly because it gives the
- * silhouette an edge at the smallest size; it does, and it also HALVED the mark's contrast. So the
- * small tiles take the muted chrome token and the LARGE tiles keep lavender, the ratified mark
- * variant, the silhouette not being contrast-limited at that size. A legibility exception at the
- * sizes that need it, not a second identity.
+ * Favicon tiles only: the tile halved the mark's contrast, so the small tiles take the muted chrome
+ * token and the large tiles keep lavender.
  */
 const ICO_MARK = "#EDE8F5";
 
-/**
- * The eight paths in the spec's paint order, VERBATIM. The five purple ones carry a placeholder
- * the caller substitutes; the warm three are constant and are written as literals.
- */
+/** The spec's eight paths in paint order, verbatim. */
 const BRAND = "(brand)";
 const PATHS = [
   [BRAND, "M 271.75 306.65 A 112.5 112.5 0 1 1 167.85 117.27 L 177.21 159.48 A 69.2 69.2 0 1 0 238.83 273.73 L 271.75 306.65 Z"],
@@ -51,8 +30,8 @@ const PATHS = [
 ];
 
 /**
- * The mark's INK bounding box, derived from the CONSTRUCTION rather than the path control points,
- * because the extremes are on ARCS and a control-point box would crop the ring.
+ * Derived from the construction, not the control points: the extremes are on arcs, and a
+ * control-point box would crop the ring.
  */
 const INK = { x0: 79.7, y0: 16.91, x1: 309.3, y1: 341.7 };
 const INK_W = INK.x1 - INK.x0;
@@ -61,8 +40,6 @@ const INK_CX = (INK.x0 + INK.x1) / 2;
 const INK_CY = (INK.y0 + INK.y1) / 2;
 
 /**
- * One square icon as an SVG string.
- *
  * @param {object} o
  * @param {number} o.size        canvas edge, px
  * @param {string} o.mark        the hex the five purple paths take
@@ -83,7 +60,6 @@ function square({ size, mark, tile, pad }) {
   );
 }
 
-/** The og card: the same tile and mark, at 1200x630 rather than square. */
 function ogCard({ width = 1200, height = 630, mark = DARK, tile = TILE } = {}) {
   const k = (height * (1 - 2 * 0.14)) / INK_H;
   const body = PATHS.map(
@@ -98,11 +74,8 @@ function ogCard({ width = 1200, height = 630, mark = DARK, tile = TILE } = {}) {
 }
 
 /**
- * favicon.svg, a TILE like everything else, superseding the media-query version. WHAT WAS WRONG
- * WITH IT: the embedded query keyed on the OPERATING SYSTEM's color scheme while the thing it
- * tried to survive is the TAB STRIP's, set by the browser theme, which no media query can see. A
- * tile has no such dependency, and an SVG favicon renders small, so it takes the small-size
- * treatment, from the same padding helper as the rasters.
+ * A tile, not a media query: a query sees the OS color scheme, while the tab strip's is set by the
+ * browser theme.
  */
 function faviconSvg() {
   return `${square({ size: 512, mark: ICO_MARK, tile: TILE, pad: 0.1 })}\n`;
@@ -113,12 +86,7 @@ function png(svg, size) {
   return new Resvg(svg, { fitTo: { mode: "width", value: size } }).render().asPng();
 }
 
-/**
- * An ICO is a CONTAINER. This writes the same structure the shipped file already uses, measured
- * before anything was regenerated.
- *
- * @param {Array<{ size: number, data: Buffer }>} images
- */
+/** @param {Array<{ size: number, data: Buffer }>} images */
 function ico(images) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0); // reserved
@@ -142,8 +110,6 @@ function ico(images) {
 
   return Buffer.concat([header, dir, ...images.map((i) => i.data)]);
 }
-
-/* output */
 
 const outArg = process.argv.indexOf("--out");
 const OUT = outArg === -1 ? join(ROOT, "public") : process.argv[outArg + 1];
@@ -179,19 +145,13 @@ emit("dustin-edwards-apple-touch-icon.png", png(square({ size: 180, mark: DARK, 
 emit("dustin-edwards-android-chrome-192x192.png", png(square({ size: 192, mark: DARK, tile: TILE, pad: 0.12 }), 192));
 emit("dustin-edwards-android-chrome-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.12 }), 512));
 
-// Maskable: the launcher may crop to a CIRCLE, so for ink of this aspect the DIAGONAL has to
-// clear it, which is why the padding is much larger and is NOT a style choice. The tighter
-// candidate left too little headroom for a spec launchers implement loosely.
+// Maskable: the launcher may crop to a circle, so the ink's diagonal has to clear it, which is why
+// the padding is much larger.
 emit("dustin-edwards-maskable-icon-512x512.png", png(square({ size: 512, mark: DARK, tile: TILE, pad: 0.19 }), 512));
 
 emit("dustin-edwards-og-image.png", png(ogCard(), 1200));
 
-/*
- * REGENERATE THE ASSET MANIFEST, everything above writing into `public/` and the manifest being
- * derived from exactly that directory: this script has no npm alias, is run by hand, and is the
- * only generator that adds NEW files. ONLY WHEN WRITING TO `public/`: elsewhere this is rendering
- * for inspection. The media index still cannot be rebuilt from here, needing the Worker's binding.
- */
+// This is the only generator that adds new files to `public/`, so it regenerates the asset manifest.
 if (OUT === join(ROOT, "public")) {
   // cwd pinned to the repo root: the manifest builder resolves relative to the working directory.
   const manifest = spawnSync(process.execPath, [join(ROOT, "scripts", "build-assets.mjs")], {

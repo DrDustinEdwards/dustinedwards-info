@@ -1,15 +1,3 @@
-/**
- * Gate: an applied migration is never edited, which is the hand-written migration rule.
- *
- *   npm run check:migrations
- *   node scripts/check-migrations.mjs --write [--force]
- *
- * BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** It does not prove the
- * manifest was honest when written, and it does not know what the LIVE database applied, which is
- * `test/schema-invariants.test.mjs`'s half, with `SCHEMA_LIVE=1`. It is verified by PLANTS ONLY, no migration here having ever
- * been edited after being applied, so replay a real one against it before trusting the plants.
- */
-
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -26,10 +14,6 @@ const args = process.argv.slice(2);
 const WRITE = args.includes("--write");
 const FORCE = args.includes("--force");
 
-/**
- * Below this the directory is not a migrations directory. The earlier value could not notice a
- * third of it being deleted, and the first migration is the only copy of the CREATE TABLEs.
- */
 const MINIMUM_MIGRATIONS = 18;
 
 let checks = 0;
@@ -45,8 +29,7 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * The migration's CONTENT, with CRLF collapsed: with autocrlf on, a working tree and its own
- * committed blobs disagree, so a raw-byte manifest is valid only where it was written.
+ * CRLF collapsed: with autocrlf on, a working tree and its own committed blobs disagree.
  *
  * @param {string} file
  */
@@ -57,8 +40,6 @@ function hashOf(file) {
 
 console.log("\ncheck:migrations\n");
 
-/* fail closed first */
-
 if (!existsSync(MIGRATIONS)) {
   console.log("  FAIL  drizzle/ is missing. Refusing to pass with nothing to check.\n");
   process.exit(1);
@@ -68,11 +49,8 @@ const files = readdirSync(MIGRATIONS)
   .filter((f) => f.endsWith(".sql"))
   .sort();
 
-/*
- * THROUGH assertFloor: migrations are append-only, the purest growing set in the repo, so a floor
- * left alone goes slack on its own. STILL A HARD EXIT rather than a counted assertion, because
- * continuing past a truncated directory would measure a corpus that is not there.
- */
+// A hard exit rather than a counted assertion: continuing past a truncated directory would measure
+// a corpus that is not there.
 const migrationsBreach = assertFloor(
   "check:migrations",
   "migrations",
@@ -87,8 +65,6 @@ if (migrationsBreach) {
   process.exit(1);
 }
 
-/* generator */
-
 if (WRITE) {
   /** @type {Record<string, string>} */
   const previous = existsSync(MANIFEST) ? JSON.parse(readFileSync(MANIFEST, "utf8")).sha256 : {};
@@ -100,11 +76,8 @@ if (WRITE) {
     if (previous[file] && previous[file] !== next[file]) changed.push(file);
   }
 
-  /*
-   * REFUSES TO LAUNDER AN EDIT: regenerating is the obvious way to make this gate green, so a hash
-   * that CHANGES needs `--force`, which puts the decision in the shell history. A NEW file needs
-   * nothing.
-   */
+  // Regenerating is the obvious way to make this gate green, so a changed hash needs `--force`, which
+  // puts the decision in the shell history.
   if (changed.length > 0 && !FORCE) {
     console.log(
       `  REFUSED: ${changed.length} existing hash(es) would CHANGE: ${changed.join(", ")}\n` +
@@ -121,8 +94,6 @@ if (WRITE) {
   console.log(`  wrote ${files.length} hash(es) to drizzle/manifest.json${FORCE ? " (--force)" : ""}\n`);
   process.exit(0);
 }
-
-/* the checking */
 
 ok(
   "drizzle/manifest.json exists",
@@ -150,7 +121,6 @@ ok(
   `${Object.keys(recorded).length} recorded against ${files.length} on disk`,
 );
 
-// Direction 1: every file on disk is recorded, and its bytes are unchanged.
 for (const file of files) {
   const expected = recorded[file];
   ok(
@@ -172,7 +142,6 @@ for (const file of files) {
   );
 }
 
-// Direction 2: every recorded entry still names a file.
 for (const file of Object.keys(recorded)) {
   ok(
     `${file} still exists on disk`,
@@ -189,18 +158,7 @@ console.log(
 );
 
 
-/* ship refuses on a pending migration */
-
-/*
- * **AUTHORING A MIGRATION MUST CREATE AN OBLIGATION SOMEWHERE, AND THIS IS IT.** A ship deployed
- * with every offline gate green and the media admin page 500d on first load, a migration having
- * been pending on the remote database since the session that authored it. THIS SECTION BELONGS
- * HERE: what this gate owns is the MIGRATION CONTRACT, and "a migration in the repo is applied
- * before the code that needs it deploys" is a clause of it. SOURCE LEVEL: it reads what ship
- * DECLARES, and must not run ship, a deploy guard being proven on its PREDICATE IN ISOLATION.
- */
-
-/* One owner: scripts/lib/strip-comments.mjs carries the trap, the guard and the boundary. */
+// Source level only: it reads what ship declares, because running ship would deploy.
 
 const SHIP = join(root, "scripts", "ship.mjs");
 
@@ -212,8 +170,7 @@ ok(
 
 if (existsSync(SHIP)) {
   const shipSource = readFileSync(SHIP, "utf8");
-  // Comments stripped before anything is located, the same trap check:contrast and
-  // check:features have each hit by parsing their own prose.
+  // Comments stripped first, so prose that names a function cannot satisfy a code assertion.
   const shipCode = stripComments(shipSource);
 
   ok(
@@ -248,10 +205,7 @@ if (existsSync(SHIP)) {
       "pressure of a refused deploy",
   );
 
-  /*
-   * ORDERING, the half a presence check cannot see: a guard that runs AFTER the deploy is a report.
-   * The index comparison is crude and it is the right crudeness, moving either end failing it.
-   */
+  // Ordering: a guard that runs after the deploy is a report.
   const guardAt = shipCode.indexOf("The deployed database has every migration");
   const deployAt = shipCode.indexOf('announce("Deploy")');
   ok(
@@ -268,21 +222,11 @@ if (existsSync(SHIP)) {
   );
 }
 
-/* the LOCAL tier's ledger, when there is one to read */
-
-/*
- * **NOTHING READ THE LOCAL DATABASE, AND THAT IS WHY IT SAT TWO MIGRATIONS BEHIND.** The blind
- * spot was structural: this gate hashes FILES, and the gate that does compare against a database
- * is remote-gated and builds its third source by REPLAYING the same files. READ DIRECTLY, NOT
- * THROUGH WRANGLER: `d1 execute --local` CREATES the local database when absent, and a gate that
- * brings its own subject into existence cannot report on it. Opened READ ONLY. A MISSING DATABASE
- * IS NOT A LAGGING ONE: three states, and only the third can fail. **THE SKIP EMITS NO ASSERTION
- * ON PURPOSE**, so the floor below is set for the CI case. NAMES, NOT A COUNT: a count passes
- * when a file is renamed.
- */
+// Read directly, not through wrangler: `d1 execute --local` creates the local database when absent.
+// Opened read only. A missing database emits no assertion, so the floor below is set for CI.
 const D1_STATE = join(root, ".wrangler", "state", "v3", "d1", "miniflare-D1DatabaseObject");
 
-/** @returns {string[] | null} the ledger's names, or null when there is none to read */
+/** @returns {string[] | null} */
 function localLedger() {
   if (!existsSync(D1_STATE)) return null;
   const candidates = readdirSync(D1_STATE).filter(
@@ -319,10 +263,7 @@ if (ledger === null) {
   const notApplied = files.filter((f) => !applied.has(f));
   const unknown = ledger.filter((n) => !onDisk.has(n));
 
-  /*
-   * SCOPE FIRST. An empty ledger read against an empty file list would report
-   * agreement by comparing nothing, which is this repo's most repeated defect.
-   */
+  // Scope first: an empty ledger against an empty file list would report agreement over nothing.
   ok(
     "the local ledger was read and there are migrations to compare it against",
     ledger.length > 0 && files.length > 0,
@@ -343,18 +284,8 @@ if (ledger === null) {
   );
 }
 
-/*
- * EXECUTED-COUNT FLOOR. The scope floor catches a directory that stopped being read; this catches
- * an assertion block that stopped running over a full one. MEASURED BY RUNNING IT, both cases.
- * **THE COUNT DEPENDS ON THE ENVIRONMENT and the floor is set for the lower one**, the ledger
- * section emitting no assertion where there is no local database. It steps by a fixed amount per
- * migration, which is append-only by the hand-written migration rule.
- */
-/*
- * 65, NOT THE 68 A WORKING TREE WITH A LOCAL D1 RUNS: without a local database the three
- * assertions comparing the applied set to it do not run, and a floor set to the richer context's
- * number would fail the poorer one.
- */
+// Measured by running it, set for the lower environment: without a local database the three
+// assertions comparing the applied set to it do not run.
 const MINIMUM_CHECKS = 65;
 const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) ok("this gate executed its assertions", false, floorBreach);

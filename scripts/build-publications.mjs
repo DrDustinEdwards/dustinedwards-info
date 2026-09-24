@@ -1,14 +1,3 @@
-/**
- * Generates the publications module from the canonical bibliographic record and the site-only
- * fields keyed by DOI.
- *
- *   npm run build:publications
- *
- * BOUNDARY: deterministic and offline, and the network refresh that produces those two files
- * lives outside this repo. The generated module is a build artifact: the gate imports `generate()`
- * from here and fails when the committed copy has drifted.
- */
-
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -16,29 +5,16 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(ROOT, "app", "data", "publications.ts");
 
-/**
- * DOI names are case-insensitive per the spec. Store as deposited, compare casefolded: a raw
- * join silently drops records rather than throwing.
- */
+/** DOI names are case-insensitive: a raw join silently drops records rather than throwing. */
 /** @param {string | null | undefined} doi */
 const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
-/*
- * Punctuation that never takes a space BEFORE it, and brackets that never take one after. Two
- * explicit classes rather than one clever pattern: they are different facts about typography.
- */
 const SPACE_BEFORE_PUNCTUATION = /\s+([,;:.)\]])/g;
 const SPACE_AFTER_OPENING = /([([])\s+/g;
 
 /**
- * Registry markup reduced to plain text.
- *
- * THE SPACE IS NOT OPTIONAL AND NEITHER IS CLEANING UP AFTER IT. Tags become a SPACE rather than
- * nothing, an earlier import having welded two words together. The cost is a space that was never
- * in the rendered text, which several titles carry, italicized organism names sitting inside
- * parentheses, and a title differing by a space may not match in Google Scholar. So the space is
- * inserted, whitespace collapsed, then the space removed from the two places typography never
- * puts one. The order matters: collapsing first means the cleanup sees a single space.
+ * Tags become a space, or two words weld together; the space is then removed from the two places
+ * typography never puts one. Whitespace is collapsed first so that cleanup sees a single space.
  *
  * @param {string | null | undefined} value
  */
@@ -50,7 +26,6 @@ const clean = (value) =>
     .replace(SPACE_AFTER_OPENING, "$1")
     .trim();
 
-/** TS string literal or null. JSON string syntax is valid TS. */
 /** @param {unknown} value @returns {string} */
 const str = (value) =>
   value === null || value === undefined || value === ""
@@ -66,7 +41,6 @@ const arr = (items) =>
 /** @param {any} value */
 const first = (value) => (Array.isArray(value) ? (value[0] ?? null) : (value ?? null));
 
-/** The date fields CSL may carry, in the order of authority this corpus uses. */
 const DATE_KEYS = ["published-print", "issued", "published"];
 
 /** @param {any} record @returns {number | null} */
@@ -79,9 +53,7 @@ function cslYear(record) {
 }
 
 /**
- * The publication date at WHATEVER PRECISION the registry deposited, separate from the year, which
- * stays the thing the page groups by. Padding would invent a day for month-only records and taking
- * the year would throw one away for most; emitting the deposited precision asserts nothing extra.
+ * At the deposited precision: padding would invent a day for month-only records.
  *
  * @param {any} record @returns {string | null}
  */
@@ -98,17 +70,13 @@ function cslDate(record) {
   return null;
 }
 
-/*
- * A page range, written as an escape rather than as the characters: this repo's hook refuses the
- * literal wide one, and an invisible-width character in a class is unreviewable.
- */
+// Written as an escape: the repo's hook refuses the literal wide dash, and an invisible-width
+// character in a class is unreviewable.
 const PAGE_RANGE = new RegExp("^(\\d+)\\s*[-\\u2013]\\s*(\\d+)$");
 
 /**
- * A page value split into first and last, ONLY when it really is a page range. THE TRAP, AND IT IS
- * IN THIS CORPUS: some records carry an ARTICLE NUMBER rather than pagination, and a split is safe
- * on today's only because they contain no separator. Written as a positive match on the shape, so
- * a future article number carrying one cannot be read as a range.
+ * Some records carry an article number rather than pagination, so this is a positive match on the
+ * range shape, never a split on the separator.
  *
  * @param {string | null | undefined} page
  * @returns {{ first: string | null, last: string | null }}
@@ -357,10 +325,6 @@ export function generate() {
     lines.push(`    license: ${str(r.license)},`);
     lines.push(`    licenseSource: ${str(r.licenseSource)},`);
     lines.push(`    summary: ${str(r.summary)},`);
-    /*
-     * EMITTED AS JSON, not field by field: a per-field emitter would be a second statement of the
-     * shape another module owns.
-     */
     lines.push(
       `    updateNotice: ${r.updateNotice ? JSON.stringify(r.updateNotice) : "null"},`,
     );
@@ -376,11 +340,7 @@ export function generate() {
   return lines.join("\n");
 }
 
-/*
- * WRITES ONLY WHEN RUN DIRECTLY, and the gate's import is the reason: the bottom of this file used
- * to write at module scope, so importing it would have rewritten the very file the comparison was
- * about, and the gate would pass by repairing its own subject.
- */
+// Writes only when run directly, so the gate's import cannot rewrite the file it compares.
 if (pathToFileURL(process.argv[1] ?? "").href === import.meta.url) {
   const emitted = generate();
   writeFileSync(OUT_PATH, emitted, "utf8");

@@ -1,17 +1,7 @@
 /**
- * Year-by-year roster of the SEA-PHAGES research cohort at Tarleton State.
- *
- * Structured content edited by commit, so it lives here rather than in the D1 `posts` table, whose
- * single body column would flatten the structure. Photo dimensions are the real output of
- * scripts/resize-phage-photos.mjs and are recorded per photo to keep layout shift at zero.
- *
- * ALT TEXT IS DELIBERATELY NEUTRAL, on a page whose whole point is that it carries names and nothing
- * else. It is NOT emptied, because these photos are half the page's content rather than decoration,
- * and `alt=""` on a content image is a WCAG failure.
- *
- * **THE NAMES ARE AS GIVEN, and there is no open question about any of them.** A speculative
- * respelling of a real person's name, on the page that lists them, is a worse error than an
- * unhyphenated one, and a comment inviting that edit is the same error with a delay on it.
+ * Photo dimensions are the real output of scripts/resize-phage-photos.mjs, recorded to keep layout
+ * shift at zero. Alt text is neutral but never empty: the photos are content, and alt="" on a
+ * content image fails WCAG. Names are as given; do not respell them.
  */
 
 export type PhageYear = {

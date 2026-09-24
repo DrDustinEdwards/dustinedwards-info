@@ -1,13 +1,3 @@
-/**
- * Gate over the URL protocol allowlist, at the predicate and through the renderer.
- *
- *   npm run check:urls
- *
- * BOUNDARY: the allowlist predicate over crafted inputs, plus one end-to-end render. It never
- * fetches a URL and never scans the live corpus, so it proves the rule and not that every
- * published href obeys it.
- */
-
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,7 +13,6 @@ const FIXTURE = join(root, "scripts", "fixtures", "url-protocol-cases.json");
 
 console.log("\ncheck:urls\n");
 
-// Fail closed. A gate whose expectation is missing must block and say so.
 if (!existsSync(FIXTURE)) {
   console.log("  FAIL  fixture is missing: scripts/fixtures/url-protocol-cases.json");
   console.log("        This gate cannot pass without it. Restore it from git.\n");
@@ -51,8 +40,6 @@ function assert(label, ok, detail = "") {
   }
 }
 
-/* The predicate */
-
 for (const probe of fixture.predicateCases) {
   assert(
     `predicate: ${JSON.stringify(probe.url)} is ${probe.allowed ? "allowed" : "blocked"}`,
@@ -60,10 +47,7 @@ for (const probe of fixture.predicateCases) {
   );
 }
 
-/**
- * Obfuscations are built from CODE POINTS rather than escapes, so this file holds no control
- * characters: writing them literally corrupted the module into a binary file more than once.
- */
+/** Built from code points: written literally, control characters corrupted this module into a binary file. */
 for (const probe of fixture.obfuscationCases) {
   const url = probe.codes.map((code) => String.fromCodePoint(code)).join("");
   assert(
@@ -71,8 +55,6 @@ for (const probe of fixture.obfuscationCases) {
     isAllowedUrl(url) === probe.allowed,
   );
 }
-
-/* The renderer, end to end */
 
 /** Images are measured without touching R2; dimensions are not what is tested. */
 const resolveImage = async () => ({ width: 8, height: 8 });
@@ -112,11 +94,9 @@ for (const probe of fixture.cases) {
       urls.length === 0,
       `got ${JSON.stringify(urls)}`,
     );
-    // Ruling point 2: visible, not silent. The markdown has to come back as
-    // text carrying the offending url, so the author can see what happened.
+    // Visible, not silent: the markdown comes back as text carrying the offending url, so the author sees it.
     assert(
       `render: ${probe.label} renders the source as visible text`,
-      // SCOPED-BY: the whole fragment is the scope. The question is whether the blocked markdown survived as TEXT anywhere in the output, not where.
       html.includes("]("),
       `markup was ${JSON.stringify(html.slice(0, 120))}`,
     );
@@ -124,12 +104,8 @@ for (const probe of fixture.cases) {
   }
 }
 
-/*
- * FRONTMATTER, which the render layer never sees: the plugin walks the tree `renderBody`
- * produces, so the allowlist did not bind the two frontmatter fields that reach a URL context,
- * one of which renders as a live public href. These bind the SCHEMA, the only thing in that path,
- * asserted against the object both writers import so they cannot pass against a copy.
- */
+// Frontmatter never reaches the render layer's plugin, so these bind the schema, asserted against the
+// object both writers import.
 
 const FM_BASE = { title: "t", slug: "a-slug", date: "2026-01-01", description: "d" };
 
@@ -165,14 +141,8 @@ for (const probe of fixture.frontmatterCases) {
   }
 }
 
-/*
- * THE SHARED PREDICATE, ASSERTED ON THE SOURCE. Everything above tests BEHAVIOUR, and the rule is
- * not "these fields refuse bad protocols" but "these fields call the same predicate the renderer
- * uses". Those come apart: one field was a regex that blocked the protocol only as a side effect
- * of demanding a leading slash, and every behavioral case was green. The mechanism is what
- * survives the next edit. COMMENTS ARE STRIPPED FIRST, both docblocks discussing the predicate in
- * prose; only BLOCK comments, the line form truncating a `//host` inside a message string.
- */
+// Behaviour can pass while a field blocks a protocol only by accident, so the source must call the
+// shared predicate. Only block comments are stripped: the line form truncates a `//host` in a string.
 
 const PIPELINE = join(root, "app", "lib", "content", "pipeline.mjs");
 const pipelineSource = readFileSync(PIPELINE, "utf8");
@@ -215,21 +185,14 @@ for (const [label, , pattern] of SCHEMA_FIELDS) {
   );
 }
 
-// One definition, so "the same predicate" is a fact about the module and not
-// two functions that agree today.
 assert(
   "isAllowedUrl is defined exactly once in pipeline.mjs",
   [...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length === 1,
   `found ${[...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length} definitions`,
 );
 
-/*
- * THE REDIRECT MAP: every old slug goes somewhere that exists, and no post claims a slug the map
- * redirects away from. A REDIRECT TO A 404 is invisible because the gateway resolves the map
- * without touching the database; A SLUG THAT IS ALSO A SOURCE is sharper, the redirect running
- * before the router, so the post can never be served while looking fine on disk. READ FROM THE
- * MARKDOWN, NOT THE BUILD PRODUCT, which is the fixture independence the vacuity rule names.
- */
+// A redirect to a 404 is invisible because the gateway resolves the map without the database, and a
+// slug that is also a source can never be served, the redirect running before the router.
 
 const REDIRECTS_PATH = join(root, "content", "redirects.json");
 
@@ -243,12 +206,7 @@ if (!existsSync(REDIRECTS_PATH)) {
 const redirects = JSON.parse(readFileSync(REDIRECTS_PATH, "utf8"));
 const redirectSources = Object.keys(redirects.posts ?? {});
 
-/*
- * THE RETIRED SET, AND WHY IT IS A SECOND FILE: everything below checks that what is IN the map
- * is coherent, which cannot catch DELETING an entry. So the expected set comes from a file the
- * map cannot edit, reconciled BOTH DIRECTIONS. Not two owners of one fact, which the one-owner rule
- * forbids, but two facts: that a URL was ONCE PUBLIC, and WHERE IT GOES NOW.
- */
+// A second file, because checking the map's coherence cannot catch deleting an entry from it.
 const RETIRED_PATH = join(root, "scripts", "fixtures", "retired-slugs.json");
 if (!existsSync(RETIRED_PATH)) {
   console.log("  FAIL  fixture is missing: scripts/fixtures/retired-slugs.json");
@@ -284,10 +242,7 @@ for (const from of redirectSources) {
   );
 }
 
-/**
- * A post whose frontmatter does not parse is counted and reported, never skipped: skipping turns
- * a live redirect target into a missing one this gate calls fine.
- */
+/** Counted and reported, never skipped: skipping turns a live redirect target into a missing one. */
 const postFiles = readdirSync(join(root, "content", "posts")).filter((f) => f.endsWith(".md"));
 /** @type {Map<string, { published: boolean, file: string }>} */
 const corpus = new Map();
@@ -301,10 +256,7 @@ for (const file of postFiles) {
     continue;
   }
   const fm = result.data;
-  /*
-   * PUBLISHED, on the same three conditions the public read applies. A redirect whose target is a
-   * draft is a 404 for every reader, and the visibility rule is why this cannot soften to "the file exists".
-   */
+  // A redirect whose target is a draft is a 404 for every reader, so the file existing is not enough.
   const scheduled = fm.publish_at ? fm.publish_at.slice(0, 10) > today : false;
   corpus.set(fm.slug, { published: fm.draft !== true && fm.date <= today && !scheduled, file });
 }
@@ -356,11 +308,6 @@ for (const [from, to] of Object.entries(redirects.posts ?? {})) {
   );
 }
 
-/*
- * THE PREDICATE ITSELF, over the real map. The loop above proves the DATA is
- * coherent; this proves the CODE that reads it agrees, which is the same
- * two-level split the rest of this file uses.
- */
 for (const from of redirectSources) {
   assert(
     `redirects: the predicate resolves /blog/${from}`,
@@ -413,10 +360,7 @@ assert(
   `GET ${postRedirectStatus("GET")}, HEAD ${postRedirectStatus("HEAD")}, POST ${postRedirectStatus("POST")}`,
 );
 
-/*
- * THE GATEWAY ACTUALLY CALLS IT, AND IN THE RIGHT PLACE, asserted by POSITION in its own body:
- * asserting a stage EXISTS passes on an arrangement that runs it too late. Comments stripped.
- */
+// Asserted by position: asserting a stage exists passes on an arrangement that runs it too late.
 {
   const workerSource = readFileSync(join(root, "workers", "app.ts"), "utf8");
   const workerCode = workerSource
@@ -451,8 +395,6 @@ assert(
   );
 }
 
-/* Counts, so a green run cannot mean an empty one */
-
 assert(
   "the frontmatter fixture still carries its permanent negatives",
   fixture.frontmatterCases.filter((c) => c.label.startsWith("PERMANENT NEGATIVE")).length >= 10,
@@ -485,13 +427,8 @@ console.log(
     `${fixture.obfuscationCases.length} obfuscation(s)`,
 );
 
-/*
- * EXECUTED-COUNT FLOOR. Every case comes from a committed fixture, which fails quietly: one that
- * parsed to an empty list runs zero cases and reports a clean sweep. MEASURED BY RUNNING IT, with
- * slack deliberately smaller than one redirect entry's worth, so deleting a redirect cannot hide
- * inside the tolerance. The prose here once claimed a floor the constant disagreed with, which is
- * the one-owner rule's rot in its ordinary form.
- */
+// Measured by running it, with slack smaller than one redirect entry, so deleting a redirect cannot
+// hide inside the tolerance.
 const MINIMUM_CHECKS = 188;
 const floorBreach = assertFloor("check:urls", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) assert("this gate executed its assertions", false, floorBreach);

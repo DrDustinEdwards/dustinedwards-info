@@ -1,12 +1,3 @@
-/*
- * THE `?key=` INSPECTOR: the panel that opens over the library when a row is
- * addressed by key.
- *
- * `detail` is the loader's own row, taken from the route's generated types rather
- * than restated here, so the shape has ONE owner and this file cannot drift from
- * what the loader returns.
- */
-
 import { Form, Link } from "react-router";
 
 import { CopyButton } from "~/components/admin/media-copy-button";
@@ -18,11 +9,6 @@ import type { hrefWith } from "~/lib/media/view.mjs";
 
 import type { Route } from "../../routes/+types/admin.media._index";
 
-/*
- * The loader returns a UNION of three shapes and only the listing carries
- * `detail`, so the member is selected rather than the property read off the union.
- * Still one owner: the loader.
- */
 type Listing = Extract<Route.ComponentProps["loaderData"], { detail: unknown }>;
 type Detail = NonNullable<Listing["detail"]>;
 
@@ -35,12 +21,7 @@ export function MediaInspector({
 }) {
   return (
         <>
-        {/*
-         * THE SCRIM IS A LINK rather than a div with a handler: closing by clicking
-         * outside must not depend on script. It is the same URL the Close control uses, so
-         * there is one way to close and not two. `preventScrollReset`, because closing is
-         * not a new place to be.
-         */}
+        {/* A link, not a div with a handler, so closing by clicking outside needs no script. */}
         <Link
           to={linkTo({ key: "" })}
           className="media-detail-scrim"
@@ -49,11 +30,7 @@ export function MediaInspector({
         />
         <section
           className="media-detail"
-          /*
-           * A DIALOG in role, not a `<dialog>` element: that would need `showModal()` to
-           * behave, which is script, and this panel is server-rendered and has to work
-           * without any.
-           */
+          /* A dialog role rather than <dialog>, which needs showModal() and so script. */
           role="dialog"
           aria-modal="true"
           aria-label={`Details for ${detail.found ? (detail.originalName ?? detail.key) : detail.key}`}
@@ -61,12 +38,7 @@ export function MediaInspector({
         >
           {detail.found ? (
             <>
-              {/*
-               * The name ELLIPSISES rather than wrapping: a content-addressed key can wrap to
-               * three lines and push the whole panel down. The usage pill repeats the state the
-               * panel explains below, deliberately: it is the one fact somebody opens this panel
-               * to check.
-               */}
+              {/* Ellipsised, not wrapped: a content-addressed key can wrap to three lines and push the panel down. */}
               <header className="media-detail-head">
                 <h3 title={detail.key}>{detail.originalName ?? detail.key}</h3>
                 <span className="media-detail-usage-pill">
@@ -100,11 +72,7 @@ export function MediaInspector({
                 </div>
 
                 <div className="media-detail-facts">
-                  {/*
-                   * THE NO-SCRIPT PATH FOR THE PAGE'S ONE JOB. A readonly input rather than a
-                   * `<code>`: it selects with a click and a keyboard and copies with the platform's
-                   * own shortcut, none of which needs this page to be running.
-                   */}
+                  {/* The no-script copy path: a readonly input selects and copies with the platform's own keys. */}
                   <label className="media-detail-address" htmlFor="media-detail-url">
                     Address
                   </label>
@@ -118,11 +86,7 @@ export function MediaInspector({
                     <CopyButton value={detail.url} label={detail.originalName ?? detail.key} />
                   </div>
 
-                  {/*
-                   * DERIVED, and the inspector says so: everything in this list is recomputable
-                   * from the object by `rebuildMediaIndex`, and an edit here would be overwritten by
-                   * the next rebuild.
-                   */}
+                  {/* Derived: `rebuildMediaIndex` recomputes all of this, so an edit here would be overwritten. */}
                   <p className="media-facet-hint media-detail-owner">
                     assigned by the system
                   </p>
@@ -147,14 +111,8 @@ export function MediaInspector({
                     <dd>{detail.uploadedAt ? detail.uploadedAt.slice(0, 10) : "ships with the repo"}</dd>
                   </dl>
 
-                  {/* AUTHORED, and the only field on this panel that is. A
-                      rebuild preserves it precisely because nothing can
-                      recompute it. */}
+                  {/* Authored: a rebuild preserves it because nothing can recompute it. */}
                   <p className="media-facet-hint media-detail-owner">yours to edit</p>
-                  {/*
-                   * ALT TEXT, FOR IMAGES ONLY. A document does not take alt text, so offering the
-                   * field on one invents an obligation the author cannot discharge.
-                   */}
                   {detail.viewable ? (
                     <Form method="post" className="media-alt-form">
                       <input type="hidden" name="key" value={detail.key} />
@@ -170,12 +128,8 @@ export function MediaInspector({
                       <button type="submit" name="intent" value="set-alt" className="btn-ghost">
                         Save alt
                       </button>
-                      {/*
-                       * A SUBMIT BUTTON CARRYING ITS VALUE, through the SAME `set-alt` intent, so the
-                       * server keeps one writer. Offered only while the field is EMPTY: a suggestion
-                       * beside text somebody has written is an invitation to overwrite their sentence.
-                       * A FORM, not a click handler, so it works with scripting off.
-                       */}
+                      {/* Through the same `set-alt` intent, so the server keeps one writer. Offered only while the
+                          field is empty, so it never invites overwriting a written sentence. */}
                       {!detail.alt.trim() && detail.altSuggestion ? (
                         <button
                           type="submit"
@@ -195,11 +149,7 @@ export function MediaInspector({
                     </p>
                   )}
 
-                  {/*
-                   * The field carries the PARSED list joined back with commas, never the
-                   * delimiter-wrapped storage form. Nothing outside `tags.mjs` should ever see
-                   * `,alpha,beta,`.
-                   */}
+                  {/* The parsed list joined with commas, never the delimiter-wrapped storage form. */}
                   <Form method="post" className="media-alt-form">
                     <input type="hidden" name="key" value={detail.key} />
                     <label htmlFor="detail-tags">Tags</label>
@@ -215,13 +165,8 @@ export function MediaInspector({
                     </button>
                   </Form>
 
-                  {/*
-                   * Every chip is a submit button on the SAME `set-tags` intent carrying the WHOLE
-                   * resulting list, with ONE exception: the chip whose removal would leave nothing
-                   * submits `clear`, because an empty value is no longer an instruction to clear.
-                   * `setMediaTags` stays the one writer and the one author of the delimiter rule,
-                   * and every chip works with scripting off.
-                   */}
+                  {/* Each chip submits the whole resulting list on `set-tags`, except the last one, which submits
+                      `clear`: an empty value is not an instruction to clear. */}
                   {detail.tags.length > 0 || detail.tagSuggestions.length > 0 ? (
                     <Form method="post" className="media-tag-chips">
                       <input type="hidden" name="key" value={detail.key} />
@@ -243,11 +188,7 @@ export function MediaInspector({
                           {tag} <span aria-hidden="true">&times;</span>
                         </button>
                       ))}
-                      {/*
-                       * CLEAR ALL, an explicit act with its own control: the point of the fix is that
-                       * clearing is DELIBERATE, not that it is tedious. Shown only above one tag,
-                       * because at one the chip beside it already does this.
-                       */}
+                      {/* Shown only above one tag: at one, the chip already does this. */}
                       {detail.tags.length > 1 ? (
                         <button
                           type="submit"
@@ -274,12 +215,6 @@ export function MediaInspector({
                     </Form>
                   ) : null}
 
-                  {/*
-                   * THE LABELS CHANGE WITH THE FILE: an image goes into a post as `![alt](src)` and
-                   * a document as `[title](href)`, so a control labeled HTML has to produce a
-                   * different thing for each. `copySnippetsFor` owns both the label and the value,
-                   * so the two cannot disagree.
-                   */}
                   <div className="media-detail-copy">
                     <h4>Copy</h4>
                     {copySnippetsFor({
@@ -298,22 +233,13 @@ export function MediaInspector({
                     ))}
                   </div>
 
-                  {/*
-                   * IDENTICAL BYTES, found by content hash: exact identity only, never a similarity
-                   * score. Trashing a twin hides it and BOTH addresses keep working, so nothing here
-                   * can cost a published page its image.
-                   */}
+                  {/* Trashing a twin hides it and both addresses keep working, so no published page loses its image. */}
                   {detail.twins.length > 0 ? (
                     <div className="media-detail-twins">
                       <h4>Identical files</h4>
                       <ul className="media-detail-refs">
                         {detail.twins.map((twin) => (
                           <li key={twin.key}>
-                            {/*
-                             * "Byte-identical" says the comparison was exact, not a similarity score, and
-                             * "both addresses resolve to the same content" says what a reader needs before
-                             * trashing one. Naming the twin in the button is the other half.
-                             */}
                             <p className="media-twin-note">
                               Byte-identical to{" "}
                               <Link to={linkTo({ key: twin.key })}>{twin.key}</Link>, both
@@ -340,11 +266,7 @@ export function MediaInspector({
                     </div>
                   ) : null}
 
-                  {/*
-                   * Shown and never recomputed: the key already carries it. A static row has a path
-                   * rather than a hash, so it gets nothing rather than a truncated path dressed as a
-                   * digest.
-                   */}
+                  {/* Read off the key, never recomputed. A static row's key is a path, so it shows nothing. */}
                   {detail.hash ? (
                     <p className="media-detail-hash">
                       <span className="media-display-label">sha256</span>
@@ -352,10 +274,6 @@ export function MediaInspector({
                     </p>
                   ) : null}
 
-                  {/*
-                   * The heading is the CLAIM, the sentence is its BOUNDARY, and the list underneath
-                   * is what was actually found: posts for `used`, source files for `in template`.
-                   */}
                   <div className="media-detail-usage" data-usage={detail.usage}>
                     <h4>Usage</h4>
                     {!detail.scanComplete ? (
@@ -372,7 +290,6 @@ export function MediaInspector({
                           {usageDescriptor(detail.usage).note}
                         </p>
 
-                        {/* THE POSTS, which is what `used` is evidence of. */}
                         {detail.refs.length > 0 || detail.citations.length > 0 ? (
                           <ul className="media-detail-refs">
                             {detail.refs.map((ref) => (
@@ -395,11 +312,7 @@ export function MediaInspector({
                           </ul>
                         ) : null}
 
-                        {/*
-                         * Repo-relative paths rather than prose labels, because a path is a fact the
-                         * reader can open and check. Not links, because the admin has no source browser
-                         * and a link to nothing is worse than text.
-                         */}
+                        {/* Not links: the admin has no source browser, and a link to nothing is worse than text. */}
                         {detail.templateRefs.length > 0 ? (
                           <ul className="media-detail-refs media-template-refs">
                             {detail.templateRefs.map((file) => (
@@ -414,12 +327,8 @@ export function MediaInspector({
                     )}
                   </div>
 
-                  {/*
-                   * NEITHER CARRIES A CONFIRM, and that is the friction ladder working: trashing is
-                   * reversible and changes nothing a reader can see, so ceremony that is always
-                   * harmless is ceremony people learn to click through. Offered on a static row too,
-                   * because trashing touches no file.
-                   */}
+                  {/* No confirm on purpose: trashing is reversible and invisible to readers, and always-harmless
+                      ceremony teaches people to click through. */}
                   {detail.trashedAt ? (
                     <Form method="post" className="media-trash-form">
                       <input type="hidden" name="key" value={detail.key} />
@@ -439,20 +348,11 @@ export function MediaInspector({
                     </Form>
                   )}
 
-                  {/*
-                   * A static asset shows WHY it cannot be deleted rather than simply lacking a
-                   * button. The action refuses it regardless; this is so the page explains the
-                   * refusal instead of leaving a gap.
-                   */}
                   {detail.deletable ? (
                     <Form
                       method="post"
                       onSubmit={(event) => {
-                        /*
-                         * EARLIER FEEDBACK, NOT THE GATE. The action checks the same thing server-side,
-                         * because this handler does not run for a reader without JavaScript and the R2
-                         * delete did.
-                         */
+                        /* Earlier feedback only: the action re-checks, since this handler never runs without JavaScript. */
                         if (!confirm(`Delete ${detail.key}? This removes the object from R2.`)) {
                           event.preventDefault();
                           return;
@@ -463,8 +363,7 @@ export function MediaInspector({
                       }}
                     >
                       <input type="hidden" name="key" value={detail.key} />
-                      {/* Empty with scripting off, which is what makes the action
-                          refuse and open the confirmation below. */}
+                      {/* Empty with scripting off, which makes the action refuse and open the confirmation below. */}
                       <input type="hidden" name={CONFIRM_FIELD} defaultValue="" />
                       <button type="submit" name="intent" value="delete" className="btn-danger">
                         Delete
@@ -486,8 +385,7 @@ export function MediaInspector({
             </p>
           )}
         </section>
-        {/* Escape, the focus trap and focus return. Renders nothing; with no
-            script the drawer still opens, works and closes by its own links. */}
+        {/* With no script the drawer still opens, works and closes by its own links. */}
         <MediaDrawer activeKey={detail.key} closeHref={linkTo({ key: "" })} />
         </>
   );
