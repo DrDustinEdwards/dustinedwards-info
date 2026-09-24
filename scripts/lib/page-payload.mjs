@@ -13,15 +13,19 @@ export function importsOf(source, file, appDir) {
   const modules = [];
   /** @type {string[]} */
   const assets = [];
-  // A `?url` import is not a fetch: a component may import a bundle URL only to put it on a data
-  // attribute, so an `enhance/dist` asset counts only when the same file renders the script tag.
-  const rendersScript = source.includes("<EnhancementScript");
+  // An enhancement bundle is served where `<Enhance module="x"` renders it. Its `?url` import alone
+  // is not a fetch: the registry imports all eight, and the palette's URL rides a data attribute.
+  // Comments stripped first, or a comment naming <Enhance> would charge every importer for it.
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  for (const m of code.matchAll(/<Enhance\s+module="([a-z-]+)"/g)) {
+    assets.push(`~/enhance/dist/${m[1]}.js`);
+  }
 
   for (const m of source.matchAll(/(?:from\s*|import\s*\(?\s*)["']([^"']+)["']/g)) {
     const spec = m[1];
     if (spec.includes("?url")) {
       const asset = spec.replace(/\?url$/, "");
-      if (!asset.includes("enhance/dist/") || rendersScript) assets.push(asset);
+      if (!asset.includes("enhance/dist/")) assets.push(asset);
       continue;
     }
     if (spec.endsWith(".css")) continue;

@@ -22,21 +22,37 @@ test("a ?url import of an enhancement bundle does NOT count as a fetch", () => {
   assert.deepEqual(assets, [], "the URL is carried, not fetched");
 });
 
-test("the SAME import counts when the file renders the script tag", () => {
-  const source = `
-    import blogUrl from "~/enhance/dist/blog.js?url";
-    import { EnhancementScript } from "~/components/enhancement-script";
-    export function BlogEnhancements() {
-      return <EnhancementScript src={blogUrl} />;
-    }
+test("<Enhance module> counts its bundle, and the registry's imports count nothing", () => {
+  const page = `
+    import { Enhance } from "~/components/enhance";
+    export function Post() { return <Enhance module="blog" />; }
   `;
-  const { assets } = importsOf(source, "/app/components/blog-enhancements.tsx", APP);
-  assert.deepEqual(assets, ["~/enhance/dist/blog.js"]);
+  assert.deepEqual(importsOf(page, "/app/routes/post.tsx", APP).assets, ["~/enhance/dist/blog.js"]);
+
+  const registry = `
+    import blogUrl from "~/enhance/dist/blog.js?url";
+    import plateUrl from "~/enhance/dist/plate.js?url";
+    export const ENHANCE_URLS = { blog: blogUrl, plate: plateUrl };
+  `;
+  assert.deepEqual(
+    importsOf(registry, "/app/components/enhance.tsx", APP).assets,
+    [],
+    "counting the registry would charge every page for every bundle",
+  );
+});
+
+test("an <Enhance> named in a comment serves nothing", () => {
+  const source = `
+    // Renders <Enhance module="plate" /> where the plate is.
+    /* The one way in: <Enhance module="blog" />. */
+    export const X = () => <div>{/* No <Enhance module="podcast" /> here */}</div>;
+  `;
+  assert.deepEqual(importsOf(source, "/app/components/x.tsx", APP).assets, []);
 });
 
 test("a non-bundle ?url asset is collected either way", () => {
-  // A font or a stylesheet handed to something at runtime is not gated by
-  // EnhancementScript, and the callers filter by what they are asking about.
+  // A font or a stylesheet handed to something at runtime is not an enhancement
+  // bundle, and the callers filter by what they are asking about.
   const source = `import fontUrl from "./fonts/inter-latin-normal.woff2?url";`;
   const { assets } = importsOf(source, "/app/root.tsx", APP);
   assert.deepEqual(assets, ["./fonts/inter-latin-normal.woff2"]);
@@ -46,9 +62,8 @@ test("the walk follows ~/ and relative imports and is cycle-safe", () => {
   const read = tree({
     "/app/routes/post.tsx": `
       import { Body } from "~/components/body";
-      import { EnhancementScript } from "~/components/enhancement-script";
-      import blogUrl from "~/enhance/dist/blog.js?url";
-      export default function Post() { return <EnhancementScript src={blogUrl} />; }
+      import { Enhance } from "~/components/enhance";
+      export default function Post() { return <Enhance module="blog" />; }
     `,
     "/app/components/body.tsx": `
       import { Loop } from "./loop";
