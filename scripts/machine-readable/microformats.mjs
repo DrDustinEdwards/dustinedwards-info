@@ -1,7 +1,6 @@
 /**
- * Gate: the microformats2 annotations on the public plane, parsed rather than grepped.
- *
- *   npm run check:microformats
+ * Part of check:machine-readable: the microformats2 annotations on the public plane, parsed rather
+ * than grepped.
  *
  * BOUNDARY: it RENDERS THE THREE PUBLIC ROUTE COMPONENTS in Node and parses the result, so it
  * sees markup and nothing else, and the live-path rule is why it is not folded into `check:content`.
@@ -10,19 +9,20 @@
 
 import { readFile } from "node:fs/promises";
 
-import { assertFloor } from "./lib/floor.mjs";
-import { bundleRoutes, importBundled, renderRoute } from "./lib/route-render.mjs";
-import { buildArtifact, revisedDate } from "./build-content.mjs";
+import { bundleRoutes, importBundled, renderRoute } from "../lib/route-render.mjs";
+import { buildArtifact, revisedDate } from "../build-content.mjs";
 
 import {
   POSTS_PER_PAGE,
   pageCount,
   splitFeatured,
   startHere,
-} from "../app/lib/blog-listing.mjs";
-import { postPath } from "../app/lib/content/pipeline.mjs";
+} from "../../app/lib/blog-listing.mjs";
+import { postPath } from "../../app/lib/content/pipeline.mjs";
 
 const { mf2 } = await import("microformats-parser");
+
+console.log("\n  microformats\n");
 
 /** @type {string[]} */
 const failures = [];
@@ -104,12 +104,12 @@ try {
   artifact = JSON.parse(await buildArtifact());
 } catch (error) {
   console.error(
-    `check:microformats FAILED: the corpus would not build, so there is nothing to ` +
+    `  FAIL  microformats: the corpus would not build, so there is nothing to ` +
       `render.\n\n  ${error instanceof Error ? error.message : String(error)}\n\n  ` +
       `If this names content/generated/stack.json, run npm run build:stack first; ` +
       `check:all builds it for the tier.\n`,
   );
-  process.exit(1);
+  throw new Error("microformats: the corpus would not build");
 }
 const published = artifact.posts.filter((/** @type {any} */ p) => !p.draft);
 
@@ -124,9 +124,9 @@ assert(
     `asserts nothing over an empty scope, so an empty one is a failure rather than a pass.`,
 );
 if (failures.length > 0) {
-  console.error(`check:microformats FAILED before rendering:\n`);
+  console.error(`  FAIL  microformats stopped before rendering:\n`);
   for (const f of failures) console.error(`  ${f}\n`);
-  process.exit(1);
+  throw new Error("microformats: the corpus has no published posts");
 }
 
 /*
@@ -164,9 +164,9 @@ assert(
 );
 if (failures.length > 0) {
   await cleanup();
-  console.error(`check:microformats FAILED before rendering:\n`);
+  console.error(`  FAIL  microformats stopped before rendering:\n`);
   for (const f of failures) console.error(`  ${f}\n`);
-  process.exit(1);
+  throw new Error("microformats: the site identity module did not load");
 }
 
 const EXPECTED_AUTHOR_URL = `${SITE_ORIGIN}/`;
@@ -702,32 +702,15 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
 
 await cleanup();
 
-// Report
+// Report. No count floor: "every published post rendered and parsed" and "both ends of the index
+// pagination parsed" already fail a skipped render, and a floor tied to the corpus size failed on
+// every unpublish.
 
-/*
- * WHOLE-GATE EXECUTED-COUNT FLOOR, MEASURED BY RUNNING THIS GATE. It moves with the corpus size
- * and steps DOWN when a post is unpublished, and it does NOT move with the checkout, which is
- * load bearing for CI. WHAT THE TIGHTNESS COSTS: unpublishing breaches it, and the repair is a
- * re-measured floor in the same commit.
- */
-const MINIMUM_CHECKS = 226;
-const floorBreach = assertFloor(
-  "check:microformats",
-  "checks",
-  checks,
-  MINIMUM_CHECKS,
-  `Sections are a per-post loop, so a skipped render is a silently smaller sweep.`,
-);
-if (floorBreach) failures.push(floorBreach);
-
-if (failures.length > 0) {
-  console.error(`check:microformats FAILED, ${failures.length} of ${checks} checks:\n`);
-  for (const f of failures) console.error(`  ${f}\n`);
-  process.exit(1);
-}
-
+for (const f of failures) console.log(`  FAIL  ${f}`);
 console.log(
-  `check:microformats ok. ${checks} assertions: ${postsParsed} post page(s) as h-entry, ` +
-    `${feedsParsed} index page(s) as h-feed, the home h-card, and the rel="me" set on two ` +
-    `rendered pages. 0 failures.`,
+  `  ${checks} assertions: ${postsParsed} post page(s) as h-entry, ${feedsParsed} index ` +
+    `page(s) as h-feed, the home h-card, and the rel="me" set on two rendered pages. ` +
+    `${failures.length} failure(s).`,
 );
+
+export const outcome = { checks, failures: failures.length };

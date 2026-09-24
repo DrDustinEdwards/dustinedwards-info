@@ -174,8 +174,8 @@ function truncateWords(value: string, limit: number): string {
  *
  * They cannot be collapsed: that one is a drizzle condition over `posts` and this is a string
  * spliced into a hand-written query over `search_docs`. So the agreement is asserted instead, which
- * is why this is exported: `check:invariants` runs both against a fixture of post states and fails
- * if they ever admit different rows.
+ * is why this is exported: `test/visibility-invariants.test.mjs` runs both against a fixture of post
+ * states and fails if they ever admit different rows.
  *
  * THE ALIAS IS A PARAMETER so the aliasless queries below compose it rather than restate it. Pass
  * NO_ALIAS for an unaliased query.
@@ -188,9 +188,9 @@ export function visibilityClause(alias = "d"): string {
 /**
  * The unaliased argument, as a NAMED CONSTANT rather than a bare `""`.
  *
- * This is not style. `check:invariants` section 5 extracts raw SQL string literals and binds their
- * column names to the schema, and an empty string literal sitting between two SQL literals makes the
- * extractor read across the boundary and report columns the query does not have.
+ * This is not style. The raw-SQL scans read string literals, and an empty string literal sitting
+ * between two SQL literals makes an extractor read across the boundary and report what the query
+ * does not have.
  *
  * A named constant keeps every string literal at these call sites SQL. DO NOT INLINE IT BACK.
  */
@@ -532,7 +532,7 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * deliberately not uploaded, so including them would report every one as permanently stale.
  *
  * The predicate is `visibilityClause(NO_ALIAS)`, composed and never hand copied.
- * That is the visibility rule, and `check:invariants` section 8 binds every `search_docs` reader to it. It
+ * That is the visibility rule, and `test/visibility-invariants.test.mjs` binds every `search_docs` reader to it. It
  * carries the unit as well: `publish_at` is SECONDS.
  */
 /**
@@ -540,7 +540,7 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * twin of `askExpectedUrls`, and the reason `syncAskCorpus` takes no posts argument: the records
  * were materialized into `search_docs` by the same `records.mjs` both writers run.
  *
- * Visibility is COMPOSED, not restated: `check:invariants` section 8 holds every `search_docs`
+ * Visibility is COMPOSED, not restated: `test/visibility-invariants.test.mjs` holds every `search_docs`
  * reader to it.
  */
 export async function askCorpusRecords(
@@ -562,7 +562,7 @@ export async function askExpectedUrls(env: Env, now = new Date()): Promise<strin
   const nowSeconds = Math.floor(now.getTime() / 1000);
   const rows = await env.DB.prepare(
     // CONCATENATED, not interpolated, for the reason stated at NO_ALIAS: a
-    // `${...}` truncates the literal check:invariants section 5 can see.
+    // `${...}` truncates the literal the raw-SQL scans can see.
     `SELECT url FROM search_docs WHERE type = 'post' AND ` + visibilityClause(NO_ALIAS),
   )
     .bind(nowSeconds)
@@ -576,7 +576,7 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
 
   const tagRows = await env.DB.prepare(
     // The predicate comes from `visibilityClause(NO_ALIAS)`, not from a hand-copy. CONCATENATED, not
-    // interpolated: a `${...}` truncates the literal `check:invariants` section 5 can see, and a `+`
+    // interpolated: a `${...}` truncates the literal the raw-SQL scans can see, and a `+`
     // keeps it whole and parseable.
     `SELECT DISTINCT doc_tags FROM search_docs WHERE doc_tags <> '' AND ` +
       visibilityClause(NO_ALIAS),

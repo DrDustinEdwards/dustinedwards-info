@@ -3,8 +3,8 @@
  *
  * Nine gates carried their own copy of one job. The risk consolidation removes
  * is DRIFT IN STRENGTH: a copy weaker than its siblings does not fail, it
- * passes for a reason nobody checks. check:logo's copy was exactly that, and
- * the plant in check:logo proves it.
+ * passes for a reason nobody checks. The old logo gate's copy was exactly
+ * that, and a plant there proved it.
  *
  * THE BOUNDARY IS ASSERTED HERE RATHER THAN DESCRIBED. The reconciliation ruled
  * this helper must never be fed JSONC or SVG. A comment saying so is a claim
@@ -136,8 +136,7 @@ test("AND THE SVG BOUNDARY WITH IT, for the same reason", () => {
 
 test("THE WEAK FORMS STAY, and this says what is left of the reason", () => {
   /*
-   * The three JSONC readers and check:logo's SVG path keep their own weak
-   * strippers. The measured hazard above is gone, so the argument is narrower
+   * The three JSONC readers keep their own weak strippers. The measured hazard above is gone, so the argument is narrower
    * now and worth stating rather than assuming: this helper is a JAVASCRIPT
    * tokenizer. It reads an apostrophe in SVG TEXT CONTENT as opening a string,
    * and a slash after an operator-looking character as opening a regex, neither
@@ -196,7 +195,7 @@ test("A QUOTE INSIDE A REGEX CHARACTER CLASS does not open a string", () => {
    * The second half, found BY THE DIFFERENTIAL rather than by reading. Once
    * strings were tokenized, a quote inside a regex character class sat outside
    * any literal and paired with the next quote in the file. Six assertion calls
-   * in check-llms.mjs went invisible to check:invariants section 17.
+   * in scripts/machine-readable/llms.mjs went invisible to check:invariants section 17.
    */
   const src = [
     "const pattern = /from[\"']x[\"']/;",

@@ -5,8 +5,8 @@
  *
  * BOUNDARY: everything is DERIVED and there is no list in this file, so a binding kind the shared
  * enumerator does not know is invisible here too. It reads the EXAMPLE config, which is what a
- * fresh clone has, and the hand-written prose beside each layer is reconciled by `check:stack`
- * rather than produced here.
+ * fresh clone has, and the hand-written prose beside each layer comes from
+ * content/stack-notes.json rather than being produced here.
  */
 
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -87,7 +87,7 @@ export function buildStack() {
         kind,
         name,
         settings,
-        /** Hand-written, reconciled by check:stack in both directions. */
+        /** Hand-written in content/stack-notes.json. */
         what: notes.bindings?.[id]?.what ?? null,
         whyLoadBearing: notes.bindings?.[id]?.whyLoadBearing ?? null,
       };

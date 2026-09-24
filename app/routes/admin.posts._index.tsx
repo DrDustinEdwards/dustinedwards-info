@@ -498,17 +498,17 @@ export default function AdminPosts({
    * The selection this page starts with. Empty in production, always: React Router
    * passes only loaderData, actionData, params and matches.
    *
-   * It exists for `check:admin-ui`, which renders one static pass and dispatches no
-   * event: without it the bulk bar never mounts under the harness and the three bulk
-   * intents contribute no payload.
+   * It exists for a static render, which dispatches no event: without it the bulk bar
+   * never mounts and the three bulk intents contribute no payload. The admin-ui check
+   * that relied on it was removed by ruling 150.
    */
   initialSelection = [],
 }: Route.ComponentProps & { initialSelection?: string[] }) {
   const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
     loaderData;
   /*
-   * Defaulted like `readership`: `check:admin-ui` renders against fabricated
-   * loader data, and a fixture written before this field existed must render zeros.
+   * Defaulted like `readership`: loader data written before this field existed must
+   * render zeros.
    */
   const statusCounts = loaderData.statusCounts ?? {
     all: total,
@@ -995,8 +995,8 @@ export default function AdminPosts({
                   <th scope="col" className="posts-title-cell">Title</th>
                   <th scope="col">Published</th>
                   {/*
-                   * THE LABEL IS "Reads counted". check-admin-ui.mjs forbids "views", "visits",
-                   * "visitors" and "traffic" here: a cached read never reaches the Worker.
+                   * THE LABEL IS "Reads counted". Never "views", "visits", "visitors" or
+                   * "traffic" here: a cached read never reaches the Worker.
                    */}
                   <th scope="col" className="posts-readership">Reads counted</th>
                   <th scope="col" className="posts-row-actions">Actions</th>
@@ -1134,8 +1134,8 @@ export default function AdminPosts({
 
           {/*
            * OUTSIDE the bulk form: forms cannot nest. THE SLUG IS A FIELD, not the
-           * button's value: `check:admin-ui` reads a submitter as the intent, so the tuple
-           * set would grow per post.
+           * button's value: a submitter is read as the intent, so the set of intents
+           * would grow per post.
            */}
           {posts.map((post) => (
             <Form

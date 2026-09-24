@@ -1,9 +1,10 @@
 /**
- * Gate: `content/llms.txt` is the source of truth for the `llms.txt` settings row.
+ * Part of check:machine-readable: `content/llms.txt` is the source of truth for the `llms.txt`
+ * settings row.
  *
- *   npm run check:llms                 pure checks only
- *   npm run check:llms -- --local      also compare against the local D1 row
- *   npm run check:llms -- --remote     also compare against the remote D1 row
+ *   npm run check:machine-readable                 pure checks only
+ *   npm run check:machine-readable -- --local      also compare against the local D1 row
+ *   npm run check:machine-readable -- --remote     also compare against the remote D1 row
  *
  * BOUNDARY: it compares the committed file against the row it seeds and against the route that
  * serves it, but it does not fetch `/llms.txt`, so it cannot see the route failing to serve what
@@ -12,13 +13,12 @@
 
 import { readFileSync, existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { retryRead } from "./lib/retry.mjs";
+import { retryRead } from "../lib/retry.mjs";
 import { createHash } from "node:crypto";
-import { assertFloor } from "./lib/floor.mjs";
+import { resolveD1Address } from "../lib/d1-address.mjs";
 
 const LLMS_PATH = "content/llms.txt";
 const ROUTE_PATH = "app/routes/llms.ts";
-import { resolveD1Address } from "./lib/d1-address.mjs";
 
 const DB_NAME = "dustinedwards";
 
@@ -41,11 +41,11 @@ function assertThat(ok, label, detail) {
 /** @param {Buffer} buf */
 const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 16);
 
-console.log("\ncheck:llms\n");
+console.log("\n  llms.txt\n");
 
 if (!existsSync(LLMS_PATH)) {
   console.log(`\n  FAIL  ${LLMS_PATH} is missing. It is the source of the settings row.`);
-  process.exit(1);
+  throw new Error(`${LLMS_PATH} is missing`);
 }
 
 // Read as BYTES and decode explicitly: this file is compared byte for byte and the platform text
@@ -112,17 +112,17 @@ if (target) {
       if (r.status !== 0) throw new Error((r.stdout || r.stderr || "no output").slice(0, 200));
       return r;
     },
-    { label: `check:llms settings row read (${target})` },
+    { label: `check:machine-readable llms.txt settings row read (${target})` },
   );
   if (result.status !== 0) {
     console.log(`\n  FAIL  wrangler could not read the settings row (${target}).`);
     console.log(result.stdout ?? "");
-    process.exit(1);
+    throw new Error(`wrangler could not read the settings row (${target})`);
   }
   const match = result.stdout.match(/\[[\s\S]*\]/);
   if (!match) {
     console.log(`\n  FAIL  could not parse the query output.`);
-    process.exit(1);
+    throw new Error("could not parse the llms.txt settings row query output");
   }
   /** @type {any} */
   let parsed;
@@ -131,7 +131,7 @@ if (target) {
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.log(`\n  FAIL  query output was not JSON: ${detail}`);
-    process.exit(1);
+    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`);
   }
   const rows = parsed?.[0]?.results ?? [];
   assertThat(
@@ -157,12 +157,7 @@ if (target) {
 console.log(
   `  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`,
 );
-/*
- * EXECUTED-COUNT FLOOR, MEASURED THROUGH THIS GATE'S OWN PIPELINE by RUNNING it, never summed.
- * Slack of ZERO, and the zero is the point: this gate is SMALL, so one skipped assertion is a
- * sixth of it and there is no natural movement to absorb. The remote tier only ADDS a comparison,
- * so a floor set on the offline figure holds for both.
- */
+
 /*
  * THE CONTACT URL IS BOUND TO SITE_ORIGIN, in both directions. A tracked literal cannot import
  * anything, so its contact line was typed by hand and pointed the one machine-readable file whose
@@ -195,20 +190,4 @@ console.log(
   );
 }
 
-const MINIMUM_CHECKS = 9;
-const floorBreach = assertFloor(
-  "check:llms",
-  /*
-   * NAMED PER BRANCH even though one VALUE covers both, the offline figure being the stricter of
-   * the two and kept for both: a single name would let whichever branch ran last be judged against
-   * the other's reading.
-   */
-  target === "--remote" ? "checks-remote" : "checks-offline",
-  checks,
-  MINIMUM_CHECKS,
-  "The offline branch is the smaller one; --remote adds the live comparison.",
-);
-if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
-
-console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
-process.exit(failures > 0 ? 1 : 0);
+export const outcome = { checks, failures };

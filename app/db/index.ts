@@ -96,8 +96,8 @@ function isBlogPost() {
  * tag archive and the series archive all state the same three and take them from here.
  *
  * IT COMPOSES `isBlogPost()` ITSELF and takes only the EXTRA clauses. Written first to take a
- * finished `where` from the caller, which read fine and was wrong twice over: `check:invariants`
- * section 6 could not see a predicate in this body and failed it, correctly, and a future caller
+ * finished `where` from the caller, which read fine and was wrong twice over: the visibility
+ * test (`test/visibility-invariants.test.mjs`) could not see a predicate in this body and failed it, correctly, and a future caller
  * could have passed a `where` without one and nothing would have said so. The visibility rule is a
  * chokepoint, not a convention, so the predicate belongs where it cannot be left out.
  *
@@ -311,7 +311,7 @@ export async function listHomeStartHere(
     ]),
   );
 
-  /* Which list leads is `startHere`'s rule, shared with `check:microformats`. */
+  /* Which list leads is `startHere`'s rule, shared with `check:machine-readable`. */
   const { featured, recent } = startHere(featuredRows, otherRows, cards);
 
   return { featured, recent, total: countRows[0]?.total ?? 0 };
@@ -640,7 +640,7 @@ function matchesQuery(q: string) {
     OR lower(${media.tags}) LIKE ${needle})`;
 }
 
-/** Not trashed. Reconciliation readers must skip it, or `check:media` restores the rows. */
+/** Not trashed. Reconciliation readers must skip it, or the rebuild restores the rows. */
 /** Large file threshold, stated once for the lens, its count and its label. */
 export const LARGE_FILE_BYTES = 1048576;
 

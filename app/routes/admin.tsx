@@ -455,8 +455,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
        */}
       <header className="admin-topbar">
         {/*
-         * The component is imported, never copied, so check:logo covers this instance
-         * too. It links to /admin, the home of the plane you are on.
+         * The component is imported, never copied, so this instance cannot drift from
+         * the others. It links to /admin, the home of the plane you are on.
          */}
         <Link to="/admin" className="admin-brand">
           {/* Decorative: the link's accessible name is the wordmark beside it,

@@ -11,8 +11,8 @@
  *
  * The first two are two LANGUAGES expressing one rule, and they cannot share an
  * implementation: one builds a Drizzle expression tree, the other a SQL string.
- * `check:invariants` binds them to each other, which is the right instrument for
- * a pair that must agree but cannot be one function.
+ * `test/visibility-invariants.test.mjs` binds them to each other, which is the
+ * right instrument for a pair that must agree but cannot be one function.
  *
  * **The Ask filter was a third, hand-rolled copy, and it was held only by a
  * grep.** That is the exact class that leaked: on 2026-07-29 five unpublished
@@ -29,7 +29,7 @@
  * ## WHAT THIS DELIBERATELY DOES NOT TOUCH
  *
  * **The FTS build.** `search_docs` includes drafts on purpose and the two FTS
- * indexes are built from all of it; `check:invariants` section 8 carries that as
+ * indexes are built from all of it; `test/visibility-invariants.test.mjs` carries that as
  * a NAMED exemption with its reason. Filtering there would manufacture drift
  * between the content table and its own shadows on every rebuild. Visibility on
  * the classic search path is applied at query time by `visibilityClause`, which

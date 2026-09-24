@@ -145,8 +145,8 @@ export function card(post) {
       },
     },
     /*
-     * The mark from `scripts/lib/mark.mjs`, a SEAM: `check:logo` renders this same node against the
-     * committed fixture, so the shape is asserted rather than assumed.
+     * The mark from `scripts/lib/mark.mjs`, the same node the site renders, derived from the committed
+     * logo files rather than restated.
      */
     el("div", { style: { display: "flex" } }, markElement()),
     // The gap. Everything below hangs off the foot, so a long title grows up

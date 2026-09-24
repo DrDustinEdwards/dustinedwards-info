@@ -9,9 +9,8 @@
  *
  * Nothing could see it. `npm run ship` applies no migrations and compares no
  * schema. `check:migrations` compares FILES to a hash manifest, never to a
- * database. `check:admin-ui` renders the route with `.server` imports stubbed,
- * so the loader never runs. `check:invariants --remote` would have caught it
- * and is in neither tier ship runs.
+ * database. `test/schema-invariants.test.mjs` with SCHEMA_LIVE=1 would have caught it
+ * and ship does not set it.
  *
  * ## The fixtures are REAL OUTPUT, captured, not invented
  *

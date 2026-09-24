@@ -88,7 +88,7 @@
       "slug": "media-key",
       "title": "Media key grammar",
       "lede": "One key in, and the answer every reader of the key grammar gives. There is exactly one statement of that grammar in this repository and four functions read it, which is the whole reason this demo is interesting: the last time there were more, they had already drifted.",
-      "realPath": "app/lib/media/classify.mjs, imported by the Worker, by the build scripts and by check:media",
+      "realPath": "app/lib/media/classify.mjs, imported by the Worker and by the build scripts",
       "homeArticle": {
         "slug": "ten-years-on-cloudflare",
         "title": "Every Cloudflare product, and which ones this site runs on"

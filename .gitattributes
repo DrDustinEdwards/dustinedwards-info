@@ -29,7 +29,7 @@
 #      under `--force`. On a CRLF checkout every asset would come back as a diff
 #      the moment anyone forced a rebuild, whether or not the drawing changed.
 #   4. `content/llms.txt` is the SOURCE of the `llms.txt` settings row and is
-#      compared against that row byte for byte by `check:llms`. The live row is
+#      compared against that row byte for byte by `check:machine-readable`. The live row is
 #      LF, so a CRLF checkout would fail the gate AND sync CRLF into D1,
 #      changing what `/llms.txt` serves.
 #   5. `CLAUDE.md` is measured by `check:claude-md`, which asserts it fits under
@@ -74,7 +74,7 @@
 # conversion on the way in, so the rot was invisible to the tool most likely to
 # be asked about it.
 #
-# What it cost, measured rather than assumed: `check:invariants` section 6
+# What it cost, measured rather than assumed: `test/visibility-invariants.test.mjs`
 # extracts top-level functions by comparing a line to `"}"`. On a CRLF file
 # every line ends with a carriage return, so no function ever found its end and
 # every body ran to EOF. `app/lib/operator/api.server.ts` is one of the 130, and

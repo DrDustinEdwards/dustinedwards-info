@@ -19,8 +19,8 @@ import type { RouterContextProvider } from "react-router";
 const TTL_SECONDS = 7 * 24 * 60 * 60;
 /*
  * THE CALLER'S NAME, AND DELIBERATELY NOT AN ADDRESS. OpenAlex removed the `mailto` polite pool, so
- * an address buys nothing from the vendor, and `check:config` refuses a real configured value
- * appearing in a tracked file, which that address is: it is also the watchdog's ALERT_EMAIL.
+ * an address buys nothing from the vendor, and a real configured value does not belong in a
+ * tracked file, which that address is: it is also the watchdog's ALERT_EMAIL.
  *
  * The address is not written out here either, for the reason it was removed: that gate reads the
  * WHOLE file and does not strip comments, which is correct. A value quoted in a comment is still the

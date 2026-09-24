@@ -89,7 +89,7 @@ export const TEST_OPERATOR_TOKEN = "test-operator-token-0123456789abcdef";
  * the same directory. That is the property that makes a D1 assertion here mean
  * anything: a hand-written schema for the tests would be a second owner of the
  * shape, and rule 11 says `app/db/schema.ts` and `drizzle/` are the owners.
- * `check:invariants` section 4 already binds those two to the live database; a
+ * `test/schema-invariants.test.mjs` already binds those two to the live database; a
  * fixture schema would sit outside that chain entirely.
  */
 const D1_MIGRATIONS = await readD1Migrations(

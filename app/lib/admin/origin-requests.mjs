@@ -6,9 +6,8 @@
  * component renders on the client too, so the `.server` module is stubbed out
  * of that bundle and every imported value arrived `undefined`: the window and
  * the cap rendered as `Top NaN of 23 paths` and the pending caption sentence
- * vanished from the page entirely. `check:admin-ui` caught it by rendering the
- * route and reading the markup, which is the only place that failure is
- * visible.
+ * vanished from the page entirely. Only the rendered markup shows that
+ * failure.
  *
  * So anything the COMPONENT reads lives here, and `traffic.server.ts` keeps
  * only what touches the network: the query builders, the fetch and the token.
@@ -63,10 +62,9 @@ export const TOP_N = 20;
  *
  * ## THE WORD THIS SENTENCE MAY NOT USE
  *
- * `check:admin-ui` forbids "visits", "visitors", "traffic" and "page views"
- * anywhere this panel renders, because every one of them names something this
- * number is not. The first draft said "real traffic is therefore higher" and
- * the gate refused it, which is the copy law working on the very sentence
+ * "visits", "visitors", "traffic" and "page views" are forbidden anywhere this
+ * panel renders, because every one of them names something this number is
+ * not. The first draft said "real traffic is therefore higher" and was refused, which is the copy law working on the very sentence
  * written to explain the copy law's subject. It says "what people actually
  * requested" instead.
  */

@@ -46,7 +46,7 @@ const GENRE = {
  * The ContextObject for one paper, as the `title` attribute's value.
  *
  * Key order is FIXED and is the order below rather than the record's, so the
- * output is a pure function of the values. `check:publications` compares two
+ * output is a pure function of the values. `check:machine-readable` compares two
  * generations byte for byte and an object-key iteration order that depended on
  * how a record was built would make that comparison meaningless.
  *

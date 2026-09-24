@@ -230,8 +230,8 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
  * THE RENDERER: everything that produces a document, and the entrypoint the platform may cache.
  *
  * Cache is per entrypoint and this Worker's two jobs want opposite answers, so `default` is cache
- * DISABLED and runs always while this is ENABLED and runs on a miss; `check:config` compares the
- * two files that say so.
+ * DISABLED and runs always while this is ENABLED and runs on a miss; the real config and the
+ * example must both say so.
  *
  * IT MUST NOT WRITE THE TRAFFIC ROW: on a hit this does not run, so a count here would become a
  * count of MISSES, looking like readership while moving with cache behavior.

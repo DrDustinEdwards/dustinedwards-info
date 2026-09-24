@@ -1,9 +1,8 @@
 /*
  * Screenshots the two mockups at 1280 and 375, in both themes.
  *
- * check:admin-ui cannot do this: it is a markup harness (esbuild plus
- * renderToStaticMarkup) with no browser at all, so it has no viewport and no
- * screenshot. This drives Puppeteer directly, which is the same engine
+ * A markup harness (esbuild plus renderToStaticMarkup) cannot do this: it has
+ * no browser, so no viewport and no screenshot. This drives Puppeteer directly, which is the same engine
  * check:browser uses.
  *
  * Not a gate and not in any tier. Run it from the repo root when a mockup

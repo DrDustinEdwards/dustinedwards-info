@@ -14,8 +14,8 @@ import { longDateUTC } from "~/lib/long-date.mjs";
  * submission is IDENTICAL in shape and the fixture describes the requests the page
  * can issue rather than how many rows it holds.
  *
- * THE INTENT IS ON THE BUTTON, because `check:admin-ui` records a hidden field's
- * NAME and not its value.
+ * THE INTENT IS ON THE BUTTON, where the submitter names it, rather than in a
+ * hidden field whose value nothing shows.
  */
 
 export interface PreviewLinkView {

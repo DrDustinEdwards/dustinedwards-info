@@ -430,8 +430,8 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
  * The request-scoped, MEMOIZED reader for the drift status above.
  *
  * Two surfaces want the fact and a parent cannot read a child's loader data. Moving the computation
- * up was ruled out because `check:admin-ui` fabricates this in the posts route's OWN loader data,
- * so it would have moved the gate's fixture. The VALUE moves instead, on the context. A getter, so
+ * up was ruled out because the posts route's OWN loader data carries it, and moving it there would
+ * have reshaped that route. The VALUE moves instead, on the context. A getter, so
  * a route that never asks never pays.
  */
 export type AskStatusReader = () => Promise<AskIndexStatus | null>;
@@ -464,8 +464,8 @@ export function askStatusReader(env: Env, timings?: Timings): AskStatusReader {
  * admin layout runs on every admin page load.
  *
  * ON A HIT THIS DOES NOT TOUCH AI SEARCH, structurally: one `return` sits between the KV read and
- * the first mention of the index, and `check:invariants` section 11 asserts that ON THE SOURCE
- * rather than on a timing mark, a mark count having already failed to see an unmarked read here.
+ * the first mention of the index. Keep it that way ON THE SOURCE: a timing-mark count has already
+ * failed to see an unmarked read here.
  *
  * FAILURE IS NULL, NOT ZERO: zero claims the index agrees with the corpus, on no evidence, beside a
  * repair the operator would then not perform.

@@ -6,7 +6,7 @@
  *
  * BOUNDARY: **IT PROVES THE FILES MATCH THE MANIFEST. Nothing more.** It does not prove the
  * manifest was honest when written, and it does not know what the LIVE database applied, which is
- * `check:invariants --remote`'s half. It is verified by PLANTS ONLY, no migration here having ever
+ * `test/schema-invariants.test.mjs`'s half, with `SCHEMA_LIVE=1`. It is verified by PLANTS ONLY, no migration here having ever
  * been edited after being applied, so replay a real one against it before trusting the plants.
  */
 
@@ -165,7 +165,7 @@ for (const file of files) {
     `${file} is byte-identical to its recorded hash`,
     actual === expected,
     `recorded ${expected.slice(0, 16)}…, on disk ${actual.slice(0, 16)}…\n` +
-      `        AN APPLIED MIGRATION HAS BEEN EDITED. check:invariants section 4 only sees\n` +
+      `        AN APPLIED MIGRATION HAS BEEN EDITED. The schema test only sees\n` +
       `        an edit that MOVES A COLUMN; seed data, an index, a trigger or FTS DDL\n` +
       `        changes what a fresh clone builds and is invisible to every other gate.\n` +
       `        The repair is a NEW numbered migration, never an edit to this one.`,
@@ -212,8 +212,8 @@ ok(
 
 if (existsSync(SHIP)) {
   const shipSource = readFileSync(SHIP, "utf8");
-  // Comments stripped before anything is located, the same trap check:logo,
-  // check:contrast and check:features have each hit by parsing their own prose.
+  // Comments stripped before anything is located, the same trap check:contrast and
+  // check:features have each hit by parsing their own prose.
   const shipCode = stripComments(shipSource);
 
   ok(
@@ -351,10 +351,9 @@ if (ledger === null) {
  * migration, which is append-only by the hand-written migration rule.
  */
 /*
- * 65, NOT THE 68 A WORKING TREE RUNS. check:head runs this gate against a FRESH CHECKOUT of HEAD,
- * which has no local D1, so the three assertions comparing the applied set to that database do not
- * run there. A floor set to the richer context's number fails the poorer one, and the poorer one is
- * the context CI has. The old 56 carried the same slack for the same reason.
+ * 65, NOT THE 68 A WORKING TREE WITH A LOCAL D1 RUNS: without a local database the three
+ * assertions comparing the applied set to it do not run, and a floor set to the richer context's
+ * number would fail the poorer one.
  */
 const MINIMUM_CHECKS = 65;
 const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);

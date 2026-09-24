@@ -169,8 +169,8 @@ if (Object.keys(manifest).length !== desired.length) {
   console.error(
     `\nExpected ${desired.length} monitor(s) in the manifest and have ` +
       `${Object.keys(manifest).length}. Refusing to write a partial manifest, because ` +
-      `check:uptime reads it as the complete set and a short one would pass by ` +
-      `checking less.`,
+      `it is read as the complete set and a short one would look complete ` +
+      `while covering less.`,
   );
   process.exit(1);
 }

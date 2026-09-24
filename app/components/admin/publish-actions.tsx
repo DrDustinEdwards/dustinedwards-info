@@ -16,9 +16,8 @@ import { OverflowMenu } from "./overflow-menu";
  * nothing is flipped, nothing is armed, and no handler has to run for the request
  * to say what the author asked for.
  *
- * That the transitions map correctly is asserted by `check:admin-ui` against
- * `publish-transition.mjs`: the intent is in the markup, so the gate reads it off
- * the rendered page rather than taking a click handler on trust.
+ * The transitions come from `publish-transition.mjs`: the intent is in the
+ * markup, readable off the rendered page rather than hidden in a click handler.
  */
 export function PublishActions({
   state,

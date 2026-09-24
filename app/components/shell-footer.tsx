@@ -18,7 +18,7 @@ import {
  * THE MACHINE LINKS ARE NOT DECORATION. `/llms.txt` and the feeds are how an agent reads this site,
  * so they stay in every page's footer, now under Writing.
  *
- * THE PROFILE LINKS CARRY rel="me", and `check:microformats` asserts that set equals
+ * THE PROFILE LINKS CARRY rel="me", and `check:machine-readable` asserts that set equals
  * `OWNER_PROFILES`. The same URLs are the Person record's sameAs, from the same constants.
  *
  * THE X MARK IS X's OWN PATH, from its brand toolkit's logo.svg, unaltered. Only the fill changes,
