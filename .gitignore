@@ -213,15 +213,15 @@ wrangler.watchdog.jsonc
 # tsconfig.cloudflare.json, which stay the only owners of their content.
 /.design-sync/ds-styles.css
 /.design-sync/tsconfig.paths.json
-# Assembled by build-inputs.mjs from canvas-constraints.md and conventions.md,
-# both committed beside it. Only the concatenation is derived; the skill takes
-# one readmeHeader path and those two have to share it.
+# Assembled by build-inputs.mjs from readme.md, committed beside it, plus the
+# preview cards' digest, which is what makes a changed card re-upload.
 /.design-sync/readme-header.md
 # Derived by scripts/build-guidelines.mjs from the comment blocks in the sheets
 # SHEETS names, and by scripts/build-capsid-guidelines.mjs from the ruling log.
 # Those two stay the only owners of that prose; a committed copy would be a
 # second owner that drifts the moment a comment is edited, which is why ruling
-# 109 says GENERATED rather than written.
+# 109 says GENERATED rather than written. build-inputs.mjs also copies
+# canvas-constraints.md and conventions.md in; those stay committed beside it.
 /.design-sync/guidelines/
 # Live page shots of the DEPLOYED site, uploaded to the Claude Design project
 # as reference images. STAYS LOCAL: these are observations of a deployment at a
