@@ -57,6 +57,20 @@ export function formatDuration(ms) {
 }
 
 /**
+ * Mails first and stores second. Storing first made a failed "unhealthy" mail permanent: the next
+ * firing read red as already reported and stayed silent for the whole incident.
+ *
+ * @param {{ email: unknown, write: boolean }} transition  from alertTransition
+ * @param {{ send: () => Promise<boolean>, write: () => Promise<void> }} io
+ * @returns {Promise<boolean>} false when a mail was due and did not go; the state is then left as it was
+ */
+export async function deliverTransition(transition, { send, write }) {
+  if (transition.email && !(await send())) return false;
+  if (transition.write) await write();
+  return true;
+}
+
+/**
  * @param {object} input
  * @param {unknown} input.stored       what KV held, or null when the key is absent
  * @param {boolean} input.storedReadable  false when the read itself FAILED
