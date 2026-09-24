@@ -6,7 +6,11 @@ import {
   watchdogActions,
   watchdogOutcome,
 } from "../app/lib/health/repair.mjs";
-import { alertTransition, formatDuration } from "../app/lib/health/alert-state.mjs";
+import {
+  alertTransition,
+  deliverTransition,
+  formatDuration,
+} from "../app/lib/health/alert-state.mjs";
 import {
   ERROR_WINDOW_MINUTES,
   errorRateQuery,
@@ -363,26 +367,29 @@ export default {
         }),
       );
 
-      if (transition.write) await writeState(env, transition.state);
-
-      if (transition.email?.kind === "opened") {
-        const changed = transition.email.checks;
-        await alert(env, subject, [
-          `Changed to unhealthy. Failing now: ${changed.join(", ") || "(the endpoint named none)"}.`,
-          "",
-          "You will not be mailed again about this until it recovers.",
-          "",
-          ...lines,
-        ]);
-      } else if (transition.email?.kind === "recovered") {
-        const was = transition.email.checks;
-        await alert(env, "dustinedwards.info recovered", [
-          `Health is green again after ${formatDuration(transition.email.durationMs)}.`,
-          "",
-          `Was failing: ${was.join(", ") || "(the endpoint named none)"}.`,
-          "",
-          renderBody(reading),
-        ]);
+      const email = transition.email;
+      const delivered = await deliverTransition(transition, {
+        send: () =>
+          email?.kind === "opened"
+            ? alert(env, subject, [
+                `Changed to unhealthy. Failing now: ${email.checks.join(", ") || "(the endpoint named none)"}.`,
+                "",
+                "You will not be mailed again about this until it recovers.",
+                "",
+                ...lines,
+              ])
+            : alert(env, "dustinedwards.info recovered", [
+                `Health is green again after ${formatDuration(email?.durationMs ?? null)}.`,
+                "",
+                `Was failing: ${email?.checks.join(", ") || "(the endpoint named none)"}.`,
+                "",
+                renderBody(reading),
+              ]),
+        write: () => writeState(env, transition.state),
+      });
+      // Thrown so the firing is recorded as failed; the unchanged state makes the next one retry.
+      if (!delivered) {
+        throw new Error(`the ${email?.kind} mail did not send, so the alert state was left unchanged`);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

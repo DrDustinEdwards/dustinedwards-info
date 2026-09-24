@@ -1,19 +1,10 @@
 # The restore drill: proves the documented backup path reconstructs D1.
 #
-# SEPARATE FROM Health, AND ON ITS OWN SCHEDULE, which is a correction rather
-# than a preference. The prompt that asked for this said to run it "from the
-# Health workflow weekly (its existing cron)". Health's existing cron is HOURLY
-# (`17 * * * *`), deliberately, and it is the off-platform second opinion on a
-# fifteen-minute watchdog. Hanging a drill that CREATES AND DELETES A REAL D1
-# DATABASE off that cron would run it twenty-four times a day, at roughly four
-# minutes and a few hundred round trips each.
+# On its own weekly schedule: a drill that CREATES AND DELETES A REAL D1
+# DATABASE is an expensive rehearsal, run when a rehearsal is worth its cost.
 #
-# So it gets its own weekly schedule and its own file. Health stays a cheap
-# poll that can safely run every hour; this stays an expensive rehearsal that
-# runs when a rehearsal is worth its cost.
-#
-# Actions are pinned BY COMMIT SHA, not by tag, for the reason ci.yml and
-# health.yml state: a tag is a moving pointer the upstream owner can repoint.
+# Actions are pinned BY COMMIT SHA, not by tag, for the reason ci.yml states: a
+# tag is a moving pointer the upstream owner can repoint.
 
 name: Restore drill
 

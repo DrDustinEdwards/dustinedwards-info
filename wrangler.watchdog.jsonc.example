@@ -10,9 +10,8 @@
  *   npx wrangler secret put OPERATOR_TOKEN -c wrangler.watchdog.jsonc
  *
  * A SECOND WORKER RATHER THAN A SECOND CRON ON THE SITE. A watcher that runs
- * inside the thing it watches dies with it, which is the argument
- * .github/workflows/health.yml used to reject every in-Worker design. A
- * separate Worker keeps that property against everything except a
+ * inside the thing it watches dies with it. A separate Worker keeps that
+ * property against everything except a
  * Cloudflare-wide outage, in which case the site is down anyway. The whole
  * ruling, and the measurement that forced the transport, are in
  * workers/watchdog.ts.
@@ -42,8 +41,7 @@
 	// EVERY FIFTEEN MINUTES, and this cron is now the ONE owner of the poll
 	// interval. `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs
 	// decides when the home page calls its health verdict stale, and
-	// the two must mean the same number of seconds: change them together. It used to parse health.yml's cron;
-	// that workflow is now the hourly second opinion and no longer sets the pace.
+	// the two must mean the same number of seconds: change them together.
 	"triggers": {
 		"crons": ["*/15 * * * *"]
 	},

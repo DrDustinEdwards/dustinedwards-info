@@ -7,10 +7,11 @@
 # defects were found by him clicking. The smoke credential ended that; this
 # workflow is what makes the machine do the clicking on a schedule.
 #
-# A failing run IS the alert, on health.yml's mechanism exactly: GitHub emails
-# the repository owner when a SCHEDULED run fails, and that is the whole
-# delivery path. No notification service, no webhook, nothing to configure, and
-# it lives outside Cloudflare so it still speaks when the Worker is broken.
+# A failing run IS the alert: GitHub emails a failed run to the account that
+# started it (for the weekly schedule, the account that last edited the cron;
+# for a run ship starts, the account ship ran under). No notification service,
+# no webhook, and it lives outside Cloudflare so it still speaks when the Worker
+# is broken.
 #
 # ## IT WATCHES THE DEPLOYED SITE, AND THAT IS THE POINT
 #
@@ -37,9 +38,9 @@
 # is about THAT COMMIT. This needs a deployed site to look at, which a commit
 # does not have, and a credential a fork's pull request must never hold.
 #
-# NOT in ship: recorded as Dustin's open call and left there deliberately. Ship
-# already refuses on a red gate tier; adding a four-minute browser run to every
-# deploy is a cost decision, not a correctness one.
+# AFTER ship, not inside it (ruling 151, 2026-09-24): ship's last step starts
+# this workflow against the deploy it just made, so every deploy is tested in a
+# browser without making ship wait four minutes for it.
 #
 # ## WHAT IT CANNOT SEE
 #
@@ -50,23 +51,20 @@
 # out correctly and is unreadable passes. The gate prints its own
 # remaining-human list every run; that list is the honest scope of this alert.
 #
-# And the schedule's own limits, identical to health.yml's: GitHub disables
-# schedules on repositories inactive for 60 days and does so SILENTLY, scheduled
-# runs are best effort and are often late, and the email depends on the owner's
-# notification settings.
+# And the schedule's own limits: GitHub disables schedules on repositories
+# inactive for 60 days and does so SILENTLY, scheduled runs are best effort and
+# are often late, and the email depends on the owner's notification settings.
 
 name: Browser
 
 on:
   schedule:
-    # Daily, not every 15 minutes. Layout does not drift between deploys the way
-    # a derived index does: the failure this catches arrives WITH a change, and
-    # ship already ran the gate tier before that change went out. A daily sweep
-    # is the backstop for what ship's tier cannot see, and a browser run is two
-    # orders of magnitude more expensive than a health poll.
-    - cron: "17 6 * * *"
-  # So it can be run against the live site the moment a deploy lands, without
-  # waiting for tomorrow or editing the schedule.
+    # Weekly, Monday 06:17 UTC (ruling 151). The failure this catches arrives
+    # WITH a deploy, and ship starts this workflow after every deploy; the weekly
+    # run is the backstop for what arrives without one: an expired credential, a
+    # drifted secret, a platform change.
+    - cron: "17 6 * * 1"
+  # How ship starts it after a deploy, and how to run it by hand.
   workflow_dispatch:
 
 # Read-only. This job reads a secret and drives a browser; it writes nothing,
@@ -169,7 +167,7 @@ jobs:
       - name: Allow Chromium's sandbox to start
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
-      # THE ORIGIN IS DERIVED FROM THE REPO, exactly as health.yml derives it,
+      # THE ORIGIN IS DERIVED FROM THE REPO,
       # and that is why this job checks out the source. `app/lib/seo.ts` states
       # SITE_ORIGIN once; a URL typed into this file would be a second copy that
       # goes stale on precisely one day, the DNS cutover.

@@ -617,19 +617,35 @@ Then check by hand:
 
 ---
 
-## 11. Alerting: a scheduled GitHub Actions run is the alert
+## 11. Alerting: the watchdog and the uptime monitors email Dustin
 
-**Added 2026-08-22, because there was none. RULED AGAIN 2026-08-23, and this
-section is the replacement rather than an edit.** The Ask index lost nine
-records on 31 July and it was found on 21 August, by a badge on a page somebody
-happened to open. `askIndexStatus` had been returning 9 for three weeks. Nothing
-was broken about the detection; there was no path from the number to a person.
+**Added 2026-08-22, because there was none; rewritten 2026-09-24 for ruling
+151.** The Ask index lost nine records on 31 July and it was found on 21 August,
+by a badge on a page somebody happened to open. Nothing was broken about the
+detection; there was no path from the number to a person. Three paths exist now,
+and each reaches Dustin's inbox by email:
 
-`.github/workflows/health.yml` polls `/api/health` every 15 minutes and fails
-its run on any non-200, on a body that does not parse, or on `ok: false`.
-**GitHub emails the repository owner when a scheduled run fails, by default, and
-that is the whole delivery mechanism.** No notification service, no webhook, no
-secret to set or rotate.
+- **The watchdog Worker** (`workers/watchdog.ts`, every 15 minutes, inside
+  Cloudflare). It reads `/api/health` through a service binding, runs the
+  repairs `app/lib/health/repair.mjs` allows, re-reads, and also reads the site
+  Worker's error rate. It mails `ALERT_EMAIL` through Cloudflare Email Sending
+  ONCE when health goes red and once when it recovers, never per firing. The
+  mail is sent before the state that suppresses the next one is stored, so a
+  failed send is retried on the next firing, and the firing records as failed.
+- **The external uptime monitors** (UptimeRobot, `scripts/uptime-monitors.json`,
+  reconciled by every ship). Two monitors, the home page and `/api/health`,
+  from OUTSIDE Cloudflare, which the watchdog cannot be (a Worker cannot make an
+  ordinary request to a Worker on its own zone). `/api/health` answers 503 when
+  any check fails, so the second monitor catches a failing check as well as an
+  outage. They mail the account's active email contact once on down and once on
+  up; `uptime-ensure` refuses to create a monitor with no such contact.
+- **The browser test** (`.github/workflows/browser.yml`), started by ship after
+  every deploy and weekly as a backstop. A failed run emails the account that
+  started it.
+
+The hourly GitHub `health.yml` poll these replaced was retired on 2026-09-24:
+it duplicated the watchdog's poll and the uptime monitors' outside view, and
+GitHub runs schedules late or not at all under load.
 
 The checks and their order are owned by `runHealthChecks` in
 `app/lib/health/checks.server.ts`; this paragraph points at it rather than
@@ -642,29 +658,25 @@ individually timed out, so one wedged binding cannot hang the response. The body
 only; the numbers behind a failure are in Workers Logs, because the endpoint is
 unauthenticated.
 
-**Why an outside watcher and not a cron in the Worker.** A watcher that runs
-inside the thing it watches dies with it, and its silence then looks exactly
-like health. GitHub Actions is outside Cloudflare entirely, so it still speaks
-when the Worker is broken, which is the property that makes it a dead man's
-switch rather than a second opinion.
+**Why a watcher outside the site Worker.** A watcher that runs inside the thing
+it watches dies with it, and its silence then looks exactly like health. The
+watchdog is a separate Worker, and the uptime monitors are outside Cloudflare
+entirely, so a broken site Worker is still reported.
 
 ### WHAT IT DOES NOT COVER
 
-Read this before treating a quiet inbox as good news. The workflow file repeats
-all of it at the top, where somebody editing it will meet it.
+Read this before treating a quiet inbox as good news.
 
-- **A STOPPED SCHEDULE IS SILENT.** GitHub disables scheduled workflows on
-  repositories with no activity for 60 days, quietly. Nothing here can detect
-  that: the thing that would report it is the thing that stopped. The mitigation
-  is that this repo is active, and the residual risk is accepted, not solved.
-- **Scheduled runs are best effort and are often late.** Fifteen minutes is a
-  request, not a promise, and a missed run is invisible for the same reason.
-- **Delivery depends on the owner's notification settings.** With Actions
-  notifications off, the run fails and nobody is told.
-- **It sees no reader.** A page that renders wrongly but returns 200 passes.
-  That is `verify-live`, which needs a deploy.
-- **It sees no layout, no admin plane, no bill.**
-- **Between polls it sees nothing.** Worst case fifteen minutes.
+- **A watchdog that stops firing is silent.** `verify-live` checks the home
+  page's health verdict is under two poll intervals old; nothing checks it
+  between deploys. The uptime monitors still cover an outage in that case.
+- **An email the provider fails to deliver is silent.** The watchdog retries a
+  send that errors, but a message accepted and then lost is not seen.
+- **The health checks see no reader.** A page that renders wrongly but returns
+  200 passes them. That is the browser test and `verify-live`.
+- **Nothing here sees the bill.**
+- **Between polls it sees nothing.** Worst case fifteen minutes for the
+  watchdog, the monitor interval for UptimeRobot.
 
 ### The webhook design that came before it, now REMOVED
 

@@ -977,6 +977,27 @@ let deferredMiss = "";
   if (deferredMiss) console.log(`  MISS: ${deferredMiss}`);
 }
 
+/*
+ * Ruling 151: the browser test runs against every deploy, not only on its weekly schedule. Started
+ * last, so it tests the synced content. A failure to start it is a miss: the deploy stands.
+ */
+announce("Start the browser test against this deploy");
+
+let browserMiss = "";
+{
+  const branch = run("git", ["rev-parse", "--abbrev-ref", "HEAD"], { capture: true }).text.trim();
+  const ref = branch && branch !== "HEAD" ? branch : "main";
+  const started = run("gh", ["workflow", "run", "browser.yml", "--ref", ref], { capture: true });
+  if (started.code !== 0) {
+    browserMiss =
+      `gh workflow run browser.yml --ref ${ref} did not start, so nothing is testing this deploy ` +
+      "in a browser until the weekly run. Start it with that command";
+    console.log(`  MISSED: ${browserMiss}`);
+  } else {
+    console.log(`  started browser.yml on ${ref}; a failed run notifies the account that started it`);
+  }
+}
+
 announce("Shipped");
 console.log(`  commit       ${sha}`);
 console.log(`  version      ${version}`);
@@ -984,7 +1005,8 @@ console.log(`  search index ${docs} records, identity and prose agree`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
 /* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
-if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || deferredMiss) {
+const misses = [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss, deferredMiss, browserMiss];
+if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || deferredMiss || browserMiss) {
   const behind = [
     askMiss ? "THE ASK INDEX" : "",
     mediaMiss ? "THE MEDIA INDEX" : "",
@@ -992,13 +1014,11 @@ if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || def
     watchdogMiss ? "THE WATCHDOG" : "",
     uptimeMiss ? "THE UPTIME MONITORS" : "",
     deferredMiss ? "DEFERRED DRIFT" : "",
+    browserMiss ? "THE BROWSER TEST" : "",
   ]
     .filter(Boolean)
     .join(" AND ");
-  const several =
-    [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss, deferredMiss].filter(
-      Boolean,
-    ).length > 1;
+  const several = misses.filter(Boolean).length > 1;
   console.error(`\n${"!".repeat(64)}`);
   console.error(`  DEPLOYED, BUT ${behind} ${several ? "NEED" : "NEEDS"} ATTENTION.`);
   if (askMiss) console.error(`  ask:      ${askMiss}`);
@@ -1007,6 +1027,7 @@ if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || def
   if (watchdogMiss) console.error(`  watchdog: ${watchdogMiss}`);
   if (uptimeMiss) console.error(`  uptime:   ${uptimeMiss}`);
   if (deferredMiss) console.error(`  deferred: ${deferredMiss}`);
+  if (browserMiss) console.error(`  browser:  ${browserMiss}`);
   console.error(
     `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
       `  means Ask can miss recent writing or the media library can misdescribe\n` +
@@ -1023,8 +1044,8 @@ if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || def
       `  site is still watched, by older code. Re-run \`npm run ship\`, or deploy\n` +
       `  it alone with \`npx wrangler deploy -c wrangler.watchdog.jsonc\`.\n\n` +
       `  The watchdog reads the same index drift every fifteen minutes and\n` +
-      `  attempts the same repair itself before it alerts; the hourly health.yml\n` +
-      `  run is the off-platform second opinion.`,
+      `  attempts the same repair itself before it alerts; the external uptime\n` +
+      `  monitors are the off-platform second opinion.`,
   );
   console.error(`${"!".repeat(64)}\n`);
   process.exit(1);
