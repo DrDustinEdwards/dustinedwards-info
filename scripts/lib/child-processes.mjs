@@ -283,7 +283,9 @@ export class ChildRegistry {
 }
 
 /**
- * By command line, never by process name: every one of them is `node`.
+ * By command line, never by process name: every one of them is `node`. Self's ANCESTORS are
+ * excused with it, because the ship needle matches ship's own launchers (the tee parent, and
+ * on Windows the `cmd /c node scripts/ship.mjs` shell).
  *
  * @param {Map<number, { ppid: number, command: string }>} table
  * @param {Array<{ needle: string, what: string }>} needles
@@ -291,10 +293,16 @@ export class ChildRegistry {
  * @returns {Array<{ pid: number, what: string }>}
  */
 export function busyProcesses(table, needles, self = 0) {
+  const excused = new Set([self]);
+  // Bounded: a reused pid can manufacture a parentage cycle.
+  for (let pid = table.get(self)?.ppid; pid && !excused.has(pid) && excused.size <= table.size; ) {
+    excused.add(pid);
+    pid = table.get(pid)?.ppid;
+  }
   /** @type {Array<{ pid: number, what: string }>} */
   const found = [];
   for (const [pid, entry] of table) {
-    if (pid === self) continue;
+    if (excused.has(pid)) continue;
     for (const { needle, what } of needles) {
       if (entry.command.includes(normaliseCommand(needle))) {
         found.push({ pid, what });
@@ -310,4 +318,6 @@ export const SHIP_BUSY_NEEDLES = [
   { needle: "scripts/check-all.mjs", what: "a check:all run" },
   { needle: "scripts/check-browser.mjs", what: "a check:browser run" },
   { needle: "preview --port 4173", what: "an orphaned preview server" },
+  // Two ships on one checkout run two builds into one build/ (2026-09-24: one wiped the other's manifest).
+  { needle: "scripts/ship.mjs", what: "another ship" },
 ];
