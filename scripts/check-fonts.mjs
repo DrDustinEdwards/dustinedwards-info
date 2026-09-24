@@ -149,8 +149,8 @@ assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile
  * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future file-backed block cannot
  * fall into the skip path unnoticed. Exact rather than a count: WHICH faces is the assertion.
  */
-/* "Inter Fallback" twice: a regular face and a bold one, one per weight band (app.css). */
-const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback"];
+/* "Inter Fallback" twice: a regular face and a bold one, one per weight band. The serif's twice: roman and italic. */
+const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback", "Source Serif 4 Web Fallback"];
 {
   const got = withoutFile.map((b) => b.family).sort();
   assertThat(
@@ -459,7 +459,7 @@ if (update) {
  */
 /* RE-MEASURED 2026-09-20 on a plain run: home.css added axis requests, and 240 then sat 28 under
    its count against a 5% tolerance. */
-const MINIMUM_CHECKS = 268;
+const MINIMUM_CHECKS = 520;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 
