@@ -414,9 +414,10 @@
   --line-strong: #8a7d6e;
   /* a press is not a hover and is never --visited */
   --brand-pressed: #2f1a4d;
-  /* legal on /search over paper and NOWHERE else */
-  --glass-fill-paper: #e7e2ee;
-  --glass-fill-paper: color-mix(in srgb, #e2dcf2 70%, #f4efe6);
+  /* What text on the glass pane sits on: --glass-pane (82% paper) over the palette's 45% scrim over
+     paper. Untinted. Measured by check:contrast; the pane itself paints --glass-pane. */
+  --glass-fill-paper: #e2ddd5;
+  --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #f4efe6);
   /* error TEXT, and the field border at --line-w-thick */
   --error: #8e1024;
   --error-fill: #8e1024;
@@ -576,8 +577,8 @@
     /* As in the light block. */
     --brand-pressed: #a08ecd;
     /* As in the light block. */
-    --glass-fill-paper: #2f2a2e;
-    --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
+    --glass-fill-paper: #1c1916;
+    --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #1c1916);
     /* As in the light block. */
     --error: #f0a9b4;
     --error-fill: #e08a98;
@@ -731,8 +732,8 @@
   /* As in the light block. */
   --brand-pressed: #a08ecd;
   /* As in the light block. */
-  --glass-fill-paper: #2f2a2e;
-  --glass-fill-paper: color-mix(in srgb, #b7a5e0 12%, #1c1916);
+  --glass-fill-paper: #1c1916;
+  --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #1c1916);
   /* As in the light block. */
   --error: #f0a9b4;
   --error-fill: #e08a98;
@@ -801,6 +802,13 @@
   syntax: "<number>";
   inherits: true;
   initial-value: 0;
+}
+
+/* The glass pane of the two overlays (ruling 149): untinted paper at 82% over a 12px backdrop blur.
+   Outside the palette blocks because it is translucent, and it follows each theme through --paper. */
+:root {
+  --glass-pane: color-mix(in srgb, var(--paper) 82%, transparent);
+  --glass-blur: 12px;
 }
 
 :root,

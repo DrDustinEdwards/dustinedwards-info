@@ -142,26 +142,40 @@
   margin: 0 auto;
 }
 
-.diagram-dark {
-  display: none;
+/* Which diagram shows, and which Shiki palette paints, is chosen on the theme scopes, as app.css
+   chooses every token. --shiki-on-light and --shiki-on-dark are a switch pair: the one that is on is
+   empty, and the one that is off is `initial`, so var(--off, X) yields X and var(--on, X) yields
+   nothing. One color survives in the declaration below, in either theme. */
+:root,
+[data-theme="light"] {
+  --diagram-light-display: block;
+  --diagram-dark-display: none;
+  --shiki-on-light: ;
+  --shiki-on-dark: initial;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .diagram-light {
-    display: none;
-  }
-
-  :root:not([data-theme]) .diagram-dark {
-    display: block;
+  :root:not([data-theme]) {
+    --diagram-light-display: none;
+    --diagram-dark-display: block;
+    --shiki-on-light: initial;
+    --shiki-on-dark: ;
   }
 }
 
-[data-theme="dark"] .diagram-light {
-  display: none;
+[data-theme="dark"] {
+  --diagram-light-display: none;
+  --diagram-dark-display: block;
+  --shiki-on-light: initial;
+  --shiki-on-dark: ;
 }
 
-[data-theme="dark"] .diagram-dark {
-  display: block;
+.diagram-light {
+  display: var(--diagram-light-display);
+}
+
+.diagram-dark {
+  display: var(--diagram-dark-display);
 }
 
 .diagram-title {
@@ -322,7 +336,7 @@
    4.5:1 (and on --surface-popover). With no attribute :root:not([data-theme]) answers; no light override. */
 .prose .shiki,
 .prose .shiki span {
-  color: var(--shiki-light);
+  color: var(--shiki-on-dark, var(--shiki-light)) var(--shiki-on-light, var(--shiki-dark));
 }
 
 /* The pre carries --shiki-light-bg inline but no inline background-color, so
@@ -338,24 +352,11 @@
   background-color: var(--shiki-light-bg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) .prose .shiki,
-  :root:not([data-theme]) .prose .shiki span {
-    color: var(--shiki-dark);
-  }
-
-  :root:not([data-theme]) .prose .shiki span[style*="--shiki-dark-bg"] {
-    background-color: var(--shiki-dark-bg);
-  }
-}
-
-[data-theme="dark"] .prose .shiki,
-[data-theme="dark"] .prose .shiki span {
-  color: var(--shiki-dark);
-}
-
-[data-theme="dark"] .prose .shiki span[style*="--shiki-dark-bg"] {
-  background-color: var(--shiki-dark-bg);
+/* In light this yields what the rule above paints (or nothing, for a span with no light background);
+   in dark, the dark background. */
+.prose .shiki span[style*="--shiki-dark-bg"] {
+  background-color: var(--shiki-on-dark, var(--shiki-light-bg, transparent))
+    var(--shiki-on-light, var(--shiki-dark-bg));
 }
 
 /*
