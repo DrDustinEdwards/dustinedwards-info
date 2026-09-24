@@ -53,8 +53,8 @@
 #        gh secret set D1_DATABASE_ID            (the real wrangler.jsonc's value)
 #        gh secret set KV_NAMESPACE_ID           (the real wrangler.jsonc's value)
 #
-#      OPERATOR_TOKEN is already set, for the health workflow, and this reuses
-#      it. SMOKE_TOKEN is not needed here.
+#      OPERATOR_TOKEN is already set, and this reuses it. SMOKE_TOKEN is not
+#      needed here.
 #
 # The two ids are account-scoped identifiers rather than credentials, and they
 # are secrets here for the same reason they are gitignored: the portfolio's
@@ -94,13 +94,14 @@ on:
         required: false
         default: main
 
-# `actions: read` is not decoration: ship asks the Actions API whether CI
-# concluded success for this exact sha, and refuses if it cannot read the
-# answer. Without this scope the deploy fails closed at that step, which is the
-# correct direction but a confusing way to learn about a permission.
+# `actions: write` is not decoration. Ship reads the Actions API to learn whether
+# CI concluded success for this exact sha, and refuses if it cannot; and its last
+# step starts browser.yml against the deploy (ruling 151), which is a dispatch.
+# Without read the deploy fails closed; without write it stands and reports the
+# browser test as a miss.
 permissions:
   contents: read
-  actions: read
+  actions: write
 
 # QUEUE, NEVER RACE. Two deploys of different shas running concurrently would
 # leave the account serving whichever one happened to finish last, which is not

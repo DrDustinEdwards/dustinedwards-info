@@ -1267,7 +1267,7 @@ const ASK_PROBE_LIMIT = 3;
     attr !== undefined,
     "no element on / carries data-health-age. The tile is in its `missing` state, " +
       "which means NOTHING has written the snapshot: not the watchdog, not ship, " +
-      "not the hourly workflow. Check the watchdog's cron and the APP_KV binding.",
+      "Check the watchdog's cron and the APP_KV binding.",
   );
 
   const age = attr === undefined ? Number.NaN : Number(attr);
@@ -1286,8 +1286,8 @@ const ASK_PROBE_LIMIT = 3;
     `the tile reports a verdict ${age} second(s) old against a bound of ${bound}s ` +
       `(two ${HEALTH_POLL_INTERVAL_SECONDS}s intervals). Nothing has polled /api/health ` +
       `recently, so the watchdog Worker is not firing. Check its Cron Trigger with ` +
-      `\`npx wrangler deployments list -c wrangler.watchdog.jsonc\` and its logs; the ` +
-      `hourly health.yml run is the only remaining watcher until it is fixed.`,
+      `\`npx wrangler deployments list -c wrangler.watchdog.jsonc\` and its logs; until it is ` +
+      `fixed, only the external uptime monitors are watching.`,
   );
 
   console.log(
