@@ -65,9 +65,9 @@
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
 
-/* 109% tuned by layout shift at 1280 and 375: 108% re-wrapped the /blog tag row, 110% shifted it. A
-   new tag can move the window; check:browser's /blog CLS case notices. Ascent and descent are Inter's
-   (0.969, 0.241) divided by the size-adjust. */
+/* 109% matches Inter's average advance. The filter rows no longer rely on it (FilterLink sizes them
+   from Inter's own widths); running text still does. Ascent and descent are Inter's (0.969, 0.241)
+   divided by the size-adjust. */
 @font-face {
   font-family: "Inter Fallback";
   font-style: normal;

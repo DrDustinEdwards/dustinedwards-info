@@ -21,6 +21,7 @@
     "build:publications": "node scripts/build-publications.mjs",
     "build:publication-twins": "node scripts/build-publication-twins.mjs",
     "build:enhance": "node scripts/build-enhance.mjs",
+    "build:inter-advances": "node scripts/build-inter-advances.mjs",
     "check": "node scripts/check-all.mjs",
     "check:all": "node scripts/check-all.mjs --all",
     "check:ci": "node scripts/check-all.mjs --ci",

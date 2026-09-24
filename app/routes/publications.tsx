@@ -1,6 +1,7 @@
 import { Form, Link } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
+import { FilterLink } from "~/components/filter-link";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import {
@@ -410,19 +411,22 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
         <nav className="list-filter" aria-label="Filter by topic">
           <span className="list-filter-label">Topics</span>
           {chips.map((chip) => (
-            <Link
+            <FilterLink
               key={chip.id}
               to={chip.href}
-              aria-current={chip.active ? "true" : undefined}
+              label={chip.label}
+              count={chip.count}
+              active={chip.active}
               title={chip.description}
-            >
-              {chip.label} <span className="filter-count">{chip.count}</span>
-            </Link>
+            />
           ))}
           {selectedCount > 0 ? (
-            <Link to={selectedHref} aria-current={selectedOnly ? "true" : undefined}>
-              Selected <span className="filter-count">{selectedCount}</span>
-            </Link>
+            <FilterLink
+              to={selectedHref}
+              label="Selected"
+              count={selectedCount}
+              active={selectedOnly}
+            />
           ) : null}
         </nav>
 
