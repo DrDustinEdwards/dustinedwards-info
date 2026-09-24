@@ -16,7 +16,7 @@ export function FilterLink({
   active: boolean;
   title?: string;
 }) {
-  const width = { "--w": interWidthEm(label, active ? 600 : 400) } as CSSProperties;
+  const width = { "--name-w": `${interWidthEm(label, active ? 600 : 400)}em` } as CSSProperties;
   return (
     <Link to={to} aria-current={active ? "true" : undefined} title={title}>
       <span className="filter-name" style={width}>
