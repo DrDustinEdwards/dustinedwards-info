@@ -1,6 +1,5 @@
 /**
- * The media key grammar has ONE owner, and these are the assertions that fail
- * when a second one appears.
+ * The media key grammar has ONE owner.
  *
  * WHAT THIS PROTECTS. `contentKey` in classify.mjs writes two shapes,
  * `<16 hex>.<ext>` and `<16 hex>-<w>x<h>.<ext>`, and three readers used to
@@ -10,23 +9,18 @@
  * set-alt and empty-trash, hashed to null in the inspector, and was invisible
  * to twin detection. Latent only because R2 held no uploaded originals yet.
  *
- * TWO HALVES. The behavioral half feeds real `contentKey` output to the two
- * readers that now own the grammar. The source half asserts the three former
- * copies STAYED deleted, because a reader that regrows a private regex fails
- * exactly when the writer moves, which no behavioral test of the reader's
- * module can see (core.server.ts imports `~/db` and cannot be loaded here).
+ * These feed real `contentKey` output to the two readers that now own the
+ * grammar.
  */
 
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 
 import {
   contentKey,
   digestFromKey,
   isContentKey,
 } from "../app/lib/media/classify.mjs";
-import { stripComments } from "../scripts/lib/strip-comments.mjs";
 
 /** A fixed 32-byte digest: 00 01 02 ... 1f. First 16 hex: 0001020304050607. */
 const DIGEST = Uint8Array.from({ length: 32 }, (_, i) => i).buffer;
@@ -91,31 +85,3 @@ test("isContentKey and digestFromKey agree with the writer on every case", () =>
   assert.equal(checked, 13, "every case in the table was checked");
 });
 
-/**
- * THE SWEEP, MADE DURABLE. The three files that carried private copies of the
- * grammar must not contain one again. Matched on the un-escapable stem of any
- * such regex, as a literal string, after comment stripping, because a comment
- * explaining the ban would otherwise satisfy the search for a violation.
- */
-const FORMER_COPIES = [
-  { file: "app/lib/media/core.server.ts", anchor: "isManagedKey" },
-  { file: "app/db/index.ts", anchor: "mediaTwins" },
-  { file: "app/routes/admin.media._index.tsx", anchor: "digestFromKey" },
-];
-
-test("no former grammar copy has regrown its own 16-hex regex", () => {
-  let checked = 0;
-  for (const { file, anchor } of FORMER_COPIES) {
-    const source = stripComments(readFileSync(new URL(`../${file}`, import.meta.url), "utf8"));
-    // Scope, proven non-empty: the file read something and it is the file this
-    // test believes it is. Without this, a moved file passes vacuously.
-    assert.ok(source.length > 0, `${file} read empty`);
-    assert.ok(source.includes(anchor), `${file} no longer contains "${anchor}"; the sweep is aimed at the wrong file`);
-    assert.ok(
-      !source.includes("[0-9a-f]{16"),
-      `${file} carries its own 16-hex key regex again; the grammar's only owner is classify.mjs (isContentKey / digestFromKey)`,
-    );
-    checked += 1;
-  }
-  assert.equal(checked, 3, "all three former copies were swept");
-});

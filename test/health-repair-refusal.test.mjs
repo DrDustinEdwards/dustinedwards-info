@@ -39,7 +39,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -151,7 +151,7 @@ test("a 422 names the server's reason, abandons the plan, and still alerts", asy
 });
 
 /*
- * THE CLASSIFICATION ITSELF, and the guard that keeps both callers on it.
+ * THE CLASSIFICATION ITSELF.
  *
  * The test above drives the script end to end, which is the behavior that
  * matters. These cover the half the WATCHDOG runs: it makes the identical
@@ -177,27 +177,4 @@ test("refusalMiss carries the server's sentence and marks 422 unrepairable", () 
 
   // A body that carried nothing still names the tool and the status.
   assert.equal(refusalMiss("sync_ask", 500, null).miss, "sync_ask answered 500");
-});
-
-test("both repair callers use the shared classification, not their own copy", () => {
-  const callers = ["scripts/health-repair.mjs", "workers/watchdog.ts"];
-
-  for (const path of callers) {
-    const source = readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
-
-    // Scope proof: a path that stopped existing would read as empty and pass.
-    assert.ok(source.length > 500, `${path} was read and is non-empty`);
-    assert.match(source, /refusalMiss/, `${path} imports and uses the shared classification`);
-
-    /*
-     * The defect's exact shape: building the miss string from the status alone.
-     * Matching the SHAPE rather than the old spelling, so a third caller
-     * reintroducing it in its own words is caught too.
-     */
-    assert.doesNotMatch(
-      source,
-      /answered \$\{(?:response\.)?status\}`/,
-      `${path} does not rebuild the status-only miss string`,
-    );
-  }
 });

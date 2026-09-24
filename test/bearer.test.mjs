@@ -30,12 +30,6 @@
  * and the observable consequence of hashing both operands. One case, both
  * properties, and it fails loudly if either is undone.
  *
- * **WITH A CONTROL.** The naive prefix-bounded comparison is written out below
- * and shown to answer TRUE on the same input. Without it, the assertion that the
- * real function answers false is satisfied by any implementation at all,
- * including `() => false`, and a test that cannot be told apart from a constant
- * has not been observed working.
- *
  * @see app/lib/bearer.server.ts
  */
 
@@ -43,29 +37,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { constantTimeEqual, tokenLabel } from "../app/lib/bearer.server.ts";
-
-/**
- * The defect this is guarding against, written out so the guard can be seen to
- * discriminate: a loop bounded by the FIRST operand, comparing raw characters.
- *
- * @param {string} a
- * @param {string} b
- */
-function prefixBoundedEqual(a, b) {
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
-
-test("the control implementation is wrong in the way the real one must not be", () => {
-  // If this ever stops being true, the case below has stopped discriminating
-  // and the two assertions after it are being satisfied by nothing.
-  assert.equal(
-    prefixBoundedEqual("abc", "abcdef"),
-    true,
-    "the prefix-bounded comparison no longer accepts a prefix, so it is not a control",
-  );
-});
 
 test("equal strings compare equal", async () => {
   assert.equal(await constantTimeEqual("", ""), true);

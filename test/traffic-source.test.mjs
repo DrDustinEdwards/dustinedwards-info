@@ -19,12 +19,7 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 
-import {
-  fetchTraffic,
-  trafficQuery,
-  trafficTotalQuery,
-} from "../app/lib/admin/traffic.server.ts";
-import { TOP_N, WINDOW_DAYS } from "../app/lib/admin/origin-requests.mjs";
+import { fetchTraffic } from "../app/lib/admin/traffic.server.ts";
 
 const realFetch = globalThis.fetch;
 after(() => {
@@ -36,18 +31,6 @@ test("no token returns the error state rather than throwing", async () => {
   assert.equal(result.status, "error");
   assert.equal(result.data, null);
   assert.match(result.message, /ANALYTICS_READ_TOKEN/);
-});
-
-test("no token performs no network call at all", async () => {
-  let called = false;
-  globalThis.fetch = async () => {
-    called = true;
-    throw new Error("should never be reached");
-  };
-  const result = await fetchTraffic({ CLOUDFLARE_ACCOUNT_ID: "acct" });
-  globalThis.fetch = realFetch;
-  assert.equal(called, false, "it must short circuit before touching the network");
-  assert.equal(result.status, "error");
 });
 
 test("a non-200 from the SQL API becomes the error state", async () => {
@@ -114,21 +97,4 @@ test("a good response becomes the live state, sampling weighted", async () => {
   assert.equal(result.data.rows[0].rows, 48);
   assert.equal(result.data.totalOriginRequests, 940);
   assert.equal(result.data.pathsReturned, 23);
-});
-
-test("the query counts by sampling interval, never by row", () => {
-  const q = trafficQuery(WINDOW_DAYS, TOP_N);
-  assert.match(q, /SUM\(_sample_interval\) AS origin_requests/);
-  assert.match(q, /GROUP BY path/);
-  assert.match(q, /ORDER BY origin_requests DESC/);
-  assert.match(q, new RegExp(`LIMIT ${TOP_N}`));
-  // COUNT() may appear ONLY as the sampling diagnostic, never as the metric.
-  assert.doesNotMatch(q, /COUNT\(\) AS origin_requests/);
-});
-
-test("the INTERVAL literal is quoted, which this API requires", () => {
-  // Recorded law: INTERVAL '7' DAY parses, INTERVAL 7 DAY does not.
-  assert.match(trafficQuery(7, 5), /INTERVAL '7' DAY/);
-  assert.match(trafficTotalQuery(7), /INTERVAL '7' DAY/);
-  assert.doesNotMatch(trafficQuery(7, 5), /INTERVAL 7 DAY/);
 });

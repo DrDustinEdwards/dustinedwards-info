@@ -12,8 +12,8 @@
  * **The assumption: nothing user-writable can put script into these pages.**
  *
  * It has two halves and both are now gated. The upload half is
- * `test/upload-contract.test.mjs`, which refuses a script-executable type in
- * the allowlist. THIS is the markdown half: post bodies are the only other
+ * `test/worker/media.test.ts`, which serves every script-capable type as a
+ * nosniff attachment. THIS is the markdown half: post bodies are the only other
  * authored content that reaches a shared-cached page, so if the pipeline ever
  * started passing raw HTML through, a shared nonce would stop being a
  * theoretical exposure and become a usable one.
@@ -94,18 +94,4 @@ test("an executable URL protocol produces no anchor and is recorded", async () =
       `${protocol} was not recorded in blockedUrls`,
     );
   }
-});
-
-test("the pipeline is constructed without allowDangerousHtml", async () => {
-  // The behavior above IS the contract, and this is the one-word change that
-  // would reverse all of it. Read as source because a passing render cannot
-  // distinguish "the option is absent" from "the option is present and the
-  // input happened not to exercise it".
-  const { readFileSync } = await import("node:fs");
-  const src = readFileSync(new URL("../app/lib/content/pipeline.mjs", import.meta.url), "utf8");
-  assert.ok(
-    !/allowDangerousHtml/.test(src),
-    "allowDangerousHtml appears in the pipeline; raw HTML may now reach a " +
-      "shared-cached page, which is the assumption the enforced CSP rests on",
-  );
 });

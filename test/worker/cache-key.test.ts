@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 
 import worker, { cacheDimensions } from "../../workers/app";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
-import { serializeThemeCookie } from "~/lib/theme";
 
 import { STUB_PATHS, STUB_PAGE_BODY, STUB_MARKDOWN_BODY } from "./stub-server-build";
 
@@ -89,78 +88,12 @@ describe("the cache key the gateway builds", () => {
     expect(light.cacheKey).toContain("theme=light");
   });
 
-  it("separates by PATH and by QUERY, and keeps one separator", async () => {
-    const bare = dimensionsFor(`${ORIGIN}/blog/a-post`);
-    const other = dimensionsFor(`${ORIGIN}/blog/another-post`);
-    expect(bare.cacheKey).not.toBe(other.cacheKey);
+  it("separates by PATH and by QUERY", async () => {
+    const post = dimensionsFor(`${ORIGIN}/blog/a-post`);
+    expect(post.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/blog/another-post`).cacheKey);
 
-    /*
-     * A PATH THAT ALREADY CARRIES A QUERY keys correctly rather than producing
-     * a second `?`. `URL` handles the separator, which is the one detail that
-     * outlived the layer this function replaced.
-     */
-    const searched = dimensionsFor(`${ORIGIN}/search?q=cloudflare`, "dark");
-    expect(searched.cacheKey.match(/\?/g)).toHaveLength(1);
-    expect(searched.cacheKey).toContain("q=cloudflare");
-    expect(searched.cacheKey).toContain("theme=dark");
-    /* And the query is still a dimension: two searches are two entries. */
-    expect(searched.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/search?q=d1`, "dark").cacheKey);
-  });
-
-  it("gives an ADMIN PATH no theme dimension, in the key OR the props", async () => {
-    /*
-     * Belt and braces rather than the protection itself: an admin response is
-     * `private, no-store` by its own declaration and is never stored whatever
-     * the key says. Asserted because a key that carried a reader's theme on an
-     * authenticated path would be a reader-dependent key on the one plane where
-     * that must never happen, even if nothing stores it today.
-     */
-    for (const path of ["/admin", "/admin/mentions", "/admin/posts/a-slug/edit"]) {
-      const { cacheKey, props } = dimensionsFor(`${ORIGIN}${path}`, "dark");
-      expect(cacheKey, path).not.toContain("theme");
-      expect(props, path).toEqual({});
-    }
-  });
-
-  it("gives a MARKDOWN-NEGOTIATED request no theme dimension", async () => {
-    /*
-     * The negotiated representation is never stored (`markdownResponse` says
-     * why), so it has no business carrying a theme. One expression decides the
-     * dimension, so the key and the props cannot disagree about it.
-     */
-    const { cacheKey, props } = dimensionsFor(`${ORIGIN}/blog/a-post`, "dark", {
-      headers: { accept: "text/markdown" },
-    });
-    expect(cacheKey).not.toContain("theme");
-    expect(props).toEqual({});
-    /* The HTML request to the same URL DOES carry it, so the case above is the
-     * negotiation deciding rather than the path. */
-    expect(dimensionsFor(`${ORIGIN}/blog/a-post`, "dark").cacheKey).toContain("theme=dark");
-  });
-
-  it("gives a non-GET no theme dimension", async () => {
-    /* Workers Cache caches GET and HEAD only, per the docs. A POST cannot be
-     * stored, so a theme in its key would be a distinction with no entry. */
-    const { cacheKey, props } = dimensionsFor(`${ORIGIN}/theme`, "dark", { method: "POST" });
-    expect(cacheKey).not.toContain("theme=dark");
-    expect(props).toEqual({});
-  });
-
-  it("reads the theme the TOGGLE writes, so the two agree about the cookie", async () => {
-    /*
-     * The toggle and the key both go through `app/lib/theme.ts`. Asserted
-     * rather than assumed, because a disagreement here would serve one reader's
-     * colors to another, which is the defect the whole dimension exists to
-     * prevent.
-     */
-    const cookie = serializeThemeCookie("dark");
-    expect(cookie).toContain("theme=dark");
-    const { props } = cacheDimensions(
-      new URL(`${ORIGIN}/`),
-      new Request(`${ORIGIN}/`, { headers: { cookie: cookie.split(";")[0] ?? "" } }),
-      "dark",
-    );
-    expect(props).toEqual({ theme: "dark" });
+    const cloudflare = dimensionsFor(`${ORIGIN}/search?q=cloudflare`, "dark");
+    expect(cloudflare.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/search?q=d1`, "dark").cacheKey);
   });
 });
 

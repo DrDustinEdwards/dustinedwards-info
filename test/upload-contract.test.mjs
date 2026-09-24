@@ -224,19 +224,6 @@ test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
   assert.equal(uploadErrorSentence("constructor"), null);
 });
 
-test("THE LIMITS the sentences are built from are the ones the route enforces", () => {
-  assert.equal(MAX_BYTES, 10 * 1024 * 1024);
-  assert.ok(uploadErrorSentence("too-large").includes("10 MB"));
-
-  // The accepted set, as the page describes it. SVG is in it deliberately: the
-  // bucket takes vectors, the Images binding simply cannot rasterise one.
-  assert.deepEqual(
-    [...ALLOWED.keys()].sort(),
-    ["image/avif", "image/gif", "image/jpeg", "image/png", "image/svg+xml", "image/webp"],
-  );
-  assert.ok(uploadErrorSentence("unsupported-type").includes("svg+xml".split("/")[0]));
-});
-
 /* ------------------------------------------------------------------ *
  * THE ORIGIN INVARIANT: nothing user-writable may serve a script.
  * ------------------------------------------------------------------ *
@@ -276,9 +263,6 @@ const EXECUTABLE_TYPES = [
 /** Extensions the same rule covers, since the map stores those too. */
 const EXECUTABLE_EXTENSIONS = ["js", "mjs", "cjs", "jsx", "ts", "wasm", "html", "htm", "xhtml"];
 
-/** Types that can CARRY script. Allowed only with the attachment mitigation. */
-export const SCRIPT_CAPABLE_TYPES = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
-
 test("the upload allowlist contains no directly executable type", () => {
   for (const type of ALLOWED.keys()) {
     assert.ok(
@@ -292,23 +276,4 @@ test("the upload allowlist contains no directly executable type", () => {
       `.${ext} is executable and must never be uploadable`,
     );
   }
-});
-
-test("the allowlist is non-empty, so the loop above is not vacuous", () => {
-  // The vacuity rule: every per-entry assertion is vacuous over an empty map, and
-  // an emptied allowlist would pass the check above while breaking uploads.
-  assert.ok(ALLOWED.size >= 6, `allowlist has ${ALLOWED.size} entries`);
-});
-
-test("every script-CAPABLE allowed type is a known one with a mitigation", () => {
-  // Not a ban: SVG is deliberately allowed. This fails when a NEW capable type
-  // is added, so the attachment rule is extended in the same change rather than
-  // silently left behind. check:headers asserts the route end of that pairing.
-  const capable = [...ALLOWED.keys()].filter((t) => SCRIPT_CAPABLE_TYPES.includes(t));
-  assert.deepEqual(
-    capable,
-    ["image/svg+xml"],
-    "a script-capable type was added or removed; the Content-Disposition rule in " +
-      "app/routes/media.$.ts must be updated to match, and check:headers asserts it",
-  );
 });

@@ -20,8 +20,7 @@
  * discriminate: a folded scalar's continuation lines are indented, so the `^`
  * anchor already misses them, and an appended key at column zero correctly ends
  * the scalar above it. YAML's own indentation rules make the line edit safer
- * than it looks, which is why the two real cases each carry a control showing
- * the old body producing the wrong answer on the same input.
+ * than it looks.
  *
  * @see app/lib/editor/publish-policy.mjs
  */
@@ -118,22 +117,6 @@ test("a document with no frontmatter is returned untouched", () => {
   assert.equal(forceFirstPublished(bare, "2026-08-28"), bare);
 });
 
-/**
- * The old body, lifted verbatim, so the two documents below can be shown to
- * discriminate rather than asserted to.
- *
- * @param {string} raw
- * @param {string | null} value
- */
-function naiveLineEdit(raw, value) {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
-  if (!match?.[1]) return raw;
-  const rest = raw.slice(match[0].length);
-  const kept = match[1].split("\n").filter((line) => !/^first_published\s*:/.test(line));
-  if (value) kept.push(`first_published: ${value}`);
-  return `---\n${kept.join("\n")}\n---\n${rest}`;
-}
-
 /*
  * THE TWO DOCUMENTS THE LINE EDIT GETS WRONG.
  *
@@ -168,21 +151,6 @@ first_published:
 
 Body.
 `;
-
-test("the controls: the line edit really does corrupt both documents", () => {
-  // Without this, the two cases below are satisfied by any implementation at
-  // all, including one that never had the defect.
-  assert.throws(
-    () => matter(naiveLineEdit(QUOTED_KEY, "2026-08-28")),
-    /duplicated mapping key/,
-    "the quoted-key document no longer produces a duplicate, so it does not discriminate",
-  );
-  assert.equal(
-    fields(naiveLineEdit(LIST_VALUE, "2026-08-28")).title,
-    "A post - 2020-01-01",
-    "the list-value document no longer corrupts the title, so it does not discriminate",
-  );
-});
 
 test("A QUOTED KEY: the edit would append a duplicate and break the document", () => {
   // The naive edit leaves `"first_published"` in place and adds a second key,

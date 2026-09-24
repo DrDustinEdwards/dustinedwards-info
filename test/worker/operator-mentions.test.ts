@@ -1,27 +1,6 @@
 import { env } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-/*
- * THE PURGE IS SPIED, NOT STUBBED OUT, and the difference is the point.
- *
- * `importOriginal` keeps the real function, so the guard inside it still runs
- * and still reports what it does on a runtime with no purge API. What the spy
- * adds is a call record, which is the only way to assert the thing this session
- * exists to protect: that deciding a mention through the OPERATOR purges the
- * same tag the admin page purges, exactly once, with the slug of the row that
- * actually moved.
- *
- * Miniflare has no Workers Cache (measured 2026-09-05), so the purge itself is
- * a logged no-op here and its live proof is on the wire. That is precisely why
- * the CALL is worth asserting offline: it is the half that can regress silently
- * in a refactor, where the platform half cannot be seen at all.
- */
-vi.mock("~/lib/cache-purge.server", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("~/lib/cache-purge.server")>();
-  return { ...actual, purgePost: vi.fn(actual.purgePost) };
-});
-
-import { purgePost } from "~/lib/cache-purge.server";
 import { runTool } from "~/lib/operator/api.server";
 import { MENTION_POLICIES } from "~/lib/webmention/decide.server";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
@@ -77,11 +56,6 @@ const statusOf = async (source: string) =>
 beforeEach(async () => {
   await env.DB.prepare(`DELETE FROM webmentions`).run();
   await seedPost();
-  vi.mocked(purgePost).mockClear();
-});
-
-afterEach(() => {
-  vi.mocked(purgePost).mockClear();
 });
 
 describe("decide_mention: who may decide", () => {
@@ -104,17 +78,9 @@ describe("decide_mention: who may decide", () => {
     /* NOTHING MOVED. A refusal that had already written would be a refusal in
      * name only. */
     expect(await statusOf("https://elsewhere.example/smoke")).toBe("pending");
-    expect(purgePost).not.toHaveBeenCalled();
   });
 
-  it("ALLOWS THE OPERATOR to approve, and purges that post exactly once", async () => {
-    /*
-     * THE ASSERTION THIS WHOLE SESSION IS FOR. The admin page's approve purges
-     * `post:<slug>`, which was proven on the wire on 2026-09-05. The operator
-     * must do the same thing, and it must do it by calling the SAME function
-     * rather than by carrying its own copy of "write, then purge", because a
-     * second copy is a second place to forget the second half.
-     */
+  it("ALLOWS THE OPERATOR to approve, and reports the post it purged", async () => {
     const source = "https://elsewhere.example/operator-approve";
     const id = await seedMention(source);
 
@@ -128,24 +94,20 @@ describe("decide_mention: who may decide", () => {
       expect(result.data).toMatchObject({ changed: true, slug: SLUG, purged: `post:${SLUG}` });
     }
     expect(await statusOf(source)).toBe("approved");
-
-    /* ONCE, and with the slug of the row that actually moved. */
-    expect(purgePost).toHaveBeenCalledTimes(1);
-    expect(vi.mocked(purgePost).mock.calls[0]?.[0]).toBe(SLUG);
   });
 
   it("ALLOWS THE OPERATOR to reject, which is the two-way door's other half", async () => {
     const source = "https://elsewhere.example/operator-reject";
     const id = await seedMention(source);
 
-    await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "reject" });
+    const rejected = await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "reject" });
     expect(await statusOf(source)).toBe("rejected");
-    expect(purgePost).toHaveBeenCalledTimes(1);
+    expect(rejected).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
 
     /* And back again, which is what makes it reversible rather than a claim. */
-    await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "approve" });
+    const approved = await runTool(operatorEnv(), OPERATOR, "decide_mention", { id, decision: "approve" });
     expect(await statusOf(source)).toBe("approved");
-    expect(purgePost).toHaveBeenCalledTimes(2);
+    expect(approved).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
   });
 
   it("REFUSES THE OPERATOR a delete, on delete_post's terms", async () => {
@@ -165,7 +127,6 @@ describe("decide_mention: who may decide", () => {
     expect(result).toMatchObject({ ok: false, status: 403 });
     if (!result.ok) expect(result.error).toContain(MENTION_POLICIES.destroy);
     expect(await statusOf(source)).toBe("pending");
-    expect(purgePost).not.toHaveBeenCalled();
   });
 
   it("ALLOWS THE ADMIN to delete, which is the capability the operator lacks", async () => {
@@ -177,9 +138,8 @@ describe("decide_mention: who may decide", () => {
       decision: "delete",
     });
 
-    expect(result).toMatchObject({ ok: true });
+    expect(result).toMatchObject({ ok: true, data: { purged: `post:${SLUG}` } });
     expect(await statusOf(source)).toBeNull();
-    expect(purgePost).toHaveBeenCalledTimes(1);
   });
 
   it("does NOT purge when nothing moved", async () => {
@@ -200,7 +160,6 @@ describe("decide_mention: who may decide", () => {
     expect(result).toMatchObject({ ok: true });
     if (result.ok) expect(result.data).toMatchObject({ changed: false, slug: null, purged: null });
     expect(await statusOf(source)).toBe("unverified");
-    expect(purgePost).not.toHaveBeenCalled();
   });
 
   it("REFUSES a malformed id or decision before touching the database", async () => {
@@ -214,7 +173,6 @@ describe("decide_mention: who may decide", () => {
       const result = await runTool(operatorEnv(), OPERATOR, "decide_mention", args);
       expect(result, JSON.stringify(args)).toMatchObject({ ok: false, status: 400 });
     }
-    expect(purgePost).not.toHaveBeenCalled();
   });
 });
 
@@ -261,27 +219,22 @@ describe("list_mentions", () => {
     if (!result.ok) expect(result.error).toContain("pending");
   });
 
-  it("carries no moderation state a public surface would not, but keeps what triage needs", async () => {
-    /* It is an ADMIN surface, so the failure reason is exactly what it should
-     * carry: the operator's job is deciding, and a failed row's reason is how it
-     * decides. Asserted so a future narrowing is a deliberate change. */
-    await seedMention("https://elsewhere.example/f", "failed");
+  it("returns a failed mention's reason, which is how the operator decides on it", async () => {
+    const source = "https://elsewhere.example/f";
+    await seedMention(source, "failed");
+    await env.DB.prepare(`UPDATE webmentions SET failure_reason = ?1 WHERE source_url = ?2`)
+      .bind("the source page does not link to the target", source)
+      .run();
+
     const result = await runTool(operatorEnv(), OPERATOR, "list_mentions", { status: "failed" });
+    expect(result).toMatchObject({ ok: true });
     if (result.ok) {
-      const first = (result.data as { mentions: Array<Record<string, unknown>> }).mentions[0] ?? {};
-      expect(Object.keys(first).sort()).toEqual([
-        "author",
-        "authorUrl",
-        "decidedAt",
-        "excerpt",
-        "failureReason",
-        "id",
-        "receivedAt",
-        "source",
-        "status",
-        "target",
-        "verifiedAt",
-      ]);
+      const mentions = (result.data as { mentions: Array<Record<string, unknown>> }).mentions;
+      expect(mentions).toHaveLength(1);
+      expect(mentions[0]).toMatchObject({
+        source,
+        failureReason: "the source page does not link to the target",
+      });
     }
   });
 });

@@ -532,16 +532,15 @@ function buildFacets(hits: SearchHit[]): SearchFacets {
  * deliberately not uploaded, so including them would report every one as permanently stale.
  *
  * The predicate is `visibilityClause(NO_ALIAS)`, composed and never hand copied.
- * That is the visibility rule, and `test/visibility-invariants.test.mjs` binds every `search_docs` reader to it. It
- * carries the unit as well: `publish_at` is SECONDS.
+ * That is the visibility rule, and it carries the unit as well: `publish_at` is SECONDS.
  */
 /**
  * The Ask corpus itself: every record the index should hold, with the text to upload. The reading
  * twin of `askExpectedUrls`, and the reason `syncAskCorpus` takes no posts argument: the records
  * were materialized into `search_docs` by the same `records.mjs` both writers run.
  *
- * Visibility is COMPOSED, not restated: `test/visibility-invariants.test.mjs` holds every `search_docs`
- * reader to it.
+ * Visibility is COMPOSED, not restated. `test/worker/visibility.test.ts` checks that the Ask index is
+ * sent only the published post.
  */
 export async function askCorpusRecords(
   env: Env,

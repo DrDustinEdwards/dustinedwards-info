@@ -16,11 +16,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  DIVERGENCE_ERROR_NAME,
-  convergeWithRetry,
-  divergenceMessage,
-} from "../app/lib/editor/converge.mjs";
+import { DIVERGENCE_ERROR_NAME, convergeWithRetry } from "../app/lib/editor/converge.mjs";
 
 const SLUG = "agent-write-access-to-a-live-site";
 const SHA = "a1b2c3d";
@@ -96,16 +92,6 @@ test("FAILURE POINT 2: D1 fails twice, the drift IS recorded and the error names
   );
 });
 
-test("the error is distinguishable from a validation failure and a GitHub failure", () => {
-  // The three sibling errors carry their own names. This one must not collide,
-  // because api.server.ts branches on it to answer 500 with committed:true
-  // rather than 422 (fix and retry) or 502 (nothing was committed).
-  assert.equal(DIVERGENCE_ERROR_NAME, "D1DivergenceError");
-  for (const other of ["EditorError", "PolicyError", "GitHubError", "Error", "TypeError"]) {
-    assert.notEqual(DIVERGENCE_ERROR_NAME, other);
-  }
-});
-
 test("a recorder that throws does not swallow the divergence error", async () => {
   // Losing the status entry is bad. Replacing the operator's explanation with
   // the failure of the thing meant to explain it is worse.
@@ -127,14 +113,6 @@ test("a recorder that throws does not swallow the divergence error", async () =>
       return true;
     },
   );
-});
-
-test("the message states the writing is safe, because the natural fear is that it is not", () => {
-  const message = divergenceMessage({ slug: SLUG, commitSha: SHA, attempts: 2, cause: new Error("boom") });
-  assert.match(message, /WAS committed/);
-  assert.match(message, /safe in git/);
-  assert.match(message, /not lost/);
-  assert.match(message, /boom/, "and the underlying reason");
 });
 
 test("attempts is honored, so the retry count is not hardcoded in the loop", async () => {

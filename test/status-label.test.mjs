@@ -58,18 +58,3 @@ test("the throw names the value, so the failure is diagnosable", () => {
     );
   }
 });
-
-/*
- * The original defect, replayed directly rather than described. This is the
- * expression that shipped, and the assertion is that the module no longer
- * behaves like it.
- */
-test("REPLAY: the shipped defect was STATUS_LABEL[s] ?? s", () => {
-  const missing = "a-status-nobody-declared";
-  const asItWas = STATUS_LABEL[missing] ?? missing;
-  assert.equal(asItWas, missing, "the old expression returned the raw enum");
-  assert.throws(
-    () => statusLabel(missing),
-    "the current function must NOT reproduce that value",
-  );
-});

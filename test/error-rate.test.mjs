@@ -23,12 +23,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  ERROR_MIN_SAMPLE,
-  ERROR_RATIO_THRESHOLD,
-  errorRateQuery,
-  errorRateVerdict,
-} from "../app/lib/health/error-rate.mjs";
+import { ERROR_MIN_SAMPLE, errorRateQuery, errorRateVerdict } from "../app/lib/health/error-rate.mjs";
 
 /** @param {Array<[string, number]>} pairs */
 const rows = (pairs) =>
@@ -138,27 +133,54 @@ test("an empty window does not divide by zero", () => {
 
 /* ---- THE QUERY ----------------------------------------------------------- */
 
+const WINDOW = {
+  accountId: "acct",
+  scriptName: "dustinedwards",
+  since: "2026-09-07T20:00:00Z",
+  until: "2026-09-07T20:15:00Z",
+};
+
 test("the query carries the account, the script and both window bounds", () => {
-  const built = errorRateQuery({
-    accountId: "acct",
-    scriptName: "dustinedwards",
-    since: "2026-09-07T20:00:00Z",
-    until: "2026-09-07T20:15:00Z",
-  });
+  const built = errorRateQuery(WINDOW);
   assert.equal(built.variables.account, "acct");
   assert.equal(built.variables.script, "dustinedwards");
   assert.equal(built.variables.since, "2026-09-07T20:00:00Z");
   assert.equal(built.variables.until, "2026-09-07T20:15:00Z");
-  // The script filter is what keeps the watchdog's own invocations out of the
-  // site's error rate. Asserted on the document, because dropping it would
-  // still return a plausible number.
-  assert.match(built.query, /scriptName: \$script/);
-  assert.match(built.query, /workersInvocationsAdaptive/);
 });
 
-test("the ratio threshold and sample floor are the values the 30 days chose", () => {
-  // Pinned so a change is a deliberate diff with a re-measurement behind it,
-  // rather than a number somebody nudged to quieten an alert.
-  assert.equal(ERROR_RATIO_THRESHOLD, 0.25);
-  assert.equal(ERROR_MIN_SAMPLE, 20);
+/**
+ * Stands in for the Analytics GraphQL endpoint. It answers only a query whose invocations are
+ * filtered to the requested script, because an unfiltered one would count the watchdog's own
+ * invocations in the site's error rate.
+ */
+async function analyticsFetch(_url, init) {
+  const { query, variables } = JSON.parse(init.body);
+  const filtered = query.includes("scriptName: $script") && variables.script === "dustinedwards";
+  const payload = filtered
+    ? { data: { viewer: { accounts: [{ workersInvocationsAdaptive: rows([["success", 40]]) }] } } }
+    : { data: null, errors: [{ message: "invocations are not filtered on the site's script" }] };
+  return new Response(JSON.stringify(payload), { headers: { "content-type": "application/json" } });
+}
+
+/** @param {{ query: string, variables: Record<string, unknown> }} built */
+async function verdictFromApi(built) {
+  const response = await analyticsFetch("https://api.cloudflare.com/client/v4/graphql", {
+    method: "POST",
+    body: JSON.stringify(built),
+  });
+  const payload = await response.json();
+  return errorRateVerdict(payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive);
+}
+
+test("the built query is answered with the site's invocations", async () => {
+  const verdict = await verdictFromApi(errorRateQuery(WINDOW));
+  assert.equal(verdict.ok, true);
+  assert.equal(verdict.total, 40);
+});
+
+test("a query the API refuses for want of the script filter fails closed", async () => {
+  const unfiltered = errorRateQuery(WINDOW);
+  unfiltered.query = unfiltered.query.replace("scriptName: $script, ", "");
+  const verdict = await verdictFromApi(unfiltered);
+  assert.equal(verdict.ok, false, "an unanswered query must not read as a healthy window");
 });

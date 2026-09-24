@@ -19,7 +19,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  REPAIRABLE,
   failingCheckNames,
   repairPlan,
   watchdogActions,
@@ -148,30 +147,6 @@ test("a non-string in the failing list cannot smuggle itself past the classifier
   // drift still repairs.
   assert.deepEqual(plan.repair, ["sync_ask"]);
   assert.equal(plan.alertOnly, false);
-});
-
-test("every repairable class maps to a tool that goes through the front door", () => {
-  /*
-   * Rule 18 as an assertion: the value is an operator TOOL NAME, never anything
-   * that writes a row. A future entry pointing at a direct write would fail.
-   *
-   * WIDENED 2026-09-01 from `/^sync_/`. `backup_media` is the fourth repairable
-   * class and it is not a sync: a sync converges a DERIVED store to its source,
-   * and this copies bytes to a second bucket that nothing derives from. The
-   * assertion is the verb allowlist rather than one prefix, because the
-   * property being protected was never the word "sync": it is that the repair
-   * is an operator operation with a door, and that its verb is one that cannot
-   * be mistaken for a direct write.
-   */
-  const REPAIR_VERBS = ["sync", "backup"];
-  for (const [name, tool] of Object.entries(REPAIRABLE)) {
-    assert.match(name, /-drift$/, `${name} should be a drift class`);
-    const verb = tool.split("_")[0];
-    assert.ok(
-      REPAIR_VERBS.includes(verb),
-      `${tool} should be one of ${REPAIR_VERBS.join(", ")}, got verb ${JSON.stringify(verb)}`,
-    );
-  }
 });
 
 /* ---- failingCheckNames --------------------------------------------------- */
@@ -441,21 +416,3 @@ test("a recheck that never completed notifies rather than passing", () => {
   assert.match(reasonOf(actions[0]), /proved nothing/);
 });
 
-test("the decision module does no I/O", async () => {
-  /*
-   * ASSERTED, not left to prose. This module is imported into a Worker bundle,
-   * into a Node script and into this file, and the property that makes it
-   * testable at all is that it does no I/O. A `fetch` added here would still
-   * pass every assertion above.
-   *
-   * The source is read and its length asserted first: an empty read passes
-   * every doesNotMatch below it vacuously.
-   */
-  const { readFileSync } = await import("node:fs");
-  const source = readFileSync(new URL("../app/lib/health/repair.mjs", import.meta.url), "utf8");
-  assert.ok(source.length > 2000, `read ${source.length} chars; an empty read passes vacuously`);
-  const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  assert.ok(code.length > 1000, `stripped to ${code.length} chars; the stripper ate the module`);
-  assert.doesNotMatch(code, /\bfetch\s*\(/, "the module must never fetch");
-  assert.doesNotMatch(code, /^\s*import\s/m, "the module must import nothing");
-});

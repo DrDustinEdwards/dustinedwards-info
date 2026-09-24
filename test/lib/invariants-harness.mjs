@@ -1,14 +1,14 @@
 /**
  * Shared by the invariant tests: rules stated twice, in different languages or runtimes, that
- * cannot merge, and source scans over the rules no type can carry (drafts never public, the
- * schema matching the database, the write paths, no raw control bytes).
+ * cannot merge (drafts never public, the schema matching the database, the write paths), and the
+ * control-byte scan.
  *
- * Every test asserts its fixture and scan are non-empty, because a scan over nothing reports what
- * a clean tree reports.
+ * Every test asserts its fixture is non-empty, because a comparison over nothing reports what a
+ * clean tree reports.
  */
 
 import assert from "node:assert/strict";
-import { mkdirSync, readdirSync } from "node:fs";
+import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -38,38 +38,6 @@ export function collector() {
       assert.deepEqual(failures, [], `${failures.length} of ${checks} assertion(s) failed`);
     },
   };
-}
-
-/**
- * Every source file in the tree, derived by walking rather than listed.
- *
- * @param {string} [dir]
- * @param {string[]} [out]
- * @returns {string[]}
- */
-export function sourceFiles(dir = root, out = []) {
-  const SKIP = new Set([
-    "node_modules",
-    ".git",
-    "build",
-    ".wrangler",
-    "content",
-    "public",
-    ".react-router",
-  ]);
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith(".") && entry.name !== ".claude") continue;
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (SKIP.has(entry.name)) continue;
-      // Gitignored build output, excluded by full path so a source `dist` elsewhere is walked.
-      if (full === join(root, "app", "enhance", "dist")) continue;
-      sourceFiles(full, out);
-    } else if (/\.(ts|tsx|mjs|js)$/.test(entry.name)) {
-      out.push(full);
-    }
-  }
-  return out;
 }
 
 /**

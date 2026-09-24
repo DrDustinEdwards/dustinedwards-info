@@ -71,12 +71,11 @@ test("every state carries a title and a note, and they are all different", () =>
   assert.equal(notes.size, 3, "two states share a note");
 });
 
-test("the unattached note refuses to say unused, which is the whole point", () => {
-  const note = usageDescriptor("unattached").note.toLowerCase();
-  assert.ok(note.includes("not the same as"), "the caveat is missing");
-  assert.ok(note.includes("verify before deleting"));
-  // Both directions: it must not claim the stronger thing.
-  assert.ok(!/\bis unused\b/.test(note), "the note claims the file is unused");
+test("the unattached note never claims the file is unused", () => {
+  // Beside a delete button, "unused" reads as permission; the note has to leave the doubt in.
+  const note = usageDescriptor("unattached").note;
+  assert.doesNotMatch(note, /\bis unused\b/i, "the note claims the file is unused");
+  assert.notEqual(note, usageDescriptor("used").note);
 });
 
 test("an unknown state degrades to unattached rather than throwing", () => {
@@ -153,13 +152,6 @@ test("every lens that narrows has a note explaining what it claims", () => {
   }
 });
 
-test("the unattached lens note does not claim a check that does not run", () => {
-  // It says repository code was searched. That sentence is only true because
-  // the scan exists; the two ship together.
-  assert.ok(LENS_NOTES.unattached.includes("repository code"));
-  assert.ok(LENS_NOTES.unattached.includes("not proof"));
-});
-
 /* ---- suggestions --------------------------------------------------------- */
 
 test("suggested alt is the words, matching the document card exactly", () => {
@@ -219,20 +211,14 @@ test("an image with no alt still produces a snippet, with an empty alt attribute
 
 test("every snippet carries an accessible name that is not its visible label", () => {
   // The visible label sits under a heading that supplies the verb for a sighted
-  // reader and supplies nothing to anyone else. Interpolating the label into a
-  // sentence shipped "Copy the address for Copy address" for one render.
+  // reader and supplies nothing to anyone else.
   for (const viewable of [true, false]) {
     const out = copySnippetsFor({ url: "/a", viewable, alt: "", base: "a.png" });
     for (const s of out) {
-      assert.ok(s.name.length > 0, `${s.id} has no accessible name`);
-      assert.ok(
-        s.name.toLowerCase().startsWith("copy the"),
-        `${s.id} name should be an imperative sentence, got ${s.name}`,
-      );
+      assert.ok(s.name.trim().length > 0, `${s.id} has no accessible name`);
       assert.notEqual(s.name, s.label, `${s.id} name and label are the same string`);
     }
-    // And the three are distinguishable from one another by name alone.
-    assert.equal(new Set(out.map((s) => s.name)).size, 3);
+    assert.equal(new Set(out.map((s) => s.name)).size, out.length, "two snippets share a name");
   }
 });
 

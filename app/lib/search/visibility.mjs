@@ -29,8 +29,7 @@
  * ## WHAT THIS DELIBERATELY DOES NOT TOUCH
  *
  * **The FTS build.** `search_docs` includes drafts on purpose and the two FTS
- * indexes are built from all of it; `test/visibility-invariants.test.mjs` carries that as
- * a NAMED exemption with its reason. Filtering there would manufacture drift
+ * indexes are built from all of it. Filtering there would manufacture drift
  * between the content table and its own shadows on every rebuild. Visibility on
  * the classic search path is applied at query time by `visibilityClause`, which
  * is why that path never leaked.

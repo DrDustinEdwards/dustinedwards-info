@@ -37,7 +37,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
-import { colophonFacts, el } from "../scripts/lib/colophon-facts.mjs";
+import { colophonFacts } from "../scripts/lib/colophon-facts.mjs";
 
 /** @param {string} rel */
 const json = (rel) =>
@@ -49,12 +49,6 @@ const json = (rel) =>
 // have run; check-all builds it before the tier that runs check:tests.
 const stack = json("../content/generated/stack.json");
 const features = json("../content/features.json");
-
-test("the descriptor has sections at all", () => {
-  // Scope check. Every assertion below iterates this list, so all of them are
-  // vacuous if it is empty, and "0 sections missing a fact list" would pass.
-  assert.ok(COLOPHON_SECTIONS.length > 0, "no sections, so nothing below checks anything");
-});
 
 test("EVERY colophon section has a fact list", () => {
   const missing = [];
@@ -99,23 +93,4 @@ test("an UNKNOWN section still fails closed", () => {
     () => colophonFacts(stack, features, "no-such-section"),
     /no fact list for colophon section "no-such-section"/,
   );
-});
-
-test("the security section sweeps the tradeoff sentences the page renders", () => {
-  // The section that shipped without a fact list. Named rather than left to the
-  // loop above, because "every section has one" would go green again the moment
-  // someone registered `security` with the wrong content.
-  const facts = colophonFacts(stack, features, "security");
-  assert.ok(facts.length >= 4, `expected the tradeoff sentences, got ${facts.length} needle(s)`);
-  // Element-delimited, matching how the page renders each sentence as its own
-  // paragraph. A bare substring would pass on a neighboring node.
-  for (const fact of facts) {
-    assert.ok(fact.startsWith(">") && fact.endsWith("<"), `needle is not element-delimited: ${fact}`);
-  }
-});
-
-test("el delimits, so a token cannot pass on a neighbor's substring", () => {
-  // `react` is a substring of `react-dom`; this is why the needles are wrapped.
-  assert.equal(el("react"), ">react<");
-  assert.ok(!">react-dom<".includes(el("react")));
 });

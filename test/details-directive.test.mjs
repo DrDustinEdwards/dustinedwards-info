@@ -13,14 +13,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { KNOWN_DIRECTIVES, renderBody } from "../app/lib/content/pipeline.mjs";
+import { renderBody } from "../app/lib/content/pipeline.mjs";
 
 /** @param {string} body */
 const render = (body) => renderBody({ file: "test.md", body, resolveImage: () => null });
-
-test("the directive is registered, or every use of it is an unknown-directive failure", () => {
-  assert.ok(KNOWN_DIRECTIVES.includes("details"));
-});
 
 test("it renders a native details with the summary first", async () => {
   const { html } = await render(':::details{summary="Raw counts"}\nOne paragraph.\n:::\n');

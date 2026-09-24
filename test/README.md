@@ -33,10 +33,12 @@ are the right home for anything that can be expressed as input in, output out.
 `check:migrations` hashes the migrations against their manifest. Each carries an
 OBSERVATION BOUNDARY note saying what it cannot see.
 
-**THE INVARIANTS ARE TESTS NOW** (ruling 150): the rules stated twice that cannot
-merge live in `visibility-invariants`, `schema-invariants`, `write-path-invariants`
-and `control-characters`, with their shared helpers in `lib/`. The schema test
-compares the live database only with `SCHEMA_LIVE=1`, which `check:all` sets.
+**The rules stated twice that cannot merge** live in `visibility-invariants`,
+`schema-invariants`, `write-path-invariants` and `control-characters`, with their
+shared helpers in `lib/`. The schema test compares the live database only with
+`SCHEMA_LIVE=1`, which `check:all` sets. That drafts never reach a public surface,
+and that the write paths keep the search indexes consistent, is checked through
+behavior in `worker/visibility.test.ts` and `worker/publish.test.ts`.
 
 **PLANTS remain the discipline for NEW assertions.** Before trusting any new
 check, break the thing it watches and confirm it goes red, and confirm the
