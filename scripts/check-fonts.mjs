@@ -149,8 +149,8 @@ assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile
  * The local()-only faces are SKIPPED EXPLICITLY and counted, so a future file-backed block cannot
  * fall into the skip path unnoticed. Exact rather than a count: WHICH faces is the assertion.
  */
-/* "Inter Fallback" twice: a regular face and a bold one, one per weight band (app.css). */
-const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback"];
+/* "Inter Fallback" twice: a regular face and a bold one, one per weight band. The serif's twice: roman and italic. */
+const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback", "Source Serif 4 Web Fallback"];
 {
   const got = withoutFile.map((b) => b.family).sort();
   assertThat(
