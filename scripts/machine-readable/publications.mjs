@@ -1,7 +1,6 @@
 /**
- * Gate: the publication corpus is internally consistent and its artifact is fresh.
- *
- *   npm run check:publications
+ * Part of check:machine-readable: the publication corpus is internally consistent and its artifact
+ * is fresh.
  *
  * BOUNDARY: two committed JSON files, a generated module and `stat` on the PDFs. It cannot see
  * whether the registry data is still true, so the networked assertions stay in the pipeline, and
@@ -13,37 +12,36 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { generate } from "./build-publications.mjs";
-import { generateTwins } from "./build-publication-twins.mjs";
+import { generate } from "../build-publications.mjs";
+import { generateTwins } from "../build-publication-twins.mjs";
 import {
   doiSlug,
   paperAskUrl,
   paperMarkdownPath,
   paperPath,
   paperPdfPath,
-} from "../app/lib/publications/paths.mjs";
-import { decodeEntities } from "../app/lib/publications/entities.mjs";
-import { accessionUrl, accessionsInText } from "../app/lib/publications/accessions.mjs";
-import { updateNoticeProblem } from "../app/lib/publications/update-notice.mjs";
-import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
-import { recordsForPapers } from "../app/lib/search/records.mjs";
-import { keyForUrl, urlForKey } from "../app/lib/search/ask-keys.mjs";
+} from "../../app/lib/publications/paths.mjs";
+import { decodeEntities } from "../../app/lib/publications/entities.mjs";
+import { accessionUrl, accessionsInText } from "../../app/lib/publications/accessions.mjs";
+import { updateNoticeProblem } from "../../app/lib/publications/update-notice.mjs";
+import { paperSearchInputs } from "../../app/lib/publications/search-inputs.mjs";
+import { recordsForPapers } from "../../app/lib/search/records.mjs";
+import { keyForUrl, urlForKey } from "../../app/lib/search/ask-keys.mjs";
 import {
   buildCitationTags,
   REQUIRED_CITATION_TAGS,
-} from "../app/lib/publications/citation-tags.mjs";
-import { PUBLICATIONS } from "../app/data/publications.ts";
-import { SHOWCASE_TYPES } from "../app/lib/publications/export-response.mjs";
+} from "../../app/lib/publications/citation-tags.mjs";
+import { PUBLICATIONS } from "../../app/data/publications.ts";
+import { SHOWCASE_TYPES } from "../../app/lib/publications/export-response.mjs";
 import {
   organismsIn,
   toBibtex,
   toBibtexAll,
   toCslJson,
   toRisAll,
-} from "../app/lib/publications/exports.mjs";
-import { assertFloor } from "./lib/floor.mjs";
+} from "../../app/lib/publications/exports.mjs";
 
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 let checks = 0;
 /** @type {string[]} */
@@ -70,7 +68,7 @@ function assertThat(ok, label, detail = "") {
 /** @param {string} doi */
 const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
-console.log("check:publications\n");
+console.log("\n  publications\n");
 
 /* the sources exist at all */
 
@@ -85,8 +83,8 @@ for (const [label, path] of [
   ["the generated module", OUT_PATH],
 ]) {
   if (!existsSync(path)) {
-    console.error(`check:publications failed. ${label} is missing: ${path}`);
-    process.exit(1);
+    console.log(`  FAIL  publications: ${label} is missing: ${path}`);
+    throw new Error(`publications: ${label} is missing`);
   }
 }
 
@@ -100,8 +98,7 @@ assertThat(
   `site ${siteEntries.length}, csl ${Array.isArray(csl) ? csl.length : "not an array"}`,
 );
 if (siteEntries.length === 0 || !Array.isArray(csl) || csl.length === 0) {
-  console.error("\ncheck:publications failed. The scope is empty; nothing below would mean anything.");
-  process.exit(1);
+  throw new Error("publications: the scope is empty; nothing below would mean anything");
 }
 
 /* the artifact is fresh */
@@ -1264,15 +1261,4 @@ assertThat(
   );
 }
 
-/* done */
-
-/* MEASURED BY RUNNING THIS GATE, never summed. Slack of two: it moves only on a new assertion. */
-const MINIMUM_CHECKS = 97;
-const floorBreach = assertFloor("check:publications", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) {
-  console.error(`\ncheck:publications failed. ${floorBreach}`);
-  process.exit(1);
-}
-
-console.log(`\n${checks} checks, ${failures.length} failures`);
-if (failures.length > 0) process.exit(1);
+export const outcome = { checks, failures: failures.length };
