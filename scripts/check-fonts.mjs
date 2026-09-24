@@ -459,7 +459,7 @@ if (update) {
  */
 /* RE-MEASURED 2026-09-20 on a plain run: home.css added axis requests, and 240 then sat 28 under
    its count against a 5% tolerance. */
-const MINIMUM_CHECKS = 268;
+const MINIMUM_CHECKS = 520;
 const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
 if (breach) assertThat(false, "this gate executed its assertions", breach);
 
