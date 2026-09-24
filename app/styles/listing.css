@@ -108,11 +108,12 @@
   font-weight: 600;
 }
 
-/* Inter's width from the server (--w, in em), so the row wraps the same before and after the font swap;
+/* Inter's width, set per link by FilterLink, so the row wraps the same before and after the font swap;
    the fallback's text may run a pixel short or long inside it. */
 .filter-name {
+  --name-w: auto;
   display: inline-block;
-  inline-size: calc(var(--w) * 1em);
+  inline-size: var(--name-w);
   white-space: nowrap;
 }
 
