@@ -35,6 +35,9 @@ const BUILD_OWNED = [
   /^guidelines\/.+/,
   /^_vendor\/.+/,
   /^_preview\/[^/]+\.js$/,
+  // The preview cards `.design-sync/build-cards.mjs` renders: one HTML file per directory, three
+  // deep, and nothing else, so the folder cannot become a place the sync writes anything.
+  /^cards\/[a-z]+\/[a-z0-9-]+\/[a-z0-9-]+\.html$/,
 ];
 
 /**

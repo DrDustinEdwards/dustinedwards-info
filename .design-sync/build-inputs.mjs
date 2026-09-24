@@ -1,6 +1,7 @@
 /**
- * Generate the two derived inputs the design-sync converter reads: the
- * flattened stylesheet, and a paths-only tsconfig.
+ * Generate the derived inputs the design-sync converter reads: the flattened
+ * stylesheet, a paths-only tsconfig, the README header, and the preview cards
+ * (`build-cards.mjs`, which `scripts/ds-resync.mjs` copies into the bundle).
  *
  * ## 1. THE FLATTENED STYLESHEET
  *
@@ -397,25 +398,29 @@ writeFileSync(
 console.error(`tsconfig.paths.json: ${Object.keys(tsPaths).length} alias(es) from ${TS_SRC}, ${Object.keys(tsPaths).join(", ")}`);
 
 /**
- * readme-header.md, the ONE file `cfg.readmeHeader` points at.
+ * THE PREVIEW CARDS, built before the header because the header names their digest. See
+ * build-cards.mjs: a changed card changes the README, which is what makes the sync's docs
+ * partition, and so the cards, upload.
+ */
+const { buildCards } = await import("./build-cards.mjs");
+const cards = await buildCards();
+console.error(`cards: ${cards.files.length} preview cards, digest ${cards.digest}`);
+
+/**
+ * readme-header.md, the ONE file `cfg.readmeHeader` points at, and it is SHORT.
  *
- * ## WHY IT IS ASSEMBLED RATHER THAN AUTHORED
+ * The skill prepends it to the generated README, and the README is the Design
+ * System pane's overview. When the header was the two long notes the overview
+ * was pages of prose and the pane read as text, so since
+ * ruling 137 the design authority is the visual system and the header is
+ * `readme.md`: what Paper and Plate is, the avoid list, and where to look. Its
+ * text is the approved visual system's own README.
  *
- * The skill takes a single header path and prepends it to the generated README,
- * and the app inlines only the FIRST 32,000 characters of that README into the
- * agent prompt. So the header is the only text the design agent is guaranteed to
- * read, and two committed files have to share it:
- *
- *   canvas-constraints.md  what is already decided and may not be re-decided
- *   conventions.md         the vocabulary: tokens, class names, how to compose
- *
- * Constraints go FIRST. Truncation eats the tail, so the half that must survive
- * a long README is the half that says what not to do.
- *
- * Both halves stay committed and single-owner; only the concatenation is
- * derived, which is why this file is gitignored beside ds-styles.css. It is
- * built HERE because this is the one command that runs before the converter
- * reads the header.
+ * THE LONG NOTES MOVED TO guidelines/, unchanged and still single-owner: they are
+ * copied into `.design-sync/guidelines/`, which `guidelinesGlob` ships, so the
+ * canvas still has them one read away. Copied HERE, in the same run that feeds
+ * the driver, because `scripts/build-guidelines.mjs` rebuilds that folder from
+ * empty and would sweep a copy made earlier.
  *
  * `cfg.buildCmd` names this file and NOTHING EXECUTES IT: in the staged skill it
  * appears only in `lib/common.mjs`'s list of known config keys, so neither the
@@ -424,19 +429,23 @@ console.error(`tsconfig.paths.json: ${Object.keys(tsPaths).length} alias(es) fro
  * was skipped anyway. Measured 2026-09-21: a driver run green on a ds-styles.css
  * 14 hours older than its sheets shipped a header wordmark at 1.06:1.
  */
-const HEADER_PARTS = ["canvas-constraints.md", "conventions.md"];
-const headerText = HEADER_PARTS.map((name) => {
-  const path = join(HERE, name);
-  if (!existsSync(path)) throw new Error(`readme-header: ${name} is missing; the header would ship half its content`);
-  return readFileSync(path, "utf8").trim();
-}).join("\n\n");
+const README_SOURCE = "readme.md";
+const LONG_NOTES = ["canvas-constraints.md", "conventions.md"];
+const readmePath = join(HERE, README_SOURCE);
+if (!existsSync(readmePath)) throw new Error(`readme-header: ${README_SOURCE} is missing`);
+const headerText =
+  readFileSync(readmePath, "utf8").trim() +
+  `\n\nPreview cards: ${cards.files.length} in \`cards/\`, build ${cards.digest}.`;
 writeFileSync(join(HERE, "readme-header.md"), `${headerText}\n`);
-// The skill warns above 31,900 for the header plus the generated body together.
-// Naming the remaining room here means a header that has quietly eaten the
-// budget is visible at build time rather than in a truncated prompt.
+mkdirSync(join(HERE, "guidelines"), { recursive: true });
+for (const name of LONG_NOTES) {
+  const path = join(HERE, name);
+  if (!existsSync(path)) throw new Error(`guidelines: ${name} is missing; the long notes would ship half their content`);
+  writeFileSync(join(HERE, "guidelines", name), readFileSync(path, "utf8"));
+}
 console.error(
-  `readme-header.md: ${headerText.length} chars from ${HEADER_PARTS.join(" + ")}, ` +
-    `${31900 - headerText.length} left for the generated README body`,
+  `readme-header.md: ${headerText.length} chars from ${README_SOURCE}; ` +
+    `${LONG_NOTES.join(" and ")} copied to guidelines/`,
 );
 
 /**

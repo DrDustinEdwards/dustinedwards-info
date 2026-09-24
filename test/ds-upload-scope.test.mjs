@@ -107,6 +107,35 @@ test("_preview/ is build-owned only for the component scripts directly in it", (
   assert.notEqual(refusal("_preview/nested/x.js"), null);
 });
 
+test("cards/ is build-owned only for one preview card per directory", () => {
+  assert.equal(refusal("cards/colors/page-colors/page-colors.html"), null);
+  assert.equal(refusal("cards/components/header-phone/header-phone.html"), null);
+  for (const p of [
+    "cards/index.html",
+    "cards/colors/page-colors.html",
+    "cards/colors/page-colors/nested/x.html",
+    "cards/colors/page-colors/shot.png",
+    "cards/Colors/Page/Page.html",
+  ]) {
+    assert.notEqual(refusal(p), null, p);
+  }
+});
+
+test("PLANTED: a stray file beside the cards is refused before upload", () => {
+  const cards = ["cards/type/values/values.html", "cards/components/footer/footer.html"];
+  const clean = outDirWith([...REAL_BUILD, ...cards]);
+  const planted = outDirWith([...REAL_BUILD, ...cards, "cards/components/footer/notes.md"]);
+  try {
+    assert.deepEqual(enforceVerdict(upload(), clean).violations, []);
+    assert.deepEqual(enforceVerdict(upload(), planted).violations, [
+      "write cards/components/footer/notes.md: not a build-owned path",
+    ]);
+  } finally {
+    rmSync(clean, { recursive: true, force: true });
+    rmSync(planted, { recursive: true, force: true });
+  }
+});
+
 test("a path that is not plain and relative is refused, not normalized", () => {
   for (const p of ["../styles.css", "/styles.css", "fonts/../templates/x", "components\\x.html", "", "fonts//a"]) {
     assert.notEqual(refusal(p), null, JSON.stringify(p));
