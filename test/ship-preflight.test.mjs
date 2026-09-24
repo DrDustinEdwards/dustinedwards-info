@@ -23,8 +23,41 @@ test("THE PLANT: an orphaned preview server is found, and named by pid", () => {
       [222, "C:/Program Files/nodejs/node.exe C:/repo/scripts/ship.mjs"],
     ]),
     SHIP_NEEDLES,
+    222,
   );
   assert.deepEqual(found, [{ pid: 111, what: "an orphaned preview server" }]);
+});
+
+// The 2026-09-24 collision's real shape: npm, the cmd shell, the tee parent, the ship child.
+/** @param {number} base */
+const shipTree = (base) => [
+  [base, { ppid: 1, command: normaliseCommand("node.exe C:/nodejs/node_modules/npm/bin/npm-cli.js run ship") }],
+  [base + 1, { ppid: base, command: normaliseCommand("C:\\WINDOWS\\system32\\cmd.exe /d /s /c node scripts/ship.mjs") }],
+  [base + 2, { ppid: base + 1, command: normaliseCommand("node  scripts/ship.mjs") }],
+  [base + 3, { ppid: base + 2, command: normaliseCommand("C:\\nodejs\\node.exe C:\\repo\\scripts\\ship.mjs") }],
+];
+
+test("THE PLANT: a second ship is found, and the running ship's own launchers are not", () => {
+  const table = new Map([...shipTree(100), ...shipTree(200)]);
+  const found = busyProcesses(table, SHIP_NEEDLES, 103);
+  assert.deepEqual(
+    found.map(({ pid }) => pid),
+    [201, 202, 203],
+    "the other ship's shell, tee and child; none of 100 to 103",
+  );
+  assert.ok(found.every(({ what }) => what === "another ship"));
+});
+
+test("a lone ship passes its own preflight", () => {
+  assert.deepEqual(busyProcesses(new Map(shipTree(100)), SHIP_NEEDLES, 103), []);
+});
+
+test("a parentage cycle from reused pids ends the ancestor walk", () => {
+  const table = new Map([
+    [1, { ppid: 2, command: "node scripts/ship.mjs" }],
+    [2, { ppid: 1, command: "node scripts/ship.mjs" }],
+  ]);
+  assert.deepEqual(busyProcesses(table, SHIP_NEEDLES, 1), []);
 });
 
 test("backslashes and case do not hide a match", () => {

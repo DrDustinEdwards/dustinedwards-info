@@ -269,13 +269,13 @@ announce("Preflight: up to date, and nothing else holding the tree");
       console.error(busy.map(({ pid, what }) => `    pid ${pid}  ${what}`).join("\n"));
       refuse(
         `${busy.length} process(es) that write the build or the database are still alive`,
-        "Ship reads build/client and writes production D1; a gate run doing the same " +
-          "thing underneath it is how EBUSY and a half-written build happen. These are " +
+        "Ship reads build/client and writes production D1; a gate run or another ship " +
+          "doing the same thing underneath it is how EBUSY and a half-written build happen. These are " +
           "REPORTED rather than killed, because ship does not know whose run they are. " +
           "Stop them, or wait, then run ship again. Nothing has been built or deployed.",
       );
     }
-    console.log(`  ${table.size} process(es) scanned, none of them a gate run or a preview.`);
+    console.log(`  ${table.size} process(es) scanned, none of them a gate run, a preview or another ship.`);
   }
 }
 
