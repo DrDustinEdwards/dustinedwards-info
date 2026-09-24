@@ -1,6 +1,10 @@
 {
+  "app/fonts/inter-greek-italic.woff2": "94fd1ce2533a7db49fac13877633836edee820d2af40a0f1929d30c06e9dcacb",
+  "app/fonts/inter-greek-normal.woff2": "93c5ac80e25cda1cf289206c724027eeb187c9d398106f0079a912cbe80616ce",
   "app/fonts/inter-latin-italic.woff2": "c58f9d530baa7e96355f444502eca739d5eefa0f328f3d635b73648373214629",
   "app/fonts/inter-latin-normal.woff2": "2c295d99e26dcf357d4d01bcf270fd6924b600c9a13dd8c363ef114f4c6976fa",
+  "app/fonts/inter-math-italic.woff2": "10d69c109f4a3dc3d596235e425fbcee7d124fde3235b388474a6b98aebdbcdb",
+  "app/fonts/inter-math-normal.woff2": "02ec6366b668de9f01ce8d97b63ccf4f938f07427bb3c792f4faf815162b9129",
   "app/fonts/katex/KaTeX_AMS-Regular.woff2": "0cdd387c9590a1a9f9794560022dbb59654a7d86f187aa0c81495ad42d3a7308",
   "app/fonts/katex/KaTeX_Caligraphic-Bold.woff2": "de7701e42cf1f4cf0b766c03fb27977207eee2f4fd5d76fa82188406da43ea4c",
   "app/fonts/katex/KaTeX_Caligraphic-Regular.woff2": "5d53e70ad607c2352162dec9e0923fb54ecdafaccbf604cd8dcf7d00facb989b",
@@ -21,7 +25,12 @@
   "app/fonts/katex/KaTeX_Size3-Regular.woff2": "73d591271b1604960cb10bb90fee021670af7297017e0e98480b332d11f51995",
   "app/fonts/katex/KaTeX_Size4-Regular.woff2": "a4af7d414440a1c1790825cfb700cf9cf43b0f2c4b04f0ebc523011ad9853ec0",
   "app/fonts/katex/KaTeX_Typewriter-Regular.woff2": "71d517d67827787cfabdf186914cc3358eda539e37931941f2b2fd4a21f68c0b",
+  "app/fonts/source-serif-4-greek-italic.woff2": "d29b0cfc1b6bdca3d8ccca2b242f04f7c13d50934d31ea46fe19eb2313bc01bb",
+  "app/fonts/source-serif-4-greek-normal.woff2": "d69b8909cbccf5948675c7de331858d40f48b1ef3e4a9fc5ddfaa8c097fb434b",
+  "app/fonts/source-serif-4-latin-italic.woff2": "96e6393209728ab93c334ae739af8a040cd2006c82e8614d6465a8084db88f89",
   "app/fonts/source-serif-4-latin-normal.woff2": "f2ea9c12d2fe9bd3a9589b02ad2c0909da88f30938c91adc838c4f4098f9f9e0",
+  "app/fonts/source-serif-4-math-italic.woff2": "a107b7db8b718c0796d2b2b77c547fd524af4a1a3195c49863fc22270f23a7c7",
+  "app/fonts/source-serif-4-math-normal.woff2": "a73065dbc87efa9de03c9210b6e3a3c06197abecdbc5a8752843272fb0ef6ca9",
   "assets/fonts/Inter-Bold.ttf": "288316099b1e0a47a4716d159098005eef7c0066921f34e3200393dbdb01947f",
   "assets/fonts/Inter-Regular.ttf": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82"
 }
