@@ -129,11 +129,11 @@ export default defineConfig({
          * a different runtime, and a test layer running on one while the deploy
          * runs on another is measuring something else.
          *
-         * The one flag is the config's, for the same reason: the module
-         * registry changes how every module loads. `nodejs_compat` stays out, as
-         * the config states: at 2026-08-04 and later it is on by default. */
+         * NO FLAGS, for the reason the config states at length: at 2026-08-04
+         * and later `nodejs_compat` and `nodejs_compat_v2` are both on by
+         * default, so listing one here would be a flag the runtime ignores and
+         * a reader takes for a decision. */
         compatibilityDate: "2026-09-01",
-        compatibilityFlags: ["new_module_registry"],
         /*
          * ONIGURUMA, AS A COMPILED MODULE. `app/lib/content/wasm.server.ts`
          * statically imports `shiki/onig.wasm` because Workers refuse
