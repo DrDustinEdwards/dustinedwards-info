@@ -28,6 +28,7 @@ import {
   readProcessTable,
 } from "./lib/child-processes.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { runWrangler } from "./lib/wrangler-run.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
@@ -380,35 +381,46 @@ if (DRIVES_PREVIEW) {
 /* Registered first: killing its wrappers orphans this process. */
 registry.record(process.pid, "the check:browser gate", ["check-browser.mjs"]);
 
+/**
+ * A setup step that failed ends the run: nothing after it would measure what it claims. Prints why,
+ * then the end of the step's output, where its error is.
+ *
+ * @param {{ status: number | null }} result
+ * @param {string} output
+ * @param {string[]} why
+ */
+function refuseUnlessRan(result, output, why) {
+  if (result.status === 0) return;
+  for (const line of why) console.error(line);
+  console.error(output.slice(-1200));
+  // `cleanupChildren` is still in its temporal dead zone at the first of these.
+  registry.clear();
+  process.exit(1);
+}
+
+/** @param {string} script */
+const npmRun = (script) => {
+  const r = spawnSync("npm", ["run", script], {
+    cwd: root,
+    encoding: "utf8",
+    shell: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  return { status: r.status, output: r.stderr || r.stdout || "" };
+};
+
 /* Builds rather than trusting build/, which may be stale. */
 if (DRIVES_PREVIEW) {
   console.log("  building ...");
   // Enhancement bundles first: the app build imports them, and this gate runs alone.
-  const bundled = spawnSync("npm", ["run", "build:enhance"], {
-    cwd: root,
-    encoding: "utf8",
-    shell: true,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  if (bundled.status !== 0) {
-    console.error("check:browser failed. build:enhance did not succeed, so the build below cannot.");
-    console.error((bundled.stderr || bundled.stdout || "").slice(-1200));
-    // `cleanupChildren` is still in its temporal dead zone here.
-    registry.clear();
-    process.exit(1);
-  }
-  const built = spawnSync("npm", ["run", "build"], {
-    cwd: root,
-    encoding: "utf8",
-    shell: true,
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  if (built.status !== 0) {
-    console.error("check:browser failed. the build did not succeed, so there is nothing to lay out.");
-    console.error((built.stderr || built.stdout || "").slice(-1200));
-    registry.clear();
-    process.exit(1);
-  }
+  const bundled = npmRun("build:enhance");
+  refuseUnlessRan(bundled, bundled.output, [
+    "check:browser failed. build:enhance did not succeed, so the build below cannot.",
+  ]);
+  const built = npmRun("build");
+  refuseUnlessRan(built, built.output, [
+    "check:browser failed. the build did not succeed, so there is nothing to lay out.",
+  ]);
 } else {
   console.log(`  NOT building: the public cases observe ${PUBLIC_ORIGIN}, a deployed site.`);
 }
@@ -476,17 +488,11 @@ if (DRIVES_PREVIEW) {
     "utf8",
   );
 
-  const seeded = spawnSync(
-    `npx wrangler d1 execute dustinedwards --local --file "${mentionFile}"`,
-    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
-  );
-  if (seeded.status !== 0) {
-    console.error("check:browser failed. the mention seed did not apply, so the byte-identity");
-    console.error("case below would compare two renders of a page with no Mentions section.");
-    console.error((seeded.stderr || seeded.stdout || "").slice(-1200));
-    registry.clear();
-    process.exit(1);
-  }
+  const seeded = runWrangler(`d1 execute dustinedwards --local --file "${mentionFile}"`, { cwd: root });
+  refuseUnlessRan(seeded, seeded.output, [
+    "check:browser failed. the mention seed did not apply, so the byte-identity",
+    "case below would compare two renders of a page with no Mentions section.",
+  ]);
   console.log(`  seeded ${MENTION_SEED_ROWS} approved mention(s) on ${MENTION_POST_PATH}`);
 }
 
@@ -549,17 +555,11 @@ if (DRIVES_PREVIEW) {
     "utf8",
   );
 
-  const row = spawnSync(
-    `npx wrangler d1 execute dustinedwards --local --file "${sqlFile}"`,
-    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
-  );
-  if (row.status !== 0) {
-    console.error("check:browser failed. the math fixture row did not apply, so /preview");
-    console.error("would answer 404 and every math case below would report the wrong cause.");
-    console.error((row.stderr || row.stdout || "").slice(-1200));
-    registry.clear();
-    process.exit(1);
-  }
+  const row = runWrangler(`d1 execute dustinedwards --local --file "${sqlFile}"`, { cwd: root });
+  refuseUnlessRan(row, row.output, [
+    "check:browser failed. the math fixture row did not apply, so /preview",
+    "would answer 404 and every math case below would report the wrong cause.",
+  ]);
 
   /* `resolvePreview` re-checks post status, so a stale record cannot leak. */
   const record = JSON.stringify({
@@ -570,18 +570,12 @@ if (DRIVES_PREVIEW) {
   /* The value from a file too: JSON with escaped quotes inside a cmd string held only by MSVCRT rules. */
   const recordFile = join(SEED_DIR, "preview-token.json");
   writeFileSync(recordFile, record, "utf8");
-  const kv = spawnSync(
-    `npx wrangler kv key put --binding APP_KV --local ` +
-      `"preview:token:${MATH_PREVIEW_TOKEN}" --path "${recordFile}"`,
-    { cwd: root, encoding: "utf8", shell: true, maxBuffer: 8 * 1024 * 1024 },
+  const kv = runWrangler(
+    `kv key put --binding APP_KV --local "preview:token:${MATH_PREVIEW_TOKEN}" --path "${recordFile}"`,
+    { cwd: root },
   );
   removeSeedDir();
-  if (kv.status !== 0) {
-    console.error("check:browser failed. the preview token did not reach local KV.");
-    console.error((kv.stderr || kv.stdout || "").slice(-1200));
-    registry.clear();
-    process.exit(1);
-  }
+  refuseUnlessRan(kv, kv.output, ["check:browser failed. the preview token did not reach local KV."]);
 
   mathPreviewSeeded = true;
   console.log(`  seeded the ${MATH_SLUG} draft row and its preview token`);
