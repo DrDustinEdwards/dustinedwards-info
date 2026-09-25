@@ -24,6 +24,14 @@ const AFTER_SIGN_IN = "/admin";
 
 const NO_STORE = { "cache-control": "private, no-store" };
 
+/**
+ * Without this, React Router forwards only Set-Cookie from the action's `data()` init to the
+ * document, so the 429's Retry-After and the refusals' no-store would never reach the browser.
+ */
+export function headers({ actionHeaders }: Route.HeadersArgs) {
+  return actionHeaders;
+}
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   if (await getAdminSession(getEnv(context), request)) throw redirect("/admin");
   return null;
