@@ -2,6 +2,7 @@
 // scripts/build-diagrams.mjs renders assets at build time and the HTML carries only the key and source.
 
 import { ASSET_PREFIX } from "../media/classify.mjs";
+import { h, text } from "./hast.mjs";
 
 // Bump when the token map, the token values in app.css or the mermaid version changes: the key hashes
 // only the source, so a restyle without a bump leaves every rendered asset at the old colors forever.
@@ -110,17 +111,6 @@ export function buildDiagramModel(attrs, source) {
     key: diagramKey(source),
   };
 }
-
-/** @param {string} tagName @param {Record<string, any>} properties @param {any[]} children */
-const h = (tagName, properties, children) => ({
-  type: "element",
-  tagName,
-  properties,
-  children,
-});
-
-/** @param {string} value */
-const text = (value) => ({ type: "text", value });
 
 /**
  * Two images switched by display: none in app.css, because an <img> SVG cannot see the page's custom
