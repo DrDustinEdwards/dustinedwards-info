@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
-import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
+import { UNPOLICED_TYPES, isUnpolicedType } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { blockFrom } from "./lib/source-body.mjs";
 import { assertFloor } from "./lib/floor.mjs";
@@ -315,7 +315,8 @@ for (const name of [
   }
 }
 
-/* The types are read out of the feed module and isFeed() is called, so the two owners cannot drift. */
+/* The types are read out of the feed module and isUnpolicedType() is called, so the two owners
+   cannot drift. */
 {
   /** Named rather than globbed: the assertion is about THESE THREE, and a glob quietly shrinks. */
   const FEED_FORMATS = ["rss", "atom", "json"];
@@ -336,23 +337,23 @@ for (const name of [
     );
     if (!declared) continue;
     ok(
-      `the ${format} feed serves "${declared[1]}", which isFeed() exempts from the CSP`,
-      isFeed(declared[1]),
-      `isFeed("${declared[1]}") is false, so this feed is served a policy with a ` +
+      `the ${format} feed serves "${declared[1]}", which isUnpolicedType() exempts from the CSP`,
+      isUnpolicedType(declared[1]),
+      `isUnpolicedType("${declared[1]}") is false, so this feed is served a policy with a ` +
         `per-request nonce on a shared-cached body. Exempt types: ` +
         `${[...UNPOLICED_TYPES].join(", ")}`,
     );
   }
 
-  /* THE NEGATIVE, so the three above cannot pass by isFeed() having become a constant true. */
+  /* THE NEGATIVE, so the three above cannot pass by isUnpolicedType() having become a constant true. */
   for (const type of ["text/html", "text/html; charset=utf-8", "image/svg+xml", ""]) {
     ok(
-      `isFeed(${JSON.stringify(type)}) is false, so a document still gets a policy`,
-      !isFeed(type),
-      "isFeed() exempts a type a browser renders as a browsing context",
+      `isUnpolicedType(${JSON.stringify(type)}) is false, so a document still gets a policy`,
+      !isUnpolicedType(type),
+      "isUnpolicedType() exempts a type a browser renders as a browsing context",
     );
   }
-  ok("isFeed(null) is false", !isFeed(null));
+  ok("isUnpolicedType(null) is false", !isUnpolicedType(null));
 }
 
 /* The public branch matters most: granting the nonce everywhere silences a report and breaks nothing
