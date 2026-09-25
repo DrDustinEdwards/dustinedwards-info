@@ -57,14 +57,16 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /* `request.text()` materializes the whole body before a slice, so `readCapped` stops the stream at the cap. */
-  /* A body stream that breaks mid-read is the sender's request failing, not this endpoint: a 400, logged. */
   let capped: string | null;
   try {
     capped = await readCapped(request, MAX_BODY_BYTES);
   } catch (error) {
-    console.error("[csp-report] request body unreadable", error);
-    return new Response("The request body could not be read.", {
-      status: 400,
+    // Logged and still 204, the rule above: a 500 here would make the browser send the report again.
+    console.error(
+      `[csp-report] body unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return new Response(null, {
+      status: 204,
       headers: { "cache-control": "private, no-store" },
     });
   }
