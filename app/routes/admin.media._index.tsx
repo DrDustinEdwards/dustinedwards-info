@@ -609,7 +609,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     return { message: `Deleted ${key} and its row. Nothing cited it.` };
   }
 
-  return { message: null };
+  return data(
+    { message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.` },
+    { status: 400 },
+  );
 }
 
 function describeCitations(citations: MediaCitation[]) {

@@ -403,7 +403,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     return { message: `Ask budget reset. ${after.count} of ${after.limit} used today.` };
   }
 
-  return { message: null };
+  return data(
+    { message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.` },
+    { status: 400 },
+  );
 }
 
 const STATUS_TABS = [
