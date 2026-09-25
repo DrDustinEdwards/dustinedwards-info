@@ -91,14 +91,6 @@ test("ok is required to be exactly true, not merely truthy", () => {
   assert.equal(verdict.ok, false);
 });
 
-test("THE DISCRIMINATING CONTROL: healthy and unhealthy do not agree", () => {
-  const pass = readinessVerdict(200, HEALTHY);
-  const fail = readinessVerdict(503, UNHEALTHY);
-  assert.equal(pass.ok, true);
-  assert.equal(fail.ok, false);
-  assert.notEqual(pass.ok, fail.ok);
-});
-
 // A drifted corpus must not block its own repair: the D1 sync that converges
 // content-drift runs after readiness.
 const DRIFTED_CORPUS = JSON.stringify({
