@@ -47,6 +47,7 @@ import githubDarkHighContrast from "shiki/themes/github-dark-high-contrast.mjs";
 import githubLightHighContrast from "shiki/themes/github-light-high-contrast.mjs";
 
 import { readingTimeMinutes } from "./reading-time.mjs";
+import { errorMessage } from "../error-message.mjs";
 
 const GRAMMARS = {
   bash,
@@ -672,7 +673,7 @@ function remarkMathValidate(file, sink) {
           throwOnError: true,
         });
       } catch (error) {
-        const detail = error instanceof Error ? error.message : String(error);
+        const detail = errorMessage(error);
         // A line of the BODY: the tree is parsed without frontmatter, and the editor preview has no file.
         throw new ContentError(
           file,
@@ -940,7 +941,7 @@ function remarkChart(file, sink) {
       } catch (error) {
         throw new ContentError(
           file,
-          error instanceof Error ? error.message : String(error),
+          errorMessage(error),
         );
       }
 
@@ -1023,7 +1024,7 @@ function remarkDiagram(file, sink) {
       } catch (error) {
         throw new ContentError(
           file,
-          error instanceof Error ? error.message : String(error),
+          errorMessage(error),
         );
       }
 

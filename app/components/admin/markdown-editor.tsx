@@ -8,6 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 // Split out of pipeline.mjs so this browser chunk can reach it without pulling shiki in.
 import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // CodeMirror must never reach a public bundle; it stays its own chunk because it is dynamically imported.
 
@@ -276,7 +277,7 @@ export default function MarkdownEditor({
       setAlt("");
     } catch (error) {
       setUpload(null);
-      setUploadError(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
+      setUploadError(`Upload failed: ${errorMessage(error)}`);
     }
   };
 

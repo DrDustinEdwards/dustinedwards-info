@@ -11,6 +11,7 @@ import {
   type PodcastEpisode,
   type PodcastSlot,
 } from "~/lib/podcast/feed.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // The page never waits on the podcast host: loaders read KV only and refresh in `waitUntil` (this Worker
 // has no cron). A failed refresh keeps the episodes and stamps `checkedAt`, so a down host is asked once
@@ -40,7 +41,7 @@ function logFailure(stage: string, detail: unknown) {
     JSON.stringify({
       alert: "podcast-refresh-failed",
       stage,
-      detail: detail instanceof Error ? detail.message : String(detail),
+      detail: errorMessage(detail),
     }),
   );
 }
@@ -65,7 +66,7 @@ async function fetchEpisodes(): Promise<{ episodes: PodcastEpisode[] } | { error
     const episodes = parsePodcastFeed(await res.text());
     return episodes.length > 0 ? { episodes } : { error: "the feed parsed to no episodes" };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { error: errorMessage(error) };
   }
 }
 

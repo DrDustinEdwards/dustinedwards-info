@@ -12,6 +12,7 @@ import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
 import { readHead } from "~/lib/editor/head.server";
 import { adminActorContext } from "~/lib/auth.server";
 import type { Route } from "./+types/admin.posts.new";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /* Always: the exact-preview pane copies this document's stylesheets into its iframe. */
 export const handle = { math: true };
@@ -30,7 +31,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   const loadProblems: string[] = [];
   const failed = (what: string, sentence: string) => (error: unknown) => {
     console.error(`editor ${what} read failed`, error);
-    loadProblems.push(`${sentence}: ${error instanceof Error ? error.message : String(error)}`);
+    loadProblems.push(`${sentence}: ${errorMessage(error)}`);
     return [];
   };
   const payload = {

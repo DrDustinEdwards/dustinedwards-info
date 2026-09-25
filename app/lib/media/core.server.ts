@@ -2,6 +2,7 @@ import { listMediaPage } from "~/db";
 
 import { isContentKey } from "./classify.mjs";
 import { WEBP_QUALITY } from "./encoding.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Content-agnostic: nothing post-shaped is imported here; citations arrive through the resolver seam.
 
@@ -97,7 +98,7 @@ export async function measureDimensions(
   } catch (error) {
     throw new Error(
       `Cloudflare Images could not measure the image: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
       { cause: error },
     );
   }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import type { PostFields } from "~/lib/editor/frontmatter";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export type Revision = {
   sha: string;
@@ -41,7 +42,7 @@ export function RevisionList({
       const body = (await response.json()) as { patch: string | null };
       setPatches((prev) => ({ ...prev, [sha]: body.patch }));
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(errorMessage(cause));
       setOpenSha(null);
     }
   };
@@ -60,7 +61,7 @@ export function RevisionList({
       const body = (await response.json()) as { fields: PostFields };
       onRestore(body.fields, sha);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      setError(errorMessage(cause));
     } finally {
       setRestoring((prev) => {
         const next = { ...prev };

@@ -43,6 +43,7 @@ import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 
 import type { OperatorEnv } from "./auth.server";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Validated like the write path: the slug goes into a repository path via `encodeURI`, which does not
 // escape `.`, `/` or `?`.
@@ -388,7 +389,7 @@ function translate(error: unknown): ToolResult {
   return {
     ok: false,
     status: 500,
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage(error),
   };
 }
 
@@ -727,7 +728,7 @@ async function uploadMediaTool(
       return {
         ok: false,
         status: 502,
-        error: `Fetching ${parsed.href} failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: `Fetching ${parsed.href} failed: ${errorMessage(error)}`,
       };
     }
     // Checked again where it LANDED: `fetch` follows redirects, and https may redirect to http.

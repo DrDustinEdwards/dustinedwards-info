@@ -1,3 +1,5 @@
+import { errorMessage } from "./error-message.mjs";
+
 /**
  * Counts chunks as they arrive. The client's declared length must never permit: it can be absent
  * or understated, and `request.text()` materializes the whole body before any slice runs. A stream
@@ -30,7 +32,7 @@ export async function readCapped(source, max) {
   } catch (error) {
     throw new Error(
       `the body stream failed after ${total} bytes: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
       { cause: error },
     );
   }

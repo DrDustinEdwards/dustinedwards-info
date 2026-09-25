@@ -30,6 +30,7 @@ import { PostMetadata } from "./post-metadata";
 import { PublishActions } from "./publish-actions";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // There is no `draft` field: the transition rides in the submitter's `intent`, which a scriptless browser still sends.
 
@@ -245,7 +246,7 @@ export function PostEditor({
         setPreview(result.error ? { error: result.error } : { html: result.html ?? "" });
       } catch (error) {
         if (seq !== previewSeq.current) return;
-        setPreview({ error: error instanceof Error ? error.message : String(error) });
+        setPreview({ error: errorMessage(error) });
       } finally {
         if (seq === previewSeq.current) setPreviewing(false);
       }
@@ -1013,7 +1014,7 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
       setAlt("");
       if (fileRef.current) fileRef.current.value = "";
     } catch (error) {
-      setMessage(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
+      setMessage(`Upload failed: ${errorMessage(error)}`);
     }
   }
 

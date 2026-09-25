@@ -11,6 +11,7 @@ import { SITE_ORIGIN } from "~/lib/seo";
 import { sourceVerdict, targetSlug } from "~/lib/webmention/urls.mjs";
 
 import type { Route } from "./+types/webmention";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /**
  * Public by necessity, and it writes rows, so four bounds: a per-IP rate, a publicly visible target,
@@ -145,7 +146,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           JSON.stringify({
             alert: "webmention-verify-load-failed",
             id,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: errorMessage(error),
           }),
         );
         await recordWebmentionVerdict(env, id, { status: "failed", failureReason: "fetch-error" });
@@ -155,7 +156,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           JSON.stringify({
             alert: "webmention-verdict-write-failed",
             id,
-            detail: error instanceof Error ? error.message : String(error),
+            detail: errorMessage(error),
           }),
         );
       }),

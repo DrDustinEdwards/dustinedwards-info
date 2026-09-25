@@ -1,3 +1,5 @@
+import { errorMessage } from "../error-message.mjs";
+
 /**
  * Both directions summed: a missing record and a stale one are each a wrong answer. Matches the admin badge.
  *
@@ -245,7 +247,7 @@ export function withTimeout(promise, ms, name) {
         clearTimeout(timer);
         resolve({
           ok: false,
-          detail: `check threw: ${error instanceof Error ? error.message : String(error)}`,
+          detail: `check threw: ${errorMessage(error)}`,
         });
       },
     );

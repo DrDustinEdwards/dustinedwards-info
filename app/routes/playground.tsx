@@ -43,6 +43,7 @@ import type { Route } from "./+types/playground";
 
 import "~/styles/prose.css";
 import "~/styles/playground.css";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /**
  * Every demo runs the real code path, and every result is a server-rendered GET URL. No user input
@@ -162,7 +163,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     try {
       classification = classify(key);
     } catch (error) {
-      classifyRefusal = error instanceof Error ? error.message : String(error);
+      classifyRefusal = errorMessage(error);
     }
 
     const dimensions = dimensionsFromKey(key);
@@ -235,7 +236,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         blockedUrls: rendered.blockedUrls,
       };
     } catch (error) {
-      markdownRefusal = error instanceof Error ? error.message : String(error);
+      markdownRefusal = errorMessage(error);
     }
   }
 
@@ -270,7 +271,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     );
     chartHtml = serialize(renderChartHast(model, []));
   } catch (error) {
-    chartRenderError = error instanceof Error ? error.message : String(error);
+    chartRenderError = errorMessage(error);
   }
 
   return {

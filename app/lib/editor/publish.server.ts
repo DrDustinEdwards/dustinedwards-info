@@ -25,6 +25,7 @@ import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { listPostCorpusForRelated, listPostLinkCorpus } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export { GitHubError, PolicyError };
 export type { Actor };
@@ -73,7 +74,7 @@ export function makeResolveImage(env: PublishEnv) {
       } catch (error) {
         throw new EditorError(
           `${ASSET_MANIFEST_PATH} did not parse: ` +
-            `${error instanceof Error ? error.message : String(error)}`,
+            `${errorMessage(error)}`,
         );
       }
     });
@@ -368,7 +369,7 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
     return { ok: true as const, ...result };
   } catch (error) {
     console.error("ask index sync failed after save", error);
-    return { ok: false as const, message: error instanceof Error ? error.message : String(error) };
+    return { ok: false as const, message: errorMessage(error) };
   }
 }
 
@@ -411,7 +412,7 @@ async function removeAskForPost(env: PublishEnv, slug: string) {
       ok: false as const,
       message:
         `The post was deleted but its Ask records were not removed, so Ask can still quote it: ` +
-        `${error instanceof Error ? error.message : String(error)}. Re-run the Ask sync to prune them.`,
+        `${errorMessage(error)}. Re-run the Ask sync to prune them.`,
     };
   }
 }
