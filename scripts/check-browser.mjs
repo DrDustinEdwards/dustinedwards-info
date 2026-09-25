@@ -797,7 +797,7 @@ async function pollUntil(read, done, { tries = 25, everyMs = 200, sleepFirst = t
  * Visits each path until one carries `selector`, and leaves the page there.
  *
  * @param {import("puppeteer").Page} target
- * @param {string[]} paths
+ * @param {Array<string | null>} paths
  * @param {string} selector
  * @returns {Promise<{ found: string | null, last: string | null }>} the first path carrying it, and the last one visited
  */
@@ -3710,7 +3710,7 @@ try {
     ok(
       "the ADMIN stylesheet is actually applied where the layout is measured",
       rules >= 670,
-      `${adminCss.rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 670, ` +
+      `${rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 670, ` +
         `measured 730 on 2026-08-28. Below this admin.css did not load and every ` +
         `overflow number below is about browser defaults.` +
         `
