@@ -79,7 +79,16 @@ export async function action({ request, context }: Route.ActionArgs) {
     return answer(BAD_FORM, 400);
   }
 
-  const body = await readCapped(request, MAX_BODY_BYTES);
+  let body: string | null;
+  try {
+    body = await readCapped(request, MAX_BODY_BYTES);
+  } catch (error) {
+    // The sender's body broke mid-read: its request is malformed, not this site down, so 400, logged.
+    console.error(
+      `[webmention] body unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return answer(BAD_FORM, 400);
+  }
   if (body === null) {
     return answer("Payload Too Large", 413);
   }

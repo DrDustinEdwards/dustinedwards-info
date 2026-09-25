@@ -21,9 +21,14 @@ const PUBLIC_DIR = "public";
  */
 let placeholderMemo = null;
 function assetPlaceholders() {
-  placeholderMemo ??= readFile(ASSET_MANIFEST_PATH, "utf8").then(
-    (text) => JSON.parse(text).placeholders ?? {},
-  );
+  placeholderMemo ??= readFile(ASSET_MANIFEST_PATH, "utf8").then((text) => {
+    const { placeholders } = JSON.parse(text);
+    // A manifest without the map would strip every placeholder from every post without a word.
+    if (!placeholders || typeof placeholders !== "object") {
+      throw new Error(`${ASSET_MANIFEST_PATH} carries no placeholders map. Run npm run build:assets.`);
+    }
+    return placeholders;
+  });
   return placeholderMemo;
 }
 
@@ -58,7 +63,9 @@ export function makeResolveImage(file) {
     let bytes;
     try {
       bytes = await readFile(onDisk);
-    } catch {
+    } catch (error) {
+      // Only absence is "not found"; a permissions or I/O error is reported as itself.
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
       throw new ContentError(file, `image "${src}" not found at ${onDisk}`);
     }
     const size = imageSize(bytes);

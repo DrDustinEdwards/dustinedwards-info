@@ -131,7 +131,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </a>
         {children}
         {/* The two ld+json blocks are deliberately NOT nonced: see `contentSecurityPolicy` in
-            workers/app.ts. */}
+            workers/csp.mjs. */}
         {hydrates ? (
           <>
             <ScrollRestoration nonce={nonce} />

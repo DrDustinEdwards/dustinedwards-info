@@ -83,22 +83,29 @@ export async function listMedia(
   };
 }
 
-// Measured before a key exists, because the key carries the dimensions.
+// Measured before a key exists, because the key carries the dimensions. Null means the binding answered
+// with no pixel dimensions (an SVG); a binding that throws is NOT that answer, so the throw propagates:
+// read as null it would mint a permanent key with no size, or write empty sizes over measured ones.
 export async function measureDimensions(
   env: Env,
   body: ReadableStream | ArrayBuffer,
 ): Promise<{ width: number; height: number } | null> {
   const stream = body instanceof ArrayBuffer ? new Blob([body]).stream() : body;
+  let info: Awaited<ReturnType<Env["IMAGES"]["info"]>>;
   try {
-    const info = await env.IMAGES.info(stream);
-    // An SVG has no pixel dimensions: record nothing rather than 0.
-    if ("width" in info && "height" in info) {
-      return { width: info.width, height: info.height };
-    }
-    return null;
-  } catch {
-    return null;
+    info = await env.IMAGES.info(stream);
+  } catch (error) {
+    throw new Error(
+      `Cloudflare Images could not measure the image: ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
+  // An SVG has no pixel dimensions: record nothing rather than 0.
+  if ("width" in info && "height" in info) {
+    return { width: info.width, height: info.height };
+  }
+  return null;
 }
 
 const PLACEHOLDER_WIDTH = 20;

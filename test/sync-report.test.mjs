@@ -147,12 +147,35 @@ test("media: an unreadable count is not a passing count", () => {
   }
 });
 
-test("media: a non-array missing or extra cannot smuggle a pass or a crash", () => {
+test("media: a non-array missing, extra or failure list fails closed without a crash", () => {
+  // A report that cannot say what failed has not converged (Dustin's ruling, job_acaa730fcbc8).
   const r = mediaSyncReport({ ...CLEAN, missing: "nope", extra: null, failures: 7 });
   assert.deepEqual(r.missing, []);
   assert.deepEqual(r.extra, []);
   assert.deepEqual(r.failures, []);
-  assert.equal(r.converged, true);
+  assert.equal(r.converged, false);
+  assert.equal(r.unreadable, true);
+  assert.match(mediaSyncSummary(r), /unreadable/);
+
+  for (const bad of [{ failures: 7 }, { failures: undefined }, { missing: null }, { extra: "x" }]) {
+    assert.equal(mediaSyncReport({ ...CLEAN, ...bad }).converged, false, JSON.stringify(bad));
+  }
+});
+
+test("media: a failure entry that is not a string still counts as a failure", () => {
+  const r = mediaSyncReport({ ...CLEAN, failures: [{ key: "/x.png" }] });
+  assert.equal(r.converged, false);
+  assert.equal(r.unreadable, true);
+});
+
+test("ask: an unreadable failure list is not converged, an absent one is", () => {
+  const counts = { uploaded: 5, removed: 0, cacheDropped: 0, expected: 5, present: 5 };
+  for (const bad of [7, null, "nope", {}]) {
+    const r = askSyncReport({ ...counts, failed: bad });
+    assert.equal(r.converged, false, `failed=${JSON.stringify(bad)}`);
+    assert.match(askSyncSummary(r), /UNREADABLE/);
+  }
+  assert.equal(askSyncReport(counts).converged, true);
 });
 
 test("media: the summary names what is wrong, not just that something is", () => {

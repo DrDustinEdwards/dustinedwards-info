@@ -31,6 +31,9 @@ export function MediaPalette({
   const navigate = useNavigate();
   const [open, setOpen] = useState(Boolean(initialResults));
   const [copied, setCopied] = useState("");
+  const [copyFailed, setCopyFailed] = useState(false);
+  /* A failed search is said as one; an empty list would read as "nothing matches". */
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
   const seq = useRef(0);
@@ -55,35 +58,53 @@ export function MediaPalette({
     if (!trimmed) {
       setResults([]);
       setHasMore(false);
+      setSearchError(null);
       return;
     }
     const id = (seq.current += 1);
     const timer = window.setTimeout(() => {
+      // Answered as JSON by the route's middleware; anything else (an expired session's page) is a failure.
       fetch(`/admin/media?palette=1&q=${encodeURIComponent(trimmed)}`, {
         headers: { accept: "application/json" },
       })
-        .then((r) => (r.ok ? (r.json() as Promise<PalettePayload>) : null))
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          if (!(r.headers.get("content-type") ?? "").includes("application/json")) {
+            throw new Error("the server did not answer with results");
+          }
+          return r.json() as Promise<PalettePayload>;
+        })
         .then((data) => {
-          if (id !== seq.current || !data) return;
+          if (id !== seq.current) return;
+          setSearchError(null);
           setResults(data.results ?? []);
           setHasMore(Boolean(data.hasMore));
           setCursor(0);
         })
-        .catch(() => {
-          if (id === seq.current) setResults([]);
+        .catch((error: unknown) => {
+          if (id !== seq.current) return;
+          setResults([]);
+          setHasMore(false);
+          setSearchError(error instanceof Error ? error.message : String(error));
         });
     }, 130);
     return () => window.clearTimeout(timer);
   }, [query]);
 
   const copy = (value: string) => {
-    navigator.clipboard
-      .writeText(value)
+    // Inside a promise: with no clipboard (an insecure context) the call throws before any promise exists.
+    Promise.resolve()
+      .then(() => navigator.clipboard.writeText(value))
       .then(() => {
+        setCopyFailed(false);
         setCopied(value);
         window.setTimeout(() => setCopied(""), 1600);
       })
-      .catch(() => setCopied(""));
+      .catch(() => {
+        setCopied("");
+        setCopyFailed(true);
+        window.setTimeout(() => setCopyFailed(false), 2400);
+      });
   };
 
   // Only Cmd+K and / are global; the rest applies in the search box alone, so arrows keep working in fields.
@@ -144,7 +165,11 @@ export function MediaPalette({
 
   return (
     <div className="media-palette" role="presentation">
-      {results.length === 0 ? (
+      {searchError ? (
+        <p className="media-palette-empty">
+          Search failed: {searchError}. Press Enter to search the full page.
+        </p>
+      ) : results.length === 0 ? (
         <p className="media-palette-empty">
           Nothing matches &ldquo;{query.trim()}&rdquo;. Searched paths, names, alt
           text and tags.
@@ -193,7 +218,9 @@ export function MediaPalette({
         <span className="media-palette-count">
           {copied
             ? "copied"
-            : results.length
+            : copyFailed
+              ? "copy failed"
+              : results.length
               ? `${results.length}${hasMore ? "+" : ""} match${results.length === 1 && !hasMore ? "" : "es"}`
               : ""}
         </span>

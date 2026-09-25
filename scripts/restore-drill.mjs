@@ -1,12 +1,11 @@
 // D1 Time Travel restores a database in place and no form of it targets another, so it cannot be drilled here.
 
 import { readFile, readdir, mkdir, rm, writeFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
 import { assertFloor } from "./lib/floor.mjs";
-import { retryRead } from "./lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 
@@ -52,12 +51,16 @@ function ok(label, condition, detail = "") {
  * @returns {{ stdout: string, status: number }}
  */
 function wrangler(args) {
-  const result = spawnSync(`npx wrangler ${args}`, {
-    encoding: "utf8",
+  // Bounded for the whole-database export and import, so a hung wrangler fails the drill instead of hanging it.
+  const result = spawnSyncBounded(`npx wrangler ${args}`, [], {
     shell: true,
     maxBuffer: 64 * 1024 * 1024,
+    timeoutMs: 15 * 60_000,
   });
-  return { stdout: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status ?? 1 };
+  return {
+    stdout: `${result.stdout}${result.stderr}${result.error ? `\n${result.error}` : ""}`,
+    status: result.status ?? 1,
+  };
 }
 
 /**
@@ -257,20 +260,40 @@ async function main() {
   console.log(`  ${PRODUCTION_DB} resolved to ${PRODUCTION_ID}`);
 
   if (listed.status === 0) {
-    const stale = databases.filter(
+    const leaked = databases.filter(
       (d) =>
-        typeof d.name === "string" &&
-        d.name.startsWith(SCRATCH_PREFIX) &&
-        d.name !== SCRATCH_DB &&
-        Date.now() - Date.parse(d.created_at ?? "") > SWEEP_AFTER_MS,
+        typeof d.name === "string" && d.name.startsWith(SCRATCH_PREFIX) && d.name !== SCRATCH_DB,
     );
+    // An unparseable date is NaN, and NaN is never older than the window, so it would never be swept.
+    const undated = leaked.filter((d) => Number.isNaN(Date.parse(d.created_at ?? "")));
+    if (undated.length > 0) {
+      ok(
+        "EVERY LEAKED SCRATCH DATABASE CAN BE AGED",
+        false,
+        `${undated.map((d) => d.name).join(", ")} carry no readable created_at, so the sweep ` +
+          `cannot tell a leak from a concurrent run and never deletes them. Delete them by hand.`,
+      );
+    }
+    const stale = leaked.filter(
+      (d) => Date.now() - Date.parse(d.created_at ?? "") > SWEEP_AFTER_MS,
+    );
+    /** @type {string[]} */
+    const unswept = [];
     for (const old of stale) {
-      wrangler(`d1 delete ${scratch(String(old.name))} --skip-confirmation`);
+      const dropped = wrangler(`d1 delete ${scratch(String(old.name))} --skip-confirmation`);
+      if (dropped.status !== 0) {
+        unswept.push(`${old.name} (exited ${dropped.status}: ${tail(dropped.stdout)})`);
+      }
     }
     if (stale.length > 0) {
       console.log(
-        `  swept ${stale.length} leaked scratch database(s): ` +
+        `  swept ${stale.length - unswept.length} of ${stale.length} leaked scratch database(s): ` +
           `${stale.map((d) => d.name).join(", ")}`,
+      );
+      ok(
+        "EVERY LEAKED SCRATCH DATABASE IS SWEPT",
+        unswept.length === 0,
+        `${unswept.join("; ")}. Delete them by hand.`,
       );
     }
   }
@@ -568,7 +591,17 @@ async function main() {
           `assertion here would ever notice. Delete ${SCRATCH_DB} by hand.`,
       );
     }
-    await rm(dir, { recursive: true, force: true }).catch(() => {});
+    // The directory holds a full export of production, so failing to remove it is a failure.
+    try {
+      await rm(dir, { recursive: true, force: true });
+    } catch (error) {
+      ok(
+        "THE PRODUCTION EXPORT IS REMOVED FROM TMP",
+        false,
+        `${error instanceof Error ? error.message : String(error)}. ${dir} still holds a full ` +
+          `export of production; delete it by hand.`,
+      );
+    }
   }
 
   timings.total = Date.now() - started;
