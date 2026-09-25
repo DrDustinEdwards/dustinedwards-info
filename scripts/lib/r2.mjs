@@ -29,6 +29,23 @@ async function bucketProxy(bucket, remote) {
 }
 
 /**
+ * The runtime can throw on teardown after a remote session, and that must not replace the error that
+ * ended the work, nor fail work that finished. It is printed, never dropped.
+ *
+ * @param {{ dispose: () => Promise<void> }} proxy
+ */
+async function disposeProxy(proxy) {
+  try {
+    await proxy.dispose();
+  } catch (error) {
+    console.error(
+      `  r2: proxy teardown failed (${error instanceof Error ? error.message : String(error)}); ` +
+        `the listing or download itself is unaffected`,
+    );
+  }
+}
+
+/**
  * Size is verified per object, not just the count: a short read writes a plausible file that
  * restores to a corrupt image.
  *
@@ -69,9 +86,11 @@ export async function downloadAllObjects({ bucket, destDir, remote = true }) {
       }
       if (!page.truncated) break;
       cursor = page.cursor;
+      // Without a cursor the same first page comes back forever.
+      if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
     }
   } finally {
-    await proxy.dispose();
+    await disposeProxy(proxy);
   }
 
   return { downloaded, bytes, mismatched };
@@ -115,13 +134,9 @@ export async function listAllObjects({ bucket, prefix = "", remote = true }) {
       if (!cursor) throw new Error("R2 reported a truncated listing with no cursor");
     }
   } finally {
-    // The runtime can throw on teardown after a remote session. Only teardown is swallowed: a
-    // listing error must propagate so a deleting caller can tell "empty" from "did not finish".
-    try {
-      await proxy.dispose();
-    } catch {
-      /* teardown only */
-    }
+    // Only teardown is caught: a listing error must propagate so a deleting caller can tell "empty"
+    // from "did not finish".
+    await disposeProxy(proxy);
   }
 
   return objects;

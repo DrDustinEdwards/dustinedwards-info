@@ -1,4 +1,4 @@
-import { readFile, readdir, mkdir, stat } from "node:fs/promises";
+import { readFile, readdir, mkdir, rm, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 import { retryRead } from "./lib/retry.mjs";
 import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
@@ -212,6 +212,9 @@ async function main() {
   /** @param {string} name */
   async function exportTable(name) {
     const out = path.join(dir, `${name}.sql`);
+    // The directory is fixed across runs, so an export that exits 0 without writing would otherwise
+    // be graded on the previous run's file.
+    await rm(out, { force: true });
     // Retried once: an export is a read that overwrites its own local file. The throw is load-bearing,
     // because wrangler returns on a failed command rather than rejecting.
     await retryRead(
