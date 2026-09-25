@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 import { bundleRoutes, importBundled, renderRoute } from "../lib/route-render.mjs";
 import { buildArtifact, revisedDate } from "../build-content.mjs";
+import { postLoaderData } from "../lib/route-fixtures.mjs";
 
 import {
   POSTS_PER_PAGE,
@@ -144,41 +145,6 @@ if (failures.length > 0) {
 
 const EXPECTED_AUTHOR_URL = `${SITE_ORIGIN}/`;
 
-/**
- * @param {any} record
- */
-function postLoaderData(record) {
-  return {
-    toc: record.toc ?? [],
-    seriesParts: [],
-    mentions: [],
-    post: {
-      slug: record.slug,
-      title: record.title,
-      description: record.description ?? null,
-      html: record.html ?? "",
-      publishAt: record.publishAt ?? null,
-      // With no revision date the sync writes `unixepoch()`, so the assertion is the pairing.
-      updatedAt: revisedDate(record),
-      coverImage: record.cover?.src ?? null,
-      coverAlt: record.cover?.alt ?? null,
-      ogImage: null,
-      readingTimeMinutes: record.readingTimeMinutes ?? null,
-      tags: record.tags ?? [],
-      previous: null,
-      next: null,
-      series: record.series ?? null,
-      part: record.part ?? null,
-      ogTitle: record.ogTitle ?? null,
-      ogDescription: record.ogDescription ?? null,
-      related: record.related ?? [],
-      backlinks: record.backlinks ?? [],
-      changelog: record.changelog ?? null,
-      furtherReading: record.furtherReading ?? [],
-    },
-  };
-}
-
 let postsParsed = 0;
 let updatedSeen = 0;
 let unrevisedSeen = 0;
@@ -190,7 +156,7 @@ for (const record of published) {
   const html = await renderRoute(postModule, {
     path: "/blog/:slug",
     url: `/blog/${slug}`,
-    loaderData: postLoaderData(record),
+    loaderData: postLoaderData(record, revisedDate),
     params: { slug },
   });
   const parsed = mf2(html, { baseUrl: canonical });
@@ -562,7 +528,7 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
     await renderRoute(postModule, {
       path: "/blog/:slug",
       url: `/blog/${published[0].slug}`,
-      loaderData: postLoaderData(published[0]),
+      loaderData: postLoaderData(published[0], revisedDate),
       params: { slug: published[0].slug },
     }),
   ],
