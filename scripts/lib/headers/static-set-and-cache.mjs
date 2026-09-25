@@ -25,7 +25,16 @@ const RATIFIED = {
 };
 
 /**
- * Returns the declared set and the applySecurityHeaders occurrences, for the closing summary.
+ * The body of applyDocumentHeaders, the one helper both exits call.
+ *
+ * @param {string} code workers/app.ts with its comments stripped
+ */
+export function documentHeadersOf(code) {
+  return code.match(/function\s+applyDocumentHeaders\s*\([\s\S]*?\n\}/)?.[0] ?? "";
+}
+
+/**
+ * Returns the declared set and the applyDocumentHeaders occurrences, for the closing summary.
  *
  * @param {string} code workers/app.ts with its comments stripped
  */
@@ -93,16 +102,22 @@ export function run(code) {
 
   /*
    * Declaring the set and applying it differ: app.ts has two exits, and one helper call means
-   * redirects ship bare.
+   * redirects ship bare. Both exits call applyDocumentHeaders, which applies the set.
    */
-  const applications = [...code.matchAll(/applySecurityHeaders\s*\(/g)].length;
+  const documentHeaders = documentHeadersOf(code);
+  const applications = [...code.matchAll(/applyDocumentHeaders\s*\(/g)].length;
   ok(
     "applySecurityHeaders is defined",
     /function\s+applySecurityHeaders\s*\(/.test(code),
     "the constant is declared but nothing applies it",
   );
   ok(
-    "applySecurityHeaders is called on BOTH exits (mutable and the immutable rebuild)",
+    "applyDocumentHeaders applies the security set",
+    /applySecurityHeaders\s*\(/.test(documentHeaders),
+    "the helper both exits call does not call applySecurityHeaders, so neither exit ships the set",
+  );
+  ok(
+    "applyDocumentHeaders is called on BOTH exits (mutable and the immutable rebuild)",
     applications >= 3,
     `found ${applications} occurrence(s) including the definition; expected the definition ` +
       `plus one call per exit. A redirect that misses it ships with no security headers.`,
@@ -135,18 +150,21 @@ export function run(code) {
       `intermediaries and the browser treat it the same way.`,
   );
 
-  const guards = [...code.matchAll(/if\s*\(\s*!\s*(?:\w+\.)?headers\.has\(\s*"cache-control"\s*\)\s*\)/g)];
+  /* In the helper both exits call, which the assertion on applyDocumentHeaders above counts. */
+  const guards = [
+    ...documentHeaders.matchAll(/if\s*\(\s*!\s*(?:\w+\.)?headers\.has\(\s*"cache-control"\s*\)\s*\)/g),
+  ];
   ok(
-    "the no-Cache-Control default is applied on BOTH exits (mutable and the immutable rebuild)",
-    guards.length >= 2,
-    `found ${guards.length} guard(s); expected one per exit. A redirect that misses it ` +
+    "the no-Cache-Control default is applied in applyDocumentHeaders, so on BOTH exits",
+    guards.length >= 1,
+    `found ${guards.length} guard(s) in the helper both exits call. A redirect that misses it ` +
       `is stored in a shared cache, and /admin returns 302.`,
   );
 
   let guardsSettingUncached = 0;
   for (const guard of guards) {
     /* The guard's own consequent: a braced block, or the one statement it governs. */
-    const rest = code.slice(guard.index + guard[0].length);
+    const rest = documentHeaders.slice((guard.index ?? 0) + guard[0].length);
     const after = /^\s*\{/.test(rest) ? blockFrom(rest, 0) : rest.slice(0, rest.indexOf(";") + 1);
     if (/headers\.set\(\s*"cache-control"\s*,\s*UNCACHED\s*\)/.test(after)) guardsSettingUncached += 1;
   }
@@ -194,10 +212,10 @@ export function run(code) {
       `EDGE_CACHE_HEADER is ${JSON.stringify(edgeHeader?.[1])}. CDN-Cache-Control passes downstream; ` +
         `Cache-Control would reach the browser and defeat every purge.`,
     );
-    const stamps = [...code.matchAll(/\bapplyEdgePolicy\(\s*(?:response\.)?headers\s*\)/g)];
+    const stamps = [...documentHeaders.matchAll(/\bapplyEdgePolicy\(\s*headers\s*\)/g)];
     ok(
-      "the Renderer stamps the edge policy on BOTH exits",
-      stamps.length >= 2,
+      "the Renderer stamps the edge policy on BOTH exits, through applyDocumentHeaders",
+      stamps.length >= 1,
       `found ${stamps.length} call(s). A shared response that misses it carries no edge policy and ` +
         `falls back to Cache-Control, which is max-age=0.`,
     );

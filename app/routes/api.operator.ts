@@ -20,6 +20,14 @@ const json = (body: unknown, status = 200, headers: HeadersInit = {}) =>
     },
   });
 
+/** A refused identity or allowance, with its Retry-After when the refusal is a rate limit. */
+const refusal = (outcome: { error: string; status: number; retryAfter?: number }) =>
+  json(
+    { ok: false, error: outcome.error },
+    outcome.status,
+    outcome.retryAfter ? { "retry-after": String(outcome.retryAfter) } : {},
+  );
+
 export async function action({ request, context }: Route.ActionArgs) {
   if (request.method !== "POST") {
     return json({ ok: false, error: "Use POST." }, 405, { allow: "POST" });
@@ -29,21 +37,13 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const auth = await authenticateOperator(env, request);
   if (!auth.ok) {
-    return json(
-      { ok: false, error: auth.error },
-      auth.status,
-      auth.retryAfter ? { "retry-after": String(auth.retryAfter) } : {},
-    );
+    return refusal(auth);
   }
 
   /* Metered right after identity is proven, so an unauthenticated flood never reaches the Durable Object. */
   const metered = await meterOperator(env, auth.id);
   if (!metered.ok) {
-    return json(
-      { ok: false, error: metered.error },
-      metered.status,
-      metered.retryAfter ? { "retry-after": String(metered.retryAfter) } : {},
-    );
+    return refusal(metered);
   }
 
   let body: unknown;
@@ -86,11 +86,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context) as Parameters<typeof authenticateOperator>[0];
   const auth = await authenticateOperator(env, request);
   if (!auth.ok) {
-    return json(
-      { ok: false, error: auth.error },
-      auth.status,
-      auth.retryAfter ? { "retry-after": String(auth.retryAfter) } : {},
-    );
+    return refusal(auth);
   }
 
   return json({
