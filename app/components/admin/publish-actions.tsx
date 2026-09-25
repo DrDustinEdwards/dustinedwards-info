@@ -76,7 +76,7 @@ export function PublishActions({
             name="intent"
             value={primary.id}
             className="btn"
-            disabled={disabled}
+            disabled={disabled || busy}
             onClick={(event) => {
               event.preventDefault();
               setCeremony(true);
@@ -98,7 +98,7 @@ export function PublishActions({
             name="intent"
             value={primary.id}
             className="btn"
-            disabled={disabled}
+            disabled={disabled || busy}
           >
             {busy ? "Saving" : primary.label}
           </button>
