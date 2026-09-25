@@ -317,8 +317,17 @@ function lightbox() {
   );
   for (const image of diagrams) {
     image.classList.add("zoomable");
-    image.addEventListener("click", () => {
+    /* A button to assistive technology and the keyboard too, not only to a pointer. */
+    image.tabIndex = 0;
+    image.setAttribute("role", "button");
+    image.setAttribute("aria-label", `Enlarge diagram: ${image.alt}`);
+    const open = () =>
       openOverlay(image.src, image.alt, () => image.focus({ preventScroll: true }));
+    image.addEventListener("click", open);
+    image.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
     });
   }
 }
