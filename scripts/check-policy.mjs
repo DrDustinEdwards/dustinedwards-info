@@ -788,7 +788,8 @@ refuses(
   /* ORDER: the upload writes what the DEPLOYED Worker serves, so it runs after deploy and sync. */
   const deployAt = shipSource.indexOf('announce("Deploy")');
   const syncAt = shipSource.indexOf('announce("Sync content to remote D1")');
-  const askAt = shipSource.indexOf("sync_ask");
+  /* The CALL, not the first mention: a message string naming sync_ask would move this check. */
+  const askAt = shipSource.indexOf('operatorSync("sync_ask")');
   eq("ask sync: the deploy step was located", deployAt !== -1, true);
   eq("ask sync: the D1 sync step was located", syncAt !== -1, true);
   eq(
@@ -798,9 +799,12 @@ refuses(
   );
 
   /* A step whose result is discarded cannot fail. */
+  /* In the sync_ask step, and as the comparison itself: any identifier containing the word passed. */
+  const askStep =
+    askAt === -1 ? "" : shipSource.slice(askAt, shipSource.indexOf("operatorSync(", askAt + 1));
   eq(
     "ask sync: ship reads a converged verdict rather than a status code alone",
-    /converged/.test(shipSource),
+    /report\.converged\s*!==\s*true/.test(askStep),
     true,
   );
   /* THE EXIT CONDITION ITSELF: a block that PRINTS the miss keeps the name inside the window. */
@@ -901,9 +905,16 @@ refuses(
   );
   eq(
     "ruling 48: a still-drifted corpus reaches the exit code",
-    /deferredMiss\s*\)\s*\{/.test(shipSource) || /\|\|\s*deferredMiss/.test(shipSource),
+    /\bdeferredMiss\b/.test(guard),
     true,
   );
+  /* EVERY miss ship records, read off its declarations: one that prints but is missing from the
+     guard is a deploy that reports a fault and exits 0. */
+  const missNames = [...shipSource.matchAll(/\blet\s+(\w+Miss)\s*=/g)].map((m) => m[1]);
+  eq("ship: its miss variables were found", missNames.length >= 6, true);
+  for (const name of missNames) {
+    eq(`ship: ${name} reaches the final exit guard`, new RegExp(`\\b${name}\\b`).test(guard), true);
+  }
 
   eq(
     "media sync: the operator API exposes sync_media",
