@@ -85,6 +85,8 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   const panel = el("div", "ask-panel");
   panel.setAttribute("role", "region");
   panel.setAttribute("aria-label", "AI answer");
+  // Focusable but not a Tab stop, so focus has somewhere to go when the trigger hides.
+  panel.tabIndex = -1;
 
   const header = el("div", "ask-header");
   const badge = el("span", "ask-badge", "AI generated");
@@ -218,6 +220,15 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     if (answer.trim().length === 0) fail("No answer for that one.");
     else announcer.textContent = `AI answer: ${splitFollowUp(answer).answer}`;
   })();
+
+  /*
+   * A trigger hidden on click drops focus to <body> (WCAG 2.4.3); focus is caught here, on the answer
+   * it asked for. Focus the caller still holds on something visible is left where it is.
+   */
+  const held = document.activeElement;
+  if (!held || held === document.body || (held instanceof HTMLElement && held.closest("[hidden]"))) {
+    panel.focus();
+  }
 
   return {
     cancel() {
