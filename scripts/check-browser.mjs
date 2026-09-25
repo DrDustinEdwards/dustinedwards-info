@@ -3306,11 +3306,17 @@ try {
     }
 
     /* Asserted as resolved color against the token, never a hex: @import order decides what wins. */
+    /* Throws on anything but a hex: parseInt("") is NaN, NaN shifts to 0, and rgb(0, 0, 0) is also
+       SVG's default fill, so an unresolved --brand and a lost fill rule would agree and pass. */
     const rgb = (/** @type {string} */ hex) => {
       const h = hex.trim().replace("#", "");
+      if (!/^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(h)) {
+        throw new Error(`rgb(): ${JSON.stringify(hex)} is not a 3 or 6 digit hex`);
+      }
       const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
       return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
     };
+    const isHex = (/** @type {string} */ v) => /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
 
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const adminMark = await admin.evaluate(() => {
@@ -3329,9 +3335,12 @@ try {
     );
     ok(
       "the admin mark's fill resolves to --brand, the base binding in app.css",
-      adminMark.present && adminMark.fill === rgb(adminMark.brand),
-      `fill is ${JSON.stringify(adminMark.fill)} and --brand is ${JSON.stringify(adminMark.brand)} ` +
-        `(${rgb(adminMark.brand || "#000")}). The base rule in app.css is not reaching the admin mark.`,
+      adminMark.present && isHex(adminMark.brand) && adminMark.fill === rgb(adminMark.brand),
+      isHex(adminMark.brand)
+        ? `fill is ${JSON.stringify(adminMark.fill)} and --brand is ${JSON.stringify(adminMark.brand)} ` +
+            `(${rgb(adminMark.brand)}). The base rule in app.css is not reaching the admin mark.`
+        : `--brand resolved to ${JSON.stringify(adminMark.brand)} on the admin plane, not a hex, so ` +
+            `there is nothing for the fill to be compared with.`,
     );
 
     await admin.goto(`${ADMIN_ORIGIN}/`, { waitUntil: "networkidle0" });
@@ -3353,9 +3362,11 @@ try {
     );
     ok(
       "the public header mark's purple resolves to --brand, the base binding in app.css",
-      publicMark.brand.length > 0 && publicMark.brand.every((f) => f === rgb(publicMark.token)),
+      publicMark.brand.length > 0 &&
+        isHex(publicMark.token) &&
+        publicMark.brand.every((f) => f === rgb(publicMark.token)),
       `fills are ${JSON.stringify(publicMark.brand)} and --brand is ` +
-        `${JSON.stringify(publicMark.token)} (${rgb(publicMark.token || "#000")}). Ruling 118.2 ` +
+        `${JSON.stringify(publicMark.token)} (${isHex(publicMark.token) ? rgb(publicMark.token) : "not a hex"}). Ruling 118.2 ` +
         `removed the header override, so the (0,1,0) base in app.css has to reach the mark, ` +
         `which is what the sixteen-file split put at risk.`,
     );
