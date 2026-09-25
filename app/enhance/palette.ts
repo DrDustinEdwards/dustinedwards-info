@@ -96,7 +96,7 @@ function build() {
     <p class="palette-footer">
       <span><kbd>up</kbd><kbd>down</kbd> to move</span>
       <span><kbd>Enter</kbd> to open</span>
-      <a href="/search">All results</a>
+      <a href="/search" class="palette-all-results">All results</a>
     </p>
   `;
 
@@ -104,6 +104,7 @@ function build() {
   input = dialog.querySelector(".palette-input");
   listbox = dialog.querySelector(".palette-listbox");
   statusLine = dialog.querySelector(".palette-status");
+  allResultsLink = dialog.querySelector(".palette-all-results");
 
   askTrigger = dialog.querySelector(".palette-ask-trigger");
   askContainer = dialog.querySelector(".palette-ask-container");
