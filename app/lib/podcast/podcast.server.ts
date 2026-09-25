@@ -21,46 +21,72 @@ const REFRESH_AFTER_MS = 3 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 8000;
 const USER_AGENT = "dustinedwards.info (+https://dustinedwards.info)";
 
-type CachedFeed = {
+/**
+ * `lastError` says why the last refresh failed; absent after one that landed. With no episodes ever
+ * read, a failed refresh still answers (episodes empty, `fetchedAt` null, `lastError` set), so a
+ * reader can tell "the read failed" from "not read yet", which is the only thing null means.
+ */
+export type CachedFeed = {
   episodes: PodcastEpisode[];
-  fetchedAt: string;
+  fetchedAt: string | null;
   checkedAt: string;
+  lastError?: string;
 };
+
+// A failed refresh never takes the page down, but it is logged under one alert key and kept on the
+// cached feed as `lastError`, so a host that has been down for a week is not read as a quiet podcast.
+function logFailure(stage: string, detail: unknown) {
+  console.error(
+    JSON.stringify({
+      alert: "podcast-refresh-failed",
+      stage,
+      detail: detail instanceof Error ? detail.message : String(detail),
+    }),
+  );
+}
 
 async function readCache(kv: KVNamespace): Promise<CachedFeed | null> {
   try {
     return await kv.get<CachedFeed>(CACHE_KEY, "json");
-  } catch {
+  } catch (error) {
     // A KV hiccup must never take the page down.
+    logFailure("kv-read", error);
     return null;
   }
 }
 
-async function fetchEpisodes(): Promise<PodcastEpisode[] | null> {
+async function fetchEpisodes(): Promise<{ episodes: PodcastEpisode[] } | { error: string }> {
   try {
     const res = await fetch(PODCAST_FEED_URL, {
       headers: { "user-agent": USER_AGENT, accept: "application/rss+xml, application/xml" },
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!res.ok) return null;
+    if (!res.ok) return { error: `the feed answered HTTP ${res.status}` };
     const episodes = parsePodcastFeed(await res.text());
-    return episodes.length > 0 ? episodes : null;
-  } catch {
-    return null;
+    return episodes.length > 0 ? { episodes } : { error: "the feed parsed to no episodes" };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
   }
 }
 
-async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<CachedFeed | null> {
+async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<CachedFeed> {
   const now = new Date().toISOString();
-  const episodes = await fetchEpisodes();
-  const next: CachedFeed | null = episodes
-    ? { episodes, fetchedAt: now, checkedAt: now }
-    : cached && { ...cached, checkedAt: now };
-  if (!next) return null;
+  const fetched = await fetchEpisodes();
+  let next: CachedFeed;
+  if ("episodes" in fetched) {
+    next = { episodes: fetched.episodes, fetchedAt: now, checkedAt: now };
+  } else {
+    logFailure("fetch", fetched.error);
+    // Not stored when nothing was ever read: a cached empty feed would hold off the retry for the
+    // whole refresh interval, where today every render retries a cold cache.
+    if (!cached) return { episodes: [], fetchedAt: null, checkedAt: now, lastError: fetched.error };
+    next = { ...cached, checkedAt: now, lastError: fetched.error };
+  }
   try {
     await kv.put(CACHE_KEY, JSON.stringify(next));
-  } catch {
+  } catch (error) {
     // The next render tries again.
+    logFailure("kv-write", error);
   }
   return next;
 }
@@ -68,7 +94,8 @@ async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<Cach
 const isStale = (cached: CachedFeed) =>
   Date.now() - Date.parse(cached.checkedAt) > REFRESH_AFTER_MS;
 
-// `wait` is for the admin's cold cache only; a public render never blocks on the host.
+// `wait` is for the admin's cold cache only; a public render never blocks on the host. With `wait` the
+// answer is never null, because a refresh always answers.
 export async function readPodcastFeed(
   context: Readonly<RouterContextProvider>,
   { wait = false }: { wait?: boolean } = {},

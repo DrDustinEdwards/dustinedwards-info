@@ -2,6 +2,7 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { RouterContextProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
+import { createAuth } from "~/lib/auth.server";
 import { cloudflareContext } from "~/lib/context";
 import { loader } from "~/routes/api.auth.$";
 
@@ -30,5 +31,13 @@ describe("/api/auth rate limit", () => {
     expect(refusal).not.toBeNull();
     /* The window has to span a slow OAuth round trip, or one sign-in reads as two bursts. */
     expect(Number(refusal?.headers.get("retry-after"))).toBeGreaterThanOrEqual(300);
+  });
+});
+
+describe("createAuth", () => {
+  it("REFUSES to run without the session secret or the auth URL, naming what is missing", () => {
+    for (const name of ["BETTER_AUTH_SECRET", "BETTER_AUTH_URL"] as const) {
+      expect(() => createAuth({ ...env, [name]: "" } as never)).toThrow(name);
+    }
   });
 });

@@ -60,16 +60,21 @@ type AssetManifest = { placeholders?: Record<string, { sha: string; lqip: string
 export function makeResolveImage(env: PublishEnv) {
   let manifest: Promise<AssetManifest> | null = null;
   const placeholders = async () => {
+    // A missing or unparseable manifest refuses the save, as the build from a clone does: rendering
+    // without placeholders would commit HTML that disagrees with the next build.
     manifest ??= readFile(env, ASSET_MANIFEST_PATH).then((file) => {
-      // A bad manifest renders without placeholders rather than failing the save, and is logged.
+      if (!file) {
+        throw new EditorError(
+          `${ASSET_MANIFEST_PATH} is not in the repository, so no placeholder can be read.`,
+        );
+      }
       try {
-        return file ? (JSON.parse(file.content) as AssetManifest) : {};
+        return JSON.parse(file.content) as AssetManifest;
       } catch (error) {
-        console.error(
-          `${ASSET_MANIFEST_PATH} did not parse; rendering without placeholders. ` +
+        throw new EditorError(
+          `${ASSET_MANIFEST_PATH} did not parse: ` +
             `${error instanceof Error ? error.message : String(error)}`,
         );
-        return {};
       }
     });
     return (await manifest).placeholders ?? {};
@@ -224,10 +229,11 @@ export async function renderAndWrite(
   await syncPostToD1(env, record);
 
   // Purges on a draft save too: an unpublish writes a draft row while changing every public listing.
-  // A condition, if ever needed, must read the PREVIOUS status, never the incoming record.
-  await purgePosts(`renderAndWrite ${slug}`);
+  // A condition, if ever needed, must read the PREVIOUS status, never the incoming record. A failed purge
+  // never fails the write, but it is returned: the public pages stay stale until the cache expires.
+  const purged = await purgePosts(`renderAndWrite ${slug}`);
 
-  return record;
+  return { record, purged };
 }
 
 export async function currentHead(env: PublishEnv) {
@@ -287,14 +293,15 @@ export async function savePost(
 
   // No compensating revert, ever: undoing the commit would destroy the source to repair a derived index.
   let record = gated;
+  let purged = false;
   const converged = await convergeWithRetry({
     write: async () => {
-      record = await renderAndWrite(
+      ({ record, purged } = await renderAndWrite(
         env,
         options.slug,
         raw,
         blobShas[postPath(options.slug)] ?? null,
-      );
+      ));
     },
     recordDivergence: (facts) => recordDivergence(env, facts),
     slug: options.slug,
@@ -328,6 +335,8 @@ export async function savePost(
     commitSha,
     record,
     askSync,
+    /** False when the cache purge failed or was never reached: public pages stay stale until expiry. */
+    purged,
     d1Retried: converged.retried,
     /** null: not attempted; -1: the attempt threw. */
     previewLinksRevoked,
@@ -382,19 +391,28 @@ export async function deletePost(
     changes: [{ path: postPath(options.slug), content: null }],
   });
 
-  await deletePostFromD1(env, options.slug);
+  const { purged } = await deletePostFromD1(env, options.slug);
 
-  // The Ask index cannot fail the delete, but a post still answerable through Ask is reported, not swallowed.
-  let askRemoved: number | null = null;
-  if (askAvailable(env)) {
-    try {
-      askRemoved = await removeAskPost(env, options.slug);
-    } catch (error) {
-      console.error("ask index removal failed after delete", error);
-    }
+  return { commitSha, purged, askRemoval: await removeAskForPost(env, options.slug) };
+}
+
+/**
+ * The Ask index cannot fail the delete, but a post still answerable through Ask is reported, not
+ * swallowed. Null means Ask is not configured; a failure is `ok: false`, never the same null.
+ */
+async function removeAskForPost(env: PublishEnv, slug: string) {
+  if (!askAvailable(env)) return null;
+  try {
+    return { ok: true as const, removed: await removeAskPost(env, slug) };
+  } catch (error) {
+    console.error("ask index removal failed after delete", error);
+    return {
+      ok: false as const,
+      message:
+        `The post was deleted but its Ask records were not removed, so Ask can still quote it: ` +
+        `${error instanceof Error ? error.message : String(error)}. Re-run the Ask sync to prune them.`,
+    };
   }
-
-  return { commitSha, askRemoved };
 }
 
 /** One batch, so the row, its tags and the index move together. FTS is rebuilt, as the bulk sync does. */
@@ -550,8 +568,8 @@ function searchStatements(db: D1Database, record: any) {
 /** Tag rows stay, as in the bulk sync. Stale media_refs would block deleting the image forever. */
 export async function deletePostFromD1(env: PublishEnv, slug: string) {
   // Purged BEFORE the delete: a purge landing after a slow delete could re-store the removed page.
-  await purgePost(slug, `deletePostFromD1 ${slug}`);
-  await purgePosts(`deletePostFromD1 ${slug}`);
+  const purgedPage = await purgePost(slug, `deletePostFromD1 ${slug}`);
+  const purgedListings = await purgePosts(`deletePostFromD1 ${slug}`);
   await env.DB.batch([
     env.DB.prepare(
       `DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`,
@@ -565,6 +583,7 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
       `DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`,
     ).bind(slug),
   ]);
+  return { purged: purgedPage && purgedListings };
 }
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */
@@ -580,13 +599,19 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
     );
   }
 
+  // Through deletePostFromD1, the one delete door: a bare row delete would leave the post in /search
+  // and its media_refs blocking its images' deletion forever.
   const keep = files.map((f) => f.name.slice(0, -".md".length));
   const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
-  await env.DB.prepare(
-    `DELETE FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
+  const orphans = await env.DB.prepare(
+    `SELECT slug FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
   )
     .bind(...keep)
-    .run();
+    .all<{ slug: string }>();
+  let unpurged = 0;
+  for (const { slug } of orphans.results ?? []) {
+    if (!(await deletePostFromD1(env, slug)).purged) unpurged += 1;
+  }
 
   for (const entry of files) {
     const slug = entry.name.slice(0, -".md".length);
@@ -597,8 +622,8 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
           `Main moved mid-rebuild; re-run the regenerate.`,
       );
     }
-    await renderAndWrite(env, slug, file.content, entry.sha);
+    if (!(await renderAndWrite(env, slug, file.content, entry.sha)).purged) unpurged += 1;
   }
 
-  return { synced: files.length };
+  return { synced: files.length, removed: orphans.results?.length ?? 0, unpurged };
 }
