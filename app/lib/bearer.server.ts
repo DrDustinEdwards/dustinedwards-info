@@ -1,6 +1,8 @@
 // The one constant-time comparison: a copy that drifts toward `===` leaks the token a byte at a
 // time and no test notices. Kept `.server` because the secrets boundary is a path rule.
 
+import { fnv1a32 } from "./bytes.mjs";
+
 /**
  * Both sides are hashed to 32 bytes first, since comparing the raw strings would still leak their
  * length through the loop bound.
@@ -26,10 +28,5 @@ export async function constantTimeEqual(a: string, b: string): Promise<boolean> 
  * security boundary.
  */
 export function tokenLabel(token: string): string {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < token.length; i += 1) {
-    hash ^= token.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return hash.toString(16).padStart(8, "0");
+  return fnv1a32(token);
 }

@@ -4,6 +4,7 @@
  */
 
 import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
+import { limitHit } from "~/lib/rate-limit.mjs";
 
 /**
  * Own `smoke:` key prefix so a CI sweep and the publish path cannot exhaust each other. High because
@@ -46,18 +47,15 @@ export async function authenticateSmoke(env: Env, request: Request): Promise<Smo
 
   const id = tokenLabel(presented);
 
-  if (!env.ASK_BUDGET) {
-    // A privileged endpoint without its limiter does not serve at all.
+  const verdict = await limitHit(env, `smoke:${id}`, SMOKE_RATE_LIMIT, SMOKE_RATE_PERIOD_SECONDS);
+  if (verdict === "unavailable") {
     return {
       kind: "refused",
       status: 503,
       error: "Rate limiting is unavailable, so the smoke credential is disabled.",
     };
   }
-
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`smoke:${id}`));
-  const { ok } = await limiter.hit(SMOKE_RATE_LIMIT, SMOKE_RATE_PERIOD_SECONDS);
-  if (!ok) {
+  if (verdict === "limited") {
     return {
       kind: "refused",
       status: 429,

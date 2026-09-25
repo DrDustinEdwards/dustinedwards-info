@@ -1,6 +1,7 @@
 // The token is the whole boundary: compared in constant time, and never echoed, logged or put in an error.
 
 import { constantTimeEqual, tokenLabel } from "~/lib/bearer.server";
+import { limitHit } from "~/lib/rate-limit.mjs";
 
 const OPERATOR_RATE_LIMIT = 30;
 const OPERATOR_RATE_PERIOD_SECONDS = 60;
@@ -57,18 +58,15 @@ export async function meterOperator(
   env: OperatorEnv,
   id: string,
 ): Promise<AuthResult> {
-  if (!env.ASK_BUDGET) {
-    // A privileged endpoint without its limiter does not serve unprotected; it does not serve.
+  const verdict = await limitHit(env, `op:${id}`, OPERATOR_RATE_LIMIT, OPERATOR_RATE_PERIOD_SECONDS);
+  if (verdict === "unavailable") {
     return {
       ok: false,
       status: 503,
       error: "Rate limiting is unavailable, so the operator path is disabled.",
     };
   }
-
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`op:${id}`));
-  const { ok } = await limiter.hit(OPERATOR_RATE_LIMIT, OPERATOR_RATE_PERIOD_SECONDS);
-  if (!ok) {
+  if (verdict === "limited") {
     return {
       ok: false,
       status: 429,

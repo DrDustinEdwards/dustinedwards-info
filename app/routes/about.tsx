@@ -1,5 +1,4 @@
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
+import { PageShell } from "~/components/page-shell";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { SITE, SITE_ORIGIN, pageMeta, personJsonLd, publicHtmlHeaders } from "~/lib/seo";
 
@@ -26,23 +25,20 @@ export function meta() {
 
 export default function About() {
   return (
-    <>
-      <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
-        <div className="page-inner">
-          <header className="page-head">
-            <h1>{about.title}</h1>
-          </header>
-
-          {/* Build-time HTML from repo markdown, URL allowlist already applied; no third-party input. */}
-          <div className="prose" dangerouslySetInnerHTML={{ __html: about.html }} />
-        </div>
+    <PageShell
+      trail={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(personJsonLd(SITE_ORIGIN)) }}
         />
-      </main>
-      <ShellFooter />
-    </>
+      }
+    >
+      <header className="page-head">
+        <h1>{about.title}</h1>
+      </header>
+
+      {/* Build-time HTML from repo markdown, URL allowlist already applied; no third-party input. */}
+      <div className="prose" dangerouslySetInnerHTML={{ __html: about.html }} />
+    </PageShell>
   );
 }

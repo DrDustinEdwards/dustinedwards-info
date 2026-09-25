@@ -2,6 +2,7 @@ import matter from "gray-matter";
 
 import { readIntent } from "./intent.mjs";
 import { draftForIntent } from "./publish-transition.mjs";
+import { errorMessage } from "../error-message.mjs";
 
 // Punctuation-bearing scalars are written as JSON strings: valid YAML double-quoted scalars that
 // escape quotes and colons without a YAML serializer.
@@ -50,7 +51,8 @@ export const EMPTY_FIELDS: PostFields = {
   updated: "",
 };
 
-export function parseTags(input: string) {
+/** Tags as an author types them: comma or newline separated, lower-cased, blanks dropped. */
+export function parseTagInput(input: string) {
   return input
     .split(/[,\n]/)
     .map((t) => t.trim().toLowerCase())
@@ -63,17 +65,17 @@ export function normalizeBody(body: string) {
 }
 
 /**
- * Loose on purpose, since the schema judges the content. A half entry is dropped: it would fail
- * the save on data the author never typed. A value that is not a JSON array is refused, not read as
- * empty: written as empty, the save would erase the post's further reading.
+ * The further-reading value as entries with string titles and urls, as written. A value that is not a
+ * JSON array is refused, not read as empty: read as empty, the editor would show no rows and a save
+ * would erase the post's further reading.
  */
-function parseFurtherReading(raw: string) {
-  if (!raw.trim()) return [] as { title: string; url: string }[];
+function readingEntries(raw: string): ReadingItem[] {
+  if (!raw.trim()) return [];
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = errorMessage(error);
     throw new FrontmatterError(
       `The further reading list did not arrive as JSON (${detail}), so nothing was saved rather ` +
         `than saving the post without it.`,
@@ -89,12 +91,20 @@ function parseFurtherReading(raw: string) {
   }
   return parsed.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
-    const title = (item as Record<string, unknown>).title;
-    const url = (item as Record<string, unknown>).url;
+    const { title, url } = item as Record<string, unknown>;
     if (typeof title !== "string" || typeof url !== "string") return [];
-    if (!title.trim() || !url.trim()) return [];
-    return [{ title: title.trim(), url: url.trim() }];
+    return [{ title, url }];
   });
+}
+
+/**
+ * Loose on purpose, since the schema judges the content. A half entry is dropped: it would fail
+ * the save on data the author never typed.
+ */
+function parseFurtherReading(raw: string) {
+  return readingEntries(raw).flatMap(({ title, url }) =>
+    title.trim() && url.trim() ? [{ title: title.trim(), url: url.trim() }] : [],
+  );
 }
 
 /** A field value that cannot be written into frontmatter without changing its structure. */
@@ -239,24 +249,8 @@ const INTERNAL_PREFIX = "/blog/";
 
 type ReadingItem = { title: string; url: string };
 
-function parseReadingJson(raw: string): ReadingItem[] {
-  if (!raw.trim()) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((item) => {
-      if (!item || typeof item !== "object") return [];
-      const { title, url } = item as Record<string, unknown>;
-      if (typeof title !== "string" || typeof url !== "string") return [];
-      return [{ title, url }];
-    });
-  } catch {
-    return [];
-  }
-}
-
 export function splitReading(raw: string) {
-  const items = parseReadingJson(raw);
+  const items = readingEntries(raw);
   return {
     external: items.filter((item) => !item.url.startsWith(INTERNAL_PREFIX)),
     internal: items.filter((item) => item.url.startsWith(INTERNAL_PREFIX)),
@@ -310,7 +304,7 @@ export function fieldsFromForm(form: FormData): PostFields {
     slug: get("slug").trim().toLowerCase(),
     description: get("description"),
     date: get("date"),
-    tags: parseTags(get("tags")),
+    tags: parseTagInput(get("tags")),
     // From the button pressed, not a hidden field, so it works without script. Unknown means draft.
     draft: draftForIntent(readIntent(form)),
     publishAt: get("publishAt"),
