@@ -1,7 +1,7 @@
 import type { RouterContextProvider } from "react-router";
 
 import { getSetting, setSetting } from "~/db";
-import { cloudflareContext } from "~/lib/context";
+import { getEnv, getExecutionContext } from "~/lib/context";
 import {
   PODCAST_FEED_URL,
   PODCAST_SLOT_KEY,
@@ -11,6 +11,7 @@ import {
   type PodcastEpisode,
   type PodcastSlot,
 } from "~/lib/podcast/feed.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // The page never waits on the podcast host: loaders read KV only and refresh in `waitUntil` (this Worker
 // has no cron). A failed refresh keeps the episodes and stamps `checkedAt`, so a down host is asked once
@@ -40,7 +41,7 @@ function logFailure(stage: string, detail: unknown) {
     JSON.stringify({
       alert: "podcast-refresh-failed",
       stage,
-      detail: detail instanceof Error ? detail.message : String(detail),
+      detail: errorMessage(detail),
     }),
   );
 }
@@ -65,7 +66,7 @@ async function fetchEpisodes(): Promise<{ episodes: PodcastEpisode[] } | { error
     const episodes = parsePodcastFeed(await res.text());
     return episodes.length > 0 ? { episodes } : { error: "the feed parsed to no episodes" };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : String(error) };
+    return { error: errorMessage(error) };
   }
 }
 
@@ -100,7 +101,8 @@ export async function readPodcastFeed(
   context: Readonly<RouterContextProvider>,
   { wait = false }: { wait?: boolean } = {},
 ): Promise<CachedFeed | null> {
-  const { env, ctx } = context.get(cloudflareContext);
+  const env = getEnv(context);
+  const ctx = getExecutionContext(context);
   const kv = env.APP_KV;
   const cached = await readCache(kv);
   if (cached && !isStale(cached)) return cached;
@@ -120,7 +122,7 @@ export async function writePodcastSlot(env: Env, slot: PodcastSlot): Promise<voi
 export async function homePodcastEpisode(
   context: Readonly<RouterContextProvider>,
 ): Promise<PodcastEpisode | null> {
-  const env = context.get(cloudflareContext).env;
+  const env = getEnv(context);
   const [feed, slot] = await Promise.all([readPodcastFeed(context), readPodcastSlot(env)]);
   return chooseEpisode(feed?.episodes ?? [], slot).episode;
 }

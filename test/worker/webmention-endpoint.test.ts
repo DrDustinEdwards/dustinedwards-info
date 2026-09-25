@@ -2,7 +2,7 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { SITE_ORIGIN } from "~/lib/seo";
-import { FAILURE_REASONS } from "~/lib/webmention/verify.server";
+import { FAILURE_REASONS, inspectSource } from "~/lib/webmention/verify.server";
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
 
 import { freezeAtWindowStart, routeContext, untilRefused } from "./route-helpers";
@@ -451,6 +451,15 @@ describe("/webmention accepts and verifies", () => {
 
       expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.redirectRefused);
     }
+  });
+
+  it("REFUSES a redirect onto the canonical origin when the target names the other host", async () => {
+    /* Before the cutover the route accepts targets on the request's host too, so a hop back to
+     * SITE_ORIGIN must be refused even when the target's own origin is a different one. */
+    const source = "https://elsewhere.example/to-canonical";
+    stubSources({ [source]: { redirect: `${SITE_ORIGIN}/blog/${TARGET_SLUG}` } });
+    const verdict = await inspectSource(source, `https://other-host.example/blog/${TARGET_SLUG}`);
+    expect(verdict).toEqual({ status: "failed", failureReason: FAILURE_REASONS.redirectRefused });
   });
 
   it("STORES A SCRIPT-SHAPED AUTHOR NAME AS THAT LITERAL TEXT", async () => {

@@ -3,7 +3,7 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-export const API_BASE = "https://api.uptimerobot.com/v3";
+const API_BASE = "https://api.uptimerobot.com/v3";
 
 /** Here, not in the writer: importing from the writer would create monitors as a side effect. */
 export const MANIFEST_PATH = join(
@@ -74,23 +74,6 @@ export async function listMonitors(key) {
 }
 
 /**
- * The list endpoint is not a reliable read of status: it can report not-paused for a monitor just
- * switched off. Null for 404, a monitor that is gone rather than an error.
- *
- * @param {string} key
- * @param {number|string} id
- * @returns {Promise<Record<string, any> | null>}
- */
-export async function getMonitor(key, id) {
-  const res = await call(key, `/monitors/${id}`);
-  if (res.status === 404) return null;
-  if (!res.ok) {
-    throw new Error(`UptimeRobot GET /monitors/${id} answered ${res.status}: ${res.text.slice(0, 300)}`);
-  }
-  return res.body;
-}
-
-/**
  * The keyword is the full opening fragment: the bare word appears in every health body, so it
  * would fail open. This couples to the endpoint's key order.
  *
@@ -155,7 +138,7 @@ const READ_REPRESENTATION = {
  * @param {unknown} value
  * @returns {unknown}
  */
-export function expectedReadValue(field, value) {
+function expectedReadValue(field, value) {
   const map = /** @type {Record<string, Record<string, unknown>>} */ (READ_REPRESENTATION)[field];
   if (!map) return value;
   // Unmapped falls through unchanged, not to undefined, so a new enum member shows as a mismatch.

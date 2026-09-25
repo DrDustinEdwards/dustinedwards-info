@@ -1,6 +1,8 @@
 // Every generated answer bills Workers AI and the route is public. Nothing reaches the model until
 // rate, cache and daily budget have passed, and budget sits AFTER the cache so a hit costs nothing.
 
+import { toHex } from "~/lib/bytes.mjs";
+import { limitHit } from "~/lib/rate-limit.mjs";
 import { pacedAllowance, secondsPerPacedUnit } from "~/lib/search/ask-pacing.mjs";
 
 /** Per IP per minute: more than a reading human asks, far less than a loop wants. */
@@ -47,10 +49,7 @@ export async function questionKey(question: string): Promise<string> {
     "SHA-256",
     new TextEncoder().encode(normalized),
   );
-  const hex = [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `${ANSWER_CACHE_PREFIX}${hex}`;
+  return `${ANSWER_CACHE_PREFIX}${toHex(digest)}`;
 }
 
 interface GuardVerdict {
@@ -61,17 +60,14 @@ interface GuardVerdict {
 
 /** Fails closed without the binding, so removing it disables Ask rather than unprotecting it. */
 export async function checkAskRate(env: Env, ip: string): Promise<GuardVerdict> {
-  if (!env.ASK_BUDGET) {
-    return { ok: false, reason: "unprotected", retryAfter: ASK_RATE_LIMIT_PERIOD_SECONDS };
-  }
-
   // Keyed by IP alone, not IP plus question: the point is to cap how often one caller can spend.
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`ip:${ip}`));
-  const { ok } = await limiter.hit(ASK_RATE_LIMIT, ASK_RATE_LIMIT_PERIOD_SECONDS);
-  if (!ok) {
-    return { ok: false, reason: "rate", retryAfter: ASK_RATE_LIMIT_PERIOD_SECONDS };
-  }
-  return { ok: true };
+  const verdict = await limitHit(env, `ip:${ip}`, ASK_RATE_LIMIT, ASK_RATE_LIMIT_PERIOD_SECONDS);
+  if (verdict === "ok") return { ok: true };
+  return {
+    ok: false,
+    reason: verdict === "unavailable" ? "unprotected" : "rate",
+    retryAfter: ASK_RATE_LIMIT_PERIOD_SECONDS,
+  };
 }
 
 /**
