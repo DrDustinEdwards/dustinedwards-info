@@ -4,7 +4,6 @@
 import { readFileSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 // `readFileSync` rather than an import attribute: the attribute needs a newer module setting and fails
 // the typecheck rather than the run.
@@ -19,6 +18,7 @@ import {
   referencesIn,
   stripComments,
 } from "../app/lib/media/template-refs.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 export const TEMPLATE_REFS_PATH = path.join("content", "generated", "template-refs.json");
 
@@ -82,9 +82,7 @@ export async function scanTemplateRefs() {
   };
 }
 
-// `pathToFileURL`: on this host a hand-built URL differs in its slashes, so the script would exit 0
-// having never written the artifact.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   const result = await scanTemplateRefs();
   await writeFile(TEMPLATE_REFS_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");
   console.log(

@@ -2,7 +2,6 @@ import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { renderMermaid } from "@mermaid-js/mermaid-cli";
 import puppeteer from "puppeteer";
@@ -21,6 +20,7 @@ import { diagramsFrom } from "./lib/artifact-diagrams.mjs";
 import { deleteFloor } from "./lib/delete-floor.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 export const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 
@@ -232,7 +232,7 @@ async function main() {
   }
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(
       `build:diagrams failed. ${error instanceof Error ? error.message : String(error)}`,
