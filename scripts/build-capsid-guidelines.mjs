@@ -26,6 +26,13 @@ async function main() {
     if (!doc || typeof doc.body !== "string" || doc.body.length === 0) {
       throw new Error(`${wanted.path}: read returned no body. Refusing to write an empty export.`);
     }
+    // Checked here, before the rebuild below empties the directory, so a refusal leaves it intact.
+    if (typeof doc.path !== "string" || !doc.path || !doc.updated_at) {
+      throw new Error(
+        `${wanted.path}: Capsid returned no path or no updated_at, so the export could not be ` +
+          `named or stamped. The existing export was left in place.`,
+      );
+    }
     docs.push({
       path: doc.path,
       title: doc.title ?? wanted.path,
@@ -48,9 +55,6 @@ async function main() {
 
   const written = [];
   for (const doc of docs) {
-    if (!doc.updated_at) {
-      throw new Error(`${doc.path}: Capsid returned no updated_at, so the export could not be stamped`);
-    }
     const text =
       `${formatStamp({ namespace: NAMESPACE, path: doc.path, updated_at: doc.updated_at })}\n\n` +
       `# ${doc.title}\n\n` +

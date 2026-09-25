@@ -34,11 +34,14 @@ export function resolveD1Address(dbName, target, run = defaultRun) {
   const start = listed.status === 0 ? listed.stdout.indexOf("[") : -1;
   /** @type {Array<{ uuid?: string, name?: string }>} */
   let databases = [];
+  /** @type {string} Carried into the refusal below, so an unparseable list is named as such. */
+  let parseError = "";
   if (start !== -1) {
     try {
       databases = JSON.parse(listed.stdout.slice(start));
-    } catch {
-      databases = [];
+    } catch (error) {
+      const why = error instanceof Error ? error.message : String(error);
+      parseError = ` (d1 list output did not parse: ${why})`;
     }
   }
 
@@ -46,7 +49,7 @@ export function resolveD1Address(dbName, target, run = defaultRun) {
   if (typeof found?.uuid !== "string" || found.uuid.length === 0) {
     throw new Error(
       `could not resolve ${dbName} to a UUID from d1 list` +
-        `${listed.status === 0 ? "" : ` (d1 list exited ${listed.status})`}. ` +
+        `${listed.status === 0 ? "" : ` (d1 list exited ${listed.status})`}${parseError}. ` +
         `Passing the NAME lets wrangler resolve it out of wrangler.jsonc, which a ` +
         `clean checkout bootstraps from the example with a placeholder id, so a ` +
         `--remote run addresses a database that does not exist.`,
