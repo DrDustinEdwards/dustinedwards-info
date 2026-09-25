@@ -7,7 +7,7 @@ import { measureDimensions, placeholderFor } from "./core.server";
 // `alt`, `caption`, `focal_x` and `focal_y` are AUTHORED and recoverable from nothing, so a rebuild
 // upserts derived columns only, never delete-then-insert. R2 wins: rows are removed, objects never.
 
-export type RebuildReport = {
+type RebuildReport = {
   scannedObjects: number;
   scannedFiles: number;
   indexed: number;
@@ -28,7 +28,7 @@ async function dimensionsFor(env: Env, body: ReadableStream | null): Promise<Mea
   }
 }
 
-export type MediaSource = { key: string; size: number; uploaded: string };
+type MediaSource = { key: string; size: number; uploaded: string };
 
 // Shared with the reconciliation so the two cannot disagree about what exists. Exhaustive to the end of
 // the cursor: a partial listing makes every absent key look like a deletion. A Worker cannot list its

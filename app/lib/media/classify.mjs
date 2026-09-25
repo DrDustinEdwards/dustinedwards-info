@@ -22,7 +22,7 @@ const RASTER = new Set(["png", "jpg", "jpeg", "webp", "avif", "gif"]);
  *
  * @param {string} pathOrKey
  */
-export function extensionOf(pathOrKey) {
+function extensionOf(pathOrKey) {
   const base = pathOrKey.split("/").pop() ?? "";
   const dot = base.lastIndexOf(".");
   return dot === -1 ? "" : base.slice(dot + 1).toLowerCase();
@@ -186,7 +186,7 @@ export const ASSET_PREFIX = "dustin-edwards-";
  * @param {string | null | undefined} name
  * @returns {string}
  */
-export function slugifyName(name) {
+function slugifyName(name) {
   if (typeof name !== "string") return "";
   return name
     .replace(/\.[^.]*$/, "")
