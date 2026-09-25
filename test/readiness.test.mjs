@@ -171,15 +171,12 @@ const ASK_DRIFTED = JSON.stringify({
   ],
 });
 
-// Imported, not copied: a hand-written mirror would keep passing after a check was
-// removed from ship's real list.
-const SHIP_DEFERRED = DEFERRED_CHECKS;
 test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
   const gated = readinessVerdict(503, ASK_DRIFTED);
   assert.equal(gated.ok, false, "undeferred, this still refuses");
   assert.match(gated.why, /ask-index-drift/);
 
-  const deferred = readinessVerdict(503, ASK_DRIFTED, "/api/health", Object.keys(SHIP_DEFERRED));
+  const deferred = readinessVerdict(503, ASK_DRIFTED, "/api/health", Object.keys(DEFERRED_CHECKS));
   assert.equal(deferred.ok, true, "deferred, the ship reaches the Ask converge");
   assert.deepEqual(
     deferred.deferredFailing,
@@ -189,7 +186,7 @@ test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
 });
 
 test("THE OTHER HALF: the same body fails the post-repair assertion, by name", () => {
-  const { misses, converged } = deferredMisses(JSON.parse(ASK_DRIFTED).checks, SHIP_DEFERRED);
+  const { misses, converged } = deferredMisses(JSON.parse(ASK_DRIFTED).checks, DEFERRED_CHECKS);
   assert.equal(misses.length, 1, "one deferred check is still failing");
   assert.match(misses[0], /ask-index-drift is STILL failing after the Ask converge/);
   assert.match(misses[0], /expected 121, present 120/, "the counts the wire carries are the triage");
@@ -201,8 +198,8 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
 });
 
 test("a deferred check the endpoint stopped reporting is a MISS, not a pass", () => {
-  const { misses } = deferredMisses([{ name: "content-drift", ok: true }], SHIP_DEFERRED);
-  const absent = Object.keys(SHIP_DEFERRED).filter((name) => name !== "content-drift");
+  const { misses } = deferredMisses([{ name: "content-drift", ok: true }], DEFERRED_CHECKS);
+  const absent = Object.keys(DEFERRED_CHECKS).filter((name) => name !== "content-drift");
   assert.ok(absent.length > 0, "the case needs at least one deferred check left unreported");
   assert.equal(misses.length, absent.length, "every absent check is named");
   for (const name of absent) {
@@ -212,11 +209,11 @@ test("a deferred check the endpoint stopped reporting is a MISS, not a pass", ()
 
 test("every deferred check converging leaves no miss", () => {
   const healthy = JSON.parse(HEALTHY).checks;
-  const { misses, converged } = deferredMisses(healthy, SHIP_DEFERRED);
+  const { misses, converged } = deferredMisses(healthy, DEFERRED_CHECKS);
   assert.deepEqual(misses, [], "a clean run reports nothing");
   assert.deepEqual(
     converged.sort(),
-    Object.keys(SHIP_DEFERRED).sort(),
+    Object.keys(DEFERRED_CHECKS).sort(),
     "and says so for every one rather than staying quiet",
   );
 });

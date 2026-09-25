@@ -102,8 +102,6 @@ test("A COMMENT OPENER INSIDE A STRING is not a comment", () => {
 });
 
 test("A QUOTE INSIDE A REGEX CHARACTER CLASS does not open a string", () => {
-  /*
-   */
   const src = [
     "const pattern = /from[\"']x[\"']/;",
     "const survives = 1;",
