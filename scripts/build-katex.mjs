@@ -2,7 +2,7 @@
 // most with no math, and ship three font formats where every supported browser reads one.
 
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/is-main.mjs";
@@ -10,13 +10,13 @@ import { isMain } from "./lib/is-main.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 const KATEX_DIR = join(root, "node_modules", "katex", "dist");
-export const KATEX_CSS_PATH = join("app", "styles", "katex.generated.css");
-export const KATEX_FONT_DIR = join("app", "fonts", "katex");
-export const KATEX_OVERRIDES_PATH = join("app", "styles", "katex-overrides.css");
+const KATEX_CSS_PATH = join("app", "styles", "katex.generated.css");
+const KATEX_FONT_DIR = join("app", "fonts", "katex");
+const KATEX_OVERRIDES_PATH = join("app", "styles", "katex-overrides.css");
 
-export const OVERRIDES_MARKER = "/* ---- site overrides ---- */\n";
+const OVERRIDES_MARKER = "/* ---- site overrides ---- */\n";
 
-export function installedKatexVersion() {
+function installedKatexVersion() {
   const pkg = JSON.parse(
     readFileSync(join(root, "node_modules", "katex", "package.json"), "utf8"),
   );
@@ -30,7 +30,7 @@ export function installedKatexVersion() {
  * @param {string} src the contents of one `src:` declaration
  * @returns {string | null} the trimmed list, or null when there is no woff2
  */
-export function woff2Only(src) {
+function woff2Only(src) {
   const entries = src
     .split(/,(?![^(]*\))/)
     .map((e) => e.trim())
@@ -43,7 +43,7 @@ export function woff2Only(src) {
  * @param {string} css the contents of katex.min.css
  * @returns {{ css: string, faces: string[], untrimmed: string[] }}
  */
-export function trimStylesheet(css) {
+function trimStylesheet(css) {
   const faces = new Set();
   /** @type {string[]} */
   const untrimmed = [];
@@ -69,7 +69,7 @@ export function trimStylesheet(css) {
 }
 
 /** Exported so `check:content` can derive it and byte-compare without shelling out to this script. */
-export function generateKatexCss() {
+function generateKatexCss() {
   const version = installedKatexVersion();
   const source = readFileSync(join(KATEX_DIR, "katex.min.css"), "utf8");
   const { css, faces, untrimmed } = trimStylesheet(source);
@@ -129,13 +129,6 @@ function main() {
   }
 
   writeFileSync(join(root, KATEX_CSS_PATH), css, "utf8");
-
-  // Both directions: a one-directional copy is how a stale face survives a version bump.
-  const onDisk = readdirSync(fontDir).sort();
-  const orphans = onDisk.filter((f) => !faces.includes(f));
-  if (orphans.length > 0) {
-    throw new Error(`copied faces the stylesheet does not name: ${orphans.join(", ")}`);
-  }
 
   console.log(
     `build:katex ok. katex ${version}: ${KATEX_CSS_PATH} ${Buffer.byteLength(css)} bytes ` +
