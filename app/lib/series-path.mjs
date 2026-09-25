@@ -1,5 +1,3 @@
-import { SLUG_PATTERN } from "./content/slug.mjs";
-
 /**
  * A series is FREE TEXT, unlike a tag, so it is normalised here and nowhere else; the archive
  * builds and resolves its URL through this one function so the two cannot drift.
@@ -16,14 +14,6 @@ export function seriesSlug(name) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
-}
-
-/**
- * @param {string} slug
- * @returns {boolean}
- */
-export function isRoutableSeriesSlug(slug) {
-  return SLUG_PATTERN.test(slug);
 }
 
 /**
