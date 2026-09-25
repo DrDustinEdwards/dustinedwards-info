@@ -21,6 +21,7 @@ import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
 import { stateOf } from "~/lib/editor/publish-transition.mjs";
 import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
+import { readHead } from "~/lib/editor/head.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
@@ -45,37 +46,51 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const state = stateOf(fields, Date.now());
   const origin = new URL(request.url).origin;
 
+  /* Each read below is non-fatal, so an outage cannot blank the editor, but its failure is shown, never an empty list. */
+  const settled = <T,>(what: string, read: Promise<T[]>) =>
+    read.then(
+      (value) => ({ value, error: null as string | null }),
+      (error: unknown) => {
+        console.error(`editor ${what} read failed`, error);
+        return { value: [] as T[], error: error instanceof Error ? error.message : String(error) };
+      },
+    );
+
+  const { headSha, headError } = await timed(timings, "gh_head", () => readHead(env));
+
+  const links =
+    state === "draft"
+      ? await timed(timings, "kv_preview_links", () =>
+          settled("preview links", listPreviewLinks(env, params.slug)),
+        )
+      : { value: [], error: null };
+
+  const tags = await timed(timings, "d1_tags", () => settled("tags", listBlogTags(env)));
+
+  const revisions = await timed(timings, "gh_commits", () =>
+    settled("revisions", listCommitsForPath(env, postPath(params.slug))),
+  );
+
   return {
     fields,
-    headSha: await timed(timings, "gh_head", () => currentHead(env).catch(() => "")),
+    headSha,
+    headError,
     slug: params.slug,
     saved: feedbackFromSearch(new URL(request.url).searchParams, params.slug),
     // Derived here because `stateOf` reads the clock: recomputed in the component, a post scheduled
     // seconds away would render one word on the server and hydrate another.
     state,
-    previewLinks:
-      state === "draft"
-        ? (
-            await timed(timings, "kv_preview_links", () =>
-              listPreviewLinks(env, params.slug).catch(() => []),
-            )
-          ).map((link) => ({
-            ...link,
-            url: previewUrl(origin, link.token),
-          }))
-        : [],
+    previewLinks: links.value.map((link) => ({ ...link, url: previewUrl(origin, link.token) })),
+    previewLinksError: links.error,
     // Only `first_published` in the committed file tells a brand-new draft from a withdrawn one.
     everPublished: fields.firstPublished.trim() !== "",
-    tagOptions: (
-      await timed(timings, "d1_tags", () => listBlogTags(env).catch(() => []))
-    ).map((tag) => tag.slug),
+    tagOptions: tags.value.map((tag) => tag.slug),
+    loadProblems: tags.error
+      ? [`Existing tags could not be read, so none are suggested: ${tags.error}`]
+      : [],
     linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
-    // Non-fatal: a GitHub outage must not blank the editor.
-    revisions: await timed(timings, "gh_commits", () =>
-      listCommitsForPath(env, postPath(params.slug)),
-    ).catch(
-      () => [],
-    ),
+    revisions: revisions.value,
+    revisionsError: revisions.error,
   };
 }
 
@@ -86,12 +101,19 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   const intent = form.get("intent");
 
+  /* After a failed action the page keeps the head it was loaded with; a failed re-read is logged, not shown as a missing token. */
+  const headAfterProblem = () =>
+    currentHead(env).catch((error: unknown) => {
+      console.error("editor head re-read failed", error);
+      return String(form.get("headSha") ?? "");
+    });
+
   if (intent === "preview-link" || intent === "revoke-preview-link") {
     const problem = async (message: string) => ({
       kind: "problem" as const,
       fields: parsePost(String(form.get("body") ?? "")),
       problem: { message, conflict: false, field: undefined, line: undefined },
-      headSha: await currentHead(env).catch(() => ""),
+      headSha: await headAfterProblem(),
     });
 
     if (intent === "preview-link") {
@@ -169,7 +191,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
           field: undefined,
           line: undefined,
         },
-        headSha: await currentHead(env).catch(() => ""),
+        headSha: await headAfterProblem(),
       };
     }
   }
@@ -216,6 +238,7 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
     state === "draft" ? (
       <PreviewLinks
         links={loaderData.previewLinks as PreviewLinkView[]}
+        error={loaderData.previewLinksError}
         created={
           actionData?.kind === "preview-link"
             ? { url: actionData.url, expiresAt: actionData.expiresAt }
@@ -230,6 +253,8 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
         fields={fields}
         isNew={false}
         headSha={headSha}
+        headError={headSha ? null : loaderData.headError}
+        loadProblems={loaderData.loadProblems}
         previewHtml={actionData?.kind === "preview" ? actionData.previewHtml : null}
         feedback={feedback}
         state={state}
@@ -245,6 +270,11 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
               Every save is a commit. Nothing is ever rewritten, and a restore
               lands as a new commit on top.
             </p>
+            {loaderData.revisionsError ? (
+              <p className="field-alarm">
+                The version list could not be read, so no revisions are shown: {loaderData.revisionsError}
+              </p>
+            ) : null}
             <Link to={`/admin/posts/${loaderData.slug}/history`} className="row-action">
               Open version history
             </Link>
