@@ -10,7 +10,7 @@ const ENHANCEMENTS_PATH = join(root, "content", "enhancements.json");
 const ENHANCE_DIR = join(root, "app", "enhance");
 
 /** A tripwire: a new module means walking this list. */
-const EXPECTED_ENHANCE_MODULES = 8;
+const EXPECTED_ENHANCE_MODULES = 9;
 
 /** Set under measured, to catch a module that stopped being read. */
 const MINIMUM_ENHANCEMENT_ENTRIES = 9;

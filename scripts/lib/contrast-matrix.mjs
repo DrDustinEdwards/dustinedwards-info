@@ -229,7 +229,9 @@ export const NON_PARTICIPATING = new Map([
 export const OPACITY_EXEMPT = [
   {
     test: /:disabled|\[disabled\]|\[aria-disabled="true"\]/,
-    why: "a disabled control, native or aria-disabled, which WCAG 1.4.3 exempts outright",
+    why:
+      "a disabled control, which WCAG 1.4.3 exempts outright, aria-disabled included: it is " +
+      "the same state kept focusable",
   },
   {
     test: /\[data-pending\]/,
