@@ -147,42 +147,69 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
-function facetHref(
-  params: ReturnType<typeof readParams>,
-  key: "type" | "tag" | "year",
-  value: string | null,
+type SearchParams = ReturnType<typeof readParams>;
+type FacetKey = "type" | "tag" | "year";
+
+/**
+ * The current search with some parts changed. A change of filter or sort drops the page, since
+ * the old page number means nothing in the new list; only a pager link passes one.
+ */
+function searchHref(
+  params: SearchParams,
+  change: Partial<Pick<SearchParams, FacetKey | "sort" | "page">> = {},
 ) {
+  const merged = { ...params, page: 1, ...change };
   const next = new URLSearchParams();
-  if (params.q) next.set("q", params.q);
-  const current = { type: params.type, tag: params.tag, year: params.year };
-  current[key] = value;
-  for (const [k, v] of Object.entries(current)) {
-    if (v) next.set(k, v);
-  }
-  if (params.sort === "date") next.set("sort", "date");
-  return `/search?${next.toString()}`;
-}
-
-function pageHref(params: ReturnType<typeof readParams>, page: number) {
-  const next = new URLSearchParams();
-  if (params.q) next.set("q", params.q);
-  if (params.type) next.set("type", params.type);
-  if (params.tag) next.set("tag", params.tag);
-  if (params.year) next.set("year", params.year);
-  if (params.sort === "date") next.set("sort", "date");
-  if (page > 1) next.set("page", String(page));
-  return `/search?${next.toString()}`;
-}
-
-function sortHref(params: ReturnType<typeof readParams>, sort: "relevance" | "date") {
-  const next = new URLSearchParams();
-  if (params.q) next.set("q", params.q);
-  if (params.type) next.set("type", params.type);
-  if (params.tag) next.set("tag", params.tag);
-  if (params.year) next.set("year", params.year);
+  if (merged.q) next.set("q", merged.q);
+  if (merged.type) next.set("type", merged.type);
+  if (merged.tag) next.set("tag", merged.tag);
+  if (merged.year) next.set("year", merged.year);
   // Relevance is the absent value: two spellings of the default would be two cache entries of one page.
-  if (sort === "date") next.set("sort", "date");
+  if (merged.sort === "date") next.set("sort", "date");
+  if (merged.page > 1) next.set("page", String(merged.page));
   return `/search?${next.toString()}`;
+}
+
+/** A filter in force, as a chip whose link is the same search without it. */
+function ActiveFilterChip({ params, facet, label }: { params: SearchParams; facet: FacetKey; label: string }) {
+  return (
+    <li>
+      <Link to={searchHref(params, { [facet]: null })} className="search-chip is-active">
+        {label} <span aria-hidden="true">x</span>
+        <span className="sr-only">remove filter</span>
+      </Link>
+    </li>
+  );
+}
+
+/** One facet's choices, each a link narrowing the search to it, with its count. */
+function FacetSection({
+  params,
+  facet,
+  heading,
+  values,
+  floor,
+}: {
+  params: SearchParams;
+  facet: FacetKey;
+  heading: string;
+  values: Array<{ value: string | number; count: number }>;
+  floor: string;
+}) {
+  return (
+    <section>
+      <h2>{heading}</h2>
+      <ul>
+        {values.map((entry) => (
+          <li key={entry.value}>
+            <Link to={searchHref(params, { [facet]: String(entry.value) })} className="search-chip">
+              {entry.value} <span className="search-chip-count">{entry.count}{floor}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
 }
 
 /** Keyed by the union with no fallback: a reason without a label is a typecheck failure, not a raw value shown to readers. */
@@ -237,6 +264,85 @@ function Result({ hit }: { hit: SearchHit }) {
         ) : null}
       </p>
     </li>
+  );
+}
+
+/** A search that matched nothing: said plainly, with nearby tags and recent writing to go to instead. */
+function ZeroState({
+  raw,
+  suggestions,
+}: {
+  raw: string;
+  suggestions: NonNullable<Route.ComponentProps["loaderData"]["suggestions"]>;
+}) {
+  return (
+    <div className="search-zero">
+      <p>
+        Nothing matched <strong>{raw}</strong>.
+      </p>
+      {suggestions.nearestTags.length > 0 ? (
+        <section>
+          <h2>Related tags</h2>
+          <ul className="search-chip-row">
+            {suggestions.nearestTags.map((tag) => (
+              <li key={tag}>
+                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="search-chip">
+                  {tag}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {suggestions.recentPosts.length > 0 ? (
+        <section>
+          <h2>Recent writing</h2>
+          <ul className="search-recent">
+            {suggestions.recentPosts.map((post) => (
+              <li key={post.url}>
+                <Link to={post.url}>{post.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+/** Previous and next around "Page n of m"; an empty span holds each missing side's place. */
+function Pagination({
+  params,
+  page,
+  pageCount,
+  floor,
+}: {
+  params: SearchParams;
+  page: number;
+  pageCount: number;
+  floor: string;
+}) {
+  return (
+    <nav className="search-pagination" aria-label="Search results pages">
+      {page > 1 ? (
+        <Link rel="prev" to={searchHref(params, { page: page - 1 })}>
+          Previous
+        </Link>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+      <span>
+        Page {page} of {pageCount}
+        {floor}
+      </span>
+      {page < pageCount ? (
+        <Link rel="next" to={searchHref(params, { page: page + 1 })}>
+          Next
+        </Link>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </nav>
   );
 }
 
@@ -297,29 +403,12 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         {params.type || params.tag || params.year ? (
           <ul className="search-active-filters">
             {params.type ? (
-              <li>
-                <Link to={facetHref(params, "type", null)} className="search-chip is-active">
-                  type: {params.type} <span aria-hidden="true">x</span>
-                  <span className="sr-only">remove filter</span>
-                </Link>
-              </li>
+              <ActiveFilterChip params={params} facet="type" label={`type: ${params.type}`} />
             ) : null}
             {params.tag ? (
-              <li>
-                <Link to={facetHref(params, "tag", null)} className="search-chip is-active">
-                  tag: {params.tag} <span aria-hidden="true">x</span>
-                  <span className="sr-only">remove filter</span>
-                </Link>
-              </li>
+              <ActiveFilterChip params={params} facet="tag" label={`tag: ${params.tag}`} />
             ) : null}
-            {params.year ? (
-              <li>
-                <Link to={facetHref(params, "year", null)} className="search-chip is-active">
-                  {params.year} <span aria-hidden="true">x</span>
-                  <span className="sr-only">remove filter</span>
-                </Link>
-              </li>
-            ) : null}
+            {params.year ? <ActiveFilterChip params={params} facet="year" label={params.year} /> : null}
           </ul>
         ) : null}
 
@@ -338,7 +427,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             <ul aria-labelledby="search-sort-label">
               <li>
                 <Link
-                  to={sortHref(params, "relevance")}
+                  to={searchHref(params, { sort: "relevance" })}
                   className="search-chip"
                   aria-current={params.sort === "relevance" ? "true" : undefined}
                 >
@@ -347,7 +436,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
               </li>
               <li>
                 <Link
-                  to={sortHref(params, "date")}
+                  to={searchHref(params, { sort: "date" })}
                   className="search-chip"
                   aria-current={params.sort === "date" ? "true" : undefined}
                 >
@@ -368,114 +457,26 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
 
             <aside className="search-facets" aria-label="Filter results">
               {facets.types.length > 1 ? (
-                <section>
-                  <h2>Type</h2>
-                  <ul>
-                    {facets.types.map((facet) => (
-                      <li key={facet.value}>
-                        <Link
-                          to={facetHref(params, "type", facet.value)}
-                          className="search-chip"
-                        >
-                          {facet.value} <span className="search-chip-count">{facet.count}{floor}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <FacetSection params={params} facet="type" heading="Type" values={facets.types} floor={floor} />
               ) : null}
 
               {facets.tags.length > 0 ? (
-                <section>
-                  <h2>Tag</h2>
-                  <ul>
-                    {facets.tags.map((facet) => (
-                      <li key={facet.value}>
-                        <Link to={facetHref(params, "tag", facet.value)} className="search-chip">
-                          {facet.value} <span className="search-chip-count">{facet.count}{floor}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <FacetSection params={params} facet="tag" heading="Tag" values={facets.tags} floor={floor} />
               ) : null}
 
               {facets.years.length > 0 ? (
-                <section>
-                  <h2>Year</h2>
-                  <ul>
-                    {facets.years.map((facet) => (
-                      <li key={facet.value}>
-                        <Link
-                          to={facetHref(params, "year", String(facet.value))}
-                          className="search-chip"
-                        >
-                          {facet.value} <span className="search-chip-count">{facet.count}{floor}</span>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
+                <FacetSection params={params} facet="year" heading="Year" values={facets.years} floor={floor} />
               ) : null}
             </aside>
           </div>
         ) : null}
 
         {hasQuery && result.total === 0 && suggestions ? (
-          <div className="search-zero">
-            <p>
-              Nothing matched <strong>{result.parsed.raw}</strong>.
-            </p>
-            {suggestions.nearestTags.length > 0 ? (
-              <section>
-                <h2>Related tags</h2>
-                <ul className="search-chip-row">
-                  {suggestions.nearestTags.map((tag) => (
-                    <li key={tag}>
-                      <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="search-chip">
-                        {tag}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-            {suggestions.recentPosts.length > 0 ? (
-              <section>
-                <h2>Recent writing</h2>
-                <ul className="search-recent">
-                  {suggestions.recentPosts.map((post) => (
-                    <li key={post.url}>
-                      <Link to={post.url}>{post.title}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-          </div>
+          <ZeroState raw={result.parsed.raw} suggestions={suggestions} />
         ) : null}
 
         {pageCount > 1 ? (
-          <nav className="search-pagination" aria-label="Search results pages">
-            {result.page > 1 ? (
-              <Link rel="prev" to={pageHref(params, result.page - 1)}>
-                Previous
-              </Link>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-            <span>
-              Page {result.page} of {pageCount}
-              {floor}
-            </span>
-            {result.page < pageCount ? (
-              <Link rel="next" to={pageHref(params, result.page + 1)}>
-                Next
-              </Link>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-          </nav>
+          <Pagination params={params} page={result.page} pageCount={pageCount} floor={floor} />
         ) : null}
       </main>
       <ShellFooter />
