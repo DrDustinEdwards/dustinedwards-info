@@ -68,7 +68,6 @@ function trimStylesheet(css) {
   return { css: rewritten, faces: [...faces].sort(), untrimmed };
 }
 
-/** Exported so `check:content` can derive it and byte-compare without shelling out to this script. */
 function generateKatexCss() {
   const version = installedKatexVersion();
   const source = readFileSync(join(KATEX_DIR, "katex.min.css"), "utf8");

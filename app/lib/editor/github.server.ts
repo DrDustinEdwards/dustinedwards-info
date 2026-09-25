@@ -1,6 +1,7 @@
 // The Git Data API commit shape stays because it carries the expectedHeadSha conflict guard, which
 // the Contents API write path has no seam for.
 
+import { base64ToBytes } from "../bytes.mjs";
 import { contentsCapMessage } from "./contents-cap.mjs";
 
 const API = "https://api.github.com";
@@ -96,11 +97,7 @@ export async function readFile(env: GhEnv, path: string, ref = BRANCH) {
     }
     const content =
       file.encoding === "base64"
-        ? new TextDecoder().decode(
-            Uint8Array.from(atob(file.content.replace(/\n/g, "")), (c) =>
-              c.charCodeAt(0),
-            ),
-          )
+        ? new TextDecoder().decode(base64ToBytes(file.content))
         : file.content;
     return { content, sha: file.sha };
   } catch (error) {
@@ -130,6 +127,14 @@ export async function listDirectory(env: GhEnv, path: string, ref = BRANCH) {
   return entries;
 }
 
+/** The repository's posts: each `content/posts/*.md` file, with the slug its name carries. */
+export async function listPostFiles(env: GhEnv) {
+  const entries = await listDirectory(env, "content/posts");
+  return entries
+    .filter((e) => e.type === "file" && e.name.endsWith(".md"))
+    .map((e) => ({ ...e, slug: e.name.slice(0, -".md".length) }));
+}
+
 /** Raw bytes: readFile's TextDecoder replaces invalid UTF-8, so an image would come back a different length. */
 export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
   try {
@@ -137,16 +142,11 @@ export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
       env,
       `/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?ref=${ref}`,
     );
-    if (file.encoding !== "base64" || file.content.length === 0) {
-      throw new GitHubError(
-        `"${path}" is ${file.size} bytes and did not come back as base64 ` +
-          `content; the Contents API caps at 1 MB.`,
-        422,
-      );
+    const capped = contentsCapMessage(file, path);
+    if (capped) {
+      throw new GitHubError(capped, 422);
     }
-    return Uint8Array.from(atob(file.content.replace(/\n/g, "")), (c) =>
-      c.charCodeAt(0),
-    );
+    return base64ToBytes(file.content);
   } catch (error) {
     if (error instanceof GitHubError && error.status === 404) return null;
     throw error;

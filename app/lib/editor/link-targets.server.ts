@@ -1,4 +1,6 @@
-import { listAllPostsForAdmin } from "~/db";
+import { listAllPostsForAdmin, listBlogTags } from "~/db";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { timed, type Timings } from "~/lib/timing";
 
 import { stateOf } from "./publish-transition.mjs";
 
@@ -21,4 +23,21 @@ export async function loadLinkTargets(env: Env) {
       now,
     ),
   }));
+}
+
+/**
+ * What both editors offer: the existing tags and the link targets. A failed tag read is shown,
+ * never an empty list: it comes back as a sentence in `problems`, and the editor still opens.
+ */
+export async function loadEditorOptions(env: Env, timings: Timings | undefined) {
+  const problems: string[] = [];
+  const tags = await timed(timings, "d1_tags", () =>
+    listBlogTags(env).catch((error: unknown) => {
+      console.error("editor tags read failed", error);
+      problems.push(`Existing tags could not be read, so none are suggested: ${errorMessage(error)}`);
+      return [];
+    }),
+  );
+  const linkTargets = await timed(timings, "d1_link_targets", () => loadLinkTargets(env));
+  return { tagOptions: tags.map((tag) => tag.slug), linkTargets, problems };
 }

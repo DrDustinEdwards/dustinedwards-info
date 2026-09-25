@@ -34,11 +34,30 @@ export const MAP = [
     gates: ["check:features", "check:machine-readable", "check:urls", RELATED],
   },
   {
-    /* check-policy and check-headers read route files by name and scan app/routes; check-page-payload
-       walks every route module for its hydration flag, editor handle and stylesheet set. */
+    /* check-policy, check-ask-guards and check-headers read route files by name and scan app/routes;
+       check-page-payload walks every route module for its hydration flag, editor handle and
+       stylesheet set. */
     what: "a route module",
     test: /^app\/routes\/.+\.(ts|tsx)$/,
-    gates: ["check:policy", "check:headers", "check:page-payload"],
+    gates: ["check:policy", "check:ask-guards", "check:headers", "check:page-payload"],
+  },
+  {
+    /* check-ask-guards reads the origin predicate, the operator bearer and API, and the Ask corpus. */
+    what: "a module the Ask and origin guards read",
+    test: /^app\/lib\/(origin\.mjs|operator\/.+\.ts|search\/(ask\.server\.ts|search\.server\.ts|visibility\.mjs))$/,
+    gates: ["check:ask-guards"],
+  },
+  {
+    /* check-enhance-a11y reads the blog enhancement's source for its dialog and 1.4.13 behavior. */
+    what: "an enhancement module",
+    test: /^app\/enhance\/.+\.ts$/,
+    gates: ["check:enhance-a11y"],
+  },
+  {
+    /* check-migrations reads the operator API and its sync tools behind the sync_ask and sync_media ship calls. */
+    what: "the operator API ship calls",
+    test: /^app\/lib\/operator\/(api|sync-tools)\.server\.ts$/,
+    gates: ["check:migrations"],
   },
   {
     /* check-page-payload reads root.tsx for the <Scripts> guard and the site-wide stylesheets. */
@@ -78,9 +97,10 @@ export const MAP = [
     gates: ["check:urls", "check:page-payload", "check:fonts"],
   },
   {
+    /* check-headers asserts which entrypoint wrangler.jsonc.example lets the platform cache. */
     what: "the wrangler config example",
     test: /^wrangler\..*jsonc?(\.example)?$/,
-    gates: ["check:secrets"],
+    gates: ["check:secrets", "check:headers"],
   },
   {
     what: "a test",

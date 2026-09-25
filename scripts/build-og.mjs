@@ -214,36 +214,12 @@ async function liveCardKeys() {
   return new Set(rows.map((r) => String(r.og_image).replace(/^\/media\//, "")));
 }
 
-async function main() {
-  const dryRun = process.argv.includes("--dry-run");
-
-  const outFlag = process.argv.indexOf("--out");
-  const outDir = outFlag >= 0 ? process.argv[outFlag + 1] : null;
-  if (outFlag >= 0 && !outDir) {
-    throw new Error("--out needs a directory: npm run build:og -- --out samples");
-  }
-  // --out renders to disk and never reaches R2, so only it may run without a target.
-  const target = outDir ? null : requireTarget(process.argv.slice(2), "build:og");
-  const posts = requirePosts(JSON.parse(await readFile(ARTIFACT_PATH, "utf8")), ARTIFACT_PATH);
-
-  /** @type {any[]} */
-  const fonts = [
-    {
-      name: "Inter",
-      weight: 400,
-      style: "normal",
-      data: await readFile(path.join("assets", "fonts", "Inter-Regular.ttf")),
-    },
-    {
-      name: "Inter",
-      weight: 700,
-      style: "normal",
-      data: await readFile(path.join("assets", "fonts", "Inter-Bold.ttf")),
-    },
-  ];
-
-  // ONE derivation of which posts get a card: two loops applying the cover rule is how a prune
-  // deletes the card the writer just uploaded.
+/**
+ * ONE derivation of which posts get a card: two loops applying the cover rule is how a prune deletes
+ * the card the writer just uploaded.
+ * @param {any[]} posts
+ */
+function selectCards(posts) {
   /** @type {Array<{ post: any, key: string }>} */
   const cards = [];
   let skipped = 0;
@@ -263,7 +239,15 @@ async function main() {
     }
     cards.push({ post, key: ogImageKey(post) });
   }
+  return { cards, skipped };
+}
 
+/**
+ * Renders every card, to `outDir` when given and otherwise to R2 at `target`.
+ * @param {Array<{ post: any, key: string }>} cards
+ * @param {{ dryRun: boolean, outDir: string | null, target: string | null, fonts: any[] }} options
+ */
+async function render(cards, { dryRun, outDir, target, fonts }) {
   if (outDir) await mkdir(outDir, { recursive: true });
 
   const workDir = await mkdtemp(path.join(tmpdir(), "og-"));
@@ -313,19 +297,17 @@ async function main() {
   } finally {
     await rm(workDir, { recursive: true, force: true });
   }
+  return written;
+}
 
-  // Local render mode returns here, before the prune: after a template bump every existing object is
-  // an orphan, and those are what the deployed site still serves.
-  if (outDir || !target) {
-    console.log(
-      `\n  ${written} card(s) rendered to ${outDir}. ` +
-        `Nothing was uploaded and nothing was pruned.\n`,
-    );
-    return;
-  }
-
-  // The key hashes template version, slug, title and description. `listForPrune` refuses an empty
-  // listing, and one missing a key the corpus still references.
+/**
+ * Deletes the cards under PREFIX the corpus no longer references, behind the live-card coupling
+ * check and the delete floor. The key hashes template version, slug, title and description.
+ * `listForPrune` refuses an empty listing, and one missing a key the corpus still references.
+ * @param {Array<{ post: any, key: string }>} cards
+ * @param {string} target @param {boolean} dryRun
+ */
+async function prune(cards, target, dryRun) {
   const live = new Set(cards.map((card) => card.key));
   const present = await listForPrune({
     bucket: BUCKET,
@@ -399,6 +381,52 @@ async function main() {
     pruned += 1;
     console.log(`  pruned ${key}`);
   }
+  return { orphans, pruned };
+}
+
+async function main() {
+  const dryRun = process.argv.includes("--dry-run");
+
+  const outFlag = process.argv.indexOf("--out");
+  const outDir = outFlag >= 0 ? process.argv[outFlag + 1] : null;
+  if (outFlag >= 0 && !outDir) {
+    throw new Error("--out needs a directory: npm run build:og -- --out samples");
+  }
+  // --out renders to disk and never reaches R2, so only it may run without a target.
+  const target = outDir ? null : requireTarget(process.argv.slice(2), "build:og");
+  const posts = requirePosts(JSON.parse(await readFile(ARTIFACT_PATH, "utf8")), ARTIFACT_PATH);
+
+  /** @type {any[]} */
+  const fonts = [
+    {
+      name: "Inter",
+      weight: 400,
+      style: "normal",
+      data: await readFile(path.join("assets", "fonts", "Inter-Regular.ttf")),
+    },
+    {
+      name: "Inter",
+      weight: 700,
+      style: "normal",
+      data: await readFile(path.join("assets", "fonts", "Inter-Bold.ttf")),
+    },
+  ];
+
+  const { cards, skipped } = selectCards(posts);
+
+  const written = await render(cards, { dryRun, outDir, target, fonts });
+
+  // Local render mode returns here, before the prune: after a template bump every existing object is
+  // an orphan, and those are what the deployed site still serves.
+  if (outDir || !target) {
+    console.log(
+      `\n  ${written} card(s) rendered to ${outDir}. ` +
+        `Nothing was uploaded and nothing was pruned.\n`,
+    );
+    return;
+  }
+
+  const { orphans, pruned } = await prune(cards, target, dryRun);
 
   console.log(
     `build:og ${written} generated, ${skipped} skipped, ` +
