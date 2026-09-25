@@ -61,6 +61,12 @@ const { eq } = tally;
     !/addEventListener\("scroll"/.test(body),
     true,
   );
+  eq(
+    "footnotes: 1.3.1 the reference is described by its preview, and gets its old description back",
+    /setAttribute\("aria-describedby", `\$\{bubble\.id\} \$\{prior\}`\)/.test(body) &&
+      /owner\?\.setAttribute\("aria-describedby", prior\)/.test(body),
+    true,
+  );
 
   eq(
     "copy controls: there is a role=status region",
@@ -82,7 +88,7 @@ const { eq } = tally;
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
-const MINIMUM_CHECKS = 14;
+const MINIMUM_CHECKS = 15;
 const floorBreach = assertFloor("check:enhance-a11y", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) tally.fail(floorBreach);
 
