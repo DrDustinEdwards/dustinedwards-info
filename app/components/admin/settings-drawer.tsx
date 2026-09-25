@@ -197,7 +197,12 @@ function SlugField({
       <span className="field-label">URL</span>
       <div className="slug-line">
         <code className="slug-value">/blog/{slug}</code>
-        <CopyTextButton value={`/blog/${slug}`} label="Copy URL" />
+        <CopyTextButton
+          value={`/blog/${slug}`}
+          label="Copy URL"
+          name={`/blog/${slug}`}
+          subject={`the URL /blog/${slug}`}
+        />
       </div>
       {/* Read-only, not disabled: a disabled field submits nothing, and without the slug every save
           looks like a new post. */}
