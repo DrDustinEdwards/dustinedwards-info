@@ -1,12 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { REQUIRED_SECRETS } from "../app/lib/secrets.mjs";
 import { interfaceMembers, parseSource, propertyReads } from "./lib/syntax.mjs";
-import { assertFloor } from "./lib/floor.mjs";
 import { readDevVar } from "./lib/dev-vars.mjs";
+import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ENV_TYPES = join(root, "app", "env.d.ts");
@@ -26,17 +27,8 @@ const CLIENT_ALLOWED = {};
  * a different namespace, and the matcher is anchored so it cannot confuse the two.
  */
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally();
+const { ok } = tally;
 
 console.log("\ncheck:secrets\n");
 
@@ -81,15 +73,9 @@ for (const name of declared) {
 
 const SCAN_ROOTS = ["app", "workers"];
 
-/** @param {string} dir @param {string[]} out */
-function walk(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) walk(full, out);
-    else if (/\.(ts|tsx|mjs|js|jsx)$/.test(entry) && !entry.endsWith(".d.ts")) out.push(full);
-  }
-  return out;
-}
+/** @param {string} dir */
+const walk = (dir) =>
+  walkFiles(dir, { keep: (name) => /\.(ts|tsx|mjs|js|jsx)$/.test(name) && !name.endsWith(".d.ts") });
 
 function isServerOnly(/** @type {string} */ path) {
   return path.startsWith("workers/") || /\.server\.(ts|tsx|mjs|js)$/.test(path);
@@ -378,11 +364,10 @@ console.log(
 
 // Measured by running it, never summed; re-taken whenever a section or a secret lands.
 const MINIMUM_CHECKS = 39;
-const floorBreach = assertFloor("check:secrets", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
+tally.floor("check:secrets", "checks", MINIMUM_CHECKS);
 
-if (failures > 0) {
-  console.log(`\n${failures} FAILED of ${checks} checks\n`);
+if (tally.failures > 0) {
+  console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
   process.exit(1);
 }
-console.log(`\n${checks} checks, 0 failures\n`);
+console.log(`\n${tally.checks} checks, 0 failures\n`);
