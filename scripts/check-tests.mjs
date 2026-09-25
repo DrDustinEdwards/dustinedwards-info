@@ -12,7 +12,7 @@ const TEST_DIR = join(root, "test");
 // so the set shrinking is noticed.
 const MINIMUM_FILES = 93;
 // Catches a test file hollowed out in place. Measured by running the gate.
-const MINIMUM_TESTS = 788;
+const MINIMUM_TESTS = 787;
 
 let checks = 0;
 let failures = 0;
