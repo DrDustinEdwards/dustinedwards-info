@@ -54,9 +54,9 @@ export const MAP = [
     gates: ["check:enhance-a11y"],
   },
   {
-    /* check-migrations reads the operator API for the sync_ask and sync_media tools ship calls. */
+    /* check-migrations reads the operator API and its sync tools behind the sync_ask and sync_media ship calls. */
     what: "the operator API ship calls",
-    test: /^app\/lib\/operator\/api\.server\.ts$/,
+    test: /^app\/lib\/operator\/(api|sync-tools)\.server\.ts$/,
     gates: ["check:migrations"],
   },
   {

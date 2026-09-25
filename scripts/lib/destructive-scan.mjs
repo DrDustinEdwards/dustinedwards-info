@@ -35,13 +35,15 @@ export function findAction(sf) {
 }
 
 /**
- * `intent`, or `<anything>.get("intent")`.
+ * `intent`, `<anything>.intent`, or `<anything>.get("intent")`. The regex this replaced matched
+ * `body.intent === "x"` too, so a property read stays in the vocabulary.
  *
  * @param {ts.Node} node
  */
 function isIntentRead(node) {
   while (ts.isParenthesizedExpression(node)) node = node.expression;
   if (ts.isIdentifier(node)) return node.text === "intent";
+  if (ts.isPropertyAccessExpression(node)) return node.name.text === "intent";
   return (
     ts.isCallExpression(node) &&
     ts.isPropertyAccessExpression(node.expression) &&

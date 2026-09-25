@@ -8,8 +8,10 @@ import {
   readCachedDrift,
   writeCachedDrift,
 } from "./ask-guard.server";
-import { KEY_SEPARATOR, keyForUrl } from "./ask-keys.mjs";
-import { uploadTwins } from "./ask-twins.mjs";
+import { KEY_SEPARATOR, keyForUrl, ownsAskKey } from "./ask-keys.mjs";
+import { uploadTwins, withRetry } from "./ask-twins.mjs";
+import { answerDelta, takeSseFrames } from "./sse.mjs";
+import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { PUBLICATIONS } from "~/data/publications";
@@ -77,30 +79,14 @@ async function parseSseAnswer(
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split("\n\n");
-      buffer = frames.pop() ?? "";
-      for (const frame of frames) {
-        let eventName = "";
-        const dataLines: string[] = [];
-        for (const line of frame.split("\n")) {
-          if (line.startsWith("event:")) eventName = line.slice(6).trim();
-          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
-        }
-        const data = dataLines.join("\n");
-        if (!data || data === "[DONE]") continue;
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(data);
-        } catch {
+      const taken = takeSseFrames(buffer);
+      buffer = taken.rest;
+      for (const { event, data } of taken.frames) {
+        if (event === "chunks") {
+          if (Array.isArray(data)) chunks = data;
           continue;
         }
-        if (eventName === "chunks") {
-          if (Array.isArray(parsed)) chunks = parsed;
-          continue;
-        }
-        const delta = (parsed as { choices?: Array<{ delta?: { content?: string } }> })
-          ?.choices?.[0]?.delta?.content;
-        if (typeof delta === "string") answer += delta;
+        answer += answerDelta(data) ?? "";
       }
     }
   } catch {
@@ -172,6 +158,32 @@ function askPublishable(post: { draft?: boolean; publishAt?: string | null }): b
   return publishableForAsk([post]).length === 1;
 }
 
+/**
+ * One search record as an Ask item. Fails closed: a url containing the separator would produce a
+ * key that resolves to the wrong URL. The heading is in the text: the body alone loses what the
+ * section is about.
+ */
+function askItemFor(record: Record<string, any>) {
+  if (record.url.includes(KEY_SEPARATOR)) {
+    throw new Error(
+      `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
+        `uploaded safely: ${record.url}`,
+    );
+  }
+  return { key: keyForUrl(record.url), body: `# ${record.title}\n\n${record.body}\n` };
+}
+
+/** Lists every item, deletes the ones whose key matches, and returns their keys. */
+async function deleteAskItemsWhere(env: Env, matches: (key: string) => boolean) {
+  const removed: string[] = [];
+  for (const item of await listAllAskItems(env)) {
+    if (!matches(item.key)) continue;
+    await env.AI_SEARCH.items.delete(item.id);
+    removed.push(item.key);
+  }
+  return removed;
+}
+
 /** Uploaded rather than crawled: the crawler would index the apex (the legacy site) and lose heading granularity. */
 export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   // From D1 with visibilityClause composed in the SQL, so drafts and future posts never enter the index.
@@ -179,17 +191,8 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   const keys: string[] = [];
 
   for (const record of records) {
-    // Fail closed: a url containing the separator would produce a key that resolves to the wrong URL.
-    if (record.url.includes(KEY_SEPARATOR)) {
-      throw new Error(
-        `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
-          `uploaded safely: ${record.url}`,
-      );
-    }
-    const key = keyForUrl(record.url);
-    // The heading is included in the uploaded text: the body alone loses what the section is about.
-    const content = `# ${record.title}\n\n${record.body}\n`;
-    await env.AI_SEARCH.items.upload(key, content);
+    const { key, body } = askItemFor(record);
+    await env.AI_SEARCH.items.upload(key, body);
     keys.push(key);
   }
 
@@ -243,44 +246,23 @@ export async function syncAskPost(
   const failed: string[] = [];
 
   for (const record of records) {
-    if (record.url.includes(KEY_SEPARATOR)) {
-      // Not caught below: retrying would produce the same wrong key.
-      throw new Error(
-        `record url contains the key separator "${KEY_SEPARATOR}" and cannot be ` +
-          `uploaded safely: ${record.url}`,
-      );
-    }
-    const key = keyForUrl(record.url);
-    const body = `# ${record.title}\n\n${record.body}\n`;
+    // Outside the retry: a bad url would produce the same wrong key every time.
+    const { key, body } = askItemFor(record);
     try {
-      await env.AI_SEARCH.items.upload(key, body);
-    } catch {
-      try {
-        await env.AI_SEARCH.items.upload(key, body);
-      } catch (error) {
-        console.error("ask upload failed twice", key, error);
-        failed.push(key);
-      }
+      await withRetry(() => env.AI_SEARCH.items.upload(key, body), { attempts: 2 });
+    } catch (error) {
+      console.error("ask upload failed twice", key, error);
+      failed.push(key);
     }
     live.add(key);
   }
 
-  // Exact key or section prefix, never startsWith(slug), which would sweep up a longer slug.
-  const documentKey = keyForUrl(post.url ?? `/blog/${post.slug}`);
-  const sectionPrefix = `${documentKey.replace(/\.md$/, "")}${KEY_SEPARATOR}`;
-  let removed = 0;
-  const listed = await listAllAskItems(env);
-  for (const item of listed) {
-    const ours = item.key === documentKey || item.key.startsWith(sectionPrefix);
-    if (ours && !live.has(item.key)) {
-      await env.AI_SEARCH.items.delete(item.id);
-      removed += 1;
-    }
-  }
+  const ours = ownsAskKey(post.slug);
+  const removed = await deleteAskItemsWhere(env, (key) => ours(key) && !live.has(key));
 
   await invalidateAnswerCache(env);
   await dropCachedDrift(env);
-  return { uploaded: records.length - failed.length, removed, failed };
+  return { uploaded: records.length - failed.length, removed: removed.length, failed };
 }
 
 export interface AskIndexStatus {
@@ -301,12 +283,8 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
   const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperItemKeys()]);
   const present = new Set(listed.map((item) => item.key));
 
-  return {
-    expected: expected.size,
-    present: present.size,
-    missing: [...expected].filter((k) => !present.has(k)).sort(),
-    stale: [...present].filter((k) => !expected.has(k)).sort(),
-  };
+  const { extra, ...drift } = setDrift(expected, present);
+  return { ...drift, stale: extra };
 }
 
 /** On the context because a parent cannot read a child's loader data; a getter, so a route that never asks never pays. */
@@ -379,32 +357,16 @@ export async function askDriftCount(
 const DRIFT_BUDGET_MS = 1000;
 
 export async function removeAskPost(env: Env, slug: string): Promise<number> {
-  const documentKey = `blog/${slug}.md`;
-  const sectionPrefix = `blog/${slug}${KEY_SEPARATOR}`;
-  let removed = 0;
-  const listed = await listAllAskItems(env);
-  for (const item of listed) {
-    if (item.key === documentKey || item.key.startsWith(sectionPrefix)) {
-      await env.AI_SEARCH.items.delete(item.id);
-      removed += 1;
-    }
-  }
+  const removed = await deleteAskItemsWhere(env, ownsAskKey(slug));
   await invalidateAnswerCache(env);
   await dropCachedDrift(env);
-  return removed;
+  return removed.length;
 }
 
 /** Upload is an upsert, so a renamed or deleted post leaves its old item answering forever. */
 export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<string[]> {
   const live = new Set(liveKeys);
-  const removed: string[] = [];
-  const listed = await listAllAskItems(env);
-  for (const item of listed) {
-    if (!live.has(item.key)) {
-      await env.AI_SEARCH.items.delete(item.id);
-      removed.push(item.key);
-    }
-  }
+  const removed = await deleteAskItemsWhere(env, (key) => !live.has(key));
   // Only on an actual removal; dropping the key otherwise would cost the next reader a listing.
   if (removed.length > 0) await dropCachedDrift(env);
   return removed;

@@ -837,10 +837,6 @@
     outline-style: dotted;
   }
 
-  .admin-alert {
-    border-color: currentColor;
-  }
-
   .overflow-menu-panel {
     outline: 1px solid transparent;
   }

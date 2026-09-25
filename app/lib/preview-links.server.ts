@@ -12,6 +12,7 @@ import {
   truncateToken,
   type PreviewRecord,
 } from "~/lib/preview-token.mjs";
+import { limitHit } from "~/lib/rate-limit.mjs";
 
 /**
  * The two KV writes are not transactional, so both operations put the token (authority) key at the
@@ -134,13 +135,9 @@ export async function checkPreviewRate(
   env: Env,
   ip: string,
 ): Promise<{ ok: boolean; retryAfter: number }> {
-  if (!env.ASK_BUDGET) {
-    return { ok: false, retryAfter: PREVIEW_RATE_WINDOW_SECONDS };
-  }
   // Keyed `preview:` rather than `ip:`, so preview traffic does not spend an Ask caller's counter.
-  const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`preview:${ip}`));
-  const { ok } = await limiter.hit(PREVIEW_RATE_LIMIT, PREVIEW_RATE_WINDOW_SECONDS);
-  return { ok, retryAfter: PREVIEW_RATE_WINDOW_SECONDS };
+  const verdict = await limitHit(env, `preview:${ip}`, PREVIEW_RATE_LIMIT, PREVIEW_RATE_WINDOW_SECONDS);
+  return { ok: verdict === "ok", retryAfter: PREVIEW_RATE_WINDOW_SECONDS };
 }
 
 function toLink(token: string, record: PreviewRecord): PreviewLink {

@@ -1,6 +1,8 @@
 // Section-grained: a reader lands on the matching heading, and fusion needs more than one hit per
 // index to do anything. Pure: no clock, filesystem or git, so a record never carries a revision date.
 
+import { PUBLISHED_STATUS, statusForDraft } from "./visibility.mjs";
+
 /**
  * Fenced code is kept: the identifiers readers search for live in code blocks as often as in prose.
  *
@@ -100,59 +102,75 @@ function splitSections(markdown, toc) {
 }
 
 /**
+ * One index record. A document's own record has no anchor and ordinal 0; a section's record takes
+ * the document's uid and url with its anchor appended. Key order is fixed: the output is compared
+ * across runs.
+ *
+ * @param {{ uid: string, url: string, type: "post" | "page", title: string, docTags: string,
+ *           status: string, publishAt: any }} doc
+ * @param {{ title: string, body: string, tags?: string,
+ *           section?: { anchor: string, ordinal: number } }} part
+ * @returns {Record<string, any>}
+ */
+function record(doc, { title, body, tags = "", section }) {
+  return {
+    uid: section ? `${doc.uid}#${section.anchor}` : doc.uid,
+    url: section ? `${doc.url}#${section.anchor}` : doc.url,
+    type: doc.type,
+    title,
+    body,
+    tags,
+    docTags: doc.docTags,
+    docUid: doc.uid,
+    docTitle: doc.title,
+    docUrl: doc.url,
+    anchor: section ? section.anchor : null,
+    ordinal: section ? section.ordinal : 0,
+    status: doc.status,
+    publishAt: doc.publishAt,
+  };
+}
+
+/**
  * @param {any} post a rendered post record from the shared pipeline
  * @returns {Array<Record<string, any>>}
  */
 export function recordsForPost(post) {
-  const url = `/blog/${post.slug}`;
-  const docUid = `post:${post.slug}`;
   const tags = post.tags.join(" ");
   // Pipe-delimited on both ends so a filter can test for an exact tag with
   // instr(doc_tags, '|d1|') and never match `d1` inside `d10`.
   const docTags = post.tags.length > 0 ? `|${post.tags.join("|")}|` : "";
-  const status = post.draft ? "draft" : "published";
   const { intro, sections } = splitSections(post.markdown, post.toc);
+  const doc = {
+    uid: `post:${post.slug}`,
+    url: `/blog/${post.slug}`,
+    type: /** @type {const} */ ("post"),
+    title: post.title,
+    docTags,
+    status: statusForDraft(post.draft),
+    publishAt: post.publishAt,
+  };
 
   /** @type {Array<Record<string, any>>} */
   const records = [
-    {
-      uid: docUid,
-      url,
-      type: "post",
+    record(doc, {
       title: post.title,
       body: [post.description, intro].filter(Boolean).join(" "),
       tags,
-      docTags,
-      docUid,
-      docTitle: post.title,
-      docUrl: url,
-      anchor: null,
-      ordinal: 0,
-      status,
-      publishAt: post.publishAt,
-    },
+    }),
   ];
 
   sections.forEach((section, i) => {
     // A heading with no prose of its own would match nothing and only pad the facet counts.
     if (!section.body) return;
-    records.push({
-      uid: `${docUid}#${section.anchor}`,
-      url: `${url}#${section.anchor}`,
-      type: "post",
-      title: section.title,
-      body: section.body,
-      // Tags stay on the document: repeated per section, section count would drive identity ranking.
-      tags: "",
-      docTags,
-      docUid,
-      docTitle: post.title,
-      docUrl: url,
-      anchor: section.anchor,
-      ordinal: i + 1,
-      status,
-      publishAt: post.publishAt,
-    });
+    // Tags stay on the document: repeated per section, section count would drive identity ranking.
+    records.push(
+      record(doc, {
+        title: section.title,
+        body: section.body,
+        section: { anchor: section.anchor, ordinal: i + 1 },
+      }),
+    );
   });
 
   return records;
@@ -194,45 +212,31 @@ function recordsForPage(page) {
     );
   }
 
+  // No tags: a page would appear under a tag nothing else on the site shares.
+  const doc = {
+    uid: page.uid,
+    url: page.url,
+    type: /** @type {const} */ ("page"),
+    title: page.title,
+    docTags: "",
+    status: PUBLISHED_STATUS,
+    publishAt: null,
+  };
+
   /** @type {Array<Record<string, any>>} */
   const records = [
-    {
-      uid: page.uid,
-      url: page.url,
-      type: "page",
-      title: page.title,
-      body: [page.description, page.intro].filter(Boolean).join(" "),
-      // No tags: a page would appear under a tag nothing else on the site shares.
-      tags: "",
-      docTags: "",
-      docUid: page.uid,
-      docTitle: page.title,
-      docUrl: page.url,
-      anchor: null,
-      ordinal: 0,
-      status: "published",
-      publishAt: null,
-    },
+    record(doc, { title: page.title, body: [page.description, page.intro].filter(Boolean).join(" ") }),
   ];
 
   page.sections.forEach((section, i) => {
     if (!section.body) return;
-    records.push({
-      uid: `${page.uid}#${section.anchor}`,
-      url: `${page.url}#${section.anchor}`,
-      type: "page",
-      title: section.title,
-      body: section.body,
-      tags: "",
-      docTags: "",
-      docUid: page.uid,
-      docTitle: page.title,
-      docUrl: page.url,
-      anchor: section.anchor,
-      ordinal: i + 1,
-      status: "published",
-      publishAt: null,
-    });
+    records.push(
+      record(doc, {
+        title: section.title,
+        body: section.body,
+        section: { anchor: section.anchor, ordinal: i + 1 },
+      }),
+    );
   });
 
   return records;
@@ -270,21 +274,19 @@ export function recordsForPapers(papers) {
   }
   return [...papers]
     .sort((a, b) => String(a.uid).localeCompare(String(b.uid)))
-    .map((paper) => ({
-      uid: paper.uid,
-      url: paper.url,
-      type: "page",
-      title: paper.title,
-      body: paper.body,
+    .map((paper) =>
       // No tags: the tag facet is the blog's, and its archive would not list a paper.
-      tags: "",
-      docTags: "",
-      docUid: paper.uid,
-      docTitle: paper.title,
-      docUrl: paper.url,
-      anchor: null,
-      ordinal: 0,
-      status: "published",
-      publishAt: null,
-    }));
+      record(
+        {
+          uid: paper.uid,
+          url: paper.url,
+          type: "page",
+          title: paper.title,
+          docTags: "",
+          status: PUBLISHED_STATUS,
+          publishAt: null,
+        },
+        { title: paper.title, body: paper.body },
+      ),
+    );
 }
