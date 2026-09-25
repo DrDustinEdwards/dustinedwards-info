@@ -389,16 +389,19 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </p>
         </Form>
 
-        {hasQuery ? (
-          <p className="search-count" aria-live="polite">
-            {result.total === 0
-              ? "No results"
-              : `${result.total}${result.truncated ? "+" : ""} result${
-                  result.total === 1 ? "" : "s"
-                }`}
-            {result.parsed.year !== null ? ` from ${result.parsed.year}` : ""}
-          </p>
-        ) : null}
+        {/* Rendered even empty: a live region must exist before its text changes, or the live
+            search's count is never announced. */}
+        <p className="search-count" aria-live="polite">
+          {hasQuery
+            ? `${
+                result.total === 0
+                  ? "No results"
+                  : `${result.total}${result.truncated ? "+" : ""} result${
+                      result.total === 1 ? "" : "s"
+                    }`
+              }${result.parsed.year !== null ? ` from ${result.parsed.year}` : ""}`
+            : null}
+        </p>
 
         {params.type || params.tag || params.year ? (
           <ul className="search-active-filters">
@@ -447,14 +450,18 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
           </nav>
         ) : null}
 
-        {hasQuery && result.total > 0 ? (
-          <div className="search-body">
+        {/* The body is always there, empty without results, so the live search has a place to
+            write its results on a page that opened with none. */}
+        <div className="search-body">
+          {hasQuery && result.total > 0 ? (
             <ol className="search-results">
               {result.hits.map((hit) => (
                 <Result key={hit.uid} hit={hit} />
               ))}
             </ol>
+          ) : null}
 
+          {hasQuery && result.total > 0 ? (
             <aside className="search-facets" aria-label="Filter results">
               {facets.types.length > 1 ? (
                 <FacetSection params={params} facet="type" heading="Type" values={facets.types} floor={floor} />
@@ -468,8 +475,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                 <FacetSection params={params} facet="year" heading="Year" values={facets.years} floor={floor} />
               ) : null}
             </aside>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
 
         {hasQuery && result.total === 0 && suggestions ? (
           <ZeroState raw={result.parsed.raw} suggestions={suggestions} />
