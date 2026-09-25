@@ -151,6 +151,8 @@ here), and `node scripts/verify-live.mjs` after a deploy, which asserts against
 the running site. **Run verify-live twice after any caching change**, once cold
 and once warm. It normally runs seconds after a deploy, when the version-keyed
 cache is empty, and that blind spot hid a real bug for four sessions.
+`npx knip --no-exit-code` lists unused files, exports and dependencies from
+`knip.json`; it is a report, not a gate.
 
 ## Secrets
 
