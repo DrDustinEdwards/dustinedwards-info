@@ -10,6 +10,7 @@ import worker from "../../workers/app";
  */
 vi.mock("virtual:react-router/server-build", async () => {
   const entryServer = await import("~/entry.server");
+  const { stubServerBuild } = await import("./server-build");
   const Late = lazy(
     () =>
       new Promise<{ default: () => ReturnType<typeof h> }>((resolve) =>
@@ -19,38 +20,24 @@ vi.mock("virtual:react-router/server-build", async () => {
   const Root = () =>
     h("html", null, h("body", null, h("div", null, "shell"), h(Suspense, { fallback: null }, h(Late))));
 
-  const build = {
+  const build = stubServerBuild({
     entry: { module: entryServer },
     routes: { root: { id: "root", path: "", module: { default: Root } } },
-    assets: {
-      entry: { imports: [], module: "/stub-entry.js" },
-      routes: {
-        root: {
-          id: "root",
-          path: "",
-          module: "/stub-root.js",
-          imports: [],
-          hasLoader: false,
-          hasAction: false,
-          hasClientLoader: false,
-          hasClientAction: false,
-          hasClientMiddleware: false,
-          hasErrorBoundary: false,
-        },
+    assetRoutes: {
+      root: {
+        id: "root",
+        path: "",
+        module: "/stub-root.js",
+        imports: [],
+        hasLoader: false,
+        hasAction: false,
+        hasClientLoader: false,
+        hasClientAction: false,
+        hasClientMiddleware: false,
+        hasErrorBoundary: false,
       },
-      url: "/stub-manifest.js",
-      version: "stub",
     },
-    basename: "/",
-    publicPath: "/",
-    assetsBuildDirectory: "build/client",
-    future: {},
-    ssr: true,
-    isSpaMode: false,
-    prerender: [],
-    routeDiscovery: { mode: "initial", manifestPath: "/__manifest" },
-    unstable_getCriticalCss: undefined,
-  };
+  });
   return { ...build, default: build };
 });
 
