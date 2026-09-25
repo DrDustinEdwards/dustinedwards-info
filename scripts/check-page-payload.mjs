@@ -11,15 +11,19 @@ import {
 import { spawnSync } from "node:child_process";
 import { join, dirname, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { brotliCompressSync, constants } from "node:zlib";
 
 // Comments go first: a gate reading source can be satisfied by a comment.
 import { stripComments } from "./lib/strip-comments.mjs";
+import { findIneffectiveDynamicImports } from "./lib/dynamic-imports.mjs";
 import {
-  findIneffectiveDynamicImports,
+  ASSETS_DIR,
+  brotliSize,
+  enhancementAssets,
   fontsIn,
+  readClientManifest,
   reachableAssets,
   stylesheetsFor,
+  walkHydrationSet,
 } from "./lib/page-payload.mjs";
 import { createTally } from "./lib/tally.mjs";
 import { walkFiles } from "./lib/walk-files.mjs";
@@ -61,9 +65,6 @@ function preloadEntries(rootSource) {
   }
   return entries;
 }
-
-const ASSETS_DIR = join(root, "build", "client", "assets");
-const DIST_DIR = join(root, "app", "enhance", "dist");
 
 /**
  * Margins are wide because the bundles are tiny: the job is catching a dependency wandering in.
@@ -114,149 +115,6 @@ const MINIMUM_ASSETS_SYNTAX_CHECKED = 15;
 const tally = createTally({ printPass: true });
 const { ok } = tally;
 
-/**
- * Stems, because verify-live may face a deploy whose hashes predate this disk. Anchored on the
- * extension: a Vite hash may contain a dash.
- *
- * @param {string} name
- */
-export function chunkStem(name) {
-  return name.replace(/-[A-Za-z0-9_-]{8}\.js$/, "");
-}
-
-/** @param {Buffer} bytes */
-function brotliSize(bytes) {
-  return brotliCompressSync(bytes, {
-    params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
-  }).length;
-}
-
-function readClientManifest() {
-  /** @type {string[]} */
-  let entries;
-  try {
-    entries = readdirSync(ASSETS_DIR);
-  } catch {
-    throw new Error(
-      `${ASSETS_DIR} is missing or unreadable. This gate measures the build on ` +
-        `disk; run npm run build first.`,
-    );
-  }
-  const names = entries.filter((f) => /^manifest-[A-Za-z0-9_-]+\.js$/.test(f));
-  if (names.length !== 1) {
-    throw new Error(
-      `expected exactly one manifest-<hash>.js under build/client/assets, ` +
-        `found ${names.length}${names.length ? `: ${names.join(", ")}` : ""}. ` +
-        `A stale or partial build; run npm run build.`,
-    );
-  }
-  const source = readFileSync(join(ASSETS_DIR, names[0]), "utf8");
-  const manifest = JSON.parse(
-    source.slice(source.indexOf("=") + 1, source.lastIndexOf(";")),
-  );
-  return { manifest, manifestFile: names[0] };
-}
-
-/**
- * Minified output writes `from"./x.js"` and bare `import"./x.js"`. A dynamic `import("./x.js")` is
- * not followed: it loads later, not at hydration.
- *
- * @param {string} source
- * @returns {string[]}
- */
-function chunkImports(source) {
-  /** @type {string[]} */
-  const staticTargets = [];
-  for (const match of source.matchAll(/from\s*["'`]\.\/([^"'`]+)["'`]/g)) {
-    staticTargets.push(match[1]);
-  }
-  // Bare static import: `import"./x.js"`. The lookbehind refuses `import(`,
-  // property access (`.import`) and identifiers ending in "import".
-  for (const match of source.matchAll(/(?<![.(\w])import\s*["'`]\.\/([^"'`]+)["'`]/g)) {
-    staticTargets.push(match[1]);
-  }
-  return staticTargets;
-}
-
-/** @returns {{ files: string[], manifestFile: string }} */
-function walkHydrationSet() {
-  const { manifest, manifestFile } = readClientManifest();
-
-  /** @type {Set<string>} */
-  const seed = new Set();
-  /** @param {string} url */
-  const add = (url) => seed.add(url.replace("/assets/", ""));
-
-  if (!manifest.entry?.module) {
-    throw new Error("the manifest carries no entry module; the walk has no seed.");
-  }
-  add(manifest.entry.module);
-  for (const url of manifest.entry.imports ?? []) add(url);
-
-  for (const id of ["root", "routes/blog.$slug"]) {
-    const route = manifest.routes?.[id];
-    if (!route?.module) {
-      throw new Error(
-        `route "${id}" is missing from the manifest. The build lost a route.`,
-      );
-    }
-    add(route.module);
-    for (const url of route.imports ?? []) add(url);
-  }
-
-  // Re-close transitively over each chunk's own static imports, so a chunk
-  // the manifest's flattened arrays under-list is still counted.
-  const queue = [...seed];
-  while (queue.length > 0) {
-    const name = /** @type {string} */ (queue.pop());
-    const source = readFileSync(join(ASSETS_DIR, name), "utf8");
-    for (const target of chunkImports(source)) {
-      if (!seed.has(target)) {
-        seed.add(target);
-        queue.push(target);
-      }
-    }
-  }
-
-  return { files: [...seed].sort(), manifestFile };
-}
-
-/**
- * The stems of these asset names are the only script references a public page may carry.
- *
- * @returns {Array<{ module: string, assetName: string | null, matches: number, raw: number, brotli: number }>}
- */
-function enhancementAssets() {
-  /** @type {string[]} */
-  let distFiles;
-  try {
-    distFiles = readdirSync(DIST_DIR).filter((f) => f.endsWith(".js"));
-  } catch {
-    throw new Error(
-      `${DIST_DIR} is missing. The bundles are built by npm run build:enhance, ` +
-        `which every runner executes before this gate; run it first.`,
-    );
-  }
-  if (distFiles.length === 0) {
-    throw new Error(`${DIST_DIR} holds no bundles; run npm run build:enhance.`);
-  }
-
-  const assetNames = readdirSync(ASSETS_DIR).filter((f) => f.endsWith(".js"));
-  return distFiles.sort().map((module) => {
-    const distBytes = readFileSync(join(DIST_DIR, module));
-    const matches = assetNames.filter((name) =>
-      distBytes.equals(readFileSync(join(ASSETS_DIR, name))),
-    );
-    return {
-      module,
-      assetName: matches.length === 1 ? matches[0] : null,
-      matches: matches.length,
-      raw: distBytes.length,
-      brotli: brotliSize(distBytes),
-    };
-  });
-}
-
 /** @param {string} dir */
 const walkSource = (dir) => walkFiles(dir, { keep: (name) => /\.(ts|tsx|mjs)$/.test(name) });
 
@@ -274,6 +132,40 @@ async function main() {
   }
   console.log("");
 
+  gradeHydrationWalk(files, bundles);
+
+  gradeAssetSyntax();
+
+  gradeHydrationOptIn();
+
+  /*
+   * Derived from source, not the build log: a dynamic import splits nothing when some module in the
+   * same graph imports it statically.
+   */
+  const importScope = [join(root, "app"), join(root, "workers")].flatMap((dir) => walkSource(dir));
+
+  gradeDynamicImports(importScope);
+
+  gradeBuildOnlyDependencies(importScope);
+
+  gradeEveryPage();
+
+  await gradeRenderedHtml();
+
+  if (tally.failures > 0) {
+    console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
+    process.exit(1);
+  }
+  console.log(`\n${tally.checks} checks, 0 failures\n`);
+}
+
+/**
+ * The walk read enough files, and each enhancement bundle is served verbatim under its measured
+ * brotli ceiling.
+ *
+ * @param {string[]} files @param {ReturnType<typeof enhancementAssets>} bundles
+ */
+function gradeHydrationWalk(files, bundles) {
   ok(
     `the manifest walk read at least ${MINIMUM_FILES_WALKED} file(s)`,
     files.length >= MINIMUM_FILES_WALKED,
@@ -316,7 +208,10 @@ async function main() {
     `${ceilingOnly.join(", ")} carry ceilings but no bundle; the map is describing ` +
       `a repo that no longer exists.`,
   );
+}
 
+/** No TypeScript is served as an asset, and every served script parses as a module. */
+function gradeAssetSyntax() {
   const scratch = join(root, "node_modules", ".cache", "check-page-payload");
   rmSync(scratch, { recursive: true, force: true });
   mkdirSync(scratch, { recursive: true });
@@ -361,7 +256,10 @@ async function main() {
     `unparseable asset(s), most likely a ?url import pointed at TypeScript ` +
       `source instead of its dist bundle:\n        ${invalid.join("\n        ")}`,
   );
+}
 
+/** Only the admin layout and the login door hydrate, and root renders <Scripts> behind that guard. */
+function gradeHydrationOptIn() {
   /* Pinned to admin.tsx and login.tsx by name, so a public route gaining the flag fails HERE. */
   const hydrating = routesMatching(/hydrate\s*:\s*true/, { ts: true });
   ok(
@@ -384,13 +282,10 @@ async function main() {
     `expected one <Scripts inside the "hydrates ? (" conditional in app/root.tsx; ` +
       `an unconditional <Scripts> hydrates every public page again.`,
   );
+}
 
-  /*
-   * Derived from source, not the build log: a dynamic import splits nothing when some module in the
-   * same graph imports it statically.
-   */
-  const importScope = [join(root, "app"), join(root, "workers")].flatMap((dir) => walkSource(dir));
-
+/** @param {string[]} importScope app/ and workers/, walked once in main */
+function gradeDynamicImports(importScope) {
   ok(
     "the dynamic-import scan walked a non-empty scope",
     importScope.length >= MINIMUM_SOURCE_FILES,
@@ -448,18 +343,6 @@ async function main() {
       )
       .join("\n        "),
   );
-
-  gradeBuildOnlyDependencies(importScope);
-
-  gradeEveryPage();
-
-  await gradeRenderedHtml();
-
-  if (tally.failures > 0) {
-    console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
-    process.exit(1);
-  }
-  console.log(`\n${tally.checks} checks, 0 failures\n`);
 }
 
 /**

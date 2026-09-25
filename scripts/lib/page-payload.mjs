@@ -3,9 +3,10 @@
  * counts, which over-approximates in the safe direction for a byte ceiling.
  */
 
-import { dirname, join, posix } from "node:path";
-
-import { stripComments } from "./strip-comments.mjs";
+import { readFileSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { brotliCompressSync, constants } from "node:zlib";
 
 /**
  * @param {string} source @param {string} file @param {string} appDir
@@ -122,55 +123,150 @@ export function fontsIn(cssText) {
   return [...fonts];
 }
 
+/* The build on disk, read by check:page-payload and by nothing that builds. */
+const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+export const ASSETS_DIR = join(root, "build", "client", "assets");
+const DIST_DIR = join(root, "app", "enhance", "dist");
+
 /**
- * A module key: the repo-relative path with any script extension dropped, so `~/lib/x`,
- * `./x.mjs` and `../lib/x` from the right directories are one key. Anything that is neither `~/`
- * nor relative (a package, a virtual module) has no key.
+ * Stems, because verify-live may face a deploy whose hashes predate this disk. Anchored on the
+ * extension: a Vite hash may contain a dash.
  *
- * @param {string} spec @param {string} from repo-relative path of the importing file
+ * @param {string} name
  */
-export function moduleKey(spec, from) {
-  let path;
-  if (spec.startsWith("~/")) path = posix.join("app", spec.slice(2));
-  else if (spec.startsWith(".")) path = posix.join(posix.dirname(from.split("\\").join("/")), spec);
-  else return null;
-  return path.replace(/\.(?:ts|tsx|mjs|js)$/, "").replace(/\/index$/, "");
+export function chunkStem(name) {
+  return name.replace(/-[A-Za-z0-9_-]{8}\.js$/, "");
+}
+
+/** @param {Buffer} bytes */
+export function brotliSize(bytes) {
+  return brotliCompressSync(bytes, {
+    params: { [constants.BROTLI_PARAM_QUALITY]: 11 },
+  }).length;
+}
+
+export function readClientManifest() {
+  /** @type {string[]} */
+  let entries;
+  try {
+    entries = readdirSync(ASSETS_DIR);
+  } catch {
+    throw new Error(
+      `${ASSETS_DIR} is missing or unreadable. This gate measures the build on ` +
+        `disk; run npm run build first.`,
+    );
+  }
+  const names = entries.filter((f) => /^manifest-[A-Za-z0-9_-]+\.js$/.test(f));
+  if (names.length !== 1) {
+    throw new Error(
+      `expected exactly one manifest-<hash>.js under build/client/assets, ` +
+        `found ${names.length}${names.length ? `: ${names.join(", ")}` : ""}. ` +
+        `A stale or partial build; run npm run build.`,
+    );
+  }
+  const source = readFileSync(join(ASSETS_DIR, names[0]), "utf8");
+  const manifest = JSON.parse(
+    source.slice(source.indexOf("=") + 1, source.lastIndexOf(";")),
+  );
+  return { manifest, manifestFile: names[0] };
 }
 
 /**
- * A dynamic import splits nothing when some module in the same graph imports it statically.
- * Files are `{ path, source }` with repo-relative paths.
+ * Minified output writes `from"./x.js"` and bare `import"./x.js"`. A dynamic `import("./x.js")` is
+ * not followed: it loads later, not at hydration.
  *
- * @param {Array<{path: string, source: string}>} files
+ * @param {string} source
+ * @returns {string[]}
  */
-export function findIneffectiveDynamicImports(files) {
-  /** @type {Map<string, string[]>} module -> files importing it statically */
-  const statics = new Map();
-  /** @type {Array<{module: string, path: string}>} */
-  const dynamics = [];
+function chunkImports(source) {
+  /** @type {string[]} */
+  const staticTargets = [];
+  for (const match of source.matchAll(/from\s*["'`]\.\/([^"'`]+)["'`]/g)) {
+    staticTargets.push(match[1]);
+  }
+  // Bare static import: `import"./x.js"`. The lookbehind refuses `import(`,
+  // property access (`.import`) and identifiers ending in "import".
+  for (const match of source.matchAll(/(?<![.(\w])import\s*["'`]\.\/([^"'`]+)["'`]/g)) {
+    staticTargets.push(match[1]);
+  }
+  return staticTargets;
+}
 
-  for (const { path, source } of files) {
-    const code = stripComments(source);
-    for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) {
-      const key = moduleKey(m[1], path);
-      if (!key) continue;
-      if (!statics.has(key)) statics.set(key, []);
-      /** @type {string[]} */ (statics.get(key)).push(path);
+/** @returns {{ files: string[], manifestFile: string }} */
+export function walkHydrationSet() {
+  const { manifest, manifestFile } = readClientManifest();
+
+  /** @type {Set<string>} */
+  const seed = new Set();
+  /** @param {string} url */
+  const add = (url) => seed.add(url.replace("/assets/", ""));
+
+  if (!manifest.entry?.module) {
+    throw new Error("the manifest carries no entry module; the walk has no seed.");
+  }
+  add(manifest.entry.module);
+  for (const url of manifest.entry.imports ?? []) add(url);
+
+  for (const id of ["root", "routes/blog.$slug"]) {
+    const route = manifest.routes?.[id];
+    if (!route?.module) {
+      throw new Error(
+        `route "${id}" is missing from the manifest. The build lost a route.`,
+      );
     }
-    // A type position (`: import(`, `<import(`, `typeof import(`, `type X = import(`) is erased by
-    // TypeScript and never reaches the bundler, so it is not a dynamic import.
-    for (const m of code.matchAll(
-      /(^|[^:<\w])(?<!\btypeof\s+)(?<!\btype\s+\w+(?:<[^>]*>)?\s*=\s*)import\(\s*["']([^"']+)["']\s*\)/g,
-    )) {
-      const key = moduleKey(m[2], path);
-      if (key) dynamics.push({ module: key, path });
+    add(route.module);
+    for (const url of route.imports ?? []) add(url);
+  }
+
+  // Re-close transitively over each chunk's own static imports, so a chunk
+  // the manifest's flattened arrays under-list is still counted.
+  const queue = [...seed];
+  while (queue.length > 0) {
+    const name = /** @type {string} */ (queue.pop());
+    const source = readFileSync(join(ASSETS_DIR, name), "utf8");
+    for (const target of chunkImports(source)) {
+      if (!seed.has(target)) {
+        seed.add(target);
+        queue.push(target);
+      }
     }
   }
 
-  return dynamics
-    .filter((d) => statics.has(d.module))
-    .map((d) => ({
-      ...d,
-      importers: /** @type {string[]} */ (statics.get(d.module)),
-    }));
+  return { files: [...seed].sort(), manifestFile };
+}
+
+/**
+ * The stems of these asset names are the only script references a public page may carry.
+ *
+ * @returns {Array<{ module: string, assetName: string | null, matches: number, raw: number, brotli: number }>}
+ */
+export function enhancementAssets() {
+  /** @type {string[]} */
+  let distFiles;
+  try {
+    distFiles = readdirSync(DIST_DIR).filter((f) => f.endsWith(".js"));
+  } catch {
+    throw new Error(
+      `${DIST_DIR} is missing. The bundles are built by npm run build:enhance, ` +
+        `which every runner executes before this gate; run it first.`,
+    );
+  }
+  if (distFiles.length === 0) {
+    throw new Error(`${DIST_DIR} holds no bundles; run npm run build:enhance.`);
+  }
+
+  const assetNames = readdirSync(ASSETS_DIR).filter((f) => f.endsWith(".js"));
+  return distFiles.sort().map((module) => {
+    const distBytes = readFileSync(join(DIST_DIR, module));
+    const matches = assetNames.filter((name) =>
+      distBytes.equals(readFileSync(join(ASSETS_DIR, name))),
+    );
+    return {
+      module,
+      assetName: matches.length === 1 ? matches[0] : null,
+      matches: matches.length,
+      raw: distBytes.length,
+      brotli: brotliSize(distBytes),
+    };
+  });
 }
