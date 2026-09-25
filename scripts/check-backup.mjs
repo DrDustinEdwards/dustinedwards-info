@@ -235,27 +235,12 @@ async function main() {
     return { name, bytes, inserts };
   }
 
-  // Concurrent. The bound is argued, not tuned: enough processes to saturate the machine puts the cost
-  // back as scheduler contention.
-  const EXPORT_CONCURRENCY = 4;
-  const names = sorted(real);
+  // Serial, and said so: wrangler() is spawnSync, which blocks the event loop, so the four-worker
+  // pool that stood here ran one export at a time anyway.
   /** @type {Array<{ name: string, bytes: number, inserts: number }>} */
   const results = [];
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(EXPORT_CONCURRENCY, names.length) }, async () => {
-      for (;;) {
-        const index = next;
-        next += 1;
-        const name = names[index];
-        if (name === undefined) return;
-        results.push(await exportTable(name));
-      }
-    }),
-  );
+  for (const name of sorted(real)) results.push(await exportTable(name));
 
-  // Re-sorted: a pool completes out of order, and order-dependent output makes every diff noise.
-  results.sort((a, b) => a.name.localeCompare(b.name));
   for (const result of results) {
     totalBytes += result.bytes;
     console.log(`  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)`);
