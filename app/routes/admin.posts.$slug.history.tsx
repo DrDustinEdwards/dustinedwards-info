@@ -86,7 +86,7 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
 
               {selected === commit.sha ? (
                 patch ? (
-                  <DiffBlock patch={patch} />
+                  <DiffBlock patch={patch} label={`Diff for ${commit.sha.slice(0, 7)}`} />
                 ) : (
                   <p className="muted">
                     No diff recorded for this commit.
