@@ -44,11 +44,14 @@ export function EditorToolbar({
   run,
   openLinkPalette,
   scaffold,
+  pickImage,
 }: {
   /** Wraps a command so it runs against the mounted view, and does nothing before there is one. */
   run: (fn: (view: EditorView) => void) => () => void;
   openLinkPalette: (view: EditorView) => void;
   scaffold: (name: ScaffoldName) => void;
+  /** Opens the file chooser: the path to an image that needs neither a drag nor a paste. */
+  pickImage: () => void;
 }) {
   const [active, setActive] = useState(0);
 
@@ -96,6 +99,18 @@ export function EditorToolbar({
         <>
           <path d="M4 6h10M4 12h10M4 18h7" />
           <path d="M18 5v6M21 8h-6" />
+        </>
+      ),
+    },
+    {
+      label: "Insert image",
+      hint: "Uploads a file, then asks for alt text",
+      onClick: pickImage,
+      glyph: (
+        <>
+          <rect x="3" y="4" width="18" height="16" rx="2" />
+          <path d="m3 16 5-5 5 5" />
+          <circle cx="15.5" cy="9.5" r="1.5" />
         </>
       ),
     },
