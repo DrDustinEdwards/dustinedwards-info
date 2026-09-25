@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Form, Link, NavLink, Outlet, data, redirect, useRouteLoaderData } from "react-router";
+import {
+  Form,
+  Link,
+  NavLink,
+  Outlet,
+  data,
+  redirect,
+  useRouteLoaderData,
+} from "react-router";
 
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { SiteLogoHeader } from "~/components/site-logo";
@@ -12,7 +20,12 @@ import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
 import { timed, timingsContext } from "~/lib/timing";
-import { askDriftCount, askStatusContext, askStatusReader } from "~/lib/search/ask.server";
+import {
+  askAvailable,
+  askDriftCount,
+  askStatusContext,
+  askStatusReader,
+} from "~/lib/search/ask.server";
 import type { Route } from "./+types/admin";
 import type { loader as rootLoader } from "~/root";
 
@@ -117,8 +130,8 @@ export async function loader({ context }: Route.LoaderArgs) {
   const payload = {
     email: context.get(adminActorContext).email,
     counts,
-    /* Null becomes 0, which renders no badge: an unavailable index must not read as a clean one. */
-    askDrift: drift ?? 0,
+    /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
+    askDrift: askAvailable(getEnv(context)) ? drift : 0,
     askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
   };
 
@@ -193,11 +206,14 @@ const NAV = [
 /** Count included as words: a bare numeral announces "Posts 3", which names no unit. */
 function navName(
   label: string,
-  drift: number,
+  drift: number | null,
   count: number | null,
   maxAgeSeconds: number,
 ) {
   const size = count === null ? "" : `, ${count} item${count === 1 ? "" : "s"}`;
+  if (drift === null) {
+    return `${label}${size}, Ask index drift unknown: the check failed or ran out of time. Open Posts to check it.`;
+  }
   if (drift <= 0) return `${label}${size}`;
   const minutes = Math.round(maxAgeSeconds / 60);
   const age = minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
@@ -278,6 +294,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
     setCollapsed(document.documentElement.getAttribute(SIDEBAR_ATTR) === "collapsed");
@@ -311,6 +328,13 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [drawerOpen, closeDrawer]);
+
+  /* Picking a section in the mobile drawer closes it and puts focus on the page it opens, not a hidden link. */
+  const pickSection = useCallback(() => {
+    if (!drawerOpen) return;
+    setDrawerOpen(false);
+    mainRef.current?.focus();
+  }, [drawerOpen]);
 
   return (
     <div className="admin" data-drawer={drawerOpen ? "open" : undefined}>
@@ -367,7 +391,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       <aside className="admin-sidebar" id="admin-sidebar">
         <nav className="admin-nav" aria-label="Admin sections">
           {NAV.map((item) => {
-            const drift = item.drift ? loaderData.askDrift : 0;
+            const drift: number | null = item.drift ? loaderData.askDrift : 0;
             /* `null` means this section has no count, which must not render as zero. */
             const count = item.count
               ? loaderData.counts[item.count as keyof typeof loaderData.counts]
@@ -380,6 +404,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
                 end={item.end}
                 aria-label={name}
                 title={name}
+                onClick={pickSection}
               >
                 <Glyph>{item.icon}</Glyph>
                 <span className="admin-nav-label">{item.label}</span>
@@ -388,9 +413,9 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
                     {count}
                   </span>
                 ) : null}
-                {drift > 0 ? (
+                {drift === null || drift > 0 ? (
                   <span className="admin-nav-badge" aria-hidden="true">
-                    {drift}
+                    {drift ?? "?"}
                   </span>
                 ) : null}
               </NavLink>
@@ -456,7 +481,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       />
 
       <div className="admin-main">
-        <main className="admin-content" id="main">
+        <main className="admin-content" id="main" ref={mainRef} tabIndex={-1}>
           <Outlet />
         </main>
       </div>

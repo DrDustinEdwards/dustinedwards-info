@@ -6,7 +6,7 @@ import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
-import { POSTS_PER_PAGE, listingFacts, splitFeatured } from "~/lib/blog-listing.mjs";
+import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blog-listing.mjs";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
@@ -32,7 +32,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const tag = url.searchParams.get("tag");
   const year = url.searchParams.get("year");
-  const page = Number.parseInt(url.searchParams.get("page") ?? "1", 10) || 1;
+  const page = readPage(url.searchParams.get("page"));
 
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();

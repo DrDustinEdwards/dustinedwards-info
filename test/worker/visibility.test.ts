@@ -154,10 +154,10 @@ function expectNoHidden(text: string, surface: string) {
 }
 
 /** Every record the render door returned, so the Ask sync can be handed exactly what a save hands it. */
-const written: Record<string, Awaited<ReturnType<typeof renderAndWrite>>> = {};
+const written: Record<string, Awaited<ReturnType<typeof renderAndWrite>>["record"]> = {};
 
 async function write(slug: string, raw: string) {
-  written[slug] = await renderAndWrite(publishEnv(), slug, raw);
+  written[slug] = (await renderAndWrite(publishEnv(), slug, raw)).record;
 }
 
 beforeAll(async () => {

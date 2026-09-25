@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Form, Link } from "react-router";
+import { useEffect, useId, useRef, useState } from "react";
+import { Form, Link, useNavigate } from "react-router";
 
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 
@@ -27,6 +27,8 @@ export function ConfirmDialog({
   const fieldRef = useRef<HTMLInputElement>(null);
   const [typed, setTyped] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const titleId = useId();
+  const navigate = useNavigate();
 
   useEffect(() => {
     setHydrated(true);
@@ -44,10 +46,15 @@ export function ConfirmDialog({
       ref={ref}
       className="confirm-dialog"
       data-inline={hydrated ? undefined : ""}
-      aria-labelledby="confirm-dialog-title"
+      aria-labelledby={titleId}
+      /* Escape leaves the way Cancel does: a natively closed dialog would leave the page still asking. */
+      onCancel={(event) => {
+        event.preventDefault();
+        navigate(cancelHref);
+      }}
     >
       <Form method="post" className="confirm-dialog-form">
-        <h2 id="confirm-dialog-title">{title}</h2>
+        <h2 id={titleId}>{title}</h2>
         <div className="confirm-dialog-body">{body}</div>
         {stake && stake.length > 0 ? (
           <ul className="confirm-dialog-stake">

@@ -39,7 +39,7 @@ export function PublishActions({
             className={
               transition.danger ? "overflow-menu-item is-danger" : "overflow-menu-item"
             }
-            disabled={disabled}
+            disabled={disabled || busy}
           >
             {transition.label}
             <span className="overflow-menu-item-hint">
@@ -73,7 +73,7 @@ export function PublishActions({
             name="intent"
             value={primary.id}
             className="btn"
-            disabled={disabled || busy}
+            disabled={disabled}
             onClick={(event) => {
               event.preventDefault();
               setCeremony(true);
@@ -95,7 +95,7 @@ export function PublishActions({
             name="intent"
             value={primary.id}
             className="btn"
-            disabled={disabled || busy}
+            disabled={disabled}
           >
             {busy ? "Saving" : primary.label}
           </button>
@@ -133,6 +133,8 @@ function PublishCeremony({
   const ref = useRef<HTMLDialogElement>(null);
   const [when, setWhen] = useState(() => localInput(publishAt) || soonLocal());
   const intent = reschedule ? "save" : PUBLISH_CONFIRMED_INTENT;
+  /* An empty or invalid time would send no publish time, which publishes now: Schedule refuses it. */
+  const scheduleAt = iso(when);
 
   useEffect(() => {
     const dialog = ref.current;
@@ -181,16 +183,30 @@ function PublishCeremony({
             type="datetime-local"
             value={when}
             onChange={(event) => setWhen(event.target.value)}
+            aria-invalid={scheduleAt === ""}
+            aria-describedby={scheduleAt === "" ? "ceremony-when-problem" : undefined}
           />
           <button
             type="submit"
             name="intent"
             value={intent}
             className="btn-ghost"
-            onClick={() => onPublishAtChange(iso(when))}
+            disabled={scheduleAt === ""}
+            onClick={(event) => {
+              if (scheduleAt === "") {
+                event.preventDefault();
+                return;
+              }
+              onPublishAtChange(scheduleAt);
+            }}
           >
             Schedule
           </button>
+          {scheduleAt === "" ? (
+            <p className="field-alarm" id="ceremony-when-problem">
+              Pick a date and time to schedule.
+            </p>
+          ) : null}
         </div>
       </div>
 

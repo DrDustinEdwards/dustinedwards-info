@@ -57,6 +57,9 @@ export const UPLOAD_ERRORS = {
   "content-mismatch":
     "That file begins as markup, so it is not the image type it was uploaded " +
     "as. Upload an SVG as image/svg+xml.",
+  "images-unavailable":
+    "The image could not be measured, because Cloudflare Images did not answer. " +
+    "Nothing was stored; try again.",
 };
 
 /**
