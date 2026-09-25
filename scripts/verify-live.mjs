@@ -417,11 +417,11 @@ const corpus = { live: 0, drafts: 0 };
   ]);
 
   /* An error page contains no slug either, so "absent" means something only from a feed that served. */
-  for (const [name, doc] of [
+  for (const [name, doc] of /** @type {Array<[string, { status: number, text: string }]>} */ ([
     ["rss.xml", rss],
     ["feed.json", feed],
     ["sitemap.xml", sitemap],
-  ]) {
+  ])) {
     check(
       `feeds: ${name} serves 200 with a body, so a draft's absence from it means something`,
       doc.status === 200 && doc.text.length > 100,
