@@ -2,7 +2,13 @@ import { createExecutionContext, env } from "cloudflare:test";
 import { RouterContextProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { claimMediaKeyForDelete, mediaRefsFor, upsertMediaRecord } from "~/db";
+import {
+  claimMediaKeyForDelete,
+  listMediaPage,
+  mediaRefsFor,
+  mediaTwins,
+  upsertMediaRecord,
+} from "~/db";
 import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
@@ -312,5 +318,40 @@ describe("the atomic delete claim", () => {
   it("reports that it lost when the key was already gone", async () => {
     /* false means cited OR absent, and the caller must refuse either way. */
     expect(await claimMediaKeyForDelete(mediaEnv(), "dustin-edwards-0123456789abcdef-1x1.png")).toBe(false);
+  });
+});
+
+describe("the duplicates lens", () => {
+  it("FILTERS IN SQL BEFORE THE PAGE IS CUT, so a page of twins is a full page", async () => {
+    const digest = await crypto.subtle.digest("SHA-256", bytesFor("twin-bytes"));
+    const twins = ["first copy", "second copy"].map((name) =>
+      contentKey(digest, "png", { width: 10, height: 10 }, name),
+    );
+    const singles = await Promise.all(
+      ["single-a", "single-b", "single-c"].map(async (seed) =>
+        contentKey(await crypto.subtle.digest("SHA-256", bytesFor(seed)), "png", {
+          width: 10,
+          height: 10,
+        }),
+      ),
+    );
+    /* The singles are newest, so an unfiltered first page would be all singles. */
+    for (const [i, key] of [...twins, ...singles].entries()) {
+      await upsertMediaRecord(mediaEnv(), {
+        key,
+        alt: "",
+        storage: "r2",
+        kind: "image",
+        role: "content",
+        uploadedAt: new Date(Date.UTC(2030, 0, 1 + i)).toISOString(),
+      });
+    }
+
+    const known = await mediaTwins(mediaEnv());
+    const { rows } = await listMediaPage(mediaEnv(), { lens: "duplicates", limit: 2 });
+
+    expect(rows).toHaveLength(2);
+    for (const row of rows) expect(known.has(row.key), row.key).toBe(true);
+    expect(rows.map((row) => row.key).sort()).toEqual([...twins].sort());
   });
 });
