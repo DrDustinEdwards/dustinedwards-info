@@ -290,6 +290,8 @@ async function decideMentionTool(
       changed: result.changed,
       slug: result.slug,
       purged: result.changed ? `post:${result.slug}` : null,
+      // True when the page's cache purge failed: the change is stored but the page stays stale.
+      purgeFailed: result.purged === false,
     },
   };
 }
@@ -477,6 +479,7 @@ async function savePostTool(
       firstPublished: result.firstPublished,
       // The AI index cannot fail a save, so its outcome is reported rather than raised.
       askSync: result.askSync,
+      purged: result.purged,
     },
   };
 }
@@ -501,7 +504,12 @@ async function deletePostTool(
 
   return {
     ok: true,
-    data: { slug, commitSha: result.commitSha, askRemoval: result.askRemoval },
+    data: {
+      slug,
+      commitSha: result.commitSha,
+      purged: result.purged,
+      askRemoval: result.askRemoval,
+    },
   };
 }
 
@@ -814,6 +822,8 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
   let repaired = 0;
+  // A failed purge never fails the repair, but it is counted: those pages stay stale until expiry.
+  let unpurged = 0;
   for (const slug of [...drift.changed, ...drift.unrowed]) {
     const entry = fileBySlug.get(slug);
     if (!entry) continue;
@@ -824,13 +834,13 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
           `mid-repair. Re-run sync_posts.`,
       );
     }
-    await renderAndWrite(env, slug, file.content, entry.sha);
+    if (!(await renderAndWrite(env, slug, file.content, entry.sha)).purged) unpurged += 1;
     repaired += 1;
   }
 
   let removed = 0;
   for (const slug of drift.unfiled) {
-    await deletePostFromD1(env, slug);
+    if (!(await deletePostFromD1(env, slug)).purged) unpurged += 1;
     removed += 1;
   }
 
@@ -845,6 +855,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
     data: {
       repaired,
       removed,
+      unpurged,
       expected: after.files.length,
       present: after.files.length - residual.changed.length - residual.unrowed.length,
       converged: residualCount === 0,
