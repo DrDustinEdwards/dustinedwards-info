@@ -1,6 +1,14 @@
 console.log("\ncheck:machine-readable");
 
-const PARTS = ["llms", "microformats", "publications"];
+const PARTS = [
+  "llms",
+  "microformats",
+  "publications-corpus",
+  "publications-paths",
+  "publications-meta",
+  "publications-twins",
+  "publications-notices",
+];
 
 let checks = 0;
 /** @type {string[]} */
