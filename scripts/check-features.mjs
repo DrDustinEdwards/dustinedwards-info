@@ -126,6 +126,61 @@ if (!existsSync(FEATURES_PATH)) {
 const features = JSON.parse(readFileSync(FEATURES_PATH, "utf8")).features ?? [];
 
 const artifactRecords = readArtifact().records ?? [];
+
+/**
+ * A page's search records against the list the page is built from, both ways: one document record,
+ * a section record for every item, and no section record for an item the list no longer carries.
+ *
+ * @param {string} docUid
+ * @param {{ kind: string, page: string, item: string, list: string }} words for the labels
+ * @param {Array<{ slug: string, anchor: string }>} items
+ * @returns {any[]} the page's records
+ */
+function pageRecordParity(docUid, { kind, page, item, list }, items) {
+  const records = artifactRecords.filter((/** @type {any} */ r) => r.docUid === docUid);
+  ok(`the artifact carries ${kind} page records`, records.length > 0, "none found. Run build:content.");
+  ok(
+    `the ${page} page has exactly one document record`,
+    records.filter((/** @type {any} */ r) => r.anchor === null).length === 1,
+  );
+  const recordAnchors = new Set(
+    records
+      .filter((/** @type {any} */ r) => r.anchor !== null)
+      .map((/** @type {any} */ r) => String(r.anchor)),
+  );
+  for (const { slug, anchor } of items) {
+    ok(
+      `${slug} has a section record in the artifact`,
+      recordAnchors.has(anchor),
+      `no record anchored ${anchor}. The ${list} changed without a rebuild.`,
+    );
+  }
+  const listed = new Set(items.map((i) => i.anchor));
+  for (const anchor of recordAnchors) {
+    ok(
+      `artifact record ${anchor} corresponds to a ${item} in the ${list}`,
+      listed.has(anchor),
+      `the index describes a ${item} the ${list} no longer lists`,
+    );
+  }
+  return records;
+}
+
+/**
+ * A page reads its list from content/ and its anchors from the module the indexer uses, so neither
+ * can be a second copy.
+ *
+ * @param {string} source the route, comments stripped
+ * @param {{ route: string, list: string, json: string, reads: RegExp, noun: string, anchorFn: string, anchorModule: RegExp }} page
+ */
+function pageReadsItsList(source, { route, list, json, reads, noun, anchorFn, anchorModule }) {
+  ok(`the page imports the ${list} rather than restating it`, reads.test(source), `app/routes/${route} must read content/${json}`);
+  ok(
+    `the page derives ${noun} anchors from ${anchorFn}`,
+    source.includes(`${anchorFn}(`) && anchorModule.test(source),
+    "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
+  );
+}
 const routeModules = await declaredRouteModules();
 const routes = new Set(routeModules.keys());
 const gates = declaredGates();
@@ -1146,17 +1201,15 @@ for (const term of vocabulary) {
 }
 
 const projectsSource = codeOf(PROJECTS_ROUTE_PATH);
-ok(
-  "the page imports the roster rather than restating it",
-  /import\s+projectsData\s+from\s+["'][^"']*content\/projects\.json["']/.test(projectsSource),
-  "app/routes/projects.tsx must read content/projects.json",
-);
-ok(
-  "the page derives card anchors from projectAnchor",
-  /projectAnchor\(/.test(projectsSource) &&
-    /from\s+["']~\/lib\/projects-page\.mjs["']/.test(projectsSource),
-  "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
-);
+pageReadsItsList(projectsSource, {
+  route: "projects.tsx",
+  list: "roster",
+  json: "projects.json",
+  reads: /import\s+projectsData\s+from\s+["'][^"']*content\/projects\.json["']/,
+  noun: "card",
+  anchorFn: "projectAnchor",
+  anchorModule: /from\s+["']~\/lib\/projects-page\.mjs["']/,
+});
 
 /* Asserted on code: a field nothing renders passes every shape check. */
 ok(
@@ -1197,39 +1250,11 @@ ok(
     "one renders its <time>",
 );
 
-const projectRecords = artifactRecords.filter(
-  (/** @type {any} */ r) => r.docUid === "page:projects",
+const projectRecords = pageRecordParity(
+  "page:projects",
+  { kind: "project", page: "projects", item: "project", list: "roster" },
+  projects.map((/** @type {any} */ p) => ({ slug: p.slug, anchor: projectAnchor(p.slug) })),
 );
-ok(
-  "the artifact carries project page records",
-  projectRecords.length > 0,
-  "none found. Run build:content.",
-);
-ok(
-  "the projects page has exactly one document record",
-  projectRecords.filter((/** @type {any} */ r) => r.anchor === null).length === 1,
-);
-
-const recordAnchors = new Set(
-  projectRecords
-    .filter((/** @type {any} */ r) => r.anchor !== null)
-    .map((/** @type {any} */ r) => String(r.anchor)),
-);
-for (const project of projects) {
-  ok(
-    `${project.slug} has a section record in the artifact`,
-    recordAnchors.has(projectAnchor(project.slug)),
-    `no record anchored ${projectAnchor(project.slug)}. The roster changed without a rebuild.`,
-  );
-}
-const rosterAnchors = new Set(projects.map((/** @type {any} */ p) => projectAnchor(p.slug)));
-for (const anchor of recordAnchors) {
-  ok(
-    `artifact record ${anchor} corresponds to a project in the roster`,
-    rosterAnchors.has(anchor),
-    `the index describes a project the roster no longer lists`,
-  );
-}
 
 /* Executed-count floor, measured by running the gate, never by summing. */
 const projectsChecks = tally.checks - projectsChecksBefore;
@@ -1315,19 +1340,26 @@ ok(
 
 const playgroundSource = codeOf(PLAYGROUND_ROUTE_PATH);
 
-ok(
-  "the page imports the manifest rather than restating it",
-  /import\s+playgroundData\s+from\s+["'][^"']*content\/playground\.json["']/.test(
-    playgroundSource,
-  ),
-  "app/routes/playground.tsx must read content/playground.json",
-);
-ok(
-  "the page derives demo anchors from demoAnchor",
-  /demoAnchor\(/.test(playgroundSource) &&
-    /from\s+["']~\/lib\/playground-page\.mjs["']/.test(playgroundSource),
-  "anchors must come from the module the indexer uses, or a record can cite a fragment nothing renders",
-);
+/**
+ * @param {string} demo the label prefix naming the demo, or empty for the page's own
+ * @param {RegExp} statement
+ */
+const statesInputCap = (demo, statement) =>
+  ok(
+    `${demo}the page states the input cap it enforces`,
+    statement.test(playgroundSource),
+    "a cap enforced in the loader and unstated in the UI is a silent truncation",
+  );
+
+pageReadsItsList(playgroundSource, {
+  route: "playground.tsx",
+  list: "manifest",
+  json: "playground.json",
+  reads: /import\s+playgroundData\s+from\s+["'][^"']*content\/playground\.json["']/,
+  noun: "demo",
+  anchorFn: "demoAnchor",
+  anchorModule: /from\s+["']~\/lib\/playground-page\.mjs["']/,
+});
 ok(
   "the page takes its presets and fixtures from the manifest",
   /playgroundData\.swatches/.test(playgroundSource) &&
@@ -1640,11 +1672,7 @@ ok(
   "a caught throw that renders nothing turns the module's loudest behavior into " +
     "a blank row",
 );
-ok(
-  "media key: the page states the input cap it enforces",
-  /Up to \{KEY_CAP\} characters/.test(playgroundSource),
-  "a cap enforced in the loader and unstated in the UI is a silent truncation",
-);
+statesInputCap("media key: ", /Up to \{KEY_CAP\} characters/);
 
 for (const preset of cookiePresets) {
   const label = preset.label ?? JSON.stringify(preset.cookie);
@@ -1757,11 +1785,7 @@ ok(
   "an unguarded control character makes new Request throw, and a demo whose input " +
     "can crash its own loader answers some readers with a stack trace",
 );
-ok(
-  "theme: the page states the input cap it enforces",
-  /Up to \{COOKIE_CAP\} printable characters/.test(playgroundSource),
-  "a cap enforced in the loader and unstated in the UI is a silent truncation",
-);
+statesInputCap("theme: ", /Up to \{COOKIE_CAP\} printable characters/);
 ok(
   "theme: the page renders the absent attribute as a word rather than a blank",
   /"omitted"/.test(playgroundSource),
@@ -2016,12 +2040,8 @@ ok(
 );
 /* Never restore a ban on the string "WCAG 3": it refused a true sentence (WCAG 3.0 is the working
    draft APCA is developed in), and WCAG 2.2 is already required above as the target. */
-ok(
-  "the page states the input cap it enforces",
-  /* Through the constant only: a literal "100" would pass on stale text once the cap moved. */
-  /up to \{QUERY_CAP\} characters/i.test(playgroundSource),
-  "a cap enforced in the loader and unstated in the UI is a silent truncation",
-);
+/* Through the constant only: a literal "100" would pass on stale text once the cap moved. */
+statesInputCap("", /up to \{QUERY_CAP\} characters/i);
 ok(
   "the route sets an explicit Cache-Control",
   /publicHtmlHeaders|SHARED_CACHE_CONTROL/.test(playgroundSource) &&
@@ -2035,38 +2055,11 @@ ok(
   "a timing readout is the one value that differs between two fetches of one URL",
 );
 
-const playgroundRecords = artifactRecords.filter(
-  (/** @type {any} */ r) => r.docUid === "page:playground",
+const playgroundRecords = pageRecordParity(
+  "page:playground",
+  { kind: "playground", page: "playground", item: "demo", list: "manifest" },
+  demos.map((/** @type {any} */ d) => ({ slug: d.slug, anchor: demoAnchor(d.slug) })),
 );
-ok(
-  "the artifact carries playground page records",
-  playgroundRecords.length > 0,
-  "none found. Run build:content.",
-);
-ok(
-  "the playground page has exactly one document record",
-  playgroundRecords.filter((/** @type {any} */ r) => r.anchor === null).length === 1,
-);
-const playgroundRecordAnchors = new Set(
-  playgroundRecords
-    .filter((/** @type {any} */ r) => r.anchor !== null)
-    .map((/** @type {any} */ r) => String(r.anchor)),
-);
-for (const demo of demos) {
-  ok(
-    `${demo.slug} has a section record in the artifact`,
-    playgroundRecordAnchors.has(demoAnchor(demo.slug)),
-    `no record anchored ${demoAnchor(demo.slug)}. The manifest changed without a rebuild.`,
-  );
-}
-const manifestAnchors = new Set(demos.map((/** @type {any} */ d) => demoAnchor(d.slug)));
-for (const anchor of playgroundRecordAnchors) {
-  ok(
-    `artifact record ${anchor} corresponds to a demo in the manifest`,
-    manifestAnchors.has(anchor),
-    "the index describes a demo the manifest no longer lists",
-  );
-}
 
 /* Measured by running the section, never by summing. */
 const playgroundChecks = tally.checks - playgroundChecksBefore;
