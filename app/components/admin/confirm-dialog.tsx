@@ -45,11 +45,14 @@ export function ConfirmDialog({
     return () => {
       window.setTimeout(() => {
         if (document.activeElement && document.activeElement !== document.body) return;
-        // In order: the opener; its menu's summary, when the opener was an item in a row menu that
-        // has since closed and so cannot take focus; the page.
+        // In order: the opener; its menu's button, when the opener was an item in a row menu whose
+        // popover has since closed and so cannot take focus; the page.
+        const panel = origin?.closest<HTMLElement>("[popover]");
         const candidates = [
           origin,
-          origin?.closest("details")?.querySelector("summary"),
+          panel?.id
+            ? document.querySelector<HTMLElement>(`[popovertarget="${CSS.escape(panel.id)}"]`)
+            : null,
           document.getElementById("main"),
         ];
         for (const back of candidates) {
