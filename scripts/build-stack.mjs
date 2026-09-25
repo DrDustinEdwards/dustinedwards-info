@@ -2,7 +2,7 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { parseJsonc, surfaceOf } from "./lib/wrangler-surface.mjs";
+import { parseJsonc, surfaceOf, unhandledBindingKinds } from "./lib/wrangler-surface.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -53,6 +53,13 @@ export function buildStack() {
   const config = parseJsonc(EXAMPLE_CONFIG);
   const notes = JSON.parse(readFileSync(NOTES_PATH, "utf8"));
 
+  // A binding kind no reader knows would be left off the colophon without a word.
+  const unhandled = unhandledBindingKinds(config);
+  if (unhandled.length > 0) {
+    throw new Error(
+      `${EXAMPLE_CONFIG} declares binding kind(s) no reader in wrangler-surface.mjs handles: ${unhandled.join(", ")}`,
+    );
+  }
   const surface = surfaceOf(config);
   const bindings = [...surface.entries()]
     .map(([id, settings]) => {
