@@ -229,10 +229,11 @@ export async function renderAndWrite(
   await syncPostToD1(env, record);
 
   // Purges on a draft save too: an unpublish writes a draft row while changing every public listing.
-  // A condition, if ever needed, must read the PREVIOUS status, never the incoming record.
-  await purgePosts(`renderAndWrite ${slug}`);
+  // A condition, if ever needed, must read the PREVIOUS status, never the incoming record. A failed purge
+  // never fails the write, but it is returned: the public pages stay stale until the cache expires.
+  const purged = await purgePosts(`renderAndWrite ${slug}`);
 
-  return record;
+  return { record, purged };
 }
 
 export async function currentHead(env: PublishEnv) {
@@ -292,14 +293,15 @@ export async function savePost(
 
   // No compensating revert, ever: undoing the commit would destroy the source to repair a derived index.
   let record = gated;
+  let purged = false;
   const converged = await convergeWithRetry({
     write: async () => {
-      record = await renderAndWrite(
+      ({ record, purged } = await renderAndWrite(
         env,
         options.slug,
         raw,
         blobShas[postPath(options.slug)] ?? null,
-      );
+      ));
     },
     recordDivergence: (facts) => recordDivergence(env, facts),
     slug: options.slug,
@@ -333,6 +335,8 @@ export async function savePost(
     commitSha,
     record,
     askSync,
+    /** False when the cache purge failed or was never reached: public pages stay stale until expiry. */
+    purged,
     d1Retried: converged.retried,
     /** null: not attempted; -1: the attempt threw. */
     previewLinksRevoked,
@@ -387,9 +391,9 @@ export async function deletePost(
     changes: [{ path: postPath(options.slug), content: null }],
   });
 
-  await deletePostFromD1(env, options.slug);
+  const { purged } = await deletePostFromD1(env, options.slug);
 
-  return { commitSha, askRemoval: await removeAskForPost(env, options.slug) };
+  return { commitSha, purged, askRemoval: await removeAskForPost(env, options.slug) };
 }
 
 /**
@@ -564,8 +568,8 @@ function searchStatements(db: D1Database, record: any) {
 /** Tag rows stay, as in the bulk sync. Stale media_refs would block deleting the image forever. */
 export async function deletePostFromD1(env: PublishEnv, slug: string) {
   // Purged BEFORE the delete: a purge landing after a slow delete could re-store the removed page.
-  await purgePost(slug, `deletePostFromD1 ${slug}`);
-  await purgePosts(`deletePostFromD1 ${slug}`);
+  const purgedPage = await purgePost(slug, `deletePostFromD1 ${slug}`);
+  const purgedListings = await purgePosts(`deletePostFromD1 ${slug}`);
   await env.DB.batch([
     env.DB.prepare(
       `DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`,
@@ -579,6 +583,7 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
       `DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`,
     ).bind(slug),
   ]);
+  return { purged: purgedPage && purgedListings };
 }
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */
@@ -603,8 +608,9 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
   )
     .bind(...keep)
     .all<{ slug: string }>();
+  let unpurged = 0;
   for (const { slug } of orphans.results ?? []) {
-    await deletePostFromD1(env, slug);
+    if (!(await deletePostFromD1(env, slug)).purged) unpurged += 1;
   }
 
   for (const entry of files) {
@@ -616,8 +622,8 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
           `Main moved mid-rebuild; re-run the regenerate.`,
       );
     }
-    await renderAndWrite(env, slug, file.content, entry.sha);
+    if (!(await renderAndWrite(env, slug, file.content, entry.sha)).purged) unpurged += 1;
   }
 
-  return { synced: files.length, removed: orphans.results?.length ?? 0 };
+  return { synced: files.length, removed: orphans.results?.length ?? 0, unpurged };
 }
