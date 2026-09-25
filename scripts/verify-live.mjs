@@ -18,6 +18,7 @@ import { chunkStem } from "./check-page-payload.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { readArtifact } from "./lib/artifact.mjs";
 
 // Derived like the sync and uploader do; a literal key goes stale.
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
@@ -255,9 +256,7 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
   check(`md twin: /blog/${SLUG}.md serves`, status === 200);
 
   // The artifact's body, not the repo file, which also carries frontmatter.
-  const artifact = JSON.parse(
-    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-  );
+  const artifact = readArtifact();
   const record = artifact.posts.find((/** @type {any} */ p) => p.slug === SLUG);
   const norm = (/** @type {string} */ s) => s.replace(/\r\n/g, "\n").trim();
 
@@ -341,9 +340,7 @@ const askRefused = [];
 const corpus = { live: 0, drafts: 0 };
 
 {
-  const artifact = JSON.parse(
-    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-  );
+  const artifact = readArtifact();
   /** @type {any[]} */
   const drafts = artifact.posts.filter((/** @type {any} */ p) => p.draft === true);
   const live = artifact.posts.filter((/** @type {any} */ p) => p.draft !== true);
@@ -1010,9 +1007,7 @@ const corpus = { live: 0, drafts: 0 };
   }
 
   /* Derived, never literal: a pruned key 404s and reads as a cache failure. */
-  const thumbPost = JSON.parse(
-    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-  ).posts.find((/** @type {any} */ p) => !p.cover);
+  const thumbPost = readArtifact().posts.find((/** @type {any} */ p) => !p.cover);
   const THUMB = `/media/${ogImageKey(thumbPost)}?w=320`;
   await warm(THUMB, "");
   const cachedThumb = await warm(THUMB, "");
@@ -1289,9 +1284,7 @@ const corpus = { live: 0, drafts: 0 };
 
 /* Only the deployed origin shows an R2 target. No image is reported, not failed. */
 {
-  const artifact = JSON.parse(
-    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-  );
+  const artifact = readArtifact();
   const slugs = artifact.posts
     .filter((/** @type {any} */ p) => p.draft !== true)
     .map((/** @type {any} */ p) => p.slug);

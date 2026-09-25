@@ -30,6 +30,7 @@ import { createTally } from "./lib/tally.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 import { sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 import { sqlLiteral as q } from "./lib/sql-literal.mjs";
+import { readArtifact } from "./lib/artifact.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
@@ -502,9 +503,7 @@ const MATHLESS_POST_PATH = "/blog/ten-years-on-cloudflare";
 let mathPreviewSeeded = false;
 
 if (DRIVES_PREVIEW) {
-  const artifact = JSON.parse(
-    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-  );
+  const artifact = readArtifact();
   const fixture = artifact.posts.find((/** @type {any} */ p) => p.slug === MATH_SLUG);
 
   /* Fails rather than skips: `check:content` already requires the fixture. */
@@ -2949,9 +2948,7 @@ try {
   /* The overlay's href is compared raw, attribute to attribute: `currentSrc` is absolute. */
   {
     /* A deployed origin may lack a named post, so a candidate without the anchor skips, not fails. */
-    const artifact = JSON.parse(
-      readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-    );
+    const artifact = readArtifact();
     const candidates = artifact.posts
       .filter((/** @type {any} */ p) => p.draft !== true)
       .filter((/** @type {any} */ p) => String(p.html ?? "").includes('class="image-link"'))
