@@ -2,18 +2,18 @@
  * A document rule, not a URL list: it derives from the links on the page, so it cannot go stale.
  */
 
-export const EXCLUDED_PREFIXES = ["/admin", "/api", "/media"];
+const EXCLUDED_PREFIXES = ["/admin", "/api", "/media"];
 
 // `/search/ask` is billed: speculating it would spend model tokens on a click nobody made.
-export const EXCLUDED_PATHS = ["/login", "/theme", "/search/ask"];
+const EXCLUDED_PATHS = ["/login", "/theme", "/search/ask"];
 
-export const EXCLUDED_SUFFIXES = [".md", ".xml", ".json", ".txt"];
+const EXCLUDED_SUFFIXES = [".md", ".xml", ".json", ".txt"];
 
 /**
  * Not `immediate`: a cookie-carrying reader bypasses the cache, so immediate cost 4 to 5 extra
  * origin document requests per page load. Chrome caps moderate speculations in flight.
  */
-export const DOCUMENT_EAGERNESS = "moderate";
+const DOCUMENT_EAGERNESS = "moderate";
 
 /**
  * Not `prerender`: moderate starts on pointerdown, and activating a prerender that has not painted

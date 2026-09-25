@@ -175,7 +175,7 @@ export function colophonPages(stack, features) {
  * @param {any} stack   content/generated/stack.json
  * @param {any} features content/features.json
  */
-export function colophonPageInput(stack, features) {
+function colophonPageInput(stack, features) {
   /** @param {string} id @returns {string} */
   const contentFor = (id) => {
     if (id === "runtime") {

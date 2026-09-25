@@ -292,7 +292,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   /** Initialized `false` to match the server, then corrected in a layout effect before paint. */
   const [collapsed, setCollapsed] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const toggleRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -315,15 +314,15 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     });
   }, []);
 
-  const closeDrawer = useCallback((restoreFocus: boolean) => {
+  const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
-    if (restoreFocus) menuButtonRef.current?.focus();
+    menuButtonRef.current?.focus();
   }, []);
 
   useEffect(() => {
     if (!drawerOpen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeDrawer(true);
+      if (event.key === "Escape") closeDrawer();
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -448,7 +447,6 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           </a>
 
           <button
-            ref={toggleRef}
             type="button"
             className="admin-sidebar-toggle"
             aria-expanded={!collapsed}
@@ -476,7 +474,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
 
       <div
         className="admin-drawer-backdrop"
-        onClick={() => closeDrawer(true)}
+        onClick={closeDrawer}
         aria-hidden="true"
       />
 

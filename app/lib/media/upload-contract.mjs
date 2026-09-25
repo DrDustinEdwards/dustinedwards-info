@@ -48,7 +48,7 @@ export function uploadErrorBody(message) {
 }
 
 // A code in the URL, not the message, so the address bar never carries prose someone can edit.
-export const UPLOAD_ERRORS = {
+const UPLOAD_ERRORS = {
   "no-file": "No file was chosen.",
   "unsupported-type":
     `That file type is not one this endpoint accepts. Uploads here are images: ` +

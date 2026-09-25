@@ -17,7 +17,7 @@ export const DIRS = ["desc", "asc"];
  *
  * @type {Record<string, string>}
  */
-export const SORT_DEFAULT_DIR = {
+const SORT_DEFAULT_DIR = {
   added: "desc",
   name: "asc",
   size: "desc",
@@ -27,7 +27,7 @@ export const SORT_DEFAULT_DIR = {
 export const SIZES = ["s", "m", "l"];
 
 // `all` is the absence of a lens, so it is not a member.
-export const LENSES = ["unattached", "duplicates", "no-alt", "large"];
+const LENSES = ["unattached", "duplicates", "no-alt", "large"];
 
 const CONFIRMS = ["empty-trash"];
 
@@ -315,7 +315,7 @@ export function displaySummary(state) {
 
 // These never reach SQL, so a change skips the server (test/media-display-axes.test.mjs). `sort` and
 // `dir` must NOT be added: the page paginates, so reordering changes which rows page one holds.
-export const DISPLAY_AXES = ["view", "group", "size"];
+const DISPLAY_AXES = ["view", "group", "size"];
 
 /**
  * Overlaid on the loader's view so a display change renders from the client URL with no revalidation.

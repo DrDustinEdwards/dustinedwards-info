@@ -3,7 +3,7 @@
 
 export const TWIN_ATTEMPTS = 3;
 
-export const TWIN_BACKOFF_MS = 500;
+const TWIN_BACKOFF_MS = 500;
 
 /**
  * @template T

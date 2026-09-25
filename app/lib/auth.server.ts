@@ -68,9 +68,9 @@ export function createAuth(env: Env) {
   });
 }
 
-export type Auth = ReturnType<typeof createAuth>;
+type Auth = ReturnType<typeof createAuth>;
 
-export type AdminSession = NonNullable<
+type AdminSession = NonNullable<
   Awaited<ReturnType<Auth["api"]["getSession"]>>
 >;
 
@@ -105,7 +105,7 @@ export const adminSessionContext = createContext<AdminSession>();
  * `email` is the admin's address for the smoke actor too, so the smoke render is the exact page
  * Dustin sees and layout numbers measured through it are true.
  */
-export type AdminActor =
+type AdminActor =
   | { kind: "admin"; email: string }
   | { kind: "smoke"; id: string; email: string };
 

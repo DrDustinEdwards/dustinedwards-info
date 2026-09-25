@@ -11,10 +11,10 @@ export const ERROR_WINDOW_MINUTES = 15;
  */
 export const ERROR_MIN_SAMPLE = 20;
 
-export const ERROR_RATIO_THRESHOLD = 0.25;
+const ERROR_RATIO_THRESHOLD = 0.25;
 
 /** Not clientDisconnected: the dataset reports it with errors: 0, since it is the reader leaving. */
-export const ERROR_STATUSES = /** @type {const} */ (["scriptThrewException", "loadShed"]);
+const ERROR_STATUSES = /** @type {const} */ (["scriptThrewException", "loadShed"]);
 
 /**
  * @param {{ accountId: string, scriptName: string, since: string, until: string }} args

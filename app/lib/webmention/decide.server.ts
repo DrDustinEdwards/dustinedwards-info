@@ -6,7 +6,7 @@ import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publis
 // Delete also needs `destroy`: it removes the only copy of what a stranger sent. The admin page passes
 // no actor because the layout middleware already refuses writes for the smoke credential.
 
-export type MentionDecision = "approve" | "reject" | "delete";
+type MentionDecision = "approve" | "reject" | "delete";
 
 export const MENTION_POLICIES = {
   write: "mention-decide-requires-write",
