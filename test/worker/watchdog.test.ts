@@ -15,7 +15,11 @@ describe("the watchdog's health reading", () => {
     }) as never;
 
   it("does not throw, because the handler must live to send the mail", async () => {
-    await expect(readHealth(throwingSite("boom"))).resolves.toBeTruthy();
+    await expect(readHealth(throwingSite("boom"))).resolves.toEqual({
+      status: 0,
+      body: null,
+      error: "boom",
+    });
   });
 
   it("names a non-Error throw in the alert rather than losing it", async () => {
