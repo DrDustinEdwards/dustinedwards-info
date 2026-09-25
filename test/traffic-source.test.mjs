@@ -79,14 +79,14 @@ test("a good response becomes the live state, sampling weighted", async (t) => {
   assert.equal(result.data.pathsReturned, 23);
 });
 
-test("an answer with no data array, or a count that is not a number, is an error, not zero traffic", async () => {
+test("an answer with no data array, or a count that is not a number, is an error, not zero traffic", async (t) => {
   for (const answer of [{}, { data: [{ path: "/", origin_requests: "n/a", sampled_rows: "1" }] }]) {
-    globalThis.fetch = async () => Response.json(answer);
+    const stub = t.mock.method(globalThis, "fetch", async () => Response.json(answer));
     const result = await fetchTraffic({
       CLOUDFLARE_ACCOUNT_ID: "acct",
       ANALYTICS_READ_TOKEN: "t",
     });
-    globalThis.fetch = realFetch;
+    stub.mock.restore();
     assert.equal(result.status, "error", JSON.stringify(answer));
   }
 });
