@@ -1,7 +1,18 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import ts from "typescript";
 import { assertFloor } from "./lib/floor.mjs";
+import {
+  bindingUses,
+  findAction,
+  intentBranches,
+  isLiteralString,
+  objectConst,
+  parseSource,
+  propertyValue,
+  stringArrayConst,
+} from "./lib/destructive-scan.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const ROUTES = join(root, "app", "routes");
@@ -59,6 +70,10 @@ const REVERSIBLE = new Map([
       "the pair is a two-way door, and no column is removed either way",
   ],
   ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
+  [
+    "admin.tools.tsx:podcast-slot",
+    "overwrites which episode the home page features; the feed is untouched and the slot is re-pickable",
+  ],
 ]);
 
 // One upload path is selected by a shared predicate rather than an intent string, so this detector
@@ -82,62 +97,6 @@ function assertThat(ok, label, detail) {
   if (detail) console.log(`        ${detail}`);
 }
 
-/**
- * Preserves length so offsets still index.
- * @param {string} src
- */
-function strip(src) {
-  const out = src.split("");
-  let i = 0;
-  while (i < src.length) {
-    const two = src.slice(i, i + 2);
-    if (two === "/*") {
-      let j = src.indexOf("*/", i + 2);
-      if (j === -1) j = src.length;
-      for (let k = i; k < Math.min(j + 2, src.length); k++) if (out[k] !== "\n") out[k] = " ";
-      i = j + 2;
-      continue;
-    }
-    if (two === "//") {
-      let j = src.indexOf("\n", i);
-      if (j === -1) j = src.length;
-      for (let k = i; k < j; k++) out[k] = " ";
-      i = j;
-      continue;
-    }
-    const c = src[i];
-    if (c === '"' || c === "'" || c === "`") {
-      let j = i + 1;
-      while (j < src.length) {
-        if (src[j] === "\\") { j += 2; continue; }
-        if (src[j] === c) break;
-        j++;
-      }
-      // The literal's BODY is blanked but its delimiters are kept, so an
-      // `intent === "x"` comparison is still findable on the raw text while
-      // brace matching cannot be thrown by a brace inside a string.
-      for (let k = i + 1; k < Math.min(j, src.length); k++) if (out[k] !== "\n") out[k] = " ";
-      i = j + 1;
-      continue;
-    }
-    i++;
-  }
-  return out.join("");
-}
-
-/** @param {string} s @param {number} open */
-function matchBrace(s, open) {
-  let depth = 0;
-  for (let i = open; i < s.length; i++) {
-    if (s[i] === "{") depth++;
-    else if (s[i] === "}") {
-      depth--;
-      if (depth === 0) return i;
-    }
-  }
-  return -1;
-}
-
 console.log("\ncheck:destructive\n");
 
 if (!existsSync(ROUTES)) {
@@ -156,47 +115,27 @@ const found = new Set();
 let actionFiles = 0;
 
 for (const file of files) {
-  const raw = readFileSync(join(ROUTES, file), "utf8");
-  if (!/export\s+async\s+function\s+action|export\s+const\s+action/.test(raw)) continue;
+  const sf = parseSource(file, readFileSync(join(ROUTES, file), "utf8"));
+  const action = findAction(sf);
+  if (!action) continue;
   actionFiles += 1;
-  const bare = strip(raw);
 
-  // Every intent this module BRANCHES on. The comparison is the vocabulary:
-  // a value only reaches a destructive path by being tested for here.
-  for (const m of raw.matchAll(/intent\s*===\s*"([^"]+)"/g)) {
-    found.add(`${file}:${m[1]}`);
-  }
+  // Every intent this action BRANCHES on, read off the syntax tree so a comment cannot add one and
+  // `form.get("intent") === "x"` is seen as well as `intent === "x"`. The comparison is the
+  // vocabulary: a value only reaches a destructive path by being tested for here.
+  const branches = intentBranches(action, PREDICATE);
+  for (const b of branches) found.add(`${file}:${b.intent}`);
 
-  for (const id of [...found].filter((k) => k.startsWith(`${file}:`))) {
-    const intent = id.slice(file.length + 1);
+  // Every comparison of a destructive intent must select code that calls the predicate. An intent
+  // tested twice is held at both sites, so a guard in a sibling path cannot stand in for it, and a
+  // comment naming the predicate is not a call.
+  for (const b of branches) {
+    const id = `${file}:${b.intent}`;
     if (!DESTRUCTIVE.has(id)) continue;
-
-    // The smallest branch that tests this intent: one intent is tested twice in its file, and the outer
-    // condition would be satisfied by a guard in a sibling path.
-    /** @type {{ text: string, size: number } | null} */
-    let smallest = null;
-    for (const m of raw.matchAll(new RegExp(`intent\\s*===\\s*"${intent}"`, "g"))) {
-      // Offsets come from raw and are used against bare, `strip` preserving length. Brace matching runs on
-      // the stripped text, or a brace inside a string throws it.
-      const open = bare.indexOf("{", m.index);
-      if (open === -1) continue;
-      const close = matchBrace(bare, open);
-      if (close === -1) continue;
-      const size = close - open;
-      if (!smallest || size < smallest.size) {
-        smallest = { text: raw.slice(open, close), size };
-      }
-    }
-
+    assertThat(!b.reason, `${id}: its branch parses`, `${b.reason}, so nothing was examined`);
+    if (b.reason) continue;
     assertThat(
-      smallest !== null,
-      `${id}: its branch parses`,
-      "no braced branch was found for this intent, so nothing was examined",
-    );
-    if (!smallest) continue;
-
-    assertThat(
-      smallest.text.includes(PREDICATE),
+      b.guarded,
       `${id}: the confirmation is checked in the ACTION`,
       `the branch handling this destructive intent never calls ${PREDICATE}(). ` +
         `If the confirmation moved to an onClick or onSubmit handler, it is gone ` +
@@ -240,17 +179,15 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 // see. For a machine caller the credential is the ceremony, so each tool declares a policy instead.
 {
   const apiPath = join(root, "app", "lib", "operator", "api.server.ts");
-  const apiRaw = readFileSync(apiPath, "utf8");
+  const apiTree = parseSource(apiPath, readFileSync(apiPath, "utf8"));
 
-  const toolsBlock = apiRaw.match(/const TOOLS = \[([\s\S]*?)\] as const;/);
+  const toolsBlock = stringArrayConst(apiTree, "TOOLS");
   assertThat(
     toolsBlock !== null,
     "the operator TOOLS list was located",
     "nothing below examines anything, so every tool would read as classified",
   );
-  const toolNames = toolsBlock
-    ? [...toolsBlock[1].matchAll(/"([a-z_]+)"/g)].map((m) => m[1])
-    : [];
+  const toolNames = toolsBlock ?? [];
 
   /* An empty parse classifies nothing and reports what a compliant surface reports. */
   assertThat(
@@ -318,18 +255,24 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     );
   }
 
-  // `policy` is a property with a string-literal value, so prose cannot satisfy it and comments can stay.
+  // `policy` is a property whose value is a non-empty string literal, read off the syntax tree, so
+  // neither prose nor a comment can satisfy it and the layout of the object does not matter.
+  const descriptors = objectConst(apiTree, "TOOL_DESCRIPTORS");
+  assertThat(
+    descriptors !== null,
+    "the operator TOOL_DESCRIPTORS object was located",
+    "no descriptor below could be examined",
+  );
   for (const name of OPERATOR_DESTRUCTIVE) {
-    const descriptor = apiRaw.match(
-      new RegExp(`\\n  ${name}: \\{([\\s\\S]*?)\\n  \\},`),
-    );
+    const entry = descriptors ? propertyValue(descriptors, name) : null;
+    const descriptor = entry && ts.isObjectLiteralExpression(entry) ? entry : null;
     assertThat(
       descriptor !== null,
       `${name}: its TOOL_DESCRIPTORS entry was located`,
       "the assertion below would examine nothing",
     );
     assertThat(
-      descriptor !== null && /\bpolicy:\s*$|\bpolicy:\s*"/m.test(descriptor[1]),
+      descriptor !== null && isLiteralString(propertyValue(descriptor, "policy")),
       `${name}: declares the policy that refuses it`,
       `a destructive tool with no \`policy\` in its descriptor is one an agent ` +
         `discovers by being refused. GET /api/operator serves this block, so the ` +
@@ -339,8 +282,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 }
 
 
-// Whole-source, not routes: any line anywhere that deletes from the binding is the danger. Comments are
-// stripped first because every file touching this binding has a sentence naming both.
+// Whole-source, not routes: any line anywhere that deletes from the binding is the danger. It reads the
+// syntax tree because every file touching this binding has a comment naming both.
 {
   /** @param {string} dir @returns {string[]} */
   const walk = (dir) => {
@@ -360,47 +303,49 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   };
 
   /**
-   * The window makes it an anchored needle: a file may name the binding and, far away, delete from
-   * something else.
+   * Read off the syntax tree: a comment naming the binding is not a use, `env["MEDIA_BACKUP"]` and a
+   * local alias are, and a delete is only one whose receiver IS the binding.
    *
-   * @param {string} stripped
-   * @returns {string[]} offending excerpts
+   * @param {string} name
+   * @param {string} text
    */
-  const backupDeletes = (stripped) => {
-    /** @type {string[]} */
-    const hits = [];
-    const needle = /MEDIA_BACKUP/g;
-    for (let m = needle.exec(stripped); m; m = needle.exec(stripped)) {
-      const window = stripped.slice(m.index, m.index + 120);
-      if (/\.\s*delete\s*\(/.test(window)) hits.push(window.replace(/\s+/g, " ").slice(0, 100));
-    }
-    return hits;
-  };
+  const backupUses = (name, text) => bindingUses(parseSource(name, text), "MEDIA_BACKUP");
 
-  // A matcher that cannot detect the violation agrees with every file it reads, so the needle is proven first.
+  // A matcher that cannot detect the violation agrees with every file it reads, so it is proven first.
   assertThat(
-    backupDeletes("await env.MEDIA_BACKUP.delete(key);").length === 1,
-    "the backup-delete needle detects a real delete",
+    backupUses("c.ts", "await env.MEDIA_BACKUP.delete(key);").deletes.length === 1,
+    "the backup-delete scan detects a real delete",
     "it matched nothing, so the sweep below would pass over a genuine violation",
   );
   assertThat(
-    backupDeletes("await env.MEDIA_BACKUP.put(key, body);").length === 0,
-    "the backup-delete needle ignores a put",
-    "a needle that fires on any use of the binding would be unusable",
+    backupUses("c.ts", "const b = env.MEDIA_BACKUP; await b.delete(key);").deletes.length === 1,
+    "the backup-delete scan follows a local alias",
+    "a delete through `const b = env.MEDIA_BACKUP` would pass unseen",
   );
   assertThat(
-    backupDeletes("await env.MEDIA.delete(key); const b = env.MEDIA_BACKUP;").length === 0,
-    "the backup-delete needle does not fire on a delete from MEDIA",
+    backupUses("c.ts", "await env.MEDIA_BACKUP.put(key, body);").deletes.length === 0,
+    "the backup-delete scan ignores a put",
+    "a scan that fires on any use of the binding would be unusable",
+  );
+  assertThat(
+    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_BACKUP;").deletes.length === 0,
+    "the backup-delete scan does not fire on a delete from MEDIA",
     "deleting a media object is legitimate; only the mirror is protected",
   );
 
-  // Excluded by name, never by glob: the control above is a string literal containing the violation hunted.
-  const SELF = join(root, "scripts", "check-destructive.mjs");
+  /**
+   * Functions the binding may be handed to, with the reason, keyed by file and callee. A helper can
+   * delete from what it is given, so a new call site fails by name until someone has read it.
+   */
+  const BACKUP_PASSED_TO = new Map([
+    ["app/lib/media/backup.server.ts:listAll", "pages through bucket.list() and returns the objects; it has no other call"],
+  ]);
+
   const sources = [
     ...walk(join(root, "app")),
     ...walk(join(root, "workers")),
     ...walk(join(root, "scripts")),
-  ].filter((file) => file !== SELF);
+  ];
 
   // A walk that returned nothing would report a clean sweep.
   assertThat(
@@ -412,13 +357,29 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   let mentioning = 0;
   /** @type {string[]} */
   const violations = [];
+  /** @type {Set<string>} */
+  const passedSeen = new Set();
   for (const file of sources) {
-    const stripped = strip(readFileSync(file, "utf8"));
-    if (!stripped.includes("MEDIA_BACKUP")) continue;
+    const text = readFileSync(file, "utf8");
+    if (!text.includes("MEDIA_BACKUP")) continue;
+    const rel = file.slice(root.length + 1).replaceAll("\\", "/");
+    const uses = backupUses(file, text);
+    if (uses.mentions === 0) continue;
     mentioning += 1;
-    for (const hit of backupDeletes(stripped)) {
-      violations.push(`${file.slice(root.length + 1)}: ${hit}`);
+    for (const hit of uses.deletes) violations.push(`${rel}: ${hit}`);
+    for (const callee of uses.passedTo) {
+      const id = `${rel}:${callee}`;
+      passedSeen.add(id);
+      assertThat(
+        BACKUP_PASSED_TO.has(id),
+        `${id} is handed MEDIA_BACKUP and has been read`,
+        "a function given the backup binding can delete from it where this sweep cannot see. " +
+          "Read it, and add it to BACKUP_PASSED_TO with the reason it cannot delete.",
+      );
     }
+  }
+  for (const id of BACKUP_PASSED_TO.keys()) {
+    assertThat(passedSeen.has(id), `${id} is still handed MEDIA_BACKUP`, "the entry is stale");
   }
 
   // Zero files naming the binding means it was renamed, and every assertion above would be true of nothing.
