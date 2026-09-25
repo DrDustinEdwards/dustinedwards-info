@@ -1,6 +1,8 @@
 // Pure, so node:test and the CSP builder can import it. Every feed URL is checked against a host
 // allowlist; the audio list is what workers/csp.mjs writes into `media-src`, so the two cannot disagree.
 
+import { decodeEntities } from "../publications/entities.mjs";
+
 export const PODCAST_FEED_URL = "https://germomics.com/feed/podcast/";
 
 export const PODCAST_SITE_URL = "https://germomics.com/";
@@ -30,24 +32,14 @@ export const PODCAST_SLOT_KEY = "home.podcast";
  * @typedef {{ mode: "latest" } | { mode: "featured", guid: string }} PodcastSlot
  */
 
-const NAMED_ENTITIES = /** @type {Record<string, string>} */ ({
-  amp: "&",
-  lt: "<",
-  gt: ">",
-  quot: '"',
-  apos: "'",
-  nbsp: " ",
-});
-
-/** @param {string} text */
-function decodeEntities(text) {
-  return text.replace(/&(#x[0-9a-f]+|#[0-9]+|[a-z]+);/gi, (whole, name) => {
-    if (name[0] === "#") {
-      const code = name[1] === "x" || name[1] === "X" ? parseInt(name.slice(2), 16) : Number(name.slice(1));
-      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
-    }
-    return NAMED_ENTITIES[name.toLowerCase()] ?? whole;
-  });
+/**
+ * The shared decoder, plus `&nbsp;`: podcast hosts write it in show notes, and every whitespace run
+ * here collapses to one space anyway. Replaced before decoding, so `&amp;nbsp;` still reads literally.
+ *
+ * @param {string} text
+ */
+function decodeFeedEntities(text) {
+  return decodeEntities(text.replace(/&nbsp;/g, " "));
 }
 
 /**
@@ -58,7 +50,7 @@ function textOf(xml, tag) {
   const match = xml.match(new RegExp(`<${escaped}(?:\\s[^>]*)?>([\\s\\S]*?)</${escaped}>`));
   if (!match) return "";
   const raw = (match[1] ?? "").replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1");
-  return decodeEntities(raw.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
+  return decodeFeedEntities(raw.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
 /** @param {string} xml @param {string} tag @param {string} attr */
@@ -66,7 +58,7 @@ function attrOf(xml, tag, attr) {
   const element = xml.match(new RegExp(`<${tag.replace(":", "\\:")}\\s[^>]*>`));
   if (!element) return "";
   const value = element[0].match(new RegExp(`\\s${attr}="([^"]*)"`));
-  return value ? decodeEntities(value[1] ?? "") : "";
+  return value ? decodeFeedEntities(value[1] ?? "") : "";
 }
 
 /**
@@ -157,15 +149,4 @@ export function chooseEpisode(episodes, slot) {
   if (slot.mode !== "featured") return { episode: latest, fellBack: false };
   const featured = episodes.find((e) => e.guid === slot.guid);
   return featured ? { episode: featured, fellBack: false } : { episode: latest, fellBack: true };
-}
-
-/**
- * @param {number} seconds
- */
-export function clockTime(seconds) {
-  const s = Math.max(0, Math.floor(seconds));
-  const h = Math.floor(s / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  const rest = String(s % 60).padStart(2, "0");
-  return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${rest}` : `${m}:${rest}`;
 }
