@@ -96,11 +96,6 @@ if (target) {
     },
     { label: `check:machine-readable llms.txt settings row read (${target})` },
   );
-  if (result.status !== 0) {
-    console.log(`\n  FAIL  wrangler could not read the settings row (${target}).`);
-    console.log(result.stdout ?? "");
-    throw new Error(`wrangler could not read the settings row (${target})`);
-  }
   const match = result.stdout.match(/\[[\s\S]*\]/);
   if (!match) {
     console.log(`\n  FAIL  could not parse the query output.`);

@@ -11,7 +11,7 @@ import { pathToFileURL } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export const URL_ASSET = "asset-url-stubbed-by-route-render";
+const URL_ASSET = "asset-url-stubbed-by-route-render";
 
 /**
  * @param {string} spec
@@ -158,104 +158,4 @@ export async function importBundled(file) {
   return /** @type {Promise<{ default: unknown }>} */ (
     import(pathToFileURL(file).href)
   );
-}
-
-/**
- * Fields whose VALUE the UI decides, so the value is part of the contract. Everything else in the
- * payload is the author's content, and recording it would make the fixture a copy of the test data.
- */
-const CONTRACT_VALUES = new Set(["draft", "isNew", "headSha", "firstPublished"]);
-
-/**
- * @param {string} html
- * @returns {Array<{ action: string, method: string, intent: string, fields: string[] }>}
- */
-export function submissions(html) {
-  /** @type {Array<{ action: string, method: string, intent: string, fields: string[] }>} */
-  const out = [];
-
-  // Ownership is by the `form` attribute first and containment second, as a browser resolves it:
-  // the editor has a control outside the form it submits.
-  /** @type {Array<{ id: string, start: number, end: number, open: string }>} */
-  const forms = [];
-  for (const match of html.matchAll(/<form\b[^>]*>/g)) {
-    const start = match.index ?? 0;
-    const end = html.indexOf("</form>", start);
-    forms.push({
-      id: /\sid="([^"]*)"/.exec(match[0])?.[1] ?? "",
-      start,
-      end: end === -1 ? html.length : end,
-      open: match[0],
-    });
-  }
-
-  /**
-   * @param {number} at
-   * @param {string | undefined} formAttr
-   * @returns {number}
-   */
-  const ownerOf = (at, formAttr) => {
-    if (formAttr) return forms.findIndex((f) => f.id === formAttr);
-    return forms.findIndex((f) => at > f.start && at < f.end);
-  };
-
-  for (let i = 0; i < forms.length; i += 1) {
-    const form = forms[i];
-    const action = /action="([^"]*)"/.exec(form.open)?.[1] ?? "";
-    const method = (/method="([^"]*)"/.exec(form.open)?.[1] ?? "get").toUpperCase();
-
-    /** @type {string[]} */
-    const fields = [];
-    for (const match of html.matchAll(/<(?:input|textarea|select)\b[^>]*>/g)) {
-      const tag = match[0];
-      if (ownerOf(match.index ?? 0, /\sform="([^"]*)"/.exec(tag)?.[1]) !== i) continue;
-      // A disabled control submits nothing: the editor relies on it for "absent when unticked".
-      if (/\bdisabled\b/.test(tag)) continue;
-      const name = /\sname="([^"]*)"/.exec(tag)?.[1];
-      if (!name) continue;
-
-      const type = /\stype="([^"]*)"/.exec(tag)?.[1] ?? "text";
-      if ((type === "checkbox" || type === "radio") && !/\bchecked\b/.test(tag)) continue;
-
-      // A checkbox with no `value` submits "on" per the spec, and React renders no value attribute.
-      const explicit = /\svalue="([^"]*)"/.exec(tag)?.[1];
-      const entry = CONTRACT_VALUES.has(name)
-        ? `${name}=${explicit ?? (type === "checkbox" || type === "radio" ? "on" : "")}`
-        : name;
-      if (!fields.includes(entry)) fields.push(entry);
-    }
-    fields.sort();
-
-    /** @type {string[]} */
-    const intents = [];
-    for (const match of html.matchAll(/<button\b[^>]*>/g)) {
-      const button = match[0];
-      if (ownerOf(match.index ?? 0, /\sform="([^"]*)"/.exec(button)?.[1]) !== i) continue;
-      if (/\bdisabled\b/.test(button)) continue;
-      if (!/type="submit"/.test(button)) continue;
-      const name = /\sname="([^"]*)"/.exec(button)?.[1];
-      const value = /\svalue="([^"]*)"/.exec(button)?.[1] ?? "";
-      intents.push(name ? `${name}=${value}` : "(none)");
-    }
-    if (intents.length === 0) intents.push("(none)");
-
-    for (const intent of intents) out.push({ action, method, intent, fields });
-  }
-
-  return out;
-}
-
-/**
- * @param {string} html
- * @returns {string[]}
- */
-export function submissionKeys(html) {
-  // Distinct: counting duplicate controls would make the gate object to layout.
-  return [
-    ...new Set(
-      submissions(html).map(
-        (s) => `${s.method} ${s.action} | ${s.intent} | ${s.fields.join(",")}`,
-      ),
-    ),
-  ].sort();
 }
