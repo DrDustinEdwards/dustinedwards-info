@@ -282,26 +282,9 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   if (!match && !hasFilters(parsed)) return empty;
 
   const filters = buildFilters(parsed, nowSeconds);
-  const started = Date.now();
+  if (!match) return browse(env, parsed, filters, page, pageSize);
 
-  if (!match) {
-    const rows = await runBrowse(env.DB, filters);
-    const browseTook = Date.now() - started;
-    const browseHits: SearchHit[] = rows.map((item, index) =>
-      // Rank is the date order this came back in, not a relevance score.
-      toHit(item, renderSnippet(clampWords(item.snippet, 200)), ["filter"], rows.length - index),
-    );
-    return {
-      parsed,
-      hits: browseHits.slice((page - 1) * pageSize, page * pageSize),
-      total: browseHits.length,
-      page,
-      pageSize,
-      facets: buildFacets(browseHits),
-      truncated: rows.length >= CANDIDATE_LIMIT,
-      tookMs: browseTook,
-    };
-  }
+  const started = Date.now();
 
   const [identityRows, proseRows] = await Promise.all([
     runIndex(
@@ -347,35 +330,67 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
     facets: buildFacets(hits),
     truncated,
     tookMs,
-    ...(options.explain
-      ? {
-          explain: {
-            k: RRF_K,
-            layers: ["search_identity", "search_prose"],
-            identityCount: identityRows.length,
-            proseCount: proseRows.length,
-            rows: fused.map(({ item, score, sources, ranks, contributions }) => {
-              const at = (list: number) => sources.indexOf(list);
-              const i = at(0);
-              const p = at(1);
-              const rank = (n: number) => (n === -1 ? null : (ranks[n] ?? null));
-              const contribution = (n: number) =>
-                n === -1 ? null : (contributions[n] ?? null);
-              return {
-                uid: item.uid,
-                title: item.title,
-                docTitle: item.doc_title,
-                url: item.url,
-                identityRank: rank(i),
-                proseRank: rank(p),
-                identityContribution: contribution(i),
-                proseContribution: contribution(p),
-                score,
-              };
-            }),
-          },
-        }
-      : {}),
+    ...(options.explain ? { explain: explainFor(fused, identityRows, proseRows) } : {}),
+  };
+}
+
+/** No-match browse: the filters alone, newest first, with no relevance to fuse. */
+async function browse(
+  env: Env,
+  parsed: ParsedQuery,
+  filters: FilterSql,
+  page: number,
+  pageSize: number,
+): Promise<SearchResult> {
+  const started = Date.now();
+  const rows = await runBrowse(env.DB, filters);
+  const browseTook = Date.now() - started;
+  const browseHits: SearchHit[] = rows.map((item, index) =>
+    // Rank is the date order this came back in, not a relevance score.
+    toHit(item, renderSnippet(clampWords(item.snippet, 200)), ["filter"], rows.length - index),
+  );
+  return {
+    parsed,
+    hits: browseHits.slice((page - 1) * pageSize, page * pageSize),
+    total: browseHits.length,
+    page,
+    pageSize,
+    facets: buildFacets(browseHits),
+    truncated: rows.length >= CANDIDATE_LIMIT,
+    tookMs: browseTook,
+  };
+}
+
+/** Each fused row's rank and RRF contribution in each layer, for `?explain`. */
+function explainFor(
+  fused: ReturnType<typeof fuse<RawRow>>,
+  identityRows: RawRow[],
+  proseRows: RawRow[],
+): SearchExplain {
+  return {
+    k: RRF_K,
+    layers: ["search_identity", "search_prose"],
+    identityCount: identityRows.length,
+    proseCount: proseRows.length,
+    rows: fused.map(({ item, score, sources, ranks, contributions }) => {
+      const at = (list: number) => sources.indexOf(list);
+      const i = at(0);
+      const p = at(1);
+      const rank = (n: number) => (n === -1 ? null : (ranks[n] ?? null));
+      const contribution = (n: number) =>
+        n === -1 ? null : (contributions[n] ?? null);
+      return {
+        uid: item.uid,
+        title: item.title,
+        docTitle: item.doc_title,
+        url: item.url,
+        identityRank: rank(i),
+        proseRank: rank(p),
+        identityContribution: contribution(i),
+        proseContribution: contribution(p),
+        score,
+      };
+    }),
   };
 }
 
