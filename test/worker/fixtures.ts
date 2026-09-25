@@ -1,5 +1,6 @@
-/* Fixtures go through `frontmatterSchema` and the real render pipeline, so no case downstream
- * tests a document this site would refuse. */
+/* `post()` only writes the markdown and validates nothing itself. A case that saves it sends it
+ * through the real save path, where `frontmatterSchema` and the render pipeline refuse what the
+ * site would refuse. */
 
 export function post(
   slug: string,
