@@ -82,17 +82,26 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const askPromise = timed(timings, "ask_status_uncached", () =>
     context.get(askStatusContext)(),
   );
+  const askOn = askAvailable(env);
   /*
    * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
-   * rejection. A failing budget read must not take the page down.
+   * rejection. A failing budget read must not take the page down, and it renders as a failure.
    */
-  const budgetPromise: Promise<Awaited<ReturnType<typeof readAskBudget>> | null> =
-    askAvailable(env)
-      ? timed(timings, "ask_budget_do", () => readAskBudget(env)).catch((error) => {
+  const budgetPromise: Promise<
+    | { budget: Awaited<ReturnType<typeof readAskBudget>>; budgetError: null }
+    | { budget: null; budgetError: string | null }
+  > = askOn
+    ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
+        (budget) => ({ budget, budgetError: null }),
+        (error: unknown) => {
           console.error("ask budget read failed", error);
-          return null;
-        })
-      : Promise.resolve(null);
+          return {
+            budget: null,
+            budgetError: error instanceof Error ? error.message : String(error),
+          };
+        },
+      )
+    : Promise.resolve({ budget: null, budgetError: null });
 
   const readershipPromise = timed(timings, "ae_post_readership", () =>
     fetchPostReadership(env),
@@ -138,14 +147,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // An admin page may await the AI layer; no public route ever does.
   const ask = await askPromise;
 
-  const budget = await budgetPromise;
+  const { budget, budgetError } = await budgetPromise;
 
   const readership = await readershipPromise;
 
   const payload = {
     posts,
+    /* With Ask on, a null `ask` is a failed status read, never "up to date". */
+    askOn,
     ask,
     budget,
+    budgetError,
     filters,
     filtered,
     total: all.length,
@@ -407,8 +419,19 @@ export default function AdminPosts({
   /** Empty in production. It exists for a static render, which dispatches no event. */
   initialSelection = [],
 }: Route.ComponentProps & { initialSelection?: string[] }) {
-  const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
-    loaderData;
+  const {
+    posts,
+    askOn,
+    ask,
+    budget,
+    budgetError,
+    filters,
+    filtered,
+    total,
+    scheduledTotal,
+    tagOptions,
+  } = loaderData;
+  const askUnread = askOn && !ask;
   /* Defaulted: loader data written before this field existed must render zeros. */
   const statusCounts = loaderData.statusCounts ?? {
     all: total,
@@ -479,7 +502,11 @@ export default function AdminPosts({
             `${statusCounts.published} published and ${statusCounts.draft} draft(s).` +
             (askDrifted && ask
               ? ` ${ask.missing.length + ask.stale.length} of them have changed since search last read them.`
-              : " Search is up to date with all of them.")}
+              : askUnread
+                ? " The search index status could not be read, so whether search is up to date is unknown."
+                : ask
+                  ? " Search is up to date with all of them."
+                  : "")}
         </p>
       </div>
       <div className="posts-toolbar">
@@ -924,20 +951,23 @@ export default function AdminPosts({
           <details className="posts-explain">
             <summary>What the read count includes, and what it misses</summary>
             <p>
-              {`Only reads that reached the server, over the last ${
-                readership.status === "live" ? readership.data.windowDays : 0
-              } days, sampling weighted. ` + CACHE_SENTENCE}
+              {readership.status === "live"
+                ? `Only reads that reached the server, over the last ${readership.data.windowDays} days, sampling weighted. ` +
+                  CACHE_SENTENCE
+                : `Read counts could not be loaded: ${readership.message} ` + CACHE_SENTENCE}
             </p>
           </details>
 
-          {filtered || ask || budget ? (
+          {filtered || askOn ? (
             <p className="posts-meta">
               {filtered ? `Showing ${posts.length} of ${total} posts. ` : null}
               {ask ? `Search has read ${ask.present} of ${ask.expected} posts.` : null}
-              {ask && budget ? " " : null}
+              {askUnread ? "The search index status could not be read." : null}
+              {askOn ? " " : null}
               {budget
                 ? `Budget ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
                 : null}
+              {budgetError ? `The Ask budget could not be read: ${budgetError}` : null}
             </p>
           ) : null}
         </div>
