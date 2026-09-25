@@ -1,7 +1,7 @@
 import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 import { mirrorObject } from "~/lib/media/backup.server";
-import { placeholderFor } from "~/lib/media/core.server";
+import { measureDimensions, placeholderFor } from "~/lib/media/core.server";
 
 /**
  * The authoritative media row writer, fed by R2 event notifications rather than a dual write. Must be
@@ -62,15 +62,17 @@ async function indexOne(env: Env, key: string) {
   let width: number | null = null;
   let height: number | null = null;
   let placeholder: string | null = null;
+  // An unreadable image still gets a row, or the index would disagree with the bucket; the stored
+  // sizes are left alone and the failure is thrown after the write, so the message retries and a
+  // permanent failure lands in the dead-letter queue.
+  let measureFailure: unknown = null;
   if (isRaster(key)) {
     try {
-      const info = await env.IMAGES.info(object.body);
-      if ("width" in info && "height" in info) {
-        width = info.width;
-        height = info.height;
-      }
-    } catch {
-      // An unreadable image still gets a row, or the index would disagree with the bucket.
+      const dimensions = await measureDimensions(env, object.body);
+      width = dimensions?.width ?? null;
+      height = dimensions?.height ?? null;
+    } catch (error) {
+      measureFailure = error;
     }
 
     // Derived here, or the upsert erases the bulk pass's placeholder. A second GET, because `.info()`
@@ -109,4 +111,7 @@ async function indexOne(env: Env, key: string) {
       );
     }
   }
+
+  // Last, so the row and the mirror both happened before the retry is asked for.
+  if (measureFailure) throw measureFailure;
 }

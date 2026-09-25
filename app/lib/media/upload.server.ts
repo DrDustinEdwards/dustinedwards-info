@@ -36,8 +36,20 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
     );
   }
 
-  // Measured before the key exists, because the key carries `-<w>x<h>`. Null (an SVG) is a real answer.
-  const dimensions = await measureDimensions(env, file.bytes);
+  // Measured before the key exists, because the key carries `-<w>x<h>`. Null (an SVG) is a real answer;
+  // a failed measurement refuses, since the key would be permanent and sizeless and never render.
+  let dimensions: { width: number; height: number } | null;
+  try {
+    dimensions = await measureDimensions(env, file.bytes);
+  } catch (error) {
+    console.error("upload refused: the image could not be measured", error);
+    return {
+      ok: false,
+      code: "images-unavailable",
+      message: `${error instanceof Error ? error.message : String(error)}. Nothing was stored; try again.`,
+      status: 503,
+    };
+  }
   // The key's name segment is a lossy slug, so the original name is also kept in customMetadata.
   const key = contentKey(
     await crypto.subtle.digest("SHA-256", file.bytes),
