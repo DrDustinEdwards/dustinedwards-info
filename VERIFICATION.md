@@ -499,8 +499,8 @@ weaker claim honestly stated rather than a stronger one invented.
 A screen size quoted in physical pixels is not the viewport a page lays out in.
 PR #84 took "1920x890" as CSS pixels and reported the key row above the fold; on
 Dustin's Windows 150% display it was not visible at all. **Any fold check measures
-at `FOLD_VIEWPORT` in `scripts/lib/fold-target.mjs`**, which owns the numbers, and
-states the viewport it used in its output.
+at 1280x593 CSS pixels, device scale factor 1.5** (his 1920x1080 monitor at 150%
+scaling with a bookmarks bar), and states the viewport it used in its output.
 
 ---
 
