@@ -297,9 +297,14 @@ if (existsSync(SHIP)) {
   const apiSource = stripComments(
     readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),
   );
+  /* The tool bodies live beside the dispatcher; the dispatcher names the tool, the body builds the verdict. */
+  const syncToolsSource = stripComments(
+    readFileSync(join(root, "app/lib/operator/sync-tools.server.ts"), "utf8"),
+  );
   const shipSource = stripComments(readFileSync(join(root, "scripts/ship.mjs"), "utf8"));
 
   eq("ask sync: the operator API was read", apiSource.length > 2000, true);
+  eq("ask sync: the operator sync tools were read", syncToolsSource.length > 2000, true);
   eq("ask sync: ship.mjs was read", shipSource.length > 2000, true);
 
   eq(
@@ -309,7 +314,7 @@ if (existsSync(SHIP)) {
   );
   eq(
     "ask sync: the tool derives its verdict from a report module, not inline",
-    /askSyncReport\(/.test(apiSource),
+    /askSyncReport\(/.test(syncToolsSource),
     true,
   );
 
@@ -453,17 +458,17 @@ if (existsSync(SHIP)) {
   );
   eq(
     "media sync: the tool derives its verdict from a report module, not inline",
-    /mediaSyncReport\(/.test(apiSource),
+    /mediaSyncReport\(/.test(syncToolsSource),
     true,
   );
   eq(
     "media sync: the tool repairs THROUGH the derivation, not by writing rows",
-    /rebuildMediaIndex\(env\)/.test(apiSource),
+    /rebuildMediaIndex\(env\)/.test(syncToolsSource),
     true,
   );
   eq(
     "media sync: the verdict comes from a read-back reconciliation",
-    /mediaIndexStatus\(env\)/.test(apiSource),
+    /mediaIndexStatus\(env\)/.test(syncToolsSource),
     true,
   );
 
@@ -579,7 +584,7 @@ if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
 
 // Measured by running it, set for the lower environment: without a local database the three
 // assertions comparing the applied set to it do not run.
-const MINIMUM_CHECKS = 110;
+const MINIMUM_CHECKS = 111;
 tally.floor("check:migrations", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {

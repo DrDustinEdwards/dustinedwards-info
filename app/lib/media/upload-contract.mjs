@@ -2,6 +2,7 @@
 // default header would silently hand the editors' `response.json()` an HTML page.
 // Must stay loadable by node:test: never import anything reaching a binding, a `.server` module or React.
 
+import { errorMessage } from "../error-message.mjs";
 import { byteSize } from "./byte-size.mjs";
 
 export const ALLOWED = new Map([
@@ -45,6 +46,30 @@ export function uploadSuccessBody(key) {
  */
 export function uploadErrorBody(message) {
   return { error: message };
+}
+
+/**
+ * The editors' upload: one file to the JSON branch. Never rejects, so a caller that `void`s it
+ * still shows every failure: the route's own refusal, the status when the body is not the
+ * route's JSON, or the network error.
+ *
+ * @param {File} file
+ * @returns {Promise<{ url: string } | { error: string }>}
+ */
+export async function uploadMedia(file) {
+  try {
+    const form = new FormData();
+    form.set("file", file);
+    const response = await fetch("/admin/media/upload", { method: "POST", body: form });
+    if (!response.ok) {
+      const detail = /** @type {{ error?: string }} */ (await response.json().catch(() => ({})));
+      return uploadErrorBody(detail.error ?? `Upload failed (${response.status}).`);
+    }
+    const { url } = /** @type {{ url: string }} */ (await response.json());
+    return { url };
+  } catch (error) {
+    return uploadErrorBody(`Upload failed: ${errorMessage(error)}`);
+  }
 }
 
 // A code in the URL, not the message, so the address bar never carries prose someone can edit.
