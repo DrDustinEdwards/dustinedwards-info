@@ -59,5 +59,12 @@ describe("/login without React", () => {
     expect(refused.data?.problem).toMatch(/Too many sign-in attempts/);
     expect(Number(refused.init?.headers?.["retry-after"])).toBeGreaterThanOrEqual(300);
     expect(refused.init?.headers?.["cache-control"]).toMatch(/no-store/);
+
+    // React Router forwards only Set-Cookie from an action's init unless the route's `headers` does.
+    const sent = new Headers(
+      login.headers({ actionHeaders: new Headers(refused.init?.headers) } as never),
+    );
+    expect(sent.get("retry-after")).toBe(refused.init?.headers?.["retry-after"]);
+    expect(sent.get("cache-control")).toMatch(/no-store/);
   });
 });
