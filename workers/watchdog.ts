@@ -17,6 +17,7 @@ import {
   errorRateVerdict,
 } from "../app/lib/health/error-rate.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo";
+import { errorMessage } from "../app/lib/error-message.mjs";
 
 // A script name, not a hostname, so not derived from SITE_ORIGIN. Must equal the site config's `name`.
 const SITE_SCRIPT_NAME = "dustinedwards";
@@ -50,7 +51,7 @@ async function readState(env: WatchdogEnv): Promise<{ readable: boolean; stored:
     console.error(
       JSON.stringify({
         watchdog: "state-read-failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
     return { readable: false, stored: null };
@@ -69,7 +70,7 @@ async function writeState(
       JSON.stringify({
         alert: "watchdog-state-write-failed",
         watchdog: "state-write-failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
   }
@@ -92,7 +93,7 @@ export async function readHealth(env: WatchdogEnv): Promise<Reading> {
     return {
       status: 0,
       body: null,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     };
   }
 }
@@ -118,7 +119,7 @@ async function repair(
     payload = await response.json().catch(() => null);
   } catch (error) {
     return {
-      miss: `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`,
+      miss: `${tool} did not complete: ${errorMessage(error)}`,
       unrepairable: false,
     };
   }
@@ -158,7 +159,7 @@ async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promis
     console.error(
       JSON.stringify({
         alert: "watchdog-notify-failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
     return false;
@@ -217,7 +218,7 @@ export async function readErrorRate(
       configured: true,
       detail:
         "the invocations query did not complete, so the error rate is unknown: " +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
     };
   }
 
@@ -246,6 +247,147 @@ const renderBody = (reading: Reading | null): string =>
         `HTTP 0 (the request did not complete)\n${reading.error ?? "(no cause was recorded)"}`
       : `HTTP ${reading.status}\n${JSON.stringify(reading.body, null, 2)}`;
 
+type Action = ReturnType<typeof watchdogActions>[number];
+
+// Repairs run every firing and only the mail is deduplicated, so `alerting` is where it ended.
+type AlertDraft = { alerting: boolean; subject: string; lines: string[]; failing: string[] };
+
+const QUIET: AlertDraft = { alerting: false, subject: "", lines: [], failing: [] };
+
+// Called only when every action is a repair or a recheck; a notify action never reaches here.
+async function runRepairs(
+  env: WatchdogEnv,
+  token: string,
+  reading: Reading,
+  actions: Action[],
+): Promise<AlertDraft> {
+  const attempted: string[] = [];
+  const misses: string[] = [];
+  // A refusal abandons the rest: the Ask corpus is read from what content repair writes.
+  let refused = false;
+  for (const action of actions) {
+    if (action.type !== "repair") continue;
+    attempted.push(action.tool);
+    const outcome = await repair(env, token, action.tool);
+    if (!outcome.miss) continue;
+    misses.push(outcome.miss);
+    if (outcome.unrepairable) {
+      refused = true;
+      break;
+    }
+  }
+
+  const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
+  const outcome = watchdogOutcome({ misses, recheck });
+
+  console.log(
+    JSON.stringify({
+      watchdog: "repaired",
+      attempted,
+      misses,
+      recheckStatus: recheck?.status ?? null,
+      alerting: outcome.length > 0,
+    }),
+  );
+
+  if (outcome.length === 0) return QUIET;
+  return {
+    alerting: true,
+    failing: failingCheckNames((recheck ?? reading).body),
+    subject: refused
+      ? "dustinedwards.info: self-repair was refused, a deploy is the repair"
+      : "dustinedwards.info: self-repair did not settle it",
+    lines: [
+      ...outcome.map((a) => (a as { reason: string }).reason),
+      ...(refused
+        ? [
+            "",
+            "The operator API REFUSED the content itself (422), so repeating this " +
+              "cannot converge. That is what a repository ahead of the deployed " +
+              "build looks like: the content is valid and the renderer in " +
+              "production is older than it. Deploy (npm run ship), then let the " +
+              "next poll converge it.",
+          ]
+        : []),
+      "",
+      `Attempted: ${attempted.join(", ") || "(nothing)"}`,
+      "",
+      "Health BEFORE the repair:",
+      renderBody(reading),
+      "",
+      "Health AFTER the repair:",
+      renderBody(recheck),
+    ],
+  };
+}
+
+// A throwing Worker alerts even when every health check is green.
+function mergeErrorRate(
+  draft: AlertDraft,
+  errorRate: { ok: boolean; detail: string },
+): AlertDraft {
+  if (errorRate.ok) return draft;
+  return {
+    alerting: true,
+    subject: draft.alerting ? draft.subject : "dustinedwards.info is throwing",
+    lines: draft.alerting
+      ? [...draft.lines, "", `Error rate: ${errorRate.detail}`]
+      : [errorRate.detail],
+    failing: [...draft.failing, "error-rate"],
+  };
+}
+
+// Mails only on a change of state; throws when that mail did not send, so the next firing retries.
+async function mailTransition(
+  env: WatchdogEnv,
+  draft: AlertDraft,
+  reading: Reading,
+  errorRateNote: string[],
+): Promise<void> {
+  const { alerting, failing, subject, lines } = draft;
+  const { readable, stored } = await readState(env);
+  const now = new Date().toISOString();
+  const transition = alertTransition({ stored, storedReadable: readable, alerting, failing, now });
+
+  console.log(
+    JSON.stringify({
+      watchdog: "alert-decision",
+      alerting,
+      failing,
+      storedReadable: readable,
+      email: transition.email?.kind ?? "none",
+      reason: transition.reason,
+    }),
+  );
+
+  const email = transition.email;
+  const delivered = await deliverTransition(transition, {
+    send: () =>
+      email?.kind === "opened"
+        ? alert(env, subject, [
+            `Changed to unhealthy. Failing now: ${email.checks.join(", ") || "(the endpoint named none)"}.`,
+            "",
+            "You will not be mailed again about this until it recovers.",
+            "",
+            ...lines,
+            ...errorRateNote,
+          ])
+        : alert(env, "dustinedwards.info recovered", [
+            `Health is green again after ${formatDuration(email?.durationMs ?? null)}.`,
+            "",
+            `Was failing: ${email?.checks.join(", ") || "(the endpoint named none)"}.`,
+            "",
+            renderBody(reading),
+            ...errorRateNote,
+          ]),
+    write: () => writeState(env, transition.state),
+  });
+  // Thrown so the firing is recorded as failed; the unchanged state makes the next one retry.
+  if (!delivered) {
+    throw new Error(`the ${email?.kind} mail did not send, so the alert state was left unchanged`);
+  }
+}
+
 export default {
   // Re-raised: a throwing Cron Trigger is recorded as a failed invocation, the last signal left.
   async scheduled(_controller: ScheduledController, env: WatchdogEnv): Promise<void> {
@@ -254,12 +396,7 @@ export default {
       const reading = await readHealth(env);
       const actions = watchdogActions(reading, { hasToken: token.length > 0 });
 
-      // Repairs run every firing and only the mail is deduplicated, so `alerting` is where it ended.
-      let alerting = false;
-      let subject = "";
-      let lines: string[] = [];
-      let failing: string[] = [];
-
+      let draft = QUIET;
       if (actions.length === 0) {
         console.log(JSON.stringify({ watchdog: "healthy", status: reading.status }));
       } else {
@@ -267,68 +404,14 @@ export default {
         if (notify.length > 0) {
           const reasons = notify.map((a) => (a as { reason: string }).reason);
           console.error(JSON.stringify({ watchdog: "alerting", reasons }));
-          alerting = true;
-          failing = failingCheckNames(reading.body);
-          subject = "dustinedwards.info is unhealthy";
-          lines = [...reasons, "", "Nothing was repaired.", "", renderBody(reading)];
+          draft = {
+            alerting: true,
+            failing: failingCheckNames(reading.body),
+            subject: "dustinedwards.info is unhealthy",
+            lines: [...reasons, "", "Nothing was repaired.", "", renderBody(reading)],
+          };
         } else {
-          const attempted: string[] = [];
-          const misses: string[] = [];
-          // A refusal abandons the rest: the Ask corpus is read from what content repair writes.
-          let refused = false;
-          for (const action of actions) {
-            if (action.type !== "repair") continue;
-            attempted.push(action.tool);
-            const outcome = await repair(env, token, action.tool);
-            if (!outcome.miss) continue;
-            misses.push(outcome.miss);
-            if (outcome.unrepairable) {
-              refused = true;
-              break;
-            }
-          }
-
-          const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
-          const outcome = watchdogOutcome({ misses, recheck });
-
-          console.log(
-            JSON.stringify({
-              watchdog: "repaired",
-              attempted,
-              misses,
-              recheckStatus: recheck?.status ?? null,
-              alerting: outcome.length > 0,
-            }),
-          );
-
-          if (outcome.length > 0) {
-            alerting = true;
-            failing = failingCheckNames((recheck ?? reading).body);
-            subject = refused
-              ? "dustinedwards.info: self-repair was refused, a deploy is the repair"
-              : "dustinedwards.info: self-repair did not settle it";
-            lines = [
-              ...outcome.map((a) => (a as { reason: string }).reason),
-              ...(refused
-                ? [
-                    "",
-                    "The operator API REFUSED the content itself (422), so repeating this " +
-                      "cannot converge. That is what a repository ahead of the deployed " +
-                      "build looks like: the content is valid and the renderer in " +
-                      "production is older than it. Deploy (npm run ship), then let the " +
-                      "next poll converge it.",
-                  ]
-                : []),
-              "",
-              `Attempted: ${attempted.join(", ") || "(nothing)"}`,
-              "",
-              "Health BEFORE the repair:",
-              renderBody(reading),
-              "",
-              "Health AFTER the repair:",
-              renderBody(recheck),
-            ];
-          }
+          draft = await runRepairs(env, token, reading, actions);
         }
       }
 
@@ -343,62 +426,13 @@ export default {
           detail: errorRate.detail,
         }),
       );
-      if (!errorRate.ok) {
-        if (!alerting) {
-          subject = "dustinedwards.info is throwing";
-          lines = [errorRate.detail];
-        } else {
-          lines = [...lines, "", `Error rate: ${errorRate.detail}`];
-        }
-        alerting = true;
-        failing = [...failing, "error-rate"];
-      }
+      draft = mergeErrorRate(draft, errorRate);
       // An unconfigured rate reads ok, so every mail says it was not checked rather than implying it was.
       const errorRateNote = errorRate.configured ? [] : ["", errorRate.detail];
 
-      const { readable, stored } = await readState(env);
-      const now = new Date().toISOString();
-      const transition = alertTransition({ stored, storedReadable: readable, alerting, failing, now });
-
-      console.log(
-        JSON.stringify({
-          watchdog: "alert-decision",
-          alerting,
-          failing,
-          storedReadable: readable,
-          email: transition.email?.kind ?? "none",
-          reason: transition.reason,
-        }),
-      );
-
-      const email = transition.email;
-      const delivered = await deliverTransition(transition, {
-        send: () =>
-          email?.kind === "opened"
-            ? alert(env, subject, [
-                `Changed to unhealthy. Failing now: ${email.checks.join(", ") || "(the endpoint named none)"}.`,
-                "",
-                "You will not be mailed again about this until it recovers.",
-                "",
-                ...lines,
-                ...errorRateNote,
-              ])
-            : alert(env, "dustinedwards.info recovered", [
-                `Health is green again after ${formatDuration(email?.durationMs ?? null)}.`,
-                "",
-                `Was failing: ${email?.checks.join(", ") || "(the endpoint named none)"}.`,
-                "",
-                renderBody(reading),
-                ...errorRateNote,
-              ]),
-        write: () => writeState(env, transition.state),
-      });
-      // Thrown so the firing is recorded as failed; the unchanged state makes the next one retry.
-      if (!delivered) {
-        throw new Error(`the ${email?.kind} mail did not send, so the alert state was left unchanged`);
-      }
+      await mailTransition(env, draft, reading, errorRateNote);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       console.error(JSON.stringify({ watchdog: "threw", error: message }));
       await alert(env, "dustinedwards.info watchdog THREW", [
         "The watchdog itself failed, so this firing proved nothing about the site.",

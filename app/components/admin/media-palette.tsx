@@ -1,20 +1,42 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { isTypingTarget } from "~/components/admin/media-keyboard";
+import { useMediaSearch } from "~/components/admin/use-media-search";
+import { copyText } from "~/lib/clipboard";
 import { byteSize } from "~/lib/media/byte-size.mjs";
 
 // Attaches to the existing search input by id rather than replacing it, so the no-script page is unchanged.
 
-type PalettePayload = { results: PaletteResult[]; hasMore: boolean };
+type PaletteKey =
+  | { do: "focus"; select: boolean }
+  | { do: "close" }
+  | { do: "move"; by: 1 | -1 }
+  | { do: "choose"; open: boolean };
 
-type PaletteResult = {
-  key: string;
-  url: string;
-  name: string;
-  dir: string;
-  size: number;
-  viewable: boolean;
-};
+/**
+ * The key map. Only Cmd+K and / are global; the rest applies in the search box alone, so arrows keep
+ * working in fields, and the list keys only while a list is showing.
+ */
+function paletteKey(
+  event: KeyboardEvent,
+  inSearchBox: boolean,
+  listing: boolean,
+): PaletteKey | null {
+  if ((event.key === "k" || event.key === "K") && (event.metaKey || event.ctrlKey)) {
+    return { do: "focus", select: true };
+  }
+  if (event.key === "/" && !isTypingTarget(event.target)) return { do: "focus", select: false };
+  if (!inSearchBox) return null;
+
+  if (event.key === "Escape") return { do: "close" };
+  if (!listing) return null;
+
+  if (event.key === "ArrowDown") return { do: "move", by: 1 };
+  if (event.key === "ArrowUp") return { do: "move", by: -1 };
+  if (event.key === "Enter") return { do: "choose", open: event.shiftKey };
+  return null;
+}
 
 export function MediaPalette({
   inputId = "media-q",
@@ -22,18 +44,14 @@ export function MediaPalette({
   inputId?: string;
 }) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<PaletteResult[]>([]);
-  const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(0);
+  const { results, hasMore, searchError } = useMediaSearch(query, setCursor);
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState("");
   const [copyFailed, setCopyFailed] = useState(false);
-  /* A failed search is said as one; an empty list would read as "nothing matches". */
-  const [searchError, setSearchError] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const seq = useRef(0);
 
   useEffect(() => {
     inputRef.current = document.getElementById(inputId) as HTMLInputElement | null;
@@ -49,49 +67,8 @@ export function MediaPalette({
     return () => input.removeEventListener("input", onInput);
   }, [inputId]);
 
-  // Sequenced: a slow response to a shorter query can land after a fast one and replace the right answer.
-  useEffect(() => {
-    const trimmed = query.trim();
-    if (!trimmed) {
-      setResults([]);
-      setHasMore(false);
-      setSearchError(null);
-      return;
-    }
-    const id = (seq.current += 1);
-    const timer = window.setTimeout(() => {
-      // Answered as JSON by the route's middleware; anything else (an expired session's page) is a failure.
-      fetch(`/admin/media?palette=1&q=${encodeURIComponent(trimmed)}`, {
-        headers: { accept: "application/json" },
-      })
-        .then((r) => {
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
-          if (!(r.headers.get("content-type") ?? "").includes("application/json")) {
-            throw new Error("the server did not answer with results");
-          }
-          return r.json() as Promise<PalettePayload>;
-        })
-        .then((data) => {
-          if (id !== seq.current) return;
-          setSearchError(null);
-          setResults(data.results ?? []);
-          setHasMore(Boolean(data.hasMore));
-          setCursor(0);
-        })
-        .catch((error: unknown) => {
-          if (id !== seq.current) return;
-          setResults([]);
-          setHasMore(false);
-          setSearchError(error instanceof Error ? error.message : String(error));
-        });
-    }, 130);
-    return () => window.clearTimeout(timer);
-  }, [query]);
-
   const copy = (value: string) => {
-    // Inside a promise: with no clipboard (an insecure context) the call throws before any promise exists.
-    Promise.resolve()
-      .then(() => navigator.clipboard.writeText(value))
+    copyText(value)
       .then(() => {
         setCopyFailed(false);
         setCopied(value);
@@ -104,54 +81,46 @@ export function MediaPalette({
       });
   };
 
-  // Only Cmd+K and / are global; the rest applies in the search box alone, so arrows keep working in fields.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = (target?.tagName ?? "").toUpperCase();
-      const inField = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      const key = paletteKey(
+        event,
+        event.target === inputRef.current,
+        open && results.length > 0,
+      );
+      if (!key) return;
 
-      if ((event.key === "k" || event.key === "K") && (event.metaKey || event.ctrlKey)) {
+      if (key.do === "focus") {
         event.preventDefault();
         inputRef.current?.focus();
-        inputRef.current?.select();
+        if (key.select) inputRef.current?.select();
         return;
       }
-      if (event.key === "/" && !inField) {
-        event.preventDefault();
-        inputRef.current?.focus();
-        return;
-      }
-      if (target !== inputRef.current) return;
-
-      if (event.key === "Escape") {
+      if (key.do === "close") {
         setOpen(false);
         if (inputRef.current) inputRef.current.value = "";
         setQuery("");
         inputRef.current?.blur();
         return;
       }
-      if (!open || results.length === 0) return;
-
-      if (event.key === "ArrowDown") {
+      if (key.do === "move") {
         event.preventDefault();
-        setCursor((c) => Math.min(results.length - 1, c + 1));
-      } else if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setCursor((c) => Math.max(0, c - 1));
-      } else if (event.key === "Enter") {
-        // preventDefault: otherwise the form submits and navigates, throwing away the copy.
-        event.preventDefault();
-        const hit = results[Math.min(cursor, results.length - 1)];
-        if (!hit) return;
-        if (event.shiftKey) {
-          // Router navigation: assigning window.location rebuilds the whole document just to show a panel.
-          navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
-            preventScrollReset: true,
-          });
-        } else {
-          copy(hit.url);
-        }
+        setCursor((c) =>
+          key.by > 0 ? Math.min(results.length - 1, c + 1) : Math.max(0, c - 1),
+        );
+        return;
+      }
+      // preventDefault: otherwise the form submits and navigates, throwing away the copy.
+      event.preventDefault();
+      const hit = results[Math.min(cursor, results.length - 1)];
+      if (!hit) return;
+      if (key.open) {
+        // Router navigation: assigning window.location rebuilds the whole document just to show a panel.
+        navigate(`/admin/media?key=${encodeURIComponent(hit.key)}`, {
+          preventScrollReset: true,
+        });
+      } else {
+        copy(hit.url);
       }
     };
     window.addEventListener("keydown", onKey);
