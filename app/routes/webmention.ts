@@ -84,7 +84,14 @@ export async function action({ request, context }: Route.ActionArgs) {
     return answer(BAD_FORM, 400);
   }
 
-  const body = await readCapped(request, MAX_BODY_BYTES);
+  /* A body stream that breaks mid-read is the sender's request failing, not this endpoint: a 400, logged. */
+  let body: string | null;
+  try {
+    body = await readCapped(request, MAX_BODY_BYTES);
+  } catch (error) {
+    console.error("[webmention] request body unreadable", error);
+    return answer("The request body could not be read.", 400);
+  }
   if (body === null) {
     return answer("Payload Too Large", 413);
   }
