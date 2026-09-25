@@ -2,7 +2,8 @@ import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
-import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 import {
   bindingUses,
   findAction,
@@ -81,23 +82,8 @@ const REVERSIBLE = new Map([
 // One upload path is selected by a shared predicate rather than an intent string, so this detector
 // cannot see it, nor any future intent routed the same way.
 
-let checks = 0;
-let failures = 0;
-
-/**
- * Condition first: a string literal in argument one is always truthy.
- *
- * @param {boolean} ok
- * @param {string} label
- * @param {string} [detail]
- */
-function assertThat(ok, label, detail) {
-  checks += 1;
-  if (ok) return;
-  failures += 1;
-  console.log(`\n  FAIL  ${label}`);
-  if (detail) console.log(`        ${detail}`);
-}
+const tally = createTally({ blankLine: true });
+const { ok } = tally;
 
 console.log("\ncheck:destructive\n");
 
@@ -107,9 +93,9 @@ if (!existsSync(ROUTES)) {
 }
 
 const files = readdirSync(ROUTES).filter((f) => f.endsWith(".tsx") || f.endsWith(".ts"));
-assertThat(
-  files.length >= 34,
+ok(
   "the route directory yielded files to scan",
+  files.length >= 34,
   `found ${files.length}, floor 34, measured 37 on 2026-08-24; a glob that stops matching would otherwise report zero problems`,
 );
 
@@ -134,11 +120,11 @@ for (const file of files) {
   for (const b of branches) {
     const id = `${file}:${b.intent}`;
     if (!DESTRUCTIVE.has(id)) continue;
-    assertThat(!b.reason, `${id}: its branch parses`, `${b.reason}, so nothing was examined`);
+    ok(`${id}: its branch parses`, !b.reason, `${b.reason}, so nothing was examined`);
     if (b.reason) continue;
-    assertThat(
-      b.guarded,
+    ok(
       `${id}: the confirmation is checked in the ACTION`,
+      b.guarded,
       `the branch handling this destructive intent never calls ${PREDICATE}(). ` +
         `If the confirmation moved to an onClick or onSubmit handler, it is gone ` +
         `for every reader without JavaScript while the destruction is not.`,
@@ -146,31 +132,31 @@ for (const file of files) {
   }
 }
 
-assertThat(
-  actionFiles >= 12,
+ok(
   "route modules exporting an action were found",
+  actionFiles >= 12,
   `only ${actionFiles} matched, floor 12, measured 13 on 2026-08-24; the action detector stopped matching`,
 );
-assertThat(
-  found.size >= 17,
+ok(
   "the intent vocabulary is non-empty",
+  found.size >= 17,
   `parsed ${found.size} intent(s), floor 17, measured 19 on 2026-08-24; every per-intent assertion above is vacuous if this is empty`,
 );
 
 // A new intent nobody classified fails by name rather than defaulting to safe.
 for (const id of found) {
-  assertThat(
-    DESTRUCTIVE.has(id) || REVERSIBLE.has(id),
+  ok(
     `${id} is classified`,
+    DESTRUCTIVE.has(id) || REVERSIBLE.has(id),
     `a new intent is handled by an action and nobody has said whether it ` +
       `destroys anything. Add it to DESTRUCTIVE (and guard it) or to ` +
       `REVERSIBLE with the reason.`,
   );
 }
 for (const id of [...DESTRUCTIVE, ...REVERSIBLE.keys()]) {
-  assertThat(
-    found.has(id),
+  ok(
     `${id} still exists`,
+    found.has(id),
     "classified here but no action branches on it; the entry is stale",
   );
 }
@@ -184,17 +170,17 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   const apiTree = parseSource(apiPath, readFileSync(apiPath, "utf8"));
 
   const toolsBlock = stringArrayConst(apiTree, "TOOLS");
-  assertThat(
-    toolsBlock !== null,
+  ok(
     "the operator TOOLS list was located",
+    toolsBlock !== null,
     "nothing below examines anything, so every tool would read as classified",
   );
   const toolNames = toolsBlock ?? [];
 
   /* An empty parse classifies nothing and reports what a compliant surface reports. */
-  assertThat(
-    toolNames.length >= 9,
+  ok(
     "the operator tool list parsed",
+    toolNames.length >= 9,
     `parsed ${toolNames.length} tool(s), floor 9, measured 11. A zero-scope parse agrees with anything.`,
   );
 
@@ -241,18 +227,18 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   ]);
 
   for (const name of toolNames) {
-    assertThat(
-      OPERATOR_DESTRUCTIVE.has(name) || OPERATOR_REVERSIBLE.has(name),
+    ok(
       `operator tool ${name} is classified`,
+      OPERATOR_DESTRUCTIVE.has(name) || OPERATOR_REVERSIBLE.has(name),
       `a tool is callable over the operator token and nobody has said whether it ` +
         `destroys anything. Add it to OPERATOR_DESTRUCTIVE (and give it a policy in ` +
         `TOOL_DESCRIPTORS) or to OPERATOR_REVERSIBLE with the reason.`,
     );
   }
   for (const name of [...OPERATOR_DESTRUCTIVE, ...OPERATOR_REVERSIBLE.keys()]) {
-    assertThat(
-      toolNames.includes(name),
+    ok(
       `operator classification ${name} still names a live tool`,
+      toolNames.includes(name),
       "classified here but absent from TOOLS; the entry is stale",
     );
   }
@@ -260,22 +246,22 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   // `policy` is a property whose value is a non-empty string literal, read off the syntax tree, so
   // neither prose nor a comment can satisfy it and the layout of the object does not matter.
   const descriptors = objectConst(apiTree, "TOOL_DESCRIPTORS");
-  assertThat(
-    descriptors !== null,
+  ok(
     "the operator TOOL_DESCRIPTORS object was located",
+    descriptors !== null,
     "no descriptor below could be examined",
   );
   for (const name of OPERATOR_DESTRUCTIVE) {
     const entry = descriptors ? propertyValue(descriptors, name) : null;
     const descriptor = entry && ts.isObjectLiteralExpression(entry) ? entry : null;
-    assertThat(
-      descriptor !== null,
+    ok(
       `${name}: its TOOL_DESCRIPTORS entry was located`,
+      descriptor !== null,
       "the assertion below would examine nothing",
     );
-    assertThat(
-      descriptor !== null && isLiteralString(propertyValue(descriptor, "policy")),
+    ok(
       `${name}: declares the policy that refuses it`,
+      descriptor !== null && isLiteralString(propertyValue(descriptor, "policy")),
       `a destructive tool with no \`policy\` in its descriptor is one an agent ` +
         `discovers by being refused. GET /api/operator serves this block, so the ` +
         `refusal is documented before it is hit.`,
@@ -288,21 +274,13 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 // syntax tree because every file touching this binding has a comment naming both.
 {
   /** @param {string} dir @returns {string[]} */
-  const walk = (dir) => {
-    if (!existsSync(dir)) return [];
-    /** @type {string[]} */
-    const out = [];
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name === "node_modules" || entry.name === "dist") continue;
-        out.push(...walk(full));
-      } else if (/\.(ts|tsx|mjs|js)$/.test(entry.name)) {
-        out.push(full);
-      }
-    }
-    return out;
-  };
+  const walk = (dir) =>
+    existsSync(dir)
+      ? walkFiles(dir, {
+          keep: (name) => /\.(ts|tsx|mjs|js)$/.test(name),
+          skipDir: (name) => name === "node_modules" || name === "dist",
+        })
+      : [];
 
   /**
    * Read off the syntax tree: a comment naming the binding is not a use, `env["MEDIA_BACKUP"]` and a
@@ -314,24 +292,24 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   const backupUses = (name, text) => bindingUses(parseSource(name, text), "MEDIA_BACKUP");
 
   // A matcher that cannot detect the violation agrees with every file it reads, so it is proven first.
-  assertThat(
-    backupUses("c.ts", "await env.MEDIA_BACKUP.delete(key);").deletes.length === 1,
+  ok(
     "the backup-delete scan detects a real delete",
+    backupUses("c.ts", "await env.MEDIA_BACKUP.delete(key);").deletes.length === 1,
     "it matched nothing, so the sweep below would pass over a genuine violation",
   );
-  assertThat(
-    backupUses("c.ts", "const b = env.MEDIA_BACKUP; await b.delete(key);").deletes.length === 1,
+  ok(
     "the backup-delete scan follows a local alias",
+    backupUses("c.ts", "const b = env.MEDIA_BACKUP; await b.delete(key);").deletes.length === 1,
     "a delete through `const b = env.MEDIA_BACKUP` would pass unseen",
   );
-  assertThat(
-    backupUses("c.ts", "await env.MEDIA_BACKUP.put(key, body);").deletes.length === 0,
+  ok(
     "the backup-delete scan ignores a put",
+    backupUses("c.ts", "await env.MEDIA_BACKUP.put(key, body);").deletes.length === 0,
     "a scan that fires on any use of the binding would be unusable",
   );
-  assertThat(
-    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_BACKUP;").deletes.length === 0,
+  ok(
     "the backup-delete scan does not fire on a delete from MEDIA",
+    backupUses("c.ts", "await env.MEDIA.delete(key); const b = env.MEDIA_BACKUP;").deletes.length === 0,
     "deleting a media object is legitimate; only the mirror is protected",
   );
 
@@ -350,9 +328,9 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
   ];
 
   // A walk that returned nothing would report a clean sweep.
-  assertThat(
-    sources.length >= 100,
+  ok(
     "the backup sweep read a non-empty source tree",
+    sources.length >= 100,
     `only ${sources.length} file(s) were read, so a clean result means nothing`,
   );
 
@@ -372,29 +350,29 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     for (const callee of uses.passedTo) {
       const id = `${rel}:${callee}`;
       passedSeen.add(id);
-      assertThat(
-        BACKUP_PASSED_TO.has(id),
+      ok(
         `${id} is handed MEDIA_BACKUP and has been read`,
+        BACKUP_PASSED_TO.has(id),
         "a function given the backup binding can delete from it where this sweep cannot see. " +
           "Read it, and add it to BACKUP_PASSED_TO with the reason it cannot delete.",
       );
     }
   }
   for (const id of BACKUP_PASSED_TO.keys()) {
-    assertThat(passedSeen.has(id), `${id} is still handed MEDIA_BACKUP`, "the entry is stale");
+    ok(`${id} is still handed MEDIA_BACKUP`, passedSeen.has(id), "the entry is stale");
   }
 
   // Zero files naming the binding means it was renamed, and every assertion above would be true of nothing.
-  assertThat(
-    mentioning > 0,
+  ok(
     "at least one source file reaches the MEDIA_BACKUP binding",
+    mentioning > 0,
     "no file names it, so either the mirror is gone or this gate is watching a " +
       "binding that no longer exists",
   );
 
-  assertThat(
-    violations.length === 0,
+  ok(
     "no source deletes from the backup bucket",
+    violations.length === 0,
     `${violations.length} delete(s) against MEDIA_BACKUP: ${violations.join(" | ")}`,
   );
 
@@ -406,8 +384,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 
 // Measured by running this gate. Not raised on every addition: its job is to catch a whole block being skipped.
 const MINIMUM_CHECKS = 99;
-const floorBreach = assertFloor("check:destructive", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) assertThat(false, "this gate executed its assertions", floorBreach);
+tally.floor("check:destructive", "checks", MINIMUM_CHECKS);
 
-console.log(`\n${checks} checks, ${failures} failure${failures === 1 ? "" : "s"}\n`);
-process.exit(failures > 0 ? 1 : 0);
+console.log(`\n${tally.checks} checks, ${tally.failures} failure${tally.failures === 1 ? "" : "s"}\n`);
+process.exit(tally.failures > 0 ? 1 : 0);

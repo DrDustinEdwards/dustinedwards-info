@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { createServer } from "node:http";
 
 import { ciVerdict, fetchCiRuns } from "../scripts/lib/ci-status.mjs";
+import { withServer } from "./lib/http.mjs";
 
 const SHA = "e15b883";
 const FULL_SHA = `${SHA}0123456789abcdef0123456789abcdef0`;
@@ -129,51 +130,38 @@ test("PLANT 3: an unreachable API throws rather than returning a pass", async ()
 test("a non-2xx API answer throws with its status", async () => {
   /* A 404 must throw rather than read as an empty run list. The status comes from a local
    * server, so this offline-tier test never depends on GitHub answering. */
-  const server = createServer((_request, response) => {
-    response.writeHead(404, { "content-type": "application/json" });
-    response.end(JSON.stringify({ message: "Not Found" }));
-  });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address();
-
-  try {
-    await assert.rejects(
-      () =>
-        fetchCiRuns({
-          owner: "x",
-          repo: "this-repo-does-not-exist-91a7f",
-          sha: SHA,
-          apiBase: `http://127.0.0.1:${port}`,
-        }),
-      /GitHub API answered 404/,
-    );
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
-  }
+  await withServer(
+    (_request, response) => {
+      response.writeHead(404, { "content-type": "application/json" });
+      response.end(JSON.stringify({ message: "Not Found" }));
+    },
+    (apiBase) =>
+      assert.rejects(
+        () =>
+          fetchCiRuns({ owner: "x", repo: "this-repo-does-not-exist-91a7f", sha: SHA, apiBase }),
+        /GitHub API answered 404/,
+      ),
+  );
 });
 
 test("a 5xx is thrown with ITS status, not flattened into the 404 hint", async () => {
   /* The 404 branch carries a private-repo hint that would send a reader to `gh auth login`
    * over an upstream outage. */
-  const server = createServer((_request, response) => {
-    response.writeHead(504, { "content-type": "text/plain" });
-    response.end("gateway timeout");
-  });
-  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address();
-
-  try {
-    await assert.rejects(
-      () => fetchCiRuns({ owner: "x", repo: "y", sha: SHA, apiBase: `http://127.0.0.1:${port}` }),
-      (error) => {
-        assert.match(error.message, /GitHub API answered 504/);
-        assert.doesNotMatch(error.message, /gh auth login/);
-        return true;
-      },
-    );
-  } finally {
-    await new Promise((resolve) => server.close(resolve));
-  }
+  await withServer(
+    (_request, response) => {
+      response.writeHead(504, { "content-type": "text/plain" });
+      response.end("gateway timeout");
+    },
+    (apiBase) =>
+      assert.rejects(
+        () => fetchCiRuns({ owner: "x", repo: "y", sha: SHA, apiBase }),
+        (error) => {
+          assert.match(error.message, /GitHub API answered 504/);
+          assert.doesNotMatch(error.message, /gh auth login/);
+          return true;
+        },
+      ),
+  );
 });
 
 test("a run for another commit refuses: the head_sha filter was not applied", () => {

@@ -2,6 +2,7 @@ import { parseHTML } from "linkedom";
 
 import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
 import { readCapped } from "~/lib/read-capped.mjs";
+import { SITE_ORIGIN } from "~/lib/seo";
 import { collapseExcerpt, sameDocument, sourceVerdict } from "~/lib/webmention/urls.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 
@@ -67,8 +68,8 @@ function readAuthor(
   return { authorName: name.length > 0 ? name : hostname, authorUrl };
 }
 
-// Pure of the database: it fetches and judges the source, and the caller records the verdict.
-async function inspectSource(
+// Pure of the database, so a test can drive the decision over a stubbed fetch.
+export async function inspectSource(
   sourceUrl: string,
   targetUrl: string,
 ): Promise<WebmentionVerdict> {
@@ -76,8 +77,9 @@ async function inspectSource(
   // otherwise be misreported as a fetch error.
   const signal = AbortSignal.timeout(SOURCE_TIMEOUT_MS);
 
-  // The target is on this site, so its origin is one the source may not redirect back to.
-  const siteOrigins = [new URL(targetUrl).origin];
+  // The same two origins the route refused on the first URL: the canonical one and the target's host,
+  // which differ before the cutover. A hop to either is a redirect back onto this site.
+  const siteOrigins = [...new Set([SITE_ORIGIN, new URL(targetUrl).origin])];
   let response: Response;
   let at = sourceUrl;
   for (let hop = 0; ; hop += 1) {
