@@ -18,38 +18,16 @@ import { action as adminAction, middleware as adminMediaMiddleware } from "~/rou
 import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
 
+import { bytesFor, envWithImages, pngKey } from "./media-fixtures";
 import { routeContext } from "./route-helpers";
 import { seedPost } from "./seed";
 
-/**
- * `IMAGES` has no local emulation, so cases hand it a binding with a recorded shape. The pool
- * shares one D1 and R2 across cases, so every case seeds its own bytes or keys would collide.
- */
-
 const mediaEnv = () => env as unknown as Parameters<typeof upsertMediaRecord>[0];
-
-/** `null` models an SVG: the real binding answers with no `width`. */
-function envWithImages(dimensions: { width: number; height: number } | null) {
-  return {
-    ...env,
-    IMAGES: {
-      info: async (stream: ReadableStream) => {
-        /* Drained, because the real binding consumes the stream. */
-        await new Response(stream).arrayBuffer();
-        return dimensions ?? { format: "image/svg+xml" };
-      },
-    },
-  } as unknown as Parameters<typeof measureDimensions>[0];
-}
-
-function bytesFor(seed: string) {
-  return new TextEncoder().encode(`fake-image-bytes:${seed}`);
-}
 
 async function uploadKey(seed: string, dimensions: { width: number; height: number } | null) {
   const bytes = bytesFor(seed);
   const measured = await measureDimensions(envWithImages(dimensions), bytes.buffer as ArrayBuffer);
-  const key = contentKey(await crypto.subtle.digest("SHA-256", bytes), "png", measured);
+  const key = await pngKey(seed, measured);
   return { bytes, measured, key };
 }
 
@@ -325,12 +303,7 @@ describe("the duplicates lens", () => {
       contentKey(digest, "png", { width: 10, height: 10 }, name),
     );
     const singles = await Promise.all(
-      ["single-a", "single-b", "single-c"].map(async (seed) =>
-        contentKey(await crypto.subtle.digest("SHA-256", bytesFor(seed)), "png", {
-          width: 10,
-          height: 10,
-        }),
-      ),
+      ["single-a", "single-b", "single-c"].map((seed) => pngKey(seed, { width: 10, height: 10 })),
     );
     /* The singles are newest, so an unfiltered first page would be all singles. */
     for (const [i, key] of [...twins, ...singles].entries()) {
