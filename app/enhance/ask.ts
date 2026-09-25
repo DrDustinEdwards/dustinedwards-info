@@ -3,13 +3,13 @@ import { splitFollowUp } from "~/lib/search/follow-up.mjs";
 
 const CHUNKS_EVENT = "chunks";
 
-export interface AskCitation {
+interface AskCitation {
   url: string;
   title: string;
   isSection: boolean;
 }
 
-export interface AskHandle {
+interface AskHandle {
   cancel(): void;
 }
 

@@ -16,7 +16,6 @@ export type RecordedCall = {
 export type GitHubStub = {
   calls: RecordedCall[];
   files: Map<string, string>;
-  head: { commitSha: string; treeSha: string };
   /** Fail the next `times` requests whose path contains `fragment`, with a 500. */
   failNext: (fragment: string, times: number) => void;
   restore: () => void;
@@ -25,7 +24,7 @@ export type GitHubStub = {
 const API = "https://api.github.com";
 const REPO_PREFIX = "/repos/DrDustinEdwards/dustinedwards-info";
 
-export const STUB_HEAD_SHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const STUB_HEAD_SHA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
   const files = new Map(Object.entries(seed));
@@ -153,7 +152,6 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
   return {
     calls,
     files,
-    head,
     failNext: (fragment, times) => failures.set(fragment, times),
     restore: () => vi.unstubAllGlobals(),
   };

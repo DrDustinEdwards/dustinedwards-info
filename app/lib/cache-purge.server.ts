@@ -1,7 +1,7 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { cache } from "cloudflare:workers";
 
-import { PAGES_CACHE_TAG, cacheTags } from "~/lib/seo";
+import { cacheTags } from "~/lib/seo";
 
 // A purge never throws and never blocks a write: a failed invalidation is a stale page and a log
 // line, not a 500 after a publish that already succeeded.
@@ -70,10 +70,4 @@ export async function purgePost(slug: string, why: string): Promise<PurgeOutcome
 // Not `purgeEverything`, which would also drop the hand-authored pages no publish changes.
 export async function purgePosts(why: string): Promise<PurgeOutcome> {
   return purgeTags([cacheTags()], why);
-}
-
-// Uncalled on purpose: only a deploy changes these pages, and the Worker version in the cache key
-// already invalidates them then.
-export async function purgePages(why: string): Promise<PurgeOutcome> {
-  return purgeTags([PAGES_CACHE_TAG], why);
 }

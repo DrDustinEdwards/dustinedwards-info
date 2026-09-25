@@ -39,5 +39,3 @@ export function post(
   ];
   return lines.join("\n");
 }
-
-export { postPath } from "~/lib/content/pipeline.mjs";

@@ -66,8 +66,8 @@ function readAuthor(
   return { authorName: name.length > 0 ? name : hostname, authorUrl };
 }
 
-// Pure of the database, so a test can drive the decision over a stubbed fetch.
-export async function inspectSource(
+// Pure of the database: it fetches and judges the source, and the caller records the verdict.
+async function inspectSource(
   sourceUrl: string,
   targetUrl: string,
 ): Promise<WebmentionVerdict> {

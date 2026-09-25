@@ -10,7 +10,7 @@ export { CHART_TYPES };
 
 // Tokens, never hexes: the custom property resolves per theme in the browser, so one render serves
 // both themes. The sixth (extended) slot is safe because multi-series charts are directly labelled.
-export const CHART_SERIES_TOKENS = [
+const CHART_SERIES_TOKENS = [
   "var(--chart-cadet)",
   "var(--chart-purple)",
   "var(--chart-claret)",

@@ -18,18 +18,15 @@ type PaletteResult = {
 
 export function MediaPalette({
   inputId = "media-q",
-  /** Test seam: a static render dispatches no events, so without this the panel never opens. */
-  initialResults,
 }: {
   inputId?: string;
-  initialResults?: { query: string; results: PaletteResult[]; hasMore: boolean };
 }) {
-  const [query, setQuery] = useState(initialResults?.query ?? "");
-  const [results, setResults] = useState<PaletteResult[]>(initialResults?.results ?? []);
-  const [hasMore, setHasMore] = useState(initialResults?.hasMore ?? false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<PaletteResult[]>([]);
+  const [hasMore, setHasMore] = useState(false);
   const [cursor, setCursor] = useState(0);
   const navigate = useNavigate();
-  const [open, setOpen] = useState(Boolean(initialResults));
+  const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState("");
   const [copyFailed, setCopyFailed] = useState(false);
   /* A failed search is said as one; an empty list would read as "nothing matches". */

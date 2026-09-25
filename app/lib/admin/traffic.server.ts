@@ -7,7 +7,7 @@ import type { PostReadership, SourceResult, TrafficReport, TrafficRow } from "./
 const DATASET = "dustinedwards_traffic";
 
 // `INTERVAL '7' DAY` must be the QUOTED form; this API rejects the unquoted spelling.
-export function trafficQuery(windowDays: number, limit: number) {
+function trafficQuery(windowDays: number, limit: number) {
   return (
     `SELECT blob1 AS path, ` +
     `SUM(_sample_interval) AS origin_requests, ` +
@@ -21,7 +21,7 @@ export function trafficQuery(windowDays: number, limit: number) {
 }
 
 // A separate statement because the SQL API takes one per request.
-export function trafficTotalQuery(windowDays: number) {
+function trafficTotalQuery(windowDays: number) {
   return (
     `SELECT SUM(_sample_interval) AS origin_requests, ` +
     `COUNT(DISTINCT blob1) AS paths ` +

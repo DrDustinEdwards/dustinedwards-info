@@ -46,14 +46,14 @@ export interface SearchHit {
   score: number;
 }
 
-export interface SearchFacets {
+interface SearchFacets {
   types: Array<{ value: string; count: number }>;
   tags: Array<{ value: string; count: number }>;
   years: Array<{ value: number; count: number }>;
 }
 
 /** No score field: bm25 across differently tokenized indexes is not comparable, so it never leaves SQL. */
-export interface SearchExplainRow {
+interface SearchExplainRow {
   uid: string;
   title: string;
   /** Records are section-grained, so a row's own title is often a bare heading. */
@@ -229,7 +229,7 @@ function whyMatched(row: RawRow, parsed: ParsedQuery, inProse: boolean): MatchRe
   return why;
 }
 
-export interface SearchOptions {
+interface SearchOptions {
   q: string;
   type?: string | null;
   tag?: string | null;
@@ -480,4 +480,3 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
 }
 
 export { parseSort };
-export type { SearchSort };

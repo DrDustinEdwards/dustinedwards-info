@@ -38,6 +38,8 @@ test("THE DEFECT: a pending migration is REFUSED and named", () => {
 });
 
 test("THE INVERSE: nothing pending proceeds", () => {
+  // The name pattern is anchored to the four-digit prefix, so the wrangler
+  // version line and its update notice cannot be read as filenames.
   const verdict = readMigrationList({ code: 0, text: CLEAN_REAL });
   assert.equal(verdict.state, "clean");
   assert.deepEqual(verdict.pending, []);
@@ -82,13 +84,6 @@ test("AMBIGUITY RESOLVES TOWARD REFUSING, never toward shipping", () => {
   assert.equal(verdict.state, "pending");
 });
 
-test("a banner mentioning a version cannot be mistaken for a migration", () => {
-  // The name pattern is anchored to the four-digit prefix, so the wrangler
-  // version line and its update notice cannot be read as filenames.
-  const verdict = readMigrationList({ code: 0, text: CLEAN_REAL });
-  assert.deepEqual(verdict.pending, []);
-});
-
 test("the empty match set alone is never evidence of a clean database", () => {
   const noNames = readMigrationList({ code: 0, text: "Resource location: remote" });
   assert.notEqual(noNames.state, "clean");
@@ -99,5 +94,4 @@ test("the refusal carries the exact next command, database filled in", () => {
     applyCommand("dustinedwards"),
     "npx wrangler d1 migrations apply dustinedwards --remote",
   );
-  assert.match(applyCommand("dustinedwards"), /--remote/);
 });

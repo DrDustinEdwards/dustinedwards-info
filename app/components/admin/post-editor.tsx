@@ -66,13 +66,6 @@ function slugify(title: string) {
     .replace(/-+$/, "");
 }
 
-export type EditorProblem = {
-  message: string;
-  field?: string;
-  line?: number;
-  conflict?: boolean;
-};
-
 export function PostEditor({
   fields,
   isNew,

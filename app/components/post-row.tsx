@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 
-export type RowPost = {
+type RowPost = {
   slug: string;
   title: string;
   description: string | null;
