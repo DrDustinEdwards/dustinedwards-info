@@ -1,86 +1,80 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
-// Focus return is derived from `data-tile`, not a stored activeElement: opening is a navigation, so
-// the stored node may be gone, and a drawer opened from the URL has no trigger at all.
-export function MediaDrawer({
-  activeKey,
-  closeHref,
-}: {
-  activeKey: string;
-  closeHref: string;
-}) {
+/**
+ * Where focus goes when the inspector closes: the tile it was opened for, found by `data-tile`
+ * rather than a stored node, because opening is a navigation and a drawer opened from the URL has
+ * no trigger at all. The grid's tab stop is the thumbnail and the list's is the name.
+ */
+function focusTile(key: string) {
+  if (document.activeElement && document.activeElement !== document.body) return;
+  const tile = document.querySelector(`[data-tile="${CSS.escape(key)}"]`);
+  const grid = tile?.closest("[data-view]")?.getAttribute("data-view") === "grid";
+  const target =
+    tile?.querySelector<HTMLElement>(grid ? "a.media-thumb-link" : "a.media-name") ??
+    document.getElementById("main");
+  target?.focus({ preventScroll: false });
+}
+
+/**
+ * Drives the inspector's native `<dialog>`: modal once hydrated, so the page behind is inert and
+ * the browser owns the focus trap. Returns whether it has hydrated; until then the server render
+ * shows the dialog inline through `data-inline`, and its own links open and close it without script.
+ */
+export function useInspectorDialog(
+  ref: React.RefObject<HTMLDialogElement | null>,
+  activeKey: string,
+  closeHref: string,
+) {
   const navigate = useNavigate();
-  const panel = useRef<HTMLElement | null>(null);
+  const [hydrated, setHydrated] = useState(false);
+  const keyRef = useRef(activeKey);
 
   useEffect(() => {
-    panel.current = document.querySelector(".media-detail");
-    const el = panel.current;
+    keyRef.current = activeKey;
+  }, [activeKey]);
+
+  useEffect(() => {
+    setHydrated(true);
+    const el = ref.current;
     if (!el) return;
-
-    const stops = () =>
-      [
-        ...el.querySelectorAll<HTMLElement>(
-          'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])',
-        ),
-      ].filter((n) => n.offsetParent !== null || getComputedStyle(n).position === "fixed");
-
-    // Focus the panel, not Close: focusing Close makes a screen reader announce "Close" as the whole event.
-    const previous = document.activeElement as HTMLElement | null;
+    if (!el.open) el.showModal();
+    // The panel, not Close: focusing Close makes a screen reader announce "Close" as the whole event.
     el.focus({ preventScroll: true });
-
-    const close = () => {
-      navigate(closeHref, { preventScrollReset: true });
-      // Deferred: a tile inside a scroller is not focusable until it has a box.
-      window.setTimeout(() => {
-        const tile = document.querySelector<HTMLElement>(
-          `[data-tile="${CSS.escape(activeKey)}"] a.media-thumb-link`,
-        );
-        if (tile) {
-          tile.focus({ preventScroll: false });
-          return;
-        }
-        if (previous && previous.isConnected && previous !== document.body) previous.focus();
-      }, 0);
-    };
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        // Stop here, or one Escape would close the drawer AND clear the selection behind it.
-        event.stopPropagation();
-        close();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const list = stops();
-      const first = list[0];
-      const last = list[list.length - 1];
-      if (!first || !last) return;
-      const active = document.activeElement;
-      // Focus escapes the drawer entirely when a form control unmounts.
-      if (!el.contains(active)) {
-        event.preventDefault();
-        first.focus();
-      } else if (event.shiftKey && active === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    el.addEventListener("keydown", onKey);
-    const onWindowKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !el.contains(document.activeElement)) close();
-    };
-    window.addEventListener("keydown", onWindowKey);
+    // Closing unmounts the dialog and drops focus on the body. Deferred: a tile inside a scroller is
+    // not focusable until it has a box.
     return () => {
-      el.removeEventListener("keydown", onKey);
-      window.removeEventListener("keydown", onWindowKey);
+      window.setTimeout(() => focusTile(keyRef.current), 0);
     };
-  }, [activeKey, closeHref, navigate]);
+  }, [ref]);
 
-  return null;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const close = () => navigate(closeHref, { preventScrollReset: true });
+    // Escape leaves by the URL, as the Close link does: a natively closed dialog would leave ?key= behind.
+    const onCancel = (event: Event) => {
+      event.preventDefault();
+      close();
+    };
+    // A click outside the panel's box landed on the backdrop, which stands in for the scrim link.
+    const onClick = (event: MouseEvent) => {
+      if (event.target !== el) return;
+      const r = el.getBoundingClientRect();
+      const inside =
+        event.clientX >= r.left &&
+        event.clientX <= r.right &&
+        event.clientY >= r.top &&
+        event.clientY <= r.bottom;
+      if (!inside) close();
+    };
+    el.addEventListener("cancel", onCancel);
+    el.addEventListener("click", onClick);
+    return () => {
+      el.removeEventListener("cancel", onCancel);
+      el.removeEventListener("click", onClick);
+    };
+  }, [ref, closeHref, navigate]);
+
+  return hydrated;
 }

@@ -1,12 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
-import { isTypingTarget } from "~/components/admin/media-keyboard";
+import { toast } from "~/components/admin/toast";
 import { useMediaSearch } from "~/components/admin/use-media-search";
 import { copyText } from "~/lib/clipboard";
 import { byteSize } from "~/lib/media/byte-size.mjs";
 
 // Attaches to the existing search input by id rather than replacing it, so the no-script page is unchanged.
+// The input becomes an APG combobox over a listbox, the pattern the editor's link palette uses.
+
+const LIST_ID = "media-palette-list";
+// By position, not key: two keys can sanitise to the same id, and activedescendant would then point at the wrong row.
+const optionId = (index: number) => `media-palette-opt-${index}`;
 
 type PaletteKey =
   | { do: "focus"; select: boolean }
@@ -15,8 +20,9 @@ type PaletteKey =
   | { do: "choose"; open: boolean };
 
 /**
- * The key map. Only Cmd+K and / are global; the rest applies in the search box alone, so arrows keep
- * working in fields, and the list keys only while a list is showing.
+ * The key map. Only Cmd+K is global: a bare "/" was a single-key shortcut on the whole page, which
+ * WCAG 2.1.4 forbids without a way to turn it off. The rest applies in the search box alone, and the
+ * list keys only while a list is showing.
  */
 function paletteKey(
   event: KeyboardEvent,
@@ -26,7 +32,6 @@ function paletteKey(
   if ((event.key === "k" || event.key === "K") && (event.metaKey || event.ctrlKey)) {
     return { do: "focus", select: true };
   }
-  if (event.key === "/" && !isTypingTarget(event.target)) return { do: "focus", select: false };
   if (!inSearchBox) return null;
 
   if (event.key === "Escape") return { do: "close" };
@@ -50,6 +55,8 @@ export function MediaPalette({
   const [open, setOpen] = useState(false);
   const [copied, setCopied] = useState("");
   const [copyFailed, setCopyFailed] = useState(false);
+  const listing = open && results.length > 0 && !searchError;
+  const activeIndex = listing ? Math.min(cursor, results.length - 1) : -1;
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -67,16 +74,32 @@ export function MediaPalette({
     return () => input.removeEventListener("input", onInput);
   }, [inputId]);
 
+  // The combobox state lives on the page's own input, so it is written there rather than rendered.
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    input.setAttribute("role", "combobox");
+    input.setAttribute("aria-autocomplete", "list");
+    input.setAttribute("aria-expanded", String(listing));
+    if (listing) input.setAttribute("aria-controls", LIST_ID);
+    else input.removeAttribute("aria-controls");
+    if (activeIndex >= 0) input.setAttribute("aria-activedescendant", optionId(activeIndex));
+    else input.removeAttribute("aria-activedescendant");
+  }, [listing, activeIndex]);
+
+  // Announced by the page's toast region as well as shown in the count: the count is not a live region.
   const copy = (value: string) => {
     copyText(value)
       .then(() => {
         setCopyFailed(false);
         setCopied(value);
+        toast(`Copied ${value}`);
         window.setTimeout(() => setCopied(""), 1600);
       })
       .catch(() => {
         setCopied("");
         setCopyFailed(true);
+        toast(`Copy failed. The address is ${value}`);
         window.setTimeout(() => setCopyFailed(false), 2400);
       });
   };
@@ -96,11 +119,15 @@ export function MediaPalette({
         if (key.select) inputRef.current?.select();
         return;
       }
+      // APG: Escape closes the list and, pressed again, clears the field. Focus stays in the box.
       if (key.do === "close") {
-        setOpen(false);
+        event.preventDefault();
+        if (open) {
+          setOpen(false);
+          return;
+        }
         if (inputRef.current) inputRef.current.value = "";
         setQuery("");
-        inputRef.current?.blur();
         return;
       }
       if (key.do === "move") {
@@ -127,10 +154,29 @@ export function MediaPalette({
     return () => window.removeEventListener("keydown", onKey);
   }, [open, results, cursor, navigate]);
 
-  if (!open || (results.length === 0 && !query.trim())) return null;
+  const count = `${results.length}${hasMore ? "+" : ""} match${results.length === 1 && !hasMore ? "" : "es"}`;
+  // In the document before the list opens, so the first count is announced as well as later ones.
+  const announcement = !open || !query.trim()
+    ? ""
+    : searchError
+      ? "Search failed"
+      : results.length
+        ? count
+        : "No matches";
+  const status = (
+    <p className="sr-only" role="status">
+      {announcement}
+    </p>
+  );
 
+  const showing = open && (results.length > 0 || query.trim().length > 0);
+
+  // One return, so the region keeps its place whether or not the list shows and is never remounted.
   return (
-    <div className="media-palette" role="presentation">
+    <>
+    {status}
+    {showing ? (
+    <div className="media-palette">
       {searchError ? (
         <p className="media-palette-empty">
           Search failed: {searchError}. Press Enter to search the full page.
@@ -141,12 +187,17 @@ export function MediaPalette({
           text and tags.
         </p>
       ) : (
-        <ul className="media-palette-list">
+        <ul className="media-palette-list" id={LIST_ID} role="listbox" aria-label="Matching files">
           {results.map((r, i) => (
-            <li key={r.key}>
-              {/* A link, not a button: clicking a row opens it, while Enter copies. */}
+            <li key={r.key} role="presentation">
+              {/* A link, not a button: clicking a row opens it, while Enter copies. Out of the tab
+                  order: the box keeps focus and points at the option. */}
               <a
                 href={`/admin/media?key=${encodeURIComponent(r.key)}`}
+                id={optionId(i)}
+                role="option"
+                aria-selected={i === Math.min(cursor, results.length - 1)}
+                tabIndex={-1}
                 className="media-palette-row"
                 data-active={i === Math.min(cursor, results.length - 1) ? "yes" : undefined}
                 onMouseEnter={() => setCursor(i)}
@@ -181,16 +232,12 @@ export function MediaPalette({
         <span>
           <b>shift enter</b> opens details
         </span>
-        <span className="media-palette-count">
-          {copied
-            ? "copied"
-            : copyFailed
-              ? "copy failed"
-              : results.length
-              ? `${results.length}${hasMore ? "+" : ""} match${results.length === 1 && !hasMore ? "" : "es"}`
-              : ""}
+        <span className="media-palette-count" aria-hidden="true">
+          {copied ? "copied" : copyFailed ? "copy failed" : results.length ? count : ""}
         </span>
       </p>
     </div>
+    ) : null}
+    </>
   );
 }

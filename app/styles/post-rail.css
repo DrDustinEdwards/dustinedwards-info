@@ -109,8 +109,8 @@
   color: var(--brand);
 }
 
-/* app/enhance/blog.ts sets data-current on scroll; with no script every entry reads muted. */
-.post-toc a[data-current] {
+/* app/enhance/blog.ts sets aria-current on scroll; with no script every entry reads muted. */
+.post-toc a[aria-current="location"] {
   color: var(--text);
 }
 

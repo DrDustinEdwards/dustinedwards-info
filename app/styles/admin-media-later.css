@@ -197,6 +197,8 @@
 }
 
 .media-tag-chip {
+  /* The 24px target floor, held rather than left to the font's line height. */
+  min-height: 1.5rem;
   padding: 0.1875rem 0.5rem;
   color: var(--text-secondary);
   font: inherit;
@@ -434,15 +436,19 @@
   left: 50%;
   margin: 0;
   padding: 0.625rem 1.125rem;
+  /* max-content, or a box pinned at left: 50% shrinks to half the viewport before it wraps. */
+  width: max-content;
   max-width: min(32rem, calc(100vw - 2rem));
   overflow: hidden;
   background: var(--scrim);
   color: var(--on-scrim);
   font-size: 0.8125rem;
   border-radius: 0.625rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  /* Wrapped, never ellipsised: the address is the message, and a clipped one cannot be read. */
+  overflow-wrap: anywhere;
   pointer-events: none;
+  /* Empty, it is transparent and never visibility: hidden, which takes a live region out of the
+     accessibility tree: one that joins the tree as it gains content is often never announced. */
   opacity: 0;
   transform: translateX(-50%) translateY(0.75rem);
   transition: opacity 0.2s ease, transform 0.2s ease;
@@ -453,19 +459,14 @@
   transform: translateX(-50%) translateY(0);
 }
 
-/* An empty live region stays in the DOM, invisible: a region inserted when it gains content is often
-   never announced. */
-.media-toast:not([data-showing="yes"]) {
-  visibility: hidden;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .media-toast {
     transition-duration: 0.01ms;
   }
 }
 
-.media-card[data-active-tile="yes"] {
+/* The keyboard's place in the grid, drawn on the whole tile: the link's own ring is clipped by it. */
+.media-grid[data-view="grid"] .media-card:has(:focus-visible) {
   box-shadow: inset 0 0 0 2px var(--brand);
 }
 

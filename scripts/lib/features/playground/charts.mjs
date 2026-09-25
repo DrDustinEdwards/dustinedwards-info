@@ -49,8 +49,13 @@ export function checkCharts({ ok, datasets }) {
       ok(`chart options: ${key}/${type} emits an svg`, /<svg[\s>]/.test(svg));
       ok(
         `chart options: ${key}/${type} labels the mark group "${type}"`,
-        new RegExp(`<g[^>]*aria-label="${type}"`).test(svg),
+        new RegExp(`<g[^>]*data-plot-mark="${type}"`).test(svg),
         "the requested mark type did not reach the renderer",
+      );
+      ok(
+        `chart options: ${key}/${type} names nothing inside the svg but the svg itself`,
+        !/<g[^>]*aria-label=/.test(svg),
+        "an aria-label on a <g> has no role to belong to, and role=\"img\" hides it anyway",
       );
       const element = MARK_ELEMENT[type];
       ok(
