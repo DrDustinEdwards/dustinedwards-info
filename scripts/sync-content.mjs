@@ -182,171 +182,123 @@ async function wranglerImport(args, label) {
   }
 }
 
-async function main() {
-  const target = process.argv.includes("--remote") ? "--remote" : "--local";
-
-  const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
-  // Every delete below converges D1 to this artifact, so an empty one would empty production.
-  const posts = requirePosts(artifact, ARTIFACT_PATH);
-  const { records } = artifact;
-  if (!Array.isArray(records) || records.length === 0) {
-    throw new Error(
-      `${ARTIFACT_PATH} carries no search records. Run npm run build:content first; ` +
-        `nothing was written.`,
-    );
+/**
+ * search_docs is replaced wholesale, so its floor compares the artifact against what D1 holds now.
+ * @param {string} target @param {any[]} records
+ */
+function refuseSearchShrink(target, records) {
+  const read = runWrangler(
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
+      '"SELECT COUNT(*) AS docs FROM search_docs;"',
+  );
+  if (read.status !== 0) {
+    console.error(read.output);
+    throw new Error("the pre-write search_docs count failed, so the delete floor cannot hold");
   }
-  const problems = syncablePostProblems(posts);
-  if (problems.length > 0) {
-    throw new Error(
-      `${ARTIFACT_PATH} has posts sync cannot trust, so nothing was written:\n  ` +
-        problems.join("\n  "),
-    );
+  const countMatch = read.stdout.match(/\[[\s\S]*\]/);
+  if (!countMatch) throw new Error(`could not parse the search_docs count:\n${read.output}`);
+  const current = JSON.parse(countMatch[0])[0].results[0]?.docs;
+  const searchFloor = deleteFloor({
+    what: "search records",
+    keeping: records.length,
+    removing: Number.isInteger(current) ? Math.max(0, current - records.length) : current,
+  });
+  if (searchFloor) {
+    throw new Error(`REFUSED before any write: ${searchFloor}. D1 is untouched.`);
   }
+}
 
-  // search_docs is replaced wholesale, so its floor compares the artifact against what D1 holds now.
-  {
-    const read = runWrangler(
-      `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
-        '"SELECT COUNT(*) AS docs FROM search_docs;"',
-    );
-    if (read.status !== 0) {
-      console.error(read.output);
-      throw new Error("the pre-write search_docs count failed, so the delete floor cannot hold");
-    }
-    const countMatch = read.stdout.match(/\[[\s\S]*\]/);
-    if (!countMatch) throw new Error(`could not parse the search_docs count:\n${read.output}`);
-    const current = JSON.parse(countMatch[0])[0].results[0]?.docs;
-    const searchFloor = deleteFloor({
-      what: "search records",
-      keeping: records.length,
-      removing: Number.isInteger(current) ? Math.max(0, current - records.length) : current,
-    });
-    if (searchFloor) {
-      throw new Error(`REFUSED before any write: ${searchFloor}. D1 is untouched.`);
-    }
-  }
-
-  // The write runs whatever this finds, because converging D1 to the build is the repair; the exit
-  // goes nonzero at the very end so ship can let the deploy stand.
+/**
+ * Reports per-post drift against D1 and refuses a write that would remove too many file-sourced
+ * posts. The write runs whatever this finds, because converging D1 to the build is the repair; the
+ * caller exits nonzero at the very end so ship can let the deploy stand.
+ * @param {string} target @param {any[]} posts
+ * @returns {string[]} the slugs whose render drifted
+ */
+function readDrift(target, posts) {
   /** @type {string[]} */
   const renderDrift = [];
-  {
-    const read = runWrangler(
-      `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
-        '"SELECT slug, source_blob_sha, render_hash FROM posts WHERE source_path IS NOT NULL;"',
-    );
-    if (read.status !== 0) {
-      console.error(read.output);
-      throw new Error("the pre-write drift read failed, so drift cannot be reported");
-    }
-    const rowsMatch = read.stdout.match(/\[[\s\S]*\]/);
-    if (!rowsMatch) throw new Error(`could not parse the drift read:\n${read.output}`);
-    /** @type {Array<{slug: string, source_blob_sha: string | null, render_hash: string | null}>} */
-    const rows = JSON.parse(rowsMatch[0])[0].results;
+  const read = runWrangler(
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
+      '"SELECT slug, source_blob_sha, render_hash FROM posts WHERE source_path IS NOT NULL;"',
+  );
+  if (read.status !== 0) {
+    console.error(read.output);
+    throw new Error("the pre-write drift read failed, so drift cannot be reported");
+  }
+  const rowsMatch = read.stdout.match(/\[[\s\S]*\]/);
+  if (!rowsMatch) throw new Error(`could not parse the drift read:\n${read.output}`);
+  /** @type {Array<{slug: string, source_blob_sha: string | null, render_hash: string | null}>} */
+  const rows = JSON.parse(rowsMatch[0])[0].results;
 
-    const rowBySlug = new Map(rows.map((r) => [r.slug, r]));
-    const buildSlugs = new Set(posts.map((/** @type {any} */ p) => p.slug));
-    let unchanged = 0;
-    let sourceChanged = 0;
-    let missing = 0;
-    for (const post of posts) {
-      const row = rowBySlug.get(post.slug);
-      if (!row) {
-        missing += 1;
-        console.log(`  missing-in-d1: ${post.slug}`);
-      } else if (row.source_blob_sha !== post.sourceBlobSha) {
-        sourceChanged += 1;
-        console.log(`  source-changed: ${post.slug} (expected: the repo moved)`);
-      } else if (row.render_hash !== post.renderHash) {
-        renderDrift.push(post.slug);
-        console.log(
-          `  RENDER DRIFT: ${post.slug} renders differently in the Worker and ` +
-            `the Node build from the same source ${post.sourceBlobSha}: ` +
-            `d1=${row.render_hash} build=${post.renderHash}`,
-        );
-      } else {
-        unchanged += 1;
-      }
+  const rowBySlug = new Map(rows.map((r) => [r.slug, r]));
+  const buildSlugs = new Set(posts.map((/** @type {any} */ p) => p.slug));
+  let unchanged = 0;
+  let sourceChanged = 0;
+  let missing = 0;
+  for (const post of posts) {
+    const row = rowBySlug.get(post.slug);
+    if (!row) {
+      missing += 1;
+      console.log(`  missing-in-d1: ${post.slug}`);
+    } else if (row.source_blob_sha !== post.sourceBlobSha) {
+      sourceChanged += 1;
+      console.log(`  source-changed: ${post.slug} (expected: the repo moved)`);
+    } else if (row.render_hash !== post.renderHash) {
+      renderDrift.push(post.slug);
+      console.log(
+        `  RENDER DRIFT: ${post.slug} renders differently in the Worker and ` +
+          `the Node build from the same source ${post.sourceBlobSha}: ` +
+          `d1=${row.render_hash} build=${post.renderHash}`,
+      );
+    } else {
+      unchanged += 1;
     }
-    const extra = rows.filter((r) => !buildSlugs.has(r.slug));
-    for (const row of extra) console.log(`  extra-in-d1: ${row.slug} (the write removes it)`);
+  }
+  const extra = rows.filter((r) => !buildSlugs.has(r.slug));
+  for (const row of extra) console.log(`  extra-in-d1: ${row.slug} (the write removes it)`);
 
-    // Before the drift line, which ship reads as "every write ran": a refusal must not print it.
-    const postFloor = deleteFloor({
-      what: "file-sourced posts",
-      keeping: posts.length,
-      removing: extra.length,
-    });
-    if (postFloor) {
-      throw new Error(`REFUSED before any write: ${postFloor}. D1 is untouched.`);
-    }
-
-    // Ship reads this line, so it prints every run.
-    console.log(
-      `sync:content drift: unchanged=${unchanged} source-changed=${sourceChanged} ` +
-        `render-drift=${renderDrift.length} missing-in-d1=${missing} extra-in-d1=${extra.length}`,
-    );
+  // Before the drift line, which ship reads as "every write ran": a refusal must not print it.
+  const postFloor = deleteFloor({
+    what: "file-sourced posts",
+    keeping: posts.length,
+    removing: extra.length,
+  });
+  if (postFloor) {
+    throw new Error(`REFUSED before any write: ${postFloor}. D1 is untouched.`);
   }
 
-  // mkdir returns undefined when the directory already exists, so the path is
-  // computed here rather than taken from its return value.
-  const dir = path.join(os.tmpdir(), "dustinedwards-sync");
-  await mkdir(dir, { recursive: true });
-  const sqlPath = path.join(dir, "sync-content.sql");
-  await writeFile(sqlPath, buildSql(posts), "utf8");
+  // Ship reads this line, so it prints every run.
+  console.log(
+    `sync:content drift: unchanged=${unchanged} source-changed=${sourceChanged} ` +
+      `render-drift=${renderDrift.length} missing-in-d1=${missing} extra-in-d1=${extra.length}`,
+  );
+  return renderDrift;
+}
 
-  console.log(`sync:content applying ${posts.length} posts to ${target.slice(2)} D1`);
+/**
+ * Writes one statement file and applies it, throwing with the output on failure.
+ * @param {string} target @param {string} file @param {string} body
+ * @param {string} label @param {string} failure
+ */
+async function applySql(target, file, body, label, failure) {
+  await writeFile(file, body, "utf8");
   const applied = await wranglerImport(
-    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${sqlPath}" --yes`,
-    `sync:content posts import (${target})`,
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${file}" --yes`,
+    label,
   );
   if (applied.status !== 0) {
     console.error(applied.output);
-    throw new Error("wrangler d1 execute failed");
+    throw new Error(failure);
   }
+}
 
-  // Read as a Buffer and decoded explicitly: it is compared byte for byte, and the platform text layer
-  // is not UTF-8 here.
-  const llms = (await readFile(LLMS_PATH)).toString("utf8");
-  if (llms.includes("\r")) {
-    throw new Error(
-      `${LLMS_PATH} contains CR. It is pinned to LF in .gitattributes; a CRLF ` +
-        `checkout would sync CRLF into D1 and change what /llms.txt serves.`,
-    );
-  }
-  const settingsPath = path.join(dir, "sync-settings.sql");
-  await writeFile(
-    settingsPath,
-    `INSERT INTO settings (key, value) VALUES ('llms.txt', ${sql(llms)})\n` +
-      `  ON CONFLICT(key) DO UPDATE SET value = excluded.value;\n`,
-    "utf8",
-  );
-  console.log(`sync:content applying llms.txt (${Buffer.byteLength(llms)} bytes)`);
-  const settingsApplied = await wranglerImport(
-    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${settingsPath}" --yes`,
-    `sync:content llms.txt import (${target})`,
-  );
-  if (settingsApplied.status !== 0) {
-    console.error(settingsApplied.output);
-    throw new Error("wrangler d1 execute failed for the llms.txt settings row");
-  }
-
-  // A separate statement file, so a failure here names the search index rather than the content.
-  const searchPath = path.join(dir, "sync-search.sql");
-  await writeFile(searchPath, buildSearchSql(records), "utf8");
-
-  console.log(`sync:content applying ${records.length} search records`);
-  const indexed = await wranglerImport(
-    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${searchPath}" --yes`,
-    `sync:content search index import (${target})`,
-  );
-  if (indexed.status !== 0) {
-    console.error(indexed.output);
-    throw new Error("wrangler d1 execute failed for the search index");
-  }
-
-  // Counts the FTS docsize shadow: a count on an external-content fts5 table reads through to the
-  // content table.
+/**
+ * Counts the FTS docsize shadow: a count on an external-content fts5 table reads through to the
+ * content table.
+ * @param {string} target @param {any[]} posts @param {any[]} records
+ */
+function verify(target, posts, records) {
   const verify = runWrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
@@ -397,6 +349,79 @@ async function main() {
     );
   }
   console.log("sync:content ok. FTS and search index row counts match.");
+}
+
+async function main() {
+  const target = process.argv.includes("--remote") ? "--remote" : "--local";
+
+  const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
+  // Every delete below converges D1 to this artifact, so an empty one would empty production.
+  const posts = requirePosts(artifact, ARTIFACT_PATH);
+  const { records } = artifact;
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error(
+      `${ARTIFACT_PATH} carries no search records. Run npm run build:content first; ` +
+        `nothing was written.`,
+    );
+  }
+  const problems = syncablePostProblems(posts);
+  if (problems.length > 0) {
+    throw new Error(
+      `${ARTIFACT_PATH} has posts sync cannot trust, so nothing was written:\n  ` +
+        problems.join("\n  "),
+    );
+  }
+
+  refuseSearchShrink(target, records);
+
+  const renderDrift = readDrift(target, posts);
+
+  // mkdir returns undefined when the directory already exists, so the path is
+  // computed here rather than taken from its return value.
+  const dir = path.join(os.tmpdir(), "dustinedwards-sync");
+  await mkdir(dir, { recursive: true });
+
+  console.log(`sync:content applying ${posts.length} posts to ${target.slice(2)} D1`);
+  await applySql(
+    target,
+    path.join(dir, "sync-content.sql"),
+    buildSql(posts),
+    `sync:content posts import (${target})`,
+    "wrangler d1 execute failed",
+  );
+
+  // Read as a Buffer and decoded explicitly: it is compared byte for byte, and the platform text layer
+  // is not UTF-8 here.
+  const llms = (await readFile(LLMS_PATH)).toString("utf8");
+  if (llms.includes("\r")) {
+    throw new Error(
+      `${LLMS_PATH} contains CR. It is pinned to LF in .gitattributes; a CRLF ` +
+        `checkout would sync CRLF into D1 and change what /llms.txt serves.`,
+    );
+  }
+  const settingsSql =
+    `INSERT INTO settings (key, value) VALUES ('llms.txt', ${sql(llms)})\n` +
+    `  ON CONFLICT(key) DO UPDATE SET value = excluded.value;\n`;
+  console.log(`sync:content applying llms.txt (${Buffer.byteLength(llms)} bytes)`);
+  await applySql(
+    target,
+    path.join(dir, "sync-settings.sql"),
+    settingsSql,
+    `sync:content llms.txt import (${target})`,
+    "wrangler d1 execute failed for the llms.txt settings row",
+  );
+
+  // A separate statement file, so a failure here names the search index rather than the content.
+  console.log(`sync:content applying ${records.length} search records`);
+  await applySql(
+    target,
+    path.join(dir, "sync-search.sql"),
+    buildSearchSql(records),
+    `sync:content search index import (${target})`,
+    "wrangler d1 execute failed for the search index",
+  );
+
+  verify(target, posts, records);
 
   // Nonzero last, after every write stood: render drift means the shared pipeline is not shared in practice.
   if (renderDrift.length > 0) {
