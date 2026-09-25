@@ -258,7 +258,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.media-detail-head h3 {
+.media-detail-head h2 {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
@@ -402,7 +402,7 @@
   margin: 0;
 }
 
-.media-detail-usage h4 {
+.media-detail-usage h3 {
   margin: 0 0 0.25rem;
   font-size: 0.8125rem;
 }
@@ -832,8 +832,8 @@
   margin-top: 0.875rem;
 }
 
-.media-detail-copy h4,
-.media-detail-twins h4 {
+.media-detail-copy h3,
+.media-detail-twins h3 {
   flex-basis: 100%;
   margin: 0;
   font-size: 0.8125rem;
