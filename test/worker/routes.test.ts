@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cloudflareContext } from "~/lib/context";
 import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
+import { readHealthTile } from "~/lib/health/snapshot.server";
 import { ORIGIN_REFUSAL } from "~/lib/origin.mjs";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
@@ -322,5 +323,23 @@ describe("/api/health", () => {
     /* Asserted by absence: the scaffold body carried a `message` field this route never
      * produces. */
     expect(body).not.toHaveProperty("message");
+  });
+});
+
+describe("the home health tile", () => {
+  it("reads a FAILED KV read as unreadable, not as a missing snapshot", async () => {
+    const brokenKv = {
+      get: async () => {
+        throw new Error("planted KV read failure");
+      },
+    };
+    const tile = await readHealthTile({ ...env, APP_KV: brokenKv } as never);
+    expect(tile.state).toBe("unreadable");
+  });
+
+  it("still reads an absent snapshot as missing", async () => {
+    await env.APP_KV.delete(HEALTH_SNAPSHOT_KEY);
+    const tile = await readHealthTile(env as never);
+    expect(tile.state).toBe("missing");
   });
 });
