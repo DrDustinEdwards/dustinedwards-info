@@ -1,8 +1,8 @@
 import { Enhance } from "~/components/enhance";
 import { longDateUTC } from "~/lib/long-date.mjs";
-import { PODCAST_SITE_URL, clockTime, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
-
-const X_URL = "https://x.com/Germomics";
+import { clockTime } from "~/lib/podcast/clock.mjs";
+import { PODCAST_SITE_URL, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
+import { GERMOMICS_X_URL } from "~/lib/seo";
 
 // The hand-drawn controls are server markup marked `hidden` that the bundle swaps in, so a
 // reader without script gets the native audio controls and never a button that does nothing.
@@ -100,7 +100,7 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
         </p>
       )}
       <p className="home-more podcast-x">
-        <a href={X_URL}>Germomics is also on X</a>
+        <a href={GERMOMICS_X_URL}>Germomics is also on X</a>
       </p>
     </section>
   );

@@ -17,7 +17,7 @@ export const UNPOLICED_TYPES = new Set([
  * @param {string | null} contentType
  * @returns {boolean}
  */
-export function isFeed(contentType) {
+export function isUnpolicedType(contentType) {
   if (!contentType) return false;
   const type = (contentType.split(";")[0] ?? "").trim().toLowerCase();
   return UNPOLICED_TYPES.has(type);
