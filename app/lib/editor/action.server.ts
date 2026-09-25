@@ -37,13 +37,21 @@ export async function handleEditorAction(
   const submittedHead = String(form.get("headSha") ?? "");
   const raw = serializePost(fields);
 
-  const fail = async (message: string, extra: { field?: string; line?: number; conflict?: boolean } = {}) => ({
-    kind: "problem" as const,
-    fields,
-    problem: { message, ...extra },
-    // Re-read head so a retry after a conflict is against current state.
-    headSha: await currentHead(env).catch(() => submittedHead),
-  });
+  const fail = async (message: string, extra: { field?: string; line?: number; conflict?: boolean } = {}) => {
+    // Re-read head so a retry after a conflict is against current state. A failed re-read keeps the
+    // submitted head and says so, because a retry against it may then report a conflict.
+    let headSha = submittedHead;
+    let note = "";
+    try {
+      headSha = await currentHead(env);
+    } catch (error) {
+      console.error("editor could not re-read the head after a failure", error);
+      note =
+        ` (The repository head could not be re-read: ` +
+        `${error instanceof Error ? error.message : String(error)}. A retry may report a conflict.)`;
+    }
+    return { kind: "problem" as const, fields, problem: { message: message + note, ...extra }, headSha };
+  };
 
   if (rawIntent === null) {
     return fail(
@@ -97,6 +105,8 @@ export async function handleEditorAction(
     if (error instanceof GitHubError) {
       return fail(error.message, { conflict: error.conflict });
     }
+    // Not a recognized failure: logged with its stack, since the editor shows only the message.
+    console.error("editor action failed with an unrecognized error", error);
     return fail(error instanceof Error ? error.message : String(error));
   }
 }
