@@ -54,6 +54,12 @@ export const MAP = [
     gates: ["check:enhance-a11y"],
   },
   {
+    /* check-migrations reads the operator API for the sync_ask and sync_media tools ship calls. */
+    what: "the operator API ship calls",
+    test: /^app\/lib\/operator\/api\.server\.ts$/,
+    gates: ["check:migrations"],
+  },
+  {
     /* check-page-payload reads root.tsx for the <Scripts> guard and the site-wide stylesheets. */
     what: "the root route",
     test: /^app\/root\.tsx$/,
