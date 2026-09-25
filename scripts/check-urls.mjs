@@ -202,11 +202,18 @@ for (const [label, property] of SCHEMA_FIELDS) {
 }
 
 {
-  const definitions = findAll(
-    pipelineTree,
-    (n) => ts.isFunctionDeclaration(n) && n.name?.text === "isAllowedUrl",
-  ).length;
-  assert("isAllowedUrl is defined exactly once in pipeline.mjs", definitions === 1, `found ${definitions} definitions`);
+  /* The predicate lives in url-policy.mjs and pipeline.mjs imports it: one definition across the two. */
+  const URL_POLICY = join(root, "app", "lib", "content", "url-policy.mjs");
+  const urlPolicyTree = parseSource(URL_POLICY, readFileSync(URL_POLICY, "utf8"));
+  const definitionsIn = (/** @type {ts.SourceFile} */ tree) =>
+    findAll(tree, (n) => ts.isFunctionDeclaration(n) && n.name?.text === "isAllowedUrl").length;
+  const inPolicy = definitionsIn(urlPolicyTree);
+  const inPipeline = definitionsIn(pipelineTree);
+  assert(
+    "isAllowedUrl is defined exactly once, in url-policy.mjs",
+    inPolicy === 1 && inPipeline === 0,
+    `found ${inPolicy} definition(s) in url-policy.mjs and ${inPipeline} in pipeline.mjs`,
+  );
 }
 
 // A redirect to a 404 is invisible because the gateway resolves the map without the database, and a
