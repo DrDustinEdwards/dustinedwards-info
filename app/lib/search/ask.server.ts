@@ -292,7 +292,7 @@ export interface AskIndexStatus {
 
 /** Both directions: an item the corpus does not know is as much a defect as a missing one. */
 export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIndexStatus> {
-  // publishableForAsk must stay in step with the SQL predicate here; check:policy binds the two.
+  // publishableForAsk must stay in step with the SQL predicate here; check:ask-guards binds the two.
   const [expectedUrls, listed] = await Promise.all([
     askExpectedUrls(env),
     listAllAskItems(env, timings),

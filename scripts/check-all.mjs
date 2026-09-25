@@ -51,6 +51,8 @@ export const TIERS = {
   "check:secrets": "offline",
   "check:migrations": "offline",
   "check:policy": "offline",
+  "check:ask-guards": "offline",
+  "check:enhance-a11y": "offline",
   "check:headers": "offline",
   "check:urls": "offline",
   "check:destructive": "offline",
