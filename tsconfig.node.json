@@ -77,6 +77,12 @@
     // its own source, which is how the export assertions iterate real records.
     "app/data/publications.ts",
     "app/lib/content/pipeline.mjs",
+    // Split out of pipeline.mjs, which imports and re-exports them, so this
+    // project reaches them through it.
+    "app/lib/content/content-error.mjs",
+    "app/lib/content/corpus.mjs",
+    "app/lib/content/directives.mjs",
+    "app/lib/content/url-policy.mjs",
     "app/lib/content/slug.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so

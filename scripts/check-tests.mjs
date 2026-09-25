@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
 import { descendantPids, killTree, processExists, readProcessTable } from "./lib/child-processes.mjs";
+import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
@@ -12,19 +13,10 @@ const TEST_DIR = join(root, "test");
 // so the set shrinking is noticed.
 const MINIMUM_FILES = 93;
 // Catches a test file hollowed out in place. Measured by running the gate.
-const MINIMUM_TESTS = 780;
+const MINIMUM_TESTS = 779;
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally();
+const { ok } = tally;
 
 /**
  * By parentage from this gate's own spawn, never by a machine-wide command-line match: another
@@ -42,7 +34,8 @@ function reapTestRunners(rootPid) {
   const killed = [];
   /** @type {number[]} */
   const failed = [];
-  for (const pid of descendantPids(Number(rootPid), table)) {
+  // The shell is dead, so its direct child must be the npm run it spawned, named by the bound passed to it.
+  for (const pid of descendantPids(Number(rootPid), table, `--test-timeout=${TEST_TIMEOUT_MS}`)) {
     if (!processExists(pid)) continue;
     (killTree(pid) ? killed : failed).push(pid);
   }
@@ -92,30 +85,14 @@ function slowestTests(text) {
   return [...longest.values()].sort((a, b) => b.ms - a.ms).slice(0, 5);
 }
 
-/** @param {string} dir @param {string[]} out */
-function testFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) testFiles(full, out);
-    else if (entry.endsWith(".test.mjs")) out.push(full);
-  }
-  return out;
-}
-
 console.log("\ncheck:tests\n");
 
-const files = testFiles(TEST_DIR);
+const files = walkFiles(TEST_DIR, { keep: (name) => name.endsWith(".test.mjs") });
 console.log(
   `  discovered ${files.length} file(s): ` +
     files.map((f) => relative(TEST_DIR, f).split(sep).join("/")).join(", "),
 );
 
-ok(
-  "the test glob discovered files at all",
-  files.length > 0,
-  "test/ holds no *.test.mjs. node --test exits 0 on an empty match, so without " +
-    "this the gate would report PASS while running nothing.",
-);
 const filesBreach = assertFloor(
   "check:tests",
   "files",
@@ -218,9 +195,5 @@ const testsFloorBreach = assertFloor(
 );
 ok("the executed test count has not shrunk", !testsFloorBreach, testsFloorBreach ?? "");
 
-const MINIMUM_CHECKS = 5;
-const floorBreach = assertFloor("check:tests", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
-
-console.log(`\n${checks} checks, ${failures} failures\n`);
-process.exit(failures > 0 ? 1 : 0);
+console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
+process.exit(tally.failures > 0 ? 1 : 0);

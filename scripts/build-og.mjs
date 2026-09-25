@@ -89,7 +89,7 @@ const SITE_NAME = siteName();
  *   publishAt?: string | null,
  * }} post
  */
-export function card(post) {
+function card(post) {
   /**
    * @param {string} type
    * @param {any} props

@@ -1,68 +1,18 @@
 // Generated and committed because a Worker cannot read the resolved hex out of a stylesheet.
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveToken, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CSS_PATH = join(root, "app", "app.css");
 const OUT_PATH = join(root, "content", "tokens.json");
 
-// Comments are stripped first: the palette's own comment names both theme selectors. CRLF goes too,
-// because a Windows clone breaks the multi-line light selector.
-const css = readFileSync(CSS_PATH, "utf8")
-  .replace(/\r\n/g, "\n")
-  .replace(/\/\*[\s\S]*?\*\//g, "");
+/** A figure series slot is declared as a ramp step, and the swatch wants the color. */
+const resolve = (/** @type {Record<string, string>} */ block, /** @type {string} */ name) =>
+  resolveToken(block, name).value;
 
-/**
- * Palette blocks carry no nested braces, so the first closing brace ends the block. The first
- * declaration of a name wins: a mixed value ships its hex first, which is what a browser that cannot
- * mix paints.
- *
- * @param {string} label
- * @param {string} selector
- * @returns {Record<string, string>}
- */
-function tokenBlock(label, selector) {
-  const at = css.indexOf(selector);
-  if (at === -1) throw new Error(`${label}: selector not found in app.css`);
-  const open = css.indexOf("{", at + selector.length - 1);
-  const close = css.indexOf("}", open);
-  if (open === -1 || close === -1) throw new Error(`${label}: unterminated block`);
-
-  /** @type {Record<string, string>} */
-  const out = {};
-  for (const m of css.slice(open + 1, close).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    if (!(m[1] in out)) out[m[1]] = m[2].trim();
-  }
-  if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
-  return out;
-}
-
-/**
- * A figure series slot is declared as a ramp step, and the swatch wants the color.
- *
- * @param {Record<string, string>} block
- * @param {string} name
- * @returns {string|null}
- */
-function resolve(block, name) {
-  /** @type {string[]} */
-  const seen = [];
-  let current = name;
-  for (let i = 0; i <= Object.keys(block).length; i += 1) {
-    const raw = block[current];
-    if (raw === undefined) return null;
-    const ref = /^var\(\s*(--[a-z0-9-]+)\s*\)$/.exec(raw.trim());
-    if (!ref) return raw.trim();
-    if (seen.includes(ref[1])) return null;
-    seen.push(ref[1]);
-    current = ref[1];
-  }
-  return null;
-}
-
-const light = tokenBlock("light", ':root,\n[data-theme="light"]');
-const dark = tokenBlock("dark", '[data-theme="dark"]');
+const light = tokenBlock("light", THEME_SELECTORS.light);
+const dark = tokenBlock("dark", THEME_SELECTORS.dark);
 
 /* The palette blocks are the ones declaring --paper. A theme block inserted
    above them would otherwise be read as the palette. */

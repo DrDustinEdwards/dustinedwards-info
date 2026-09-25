@@ -7,6 +7,7 @@ import {
   watchdogActions,
   watchdogOutcome,
 } from "../app/lib/health/repair.mjs";
+import { bodyFailing, HEALTHY } from "./lib/health-bodies.mjs";
 
 const WITH = { hasToken: true };
 const WITHOUT = { hasToken: false };
@@ -139,26 +140,6 @@ test("content drift repairs BEFORE the ask index when both fail", () => {
   const plan = repairPlan(["ask-index-drift", "content-drift"], WITH);
   assert.deepEqual(plan.repair, ["sync_posts", "sync_ask"]);
   assert.equal(plan.alertOnly, false);
-});
-
-const HEALTHY = {
-  ok: true,
-  checks: [
-    { name: "ask-index-drift", ok: true },
-    { name: "media-index-drift", ok: true },
-    { name: "media-backup-drift", ok: true },
-    { name: "content-drift", ok: true },
-    { name: "fts-equality", ok: true },
-  ],
-};
-
-/** @param {string[]} failing */
-const bodyFailing = (failing) => ({
-  ok: false,
-  checks: [
-    { name: "fts-equality", ok: true },
-    ...failing.map((name) => ({ name, ok: false })),
-  ],
 });
 
 /** @param {unknown} action */
