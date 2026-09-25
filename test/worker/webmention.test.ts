@@ -1,12 +1,8 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { RouterContextProvider, createRoutesStub } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { approvedMentionsFor } from "~/db";
 import { adminActorContext } from "~/lib/auth.server";
-import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -19,18 +15,17 @@ import AdminMentions, {
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
 import { loader as blogLoader } from "~/routes/blog.$slug";
 
+import {
+  freezeAtWindowStart,
+  renderRoute,
+  routeContext,
+  textsOf,
+  throughMiddleware,
+  untilRefused,
+} from "./route-helpers";
+
 /* Every case carries its own client IP: `clientIp` falls back to `unknown` off the edge, so
  * cases would otherwise share one `wm:unknown` rate-limit instance. */
-
-function routeContext(ctx: ExecutionContext, overrides: Record<string, unknown> = {}) {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, { env: { ...env, ...overrides } as never, ctx });
-  return context;
-}
-
-/* On a minute boundary, and frozen: `AskBudget.hit` keys on a FIXED window, so a boundary
- * landing inside a spend loop resets the count and the refusal never arrives. */
-const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
 
 const TARGET_SLUG = "a-mentioned-post";
 const TARGET = `${SITE_ORIGIN}/blog/${TARGET_SLUG}`;
@@ -129,31 +124,7 @@ async function seedMention(
 }
 
 function renderMentionsPage(url: string, loaderData: unknown, actionData?: unknown) {
-  const Stub = createRoutesStub([
-    {
-      path: "/admin/mentions",
-      Component: () =>
-        createElement(AdminMentions as never, { loaderData, actionData, params: {}, matches: [] }),
-    },
-  ]);
-  return renderToStaticMarkup(createElement(Stub, { initialEntries: [url] }));
-}
-
-async function textsOf(html: string, selector: string): Promise<string[]> {
-  const texts: string[] = [];
-  await new HTMLRewriter()
-    .on(selector, {
-      element() {
-        texts.push("");
-      },
-      text(chunk) {
-        const last = texts.length - 1;
-        texts[last] = (texts[last] ?? "") + chunk.text;
-      },
-    })
-    .transform(new Response(html))
-    .text();
-  return texts.map((t) => t.replace(/\s+/g, " ").trim());
+  return renderRoute("/admin/mentions", AdminMentions, { loaderData, actionData }, url);
 }
 
 beforeEach(async () => {
@@ -244,14 +215,9 @@ describe("/webmention refuses before it reads", () => {
 
   it("does NOT serve when the limiter is missing", async () => {
     /* An unprotected public write path does not serve unmetered; it does not serve. */
-    const ctx = createExecutionContext();
-    const { ASK_BUDGET: _removed, ...withoutLimiter } = env as unknown as Record<string, unknown>;
-    const context = new RouterContextProvider();
-    context.set(cloudflareContext, { env: withoutLimiter as never, ctx });
-
     const response = await webmentionAction({
       request: wm(form("https://elsewhere.example/a", TARGET), { ip: "203.0.113.15" }),
-      context,
+      context: routeContext(createExecutionContext(), { ASK_BUDGET: undefined }),
     } as never);
 
     expect(response.status).toBe(503);
@@ -262,26 +228,24 @@ describe("/webmention bound 1: the per-IP rate limit", () => {
   it("REFUSES past 20 per 60 seconds, with a Retry-After to hand back", async () => {
     /* The clock is frozen: `AskBudget.hit` keys on a FIXED window. The target is one this site
      * lacks, so each request spends its rate unit and stops at 400 before touching D1. */
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(WINDOW_START);
+    freezeAtWindowStart();
 
     const ctx = createExecutionContext();
     const context = routeContext(ctx);
-    let refusal: Response | null = null;
-    let accepted = 0;
-    for (let i = 0; i < 40 && refusal === null; i += 1) {
-      const response = await webmentionAction({
-        request: wm(form("https://elsewhere.example/a", "https://elsewhere.example/not-here"), {
-          ip: "203.0.113.20",
-        }),
-        context,
-      } as never);
-      if (response.status === 429) refusal = response;
-      else accepted += 1;
-    }
+    const { refusal, results } = await untilRefused(
+      () =>
+        webmentionAction({
+          request: wm(form("https://elsewhere.example/a", "https://elsewhere.example/not-here"), {
+            ip: "203.0.113.20",
+          }),
+          context,
+        } as never),
+      (response) => response.status === 429,
+      40,
+    );
 
     expect(refusal).not.toBeNull();
-    expect(accepted).toBe(20);
+    expect(results.filter((response) => response.status !== 429)).toHaveLength(20);
     expect(refusal?.headers.get("retry-after")).toBe("60");
     expect(refusal?.headers.get("cache-control")).toBe("private, no-store");
   });
@@ -619,16 +583,13 @@ describe("/webmention bound 3: one row per source and target", () => {
 });
 
 describe("the admin plane refuses the smoke actor", () => {
-  async function throughAdminStack(request: Request, context: RouterContextProvider) {
-    const args = { request, context, params: {} } as never;
-    const run = async (index: number): Promise<unknown> => {
-      const handler = adminMiddleware[index] as unknown as
-        | ((a: never, next: () => Promise<unknown>) => Promise<unknown>)
-        | undefined;
-      return handler ? handler(args, () => run(index + 1)) : mentionsAction(args);
-    };
+  async function throughAdminStack(request: Request, context: ReturnType<typeof routeContext>) {
     try {
-      return await run(0);
+      return await throughMiddleware(adminMiddleware, mentionsAction, {
+        request,
+        context,
+        params: {},
+      } as never);
     } catch (thrown) {
       return thrown;
     }

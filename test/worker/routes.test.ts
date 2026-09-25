@@ -1,22 +1,13 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
-import { RouterContextProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { cloudflareContext } from "~/lib/context";
 import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import { readHealthTile } from "~/lib/health/snapshot.server";
 import { ORIGIN_REFUSAL } from "~/lib/origin.mjs";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
 import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
 
-function routeContext(ctx: ExecutionContext, overrides: Record<string, unknown> = {}) {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, { env: { ...env, ...overrides } as never, ctx });
-  return context;
-}
-
-/* On a minute boundary, so the window arithmetic under test is the limiter's, not this fixture's. */
-const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
+import { freezeAtWindowStart, routeContext } from "./route-helpers";
 
 /* Restored for every case: a case that fails mid-assertion never reaches its own cleanup, and a
  * frozen clock would fail whatever ran next. */
@@ -176,9 +167,8 @@ describe("/api/health", () => {
      * through the route's Durable Object, so the one loader call is the subject and must be the
      * first refusal. The limiter is keyed per IP, so this case has an address of its own. */
     /* Frozen: the limiter keys on a FIXED wall-clock window, and a boundary between the spend
-     * and the loader call would hand the loader a fresh allowance. Only `Date` is faked. */
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(WINDOW_START);
+     * and the loader call would hand the loader a fresh allowance. */
+    freezeAtWindowStart();
 
     const ip = "203.0.113.99";
     const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${ip}`));

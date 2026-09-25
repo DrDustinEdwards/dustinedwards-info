@@ -1,5 +1,4 @@
 import { createExecutionContext, env } from "cloudflare:test";
-import { RouterContextProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,7 +10,6 @@ import {
   trashedMediaKeys,
   upsertMediaRecord,
 } from "~/db";
-import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
@@ -19,6 +17,8 @@ import { ALLOWED } from "~/lib/media/upload-contract.mjs";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
+
+import { routeContext } from "./route-helpers";
 
 /**
  * `IMAGES` has no local emulation, so cases hand it a binding with a recorded shape. The pool
@@ -54,12 +54,6 @@ async function uploadKey(seed: string, dimensions: { width: number; height: numb
 
 type Dimensions = { width: number; height: number } | null;
 
-function routeContext(routeEnv: object) {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, { env: routeEnv as never, ctx: createExecutionContext() });
-  return context;
-}
-
 async function upload(
   file: { name: string; type: string; body: string },
   dimensions: Dimensions,
@@ -69,7 +63,7 @@ async function upload(
   form.append("file", new File([file.body], file.name, { type: file.type }));
   const response = (await uploadAction({
     request: new Request("https://example.com/admin/media/upload", { method: "POST", body: form }),
-    context: routeContext({ ...envWithImages(dimensions), ...overrides }),
+    context: routeContext(createExecutionContext(), { ...envWithImages(dimensions), ...overrides }),
   } as never)) as Response;
   const body = (await response.json()) as { url?: string; key?: string };
   return { status: response.status, url: body.url, key: body.key ?? "" };
@@ -80,7 +74,7 @@ async function adminMediaAction(fields: Record<string, string>, routeEnv: object
   for (const [name, value] of Object.entries(fields)) form.append(name, value);
   return adminAction({
     request: new Request("https://example.com/admin/media", { method: "POST", body: form }),
-    context: routeContext(routeEnv),
+    context: routeContext(createExecutionContext(), routeEnv),
   } as never);
 }
 
@@ -88,7 +82,7 @@ async function serve(key: string) {
   return (await mediaLoader({
     params: { "*": key },
     request: new Request(`https://example.com/media/${key}`),
-    context: routeContext(env),
+    context: routeContext(),
   } as never)) as Response;
 }
 
@@ -444,7 +438,7 @@ describe("a thumbnail whose transform fails", () => {
     const served = (await mediaLoader({
       params: { "*": key },
       request: new Request(`https://example.com/media/${key}?w=320`),
-      context: routeContext({ ...env, IMAGES: failingImages }),
+      context: routeContext(createExecutionContext(), { IMAGES: failingImages }),
     } as never)) as Response;
 
     expect(served.status).toBe(200);
@@ -475,7 +469,7 @@ describe("the media palette", () => {
         request: new Request("https://example.com/admin/media?palette=1&q=zanzibar", {
           headers: { accept: "application/json" },
         }),
-        context: routeContext(env),
+        context: routeContext(),
         params: {},
       } as never,
       async () => new Response("the page, not the palette", { status: 500 }),
