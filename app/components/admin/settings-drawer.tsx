@@ -402,7 +402,20 @@ function ScheduleField({
   publishAt: string;
   onPublishAtChange: (value: string) => void;
 }) {
-  const scheduled = publishAt.trim() !== "";
+  /*
+   * The hold and the typed time are kept apart from `publishAt`: clearing the field used to set it
+   * to "", which silently dropped the hold. Now only the checkbox drops it, and a cleared or invalid
+   * time leaves the last valid one in place and says so.
+   */
+  const [holding, setHolding] = useState(publishAt.trim() !== "");
+  const [raw, setRaw] = useState(() => toLocalInput(publishAt));
+  const rawValid = toIso(raw) !== "";
+
+  // A change from elsewhere (the publish dialog) wins; a cleared field leaves `publishAt` unchanged, so this does not run.
+  useEffect(() => {
+    setHolding(publishAt.trim() !== "");
+    setRaw((current) => (toIso(current) === publishAt ? current : toLocalInput(publishAt)));
+  }, [publishAt]);
 
   return (
     <div className="field">
@@ -417,15 +430,23 @@ function ScheduleField({
       <label className="schedule-option">
         <input
           type="checkbox"
-          checked={scheduled}
-          onChange={(event) =>
-            onPublishAtChange(event.target.checked ? toIso(defaultScheduleLocal()) : "")
-          }
+          checked={holding}
+          onChange={(event) => {
+            if (event.target.checked) {
+              const local = defaultScheduleLocal();
+              setRaw(local);
+              setHolding(true);
+              onPublishAtChange(toIso(local));
+            } else {
+              setHolding(false);
+              onPublishAtChange("");
+            }
+          }}
         />
         <span>Hold until a set time, rather than going live on publish</span>
       </label>
 
-      {scheduled ? (
+      {holding ? (
         <>
           <label className="field-label" htmlFor="field-schedule">
             Goes live at (your local time)
@@ -433,12 +454,22 @@ function ScheduleField({
           <input
             id="field-schedule"
             type="datetime-local"
-            value={toLocalInput(publishAt)}
-            onChange={(event) => onPublishAtChange(toIso(event.target.value))}
+            value={raw}
+            onChange={(event) => {
+              setRaw(event.target.value);
+              const next = toIso(event.target.value);
+              if (next) onPublishAtChange(next);
+            }}
+            aria-invalid={!rawValid}
+            aria-describedby={rawValid ? undefined : "field-schedule-problem"}
           />
-          <span className="field-hint muted">
-            Stored as {publishAt || "an invalid date"} (UTC).
-          </span>
+          {rawValid ? (
+            <span className="field-hint muted">Stored as {publishAt} (UTC).</span>
+          ) : (
+            <p className="field-alarm" id="field-schedule-problem">
+              Not a valid date and time. Saving keeps the last valid one, {publishAt} (UTC).
+            </p>
+          )}
         </>
       ) : null}
 
