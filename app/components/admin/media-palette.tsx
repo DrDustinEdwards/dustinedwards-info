@@ -168,11 +168,13 @@ export function MediaPalette({
     </p>
   );
 
-  if (!open || (results.length === 0 && !query.trim())) return status;
+  const showing = open && (results.length > 0 || query.trim().length > 0);
 
+  // One return, so the region keeps its place whether or not the list shows and is never remounted.
   return (
     <>
     {status}
+    {showing ? (
     <div className="media-palette">
       {searchError ? (
         <p className="media-palette-empty">
@@ -234,6 +236,7 @@ export function MediaPalette({
         </span>
       </p>
     </div>
+    ) : null}
     </>
   );
 }
