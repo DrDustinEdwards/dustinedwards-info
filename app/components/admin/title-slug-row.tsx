@@ -59,8 +59,12 @@ export function TitleSlugRow({
                 placeholder="Untitled"
                 required
                 autoComplete="off"
+                aria-describedby="title-count"
               />
-              <span className={title.length > TITLE_LIMIT ? "count over" : "count"}>
+              <span
+                id="title-count"
+                className={title.length > TITLE_LIMIT ? "count over" : "count"}
+              >
                 {title.length}/{TITLE_LIMIT}
               </span>
             </div>
@@ -69,7 +73,12 @@ export function TitleSlugRow({
               <div className="editor-slug-row">
                 <label className="field-label" htmlFor="field-slug">
                   Slug
-                  {slugProblem ? <span className="count over">{slugProblem}</span> : null}
+                  {/* Hidden from the name: the full sentence reaches the field by describedby. */}
+                  {slugProblem ? (
+                    <span className="count over" aria-hidden="true">
+                      {slugProblem}
+                    </span>
+                  ) : null}
                 </label>
                 <div className="editor-slug-input">
                   <span className="muted">/blog/</span>
@@ -86,7 +95,7 @@ export function TitleSlugRow({
                     /* An HTML pattern cannot carry a length without a lookahead, so the bound is its own attribute. */
                     maxLength={SLUG_MAX_LENGTH}
                     aria-invalid={slugProblem !== null}
-                    aria-describedby={slugProblem ? "slug-problem" : undefined}
+                    aria-describedby={slugProblem ? "slug-problem slug-hint" : "slug-hint"}
                     autoComplete="off"
                   />
                 </div>
@@ -97,7 +106,7 @@ export function TitleSlugRow({
                       : "Lowercase letters, digits and single hyphens."}
                   </p>
                 ) : null}
-                <span className="field-hint muted">
+                <span className="field-hint muted" id="slug-hint">
                   Derived from the title until you change it. Fixed after the
                   first save, because it is the filename and the public URL.
                 </span>

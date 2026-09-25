@@ -67,7 +67,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     const feed = await readPodcastFeed(context, { wait: true });
     if (slot.mode === "featured" && !feed?.episodes.some((e) => e.guid === slot.guid)) {
       return data(
-        { message: "Nothing was saved: that episode is not in the feed. Reload and pick again." },
+        {
+          message: "Nothing was saved: that episode is not in the feed. Reload and pick again.",
+          failed: true,
+        },
         { status: 400 },
       );
     }
@@ -83,7 +86,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
   if (form.get("intent") !== "purge-zero-results") {
     return data(
-      { message: `Nothing was done: ${String(form.get("intent") ?? "(none)")} is not an action this page knows.` },
+      {
+        message: `Nothing was done: ${String(form.get("intent") ?? "(none)")} is not an action this page knows.`,
+        failed: true,
+      },
       { status: 400 },
     );
   }
@@ -100,26 +106,32 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function AdminTools({ loaderData, actionData }: Route.ComponentProps) {
   const { secrets, misses, podcast } = loaderData;
   const missing = secrets.filter((s) => !s.present);
+  const message = actionData && "message" in actionData ? actionData.message : null;
+  const failed = actionData && "failed" in actionData ? actionData.failed === true : false;
   return (
     <Panel
       title="Tools"
       description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
-      {/* A live announcement: it reports what the submit just did. */}
-      {actionData && "message" in actionData ? (
-        <p className="admin-notice" role="status">
-          {actionData.message}
+      {/* A live announcement: it reports what the submit just did. The status region is always in
+          the DOM so its text is read when it arrives; a refusal is an alert. */}
+      <div role="status">
+        {message !== null && !failed ? <p className="admin-notice">{message}</p> : null}
+      </div>
+      {message !== null && failed ? (
+        <p className="admin-notice" data-tone="error" role="alert">
+          {message}
         </p>
       ) : null}
 
-      <h3 className="tool-audit-heading">
+      <h2 className="tool-audit-heading">
         Secrets{" "}
         <span className="chip">
           {missing.length === 0
             ? `all ${secrets.length} set`
             : `${missing.length} of ${secrets.length} missing`}
         </span>
-      </h3>
+      </h2>
       <ul className="tool-list">
         {secrets.map((secret) => (
           <li key={secret.name} className="tool-row">
@@ -131,10 +143,10 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
         ))}
       </ul>
 
-      <h3 className="tool-heading">
+      <h2 className="tool-audit-heading">
         Searches that found nothing
         <span className="chip">{misses.length === 0 ? "none" : `${misses.length} shown`}</span>
-      </h3>
+      </h2>
       {misses.length === 0 ? (
         <p className="muted">Nothing recorded yet, which is the good case.</p>
       ) : (
@@ -173,12 +185,12 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       </Form>
 
       {/* A featured episode that has left the feed is not an error on home, which plays the latest. */}
-      <h3 className="tool-audit-heading" id="home-podcast">
+      <h2 className="tool-audit-heading" id="home-podcast">
         Home podcast
         <span className={podcast.fellBack ? "chip chip-error" : "chip"}>
           {podcast.fellBack ? "featured episode gone" : podcast.slot.mode}
         </span>
-      </h3>
+      </h2>
       <p className="muted" data-podcast-showing>
         {podcast.showing === null
           ? podcast.lastError
@@ -193,47 +205,52 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       </p>
       <Form method="post" aria-labelledby="home-podcast">
         <input type="hidden" name="intent" value="podcast-slot" />
-        <ul className="tool-list">
-          <li className="tool-row">
-            <label className="tool-row-label">
-              <input
-                type="radio"
-                name="mode"
-                value="latest"
-                defaultChecked={podcast.slot.mode === "latest"}
-              />
-              Latest episode
-            </label>
-          </li>
-          <li className="tool-row">
-            <label className="tool-row-label">
-              <input
-                type="radio"
-                name="mode"
-                value="featured"
-                defaultChecked={podcast.slot.mode === "featured"}
+        {/* A fieldset, so the two radios are announced as one choice with its question. */}
+        <fieldset className="tool-fieldset">
+          <legend className="sr-only">Which episode the home page plays</legend>
+          <ul className="tool-list">
+            <li className="tool-row">
+              <label className="tool-row-label">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="latest"
+                  defaultChecked={podcast.slot.mode === "latest"}
+                />
+                Latest episode
+              </label>
+            </li>
+            <li className="tool-row">
+              <label className="tool-row-label">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="featured"
+                  defaultChecked={podcast.slot.mode === "featured"}
+                  disabled={podcast.episodes.length === 0}
+                />
+                Featured episode
+              </label>
+              {/* Not "Featured episode" again: two controls with one name cannot be told apart. */}
+              <label className="sr-only" htmlFor="podcast-guid">
+                Episode to feature
+              </label>
+              <select
+                id="podcast-guid"
+                name="guid"
+                className="tool-select"
+                defaultValue={podcast.slot.mode === "featured" ? podcast.slot.guid : undefined}
                 disabled={podcast.episodes.length === 0}
-              />
-              Featured episode
-            </label>
-            <label className="sr-only" htmlFor="podcast-guid">
-              Featured episode
-            </label>
-            <select
-              id="podcast-guid"
-              name="guid"
-              className="tool-select"
-              defaultValue={podcast.slot.mode === "featured" ? podcast.slot.guid : undefined}
-              disabled={podcast.episodes.length === 0}
-            >
-              {podcast.episodes.map((episode) => (
-                <option key={episode.guid} value={episode.guid}>
-                  {episode.title} ({episode.publishedAt.slice(0, 10)})
-                </option>
-              ))}
-            </select>
-          </li>
-        </ul>
+              >
+                {podcast.episodes.map((episode) => (
+                  <option key={episode.guid} value={episode.guid}>
+                    {episode.title} ({episode.publishedAt.slice(0, 10)})
+                  </option>
+                ))}
+              </select>
+            </li>
+          </ul>
+        </fieldset>
         <button type="submit" className="btn-secondary">
           Save the home podcast
         </button>

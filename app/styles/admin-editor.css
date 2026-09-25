@@ -394,12 +394,12 @@
   color: var(--text);
 }
 
-.editor-layout-option[aria-pressed="true"] {
+.editor-layout-option[aria-checked="true"] {
   background: var(--brand);
   color: var(--on-brand);
 }
 
-.editor-layout-option[aria-pressed="true"]:focus-visible {
+.editor-layout-option[aria-checked="true"]:focus-visible {
   outline: 2px solid var(--focus-ring-on-brand);
   outline-offset: -4px;
 }
@@ -669,7 +669,7 @@
     border: 1px solid CanvasText;
   }
 
-  .editor-layout-option[aria-pressed="true"] {
+  .editor-layout-option[aria-checked="true"] {
     outline: 1px solid transparent;
   }
 }
