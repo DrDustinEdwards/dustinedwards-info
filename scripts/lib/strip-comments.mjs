@@ -1,7 +1,9 @@
 /**
  * A JavaScript tokenizer, so not for CSS, where `//` is never a comment, and it reads an
- * apostrophe in SVG text as opening a string.
+ * apostrophe in SVG or JSX text as opening a string; `stripTsxComments` is the one for TSX.
  */
+
+import { createRequire } from "node:module";
 
 /**
  * One left-to-right pass: "is this a comment opener" depends on everything to its left, which no
@@ -132,4 +134,46 @@ export function stripComments(source, options = {}) {
  */
 export function stripCommentsAndStrings(source) {
   return scan(source, { blankStrings: true });
+}
+
+/**
+ * Comments out of TSX by the TypeScript parser, not the tokenizer above, which reads an apostrophe in
+ * JSX text (`a post's table`) as opening a string and can then keep every comment after it. Each
+ * comment is blanked to spaces with its newlines kept, so line numbers do not shift. JSX text is
+ * never read as trivia, so `// not a comment` inside markup survives as the text it is.
+ *
+ * @param {string} source
+ * @returns {string}
+ */
+export function stripTsxComments(source) {
+  const ts = createRequire(import.meta.url)("typescript");
+  const file = ts.createSourceFile("x.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  /** @type {Array<[number, number]>} */
+  const ranges = [];
+  /** Where JSX text begins: content, not trivia, so never scanned for comments. */
+  const textStarts = new Set();
+  const findText = (/** @type {any} */ node) => {
+    if (node.kind === ts.SyntaxKind.JsxText) textStarts.add(node.pos);
+    for (const child of node.getChildren(file)) findText(child);
+  };
+  findText(file);
+  const collect = (/** @type {number} */ pos) => {
+    if (textStarts.has(pos)) return;
+    for (const r of ts.getLeadingCommentRanges(source, pos) ?? []) ranges.push([r.pos, r.end]);
+    for (const r of ts.getTrailingCommentRanges(source, pos) ?? []) ranges.push([r.pos, r.end]);
+  };
+  const visit = (/** @type {any} */ node) => {
+    if (node.kind === ts.SyntaxKind.JsxText) return;
+    collect(node.pos);
+    collect(node.end);
+    for (const child of node.getChildren(file)) visit(child);
+  };
+  visit(file);
+  collect(file.endOfFileToken.pos);
+
+  const out = source.split("");
+  for (const [start, end] of ranges) {
+    for (let i = start; i < end; i += 1) if (out[i] !== "\n" && out[i] !== "\r") out[i] = " ";
+  }
+  return out.join("");
 }
