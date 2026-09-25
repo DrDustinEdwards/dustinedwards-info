@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
 } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -22,6 +23,42 @@ import {
 } from "./lib/page-payload.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+
+/**
+ * Null only when there is no module at that path (missing, or a directory the resolver tried as a
+ * file). A locked or unreadable file throws: read as "no such module", it would drop that module's
+ * bundles from the walk and the byte ceilings would pass on an under-count.
+ *
+ * @param {string} path
+ */
+function read(path) {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (/** @type {any} */ error) {
+    if (error?.code === "ENOENT" || error?.code === "ENOTDIR" || error?.code === "EISDIR") return null;
+    throw error;
+  }
+}
+
+/**
+ * Every object literal in root.tsx that declares `rel: "preload"`, whole. Bounded by its own braces,
+ * so a longer entry or a second preload cannot move a needle out of a fixed character window.
+ *
+ * @param {string} rootSource
+ */
+function preloadEntries(rootSource) {
+  const code = stripComments(rootSource);
+  /** @type {string[]} */
+  const entries = [];
+  for (const m of code.matchAll(/rel:\s*"preload"/g)) {
+    const open = code.lastIndexOf("{", m.index);
+    const close = code.indexOf("}", m.index);
+    if (open === -1 || close === -1) throw new Error("a preload entry in root.tsx has no enclosing braces");
+    entries.push(code.slice(open, close + 1));
+  }
+  return entries;
+}
+
 const ASSETS_DIR = join(root, "build", "client", "assets");
 const DIST_DIR = join(root, "app", "enhance", "dist");
 
@@ -478,15 +515,20 @@ function gradeBuildOnlyDependencies() {
      or an external. */
   const serverBundle = join(root, "build", "server", "index.js");
   let bundle = "";
+  let bundleError = "";
   try {
     bundle = readFileSync(serverBundle, "utf8");
-  } catch {
+  } catch (/** @type {any} */ error) {
+    bundleError = error?.code ?? String(error);
   }
   ok(
     "the Worker bundle is on disk to be read",
     bundle.length > 0,
-    `${relative(root, serverBundle)} is missing or empty. This gate measures the ` +
-      `build on disk; run npm run build first.`,
+    bundleError && bundleError !== "ENOENT"
+      ? `${relative(root, serverBundle)} could not be read (${bundleError}). A locked build is ` +
+          `not a missing one; release whatever holds it and run the gate again.`
+      : `${relative(root, serverBundle)} is missing or empty. This gate measures the ` +
+          `build on disk; run npm run build first.`,
   );
   ok(
     "the built Worker does not carry sharp",
@@ -597,14 +639,6 @@ function gradeEveryPage() {
   const routesDir = join(root, "app", "routes");
   const rootModule = join(appDir, "root.tsx");
   const rootSource = readFileSync(rootModule, "utf8");
-
-  const read = (/** @type {string} */ path) => {
-    try {
-      return readFileSync(path, "utf8");
-    } catch {
-      return null;
-    }
-  };
 
   const assetFile = (/** @type {string} */ assetPath) =>
     join(clientDir, assetPath.replace(/^\//, ""));
@@ -727,12 +761,12 @@ function gradeEveryPage() {
       const bound = rootSource.match(
         new RegExp(`import\\s+(\\w+)\\s+from\\s+"[^"]*${stem}\\.woff2\\?url"`),
       );
-      const preloadBlock = rootSource.slice(rootSource.indexOf('rel: "preload"'));
       ok(
         `${path}: the reachable font ${stem} is preloaded`,
         Boolean(bound) &&
-          rootSource.includes('rel: "preload"') &&
-          preloadBlock.slice(0, 400).includes(`href: ${bound?.[1]}`),
+          preloadEntries(rootSource).some((entry) =>
+            new RegExp(`\\bhref:\\s*${bound?.[1]}\\b`).test(entry),
+          ),
         `${font} is fetched by a @font-face rule on this route and root.tsx declares no ` +
           `preload for it${bound ? ` naming ${bound[1]}` : " and no ?url import of it"}. ` +
           `A font inside a stylesheet is discovered LATE: the browser fetches the sheet, ` +
@@ -764,13 +798,6 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
 
   /* Reachable from root, so the no-manifest assertion below is not vacuous. */
 
-  const read = (/** @type {string} */ path) => {
-    try {
-      return readFileSync(path, "utf8");
-    } catch {
-      return null;
-    }
-  };
   const postRouteFile = join(root, "app", "routes", "blog.$slug.tsx");
   const postAssets = reachableAssets(postRouteFile, join(root, "app"), read).assets;
   /* A SET, because the two walks OVERLAP and the raw count says two where there is one file. */
@@ -939,11 +966,12 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
   );
 
   /* No preload for KaTeX faces: each is used by an expression, so preloading the set is speculative. */
-  const preloadBlock = rootSource.slice(rootSource.indexOf('rel: "preload"'));
+  const preloads = preloadEntries(rootSource);
   ok(
     "no math face is preloaded, which is the deliberate opposite of the rule above",
-    !preloadBlock.slice(0, 400).includes("katex"),
-    `root.tsx preloads a KaTeX face. They are fetched on demand by the expression that ` +
+    preloads.length > 0 && !preloads.some((entry) => /katex/i.test(entry)),
+    `root.tsx preloads a KaTeX face (or declares no preload at all, so this could not be ` +
+      `checked). KaTeX faces are fetched on demand by the expression that ` +
       `uses them; preloading the set is 260 kB speculatively for a page that needs a ` +
       `fraction of it.`,
   );
@@ -1155,7 +1183,14 @@ async function gradeRenderedHtml() {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+/* Compared as real paths, case-folded on Windows: a junctioned checkout or a lower-case drive letter
+   would otherwise make this false, and the gate would exit 0 having checked nothing. */
+const samePath = (/** @type {string} */ a, /** @type {string} */ b) =>
+  process.platform === "win32" ? a.toLowerCase() === b.toLowerCase() : a === b;
+if (
+  process.argv[1] &&
+  samePath(realpathSync(process.argv[1]), realpathSync(fileURLToPath(import.meta.url)))
+) {
   try {
     await main();
   } catch (/** @type {any} */ error) {
