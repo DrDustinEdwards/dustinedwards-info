@@ -85,17 +85,25 @@ export function startRssSampler(outPath, intervalMs = 400) {
         stdio: "ignore",
       },
     );
-  } catch {
+  } catch (error) {
+    // Soft, as the header says, but said: an instrument that silently is not running reads as idle.
+    console.error(`rss sampler not started: ${error instanceof Error ? error.message : String(error)}`);
     return { stop: () => {}, available: false, pid: null };
   }
+  // A spawn that fails after returning (the binary vanished, access denied) emits 'error'. With no
+  // listener that event is thrown, and the sampler would take the check run down with it.
+  child.on("error", (error) => {
+    console.error(`rss sampler failed: ${error.message}`);
+  });
 
   return {
     available: true,
     stop: () => {
       try {
         child?.kill();
-      } catch {
-        // A sampler that will not die is not worth failing a check run over.
+      } catch (error) {
+        // A sampler that will not die is not worth failing a check run over, but it is worth a line.
+        console.error(`rss sampler did not stop: ${error instanceof Error ? error.message : String(error)}`);
       }
     },
     pid: child?.pid ?? null,

@@ -3,23 +3,21 @@
  * at whatever still answers to it. Reads the real file; the example carries placeholder ids.
  */
 
-import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { parseJsonc } from "./wrangler-surface.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const CONFIG = join(root, "wrangler.jsonc");
 
 /**
- * Weak on purpose: the strong stripper's line-comment rule eats a protocol-relative url, and
- * JSON.parse throws on any comment this misses.
+ * Through the one JSONC reader, not a second regex stripper that could disagree with it.
  *
  * @returns {any}
  */
 export function readWranglerConfig() {
-  const raw = readFileSync(CONFIG, "utf8");
-  const stripped = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  return JSON.parse(stripped);
+  return parseJsonc(CONFIG);
 }
 
 /**

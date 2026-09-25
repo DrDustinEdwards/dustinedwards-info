@@ -1,9 +1,11 @@
 import { Form, data } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
+import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { purgePosts } from "~/lib/cache-purge.server";
 import { chooseEpisode, parsePodcastSlot } from "~/lib/podcast/feed.mjs";
 import { readPodcastFeed, readPodcastSlot, writePodcastSlot } from "~/lib/podcast/podcast.server";
@@ -86,6 +88,11 @@ export async function action({ request, context }: Route.ActionArgs) {
       { status: 400 },
     );
   }
+  // The rows are gone for good, so the action asks, as the mentions sweep does: a guard in a handler
+  // does not run with scripting off. The count is 1, the operator authorizing the purge.
+  if (!confirmationSatisfied(String(form.get(CONFIRM_FIELD) ?? "").trim(), 1)) {
+    return data({ purged: null, confirmPurge: true });
+  }
   const purged = await purgeZeroResults(getEnv(context));
   return data({ message: `Removed ${purged} expired quer${purged === 1 ? "y" : "ies"}.` });
 }
@@ -100,7 +107,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
       {/* A live announcement: it reports what the submit just did. */}
-      {actionData?.message ? (
+      {actionData && "message" in actionData ? (
         <p className="admin-notice" role="status">
           {actionData.message}
         </p>
@@ -143,6 +150,17 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           ))}
         </ul>
       )}
+      {actionData && "confirmPurge" in actionData ? (
+        <ConfirmDialog
+          title="Remove the expired queries"
+          body={<p>{`This permanently removes every query nobody has repeated in ${RETENTION_DAYS} days.`}</p>}
+          requireTyped="1"
+          confirmLabel="Remove them"
+          cancelHref="/admin/tools"
+        >
+          <input type="hidden" name="intent" value="purge-zero-results" />
+        </ConfirmDialog>
+      ) : null}
       <Form method="post">
         <input type="hidden" name="intent" value="purge-zero-results" />
         <p className="muted">

@@ -5,6 +5,9 @@ description: "A pipeline fixture carrying every form the swatch directive accept
 date: 2026-09-08
 tags: [design, color]
 draft: true
+further_reading:
+  - title: "Images in prose, the sibling fixture"
+    url: /blog/images-in-prose-fixture
 ---
 
 This post is a fixture, on the same footing as the math and chart fixtures
