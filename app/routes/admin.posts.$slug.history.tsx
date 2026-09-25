@@ -3,6 +3,7 @@ import { Link, data } from "react-router";
 import { timed, timingsContext } from "~/lib/timing";
 
 import { Panel } from "~/components/admin/panel";
+import { DiffBlock, RevisionMeta } from "~/components/admin/revision-list";
 import { getEnv } from "~/lib/context";
 import {
   getCommitPatch,
@@ -50,13 +51,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   return data(payload);
 }
 
-function diffKind(line: string) {
-  if (line.startsWith("+") && !line.startsWith("+++")) return "add";
-  if (line.startsWith("-") && !line.startsWith("---")) return "del";
-  if (line.startsWith("@@")) return "hunk";
-  return undefined;
-}
-
 export default function PostHistory({ loaderData }: Route.ComponentProps) {
   const { slug, commits, selected, patch } = loaderData;
 
@@ -77,18 +71,7 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
         <ol className="history-list">
           {commits.map((commit, index) => (
             <li key={commit.sha} className="history-entry">
-              <div className="history-meta">
-                <code>{commit.sha.slice(0, 7)}</code>
-                <span className="history-message">{commit.message}</span>
-                <span className="muted">
-                  {commit.author}
-                  {" · "}
-                  {new Date(commit.date).toLocaleString("en-US", {
-                    timeZone: "UTC",
-                  })}
-                  {index === 0 ? " · current" : ""}
-                </span>
-              </div>
+              <RevisionMeta revision={commit} current={index === 0} />
 
               <div className="history-actions">
                 <Link
@@ -104,14 +87,7 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
 
               {selected === commit.sha ? (
                 patch ? (
-                  <pre className="history-diff">
-                    {patch.split("\n").map((line, i) => (
-                      <span key={i} data-diff={diffKind(line)}>
-                        {line}
-                        {"\n"}
-                      </span>
-                    ))}
-                  </pre>
+                  <DiffBlock patch={patch} />
                 ) : (
                   <p className="muted">
                     No diff recorded for this commit.

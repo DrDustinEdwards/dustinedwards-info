@@ -91,17 +91,7 @@ export function RevisionList({
       <ol className="history-list">
         {revisions.map((revision, index) => (
           <li key={revision.sha} className="history-entry">
-            <div className="history-meta">
-              <code>{revision.sha.slice(0, 7)}</code>
-              <span className="history-message">{revision.message}</span>
-              <span className="muted">
-                {revision.author}
-                {" · "}
-                {/* UTC, so the server render and hydration agree on which day a commit landed. */}
-                {new Date(revision.date).toLocaleString("en-US", { timeZone: "UTC" })}
-                {index === 0 ? " · current" : ""}
-              </span>
-            </div>
+            <RevisionMeta revision={revision} current={index === 0} />
 
             <div className="history-actions">
               <button
@@ -130,14 +120,7 @@ export function RevisionList({
               !(revision.sha in patches) ? (
                 <p className="muted">Loading diff...</p>
               ) : patches[revision.sha] ? (
-                <pre className="history-diff">
-                  {(patches[revision.sha] ?? "").split("\n").map((line, i) => (
-                    <span key={i} data-diff={diffKind(line)}>
-                      {line}
-                      {"\n"}
-                    </span>
-                  ))}
-                </pre>
+                <DiffBlock patch={patches[revision.sha] ?? ""} />
               ) : (
                 <p className="muted">No diff recorded for this commit.</p>
               )
@@ -146,6 +129,37 @@ export function RevisionList({
         ))}
       </ol>
     </>
+  );
+}
+
+/** One commit's line: short sha, message, author, date and whether it is the current one. */
+export function RevisionMeta({ revision, current }: { revision: Revision; current: boolean }) {
+  return (
+    <div className="history-meta">
+      <code>{revision.sha.slice(0, 7)}</code>
+      <span className="history-message">{revision.message}</span>
+      <span className="muted">
+        {revision.author}
+        {" · "}
+        {/* UTC, so the server render and hydration agree on which day a commit landed. */}
+        {new Date(revision.date).toLocaleString("en-US", { timeZone: "UTC" })}
+        {current ? " · current" : ""}
+      </span>
+    </div>
+  );
+}
+
+/** A unified patch, each line tagged for the add, delete and hunk colors. */
+export function DiffBlock({ patch }: { patch: string }) {
+  return (
+    <pre className="history-diff">
+      {patch.split("\n").map((line, i) => (
+        <span key={i} data-diff={diffKind(line)}>
+          {line}
+          {"\n"}
+        </span>
+      ))}
+    </pre>
   );
 }
 
