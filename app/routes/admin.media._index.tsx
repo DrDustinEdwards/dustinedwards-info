@@ -1053,7 +1053,7 @@ export default function AdminMedia({
       ) : null}
 
       {!scanComplete ? (
-        <AdminAlert title="Usage could not be determined" headingId="scan-failed">
+        <AdminAlert tone="warning" title="Usage could not be determined" headingId="scan-failed">
           <p>
             The reference scan failed ({scanFailed.join(", ")}), so nothing below is
             labeled unused and every delete will be refused until it succeeds.

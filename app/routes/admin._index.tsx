@@ -1,6 +1,7 @@
 import { Form, data } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
+import { AdminAlert } from "~/components/admin/alert";
 import { RowMenu } from "~/components/admin/row-menu";
 import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
@@ -57,35 +58,23 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
 
       {/* A named region, not a live one: a `role` would announce a standing condition on every load. */}
       {worst && worstCopy ? (
-        <section className="admin-notice" data-tone="error" aria-labelledby="overview-worst">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 8v5" />
-            <path d="M12 16h.01" />
-          </svg>
-          <div className="admin-notice-body">
-            <h2 id="overview-worst">{worstCopy.name} needs attention</h2>
-            <p>{worstCopy.finding}</p>
-          </div>
-          {worstCopy.repair ? (
-            <Form method="post" action={worstCopy.repair.action} className="admin-notice-action">
-              <input type="hidden" name="intent" value={worstCopy.repair.intent} />
-              <button type="submit" className="btn">
-                {worstCopy.repair.label}
-              </button>
-            </Form>
-          ) : null}
-        </section>
+        <AdminAlert
+          tone="error"
+          title={`${worstCopy.name} needs attention`}
+          headingId="overview-worst"
+          action={
+            worstCopy.repair ? (
+              <Form method="post" action={worstCopy.repair.action}>
+                <input type="hidden" name="intent" value={worstCopy.repair.intent} />
+                <button type="submit" className="btn">
+                  {worstCopy.repair.label}
+                </button>
+              </Form>
+            ) : null
+          }
+        >
+          <p>{worstCopy.finding}</p>
+        </AdminAlert>
       ) : null}
 
       <div className="admin-table-scroll" tabIndex={0} role="region" aria-label="Checks">
