@@ -1,6 +1,6 @@
 import { data } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { EmptyState, Panel } from "~/components/admin/panel";
 // Constants from the shared module, never the `.server` one: on the client a `.server` import is
 // stubbed out and every value from it arrives undefined.
@@ -20,11 +20,10 @@ export function meta() {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const result = await timed(timings, "ae_fetch_traffic", () => fetchTraffic(getEnv(context)));
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data({ result });
+  return timedLoader(context, async (timings) => {
+    const result = await timed(timings, "ae_fetch_traffic", () => fetchTraffic(getEnv(context)));
+    return data({ result });
+  });
 }
 
 

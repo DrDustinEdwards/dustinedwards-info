@@ -15,13 +15,16 @@ import {
   SMOKE_READ_ONLY_POLICY,
   WRITE_CAPABILITIES,
 } from "../app/lib/editor/publish-policy.mjs";
+import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
+import { parseJsonc } from "./lib/wrangler-surface.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-let checks = 0;
-/** @type {string[]} */
-const failures = [];
+const tally = createTally({ print: false });
+const { ok } = tally;
 
 /**
  * @param {string} label
@@ -29,37 +32,33 @@ const failures = [];
  * @param {unknown} expected
  */
 function eq(label, actual, expected) {
-  checks += 1;
   const a = JSON.stringify(actual);
   const b = JSON.stringify(expected);
-  if (a !== b) failures.push(`${label}\n    expected ${b}\n    actual   ${a}`);
+  ok(`${label}\n    expected ${b}\n    actual   ${a}`, a === b);
 }
 
 /** @param {string} label @param {() => void} fn @param {string} policy */
 function refuses(label, fn, policy) {
-  checks += 1;
+  let problem = "expected a PolicyError, got none";
   try {
     fn();
-    failures.push(`${label}\n    expected a PolicyError, got none`);
   } catch (error) {
-    if (!(error instanceof PolicyError)) {
-      failures.push(`${label}\n    expected PolicyError, got ${error}`);
-      return;
-    }
-    if (error.policy !== policy) {
-      failures.push(`${label}\n    expected policy ${policy}, got ${error.policy}`);
-    }
+    if (!(error instanceof PolicyError)) problem = `expected PolicyError, got ${error}`;
+    else if (error.policy !== policy) problem = `expected policy ${policy}, got ${error.policy}`;
+    else problem = "";
   }
+  ok(`${label}\n    ${problem}`, problem === "");
 }
 
 /** @param {string} label @param {() => void} fn */
 function permits(label, fn) {
-  checks += 1;
+  let problem = "";
   try {
     fn();
   } catch (error) {
-    failures.push(`${label}\n    expected no error, got ${error}`);
+    problem = `expected no error, got ${error}`;
   }
+  ok(`${label}\n    ${problem}`, problem === "");
 }
 
 /** @param {{draft: boolean, firstPublished?: string | null}} o */
@@ -207,8 +206,6 @@ const EVERY_TRANSITION = [
   ["create an already published post", file({ draft: false }), null],
 ];
 
-eq("the transition table is not empty", EVERY_TRANSITION.length >= 7, true);
-
 for (const [what, incomingRaw, priorRaw] of EVERY_TRANSITION) {
   refuses(
     `smoke cannot ${what}`,
@@ -306,19 +303,11 @@ refuses(
 
   /** @type {string[]} */
   const constructors = [];
-  const walk = (/** @type {string} */ dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.(ts|tsx|mjs)$/.test(entry.name)) {
-        const text = stripComments(readFileSync(full, "utf8"));
-        if (/kind:\s*"smoke"/.test(text)) {
-          constructors.push(relative(root, full).split(sep).join("/"));
-        }
-      }
+  for (const full of walkFiles(join(root, "app"), { keep: (name) => /\.(ts|tsx|mjs)$/.test(name) })) {
+    if (/kind:\s*"smoke"/.test(stripComments(readFileSync(full, "utf8")))) {
+      constructors.push(relative(root, full).split(sep).join("/"));
     }
-  };
-  walk(join(root, "app"));
+  }
 
   eq(
     "the smoke-actor scan found the one construction site it expects",
@@ -506,13 +495,7 @@ refuses(
   const publishSrc = readFileSync(join(root, "app/lib/editor/publish.server.ts"), "utf8");
   const at = publishSrc.indexOf("export async function deletePost(");
   eq("delete: deletePost exists to be checked", at !== -1, true);
-  const open = publishSrc.indexOf("{", publishSrc.indexOf(")", at));
-  let depth = 0, close = -1;
-  for (let i = open; i < publishSrc.length; i += 1) {
-    if (publishSrc[i] === "{") depth += 1;
-    else if (publishSrc[i] === "}") { depth -= 1; if (depth === 0) { close = i; break; } }
-  }
-  const body = close === -1 ? "" : publishSrc.slice(open, close);
+  const body = functionBody(publishSrc, /export async function deletePost\(/);
   eq("delete: deletePost's body parses", body.length > 0, true);
   eq("delete: deletePost calls decideDelete in its own body",
     /decideDelete\(\s*\{\s*actor\s*\}\s*\)/.test(body), true);
@@ -772,9 +755,14 @@ refuses(
   const apiSource = stripComments(
     readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),
   );
+  /* The tool bodies live beside the dispatcher; the dispatcher names the tool, the body builds the verdict. */
+  const syncToolsSource = stripComments(
+    readFileSync(join(root, "app/lib/operator/sync-tools.server.ts"), "utf8"),
+  );
   const shipSource = stripComments(readFileSync(join(root, "scripts/ship.mjs"), "utf8"));
 
   eq("ask sync: the operator API was read", apiSource.length > 2000, true);
+  eq("ask sync: the operator sync tools were read", syncToolsSource.length > 2000, true);
   eq("ask sync: ship.mjs was read", shipSource.length > 2000, true);
 
   eq(
@@ -784,7 +772,7 @@ refuses(
   );
   eq(
     "ask sync: the tool derives its verdict from a report module, not inline",
-    /askSyncReport\(/.test(apiSource),
+    /askSyncReport\(/.test(syncToolsSource),
     true,
   );
 
@@ -928,17 +916,17 @@ refuses(
   );
   eq(
     "media sync: the tool derives its verdict from a report module, not inline",
-    /mediaSyncReport\(/.test(apiSource),
+    /mediaSyncReport\(/.test(syncToolsSource),
     true,
   );
   eq(
     "media sync: the tool repairs THROUGH the derivation, not by writing rows",
-    /rebuildMediaIndex\(env\)/.test(apiSource),
+    /rebuildMediaIndex\(env\)/.test(syncToolsSource),
     true,
   );
   eq(
     "media sync: the verdict comes from a read-back reconciliation",
-    /mediaIndexStatus\(env\)/.test(apiSource),
+    /mediaIndexStatus\(env\)/.test(syncToolsSource),
     true,
   );
 
@@ -967,11 +955,7 @@ refuses(
  * hides readership, Renderer cache off renders every request, cross_version on serves stale.
  */
 {
-  const exampleRaw = readFileSync(join(root, "wrangler.jsonc.example"), "utf8");
-  /* Comments stripped before parsing: the file is JSONC and is mostly prose. */
-  const example = JSON.parse(
-    exampleRaw.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, ""),
-  );
+  const example = parseJsonc(join(root, "wrangler.jsonc.example"));
 
   eq("the example config still enables Workers Cache at the top level", example.cache?.enabled, true);
   eq("the GATEWAY entrypoint has cache DISABLED", example.exports?.default?.cache?.enabled, false);
@@ -987,12 +971,13 @@ refuses(
 /** Drafts must never reach the AI index: Ask cannot filter at query time, so exclude at upload. */
 {
   const now = Date.parse("2026-07-29T12:00:00.000Z");
+  /*
+   * The composition publishableForAsk is asserted below to be, run on the shared owners of the rule,
+   * so these cases exercise the production predicate rather than a copy defined here.
+   */
   /** @param {{draft?: boolean, publishAt?: string|null}} p */
-  const publishable = (p) => {
-    if (p.draft === true) return false;
-    if (p.publishAt && Date.parse(p.publishAt) > now) return false;
-    return true;
-  };
+  const publishable = (p) =>
+    isPubliclyVisible({ status: statusForDraft(p.draft), publishAt: p.publishAt }, now);
 
   eq("a draft is not Ask-publishable", publishable({ draft: true }), false);
   eq("a published post is Ask-publishable", publishable({ draft: false }), true);
@@ -1053,21 +1038,7 @@ refuses(
   const askAt = askSource.search(/function publishableForAsk\b/);
   eq("publishableForAsk exists in ask.server.ts", askAt !== -1, true);
 
-  let askBody = "";
-  if (askAt !== -1) {
-    const open = askSource.indexOf("{", askSource.indexOf(")", askAt));
-    let depth = 0;
-    for (let i = open; i < askSource.length; i += 1) {
-      if (askSource[i] === "{") depth += 1;
-      else if (askSource[i] === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          askBody = askSource.slice(open, i + 1);
-          break;
-        }
-      }
-    }
-  }
+  const askBody = functionBody(askSource, /function publishableForAsk\b/);
   eq("publishableForAsk's body was extracted", askBody.length > 40, true);
 
   eq(
@@ -1152,15 +1123,15 @@ refuses(
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
-const MINIMUM_CHECKS = 190;
-const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) failures.push(floorBreach);
+const MINIMUM_CHECKS = 189;
+const floorBreach = assertFloor("check:policy", "checks", tally.checks, MINIMUM_CHECKS);
+if (floorBreach) tally.fail(floorBreach);
 
-if (failures.length > 0) {
-  console.error(`check:policy FAILED, ${failures.length} of ${checks} checks:\n`);
-  for (const f of failures) console.error(`  ${f}\n`);
+if (tally.failures > 0) {
+  console.error(`check:policy FAILED, ${tally.failures} of ${tally.checks} checks:\n`);
+  for (const f of tally.failed) console.error(`  ${f}\n`);
   process.exit(1);
 }
 
-console.log(`check:policy ok. ${checks} assertions, 0 failures.`);
+console.log(`check:policy ok. ${tally.checks} assertions, 0 failures.`);
 

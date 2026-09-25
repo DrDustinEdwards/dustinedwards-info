@@ -31,7 +31,8 @@ export function httpsRedirectTarget(requestUrl) {
 
 /**
  * 308 for non-GET: a 301 lets a browser turn a POST into a GET and drop the
- * no-script sign-in form's body.
+ * no-script sign-in form's body. Every redirect the gateway answers uses this rule; the post and
+ * PDF helpers re-export it under their own names.
  *
  * @param {string} method
  * @returns {number}

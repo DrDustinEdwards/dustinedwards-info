@@ -20,8 +20,8 @@
       "public/site.webmanifest"
     ],
     "/dustin-edwards-og-image.png": [
-      "app/lib/seo.ts",
-      "app/routes/playground.ui.tsx"
+      "app/components/playground-ui/composites.tsx",
+      "app/lib/seo.ts"
     ],
     "/dustin-edwards-orcid-id.svg": [
       "app/components/shell-footer.tsx"
@@ -51,8 +51,8 @@
       "app/data/phage-hunters.ts"
     ],
     "/phage-hunters/dustin-edwards-2024.webp": [
-      "app/data/phage-hunters.ts",
-      "app/routes/playground.ui.tsx"
+      "app/components/playground-ui/composites.tsx",
+      "app/data/phage-hunters.ts"
     ],
     "/phage-hunters/dustin-edwards-2025.webp": [
       "app/data/phage-hunters.ts"
@@ -154,6 +154,6 @@
       "app/root.tsx"
     ]
   },
-  "filesRead": 303,
+  "filesRead": 329,
   "assetsConsidered": 61
 }
