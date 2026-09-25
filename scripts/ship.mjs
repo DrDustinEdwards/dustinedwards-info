@@ -31,9 +31,11 @@ import {
 import {
   DEFERRED_CHECKS,
   deferredMisses,
+  fetchHealth,
   readinessLines,
   readinessVerdict,
 } from "./lib/readiness.mjs";
+import { dirtyTree } from "./lib/git-tree.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import {
@@ -258,12 +260,9 @@ if (OPERATOR_TOKEN.length < 32) {
 announce("Preflight: up to date, and nothing else holding the tree");
 
 {
-  const beforePull = spawnSync("git", ["status", "--porcelain"], {
-    cwd: root,
-    encoding: "utf8",
-  });
-  if (beforePull.status !== 0) refuse("git status failed", "Is this a git repository?");
-  const dirtyNow = (beforePull.stdout ?? "").trim();
+  const beforePull = dirtyTree(root);
+  if (!beforePull.ok) refuse("git status failed", "Is this a git repository?");
+  const dirtyNow = beforePull.dirty;
   if (dirtyNow.length > 0) {
     console.error(dirtyNow);
     refuse(
@@ -327,14 +326,11 @@ announce("Preflight: up to date, and nothing else holding the tree");
 announce("Working tree must be clean");
 
 /* Checked again after the pull: a failed pull can leave files, and this is what gets built. */
-const porcelain = spawnSync("git", ["status", "--porcelain"], {
-  cwd: root,
-  encoding: "utf8",
-});
-if (porcelain.status !== 0) {
+const tree = dirtyTree(root);
+if (!tree.ok) {
   refuse("git status failed", "Is this a git repository?");
 }
-const dirty = (porcelain.stdout ?? "").trim();
+const dirty = tree.dirty;
 if (dirty.length > 0) {
   console.error(dirty);
   refuse(
@@ -625,21 +621,12 @@ console.log(`  ${POLL_COUNT} consecutive 200s.`);
 announce(`Readiness: ${READINESS_PATH} reports ok`);
 
 {
-  const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
-  /** @type {number} */
-  let status = 0;
-  /** @type {string} */
-  let text = "";
-  try {
-    const res = await fetch(url, {
-      headers: { "user-agent": "ship", "cache-control": "no-cache" },
-      redirect: "manual",
-    });
-    status = res.status;
-    text = await res.text();
-  } catch (error) {
+  const { status, text, error: unreachable } = await fetchHealth(
+    `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`,
+  );
+  if (unreachable) {
     refuse(
-      `${READINESS_PATH} could not be reached: ${error instanceof Error ? error.message : error}`,
+      `${READINESS_PATH} could not be reached: ${unreachable}`,
       "The deploy landed and the poll passed, so this is a network problem or the " +
         "endpoint is gone. NOTHING WAS SYNCED.",
     );
@@ -1006,22 +993,11 @@ announce("The drift checks readiness deferred, asserted");
 let deferredMiss = "";
 {
   /* One read for all: more requests risk the per-IP limiter's 429. */
-  const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
-  /** @type {number} */
-  let status = 0;
-  /** @type {string} */
-  let text = "";
-  try {
-    const res = await fetch(url, {
-      headers: { "user-agent": "ship", "cache-control": "no-cache" },
-      redirect: "manual",
-    });
-    status = res.status;
-    text = await res.text();
-  } catch (error) {
-    deferredMiss =
-      `${READINESS_PATH} could not be reached after the sync: ` +
-      `${error instanceof Error ? error.message : error}`;
+  const { status, text, error: unreachable } = await fetchHealth(
+    `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`,
+  );
+  if (unreachable) {
+    deferredMiss = `${READINESS_PATH} could not be reached after the sync: ${unreachable}`;
   }
 
   if (!deferredMiss) {
