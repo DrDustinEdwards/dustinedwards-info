@@ -1,21 +1,14 @@
-import { Link, data, redirect } from "react-router";
+import { data } from "react-router";
 
-import { EvidenceRow } from "~/components/evidence-row";
-import { PostRow, Pager } from "~/components/post-row";
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
-import { getBlogSeries, listSeriesPosts } from "~/db";
-import { POSTS_PER_PAGE, listingFacts, readPage } from "~/lib/blog-listing.mjs";
-import { getEnv } from "~/lib/context";
-import { jsonLd } from "~/lib/json-ld.mjs";
 import {
-  SITE,
-  SITE_ORIGIN,
-  breadcrumbJsonLd,
-  pageMeta,
-  cacheTags,
-  publicHtmlHeaders,
-} from "~/lib/seo";
+  TaxonomyListing,
+  listingHref,
+  redirectPastLastPage,
+} from "~/components/taxonomy-listing";
+import { getBlogSeries, listSeriesPosts } from "~/db";
+import { POSTS_PER_PAGE, readPage } from "~/lib/blog-listing.mjs";
+import { getEnv } from "~/lib/context";
+import { SITE, pageMeta, cacheTags, publicHtmlHeaders } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series";
 
@@ -37,10 +30,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 
   const listing = await listSeriesPosts(env, series.name, { page, perPage: POSTS_PER_PAGE });
 
-  if (page > listing.pageCount) {
-    const last = listing.pageCount > 1 ? `?page=${listing.pageCount}` : "";
-    throw redirect(`${seriesPath(series.name)}${last}`);
-  }
+  redirectPastLastPage(page, listing.pageCount, seriesPath(series.name));
 
   return data({ ...listing, series });
 }
@@ -54,7 +44,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     return [{ title: `Not found | ${SITE.name}` }];
   }
   const { series, page } = loaderData;
-  const path = page > 1 ? `${seriesPath(series.name)}?page=${page}` : seriesPath(series.name);
+  const path = listingHref(seriesPath(series.name), page);
   return pageMeta({
     title: `${series.name} | ${SITE.name}`,
     description: `Every part of ${series.name}, a series on ${SITE.name}'s blog.`,
@@ -63,53 +53,14 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function BlogSeries({ loaderData }: Route.ComponentProps) {
-  const { posts, series, page, pageCount, total, span } = loaderData;
-  const base = seriesPath(series.name);
-  const hrefFor = (n: number) => (n > 1 ? `${base}?page=${n}` : base);
-
+  const { series, ...listing } = loaderData;
   return (
-    <>
-      <SiteHeader />
-      <main className="tracks list-tracks" id="main" tabIndex={-1}>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLd(
-              breadcrumbJsonLd(SITE_ORIGIN, [
-                ["Home", "/"],
-                ["Blog", "/blog"],
-                [series.name, base],
-              ]),
-            ),
-          }}
-        />
-
-        <header className="list-head">
-          <h1 className="list-label">{series.name}</h1>
-          <p className="list-dek">
-            A series in {series.total} part{series.total === 1 ? "" : "s"}, in order.{" "}
-            <Link to="/blog">All posts</Link>
-          </p>
-          <EvidenceRow facts={listingFacts(total, span)} />
-        </header>
-
-        {posts.length === 0 ? (
-          <p className="list-empty">No posts here yet.</p>
-        ) : (
-          <ul className="entry-list">
-            {posts.map((post) => (
-              <PostRow key={post.slug} post={post} />
-            ))}
-          </ul>
-        )}
-
-        <Pager page={page} pageCount={pageCount} hrefFor={hrefFor} />
-
-        <p className="list-feeds">
-          Subscribe: <a href={`${base}/rss.xml`}>RSS</a> <a href={`${base}/feed.json`}>JSON</a>
-        </p>
-      </main>
-      <ShellFooter />
-    </>
+    <TaxonomyListing
+      {...listing}
+      base={seriesPath(series.name)}
+      name={series.name}
+      heading={series.name}
+      dek={`A series in ${series.total} part${series.total === 1 ? "" : "s"}, in order.`}
+    />
   );
 }
