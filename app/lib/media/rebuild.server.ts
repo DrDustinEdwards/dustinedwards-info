@@ -3,6 +3,8 @@ import assetManifest from "../../../content/generated/assets.json";
 import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
 import { measureDimensions, placeholderFor } from "./core.server";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { setDrift } from "~/lib/health/verdicts.mjs";
 
 // `alt`, `caption`, `focal_x` and `focal_y` are AUTHORED and recoverable from nothing, so a rebuild
 // upserts derived columns only, never delete-then-insert. R2 wins: rows are removed, objects never.
@@ -24,7 +26,7 @@ async function dimensionsFor(env: Env, body: ReadableStream | null): Promise<Mea
   try {
     return { dimensions: await measureDimensions(env, body), failure: null };
   } catch (error) {
-    return { dimensions: null, failure: error instanceof Error ? error.message : String(error) };
+    return { dimensions: null, failure: errorMessage(error) };
   }
 }
 
@@ -84,12 +86,7 @@ export async function mediaIndexStatus(env: Env): Promise<{
   const expected = new Set<string>([...objects.map((o) => o.key), ...files]);
   const present = new Set<string>(rows.map((r) => r.key));
 
-  return {
-    expected: expected.size,
-    present: present.size,
-    missing: [...expected].filter((k) => !present.has(k)).sort(),
-    extra: [...present].filter((k) => !expected.has(k)).sort(),
-  };
+  return setDrift(expected, present);
 }
 
 export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
@@ -136,7 +133,7 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
       }
       indexed += 1;
     } catch (error) {
-      failures.push(`${object.key}: ${error instanceof Error ? error.message : String(error)}`);
+      failures.push(`${object.key}: ${errorMessage(error)}`);
     }
   }
 
@@ -179,7 +176,7 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
       }
       indexed += 1;
     } catch (error) {
-      failures.push(`${path}: ${error instanceof Error ? error.message : String(error)}`);
+      failures.push(`${path}: ${errorMessage(error)}`);
     }
   }
 

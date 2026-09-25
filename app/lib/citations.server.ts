@@ -1,5 +1,6 @@
-import { cloudflareContext } from "~/lib/context";
+import { getEnv, getExecutionContext } from "~/lib/context";
 import type { RouterContextProvider } from "react-router";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Per DOI only: the OpenAlex author endpoint has works by other people merged into it.
 
@@ -26,7 +27,7 @@ function logFailure(stage: string, doi: string | null, detail: unknown) {
       alert: "citation-count-failed",
       stage,
       doi,
-      detail: detail instanceof Error ? detail.message : String(detail),
+      detail: errorMessage(detail),
     }),
   );
 }
@@ -83,7 +84,8 @@ export async function getCitationCounts(
   context: Readonly<RouterContextProvider>,
   dois: string[],
 ): Promise<Record<string, CitationEntry>> {
-  const { env, ctx } = context.get(cloudflareContext);
+  const env = getEnv(context);
+  const ctx = getExecutionContext(context);
   const kv = env.APP_KV;
 
   const entries = await Promise.all(

@@ -1,4 +1,5 @@
 import { currentHead } from "~/lib/editor/publish.server";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 type HeadEnv = Parameters<typeof currentHead>[0];
 
@@ -13,6 +14,6 @@ export async function readHead(
     return { headSha: await currentHead(env), headError: null };
   } catch (error) {
     console.error("editor head read failed", error);
-    return { headSha: "", headError: error instanceof Error ? error.message : String(error) };
+    return { headSha: "", headError: errorMessage(error) };
   }
 }
