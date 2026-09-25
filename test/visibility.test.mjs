@@ -17,6 +17,9 @@ test("A DRAFT IS EXCLUDED, which is the July leak", () => {
     false,
     "a draft with a past publish date must still be excluded",
   );
+  // Neither fact holding must not admit a post either: an equality of the two facts would pass
+  // both flip tests below and still publish a future-dated draft.
+  assert.equal(isPubliclyVisible({ status: "draft", publishAt: FUTURE }, NOW), false);
 });
 
 test("A FUTURE-DATED POST IS EXCLUDED", () => {

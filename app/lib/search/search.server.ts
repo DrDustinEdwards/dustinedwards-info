@@ -135,7 +135,7 @@ function toHit(row: RawRow, snippet: string, why: MatchReason[], score: number):
 }
 
 /**
- * The SQL twin of publiclyVisible() in app/db/index.ts: they cannot be one function, so
+ * The SQL twin of publiclyVisible() in app/db/client.ts: they cannot be one function, so
  * test/visibility-invariants.test.mjs asserts they admit the same rows.
  */
 export function visibilityClause(alias = "d"): string {
