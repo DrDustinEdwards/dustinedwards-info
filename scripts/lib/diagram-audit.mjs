@@ -28,7 +28,8 @@ const NON_COLOUR_VALUES = new Set([
 ]);
 
 /**
- * By brace depth, not splitting on `}`: mermaid's stylesheet opens with nested at-rules.
+ * By brace depth, not splitting on `}`: mermaid's stylesheet opens with nested at-rules. Unbalanced
+ * braces throw: a stray `}` drove the depth negative and every later rule was silently lost.
  *
  * @param {string} text
  * @returns {Array<{ selector: string, body: string }>}
@@ -46,6 +47,7 @@ export function cssRules(text) {
       depth += 1;
     } else if (c === "}") {
       depth -= 1;
+      if (depth < 0) throw new Error(`unbalanced stylesheet: a "}" at offset ${i} closes nothing`);
       if (depth === 0) {
         out.push({
           selector: text.slice(start, selectorEnd).trim(),
@@ -55,8 +57,12 @@ export function cssRules(text) {
       }
     }
   }
+  if (depth !== 0) throw new Error(`unbalanced stylesheet: ${depth} "{" never closed`);
   return out;
 }
+
+/** At-rules whose body is more rules, applied when a condition holds, so their rules are audited. */
+const GROUPING_AT_RULES = /^@(media|supports|layer|container|document|scope)\b/i;
 
 /**
  * @param {string} body
@@ -112,12 +118,27 @@ export function auditDiagramSvg(svg, paletteHexes) {
   /** @type {Array<{ selectors: string[], properties: Set<string> }>} */
   const styling = [];
 
-  for (const style of document.querySelectorAll("style")) {
-    for (const rule of cssRules(style.textContent ?? "")) {
+  /**
+   * Conditional group rules (`@media (prefers-color-scheme: dark)`) are recursed into, since they
+   * paint whenever their condition holds; any other at-rule (`@keyframes`) is audited whole, since
+   * its colors paint when the animation runs and it has no element to be unreachable from.
+   *
+   * @param {string} text
+   */
+  const auditRules = (text) => {
+    for (const rule of cssRules(text)) {
+      if (GROUPING_AT_RULES.test(rule.selector)) {
+        auditRules(rule.body);
+        continue;
+      }
       const declarations = colourDeclarations(rule.body);
       if (declarations.length === 0) continue;
       if (rule.selector.startsWith("@")) {
-        skippedRules += 1;
+        for (const { property, value } of declarations) {
+          checked += 1;
+          const problem = colourProblem(value, palette);
+          if (problem) problems.push(`${rule.selector} { ${property}: ${problem} }`);
+        }
         continue;
       }
       const selectors = rule.selector.split(",").map((s) => s.trim()).filter(Boolean);
@@ -145,7 +166,8 @@ export function auditDiagramSvg(svg, paletteHexes) {
         if (problem) problems.push(`${rule.selector} { ${property}: ${problem} }`);
       }
     }
-  }
+  };
+  for (const style of document.querySelectorAll("style")) auditRules(style.textContent ?? "");
 
   /**
    * A presentation attribute a stylesheet rule overrides is never painted.
@@ -165,21 +187,31 @@ export function auditDiagramSvg(svg, paletteHexes) {
       });
     });
 
-  // Unreferenced `<defs>` children are never painted; arrowhead markers are referenced, so audited.
+  // Unreferenced `<defs>` children are never painted. A reference is `url(#id)` (markers, gradients)
+  // or an `href` to `#id` (`<use>`), and both keep the target audited.
   const serialized = root.toString();
+  /** @type {Set<string>} */
+  const hrefs = new Set();
+  for (const element of [root, ...root.querySelectorAll("*")]) {
+    for (const name of ["href", "xlink:href"]) {
+      const value = element.getAttribute(name);
+      if (value?.startsWith("#")) hrefs.add(value.slice(1));
+    }
+  }
   /** @type {Set<Element>} */
   const dead = new Set();
   for (const defs of document.querySelectorAll("defs")) {
     for (const child of defs.children) {
       const id = child.getAttribute("id");
-      if (!id || !serialized.includes(`url(#${id})`)) {
+      if (!id || (!serialized.includes(`url(#${id})`) && !hrefs.has(id))) {
         dead.add(child);
         for (const descendant of child.querySelectorAll("*")) dead.add(descendant);
       }
     }
   }
 
-  for (const element of root.querySelectorAll("*")) {
+  // The root itself carries attributes too (mermaid writes its background into `style`).
+  for (const element of [root, ...root.querySelectorAll("*")]) {
     if (dead.has(element)) continue;
     for (const attribute of element.attributes) {
       const name = attribute.name.toLowerCase();

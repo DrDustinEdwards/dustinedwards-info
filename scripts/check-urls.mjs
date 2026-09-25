@@ -7,6 +7,7 @@ import matter from "gray-matter";
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 import { postRedirectStatus, postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { parseSource, ts } from "./lib/syntax.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "url-protocol-cases.json");
@@ -142,54 +143,71 @@ for (const probe of fixture.frontmatterCases) {
 }
 
 // Behaviour can pass while a field blocks a protocol only by accident, so the source must call the
-// shared predicate. Only block comments are stripped: the line form truncates a `//host` in a string.
+// shared predicate. Read off the syntax tree: the old regexes ended a block at its first `})`, so a
+// nested object cut the scan short, and prose could not be told from code without a stripper.
+
+/** @param {ts.Node} root @param {(n: ts.Node) => boolean} test @returns {ts.Node[]} */
+function findAll(root, test) {
+  /** @type {ts.Node[]} */
+  const out = [];
+  /** @param {ts.Node} n */
+  const visit = (n) => {
+    if (test(n)) out.push(n);
+    ts.forEachChild(n, visit);
+  };
+  visit(root);
+  return out;
+}
+
+/** `.refine(isAllowedUrl, ...)` */
+const refinesWithPredicate = (/** @type {ts.Node} */ n) =>
+  ts.isCallExpression(n) &&
+  ts.isPropertyAccessExpression(n.expression) &&
+  n.expression.name.text === "refine" &&
+  n.arguments.length > 0 &&
+  ts.isIdentifier(n.arguments[0]) &&
+  n.arguments[0].text === "isAllowedUrl";
 
 const PIPELINE = join(root, "app", "lib", "content", "pipeline.mjs");
-const pipelineSource = readFileSync(PIPELINE, "utf8");
-const pipelineCode = pipelineSource.replace(/\/\*[\s\S]*?\*\//g, " ");
+const pipelineTree = parseSource(PIPELINE, readFileSync(PIPELINE, "utf8"));
 
-// Fail closed on the stripper itself. This phrase lives in the further_reading
-// docblock, so if it survives, the strip did not run and every assertion below
-// could be reading prose.
-assert(
-  "the comment stripper actually ran on pipeline.mjs",
-  pipelineSource.includes("is the SAME predicate") && !pipelineCode.includes("is the SAME predicate"),
-  "the docblock phrase is still present after stripping; the assertions below would read prose",
-);
-
-/** @type {Array<[string, string, RegExp]>} */
+/** Schema properties by name: `name: z....`, the zod definition rather than any other use of the name. */
 const SCHEMA_FIELDS = [
-  ["cover.src", "cover", /cover:\s*z\s*\.object\(\s*\{([\s\S]*?)\}\s*\)/],
-  [
-    "further_reading[].url",
-    "further_reading",
-    /further_reading:\s*z\s*\.array\(([\s\S]*?)\)\s*\.default\(/,
-  ],
+  ["cover.src", "cover"],
+  ["further_reading[].url", "further_reading"],
 ];
 
-for (const [label, , pattern] of SCHEMA_FIELDS) {
-  const block = pipelineCode.match(pattern);
-  // Fail closed: a block that stopped parsing must not pass as a block with no
-  // problems in it.
+for (const [label, property] of SCHEMA_FIELDS) {
+  const blocks = findAll(
+    pipelineTree,
+    (n) =>
+      ts.isPropertyAssignment(n) &&
+      ts.isIdentifier(n.name) &&
+      n.name.text === property &&
+      /^z\s*\./.test(n.initializer.getText(pipelineTree)),
+  );
+  // Fail closed: a block that stopped parsing must not pass as a block with no problems in it.
   assert(
     `schema: the ${label} block was located in pipeline.mjs`,
-    block !== null && block[1].trim().length > 0,
-    "not found after stripping comments; the next assertion would examine nothing",
+    blocks.length === 1,
+    `found ${blocks.length} zod definition(s) of ${property}; the next assertion needs exactly one`,
   );
-  if (!block) continue;
+  if (blocks.length !== 1) continue;
   assert(
     `schema: ${label} calls isAllowedUrl, not a reimplementation`,
-    /\.refine\(\s*isAllowedUrl\b/.test(block[1]),
+    findAll(blocks[0], refinesWithPredicate).length > 0,
     `the block validates the value without calling the shared predicate. ` +
       `A field that merely happens to refuse bad protocols is not this rule.`,
   );
 }
 
-assert(
-  "isAllowedUrl is defined exactly once in pipeline.mjs",
-  [...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length === 1,
-  `found ${[...pipelineCode.matchAll(/function\s+isAllowedUrl\s*\(/g)].length} definitions`,
-);
+{
+  const definitions = findAll(
+    pipelineTree,
+    (n) => ts.isFunctionDeclaration(n) && n.name?.text === "isAllowedUrl",
+  ).length;
+  assert("isAllowedUrl is defined exactly once in pipeline.mjs", definitions === 1, `found ${definitions} definitions`);
+}
 
 // A redirect to a 404 is invisible because the gateway resolves the map without the database, and a
 // slug that is also a source can never be served, the redirect running before the router.
@@ -361,27 +379,30 @@ assert(
 );
 
 // Asserted by position: asserting a stage exists passes on an arrangement that runs it too late.
+// Positions are of the CALLS on the syntax tree, so a mention in a string or comment cannot move them.
 {
-  const workerSource = readFileSync(join(root, "workers", "app.ts"), "utf8");
-  const workerCode = workerSource
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/^\s*\/\/.*$/gm, " ");
-  assert(
-    "redirects: the comment stripper ran on workers/app.ts",
-    workerSource.includes("THE GATEWAY. Cache disabled") &&
-      !workerCode.includes("THE GATEWAY. Cache disabled"),
-    "the docblock phrase survived stripping, so the assertions below could be reading prose",
+  const workerPath = join(root, "workers", "app.ts");
+  const workerTree = parseSource(workerPath, readFileSync(workerPath, "utf8"));
+  /** @param {(n: ts.Node) => boolean} test */
+  const firstAt = (test) => {
+    const hits = findAll(workerTree, test).map((n) => n.getStart(workerTree));
+    return hits.length > 0 ? Math.min(...hits) : -1;
+  };
+  /** @param {string} name */
+  const callTo = (name) => (/** @type {ts.Node} */ n) =>
+    ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name;
+  const callAt = firstAt(callTo("postRedirectTarget"));
+  const loopbackAt = firstAt(
+    (n) => ts.isPropertyAccessExpression(n) && n.getText(workerTree).replace(/\s+/g, "") === "ctx.exports.Renderer",
   );
-  const callAt = workerCode.indexOf("postRedirectTarget(");
-  const loopbackAt = workerCode.indexOf("ctx.exports.Renderer");
-  const httpsAt = workerCode.indexOf("httpsRedirectTarget(");
+  const httpsAt = firstAt(callTo("httpsRedirectTarget"));
   assert(
     "redirects: the gateway calls postRedirectTarget",
     callAt !== -1,
     "it is not called anywhere in workers/app.ts, so the map is decoration",
   );
   assert("redirects: the cache loopback was located", loopbackAt !== -1, "ctx.exports.Renderer not found");
-  assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "httpsRedirectTarget not found");
+  assert("redirects: the HTTPS redirect was located", httpsAt !== -1, "httpsRedirectTarget is not called");
   assert(
     "redirects: THE REDIRECT IS DECIDED BEFORE THE CACHE LOOPBACK",
     callAt !== -1 && loopbackAt !== -1 && callAt < loopbackAt,
