@@ -3,6 +3,7 @@ import { useRouteLoaderData } from "react-router";
 import askUrl from "~/enhance/dist/ask.js?url";
 import blogUrl from "~/enhance/dist/blog.js?url";
 import headerUrl from "~/enhance/dist/header.js?url";
+import loginUrl from "~/enhance/dist/login.js?url";
 import paletteUrl from "~/enhance/dist/palette.js?url";
 import plateUrl from "~/enhance/dist/plate.js?url";
 import podcastUrl from "~/enhance/dist/podcast.js?url";
@@ -20,6 +21,7 @@ export const ENHANCE_URLS = {
   ask: askUrl,
   blog: blogUrl,
   header: headerUrl,
+  login: loginUrl,
   palette: paletteUrl,
   plate: plateUrl,
   podcast: podcastUrl,
