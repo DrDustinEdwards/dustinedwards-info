@@ -183,8 +183,17 @@ function iso(value: Date): string {
 
 const DECIDABLE: ReadonlyArray<Webmention["status"]> = ["pending", "approved", "rejected"];
 
-function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDelete?: number }) {
+function MentionRow({
+  mention,
+  confirmDelete,
+  cancelHref,
+}: {
+  mention: Webmention;
+  confirmDelete?: number;
+  cancelHref: string;
+}) {
   const decidable = DECIDABLE.includes(mention.status);
+  const from = mention.authorName ?? "an unnamed sender";
   return (
     <li className="tool-row mention-row">
       <div className="mention-body">
@@ -210,7 +219,7 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
             body={<p>This removes the only copy of it. Nothing else has one.</p>}
             requireTyped="1"
             confirmLabel="Delete permanently"
-            cancelHref="/admin/mentions"
+            cancelHref={cancelHref}
           >
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={mention.id} />
@@ -222,13 +231,14 @@ function MentionRow({ mention, confirmDelete }: { mention: Webmention; confirmDe
           <Form method="post" className="mention-approve">
             <input type="hidden" name="intent" value="approve" />
             <input type="hidden" name="id" value={mention.id} />
+            {/* Context in the name: every row has an Approve, and a list of them is otherwise identical. */}
             <button type="submit" className="btn">
-              Approve
+              Approve<span className="sr-only"> the mention from {from}</span>
             </button>
           </Form>
         ) : null}
         <RowMenu
-          label={`Actions for the mention from ${mention.authorName ?? "an unnamed sender"}`}
+          label={`Actions for the mention from ${from}`}
         >
           {decidable && mention.status !== "rejected" ? (
             <Form method="post">
@@ -264,14 +274,23 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
 
   const unverified = mentions.filter((m) => m.status === "unverified").length;
   const expired = expiring.failed + expiring.rejected;
+  // Cancel keeps the filter it was opened from, rather than dropping back to the default one.
+  const cancelHref = `/admin/mentions?status=${status}`;
 
   return (
     <>
-      {message ? (
-        <p
-          className={`${actionData?.ok ? "editor-notice" : "panel-error"} mention-feedback`}
-          role="status"
-        >
+      <div className="admin-page-head">
+        <h1>Mentions</h1>
+      </div>
+
+      {/* The status region is always in the DOM, so a result is announced; a refusal is an alert. */}
+      <div role="status">
+        {message && actionData?.ok ? (
+          <p className="editor-notice mention-feedback">{message}</p>
+        ) : null}
+      </div>
+      {message && !actionData?.ok ? (
+        <p className="panel-error mention-feedback" role="alert">
           {message}
         </p>
       ) : null}
@@ -305,7 +324,12 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
       ) : (
         <ul className="tool-list mention-queue">
           {rows.map((mention) => (
-            <MentionRow key={mention.id} mention={mention} confirmDelete={confirmDelete} />
+            <MentionRow
+              key={mention.id}
+              mention={mention}
+              confirmDelete={confirmDelete}
+              cancelHref={cancelHref}
+            />
           ))}
         </ul>
       )}
@@ -327,7 +351,7 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
             }
             requireTyped="1"
             confirmLabel="Remove them"
-            cancelHref="/admin/mentions"
+            cancelHref={cancelHref}
           >
             <input type="hidden" name="intent" value="sweep" />
           </ConfirmDialog>

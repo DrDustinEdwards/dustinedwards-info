@@ -106,15 +106,11 @@
   padding: 0.4rem 0.75rem;
   border: 1px solid var(--border);
   border-radius: var(--r-control);
+  background: transparent;
   color: var(--text-secondary);
+  font: inherit;
   font-size: 0.9375rem;
   cursor: pointer;
-  /* Both selectors: Safari still uses the WebKit pseudo-element. */
-  list-style: none;
-}
-
-.overflow-menu-button::-webkit-details-marker {
-  display: none;
 }
 
 .overflow-menu-button:hover {
@@ -122,24 +118,22 @@
   color: var(--text);
 }
 
-.overflow-menu[open] > .overflow-menu-button {
+.overflow-menu:has(> :popover-open) > .overflow-menu-button {
   color: var(--text);
 }
 
-.overflow-menu[open] .overflow-menu-chevron {
+.overflow-menu:has(> :popover-open) .overflow-menu-chevron {
   transform: rotate(180deg);
 }
 
+/* A popover in the top layer, so the z-index a positioned panel needed is gone. */
 .overflow-menu-panel {
-  position: absolute;
-  top: calc(100% + 0.25rem);
-  right: 0;
-  z-index: var(--z-dropdown);
   min-width: 17rem;
   padding: 0.25rem;
   border: 1px solid var(--border);
   border-radius: 0.5rem;
   background: var(--surface-popover);
+  color: var(--text);
 }
 
 .overflow-menu-item {
@@ -228,6 +222,7 @@
 /* Opacity AND cursor, so it survives forced-colors. */
 .btn:disabled,
 .btn-brand:disabled,
+.btn-brand[aria-disabled="true"],
 .btn-danger:disabled,
 .btn-secondary:disabled,
 .btn-ghost:disabled,
@@ -645,15 +640,13 @@
   justify-content: center;
   min-width: var(--admin-control-h);
   min-height: var(--admin-control-h);
+  padding: 0;
   border: 1px solid transparent;
   border-radius: var(--r-control);
+  background: transparent;
   color: var(--text-secondary);
+  font: inherit;
   cursor: pointer;
-  list-style: none;
-}
-
-.row-menu-button::-webkit-details-marker {
-  display: none;
 }
 
 .row-menu-button:hover {
@@ -663,15 +656,40 @@
 }
 
 .row-menu-panel {
-  position: absolute;
-  right: 0;
-  z-index: var(--z-popover);
   width: 14rem;
-  margin-top: 0.25rem;
   padding: 0.25rem;
   border: 1px solid var(--border-strong);
   border-radius: var(--r-panel);
   background: var(--surface-popover);
+  color: var(--text);
+}
+
+/*
+ * Both panels are popovers (disclosure.tsx), placed under their own button by anchor positioning,
+ * right edges aligned, flipping above it near the bottom of the viewport. Without anchor
+ * positioning the script places them; with neither, the browser centers the popover.
+ */
+.overflow-menu,
+.row-menu {
+  /* Overridden per menu by an inline style from disclosure.tsx; this default keeps it declared. */
+  --menu-anchor: --menu;
+}
+
+.overflow-menu-button,
+.row-menu-button {
+  anchor-name: var(--menu-anchor);
+}
+
+@supports (anchor-name: --menu) {
+  .overflow-menu-panel,
+  .row-menu-panel {
+    position-anchor: var(--menu-anchor);
+    inset: auto;
+    top: calc(anchor(bottom) + 0.25rem);
+    right: anchor(right);
+    margin: 0;
+    position-try-fallbacks: flip-block;
+  }
 }
 
 .row-menu-item {

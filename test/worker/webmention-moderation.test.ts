@@ -262,7 +262,10 @@ describe("the moderation queue", () => {
         step.data,
       );
 
-      expect(await textsOf(page, "[role=status]"), body.intent).toEqual([]);
+      /* The status region is always rendered, so "no outcome" is an empty one, and no alert. */
+      const said = (await textsOf(page, "[role=status]")).filter((text) => text.trim() !== "");
+      expect(said, body.intent).toEqual([]);
+      expect(await textsOf(page, "[role=alert]"), body.intent).toEqual([]);
       expect(await textsOf(page, `input[name="${CONFIRM_FIELD}"]`), body.intent).toHaveLength(1);
     }
     expect(await statusOf(source)).toBe("rejected");
