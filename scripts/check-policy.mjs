@@ -755,9 +755,14 @@ refuses(
   const apiSource = stripComments(
     readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),
   );
+  /* The tool bodies live beside the dispatcher; the dispatcher names the tool, the body builds the verdict. */
+  const syncToolsSource = stripComments(
+    readFileSync(join(root, "app/lib/operator/sync-tools.server.ts"), "utf8"),
+  );
   const shipSource = stripComments(readFileSync(join(root, "scripts/ship.mjs"), "utf8"));
 
   eq("ask sync: the operator API was read", apiSource.length > 2000, true);
+  eq("ask sync: the operator sync tools were read", syncToolsSource.length > 2000, true);
   eq("ask sync: ship.mjs was read", shipSource.length > 2000, true);
 
   eq(
@@ -767,7 +772,7 @@ refuses(
   );
   eq(
     "ask sync: the tool derives its verdict from a report module, not inline",
-    /askSyncReport\(/.test(apiSource),
+    /askSyncReport\(/.test(syncToolsSource),
     true,
   );
 
@@ -911,17 +916,17 @@ refuses(
   );
   eq(
     "media sync: the tool derives its verdict from a report module, not inline",
-    /mediaSyncReport\(/.test(apiSource),
+    /mediaSyncReport\(/.test(syncToolsSource),
     true,
   );
   eq(
     "media sync: the tool repairs THROUGH the derivation, not by writing rows",
-    /rebuildMediaIndex\(env\)/.test(apiSource),
+    /rebuildMediaIndex\(env\)/.test(syncToolsSource),
     true,
   );
   eq(
     "media sync: the verdict comes from a read-back reconciliation",
-    /mediaIndexStatus\(env\)/.test(apiSource),
+    /mediaIndexStatus\(env\)/.test(syncToolsSource),
     true,
   );
 

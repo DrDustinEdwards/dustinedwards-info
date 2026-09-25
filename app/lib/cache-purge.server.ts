@@ -2,6 +2,7 @@
 import { cache } from "cloudflare:workers";
 
 import { cacheTags } from "~/lib/seo";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // A purge never throws and never blocks a write: a failed invalidation is a stale page and a log
 // line, not a 500 after a publish that already succeeded.
@@ -53,7 +54,7 @@ async function purgeTags(tags: string[], why: string): Promise<PurgeOutcome> {
         alert: "cache-purge-threw",
         why,
         tags,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
     return false;

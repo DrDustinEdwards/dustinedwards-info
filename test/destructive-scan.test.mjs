@@ -57,6 +57,11 @@ test("form.get(\"intent\") compared directly is part of the vocabulary", () => {
   assert.deepEqual(found.map((b) => b.intent), ["podcast-slot"]);
 });
 
+test("a property named intent compared directly is part of the vocabulary", () => {
+  const found = branches(`if (body.intent === "delete") { await remove(); }`);
+  assert.deepEqual(found.map((b) => [b.intent, b.guarded]), [["delete", false]]);
+});
+
 test("a !== guard that returns selects the statements after it", () => {
   const found = branches(`
     if (form.get("intent") !== "purge") { return bad(); }

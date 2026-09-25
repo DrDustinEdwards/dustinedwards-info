@@ -1,32 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { renderBody } from "../app/lib/content/pipeline.mjs";
+import { attr, fixedSize, render as renderWith } from "./lib/render.mjs";
 
 const MEDIA_KEY = "dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const MEDIA_SRC = `/media/${MEDIA_KEY}`;
 const STATIC_SRC = "/publications/measured-latency.png";
 
+// Fixed, and deliberately not the dimensions in the key: an assertion that
+// the width reached the img must be able to tell the two apart.
 /** @param {string} body */
-const render = (body) =>
-  renderBody({
-    file: "test.md",
-    body,
-    // Fixed, and deliberately not the dimensions in the key: an assertion that
-    // the width reached the img must be able to tell the two apart.
-    resolveImage: async () => ({ width: 1280, height: 720 }),
-  });
+const render = (body) => renderWith(body, fixedSize);
 
 function anchorFor(/** @type {string} */ html, /** @type {string} */ src) {
   for (const match of html.matchAll(/<a\b[^>]*>\s*<img\b[^>]*>/g)) {
     if (match[0].includes(`src="${src}"`)) return match[0];
   }
   return null;
-}
-
-function attr(/** @type {string} */ tag, /** @type {string} */ name) {
-  const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
-  return match ? match[1] : null;
 }
 
 const FIXTURE = [
