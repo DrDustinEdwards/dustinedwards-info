@@ -1,4 +1,5 @@
 import type { EditorView } from "@codemirror/view";
+import { useState } from "react";
 
 import {
   SCAFFOLDS,
@@ -7,6 +8,7 @@ import {
   wrap,
   type ScaffoldName,
 } from "./md-editor-commands";
+import { moveRovingFocus } from "./roving-focus";
 
 const SCAFFOLD_GLYPHS: Record<ScaffoldName, React.ReactNode> = {
   chart: (
@@ -31,7 +33,13 @@ const SCAFFOLD_GLYPHS: Record<ScaffoldName, React.ReactNode> = {
   ),
 };
 
-/** The formatting buttons, the scaffold buttons and the slash hint above the markdown surface. */
+type Tool = { label: string; hint: string; onClick: () => void; glyph: React.ReactNode };
+
+/**
+ * The formatting buttons, the scaffold buttons and the slash hint above the markdown surface. One
+ * tab stop for the whole toolbar, arrows between its buttons (the APG toolbar pattern), so a
+ * keyboard reader crosses it in one Tab rather than one per button.
+ */
 export function EditorToolbar({
   run,
   openLinkPalette,
@@ -42,45 +50,91 @@ export function EditorToolbar({
   openLinkPalette: (view: EditorView) => void;
   scaffold: (name: ScaffoldName) => void;
 }) {
-  return (
-      <div className="md-toolbar" role="toolbar" aria-label="Markdown formatting">
-        <ToolButton label="Bold" hint="Ctrl or Cmd + B" onClick={run((v) => wrap(v, "**"))}>
-          <path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z" />
-        </ToolButton>
-        <ToolButton label="Italic" hint="Ctrl or Cmd + I" onClick={run((v) => wrap(v, "_"))}>
-          <path d="M15 4h-5M14 20H9M14 4 10 20" />
-        </ToolButton>
-        <ToolButton
-          label="Link"
-          hint="Ctrl or Cmd + K, searches your posts"
-          onClick={run(openLinkPalette)}
-        >
+  const [active, setActive] = useState(0);
+
+  const tools: Tool[] = [
+    {
+      label: "Bold",
+      hint: "Ctrl or Cmd + B",
+      onClick: run((v) => wrap(v, "**")),
+      glyph: <path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z" />,
+    },
+    {
+      label: "Italic",
+      hint: "Ctrl or Cmd + I",
+      onClick: run((v) => wrap(v, "_")),
+      glyph: <path d="M15 4h-5M14 20H9M14 4 10 20" />,
+    },
+    {
+      label: "Link",
+      hint: "Ctrl or Cmd + K, searches your posts",
+      onClick: run(openLinkPalette),
+      glyph: (
+        <>
           <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
           <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-        </ToolButton>
-        <ToolButton label="Heading level" hint="Cycles h2, h3, h4, none" onClick={run(cycleHeading)}>
-          <path d="M6 4v16M18 4v16M6 12h12" />
-        </ToolButton>
-        <ToolButton label="Code" hint="Ctrl or Cmd + E" onClick={run((v) => wrap(v, "`"))}>
-          <path d="m8 6-6 6 6 6M16 6l6 6-6 6" />
-        </ToolButton>
-        <ToolButton label="Footnote" hint="Reference plus definition" onClick={run(insertFootnote)}>
+        </>
+      ),
+    },
+    {
+      label: "Heading level",
+      hint: "Cycles h2, h3, h4, none",
+      onClick: run(cycleHeading),
+      glyph: <path d="M6 4v16M18 4v16M6 12h12" />,
+    },
+    {
+      label: "Code",
+      hint: "Ctrl or Cmd + E",
+      onClick: run((v) => wrap(v, "`")),
+      glyph: <path d="m8 6-6 6 6 6M16 6l6 6-6 6" />,
+    },
+    {
+      label: "Footnote",
+      hint: "Reference plus definition",
+      onClick: run(insertFootnote),
+      glyph: (
+        <>
           <path d="M4 6h10M4 12h10M4 18h7" />
           <path d="M18 5v6M21 8h-6" />
-        </ToolButton>
-        <span className="md-toolbar-sep" aria-hidden="true" />
-        {(Object.keys(SCAFFOLDS) as ScaffoldName[]).map((name) => (
-          <ToolButton
-            key={name}
-            label={SCAFFOLDS[name].label}
-            hint={SCAFFOLDS[name].hint}
-            onClick={() => scaffold(name)}
-          >
-            {SCAFFOLD_GLYPHS[name]}
-          </ToolButton>
-        ))}
-          <span className="md-toolbar-hint muted">Type / on an empty line</span>
-        </div>
+        </>
+      ),
+    },
+  ];
+  const scaffolds: Tool[] = (Object.keys(SCAFFOLDS) as ScaffoldName[]).map((name) => ({
+    label: SCAFFOLDS[name].label,
+    hint: SCAFFOLDS[name].hint,
+    onClick: () => scaffold(name),
+    glyph: SCAFFOLD_GLYPHS[name],
+  }));
+
+  const button = (tool: Tool, index: number) => (
+    <ToolButton
+      key={tool.label}
+      label={tool.label}
+      hint={tool.hint}
+      onClick={tool.onClick}
+      tabIndex={index === active ? 0 : -1}
+      onFocus={() => setActive(index)}
+    >
+      {tool.glyph}
+    </ToolButton>
+  );
+
+  return (
+    <div
+      className="md-toolbar"
+      role="toolbar"
+      aria-label="Markdown formatting"
+      onKeyDown={(event) => {
+        const next = moveRovingFocus(event, ".md-tool");
+        if (next !== null) setActive(next);
+      }}
+    >
+      {tools.map((tool, index) => button(tool, index))}
+      <span className="md-toolbar-sep" aria-hidden="true" />
+      {scaffolds.map((tool, index) => button(tool, tools.length + index))}
+      <span className="md-toolbar-hint muted">Type / on an empty line</span>
+    </div>
   );
 }
 
@@ -88,15 +142,26 @@ function ToolButton({
   label,
   hint,
   onClick,
+  tabIndex,
+  onFocus,
   children,
 }: {
   label: string;
   hint: string;
   onClick: () => void;
+  tabIndex: number;
+  onFocus: () => void;
   children: React.ReactNode;
 }) {
   return (
-    <button type="button" className="md-tool" onClick={onClick} title={`${label}. ${hint}`}>
+    <button
+      type="button"
+      className="md-tool"
+      onClick={onClick}
+      title={`${label}. ${hint}`}
+      tabIndex={tabIndex}
+      onFocus={onFocus}
+    >
       <svg
         width="16"
         height="16"
