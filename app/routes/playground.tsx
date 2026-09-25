@@ -4,8 +4,7 @@ import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
 
 import playgroundData from "../../content/playground.json";
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
+import { PageShell } from "~/components/page-shell";
 import { CHART_TYPES } from "~/lib/content/chart-types.mjs";
 /*
  * Behind a named server export: React Router's server-code removal traces names, so a bare
@@ -370,609 +369,603 @@ export default function Playground({ loaderData }: Route.ComponentProps) {
   );
 
   return (
-    <>
-      <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
-        <div className="page-inner">
-          <h1 className="page-title">{PLAYGROUND_TITLE}</h1>
-          <p className="page-intro">{PLAYGROUND_INTRO}</p>
-          <p className="page-intro">
-            The <a href="/playground/ui">UI inventory</a> is the companion page: every component
-            and every palette token, in both themes.
+    <PageShell>
+      <h1 className="page-title">{PLAYGROUND_TITLE}</h1>
+      <p className="page-intro">{PLAYGROUND_INTRO}</p>
+      <p className="page-intro">
+        The <a href="/playground/ui">UI inventory</a> is the companion page: every component
+        and every palette token, in both themes.
+      </p>
+
+      <section id={demoAnchor("contrast")} className="playground-demo">
+        <DemoHeader slug="contrast" />
+
+        <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+          {carry("lab")}
+          <div className="playground-field">
+            <label htmlFor="pg-fg">Foreground</label>
+            <input
+              id="pg-fg" name="fg" type="text" inputMode="text"
+              maxLength={7} size={9} spellCheck={false}
+              defaultValue={fgRaw || inputDefault("contrast", "fg")}
+              aria-describedby="pg-hex-cap"
+            />
+          </div>
+          <div className="playground-field">
+            <label htmlFor="pg-bg">Background</label>
+            <input
+              id="pg-bg" name="bg" type="text" inputMode="text"
+              maxLength={7} size={9} spellCheck={false}
+              defaultValue={bgRaw || inputDefault("contrast", "bg")}
+              aria-describedby="pg-hex-cap"
+            />
+          </div>
+          <button type="submit">Compute</button>
+          <p id="pg-hex-cap" className="playground-cap">
+            Three or six hex digits each, with or without the hash.
           </p>
+        </Form>
 
-          <section id={demoAnchor("contrast")} className="playground-demo">
-            <DemoHeader slug="contrast" />
+        <ul className="playground-swatches">
+          {SWATCHES.map((s) => (
+            <li key={s.label}>
+              <Link
+                to={`${PLAYGROUND_URL}?fg=${encodeURIComponent(s.fg)}&bg=${encodeURIComponent(s.bg)}#${demoAnchor("contrast")}`}
+              >
+                {s.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
 
-            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
-              {carry("lab")}
-              <div className="playground-field">
-                <label htmlFor="pg-fg">Foreground</label>
-                <input
-                  id="pg-fg" name="fg" type="text" inputMode="text"
-                  maxLength={7} size={9} spellCheck={false}
-                  defaultValue={fgRaw || inputDefault("contrast", "fg")}
-                  aria-describedby="pg-hex-cap"
-                />
-              </div>
-              <div className="playground-field">
-                <label htmlFor="pg-bg">Background</label>
-                <input
-                  id="pg-bg" name="bg" type="text" inputMode="text"
-                  maxLength={7} size={9} spellCheck={false}
-                  defaultValue={bgRaw || inputDefault("contrast", "bg")}
-                  aria-describedby="pg-hex-cap"
-                />
-              </div>
-              <button type="submit">Compute</button>
-              <p id="pg-hex-cap" className="playground-cap">
-                Three or six hex digits each, with or without the hash.
-              </p>
-            </Form>
+        {labError && <Problem>{labError}</Problem>}
 
-            <ul className="playground-swatches">
-              {SWATCHES.map((s) => (
-                <li key={s.label}>
-                  <Link
-                    to={`${PLAYGROUND_URL}?fg=${encodeURIComponent(s.fg)}&bg=${encodeURIComponent(s.bg)}#${demoAnchor("contrast")}`}
-                  >
-                    {s.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            {labError && <Problem>{labError}</Problem>}
-
-            {lab && (
-              <div className="playground-result">
-                <p
-                  className="playground-sample"
-                  style={{ color: lab.fg, background: lab.bg }}
-                >
-                  The quick brown fox jumps over the lazy dog.
-                </p>
-                <dl className="playground-metrics">
-                  <div>
-                    <dt>WCAG 2.2 contrast ratio</dt>
-                    <dd>
-                      <strong>{lab.ratio.toFixed(2)}:1</strong>
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>AA, normal text (4.5:1)</dt>
-                    <dd>{lab.passNormal ? "Pass" : "Fail"}</dd>
-                  </div>
-                  <div>
-                    <dt>AA, large text (3:1)</dt>
-                    <dd>{lab.passLarge ? "Pass" : "Fail"}</dd>
-                  </div>
-                  <div>
-                    <dt>AAA, normal text (7:1)</dt>
-                    <dd>{lab.passAAANormal ? "Pass" : "Fail"}</dd>
-                  </div>
-                  <div>
-                    <dt>APCA Lc</dt>
-                    <dd>
-                      {lab.lc >= 0 ? "+" : ""}
-                      {lab.lc.toFixed(1)}
-                    </dd>
-                  </div>
-                </dl>
-                <p className="playground-note">
-                  The ratio is the conformance number: WCAG 2.2 AA is what this
-                  site is measured against, and it is what the build gate fails
-                  on. APCA Lc is shown beside it as an experimental perceptual
-                  model, not part of any standard and not a pass or fail. It is
-                  here because it is what decided one real rule in the palette:
-                  the dark semantic pastels clear the ratio comfortably and APCA
-                  still rates them around Lc 57 to 60, which is why interactive
-                  elements in dark mode take solid fills instead.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section id={demoAnchor("search-anatomy")} className="playground-demo">
-            <DemoHeader slug="search-anatomy" />
-
-            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
-              {carry("search")}
-              <div className="playground-field playground-field-wide">
-                <label htmlFor="pg-q">Query</label>
-                <input
-                  id="pg-q" name="q" type="search"
-                  maxLength={QUERY_CAP} defaultValue={qRaw}
-                  aria-describedby="pg-q-cap"
-                />
-              </div>
-              <button type="submit">Run</button>
-              <p id="pg-q-cap" className="playground-cap">
-                Up to {QUERY_CAP} characters. Nothing you type is stored.
-              </p>
-            </Form>
-
-            {anatomyError && <Problem>{anatomyError}</Problem>}
-
-            {anatomy && anatomy.total === 0 && (
-              <p className="playground-note">
-                No rows matched, so there is nothing to fuse. Try a word that
-                appears in an article, like <code>fusion</code> or{" "}
-                <code>durable</code>.
-              </p>
-            )}
-
-            {anatomy && anatomy.browse && (
-              <p className="playground-note">
-                That query has filters but no matchable text, so it took the
-                browse path: a plain filtered listing with no ranking and
-                therefore no fusion to show.
-              </p>
-            )}
-
-            {anatomy?.explain && anatomy.total > 0 && (
-              <div className="playground-result">
-{/* No timing: a wall-clock value would make one result URL render differently on each fetch. */}
-                <p className="playground-note">
-                  {anatomy.explain.identityCount} row(s) from{" "}
-                  <code>search_identity</code>, {anatomy.explain.proseCount} from{" "}
-                  <code>search_prose</code>.
-                </p>
-                <div className="playground-table-scroll">
-                  <table className="playground-table">
-                    <caption>
-                      Within each layer, ordering comes from bm25. Values from
-                      differently tokenized indexes are not comparable, so
-                      reciprocal rank fusion combines the ranks rather than the
-                      scores. That is why there is no score column: each row
-                      contributes 1/(k + rank) from every layer it appeared in,
-                      with k = {anatomy.explain.k}, and the totals are what sort
-                      the results.
-                    </caption>
-                    <thead>
-                      <tr>
-                        <th scope="col">Result</th>
-                        <th scope="col">Identity rank</th>
-                        <th scope="col">Prose rank</th>
-                        <th scope="col">Identity 1/(k+rank)</th>
-                        <th scope="col">Prose 1/(k+rank)</th>
-                        <th scope="col">Fused total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {anatomy.explain.rows.slice(0, 10).map((row) => (
-                        <tr key={row.uid}>
-                          <th scope="row">
-                            <a href={row.url}>{row.title}</a>
-                            {row.docTitle && row.docTitle !== row.title && (
-                              <span className="playground-row-parent">
-                                in {row.docTitle}
-                              </span>
-                            )}
-                          </th>
-                          <td>{row.identityRank ?? "not returned"}</td>
-                          <td>{row.proseRank ?? "not returned"}</td>
-                          <td>
-                            {row.identityContribution === null
-                              ? "0"
-                              : row.identityContribution.toFixed(5)}
-                          </td>
-                          <td>
-                            {row.proseContribution === null
-                              ? "0"
-                              : row.proseContribution.toFixed(5)}
-                          </td>
-                          <td>
-                            <strong>{row.score.toFixed(5)}</strong>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </section>
-
-          <section id={demoAnchor("chart-options")} className="playground-demo">
-            <DemoHeader slug="chart-options" />
-
-            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
-              {carry("chart")}
-              <fieldset className="playground-fieldset">
-                <legend>Mark type</legend>
-                {MARKS.map((m) => (
-                  <label key={m} className="playground-radio">
-                    <input type="radio" name="mark" value={m} defaultChecked={m === mark} />
-                    {m}
-                  </label>
-                ))}
-              </fieldset>
-              <fieldset className="playground-fieldset">
-                <legend>Dataset</legend>
-                {(Object.keys(DATASETS) as DatasetKey[]).map((k) => (
-                  <label key={k} className="playground-radio">
-                    <input type="radio" name="data" value={k} defaultChecked={k === dataset} />
-                    {DATASETS[k].label}
-                  </label>
-                ))}
-              </fieldset>
-              <button type="submit">Render</button>
-              <p className="playground-cap">
-                Enum inputs only. There is no free-text chart specification here:
-                arbitrary input into the renderer is a compute surface this page
-                does not open.
-              </p>
-            </Form>
-
-            {chartError && <Problem>{chartError}</Problem>}
-            {chartRenderError && <Problem>{chartRenderError}</Problem>}
-
-            {chartHtml && (
-              <div className="playground-result">
-                {/* Pipeline output from data committed in this file; no third-party input, so it can be injected. */}
-                <figure
-                  className="chart-figure"
-                  dangerouslySetInnerHTML={{ __html: chartHtml }}
-                />
-                <p className="playground-note">
-                  {datasetLabel}: {datasetNote}
-                </p>
-                <p className="playground-note">
-                  One render serves both themes. The series colors in that SVG
-                  are <code>var(--chart-cadet)</code> and its siblings, not
-                  literals, so the bytes are identical in light and dark and the
-                  browser resolves them per theme. Use the theme switch in the
-                  header and watch this chart recolor without a new request:
-                  that is the proof, and it is why there is no theme control
-                  here to press.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section id={demoAnchor("media-key")} className="playground-demo">
-            <DemoHeader slug="media-key" />
-
-            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
-              {carry("key")}
-              <div className="playground-field playground-field-wide">
-                <label htmlFor="pg-key">Key or path</label>
-                <input
-                  id="pg-key" name="key" type="text" inputMode="text"
-                  maxLength={KEY_CAP} spellCheck={false}
-                  defaultValue={keyRaw}
-                  aria-describedby="pg-key-cap"
-                />
-              </div>
-              <button type="submit">Parse</button>
-              <p id="pg-key-cap" className="playground-cap">
-                Up to {KEY_CAP} characters. Nothing you type is stored, and
-                nothing here reads a bucket: every answer below is a function of
-                the string and nothing else.
-              </p>
-            </Form>
-
-            <ul className="playground-swatches">
-              {KEY_PRESETS.map((preset) => (
-                <li key={preset.key}>
-                  <Link
-                    to={`${PLAYGROUND_URL}?key=${encodeURIComponent(preset.key)}#${demoAnchor("media-key")}`}
-                  >
-                    {preset.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            {keyError && <Problem>{keyError}</Problem>}
-
-            {keyResult && (
-              <div className="playground-result">
-                <dl className="playground-metrics">
-                  <div>
-                    <dt>Content key</dt>
-                    <dd>{keyResult.contentKey ? "Yes" : "No"}</dd>
-                  </div>
-                  <div>
-                    <dt>Content digest</dt>
-                    <dd>{keyResult.digest ?? "none"}</dd>
-                  </div>
-                  <div>
-                    <dt>Intrinsic dimensions</dt>
-                    <dd>{keyResult.dimensions ?? "none"}</dd>
-                  </div>
-                  <div>
-                    <dt>Storage tier</dt>
-                    <dd>{keyResult.storage}</dd>
-                  </div>
-                  <div>
-                    <dt>Role</dt>
-                    <dd>{keyResult.role}</dd>
-                  </div>
-                  <div>
-                    <dt>Kind</dt>
-                    <dd>{keyResult.classification?.kind ?? "refused"}</dd>
-                  </div>
-                  <div>
-                    <dt>Media type</dt>
-                    <dd>{keyResult.classification?.mime ?? "refused"}</dd>
-                  </div>
-                  <div>
-                    <dt>Transformable raster</dt>
-                    <dd>{keyResult.raster ? "Yes" : "No"}</dd>
-                  </div>
-                  <div>
-                    <dt>Safe to crop</dt>
-                    <dd>{keyResult.cropSafe ? "Yes" : "No"}</dd>
-                  </div>
-                </dl>
-
-                {keyResult.classifyRefusal && (
-                  <>
-                    <Problem>{keyResult.classifyRefusal}</Problem>
-                    <p className="playground-note">
-                      That is the classifier doing its job. It throws on an
-                      unrecognised extension rather than returning a default,
-                      which is the whole reason it is a function and not a
-                      lookup at the call site: a new file type appearing under{" "}
-                      <code>public/</code> has to stop a build, not acquire a
-                      plausible kind nobody chose. Adding a type means adding it
-                      to the table in the same commit as the file.
-                    </p>
-                  </>
-                )}
-
-                {keyResult.excluded && (
-                  <p className="playground-note">
-                    Excluded from the asset index: {keyResult.excluded}
-                  </p>
-                )}
-
-                <p className="playground-note">
-                  The three shapes above are one grammar, stated once. A key is
-                  sixteen hex digits of the content digest, optionally the
-                  intrinsic dimensions, then the extension; nothing else is a
-                  content key. Four functions read that one statement, and they
-                  do not all take the same argument: the digest and dimension
-                  readers accept a bare key OR a <code>/media/</code> path and
-                  strip any transform query, because a width is a request for a
-                  different rendering rather than a different object, while the
-                  boolean documents a bare key and the classifier reads
-                  everything after the last dot. Every one of those contracts is
-                  visible in the presets above, which is the reason they are the
-                  presets.
-                </p>
-                <p className="playground-note">
-                  Why one statement rather than four: there used to be more, and
-                  they had already drifted. Collapsing them was done as a
-                  differential over generated and negative cases, and the two
-                  spellings disagreed on a key with a leading zero in its
-                  dimension, where the loose reader returned a size for a key the
-                  strict readers were simultaneously refusing to give a digest
-                  for. A grammar with two spellings fails exactly when the writer
-                  moves, which is the one moment it is needed.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section id={demoAnchor("theme-resolution")} className="playground-demo">
-            <DemoHeader slug="theme-resolution" />
-
-            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
-              {carry("theme")}
-              <div className="playground-field playground-field-wide">
-                <label htmlFor="pg-cookie">Cookie header</label>
-                <input
-                  id="pg-cookie" name="cookie" type="text" inputMode="text"
-                  maxLength={COOKIE_CAP} spellCheck={false}
-                  defaultValue={cookieRaw}
-                  aria-describedby="pg-cookie-cap"
-                />
-              </div>
-              <button type="submit">Resolve</button>
-              <p id="pg-cookie-cap" className="playground-cap">
-                Up to {COOKIE_CAP} printable characters. Your own cookie is not
-                read and nothing you type is stored: the resolver is handed a
-                request built from this box and from nothing else.
-              </p>
-            </Form>
-
-            <ul className="playground-swatches">
-              {COOKIE_PRESETS.map((preset) => (
-                <li key={preset.label}>
-                  <Link
-                    to={`${PLAYGROUND_URL}?cookie=${encodeURIComponent(preset.cookie)}#${demoAnchor("theme-resolution")}`}
-                  >
-                    {preset.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-
-            {themeError && <Problem>{themeError}</Problem>}
-
-            {themeResult && (
-              <div className="playground-result">
-                <dl className="playground-metrics">
-                  <div>
-                    <dt>Cookie header</dt>
-                    <dd>{themeResult.cookie === "" ? "none sent" : themeResult.cookie}</dd>
-                  </div>
-                  <div>
-                    <dt>Resolved theme</dt>
-                    <dd>{themeResult.theme}</dd>
-                  </div>
-                  <div>
-                    <dt>data-theme</dt>
-                    <dd>{themeResult.attribute ?? "omitted"}</dd>
-                  </div>
-                  <div>
-                    <dt>meta color-scheme</dt>
-                    <dd>{themeResult.colorScheme}</dd>
-                  </div>
-                </dl>
-
-                <p className="playground-note">
-                  The choice is a cookie rather than local storage, and that is
-                  the whole anti-flash design. Local storage is unreadable on the
-                  server, so a site that keeps the theme there has to paint once
-                  and then correct itself, which is the flash. A cookie arrives
-                  with the request, so the server writes the right{" "}
-                  <code>data-theme</code> into the very first byte of HTML and
-                  nothing is ever corrected.
-                </p>
-                <p className="playground-note">
-                  Omitting the attribute is not a missing value, it is the
-                  mechanism: with no <code>data-theme</code> the stylesheet falls
-                  through to <code>prefers-color-scheme</code> and the machine
-                  decides. That is why a legacy <code>theme=system</code> cookie
-                  and no cookie at all resolve to the same thing here rather than
-                  to two states that merely look alike.
-                </p>
-                <p className="playground-note">
-                  The meta element is separate from the attribute and does a
-                  different job. <code>data-theme</code> tells the STYLESHEET
-                  which palette to use and tells the browser nothing, because the
-                  browser cannot know what that attribute means until it has
-                  parsed the CSS that gives it meaning. Until then the canvas it
-                  paints between documents is the default one, and the default is
-                  light: a white frame, for exactly one composited frame, for the
-                  reader whose choice disagrees with their machine.
-                </p>
-              </div>
-            )}
-          </section>
-
-          <section id={demoAnchor("markdown-render")} className="playground-demo">
-            <DemoHeader slug="markdown-render" />
-
-            <Form method="get" action={PLAYGROUND_URL} className="playground-form">
-              {carry("markdown")}
-              <fieldset className="playground-fieldset">
-                <legend>Snippet</legend>
-                {SNIPPETS.map((s) => (
-                  <label key={s.slug} className="playground-radio">
-                    <input
-                      type="radio" name="md" value={s.slug}
-                      defaultChecked={s.slug === snippetSlug}
-                    />
-                    {s.label}
-                  </label>
-                ))}
-              </fieldset>
-              <button type="submit">Render</button>
-              <p className="playground-cap">
-                Enum inputs only. There is no text box here: the pipeline runs a
-                syntax highlighter over a WebAssembly regex engine and a
-                directive layer that resolves assets, so arbitrary text into it
-                is a compute and sanitization surface that needs its own threat
-                model before it reaches the public plane.
-              </p>
-            </Form>
-
-            {snippetError && <Problem>{snippetError}</Problem>}
-
-            <div className="playground-result">
-              <h3 className="playground-subhead">In</h3>
-              <pre className="playground-source">
-                <code>{markdown?.source ?? SNIPPETS.find((s) => s.slug === snippetSlug)?.source}</code>
-              </pre>
-              <p className="playground-note">{snippetNote}</p>
-
-              <h3 className="playground-subhead">Out</h3>
-
-              {markdownRefusal && (
-                <>
-                  <Problem>{markdownRefusal}</Problem>
-                  <p className="playground-note">
-                    That is the pipeline failing closed, before any directive
-                    handler runs. A directive nobody implemented is a named build
-                    error rather than a silent empty div in a published article,
-                    which is why this branch cannot be shown any other way: an
-                    article carrying it would never have been published.
-                  </p>
-                </>
-              )}
-
-              {markdown && (
-                <>
-                  {/* The same `renderBody` output an article gets; no third-party input, so it can be injected. */}
-                  <div
-                    className="prose playground-rendered"
-                    dangerouslySetInnerHTML={{ __html: markdown.html }}
-                  />
-
-                  <h3 className="playground-subhead">Collected on the way through</h3>
-                  <dl className="playground-metrics">
-                    <div>
-                      <dt>Heading anchors</dt>
-                      <dd>
-                        {markdown.toc.length > 0
-                          ? markdown.toc.map((h) => h.id).join(", ")
-                          : "none"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>URLs the allowlist demoted</dt>
-                      <dd>
-                        {markdown.blockedUrls.length > 0
-                          ? markdown.blockedUrls.map((b) => b.url).join(", ")
-                          : "none"}
-                      </dd>
-                    </div>
-                  </dl>
-
-                  {markdown.blockedUrls.length > 0 && (
-                    <p className="playground-note">
-                      A refused link is demoted to the markdown that produced it
-                      rather than stripped or emptied, because both of those look
-                      to an author exactly like a link that worked. Un-rendered
-                      markdown is the one signal every markdown author already
-                      reads as "this did not become what I meant", and the
-                      offending URL stays in the text so the reason is legible
-                      without opening a console. It is emitted as a text node, so
-                      it cannot re-enter the document as markup. The guard runs
-                      LAST in the chain on purpose, after every href and src the
-                      pipeline can emit: markdown links and images, the figure
-                      directive, diagram assets, heading autolinks and footnote
-                      references.
-                    </p>
-                  )}
-
-                  <p className="playground-note">
-                    The heading anchors are collected during the same pass that
-                    renders, not by a second walk afterwards, which is what makes
-                    a post's table of contents and its heading permalinks
-                    incapable of disagreeing. This is one call, and it is the one
-                    the deploy build makes for every article, the editor preview
-                    makes on every keystroke and the operator API makes on every
-                    save.
-                  </p>
-                </>
-              )}
-            </div>
-          </section>
-
-          <section className="playground-deferred">
-            <h2>Not here yet</h2>
-            <p>
-              A missing demo is a stated absence rather than a stub. Each of
-              these needs a decision before it can exist.
+        {lab && (
+          <div className="playground-result">
+            <p
+              className="playground-sample"
+              style={{ color: lab.fg, background: lab.bg }}
+            >
+              The quick brown fox jumps over the lazy dog.
             </p>
-            <dl>
-              {playgroundData.deferred.map((d) => (
-                <div key={d.slug}>
-                  <dt>{d.title}</dt>
-                  <dd>{d.reason}</dd>
-                </div>
-              ))}
+            <dl className="playground-metrics">
+              <div>
+                <dt>WCAG 2.2 contrast ratio</dt>
+                <dd>
+                  <strong>{lab.ratio.toFixed(2)}:1</strong>
+                </dd>
+              </div>
+              <div>
+                <dt>AA, normal text (4.5:1)</dt>
+                <dd>{lab.passNormal ? "Pass" : "Fail"}</dd>
+              </div>
+              <div>
+                <dt>AA, large text (3:1)</dt>
+                <dd>{lab.passLarge ? "Pass" : "Fail"}</dd>
+              </div>
+              <div>
+                <dt>AAA, normal text (7:1)</dt>
+                <dd>{lab.passAAANormal ? "Pass" : "Fail"}</dd>
+              </div>
+              <div>
+                <dt>APCA Lc</dt>
+                <dd>
+                  {lab.lc >= 0 ? "+" : ""}
+                  {lab.lc.toFixed(1)}
+                </dd>
+              </div>
             </dl>
-          </section>
+            <p className="playground-note">
+              The ratio is the conformance number: WCAG 2.2 AA is what this
+              site is measured against, and it is what the build gate fails
+              on. APCA Lc is shown beside it as an experimental perceptual
+              model, not part of any standard and not a pass or fail. It is
+              here because it is what decided one real rule in the palette:
+              the dark semantic pastels clear the ratio comfortably and APCA
+              still rates them around Lc 57 to 60, which is why interactive
+              elements in dark mode take solid fills instead.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section id={demoAnchor("search-anatomy")} className="playground-demo">
+        <DemoHeader slug="search-anatomy" />
+
+        <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+          {carry("search")}
+          <div className="playground-field playground-field-wide">
+            <label htmlFor="pg-q">Query</label>
+            <input
+              id="pg-q" name="q" type="search"
+              maxLength={QUERY_CAP} defaultValue={qRaw}
+              aria-describedby="pg-q-cap"
+            />
+          </div>
+          <button type="submit">Run</button>
+          <p id="pg-q-cap" className="playground-cap">
+            Up to {QUERY_CAP} characters. Nothing you type is stored.
+          </p>
+        </Form>
+
+        {anatomyError && <Problem>{anatomyError}</Problem>}
+
+        {anatomy && anatomy.total === 0 && (
+          <p className="playground-note">
+            No rows matched, so there is nothing to fuse. Try a word that
+            appears in an article, like <code>fusion</code> or{" "}
+            <code>durable</code>.
+          </p>
+        )}
+
+        {anatomy && anatomy.browse && (
+          <p className="playground-note">
+            That query has filters but no matchable text, so it took the
+            browse path: a plain filtered listing with no ranking and
+            therefore no fusion to show.
+          </p>
+        )}
+
+        {anatomy?.explain && anatomy.total > 0 && (
+          <div className="playground-result">
+{/* No timing: a wall-clock value would make one result URL render differently on each fetch. */}
+            <p className="playground-note">
+              {anatomy.explain.identityCount} row(s) from{" "}
+              <code>search_identity</code>, {anatomy.explain.proseCount} from{" "}
+              <code>search_prose</code>.
+            </p>
+            <div className="playground-table-scroll">
+              <table className="playground-table">
+                <caption>
+                  Within each layer, ordering comes from bm25. Values from
+                  differently tokenized indexes are not comparable, so
+                  reciprocal rank fusion combines the ranks rather than the
+                  scores. That is why there is no score column: each row
+                  contributes 1/(k + rank) from every layer it appeared in,
+                  with k = {anatomy.explain.k}, and the totals are what sort
+                  the results.
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Result</th>
+                    <th scope="col">Identity rank</th>
+                    <th scope="col">Prose rank</th>
+                    <th scope="col">Identity 1/(k+rank)</th>
+                    <th scope="col">Prose 1/(k+rank)</th>
+                    <th scope="col">Fused total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {anatomy.explain.rows.slice(0, 10).map((row) => (
+                    <tr key={row.uid}>
+                      <th scope="row">
+                        <a href={row.url}>{row.title}</a>
+                        {row.docTitle && row.docTitle !== row.title && (
+                          <span className="playground-row-parent">
+                            in {row.docTitle}
+                          </span>
+                        )}
+                      </th>
+                      <td>{row.identityRank ?? "not returned"}</td>
+                      <td>{row.proseRank ?? "not returned"}</td>
+                      <td>
+                        {row.identityContribution === null
+                          ? "0"
+                          : row.identityContribution.toFixed(5)}
+                      </td>
+                      <td>
+                        {row.proseContribution === null
+                          ? "0"
+                          : row.proseContribution.toFixed(5)}
+                      </td>
+                      <td>
+                        <strong>{row.score.toFixed(5)}</strong>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <section id={demoAnchor("chart-options")} className="playground-demo">
+        <DemoHeader slug="chart-options" />
+
+        <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+          {carry("chart")}
+          <fieldset className="playground-fieldset">
+            <legend>Mark type</legend>
+            {MARKS.map((m) => (
+              <label key={m} className="playground-radio">
+                <input type="radio" name="mark" value={m} defaultChecked={m === mark} />
+                {m}
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className="playground-fieldset">
+            <legend>Dataset</legend>
+            {(Object.keys(DATASETS) as DatasetKey[]).map((k) => (
+              <label key={k} className="playground-radio">
+                <input type="radio" name="data" value={k} defaultChecked={k === dataset} />
+                {DATASETS[k].label}
+              </label>
+            ))}
+          </fieldset>
+          <button type="submit">Render</button>
+          <p className="playground-cap">
+            Enum inputs only. There is no free-text chart specification here:
+            arbitrary input into the renderer is a compute surface this page
+            does not open.
+          </p>
+        </Form>
+
+        {chartError && <Problem>{chartError}</Problem>}
+        {chartRenderError && <Problem>{chartRenderError}</Problem>}
+
+        {chartHtml && (
+          <div className="playground-result">
+            {/* Pipeline output from data committed in this file; no third-party input, so it can be injected. */}
+            <figure
+              className="chart-figure"
+              dangerouslySetInnerHTML={{ __html: chartHtml }}
+            />
+            <p className="playground-note">
+              {datasetLabel}: {datasetNote}
+            </p>
+            <p className="playground-note">
+              One render serves both themes. The series colors in that SVG
+              are <code>var(--chart-cadet)</code> and its siblings, not
+              literals, so the bytes are identical in light and dark and the
+              browser resolves them per theme. Use the theme switch in the
+              header and watch this chart recolor without a new request:
+              that is the proof, and it is why there is no theme control
+              here to press.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section id={demoAnchor("media-key")} className="playground-demo">
+        <DemoHeader slug="media-key" />
+
+        <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+          {carry("key")}
+          <div className="playground-field playground-field-wide">
+            <label htmlFor="pg-key">Key or path</label>
+            <input
+              id="pg-key" name="key" type="text" inputMode="text"
+              maxLength={KEY_CAP} spellCheck={false}
+              defaultValue={keyRaw}
+              aria-describedby="pg-key-cap"
+            />
+          </div>
+          <button type="submit">Parse</button>
+          <p id="pg-key-cap" className="playground-cap">
+            Up to {KEY_CAP} characters. Nothing you type is stored, and
+            nothing here reads a bucket: every answer below is a function of
+            the string and nothing else.
+          </p>
+        </Form>
+
+        <ul className="playground-swatches">
+          {KEY_PRESETS.map((preset) => (
+            <li key={preset.key}>
+              <Link
+                to={`${PLAYGROUND_URL}?key=${encodeURIComponent(preset.key)}#${demoAnchor("media-key")}`}
+              >
+                {preset.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        {keyError && <Problem>{keyError}</Problem>}
+
+        {keyResult && (
+          <div className="playground-result">
+            <dl className="playground-metrics">
+              <div>
+                <dt>Content key</dt>
+                <dd>{keyResult.contentKey ? "Yes" : "No"}</dd>
+              </div>
+              <div>
+                <dt>Content digest</dt>
+                <dd>{keyResult.digest ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Intrinsic dimensions</dt>
+                <dd>{keyResult.dimensions ?? "none"}</dd>
+              </div>
+              <div>
+                <dt>Storage tier</dt>
+                <dd>{keyResult.storage}</dd>
+              </div>
+              <div>
+                <dt>Role</dt>
+                <dd>{keyResult.role}</dd>
+              </div>
+              <div>
+                <dt>Kind</dt>
+                <dd>{keyResult.classification?.kind ?? "refused"}</dd>
+              </div>
+              <div>
+                <dt>Media type</dt>
+                <dd>{keyResult.classification?.mime ?? "refused"}</dd>
+              </div>
+              <div>
+                <dt>Transformable raster</dt>
+                <dd>{keyResult.raster ? "Yes" : "No"}</dd>
+              </div>
+              <div>
+                <dt>Safe to crop</dt>
+                <dd>{keyResult.cropSafe ? "Yes" : "No"}</dd>
+              </div>
+            </dl>
+
+            {keyResult.classifyRefusal && (
+              <>
+                <Problem>{keyResult.classifyRefusal}</Problem>
+                <p className="playground-note">
+                  That is the classifier doing its job. It throws on an
+                  unrecognised extension rather than returning a default,
+                  which is the whole reason it is a function and not a
+                  lookup at the call site: a new file type appearing under{" "}
+                  <code>public/</code> has to stop a build, not acquire a
+                  plausible kind nobody chose. Adding a type means adding it
+                  to the table in the same commit as the file.
+                </p>
+              </>
+            )}
+
+            {keyResult.excluded && (
+              <p className="playground-note">
+                Excluded from the asset index: {keyResult.excluded}
+              </p>
+            )}
+
+            <p className="playground-note">
+              The three shapes above are one grammar, stated once. A key is
+              sixteen hex digits of the content digest, optionally the
+              intrinsic dimensions, then the extension; nothing else is a
+              content key. Four functions read that one statement, and they
+              do not all take the same argument: the digest and dimension
+              readers accept a bare key OR a <code>/media/</code> path and
+              strip any transform query, because a width is a request for a
+              different rendering rather than a different object, while the
+              boolean documents a bare key and the classifier reads
+              everything after the last dot. Every one of those contracts is
+              visible in the presets above, which is the reason they are the
+              presets.
+            </p>
+            <p className="playground-note">
+              Why one statement rather than four: there used to be more, and
+              they had already drifted. Collapsing them was done as a
+              differential over generated and negative cases, and the two
+              spellings disagreed on a key with a leading zero in its
+              dimension, where the loose reader returned a size for a key the
+              strict readers were simultaneously refusing to give a digest
+              for. A grammar with two spellings fails exactly when the writer
+              moves, which is the one moment it is needed.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section id={demoAnchor("theme-resolution")} className="playground-demo">
+        <DemoHeader slug="theme-resolution" />
+
+        <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+          {carry("theme")}
+          <div className="playground-field playground-field-wide">
+            <label htmlFor="pg-cookie">Cookie header</label>
+            <input
+              id="pg-cookie" name="cookie" type="text" inputMode="text"
+              maxLength={COOKIE_CAP} spellCheck={false}
+              defaultValue={cookieRaw}
+              aria-describedby="pg-cookie-cap"
+            />
+          </div>
+          <button type="submit">Resolve</button>
+          <p id="pg-cookie-cap" className="playground-cap">
+            Up to {COOKIE_CAP} printable characters. Your own cookie is not
+            read and nothing you type is stored: the resolver is handed a
+            request built from this box and from nothing else.
+          </p>
+        </Form>
+
+        <ul className="playground-swatches">
+          {COOKIE_PRESETS.map((preset) => (
+            <li key={preset.label}>
+              <Link
+                to={`${PLAYGROUND_URL}?cookie=${encodeURIComponent(preset.cookie)}#${demoAnchor("theme-resolution")}`}
+              >
+                {preset.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
+
+        {themeError && <Problem>{themeError}</Problem>}
+
+        {themeResult && (
+          <div className="playground-result">
+            <dl className="playground-metrics">
+              <div>
+                <dt>Cookie header</dt>
+                <dd>{themeResult.cookie === "" ? "none sent" : themeResult.cookie}</dd>
+              </div>
+              <div>
+                <dt>Resolved theme</dt>
+                <dd>{themeResult.theme}</dd>
+              </div>
+              <div>
+                <dt>data-theme</dt>
+                <dd>{themeResult.attribute ?? "omitted"}</dd>
+              </div>
+              <div>
+                <dt>meta color-scheme</dt>
+                <dd>{themeResult.colorScheme}</dd>
+              </div>
+            </dl>
+
+            <p className="playground-note">
+              The choice is a cookie rather than local storage, and that is
+              the whole anti-flash design. Local storage is unreadable on the
+              server, so a site that keeps the theme there has to paint once
+              and then correct itself, which is the flash. A cookie arrives
+              with the request, so the server writes the right{" "}
+              <code>data-theme</code> into the very first byte of HTML and
+              nothing is ever corrected.
+            </p>
+            <p className="playground-note">
+              Omitting the attribute is not a missing value, it is the
+              mechanism: with no <code>data-theme</code> the stylesheet falls
+              through to <code>prefers-color-scheme</code> and the machine
+              decides. That is why a legacy <code>theme=system</code> cookie
+              and no cookie at all resolve to the same thing here rather than
+              to two states that merely look alike.
+            </p>
+            <p className="playground-note">
+              The meta element is separate from the attribute and does a
+              different job. <code>data-theme</code> tells the STYLESHEET
+              which palette to use and tells the browser nothing, because the
+              browser cannot know what that attribute means until it has
+              parsed the CSS that gives it meaning. Until then the canvas it
+              paints between documents is the default one, and the default is
+              light: a white frame, for exactly one composited frame, for the
+              reader whose choice disagrees with their machine.
+            </p>
+          </div>
+        )}
+      </section>
+
+      <section id={demoAnchor("markdown-render")} className="playground-demo">
+        <DemoHeader slug="markdown-render" />
+
+        <Form method="get" action={PLAYGROUND_URL} className="playground-form">
+          {carry("markdown")}
+          <fieldset className="playground-fieldset">
+            <legend>Snippet</legend>
+            {SNIPPETS.map((s) => (
+              <label key={s.slug} className="playground-radio">
+                <input
+                  type="radio" name="md" value={s.slug}
+                  defaultChecked={s.slug === snippetSlug}
+                />
+                {s.label}
+              </label>
+            ))}
+          </fieldset>
+          <button type="submit">Render</button>
+          <p className="playground-cap">
+            Enum inputs only. There is no text box here: the pipeline runs a
+            syntax highlighter over a WebAssembly regex engine and a
+            directive layer that resolves assets, so arbitrary text into it
+            is a compute and sanitization surface that needs its own threat
+            model before it reaches the public plane.
+          </p>
+        </Form>
+
+        {snippetError && <Problem>{snippetError}</Problem>}
+
+        <div className="playground-result">
+          <h3 className="playground-subhead">In</h3>
+          <pre className="playground-source">
+            <code>{markdown?.source ?? SNIPPETS.find((s) => s.slug === snippetSlug)?.source}</code>
+          </pre>
+          <p className="playground-note">{snippetNote}</p>
+
+          <h3 className="playground-subhead">Out</h3>
+
+          {markdownRefusal && (
+            <>
+              <Problem>{markdownRefusal}</Problem>
+              <p className="playground-note">
+                That is the pipeline failing closed, before any directive
+                handler runs. A directive nobody implemented is a named build
+                error rather than a silent empty div in a published article,
+                which is why this branch cannot be shown any other way: an
+                article carrying it would never have been published.
+              </p>
+            </>
+          )}
+
+          {markdown && (
+            <>
+              {/* The same `renderBody` output an article gets; no third-party input, so it can be injected. */}
+              <div
+                className="prose playground-rendered"
+                dangerouslySetInnerHTML={{ __html: markdown.html }}
+              />
+
+              <h3 className="playground-subhead">Collected on the way through</h3>
+              <dl className="playground-metrics">
+                <div>
+                  <dt>Heading anchors</dt>
+                  <dd>
+                    {markdown.toc.length > 0
+                      ? markdown.toc.map((h) => h.id).join(", ")
+                      : "none"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>URLs the allowlist demoted</dt>
+                  <dd>
+                    {markdown.blockedUrls.length > 0
+                      ? markdown.blockedUrls.map((b) => b.url).join(", ")
+                      : "none"}
+                  </dd>
+                </div>
+              </dl>
+
+              {markdown.blockedUrls.length > 0 && (
+                <p className="playground-note">
+                  A refused link is demoted to the markdown that produced it
+                  rather than stripped or emptied, because both of those look
+                  to an author exactly like a link that worked. Un-rendered
+                  markdown is the one signal every markdown author already
+                  reads as "this did not become what I meant", and the
+                  offending URL stays in the text so the reason is legible
+                  without opening a console. It is emitted as a text node, so
+                  it cannot re-enter the document as markup. The guard runs
+                  LAST in the chain on purpose, after every href and src the
+                  pipeline can emit: markdown links and images, the figure
+                  directive, diagram assets, heading autolinks and footnote
+                  references.
+                </p>
+              )}
+
+              <p className="playground-note">
+                The heading anchors are collected during the same pass that
+                renders, not by a second walk afterwards, which is what makes
+                a post's table of contents and its heading permalinks
+                incapable of disagreeing. This is one call, and it is the one
+                the deploy build makes for every article, the editor preview
+                makes on every keystroke and the operator API makes on every
+                save.
+              </p>
+            </>
+          )}
         </div>
-      </main>
-      <ShellFooter />
-    </>
+      </section>
+
+      <section className="playground-deferred">
+        <h2>Not here yet</h2>
+        <p>
+          A missing demo is a stated absence rather than a stub. Each of
+          these needs a decision before it can exist.
+        </p>
+        <dl>
+          {playgroundData.deferred.map((d) => (
+            <div key={d.slug}>
+              <dt>{d.title}</dt>
+              <dd>{d.reason}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
+    </PageShell>
   );
 }
