@@ -440,11 +440,11 @@ const DECLARED_ELSEWHERE = new Map([
 
   /* Scope, both sides: an empty set on either side fails for the wrong reason. */
   assert(
-    `resolution scope: ${used.size} var() token(s) found in app.css`,
+    `resolution scope: ${used.size} var() token(s) found in the source stylesheets`,
     used.size >= 63,
   );
   assert(
-    `resolution scope: ${declaredAnywhere.size} token declaration(s) found in app.css`,
+    `resolution scope: ${declaredAnywhere.size} token declaration(s) found in the source stylesheets`,
     declaredAnywhere.size >= 72,
   );
 
