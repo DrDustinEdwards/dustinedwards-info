@@ -435,6 +435,11 @@ export default function AdminPosts({
     tagOptions,
   } = loaderData;
   const askUnread = askOn && !ask;
+  /* Narrowed by key: the 400 answer carries only `message`, so the union no longer has these on every arm. */
+  const confirmSyncAsk =
+    actionData && "confirmSyncAsk" in actionData ? actionData.confirmSyncAsk : undefined;
+  const confirmDelete =
+    actionData && "confirmDelete" in actionData ? actionData.confirmDelete : undefined;
   /* Defaulted: loader data written before this field existed must render zeros. */
   const statusCounts = loaderData.statusCounts ?? {
     all: total,
@@ -660,14 +665,14 @@ export default function AdminPosts({
         </p>
       ) : null}
 
-      {actionData?.confirmSyncAsk !== undefined ? (
+      {confirmSyncAsk !== undefined ? (
         <ConfirmDialog
           title="Rebuild the search answer index?"
           body={
             <p>
               Every record not in this run is removed from the index, and saved
               answers are dropped. The site currently has{" "}
-              <strong>{actionData.confirmSyncAsk}</strong> post(s), so that is
+              <strong>{confirmSyncAsk}</strong> post(s), so that is
               what the index will hold afterwards.
             </p>
           }
@@ -679,10 +684,10 @@ export default function AdminPosts({
         </ConfirmDialog>
       ) : null}
 
-      {actionData?.confirmDelete ? (
+      {confirmDelete ? (
         <ConfirmDialog
-          title={`Delete ${actionData.confirmDelete.count} post${
-            actionData.confirmDelete.count === 1 ? "" : "s"
+          title={`Delete ${confirmDelete.count} post${
+            confirmDelete.count === 1 ? "" : "s"
           }`}
           body={
             <p>
@@ -690,14 +695,14 @@ export default function AdminPosts({
               nothing else does.
             </p>
           }
-          stake={actionData.confirmDelete.slugs}
-          requireTyped={String(actionData.confirmDelete.count)}
+          stake={confirmDelete.slugs}
+          requireTyped={String(confirmDelete.count)}
           confirmLabel="Delete permanently"
           cancelHref={cancelHref}
         >
           {/* The intent is a field: a disabled submitter sends neither its name nor its value. */}
           <input type="hidden" name="intent" value="bulk-delete" />
-          {actionData.confirmDelete.slugs.map((slug) => (
+          {confirmDelete.slugs.map((slug) => (
             <input key={slug} type="hidden" name="slug" value={slug} />
           ))}
         </ConfirmDialog>

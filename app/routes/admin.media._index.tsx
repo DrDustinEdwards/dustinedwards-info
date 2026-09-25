@@ -672,6 +672,12 @@ export default function AdminMedia({
   const anchor = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  /* Narrowed by key: the 400 answer carries only `message`, so the union no longer has these on every arm. */
+  const confirmRebuild =
+    actionData && "confirmRebuild" in actionData ? actionData.confirmRebuild : undefined;
+  const confirmDelete =
+    actionData && "confirmDelete" in actionData ? actionData.confirmDelete : undefined;
+
   if (loaderData.picker) return null;
   const {
     objects,
@@ -1110,7 +1116,7 @@ export default function AdminMedia({
       </MediaConfirm>
 
       <MediaConfirm
-        open={Boolean(actionData?.confirmRebuild !== undefined)}
+        open={confirmRebuild !== undefined}
         title="Re-derive the whole media index"
         body={
           <>
@@ -1122,7 +1128,7 @@ export default function AdminMedia({
             </p>
             <p>
               The index currently holds{" "}
-              <strong>{actionData?.confirmRebuild ?? 0}</strong> row(s). Type{" "}
+              <strong>{confirmRebuild ?? 0}</strong> row(s). Type{" "}
               <strong>1</strong> to confirm.
             </p>
           </>
@@ -1135,8 +1141,8 @@ export default function AdminMedia({
       </MediaConfirm>
 
       <MediaConfirm
-        open={Boolean(actionData?.confirmDelete)}
-        title={`Permanently delete ${actionData?.confirmDelete ?? ""}`}
+        open={Boolean(confirmDelete)}
+        title={`Permanently delete ${confirmDelete ?? ""}`}
         body={
           <>
             <p>
@@ -1151,10 +1157,10 @@ export default function AdminMedia({
         }
         requireTyped="1"
         confirmLabel="Delete permanently"
-        cancelHref={linkTo({ key: actionData?.confirmDelete ?? "" })}
+        cancelHref={linkTo({ key: confirmDelete ?? "" })}
       >
         <input type="hidden" name="intent" value="delete" />
-        <input type="hidden" name="key" value={actionData?.confirmDelete ?? ""} />
+        <input type="hidden" name="key" value={confirmDelete ?? ""} />
       </MediaConfirm>
 
       <MediaToast />
