@@ -78,9 +78,10 @@ export function PostsFilters({
             </option>
           ))}
         </select>
-        {/* Visually hidden, never removed: without it a scriptless reader cannot apply a tag. */}
-        <button type="submit" className="sr-only posts-filter-submit">
-          Apply the tag filter
+        {/* Shown, never hidden: a focusable control nobody can see fails 2.4.7, and a select that
+            submitted on change would move the page under a keyboard user (3.2.2). */}
+        <button type="submit" className="btn-secondary posts-filter-submit">
+          Apply
         </button>
 
         {/* A link, not a reset button: `reset` restores the form's defaults, which are the current filters. */}
