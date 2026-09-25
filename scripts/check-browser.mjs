@@ -2306,6 +2306,12 @@ try {
         .filter((h) => h && /^\/blog\/[^/.]+$/.test(h)),
     )].slice(0, 6),
   );
+  ok(
+    "the /blog listing yields post links to probe",
+    postPaths.length > 0,
+    "no post link on /blog, so the post-page bundle, copy, footnote and progress cases below " +
+      "would have nothing to run on",
+  );
   /* @param {string} stem */
   const bundleFetches = (/** @type {string} */ stem) =>
     page.evaluate(
@@ -2393,7 +2399,9 @@ try {
       page.evaluate(() => Boolean(document.querySelector(".footnote-preview")));
 
     // The page is already open on footnotePost from the walk above.
-    await page.hover(".prose a[data-footnote-ref]");
+    const footnoteRef = await page.$(".prose a[data-footnote-ref]");
+    if (footnoteRef) await footnoteRef.hover();
+    else ok(`${footnotePost}: the footnote reference is there to hover`, false, "it vanished after the walk found it");
     await new Promise((r) => setTimeout(r, 150));
     ok(
       `${footnotePost}: hovering a footnote reference shows the preview`,
@@ -2453,44 +2461,46 @@ try {
       `focus went from ${focusBefore} to ${afterEscape.focus}. Dismissing content must ` +
         `not cost the reader their place, which is what 1.4.13 asks for.`,
     );
+  }
 
-    /* Asserted on the `role="status"` region; speech is not observable. */
-    const codePost = await page.evaluate(
-      () => document.querySelectorAll(".prose pre[data-lang] .code-copy").length > 0,
+  /* Asserted on the `role="status"` region; speech is not observable. On the code post the walk
+     found, not on whichever post had footnotes: that only ran when one post had both. */
+  if (codePost === null) {
+    skip(
+      "the copy controls announce through a status region",
+      `none of the first ${postPaths.length} posts carries a code block, so there is no copy ` +
+        `control to press`,
     );
-    if (!codePost) {
-      skip(
-        "the copy controls announce through a status region",
-        "this post carries no code block, so there is no copy control to press",
-      );
-    } else {
-      await page.evaluate(() => {
-        const button = document.querySelector(".prose pre[data-lang] .code-copy");
-        if (button instanceof HTMLElement) button.click();
-      });
-      await new Promise((r) => setTimeout(r, 250));
-      const status = await page.evaluate(() => {
-        const region = document.querySelector('[role="status"]');
-        return {
-          exists: Boolean(region),
-          text: region?.textContent?.trim() ?? "",
-          hidden: region ? !region.classList.contains("sr-only") : false,
-        };
-      });
-      ok(
-        `${footnotePost}: 4.1.3 the copy control writes into a role=status region`,
-        status.exists && status.text.length > 0,
-        `region present ${status.exists}, text ${JSON.stringify(status.text)}. A button ` +
-          `that relabels itself is a change of NAME, not a status message, and generated ` +
-          `::after content is not in the accessibility tree at all.`,
-      );
-      ok(
-        `${footnotePost}: the status region is visually hidden, not a second visible label`,
-        !status.hidden,
-        `the region is not .sr-only, so the announcement is also painted on screen ` +
-          `beside the control's own feedback.`,
-      );
-    }
+  } else {
+    await page.goto(`${BASE}${codePost}`, { waitUntil: "networkidle0" });
+    await page.evaluate(() => {
+      const button = document.querySelector(".prose pre[data-lang] .code-copy");
+      if (button instanceof HTMLElement) button.click();
+    });
+    await new Promise((r) => setTimeout(r, 250));
+    const status = await page.evaluate(() => {
+      const region = document.querySelector('[role="status"]');
+      return {
+        exists: Boolean(region),
+        text: region?.textContent?.trim() ?? "",
+        visuallyHidden: region ? region.classList.contains("sr-only") : false,
+      };
+    });
+    ok(
+      `${codePost}: 4.1.3 the copy control writes into a role=status region`,
+      status.exists && status.text.length > 0,
+      `region present ${status.exists}, text ${JSON.stringify(status.text)}. A button ` +
+        `that relabels itself is a change of NAME, not a status message, and generated ` +
+        `::after content is not in the accessibility tree at all.`,
+    );
+    ok(
+      `${codePost}: the status region is visually hidden, not a second visible label`,
+      status.exists && status.visuallyHidden,
+      status.exists
+        ? `the region is not .sr-only, so the announcement is also painted on screen ` +
+            `beside the control's own feedback.`
+        : "there is no role=status region at all",
+    );
   }
 
   /* The cases below navigate for themselves. */
