@@ -22,7 +22,7 @@ import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
-export const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
+const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 
 /** Set explicitly so the bytes do not move if the tool's default does. */
 const SVG_ID = "diagram";

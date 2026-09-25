@@ -26,7 +26,7 @@ export function fromRoot(repoPath) {
   return path.join(ROOT, repoPath);
 }
 
-export const CONTENT_DIR = path.join("content", "posts");
+const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
 
 export const ABOUT_SOURCE = path.join("content", "about.md");
