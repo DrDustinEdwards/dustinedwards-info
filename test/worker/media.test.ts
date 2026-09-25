@@ -16,7 +16,7 @@ import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
 import { ALLOWED } from "~/lib/media/upload-contract.mjs";
-import { action as adminAction } from "~/routes/admin.media._index";
+import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
 
@@ -451,5 +451,39 @@ describe("a thumbnail whose transform fails", () => {
     expect(served.headers.get("x-media-thumb")).toBe("original-fallback");
     expect(served.headers.get("cache-control")).not.toContain("immutable");
     expect(served.headers.get("content-disposition")).toContain("attachment");
+  });
+});
+
+describe("the media palette", () => {
+  it("is answered as JSON, which a document loader cannot do", async () => {
+    const { key } = await uploadKey("palette-target", { width: 20, height: 20 });
+    await upsertMediaRecord(mediaEnv(), {
+      key,
+      alt: "",
+      storage: "r2",
+      kind: "image",
+      role: "content",
+      originalName: "zanzibar-palette-target.png",
+    });
+
+    const middleware = adminMediaMiddleware[0] as unknown as (
+      args: never,
+      next: () => Promise<Response>,
+    ) => Promise<Response>;
+    const response = await middleware(
+      {
+        request: new Request("https://example.com/admin/media?palette=1&q=zanzibar", {
+          headers: { accept: "application/json" },
+        }),
+        context: routeContext(env),
+        params: {},
+      } as never,
+      async () => new Response("the page, not the palette", { status: 500 }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    const body = (await response.json()) as { results: Array<{ key: string }>; hasMore: boolean };
+    expect(body.results.map((r) => r.key)).toContain(key);
   });
 });

@@ -40,6 +40,7 @@ import {
 } from "~/db";
 import { readPage } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
+import { prefersType } from "~/lib/negotiate.mjs";
 import templateRefs from "../../content/generated/template-refs.json";
 import { digestFromKey, storageOf } from "~/lib/media/classify.mjs";
 import {
@@ -124,28 +125,17 @@ const LENS_CHIPS = [
 const TEMPLATE_REFS: Record<string, string[]> = templateRefs.refs;
 const TEMPLATE_REF_KEYS = Object.keys(TEMPLATE_REFS);
 
-export async function loader({ request, context }: Route.LoaderArgs) {
-  const env = getEnv(context);
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const url = new URL(request.url);
+/** The one listing query: the page, the picker and the palette each ask it with their own options. */
+function listingFor(env: Env, url: URL, picker: boolean) {
   const page = readPage(url.searchParams.get("page"));
-
-  const picker = url.searchParams.get("picker") === "1";
-
-  const palette = url.searchParams.get("palette") === "1";
-
   const view = readView(url.searchParams);
-
   const requested = url.searchParams.get("role");
   const filter = requested === "all" || (requested && ROLE_IDS.has(requested))
     ? requested
     : "content";
-
   const q = view.q;
-
-  const listed = await timed(timings, "d1_list_media", () =>
-    listMedia(env, {
+  /* A thunk, so the caller's timer brackets the query itself. */
+  const list = () => listMedia(env, {
     page,
     limit: picker ? 200 : MEDIA_PAGE_SIZE,
     ...(picker
@@ -166,8 +156,48 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           ...(!view.trash && ROLE_IDS.has(filter) ? { role: filter } : {}),
           ...(q ? { q } : {}),
         }),
-    }),
-  );
+  });
+  return { page, view, filter, q, list };
+}
+
+/**
+ * The palette asks for JSON, which a document loader cannot return, so it is answered here, after
+ * the admin layout's middleware has authenticated the request. No usage, citations or twins: three
+ * more queries per keystroke for nothing the palette shows.
+ */
+export const middleware: Route.MiddlewareFunction[] = [
+  async ({ request, context }, next) => {
+    const url = new URL(request.url);
+    if (url.searchParams.get("palette") !== "1" || !prefersType(request, "application/json")) {
+      return next();
+    }
+    const listed = await listingFor(getEnv(context), url, false).list();
+    return Response.json(
+      {
+        results: listed.objects.slice(0, PALETTE_RESULTS).map((object) => ({
+          key: object.key,
+          url: object.url,
+          name: object.originalName ?? object.key.split("/").pop() ?? object.key,
+          dir: folderPrefix(object.key),
+          size: object.size,
+          viewable: isViewable(object.kind),
+        })),
+        hasMore: listed.objects.length > PALETTE_RESULTS || listed.hasMore,
+      },
+      { headers: { "cache-control": "private, no-store" } },
+    );
+  },
+];
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const env = getEnv(context);
+  const timings = context.get(timingsContext).timings;
+  const loaderStart = performance.now();
+  const url = new URL(request.url);
+  const picker = url.searchParams.get("picker") === "1";
+
+  const { page, view, filter, q, list } = listingFor(env, url, picker);
+  const listed = await timed(timings, "d1_list_media", list);
   const keys = listed.objects.map((object) => object.key);
 
   if (picker) {
@@ -180,22 +210,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         alt: object.alt,
       })),
       truncated: listed.hasMore,
-    };
-  }
-
-  /* No usage, citations or twins: three more queries per keystroke for nothing a picker needs. */
-  if (palette) {
-    return {
-      palette: true as const,
-      results: listed.objects.slice(0, PALETTE_RESULTS).map((object) => ({
-        key: object.key,
-        url: object.url,
-        name: object.originalName ?? object.key.split("/").pop() ?? object.key,
-        dir: folderPrefix(object.key),
-        size: object.size,
-        viewable: isViewable(object.kind),
-      })),
-      hasMore: listed.objects.length > PALETTE_RESULTS || listed.hasMore,
     };
   }
 
@@ -282,7 +296,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
   const payload = {
     picker: false as const,
-    palette: false as const,
     objects: shown.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
@@ -659,7 +672,7 @@ export default function AdminMedia({
   const anchor = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  if (loaderData.picker || loaderData.palette) return null;
+  if (loaderData.picker) return null;
   const {
     objects,
     page,
