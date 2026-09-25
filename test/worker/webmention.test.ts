@@ -23,6 +23,7 @@ import {
   throughMiddleware,
   untilRefused,
 } from "./route-helpers";
+import { seedMention as seedMentionRow, seedPost } from "./seed";
 
 /* Every case carries its own client IP: `clientIp` falls back to `unknown` off the edge, so
  * cases would otherwise share one `wm:unknown` rate-limit instance. */
@@ -81,16 +82,6 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
 const pageLinkingTo = (href: string, extra = "") =>
   `<!doctype html><html><body>${extra}<p>I read <a href="${href}">this post</a> today and it was useful.</p></body></html>`;
 
-async function seedPost(slug: string, status: "draft" | "published") {
-  await env.DB.prepare(
-    `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-     VALUES (?1, 'post', ?2, 'A body.', ?3, ?4)
-     ON CONFLICT(slug) DO UPDATE SET status = excluded.status`,
-  )
-    .bind(slug, `Title for ${slug}`, status, Math.floor(Date.UTC(2026, 0, 1) / 1000))
-    .run();
-}
-
 async function mentionRow(sourceUrl: string) {
   return env.DB.prepare(`SELECT * FROM webmentions WHERE source_url = ?1`)
     .bind(sourceUrl)
@@ -105,22 +96,9 @@ async function mentionRow(sourceUrl: string) {
     }>();
 }
 
-async function seedMention(
-  sourceUrl: string,
-  status: string,
-  receivedDaysAgo: number,
-): Promise<number> {
-  const received = Math.floor((Date.now() - receivedDaysAgo * 24 * 60 * 60 * 1000) / 1000);
-  await env.DB.prepare(
-    `INSERT INTO webmentions (source_url, target_slug, status, received_at, excerpt)
-     VALUES (?1, ?2, ?3, ?4, 'An excerpt.')`,
-  )
-    .bind(sourceUrl, TARGET_SLUG, status, received)
-    .run();
-  const row = await env.DB.prepare(`SELECT id FROM webmentions WHERE source_url = ?1`)
-    .bind(sourceUrl)
-    .first<{ id: number }>();
-  return row?.id ?? -1;
+function seedMention(sourceUrl: string, status: string, receivedDaysAgo: number): Promise<number> {
+  const receivedAt = Math.floor((Date.now() - receivedDaysAgo * 24 * 60 * 60 * 1000) / 1000);
+  return seedMentionRow(sourceUrl, TARGET_SLUG, { status, receivedAt });
 }
 
 function renderMentionsPage(url: string, loaderData: unknown, actionData?: unknown) {
@@ -131,7 +109,7 @@ beforeEach(async () => {
   /* Emptied between cases: D1 persists for the whole file and the global-cap case asserts an
    * exact count. */
   await env.DB.prepare(`DELETE FROM webmentions`).run();
-  await seedPost(TARGET_SLUG, "published");
+  await seedPost(TARGET_SLUG);
 });
 
 afterEach(() => {
@@ -280,7 +258,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
   it("REFUSES A DRAFT TARGET AND AN UNKNOWN SLUG IDENTICALLY, byte for byte", async () => {
     /* A 400 that told a draft from an unknown slug would let a caller enumerate unpublished
      * slugs from the refusals, so the two are compared on the wire. */
-    await seedPost("an-unpublished-draft", "draft");
+    await seedPost("an-unpublished-draft", { status: "draft" });
 
     const ctx = createExecutionContext();
     const draft = await webmentionAction({
@@ -923,22 +901,14 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     } = {},
   ) {
     const decided = fields.decidedAt ?? Math.floor(Date.UTC(2026, 7, 20) / 1000);
-    await env.DB.prepare(
-      `INSERT INTO webmentions
-         (source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
-    )
-      .bind(
-        sourceUrl,
-        fields.slug ?? POST_SLUG,
-        fields.status ?? "approved",
-        fields.authorName ?? "A Reader",
-        fields.authorUrl ?? null,
-        fields.excerpt ?? "A sentence about the post.",
-        decided,
-        fields.decidedAt === null ? null : decided,
-      )
-      .run();
+    await seedMentionRow(sourceUrl, fields.slug ?? POST_SLUG, {
+      status: fields.status ?? "approved",
+      authorName: fields.authorName ?? "A Reader",
+      authorUrl: fields.authorUrl ?? null,
+      excerpt: fields.excerpt ?? "A sentence about the post.",
+      receivedAt: decided,
+      decidedAt: fields.decidedAt === null ? null : decided,
+    });
   }
 
   async function loadPost(slug: string) {
@@ -995,12 +965,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   it("A DRAFT'S APPROVED MENTION IS UNREACHABLE, at the route AND at the reader", async () => {
     /* Seeded directly: the endpoint refuses a draft target, but a post unpublished after its
      * mentions were approved reaches this state. */
-    await env.DB.prepare(
-      `INSERT INTO posts (slug, kind, title, body, status) VALUES (?1, 'post', 'A draft', 'Body.', 'draft')
-       ON CONFLICT(slug) DO UPDATE SET status = 'draft'`,
-    )
-      .bind("a-drafted-post")
-      .run();
+    await seedPost("a-drafted-post", { status: "draft", publishAt: null });
     await seedApproved("https://elsewhere.example/on-a-draft", { slug: "a-drafted-post" });
 
     await expect(approvedMentionsFor(env as never, "a-drafted-post")).resolves.toEqual([]);
@@ -1023,13 +988,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   it("A SCHEDULED POST'S mentions are refused too, on the same predicate", async () => {
     /* A predicate that only checked status would pass this case while leaking it. */
     const future = Math.floor((Date.now() + 90 * 24 * 60 * 60 * 1000) / 1000);
-    await env.DB.prepare(
-      `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-       VALUES (?1, 'post', 'Scheduled', 'Body.', 'published', ?2)
-       ON CONFLICT(slug) DO UPDATE SET publish_at = excluded.publish_at`,
-    )
-      .bind("a-scheduled-post", future)
-      .run();
+    await seedPost("a-scheduled-post", { publishAt: future });
     await seedApproved("https://elsewhere.example/on-a-schedule", { slug: "a-scheduled-post" });
 
     await expect(approvedMentionsFor(env as never, "a-scheduled-post")).resolves.toEqual([]);
