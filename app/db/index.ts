@@ -869,16 +869,17 @@ export async function upsertDerivedMedia(
     role: record.role,
     mime: record.mime ?? null,
     bytes: record.bytes ?? null,
-    width: record.width ?? null,
-    height: record.height ?? null,
     uploadedAt: record.uploadedAt ?? null,
     updatedAt: now,
   };
+  const measured = record.width != null && record.height != null;
   await getDb(env)
     .insert(media)
     .values({
       key: record.key,
       ...derived,
+      width: record.width ?? null,
+      height: record.height ?? null,
       originalName: record.originalName ?? null,
       placeholder: record.placeholder ?? null,
     })
@@ -886,6 +887,8 @@ export async function upsertDerivedMedia(
       target: media.key,
       set: {
         ...derived,
+        // Written when measured, never blanked by a caller whose Images read failed.
+        ...(measured ? { width: record.width, height: record.height } : {}),
         // Written when present, never blanked by a caller that cannot measure one.
         ...(record.placeholder ? { placeholder: record.placeholder } : {}),
         // Written when present, never blanked by a caller with no name.
