@@ -31,6 +31,7 @@ import {
   toCslJson,
   toRisAll,
 } from "../../app/lib/publications/exports.mjs";
+import { assertFloor } from "../lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -1156,6 +1157,20 @@ assertThat(
     `every accession builds an NCBI URL ending in its own id (${[...curated.values()].flat().length} accessions)`,
     badLinks.map(({ a, url }) => `${a.kind}:${a.id} -> ${url}`).join("; "),
   );
+}
+
+/* Measured 99 by running this part on 2026-09-24; the floor sits a little under it. */
+const floorBreach = assertFloor(
+  "check:machine-readable/publications",
+  "checks",
+  checks,
+  93,
+  "The runner fails a part only on zero checks, so without this a refactor could drop " +
+    "most of its sweeps and still pass.",
+);
+if (floorBreach) {
+  console.log(`  FAIL  ${floorBreach}`);
+  failures.push(floorBreach);
 }
 
 export const outcome = { checks, failures: failures.length };
