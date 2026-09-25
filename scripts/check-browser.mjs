@@ -3224,7 +3224,14 @@ try {
     ok(
       `the ${CREDENTIAL} credential supplied in ${CREDENTIAL_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
       false,
-      CREDENTIAL === "smoke"
+      /* Status 0 is a request that never got an answer (DNS, TLS, timeout): no credential was
+         judged, so neither repair below applies, and the cause is the error itself. */
+      AUTH_RESULT.status === 0
+        ? `GET /admin never got an answer: ${AUTH_RESULT.error ?? "no error was recorded"}. ` +
+          `No credential was judged, so this is ${ADMIN_ORIGIN} being unreachable from here, ` +
+          `not an expired session or a drifted token.\n` +
+          `        The admin cases below did not run.`
+        : CREDENTIAL === "smoke"
         ? `GET /admin with it did not return 200. The status NAMES the repair, which is why ` +
           `the smoke path reports one rather than guessing:\n` +
           `        ${smokeRepair(AUTH_RESULT.status)}\n` +
