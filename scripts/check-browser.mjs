@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
 
 import { assertFloor } from "./lib/floor.mjs";
+import { stripComments, stripTsxComments } from "./lib/strip-comments.mjs";
 import { HEALTH_FACT_SELECTOR, freshHealthRatio } from "./lib/health-tile.mjs";
 
 /* The network profile the /blog layout shift was measured on. */
@@ -251,6 +252,10 @@ function smokeRepair(status) {
 let checks = 0;
 let failures = 0;
 const skipped = [];
+
+/* The gate's own fetches carry a deadline, like the readiness probes: a hung origin would otherwise
+   stall the run until CI's job timeout, with nothing saying which request hung. */
+const FETCH_TIMEOUT_MS = 30_000;
 
 /** Not `skipped.length`: that cannot tell a rejected session from a completed run. */
 let adminCasesRan = false;
@@ -886,7 +891,10 @@ try {
      */
     const before = await readTile("before");
 
-    const primed = await fetch(`${BASE}/api/health`, { headers: { accept: "application/json" } });
+    const primed = await fetch(`${BASE}/api/health`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     const primedBody = await primed.text();
     ok(
       "the health endpoint answered, so a snapshot could be written",
@@ -1014,8 +1022,9 @@ try {
       .filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
       .filter((name) => {
         const source = readFileSync(join(routeDir, name), "utf8");
-        // `preview.$token.tsx` names the constant only in prose, so comments are stripped first.
-        const code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+        // `preview.$token.tsx` names the constant only in prose, so comments are stripped first,
+        // by the shared strippers: a hand-rolled one reads a /* inside a string as a comment.
+        const code = name.endsWith(".tsx") ? stripTsxComments(source) : stripComments(source);
         return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
       })
       /* Shared-cached but not HTML: no `<html data-theme>` for a theme to reach. */
@@ -1068,13 +1077,23 @@ try {
      */
     const RUN_IDENTITY = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
+    /**
+     * Every status fetchDoc saw, by path: two error pages are byte-identical too, so identity and
+     * theme-diff mean something only for a path that answered 200 to every variant.
+     *
+     * @type {Map<string, number[]>}
+     */
+    const docStatuses = new Map();
+
     /** @param {string} path @param {Record<string,string>} headers */
     const fetchDoc = async (path, headers) => {
       const sep = path.includes("?") ? "&" : "?";
       const res = await fetch(`${BASE}${path}${sep}identity=${RUN_IDENTITY}`, {
         headers: { "cache-control": "no-cache", ...headers },
         redirect: "manual",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
+      docStatuses.set(path, [...(docStatuses.get(path) ?? []), res.status]);
       return mask(await res.text());
     };
 
@@ -1103,7 +1122,13 @@ try {
     let footerOrderCompared = 0;
 
     for (const { path } of THEME_CACHED) {
-      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      const visited = await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      ok(
+        `${path}: the page answers 200 in the browser`,
+        visited?.status() === 200,
+        `answered ${visited?.status() ?? "(no response)"}. Every case on this path below would ` +
+          `be about an error page.`,
+      );
 
       // 3.2.6 asks for the same relative order on every page, never a fixed index. `/colophon`
       // appears twice in the footer, as a nav link and as prose, and that is the markup.
@@ -1155,6 +1180,14 @@ try {
 
       const dark = await fetchDoc(path, { cookie: "theme=dark" });
       const light = await fetchDoc(path, { cookie: "theme=light" });
+
+      const statuses = docStatuses.get(path) ?? [];
+      ok(
+        `${path}: every variant fetched for the identity and theme checks answered 200`,
+        statuses.length > 0 && statuses.every((s) => s === 200),
+        `answered [${statuses.join(", ")}]. Two error pages are byte-identical as well, so the ` +
+          `checks beside this one would pass on a route that fails for every reader.`,
+      );
 
       /* Without this, both assertions below pass on a site that stopped rendering the theme. */
       ok(
@@ -1276,6 +1309,7 @@ try {
       const negotiated = await fetch(key, {
         headers: { cookie: "theme=dark", accept },
         redirect: "manual",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       const type = negotiated.headers.get("content-type") ?? "";
       ok(
@@ -2939,7 +2973,9 @@ try {
 
       let delivered = { status: 0, type: "" };
       if (served.href) {
-        const response = await fetch(new URL(served.href, BASE));
+        const response = await fetch(new URL(served.href, BASE), {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
         delivered = {
           status: response.status,
           type: response.headers.get("content-type") ?? "",
