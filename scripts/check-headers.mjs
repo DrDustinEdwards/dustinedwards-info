@@ -6,6 +6,7 @@ import { join } from "node:path";
 
 import * as analyticsCapture from "./lib/headers/analytics-capture.mjs";
 import * as csp from "./lib/headers/csp.mjs";
+import * as entrypointCache from "./lib/headers/entrypoint-cache.mjs";
 import * as gatewayAndPublicRoutes from "./lib/headers/gateway-and-public-routes.mjs";
 import { root, tally } from "./lib/headers/gate.mjs";
 import * as mediaAndHeadersFile from "./lib/headers/media-and-headers-file.mjs";
@@ -40,8 +41,9 @@ console.log(
 mediaAndHeadersFile.run();
 runHealth();
 gatewayAndPublicRoutes.run(code);
+entrypointCache.run();
 /* Measured by running this gate, never summed. */
-const MINIMUM_CHECKS = 228;
+const MINIMUM_CHECKS = 234;
 tally.floor("check:headers", "checks", MINIMUM_CHECKS);
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);

@@ -8,4 +8,4 @@ import { createTally } from "../tally.mjs";
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 
 export const tally = createTally({ separator: ": " });
-export const { ok } = tally;
+export const { ok, eq } = tally;

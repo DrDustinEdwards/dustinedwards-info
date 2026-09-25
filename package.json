@@ -46,6 +46,8 @@
     "check:diagrams": "node scripts/check-diagrams.mjs",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check:policy": "node scripts/check-policy.mjs",
+    "check:ask-guards": "node scripts/check-ask-guards.mjs",
+    "check:enhance-a11y": "node scripts/check-enhance-a11y.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:urls": "node scripts/check-urls.mjs",
     "check:page-payload": "node scripts/check-page-payload.mjs",
