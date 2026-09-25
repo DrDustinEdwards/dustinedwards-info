@@ -25,6 +25,7 @@ import {
   PUBLICATIONS_DESCRIPTION,
   PUBLICATIONS_URL,
   SITE,
+  SITE_ORIGIN,
 } from "~/lib/seo";
 import type { Route } from "./+types/publications";
 
@@ -215,7 +216,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const citations = await getCitationCounts(context, items.map((p) => p.doi));
 
   return {
-    origin: url.origin,
+    /* The canonical origin, never the request's: this page is shared-cached, so a preview host's JSON-LD would be served to everyone. */
+    origin: SITE_ORIGIN,
     citations,
     items,
     chips,
