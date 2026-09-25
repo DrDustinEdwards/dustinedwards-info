@@ -3,20 +3,9 @@
  * text, so a comment naming the predicate cannot satisfy a guard, an apostrophe in JSX text cannot
  * blank the code after it, and `form.get("intent") === "x"` is seen as well as `intent === "x"`.
  */
-import ts from "typescript";
+import { parseSource, ts } from "./syntax.mjs";
 
-/**
- * @param {string} fileName
- * @param {string} text
- */
-export function parseSource(fileName, text) {
-  const kind = fileName.endsWith(".tsx")
-    ? ts.ScriptKind.TSX
-    : /\.(mjs|js)$/.test(fileName)
-      ? ts.ScriptKind.JS
-      : ts.ScriptKind.TS;
-  return ts.createSourceFile(fileName, text, ts.ScriptTarget.Latest, true, kind);
-}
+export { parseSource };
 
 /** @param {ts.Node} node */
 function isExported(node) {
