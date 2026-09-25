@@ -35,7 +35,8 @@ const houseTheme = EditorView.theme({
     color: "var(--text-disabled)",
     border: "none",
   },
-  "&.cm-focused": { outline: "none" },
+  // Inset, because the surface clips overflow: an outside ring would be cut off (2.4.7).
+  "&.cm-focused": { outline: "2px solid var(--brand)", outlineOffset: "-2px" },
   ".cm-activeLine": { backgroundColor: "var(--paper)" },
   ".cm-activeLineGutter": { backgroundColor: "var(--paper)" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
@@ -131,6 +132,8 @@ export default function MarkdownEditor({
       syntaxHighlighting(houseHighlight),
       houseTheme,
       EditorView.lineWrapping,
+      // The label on the hidden textarea does not reach this surface, which is what has focus (4.1.2).
+      EditorView.contentAttributes.of({ "aria-label": "Body, markdown" }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const text = update.state.doc.toString();
@@ -300,7 +303,8 @@ export default function MarkdownEditor({
             aria-label="Search posts to link to, or type a URL"
             role="combobox"
             aria-expanded={linkMatches.length > 0}
-            aria-controls="md-link-list"
+            // Only while the list exists: an id that resolves to nothing is a broken reference.
+            aria-controls={linkMatches.length > 0 ? "md-link-list" : undefined}
             aria-activedescendant={
               linkMatches[linkIndex] ? `md-link-opt-${linkMatches[linkIndex].slug}` : undefined
             }
