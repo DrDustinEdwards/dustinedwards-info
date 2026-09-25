@@ -53,9 +53,8 @@
 #
 # ## Fail direction: toward RUNNING the check
 #
-# Matching stop-typecheck.sh rather than scoped-git-add.sh, and deliberately.
-# scoped-git-add guards against an irreversible staging mistake, so an
-# unreadable payload there blocks the command. This one guards against a red CI
+# Unlike scoped-git-add.sh, and deliberately. scoped-git-add guards against an
+# irreversible staging mistake, so an unreadable payload there blocks the command. This one guards against a red CI
 # run, so an unreadable payload here runs a five-second gate. Blocking every
 # Bash call in the session because one JSON payload was malformed would be a
 # worse outcome than the thing being guarded against.
