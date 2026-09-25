@@ -90,7 +90,7 @@ which is what repeats across people and sessions.
   passed both visibility sections by carrying no predicate either scans; a
   `reject` hid from `check:destructive` behind a ternary; an entire operator
   surface spelled its verbs with a different noun. Teach the gate the other
-  spelling, then prove it bites. `app/db/index.ts`
+  spelling, then prove it bites. `app/db/webmentions.ts`
   `app/routes/admin.mentions.tsx` `scripts/check-destructive.mjs`
 - **A backslash escape in prose can reach disk as a control byte and still
   render close enough to survive review.** Three: backslash-f left

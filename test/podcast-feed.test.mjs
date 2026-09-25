@@ -4,11 +4,11 @@ import assert from "node:assert/strict";
 import {
   PODCAST_AUDIO_HOSTS,
   chooseEpisode,
-  clockTime,
   parseDuration,
   parsePodcastFeed,
   parsePodcastSlot,
 } from "../app/lib/podcast/feed.mjs";
+import { clockTime } from "../app/lib/podcast/clock.mjs";
 import { contentSecurityPolicy } from "../workers/csp.mjs";
 
 /** @param {Record<string, string>} over */

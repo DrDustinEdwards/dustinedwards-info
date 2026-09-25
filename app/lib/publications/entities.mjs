@@ -19,7 +19,8 @@ const REFERENCE = /&(?:#(\d+)|#[xX]([0-9a-fA-F]+)|([a-zA-Z][a-zA-Z0-9]*));/g;
  * @returns {string | null}
  */
 function fromCodePoint(code) {
-  if (!Number.isInteger(code) || code < 0 || code > 0x10ffff) return null;
+  // Zero too: &#0; is a NUL, which no reader should receive from a deposit or a feed.
+  if (!Number.isInteger(code) || code < 1 || code > 0x10ffff) return null;
   // Lone surrogates are valid integers and produce unpaired halves.
   if (code >= 0xd800 && code <= 0xdfff) return null;
   return String.fromCodePoint(code);

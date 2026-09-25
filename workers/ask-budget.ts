@@ -9,34 +9,42 @@ import { DurableObject } from "cloudflare:workers";
 export class AskBudget extends DurableObject {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    // `day` is the window's key, whatever the window: the UTC date for the daily budget, the window
+    // number for a per-IP limit. Named for the first use; renaming it would strand stored counts.
     this.ctx.storage.sql.exec(
       `CREATE TABLE IF NOT EXISTS budget (day TEXT PRIMARY KEY, count INTEGER NOT NULL)`,
     );
   }
 
-  /** No `await` anywhere in the body, or the count can be raced. */
-  consume(limit: number): { ok: boolean; spent: number } {
-    const day = new Date().toISOString().slice(0, 10);
-
+  /**
+   * Counts one use in the window `key` unless `limit` is already reached, and forgets every other
+   * window. No `await` anywhere in the body, or the count can be raced.
+   */
+  private increment(key: string, limit: number): { ok: boolean; count: number } {
     const rows = this.ctx.storage.sql
-      .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, day)
+      .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, key)
       .toArray();
     const current = rows[0]?.count ?? 0;
 
     if (current >= limit) {
-      return { ok: false, spent: current };
+      return { ok: false, count: current };
     }
 
     const next = current + 1;
     this.ctx.storage.sql.exec(
       `INSERT INTO budget (day, count) VALUES (?, ?)
          ON CONFLICT(day) DO UPDATE SET count = excluded.count`,
-      day,
+      key,
       next,
     );
-    this.ctx.storage.sql.exec(`DELETE FROM budget WHERE day <> ?`, day);
+    this.ctx.storage.sql.exec(`DELETE FROM budget WHERE day <> ?`, key);
+    return { ok: true, count: next };
+  }
 
-    return { ok: true, spent: next };
+  /** The site-wide daily budget, keyed by the UTC date. */
+  consume(limit: number): { ok: boolean; spent: number } {
+    const { ok, count } = this.increment(new Date().toISOString().slice(0, 10), limit);
+    return { ok, spent: count };
   }
 
   /**
@@ -44,28 +52,11 @@ export class AskBudget extends DurableObject {
    * because one bursting client could otherwise burn the whole day's budget for every reader.
    */
   hit(limit: number, windowSeconds: number): { ok: boolean; used: number } {
-    const window = Math.floor(Date.now() / 1000 / windowSeconds);
-    const rows = this.ctx.storage.sql
-      .exec<{ count: number }>(`SELECT count FROM budget WHERE day = ?`, String(window))
-      .toArray();
-    // The value is read once and guarded, not the row count: a single-row
-    // SELECT that returned nothing and a stored count of zero mean the same
-    // thing here, which is what the original ternary said too.
-    const current = rows[0]?.count ?? 0;
-
-    if (current >= limit) {
-      return { ok: false, used: current };
-    }
-
-    const next = current + 1;
-    this.ctx.storage.sql.exec(
-      `INSERT INTO budget (day, count) VALUES (?, ?)
-         ON CONFLICT(day) DO UPDATE SET count = excluded.count`,
-      String(window),
-      next,
+    const { ok, count } = this.increment(
+      String(Math.floor(Date.now() / 1000 / windowSeconds)),
+      limit,
     );
-    this.ctx.storage.sql.exec(`DELETE FROM budget WHERE day <> ?`, String(window));
-    return { ok: true, used: next };
+    return { ok, used: count };
   }
 
   peek(): { day: string; count: number } {

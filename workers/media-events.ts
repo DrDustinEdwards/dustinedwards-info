@@ -2,6 +2,7 @@ import { deleteMediaRecord, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "~/lib/media/classify.mjs";
 import { mirrorObject } from "~/lib/media/backup.server";
 import { measureDimensions, placeholderFor } from "~/lib/media/core.server";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /**
  * The authoritative media row writer, fed by R2 event notifications rather than a dual write. Must be
@@ -36,7 +37,7 @@ export async function handleMediaEvents(batch: MessageBatch<unknown>, env: Env) 
       // Never ack a transient failure, or the row silently never appears.
       console.error(
         `media event failed for ${key}`,
-        error instanceof Error ? error.message : String(error),
+        errorMessage(error),
       );
       message.retry();
     }
@@ -106,7 +107,7 @@ async function indexOne(env: Env, key: string) {
     } catch (error) {
       console.log(
         `media event: mirror failed for ${JSON.stringify(key)}: ` +
-          `${error instanceof Error ? error.message : String(error)}. ` +
+          `${errorMessage(error)}. ` +
           `The row stands; media-backup-drift will report it and backup_media repairs it.`,
       );
     }

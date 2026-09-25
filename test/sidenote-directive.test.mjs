@@ -4,10 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { renderBody } from "../app/lib/content/pipeline.mjs";
-
-/** @param {string} body */
-const render = (body) => renderBody({ file: "test.md", body, resolveImage: () => null });
+import { render } from "./lib/render.mjs";
 
 test("it renders an aside with the kind label first", async () => {
   const { html } = await render(':::sidenote{kind="Fallback"}\nA short note.\n:::\n');

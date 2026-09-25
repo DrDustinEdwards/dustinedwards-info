@@ -19,6 +19,7 @@ export function checkManifest(p) {
     keyPresets,
     cookiePresets,
     snippets,
+    playgroundFiles,
     playgroundSource,
   } = p;
 
@@ -62,6 +63,12 @@ export function checkManifest(p) {
     `routes.ts declares ${PLAYGROUND_URL}`,
     routes.has(PLAYGROUND_URL),
     `parsed routes: ${[...routes].join(", ")}`,
+  );
+  ok(
+    "the playground's demo modules were found",
+    playgroundFiles.length >= 1 + 2 * demos.length,
+    `read ${playgroundFiles.length} file(s) for ${demos.length} demo(s), each a loader module and a ` +
+      `component: a check below would pass or fail on a file it never read`,
   );
 
   pageReadsItsList(ok, playgroundSource, {
