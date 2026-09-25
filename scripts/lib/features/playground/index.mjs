@@ -1,7 +1,7 @@
 // The playground: every demo on /playground runs the module it describes, over the manifest's
 // presets, and the page's records match the manifest.
 
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 
 import { demoAnchor } from "../../../../app/lib/playground-page.mjs";
@@ -16,6 +16,11 @@ import { checkTheme } from "./theme.mjs";
 
 const PLAYGROUND_PATH = join(root, "content", "playground.json");
 const PLAYGROUND_ROUTE_PATH = join(root, "app", "routes", "playground.tsx");
+/* Each demo is a loader module and a section component in these, so the page's source is all of them. */
+const PLAYGROUND_DEMO_DIRS = [
+  join(root, "app", "lib", "playground"),
+  join(root, "app", "components", "playground"),
+];
 
 /**
  * @typedef {import("../shared.mjs").FeaturesContext & {
@@ -26,6 +31,7 @@ const PLAYGROUND_ROUTE_PATH = join(root, "app", "routes", "playground.tsx");
  *   keyPresets: any[],
  *   cookiePresets: any[],
  *   snippets: any[],
+ *   playgroundFiles: string[],
  *   playgroundSource: string,
  *   statesInputCap: (demo: string, statement: RegExp) => void,
  * }} PlaygroundContext
@@ -47,7 +53,16 @@ export async function checkPlayground(ctx) {
   const snippets = playgroundDoc.markdownSnippets ?? [];
   const playgroundChecksBefore = tally.checks;
 
-  const playgroundSource = codeOf(PLAYGROUND_ROUTE_PATH);
+  const playgroundFiles = [
+    PLAYGROUND_ROUTE_PATH,
+    ...PLAYGROUND_DEMO_DIRS.flatMap((dir) =>
+      readdirSync(dir)
+        .filter((name) => /\.(tsx?|mjs)$/.test(name))
+        .sort()
+        .map((name) => join(dir, name)),
+    ),
+  ];
+  const playgroundSource = playgroundFiles.map((file) => codeOf(file)).join("\n");
 
   /**
    * @param {string} demo the label prefix naming the demo, or empty for the page's own
@@ -70,6 +85,7 @@ export async function checkPlayground(ctx) {
     keyPresets,
     cookiePresets,
     snippets,
+    playgroundFiles,
     playgroundSource,
     statesInputCap,
   };

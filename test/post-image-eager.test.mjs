@@ -4,34 +4,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { renderBody } from "../app/lib/content/pipeline.mjs";
+import { attr, fixedSize, images, render as renderWith, twoImages } from "./lib/render.mjs";
 
 const FIRST = "/media/dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const SECOND = "/publications/measured-latency.png";
 
 /** @param {string} body */
-const render = (body) =>
-  renderBody({
-    file: "test.md",
-    body,
-    resolveImage: async () => ({ width: 1280, height: 720 }),
-  });
+const render = (body) => renderWith(body, fixedSize);
 
-const images = (/** @type {string} */ html) => html.match(/<img\b[^>]*>/g) ?? [];
-
-function attr(/** @type {string} */ tag, /** @type {string} */ name) {
-  const match = tag.match(new RegExp(`\\b${name}="([^"]*)"`));
-  return match ? match[1] : null;
-}
-
-const FIXTURE = [
-  `![The opening figure, which is the LCP element](${FIRST})`,
-  "",
+const FIXTURE = twoImages(
+  ["The opening figure, which is the LCP element", FIRST],
+  ["A later image, well below the fold", SECOND],
   "Some prose between them, so the two images are not siblings.",
-  "",
-  `![A later image, well below the fold](${SECOND})`,
-  "",
-].join("\n");
+);
 
 test("CONTROL: the fixture renders two images, in order", async () => {
   const { html } = await render(FIXTURE);

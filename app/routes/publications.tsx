@@ -4,17 +4,12 @@ import { EvidenceRow } from "~/components/evidence-row";
 import { FilterLink } from "~/components/filter-link";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import {
-  PUBLICATIONS,
-  TOPICS,
-  type Publication,
-  type PublicationType,
-  type TopicId,
-} from "~/data/publications";
+import type { Publication, TopicId } from "~/data/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { SORTS, publicationListing } from "~/lib/publications/listing.mjs";
 import { PUBLICATIONS_PATH, doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
@@ -32,26 +27,6 @@ import type { Route } from "./+types/publications";
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/publications.css";
-
-const SORTS = [
-  { value: "year-desc", label: "Newest first" },
-  { value: "year-asc", label: "Oldest first" },
-  { value: "title", label: "Title A to Z" },
-] as const;
-
-type SortKey = (typeof SORTS)[number]["value"];
-
-const TOPIC_IDS = new Set<string>(TOPICS.map((t) => t.id));
-
-/** Conference abstracts stay in the data file, which the CV also reads, and are excluded here. */
-const SHOWCASE_TYPES = new Set<PublicationType>([
-  "article",
-  "review",
-  "chapter",
-  "teaching-resource",
-]);
-
-const SHOWCASE = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
 
 const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   "human-simian-retroviruses": {
@@ -76,32 +51,6 @@ const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   },
 };
 
-/** Comparison-time only: Crossref titles carry em dashes nobody types into a search box. */
-function fold(value: string) {
-  return value
-    .toLowerCase()
-    // U+2010 to U+2015 hyphen and dash family, U+2212 minus, plain hyphen.
-    // Written as escapes so the literal characters never appear in source.
-    .replace(/[\u2010-\u2015\u2212-]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/** Decoded first, so the haystack is the text on the page, ampersands included. */
-function haystack(p: Publication) {
-  return fold(decodeEntities([p.title, p.journal ?? "", ...p.authors].join(" ")));
-}
-
-function sortItems(items: Publication[], sort: SortKey) {
-  const byTitle = (a: Publication, b: Publication) =>
-    a.title.localeCompare(b.title);
-  return [...items].sort((a, b) => {
-    if (sort === "title") return byTitle(a, b);
-    if (sort === "year-asc") return a.year - b.year || byTitle(a, b);
-    return b.year - a.year || byTitle(a, b);
-  });
-}
-
 export function meta({ loaderData }: Route.MetaArgs) {
   const title = loaderData?.pageTitle ?? `Publications, ${SITE.name}`;
   const description = loaderData?.pageDescription ?? PUBLICATIONS_DESCRIPTION;
@@ -125,80 +74,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams;
 
-  const topics = params.getAll("topic").filter((t): t is TopicId => TOPIC_IDS.has(t));
-  const q = (params.get("q") ?? "").trim();
-  const sortParam = params.get("sort");
-  const sort: SortKey =
-    SORTS.some((s) => s.value === sortParam) ? (sortParam as SortKey) : "year-desc";
-  // Any other value is absent rather than truthy, so `?selected=banana` shows the full list.
-  const selectedParam = (params.get("selected") ?? "").toLowerCase();
-  const selectedOnly = selectedParam === "1" || selectedParam === "true";
-
-  // Chip counts run against everything except the topic filter, so a count only promises what a click returns.
-  const needle = fold(q);
-  const base = SHOWCASE.filter(
-    (p) =>
-      (!selectedOnly || p.selected) && (!needle || haystack(p).includes(needle)),
-  );
-
-  const items = sortItems(
-    topics.length
-      ? base.filter((p) => p.topics.some((t) => topics.includes(t)))
-      : base,
-    sort,
-  );
-
-  const linkParams = () => {
-    const next = new URLSearchParams();
-    if (q) next.set("q", q);
-    if (sort !== "year-desc") next.set("sort", sort);
-    if (selectedOnly) next.set("selected", "1");
-    return next;
-  };
-  const href = (list: TopicId[]) => {
-    const next = linkParams();
-    for (const t of list) next.append("topic", t);
-    const s = next.toString();
-    return s ? `/publications?${s}` : "/publications";
-  };
-
-  const chips = TOPICS.map((topic) => {
-    const active = topics.includes(topic.id);
-    return {
-      id: topic.id,
-      label: topic.label,
-      description: topic.description,
-      count: base.filter((p) => p.topics.includes(topic.id)).length,
-      active,
-      href: href(
-        active ? topics.filter((t) => t !== topic.id) : [...topics, topic.id],
-      ),
-    };
-  });
-
-  const selectedCount = SHOWCASE.filter((p) => p.selected).length;
-  const filtered = topics.length > 0 || q !== "" || selectedOnly;
-
-  const span = {
-    papers: items.length,
-    firstYear: items.length > 0 ? Math.min(...items.map((p) => p.year)) : null,
-    lastYear: items.length > 0 ? Math.max(...items.map((p) => p.year)) : null,
-    venues: new Set(items.map((p) => p.journal).filter(Boolean)).size,
-  };
-
-  // Only the four bare single-topic URLs self-canonical: the rest are subsets or orderings, and q is unbounded.
-  const KNOWN_PARAMS = new Set(["topic", "q", "sort", "selected"]);
-  const hasUnknownParam = [...params.keys()].some((k) => !KNOWN_PARAMS.has(k));
-  const soleTopic: TopicId | null =
-    topics.length === 1 &&
-    params.getAll("topic").length === 1 &&
-    !params.has("q") &&
-    !params.has("sort") &&
-    !params.has("selected") &&
-    !hasUnknownParam
-      ?
-        (topics[0] ?? null)
-      : null;
+  const { soleTopic, ...listing } = publicationListing(params);
+  const { items } = listing;
 
   /* A path, not an absolute URL: deriving it from `url.origin` is how a preview host becomes canonical. */
   const canonicalPath = soleTopic
@@ -219,24 +96,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     /* The canonical origin, never the request's: this page is shared-cached, so a preview host's JSON-LD would be served to everyone. */
     origin: SITE_ORIGIN,
     citations,
-    items,
-    chips,
-    topics,
-    q,
-    sort,
-    selectedOnly,
-    selectedCount,
-    selectedHref: (() => {
-      const next = linkParams();
-      next.delete("selected");
-      if (!selectedOnly) next.set("selected", "1");
-      for (const t of topics) next.append("topic", t);
-      const s = next.toString();
-      return s ? `/publications?${s}` : "/publications";
-    })(),
-    filtered,
-    span,
-    total: SHOWCASE.length,
+    ...listing,
     canonicalPath,
     pageTitle,
     pageDescription,

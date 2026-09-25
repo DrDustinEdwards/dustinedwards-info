@@ -1,6 +1,8 @@
 // Every writer and comparer of posts.source_blob_sha and posts.render_hash uses this module;
 // a second implementation is drift. The git header counts UTF-8 BYTES, not string.length.
 
+import { toHex } from "../bytes.mjs";
+
 const encoder = new TextEncoder();
 
 /**
@@ -10,9 +12,7 @@ const encoder = new TextEncoder();
  */
 async function digestHex(algorithm, bytes) {
   const digest = await crypto.subtle.digest(algorithm, bytes);
-  return [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  return toHex(digest);
 }
 
 /**
