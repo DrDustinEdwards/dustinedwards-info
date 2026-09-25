@@ -18,7 +18,7 @@ import {
 } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
 
-import { HOME_CARDS, POSTS_PER_PAGE, startHere } from "../lib/blog-listing.mjs";
+import { HOME_CARDS, POSTS_PER_PAGE, pageCount, startHere } from "../lib/blog-listing.mjs";
 import {
   FAILED_RETENTION_DAYS,
   REJECTED_RETENTION_DAYS,
@@ -26,6 +26,7 @@ import {
 } from "../lib/webmention/retention.mjs";
 import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
+import { LARGE_FILE_BYTES } from "../lib/media/usage.mjs";
 import { seriesSlug } from "../lib/series-path.mjs";
 import { timed, type Timings } from "../lib/timing";
 import * as authSchema from "./auth-schema";
@@ -251,7 +252,7 @@ export async function listBlogPosts(
     total,
     page,
     perPage,
-    pageCount: Math.max(1, Math.ceil(total / perPage)),
+    pageCount: pageCount(total, perPage),
     /* The whole filtered list, not this page of it. */
     span: spanOf(stats),
   };
@@ -358,7 +359,7 @@ export async function listSeriesPosts(
     posts: rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] })),
     total,
     page,
-    pageCount: Math.max(1, Math.ceil(total / perPage)),
+    pageCount: pageCount(total, perPage),
     span: spanOf(statRows[0]),
   };
 }
@@ -588,8 +589,6 @@ function matchesQuery(q: string) {
     OR lower(${media.caption}) LIKE ${needle}
     OR lower(${media.tags}) LIKE ${needle})`;
 }
-
-const LARGE_FILE_BYTES = 1048576;
 
 /** Reconciliation readers must not use this filter, or a rebuild restores trashed rows. */
 function notTrashed() {
@@ -1237,23 +1236,35 @@ export async function decideWebmention(
   return rows[0]?.targetSlug ?? null;
 }
 
+/** What the sweep removes, per status: shared so the count and the sweep cannot drift apart. */
+function expiryPredicates(now: Date) {
+  const olderThan = (status: "failed" | "rejected", days: number) =>
+    and(
+      eq(webmentions.status, status),
+      lt(webmentions.receivedAt, new Date(now.getTime() - daysInMilliseconds(days))),
+    );
+  return {
+    failed: olderThan("failed", FAILED_RETENTION_DAYS),
+    rejected: olderThan("rejected", REJECTED_RETENTION_DAYS),
+  };
+}
+
 /** Rows the sweep would remove now, on `sweepWebmentions`'s predicates. */
 export async function countExpiringWebmentions(
   env: Env,
   now: Date = new Date(),
 ): Promise<{ failed: number; rejected: number }> {
   const db = getDb(env);
-  const failedBefore = new Date(now.getTime() - daysInMilliseconds(FAILED_RETENTION_DAYS));
-  const rejectedBefore = new Date(now.getTime() - daysInMilliseconds(REJECTED_RETENTION_DAYS));
+  const expired = expiryPredicates(now);
   const [failed, rejected] = await Promise.all([
     db
       .select({ n: count() })
       .from(webmentions)
-      .where(and(eq(webmentions.status, "failed"), lt(webmentions.receivedAt, failedBefore))),
+      .where(expired.failed),
     db
       .select({ n: count() })
       .from(webmentions)
-      .where(and(eq(webmentions.status, "rejected"), lt(webmentions.receivedAt, rejectedBefore))),
+      .where(expired.rejected),
   ]);
   return { failed: failed[0]?.n ?? 0, rejected: rejected[0]?.n ?? 0 };
 }
@@ -1274,16 +1285,15 @@ export async function sweepWebmentions(
   now: Date = new Date(),
 ): Promise<{ failed: number; rejected: number }> {
   const db = getDb(env);
-  const failedBefore = new Date(now.getTime() - daysInMilliseconds(FAILED_RETENTION_DAYS));
-  const rejectedBefore = new Date(now.getTime() - daysInMilliseconds(REJECTED_RETENTION_DAYS));
+  const expired = expiryPredicates(now);
 
   const failed = await db
     .delete(webmentions)
-    .where(and(eq(webmentions.status, "failed"), lt(webmentions.receivedAt, failedBefore)))
+    .where(expired.failed)
     .returning({ id: webmentions.id });
   const rejected = await db
     .delete(webmentions)
-    .where(and(eq(webmentions.status, "rejected"), lt(webmentions.receivedAt, rejectedBefore)))
+    .where(expired.rejected)
     .returning({ id: webmentions.id });
 
   return { failed: failed.length, rejected: rejected.length };
