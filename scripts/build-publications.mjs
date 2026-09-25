@@ -89,13 +89,24 @@ function pageRange(page) {
   return { first: null, last: null };
 }
 
-/** @param {any} record @returns {string[]} */
+/**
+ * Throws on an author with no name rather than dropping them: a silently shortened author list is a
+ * wrong citation on a page that exists to be cited.
+ *
+ * @param {any} record @returns {string[]}
+ */
 function cslAuthors(record) {
-  return (record.author ?? [])
-    .map((/** @type {any} */ a) =>
-      [a.given, a.family].filter(Boolean).join(" ") || a.literal || a.name || "",
-    )
-    .filter(Boolean);
+  const authors = (record.author ?? []).map((/** @type {any} */ a) =>
+    [a.given, a.family].filter(Boolean).join(" ") || a.literal || a.name || "",
+  );
+  const unnamed = authors.filter((/** @type {string} */ name) => !name).length;
+  if (authors.length === 0 || unnamed > 0) {
+    throw new Error(
+      `CSL record ${record.DOI ?? "(no DOI)"} has ${authors.length} author(s), ${unnamed} with no ` +
+        `usable name. Fix data/publications.csl.json; nothing was written.`,
+    );
+  }
+  return authors;
 }
 
 const PRELUDE = `/**
@@ -258,6 +269,10 @@ export function generate() {
   for (const [doi, siteFields] of Object.entries(site)) {
     const record = cslByDoi.get(doiKey(doi));
     if (!record) throw new Error(`no CSL record for DOI ${doi}`);
+    // A null title or year would be emitted into the data file and rendered as an empty citation.
+    if (!clean(first(record.title)) || cslYear(record) === null) {
+      throw new Error(`CSL record for DOI ${doi} has no title or no publication year`);
+    }
     rows.push({
       // DOI is emitted from the site key, as deposited, not from the CSL
       // payload, which Crossref lowercases as a display convention.
