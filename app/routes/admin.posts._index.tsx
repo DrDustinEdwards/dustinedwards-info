@@ -8,7 +8,7 @@ import { RowMenu } from "~/components/admin/row-menu";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
@@ -77,110 +77,108 @@ function daysUntil(publishAt: Date, now: number) {
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const env = getEnv(context);
-  const filters = readFilters(new URL(request.url).searchParams);
-  const deleteLeft = deleteLeftBehind(new URL(request.url).searchParams);
+  return timedLoader(context, async (timings) => {
+    const env = getEnv(context);
+    const filters = readFilters(new URL(request.url).searchParams);
+    const deleteLeft = deleteLeftBehind(new URL(request.url).searchParams);
 
-  const askPromise = timed(timings, "ask_status_uncached", () =>
-    context.get(askStatusContext)(),
-  );
-  const askOn = askAvailable(env);
-  /*
-   * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
-   * rejection. A failing budget read must not take the page down, and it renders as a failure.
-   */
-  const budgetPromise: Promise<
-    | { budget: Awaited<ReturnType<typeof readAskBudget>>; budgetError: null }
-    | { budget: null; budgetError: string | null }
-  > = askOn
-    ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
-        (budget) => ({ budget, budgetError: null }),
-        (error: unknown) => {
-          console.error("ask budget read failed", error);
-          return {
-            budget: null,
-            budgetError: errorMessage(error),
-          };
-        },
-      )
-    : Promise.resolve({ budget: null, budgetError: null });
-
-  const readershipPromise = timed(timings, "ae_post_readership", () =>
-    fetchPostReadership(env),
-  );
-
-  const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
-    Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
-  );
-
-  const tagsBySlug = new Map<string, string[]>();
-  for (const row of tagRows) {
-    const list = tagsBySlug.get(row.slug);
-    if (list) list.push(row.tag);
-    else tagsBySlug.set(row.slug, [row.tag]);
-  }
-
-  const now = Date.now();
-  const all = rows.map((post) => {
-    const state = statusOf(post.status, post.publishAt, now);
-    return {
-      ...post,
-      state,
-      tags: tagsBySlug.get(post.slug) ?? [],
-      // A number by the time the component sees it: rendering from a date reads the clock, and server
-      // and hydration would disagree near a day boundary.
-      scheduledInDays:
-        state === "scheduled" && post.publishAt ? daysUntil(post.publishAt, now) : null,
-    };
-  });
-
-  const needle = filters.q.toLowerCase();
-  const posts = all.filter((post) => {
-    if (filters.status && post.state !== filters.status) return false;
-    if (filters.tag && !post.tags.includes(filters.tag)) return false;
-    if (!needle) return true;
-    return (
-      post.title.toLowerCase().includes(needle) || post.slug.toLowerCase().includes(needle)
+    const askPromise = timed(timings, "ask_status_uncached", () =>
+      context.get(askStatusContext)(),
     );
+    const askOn = askAvailable(env);
+    /*
+     * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
+     * rejection. A failing budget read must not take the page down, and it renders as a failure.
+     */
+    const budgetPromise: Promise<
+      | { budget: Awaited<ReturnType<typeof readAskBudget>>; budgetError: null }
+      | { budget: null; budgetError: string | null }
+    > = askOn
+      ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
+          (budget) => ({ budget, budgetError: null }),
+          (error: unknown) => {
+            console.error("ask budget read failed", error);
+            return {
+              budget: null,
+              budgetError: errorMessage(error),
+            };
+          },
+        )
+      : Promise.resolve({ budget: null, budgetError: null });
+
+    const readershipPromise = timed(timings, "ae_post_readership", () =>
+      fetchPostReadership(env),
+    );
+
+    const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
+      Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
+    );
+
+    const tagsBySlug = new Map<string, string[]>();
+    for (const row of tagRows) {
+      const list = tagsBySlug.get(row.slug);
+      if (list) list.push(row.tag);
+      else tagsBySlug.set(row.slug, [row.tag]);
+    }
+
+    const now = Date.now();
+    const all = rows.map((post) => {
+      const state = statusOf(post.status, post.publishAt, now);
+      return {
+        ...post,
+        state,
+        tags: tagsBySlug.get(post.slug) ?? [],
+        // A number by the time the component sees it: rendering from a date reads the clock, and server
+        // and hydration would disagree near a day boundary.
+        scheduledInDays:
+          state === "scheduled" && post.publishAt ? daysUntil(post.publishAt, now) : null,
+      };
+    });
+
+    const needle = filters.q.toLowerCase();
+    const posts = all.filter((post) => {
+      if (filters.status && post.state !== filters.status) return false;
+      if (filters.tag && !post.tags.includes(filters.tag)) return false;
+      if (!needle) return true;
+      return (
+        post.title.toLowerCase().includes(needle) || post.slug.toLowerCase().includes(needle)
+      );
+    });
+
+    const filtered = Boolean(filters.q || filters.status || filters.tag);
+
+    // An admin page may await the AI layer; no public route ever does.
+    const ask = await askPromise;
+
+    const { budget, budgetError } = await budgetPromise;
+
+    const readership = await readershipPromise;
+
+    const payload = {
+      posts,
+      /* With Ask on, a null `ask` is a failed status read, never "up to date". */
+      askOn,
+      /** What a delete from the editor left behind, when it redirected here. */
+      deleteLeft,
+      ask,
+      budget,
+      budgetError,
+      filters,
+      filtered,
+      total: all.length,
+      statusCounts: {
+        all: all.length,
+        published: all.filter((post) => post.state === "published").length,
+        draft: all.filter((post) => post.state === "draft").length,
+        scheduled: all.filter((post) => post.state === "scheduled").length,
+      },
+      tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
+      /** The whole report: only `complete` and the error arm tell a measured zero from an unasked question. */
+      readership,
+    };
+
+    return data(payload);
   });
-
-  const filtered = Boolean(filters.q || filters.status || filters.tag);
-
-  // An admin page may await the AI layer; no public route ever does.
-  const ask = await askPromise;
-
-  const { budget, budgetError } = await budgetPromise;
-
-  const readership = await readershipPromise;
-
-  const payload = {
-    posts,
-    /* With Ask on, a null `ask` is a failed status read, never "up to date". */
-    askOn,
-    /** What a delete from the editor left behind, when it redirected here. */
-    deleteLeft,
-    ask,
-    budget,
-    budgetError,
-    filters,
-    filtered,
-    total: all.length,
-    statusCounts: {
-      all: all.length,
-      published: all.filter((post) => post.state === "published").length,
-      draft: all.filter((post) => post.state === "draft").length,
-      scheduled: all.filter((post) => post.state === "scheduled").length,
-    },
-    tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
-    /** The whole report: only `complete` and the error arm tell a measured zero from an unasked question. */
-    readership,
-  };
-
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-
-  return data(payload);
 }
 
 /** Appended when a write landed but its cache purge did not: the public pages are stale until expiry. */

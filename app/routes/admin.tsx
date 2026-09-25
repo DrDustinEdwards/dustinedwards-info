@@ -19,7 +19,7 @@ import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader, timingsContext } from "~/lib/timing";
 import {
   askAvailable,
   askDriftCount,
@@ -114,31 +114,29 @@ export const middleware: Route.MiddlewareFunction[] = [
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  /*
-   * The badge reads a cached count from KV, never AI Search. /admin/posts calls the reader uncached,
-   * because the page that fixes drift must not act on a stale number.
-   */
-  const [drift, counts] = await Promise.all([
-    /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
-    timed(timings, "layout_ask_drift", () =>
-      askDriftCount(getEnv(context), getExecutionContext(context), timings),
-    ),
-    timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
-  ]);
-  const payload = {
-    email: context.get(adminActorContext).email,
-    counts,
-    /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
-    askDrift: askAvailable(getEnv(context)) ? drift : 0,
-    askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
-  };
+  return timedLoader(context, async (timings) => {
+    /*
+     * The badge reads a cached count from KV, never AI Search. /admin/posts calls the reader uncached,
+     * because the page that fixes drift must not act on a stale number.
+     */
+    const [drift, counts] = await Promise.all([
+      /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
+      timed(timings, "layout_ask_drift", () =>
+        askDriftCount(getEnv(context), getExecutionContext(context), timings),
+      ),
+      timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
+    ]);
+    const payload = {
+      email: context.get(adminActorContext).email,
+      counts,
+      /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
+      askDrift: askAvailable(getEnv(context)) ? drift : 0,
+      askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
+    };
 
-  /* The layout's own total: its marks run in parallel and one nests, so summing them overcounts. */
-  timings?.push({ name: "layout_total", ms: performance.now() - loaderStart });
-
-  return data(payload);
+    return data(payload);
+    // The layout's own total: its marks run in parallel and one nests, so summing them overcounts.
+  }, "layout_total");
 }
 
 /** localStorage, a per-device preference: the server cannot know it, hence the blocking script below. */
