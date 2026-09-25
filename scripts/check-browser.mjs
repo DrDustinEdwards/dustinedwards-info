@@ -2103,6 +2103,18 @@ try {
       [...document.querySelectorAll("section.playground-demo")].map((s) => s.id),
     );
     const declared = manifest.demos.map((/** @type {any} */ d) => `demo-${d.slug}`);
+    /* Each list below is looped over; an emptied one would pass every loop by running none. */
+    for (const [name, list] of [
+      ["demos", manifest.demos],
+      ["cookiePresets", manifest.cookiePresets],
+      ["markdownSnippets", manifest.markdownSnippets],
+    ]) {
+      ok(
+        `content/playground.json lists ${name} to drive`,
+        Array.isArray(list) && list.length > 0,
+        `${name} is ${JSON.stringify(list)}, so the cases that loop over it would assert nothing`,
+      );
+    }
     ok(
       "/playground renders a section for every demo in the manifest",
       declared.every((/** @type {string} */ id) => sections.includes(id)),
@@ -2173,6 +2185,7 @@ try {
     }
 
     /* workerd refuses `WebAssembly.instantiate()` on raw bytes; only a Worker sees this. */
+    let tocAnchorsChecked = 0;
     for (const snippet of manifest.markdownSnippets) {
       await page.goto(`${BASE}/playground?md=${encodeURIComponent(snippet.slug)}`, {
         waitUntil: "networkidle0",
@@ -2190,6 +2203,7 @@ try {
       }
 
       for (const anchor of snippet.expect.toc) {
+        tocAnchorsChecked += 1;
         ok(
           `the markdown demo reports the "${anchor}" anchor it collected`,
           text.includes(anchor),
@@ -2216,6 +2230,13 @@ try {
             a.getAttribute("href"),
           ),
         );
+        /* A pane that rendered nothing has no refused link either; the allowed ones must be there. */
+        const allowed = (snippet.source.match(/\]\(/g) ?? []).length - snippet.expect.blockedCount;
+        ok(
+          `the markdown demo renders the ${allowed} link(s) it allows`,
+          liveHrefs.length >= allowed,
+          `rendered ${liveHrefs.length} anchor(s): ${liveHrefs.join(", ") || "none"}`,
+        );
         ok(
           `the markdown demo emits no refused protocol as a live link`,
           liveHrefs.every((/** @type {string | null} */ href) => !/^javascript:/i.test(href ?? "")),
@@ -2223,6 +2244,11 @@ try {
         );
       }
     }
+    ok(
+      "the markdown demo checked at least one collected heading anchor",
+      tocAnchorsChecked > 0,
+      "no snippet in content/playground.json expects a toc, so the anchor case asserted nothing",
+    );
   }
 
   await page.setViewport({ width: 1280, height: 900 });
@@ -2234,11 +2260,14 @@ try {
     const id = href.startsWith("#") ? href.slice(1) : "";
     return { link: true, href, target: !!(id && document.getElementById(id)) };
   });
+  /* root.tsx renders the skip link on every page, /login included, so its absence is a failure. */
   ok(
-    "/login: the skip link target exists",
-    !loginSkip.link || loginSkip.target,
-    `the login page renders a skip link to ${JSON.stringify(loginSkip.href)} and nothing ` +
-      `carries that id, so keyboard focus goes nowhere`,
+    "/login: the skip link exists and its target does",
+    loginSkip.link && loginSkip.target,
+    loginSkip.link
+      ? `the login page renders a skip link to ${JSON.stringify(loginSkip.href)} and nothing ` +
+          `carries that id, so keyboard focus goes nowhere`
+      : "there is no .skip-link on /login at all",
   );
 
   /* The Ask stream is not driven because it bills. Console errors are asserted at the end, where CSP refusals show. */
