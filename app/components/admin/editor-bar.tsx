@@ -3,7 +3,10 @@ import { Link } from "react-router";
 import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostState } from "~/lib/editor/publish-transition.mjs";
 import { PublishActions } from "./publish-actions";
+import { moveRovingFocus } from "./roving-focus";
 import type { Layout } from "./use-live-preview";
+
+const LAYOUTS: Layout[] = ["write", "split", "preview"];
 
 // Rendered only beside "Unsaved changes", so the local buffer never reads as a save.
 function bufferAgeLabel(savedAt: string, now: number): string {
@@ -83,13 +86,26 @@ export function EditorBar({
               required control that is not displayed blocks submission unreachably. */}
           <div className="editor-bar-group editor-bar-center">
             {richBody ? (
-              <div className="editor-layout-toggle" role="group" aria-label="Editor layout">
-                {(["write", "split", "preview"] as Layout[]).map((option) => (
+              /* A radio group, not three toggles: exactly one layout is on. Arrows move and choose,
+                 and the chosen one is the single tab stop (APG radio group). */
+              <div
+                className="editor-layout-toggle"
+                role="radiogroup"
+                aria-label="Editor layout"
+                onKeyDown={(event) => {
+                  const next = moveRovingFocus(event, ".editor-layout-option", "both");
+                  const option = next === null ? undefined : LAYOUTS[next];
+                  if (option) chooseLayout(option);
+                }}
+              >
+                {LAYOUTS.map((option) => (
                   <button
                     key={option}
                     type="button"
+                    role="radio"
                     className="editor-layout-option"
-                    aria-pressed={layout === option}
+                    aria-checked={layout === option}
+                    tabIndex={layout === option ? 0 : -1}
                     onClick={() => chooseLayout(option)}
                   >
                     {option === "write" ? "Write" : option === "split" ? "Split" : "Preview"}
@@ -113,7 +129,8 @@ export function EditorBar({
 
             {/* Nothing renders on the server, so the static harness render is unchanged. */}
             {dirty && savedAt ? (
-              <span className="editor-buffer-age" aria-live="polite">
+              /* Not live: the age ticks every minute, and each tick would interrupt the author. */
+              <span className="editor-buffer-age">
                 last written {bufferAgeLabel(savedAt, ageNow)}
               </span>
             ) : dirty && bufferTried ? (

@@ -184,8 +184,8 @@
   justify-content: center;
   /* margin-top: 0 resets .btn-ghost's stacked-button margin. */
   margin: 0;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.5rem;
+  height: 1.5rem;
   padding: 0;
 }
 
@@ -243,9 +243,37 @@
   border: 0;
   border-left: 1px solid var(--border-strong);
   border-radius: 0;
+  /* A <dialog>: these undo the centred modal box a browser draws, so it stays a drawer. */
+  left: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  color: var(--text);
+}
+
+/* Unopened and not inline, it is hidden, as a closed dialog is. */
+.media-detail:not([open]):not([data-inline]) {
+  display: none;
+}
+
+/* Once modal, the backdrop is the scrim; the link stays for the page without script. */
+.media-detail::backdrop {
+  background: var(--scrim);
+  opacity: 0.28;
+}
+
+.media-detail-scrim:has(+ .media-detail:modal) {
+  display: none;
+}
+
+/* Empty regions sit out of the flex flow, so they add no gap; the header is drawn first although the
+   notice comes first in the document. */
+.media-detail-notice:not(:has(p)) {
+  position: absolute;
 }
 
 .media-detail-head {
+  order: -1;
   position: sticky;
   z-index: var(--z-tile-body);
   top: -1rem;
@@ -258,7 +286,7 @@
   border-bottom: 1px solid var(--border);
 }
 
-.media-detail-head h3 {
+.media-detail-head h2 {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
@@ -402,7 +430,7 @@
   margin: 0;
 }
 
-.media-detail-usage h4 {
+.media-detail-usage h3 {
   margin: 0 0 0.25rem;
   font-size: 0.8125rem;
 }
@@ -627,6 +655,18 @@
   margin-left: auto;
 }
 
+/* Empty, it sits out of the flex row, so it adds no gap; it stays in the document as a live region. */
+.media-drop-status:empty {
+  position: absolute;
+}
+
+.media-upload-chosen {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
 .media-upload-label {
   padding: 0.4375rem 0.75rem;
   font-size: 0.8125rem;
@@ -678,6 +718,12 @@
   margin: 0.75rem 0;
 }
 
+.media-search-label {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
 .media-search-input {
   flex: 1;
   padding: 0.625rem 0.875rem;
@@ -724,9 +770,13 @@
   box-shadow: inset 0.1875rem 0 0 0 var(--brand);
 }
 
+/* The label is the target, so it holds the 24px floor round a native box that draws at about 13px. */
 .media-check-label {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
 }
 
 .media-grid[data-view="grid"] .media-check-label {
@@ -832,8 +882,8 @@
   margin-top: 0.875rem;
 }
 
-.media-detail-copy h4,
-.media-detail-twins h4 {
+.media-detail-copy h3,
+.media-detail-twins h3 {
   flex-basis: 100%;
   margin: 0;
   font-size: 0.8125rem;
@@ -1006,8 +1056,8 @@
 
 .media-caption .media-copy {
   flex: none;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1.5rem;
+  height: 1.5rem;
   color: var(--on-scrim);
 }
 
@@ -1061,8 +1111,7 @@
 .media-grid[data-view="grid"] .media-card:hover .media-card-body,
 .media-grid[data-view="grid"] .media-card:focus-within .media-card-body,
 .media-grid[data-view="grid"] .media-card[data-selected] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active-tile="yes"] .media-card-body {
+.media-grid[data-view="grid"] .media-card[data-active] .media-card-body {
   opacity: 1;
 }
 
@@ -1075,8 +1124,7 @@
 .media-grid[data-view="grid"] .media-card:hover .media-card-body,
 .media-grid[data-view="grid"] .media-card:focus-within .media-card-body,
 .media-grid[data-view="grid"] .media-card[data-selected] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active-tile="yes"] .media-card-body {
+.media-grid[data-view="grid"] .media-card[data-active] .media-card-body {
   visibility: visible;
 }
 
@@ -1118,9 +1166,10 @@
   color: var(--on-scrim);
 }
 
+/* Transparent, never visibility: hidden, which took the box out of the tab order: the roving tab
+   stop decides which tile's box takes Tab, and focusing it reveals it. */
 .media-grid[data-view="grid"] .media-check-label {
   opacity: 0;
-  visibility: hidden;
   transition: opacity 0.15s ease;
 }
 
@@ -1128,10 +1177,8 @@
 .media-grid[data-view="grid"] .media-card:focus-within .media-check-label,
 .media-grid[data-view="grid"] .media-card[data-selected] .media-check-label,
 .media-grid[data-view="grid"] .media-card[data-active] .media-check-label,
-.media-grid[data-view="grid"] .media-card[data-active-tile="yes"] .media-check-label,
 .media-grid[data-view="grid"]:has(.media-card[data-selected]) .media-check-label {
   opacity: 1;
-  visibility: visible;
 }
 
 .media-grid[data-view="grid"] .media-card {

@@ -1,18 +1,28 @@
 import type { ReactNode } from "react";
 
-/** Ids are per panel: the same specimen renders twice and labels need targets. */
-type Ids = (name: string) => string;
+/**
+ * Ids are per panel: the same specimen renders twice and labels need targets. `label` does the same
+ * for a landmark's name, since two landmarks of one role and name cannot be told apart (axe
+ * landmark-unique).
+ */
+type Ids = ((name: string) => string) & { label: (name: string) => string };
+
+function panelIds(id: string, short: string, theme: string): Ids {
+  return Object.assign((name: string) => `${id}-${short}-${name}`, {
+    label: (name: string) => `${name}, ${theme} panel`,
+  });
+}
 
 function Pair({ id, children }: { id: string; children: (ids: Ids) => ReactNode }) {
   return (
     <div className="pgui-pair">
       <div className="pgui pgui-panel" data-theme="light">
         <span className="pgui-panel-tag">Light</span>
-        {children((name) => `${id}-l-${name}`)}
+        {children(panelIds(id, "l", "light"))}
       </div>
       <div className="pgui pgui-panel" data-theme="dark">
         <span className="pgui-panel-tag">Dark</span>
-        {children((name) => `${id}-d-${name}`)}
+        {children(panelIds(id, "d", "dark"))}
       </div>
     </div>
   );

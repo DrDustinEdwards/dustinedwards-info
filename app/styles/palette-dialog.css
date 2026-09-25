@@ -91,12 +91,24 @@
   display: none;
 }
 
-.palette-listbox {
+/* The recent list sits outside the listbox (a listbox owns only options) and keeps its box exactly. */
+.palette-listbox,
+.palette-recent-list {
   margin: 0;
   padding: 0.375rem;
   list-style: none;
   overflow-y: auto;
   max-height: 21rem;
+}
+
+.palette-recent-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.palette-recent-list .palette-group {
+  margin: 0;
 }
 
 .palette-group {
@@ -201,7 +213,8 @@
     border-radius: 0;
   }
 
-  .palette-listbox {
+  .palette-listbox,
+  .palette-recent-list {
     max-height: none;
   }
 }

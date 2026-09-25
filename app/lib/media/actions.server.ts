@@ -23,7 +23,8 @@ import { normaliseTags, parseTags } from "./tags.mjs";
  * own action, so a handler here runs only once the route has let it.
  */
 
-type Message = { message: string };
+/** `refused` marks a result that changed nothing or failed, which the page announces as an alert. */
+type Message = { message: string; refused?: boolean };
 
 export async function bulkTagMedia(
   env: Env,
@@ -31,10 +32,10 @@ export async function bulkTagMedia(
   intent: "bulk-add-tag" | "bulk-remove-tag",
 ): Promise<Message> {
   const keys = form.getAll("key").map(String).filter(Boolean);
-  if (keys.length === 0) return { message: "Nothing selected." };
+  if (keys.length === 0) return { message: "Nothing selected.", refused: true };
 
   const wanted = normaliseTags(String(form.get("tag") ?? ""))[0];
-  if (!wanted) return { message: "Enter a tag first." };
+  if (!wanted) return { message: "Enter a tag first.", refused: true };
   const adding = intent === "bulk-add-tag";
 
   // Rows already in the target state are skipped, so updated_at is not touched for nothing.
@@ -56,6 +57,7 @@ export async function bulkTagMedia(
       (skipped > 0 ? `, ${skipped} already ${adding ? "tagged" : "untagged"}` : "") +
       "." +
       (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+    refused: failed.length > 0,
   };
 }
 
@@ -71,6 +73,7 @@ export async function setMediaTagsFromForm(env: Env, form: FormData): Promise<Me
         `Nothing changed for ${key}. The tag field was empty, and an empty ` +
         `field does not clear tags. Remove them one at a time, or press ` +
         `Clear all.`,
+      refused: true,
     };
   }
 
@@ -84,7 +87,7 @@ export async function setMediaTagsFromForm(env: Env, form: FormData): Promise<Me
 
 export async function bulkTrashMedia(env: Env, form: FormData): Promise<Message> {
   const keys = form.getAll("key").map(String).filter(Boolean);
-  if (keys.length === 0) return { message: "Nothing selected." };
+  if (keys.length === 0) return { message: "Nothing selected.", refused: true };
   let moved = 0;
   let already = 0;
   const failed: string[] = [];
@@ -103,6 +106,7 @@ export async function bulkTrashMedia(env: Env, form: FormData): Promise<Message>
       (already > 0 ? `, ${already} already there` : "") +
       ". Every address still works and no published page changes." +
       (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+    refused: failed.length > 0,
   };
 }
 
@@ -135,6 +139,7 @@ export async function emptyMediaTrash(env: Env, keys: string[]): Promise<Message
       message:
         `Nothing was deleted: the reference scan failed (${resolution.failed.join(", ")}), ` +
         `so it cannot be confirmed that nothing cites these files.`,
+      refused: true,
     };
   }
   const deleted: string[] = [];
@@ -170,7 +175,7 @@ export async function emptyMediaTrash(env: Env, keys: string[]): Promise<Message
 
 export async function setMediaAlt(env: Env, form: FormData): Promise<Message> {
   const key = String(form.get("key") ?? "");
-  if (!isManagedKey(key)) return { message: "Not a managed media key." };
+  if (!isManagedKey(key)) return { message: "Not a managed media key.", refused: true };
   // Saving alt rewrites no post: alt is contextual, so only future insertions pick it up.
   await upsertMediaRecord(env, { key, alt: String(form.get("alt") ?? "") });
   return { message: `Alt text saved for ${key}. Existing posts are unchanged.` };
@@ -223,10 +228,11 @@ export async function deleteMedia(env: Env, key: string): Promise<Message> {
       message:
         `Delete refused: ${key} is a static asset, served from the repo rather than R2. ` +
         `Remove it with a commit that deletes the file, then rebuild the index.`,
+      refused: true,
     };
   }
 
-  if (!isManagedKey(key)) return { message: "Not a managed media key." };
+  if (!isManagedKey(key)) return { message: "Not a managed media key.", refused: true };
 
   // Server side on a fresh read: a post may have cited the object since the page rendered.
   const [resolution, refs] = await Promise.all([
@@ -238,6 +244,7 @@ export async function deleteMedia(env: Env, key: string): Promise<Message> {
   if (!resolution.complete) {
     return {
       message: `Delete refused: the reference scan failed (${resolution.failed.join(", ")}), so it cannot be confirmed that nothing cites this object.`,
+      refused: true,
     };
   }
 
@@ -252,6 +259,7 @@ export async function deleteMedia(env: Env, key: string): Promise<Message> {
         : "";
     return {
       message: `Delete refused. ${describeCitations(citations)}${refNote}`,
+      refused: true,
     };
   }
 
@@ -259,6 +267,7 @@ export async function deleteMedia(env: Env, key: string): Promise<Message> {
   if (!(await claimMediaKeyForDelete(env, key))) {
     return {
       message: `Delete refused: ${key} was cited or removed while this delete was being checked. Reload and try again.`,
+      refused: true,
     };
   }
 

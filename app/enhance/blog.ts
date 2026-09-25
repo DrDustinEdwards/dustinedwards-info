@@ -69,7 +69,9 @@ function scrollSpy() {
       const active = targets.find((t) => seen.get(t.id));
       for (const link of links) {
         const isActive = active !== undefined && link.hash === `#${active.id}`;
-        link.toggleAttribute("data-current", isActive);
+        // The state itself, not a styling hook, so a screen reader hears which section is current.
+        if (isActive) link.setAttribute("aria-current", "location");
+        else link.removeAttribute("aria-current");
       }
     },
     { rootMargin: "0px 0px -70% 0px" },
@@ -261,12 +263,15 @@ function footnotePreviews() {
  * `src` is passed in rather than read from `currentSrc`, which is whichever `srcset` rung the browser
  * downloaded: a resized copy shown as full size.
  */
-function openOverlay(src: string, alt: string, restoreFocus: () => void) {
+function openOverlay(src: string, alt: string, restoreFocus: () => void, label?: string) {
   // `restoreFocus` is kept because the opener is not always the element focus should land on.
   const dialog = document.createElement("dialog");
   dialog.className = "lightbox";
-  // Empty alt means decorative, so the dialog gets a generic label rather than an empty one.
-  dialog.setAttribute("aria-label", alt || "Full size image");
+  /*
+   * Empty alt means decorative, so the dialog gets a generic label rather than an empty one. A
+   * diagram passes its own short label: its alt describes every node and is too long for a name.
+   */
+  dialog.setAttribute("aria-label", label ?? (alt || "Full size image"));
   if (reduceMotion.matches) dialog.dataset.reduced = "true";
 
   const full = document.createElement("img");
@@ -322,7 +327,12 @@ function lightbox() {
     image.setAttribute("role", "button");
     image.setAttribute("aria-label", `Enlarge diagram: ${image.alt}`);
     const open = () =>
-      openOverlay(image.src, image.alt, () => image.focus({ preventScroll: true }));
+      openOverlay(
+        image.src,
+        image.alt,
+        () => image.focus({ preventScroll: true }),
+        "Diagram, full size",
+      );
     image.addEventListener("click", open);
     image.addEventListener("keydown", (event) => {
       if (event.key !== "Enter" && event.key !== " ") return;

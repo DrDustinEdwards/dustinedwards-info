@@ -27,6 +27,8 @@ let askLoading = false;
 let askContainer: HTMLDivElement | null = null;
 let input: HTMLInputElement | null = null;
 let listbox: HTMLUListElement | null = null;
+/** Outside the listbox: recent searches are buttons, and a listbox may own only options and groups. */
+let recentList: HTMLDivElement | null = null;
 let statusLine: HTMLParagraphElement | null = null;
 let allResultsLink: HTMLAnchorElement | null = null;
 let hits: Hit[] = [];
@@ -86,10 +88,14 @@ function build() {
         aria-autocomplete="list"
         aria-label="Search this site"
       />
-      <button type="button" class="palette-close" aria-label="Close search">Esc</button>
+      <button type="button" class="palette-close" aria-label="Close search (Esc)">Esc</button>
     </form>
     <p class="palette-status" role="status" aria-live="polite"></p>
-    <ul id="palette-listbox" class="palette-listbox" role="listbox" aria-label="Search results"></ul>
+    <ul id="palette-listbox" class="palette-listbox" role="listbox" aria-label="Search results" tabindex="-1"></ul>
+    <div class="palette-recent-list" hidden>
+      <p class="palette-group" id="palette-recent-label">Recent</p>
+      <ul aria-labelledby="palette-recent-label"></ul>
+    </div>
     <div class="palette-ask">
       <button type="button" class="palette-ask-trigger" hidden>Ask AI about this</button>
       <div class="palette-ask-container" hidden></div>
@@ -104,6 +110,7 @@ function build() {
   document.body.appendChild(dialog);
   input = dialog.querySelector(".palette-input");
   listbox = dialog.querySelector(".palette-listbox");
+  recentList = dialog.querySelector(".palette-recent-list");
   statusLine = dialog.querySelector(".palette-status");
   allResultsLink = dialog.querySelector(".palette-all-results");
 
@@ -135,6 +142,7 @@ function optionId(i: number) {
 function render() {
   if (!listbox || !input) return;
   if (dialog && !dialog.open) return;
+  showRecent(false);
 
   if (hits.length === 0) {
     listbox.innerHTML = "";
@@ -145,7 +153,11 @@ function render() {
 
   input.setAttribute("aria-expanded", "true");
 
-  // Group labels are presentational rows, so the listbox's children stay options to assistive technology.
+  /*
+   * The APG grouped listbox: each type is a `role="group"` named by its label row, so the listbox owns
+   * only groups and options. An option is named by its title alone and described by the rest, since the
+   * snippet made names too long to hear.
+   */
   const groups = new Map<string, Array<{ hit: Hit; index: number }>>();
   hits.forEach((hit, index) => {
     const list = groups.get(hit.type) ?? [];
@@ -154,27 +166,36 @@ function render() {
   });
 
   let html = "";
+  let group = 0;
   for (const [type, entries] of groups) {
-    html += `<li class="palette-group" role="presentation">${escapeHtml(type)}</li>`;
+    const labelId = `palette-group-${group++}`;
+    html += `<li role="group" aria-labelledby="${labelId}"><div class="palette-group" id="${labelId}" role="presentation">${escapeHtml(type)}</div>`;
     for (const { hit, index } of entries) {
+      const id = optionId(index);
       const context =
         hit.anchor && hit.documentTitle !== hit.title
-          ? `<span class="palette-context">in ${escapeHtml(hit.documentTitle)}</span>`
+          ? `<span class="palette-context" id="${id}-context">in ${escapeHtml(hit.documentTitle)}</span>`
           : "";
+      const described = [context ? `${id}-context` : "", `${id}-snippet`, `${id}-why`]
+        .filter(Boolean)
+        .join(" ");
       html += `
-        <li
-          id="${optionId(index)}"
+        <div
+          id="${id}"
           class="palette-option"
           role="option"
           aria-selected="${index === active}"
+          aria-labelledby="${id}-title"
+          aria-describedby="${described}"
           data-index="${index}"
         >
-          <span class="palette-title">${escapeHtml(hit.title)}</span>
+          <span class="palette-title" id="${id}-title">${escapeHtml(hit.title)}</span>
           ${context}
-          <span class="palette-snippet">${hit.snippet}</span>
-          <span class="palette-why">${escapeHtml(hit.matchedOn.join(", "))}</span>
-        </li>`;
+          <span class="palette-snippet" id="${id}-snippet">${hit.snippet}</span>
+          <span class="palette-why" id="${id}-why">${escapeHtml(hit.matchedOn.join(", "))}</span>
+        </div>`;
     }
+    html += `</li>`;
   }
   listbox.innerHTML = html;
 
@@ -187,7 +208,7 @@ function render() {
     input.removeAttribute("aria-activedescendant");
   }
 
-  for (const option of listbox.querySelectorAll<HTMLLIElement>(".palette-option")) {
+  for (const option of listbox.querySelectorAll<HTMLElement>(".palette-option")) {
     option.addEventListener("mouseenter", () => {
       active = Number(option.dataset.index ?? -1);
       syncSelection();
@@ -201,11 +222,17 @@ function render() {
 
 function syncSelection() {
   if (!listbox || !input) return;
-  for (const option of listbox.querySelectorAll<HTMLLIElement>(".palette-option")) {
+  for (const option of listbox.querySelectorAll<HTMLElement>(".palette-option")) {
     option.setAttribute("aria-selected", String(Number(option.dataset.index) === active));
   }
   if (active >= 0) input.setAttribute("aria-activedescendant", optionId(active));
   else input.removeAttribute("aria-activedescendant");
+}
+
+/** One of the two lists shows at a time, so the empty one never adds its padding above the other. */
+function showRecent(show: boolean) {
+  if (recentList) recentList.hidden = !show;
+  if (listbox) listbox.hidden = show;
 }
 
 function renderRecent() {
@@ -215,23 +242,24 @@ function renderRecent() {
   input.setAttribute("aria-expanded", "false");
   input.removeAttribute("aria-activedescendant");
 
+  listbox.innerHTML = "";
   const recent = readRecent();
-  if (recent.length === 0) {
-    listbox.innerHTML = "";
+  const list = recentList?.querySelector("ul");
+  if (recent.length === 0 || !list) {
+    showRecent(false);
     if (statusLine) statusLine.textContent = "";
     return;
   }
-  listbox.innerHTML =
-    `<li class="palette-group" role="presentation">Recent</li>` +
-    recent
-      .map(
-        (query) =>
-          `<li class="palette-recent" role="presentation"><button type="button" data-recent="${escapeHtml(
-            query,
-          )}">${escapeHtml(query)}</button></li>`,
-      )
-      .join("");
-  for (const button of listbox.querySelectorAll<HTMLButtonElement>("[data-recent]")) {
+  list.innerHTML = recent
+    .map(
+      (query) =>
+        `<li class="palette-recent"><button type="button" data-recent="${escapeHtml(
+          query,
+        )}">${escapeHtml(query)}</button></li>`,
+    )
+    .join("");
+  showRecent(true);
+  for (const button of list.querySelectorAll<HTMLButtonElement>("[data-recent]")) {
     button.addEventListener("click", () => {
       if (!input) return;
       input.value = button.dataset.recent ?? "";
@@ -401,6 +429,7 @@ function reset() {
   clearTimeout(debounce);
   resetAsk();
   if (listbox) listbox.innerHTML = "";
+  showRecent(false);
   if (statusLine) statusLine.textContent = "";
   if (input) {
     input.setAttribute("aria-expanded", "false");

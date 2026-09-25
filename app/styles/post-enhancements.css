@@ -9,7 +9,7 @@
   transition: transform 0.1s linear;
 }
 
-.post-toc a[data-current] {
+.post-toc a[aria-current="location"] {
   color: var(--brand);
   font-weight: 500;
 }

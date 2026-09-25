@@ -6,10 +6,12 @@ import { EditorView, keymap, placeholder as cmPlaceholder } from "@codemirror/vi
 import { tags } from "@lezer/highlight";
 import { useEffect, useRef, useState } from "react";
 
+import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
 // Split out of pipeline.mjs so this browser chunk can reach it without pulling shiki in.
 import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
 import { SCAFFOLDS, insertBlock, wrap, type ScaffoldName } from "./md-editor-commands";
 import { EditorToolbar } from "./md-editor-toolbar";
+import { moveRovingFocus } from "./roving-focus";
 import { useImageUpload } from "./use-image-upload";
 import { looksLikeUrl, useLinkPalette } from "./use-link-palette";
 
@@ -35,7 +37,8 @@ const houseTheme = EditorView.theme({
     color: "var(--text-disabled)",
     border: "none",
   },
-  "&.cm-focused": { outline: "none" },
+  // Inset, because the surface clips overflow: an outside ring would be cut off (2.4.7).
+  "&.cm-focused": { outline: "2px solid var(--brand)", outlineOffset: "-2px" },
   ".cm-activeLine": { backgroundColor: "var(--paper)" },
   ".cm-activeLineGutter": { backgroundColor: "var(--paper)" },
   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground, ::selection": {
@@ -97,6 +100,12 @@ export default function MarkdownEditor({
   // React 19 renders a lazy component during SSR, so the chrome waits for mount or a no-script reader gets a dead toolbar.
   const [ready, setReady] = useState(false);
   const [slashAt, setSlashAt] = useState<{ from: number; top: number; left: number } | null>(null);
+  // Read by the keymap, which is built once and would otherwise see the first render's null.
+  const slashOpenRef = useRef(false);
+  slashOpenRef.current = slashAt !== null;
+  const slashRef = useRef<HTMLUListElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const altRef = useRef<HTMLInputElement>(null);
   const { upload, setUpload, uploadError, alt, setAlt, uploadFile, insertFigure } =
     useImageUpload(viewRef);
 
@@ -131,6 +140,8 @@ export default function MarkdownEditor({
       syntaxHighlighting(houseHighlight),
       houseTheme,
       EditorView.lineWrapping,
+      // The label on the hidden textarea does not reach this surface, which is what has focus (4.1.2).
+      EditorView.contentAttributes.of({ "aria-label": "Body, markdown" }),
       EditorView.updateListener.of((update) => {
         if (update.docChanged) {
           const text = update.state.doc.toString();
@@ -188,6 +199,15 @@ export default function MarkdownEditor({
         { key: "Mod-e", run: (v) => (wrap(v, "`"), true) },
         // No Mod-s here: the editor shell owns Cmd+S, since it knows which transition the primary button is armed for.
         { key: "Escape", run: () => (setSlashAt(null), false) },
+        // Down from the "/" line enters the block menu, which is otherwise reachable only by mouse.
+        {
+          key: "ArrowDown",
+          run: () => {
+            if (!slashOpenRef.current) return false;
+            slashRef.current?.querySelector<HTMLElement>(".md-slash-item")?.focus();
+            return true;
+          },
+        },
         ...historyKeymap,
         ...defaultKeymap,
       ]),
@@ -219,6 +239,13 @@ export default function MarkdownEditor({
     view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
   }, [value]);
 
+  // Focus goes to the alt field once the file is in the bucket: the prompt is otherwise silent,
+  // and the figure cannot be inserted until it is answered.
+  const uploadedUrl = upload?.url ?? "";
+  useEffect(() => {
+    if (uploadedUrl) altRef.current?.focus();
+  }, [uploadedUrl]);
+
   const run = (fn: (view: EditorView) => void) => () => {
     const view = viewRef.current;
     if (view) fn(view);
@@ -240,8 +267,25 @@ export default function MarkdownEditor({
   return (
     <div className="md-editor">
       {ready ? (
-        <EditorToolbar run={run} openLinkPalette={openLinkPalette} scaffold={scaffold} />
+        <EditorToolbar
+          run={run}
+          openLinkPalette={openLinkPalette}
+          scaffold={scaffold}
+          pickImage={() => fileRef.current?.click()}
+        />
       ) : null}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept={ACCEPT_ATTRIBUTE}
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) void uploadFile(file);
+        }}
+      />
 
       <div className="md-surface" ref={host} />
 
@@ -300,7 +344,8 @@ export default function MarkdownEditor({
             aria-label="Search posts to link to, or type a URL"
             role="combobox"
             aria-expanded={linkMatches.length > 0}
-            aria-controls="md-link-list"
+            // Only while the list exists: an id that resolves to nothing is a broken reference.
+            aria-controls={linkMatches.length > 0 ? "md-link-list" : undefined}
             aria-activedescendant={
               linkMatches[linkIndex] ? `md-link-opt-${linkMatches[linkIndex].slug}` : undefined
             }
@@ -371,18 +416,28 @@ export default function MarkdownEditor({
       ) : null}
 
       {slashAt ? (
+        /* Plain buttons, not a listbox: nothing here is selected, each one acts. Down from the
+           editor enters it, Up and Down move, Escape returns to the text. */
         <ul
+          ref={slashRef}
           className="md-slash"
           style={{ top: `${slashAt.top}px`, left: `${slashAt.left}px` }}
-          role="listbox"
           aria-label="Insert a block"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setSlashAt(null);
+              viewRef.current?.focus();
+              return;
+            }
+            moveRovingFocus(event, ".md-slash-item", "vertical");
+          }}
         >
           {(Object.keys(SCAFFOLDS) as ScaffoldName[]).map((name) => (
             <li key={name}>
               <button
                 type="button"
-                role="option"
-                aria-selected="false"
                 className="md-slash-item"
                 onClick={() => scaffold(name, slashAt.from)}
               >
@@ -394,11 +449,17 @@ export default function MarkdownEditor({
         </ul>
       ) : null}
 
+      {/* An alert, read on insertion: a failed upload is an event the author has to act on. */}
       {uploadError ? (
-        <p className="field-alarm" role="status">
+        <p className="field-alarm" role="alert">
           {uploadError}
         </p>
       ) : null}
+
+      {/* Always in the DOM, so the region exists before its text does. */}
+      <p className="sr-only" role="status">
+        {upload && !upload.url ? `Uploading ${upload.name}` : ""}
+      </p>
 
       {upload ? (
         <div className="md-upload" role="group" aria-label="Describe the image">
@@ -413,6 +474,7 @@ export default function MarkdownEditor({
             </label>
             <input
               id="md-upload-alt"
+              ref={altRef}
               value={alt}
               onChange={(event) => setAlt(event.target.value)}
               placeholder="What the image shows"
@@ -440,6 +502,7 @@ export default function MarkdownEditor({
                 onClick={() => {
                   setUpload(null);
                   setAlt("");
+                  viewRef.current?.focus();
                 }}
               >
                 Cancel

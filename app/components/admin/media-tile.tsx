@@ -25,6 +25,7 @@ export function MediaTile({
   linkTo,
   view,
   scanComplete,
+  tabStop,
 }: {
   object: Listing["objects"][number];
   chosen: string[];
@@ -32,6 +33,8 @@ export function MediaTile({
   linkTo: (over?: Parameters<typeof hrefWith>[1]) => string;
   view: Parameters<typeof sortHref>[0];
   scanComplete: boolean;
+  /** Grid only: whether this tile's controls are in the tab order. The arrows move between tiles. */
+  tabStop: boolean;
 }) {
   const name = displayName(object);
   const usage = usageDescriptor(object.usage);
@@ -49,6 +52,9 @@ export function MediaTile({
   // Not on hover: the server cannot render hover, and it would reveal a control the keyboard cannot reach first.
   const showCaption =
     view.view === "grid" && (chosen.includes(object.key) || view.key === object.key);
+  const grid = view.view === "grid";
+  // Roving: in the grid only one tile's controls take Tab; the list keeps every row in the tab order.
+  const roving = grid && !tabStop ? -1 : undefined;
   return (
     <li
       key={object.key}
@@ -64,6 +70,7 @@ export function MediaTile({
           type="checkbox"
           name="key"
           value={object.key}
+          tabIndex={roving}
           checked={chosen.includes(object.key)}
           onChange={(event) =>
             selectRange(
@@ -84,6 +91,11 @@ export function MediaTile({
         to={linkTo({ key: object.key })}
         className="media-thumb-link"
         preventScrollReset
+        /* The grid's tab stop, named for the file. In the list the name link is the stop, so this
+           duplicate of it leaves the tab order and the accessibility tree. */
+        {...(grid
+          ? { "aria-label": name, tabIndex: roving }
+          : { "aria-hidden": true, tabIndex: -1 })}
         /* preventDefault only on modified clicks, so a plain click stays a link that works without script. */
         onClick={(event) => {
           if (!event.shiftKey && !event.metaKey && !event.ctrlKey) return;
@@ -141,7 +153,7 @@ export function MediaTile({
                 : ""}
             </span>
           </span>
-          <CopyButton value={object.url} label={name} />
+          <CopyButton value={object.url} label={name} tabIndex={roving} />
         </span>
       ) : null}
       </span>
@@ -156,6 +168,8 @@ export function MediaTile({
             className="media-name"
             title={object.key}
             preventScrollReset
+            /* In the grid the thumbnail is the stop and carries this name, so this one steps aside. */
+            {...(grid ? { "aria-hidden": true, tabIndex: -1 } : {})}
           >
             {view.view === "list" ? name : middleTruncate(name)}
           </Link>
@@ -198,7 +212,7 @@ export function MediaTile({
 
       {showCaption ? null : (
         <span className="media-col-copy">
-          <CopyButton value={object.url} label={name} />
+          <CopyButton value={object.url} label={name} tabIndex={roving} />
         </span>
       )}
     </li>
