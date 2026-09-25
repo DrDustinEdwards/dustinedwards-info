@@ -1,6 +1,7 @@
 /**
  * Counts chunks as they arrive. The client's declared length must never permit: it can be absent
- * or understated, and `request.text()` materializes the whole body before any slice runs.
+ * or understated, and `request.text()` materializes the whole body before any slice runs. A stream
+ * that errors mid-read THROWS: no string is a safe stand-in, because every caller parses what it gets.
  *
  * @param {{ body: ReadableStream<Uint8Array> | null }} source Anything with a body stream.
  * @param {number} max Hard ceiling in bytes.
@@ -26,8 +27,12 @@ export async function readCapped(source, max) {
       }
       chunks.push(value);
     }
-  } catch {
-    return "(unreadable)";
+  } catch (error) {
+    throw new Error(
+      `the body stream failed after ${total} bytes: ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
   const joined = new Uint8Array(total);
   let at = 0;

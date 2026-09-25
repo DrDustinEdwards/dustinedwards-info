@@ -55,7 +55,8 @@ const form = (source: string, target: string) =>
 
 type StubPage =
   | { body: string; contentType?: string; status?: number }
-  | { networkError: true };
+  | { networkError: true }
+  | { redirect: string };
 
 /* A URL with no recorded page throws rather than reaching the network. `gate` holds serving
  * so a case can observe the row BEFORE verification overwrites it. */
@@ -71,6 +72,9 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
     }
     if (gate) await gate;
     if ("networkError" in page) throw new TypeError("network failure");
+    if ("redirect" in page) {
+      return new Response(null, { status: 302, headers: { location: page.redirect } });
+    }
     return new Response(page.body, {
       status: page.status ?? 200,
       headers: { "content-type": page.contentType ?? "text/html; charset=utf-8" },
@@ -519,6 +523,38 @@ describe("/webmention accepts and verifies", () => {
     await waitOnExecutionContext(ctx);
 
     expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.fetchError);
+  });
+
+  it("FOLLOWS a redirect to another public page and verifies the page it lands on", async () => {
+    const source = "https://elsewhere.example/moved";
+    const landed = "https://elsewhere.example/moved-here";
+    stubSources({ [source]: { redirect: "/moved-here" }, [landed]: { body: pageLinkingTo(TARGET) } });
+
+    const ctx = createExecutionContext();
+    await webmentionAction({
+      request: wm(form(source, TARGET), { ip: "203.0.113.58" }),
+      context: routeContext(ctx),
+    } as never);
+    await waitOnExecutionContext(ctx);
+
+    expect((await mentionRow(source))?.status).toBe("pending");
+  });
+
+  it("REFUSES a redirect to a loopback name or an IP literal, which the first URL could not name", async () => {
+    for (const [index, hop] of ["http://localhost/admin", "http://169.254.169.254/latest"].entries()) {
+      const source = `https://elsewhere.example/bounce-${index}`;
+      /* The hop has no recorded page, so reaching it would throw inside the stub. */
+      stubSources({ [source]: { redirect: hop } });
+
+      const ctx = createExecutionContext();
+      await webmentionAction({
+        request: wm(form(source, TARGET), { ip: `203.0.113.${70 + index}` }),
+        context: routeContext(ctx),
+      } as never);
+      await waitOnExecutionContext(ctx);
+
+      expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.redirectRefused);
+    }
   });
 
   it("STORES A SCRIPT-SHAPED AUTHOR NAME AS THAT LITERAL TEXT", async () => {

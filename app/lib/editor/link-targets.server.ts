@@ -7,7 +7,8 @@ import { stateOf } from "./publish-transition.mjs";
  * memory, which is where typos come from.
  */
 export async function loadLinkTargets(env: Env) {
-  const rows = await listAllPostsForAdmin(env).catch(() => []);
+  // A failed read throws: an empty list would read as "no posts to link to".
+  const rows = await listAllPostsForAdmin(env);
   const now = Date.now();
   return rows.map((row) => ({
     slug: row.slug,

@@ -21,24 +21,31 @@ function bodyWordCount(html: string | null) {
   return countWords(html.replace(/<[^>]*>/g, " "));
 }
 
-function parseJson(value: string | null, fallback: unknown) {
+// The page still renders with the section empty, but the corrupt row is logged by slug and column: the
+// rows are derived, so this is a render bug that `sync_posts` or a re-save repairs, not a reader's fault.
+function parseJson(slug: string, field: string, value: string | null, fallback: unknown) {
   if (!value) return fallback;
   try {
     return JSON.parse(value);
-  } catch {
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        alert: "post-json-unreadable",
+        slug,
+        field,
+        detail: error instanceof Error ? error.message : String(error),
+      }),
+    );
     return fallback;
   }
 }
 
 export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
-  let toc: Array<{ depth: number; id: string; text: string }> = [];
-  if (post.toc) {
-    try {
-      toc = JSON.parse(post.toc);
-    } catch {
-      toc = [];
-    }
-  }
+  const toc = parseJson(post.slug, "toc", post.toc, []) as Array<{
+    depth: number;
+    id: string;
+    text: string;
+  }>;
 
   return {
     toc,
@@ -65,24 +72,24 @@ export function blogPostView(post: LoadedPost, seriesParts: SeriesParts) {
       part: post.part,
       ogTitle: post.ogTitle,
       ogDescription: post.ogDescription,
-      backlinks: parseJson(post.backlinks, []) as Array<{
+      backlinks: parseJson(post.slug, "backlinks", post.backlinks, []) as Array<{
         slug: string;
         title: string;
       }>,
-      related: parseJson(post.related, []) as Array<{
+      related: parseJson(post.slug, "related", post.related, []) as Array<{
         slug: string;
         title: string;
         // Optional: rows stored before the field existed have none until the next sync.
         description?: string | null;
       }>,
-      furtherReading: parseJson(post.furtherReading, []) as Array<{
+      furtherReading: parseJson(post.slug, "further_reading", post.furtherReading, []) as Array<{
         title: string;
         url: string;
       }>,
       writingStatus: post.writingStatus ?? null,
       assumedAudience: post.assumedAudience ?? null,
-      keyTakeaways: parseJson(post.keyTakeaways, null) as string[] | null,
-      changelog: parseJson(post.changelog, null) as Array<{
+      keyTakeaways: parseJson(post.slug, "key_takeaways", post.keyTakeaways, null) as string[] | null,
+      changelog: parseJson(post.slug, "changelog", post.changelog, null) as Array<{
         date: string;
         note: string;
       }> | null,
