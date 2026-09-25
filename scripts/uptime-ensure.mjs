@@ -59,6 +59,20 @@ const desired = desiredMonitors(SITE_ORIGIN);
 const manifest = {};
 let changed = 0;
 
+/**
+ * The manifest is what the gate checks by id, so an answer without a usable id stops the run rather
+ * than writing `undefined` into it.
+ *
+ * @param {string} name @param {any} body
+ */
+function manifestEntry(name, body) {
+  if (!Number.isInteger(body?.id) || body.id <= 0 || typeof body.url !== "string") {
+    console.error(`  ${name}: UptimeRobot answered without a monitor id and url: ${JSON.stringify(body)}`);
+    process.exit(1);
+  }
+  return { id: body.id, url: body.url };
+}
+
 for (const want of desired) {
   const url = /** @type {string} */ (want.shape.url);
   const match = existing.find((m) => String(m.url).replace(/\/+$/, "") === url.replace(/\/+$/, ""));
@@ -79,7 +93,7 @@ for (const want of desired) {
       console.error(`  create ${want.key} answered ${res.status}: ${res.text.slice(0, 400)}`);
       process.exit(1);
     }
-    manifest[want.key] = { id: res.body.id, url: res.body.url };
+    manifest[want.key] = manifestEntry(want.key, res.body);
     changed += 1;
     console.log(`  CREATED  ${want.key}  id ${res.body.id}`);
     continue;
@@ -122,7 +136,7 @@ for (const want of desired) {
       process.exit(1);
     }
   }
-  manifest[want.key] = { id: res.body.id, url: res.body.url };
+  manifest[want.key] = manifestEntry(want.key, res.body);
   changed += 1;
   console.log(
     `  UPDATED  ${want.key}  id ${match.id}` +

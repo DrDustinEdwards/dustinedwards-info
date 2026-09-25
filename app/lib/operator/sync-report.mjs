@@ -21,18 +21,23 @@
  *   drift: number,
  *   converged: boolean,
  *   failed: Array<{ key: string, error: string }>,
+ *   unreadable: boolean,
  * }}
  */
 export function askSyncReport(counts) {
   const agreement = convergence(counts.expected, counts.present);
+  // An absent list means the caller had nothing to report; anything else that is not an array is an
+  // unreadable failure list, and a report that cannot say what failed has not converged.
+  const failedReadable = counts.failed === undefined || Array.isArray(counts.failed);
   const failed = Array.isArray(counts.failed) ? counts.failed : [];
   return {
     uploaded: whole(counts.uploaded),
     removed: whole(counts.removed),
     cacheDropped: whole(counts.cacheDropped),
     ...agreement,
-    converged: agreement.converged && failed.length === 0,
+    converged: agreement.converged && failedReadable && failed.length === 0,
     failed,
+    unreadable: !failedReadable,
   };
 }
 
@@ -77,6 +82,9 @@ export function mediaSyncReport(counts) {
   const extra = list(counts.extra);
   const drift = missing.length + extra.length;
   const failures = list(counts.failures);
+  // Fails closed: a list that is not an array of strings cannot say what is missing or what failed, so
+  // the report does not converge on it.
+  const readable = [counts.missing, counts.extra, counts.failures].every(stringList);
 
   return {
     indexed: whole(counts.indexed),
@@ -88,13 +96,19 @@ export function mediaSyncReport(counts) {
     extra,
     failures,
     // A failed derivation leaves no row and no source change, so the key sets can agree while wrong.
-    converged: totals.converged && drift === 0 && failures.length === 0,
+    converged: totals.converged && readable && drift === 0 && failures.length === 0,
+    unreadable: !readable,
   };
 }
 
 /** @param {unknown} v @returns {string[]} */
 function list(v) {
   return Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+}
+
+/** @param {unknown} v @returns {boolean} */
+function stringList(v) {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
 /**
@@ -112,6 +126,7 @@ export function mediaSyncSummary(report) {
     report.missing.length ? `${report.missing.length} missing` : "",
     report.extra.length ? `${report.extra.length} extra` : "",
     report.failures.length ? `${report.failures.length} failed to derive` : "",
+    report.unreadable ? "an unreadable missing, extra or failure list" : "",
   ].filter(Boolean);
   return (
     `MEDIA INDEX STILL DRIFTED: ${report.expected} expected, ${report.present} present` +
@@ -143,6 +158,12 @@ export function askSyncSummary(report) {
     return (
       `ASK UPLOAD FAILED for ${report.failed.length} key(s) after retries: ` +
       `${report.failed.map((f) => `${f.key} (${f.error})`).join(", ")}. ` +
+      `${report.expected} expected, ${report.present} present.`
+    );
+  }
+  if (report.unreadable) {
+    return (
+      `ASK SYNC REPORT UNREADABLE: the failure list was not a list, so what failed is unknown. ` +
       `${report.expected} expected, ${report.present} present.`
     );
   }
