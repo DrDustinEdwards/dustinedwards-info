@@ -1,8 +1,8 @@
 import { env } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { watchdogActions } from "~/lib/health/repair.mjs";
-import watchdog, { readHealth } from "../../workers/watchdog";
+import watchdog, { readErrorRate, readHealth } from "../../workers/watchdog";
 
 describe("the watchdog's health reading", () => {
   const throwingSite = (message: string) =>
@@ -116,5 +116,74 @@ describe("the watchdog's repair loop", () => {
     expect(tools).toEqual(["sync_posts"]);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.text).toContain(refusal);
+  });
+});
+
+describe("the watchdog's error-rate reading", () => {
+  const configured = { CLOUDFLARE_ACCOUNT_ID: "acct", CLOUDFLARE_API_TOKEN: "a-token" } as never;
+  const invocations = (pairs: Array<[string, number]>) =>
+    pairs.map(([status, requests]) => ({ sum: { requests }, dimensions: { status } }));
+
+  /** Answers only a script-filtered query: unfiltered, the watchdog's own invocations would count. */
+  const analyticsApi = (rows: unknown) =>
+    vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const { query, variables } = JSON.parse(String(init?.body));
+      const filtered = query.includes("scriptName: $script") && variables.script === "dustinedwards";
+      return Response.json(
+        filtered
+          ? { data: { viewer: { accounts: [{ workersInvocationsAdaptive: rows }] } } }
+          : { data: null, errors: [{ message: "invocations are not filtered on the site's script" }] },
+      );
+    });
+
+  it("reads the site's invocations through a script-filtered query", async () => {
+    const api = analyticsApi(invocations([["success", 40]]));
+    vi.stubGlobal("fetch", api);
+
+    const reading = await readErrorRate(configured);
+    expect(reading).toMatchObject({ ok: true, configured: true });
+    expect(reading.detail).toContain("0 of 40");
+    expect(api).toHaveBeenCalledTimes(1);
+    expect(String(api.mock.calls[0]?.[0])).toBe("https://api.cloudflare.com/client/v4/graphql");
+  });
+
+  it("reports a window over the threshold as not ok", async () => {
+    vi.stubGlobal("fetch", analyticsApi(invocations([["success", 121], ["scriptThrewException", 59]])));
+    const reading = await readErrorRate(configured);
+    expect(reading).toMatchObject({ ok: false, configured: true });
+    expect(reading.detail).toContain("59 of 180");
+  });
+
+  it("fails closed on a 200 that carries GraphQL errors", async () => {
+    vi.stubGlobal("fetch", async () =>
+      Response.json({ data: null, errors: [{ message: "not authorized for this account" }] }),
+    );
+    const reading = await readErrorRate(configured);
+    expect(reading).toMatchObject({ ok: false, configured: true });
+    expect(reading.detail).toContain("GraphQL errors");
+    expect(reading.detail).toContain("not authorized for this account");
+  });
+
+  it("fails closed on a non-200 answer", async () => {
+    vi.stubGlobal("fetch", async () => new Response("rate limited", { status: 429 }));
+    const reading = await readErrorRate(configured);
+    expect(reading).toMatchObject({ ok: false, configured: true });
+    expect(reading.detail).toContain("HTTP 429");
+  });
+
+  it("fails closed when the query does not complete", async () => {
+    vi.stubGlobal("fetch", async () => {
+      throw new Error("connect ETIMEDOUT");
+    });
+    const reading = await readErrorRate(configured);
+    expect(reading).toMatchObject({ ok: false, configured: true });
+    expect(reading.detail).toContain("connect ETIMEDOUT");
+  });
+
+  it("names the missing credential and reaches for nothing when unconfigured", async () => {
+    /* The setup's refusing fetch stays installed, so any network call here would throw. */
+    const reading = await readErrorRate({ CLOUDFLARE_ACCOUNT_ID: "acct" } as never);
+    expect(reading).toMatchObject({ ok: true, configured: false });
+    expect(reading.detail).toContain("CLOUDFLARE_API_TOKEN");
   });
 });

@@ -167,8 +167,9 @@ async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promis
 /**
  * Not a health check: `ship` refuses unless `/api/health` is ok, so an error spike there would block
  * deploying the fix. Never throws, and any failure to read the rate is reported as not ok.
+ * Exported only so the worker test can drive it against a stubbed analytics API.
  */
-async function readErrorRate(
+export async function readErrorRate(
   env: WatchdogEnv,
 ): Promise<{ ok: boolean; detail: string; configured: boolean }> {
   const account = env.CLOUDFLARE_ACCOUNT_ID ?? "";
