@@ -885,13 +885,19 @@ export async function syncStatus(env: OperatorEnv) {
     .prepare("SELECT COUNT(*) AS n FROM search_identity_docsize")
     .first<{ n: number }>();
 
+  // A COUNT always returns one row; a missing one is an unreadable answer, never zero posts.
+  const counted = (row: { n: number } | null | undefined, what: string) => {
+    if (typeof row?.n !== "number") throw new Error(`syncStatus: the ${what} count returned no row`);
+    return row.n;
+  };
+
   return {
     headSha: await currentHead(env),
     artifactPosts: repoPosts,
-    d1Posts: totalRow?.n ?? 0,
-    d1PubliclyVisible: visibleRow?.n ?? 0,
+    d1Posts: counted(totalRow, "posts"),
+    d1PubliclyVisible: counted(visibleRow, "publicly visible posts"),
     // The docsize shadow table: `COUNT(*)` on the index reads through to the content table and never drifts.
-    searchIndexDocs: indexed?.n ?? 0,
+    searchIndexDocs: counted(indexed, "search index"),
     askConfigured: askAvailable(env),
     githubConfigured: Boolean(env.GITHUB_TOKEN),
     // Read from KV: a record of a D1 failure kept in D1 is missing exactly when it matters. `known: false`
