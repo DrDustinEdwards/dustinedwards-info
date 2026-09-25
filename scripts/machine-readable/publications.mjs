@@ -24,6 +24,7 @@ import {
 } from "../../app/lib/publications/citation-tags.mjs";
 import { PUBLICATIONS } from "../../app/data/publications.ts";
 import { SHOWCASE_TYPES } from "../../app/lib/publications/export-response.mjs";
+import { SHOWCASE_TYPES as PAGE_SHOWCASE_TYPES } from "../../app/lib/publications/listing.mjs";
 import {
   organismsIn,
   toBibtex,
@@ -716,29 +717,20 @@ assertThat(
   "every export assertion below iterates it",
 );
 
-/* Stated twice: importing the route module would drag React in, so its literal is parsed. */
+/* Stated twice, the page's in its pure listing module, so it is imported rather than parsed out of the route. */
 {
-  const routeSource = readFileSync(
-    join(root, "app", "routes", "publications.tsx"),
-    "utf8",
-  );
-  const block = /const SHOWCASE_TYPES = new Set<PublicationType>\(\[([\s\S]*?)\]\)/.exec(
-    routeSource,
-  );
-  const routeTypes = new Set(
-    [...(block?.[1] ?? "").matchAll(/"([a-z-]+)"/g)].map((m) => m[1]),
-  );
+  const routeTypes = new Set(/** @type {Set<string>} */ (PAGE_SHOWCASE_TYPES));
   assertThat(
     routeTypes.size > 0,
-    `the route's SHOWCASE_TYPES literal is parseable (${routeTypes.size} types)`,
-    "a failed parse would make the comparison below vacuous",
+    `the page's SHOWCASE_TYPES set is non-empty (${routeTypes.size} types)`,
+    "an empty set would make the comparison below vacuous",
   );
   const onlyRoute = [...routeTypes].filter((t) => !SHOWCASE_TYPES.has(t));
   const onlyExport = [...SHOWCASE_TYPES].filter((t) => !routeTypes.has(t));
   assertThat(
     onlyRoute.length === 0 && onlyExport.length === 0,
     "the page and the exports agree about which types are shown",
-    `only in the route: ${onlyRoute.join(", ") || "none"}; ` +
+    `only in listing.mjs: ${onlyRoute.join(", ") || "none"}; ` +
       `only in export-response.mjs: ${onlyExport.join(", ") || "none"}`,
   );
 }
