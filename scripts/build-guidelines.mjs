@@ -50,6 +50,10 @@ const FILES = [
       /--z-[a-z]/i,
       /\bstacking\b/i,
       /\.tracks\b/,
+      // The sheets now say "track" and "rail" for the grid, not the selector: paper.css's rail-track rule
+      // is real layout reasoning, and without these the file classified nothing.
+      /\btracks?\b/i,
+      /\brail\b/i,
       /\bsite-inset\b/i,
       /\bgutter\b/i,
       /\bgrid-template\b/i,
