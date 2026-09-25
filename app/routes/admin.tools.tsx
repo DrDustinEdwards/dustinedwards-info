@@ -107,7 +107,7 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
       {/* A live announcement: it reports what the submit just did. */}
-      {actionData?.message ? (
+      {actionData && "message" in actionData ? (
         <p className="admin-notice" role="status">
           {actionData.message}
         </p>
