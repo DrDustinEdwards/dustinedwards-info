@@ -1,5 +1,6 @@
 // Two phases because step 3 is a human action: the first publication of a post is reserved to the admin.
 
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
 import { postPath } from "../app/lib/content/pipeline.mjs";
@@ -8,6 +9,11 @@ const ORIGIN = process.env.ORIGIN ?? "https://dustinedwards.dustin-edwards.worke
 const TOKEN_FILE = process.env.OPERATOR_TOKEN_FILE;
 const SLUG = process.env.THROWAWAY_SLUG ?? "operator-round-trip-probe";
 const PHASE = (process.argv[2] ?? "a").toLowerCase();
+// Anything else ran neither phase and printed "0 passed, 0 failed" with exit 0.
+if (PHASE !== "a" && PHASE !== "b") {
+  console.error(`Unknown phase ${JSON.stringify(process.argv[2])}; pass a or b.`);
+  process.exit(2);
+}
 
 /** Built from its code point so this file never contains the character. */
 const EM_DASH = String.fromCharCode(0x2014);
@@ -55,17 +61,25 @@ async function tool(name, args = {}) {
     },
     body: JSON.stringify({ tool: name, args }),
   });
+  const text = await res.text();
   /** @type {any} */
   let body;
   try {
-    body = await res.json();
-  } catch {
-    body = null;
+    body = JSON.parse(text);
+  } catch (error) {
+    // A null body made every negated check below (draft === false, absent === false) meaningless.
+    throw new Error(
+      `${name} answered ${res.status} with a body that is not JSON: ${text.slice(0, 200)}`,
+      { cause: error },
+    );
   }
   return { status: res.status, body };
 }
 
 /**
+ * The text only for a 200. Callers must look at the status: an empty string for a 404 or a 5xx
+ * reads as "the slug is absent", which is the answer half the checks want.
+ *
  * @param {string} path
  * @param {Record<string, string>} [headers]
  */
@@ -97,7 +111,12 @@ const draft = (published) =>
     "",
   ].join("\n");
 
-/** @returns {Promise<Record<string, any>>} */
+/**
+ * Each surface is true or false only when it answered 200; otherwise it carries the status as a
+ * string, which is neither, so an absence check cannot pass on an error page.
+ *
+ * @returns {Promise<Record<string, any>>}
+ */
 async function publicSurfaces() {
   /** @type {Record<string, any>} */
   const out = {};
@@ -111,7 +130,8 @@ async function publicSurfaces() {
     ["llmsFull", "/llms-full.txt"],
     ["feedJson", "/blog/feed.json"],
   ])) {
-    out[key] = (await pub(path)).text.includes(SLUG);
+    const got = await pub(path);
+    out[key] = got.status === 200 ? got.text.includes(SLUG) : `HTTP ${got.status}`;
   }
 
   // Scope the search assertion to the results themselves: the zero state renders a recent-writing
@@ -119,13 +139,17 @@ async function publicSurfaces() {
   const search = await pub(`/search?q=${encodeURIComponent("operator round trip probe")}`, {
     accept: "application/json",
   });
-  try {
-    const j = JSON.parse(search.text);
-    out.search = (j.results ?? []).some((/** @type {any} */ r) =>
-      String(r.url ?? r.slug ?? "").includes(SLUG),
-    );
-  } catch {
-    out.search = false;
+  if (search.status !== 200) {
+    out.search = `HTTP ${search.status}`;
+  } else {
+    try {
+      const j = JSON.parse(search.text);
+      out.search = Array.isArray(j.results)
+        ? j.results.some((/** @type {any} */ r) => String(r.url ?? r.slug ?? "").includes(SLUG))
+        : "no results array";
+    } catch (error) {
+      out.search = `unparseable: ${error instanceof Error ? error.message : String(error)}`;
+    }
   }
   out.postPage = (await pub(`/blog/${SLUG}`)).status;
   return out;
@@ -144,11 +168,22 @@ if (PHASE === "a") {
   check("first_published is null on a draft", created.body?.data?.firstPublished === null);
   if (sha) console.log(`     commit ${sha}`);
 
-  // Verified against GitHub, not against the API's own report.
+  // Verified against GitHub, not against the API's own report. The repo is private, so the read
+  // is authenticated with the gh CLI's token; unauthenticated it 404s on a commit that exists.
   if (sha) {
+    const ghToken = process.env.GITHUB_TOKEN ?? (() => {
+      const t = spawnSync("gh", ["auth", "token"], { encoding: "utf8", shell: process.platform === "win32" });
+      return t.status === 0 ? String(t.stdout ?? "").trim() : "";
+    })();
     const gh = await fetch(
       `https://api.github.com/repos/DrDustinEdwards/dustinedwards-info/commits/${sha}`,
-      { headers: { "user-agent": UA, accept: "application/vnd.github+json" } },
+      {
+        headers: {
+          "user-agent": UA,
+          accept: "application/vnd.github+json",
+          ...(ghToken ? { authorization: `Bearer ${ghToken}` } : {}),
+        },
+      },
     );
     if (gh.status === 200) {
       /** @type {any} */
@@ -171,7 +206,7 @@ if (PHASE === "a") {
       check(
         "the commit is readable on GitHub",
         false,
-        "gh api failed. This repo is PRIVATE, so an unauthenticated read 404s on a commit that exists.",
+        `GitHub answered ${gh.status}${ghToken ? "" : " with no token (set GITHUB_TOKEN or run gh auth login)"}`,
       );
     }
   }
@@ -236,7 +271,12 @@ if (PHASE === "b") {
   check("the post page serves 200", live.postPage === 200, `got ${live.postPage}`);
 
   console.log("\n4. Operator edits the now-live post");
-  const edited = (after.body?.data?.raw ?? "").replace(
+  // An empty raw would be sent to the PRODUCTION save_post as the whole file.
+  if (typeof after.body?.data?.raw !== "string" || after.body.data.raw.length === 0) {
+    console.error("get_post returned no raw file, so there is nothing safe to edit. Stopping.");
+    process.exit(1);
+  }
+  const edited = after.body.data.raw.replace(
     "A throwaway post written through the operator API to verify the publish path.",
     "Edited by the operator after publication, to prove editing a live post is allowed.",
   );
@@ -321,6 +361,7 @@ if (PHASE === "b") {
   // Sequential is the recorded trap: a sequential burst against the same limit produced ZERO
   // refusals, the loop straddling the window boundary, which reads exactly like a dead limiter.
   const burst = await Promise.all(
+    // A request that failed outright is counted as 0 and asserted on below, not read as "no 5xx".
     Array.from({ length: 45 }, () => tool("sync_status").then((r) => r.status).catch(() => 0)),
   );
   /** @type {Record<string, number>} */
@@ -331,6 +372,7 @@ if (PHASE === "b") {
   console.log(`     statuses: ${JSON.stringify(tally)}`);
   check("the burst produced 429s", (tally[429] ?? 0) > 0, JSON.stringify(tally));
   check("no 5xx under load", !Object.keys(tally).some((s) => Number(s) >= 500), JSON.stringify(tally));
+  check("no request failed outright under load", (tally[0] ?? 0) === 0, JSON.stringify(tally));
 
   console.log("\n9. Operator deletes the throwaway");
   // The burst may have consumed the window, so wait it out rather than reporting a rate-limit

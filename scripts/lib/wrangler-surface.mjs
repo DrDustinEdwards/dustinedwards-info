@@ -1,18 +1,24 @@
 import { readFileSync } from "node:fs";
 
+import { ts } from "./syntax.mjs";
+
 /**
- * Weak on purpose: the strong stripper's line-comment rule eats a protocol-relative url, and
- * JSON.parse throws on any comment this misses.
+ * TypeScript's own JSONC reader, which knows a string from a comment. The regex it replaces took
+ * the `/*` in a comment naming `/api/auth/*` as a block opener, so one later star-slash anywhere
+ * would have silently deleted every key between them; it also refused a trailing comma.
  *
  * @param {string} path
  * @returns {any}
  */
 export function parseJsonc(path) {
-  const raw = readFileSync(path, "utf8");
-  const stripped = raw
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
-  return JSON.parse(stripped);
+  // TypeScript asserts its file names are forward-slashed when it attaches a diagnostic.
+  const result = ts.parseConfigFileTextToJson(path.replaceAll("\\", "/"), readFileSync(path, "utf8"));
+  if (result.error) {
+    throw new Error(
+      `${path} is not valid JSONC: ${ts.flattenDiagnosticMessageText(result.error.messageText, "\n")}`,
+    );
+  }
+  return result.config;
 }
 
 /**

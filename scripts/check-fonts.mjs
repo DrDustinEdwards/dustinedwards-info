@@ -167,15 +167,21 @@ for (const b of withFile) {
 
   // KaTeX's name table carries the family without the style suffix, which is what the CSS declares too.
   const expected = NAMESPACED.get(b.family) ?? b.family;
+  // The PostScript fallback compares the family part before the style suffix EXACTLY: a prefix match let
+  // "InterDisplay-Bold" pass for "Inter".
   assertThat(
-    font.familyName === expected || font.postscriptName?.startsWith(expected.replace(/\s+/g, "")),
+    font.familyName === expected || font.postscriptName?.split("-")[0] === expected.replace(/\s+/g, ""),
     `${rel} is the family the declaration names`,
     `css says "${b.family}"${
       expected === b.family ? "" : ` (namespaced, and must be "${expected}")`
     }, the file's name table says "${font.familyName}" (${font.postscriptName})`,
   );
 
-  const weight = (b.weight ?? "").trim();
+  // Absent means `normal`, and the two keywords a face descriptor accepts are numbers in disguise; a
+  // value in none of these shapes used to fall through every branch unasserted.
+  const WEIGHT_KEYWORDS = /** @type {Record<string, string>} */ ({ "": "400", normal: "400", bold: "700" });
+  const declaredWeight = (b.weight ?? "").trim().toLowerCase();
+  const weight = WEIGHT_KEYWORDS[declaredWeight] ?? declaredWeight;
   const range = weight.match(/^(\d+)\s+(\d+)$/);
   if (range) {
     const [, lo, hi] = range;
@@ -204,25 +210,46 @@ for (const b of withFile) {
       `${rel} usWeightClass matches the declared weight`,
       `css declares ${weight}, the file's OS/2.usWeightClass is ${us}`,
     );
+  } else {
+    assertThat(
+      false,
+      `${rel} declares a font-weight this gate can read`,
+      `"font-weight: ${b.weight}" is neither a number, a range nor normal/bold, so nothing checked it`,
+    );
   }
 
-  if (b.style === "italic" || b.style === "normal") {
+  // Absent means `normal`; `oblique` (with or without an angle) is a slanted face.
+  const style = (b.style ?? "normal").trim().toLowerCase();
+  if (style === "italic" || style === "normal" || style.startsWith("oblique")) {
     const italicByAngle = font.italicAngle !== 0;
     const italicByName = /italic|oblique/i.test(font.subfamilyName ?? "") || /italic/i.test(font.postscriptName ?? "");
     const isItalic = italicByAngle || italicByName || Boolean(axes.ital) || Boolean(axes.slnt);
     assertThat(
-      (b.style === "italic") === isItalic,
+      (style !== "normal") === isItalic,
       `${rel} slant matches the declared font-style`,
-      `css declares "${b.style}", the file reports italicAngle=${font.italicAngle} subfamily="${font.subfamilyName}"`,
+      `css declares "${style}", the file reports italicAngle=${font.italicAngle} subfamily="${font.subfamilyName}"`,
+    );
+  } else {
+    assertThat(
+      false,
+      `${rel} declares a font-style this gate can read`,
+      `"font-style: ${b.style}" is not normal, italic or oblique, so nothing checked it`,
     );
   }
 
-  const stretch = (b.stretch ?? "").trim().match(/^([\d.]+)%\s+([\d.]+)%$/);
+  const declaredStretch = (b.stretch ?? "").trim().toLowerCase();
+  const stretch = declaredStretch.match(/^([\d.]+)%\s+([\d.]+)%$/);
   if (stretch) {
     assertThat(
       axes.wdth !== undefined && axes.wdth.min === Number(stretch[1]) && axes.wdth.max === Number(stretch[2]),
       `${rel} wdth range matches the declared font-stretch`,
       `css declares ${stretch[1]}% ${stretch[2]}%, the file's wdth is ${axes.wdth ? `${axes.wdth.min} to ${axes.wdth.max}` : "absent"}`,
+    );
+  } else if (declaredStretch !== "" && declaredStretch !== "normal" && declaredStretch !== "100%") {
+    assertThat(
+      false,
+      `${rel} declares a font-stretch this gate can read`,
+      `"font-stretch: ${b.stretch}" is not a percentage range or normal, so nothing checked it`,
     );
   }
 }
@@ -260,18 +287,21 @@ assertThat(
 function resolveFamily(value) {
   if (!value) return null;
   let v = value.trim();
+  const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
   for (let i = 0; i < 4 && v.startsWith("var("); i += 1) {
-    const name = v.slice(4, v.indexOf(")")).trim();
-    const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
-    const decl = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(sheet);
+    // `var(--a, fallback)` names --a; the fallback is not part of the name.
+    const name = v.slice(4, v.indexOf(")")).split(",")[0].trim();
+    if (!/^--[a-z0-9-]+$/i.test(name)) return null;
+    // Anchored, so `--x--font-sans:` cannot answer for `--font-sans`.
+    const decl = new RegExp(`(?:^|[\\s;{])${name}\\s*:\\s*([^;]+);`).exec(sheet);
     if (!decl) return null;
     v = decl[1].trim();
   }
   return v.split(",")[0].trim().replace(/^['"]|['"]$/g, "");
 }
 
+const faces = withFile.filter((b) => existsSync(b.file)).map((b) => ({ b, axes: fontFor(b.file).variationAxes ?? {} }));
 for (const req of variationRequests) {
-  const faces = withFile.filter((b) => existsSync(b.file)).map((b) => ({ b, axes: fontFor(b.file).variationAxes ?? {} }));
 
   const where = req.level ? `--t-${req.level}-vars` : relative(root, req.sheet);
 
@@ -374,6 +404,10 @@ if (update) {
       "the baseline covers every shipped binary",
       `baseline pins ${Object.keys(pinned).length}, disk has ${Object.keys(current).length}`,
     );
+    // Both directions: a count match alone passes when one pinned file is swapped for another.
+    for (const name of Object.keys(pinned)) {
+      assertThat(name in current, `${name} is pinned and still on disk`, "the baseline names a binary that is gone");
+    }
     for (const [name, sha] of Object.entries(current)) {
       assertThat(
         pinned[name] === sha,
