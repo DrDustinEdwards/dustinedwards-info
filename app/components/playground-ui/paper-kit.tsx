@@ -84,8 +84,8 @@ export function PaperKitSection() {
         title="Pagination"
         note="Two steps and a position, not a run of numbers. At the ends the unavailable step is absent rather than disabled: there is nothing to explain about the end of a list."
       >
-        {() => (
-          <nav className="pagination" aria-label="Pagination">
+        {(ids) => (
+          <nav className="pagination" aria-label={ids.label("Pagination")}>
             <a className="pagination-step" href="/playground/ui" rel="prev">
               <Icon name="chevron-left" />
               Newer
@@ -201,8 +201,8 @@ export function PaperKitSection() {
         title="Previous and next"
         note="A two-column grid that collapses by auto-fit, with no media query. Each item shows the direction and the actual title."
       >
-        {() => (
-          <nav className="post-nav" aria-label="More writing">
+        {(ids) => (
+          <nav className="post-nav" aria-label={ids.label("More writing")}>
             <a className="post-nav-item" href="/playground/ui" rel="prev">
               <span className="post-nav-dir">Newer</span>
               <span className="post-nav-title">Counting plaques by hand</span>
@@ -220,8 +220,8 @@ export function PaperKitSection() {
         title="Breadcrumb"
         note="The separator is a ::before, so it is not in the accessibility tree and is never read aloud. The current page is a span, not a link to itself."
       >
-        {() => (
-          <nav className="crumb" aria-label="Breadcrumb">
+        {(ids) => (
+          <nav className="crumb" aria-label={ids.label("Breadcrumb")}>
             <ol className="crumb-list">
               <li>
                 <a href="/playground/ui">Writing</a>
@@ -295,7 +295,13 @@ export function PaperKitSection() {
       >
         {(ids) => (
           <div>
-            <form className="search-form" method="get" action="/playground/ui" role="search">
+            <form
+              className="search-form"
+              method="get"
+              action="/playground/ui"
+              role="search"
+              aria-label={ids.label("Search")}
+            >
               <div className="field">
                 <label className="field-label" htmlFor={ids("q")}>
                   Search
