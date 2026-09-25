@@ -35,6 +35,8 @@ const DESTRUCTIVE = new Set([
   // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
   "admin.mentions.tsx:delete",
   "admin.mentions.tsx:sweep",
+  // A retention sweep like the mentions one: the rows have no derivation to rebuild them from.
+  "admin.tools.tsx:purge-zero-results",
 ]);
 
 /**
