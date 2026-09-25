@@ -70,7 +70,7 @@ export function MediaGrid({
         {groupRows(objects, view.group).map((bucket) => (
         <section key={bucket.label || "ungrouped"} className="media-group">
           {bucket.label ? (
-            <h3 className="media-group-heading">
+            <h2 className="media-group-heading">
               <span className="media-group-title">{bucket.label}</span>
               <span className="media-group-count">
                 {bucket.rows.length} on this page
@@ -78,7 +78,7 @@ export function MediaGrid({
               {bucket.note ? (
                 <span className="media-group-note">{bucket.note}</span>
               ) : null}
-            </h3>
+            </h2>
           ) : null}
         <ul
           className="media-grid"

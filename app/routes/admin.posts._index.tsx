@@ -175,7 +175,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   // must never be repaired by touching D1.
   if (intent === "sync-ask") {
     if (!askAvailable(env)) {
-      return { message: "Ask is not enabled: no AI Search binding." };
+      return { message: "Ask is not enabled: no AI Search binding.", failed: true as const };
     }
     /*
      * Checked here. "Sync" reads as additive and is not: `pruneAskCorpus` deletes every record this
@@ -204,7 +204,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     intent === "bulk-remove-tag"
   ) {
     const slugs = form.getAll("slug").map(String).filter(Boolean);
-    if (slugs.length === 0) return { message: "Nothing selected." };
+    if (slugs.length === 0) return { message: "Nothing selected.", failed: true as const };
 
     if (intent === "bulk-delete") {
       /*
@@ -229,7 +229,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === "reset-ask-budget") return resetAskBudgetAndReport(env);
 
   return data(
-    { message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.` },
+    {
+      message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.`,
+      failed: true as const,
+    },
     { status: 400 },
   );
 }
@@ -259,6 +262,7 @@ export default function AdminPosts({
   const confirmDelete =
     actionData && "confirmDelete" in actionData ? actionData.confirmDelete : undefined;
   const message = actionData && "message" in actionData ? actionData.message : undefined;
+  const failed = actionData && "failed" in actionData ? actionData.failed === true : false;
 
   const navigation = useNavigation();
   const pending = navigation.state === "loading" && navigation.location != null;
@@ -339,9 +343,16 @@ export default function AdminPosts({
         </p>
       ) : null}
 
-      {/* A live announcement, unlike the drift region: it reports what the submit just did. */}
-      {message ? (
-        <p className="admin-notice" role="status">
+      {/*
+        A live announcement, unlike the drift region: it reports what the submit just did. The
+        status region is always in the DOM, because a region inserted already holding its text is
+        often not read; a failure is an alert, which is read on insertion.
+      */}
+      <div role="status">
+        {message && !failed ? <p className="admin-notice">{message}</p> : null}
+      </div>
+      {message && failed ? (
+        <p className="admin-notice" role="alert">
           {message}
         </p>
       ) : null}
