@@ -22,6 +22,7 @@ import {
   stylesheetsFor,
 } from "./lib/page-payload.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { ROUTES_DIR, routesMatching, sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -62,7 +63,6 @@ function preloadEntries(rootSource) {
 
 const ASSETS_DIR = join(root, "build", "client", "assets");
 const DIST_DIR = join(root, "app", "enhance", "dist");
-const ROUTES_DIR = join(root, "app", "routes");
 
 /**
  * Margins are wide because the bundles are tiny: the job is catching a dependency wandering in.
@@ -368,10 +368,7 @@ async function main() {
   );
 
   /* Pinned to admin.tsx and login.tsx by name, so a public route gaining the flag fails HERE. */
-  const hydrating = readdirSync(ROUTES_DIR)
-    .filter((f) => /\.(ts|tsx)$/.test(f))
-    .filter((f) => /hydrate\s*:\s*true/.test(stripComments(readFileSync(join(ROUTES_DIR, f), "utf8"))))
-    .sort();
+  const hydrating = routesMatching(/hydrate\s*:\s*true/, { ts: true });
   ok(
     "hydration opt-in is exactly the admin layout and the login door",
     hydrating.join(", ") === "admin.tsx, login.tsx",
@@ -644,15 +641,7 @@ function gradeEveryPage() {
   const assetFile = (/** @type {string} */ assetPath) =>
     join(clientDir, assetPath.replace(/^\//, ""));
 
-  const publicRoutes = readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx"))
-    .filter((name) => {
-      const code = stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"));
-      return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
-    })
-    .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full)/.test(name))
-    .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
-    .sort();
+  const publicRoutes = sharedCacheHtmlRoutes().map((name) => `routes/${name.replace(/\.tsx$/, "")}`);
 
   const declaredIds = Object.values(ROUTE_CEILINGS)
     .map((r) => r.id)
@@ -861,17 +850,9 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
    * A route rendering `<PostEditor` copies these sheets into its preview iframe, so without the
    * handle an author typing an expression sees it unstyled. Derived, or a later route inherits it.
    */
-  const editorRoutes = readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx"))
-    .filter((name) =>
-      /<PostEditor/.test(stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"))),
-    )
-    .sort();
-  const optedIn = editorRoutes.filter((name) =>
-    /export const handle = \{[^}]*\bmath:\s*true/.test(
-      stripComments(readFileSync(join(ROUTES_DIR, name), "utf8")),
-    ),
-  );
+  const editorRoutes = routesMatching(/<PostEditor/);
+  const mathHandles = routesMatching(/export const handle = \{[^}]*\bmath:\s*true/);
+  const optedIn = editorRoutes.filter((name) => mathHandles.includes(name));
   ok(
     "every route that renders the editor opts into the math stylesheet",
     editorRoutes.length >= 2 && optedIn.length === editorRoutes.length,
@@ -881,13 +862,7 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `pane. Fewer than two means the derivation stopped finding them.`,
   );
 
-  const postRoutes = readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx"))
-    .filter((name) =>
-      /blogPostView\(/.test(stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"))),
-    )
-    .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
-    .sort();
+  const postRoutes = routesMatching(/blogPostView\(/).map((name) => `routes/${name.replace(/\.tsx$/, "")}`);
   const namedInRoot = [...rootStripped.matchAll(/useRouteLoaderData\(\s*"([^"]+)"/g)]
     .map((m) => m[1])
     .filter((id) => id !== "root")

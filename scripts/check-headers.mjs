@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,6 +8,7 @@ import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { blockFrom } from "./lib/source-body.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = join(root, "workers", "app.ts");
@@ -1127,12 +1128,7 @@ console.log("  public HTML routes share one headers()");
   /* Comments stripped, because one route names the constant while explaining why it refuses it. */
   {
     const listed = new Set([...PUBLIC_HTML, ...ACCEPT_NEGOTIATED]);
-    const found = readdirSync(join(root, "app", "routes"))
-      .filter((f) => f.endsWith(".tsx"))
-      .filter((f) => {
-        const code = stripComments(readFileSync(join(root, "app", "routes", f), "utf8"));
-        return code.includes("SHARED_CACHE_CONTROL") || code.includes("publicHtmlHeaders");
-      });
+    const found = sharedCacheHtmlRoutes();
     const unlisted = found.filter((f) => !listed.has(f));
     ok(
       "every shared-cached HTML route is named in one of the two lists",
