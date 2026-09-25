@@ -26,7 +26,10 @@ const mediaEnv = () => env as unknown as Parameters<typeof upsertMediaRecord>[0]
 
 async function uploadKey(seed: string, dimensions: { width: number; height: number } | null) {
   const bytes = bytesFor(seed);
-  const measured = await measureDimensions(envWithImages(dimensions), bytes.buffer as ArrayBuffer);
+  const measured = await measureDimensions(
+    envWithImages(dimensions) as unknown as Parameters<typeof measureDimensions>[0],
+    bytes.buffer as ArrayBuffer,
+  );
   const key = await pngKey(seed, measured);
   return { bytes, measured, key };
 }
