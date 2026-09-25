@@ -195,13 +195,9 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((/** @type {unknown} */ error) => {
-    if (error instanceof ContentError) {
-      console.error(`build:content failed. ${error.message}`);
-    } else {
-      console.error(
-        `build:content failed. ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    console.error(
+      `build:content failed. ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exit(1);
   });
 }

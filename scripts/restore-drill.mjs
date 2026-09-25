@@ -140,7 +140,6 @@ async function migrationFiles() {
   return files;
 }
 
-/** @returns {Promise<string[]>} */
 /**
  * Dependency order despite the export's PRAGMA: `defer_foreign_keys` resets at every COMMIT and
  * `--file` batches across transactions.
