@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { retryRead } from "../scripts/lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "../scripts/lib/retry.mjs";
 
 async function capturingStderr(fn) {
   const original = console.error;
@@ -115,4 +115,27 @@ test("a SYNCHRONOUS read is accepted, because the wrangler spawns are sync", asy
     retryRead(() => ({ status: 0, stdout: "[]" }), { label: "sync" }),
   );
   assert.deepEqual(value, { status: 0, stdout: "[]" });
+});
+
+test("THE PLANT: a hung child spawned synchronously fails at its bound instead of hanging", () => {
+  const started = Date.now();
+  const r = spawnSyncBounded(process.execPath, ["-e", "setTimeout(() => {}, 60000)"], { timeoutMs: 1000 });
+  assert.ok(Date.now() - started < 30_000, "the bound fired, rather than the child's own minute");
+  assert.equal(r.status, null, "a timeout is never a clean exit");
+  assert.match(r.error, /timed out after 1000ms/);
+});
+
+test("a bounded spawn that finishes reports its status and output with no error", () => {
+  const r = spawnSyncBounded(process.execPath, ["-e", "process.stdout.write('hi'); process.exit(3)"], {
+    timeoutMs: 30_000,
+  });
+  assert.equal(r.status, 3);
+  assert.equal(r.stdout, "hi");
+  assert.equal(r.error, "");
+});
+
+test("a bounded spawn that cannot start says so, and has no status", () => {
+  const r = spawnSyncBounded("definitely-not-a-command-ohnine", [], { timeoutMs: 5000 });
+  assert.equal(r.status, null);
+  assert.match(r.error, /could not run/);
 });
