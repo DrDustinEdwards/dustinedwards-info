@@ -36,7 +36,7 @@ export function PublishActions({
     setCeremony(false);
     if (!fromMenu.current) return;
     fromMenu.current = false;
-    rootRef.current?.querySelector<HTMLElement>("summary")?.focus();
+    rootRef.current?.querySelector<HTMLElement>("button[popovertarget]")?.focus();
   };
 
   return (
