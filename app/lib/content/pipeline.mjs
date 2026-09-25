@@ -4,6 +4,7 @@
 
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
 import { longDateUTC } from "../long-date.mjs";
+import { fnv1a32 } from "../bytes.mjs";
 import { isPubliclyVisible, statusForDraft } from "../search/visibility.mjs";
 import { transformerMetaHighlight } from "@shikijs/transformers";
 import matter from "gray-matter";
@@ -243,12 +244,7 @@ export function ogImageKey(post) {
   const input =
     `${OG_TEMPLATE_VERSION}\n${post.slug}\n${cardTitle(post.title)}\n` +
     `${cardDescription(post.description)}\n${drawnDate === null ? "" : drawnDate}`;
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < input.length; i += 1) {
-    hash ^= input.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return `og/${ASSET_PREFIX}${post.slug}-${hash.toString(16).padStart(8, "0")}.png`;
+  return `og/${ASSET_PREFIX}${post.slug}-${fnv1a32(input)}.png`;
 }
 
 const RELATED_LIMIT = 3;

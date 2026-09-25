@@ -44,6 +44,7 @@ import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 import type { OperatorEnv } from "./auth.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { readCappedBytes } from "~/lib/read-capped.mjs";
+import { base64ToBytes } from "~/lib/bytes.mjs";
 
 // Validated like the write path: the slug goes into a repository path via `encodeURI`, which does not
 // escape `.`, `/` or `?`.
@@ -589,13 +590,9 @@ function readDataUri(value: string): { type: string; payload: string } | null {
 }
 
 function decodeBase64(payload: string): Uint8Array | null {
-  // Base64 picks up whitespace in chats and YAML, and `atob` throws on it.
-  const packed = payload.replace(/\s+/g, "");
+  // Null rather than a throw: the caller answers the agent that sent it with a 400 that says why.
   try {
-    const binary = atob(packed);
-    const out = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
-    return out;
+    return base64ToBytes(payload);
   } catch {
     return null;
   }
