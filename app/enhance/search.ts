@@ -122,6 +122,23 @@ export function enhanceSearch(): void {
 
     // Replaced, not pushed, so a reader who typed eight characters need not press Back eight times.
     history.replaceState(null, "", url);
+    followQuery(query);
+  }
+
+  /**
+   * The server drew the sort, filter and pager links and the Ask question for the query it was sent.
+   * After retyping they must act on the query on screen, not the old one.
+   */
+  function followQuery(query: string) {
+    for (const link of document.querySelectorAll<HTMLAnchorElement>(
+      ".search-sort a, .search-facets a, .search-active-filters a, .search-pagination a",
+    )) {
+      const next = new URL(link.href, location.origin);
+      next.searchParams.set("q", query);
+      link.href = next.pathname + next.search;
+    }
+    const mount = document.querySelector<HTMLElement>("[data-ask-mount]");
+    if (mount) mount.dataset.askQuestion = query;
   }
 
   input.addEventListener("input", () => {
@@ -141,6 +158,11 @@ export function enhanceSearch(): void {
   });
 
   document.addEventListener("keydown", (event) => {
+    /*
+     * The input's own ArrowDown has already moved focus to the first result by the time this bubbles
+     * here, and handling it again would skip that result.
+     */
+    if (event.target === input) return;
     const target = results;
     const active = document.activeElement;
     if (!target?.isConnected) return;
