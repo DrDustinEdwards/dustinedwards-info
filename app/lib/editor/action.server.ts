@@ -6,7 +6,7 @@ import {
   savePost,
   validateAndRender,
 } from "./publish.server";
-import { fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
+import { FrontmatterError, fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
 import type { Actor, SaveOutcome } from "./publish-policy.mjs";
 import { readIntent } from "./intent.mjs";
 import { DRAFT_BY_INTENT, PUBLISH_CONFIRMED_INTENT } from "./publish-transition.mjs";
@@ -35,7 +35,6 @@ export async function handleEditorAction(
   const rawIntent = readIntent(form);
   const isNew = form.get("isNew") === "1";
   const submittedHead = String(form.get("headSha") ?? "");
-  const raw = serializePost(fields);
 
   const fail = async (message: string, extra: { field?: string; line?: number; conflict?: boolean } = {}) => {
     // Re-read head so a retry after a conflict is against current state. A failed re-read keeps the
@@ -72,6 +71,8 @@ export async function handleEditorAction(
   }
 
   try {
+    // Inside the try: a field that would reshape the frontmatter is refused as a problem on that field.
+    const raw = serializePost(fields);
     if (intent === "preview") {
       const record = await validateAndRender(env, fields.slug, raw);
       return { kind: "preview", fields, previewHtml: record.html, headSha: submittedHead };
@@ -101,6 +102,9 @@ export async function handleEditorAction(
     }
     if (error instanceof EditorError) {
       return fail(error.message, { field: error.field, line: error.line });
+    }
+    if (error instanceof FrontmatterError) {
+      return fail(error.message, { field: error.field });
     }
     if (error instanceof GitHubError) {
       return fail(error.message, { conflict: error.conflict });
