@@ -1,6 +1,6 @@
 import { Link, data } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 
 import { Panel } from "~/components/admin/panel";
 import { DiffBlock, RevisionMeta } from "~/components/admin/revision-list";
@@ -24,31 +24,30 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const path = postPath(params.slug);
 
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
+  return timedLoader(context, async (timings) => {
 
-  // The read is the 404: the commits endpoint answers a missing or deleted path with commits or an
-  // empty list, never a not-found.
-  const file = await timed(timings, "gh_read_file", () => readFile(env, path));
-  if (!file) throw data("Not found", { status: 404 });
+    // The read is the 404: the commits endpoint answers a missing or deleted path with commits or an
+    // empty list, never a not-found.
+    const file = await timed(timings, "gh_read_file", () => readFile(env, path));
+    if (!file) throw data("Not found", { status: 404 });
 
-  const commits = await timed(timings, "gh_commits", () => listCommitsForPath(env, path));
+    const commits = await timed(timings, "gh_commits", () => listCommitsForPath(env, path));
 
-  const selected = new URL(request.url).searchParams.get("commit");
-  const patch =
-    selected && commits.some((commit) => commit.sha === selected)
-      ? await timed(timings, "gh_patch", () => getCommitPatch(env, selected, path))
-      : null;
+    const selected = new URL(request.url).searchParams.get("commit");
+    const patch =
+      selected && commits.some((commit) => commit.sha === selected)
+        ? await timed(timings, "gh_patch", () => getCommitPatch(env, selected, path))
+        : null;
 
-  const payload = {
-    slug: params.slug,
-    commits,
-    selected,
-    patch: patch?.patch ?? null,
-  };
+    const payload = {
+      slug: params.slug,
+      commits,
+      selected,
+      patch: patch?.patch ?? null,
+    };
 
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data(payload);
+    return data(payload);
+  });
 }
 
 export default function PostHistory({ loaderData }: Route.ComponentProps) {

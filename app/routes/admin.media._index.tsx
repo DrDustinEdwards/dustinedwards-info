@@ -10,7 +10,7 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { MediaDisplayGroup } from "~/components/admin/media-display-group";
@@ -189,153 +189,151 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const url = new URL(request.url);
-  const picker = url.searchParams.get("picker") === "1";
+  return timedLoader(context, async (timings) => {
+    const url = new URL(request.url);
+    const picker = url.searchParams.get("picker") === "1";
 
-  const { page, view, filter, q, list } = listingFor(env, url, picker);
-  const listed = await timed(timings, "d1_list_media", list);
-  const keys = listed.objects.map((object) => object.key);
+    const { page, view, filter, q, list } = listingFor(env, url, picker);
+    const listed = await timed(timings, "d1_list_media", list);
+    const keys = listed.objects.map((object) => object.key);
 
-  if (picker) {
-    return {
-      picker: true as const,
-      objects: listed.objects.map((object) => ({
-        key: object.key,
-        url: object.url,
-        thumb: thumbUrl(object.key, 320),
-        alt: object.alt,
-      })),
-      truncated: listed.hasMore,
-    };
-  }
-
-  /* Starts here, not at the loader top: earlier branches return and would leave a promise unawaited. */
-  const [resolution, refs, twins, trashedCount, tagCounts, lensCounts] = await timed(
-    timings,
-    "group_listing",
-    () =>
-      Promise.all([
-        timed(timings, "resolve_citations", () => resolveCitations(env, keys)),
-        timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
-        timed(timings, "d1_media_twins", () => mediaTwins(env)),
-        timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
-        timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
-        timed(timings, "d1_lens_counts", () => mediaLensCounts(env, TEMPLATE_REF_KEYS)),
-      ]),
-  );
-
-  /* A parameter, not a route: static keys contain `/`. */
-  const detailKey = url.searchParams.get("key");
-  let detail = null;
-  if (detailKey) {
-    const row = await mediaRecord(env, detailKey);
-    if (row) {
-      const [detailResolution, detailRefs] = await Promise.all([
-        resolveCitations(env, [row.key]),
-        mediaRefsFor(env, [row.key]),
-      ]);
-      detail = {
-        found: true as const,
-        key: row.key,
-        url: row.storage === "static" ? row.key : `/media/${row.key}`,
-        thumb: thumbUrl(row.key, 640),
-        viewable: isViewable(row.kind),
-        deletable: row.storage !== "static",
-        originalName: row.originalName,
-        role: row.role,
-        storage: row.storage,
-        kind: row.kind,
-        mime: row.mime,
-        bytes: row.bytes ?? 0,
-        width: row.width,
-        height: row.height,
-        alt: row.alt,
-        caption: row.caption,
-        uploadedAt: row.uploadedAt,
-        placeholder: row.placeholder,
-        refs: (detailRefs.get(row.key) ?? []).map((ref) => ({
-          sourceType: ref.sourceType,
-          sourceId: ref.sourceId,
-          form: ref.form,
-          detail: ref.detail,
+    if (picker) {
+      return {
+        picker: true as const,
+        objects: listed.objects.map((object) => ({
+          key: object.key,
+          url: object.url,
+          thumb: thumbUrl(object.key, 320),
+          alt: object.alt,
         })),
-        citations: detailResolution.citations.get(row.key) ?? [],
-        scanComplete: detailResolution.complete,
-        tags: parseTags(row.tags ?? ""),
-        trashedAt: row.trashedAt,
-        hash: digestFromKey(row.key),
-        twins: twins.get(row.key) ?? [],
-        usage: usageStateOf({
-          postRefs: (detailRefs.get(row.key) ?? []).length,
-          citations: (detailResolution.citations.get(row.key) ?? []).length,
-          templateRefs: (TEMPLATE_REFS[row.key] ?? []).length,
-        }),
-        templateRefs: TEMPLATE_REFS[row.key] ?? [],
-        /** Suggested, never applied: a filename posing as alt hides a defect an empty field shows. */
-        altSuggestion: suggestedAlt(row.originalName ?? row.key.split("/").pop() ?? row.key),
-        tagSuggestions: suggestedTags(row.key).filter(
-          (t) => !parseTags(row.tags ?? "").includes(t),
-        ),
+        truncated: listed.hasMore,
       };
-    } else {
-      detail = { found: false as const, key: detailKey };
     }
-  }
 
-  const uploaded = url.searchParams.get("uploaded");
-  const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
+    /* Starts here, not at the loader top: earlier branches return and would leave a promise unawaited. */
+    const [resolution, refs, twins, trashedCount, tagCounts, lensCounts] = await timed(
+      timings,
+      "group_listing",
+      () =>
+        Promise.all([
+          timed(timings, "resolve_citations", () => resolveCitations(env, keys)),
+          timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
+          timed(timings, "d1_media_twins", () => mediaTwins(env)),
+          timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
+          timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
+          timed(timings, "d1_lens_counts", () => mediaLensCounts(env, TEMPLATE_REF_KEYS)),
+        ]),
+    );
 
-  const payload = {
-    picker: false as const,
-    /* The duplicates lens is filtered in SQL before the page is cut, so every row here belongs. */
-    objects: listed.objects.map((object) => ({
-      ...object,
-      thumb: thumbUrl(object.key, 320),
-      viewable: isViewable(object.kind),
-      citations: resolution.citations.get(object.key) ?? [],
-      refCount: (refs.get(object.key) ?? []).length,
-      tags: parseTags(object.tags ?? ""),
-      twinCount: (twins.get(object.key) ?? []).length,
-      usage: usageStateOf({
-        postRefs: (refs.get(object.key) ?? []).length,
-        citations: (resolution.citations.get(object.key) ?? []).length,
-        templateRefs: (TEMPLATE_REFS[object.key] ?? []).length,
-      }),
-      templateRefs: TEMPLATE_REFS[object.key] ?? [],
-    })),
-    page,
-    hasMore: listed.hasMore,
-    filter,
-    q,
-    detail,
-    uploaded,
-    uploadError,
-    scanComplete: resolution.complete,
-    scanFailed: resolution.failed,
-    view,
-    modified: isModified(view),
-    trashedCount,
-    tagCounts,
+    /* A parameter, not a route: static keys contain `/`. */
+    const detailKey = url.searchParams.get("key");
+    let detail = null;
+    if (detailKey) {
+      const row = await mediaRecord(env, detailKey);
+      if (row) {
+        const [detailResolution, detailRefs] = await Promise.all([
+          resolveCitations(env, [row.key]),
+          mediaRefsFor(env, [row.key]),
+        ]);
+        detail = {
+          found: true as const,
+          key: row.key,
+          url: row.storage === "static" ? row.key : `/media/${row.key}`,
+          thumb: thumbUrl(row.key, 640),
+          viewable: isViewable(row.kind),
+          deletable: row.storage !== "static",
+          originalName: row.originalName,
+          role: row.role,
+          storage: row.storage,
+          kind: row.kind,
+          mime: row.mime,
+          bytes: row.bytes ?? 0,
+          width: row.width,
+          height: row.height,
+          alt: row.alt,
+          caption: row.caption,
+          uploadedAt: row.uploadedAt,
+          placeholder: row.placeholder,
+          refs: (detailRefs.get(row.key) ?? []).map((ref) => ({
+            sourceType: ref.sourceType,
+            sourceId: ref.sourceId,
+            form: ref.form,
+            detail: ref.detail,
+          })),
+          citations: detailResolution.citations.get(row.key) ?? [],
+          scanComplete: detailResolution.complete,
+          tags: parseTags(row.tags ?? ""),
+          trashedAt: row.trashedAt,
+          hash: digestFromKey(row.key),
+          twins: twins.get(row.key) ?? [],
+          usage: usageStateOf({
+            postRefs: (detailRefs.get(row.key) ?? []).length,
+            citations: (detailResolution.citations.get(row.key) ?? []).length,
+            templateRefs: (TEMPLATE_REFS[row.key] ?? []).length,
+          }),
+          templateRefs: TEMPLATE_REFS[row.key] ?? [],
+          /** Suggested, never applied: a filename posing as alt hides a defect an empty field shows. */
+          altSuggestion: suggestedAlt(row.originalName ?? row.key.split("/").pop() ?? row.key),
+          tagSuggestions: suggestedTags(row.key).filter(
+            (t) => !parseTags(row.tags ?? "").includes(t),
+          ),
+        };
+      } else {
+        detail = { found: false as const, key: detailKey };
+      }
+    }
 
-    lensCounts: {
-      ...lensCounts,
-      duplicates: twins.size,
-    },
+    const uploaded = url.searchParams.get("uploaded");
+    const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
 
-    /* The scan sees only literal paths and no external links, hence unattached, not unused. */
-    usageNote:
-      "Usage is asked three ways: what a post cites, what the artifact scan " +
-      "finds, and what repository code references. A file none of them names is " +
-      "unattached rather than unused, because a path the code builds at runtime " +
-      "is invisible to the scan and an external site can link anything.",
-  };
+    const payload = {
+      picker: false as const,
+      /* The duplicates lens is filtered in SQL before the page is cut, so every row here belongs. */
+      objects: listed.objects.map((object) => ({
+        ...object,
+        thumb: thumbUrl(object.key, 320),
+        viewable: isViewable(object.kind),
+        citations: resolution.citations.get(object.key) ?? [],
+        refCount: (refs.get(object.key) ?? []).length,
+        tags: parseTags(object.tags ?? ""),
+        twinCount: (twins.get(object.key) ?? []).length,
+        usage: usageStateOf({
+          postRefs: (refs.get(object.key) ?? []).length,
+          citations: (resolution.citations.get(object.key) ?? []).length,
+          templateRefs: (TEMPLATE_REFS[object.key] ?? []).length,
+        }),
+        templateRefs: TEMPLATE_REFS[object.key] ?? [],
+      })),
+      page,
+      hasMore: listed.hasMore,
+      filter,
+      q,
+      detail,
+      uploaded,
+      uploadError,
+      scanComplete: resolution.complete,
+      scanFailed: resolution.failed,
+      view,
+      modified: isModified(view),
+      trashedCount,
+      tagCounts,
 
-  /* Not timing serialization: the framework encodes turbo-stream, so a stringify would mislead. */
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
+      lensCounts: {
+        ...lensCounts,
+        duplicates: twins.size,
+      },
 
-  return data(payload);
+      /* The scan sees only literal paths and no external links, hence unattached, not unused. */
+      usageNote:
+        "Usage is asked three ways: what a post cites, what the artifact scan " +
+        "finds, and what repository code references. A file none of them names is " +
+        "unattached rather than unused, because a path the code builds at runtime " +
+        "is invisible to the scan and an external site can link anything.",
+    };
+
+    /* Not timing serialization: the framework encodes turbo-stream, so a stringify would mislead. */
+    return data(payload);
+  });
 }
 
 export async function action({ request, context }: Route.ActionArgs) {

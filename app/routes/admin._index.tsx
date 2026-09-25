@@ -1,6 +1,6 @@
 import { Form, data } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
 import { RowMenu } from "~/components/admin/row-menu";
 import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
@@ -15,28 +15,27 @@ export function meta() {
 
 /** Reads the same instruments as /api/health and the operator tool, so it cannot disagree with them. */
 export async function loader({ context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const env = getEnv(context);
+  return timedLoader(context, async (timings) => {
+    const env = getEnv(context);
 
-  const [health, stores] = await Promise.all([
-    timed(timings, "overview_health", () => runHealthChecks(env)),
-    timed(timings, "overview_stores", () => syncStatus(env)),
-  ]);
+    const [health, stores] = await Promise.all([
+      timed(timings, "overview_health", () => runHealthChecks(env)),
+      timed(timings, "overview_stores", () => syncStatus(env)),
+    ]);
 
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data({
-    checks: health.checks,
-    stores: {
-      headSha: stores.headSha,
-      artifactPosts: stores.artifactPosts,
-      d1Posts: stores.d1Posts,
-      d1PubliclyVisible: stores.d1PubliclyVisible,
-      searchIndexDocs: stores.searchIndexDocs,
-      askConfigured: stores.askConfigured,
-      githubConfigured: stores.githubConfigured,
-      divergences: stores.divergences,
-    },
+    return data({
+      checks: health.checks,
+      stores: {
+        headSha: stores.headSha,
+        artifactPosts: stores.artifactPosts,
+        d1Posts: stores.d1Posts,
+        d1PubliclyVisible: stores.d1PubliclyVisible,
+        searchIndexDocs: stores.searchIndexDocs,
+        askConfigured: stores.askConfigured,
+        githubConfigured: stores.githubConfigured,
+        divergences: stores.divergences,
+      },
+    });
   });
 }
 
