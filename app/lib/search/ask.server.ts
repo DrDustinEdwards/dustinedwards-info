@@ -10,6 +10,7 @@ import {
 } from "./ask-guard.server";
 import { KEY_SEPARATOR, keyForUrl } from "./ask-keys.mjs";
 import { uploadTwins } from "./ask-twins.mjs";
+import { answerDelta, takeSseFrames } from "./sse.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { PUBLICATIONS } from "~/data/publications";
@@ -77,30 +78,14 @@ async function parseSseAnswer(
       const { done, value } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      const frames = buffer.split("\n\n");
-      buffer = frames.pop() ?? "";
-      for (const frame of frames) {
-        let eventName = "";
-        const dataLines: string[] = [];
-        for (const line of frame.split("\n")) {
-          if (line.startsWith("event:")) eventName = line.slice(6).trim();
-          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
-        }
-        const data = dataLines.join("\n");
-        if (!data || data === "[DONE]") continue;
-        let parsed: unknown;
-        try {
-          parsed = JSON.parse(data);
-        } catch {
+      const taken = takeSseFrames(buffer);
+      buffer = taken.rest;
+      for (const { event, data } of taken.frames) {
+        if (event === "chunks") {
+          if (Array.isArray(data)) chunks = data;
           continue;
         }
-        if (eventName === "chunks") {
-          if (Array.isArray(parsed)) chunks = parsed;
-          continue;
-        }
-        const delta = (parsed as { choices?: Array<{ delta?: { content?: string } }> })
-          ?.choices?.[0]?.delta?.content;
-        if (typeof delta === "string") answer += delta;
+        answer += answerDelta(data) ?? "";
       }
     }
   } catch {
