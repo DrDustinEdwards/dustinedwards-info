@@ -18,6 +18,7 @@ import {
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { parseJsonc } from "./lib/wrangler-surface.mjs";
 import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -494,13 +495,7 @@ refuses(
   const publishSrc = readFileSync(join(root, "app/lib/editor/publish.server.ts"), "utf8");
   const at = publishSrc.indexOf("export async function deletePost(");
   eq("delete: deletePost exists to be checked", at !== -1, true);
-  const open = publishSrc.indexOf("{", publishSrc.indexOf(")", at));
-  let depth = 0, close = -1;
-  for (let i = open; i < publishSrc.length; i += 1) {
-    if (publishSrc[i] === "{") depth += 1;
-    else if (publishSrc[i] === "}") { depth -= 1; if (depth === 0) { close = i; break; } }
-  }
-  const body = close === -1 ? "" : publishSrc.slice(open, close);
+  const body = functionBody(publishSrc, /export async function deletePost\(/);
   eq("delete: deletePost's body parses", body.length > 0, true);
   eq("delete: deletePost calls decideDelete in its own body",
     /decideDelete\(\s*\{\s*actor\s*\}\s*\)/.test(body), true);
@@ -955,11 +950,7 @@ refuses(
  * hides readership, Renderer cache off renders every request, cross_version on serves stale.
  */
 {
-  const exampleRaw = readFileSync(join(root, "wrangler.jsonc.example"), "utf8");
-  /* Comments stripped before parsing: the file is JSONC and is mostly prose. */
-  const example = JSON.parse(
-    exampleRaw.replace(/^\s*\/\/.*$/gm, "").replace(/\/\*[\s\S]*?\*\//g, ""),
-  );
+  const example = parseJsonc(join(root, "wrangler.jsonc.example"));
 
   eq("the example config still enables Workers Cache at the top level", example.cache?.enabled, true);
   eq("the GATEWAY entrypoint has cache DISABLED", example.exports?.default?.cache?.enabled, false);
@@ -1042,21 +1033,7 @@ refuses(
   const askAt = askSource.search(/function publishableForAsk\b/);
   eq("publishableForAsk exists in ask.server.ts", askAt !== -1, true);
 
-  let askBody = "";
-  if (askAt !== -1) {
-    const open = askSource.indexOf("{", askSource.indexOf(")", askAt));
-    let depth = 0;
-    for (let i = open; i < askSource.length; i += 1) {
-      if (askSource[i] === "{") depth += 1;
-      else if (askSource[i] === "}") {
-        depth -= 1;
-        if (depth === 0) {
-          askBody = askSource.slice(open, i + 1);
-          break;
-        }
-      }
-    }
-  }
+  const askBody = functionBody(askSource, /function publishableForAsk\b/);
   eq("publishableForAsk's body was extracted", askBody.length > 40, true);
 
   eq(
