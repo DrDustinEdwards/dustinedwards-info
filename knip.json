@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": [
+    "app/routes.ts",
+    "app/root.tsx",
+    "app/entry.*.tsx",
+    "app/routes/**/*.tsx",
+    "app/enhance/*.ts",
+    "workers/*.ts",
+    "scripts/*.mjs",
+    "scripts/machine-readable/*.mjs",
+    "scripts/measure/*.mjs",
+    ".design-sync/*.mjs",
+    ".design-sync/*.tsx",
+    ".design-sync/previews/*.tsx",
+    "test/**/*.test.mjs",
+    "test/worker/**/*.test.ts"
+  ],
+  "project": [
+    "app/**/*.{ts,tsx,mjs}",
+    "workers/**/*.{ts,mjs}",
+    "scripts/**/*.mjs",
+    "test/**/*.{ts,mjs}",
+    ".design-sync/**/*.{ts,tsx,mjs}"
+  ],
+  "ignore": ["app/enhance/dist/**", "scratchpad/**"],
+  "ignoreDependencies": [
+    "cloudflare",
+    "cloudflare:test",
+    "cloudflare:workers",
+    "virtual:header-render",
+    "virtual:react-router/server-build",
+    "mermaid"
+  ],
+  "ignoreBinaries": ["netstat"],
+  "ignoreUnresolved": ["\\+types/", "^~/enhance/dist/", "enhance-sizes\\.generated$"]
+}
