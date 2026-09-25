@@ -6,6 +6,7 @@ import { runTool } from "~/lib/operator/api.server";
 import { postPath } from "~/lib/content/pipeline.mjs";
 
 import { post } from "./fixtures";
+import { WINDOW_START, freezeAtWindowStart, untilRefused } from "./route-helpers";
 import { testEnv } from "./test-env";
 import { stubGitHub, type GitHubStub } from "./github-stub";
 
@@ -19,10 +20,6 @@ const bearer = (token: string) =>
     method: "POST",
     headers: { authorization: `Bearer ${token}` },
   });
-
-/* On a minute boundary, so a case that advances by the window length lands exactly on the next
- * one and the arithmetic under test is the limiter's. */
-const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
 
 let gh: GitHubStub;
 
@@ -86,8 +83,7 @@ describe("operator metering", () => {
   it("spends budget only when it is asked to, and DESCRIBE never asks", async () => {
     /* Authenticating must not spend the limiter, or the describe call halves a client's
      * allowance. Frozen, or a window roll would hand the loop a fresh allowance and hide it. */
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(WINDOW_START);
+    freezeAtWindowStart();
 
     for (let i = 0; i < 40; i += 1) {
       const auth = await authenticateOperator(operatorEnv(), bearer(testEnv.OPERATOR_TOKEN));
@@ -100,31 +96,20 @@ describe("operator metering", () => {
 
   it("REFUSES past the per-operator rate limit, with a Retry-After to hand back", async () => {
     /* Frozen: `AskBudget.hit` keys on a FIXED wall-clock window, so a boundary inside the loop
-     * drops the count and the refusal arrives late or never. Only `Date` is faked; the Durable
-     * Object call underneath is real RPC. */
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(WINDOW_START);
+     * drops the count and the refusal arrives late or never. */
+    freezeAtWindowStart();
 
     const id = "rate-limit-case";
-    let refusal: Awaited<ReturnType<typeof meterOperator>> | null = null;
-    for (let i = 0; i < 40 && refusal === null; i += 1) {
-      const result = await meterOperator(operatorEnv(), id);
-      if (!result.ok) refusal = result;
-    }
+    const { refusal } = await untilRefused(() => meterOperator(operatorEnv(), id), (r) => !r.ok, 40);
     expect(refusal).toMatchObject({ ok: false, status: 429 });
     if (refusal && !refusal.ok) expect(refusal.retryAfter).toBeGreaterThan(0);
   });
 
   it("SERVES AGAIN once the Retry-After it handed back has passed", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(WINDOW_START);
+    freezeAtWindowStart();
 
     const id = "retry-after-case";
-    let refusal: Awaited<ReturnType<typeof meterOperator>> | null = null;
-    for (let i = 0; i < 40 && refusal === null; i += 1) {
-      const result = await meterOperator(operatorEnv(), id);
-      if (!result.ok) refusal = result;
-    }
+    const { refusal } = await untilRefused(() => meterOperator(operatorEnv(), id), (r) => !r.ok, 40);
     expect(refusal).toMatchObject({ ok: false, status: 429 });
     const retryAfter = refusal && !refusal.ok ? (refusal.retryAfter ?? 0) : 0;
     expect(retryAfter).toBeGreaterThan(0);

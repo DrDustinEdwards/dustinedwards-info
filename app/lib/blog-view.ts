@@ -1,6 +1,7 @@
 import type { getBlogPost, listSeriesParts } from "~/db";
 import { htmlHasMath } from "~/lib/content/math.mjs";
 import { countWords } from "~/lib/content/reading-time.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // The public post and the draft preview both render this one projection, so the preview cannot
 // quietly lose a section the public page has.
@@ -33,7 +34,7 @@ function parseJson(slug: string, field: string, value: string | null, fallback: 
         alert: "post-json-unreadable",
         slug,
         field,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
     return fallback;

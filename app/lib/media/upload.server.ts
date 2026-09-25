@@ -2,6 +2,7 @@ import { upsertMediaRecord } from "~/db";
 import { classify, contentKey, roleOf } from "./classify.mjs";
 import { measureDimensions } from "./core.server";
 import { ALLOWED, validateUpload } from "./upload-contract.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // `type` is the caller's claim: checked against `ALLOWED`, never sniffed.
 type UploadInput = {
@@ -46,7 +47,7 @@ export async function storeUpload(env: Env, file: UploadInput): Promise<StoreUpl
     return {
       ok: false,
       code: "images-unavailable",
-      message: `${error instanceof Error ? error.message : String(error)}. Nothing was stored; try again.`,
+      message: `${errorMessage(error)}. Nothing was stored; try again.`,
       status: 503,
     };
   }

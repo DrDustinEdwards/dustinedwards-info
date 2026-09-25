@@ -1,7 +1,7 @@
 // Pure functions of the committed corpus (no clock, no citation count), so check:machine-readable can
 // compare bytes and two downloads match. Author names go through `canonicalAuthor` in authors.mjs.
 
-import { ORGANISMS } from "../../data/organisms.ts";
+import { ORGANISM_PATTERN } from "../../data/organisms.ts";
 import { canonicalAuthor } from "./authors.mjs";
 import { decodeEntities } from "./entities.mjs";
 
@@ -42,12 +42,6 @@ function escapeBibtex(value) {
   for (const [from, to] of BIBTEX_ESCAPES) out = out.split(from).join(to);
   return out;
 }
-
-// Longest first, so a trinomial wins over the binomial inside it.
-const ORGANISM_PATTERN = new RegExp(
-  `(${ORGANISMS.map((o) => o.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`,
-  "g",
-);
 
 /**
  * Many BibTeX styles lowercase titles, and a lowercased genus is wrong under the nomenclature codes.
