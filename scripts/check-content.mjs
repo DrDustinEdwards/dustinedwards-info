@@ -2,7 +2,6 @@ import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./
 import { internalLinkSlug } from "../app/lib/content/pipeline.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
-import { recordsForPosts } from "../app/lib/search/records.mjs";
 
 /** @param {string[]} names */
 function nameThem(names) {
@@ -64,23 +63,29 @@ async function main() {
       console.error(`  run 1: ${diff.committed.trim().slice(0, 200)}`);
       console.error(`  run 2: ${diff.fresh.trim().slice(0, 200)}`);
     }
-    process.exit(1);
-    return;
+    // Recorded, not exited: the checks below read the first render and can fail on their own.
+    process.exitCode = 1;
   }
 
-  const { posts } = JSON.parse(first);
-  const bytes = Buffer.byteLength(first, "utf8");
-  const perPost = posts.length > 0 ? Math.round(bytes / posts.length) : bytes;
-  console.log(
-    `check:content ok. the corpus renders deterministically ` +
-      `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post, rendered twice).`,
-  );
+  const { posts, records } = JSON.parse(first);
+  if (first === second) {
+    const bytes = Buffer.byteLength(first, "utf8");
+    const perPost = posts.length > 0 ? Math.round(bytes / posts.length) : bytes;
+    console.log(
+      `check:content ok. the corpus renders deterministically ` +
+        `(${posts.length} posts, ${bytes} bytes, ${perPost} bytes/post, rendered twice).`,
+    );
+  }
+
+  // The artifact's own records, the ones sync writes to both indexes, rather than a re-derivation
+  // from a reshaped post that could disagree with them.
+  const postRecords = (records ?? []).filter((/** @type {any} */ r) => r.type === "post");
 
   await checkAbout();
 
   checkInternalFurtherReading(posts);
-  checkMath(posts);
-  checkSwatches(posts);
+  checkMath(posts, postRecords);
+  checkSwatches(posts, postRecords);
 }
 
 /** Rendered twice and byte-compared, because `about.json` is imported statically into the Worker bundle. */
@@ -99,7 +104,7 @@ async function checkAbout() {
       console.error(`  run 1: ${diff.committed.trim().slice(0, 200)}`);
       console.error(`  run 2: ${diff.fresh.trim().slice(0, 200)}`);
     }
-    process.exit(1);
+    process.exitCode = 1;
   }
 
   const about = JSON.parse(first);
@@ -109,8 +114,10 @@ async function checkAbout() {
         `HTML, floor 200. An empty or near-empty render is a valid artifact describing a ` +
         `blank page, which is the one failure here that looks like success.`,
     );
-    process.exit(1);
+    process.exitCode = 1;
+    return;
   }
+  if (first !== second) return;
 
   console.log(
     `check:content ok. ${ABOUT_ARTIFACT_PATH} renders deterministically ` +
@@ -123,8 +130,9 @@ async function checkAbout() {
  *
  * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
  *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
+ * @param {Array<Record<string, any>>} records the artifact's post records
  */
-function checkMath(posts) {
+function checkMath(posts, records) {
   /** @type {string[]} */
   const problems = [];
 
@@ -139,7 +147,7 @@ function checkMath(posts) {
         `nothing, and with all, "a mathless post links no stylesheet" is. The fixture ` +
         `content/posts/math-typesetting-fixture.md exists to keep both sides populated.`,
     );
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 
@@ -204,24 +212,12 @@ function checkMath(posts) {
   }
 
   // Both indexes are built from the markdown, so markup would be span soup in a snippet and in Ask.
-  const records = recordsForPosts(
-    posts.map((post) => ({
-      slug: post.slug,
-      title: post.title,
-      markdown: post.markdown,
-      body: post.markdown,
-      toc: post.toc,
-      tags: post.tags,
-      publishAt: post.publishAt,
-      draft: post.draft,
-    })),
-  );
   if (records.length === 0) {
     console.error(
-      `check:content failed. recordsForPosts produced 0 record(s) over ${posts.length} ` +
+      `check:content failed. the artifact carries 0 post record(s) over ${posts.length} ` +
         `post(s), so every search assertion below is about an empty set.`,
     );
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
   const markupRecords = records.filter((r) => String(r.body ?? "").includes("katex"));
@@ -235,7 +231,7 @@ function checkMath(posts) {
   if (problems.length > 0) {
     console.error(`check:content failed. ${problems.length} math output problem(s):`);
     console.error(nameThem(problems));
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 
@@ -256,15 +252,20 @@ function checkMath(posts) {
  * @param {string} markdown
  */
 function prosePart(markdown) {
-  return markdown.replace(/^```[\s\S]*?^```/gm, "").replace(/`[^`\n]*`/g, "");
+  // A fence is three or more backticks or tildes, closed by the same run; inline code may use a
+  // longer backtick run so it can hold a backtick.
+  return markdown
+    .replace(/^ {0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?^ {0,3}\1[ \t]*$/gm, "")
+    .replace(/(`+)(?!`)[^\n]*?[^`]\1(?!`)/g, "");
 }
 
 /**
  * Two derivations, made to argue: one checked against itself passes on a pipeline that had stopped running.
  *
  * @param {Array<{ slug: string, markdown: string, html: string }>} posts
+ * @param {Array<Record<string, any>>} records the artifact's post records
  */
-function checkSwatches(posts) {
+function checkSwatches(posts, records) {
   /** @type {string[]} */
   const problems = [];
 
@@ -279,7 +280,7 @@ function checkSwatches(posts) {
         `true of nothing, and with all, "a swatchless post renders no chip" is. The fixture ` +
         `content/posts/swatches-in-prose-fixture.md exists to keep both sides populated.`,
     );
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 
@@ -324,24 +325,12 @@ function checkSwatches(posts) {
     }
   }
 
-  const records = recordsForPosts(
-    posts.map((post) => ({
-      slug: post.slug,
-      title: /** @type {any} */ (post).title,
-      markdown: post.markdown,
-      body: post.markdown,
-      toc: /** @type {any} */ (post).toc,
-      tags: /** @type {any} */ (post).tags,
-      publishAt: /** @type {any} */ (post).publishAt,
-      draft: /** @type {any} */ (post).draft,
-    })),
-  );
   if (records.length === 0) {
     console.error(
-      `check:content failed. recordsForPosts produced 0 record(s) over ${posts.length} ` +
+      `check:content failed. the artifact carries 0 post record(s) over ${posts.length} ` +
         `post(s), so the search assertion below is about an empty set.`,
     );
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
   const markupRecords = records.filter((r) => String(r.body ?? "").includes("swatch-chip"));
@@ -356,7 +345,7 @@ function checkSwatches(posts) {
   if (problems.length > 0) {
     console.error(`check:content failed. ${problems.length} swatch output problem(s):`);
     console.error(nameThem(problems));
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 
@@ -369,8 +358,8 @@ function checkSwatches(posts) {
 }
 
 /**
- * The schema decides a url's shape, not its target. The examined count is printed because no corpus
- * post sets the field.
+ * The schema decides a url's shape, not its target. content/posts/swatches-in-prose-fixture.md carries
+ * one internal link so this examines something: with none, "every link resolves" is true of nothing.
  *
  * @param {Array<{ slug: string, furtherReading?: Array<{ title: string, url: string }> }>} posts
  */
@@ -390,13 +379,23 @@ function checkInternalFurtherReading(posts) {
     }
   }
 
+  if (examined === 0) {
+    console.error(
+      `check:content failed. 0 internal further_reading link(s) were examined, so the ` +
+        `resolution check below passes over nothing. The fixture ` +
+        `content/posts/swatches-in-prose-fixture.md exists to carry one.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   if (dead.length > 0) {
     console.error(
       `check:content failed. ${dead.length} further_reading link(s) point at a post ` +
         `that does not exist:`,
     );
     console.error(nameThem(dead));
-    process.exit(1);
+    process.exitCode = 1;
     return;
   }
 
@@ -410,5 +409,5 @@ main().catch((/** @type {unknown} */ error) => {
   console.error(
     `check:content failed. ${error instanceof Error ? error.message : String(error)}`,
   );
-  process.exit(1);
+  process.exitCode = 1;
 });
