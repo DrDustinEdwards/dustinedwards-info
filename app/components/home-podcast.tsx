@@ -56,7 +56,14 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
             >
               <a href={episode.audioUrl}>Download the episode</a>
             </audio>
-            <div className="podcast-controls" data-podcast-controls hidden>
+            {/* A named group, so Play and Seek carry the episode they act on. */}
+            <div
+              className="podcast-controls"
+              data-podcast-controls
+              role="group"
+              aria-label={`Player for ${episode.title}`}
+              hidden
+            >
               <div className="podcast-scrub">
                 <span className="podcast-time" data-podcast-elapsed>
                   0:00

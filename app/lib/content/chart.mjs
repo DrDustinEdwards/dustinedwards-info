@@ -360,6 +360,15 @@ export function renderChartHast(model, captionChildren) {
   // live once in app.css under .chart-figure.
   svg.querySelector("style")?.remove();
 
+  /*
+   * Plot names its mark and axis groups with aria-label, which is not allowed on a `<g>` with no role
+   * and is unreachable anyway inside role="img". Kept as data-plot-mark, which the chart gate reads.
+   */
+  for (const group of svg.querySelectorAll("[aria-label]")) {
+    group.setAttribute("data-plot-mark", group.getAttribute("aria-label"));
+    group.removeAttribute("aria-label");
+  }
+
   // The accessible name goes on the SVG, not the figure, or the caption and table become presentational.
   svg.setAttribute("role", "img");
   svg.setAttribute("aria-label", model.alt);
