@@ -778,8 +778,12 @@ if (existsSync(assetDir)) {
     0,
     ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs),
   );
-  /* Stale fails, absent does not: editing a source is what makes the build stale. */
-  if (newest < cssMtime) {
+  /* Stale fails, absent does not: editing a source is what makes the build stale. An asset
+     directory with no CSS at all is its own failure, said as itself rather than as "stale". */
+  if (sheets.length === 0) {
+    builtNote = "build/client/assets holds no CSS";
+    fail("build/client/assets exists but carries no CSS. Run npm run build.");
+  } else if (newest < cssMtime) {
     builtNote = "build is OLDER than a source stylesheet";
     fail(
       "the built stylesheet is not stale: a build exists but predates a source " +
@@ -789,10 +793,9 @@ if (existsSync(assetDir)) {
     sheets.length = 0;
   }
   const built = sheets.map((f) => readFileSync(join(assetDir, f), "utf8")).join("\n");
-  if (sheets.length === 0) {
-  } else if (!built) {
-    fail("build/client/assets exists but carries no CSS");
-  } else {
+  if (sheets.length > 0 && !built.trim()) {
+    fail("build/client/assets carries only empty CSS files. Run npm run build.");
+  } else if (sheets.length > 0) {
     // Compare normalized values: Lightning CSS shortens #ffffff to #fff.
     /** @param {string} v */
     const norm = (v) => {
