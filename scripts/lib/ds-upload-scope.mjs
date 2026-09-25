@@ -3,7 +3,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 // `_ds_needs_recompile` is the sentinel the upload writes first and re-arms last, so it must be here.
 const BUILD_OWNED = [
@@ -95,8 +95,17 @@ export function plannedWrites(outDir) {
 export function enforceVerdict(verdict, outDir) {
   const upload = verdict?.upload;
   if (!upload || !upload.any) return { verdict, violations: [] };
+  // An upload whose writes or deletes cannot be read is refused: read as "none", it would pass
+  // unchecked, and the deletes are to the canvas.
+  /** @type {string[]} */
+  const unreadable = [];
+  if (!existsSync(outDir)) unreadable.push(`write ${outDir}: the build output is missing`);
+  if (upload.deletePaths !== undefined && !Array.isArray(upload.deletePaths)) {
+    unreadable.push("delete: the plan's deletePaths is not a list");
+  }
   const writes = existsSync(outDir) ? plannedWrites(outDir) : [];
-  const violations = planViolations({ writes, deletes: upload.deletePaths ?? [] });
+  const deletes = Array.isArray(upload.deletePaths) ? upload.deletePaths : [];
+  const violations = [...unreadable, ...planViolations({ writes, deletes })];
   if (violations.length === 0) return { verdict, violations };
   return {
     verdict: { ...verdict, ok: false, upload: null, uploadScopeRefused: violations },
@@ -104,13 +113,19 @@ export function enforceVerdict(verdict, outDir) {
   };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (isMain(import.meta.url)) {
   const file = process.argv[2];
   if (!file) {
     console.error("usage: node scripts/lib/ds-upload-scope.mjs <plan.json>");
     process.exit(2);
   }
-  const violations = planViolations(JSON.parse(readFileSync(file, "utf8")));
+  const plan = JSON.parse(readFileSync(file, "utf8"));
+  // A plan with neither list is a misspelled or empty file, not a plan inside scope.
+  if (!Array.isArray(plan?.writes) && !Array.isArray(plan?.deletes)) {
+    console.error(`${file} carries neither a writes nor a deletes list, so there is no plan to check.`);
+    process.exit(1);
+  }
+  const violations = planViolations(plan);
   if (violations.length) {
     console.error(`✗ upload plan refused, ${violations.length} path(s) outside the build's scope:`);
     for (const v of violations) console.error(`  ${v}`);
