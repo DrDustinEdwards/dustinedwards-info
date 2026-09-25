@@ -733,16 +733,29 @@ function serverDiagnosis() {
 
 /** Held in memory because the registry is append-only. */
 const recorded = new Set();
+let survivorsUnverifiable = false;
 
 function recordServerSurvivors() {
   if (!server?.pid) return;
   const table = readProcessTable();
-  if (table.size === 0) return;
+  /* An empty table means "cannot verify", not "no descendants": said once, so an orphan the next
+     preflight cannot identify has a cause on record. */
+  if (table.size === 0) {
+    if (!survivorsUnverifiable) {
+      console.log(
+        "  NOTE  the process table could not be read, so the preview server's descendants were " +
+          "not recorded; if this run is killed hard, the next preflight cannot identify them",
+      );
+      survivorsUnverifiable = true;
+    }
+    return;
+  }
   for (const pid of descendantPids(server.pid, table)) {
     if (recorded.has(pid)) continue;
     const live = table.get(pid);
     if (!live) continue;
-    if (!VITE_NEEDLES.every((needle) => live.command.includes(needle.toLowerCase()))) continue;
+    // The same matcher the port preflight uses, so one needle set has one meaning.
+    if (!VITE_NEEDLES.every((needle) => live.command.includes(normaliseCommand(needle)))) continue;
     registry.record(pid, "the vite preview server", VITE_NEEDLES);
     recorded.add(pid);
   }
@@ -780,6 +793,12 @@ let browser;
  */
 for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"])) {
   process.on(signal, () => {
+    /* --keep holds here too: an interrupted --keep run keeps what the flag asked to keep, and its
+       registry entries, which the next preflight needs to free the port. */
+    if (process.argv.includes("--keep")) {
+      console.error(`\ncheck:browser interrupted by ${signal}. --keep: its children are left running.`);
+      process.exit(1);
+    }
     console.error(`\ncheck:browser interrupted by ${signal}. Stopping its children.`);
     if (browser) {
       const chrome = browser.process();
