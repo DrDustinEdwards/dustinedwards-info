@@ -6,7 +6,6 @@ import {
   Outlet,
   data,
   redirect,
-  useLocation,
   useRouteLoaderData,
 } from "react-router";
 
@@ -295,6 +294,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   useLayoutEffect(() => {
     setCollapsed(document.documentElement.getAttribute(SIDEBAR_ATTR) === "collapsed");
@@ -328,6 +328,13 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [drawerOpen, closeDrawer]);
+
+  /* Picking a section in the mobile drawer closes it and puts focus on the page it opens, not a hidden link. */
+  const pickSection = useCallback(() => {
+    if (!drawerOpen) return;
+    setDrawerOpen(false);
+    mainRef.current?.focus();
+  }, [drawerOpen]);
 
   return (
     <div className="admin" data-drawer={drawerOpen ? "open" : undefined}>
@@ -397,6 +404,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
                 end={item.end}
                 aria-label={name}
                 title={name}
+                onClick={pickSection}
               >
                 <Glyph>{item.icon}</Glyph>
                 <span className="admin-nav-label">{item.label}</span>
@@ -473,7 +481,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       />
 
       <div className="admin-main">
-        <main className="admin-content" id="main">
+        <main className="admin-content" id="main" ref={mainRef} tabIndex={-1}>
           <Outlet />
         </main>
       </div>
