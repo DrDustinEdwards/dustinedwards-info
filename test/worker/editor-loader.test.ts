@@ -1,13 +1,11 @@
-import { createExecutionContext, env } from "cloudflare:test";
-import { RouterContextProvider } from "react-router";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { cloudflareContext } from "~/lib/context";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { loader as editLoader } from "~/routes/admin.posts.$slug.edit";
 
 import { post } from "./fixtures";
 import { stubGitHub, type GitHubStub } from "./github-stub";
+import { routeContext } from "./route-helpers";
 
 let gh: GitHubStub | undefined;
 
@@ -15,12 +13,6 @@ afterEach(() => {
   gh?.restore();
   gh = undefined;
 });
-
-function routeContext() {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, { env: env as never, ctx: createExecutionContext() });
-  return context;
-}
 
 async function loadEditor(slug: string) {
   return editLoader({

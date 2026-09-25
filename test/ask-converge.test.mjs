@@ -21,15 +21,20 @@ function fakeClock() {
   };
 }
 
-function readingAfter(misses, { expected = 99, present = 90 } = {}) {
+function readingAfter(
+  misses,
+  {
+    expected = 99,
+    present = 90,
+    before = () => ({ name: "ask-index-drift", ok: false, expected, present }),
+  } = {},
+) {
   const state = { calls: 0 };
   return {
     state,
     reading: async () => {
       state.calls += 1;
-      return state.calls > misses
-        ? { name: "ask-index-drift", ok: true }
-        : { name: "ask-index-drift", ok: false, expected, present };
+      return state.calls > misses ? { name: "ask-index-drift", ok: true } : before();
     },
   };
 }
@@ -114,12 +119,7 @@ test("THE BOUND: a clock that never advances still terminates", async () => {
 
 test("an unreadable poll is neither convergence nor a miss", async () => {
   const clock = fakeClock();
-  const state = { calls: 0 };
-  const reading = async () => {
-    state.calls += 1;
-    if (state.calls <= 3) return null;
-    return { name: "ask-index-drift", ok: true };
-  };
+  const { reading } = readingAfter(3, { before: () => null });
 
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
   assert.equal(out.converged, true);
@@ -128,12 +128,11 @@ test("an unreadable poll is neither convergence nor a miss", async () => {
 
 test("a reading that throws is an unreadable poll, not a crash", async () => {
   const clock = fakeClock();
-  const state = { calls: 0 };
-  const reading = async () => {
-    state.calls += 1;
-    if (state.calls === 1) throw new Error("ECONNRESET");
-    return { name: "ask-index-drift", ok: true };
-  };
+  const { reading } = readingAfter(1, {
+    before: () => {
+      throw new Error("ECONNRESET");
+    },
+  });
 
   const out = await awaitAskConvergence({ reading, sleep: clock.sleep, now: clock.now });
   assert.equal(out.converged, true);

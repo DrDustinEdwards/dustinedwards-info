@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { dirtyTree } from "./lib/git-tree.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -13,20 +14,17 @@ function refuse(why, fix) {
   process.exit(1);
 }
 
-const porcelain = spawnSync("git", ["status", "--porcelain"], {
-  cwd: root,
-  encoding: "utf8",
-});
+const tree = dirtyTree(root);
 
 // Fails closed: no git, or a directory that is not a repository, means "I could not check", which must not deploy.
-if (porcelain.status !== 0) {
+if (!tree.ok) {
   refuse(
     "git status could not be read, so the tree cannot be compared to HEAD",
-    `Is this a git repository? git said: ${(porcelain.stderr ?? "").trim() || "(nothing)"}`,
+    `Is this a git repository? git said: ${tree.error || "(nothing)"}`,
   );
 }
 
-const dirty = (porcelain.stdout ?? "").trim();
+const dirty = tree.dirty;
 if (dirty.length > 0) {
   console.error(dirty);
   refuse(

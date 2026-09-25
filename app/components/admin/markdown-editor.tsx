@@ -8,7 +8,10 @@ import { useEffect, useRef, useState } from "react";
 
 // Split out of pipeline.mjs so this browser chunk can reach it without pulling shiki in.
 import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
-import { uploadMedia } from "~/lib/media/upload-contract.mjs";
+import { SCAFFOLDS, insertBlock, wrap, type ScaffoldName } from "./md-editor-commands";
+import { EditorToolbar } from "./md-editor-toolbar";
+import { useImageUpload } from "./use-image-upload";
+import { looksLikeUrl, useLinkPalette } from "./use-link-palette";
 
 // CodeMirror must never reach a public bundle; it stays its own chunk because it is dynamically imported.
 
@@ -57,141 +60,12 @@ const houseHighlight = HighlightStyle.define([
   { tag: tags.strikethrough, color: "var(--text-secondary)", textDecoration: "line-through" },
 ]);
 
-function wrap(view: EditorView, before: string, after = before) {
-  const { from, to } = view.state.selection.main;
-  const selected = view.state.sliceDoc(from, to);
-  view.dispatch({
-    changes: { from, to, insert: `${before}${selected}${after}` },
-    selection: selected
-      ? { anchor: from + before.length, head: from + before.length + selected.length }
-      : { anchor: from + before.length },
-    scrollIntoView: true,
-  });
-  view.focus();
-}
-
-function insertBlock(view: EditorView, text: string, cursorOffset?: number) {
-  const { from } = view.state.selection.main;
-  const line = view.state.doc.lineAt(from);
-  const atLineStart = line.from === from && line.text.trim() === "";
-  const prefix = atLineStart ? "" : "\n\n";
-  const insert = `${prefix}${text}`;
-  view.dispatch({
-    changes: { from, to: view.state.selection.main.to, insert },
-    selection: {
-      anchor: from + prefix.length + (cursorOffset ?? text.length),
-    },
-    scrollIntoView: true,
-  });
-  view.focus();
-}
-
-function cycleHeading(view: EditorView) {
-  const line = view.state.doc.lineAt(view.state.selection.main.head);
-  const match = /^(#{2,4})\s+/.exec(line.text);
-  const hashes = match?.[1] ?? "";
-  const next = !hashes ? "## " : hashes.length >= 4 ? "" : `${"#".repeat(hashes.length + 1)} `;
-  const strippedFrom = match ? match[0].length : 0;
-  view.dispatch({
-    changes: { from: line.from, to: line.from + strippedFrom, insert: next },
-    scrollIntoView: true,
-  });
-  view.focus();
-}
-
-function insertFootnote(view: EditorView) {
-  const doc = view.state.doc;
-  const existing = doc.toString().match(/\[\^(\d+)\]/g) ?? [];
-  const n = existing.length + 1;
-  const { from } = view.state.selection.main;
-  const tail = doc.length;
-  view.dispatch({
-    changes: [
-      { from, to: view.state.selection.main.to, insert: `[^${n}]` },
-      { from: tail, insert: `\n\n[^${n}]: ` },
-    ],
-    // Land in the definition, the part that still needs writing.
-    selection: { anchor: tail + `[^${n}]`.length + `\n\n[^${n}]: `.length },
-    scrollIntoView: true,
-  });
-  view.focus();
-}
-
-// Alt is mandatory on :::chart and :::diagram and the build fails without it, so the cursor lands inside alt="".
-const SCAFFOLDS = {
-  chart: {
-    label: "Chart",
-    hint: "Bar, line, dot or area from inline CSV",
-    text: [
-      ':::chart{type=bar x=name y=value title="" alt=""}',
-      "```csv",
-      "name,value",
-      "first,1",
-      "```",
-      "An optional caption.",
-      ":::",
-    ].join("\n"),
-    cursor: ':::chart{type=bar x=name y=value title="" alt="'.length,
-  },
-  diagram: {
-    label: "Diagram",
-    hint: "Mermaid, rendered by build:diagrams",
-    text: [
-      ':::diagram{title="" alt=""}',
-      "```mermaid",
-      "flowchart LR",
-      "  A[Start] --> B[End]",
-      "```",
-      "An optional caption.",
-      ":::",
-    ].join("\n"),
-    cursor: ':::diagram{title="" alt="'.length,
-  },
-  figure: {
-    label: "Figure",
-    hint: "An image with a caption",
-    text: [':::figure{src="" alt=""}', "A caption.", ":::"].join("\n"),
-    cursor: ':::figure{src="'.length,
-  },
-} as const;
-
-type ScaffoldName = keyof typeof SCAFFOLDS;
-
-const SCAFFOLD_GLYPHS: Record<ScaffoldName, React.ReactNode> = {
-  chart: (
-    <>
-      <path d="M4 20V10M10 20V4M16 20v-7M22 20H2" />
-    </>
-  ),
-  diagram: (
-    <>
-      <rect x="3" y="4" width="7" height="5" rx="1" />
-      <rect x="14" y="15" width="7" height="5" rx="1" />
-      <path d="M10 6.5h4a3 3 0 0 1 3 3V15" />
-    </>
-  ),
-  figure: (
-    <>
-      <rect x="3" y="4" width="18" height="13" rx="2" />
-      <path d="m3 14 4-4 5 5" />
-      <circle cx="15.5" cy="8.5" r="1.5" />
-      <path d="M6 21h12" />
-    </>
-  ),
-};
-
 // `state` lets the palette flag a target that is not live: linking a draft would 404 on the published page.
 export type LinkTarget = {
   slug: string;
   title: string;
   state: "published" | "scheduled" | "draft";
 };
-
-const LINK_RESULT_LIMIT = 8;
-
-function looksLikeUrl(text: string) {
-  return /^(https?:\/\/|mailto:|\/|#)/i.test(text.trim());
-}
 
 // Read off the document, not loader data: the root loader re-runs on client navigation and mints a different nonce.
 // The IDL property, not getAttribute: browsers hide the attribute after parsing so injected script cannot read it.
@@ -223,102 +97,27 @@ export default function MarkdownEditor({
   // React 19 renders a lazy component during SSR, so the chrome waits for mount or a no-script reader gets a dead toolbar.
   const [ready, setReady] = useState(false);
   const [slashAt, setSlashAt] = useState<{ from: number; top: number; left: number } | null>(null);
-  const [upload, setUpload] = useState<{ url: string; name: string } | null>(null);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [alt, setAlt] = useState("");
+  const { upload, setUpload, uploadError, alt, setAlt, uploadFile, insertFigure } =
+    useImageUpload(viewRef);
 
   const [stats, setStats] = useState(() => {
     const words = countWords(value);
     return { words, minutes: minutesForWords(words) };
   });
 
-  // Captured when Cmd+K is pressed, because focus leaves the editor and the selection can move after the blur.
-  const [linkAt, setLinkAt] = useState<{
-    from: number;
-    to: number;
-    top: number;
-    left: number;
-  } | null>(null);
-  const [linkQuery, setLinkQuery] = useState("");
-  const [linkIndex, setLinkIndex] = useState(0);
-  const linkInputRef = useRef<HTMLInputElement>(null);
-
-  const linkMatches = (() => {
-    const needle = linkQuery.trim().toLowerCase();
-    if (looksLikeUrl(needle)) return [];
-    const pool = needle
-      ? linkTargets.filter(
-          (t) =>
-            t.title.toLowerCase().includes(needle) || t.slug.toLowerCase().includes(needle),
-        )
-      : linkTargets;
-    return pool.slice(0, LINK_RESULT_LIMIT);
-  })();
-
-  // Callers `void` this; `uploadMedia` never rejects, so every failure ends here as a message.
-  const uploadFile = async (file: File) => {
-    setUploadError(null);
-    setUpload({ url: "", name: file.name });
-    const result = await uploadMedia(file);
-    if ("error" in result) {
-      setUpload(null);
-      setUploadError(result.error);
-      return;
-    }
-    setUpload({ url: result.url, name: file.name });
-    setAlt("");
-  };
-
-  const openLinkPalette = (view: EditorView) => {
-    const { from, to } = view.state.selection.main;
-    const parent = host.current;
-    const coords = view.coordsAtPos(from);
-    if (!parent || !coords) return;
-    const box = parent.getBoundingClientRect();
-    const selected = view.state.sliceDoc(from, to);
-    setLinkQuery(selected);
-    setLinkIndex(0);
-    setLinkAt({ from, to, top: coords.bottom - box.top, left: coords.left - box.left });
-  };
-
-  const closeLinkPalette = () => {
-    const view = viewRef.current;
-    const at = linkAt;
-    setLinkAt(null);
-    setLinkQuery("");
-    setLinkIndex(0);
-    if (!view || !at) return;
-    view.dispatch({ selection: { anchor: at.from, head: at.to } });
-    view.focus();
-  };
-
-  // The cursor lands after the link: the next keystroke is almost always the sentence continuing.
-  const insertLink = (href: string, fallbackLabel: string) => {
-    const view = viewRef.current;
-    const at = linkAt;
-    if (!view || !at) return;
-    const selected = view.state.sliceDoc(at.from, at.to);
-    const label = selected || fallbackLabel || href;
-    const markdown = `[${label}](${href})`;
-    setLinkAt(null);
-    setLinkQuery("");
-    setLinkIndex(0);
-    view.dispatch({
-      changes: { from: at.from, to: at.to, insert: markdown },
-      selection: { anchor: at.from + markdown.length },
-    });
-    view.focus();
-  };
-
-  const commitLink = () => {
-    const typed = linkQuery.trim();
-    if (looksLikeUrl(typed)) {
-      insertLink(typed, typed);
-      return;
-    }
-    const chosen = linkMatches[linkIndex];
-    if (chosen) insertLink(`/blog/${chosen.slug}`, chosen.title);
-  };
+  const {
+    linkAt,
+    linkQuery,
+    setLinkQuery,
+    linkIndex,
+    setLinkIndex,
+    linkInputRef,
+    linkMatches,
+    openLinkPalette,
+    closeLinkPalette,
+    insertLink,
+    commitLink,
+  } = useLinkPalette({ viewRef, host, linkTargets });
 
   useEffect(() => {
     const parent = host.current;
@@ -437,60 +236,11 @@ export default function MarkdownEditor({
     insertBlock(view, s.text, s.cursor);
   };
 
-  const insertFigure = () => {
-    const view = viewRef.current;
-    if (!view || !upload?.url || !alt.trim()) return;
-    insertBlock(
-      view,
-      [`:::figure{src="${upload.url}" alt="${alt.trim().replace(/"/g, "&quot;")}"}`, ":::"].join(
-        "\n",
-      ),
-    );
-    setUpload(null);
-    setAlt("");
-  };
 
   return (
     <div className="md-editor">
       {ready ? (
-      <div className="md-toolbar" role="toolbar" aria-label="Markdown formatting">
-        <ToolButton label="Bold" hint="Ctrl or Cmd + B" onClick={run((v) => wrap(v, "**"))}>
-          <path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z" />
-        </ToolButton>
-        <ToolButton label="Italic" hint="Ctrl or Cmd + I" onClick={run((v) => wrap(v, "_"))}>
-          <path d="M15 4h-5M14 20H9M14 4 10 20" />
-        </ToolButton>
-        <ToolButton
-          label="Link"
-          hint="Ctrl or Cmd + K, searches your posts"
-          onClick={run(openLinkPalette)}
-        >
-          <path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1" />
-          <path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1" />
-        </ToolButton>
-        <ToolButton label="Heading level" hint="Cycles h2, h3, h4, none" onClick={run(cycleHeading)}>
-          <path d="M6 4v16M18 4v16M6 12h12" />
-        </ToolButton>
-        <ToolButton label="Code" hint="Ctrl or Cmd + E" onClick={run((v) => wrap(v, "`"))}>
-          <path d="m8 6-6 6 6 6M16 6l6 6-6 6" />
-        </ToolButton>
-        <ToolButton label="Footnote" hint="Reference plus definition" onClick={run(insertFootnote)}>
-          <path d="M4 6h10M4 12h10M4 18h7" />
-          <path d="M18 5v6M21 8h-6" />
-        </ToolButton>
-        <span className="md-toolbar-sep" aria-hidden="true" />
-        {(Object.keys(SCAFFOLDS) as ScaffoldName[]).map((name) => (
-          <ToolButton
-            key={name}
-            label={SCAFFOLDS[name].label}
-            hint={SCAFFOLDS[name].hint}
-            onClick={() => scaffold(name)}
-          >
-            {SCAFFOLD_GLYPHS[name]}
-          </ToolButton>
-        ))}
-          <span className="md-toolbar-hint muted">Type / on an empty line</span>
-        </div>
+        <EditorToolbar run={run} openLinkPalette={openLinkPalette} scaffold={scaffold} />
       ) : null}
 
       <div className="md-surface" ref={host} />
@@ -709,36 +459,5 @@ export default function MarkdownEditor({
         {slug ? `Editing ${slug}` : "Editing a new post"}
       </p>
     </div>
-  );
-}
-
-function ToolButton({
-  label,
-  hint,
-  onClick,
-  children,
-}: {
-  label: string;
-  hint: string;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button type="button" className="md-tool" onClick={onClick} title={`${label}. ${hint}`}>
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        {children}
-      </svg>
-      <span className="sr-only">{label}</span>
-    </button>
   );
 }

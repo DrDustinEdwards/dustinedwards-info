@@ -3,19 +3,14 @@ import { describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
 
+import { seedPost } from "./seed";
+
 /* Two posts can share a publish_at (a date-only schedule lands both at midnight). The neighbours
  * follow the listing's order, publish_at then id, so neither skips the other. */
 
 const AT = Math.floor(Date.UTC(2025, 5, 1) / 1000);
 
-async function seed(slug: string, publishAt: number) {
-  await env.DB.prepare(
-    `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-     VALUES (?1, 'post', ?2, 'A body.', 'published', ?3)`,
-  )
-    .bind(slug, `Title for ${slug}`, publishAt)
-    .run();
-}
+const seed = (slug: string, publishAt: number) => seedPost(slug, { publishAt });
 
 describe("getBlogPost neighbours", () => {
   it("LINKS TWO POSTS THAT SHARE A PUBLISH_AT to each other, in the listing's order", async () => {
