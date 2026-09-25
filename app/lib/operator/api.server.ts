@@ -290,6 +290,8 @@ async function decideMentionTool(
       changed: result.changed,
       slug: result.slug,
       purged: result.changed ? `post:${result.slug}` : null,
+      // True when the page's cache purge failed: the change is stored but the page stays stale.
+      purgeFailed: result.purged === false,
     },
   };
 }
@@ -381,6 +383,8 @@ function translate(error: unknown): ToolResult {
     };
   }
 
+  // Not a recognized failure: logged with its stack, since the caller receives only the message.
+  console.error("operator tool failed with an unrecognized error", error);
   return {
     ok: false,
     status: 500,
@@ -477,6 +481,7 @@ async function savePostTool(
       firstPublished: result.firstPublished,
       // The AI index cannot fail a save, so its outcome is reported rather than raised.
       askSync: result.askSync,
+      purged: result.purged,
     },
   };
 }
@@ -501,7 +506,12 @@ async function deletePostTool(
 
   return {
     ok: true,
-    data: { slug, commitSha: result.commitSha, askRemoved: result.askRemoved },
+    data: {
+      slug,
+      commitSha: result.commitSha,
+      purged: result.purged,
+      askRemoval: result.askRemoval,
+    },
   };
 }
 
@@ -814,6 +824,8 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
   let repaired = 0;
+  // A failed purge never fails the repair, but it is counted: those pages stay stale until expiry.
+  let unpurged = 0;
   for (const slug of [...drift.changed, ...drift.unrowed]) {
     const entry = fileBySlug.get(slug);
     if (!entry) continue;
@@ -824,13 +836,13 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
           `mid-repair. Re-run sync_posts.`,
       );
     }
-    await renderAndWrite(env, slug, file.content, entry.sha);
+    if (!(await renderAndWrite(env, slug, file.content, entry.sha)).purged) unpurged += 1;
     repaired += 1;
   }
 
   let removed = 0;
   for (const slug of drift.unfiled) {
-    await deletePostFromD1(env, slug);
+    if (!(await deletePostFromD1(env, slug)).purged) unpurged += 1;
     removed += 1;
   }
 
@@ -845,6 +857,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
     data: {
       repaired,
       removed,
+      unpurged,
       expected: after.files.length,
       present: after.files.length - residual.changed.length - residual.unrowed.length,
       converged: residualCount === 0,
@@ -874,13 +887,19 @@ export async function syncStatus(env: OperatorEnv) {
     .prepare("SELECT COUNT(*) AS n FROM search_identity_docsize")
     .first<{ n: number }>();
 
+  // A COUNT always returns one row; a missing one is an unreadable answer, never zero posts.
+  const counted = (row: { n: number } | null | undefined, what: string) => {
+    if (typeof row?.n !== "number") throw new Error(`syncStatus: the ${what} count returned no row`);
+    return row.n;
+  };
+
   return {
     headSha: await currentHead(env),
     artifactPosts: repoPosts,
-    d1Posts: totalRow?.n ?? 0,
-    d1PubliclyVisible: visibleRow?.n ?? 0,
+    d1Posts: counted(totalRow, "posts"),
+    d1PubliclyVisible: counted(visibleRow, "publicly visible posts"),
     // The docsize shadow table: `COUNT(*)` on the index reads through to the content table and never drifts.
-    searchIndexDocs: indexed?.n ?? 0,
+    searchIndexDocs: counted(indexed, "search index"),
     askConfigured: askAvailable(env),
     githubConfigured: Boolean(env.GITHUB_TOKEN),
     // Read from KV: a record of a D1 failure kept in D1 is missing exactly when it matters. `known: false`

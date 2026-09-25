@@ -120,6 +120,8 @@ describe("the watchdog's repair loop", () => {
     expect(tools).toEqual(["sync_posts"]);
     expect(sent).toHaveLength(1);
     expect(sent[0]?.text).toContain(refusal);
+    /* No API token here, so the rate read "ok" without being read; the mail must say so. */
+    expect(sent[0]?.text).toContain("error rate NOT CHECKED");
   });
 });
 
