@@ -9,7 +9,7 @@ import { decodeEntities } from "./publications/entities.mjs";
 export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 
 // Not the apex: until DNS moves, the apex is the legacy WordPress site.
-export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
+const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
 // `role` and `affiliation` are structured data (jobTitle, worksFor), so they stay short and literal.
 export const SITE = {
@@ -23,7 +23,7 @@ export const SITE = {
 } as const;
 
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
-export type PostSocialFields = {
+type PostSocialFields = {
   slug: string;
   title: string;
   description?: string | null;
@@ -139,7 +139,7 @@ export function cacheTags(slug?: string): string {
   return slug ? `post:${slug},posts` : "posts";
 }
 
-export const PAGES_CACHE_TAG = "pages";
+const PAGES_CACHE_TAG = "pages";
 
 /**
  * The Renderer stamps `EDGE_CACHE_CONTROL` beside `SHARED_CACHE_CONTROL`; pass `edge` only to depart
@@ -161,7 +161,7 @@ export const HTML_VARY_ACCEPT = "Accept";
  */
 export const NO_STORE_CACHE_CONTROL = "private, no-store";
 
-export type ArticleSeo = {
+type ArticleSeo = {
   slug: string;
   title: string;
   description: string | null;
@@ -173,7 +173,7 @@ export type ArticleSeo = {
 };
 
 // Derived once so the JSON-LD and Open Graph outputs cannot drift apart.
-export function articleFacts(origin: string, post: ArticleSeo) {
+function articleFacts(origin: string, post: ArticleSeo) {
   return {
     publishedTime: post.publishAt?.toISOString(),
     modifiedTime: (post.updatedAt ?? post.publishAt)?.toISOString(),
@@ -264,7 +264,7 @@ export const GERMOMICS_X_URL = "https://x.com/Germomics";
 // The footer's `rel="me"` profiles, in order. `check:machine-readable` reads this list.
 export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as const;
 
-export const OWNER_SAME_AS = [
+const OWNER_SAME_AS = [
   ...OWNER_PROFILES,
   OWNER_FACULTY_PAGE,
   GERMOMICS_URL,

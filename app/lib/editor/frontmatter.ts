@@ -267,7 +267,7 @@ export function splitReading(raw: string) {
  * The hidden marker separates "the author removed every row" from "the control never rendered",
  * which both arrive as no fields. A half row is kept so the schema refuses it by name.
  */
-export function furtherReadingFromForm(form: FormData, carried: string): string {
+function furtherReadingFromForm(form: FormData, carried: string): string {
   if (form.get(FR_CONTROL) === null) return carried;
 
   const titles = form.getAll(FR_TITLE).map((v) => String(v));

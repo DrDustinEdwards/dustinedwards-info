@@ -3,16 +3,16 @@
 
 import type { OperatorEnv } from "~/lib/operator/auth.server";
 
-export type BackupEnv = Pick<OperatorEnv, "MEDIA" | "MEDIA_BACKUP">;
+type BackupEnv = Pick<OperatorEnv, "MEDIA" | "MEDIA_BACKUP">;
 
-export interface TwinComparison {
+interface TwinComparison {
   key: string;
   present: boolean;
   identical: boolean;
   reason: string;
 }
 
-export interface BackupStatus {
+interface BackupStatus {
   objects: number;
   twins: number;
   missing: string[];
