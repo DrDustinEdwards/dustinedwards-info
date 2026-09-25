@@ -3,10 +3,18 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import {
   SHIP_BUSY_NEEDLES,
+  SHIP_LOCK_NEEDLE,
   busyProcesses,
+  lockHolder,
   normaliseCommand,
+  releaseLock,
+  takeLock,
 } from "../scripts/lib/child-processes.mjs";
 
 // `ship.mjs` cannot be imported by a test (importing it RUNS a ship), so the list lives in a shared module.
@@ -109,4 +117,46 @@ test("one process matching two needles is reported once", () => {
 test("an empty table finds nothing, which the caller must not read as clear", () => {
   // `readProcessTable` returns an empty map when the listing itself failed.
   assert.deepEqual(busyProcesses(new Map(), SHIP_NEEDLES), []);
+});
+
+test("THE PLANT: a second taker is refused while the holder is alive", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
+  const lock = join(dir, "ship.lock");
+  const table = new Map([[500, { ppid: 1, command: normaliseCommand("C:/nodejs/node.exe C:/repo/scripts/ship.mjs") }]]);
+  try {
+    assert.deepEqual(takeLock(lock, table, SHIP_LOCK_NEEDLE, 500), { ok: true, tookOver: null });
+    assert.deepEqual(takeLock(lock, table, SHIP_LOCK_NEEDLE, 600), { ok: false, holder: 500 });
+    assert.equal(lockHolder(lock, table, SHIP_LOCK_NEEDLE), 500);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a lock left by a dead ship, or by a pid now reused, is taken over and reported", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
+  const lock = join(dir, "ship.lock");
+  try {
+    writeFileSync(lock, "500");
+    const reused = new Map([[500, { ppid: 1, command: "chrome.exe --type=renderer" }]]);
+    assert.equal(lockHolder(lock, reused, SHIP_LOCK_NEEDLE), null, "a reused pid holds nothing");
+    assert.deepEqual(takeLock(lock, reused, SHIP_LOCK_NEEDLE, 600), { ok: true, tookOver: 500 });
+    assert.equal(readFileSync(lock, "utf8"), "600");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("release removes only the releaser's own lock", () => {
+  const dir = mkdtempSync(join(tmpdir(), "ship-lock-"));
+  const lock = join(dir, "ship.lock");
+  try {
+    writeFileSync(lock, "500");
+    releaseLock(lock, 600);
+    assert.equal(existsSync(lock), true, "another ship's lock is not this one's to remove");
+    releaseLock(lock, 500);
+    assert.equal(existsSync(lock), false);
+    releaseLock(lock, 500);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

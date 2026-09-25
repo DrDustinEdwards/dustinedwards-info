@@ -31,12 +31,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   } catch (error) {
     // A 200 carrying the pipeline's message: a half-typed directive is ordinary, and a non-2xx would
     // make the client treat a typo as a broken endpoint and stop previewing.
-    const message =
-      error instanceof ContentError || error instanceof EditorError
-        ? error.message
-        : error instanceof Error
-          ? error.message
-          : String(error);
-    return Response.json({ error: message });
+    if (error instanceof ContentError || error instanceof EditorError) {
+      return Response.json({ error: error.message });
+    }
+    // Anything else is this endpoint failing, not the author's markdown: logged, and a 500.
+    console.error("admin preview render failed", error);
+    const message = error instanceof Error ? error.message : String(error);
+    return Response.json({ error: `The preview failed: ${message}` }, { status: 500 });
   }
 }

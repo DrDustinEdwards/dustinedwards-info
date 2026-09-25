@@ -1,7 +1,17 @@
 // Windows reuses pids, so nothing here kills on a pid alone: the live command line must still match.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, appendFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { dirname } from "node:path";
 
 const isWindows = process.platform === "win32";
@@ -68,20 +78,28 @@ export function readProcessTable() {
 /**
  * Killing the gate kills the wrapper `spawn()` returned but not its grandchildren, so record those.
  *
+ * A DEAD root needs `childNeedle`: Windows never clears a parent pid, so an unrelated process whose
+ * long-dead parent had the pid the root later reused (explorer.exe, a browser) reads as its child.
+ * The needle is what the root's own direct children must be running; deeper levels follow from them.
+ * Elsewhere an orphan is reparented, so a stale parent pid cannot occur and the needle is not applied.
+ *
  * @param {number} rootPid
  * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {string} [childNeedle]
  * @returns {number[]}
  */
-export function descendantPids(rootPid, table) {
+export function descendantPids(rootPid, table, childNeedle) {
   /** @type {number[]} */
   const found = [];
   let frontier = [rootPid];
+  const needle = isWindows && childNeedle !== undefined ? normaliseCommand(childNeedle) : null;
   // Bounded: a reused pid can manufacture a parentage cycle.
   for (let depth = 0; depth < table.size && frontier.length > 0; depth += 1) {
     /** @type {number[]} */
     const next = [];
     for (const [pid, row] of table) {
       if (pid === rootPid || found.includes(pid)) continue;
+      if (depth === 0 && needle !== null && !row.command.includes(needle)) continue;
       if (frontier.includes(row.ppid)) {
         found.push(pid);
         next.push(pid);
@@ -190,34 +208,58 @@ export class ChildRegistry {
     try {
       mkdirSync(dirname(this.filePath), { recursive: true });
       appendFileSync(this.filePath, `${JSON.stringify({ pid, kind, needles })}\n`);
-    } catch {
-      // An unwritable registry costs the next run its cleanup, never this run its gate result.
+    } catch (error) {
+      // An unwritable registry costs the next run its cleanup, never this run its gate result,
+      // but it is said out loud: the next run's preflight will not know about this child.
+      process.stderr.write(
+        `  registry: could not record pid ${pid} (${kind}) in ${this.filePath}: ` +
+          `${error instanceof Error ? error.message : String(error)}\n`,
+      );
     }
+  }
+
+  /**
+   * Per line: a run killed mid-append leaves one torn line, and it must not hide the others.
+   *
+   * @returns {{ entries: { pid: number, kind: string, needles: string[] }[], torn: number }}
+   */
+  readAll() {
+    if (!existsSync(this.filePath)) return { entries: [], torn: 0 };
+    const entries = [];
+    let torn = 0;
+    for (const line of readFileSync(this.filePath, "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      let entry;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        torn += 1;
+        continue;
+      }
+      if (entry && Number.isInteger(entry.pid) && Array.isArray(entry.needles) && entry.needles.length > 0) {
+        entries.push(entry);
+      } else {
+        torn += 1;
+      }
+    }
+    return { entries, torn };
   }
 
   /** @returns {{ pid: number, kind: string, needles: string[] }[]} */
   read() {
-    if (!existsSync(this.filePath)) return [];
-    try {
-      return readFileSync(this.filePath, "utf8")
-        .split("\n")
-        .filter((line) => line.trim())
-        .map((line) => JSON.parse(line))
-        .filter(
-          (entry) =>
-            entry && Number.isInteger(entry.pid) && Array.isArray(entry.needles) && entry.needles.length > 0,
-        );
-    } catch {
-      return [];
-    }
+    return this.readAll().entries;
   }
 
   clear() {
     try {
       mkdirSync(dirname(this.filePath), { recursive: true });
       writeFileSync(this.filePath, "");
-    } catch {
-      /* nothing to clear */
+    } catch (error) {
+      // Safe to carry on: the next preflight re-checks every entry's command line before a kill.
+      process.stderr.write(
+        `  registry: could not clear ${this.filePath}: ` +
+          `${error instanceof Error ? error.message : String(error)}\n`,
+      );
     }
   }
 
@@ -230,7 +272,8 @@ export class ChildRegistry {
    */
   preflight(options = {}) {
     const exclude = options.excludePid ?? process.pid;
-    const entries = this.read().filter((entry) => entry.pid !== exclude);
+    const { entries: recorded, torn } = this.readAll();
+    const entries = recorded.filter((entry) => entry.pid !== exclude);
     const result = {
       cleared: 0,
       stale: 0,
@@ -239,6 +282,11 @@ export class ChildRegistry {
       unverifiable: 0,
       notes: /** @type {string[]} */ ([]),
     };
+    if (torn > 0) {
+      result.notes.push(
+        `${torn} registry line(s) could not be read (a run killed mid-write), so any child they named was not swept`,
+      );
+    }
 
     if (entries.length === 0) {
       this.clear();
@@ -321,3 +369,101 @@ export const SHIP_BUSY_NEEDLES = [
   // Two ships on one checkout run two builds into one build/ (2026-09-24: one wiped the other's manifest).
   { needle: "scripts/ship.mjs", what: "another ship" },
 ];
+
+/**
+ * A recorded pid is killed only while it still hangs off the recorded tree: alive, and its live
+ * parent is the recorded runner or another recorded pid. Windows reuses pids, so a recorded pid
+ * alone may now be anything; a reused pid's parent is almost never in the same recorded set.
+ *
+ * @param {number[]} recorded pids sampled from the runner's tree
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {number | null} rootPid the runner that owned the tree, when known
+ * @returns {number[]}
+ */
+export function recordedTreeLeftovers(recorded, table, rootPid) {
+  const family = new Set(recorded);
+  if (rootPid !== null && rootPid > 0) family.add(rootPid);
+  return recorded.filter((pid) => {
+    const live = table.get(pid);
+    return live !== undefined && pid !== rootPid && family.has(live.ppid);
+  });
+}
+
+/**
+ * The pid a lock file names while that pid is alive and still the locking script: a crashed
+ * holder's file names a dead pid, or one Windows has handed to something else.
+ *
+ * @param {string} lockPath
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {string} needle what the holder's command line must contain
+ * @returns {number | null}
+ */
+export function lockHolder(lockPath, table, needle) {
+  let text;
+  try {
+    text = readFileSync(lockPath, "utf8");
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return null;
+    throw error;
+  }
+  const pid = Number(text.trim());
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  const live = table.get(pid);
+  return live && live.command.includes(normaliseCommand(needle)) ? pid : null;
+}
+
+/**
+ * Created exclusively, so two takers cannot both win. A file left by a dead holder is taken over
+ * and reported. Needs a readable table, because only the table can tell a live holder from a dead one.
+ *
+ * @param {string} lockPath
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {string} needle
+ * @param {number} [self]
+ * @returns {{ ok: true, tookOver: number | null } | { ok: false, holder: number }}
+ */
+export function takeLock(lockPath, table, needle, self = process.pid) {
+  mkdirSync(dirname(lockPath), { recursive: true });
+  /** @type {number | null} */
+  let tookOver = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const fd = openSync(lockPath, "wx");
+      writeSync(fd, String(self));
+      closeSync(fd);
+      return { ok: true, tookOver };
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "EEXIST") throw error;
+    }
+    const holder = lockHolder(lockPath, table, needle);
+    if (holder !== null && holder !== self) return { ok: false, holder };
+    tookOver = Number(readFileSync(lockPath, "utf8").trim()) || 0;
+    rmSync(lockPath, { force: true });
+  }
+  // Lost the race for a stale file to another taker, which now holds it.
+  const holder = Number(readFileSync(lockPath, "utf8").trim()) || 0;
+  return { ok: false, holder };
+}
+
+/**
+ * Removes the lock only while this process still holds it.
+ * @param {string} lockPath
+ * @param {number} [self]
+ */
+export function releaseLock(lockPath, self = process.pid) {
+  let text;
+  try {
+    text = readFileSync(lockPath, "utf8");
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return;
+    throw error;
+  }
+  if (text.trim() === String(self)) rmSync(lockPath, { force: true });
+}
+
+/**
+ * Relative to the checkout root. Held for a whole ship, so a gate run started after ship's one-time
+ * process scan still finds it (check-all refuses while a live ship holds it).
+ */
+export const SHIP_LOCK_FILE = ".gate-pids/ship.lock";
+export const SHIP_LOCK_NEEDLE = "ship.mjs";

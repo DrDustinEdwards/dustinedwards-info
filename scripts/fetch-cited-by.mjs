@@ -36,6 +36,8 @@ async function main() {
   const works = {};
   let singles = 0;
   let lists = 0;
+  /** @type {string[]} A 429 or a 5xx is not an answer, so it must not read as "no citations". */
+  const failed = [];
 
   const get = async (/** @type {URL} */ url) => {
     url.searchParams.set("api_key", apiKey);
@@ -51,11 +53,17 @@ async function main() {
     );
     singles += 1;
     if (!single.body) {
+      // 404 is OpenAlex saying it does not know the DOI, a real answer. Anything else is a failed read.
+      if (single.status !== 404) failed.push(`${id} (${doi}): work lookup HTTP ${single.status}`);
       console.log(`  MISS ${id} (${doi}) HTTP ${single.status}`);
       continue;
     }
     const openalexId = String(single.body.id ?? "").split("/").pop();
-    const total = Number(single.body.cited_by_count ?? 0);
+    const total = single.body.cited_by_count;
+    if (!Number.isInteger(total) || total < 0) {
+      failed.push(`${id} (${doi}): cited_by_count is ${JSON.stringify(total)}, not a count`);
+      continue;
+    }
     if (!openalexId || total === 0) {
       works[doi] = { openalexId: openalexId ?? null, total, citing: [] };
       continue;
@@ -68,11 +76,15 @@ async function main() {
     list.searchParams.set("select", "id,doi,title,publication_year,primary_location");
     const cited = await get(list);
     lists += 1;
+    if (!Array.isArray(cited.body?.results)) {
+      failed.push(`${id} (${doi}): citing-works list HTTP ${cited.status}, no results array`);
+      continue;
+    }
 
     works[doi] = {
       openalexId,
       total,
-      citing: (cited.body?.results ?? []).map((/** @type {any} */ w) => ({
+      citing: cited.body.results.map((/** @type {any} */ w) => ({
         title: w.title ?? null,
         year: w.publication_year ?? null,
         venue: w.primary_location?.source?.display_name ?? null,
@@ -102,6 +114,15 @@ async function main() {
     `\nresolved ${resolved} of ${dois.length}; ${citing} citing works; ` +
       `${singles} singleton + ${lists} list queries = ${singles + lists * 10} credits`,
   );
+
+  if (failed.length > 0) {
+    console.error(
+      `\n${failed.length} paper(s) could not be read, so their citations are unknown rather than ` +
+        `absent:\n  ${failed.join("\n  ")}\nNothing was written. Re-run when OpenAlex answers.`,
+    );
+    process.exitCode = 1;
+    return;
+  }
 
   if (process.argv.includes("--write")) {
     writeFileSync(OUT_PATH, `${JSON.stringify(artifact, null, 2)}\n`, "utf8");

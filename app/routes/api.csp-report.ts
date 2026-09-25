@@ -57,7 +57,19 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   /* `request.text()` materializes the whole body before a slice, so `readCapped` stops the stream at the cap. */
-  const capped = await readCapped(request, MAX_BODY_BYTES);
+  let capped: string | null;
+  try {
+    capped = await readCapped(request, MAX_BODY_BYTES);
+  } catch (error) {
+    // Logged and still 204, the rule above: a 500 here would make the browser send the report again.
+    console.error(
+      `[csp-report] body unreadable: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return new Response(null, {
+      status: 204,
+      headers: { "cache-control": "private, no-store" },
+    });
+  }
   if (capped === null) {
     return new Response("Payload Too Large", {
       status: 413,

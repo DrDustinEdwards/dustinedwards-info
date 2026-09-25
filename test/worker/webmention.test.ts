@@ -5,11 +5,12 @@ import { RouterContextProvider, createRoutesStub } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { approvedMentionsFor } from "~/db";
+import { adminActorContext } from "~/lib/auth.server";
 import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
-import { FAILURE_REASONS } from "~/lib/webmention/verify.server";
+import { FAILURE_REASONS, inspectSource } from "~/lib/webmention/verify.server";
 import { middleware as adminMiddleware } from "~/routes/admin";
 import AdminMentions, {
   action as mentionsAction,
@@ -55,7 +56,8 @@ const form = (source: string, target: string) =>
 
 type StubPage =
   | { body: string; contentType?: string; status?: number }
-  | { networkError: true };
+  | { networkError: true }
+  | { redirect: string };
 
 /* A URL with no recorded page throws rather than reaching the network. `gate` holds serving
  * so a case can observe the row BEFORE verification overwrites it. */
@@ -71,6 +73,9 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
     }
     if (gate) await gate;
     if ("networkError" in page) throw new TypeError("network failure");
+    if ("redirect" in page) {
+      return new Response(null, { status: 302, headers: { location: page.redirect } });
+    }
     return new Response(page.body, {
       status: page.status ?? 200,
       headers: { "content-type": page.contentType ?? "text/html; charset=utf-8" },
@@ -522,6 +527,69 @@ describe("/webmention accepts and verifies", () => {
     expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.fetchError);
   });
 
+  it("FOLLOWS a redirect to another public page and verifies the page it lands on", async () => {
+    const source = "https://elsewhere.example/moved";
+    const landed = "https://elsewhere.example/moved-here";
+    stubSources({ [source]: { redirect: "/moved-here" }, [landed]: { body: pageLinkingTo(TARGET) } });
+
+    const ctx = createExecutionContext();
+    await webmentionAction({
+      request: wm(form(source, TARGET), { ip: "203.0.113.58" }),
+      context: routeContext(ctx),
+    } as never);
+    await waitOnExecutionContext(ctx);
+
+    expect((await mentionRow(source))?.status).toBe("pending");
+  });
+
+  it("REFUSES a redirect to a loopback name or an IP literal, which the first URL could not name", async () => {
+    for (const [index, hop] of ["http://localhost/admin", "http://169.254.169.254/latest"].entries()) {
+      const source = `https://elsewhere.example/bounce-${index}`;
+      /* The hop has no recorded page, so reaching it would throw inside the stub. */
+      stubSources({ [source]: { redirect: hop } });
+
+      const ctx = createExecutionContext();
+      await webmentionAction({
+        request: wm(form(source, TARGET), { ip: `203.0.113.${70 + index}` }),
+        context: routeContext(ctx),
+      } as never);
+      await waitOnExecutionContext(ctx);
+
+      expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.redirectRefused);
+    }
+  });
+
+  it("REFUSES a redirect onto the canonical origin when the target names the other host", async () => {
+    /* Before the cutover the route accepts targets on the request's host too, so a hop back to
+     * SITE_ORIGIN must be refused even when the target's own origin is a different one. */
+    const source = "https://elsewhere.example/to-canonical";
+    stubSources({ [source]: { redirect: `${SITE_ORIGIN}/blog/${TARGET_SLUG}` } });
+    const verdict = await inspectSource(source, `https://other-host.example/blog/${TARGET_SLUG}`);
+    expect(verdict).toEqual({ status: "failed", failureReason: FAILURE_REASONS.redirectRefused });
+  });
+
+  it("ANSWERS 400 WHEN THE REQUEST BODY BREAKS MID-READ, never a 500", async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("source=https://a.example/"));
+        controller.error(new Error("planted connection reset"));
+      },
+    });
+    const request = new Request(`${SITE_ORIGIN}/webmention`, {
+      method: "POST",
+      headers: {
+        "cf-connecting-ip": "203.0.113.90",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+    const response = await webmentionAction({
+      request,
+      context: routeContext(createExecutionContext()),
+    } as never);
+    expect(response.status).toBe(400);
+  });
+
   it("STORES A SCRIPT-SHAPED AUTHOR NAME AS THAT LITERAL TEXT", async () => {
     /* Hostile h-card: it must be stored as the CHARACTERS, unexecuted and unstripped. The source
      * entity-encodes it so `textContent` yields the literal string, as a real hostile page would. */
@@ -635,9 +703,12 @@ describe("the moderation queue", () => {
 
   async function runAction(body: Record<string, string>) {
     const ctx = createExecutionContext();
+    /* The admin layout sets the actor; the action hands it to `decideMention` for the policy checks. */
+    const context = routeContext(ctx);
+    context.set(adminActorContext, { kind: "admin", email: "admin@example.com" });
     return (await mentionsAction({
       request: adminPost(body),
-      context: routeContext(ctx),
+      context,
     } as never)) as unknown as {
       data: {
         ok?: boolean;
@@ -687,11 +758,16 @@ describe("the moderation queue", () => {
     const a = await seedMention(unverified, "unverified", 1);
     const b = await seedMention(failed, "failed", 1);
 
-    await runAction({ intent: "approve", id: String(a) });
-    await runAction({ intent: "approve", id: String(b) });
+    const first = await runAction({ intent: "approve", id: String(a) });
+    const second = await runAction({ intent: "approve", id: String(b) });
 
     expect(await statusOf(unverified)).toBe("unverified");
     expect(await statusOf(failed)).toBe("failed");
+    /* Nothing moved, so the page must not say "approved". */
+    for (const result of [first, second]) {
+      expect(result.data.ok).toBe(false);
+      expect(result.data.message).toMatch(/^Nothing changed/);
+    }
   });
 
   it("REFUSES A DELETE WITH NO TYPED CONFIRMATION, in the ACTION", async () => {
@@ -1043,5 +1119,33 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     expect(link).toContain(`/blog/${POST_SLUG}.md`);
     /* One header, two values, comma joined, which is how RFC 8288 spells it. */
     expect(link?.split(", ")).toHaveLength(2);
+  });
+});
+
+describe("/webmention on a body stream that breaks", () => {
+  it("answers 400, not a 500, and stores nothing", async () => {
+    const before = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    const broken = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("source=https%3A%2F%2Felsewhere"));
+        controller.error(new Error("planted stream failure"));
+      },
+    });
+    const ctx = createExecutionContext();
+    const response = await webmentionAction({
+      request: new Request(`${SITE_ORIGIN}/webmention`, {
+        method: "POST",
+        headers: {
+          "cf-connecting-ip": "203.0.113.77",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: broken,
+      }),
+      context: routeContext(ctx),
+    } as never);
+
+    expect(response.status).toBe(400);
+    const after = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    expect(after?.n).toBe(before?.n);
   });
 });

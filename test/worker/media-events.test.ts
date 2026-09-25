@@ -114,3 +114,30 @@ describe("the queue consumer derives the placeholder", () => {
     expect(row?.placeholder).toBe("data:image/webp;base64,PRIOR");
   });
 });
+
+describe("the queue consumer and a failed Images read", () => {
+  it("KEEPS THE STORED SIZES and asks for a retry instead of acking", async () => {
+    const key = await seedObject("images-outage");
+    const db = env as unknown as Parameters<typeof mediaRecord>[0];
+    await handleMediaEvents(batchFor(key).batch, envWithImages({ width: 800, height: 600 }, true));
+    expect((await mediaRecord(db, key))?.width, "the seed did not measure").toBe(800);
+
+    const measuring = envWithImages(null, true) as unknown as { IMAGES: object };
+    const failing = {
+      ...env,
+      IMAGES: {
+        ...measuring.IMAGES,
+        info: async () => {
+          throw new Error("planted Images outage");
+        },
+      },
+    } as unknown as Parameters<typeof handleMediaEvents>[1];
+    const { batch, acked } = batchFor(key);
+    await handleMediaEvents(batch, failing);
+
+    const row = await mediaRecord(db, key);
+    expect(acked).toEqual(["retry"]);
+    expect(row?.width).toBe(800);
+    expect(row?.height).toBe(600);
+  });
+});

@@ -68,23 +68,33 @@ function compare(source: R2Object, twin: R2Object | null): TwinComparison {
   return { key: source.key, present: true, identical: true, reason: "etag and size match" };
 }
 
-// `objects` is reported so zero missing cannot be mistaken for zero examined.
-export async function backupStatus(env: BackupEnv): Promise<BackupStatus> {
+// The mismatched keys travel beside the display strings, so a repair never parses a key back out of
+// prose: a key containing " (" would be cut short and the wrong object copied.
+async function compareBuckets(env: BackupEnv) {
   const [sources, twins] = await Promise.all([listAll(env.MEDIA), listAll(env.MEDIA_BACKUP)]);
   const twinByKey = new Map(twins.map((t) => [t.key, t]));
 
   const missing: string[] = [];
   const mismatched: string[] = [];
+  const mismatchedKeys: string[] = [];
   let identical = 0;
 
   for (const source of sources) {
     const verdict = compare(source, twinByKey.get(source.key) ?? null);
     if (verdict.identical) identical += 1;
-    else if (verdict.present) mismatched.push(`${verdict.key} (${verdict.reason})`);
-    else missing.push(verdict.key);
+    else if (verdict.present) {
+      mismatched.push(`${verdict.key} (${verdict.reason})`);
+      mismatchedKeys.push(verdict.key);
+    } else missing.push(verdict.key);
   }
 
-  return { objects: sources.length, twins: identical, missing, mismatched };
+  const status: BackupStatus = { objects: sources.length, twins: identical, missing, mismatched };
+  return { status, mismatchedKeys };
+}
+
+// `objects` is reported so zero missing cannot be mistaken for zero examined.
+export async function backupStatus(env: BackupEnv): Promise<BackupStatus> {
+  return (await compareBuckets(env)).status;
 }
 
 // R2 bindings have no server-side copy. Re-reads the source rather than trusting a queue message, so
@@ -105,8 +115,8 @@ export async function copyMissingTwins(env: BackupEnv): Promise<{
   gone: number;
   status: BackupStatus;
 }> {
-  const before = await backupStatus(env);
-  const work = [...before.missing, ...before.mismatched.map((m) => m.split(" (")[0] ?? m)];
+  const before = await compareBuckets(env);
+  const work = [...before.status.missing, ...before.mismatchedKeys];
 
   let copied = 0;
   let gone = 0;
