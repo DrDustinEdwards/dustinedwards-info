@@ -37,7 +37,9 @@ export function importsOf(source, file, appDir) {
 
 /**
  * A specifier that resolves to nothing is skipped rather than thrown on: the walk deliberately
- * does not know about node_modules or the vite alias table.
+ * does not know about node_modules or the vite alias table. The ENTRY is different: an entry that
+ * resolves to nothing is a misnamed route file, and an empty walk would grade it as carrying no
+ * bundles at all, so it throws.
  *
  * @param {string} entry
  * @param {string} appDir
@@ -47,6 +49,7 @@ export function reachableAssets(entry, appDir, read) {
   const seen = new Set();
   /** @type {Set<string>} */
   const assets = new Set();
+  if (!resolveModule(entry, read)) throw new Error(`reachableAssets: the entry ${entry} resolves to no file`);
   const queue = [entry];
 
   while (queue.length > 0) {
@@ -82,15 +85,19 @@ function resolveModule(path, read) {
 }
 
 /**
- * Root's sheets first: root is the parent match, and the cascade depends on that order.
+ * Root's sheets first: root is the parent match, and the cascade depends on that order. A route id
+ * the manifest does not list throws: a misspelled id would otherwise be graded on root's sheets
+ * alone, which is always under the ceiling.
  *
  * @param {any} manifest
  * @param {string} routeId
  */
 export function stylesheetsFor(manifest, routeId) {
-  const routes = manifest?.routes ?? {};
-  const rootCss = routes.root?.css ?? [];
-  const routeCss = routes[routeId]?.css ?? [];
+  const routes = manifest?.routes;
+  if (!routes || !Object.hasOwn(routes, "root")) throw new Error("stylesheetsFor: the manifest lists no root route");
+  if (!Object.hasOwn(routes, routeId)) throw new Error(`stylesheetsFor: the manifest lists no route ${routeId}`);
+  const rootCss = routes.root.css ?? [];
+  const routeCss = routes[routeId].css ?? [];
   return [...new Set([...rootCss, ...routeCss])];
 }
 
