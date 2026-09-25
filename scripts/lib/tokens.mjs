@@ -144,7 +144,9 @@ export function tokenBlock(label, selector) {
   /** @type {Record<string, string>} */
   const out = {};
   for (const m of css.slice(open + 1, close).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    out[m[1]] = m[2].trim();
+    // The FIRST declaration wins, as in check:contrast and build-tokens: a token declared twice is a
+    // hex followed by the color-mix() recipe that must reproduce it, and the hex is the value.
+    if (!(m[1] in out)) out[m[1]] = m[2].trim();
   }
   if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
   return out;

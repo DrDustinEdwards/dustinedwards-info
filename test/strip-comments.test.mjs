@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { stripComments, stripCommentsAndStrings } from "../scripts/lib/strip-comments.mjs";
+import {
+  stripComments,
+  stripCommentsAndStrings,
+  stripTsxComments,
+} from "../scripts/lib/strip-comments.mjs";
 
 test("block and line comments go", () => {
   assert.equal(stripComments("const a = 1; // note").trim(), "const a = 1;");
@@ -208,4 +212,29 @@ test("an unclosed block-comment opener is text, not the rest of the file", () =>
   const out = stripComments(src);
   assert.match(out, /const b = keep;/);
   assert.doesNotMatch(out, /gone/);
+});
+
+test("TSX: an apostrophe in JSX text does not shield the comments after it", () => {
+  // The tokenizer reads `post's` as opening a string, so the comment after it can survive.
+  const src = [
+    "export const A = () => (",
+    "  <p>",
+    "    a post's table of contents",
+    "    {/* SECRET-ONE */}",
+    "  </p>",
+    ");",
+    "// SECRET-TWO",
+    "const b = 1; /* SECRET-THREE */",
+  ].join("\n");
+  const code = stripTsxComments(src);
+  assert.equal(/SECRET/.test(code), false, code);
+  assert.equal(code.includes("a post's table of contents"), true, "JSX text is content and stays");
+  assert.equal(code.split("\n").length, src.split("\n").length, "line numbers do not shift");
+});
+
+test("TSX: a // inside JSX text or a string is not a comment", () => {
+  const src = 'export const A = () => <p>see https://example.com // really</p>;\nconst u = "a//b";';
+  const code = stripTsxComments(src);
+  assert.equal(code.includes("// really"), true);
+  assert.equal(code.includes('"a//b"'), true);
 });

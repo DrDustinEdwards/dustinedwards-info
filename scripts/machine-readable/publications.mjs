@@ -31,6 +31,7 @@ import {
   toCslJson,
   toRisAll,
 } from "../../app/lib/publications/exports.mjs";
+import { assertFloor } from "../lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -515,12 +516,12 @@ const HOSTED_WITHOUT_LICENCE = new Map([
 
   for (const paper of PUBLICATIONS) {
     const slug = doiSlug(paper.doi);
-    const hosted = paper.access === "self-hosted" && paper.pdfPath !== null;
+    const isHosted = paper.access === "self-hosted" && paper.pdfPath !== null;
     let tags;
     try {
       tags = buildCitationTags(paper, {
         abstractUrl: `${ORIGIN}${paperPath(slug)}`,
-        pdfUrl: hosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
+        pdfUrl: isHosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
       });
     } catch (error) {
       tagFailures.push(`${paper.id}: ${error instanceof Error ? error.message : error}`);
@@ -540,8 +541,8 @@ const HOSTED_WITHOUT_LICENCE = new Map([
       );
     }
     const pdf = tags.find((t) => t.name === "citation_pdf_url");
-    if (hosted && !pdf) tagFailures.push(`${paper.id}: hosted but no citation_pdf_url`);
-    if (!hosted && pdf) tagFailures.push(`${paper.id}: not hosted but has citation_pdf_url`);
+    if (isHosted && !pdf) tagFailures.push(`${paper.id}: hosted but no citation_pdf_url`);
+    if (!isHosted && pdf) tagFailures.push(`${paper.id}: not hosted but has citation_pdf_url`);
     if (pdf) {
       pdfTags += 1;
       const dir = `${ORIGIN}${paperPath(slug)}`;
@@ -1156,6 +1157,20 @@ assertThat(
     `every accession builds an NCBI URL ending in its own id (${[...curated.values()].flat().length} accessions)`,
     badLinks.map(({ a, url }) => `${a.kind}:${a.id} -> ${url}`).join("; "),
   );
+}
+
+/* Measured 99 by running this part on 2026-09-24; the floor sits a little under it. */
+const floorBreach = assertFloor(
+  "check:machine-readable/publications",
+  "checks",
+  checks,
+  93,
+  "The runner fails a part only on zero checks, so without this a refactor could drop " +
+    "most of its sweeps and still pass.",
+);
+if (floorBreach) {
+  console.log(`  FAIL  ${floorBreach}`);
+  failures.push(floorBreach);
 }
 
 export const outcome = { checks, failures: failures.length };
