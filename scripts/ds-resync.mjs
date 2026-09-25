@@ -82,6 +82,11 @@ function run(label, args) {
   }
 }
 
+// The two guideline folders the canvas reads. The Capsid export first: without it the directory is
+// missing, and the ruling-only design law reaches the canvas through nothing else.
+run("export the Capsid guidelines", [join(REPO, "scripts", "build-capsid-guidelines.mjs")]);
+run("extract the stylesheet guidelines", [join(REPO, "scripts", "build-guidelines.mjs")]);
+
 // Fails closed: the driver must not run against whatever the previous flatten left on disk.
 run("regenerate the derived inputs", [join(REPO, BUILD_INPUTS)]);
 
