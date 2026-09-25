@@ -914,47 +914,103 @@ function remarkUnknownDirectives(file) {
 
 /**
  * Split across remark and rehype: validation must fail the build in remark, but the caption only
- * becomes hast after remark-rehype.
+ * becomes hast after remark-rehype. The remark half of a model directive: a container holding
+ * exactly one fenced block, built into a model and marked with the model's index for the rehype half.
  *
- * @param {string} file
- * @param {any[]} sink models, indexed by the marker written onto the node
+ * @param {{
+ *   name: string,
+ *   marker: string,
+ *   className: string,
+ *   what: string,
+ *   lang?: string,
+ *   build: (attributes: any, source: string) => any,
+ * }} kind `what` names the fence's content in the refusal; `lang` is the fence language required, if any
  */
-function remarkChart(file, sink) {
-  return (/** @type {import("mdast").Root} */ tree) => {
-    visit(tree, (node) => {
-      if (node.type !== "containerDirective" || node.name !== "chart") return;
+function remarkModelDirective(kind) {
+  /**
+   * @param {string} file
+   * @param {any[]} sink models, indexed by the marker written onto the node
+   */
+  return (file, sink) =>
+    (/** @type {import("mdast").Root} */ tree) => {
+      visit(tree, (node) => {
+        if (node.type !== "containerDirective" || node.name !== kind.name) return;
 
-      const children = node.children ?? [];
-      const dataNodes = children.filter((c) => c.type === "code");
-      const data = dataNodes[0];
-      if (dataNodes.length !== 1 || !data) {
-        throw new ContentError(
-          file,
-          `:::chart requires exactly one fenced code block of data, found ${dataNodes.length}`,
-        );
-      }
+        const children = node.children ?? [];
+        const fences = children.filter((c) => c.type === "code");
+        const fence = fences[0];
+        if (fences.length !== 1 || !fence) {
+          throw new ContentError(
+            file,
+            `:::${kind.name} requires exactly one fenced code block of ${kind.what}, found ${fences.length}`,
+          );
+        }
+        // The mermaid fence is also what renders the source as a diagram in the .md twin and on GitHub.
+        const lang = fence.lang ?? "";
+        if (kind.lang !== undefined && lang !== kind.lang) {
+          throw new ContentError(
+            file,
+            `:::${kind.name} source must be a \`\`\`${kind.lang} fenced block, found \`\`\`${lang || "(none)"}`,
+          );
+        }
 
-      /** @type {any} */
-      let model;
-      try {
-        model = buildChartModel(attributesOf(node), data.value);
-      } catch (error) {
-        throw new ContentError(
-          file,
-          errorMessage(error),
-        );
-      }
+        /** @type {any} */
+        let model;
+        try {
+          model = kind.build(attributesOf(node), fence.value);
+        } catch (error) {
+          throw new ContentError(file, errorMessage(error));
+        }
 
-      const index = sink.push(model) - 1;
-      node.data = {
-        ...node.data,
-        hName: "figure",
-        hProperties: { className: ["chart-figure"], "data-chart": String(index) },
-      };
-      node.children = children.filter((/** @type {any} */ c) => c.type !== "code");
-    });
-  };
+        const index = sink.push(model) - 1;
+        node.data = {
+          ...node.data,
+          hName: "figure",
+          hProperties: { className: [kind.className], [kind.marker]: String(index) },
+        };
+        node.children = children.filter((/** @type {any} */ c) => c.type !== "code");
+      });
+    };
 }
+
+/**
+ * The rehype half: renders each marked figure from its model and drops the marker.
+ *
+ * @param {string} marker
+ * @param {(model: any, caption: any[]) => any[]} render
+ */
+function rehypeModelMarker(marker, render) {
+  /** @param {any[]} models */
+  return (models) =>
+    (/** @type {import("hast").Root} */ tree) => {
+      visit(tree, "element", (node) => {
+        const at = node.properties?.[marker];
+        if (at === undefined) return;
+        const model = models[Number(at)];
+        delete node.properties[marker];
+        node.children = render(model, node.children ?? []);
+      });
+    };
+}
+
+const remarkChart = remarkModelDirective({
+  name: "chart",
+  marker: "data-chart",
+  className: "chart-figure",
+  what: "data",
+  build: buildChartModel,
+});
+const rehypeChart = rehypeModelMarker("data-chart", renderChartHast);
+
+const remarkDiagram = remarkModelDirective({
+  name: "diagram",
+  marker: "data-diagram",
+  className: "diagram-figure",
+  what: "mermaid source",
+  lang: "mermaid",
+  build: buildDiagramModel,
+});
+const rehypeDiagram = rehypeModelMarker("data-diagram", renderDiagramHast);
 
 /**
  * A wrapper, not display: block on the table, which can strip the table role from a screen reader.
@@ -971,85 +1027,6 @@ function rehypeTableScroll() {
         properties: { className: ["table-scroll"], tabIndex: 0 },
         children: [node],
       };
-    });
-  };
-}
-
-/**
- * @param {any[]} models
- */
-function rehypeChart(models) {
-  return (/** @type {import("hast").Root} */ tree) => {
-    visit(tree, "element", (node) => {
-      const marker = node.properties?.["data-chart"];
-      if (marker === undefined) return;
-      const model = models[Number(marker)];
-      delete node.properties["data-chart"];
-      node.children = renderChartHast(model, node.children ?? []);
-    });
-  };
-}
-
-/**
- * @param {string} file
- * @param {any[]} sink models, indexed by the marker written onto the node
- */
-function remarkDiagram(file, sink) {
-  return (/** @type {import("mdast").Root} */ tree) => {
-    visit(tree, (node) => {
-      if (node.type !== "containerDirective" || node.name !== "diagram") return;
-
-      const children = node.children ?? [];
-      const sourceNodes = children.filter((c) => c.type === "code");
-      const source = sourceNodes[0];
-      if (sourceNodes.length !== 1 || !source) {
-        throw new ContentError(
-          file,
-          `:::diagram requires exactly one fenced code block of mermaid source, found ${sourceNodes.length}`,
-        );
-      }
-      // The mermaid fence is also what renders the source as a diagram in the .md twin and on GitHub.
-      const lang = source.lang ?? "";
-      if (lang !== "mermaid") {
-        throw new ContentError(
-          file,
-          `:::diagram source must be a \`\`\`mermaid fenced block, found \`\`\`${lang || "(none)"}`,
-        );
-      }
-
-      /** @type {any} */
-      let model;
-      try {
-        model = buildDiagramModel(attributesOf(node), source.value);
-      } catch (error) {
-        throw new ContentError(
-          file,
-          errorMessage(error),
-        );
-      }
-
-      const index = sink.push(model) - 1;
-      node.data = {
-        ...node.data,
-        hName: "figure",
-        hProperties: { className: ["diagram-figure"], "data-diagram": String(index) },
-      };
-      node.children = children.filter((/** @type {any} */ c) => c.type !== "code");
-    });
-  };
-}
-
-/**
- * @param {any[]} models
- */
-function rehypeDiagram(models) {
-  return (/** @type {import("hast").Root} */ tree) => {
-    visit(tree, "element", (node) => {
-      const marker = node.properties?.["data-diagram"];
-      if (marker === undefined) return;
-      const model = models[Number(marker)];
-      delete node.properties["data-diagram"];
-      node.children = renderDiagramHast(model, node.children ?? []);
     });
   };
 }
