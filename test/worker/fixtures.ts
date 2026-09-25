@@ -11,6 +11,8 @@ export function post(
     tags: string;
     draft: boolean;
     first_published: string | null;
+    /** The series title and this post's part in it. */
+    series: [string, number];
     body: string;
   }> = {},
 ) {
@@ -21,6 +23,7 @@ export function post(
     tags = "[testing]",
     draft = true,
     first_published = null,
+    series,
     body = `This is the body of ${slug}. It has a paragraph so the renderer has prose to work on.\n\n## A heading\n\nAnd a second paragraph under it.\n`,
   } = overrides;
 
@@ -33,6 +36,7 @@ export function post(
     `tags: ${tags}`,
     `draft: ${draft}`,
     ...(first_published ? [`first_published: ${first_published}`] : []),
+    ...(series ? [`series: "${series[0]}"`, `part: ${series[1]}`] : []),
     "---",
     "",
     body,

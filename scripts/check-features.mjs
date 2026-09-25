@@ -48,6 +48,11 @@ const PROJECTS_PATH = join(root, "content", "projects.json");
 const PROJECTS_ROUTE_PATH = join(root, "app", "routes", "projects.tsx");
 const PLAYGROUND_PATH = join(root, "content", "playground.json");
 const PLAYGROUND_ROUTE_PATH = join(root, "app", "routes", "playground.tsx");
+/* Each demo is a loader module and a section component in these, so the page's source is all of them. */
+const PLAYGROUND_DEMO_DIRS = [
+  join(root, "app", "lib", "playground"),
+  join(root, "app", "components", "playground"),
+];
 const ROUTES_PATH = join(root, "app", "routes.ts");
 
 const tally = createTally({ separator: ": " });
@@ -1338,7 +1343,22 @@ ok(
   `parsed routes: ${[...routes].join(", ")}`,
 );
 
-const playgroundSource = codeOf(PLAYGROUND_ROUTE_PATH);
+const playgroundFiles = [
+  PLAYGROUND_ROUTE_PATH,
+  ...PLAYGROUND_DEMO_DIRS.flatMap((dir) =>
+    readdirSync(dir)
+      .filter((name) => /\.(tsx?|mjs)$/.test(name))
+      .sort()
+      .map((name) => join(dir, name)),
+  ),
+];
+ok(
+  "the playground's demo modules were found",
+  playgroundFiles.length >= 1 + 2 * demos.length,
+  `read ${playgroundFiles.length} file(s) for ${demos.length} demo(s), each a loader module and a ` +
+    `component: a check below would pass or fail on a file it never read`,
+);
+const playgroundSource = playgroundFiles.map((file) => codeOf(file)).join("\n");
 
 /**
  * @param {string} demo the label prefix naming the demo, or empty for the page's own

@@ -10,9 +10,22 @@ import {
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus } from "~/lib/search/ask.server";
-import { listDirectory } from "~/lib/editor/github.server";
+import { listPostFiles } from "~/lib/editor/github.server";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 import { backupStatus } from "~/lib/media/backup.server";
+
+/**
+ * The two sides the content-drift comparison reads: the repository's post files with their blob
+ * shas, and D1's rows with the sha each was rendered from. The health check and sync_posts both
+ * read them here, so they cannot compare different things.
+ */
+export async function readContentSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = (await listPostFiles(env)).map((e) => ({ slug: e.slug, sha: e.sha, path: e.path }));
+  const rows = await env.DB.prepare(
+    "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
+  ).all<{ slug: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
 
 export interface HealthCheck {
   name: string;
@@ -50,14 +63,8 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
   checks.push(
     await guard("content-drift", async () => {
       // An unreadable repository fails this check, which the repair plan refuses to act on alone.
-      const entries = await listDirectory(env, "content/posts");
-      const files = entries
-        .filter((e) => e.type === "file" && e.name.endsWith(".md"))
-        .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha }));
-      const rows = await env.DB.prepare(
-        "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
-      ).all<{ slug: string; source_blob_sha: string | null }>();
-      return contentDriftVerdict(files, rows.results ?? []);
+      const { files, rows } = await readContentSides(env);
+      return contentDriftVerdict(files, rows);
     }),
   );
 

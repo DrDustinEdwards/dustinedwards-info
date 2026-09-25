@@ -97,7 +97,7 @@ for (const config of CONFIGS) {
       );
     }
 
-    // A replacer function, not a string: in a replacement string `    text = text.replace(needle, `"${field.key}": "${value}"`);` and `$1` are patterns, so a
+    // A replacer function, not a string: in a replacement string `$&` and `$1` are patterns, so a
     // value carrying a dollar sign would be written as something else.
     text = text.replace(needle, () => `"${field.key}": "${value}"`);
     console.log(`  patched ${field.name} in ${config}`);

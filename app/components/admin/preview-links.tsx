@@ -1,5 +1,4 @@
-import { useState } from "react";
-
+import { CopyTextButton } from "~/components/admin/copy-button";
 import { longDateUTC } from "~/lib/long-date.mjs";
 
 // The token is a capability: only six characters are printed, and the full URL leaves only via copy.
@@ -51,7 +50,7 @@ export function PreviewLinks({
           <span className="field-hint muted">
             Expires {expiresLabel(created.expiresAt)}.
           </span>
-          <PreviewCopyButton url={created.url} label="Copy this link" />
+          <CopyTextButton value={created.url} label="Copy this link" />
         </div>
       ) : null}
 
@@ -67,7 +66,7 @@ export function PreviewLinks({
                 </span>
               </div>
               <div className="preview-link-actions">
-                <PreviewCopyButton url={link.url} label="Copy" />
+                <CopyTextButton value={link.url} label="Copy" />
                 <button
                   type="submit"
                   form={revokeFormId(link.token)}
@@ -101,27 +100,5 @@ export function PreviewLinks({
         Create a preview link
       </button>
     </>
-  );
-}
-
-// Not media-copy-button: that would import the media page's keyboard and toast module into the editor.
-function PreviewCopyButton({ url, label }: { url: string; label: string }) {
-  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
-  return (
-    <button
-      type="button"
-      className="row-action"
-      onClick={() => {
-        // Inside a promise: with no clipboard the call throws before any promise exists.
-        Promise.resolve()
-          .then(() => navigator.clipboard.writeText(url))
-          .then(
-            () => setCopied("copied"),
-            () => setCopied("failed"),
-          );
-      }}
-    >
-      {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : label}
-    </button>
   );
 }
