@@ -10,12 +10,11 @@ import {
   revokeFormId,
   type PreviewLinkView,
 } from "~/components/admin/preview-links";
-import { listBlogTags } from "~/db";
 import { adminActorContext, adminSessionContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { createPreviewLink, listPreviewLinks, revokePreviewLink } from "~/lib/preview-links.server";
 import { previewUrl } from "~/lib/preview-token.mjs";
-import { loadLinkTargets } from "~/lib/editor/link-targets.server";
+import { loadEditorOptions } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
@@ -68,7 +67,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         )
       : { value: [], error: null };
 
-  const tags = await timed(timings, "d1_tags", () => settled("tags", listBlogTags(env)));
+  const options = await loadEditorOptions(env, timings);
 
   const revisions = await timed(timings, "gh_commits", () =>
     settled("revisions", listCommitsForPath(env, postPath(params.slug))),
@@ -87,11 +86,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     previewLinksError: links.error,
     // Only `first_published` in the committed file tells a brand-new draft from a withdrawn one.
     everPublished: fields.firstPublished.trim() !== "",
-    tagOptions: tags.value.map((tag) => tag.slug),
-    loadProblems: tags.error
-      ? [`Existing tags could not be read, so none are suggested: ${tags.error}`]
-      : [],
-    linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
+    tagOptions: options.tagOptions,
+    loadProblems: options.problems,
+    linkTargets: options.linkTargets,
     revisions: revisions.value,
     revisionsError: revisions.error,
   };
