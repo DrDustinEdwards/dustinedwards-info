@@ -142,7 +142,6 @@ const operatorToken = readOperatorToken(process.env.OPERATOR_TOKEN_FILE);
 if (operatorToken.why) refuse(operatorToken.why, operatorToken.remedy);
 const OPERATOR_TOKEN = operatorToken.token;
 
-
 /*
  * Pull `--ff-only`: a merge commit has no CI run. Refuse while another run holds build/client,
  * matched by command line, never by name (all are `node`). Never killed: whose run is unknown.
@@ -715,7 +714,6 @@ const askMiss = await convergeAsk({ origin: ORIGIN, token: OPERATOR_TOKEN });
 announce("Bring the media index into step");
 
 const mediaMiss = await convergeMedia({ origin: ORIGIN, token: OPERATOR_TOKEN });
-
 
 /*
  * Deferred checks are asserted here, after their repair: refusing before the sync would
