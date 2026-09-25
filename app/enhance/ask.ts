@@ -33,6 +33,49 @@ function attach(parent: HTMLElement, ...children: HTMLElement[]): void {
   for (const child of children) parent.appendChild(child);
 }
 
+/**
+ * The `chunks` event's payload as citations, deduplicated by URL. Same key-to-URL mapping as the
+ * upload path, so a citation cannot disagree with what was indexed.
+ */
+function citationsFromChunks(parsed: unknown): AskCitation[] {
+  const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed)
+    ? parsed
+    : [];
+  const seen = new Set<string>();
+  const out: AskCitation[] = [];
+  for (const chunk of chunks) {
+    const url = urlForKey(chunk?.item?.key ?? "");
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    out.push({
+      url,
+      title: labelForUrl(url),
+      isSection: url.includes("#"),
+    });
+  }
+  return out;
+}
+
+/** Reads the stream to its end, handing each complete SSE frame to `onFrame`; a read error throws. */
+async function readFrames(
+  stream: ReadableStream<Uint8Array>,
+  onFrame: (eventName: string | undefined, parsed: unknown) => void,
+): Promise<void> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    const taken = takeSseFrames(buffer);
+    buffer = taken.rest;
+
+    for (const { event: eventName, data: parsed } of taken.frames) onFrame(eventName, parsed);
+  }
+}
+
 /** Every DOM write goes through textContent: generated text is never rendered as HTML. */
 export function ask(container: HTMLElement, question: string): AskHandle {
   const controller = new AbortController();
@@ -110,6 +153,34 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     announcer.textContent = message;
   }
 
+  function onChunks(parsed: unknown) {
+    citations = citationsFromChunks(parsed);
+    renderCitations();
+  }
+
+  let firstToken = true;
+
+  function onAnswer(parsed: unknown) {
+    const delta = answerDelta(parsed);
+    if (delta === undefined || delta.length === 0) return;
+    if (firstToken) {
+      status.hidden = true;
+      firstToken = false;
+    }
+    answer += delta;
+    // Split on every frame so the raw "NEXT:" marker never shows in the prose mid-stream.
+    const parts = splitFollowUp(answer);
+    body.textContent = parts.answer;
+    if (parts.followUp) {
+      followUp.textContent = "";
+      const link = el("a");
+      link.href = `/search?q=${encodeURIComponent(parts.followUp)}`;
+      link.textContent = parts.followUp;
+      attach(followUp, link);
+      followUp.hidden = false;
+    }
+  }
+
   (async () => {
     let response: Response;
     try {
@@ -133,63 +204,11 @@ export function ask(container: HTMLElement, question: string): AskHandle {
       return;
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let firstToken = true;
-
     try {
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const taken = takeSseFrames(buffer);
-        buffer = taken.rest;
-
-        for (const { event: eventName, data: parsed } of taken.frames) {
-          if (eventName === CHUNKS_EVENT) {
-            const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed)
-              ? parsed
-              : [];
-            const seen = new Set<string>();
-            citations = [];
-            for (const chunk of chunks) {
-              // Same key-to-URL mapping as the upload path, so a citation cannot disagree with what was indexed.
-              const url = urlForKey(chunk?.item?.key ?? "");
-              if (!url || seen.has(url)) continue;
-              seen.add(url);
-              citations.push({
-                url,
-                title: labelForUrl(url),
-                isSection: url.includes("#"),
-              });
-            }
-            renderCitations();
-            continue;
-          }
-
-          const delta = answerDelta(parsed);
-          if (delta !== undefined && delta.length > 0) {
-            if (firstToken) {
-              status.hidden = true;
-              firstToken = false;
-            }
-            answer += delta;
-            // Split on every frame so the raw "NEXT:" marker never shows in the prose mid-stream.
-            const parts = splitFollowUp(answer);
-            body.textContent = parts.answer;
-            if (parts.followUp) {
-              followUp.textContent = "";
-              const link = el("a");
-              link.href = `/search?q=${encodeURIComponent(parts.followUp)}`;
-              link.textContent = parts.followUp;
-              attach(followUp, link);
-              followUp.hidden = false;
-            }
-          }
-        }
-      }
+      await readFrames(response.body, (eventName, parsed) => {
+        if (eventName === CHUNKS_EVENT) onChunks(parsed);
+        else onAnswer(parsed);
+      });
     } catch {
       if (!controller.signal.aborted) fail("Ask stopped early.");
       return;
