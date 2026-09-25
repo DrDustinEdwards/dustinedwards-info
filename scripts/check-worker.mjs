@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test", "worker");
@@ -13,17 +14,8 @@ const MINIMUM_FILES = 11;
 // Catches a file hollowed out in place. Measured by running the gate, a little under the count.
 const MINIMUM_CASES = 128;
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally();
+const { ok } = tally;
 
 /** @param {string} dir @param {string[]} out */
 function testFiles(dir, out = []) {
@@ -112,5 +104,5 @@ const casesFloorBreach = assertFloor(
 );
 ok("the executed worker case count has not shrunk", !casesFloorBreach, casesFloorBreach ?? "");
 
-console.log(`\n${checks} checks, ${failures} failures\n`);
-process.exit(failures > 0 ? 1 : 0);
+console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
+process.exit(tally.failures > 0 ? 1 : 0);

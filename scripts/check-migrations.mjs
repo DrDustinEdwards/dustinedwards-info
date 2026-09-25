@@ -5,6 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { parseSource, ts } from "./lib/syntax.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const MIGRATIONS = join(root, "drizzle");
@@ -16,17 +17,8 @@ const FORCE = args.includes("--force");
 
 const MINIMUM_MIGRATIONS = 18;
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally();
+const { ok } = tally;
 
 /**
  * CRLF collapsed: with autocrlf on, a working tree and its own committed blobs disagree.
@@ -102,7 +94,7 @@ ok(
     "nothing to compare against and this gate would pass by examining nothing.",
 );
 if (!existsSync(MANIFEST)) {
-  console.log(`\n${failures} FAILED of ${checks} checks\n`);
+  console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
   process.exit(1);
 }
 
@@ -391,11 +383,10 @@ if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
 // Measured by running it, set for the lower environment: without a local database the three
 // assertions comparing the applied set to it do not run.
 const MINIMUM_CHECKS = 65;
-const floorBreach = assertFloor("check:migrations", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
+tally.floor("check:migrations", "checks", MINIMUM_CHECKS);
 
-if (failures > 0) {
-  console.log(`\n${failures} FAILED of ${checks} checks\n`);
+if (tally.failures > 0) {
+  console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
   process.exit(1);
 }
-console.log(`\n${checks} checks, 0 failures\n`);
+console.log(`\n${tally.checks} checks, 0 failures\n`);

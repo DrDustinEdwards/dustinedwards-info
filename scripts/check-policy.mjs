@@ -17,12 +17,12 @@ import {
 } from "../app/lib/editor/publish-policy.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-let checks = 0;
-/** @type {string[]} */
-const failures = [];
+const tally = createTally({ print: false });
+const { ok } = tally;
 
 /**
  * @param {string} label
@@ -30,37 +30,33 @@ const failures = [];
  * @param {unknown} expected
  */
 function eq(label, actual, expected) {
-  checks += 1;
   const a = JSON.stringify(actual);
   const b = JSON.stringify(expected);
-  if (a !== b) failures.push(`${label}\n    expected ${b}\n    actual   ${a}`);
+  ok(`${label}\n    expected ${b}\n    actual   ${a}`, a === b);
 }
 
 /** @param {string} label @param {() => void} fn @param {string} policy */
 function refuses(label, fn, policy) {
-  checks += 1;
+  let problem = "expected a PolicyError, got none";
   try {
     fn();
-    failures.push(`${label}\n    expected a PolicyError, got none`);
   } catch (error) {
-    if (!(error instanceof PolicyError)) {
-      failures.push(`${label}\n    expected PolicyError, got ${error}`);
-      return;
-    }
-    if (error.policy !== policy) {
-      failures.push(`${label}\n    expected policy ${policy}, got ${error.policy}`);
-    }
+    if (!(error instanceof PolicyError)) problem = `expected PolicyError, got ${error}`;
+    else if (error.policy !== policy) problem = `expected policy ${policy}, got ${error.policy}`;
+    else problem = "";
   }
+  ok(`${label}\n    ${problem}`, problem === "");
 }
 
 /** @param {string} label @param {() => void} fn */
 function permits(label, fn) {
-  checks += 1;
+  let problem = "";
   try {
     fn();
   } catch (error) {
-    failures.push(`${label}\n    expected no error, got ${error}`);
+    problem = `expected no error, got ${error}`;
   }
+  ok(`${label}\n    ${problem}`, problem === "");
 }
 
 /** @param {{draft: boolean, firstPublished?: string | null}} o */
@@ -1153,14 +1149,14 @@ refuses(
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
 const MINIMUM_CHECKS = 189;
-const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) failures.push(floorBreach);
+const floorBreach = assertFloor("check:policy", "checks", tally.checks, MINIMUM_CHECKS);
+if (floorBreach) tally.fail(floorBreach);
 
-if (failures.length > 0) {
-  console.error(`check:policy FAILED, ${failures.length} of ${checks} checks:\n`);
-  for (const f of failures) console.error(`  ${f}\n`);
+if (tally.failures > 0) {
+  console.error(`check:policy FAILED, ${tally.failures} of ${tally.checks} checks:\n`);
+  for (const f of tally.failed) console.error(`  ${f}\n`);
   process.exit(1);
 }
 
-console.log(`check:policy ok. ${checks} assertions, 0 failures.`);
+console.log(`check:policy ok. ${tally.checks} assertions, 0 failures.`);
 

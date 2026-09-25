@@ -4,10 +4,10 @@ import { readFile, readdir, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 
-import { assertFloor } from "./lib/floor.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 /** The database this drill READS and must never write to. */
 const PRODUCTION_DB = "dustinedwards";
@@ -26,23 +26,8 @@ const MEDIA_BACKUP_BUCKET = "dustinedwards-media-backup";
 const SCRATCH_PREFIX = "restore-drill-";
 const SCRATCH_DB = `${SCRATCH_PREFIX}${new Date().toISOString().slice(0, 10)}-${process.pid}`;
 
-let checks = 0;
-let failures = 0;
-
-/**
- * The argument order every gate here uses: a string in the condition slot is always truthy.
- *
- * @param {string} label
- * @param {boolean} condition
- * @param {string} [detail]
- */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `: ${detail}` : ""}`);
-  }
-}
+const tally = createTally({ separator: ": " });
+const { ok } = tally;
 
 /**
  * One already-quoted command string: with `shell: true` an array concatenates without quoting.
@@ -607,17 +592,16 @@ async function main() {
 
   /* Measured by running the gate; moves with the number of migration files, not the table list. */
   const MINIMUM_CHECKS = 32;
-  const breach = assertFloor("check:restore", "checks", checks, MINIMUM_CHECKS);
-  if (breach) ok("[scope] this gate executed its assertions", false, breach);
+  tally.floor("check:restore", "checks", MINIMUM_CHECKS, "", "[scope] this gate executed its assertions");
 
   console.log(
     `\n  timings: export ${timings.export ?? 0}ms, restore ${timings.restore ?? 0}ms, ` +
       `total ${timings.total}ms`,
   );
-  console.log(`${checks} checks, ${failures} failures\n`);
+  console.log(`${tally.checks} checks, ${tally.failures} failures\n`);
 
   /* `exitCode` rather than `process.exit()`, which tears the process down mid stdout write. */
-  process.exitCode = failures > 0 ? 1 : 0;
+  process.exitCode = tally.failures > 0 ? 1 : 0;
 }
 
 await main().catch((/** @type {unknown} */ error) => {
