@@ -1,7 +1,10 @@
+import { useRef } from "react";
 import { Form, Link } from "react-router";
 
 import { CopyButton } from "~/components/admin/copy-button";
-import { MediaDrawer } from "~/components/admin/media-drawer";
+import { LiveNotice } from "~/components/admin/live-notice";
+import { useInspectorDialog } from "~/components/admin/media-drawer";
+import { MediaToast } from "~/components/admin/toast";
 import {
   InspectorAltForm,
   InspectorDangerZone,
@@ -20,10 +23,18 @@ type Detail = NonNullable<Listing["detail"]>;
 export function MediaInspector({
   detail,
   linkTo,
+  message,
+  refused,
 }: {
   detail: Detail;
   linkTo: (over?: Parameters<typeof hrefWith>[1]) => string;
+  /** The last action's result: announced in here, because the page behind a modal is inert. */
+  message?: string;
+  refused?: boolean;
 }) {
+  const ref = useRef<HTMLDialogElement>(null);
+  const hydrated = useInspectorDialog(ref, detail.key, linkTo({ key: "" }));
+
   return (
         <>
         {/* A link, not a div with a handler, so closing by clicking outside needs no script. */}
@@ -33,19 +44,27 @@ export function MediaInspector({
           preventScrollReset
           aria-label="Close the inspector"
         />
-        <section
+        {/* `data-inline`, not `open`: an `open` in the JSX would fight showModal(). Until then the
+            server render shows it as the fixed panel it always was, working without script. */}
+        <dialog
+          ref={ref}
           className="media-detail"
-          /* A dialog role rather than <dialog>, which needs showModal() and so script. */
-          role="dialog"
-          aria-modal="true"
+          data-inline={hydrated ? undefined : ""}
           aria-label={`Details for ${detail.found ? (detail.originalName ?? detail.key) : detail.key}`}
           tabIndex={-1}
         >
+          {/* First in the document so it survives the found and missing branches; CSS draws it under the header. */}
+          <div className="media-detail-notice">
+            <LiveNotice
+              status={message && !refused ? message : undefined}
+              alert={message && refused ? message : undefined}
+            />
+          </div>
           {detail.found ? (
             <>
               {/* Ellipsised, not wrapped: a content-addressed key can wrap to three lines and push the panel down. */}
               <header className="media-detail-head">
-                <h3 title={detail.key}>{detail.originalName ?? detail.key}</h3>
+                <h2 title={detail.key}>{detail.originalName ?? detail.key}</h2>
                 <span className="media-detail-usage-pill">
                   <span
                     className="media-usage-dot"
@@ -82,7 +101,7 @@ export function MediaInspector({
                   <InspectorTagForms detail={detail} />
 
                   <div className="media-detail-copy">
-                    <h4>Copy</h4>
+                    <h3>Copy</h3>
                     {copySnippetsFor({
                       url: detail.url,
                       viewable: detail.viewable,
@@ -102,7 +121,7 @@ export function MediaInspector({
                   {/* Trashing a twin hides it and both addresses keep working, so no published page loses its image. */}
                   {detail.twins.length > 0 ? (
                     <div className="media-detail-twins">
-                      <h4>Identical files</h4>
+                      <h3>Identical files</h3>
                       <ul className="media-detail-refs">
                         {detail.twins.map((twin) => (
                           <li key={twin.key}>
@@ -154,9 +173,8 @@ export function MediaInspector({
               .
             </p>
           )}
-        </section>
-        {/* With no script the drawer still opens, works and closes by its own links. */}
-        <MediaDrawer activeKey={detail.key} closeHref={linkTo({ key: "" })} />
+          <MediaToast inDialog />
+        </dialog>
         </>
   );
 }

@@ -98,7 +98,8 @@ export function ask(container: HTMLElement, question: string): AskHandle {
 
   /*
    * The body is not live: rewritten on every token, it would be announced over and over. This region
-   * exists before anything is written to it, and speaks once, the whole answer or the failure.
+   * exists before anything is written to it, and speaks twice: that the lookup started, then the whole
+   * answer or the failure.
    */
   const announcer = el("p", "sr-only");
   announcer.setAttribute("aria-live", "polite");
@@ -114,6 +115,10 @@ export function ask(container: HTMLElement, question: string): AskHandle {
 
   attach(panel, header, status, body, sources, followUp, announcer);
   attach(container, panel);
+  // A frame later, so the region is in the tree before its text changes and the change is heard.
+  requestAnimationFrame(() => {
+    if (!announcer.textContent) announcer.textContent = "Looking it up.";
+  });
 
   let answer = "";
   let citations: AskCitation[] = [];
@@ -173,7 +178,8 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     // Split on every frame so the raw "NEXT:" marker never shows in the prose mid-stream.
     const parts = splitFollowUp(answer);
     body.textContent = parts.answer;
-    if (parts.followUp) {
+    // Rebuilt only when the text changed, not on every frame, so the link is not replaced under a reader.
+    if (parts.followUp && parts.followUp !== followUp.textContent) {
       followUp.textContent = "";
       const link = el("a");
       link.href = `/search?q=${encodeURIComponent(parts.followUp)}`;
@@ -250,12 +256,13 @@ function mountAskTriggers() {
     if (!trigger || !container) continue;
     if (trigger.dataset.askBound) continue;
     trigger.dataset.askBound = "true";
-    const question = (mount.dataset.askQuestion ?? "").trim();
-    if (!question) continue;
+    const question = () => (mount.dataset.askQuestion ?? "").trim();
+    if (!question()) continue;
     trigger.hidden = false;
+    // Read at the click, not at binding: the live search rewrites the question as the reader retypes.
     trigger.addEventListener("click", () => {
       trigger.hidden = true;
-      ask(container, question);
+      ask(container, question());
     });
   }
 }

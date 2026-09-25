@@ -282,7 +282,8 @@ export async function run({ browser }) {
         sortable: el.tagName.toLowerCase() === "a",
         href: el.getAttribute("href") || "",
         sortKey: el.getAttribute("data-sort") || "",
-        ariaSort: el.getAttribute("aria-sort") || "",
+        /* The sort state in words inside the link: the header is not a table, so aria-sort would mean nothing. */
+        sorted: (el.querySelector(".sr-only")?.textContent || "").replace(/\s+/g, " ").trim(),
       }));
       return { cells };
     });
@@ -322,15 +323,15 @@ export async function run({ browser }) {
         : "not measured",
     );
     ok(
-      "exactly one column carries a live aria-sort, and it is the sorted one",
+      "exactly one column says it is sorted, and it is the sorted one",
       !!listHead &&
-        listHead.cells.filter((c) => c.ariaSort && c.ariaSort !== "none").length === 1 &&
+        listHead.cells.filter((c) => c.sorted).length === 1 &&
         listHead.cells.some(
-          (c) => c.ariaSort === "descending" && c.label.startsWith("Size"),
+          (c) => c.sorted === ", sorted descending" && c.label.startsWith("Size"),
         ),
       listHead
-        ? `aria-sort values ${JSON.stringify(
-            listHead.cells.filter((c) => c.sortable).map((c) => `${c.label}=${c.ariaSort}`),
+        ? `sort words ${JSON.stringify(
+            listHead.cells.filter((c) => c.sortable).map((c) => `${c.label}=${c.sorted}`),
           )}. The URL asked for sort=size and size defaults to descending.`
         : "not measured",
     );
@@ -418,10 +419,12 @@ export async function run({ browser }) {
         if (!bar) return null;
         const count = bar.querySelector(".posts-bulk-count");
         const size = bar.querySelector(".posts-bulk-size");
+        // The announcement is the form's status region, in the document before the bar mounted.
+        const status = bar.closest("form")?.querySelector(':scope > [role="status"]');
         return {
           count: (count?.textContent || "").trim(),
           size: (size?.textContent || "").trim(),
-          live: count?.getAttribute("aria-live") || "",
+          announced: (status?.textContent || "").trim(),
           label: bar.getAttribute("aria-label") || "",
         };
       });
@@ -448,8 +451,12 @@ export async function run({ browser }) {
       );
       ok(
         "the bulk bar announces itself to a screen reader",
-        !!bulk && bulk.live === "polite" && bulk.label.length > 0,
-        bulk ? `aria-live=${JSON.stringify(bulk.live)} aria-label=${JSON.stringify(bulk.label)}` : "not measured",
+        !!bulk && bulk.announced === "1 selected" && bulk.label.length > 0,
+        bulk
+          ? `status region reads ${JSON.stringify(bulk.announced)}, aria-label=${JSON.stringify(bulk.label)}. ` +
+            `The count region is the grid form's role=status, mounted before anything was selected, ` +
+            `because a region that mounts with its text is often never announced.`
+          : "not measured",
       );
     }
 
@@ -663,17 +670,17 @@ export async function run({ browser }) {
           `controls are being clipped.`,
     );
 
-    // Compared by accessible name, since a swap holds a count steady. Opened via the `open`
-    // property, as a scriptless `<summary>` click does.
+    // Compared by accessible name, since a swap holds a count steady. Opened via showPopover(), as a
+    // scriptless click on a `popovertarget` button does.
     const NARROW = 375;
-    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openDetails) => {
+    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openPanels) => {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
       return admin.evaluate((shouldOpen) => {
         const bar = document.querySelector(".admin-topbar");
-        if (!bar) return { names: [], details: 0, summary: "" };
-        const detailsEls = [...bar.querySelectorAll("details")];
-        if (shouldOpen) for (const d of detailsEls) d.open = true;
+        if (!bar) return { names: [], popovers: 0, invoked: false };
+        const panels = [...bar.querySelectorAll("[popover]")];
+        if (shouldOpen) for (const p of panels) /** @type {HTMLElement} */ (p).showPopover();
         const names = [];
         for (const el of bar.querySelectorAll(
           'a[href], button, summary, input:not([type="hidden"]), select, textarea',
@@ -693,10 +700,13 @@ export async function run({ browser }) {
         }
         return {
           names: [...new Set(names)].sort(),
-          details: detailsEls.length,
-          summary: detailsEls[0]?.querySelector("summary")?.tagName ?? "",
+          popovers: panels.length,
+          // Declarative: a button naming the panel by popovertarget opens it with script off.
+          invoked:
+            panels.length > 0 &&
+            bar.querySelector(`button[popovertarget="${CSS.escape(panels[0].id)}"]`) !== null,
         };
-      }, openDetails);
+      }, openPanels);
     };
 
     const wide = await topbarActions(1280, false);
@@ -710,10 +720,10 @@ export async function run({ browser }) {
         `The subset assertion below would agree with anything.`,
     );
     ok(
-      `the folded topbar is a native disclosure at ${NARROW}px`,
-      narrow.details >= 1 && narrow.summary === "SUMMARY",
-      `${narrow.details} <details> in the bar, first summary tag ` +
-        `${JSON.stringify(narrow.summary)}. The fold has to open with no script, so a ` +
+      `the folded topbar is a native popover disclosure at ${NARROW}px`,
+      narrow.popovers >= 1 && narrow.invoked,
+      `${narrow.popovers} [popover] in the bar, the first one ` +
+        `${narrow.invoked ? "has" : "has NO"} button[popovertarget] naming it. The fold has to open with no script, so a ` +
         `button plus a state hook is not the shape; the progressive-enhancement rule and the admin plane's ` +
         `own no-script door.`,
     );
