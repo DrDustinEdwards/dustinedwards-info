@@ -3,9 +3,9 @@ import { data, redirect } from "react-router";
 import { timed, timedLoader } from "~/lib/timing";
 
 import { PostEditor } from "~/components/admin/post-editor";
-import { listAllPostsForAdmin, listBlogTags } from "~/db";
+import { listAllPostsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
-import { loadLinkTargets } from "~/lib/editor/link-targets.server";
+import { loadEditorOptions } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { savedRedirectPath } from "~/lib/editor/feedback";
 import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
@@ -27,7 +27,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     const today = new Date().toISOString().slice(0, 10);
     // A broken token must not blank the page: preview does not touch GitHub, and the editor names the failure.
     const { headSha, headError } = await timed(timings, "gh_head", () => readHead(env));
-    const loadProblems: string[] = [];
+    const { tagOptions, linkTargets, problems: loadProblems } = await loadEditorOptions(env, timings);
     const failed = (what: string, sentence: string) => (error: unknown) => {
       console.error(`editor ${what} read failed`, error);
       loadProblems.push(`${sentence}: ${errorMessage(error)}`);
@@ -37,12 +37,8 @@ export async function loader({ context }: Route.LoaderArgs) {
       headSha,
       headError,
       fields: { ...EMPTY_FIELDS, date: today },
-      tagOptions: (
-        await timed(timings, "d1_tags", () =>
-          listBlogTags(env).catch(failed("tags", "Existing tags could not be read, so none are suggested")),
-        )
-      ).map((tag) => tag.slug),
-      linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
+      tagOptions,
+      linkTargets,
       // The save gate remains the authority; this only saves a wasted submit.
       existingSlugs: (
         await timed(timings, "d1_all_posts", () =>
