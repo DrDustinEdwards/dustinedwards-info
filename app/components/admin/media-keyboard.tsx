@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback } from "react";
 
 import { bands, nextTile } from "~/lib/media/tile-nav.mjs";
 
@@ -8,73 +8,78 @@ export function isTypingTarget(target: EventTarget | null) {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-// Rows come from rendered geometry, not a column model: `bands()` in tile-nav.mjs says why.
-export function MediaKeyboard() {
-  const [active, setActive] = useState("");
+/** The tile's tab stop in the grid: the thumbnail link, which carries the file's name. */
+export function tileLink(key: string) {
+  return document.querySelector<HTMLElement>(
+    `.media-grid[data-view="grid"] [data-tile="${CSS.escape(key)}"] a.media-thumb-link`,
+  );
+}
 
-  useEffect(() => {
-    for (const el of document.querySelectorAll("[data-tile]")) {
-      if (el.getAttribute("data-tile") === active) el.setAttribute("data-active-tile", "yes");
-      else el.removeAttribute("data-active-tile");
-    }
-  }, [active]);
+/**
+ * The grid's keys, on the grid alone: they act only while focus is on a tile, so a key pressed on a
+ * button, a link or the inspector belongs to that control (WCAG 2.1.4). Focus is real and roves:
+ * one tile's controls are in the tab order, the arrows move focus to another tile, and the page
+ * renders that tile as the tab stop. Enter is the link's own. Rows come from rendered geometry, not a
+ * column model: `bands()` in tile-nav.mjs says why.
+ */
+export function useGridKeyboard({
+  setActive,
+  setSelected,
+}: {
+  setActive: (key: string) => void;
+  setSelected: (keys: string[]) => void;
+}) {
+  // Focus arriving on a tile by any route (Tab, a click, the inspector closing) makes it the stop.
+  const onFocus = useCallback(
+    (event: React.FocusEvent<HTMLElement>) => {
+      const key = (event.target as HTMLElement).closest("[data-tile]")?.getAttribute("data-tile");
+      if (key) setActive(key);
+    },
+    [setActive],
+  );
 
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (isTypingTarget(event.target)) return;
+  const onKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.metaKey || event.ctrlKey || event.altKey) return;
-
-      const rows = bands(
-        [...document.querySelectorAll("[data-tile]")].map((el) => {
-          const r = el.getBoundingClientRect();
-          return { id: el.getAttribute("data-tile") ?? "", top: r.top, left: r.left, width: r.width };
-        }),
-      );
-      if (rows.length === 0) return;
+      const tile = (event.target as HTMLElement).closest("[data-tile]");
+      const here = tile?.getAttribute("data-tile");
+      if (!tile || !here) return;
 
       const move = (dir: "left" | "right" | "up" | "down") => {
         event.preventDefault();
-        const next = nextTile(rows, active, dir);
-        if (next !== null) setActive(next);
+        const rows = bands(
+          [...document.querySelectorAll('.media-grid[data-view="grid"] [data-tile]')].map((el) => {
+            const r = el.getBoundingClientRect();
+            return { id: el.getAttribute("data-tile") ?? "", top: r.top, left: r.left, width: r.width };
+          }),
+        );
+        const next = nextTile(rows, here, dir);
+        if (next === null) return;
+        setActive(next);
+        tileLink(next)?.focus();
       };
-
-      const tile = () => document.querySelector(`[data-tile="${CSS.escape(active)}"]`);
 
       if (event.key === "ArrowRight") move("right");
       else if (event.key === "ArrowLeft") move("left");
       else if (event.key === "ArrowDown") move("down");
       else if (event.key === "ArrowUp") move("up");
       else if (event.key === "Escape") {
-        // Order matters: the drawer and modals stop Escape first, so one press closes only the thing on top.
-        setActive("");
-        for (const d of document.querySelectorAll("details[open]")) {
-          (d as HTMLDetailsElement).open = false;
-        }
-        // Unchecks the real boxes: the grid owns the selection.
-        for (const box of document.querySelectorAll(
-          '.media-card input[type="checkbox"]:checked',
-        )) {
-          (box as HTMLInputElement).click();
-        }
-      } else if (event.key === "x" && active) {
+        // Through state: the grid owns the selection, and the boxes render from it.
+        event.preventDefault();
+        setSelected([]);
+      } else if (event.key === "x") {
         // The real checkbox: the bulk form reads those, so a parallel model would select rows it never submits.
         event.preventDefault();
-        const box = tile()?.querySelector("input[type=checkbox]");
+        const box = tile.querySelector("input[type=checkbox]");
         if (box instanceof HTMLInputElement) box.click();
-      } else if (event.key === "c" && active) {
+      } else if (event.key === "c") {
         event.preventDefault();
-        const button = tile()?.querySelector(".media-copy");
+        const button = tile.querySelector(".media-copy");
         if (button instanceof HTMLButtonElement) button.click();
-      } else if (event.key === "Enter" && active) {
-        event.preventDefault();
-        const link = tile()?.querySelector("a.media-thumb-link");
-        if (link instanceof HTMLAnchorElement) link.click();
       }
-    };
+    },
+    [setActive, setSelected],
+  );
 
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [active]);
-
-  return null;
+  return { onFocus, onKeyDown };
 }

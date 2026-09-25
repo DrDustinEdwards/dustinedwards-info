@@ -24,7 +24,8 @@ export function BulkBar({
   return (
 
     <div className="posts-bulk" role="group" aria-label="Bulk actions">
-      <p className="posts-bulk-count" aria-live="polite">
+      {/* Not a live region: it mounts with its number, and the grid's own status region announces it. */}
+      <p className="posts-bulk-count">
         {chosen.length} selected
         <span className="posts-bulk-size">
           {byteSize(
