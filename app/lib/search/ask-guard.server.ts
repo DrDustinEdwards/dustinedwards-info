@@ -1,6 +1,7 @@
 // Every generated answer bills Workers AI and the route is public. Nothing reaches the model until
 // rate, cache and daily budget have passed, and budget sits AFTER the cache so a hit costs nothing.
 
+import { toHex } from "~/lib/bytes.mjs";
 import { pacedAllowance, secondsPerPacedUnit } from "~/lib/search/ask-pacing.mjs";
 
 /** Per IP per minute: more than a reading human asks, far less than a loop wants. */
@@ -47,10 +48,7 @@ export async function questionKey(question: string): Promise<string> {
     "SHA-256",
     new TextEncoder().encode(normalized),
   );
-  const hex = [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  return `${ANSWER_CACHE_PREFIX}${hex}`;
+  return `${ANSWER_CACHE_PREFIX}${toHex(digest)}`;
 }
 
 interface GuardVerdict {
