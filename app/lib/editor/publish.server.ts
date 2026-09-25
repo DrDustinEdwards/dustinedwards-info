@@ -60,16 +60,21 @@ type AssetManifest = { placeholders?: Record<string, { sha: string; lqip: string
 export function makeResolveImage(env: PublishEnv) {
   let manifest: Promise<AssetManifest> | null = null;
   const placeholders = async () => {
+    // A missing or unparseable manifest refuses the save, as the build from a clone does: rendering
+    // without placeholders would commit HTML that disagrees with the next build.
     manifest ??= readFile(env, ASSET_MANIFEST_PATH).then((file) => {
-      // A bad manifest renders without placeholders rather than failing the save, and is logged.
+      if (!file) {
+        throw new EditorError(
+          `${ASSET_MANIFEST_PATH} is not in the repository, so no placeholder can be read.`,
+        );
+      }
       try {
-        return file ? (JSON.parse(file.content) as AssetManifest) : {};
+        return JSON.parse(file.content) as AssetManifest;
       } catch (error) {
-        console.error(
-          `${ASSET_MANIFEST_PATH} did not parse; rendering without placeholders. ` +
+        throw new EditorError(
+          `${ASSET_MANIFEST_PATH} did not parse: ` +
             `${error instanceof Error ? error.message : String(error)}`,
         );
-        return {};
       }
     });
     return (await manifest).placeholders ?? {};
