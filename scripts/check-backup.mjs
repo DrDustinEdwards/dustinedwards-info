@@ -1,8 +1,7 @@
-import { readFile, readdir, mkdir, stat } from "node:fs/promises";
+import { readFile, readdir, mkdir, rm, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
-import { retryRead } from "./lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
@@ -27,8 +26,12 @@ const PLATFORM_TABLES = new Set([
  * @returns {{ stdout: string, status: number }}
  */
 function wrangler(args) {
-  const result = spawnSync(`npx wrangler ${args}`, { encoding: "utf8", shell: true });
-  return { stdout: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status ?? 1 };
+  // Bounded, so a hung wrangler fails the gate instead of hanging it: retryRead's timer cannot fire here.
+  const result = spawnSyncBounded(`npx wrangler ${args}`, [], { shell: true, timeoutMs: 10 * 60_000 });
+  return {
+    stdout: `${result.stdout}${result.stderr}${result.error ? `\n${result.error}` : ""}`,
+    status: result.status ?? 1,
+  };
 }
 
 /**
@@ -212,6 +215,9 @@ async function main() {
   /** @param {string} name */
   async function exportTable(name) {
     const out = path.join(dir, `${name}.sql`);
+    // The directory is fixed across runs, so an export that exits 0 without writing would otherwise
+    // be graded on the previous run's file.
+    await rm(out, { force: true });
     // Retried once: an export is a read that overwrites its own local file. The throw is load-bearing,
     // because wrangler returns on a failed command rather than rejecting.
     await retryRead(
@@ -232,37 +238,22 @@ async function main() {
     return { name, bytes, inserts };
   }
 
-  // Concurrent. The bound is argued, not tuned: enough processes to saturate the machine puts the cost
-  // back as scheduler contention.
-  const EXPORT_CONCURRENCY = 4;
-  const names = sorted(real);
+  // Serial, and said so: wrangler() is spawnSync, which blocks the event loop, so the four-worker
+  // pool that stood here ran one export at a time anyway.
   /** @type {Array<{ name: string, bytes: number, inserts: number }>} */
   const results = [];
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(EXPORT_CONCURRENCY, names.length) }, async () => {
-      for (;;) {
-        const index = next;
-        next += 1;
-        const name = names[index];
-        if (name === undefined) return;
-        results.push(await exportTable(name));
-      }
-    }),
-  );
+  for (const name of sorted(real)) results.push(await exportTable(name));
 
-  // Re-sorted: a pool completes out of order, and order-dependent output makes every diff noise.
-  results.sort((a, b) => a.name.localeCompare(b.name));
   for (const result of results) {
     totalBytes += result.bytes;
     console.log(`  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)`);
     if (result.inserts === 0) empty.push(result.name);
   }
 
-  // Scope: a worker that returned early leaves exports unrun, and every count below then agrees with itself.
-  if (results.length !== names.length) {
+  // Scope: a table left unexported makes every count below agree with itself over a subset.
+  if (results.length !== real.size) {
     throw new Error(
-      `${results.length} of ${names.length} table(s) were exported. The export pool ` +
+      `${results.length} of ${real.size} table(s) were exported. The export loop ` +
         `did not run every table, so every count below would be taken over a subset.`,
     );
   }

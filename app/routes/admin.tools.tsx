@@ -1,9 +1,11 @@
 import { Form, data } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
+import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { purgePosts } from "~/lib/cache-purge.server";
 import { chooseEpisode, parsePodcastSlot } from "~/lib/podcast/feed.mjs";
 import { readPodcastFeed, readPodcastSlot, writePodcastSlot } from "~/lib/podcast/podcast.server";
@@ -44,6 +46,8 @@ export async function loader({ context }: Route.LoaderArgs) {
     showing: chosen.episode?.title ?? null,
     fellBack: chosen.fellBack,
     fetchedAt: feed?.fetchedAt ?? null,
+    /** Why the last refresh failed; null after one that landed. */
+    lastError: feed?.lastError ?? null,
   };
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
   return data({ secrets, misses, podcast });
@@ -63,22 +67,38 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
     const feed = await readPodcastFeed(context, { wait: true });
     if (slot.mode === "featured" && !feed?.episodes.some((e) => e.guid === slot.guid)) {
-      return data({ purged: null }, { status: 400 });
+      return data(
+        { message: "Nothing was saved: that episode is not in the feed. Reload and pick again." },
+        { status: 400 },
+      );
     }
     await writePodcastSlot(env, slot);
     // The home page is tagged with the corpus tag, so this purge reaches it.
-    await purgePosts("home podcast slot");
-    return data({ purged: null });
+    const purged = await purgePosts("home podcast slot");
+    return data({
+      message:
+        purged === false
+          ? "Home podcast saved, but the cache purge failed, so the home page shows the old choice until its cache expires."
+          : "Home podcast saved.",
+    });
   }
   if (form.get("intent") !== "purge-zero-results") {
-    return data({ purged: null }, { status: 400 });
+    return data(
+      { message: `Nothing was done: ${String(form.get("intent") ?? "(none)")} is not an action this page knows.` },
+      { status: 400 },
+    );
+  }
+  // The rows are gone for good, so the action asks, as the mentions sweep does: a guard in a handler
+  // does not run with scripting off. The count is 1, the operator authorizing the purge.
+  if (!confirmationSatisfied(String(form.get(CONFIRM_FIELD) ?? "").trim(), 1)) {
+    return data({ purged: null, confirmPurge: true });
   }
   const purged = await purgeZeroResults(getEnv(context));
-  return data({ purged });
+  return data({ message: `Removed ${purged} expired quer${purged === 1 ? "y" : "ies"}.` });
 }
 
 
-export default function AdminTools({ loaderData }: Route.ComponentProps) {
+export default function AdminTools({ loaderData, actionData }: Route.ComponentProps) {
   const { secrets, misses, podcast } = loaderData;
   const missing = secrets.filter((s) => !s.present);
   return (
@@ -86,6 +106,13 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
       title="Tools"
       description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
+      {/* A live announcement: it reports what the submit just did. */}
+      {actionData && "message" in actionData ? (
+        <p className="admin-notice" role="status">
+          {actionData.message}
+        </p>
+      ) : null}
+
       <h3 className="tool-audit-heading">
         Secrets{" "}
         <span className="chip">
@@ -123,6 +150,17 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
           ))}
         </ul>
       )}
+      {actionData && "confirmPurge" in actionData ? (
+        <ConfirmDialog
+          title="Remove the expired queries"
+          body={<p>{`This permanently removes every query nobody has repeated in ${RETENTION_DAYS} days.`}</p>}
+          requireTyped="1"
+          confirmLabel="Remove them"
+          cancelHref="/admin/tools"
+        >
+          <input type="hidden" name="intent" value="purge-zero-results" />
+        </ConfirmDialog>
+      ) : null}
       <Form method="post">
         <input type="hidden" name="intent" value="purge-zero-results" />
         <p className="muted">
@@ -144,10 +182,15 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
       </h3>
       <p className="muted" data-podcast-showing>
         {podcast.showing === null
-          ? "The feed has not been read yet, so the home page links to germomics.com instead."
+          ? podcast.lastError
+            ? `The last read failed: ${podcast.lastError}. The home page links to germomics.com instead.`
+            : "The feed has not been read yet, so the home page links to germomics.com instead."
           : podcast.fellBack
             ? `The featured episode is no longer in the feed, so the home page is playing the latest: ${podcast.showing}.`
             : `The home page is playing: ${podcast.showing}.`}
+        {podcast.showing !== null && podcast.lastError
+          ? ` The last read failed: ${podcast.lastError}. This is from the last good read.`
+          : null}
       </p>
       <Form method="post" aria-labelledby="home-podcast">
         <input type="hidden" name="intent" value="podcast-slot" />

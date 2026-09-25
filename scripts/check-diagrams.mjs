@@ -25,6 +25,7 @@ const DIAGRAM_DIR = join(root, "public", DIAGRAM_ASSET_DIR);
 const ARTIFACT = join(root, "content", "generated", "posts.json");
 
 let checks = 0;
+let declarations = 0;
 /** @type {string[]} */
 const failures = [];
 
@@ -233,13 +234,13 @@ if (!existsSync(ARTIFACT)) {
       assert(`${fileName(key, theme)} has no foreignObject`, !svg.includes("foreignObject"));
 
       const audit = auditDiagramSvg(svg, Object.values(palettes[theme]));
-      checks += audit.checked;
-      if (audit.problems.length > 0) {
-        failures.push(
-          `${fileName(key, theme)} uses colors that are not ratified tokens: ` +
-            audit.problems.join("; "),
-        );
-      }
+      // Tallied apart from `checks`: added in, a few hundred declarations hid a skipped block from the floor.
+      declarations += audit.checked;
+      assert(
+        `${fileName(key, theme)} uses only ratified token colors` +
+          (audit.problems.length > 0 ? `: ${audit.problems.join("; ")}` : ""),
+        audit.problems.length === 0,
+      );
       assert(`${fileName(key, theme)} had colors to check`, audit.checked > 0);
     }
   }
@@ -263,10 +264,19 @@ if (!existsSync(ARTIFACT)) {
   );
 }
 
-// Measured by running it, never summed.
-const MINIMUM_CHECKS = 390;
+// Measured by running it, never summed: 221 checks and 202 declarations on 2026-09-24, over 3 diagrams.
+const MINIMUM_CHECKS = 210;
 const floorBreach = assertFloor("check:diagrams", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
+const MINIMUM_DECLARATIONS = 190;
+const declarationBreach = assertFloor(
+  "check:diagrams",
+  "declarations",
+  declarations,
+  MINIMUM_DECLARATIONS,
+  "The color audit examined fewer declarations than the committed diagrams carry.",
+);
+if (declarationBreach) failures.push(declarationBreach);
 
 if (failures.length > 0) {
   console.error(`check:diagrams FAILED ${failures.length} of ${checks} assertions\n`);

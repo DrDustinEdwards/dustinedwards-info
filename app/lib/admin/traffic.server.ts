@@ -44,13 +44,22 @@ async function runSql(env: Env, query: string): Promise<Array<Record<string, unk
     // Status only: an API error body can echo the query.
     throw new Error(`Analytics Engine returned ${res.status}`);
   }
-  const json = (await res.json()) as { data?: Array<Record<string, unknown>> };
-  return json.data ?? [];
+  // An answer with no `data` array is unreadable, not an empty window: read as [] it shows zero traffic.
+  const json = (await res.json()) as { data?: unknown };
+  if (!Array.isArray(json.data)) {
+    throw new Error("Analytics Engine answered without a data array");
+  }
+  return json.data as Array<Record<string, unknown>>;
 }
 
+// SQL NULL (a SUM over no rows) is a real zero; anything else that is not a number is unreadable.
 const num = (value: unknown) => {
+  if (value === null) return 0;
   const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
+  if (value === undefined || value === "" || !Number.isFinite(n)) {
+    throw new Error(`Analytics Engine returned ${JSON.stringify(value)} where a count belongs`);
+  }
+  return n;
 };
 
 export async function fetchTraffic(env: Env): Promise<SourceResult<TrafficReport>> {
@@ -116,7 +125,9 @@ async function readCachedReadership(env: Env): Promise<PostReadership | null> {
     if (typeof value.complete !== "boolean") return null;
     if (!value.byPath || typeof value.byPath !== "object") return null;
     return value as PostReadership;
-  } catch {
+  } catch (error) {
+    // A miss, so the live query answers; logged, because a KV outage otherwise looks like a cold cache.
+    console.error("traffic readership cache read failed", error);
     return null;
   }
 }
@@ -162,8 +173,9 @@ export async function fetchPostReadership(env: Env): Promise<SourceResult<PostRe
       await env.APP_KV.put(READERSHIP_CACHE_KEY, JSON.stringify(report), {
         expirationTtl: READERSHIP_CACHE_TTL_SECONDS,
       });
-    } catch {
-      // Failing to cache is not failing to read.
+    } catch (error) {
+      // Failing to cache is not failing to read, but it is logged: every view then pays the query.
+      console.error("traffic readership cache write failed", error);
     }
 
     return { status: "live", data: report, fetchedAt: new Date().toISOString() };

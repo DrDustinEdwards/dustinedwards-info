@@ -26,7 +26,6 @@ test("it REFUSES every scheme that is not http or https", () => {
   for (const value of refused) {
     assert.equal(safeHttpHref(value), null, `${value} was not refused`);
   }
-  assert.equal(refused.length, 7);
 });
 
 test("it REFUSES anything that is not an absolute URL at all", () => {

@@ -12,7 +12,6 @@ import { build } from "vite";
 
 import {
   DOCUMENT_ACTION,
-  DOCUMENT_EAGERNESS,
   buildSpeculationRules,
 } from "../app/lib/speculation.mjs";
 
@@ -117,7 +116,6 @@ test("THE ACTION IS PREFETCH, NOT PRERENDER", () => {
   /* A prerender that has not painted is still ACTIVATABLE, and `moderate` starts on
    * pointerdown, so a click with no hover dwell swaps in a blank frame. */
   const payload = payloadOn("/blog");
-  assert.equal(DOCUMENT_ACTION, "prefetch");
   assert.deepEqual(Object.keys(payload), ["prefetch"], `payload keys are ${JSON.stringify(Object.keys(payload))}`);
   assert.equal(payload.prerender, undefined, "the payload still carries a prerender rule");
 });
@@ -129,8 +127,7 @@ test("THERE IS EXACTLY ONE RULE, and it is a document rule at moderate eagerness
   assert.equal(rules.length, 1, `expected one rule, got ${JSON.stringify(rules)}`);
   assert.ok(rules[0].where, "the rule is not a document rule");
   assert.ok(!rules[0].urls, "the rule carries a urls list");
-  assert.equal(rules[0].eagerness, DOCUMENT_EAGERNESS);
-  assert.equal(DOCUMENT_EAGERNESS, "moderate");
+  assert.equal(rules[0].eagerness, "moderate");
 });
 
 test("the rule has a positive scope, not only exclusions", () => {

@@ -43,10 +43,15 @@ export async function callTool(token, name, args) {
   const payload = text.includes("data:")
     ? text.split("\n").filter((l) => l.startsWith("data:")).pop()?.slice(5).trim()
     : text;
-  const rpc = JSON.parse(payload ?? "{}");
+  // No payload or no content is a failed call, never an empty object a caller could read as a result.
+  if (!payload) throw new Error(`${name} answered with no JSON-RPC payload`);
+  const rpc = JSON.parse(payload);
   if (rpc.error) throw new Error(`${name}: ${rpc.error.message ?? "rpc error"}`);
   const content = rpc.result?.content?.[0]?.text;
-  return JSON.parse(content ?? "{}");
+  // An MCP tool error arrives as a normal result flagged isError, with the message as its text.
+  if (rpc.result?.isError) throw new Error(`${name}: ${content ?? "tool error"}`);
+  if (typeof content !== "string") throw new Error(`${name} answered with no text content`);
+  return JSON.parse(content);
 }
 
 export const STAMP_PREFIX = "capsid-source:";

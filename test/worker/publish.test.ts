@@ -1,10 +1,11 @@
 import { env } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 
 import { claimMediaKeyForDelete, upsertMediaRecord } from "~/db";
 import {
   EditorError,
   deletePost,
+  regenerateAllFromRepo,
   renderAndWrite,
   savePost,
   syncPostToD1,
@@ -304,12 +305,12 @@ describe("the FTS indexes", () => {
     }
     expect(await ftsEquality()).toMatchObject({ ok: true });
 
-    try {
-      await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('delete-all')`).run();
-      expect(await ftsEquality()).toMatchObject({ ok: false });
-    } finally {
+    /* A hook, not a `finally`: a rebuild that threw there would replace the assertion's failure. */
+    onTestFinished(async () => {
       await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`).run();
-    }
+    });
+    await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('delete-all')`).run();
+    expect(await ftsEquality()).toMatchObject({ ok: false });
   });
 });
 
@@ -364,5 +365,52 @@ describe("deletePost", () => {
      * from the difference between two error messages. */
     expect(gh.calls.slice(before)).toHaveLength(0);
     expect(await countRows("posts", "WHERE slug = ?1", "operator-cannot-delete")).toBe(1);
+  });
+
+  it("REPORTS a failed Ask removal, which is not the same answer as Ask being off", async () => {
+    await savePost(publishEnv(), {
+      slug: "ask-stuck",
+      raw: post("ask-stuck"),
+      isNew: true,
+      actor: { kind: "admin" },
+    });
+
+    const withBrokenAsk = {
+      ...env,
+      AI_SEARCH: {
+        items: {
+          list: async () => {
+            throw new Error("planted AI Search outage");
+          },
+        },
+      },
+    } as unknown as Parameters<typeof deletePost>[0];
+    const result = await deletePost(withBrokenAsk, { slug: "ask-stuck", actor: { kind: "admin" } });
+
+    expect(result.askRemoval).toMatchObject({ ok: false });
+    expect(await countRows("posts", "WHERE slug = ?1", "ask-stuck")).toBe(0);
+  });
+});
+
+describe("regenerateAllFromRepo", () => {
+  it("clears every row a post removed from the repository owned, as a delete does", async () => {
+    const key = "/media/dustin-edwards-feed5678feed5678-400x300.png";
+    for (const slug of ["regen-kept", "regen-orphan"]) {
+      await savePost(publishEnv(), {
+        slug,
+        raw: post(slug, { body: `Body.\n\n![alt](${key})\n` }),
+        isNew: true,
+        actor: { kind: "admin" },
+      });
+    }
+    gh.files.delete(postPath("regen-orphan"));
+
+    const result = await regenerateAllFromRepo(publishEnv());
+
+    expect(result.removed).toBeGreaterThanOrEqual(1);
+    expect(await countRows("posts", "WHERE slug = ?1", "regen-orphan")).toBe(0);
+    expect(await countRows("search_docs", "WHERE doc_uid = ?1", "post:regen-orphan")).toBe(0);
+    expect(await countRows("media_refs", "WHERE source_id = ?1", "regen-orphan")).toBe(0);
+    expect(await countRows("posts", "WHERE slug = ?1", "regen-kept")).toBe(1);
   });
 });

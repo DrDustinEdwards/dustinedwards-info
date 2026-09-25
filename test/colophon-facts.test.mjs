@@ -25,8 +25,9 @@ test("EVERY colophon section has a fact list", () => {
   for (const section of COLOPHON_SECTIONS) {
     try {
       colophonFacts(stack, features, section.id);
-    } catch {
-      missing.push(section.id);
+    } catch (error) {
+      // The message is kept: a TypeError in the lookup is not the same defect as a missing list.
+      missing.push(`${section.id}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   assert.deepEqual(

@@ -97,7 +97,9 @@ for (const config of CONFIGS) {
       );
     }
 
-    text = text.replace(needle, `"${field.key}": "${value}"`);
+    // A replacer function, not a string: in a replacement string `$&` and `$1` are patterns, so a
+    // value carrying a dollar sign would be written as something else.
+    text = text.replace(needle, () => `"${field.key}": "${value}"`);
     console.log(`  patched ${field.name} in ${config}`);
   }
 
@@ -108,6 +110,11 @@ for (const config of CONFIGS) {
   for (const field of FIELDS.filter((f) => f.config === config)) {
     if (after.includes(needleFor(field))) {
       refuse(`${field.name} is still a placeholder in ${config} after the write.`);
+    }
+    // The placeholder being gone is half of it; the value being there is the other half.
+    const value = (process.env[field.env] ?? "").trim();
+    if (!after.includes(`"${field.key}": "${value}"`)) {
+      refuse(`${field.name} is not in ${config} after the write, though its placeholder is gone.`);
     }
   }
 }

@@ -97,14 +97,18 @@ async function serveThumbnail(env: Env, request: Request, key: string, width: nu
       .transform({ width, ...(crop ? { fit: "cover", gravity: "auto" } : {}) })
       .output({ format, quality: WEBP_QUALITY });
     response = result.response();
-  } catch {
+  } catch (error) {
     // Falling back to the original is safe here, for one tile, and must not become a general strategy.
+    console.error(`media thumbnail transform failed for ${key} at w=${width}`, error);
     const original = await bucketFor(env, key).get(key);
     if (!original) return new Response("Not found", { status: 404 });
     const headers = new Headers();
     original.writeHttpMetadata(headers);
-    headers.set("cache-control", "public, max-age=31536000, immutable");
+    /* Short, not immutable: this URL should hold the thumbnail once the transform recovers. */
+    headers.set("cache-control", "public, max-age=300");
     headers.set("x-media-thumb", "original-fallback");
+    // The original bytes, so an SVG reaches the reader here too.
+    attachIfActive(headers);
     return new Response(original.body, { headers });
   }
 

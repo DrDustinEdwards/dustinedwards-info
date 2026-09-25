@@ -4,12 +4,16 @@
 import { readFileSync } from "node:fs";
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+
+// Every path below is repo-relative, as the committed artifact records it; reads resolve from here, so
+// a run from another directory scans this repo rather than whatever the cwd holds.
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // `readFileSync` rather than an import attribute: the attribute needs a newer module setting and fails
 // the typecheck rather than the run.
 const assetManifest = JSON.parse(
-  readFileSync(path.join("content", "generated", "assets.json"), "utf8"),
+  readFileSync(path.join(ROOT, "content", "generated", "assets.json"), "utf8"),
 );
 import {
   SOURCE_FILES,
@@ -19,26 +23,27 @@ import {
   referencesIn,
   stripComments,
 } from "../app/lib/media/template-refs.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 export const TEMPLATE_REFS_PATH = path.join("content", "generated", "template-refs.json");
 
 /**
  * Forward slashes always: the artifact is committed and compared across machines.
  *
- * @param {string} dir
+ * @param {string} dir repo-relative, forward slashes
  * @returns {Promise<string[]>}
  */
 async function walk(dir) {
   /** @type {string[]} */
   const out = [];
-  for (const entry of await readdir(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
+  for (const entry of await readdir(path.join(ROOT, dir), { withFileTypes: true })) {
+    const rel = `${dir}/${entry.name}`;
     if (entry.isDirectory()) {
-      out.push(...(await walk(full)));
+      out.push(...(await walk(rel)));
       continue;
     }
     if (!entry.isFile()) continue;
-    out.push(full.split(path.sep).join("/"));
+    out.push(rel);
   }
   return out;
 }
@@ -54,10 +59,18 @@ export async function scanTemplateRefs() {
   files.push(...SOURCE_FILES);
 
   const kept = files.filter(isSourceFile);
+  // The media admin reports template references from this artifact, so a scan of nothing clears them.
+  if (!Array.isArray(assetPaths) || assetPaths.length === 0 || kept.length === 0) {
+    throw new Error(
+      `build:template-refs scanned ${kept.length} source file(s) against ` +
+        `${Array.isArray(assetPaths) ? assetPaths.length : "no"} known asset(s). An empty scope ` +
+        `reports the same as a repo with no references, so nothing was written.`,
+    );
+  }
   /** @type {Array<{ file: string, assets: string[] }>} */
   const scanned = [];
   for (const file of kept) {
-    const raw = await readFile(file, "utf8");
+    const raw = await readFile(path.join(ROOT, file), "utf8");
     // Comments go first: a doc comment naming an asset is prose, not a placement. JSON is passed through,
     // because a tokenizer would treat a `//` inside a URL string as a comment.
     const text = file.endsWith(".json") || file.endsWith(".webmanifest")
@@ -74,11 +87,9 @@ export async function scanTemplateRefs() {
   };
 }
 
-// `pathToFileURL`: on this host a hand-built URL differs in its slashes, so the script would exit 0
-// having never written the artifact.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   const result = await scanTemplateRefs();
-  await writeFile(TEMPLATE_REFS_PATH, `${JSON.stringify(result, null, 2)}\n`, "utf8");
+  await writeFile(path.join(ROOT, TEMPLATE_REFS_PATH), `${JSON.stringify(result, null, 2)}\n`, "utf8");
   console.log(
     `build:template-refs ok. ${result.generated} asset(s) referenced by repository code, ` +
       `from ${result.filesRead} source file(s) against ${result.assetsConsidered} known asset(s).`,
