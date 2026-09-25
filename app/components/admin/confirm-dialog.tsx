@@ -34,11 +34,21 @@ export function ConfirmDialog({
 
   useEffect(() => {
     setHydrated(true);
+    // Read before showModal() moves focus: the control that opened it, or nothing on a page load.
+    const active = document.activeElement;
+    const origin = active instanceof HTMLElement && active !== document.body ? active : null;
     const el = ref.current;
-    if (!el) return;
-    if (!el.open) el.showModal();
+    if (el && !el.open) el.showModal();
     // autoFocus is not enough: React focuses on mount, and the dialog's focus rules run at showModal().
     fieldRef.current?.focus();
+    // Unmounting drops focus on the body. Deferred, so the page Cancel returns to has rendered.
+    return () => {
+      window.setTimeout(() => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const back = origin?.isConnected ? origin : document.getElementById("main");
+        back?.focus({ preventScroll: true });
+      }, 0);
+    };
   }, []);
 
   const satisfied = requireTyped === undefined || typed.trim() === requireTyped;
