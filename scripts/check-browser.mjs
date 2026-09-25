@@ -3018,20 +3018,26 @@ try {
               `the preview build it is a real defect and should be read as one.`,
       );
     } else {
+      /* Closed in a finally, like the other scriptless pages: a throw here would leave it open. */
       const scriptless = await browser.newPage();
-      await scriptless.setJavaScriptEnabled(false);
-      await scriptless.goto(`${BASE}${imagePost}`, { waitUntil: "networkidle0" });
-      const served = await scriptless.evaluate(() => {
-        const image = document.querySelector(".prose img");
-        const parent = image?.parentElement ?? null;
-        return {
-          image: Boolean(image),
-          anchor: parent?.tagName === "A",
-          klass: parent?.className ?? "",
-          href: parent?.getAttribute("href") ?? "",
-        };
-      });
-      await scriptless.close();
+      // Overwritten below or the throw propagates, so these values are never read.
+      let served = { image: false, anchor: false, klass: "", href: "" };
+      try {
+        await scriptless.setJavaScriptEnabled(false);
+        await scriptless.goto(`${BASE}${imagePost}`, { waitUntil: "networkidle0" });
+        served = await scriptless.evaluate(() => {
+          const image = document.querySelector(".prose img");
+          const parent = image?.parentElement ?? null;
+          return {
+            image: Boolean(image),
+            anchor: parent?.tagName === "A",
+            klass: parent?.className ?? "",
+            href: parent?.getAttribute("href") ?? "",
+          };
+        });
+      } finally {
+        await scriptless.close();
+      }
 
       ok(
         `${imagePost}: with script off, the image's parent is an image-link anchor`,
