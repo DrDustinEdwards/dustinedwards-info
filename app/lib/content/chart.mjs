@@ -90,30 +90,14 @@ function parseChartCsv(text) {
 }
 
 /**
+ * The y columns and the label each series is drawn and keyed under, refused unless every column
+ * exists, every multi-series label is present and unique, and the palette has a color for each.
+ *
  * @param {Record<string, string>} attrs
- * @param {string} csv
+ * @param {string[]} columns
+ * @returns {{ yColumns: string[], labels: string[] }}
  */
-export function buildChartModel(attrs, csv) {
-  const type = attrs.type;
-  if (!type) throw new Error(":::chart requires a type attribute");
-  if (!CHART_TYPES.includes(type)) {
-    throw new Error(
-      `:::chart type "${type}" is not one of ${CHART_TYPES.join(", ")}`,
-    );
-  }
-
-  // Required even with the data table: the table is the long description, not the accessible name.
-  const alt = (attrs.alt ?? "").trim();
-  if (!alt) throw new Error(`:::chart "${attrs.title ?? type}" requires an alt attribute`);
-
-  const { columns, rows } = parseChartCsv(csv);
-
-  const x = attrs.x;
-  if (!x) throw new Error(":::chart requires an x attribute naming a data column");
-  if (!columns.includes(x)) {
-    throw new Error(`:::chart x column "${x}" is not in the data (have ${columns.join(", ")})`);
-  }
-
+function resolveSeries(attrs, columns) {
   if (!attrs.y) throw new Error(":::chart requires a y attribute naming a data column");
   const yColumns = attrs.y.split(",").map((s) => s.trim()).filter(Boolean);
   if (yColumns.length === 0) throw new Error(":::chart y attribute is empty");
@@ -151,6 +135,35 @@ export function buildChartModel(attrs, csv) {
       `:::chart has ${yColumns.length} series but the ratified palette has ${CHART_SERIES_TOKENS.length} chart colors`,
     );
   }
+  return { yColumns, labels };
+}
+
+/**
+ * @param {Record<string, string>} attrs
+ * @param {string} csv
+ */
+export function buildChartModel(attrs, csv) {
+  const type = attrs.type;
+  if (!type) throw new Error(":::chart requires a type attribute");
+  if (!CHART_TYPES.includes(type)) {
+    throw new Error(
+      `:::chart type "${type}" is not one of ${CHART_TYPES.join(", ")}`,
+    );
+  }
+
+  // Required even with the data table: the table is the long description, not the accessible name.
+  const alt = (attrs.alt ?? "").trim();
+  if (!alt) throw new Error(`:::chart "${attrs.title ?? type}" requires an alt attribute`);
+
+  const { columns, rows } = parseChartCsv(csv);
+
+  const x = attrs.x;
+  if (!x) throw new Error(":::chart requires an x attribute naming a data column");
+  if (!columns.includes(x)) {
+    throw new Error(`:::chart x column "${x}" is not in the data (have ${columns.join(", ")})`);
+  }
+
+  const { yColumns, labels } = resolveSeries(attrs, columns);
 
   const xIndex = columns.indexOf(x);
 
