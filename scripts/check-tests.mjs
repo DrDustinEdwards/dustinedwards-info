@@ -3,6 +3,7 @@ import { readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
+import { descendantPids, killTree, processExists, readProcessTable } from "./lib/child-processes.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
@@ -26,26 +27,26 @@ function ok(label, condition, detail = "") {
 }
 
 /**
- * By command line, never by image name: `node.exe` here is also this gate, the language server and
- * the agent harness.
+ * By parentage from this gate's own spawn, never by a machine-wide command-line match: another
+ * worktree's `node --test "test/**"` has the same command line and is not this gate's to kill.
+ * The spawned shell is dead after a timeout, so its descendants are walked from its pid.
  *
- * @returns {number[]} the pids killed
+ * @param {number | undefined} rootPid the pid spawnSync reported for the test run's shell
+ * @returns {{ killed: number[], failed: number[], unreadable: boolean }}
  */
-function reapTestRunners() {
-  if (process.platform !== "win32") return [];
-  const script =
-    "Get-CimInstance Win32_Process | " +
-    "Where-Object { $_.CommandLine -match '--test' -and $_.CommandLine -match 'test/\\*\\*' } | " +
-    "ForEach-Object { $_.ProcessId; Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }";
-  const found = spawnSync(
-    "powershell",
-    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
-    { encoding: "utf8", timeout: 30_000 },
-  );
-  return `${found.stdout ?? ""}`
-    .split("\n")
-    .map((line) => Number(line.trim()))
-    .filter((pid) => Number.isInteger(pid) && pid > 0);
+function reapTestRunners(rootPid) {
+  if (!Number.isInteger(rootPid) || Number(rootPid) <= 0) return { killed: [], failed: [], unreadable: false };
+  const table = readProcessTable();
+  if (table.size === 0) return { killed: [], failed: [], unreadable: true };
+  /** @type {number[]} */
+  const killed = [];
+  /** @type {number[]} */
+  const failed = [];
+  for (const pid of descendantPids(Number(rootPid), table)) {
+    if (!processExists(pid)) continue;
+    (killTree(pid) ? killed : failed).push(pid);
+  }
+  return { killed, failed, unreadable: false };
 }
 
 /**
@@ -146,10 +147,16 @@ const run = spawnSync(
 );
 const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 
-// `spawnSync`'s timeout kills the shell and nothing below it, so reap by command line on every path.
-const leaked = reapTestRunners();
-if (leaked.length > 0) {
-  console.log(`  reaped ${leaked.length} leftover runner process(es): ${leaked.join(", ")}`);
+// `spawnSync`'s timeout kills the shell and nothing below it, so reap its descendants on every path.
+const leaked = reapTestRunners(run.pid);
+if (leaked.killed.length > 0) {
+  console.log(`  reaped ${leaked.killed.length} leftover runner process(es): ${leaked.killed.join(", ")}`);
+}
+if (leaked.failed.length > 0) {
+  console.log(`  could NOT kill ${leaked.failed.length} leftover runner process(es): ${leaked.failed.join(", ")}`);
+}
+if (leaked.unreadable) {
+  console.log("  could not read the process table, so leftover runner processes were not looked for");
 }
 
 // `ETIMEDOUT` lives on `code`, which only `ErrnoException` declares.
