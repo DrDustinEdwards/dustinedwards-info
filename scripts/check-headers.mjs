@@ -306,32 +306,28 @@ for (const name of [
   }
 }
 
-/* The types are read out of the route files and isFeed() is called, so the two owners cannot drift. */
+/* The types are read out of the feed module and isFeed() is called, so the two owners cannot drift. */
 {
   /** Named rather than globbed: the assertion is about THESE THREE, and a glob quietly shrinks. */
-  const FEED_ROUTES = [
-    "blog.rss[.xml].ts",
-    "blog.atom[.xml].ts",
-    "blog.feed[.json].ts",
-  ];
+  const FEED_FORMATS = ["rss", "atom", "json"];
+  const feedModule = join(root, "app", "lib", "feed-response.ts");
+  const feedSource = existsSync(feedModule)
+    ? stripComments(readFileSync(feedModule, "utf8"))
+    : "";
+  ok("the feed module app/lib/feed-response.ts exists", feedSource !== "", "not on disk");
+  const typesBlock = /FEED_CONTENT_TYPES\s*=\s*\{([^}]*)\}/.exec(feedSource)?.[1] ?? "";
 
-  for (const file of FEED_ROUTES) {
-    const routePath = join(root, "app", "routes", file);
-    if (!existsSync(routePath)) {
-      ok(`the feed route ${file} exists`, false, "not on disk");
-      continue;
-    }
-    const source = stripComments(readFileSync(routePath, "utf8"));
-    const declared = source.match(/"content-type":\s*"([^"]+)"/);
+  for (const format of FEED_FORMATS) {
+    const declared = new RegExp(`\\b${format}:\\s*"([^"]+)"`).exec(typesBlock);
     ok(
-      `${file} declares a content-type this gate can read`,
+      `the ${format} feed declares a content-type this gate can read`,
       Boolean(declared),
-      "no `\"content-type\": \"...\"` literal found, so the next assertion would " +
+      `no \`${format}: "..."\` entry in FEED_CONTENT_TYPES, so the next assertion would ` +
         "have nothing to test and would pass",
     );
     if (!declared) continue;
     ok(
-      `${file} serves "${declared[1]}", which isFeed() exempts from the CSP`,
+      `the ${format} feed serves "${declared[1]}", which isFeed() exempts from the CSP`,
       isFeed(declared[1]),
       `isFeed("${declared[1]}") is false, so this feed is served a policy with a ` +
         `per-request nonce on a shared-cached body. Exempt types: ` +
