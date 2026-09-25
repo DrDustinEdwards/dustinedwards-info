@@ -5,9 +5,12 @@ import { createServer } from "node:http";
 import { ciVerdict, fetchCiRuns } from "../scripts/lib/ci-status.mjs";
 
 const SHA = "e15b883";
+const FULL_SHA = `${SHA}0123456789abcdef0123456789abcdef0`;
 
 const green = {
   name: "CI",
+  path: ".github/workflows/ci.yml",
+  head_sha: FULL_SHA,
   event: "push",
   status: "completed",
   conclusion: "success",
@@ -178,4 +181,44 @@ test("a 5xx is thrown with ITS status, not flattened into the 404 hint", async (
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }
+});
+
+test("a run for another commit refuses: the head_sha filter was not applied", () => {
+  const other = { ...green, head_sha: "0000000aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" };
+  for (const runs of [[other], [green, other]]) {
+    const v = ciVerdict({ workflow_runs: runs }, SHA);
+    assert.equal(v.ok, false);
+    assert.equal(v.state, "unparseable");
+    assert.match(v.why, /not for e15b883/);
+  }
+});
+
+test("a run with no head_sha refuses rather than being trusted", () => {
+  const { head_sha: _dropped, ...bare } = green;
+  const v = ciVerdict({ workflow_runs: [bare] }, SHA);
+  assert.equal(v.ok, false);
+  assert.equal(v.state, "unparseable");
+});
+
+test("a full sha matches, and an empty or short sha refuses instead of matching everything", () => {
+  assert.equal(ciVerdict({ workflow_runs: [green] }, FULL_SHA).ok, true);
+  for (const sha of ["", "e15b", "not-a-sha"]) {
+    const v = ciVerdict({ workflow_runs: [green] }, sha);
+    assert.equal(v.ok, false, `${JSON.stringify(sha)} must not deploy`);
+    assert.equal(v.state, "unparseable");
+  }
+});
+
+test("a green push run from another workflow is not CI", () => {
+  const other = { ...green, name: "Other", path: ".github/workflows/other.yml" };
+  const v = ciVerdict({ workflow_runs: [other] }, SHA);
+  assert.equal(v.ok, false);
+  assert.equal(v.state, "no-run");
+});
+
+test("a page holding fewer runs than the total refuses", () => {
+  const v = ciVerdict({ total_count: 101, workflow_runs: [green] }, SHA);
+  assert.equal(v.ok, false);
+  assert.equal(v.state, "unparseable");
+  assert.match(v.why, /1 of 101/);
 });
