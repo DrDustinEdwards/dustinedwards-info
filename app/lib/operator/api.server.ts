@@ -836,13 +836,13 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
           `mid-repair. Re-run sync_posts.`,
       );
     }
-    if (!(await renderAndWrite(env, slug, file.content, entry.sha)).purged) unpurged += 1;
+    if ((await renderAndWrite(env, slug, file.content, entry.sha)).purged === false) unpurged += 1;
     repaired += 1;
   }
 
   let removed = 0;
   for (const slug of drift.unfiled) {
-    if (!(await deletePostFromD1(env, slug)).purged) unpurged += 1;
+    if ((await deletePostFromD1(env, slug)).purged === false) unpurged += 1;
     removed += 1;
   }
 
