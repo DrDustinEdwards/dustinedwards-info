@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
 
 import {
-  Form,
   Link,
   data,
   useLocation,
@@ -12,16 +11,17 @@ import {
 
 import { timed, timedLoader } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
-import { ConfirmDialog } from "~/components/admin/confirm-dialog";
-import { MediaDisplayGroup } from "~/components/admin/media-display-group";
+import { MediaConfirmDialogs } from "~/components/admin/media-confirm-dialogs";
+import { MediaDisplayBar } from "~/components/admin/media-display-bar";
 import { MediaEmptyState } from "~/components/admin/media-empty-state";
 import { MediaGrid } from "~/components/admin/media-grid";
+import { MediaFacets } from "~/components/admin/media-facets";
 import { MediaInspector } from "~/components/admin/media-inspector";
-import { DropAnywhere } from "~/components/admin/media-drop-anywhere";
 import { MediaKeyboard } from "~/components/admin/media-keyboard";
+import { MediaSearch } from "~/components/admin/media-search";
 import { MediaToast } from "~/components/admin/toast";
-import { MediaPalette } from "~/components/admin/media-palette";
-import { OverflowMenu } from "~/components/admin/overflow-menu";
+import { MediaTrashControls } from "~/components/admin/media-trash-controls";
+import { MediaUploadActions } from "~/components/admin/media-upload-actions";
 import { Panel } from "~/components/admin/panel";
 import {
   mediaRecord,
@@ -46,14 +46,12 @@ import {
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { parseTags } from "~/lib/media/tags.mjs";
 import {
-  displaySummary,
   folderPrefix,
   hrefWith,
   isModified,
   onlyDisplayChanged,
   readDisplayAxes,
   readView,
-  sortHref,
 } from "~/lib/media/view.mjs";
 import { MEDIA_PAGE_SIZE, isViewable, listMedia, thumbUrl } from "~/lib/media/core.server";
 import {
@@ -69,11 +67,7 @@ import {
   trashMedia,
 } from "~/lib/media/actions.server";
 import { resolveCitations } from "~/lib/media/resolvers.server";
-import {
-  ACCEPT_ATTRIBUTE,
-  UPLOAD_FORM_INTENT,
-  uploadErrorSentence,
-} from "~/lib/media/upload-contract.mjs";
+import { uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media._index";
 
 export function meta() {
@@ -84,36 +78,6 @@ const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 
 /** About six rows fit under the search bar before the arrow keys scroll the highlight away. */
 const PALETTE_RESULTS = 6;
-
-const MEDIA_SHORTCUTS = [
-  { keys: "cmd K", what: "Focus search from anywhere" },
-  { keys: "/", what: "Focus search" },
-  { keys: "up down", what: "Move through results" },
-  { keys: "enter", what: "Copy the address" },
-  { keys: "shift enter", what: "Open details" },
-  { keys: "arrows", what: "Move through the grid" },
-  { keys: "x", what: "Select the tile under the cursor" },
-  { keys: "c", what: "Copy the address of the tile under the cursor" },
-  { keys: "escape", what: "Clear the search or the selection" },
-] as const;
-
-const LENS_CHIPS = [
-  {
-    id: "unattached",
-    label: "Unattached",
-    hint:
-      "No post cites these. Not the same as unused: an asset placed by page code, " +
-      "like the roster photographs, is unattached by this measure and is live. " +
-      "Verify before deleting.",
-  },
-  {
-    id: "duplicates",
-    label: "Duplicates",
-    hint: "Files with byte-identical twins, matched on content hash alone.",
-  },
-  { id: "no-alt", label: "No alt text", hint: "Images with no alt text written yet." },
-  { id: "large", label: "Over 1 MB", hint: "Files over one mebibyte." },
-] as const;
 
 /** A build-time import: the scan needs a filesystem and the Worker has none. */
 const TEMPLATE_REFS: Record<string, string[]> = templateRefs.refs;
@@ -421,7 +385,6 @@ export default function AdminMedia({
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmingTrash, setConfirmingTrash] = useState(false);
   const anchor = useRef<string | null>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
 
   /* Narrowed by key: the 400 answer carries only `message`, so the union no longer has these on every arm. */
   const confirmRebuild =
@@ -463,7 +426,6 @@ export default function AdminMedia({
         "https://admin.local",
       ),
     );
-  const activeLens = LENS_CHIPS.find((l) => l.id === view.lens);
 
   const visible = objects.map((o) => o.key);
   const chosen = selected.filter((key) => visible.includes(key));
@@ -491,255 +453,33 @@ export default function AdminMedia({
 
   const linkTo = (over: Parameters<typeof hrefWith>[1] = {}) => hrefWith(view, over);
 
-  const tagHref = (tag: string) => linkTo({ tag: view.tag === tag ? "" : tag, page: 1 });
-
   return (
     <Panel
       title="Media"
       description={`${loaderData.lensCounts.all} file${loaderData.lensCounts.all === 1 ? "" : "s"}, ${loaderData.trashedCount} in trash`}
-      actions={
-        <>
-        {/* The hidden `intent` alone selects the upload redirect branch. Images only. */}
-        <Form
-          method="post"
-          action="/admin/media/upload"
-          encType="multipart/form-data"
-          className="media-upload"
-        >
-          <label className="media-upload-label" htmlFor="media-file">
-            Drop files anywhere, or browse
-          </label>
-          <input
-            ref={fileRef}
-            id="media-file"
-            type="file"
-            name="file"
-            accept={ACCEPT_ATTRIBUTE}
-          />
-          <DropAnywhere inputRef={fileRef} />
-          <button type="submit" name="intent" value={UPLOAD_FORM_INTENT} className="btn">
-            Upload
-          </button>
-        </Form>
-
-        <OverflowMenu label="Maintenance">
-          <Form method="post">
-            <button
-              type="submit"
-              name="intent"
-              value="rebuild"
-              className="overflow-menu-item"
-              data-menu-item
-            >
-              Rebuild media index
-              <span className="overflow-menu-item-hint">
-                Re-derive every row from R2 and the repo, preserving alt and captions
-              </span>
-            </button>
-          </Form>
-        </OverflowMenu>
-        </>
-      }
+      actions={<MediaUploadActions />}
     >
 
-      <Form method="get" action="/admin/media" className="media-search" role="search">
-        <input
-          id="media-q"
-          type="search"
-          name="q"
-          defaultValue={q}
-          placeholder={`Search ${lensCounts.all} files`}
-          aria-label={`Search ${lensCounts.all} files by name, address, alt text or caption`}
-          className="media-search-input"
-        />
-        {/* Other axes ride as hidden fields, or searching would drop the lens and folder. */}
-        <input type="hidden" name="lens" value={view.lens} />
-        <input type="hidden" name="group" value={view.group} />
-        <input type="hidden" name="view" value={view.view} />
-        <input type="hidden" name="sort" value={view.sort} />
-        <input type="hidden" name="dir" value={view.dir} />
-        <input type="hidden" name="size" value={view.size} />
-        <input type="hidden" name="role" value={view.role} />
-        <input type="hidden" name="tag" value={view.tag} />
-        <input type="hidden" name="trash" value={view.trash ? "1" : ""} />
-        {q ? (
-          <Link to={linkTo({ q: "", page: 1 })} className="btn-ghost">
-            Clear
-          </Link>
-        ) : null}
-        <span className="media-search-kbd" aria-hidden="true">
-          {"⌘K"}
-        </span>
-      </Form>
-      <MediaPalette inputId="media-q" />
+      <MediaSearch q={q} total={lensCounts.all} view={view} linkTo={linkTo} />
 
-      <div className="media-facet">
-        <span className="media-facet-label" id="media-facet-lens">
-          Show
-        </span>
-        <nav aria-labelledby="media-facet-lens" className="media-filters">
-          <Link
-            to={linkTo({ lens: "", trash: false, page: 1 })}
-            className={`admin-chip${!view.lens && !view.trash ? " is-active" : ""}`}
-            aria-current={!view.lens && !view.trash ? "page" : undefined}
-          >
-            All <span className="admin-chip-count">{lensCounts.all}</span>
-          </Link>
-          {LENS_CHIPS.map((lens) => {
-            const n = lensCounts[lens.id === "no-alt" ? "noAlt" : lens.id];
-            return (
-              <Link
-                key={lens.id}
-                to={linkTo({ lens: lens.id, trash: false, page: 1 })}
-                className={`admin-chip${view.lens === lens.id ? " is-active" : ""}`}
-                aria-current={view.lens === lens.id ? "page" : undefined}
-                title={lens.hint}
-              >
-                {n > 0 ? (
-                  <span className="media-lens-dot" data-lens={lens.id} aria-hidden="true" />
-                ) : null}
-                {lens.label} <span className="admin-chip-count">{n}</span>
-              </Link>
-            );
-          })}
-          <Link
-            to={linkTo({ trash: !view.trash, lens: "", page: 1, key: "" })}
-            className={`admin-chip${view.trash ? " is-active" : ""}`}
-            aria-current={view.trash ? "page" : undefined}
-            title="A library view, not a takedown. A trashed file keeps its address and any page using it is unchanged."
-          >
-            Trash <span className="admin-chip-count">{trashedCount}</span>
-          </Link>
-        </nav>
-        <span className="media-facet-hint">
-          {activeLens ? activeLens.hint : "everything the library knows about"}
-        </span>
-      </div>
+      <MediaFacets
+        view={view}
+        lensCounts={lensCounts}
+        trashedCount={trashedCount}
+        tagCounts={tagCounts}
+        linkTo={linkTo}
+      />
 
-      {tagCounts.length > 0 ? (
-        <div className="media-facet">
-          <span className="media-facet-label" id="media-facet-tag">
-            Tags
-          </span>
-          <nav aria-labelledby="media-facet-tag" className="media-filters">
-            {tagCounts.map((t) => (
-              <Link
-                key={t.tag}
-                to={tagHref(t.tag)}
-                className={`admin-chip${view.tag === t.tag ? " is-active" : ""}`}
-                aria-current={view.tag === t.tag ? "page" : undefined}
-              >
-                {t.tag} <span className="admin-chip-count">{t.n}</span>
-              </Link>
-            ))}
-          </nav>
-          <span className="media-facet-hint">yours, in the inspector</span>
-        </div>
-      ) : null}
-
-      <div className="media-display-bar">
-        {/* No `name`, so it stays out of the bulk form's submission. */}
-        {objects.length > 0 ? (
-          <label className="media-select-all">
-            <input
-              type="checkbox"
-              checked={allShown}
-              onChange={() => setSelected(allShown ? [] : visible)}
-            />
-            <span>
-              {view.tag || q || filter !== "all"
-                ? `Select all ${visible.length} shown`
-                : `Select all ${visible.length}`}
-            </span>
-          </label>
-        ) : null}
-
-        <nav className="media-view-toggle" aria-label="Layout">
-          {[
-            ["list", "List"],
-            ["grid", "Grid"],
-          ].map(([id, label]) => (
-            <Link
-              key={id}
-              to={linkTo({ view: id })}
-              className={`admin-chip${view.view === id ? " is-active" : ""}`}
-              aria-current={view.view === id ? "page" : undefined}
-            >
-              {label}
-            </Link>
-          ))}
-        </nav>
-
-        <details className="media-display">
-          <summary className="row-action">Display: {displaySummary(view)}</summary>
-          <div className="media-display-panel">
-            <MediaDisplayGroup
-              label="Group by"
-              options={[
-                ["flat", "Flat"],
-                ["folder", "Folder"],
-                ["month", "Month"],
-              ]}
-              current={view.group}
-              hrefFor={(id) => linkTo({ group: id })}
-            />
-            <MediaDisplayGroup
-              label="Sort"
-              options={[
-                ["added", "Newest"],
-                ["name", "A to Z"],
-                ["size", "Largest"],
-                ["usage", "Usage"],
-              ]}
-              current={view.sort}
-              hrefFor={(id) => sortHref(view, id)}
-            />
-            <MediaDisplayGroup
-              label="Direction"
-              options={[
-                ["desc", "Descending"],
-                ["asc", "Ascending"],
-              ]}
-              current={view.dir}
-              hrefFor={(id) => linkTo({ dir: id, page: 1 })}
-            />
-            <MediaDisplayGroup
-              label="Tile size"
-              options={[
-                ["s", "S"],
-                ["m", "M"],
-                ["l", "L"],
-              ]}
-              current={view.size}
-              hrefFor={(id) => linkTo({ size: id })}
-            />
-            {modified ? (
-              <Link to="/admin/media" className="row-action">
-                Reset to defaults
-              </Link>
-            ) : null}
-          </div>
-        </details>
-
-        <details className="media-display media-shortcuts">
-          <summary className="row-action" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
-            ?
-          </summary>
-          <div className="media-display-panel media-shortcuts-panel">
-            <span className="media-display-label">Keyboard</span>
-            <dl className="media-shortcut-list">
-              {MEDIA_SHORTCUTS.map((s) => (
-                <div key={s.keys} className="media-shortcut">
-                  <dt>
-                    <kbd>{s.keys}</kbd>
-                  </dt>
-                  <dd>{s.what}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </details>
-      </div>
+      <MediaDisplayBar
+        visible={visible}
+        allShown={allShown}
+        setSelected={setSelected}
+        q={q}
+        filter={filter}
+        modified={modified}
+        view={view}
+        linkTo={linkTo}
+      />
 
       {!view.trash && lensNoteFor(view.lens) ? (
         <div className="media-lens-note">
@@ -750,45 +490,7 @@ export default function AdminMedia({
         </div>
       ) : null}
 
-      {view.trash ? (
-        <p className="media-usage-note">
-          This is a library view, not a takedown. A trashed file keeps its
-          address, and any published page using it is unchanged. Restore puts it
-          back in the library.{" "}
-          <strong>Only Empty trash deletes anything, and it still refuses
-          anything a post cites.</strong>
-        </p>
-      ) : null}
-
-      {view.trash && trashedCount > 0 ? (
-        <p className="media-empty-trash">
-          {/* A link, not `prompt()`, so the confirmation holds without script. */}
-          <Link to={linkTo({ confirm: "empty-trash" })} className="btn-danger">
-            Empty trash
-          </Link>
-          <span className="media-facet-hint">
-            Deletes the objects. Anything a post cites is kept and named.
-          </span>
-        </p>
-      ) : null}
-
-      {view.confirm === "empty-trash" && trashedCount > 0 ? (
-        <ConfirmDialog
-          title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
-          body={
-            <p>
-              Addresses are content hashes, so a deleted file cannot be restored
-              by re-uploading it under the same URL. Anything a post cites is
-              kept and named.
-            </p>
-          }
-          requireTyped={String(trashedCount)}
-          confirmLabel="Delete permanently"
-          cancelHref={linkTo({ confirm: "" })}
-        >
-          <input type="hidden" name="intent" value="empty-trash" />
-        </ConfirmDialog>
-      ) : null}
+      <MediaTrashControls view={view} trashedCount={trashedCount} linkTo={linkTo} />
 
       {/* Usage is what the renderer emitted, so a route-referenced asset reads as uncited. */}
 
@@ -844,69 +546,14 @@ export default function AdminMedia({
         />
       )}
 
-      {confirmingTrash && chosen.length > 0 ? (
-        <ConfirmDialog
-          title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
-          body={
-            <p>
-              They stop showing in the library. Every address keeps working and no
-              published page changes, so nothing here can cost a post its image.
-              Restore puts them back.
-            </p>
-          }
-          confirmLabel="Move to trash"
-          onCancel={() => setConfirmingTrash(false)}
-        >
-          <input type="hidden" name="intent" value="bulk-trash" />
-          {chosen.map((key) => (
-            <input key={key} type="hidden" name="key" value={key} />
-          ))}
-        </ConfirmDialog>
-      ) : null}
-
-      {confirmRebuild !== undefined ? (
-        <ConfirmDialog
-          title="Re-derive the whole media index"
-          body={
-            <>
-              <p>
-                Every derived column is recomputed from the buckets and every
-                authored one is preserved. Rows whose source object is GONE are
-                removed, so running this against a bucket that is only partly
-                readable prunes the index to whatever it managed to see.
-              </p>
-              <p>
-                The index currently holds{" "}
-                <strong>{confirmRebuild ?? 0}</strong> row(s).
-              </p>
-            </>
-          }
-          requireTyped="1"
-          confirmLabel="Rebuild the index"
-          cancelHref={linkTo({})}
-        >
-          <input type="hidden" name="intent" value="rebuild" />
-        </ConfirmDialog>
-      ) : null}
-
-      {confirmDelete ? (
-        <ConfirmDialog
-          title={`Permanently delete ${confirmDelete}`}
-          body={
-            <p>
-              This removes the object from R2. Addresses are content hashes, so a
-              deleted file cannot be restored by re-uploading it under the same
-              URL.
-            </p>
-          }
-          requireTyped="1"
-          confirmLabel="Delete permanently"
-          cancelHref={linkTo({ key: confirmDelete })}
-        >
-          <input type="hidden" name="intent" value="delete" />
-          <input type="hidden" name="key" value={confirmDelete} />
-        </ConfirmDialog>
-      ) : null}
+      <MediaConfirmDialogs
+        chosen={chosen}
+        confirmingTrash={confirmingTrash}
+        setConfirmingTrash={setConfirmingTrash}
+        confirmRebuild={confirmRebuild}
+        confirmDelete={confirmDelete}
+        linkTo={linkTo}
+      />
 
       <MediaToast />
       {view.view === "grid" ? <MediaKeyboard /> : null}
