@@ -4,7 +4,7 @@
 // Admin cases always drive ADMIN_ORIGIN, because sessions live in production KV.
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -426,25 +426,61 @@ const MENTION_HOSTILE_NAME = "<script>alert(1)</script>";
 
 const MENTION_SEED_ROWS = 2;
 
+/** SQL string literal: the only escaping a --file path needs. */
+const q = (/** @type {unknown} */ v) =>
+  v === null || v === undefined ? "NULL" : `'${String(v).split("'").join("''")}'`;
+
+/**
+ * Seeds go through files, never a cmd command string: the hostile row carries <script>, quotes and
+ * a %, and cmd.exe quoting is not SQL quoting. One directory for every seed, removed once each has
+ * been applied, so a run does not leave the fixture SQL in the temp folder.
+ */
+const SEED_DIR = DRIVES_PREVIEW ? mkdtempSync(join(tmpdir(), "gate-seed-")) : "";
+const removeSeedDir = () => {
+  if (SEED_DIR) rmSync(SEED_DIR, { recursive: true, force: true });
+};
+/* On every exit too, refusals included; removing it twice is harmless. */
+process.on("exit", removeSeedDir);
+
 if (DRIVES_PREVIEW) {
   /* Delete then insert, so the count means this run wrote the rows. */
-  const sql = [
-    `DELETE FROM webmentions WHERE source_url LIKE '${MENTION_SEED_PREFIX}%'`,
-    `INSERT INTO webmentions ` +
-      `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES ` +
-      `('${MENTION_SEED_PREFIX}ordinary', '${MENTION_SLUG}', 'approved', 'A Reader', ` +
-      `'https://gate.example/about', 'A sentence somebody wrote about this post.', ` +
-      `${MENTION_DECIDED_AT}, ${MENTION_DECIDED_AT})`,
-    `INSERT INTO webmentions ` +
-      `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES ` +
-      `('${MENTION_SEED_PREFIX}hostile', '${MENTION_SLUG}', 'approved', '${MENTION_HOSTILE_NAME}', ` +
-      `'javascript:alert(1)', 'An excerpt from a page that cannot be linked to.', ` +
-      `${MENTION_DECIDED_AT - 60}, ${MENTION_DECIDED_AT - 60})`,
-  ].join("; ");
+  const mentionFile = join(SEED_DIR, "mentions.sql");
+  writeFileSync(
+    mentionFile,
+    [
+      `DELETE FROM webmentions WHERE source_url LIKE ${q(`${MENTION_SEED_PREFIX}%`)};`,
+      `INSERT INTO webmentions ` +
+        `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES (` +
+        [
+          q(`${MENTION_SEED_PREFIX}ordinary`),
+          q(MENTION_SLUG),
+          q("approved"),
+          q("A Reader"),
+          q("https://gate.example/about"),
+          q("A sentence somebody wrote about this post."),
+          String(MENTION_DECIDED_AT),
+          String(MENTION_DECIDED_AT),
+        ].join(", ") +
+        `);`,
+      `INSERT INTO webmentions ` +
+        `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES (` +
+        [
+          q(`${MENTION_SEED_PREFIX}hostile`),
+          q(MENTION_SLUG),
+          q("approved"),
+          q(MENTION_HOSTILE_NAME),
+          q("javascript:alert(1)"),
+          q("An excerpt from a page that cannot be linked to."),
+          String(MENTION_DECIDED_AT - 60),
+          String(MENTION_DECIDED_AT - 60),
+        ].join(", ") +
+        `);`,
+    ].join("\n"),
+    "utf8",
+  );
 
-  /* One quoted string: with `shell: true` on Windows an argv array is joined unquoted. */
   const seeded = spawnSync(
-    `npx wrangler d1 execute dustinedwards --local --command "${sql}"`,
+    `npx wrangler d1 execute dustinedwards --local --file "${mentionFile}"`,
     { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
   );
   if (seeded.status !== 0) {
@@ -489,12 +525,8 @@ if (DRIVES_PREVIEW) {
     process.exit(1);
   }
 
-  /** SQL string literal: the only escaping a --file path needs. */
-  const q = (/** @type {unknown} */ v) =>
-    v === null || v === undefined ? "NULL" : `'${String(v).split("'").join("''")}'`;
-
   const publishAt = Math.floor(new Date(fixture.publishAt).getTime() / 1000);
-  const sqlFile = join(mkdtempSync(join(tmpdir(), "gate-math-")), "seed.sql");
+  const sqlFile = join(SEED_DIR, "math.sql");
   writeFileSync(
     sqlFile,
     [
@@ -538,11 +570,15 @@ if (DRIVES_PREVIEW) {
     createdAt: Date.UTC(2026, 8, 6),
     label: "check:browser math fixture",
   });
+  /* The value from a file too: JSON with escaped quotes inside a cmd string held only by MSVCRT rules. */
+  const recordFile = join(SEED_DIR, "preview-token.json");
+  writeFileSync(recordFile, record, "utf8");
   const kv = spawnSync(
     `npx wrangler kv key put --binding APP_KV --local ` +
-      `"preview:token:${MATH_PREVIEW_TOKEN}" "${record.split('"').join('\\"')}"`,
+      `"preview:token:${MATH_PREVIEW_TOKEN}" --path "${recordFile}"`,
     { cwd: root, encoding: "utf8", shell: true, maxBuffer: 8 * 1024 * 1024 },
   );
+  removeSeedDir();
   if (kv.status !== 0) {
     console.error("check:browser failed. the preview token did not reach local KV.");
     console.error((kv.stderr || kv.stdout || "").slice(-1200));
