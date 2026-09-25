@@ -516,12 +516,12 @@ const HOSTED_WITHOUT_LICENCE = new Map([
 
   for (const paper of PUBLICATIONS) {
     const slug = doiSlug(paper.doi);
-    const hosted = paper.access === "self-hosted" && paper.pdfPath !== null;
+    const isHosted = paper.access === "self-hosted" && paper.pdfPath !== null;
     let tags;
     try {
       tags = buildCitationTags(paper, {
         abstractUrl: `${ORIGIN}${paperPath(slug)}`,
-        pdfUrl: hosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
+        pdfUrl: isHosted ? `${ORIGIN}${paperPdfPath(slug)}` : null,
       });
     } catch (error) {
       tagFailures.push(`${paper.id}: ${error instanceof Error ? error.message : error}`);
@@ -541,8 +541,8 @@ const HOSTED_WITHOUT_LICENCE = new Map([
       );
     }
     const pdf = tags.find((t) => t.name === "citation_pdf_url");
-    if (hosted && !pdf) tagFailures.push(`${paper.id}: hosted but no citation_pdf_url`);
-    if (!hosted && pdf) tagFailures.push(`${paper.id}: not hosted but has citation_pdf_url`);
+    if (isHosted && !pdf) tagFailures.push(`${paper.id}: hosted but no citation_pdf_url`);
+    if (!isHosted && pdf) tagFailures.push(`${paper.id}: not hosted but has citation_pdf_url`);
     if (pdf) {
       pdfTags += 1;
       const dir = `${ORIGIN}${paperPath(slug)}`;
