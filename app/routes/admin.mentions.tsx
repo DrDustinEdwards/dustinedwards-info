@@ -129,10 +129,15 @@ export async function action({ request, context }: Route.ActionArgs) {
    */
   const decide = async (decision: "delete" | "approve" | "reject", done: string, unchanged: string) => {
     try {
-      const { changed } = await decideMention(env, id, decision, context.get(adminActorContext));
-      return changed
-        ? data<ActionResult>({ ok: true, message: done })
-        : data<ActionResult>({ ok: false, message: unchanged }, { status: 409 });
+      const { changed, purged } = await decideMention(env, id, decision, context.get(adminActorContext));
+      if (!changed) return data<ActionResult>({ ok: false, message: unchanged }, { status: 409 });
+      // The row moved; a failed purge leaves the post's public page showing the old mentions.
+      return purged === false
+        ? data<ActionResult>({
+            ok: false,
+            message: `${done} The cache purge failed, so the post's page may show the old mentions until its cache expires.`,
+          })
+        : data<ActionResult>({ ok: true, message: done });
     } catch (error) {
       if (error instanceof PolicyError) {
         return data<ActionResult>({ ok: false, message: error.message }, { status: 403 });
