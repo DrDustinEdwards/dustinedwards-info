@@ -106,7 +106,7 @@ test("one process matching two needles is reported once", () => {
   assert.equal(found.length, 1, "a pid is a process, not a count of its needles");
 });
 
-test("an empty table finds nothing, which the caller must not read as clear", () => {
+test("an empty table finds nothing, so reporting it unread is the caller's job", () => {
   // `readProcessTable` returns an empty map when the listing itself failed.
   assert.deepEqual(busyProcesses(new Map(), SHIP_NEEDLES), []);
 });
