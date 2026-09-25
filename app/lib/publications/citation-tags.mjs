@@ -12,7 +12,7 @@ import { decodeEntities } from "./entities.mjs";
  * @param {number | null | undefined} year fallback when no date was deposited
  * @returns {string | null}
  */
-export function scholarDate(isoish, year) {
+function scholarDate(isoish, year) {
   const value = (isoish ?? "").trim();
   if (/^\d{4}(-\d{2}){0,2}$/.test(value)) return value.replace(/-/g, "/");
   return year ? String(year) : null;

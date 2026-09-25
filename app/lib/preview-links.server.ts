@@ -19,7 +19,7 @@ import {
  * `list` skips an entry whose authority record is gone.
  */
 
-export interface PreviewLink {
+interface PreviewLink {
   /** The whole token. Reaches the page ONLY inside the copy control's value. */
   token: string;
   short: string;

@@ -62,7 +62,7 @@ function readSlug(args: Record<string, unknown>, tool: string) {
   return { slug, error: "" };
 }
 
-export type ToolResult =
+type ToolResult =
   | { ok: true; data: unknown }
   | { ok: false; status: number; error: string; detail?: unknown };
 
@@ -81,7 +81,7 @@ const TOOLS = [
   "decide_mention",
 ] as const;
 
-export type ToolName = (typeof TOOLS)[number];
+type ToolName = (typeof TOOLS)[number];
 
 export function isToolName(value: unknown): value is ToolName {
   return typeof value === "string" && (TOOLS as readonly string[]).includes(value);

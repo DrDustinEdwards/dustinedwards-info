@@ -84,7 +84,8 @@ async function counts() {
   }
   const row = data[0];
   const rows = Number(row.rows);
-  const weighted = row.origin_requests === null && rows === 0 ? 0 : Number(row.origin_requests);
+  // Number(null) is 0, so a null SUM beside a nonzero COUNT is made NaN here to be refused below.
+  const weighted = row.origin_requests === null ? (rows === 0 ? 0 : NaN) : Number(row.origin_requests);
   if (!Number.isFinite(rows) || !Number.isFinite(weighted)) {
     console.error(`the count query answered a row without numeric counts: ${JSON.stringify(row)}`);
     process.exit(1);
