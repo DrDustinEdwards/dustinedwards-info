@@ -5,9 +5,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { contentSecurityPolicy, isAdminPath } from "../../../workers/csp.mjs";
-import { UNPOLICED_TYPES, isFeed } from "../../../workers/feed-types.mjs";
+import { UNPOLICED_TYPES, isUnpolicedType } from "../../../workers/feed-types.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
+import { documentHeadersOf } from "./static-set-and-cache.mjs";
 
 /** @param {string} code workers/app.ts with its comments stripped */
 export function run(code) {
@@ -77,48 +78,45 @@ export function run(code) {
     }
   }
 
-  /* The types are read out of the route files and isFeed() is called, so the two owners cannot drift. */
+  /* The types are read out of the feed module and isUnpolicedType() is called, so the two owners
+     cannot drift. */
   {
     /** Named rather than globbed: the assertion is about THESE THREE, and a glob quietly shrinks. */
-    const FEED_ROUTES = [
-      "blog.rss[.xml].ts",
-      "blog.atom[.xml].ts",
-      "blog.feed[.json].ts",
-    ];
+    const FEED_FORMATS = ["rss", "atom", "json"];
+    const feedModule = join(root, "app", "lib", "feed-response.ts");
+    const feedSource = existsSync(feedModule)
+      ? stripComments(readFileSync(feedModule, "utf8"))
+      : "";
+    ok("the feed module app/lib/feed-response.ts exists", feedSource !== "", "not on disk");
+    const typesBlock = /FEED_CONTENT_TYPES\s*=\s*\{([^}]*)\}/.exec(feedSource)?.[1] ?? "";
 
-    for (const file of FEED_ROUTES) {
-      const routePath = join(root, "app", "routes", file);
-      if (!existsSync(routePath)) {
-        ok(`the feed route ${file} exists`, false, "not on disk");
-        continue;
-      }
-      const source = stripComments(readFileSync(routePath, "utf8"));
-      const declared = source.match(/"content-type":\s*"([^"]+)"/);
+    for (const format of FEED_FORMATS) {
+      const declared = new RegExp(`\\b${format}:\\s*"([^"]+)"`).exec(typesBlock);
       ok(
-        `${file} declares a content-type this gate can read`,
+        `the ${format} feed declares a content-type this gate can read`,
         Boolean(declared),
-        "no `\"content-type\": \"...\"` literal found, so the next assertion would " +
+        `no \`${format}: "..."\` entry in FEED_CONTENT_TYPES, so the next assertion would ` +
           "have nothing to test and would pass",
       );
       if (!declared) continue;
       ok(
-        `${file} serves "${declared[1]}", which isFeed() exempts from the CSP`,
-        isFeed(declared[1]),
-        `isFeed("${declared[1]}") is false, so this feed is served a policy with a ` +
+        `the ${format} feed serves "${declared[1]}", which isUnpolicedType() exempts from the CSP`,
+        isUnpolicedType(declared[1]),
+        `isUnpolicedType("${declared[1]}") is false, so this feed is served a policy with a ` +
           `per-request nonce on a shared-cached body. Exempt types: ` +
           `${[...UNPOLICED_TYPES].join(", ")}`,
       );
     }
 
-    /* THE NEGATIVE, so the three above cannot pass by isFeed() having become a constant true. */
+    /* THE NEGATIVE, so the three above cannot pass by isUnpolicedType() having become a constant true. */
     for (const type of ["text/html", "text/html; charset=utf-8", "image/svg+xml", ""]) {
       ok(
-        `isFeed(${JSON.stringify(type)}) is false, so a document still gets a policy`,
-        !isFeed(type),
-        "isFeed() exempts a type a browser renders as a browsing context",
+        `isUnpolicedType(${JSON.stringify(type)}) is false, so a document still gets a policy`,
+        !isUnpolicedType(type),
+        "isUnpolicedType() exempts a type a browser renders as a browsing context",
       );
     }
-    ok("isFeed(null) is false", !isFeed(null));
+    ok("isUnpolicedType(null) is false", !isUnpolicedType(null));
   }
 
   /* The public branch matters most: granting the nonce everywhere silences a report and breaks nothing
@@ -260,8 +258,8 @@ export function run(code) {
       "seven HTML routes and accepting the ten-minute nonce window.",
   );
   ok(
-    "the CSP is applied on BOTH exits, like the static set",
-    [...code.matchAll(/headers\.set\(\s*"Content-Security-Policy"/g)].length >= 2,
+    "the CSP is applied on BOTH exits, like the static set, through applyDocumentHeaders",
+    /headers\.set\(\s*"Content-Security-Policy"/.test(documentHeadersOf(code)),
     "a redirect that misses it is UNPROTECTED, not merely unreported",
   );
   /* REPORTING SURVIVES ENFORCEMENT: a policy blocks silently, so the reports are the only signal. */

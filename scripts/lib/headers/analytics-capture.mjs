@@ -1,7 +1,11 @@
 // The analytics capture in workers/app.ts: the operator excluded, HTML 200s only, and the preview
 // token redacted from every slot of the data point.
 
-import { ok } from "./gate.mjs";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { stripComments } from "../strip-comments.mjs";
+import { ok, root } from "./gate.mjs";
 
 /** @param {string} code workers/app.ts with its comments stripped */
 export function run(code) {
@@ -27,10 +31,15 @@ export function run(code) {
     `parsed ${captureBody.length} characters, so every assertion below would be vacuous`,
   );
 
+  const adminRule =
+    stripComments(readFileSync(join(root, "workers", "csp.mjs"), "utf8")).match(
+      /function\s+isAdminPath[\s\S]*?\n\}/,
+    )?.[0] ?? "";
   ok(
     "the capture excludes the /admin plane",
-    /pathname\s*===\s*"\/admin"/.test(captureBody) &&
-      /pathname\.startsWith\(\s*"\/admin\/"\s*\)/.test(captureBody),
+    /isAdminPath\(\s*url\.pathname\s*\)/.test(captureBody) &&
+      /pathname\s*===\s*"\/admin"/.test(adminRule) &&
+      /pathname\.startsWith\(\s*"\/admin\/"\s*\)/.test(adminRule),
     "THE OPERATOR IS NOT AN AUDIENCE. Both forms are needed: the bare /admin and " +
       "the subtree. A panel that counts its own author is worse than no panel.",
   );

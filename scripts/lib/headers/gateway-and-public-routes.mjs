@@ -4,7 +4,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { blockFrom } from "../source-body.mjs";
 import { sharedCacheHtmlRoutes } from "../route-source.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
@@ -57,11 +56,12 @@ export function run(code) {
     );
 
     /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. */
-    /* The `if (secure !== null) { ... }` that follows the decision, whole. */
-    const redirectBlock = redirectAt === -1 ? "" : blockFrom(fetchBody, redirectAt);
+    /* The decision answers through redirectTo, whose body is the response every redirect gets. */
+    const decision = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 200);
+    const redirectBlock = appCode.match(/function\s+redirectTo\s*\([\s\S]*?\n\}/)?.[0] ?? "";
     ok(
       "the redirect block was located",
-      redirectBlock.includes("Location"),
+      /redirectTo\(\s*request\s*,\s*secure\s*\)/.test(decision) && redirectBlock.includes("Location"),
       "the assertion below would examine the wrong bytes",
     );
     ok(
