@@ -81,9 +81,12 @@ export default function Login({ actionData }: Route.ComponentProps) {
           <button
             type="submit"
             className="btn-brand"
-            disabled={busy}
+            /* aria-disabled, not disabled: a disabled button drops the focus that pressed it, and
+               the reader loses their place just as the page says why sign-in failed. */
+            aria-disabled={busy}
             onClick={async (event) => {
               event.preventDefault();
+              if (busy) return;
               setBusy(true);
               setClientProblem(null);
               /* On success the page navigates away; anything else must free the button and say why. */
