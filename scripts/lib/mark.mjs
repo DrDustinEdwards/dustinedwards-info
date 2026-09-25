@@ -35,10 +35,13 @@ export function readMark() {
       ...source.matchAll(/<path fill="(#[0-9A-Fa-f]{6})" d="([^"]+)"\s*\/>/g),
     ].map((m) => ({ fill: m[1].toUpperCase(), d: m[2] }));
     if (paths.length === 0) throw new Error(`mark: ${file} has no paths`);
-    // A path in any other shape (another attribute, another order) would be dropped from the mark.
-    const declared = (source.match(/<path[\s>/]/g) ?? []).length;
+    // A path in any other shape (another attribute, another order) would be dropped from the mark, and
+    // so would any non-path shape (a <rect>, a <circle>), which the parser does not read at all.
+    const declared = (
+      source.match(/<(path|rect|circle|ellipse|polygon|polyline|line|use|image|text)[\s>/]/g) ?? []
+    ).length;
     if (declared !== paths.length) {
-      throw new Error(`mark: ${file} declares ${declared} path(s) and only ${paths.length} parse`);
+      throw new Error(`mark: ${file} declares ${declared} shape(s) and only ${paths.length} parse`);
     }
     return { file, viewBox, paths };
   };

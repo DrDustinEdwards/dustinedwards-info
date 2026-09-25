@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { stripComments } from "./lib/strip-comments.mjs";
+import { parseSource, ts } from "./lib/syntax.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -169,45 +169,121 @@ ok(
 );
 
 if (existsSync(SHIP)) {
-  const shipSource = readFileSync(SHIP, "utf8");
-  // Comments stripped first, so prose that names a function cannot satisfy a code assertion.
-  const shipCode = stripComments(shipSource);
+  // Read off the syntax tree: each assertion names the construct it needs (an import, a call, an if
+  // whose branch calls refuse), so a string, a comment or an unrelated token elsewhere cannot pass it.
+  const sf = parseSource(SHIP, readFileSync(SHIP, "utf8"));
 
+  /** @param {(n: ts.Node) => boolean} test @returns {ts.Node[]} */
+  const findAll = (test) => {
+    /** @type {ts.Node[]} */
+    const out = [];
+    /** @param {ts.Node} n */
+    const visit = (n) => {
+      if (test(n)) out.push(n);
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+    return out;
+  };
+  /** @param {ts.Node} n @param {string} name */
+  const isCallTo = (n, name) =>
+    ts.isCallExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name;
+  /** @param {ts.Node} scope @param {string} name */
+  const callsIn = (scope, name) => {
+    let found = false;
+    /** @param {ts.Node} n */
+    const visit = (n) => {
+      if (isCallTo(n, name)) found = true;
+      if (!found) ts.forEachChild(n, visit);
+    };
+    visit(scope);
+    return found;
+  };
+  /**
+   * The `if (<x>.state === "<state>") { ... }` whose branch refuses. Ship tests `unreadable` twice,
+   * once to retry and once to refuse, so the first match is not necessarily the guard.
+   *
+   * @param {string} state
+   * @returns {ts.IfStatement | undefined}
+   */
+  const stateBranch = (state) =>
+    /** @type {ts.IfStatement[]} */ (
+      findAll(
+        (n) =>
+          ts.isIfStatement(n) &&
+          ts.isBinaryExpression(n.expression) &&
+          n.expression.operatorToken.kind === ts.SyntaxKind.EqualsEqualsEqualsToken &&
+          ts.isPropertyAccessExpression(n.expression.left) &&
+          n.expression.left.name.text === "state" &&
+          ts.isStringLiteralLike(n.expression.right) &&
+          n.expression.right.text === state,
+      )
+    ).find((branch) => callsIn(branch.thenStatement, "refuse"));
+
+  const imported = findAll(
+    (n) =>
+      ts.isImportDeclaration(n) &&
+      ts.isStringLiteralLike(n.moduleSpecifier) &&
+      n.moduleSpecifier.text.endsWith("/pending-migrations.mjs") &&
+      Boolean(
+        n.importClause?.namedBindings &&
+          ts.isNamedImports(n.importClause.namedBindings) &&
+          n.importClause.namedBindings.elements.some((e) => e.name.text === "readMigrationList"),
+      ),
+  );
   ok(
-    "ship imports the pending-migration predicate",
-    /readMigrationList/.test(shipCode),
+    "ship imports the pending-migration predicate and calls it",
+    imported.length > 0 && findAll((n) => isCallTo(n, "readMigrationList")).length > 0,
     "the guard's decision lives in scripts/lib/pending-migrations.mjs, which is " +
       "unit tested. A guard reimplemented inline in ship would be untested by " +
       "construction, because nothing can run ship without deploying.",
   );
+
+  const listArgs = findAll((n) => {
+    if (!ts.isArrayLiteralExpression(n)) return false;
+    const words = n.elements.map((e) => (ts.isStringLiteralLike(e) ? e.text : null));
+    const at = words.indexOf("migrations");
+    return at !== -1 && words[at + 1] === "list" && words.includes("--remote");
+  });
   ok(
     "ship asks the deployed database which migrations are applied",
-    /migrations[\s\S]{0,80}list/.test(shipCode) || /"list"/.test(shipCode),
-    "the comparison is against the DATABASE, not against the manifest. The " +
+    listArgs.length > 0,
+    "no argument list carrying migrations, list and --remote was found. The " +
+      "comparison is against the DATABASE, not against the manifest. The " +
       "manifest comparison above cannot see an unapplied migration at all.",
   );
+
+  const pendingBranch = stateBranch("pending");
   ok(
     "ship refuses on a PENDING migration",
-    /state\s*===\s*"pending"/.test(shipCode) && /refuse\(/.test(shipCode),
+    pendingBranch !== undefined && callsIn(pendingBranch.thenStatement, "refuse"),
     "it must refuse rather than apply: additive and destructive are " +
       "indistinguishable from ship, so the operator decides",
   );
+  const unreadableBranch = stateBranch("unreadable");
   ok(
     "ship refuses on an UNREADABLE answer, so it fails closed",
-    /state\s*===\s*"unreadable"/.test(shipCode),
+    unreadableBranch !== undefined && callsIn(unreadableBranch.thenStatement, "refuse"),
     "a network or auth failure prints no migration names, and reading that as " +
       "nothing pending is how this guard would become decoration",
   );
   ok(
     "the refusal states the operator's next command",
-    /applyCommand\(/.test(shipCode),
+    pendingBranch !== undefined && callsIn(pendingBranch.thenStatement, "applyCommand"),
     "nobody should have to remember `wrangler d1 migrations apply` under the " +
       "pressure of a refused deploy",
   );
 
   // Ordering: a guard that runs after the deploy is a report.
-  const guardAt = shipCode.indexOf("The deployed database has every migration");
-  const deployAt = shipCode.indexOf('announce("Deploy")');
+  const deployCall = findAll(
+    (n) =>
+      isCallTo(n, "announce") &&
+      ts.isCallExpression(n) &&
+      ts.isStringLiteralLike(n.arguments[0]) &&
+      n.arguments[0].text === "Deploy",
+  )[0];
+  const guardAt = pendingBranch ? pendingBranch.getStart(sf) : -1;
+  const deployAt = deployCall ? deployCall.getStart(sf) : -1;
   ok(
     "both the migration guard and the deploy step were located",
     guardAt !== -1 && deployAt !== -1,
@@ -226,12 +302,19 @@ if (existsSync(SHIP)) {
 // Opened read only. A missing database emits no assertion, so the floor below is set for CI.
 const D1_STATE = join(root, ".wrangler", "state", "v3", "d1", "miniflare-D1DatabaseObject");
 
-/** @returns {string[] | null} */
-function localLedger() {
-  if (!existsSync(D1_STATE)) return null;
+/**
+ * Every local database carrying a migration ledger. More than one is ambiguous: directory order would
+ * decide which was compared, and a stale one could answer for the live one.
+ *
+ * @returns {Array<{ file: string, names: string[] }>}
+ */
+function localLedgers() {
+  if (!existsSync(D1_STATE)) return [];
   const candidates = readdirSync(D1_STATE).filter(
     (n) => n.endsWith(".sqlite") && n !== "metadata.sqlite",
   );
+  /** @type {Array<{ file: string, names: string[] }>} */
+  const out = [];
   for (const name of candidates) {
     const db = new DatabaseSync(join(D1_STATE, name), { readOnly: true });
     try {
@@ -239,19 +322,40 @@ function localLedger() {
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'd1_migrations'")
         .get();
       if (!table) continue;
-      return db
-        .prepare("SELECT name FROM d1_migrations ORDER BY name")
-        .all()
-        .map((row) => String(row.name));
+      out.push({
+        file: name,
+        names: db
+          .prepare("SELECT name FROM d1_migrations ORDER BY name")
+          .all()
+          .map((row) => String(row.name)),
+      });
     } finally {
       db.close();
     }
   }
-  return null;
+  return out;
 }
 
-const ledger = localLedger();
-if (ledger === null) {
+const ledgers = localLedgers();
+if (ledgers.length > 1) {
+  ok(
+    "exactly one local database carries a migration ledger",
+    false,
+    `${ledgers.length} do (${ledgers.map((l) => l.file).join(", ")}), so which one this compared ` +
+      "would be decided by directory order. Remove the stale one under .wrangler/state.",
+  );
+}
+const ledger = ledgers.length === 1 ? ledgers[0].names : null;
+// CI applies the migrations locally before the gates run, so there a missing ledger is a broken step,
+// not a fresh clone, and skipping would pass the comparison over nothing.
+if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
+  ok(
+    "the local migration ledger exists in CI",
+    false,
+    "CI's setup step runs `wrangler d1 migrations apply --local` before the gates, so the " +
+      "ledger must be there. Its absence means that step or this path changed.",
+  );
+} else if (ledger === null) {
   console.log(
     "\n  SKIP  the local migration ledger. No local D1 under .wrangler/state, so there is\n" +
       "        nothing to compare. A missing database is not a lagging one, and failing\n" +

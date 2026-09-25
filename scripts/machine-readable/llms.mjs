@@ -2,8 +2,13 @@ import { readFileSync, existsSync } from "node:fs";
 import { retryRead, spawnSyncBounded } from "../lib/retry.mjs";
 import { createHash } from "node:crypto";
 import { resolveD1Address } from "../lib/d1-address.mjs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { assertFloor } from "../lib/floor.mjs";
 
+// Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const fromRoot = (/** @type {string} */ repoPath) => join(ROOT, repoPath);
 const LLMS_PATH = "content/llms.txt";
 const ROUTE_PATH = "app/routes/llms.ts";
 
@@ -30,13 +35,13 @@ const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 16)
 
 console.log("\n  llms.txt\n");
 
-if (!existsSync(LLMS_PATH)) {
+if (!existsSync(fromRoot(LLMS_PATH))) {
   console.log(`\n  FAIL  ${LLMS_PATH} is missing. It is the source of the settings row.`);
   throw new Error(`${LLMS_PATH} is missing`);
 }
 
 // Read as bytes and decode explicitly: the platform text layer is not UTF-8 on this host.
-const fileBytes = readFileSync(LLMS_PATH);
+const fileBytes = readFileSync(fromRoot(LLMS_PATH));
 const fileText = fileBytes.toString("utf8");
 
 assertThat(fileBytes.length > 0, "content/llms.txt is not empty");
@@ -53,7 +58,7 @@ assertThat(
 );
 assertThat(fileText.endsWith("\n"), "content/llms.txt ends with a newline");
 
-const route = readFileSync(ROUTE_PATH, "utf8");
+const route = readFileSync(fromRoot(ROUTE_PATH), "utf8");
 assertThat(
   /import\s+\w+\s+from\s+["']\.\.\/\.\.\/content\/llms\.txt\?raw["']/.test(route),
   "the route imports content/llms.txt",
@@ -108,7 +113,7 @@ if (target) {
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.log(`\n  FAIL  query output was not JSON: ${detail}`);
-    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`);
+    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`, { cause: error });
   }
   const rows = parsed?.[0]?.results ?? [];
   assertThat(
@@ -138,7 +143,7 @@ console.log(
 // A tracked text file cannot import SITE_ORIGIN, so this binds its contact line to it. At DNS
 // cutover it goes red until llms.txt follows, which is the point.
 {
-  const seoSource = readFileSync("app/lib/seo.ts", "utf8");
+  const seoSource = readFileSync(fromRoot("app/lib/seo.ts"), "utf8");
   const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
 
   assertThat(
