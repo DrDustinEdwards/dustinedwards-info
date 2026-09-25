@@ -226,3 +226,4 @@ wrangler.watchdog.jsonc
 # moment, not artifacts of this repository, and a committed copy would be a
 # dated claim nothing here can re-derive.
 /ds-shots/
+scratchpad/
