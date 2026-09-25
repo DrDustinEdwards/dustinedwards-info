@@ -18,7 +18,8 @@ import { readAskBudget, resetAskBudget } from "~/lib/search/ask-guard.server";
  * action, so a handler here runs only once the route has let it.
  */
 
-type Message = { message: string };
+/* `failed` picks the live region: a failure interrupts as an alert, a result waits as a status. */
+type Message = { message: string; failed?: true };
 
 /** Appended when a write landed but its cache purge did not: the public pages are stale until expiry. */
 function unpurgedNote(count: number) {
@@ -40,6 +41,7 @@ export async function regeneratePosts(env: Env): Promise<Message> {
   } catch (error) {
     return {
       message: `Regenerate failed. ${errorMessage(error)}`,
+      failed: true,
     };
   }
 }
@@ -64,10 +66,12 @@ export async function syncAskIndex(env: Env): Promise<Message> {
         (failed.length > 0
           ? ` FAILED after retries: ${failed.map((f) => f.key).join(", ")}. Run the sync again.`
           : ""),
+      ...(failed.length > 0 ? { failed: true as const } : {}),
     };
   } catch (error) {
     return {
       message: `Ask sync failed. ${errorMessage(error)}`,
+      failed: true,
     };
   }
 }
@@ -79,7 +83,12 @@ export async function syncAskIndex(env: Env): Promise<Message> {
 export async function duplicatePost(env: Env, form: FormData, actor: Actor) {
   const slug = String(form.get("slug") ?? "");
   const file = await readFile(env, postPath(slug));
-  if (!file) return { message: `No post file exists for "${slug}", so there is nothing to copy.` };
+  if (!file) {
+    return {
+      message: `No post file exists for "${slug}", so there is nothing to copy.`,
+      failed: true as const,
+    };
+  }
   const fields = parsePost(file.content);
 
   /* Probed against the repository, not D1: D1 is derived, and the file is what `savePost` refuses on. */
@@ -96,6 +105,7 @@ export async function duplicatePost(env: Env, form: FormData, actor: Actor) {
       message:
         `Could not find a free slug for a copy of "${slug}": the first ` +
         `${candidates.length} candidates are all taken. Delete some copies first.`,
+      failed: true as const,
     };
   }
 
@@ -110,6 +120,7 @@ export async function duplicatePost(env: Env, form: FormData, actor: Actor) {
   } catch (error) {
     return {
       message: `Duplicate failed. ${errorMessage(error)}`,
+      failed: true as const,
     };
   }
 }
@@ -121,7 +132,7 @@ export async function duplicatePost(env: Env, form: FormData, actor: Actor) {
 export async function unpublishPost(env: Env, form: FormData, actor: Actor): Promise<Message> {
   const slug = String(form.get("slug") ?? "");
   const file = await readFile(env, postPath(slug));
-  if (!file) return { message: `No post file exists for "${slug}".` };
+  if (!file) return { message: `No post file exists for "${slug}".`, failed: true };
   const fields = parsePost(file.content);
   // The committed file decides, not the rendered row: another tab may already have withdrawn it.
   if (fields.draft) return { message: `"${slug}" is already a draft. Nothing changed.` };
@@ -142,6 +153,7 @@ export async function unpublishPost(env: Env, form: FormData, actor: Actor): Pro
   } catch (error) {
     return {
       message: `Unpublish failed. ${errorMessage(error)}`,
+      failed: true,
     };
   }
 }
@@ -168,6 +180,7 @@ export async function bulkDeletePosts(env: Env, slugs: string[], actor: Actor): 
       (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : "") +
       (askFailures.length > 0 ? ` Ask removal failed on ${askFailures.join("; ")}` : "") +
       unpurgedNote(unpurged),
+    ...(failed.length > 0 || askFailures.length > 0 ? { failed: true as const } : {}),
   };
 }
 
@@ -182,7 +195,7 @@ export async function bulkTagPosts(
   let unpurged = 0;
 
   const wanted = parseTagInput(String(form.get("tag") ?? ""))[0];
-  if (!wanted) return { message: "Enter a tag first." };
+  if (!wanted) return { message: "Enter a tag first.", failed: true };
   const adding = intent === "bulk-add-tag";
 
   // A no-op post is skipped: writing it costs a commit and rewrites frontmatter whose key order is
@@ -221,11 +234,12 @@ export async function bulkTagPosts(
       "." +
       (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : "") +
       unpurgedNote(unpurged),
+    ...(failed.length > 0 ? { failed: true as const } : {}),
   };
 }
 
 export async function resetAskBudgetAndReport(env: Env): Promise<Message> {
-  if (!askAvailable(env)) return { message: "Ask is not enabled." };
+  if (!askAvailable(env)) return { message: "Ask is not enabled.", failed: true };
   await resetAskBudget(env);
   const after = await readAskBudget(env);
   return { message: `Ask budget reset. ${after.count} of ${after.limit} used today.` };

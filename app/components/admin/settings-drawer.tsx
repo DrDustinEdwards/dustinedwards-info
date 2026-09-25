@@ -91,7 +91,12 @@ export function SettingsDrawer({
         <div className="field">
           <label className="field-label" htmlFor="field-description">
             Description
-            <span className={overLimit ? "count over" : "count"}>
+            {/* Out of the name, into the description: the count is a hint, not what the field is. */}
+            <span
+              id="description-count"
+              className={overLimit ? "count over" : "count"}
+              aria-hidden="true"
+            >
               {description.length}/{SERP_DESCRIPTION_LIMIT}
             </span>
           </label>
@@ -103,8 +108,8 @@ export function SettingsDrawer({
             onChange={(event) => onDescriptionChange(event.target.value)}
             required
             autoComplete="off"
-            aria-invalid={overLimit}
-            aria-describedby={overLimit ? "description-alarm" : undefined}
+            /* No aria-invalid: the limit is advisory, and the save accepts a long description. */
+            aria-describedby={overLimit ? "description-count description-alarm" : "description-count"}
           />
           {/* Alarms, never blocks: the server gates own validity. */}
           {overLimit ? (
@@ -192,7 +197,12 @@ function SlugField({
       <span className="field-label">URL</span>
       <div className="slug-line">
         <code className="slug-value">/blog/{slug}</code>
-        <CopyTextButton value={`/blog/${slug}`} label="Copy" />
+        <CopyTextButton
+          value={`/blog/${slug}`}
+          label="Copy URL"
+          name={`/blog/${slug}`}
+          subject={`the URL /blog/${slug}`}
+        />
       </div>
       {/* Read-only, not disabled: a disabled field submits nothing, and without the slug every save
           looks like a new post. */}
@@ -216,6 +226,9 @@ function TagField({
   options: string[];
 }) {
   const [entry, setEntry] = useState("");
+  // What the last add or remove did, for the status region: a token appearing is silent otherwise.
+  const [note, setNote] = useState("");
+  const entryRef = useRef<HTMLInputElement>(null);
   const listId = "tag-options";
 
   const add = (raw: string) => {
@@ -225,7 +238,13 @@ function TagField({
       return;
     }
     onChange([...tags, value]);
+    setNote(`Added tag ${value}.`);
     setEntry("");
+  };
+
+  const remove = (tag: string) => {
+    onChange(tags.filter((t) => t !== tag));
+    setNote(`Removed tag ${tag}.`);
   };
 
   return (
@@ -241,7 +260,11 @@ function TagField({
               <button
                 type="button"
                 className="tag-token-remove"
-                onClick={() => onChange(tags.filter((t) => t !== tag))}
+                onClick={() => {
+                  remove(tag);
+                  // The button goes with its token, so focus moves to the field rather than to the page.
+                  entryRef.current?.focus();
+                }}
               >
                 <span aria-hidden="true">x</span>
                 <span className="sr-only">Remove tag {tag}</span>
@@ -251,6 +274,7 @@ function TagField({
         ))}
       </ul>
       <input
+        ref={entryRef}
         value={entry}
         list={listId}
         aria-label="Add a tag"
@@ -266,8 +290,9 @@ function TagField({
             event.preventDefault();
             add(entry);
           }
-          if (event.key === "Backspace" && entry === "" && tags.length > 0) {
-            onChange(tags.slice(0, -1));
+          const last = tags[tags.length - 1];
+          if (event.key === "Backspace" && entry === "" && last !== undefined) {
+            remove(last);
           }
         }}
         onBlur={() => add(entry)}
@@ -280,6 +305,9 @@ function TagField({
           ))}
       </datalist>
       <input type="hidden" form={formId} name="tags" value={tags.join(", ")} />
+      <p className="sr-only" role="status">
+        {note}
+      </p>
     </div>
   );
 }

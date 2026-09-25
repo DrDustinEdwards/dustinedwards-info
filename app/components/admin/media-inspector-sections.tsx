@@ -178,7 +178,7 @@ export function InspectorTagForms({ detail }: { detail: FoundDetail }) {
 export function InspectorUsage({ detail }: { detail: FoundDetail }) {
   return (
     <div className="media-detail-usage" data-usage={detail.usage}>
-      <h4>Usage</h4>
+      <h3>Usage</h3>
       {!detail.scanComplete ? (
         <p className="muted">The reference scan failed, so usage is unknown.</p>
       ) : (

@@ -50,7 +50,7 @@ export function PreviewLinks({
           <span className="field-hint muted">
             Expires {expiresLabel(created.expiresAt)}.
           </span>
-          <CopyTextButton value={created.url} label="Copy this link" />
+          <CopyTextButton value={created.url} label="Copy this link" subject="the new preview link" />
         </div>
       ) : null}
 
@@ -66,7 +66,12 @@ export function PreviewLinks({
                 </span>
               </div>
               <div className="preview-link-actions">
-                <CopyTextButton value={link.url} label="Copy" />
+                <CopyTextButton
+                  value={link.url}
+                  label="Copy"
+                  name={`the link starting ${link.short}`}
+                  subject={`the link starting ${link.short}`}
+                />
                 <button
                   type="submit"
                   form={revokeFormId(link.token)}
@@ -75,7 +80,7 @@ export function PreviewLinks({
                   className="row-action"
                 >
                   Revoke
-                  <span className="sr-only"> the link ending {link.short}</span>
+                  <span className="sr-only"> the link starting {link.short}</span>
                 </button>
               </div>
             </li>
