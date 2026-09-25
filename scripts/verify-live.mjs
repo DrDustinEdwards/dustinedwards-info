@@ -164,7 +164,7 @@ for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
       ["mark is prairie gold #F3E3B8", "f3e3b8"],
       ["danger fill #8E1024", "8e1024"],
     ]) {
-      check(`css: ${label}`, css.toLowerCase().includes(needle) === true);
+      check(`css: ${label}`, css.toLowerCase().includes(needle));
     }
 
     check(
@@ -1042,8 +1042,6 @@ const corpus = { live: 0, drafts: 0 };
   );
 }
 
-/* The 302 has immutable headers, so it takes the rebuild branch. */
-
 {
   // Comments first, or docblock prose parses.
   const appSource = stripComments(readFileSync(join(root, "workers", "app.ts"), "utf8"));
@@ -1061,6 +1059,7 @@ const corpus = { live: 0, drafts: 0 };
     "SECURITY_HEADERS did not parse; the assertions below would examine nothing",
   );
 
+  /* The 302 has immutable headers, so it takes the rebuild branch. */
   /** @type {Array<[string, string, number]>} */
   const SURFACES = [
     ["200", "/", 200],
@@ -1098,7 +1097,7 @@ const corpus = { live: 0, drafts: 0 };
     const ENFORCED = "content-security-policy";
     const RO = "content-security-policy-report-only";
 
-    for (const [label, path, wantStatus] of SURFACES) {
+    for (const [label, path] of SURFACES) {
       const { res } = await get(path);
       const policy = res.headers.get(ENFORCED) ?? "";
       check(
@@ -1122,7 +1121,6 @@ const corpus = { live: 0, drafts: 0 };
         !/script-src[^;]*'unsafe-inline'/.test(policy),
         "the easy way to silence a report, and it reduces the policy to decoration",
       );
-      void wantStatus;
     }
 
     /* A cache-busting query per probe forces two renders. */
@@ -1189,10 +1187,10 @@ const corpus = { live: 0, drafts: 0 };
   }
 }
 
-/* The 200 needs a live token, so only the unminted-token 404 is asserted here. */
-
 {
   console.log("\n  draft preview links");
+
+  /* The 200 needs a live token, so only the unminted-token 404 is asserted here. */
 
   // Well formed: a malformed token is refused before lookup.
   const UNMINTED = "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz";
