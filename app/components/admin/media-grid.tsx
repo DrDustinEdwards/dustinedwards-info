@@ -1,5 +1,6 @@
 import { Form, Link } from "react-router";
 
+import { BulkTagControls } from "~/components/admin/bulk-tag-controls";
 import { CopyButton } from "~/components/admin/copy-button";
 import { DocumentCard } from "~/components/admin/media-document-card";
 import { MediaListHeader } from "~/components/admin/media-list-header";
@@ -81,27 +82,7 @@ export function MediaGrid({
             >
               Copy addresses
             </button>
-            <label className="posts-bulk-tag">
-              <span>Tag</span>
-              <input
-                type="text"
-                name="tag"
-                list="media-bulk-tags"
-                autoComplete="off"
-                placeholder="tag name"
-              />
-            </label>
-            <datalist id="media-bulk-tags">
-              {tagCounts.map((t) => (
-                <option key={t.tag} value={t.tag} />
-              ))}
-            </datalist>
-            <button type="submit" name="intent" value="bulk-add-tag" className="btn">
-              Add tag
-            </button>
-            <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
-              Remove tag
-            </button>
+            <BulkTagControls listId="media-bulk-tags" options={tagCounts.map((t) => t.tag)} />
             {/* A `type="button"` opens the modal, because submitting from here would skip it. */}
             <button
               type="button"
