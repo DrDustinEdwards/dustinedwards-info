@@ -31,9 +31,12 @@ export async function writeHealthSnapshot(
   }
 }
 
-/** A throw renders as absence, because the home page must render whatever KV is doing; it is logged. */
+/**
+ * A throw renders as `unreadable`, never as `missing`: the home page must render whatever KV is doing,
+ * but a failed read is not the same fact as no snapshot having been written. It is logged.
+ */
 export async function readHealthTile(env: Env): Promise<HealthTile> {
-  let stored: unknown = null;
+  let stored: unknown;
   try {
     stored = await env.APP_KV.get(HEALTH_SNAPSHOT_KEY, "json");
   } catch (error) {
@@ -43,7 +46,7 @@ export async function readHealthTile(env: Env): Promise<HealthTile> {
         detail: error instanceof Error ? error.message : String(error),
       }),
     );
-    stored = null;
+    return { state: "unreadable" };
   }
   return healthTile(stored, Date.now());
 }
