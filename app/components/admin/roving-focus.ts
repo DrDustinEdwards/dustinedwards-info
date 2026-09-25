@@ -8,7 +8,7 @@ import { rovingTarget } from "~/lib/admin/roving.mjs";
 export function moveRovingFocus(
   event: React.KeyboardEvent<HTMLElement>,
   selector: string,
-  axis: "horizontal" | "vertical" = "horizontal",
+  axis: "horizontal" | "vertical" | "both" = "horizontal",
 ): number | null {
   const items = [...event.currentTarget.querySelectorAll<HTMLElement>(selector)];
   const at = items.findIndex((item) => item.contains(event.target as Node));

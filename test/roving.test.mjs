@@ -32,3 +32,10 @@ test("other keys and an empty group move nothing", () => {
   assert.equal(rovingTarget("a", 0, 3), null);
   assert.equal(rovingTarget("ArrowRight", 0, 0), null);
 });
+
+test("a radio group moves on both axes: Down and Right forward, Up and Left back", () => {
+  assert.equal(rovingTarget("ArrowDown", 0, 3, "both"), 1);
+  assert.equal(rovingTarget("ArrowRight", 0, 3, "both"), 1);
+  assert.equal(rovingTarget("ArrowUp", 0, 3, "both"), 2);
+  assert.equal(rovingTarget("ArrowLeft", 0, 3, "both"), 2);
+});
