@@ -10,7 +10,7 @@ const render = (node: React.ReactElement) => renderToStaticMarkup(node);
 describe("the overflow and row menus", () => {
   it("open without script: a button names its panel by popovertarget and the panel is a popover", () => {
     const html = render(
-      createElement(RowMenu, { label: "Actions for A post" }, createElement("a", { href: "/x" }, "Edit")),
+      createElement(RowMenu, { label: "Actions for A post", children: createElement("a", { href: "/x" }, "Edit") }),
     );
     const target = html.match(/<button[^>]*popovertarget="([^"]+)"/i)?.[1];
     expect(target).toBeTruthy();
@@ -24,8 +24,8 @@ describe("the overflow and row menus", () => {
       createElement(
         "div",
         null,
-        createElement(OverflowMenu, { label: "More" }, "one"),
-        createElement(OverflowMenu, { label: "Maintenance" }, "two"),
+        createElement(OverflowMenu, { label: "More", children: "one" }),
+        createElement(OverflowMenu, { label: "Maintenance", children: "two" }),
       ),
     );
     const anchors = [...html.matchAll(/--menu-anchor:\s*(--[\w-]+)/g)].map((m) => m[1]);
