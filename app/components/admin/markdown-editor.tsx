@@ -10,6 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
 import { SCAFFOLDS, insertBlock, wrap, type ScaffoldName } from "./md-editor-commands";
 import { EditorToolbar } from "./md-editor-toolbar";
+import { moveRovingFocus } from "./roving-focus";
 import { useImageUpload } from "./use-image-upload";
 import { looksLikeUrl, useLinkPalette } from "./use-link-palette";
 
@@ -98,6 +99,10 @@ export default function MarkdownEditor({
   // React 19 renders a lazy component during SSR, so the chrome waits for mount or a no-script reader gets a dead toolbar.
   const [ready, setReady] = useState(false);
   const [slashAt, setSlashAt] = useState<{ from: number; top: number; left: number } | null>(null);
+  // Read by the keymap, which is built once and would otherwise see the first render's null.
+  const slashOpenRef = useRef(false);
+  slashOpenRef.current = slashAt !== null;
+  const slashRef = useRef<HTMLUListElement>(null);
   const { upload, setUpload, uploadError, alt, setAlt, uploadFile, insertFigure } =
     useImageUpload(viewRef);
 
@@ -191,6 +196,15 @@ export default function MarkdownEditor({
         { key: "Mod-e", run: (v) => (wrap(v, "`"), true) },
         // No Mod-s here: the editor shell owns Cmd+S, since it knows which transition the primary button is armed for.
         { key: "Escape", run: () => (setSlashAt(null), false) },
+        // Down from the "/" line enters the block menu, which is otherwise reachable only by mouse.
+        {
+          key: "ArrowDown",
+          run: () => {
+            if (!slashOpenRef.current) return false;
+            slashRef.current?.querySelector<HTMLElement>(".md-slash-item")?.focus();
+            return true;
+          },
+        },
         ...historyKeymap,
         ...defaultKeymap,
       ]),
@@ -375,18 +389,28 @@ export default function MarkdownEditor({
       ) : null}
 
       {slashAt ? (
+        /* Plain buttons, not a listbox: nothing here is selected, each one acts. Down from the
+           editor enters it, Up and Down move, Escape returns to the text. */
         <ul
+          ref={slashRef}
           className="md-slash"
           style={{ top: `${slashAt.top}px`, left: `${slashAt.left}px` }}
-          role="listbox"
           aria-label="Insert a block"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setSlashAt(null);
+              viewRef.current?.focus();
+              return;
+            }
+            moveRovingFocus(event, ".md-slash-item", "vertical");
+          }}
         >
           {(Object.keys(SCAFFOLDS) as ScaffoldName[]).map((name) => (
             <li key={name}>
               <button
                 type="button"
-                role="option"
-                aria-selected="false"
                 className="md-slash-item"
                 onClick={() => scaffold(name, slashAt.from)}
               >
