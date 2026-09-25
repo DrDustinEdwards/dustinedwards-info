@@ -47,6 +47,16 @@ test("an ABSENT content-length does not buy a large body", async () => {
   assert.equal(text, null);
 });
 
+test("a body stream that errors mid-read THROWS, and is never handed back as a body", async () => {
+  const body = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("source=https://a.example/"));
+      controller.error(new Error("planted connection reset"));
+    },
+  });
+  await assert.rejects(readCapped({ body }, MAX), /body stream failed.*planted connection reset/);
+});
+
 test("an empty body reads as the empty string, not null", async () => {
   // Null is reserved for "over the cap", so an empty POST must not 413.
   const req = new Request("https://example.test/api/csp-report", { method: "POST" });

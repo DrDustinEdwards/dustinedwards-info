@@ -154,3 +154,21 @@ test("a hand-built plan names every refused path, writes and deletes both", () =
   assert.ok(v.some((line) => line.includes("github.md")), "the github.md delete is refused");
   assert.ok(!v.some((line) => line.includes("styles.css") || line.includes("fonts/")), "build-owned paths pass");
 });
+
+test("REPLAY: an upload with no build output is refused, not read as zero writes", () => {
+  const { verdict, violations } = enforceVerdict(upload(), "/nonexistent-ds-build-output");
+  assert.equal(verdict.ok, false);
+  assert.equal(verdict.upload, null);
+  assert.match(violations[0], /the build output is missing/);
+});
+
+test("an upload whose deletePaths is not a list is refused, not read as no deletes", () => {
+  const dir = outDirWith(REAL_BUILD);
+  try {
+    const { verdict, violations } = enforceVerdict(upload(/** @type {any} */ ("github.md")), dir);
+    assert.equal(verdict.ok, false);
+    assert.match(violations.join("\n"), /deletePaths is not a list/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
