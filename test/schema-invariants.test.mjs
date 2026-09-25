@@ -27,8 +27,9 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
    * @param {string} aName
    * @param {string} bName
    * @param {string[]} tables
+   * @param {(label: string, condition: boolean, detail?: string) => void} [check] defaults to the outer collector
    */
-  function compareColumns(a, b, aName, bName, tables) {
+  function compareColumns(a, b, aName, bName, tables, check = ok) {
     let comparisons = 0;
     for (const table of tables) {
       const left = a.get(table);
@@ -38,12 +39,12 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
 
       const missingFromB = [...left.keys()].filter((c) => !right.has(c));
       const missingFromA = [...right.keys()].filter((c) => !left.has(c));
-      ok(
+      check(
         `${table}: every ${aName} column exists in ${bName}`,
         missingFromB.length === 0,
         `${bName} lacks ${missingFromB.join(", ")}`,
       );
-      ok(
+      check(
         `${table}: every ${bName} column exists in ${aName}`,
         missingFromA.length === 0,
         `${aName} lacks ${missingFromA.join(", ")}`,
@@ -52,7 +53,7 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
       const typeMismatches = [...left.entries()]
         .filter(([c, t]) => right.has(c) && right.get(c) !== t)
         .map(([c, t]) => `${c} is ${t} in ${aName} and ${right.get(c)} in ${bName}`);
-      ok(
+      check(
         `${table}: shared columns declare the same type`,
         typeMismatches.length === 0,
         typeMismatches.join("; "),
@@ -290,6 +291,8 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
       "the live database matches the migrations",
       { skip: live ? false : "set SCHEMA_LIVE=1 to compare against the deployed database" },
       async () => {
+      /* Its own collector: reporting into the parent's would fail the parent and pass this. */
+      const { ok: liveOk, fail: liveFail, done: liveDone } = collector();
       /*
        * One quoted `--command`: on Windows args arrays split, `shell: false` cannot run `.cmd`,
        * and `--file` returns one result set under `--json`.
@@ -312,13 +315,13 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
       );
       const match = (proc.stdout ?? "").match(/\[\s*\{[\s\S]*\}\s*\]/);
       if (!match) {
-        fail(
+        liveFail(
           "the live column schema could not be read",
           (proc.stderr || proc.stdout || "no output").slice(0, 200),
         );
       } else {
         const sets = JSON.parse(match[0]);
-        ok(
+        liveOk(
           "the live database answered for every table asked about",
           sets.length === migrationTables.length,
           `asked ${migrationTables.length}, got ${sets.length}`,
@@ -341,7 +344,7 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
         });
 
         const absent = migrationTables.filter((t) => !fromLive.has(t));
-        ok(
+        liveOk(
           "every table the migrations create exists in the live database",
           absent.length === 0,
           `live database has no ${absent.join(", ")}. An unapplied migration?`,
@@ -353,14 +356,16 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
           "migrations",
           "database",
           migrationTables,
+          liveOk,
         );
-        ok(
+        liveOk(
           "every live table was actually compared",
           liveCompared === migrationTables.length - absent.length,
           `${liveCompared} of ${migrationTables.length - absent.length}`,
         );
         t.diagnostic(`     live database: ${liveCompared} table(s) compared`);
       }
+      liveDone();
       },
     );
   } catch (error) {
