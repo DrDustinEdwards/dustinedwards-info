@@ -6,6 +6,7 @@ import { EditorView, keymap, placeholder as cmPlaceholder } from "@codemirror/vi
 import { tags } from "@lezer/highlight";
 import { useEffect, useRef, useState } from "react";
 
+import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
 // Split out of pipeline.mjs so this browser chunk can reach it without pulling shiki in.
 import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
 import { SCAFFOLDS, insertBlock, wrap, type ScaffoldName } from "./md-editor-commands";
@@ -103,6 +104,8 @@ export default function MarkdownEditor({
   const slashOpenRef = useRef(false);
   slashOpenRef.current = slashAt !== null;
   const slashRef = useRef<HTMLUListElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const altRef = useRef<HTMLInputElement>(null);
   const { upload, setUpload, uploadError, alt, setAlt, uploadFile, insertFigure } =
     useImageUpload(viewRef);
 
@@ -236,6 +239,13 @@ export default function MarkdownEditor({
     view.dispatch({ changes: { from: 0, to: current.length, insert: value } });
   }, [value]);
 
+  // Focus goes to the alt field once the file is in the bucket: the prompt is otherwise silent,
+  // and the figure cannot be inserted until it is answered.
+  const uploadedUrl = upload?.url ?? "";
+  useEffect(() => {
+    if (uploadedUrl) altRef.current?.focus();
+  }, [uploadedUrl]);
+
   const run = (fn: (view: EditorView) => void) => () => {
     const view = viewRef.current;
     if (view) fn(view);
@@ -257,8 +267,25 @@ export default function MarkdownEditor({
   return (
     <div className="md-editor">
       {ready ? (
-        <EditorToolbar run={run} openLinkPalette={openLinkPalette} scaffold={scaffold} />
+        <EditorToolbar
+          run={run}
+          openLinkPalette={openLinkPalette}
+          scaffold={scaffold}
+          pickImage={() => fileRef.current?.click()}
+        />
       ) : null}
+
+      <input
+        ref={fileRef}
+        type="file"
+        accept={ACCEPT_ATTRIBUTE}
+        hidden
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) void uploadFile(file);
+        }}
+      />
 
       <div className="md-surface" ref={host} />
 
@@ -422,11 +449,17 @@ export default function MarkdownEditor({
         </ul>
       ) : null}
 
+      {/* An alert, read on insertion: a failed upload is an event the author has to act on. */}
       {uploadError ? (
-        <p className="field-alarm" role="status">
+        <p className="field-alarm" role="alert">
           {uploadError}
         </p>
       ) : null}
+
+      {/* Always in the DOM, so the region exists before its text does. */}
+      <p className="sr-only" role="status">
+        {upload && !upload.url ? `Uploading ${upload.name}` : ""}
+      </p>
 
       {upload ? (
         <div className="md-upload" role="group" aria-label="Describe the image">
@@ -441,6 +474,7 @@ export default function MarkdownEditor({
             </label>
             <input
               id="md-upload-alt"
+              ref={altRef}
               value={alt}
               onChange={(event) => setAlt(event.target.value)}
               placeholder="What the image shows"
@@ -468,6 +502,7 @@ export default function MarkdownEditor({
                 onClick={() => {
                   setUpload(null);
                   setAlt("");
+                  viewRef.current?.focus();
                 }}
               >
                 Cancel

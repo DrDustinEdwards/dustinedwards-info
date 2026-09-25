@@ -748,7 +748,10 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
           Upload and insert
         </button>
       </div>
-      {message ? <p className="muted">{message}</p> : null}
+      {/* Always in the DOM so "Uploading", the failure and the result are all announced. */}
+      <p className="muted" role="status">
+        {message}
+      </p>
     </section>
   );
 }
