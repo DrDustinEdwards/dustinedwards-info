@@ -14,17 +14,17 @@ import { isMain } from "./lib/is-main.mjs";
 
 // Anchored to the repo, not the working directory: a run from elsewhere walked nothing or the wrong tree.
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const PUBLIC_DIR = path.join(ROOT, "public");
+const PUBLIC_DIR = path.join(ROOT, "public");
 // The repo path is POSIX because the Worker hands it to an API verbatim.
-export const ASSET_MANIFEST_PATH = path.join(ROOT, ...ASSET_MANIFEST_REPO_PATH.split("/"));
+const ASSET_MANIFEST_PATH = path.join(ROOT, ...ASSET_MANIFEST_REPO_PATH.split("/"));
 
 /**
- * The exclusion is applied inside the walk because the gate imports this and diffs it against D1.
+ * Excluded files are dropped inside the walk, so nothing downstream sees them.
  *
  * @param {string} [dir]
  * @returns {Promise<string[]>}
  */
-export async function walkPublic(dir = PUBLIC_DIR) {
+async function walkPublic(dir = PUBLIC_DIR) {
   /** @type {string[]} */
   const out = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -44,7 +44,7 @@ export async function walkPublic(dir = PUBLIC_DIR) {
 }
 
 /** @param {string[]} paths */
-export function placeholderPaths(paths) {
+function placeholderPaths(paths) {
   return paths.filter((p) => isRaster(p) && roleOf(p) === "content");
 }
 

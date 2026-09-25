@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 
+import { isTypingTarget } from "~/components/admin/media-keyboard";
+import { copyText } from "~/lib/clipboard";
 import { byteSize } from "~/lib/media/byte-size.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Attaches to the existing search input by id rather than replacing it, so the no-script page is unchanged.
 
@@ -82,16 +85,14 @@ export function MediaPalette({
           if (id !== seq.current) return;
           setResults([]);
           setHasMore(false);
-          setSearchError(error instanceof Error ? error.message : String(error));
+          setSearchError(errorMessage(error));
         });
     }, 130);
     return () => window.clearTimeout(timer);
   }, [query]);
 
   const copy = (value: string) => {
-    // Inside a promise: with no clipboard (an insecure context) the call throws before any promise exists.
-    Promise.resolve()
-      .then(() => navigator.clipboard.writeText(value))
+    copyText(value)
       .then(() => {
         setCopyFailed(false);
         setCopied(value);
@@ -107,9 +108,8 @@ export function MediaPalette({
   // Only Cmd+K and / are global; the rest applies in the search box alone, so arrows keep working in fields.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = (target?.tagName ?? "").toUpperCase();
-      const inField = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+      const target = event.target;
+      const inField = isTypingTarget(target);
 
       if ((event.key === "k" || event.key === "K") && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();

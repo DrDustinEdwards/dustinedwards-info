@@ -268,7 +268,7 @@ if (!existsSync(ARTIFACT)) {
 const MINIMUM_CHECKS = 210;
 const floorBreach = assertFloor("check:diagrams", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
-const MINIMUM_DECLARATIONS = 150;
+const MINIMUM_DECLARATIONS = 190;
 const declarationBreach = assertFloor(
   "check:diagrams",
   "declarations",

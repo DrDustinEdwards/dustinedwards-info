@@ -1,9 +1,11 @@
 import { Form, Link } from "react-router";
 
-import { CopyButton } from "~/components/admin/media-copy-button";
+import { BulkTagControls } from "~/components/admin/bulk-tag-controls";
+import { CopyButton } from "~/components/admin/copy-button";
 import { DocumentCard } from "~/components/admin/media-document-card";
 import { MediaListHeader } from "~/components/admin/media-list-header";
-import { toast } from "~/components/admin/media-keyboard";
+import { toast } from "~/components/admin/toast";
+import { copyText } from "~/lib/clipboard";
 import { byteSize } from "~/lib/media/byte-size.mjs";
 import { flagsFor, tileFlagFor, usageDescriptor } from "~/lib/media/usage.mjs";
 import {
@@ -69,8 +71,7 @@ export function MediaGrid({
                   .filter((o) => chosen.includes(o.key))
                   .map((o) => o.url)
                   .join("\n");
-                navigator.clipboard
-                  .writeText(addresses)
+                copyText(addresses)
                   .then(() =>
                     toast(
                       `Copied ${chosen.length} address${chosen.length === 1 ? "" : "es"}`,
@@ -81,27 +82,7 @@ export function MediaGrid({
             >
               Copy addresses
             </button>
-            <label className="posts-bulk-tag">
-              <span>Tag</span>
-              <input
-                type="text"
-                name="tag"
-                list="media-bulk-tags"
-                autoComplete="off"
-                placeholder="tag name"
-              />
-            </label>
-            <datalist id="media-bulk-tags">
-              {tagCounts.map((t) => (
-                <option key={t.tag} value={t.tag} />
-              ))}
-            </datalist>
-            <button type="submit" name="intent" value="bulk-add-tag" className="btn">
-              Add tag
-            </button>
-            <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
-              Remove tag
-            </button>
+            <BulkTagControls listId="media-bulk-tags" options={tagCounts.map((t) => t.tag)} />
             {/* A `type="button"` opens the modal, because submitting from here would skip it. */}
             <button
               type="button"

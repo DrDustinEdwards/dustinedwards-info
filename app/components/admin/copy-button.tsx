@@ -1,4 +1,7 @@
-import { toast } from "~/components/admin/media-keyboard";
+import { useState } from "react";
+
+import { toast } from "~/components/admin/toast";
+import { copyText } from "~/lib/clipboard";
 
 // An icon, not the word: the word cost a third of the row and pushed the filename into truncation.
 export function CopyButton({
@@ -14,9 +17,7 @@ export function CopyButton({
       title={value}
       onClick={(event) => {
         const button = event.currentTarget;
-        // Inside a promise: with no clipboard (an insecure context) the call throws before any promise exists.
-        Promise.resolve()
-          .then(() => navigator.clipboard.writeText(value))
+        copyText(value)
           .then(() => {
             button.dataset.copied = "yes";
             // Announced too: the data attribute drives a ::after that assistive technology cannot see.
@@ -49,6 +50,25 @@ export function CopyButton({
       {showLabel ? <span className="media-copy-label">{label}</span> : null}
       {/* Always named: the visible label is absent on a tile and only a fragment elsewhere. */}
       <span className="sr-only">{name ?? `Copy the address for ${label}`}</span>
+    </button>
+  );
+}
+
+/** A text button whose own label reports the outcome, for rows where a toast has nowhere to show. */
+export function CopyTextButton({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
+  return (
+    <button
+      type="button"
+      className="row-action"
+      onClick={() => {
+        copyText(value).then(
+          () => setCopied("copied"),
+          () => setCopied("failed"),
+        );
+      }}
+    >
+      {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : label}
     </button>
   );
 }

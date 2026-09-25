@@ -13,16 +13,18 @@ export function ConfirmDialog({
   confirmLabel,
   /** Where Cancel goes. Carry the current query so filters survive. */
   cancelHref,
+  /** Cancel for a dialog opened from client state rather than the URL, which has nowhere to go. */
+  onCancel,
   children,
 }: {
   title: string;
   body: React.ReactNode;
   stake?: string[];
-  requireTyped: string;
+  /** Absent for a reversible action: the dialog then confirms without a typed value. */
+  requireTyped?: string;
   confirmLabel: string;
-  cancelHref: string;
   children: React.ReactNode;
-}) {
+} & ({ cancelHref: string; onCancel?: never } | { cancelHref?: never; onCancel: () => void })) {
   const ref = useRef<HTMLDialogElement>(null);
   const fieldRef = useRef<HTMLInputElement>(null);
   const [typed, setTyped] = useState("");
@@ -39,7 +41,12 @@ export function ConfirmDialog({
     fieldRef.current?.focus();
   }, []);
 
-  const satisfied = typed.trim() === requireTyped;
+  const satisfied = requireTyped === undefined || typed.trim() === requireTyped;
+  // Cancel keeps the scroll position: the page behind the dialog is where the reader still is.
+  const cancel = () => {
+    if (cancelHref === undefined) onCancel?.();
+    else navigate(cancelHref, { preventScrollReset: true });
+  };
 
   return (
     <dialog
@@ -50,7 +57,7 @@ export function ConfirmDialog({
       /* Escape leaves the way Cancel does: a natively closed dialog would leave the page still asking. */
       onCancel={(event) => {
         event.preventDefault();
-        navigate(cancelHref);
+        cancel();
       }}
     >
       <Form method="post" className="confirm-dialog-form">
@@ -66,26 +73,34 @@ export function ConfirmDialog({
           </ul>
         ) : null}
         {children}
-        <label className="confirm-dialog-typed">
-          <span>
-            Type <strong>{requireTyped}</strong> to confirm
-          </span>
-          {/* From the constant the action also reads, so a rename cannot split the wire name. */}
-          <input
-            ref={fieldRef}
-            type="text"
-            name={CONFIRM_FIELD}
-            value={typed}
-            onChange={(event) => setTyped(event.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-            required
-          />
-        </label>
+        {requireTyped === undefined ? null : (
+          <label className="confirm-dialog-typed">
+            <span>
+              Type <strong>{requireTyped}</strong> to confirm
+            </span>
+            {/* From the constant the action also reads, so a rename cannot split the wire name. */}
+            <input
+              ref={fieldRef}
+              type="text"
+              name={CONFIRM_FIELD}
+              value={typed}
+              onChange={(event) => setTyped(event.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+              required
+            />
+          </label>
+        )}
         <div className="confirm-dialog-actions">
-          <Link to={cancelHref} className="btn-secondary">
-            Cancel
-          </Link>
+          {cancelHref === undefined ? (
+            <button type="button" className="btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+          ) : (
+            <Link to={cancelHref} preventScrollReset className="btn-secondary">
+              Cancel
+            </Link>
+          )}
           <button
             type="submit"
             className="btn-danger"
