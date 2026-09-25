@@ -1,11 +1,13 @@
 /**
- * `check:contrast` deliberately keeps its own copy of this parsing: two independent readers can
- * disagree, where one shared reader would just be wrong once.
+ * The one reader of app.css's token blocks, for build:tokens, check:contrast and every script that
+ * paints in the palette. Two copies of the same algorithm were never independent: a parsing bug in
+ * one was in both, and their disagreement over a doubled token was the only difference they had.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { walkFiles } from "./walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -21,6 +23,16 @@ const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 const ROOT_MODULE_PATH = join(root, "app", "root.tsx");
 
 /**
+ * CRLF first, because autocrlf gives a fresh clone CRLF and multi-line selectors stop matching;
+ * then comments, because the token block's own comment spells out its selectors.
+ *
+ * @param {string} css
+ */
+export function stripCss(css) {
+  return css.replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+/**
  * A relative `@import` in any spelling CSS accepts: `"./a.css"`, `'./a.css'`, `url("./a.css")` or
  * `url(./a.css)`. Comments are stripped first, so a commented-out import is not followed.
  *
@@ -28,7 +40,7 @@ const ROOT_MODULE_PATH = join(root, "app", "root.tsx");
  * @returns {string[]}
  */
 export function cssRelativeImports(css) {
-  const code = css.replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
+  const code = stripCss(css);
   return [...code.matchAll(/@import\s+(?:url\(\s*)?(["']?)(\.[^"')\s;]+)\1\s*\)?/g)].map((m) => m[2]);
 }
 
@@ -91,14 +103,10 @@ export function stylesheetPaths() {
   // Order between routes is not meaningful, only sorted for stability. Every module under app/,
   // not just routes: the palette's sheet is referenced by a component alone.
   const routeDir = join(root, "app");
-  /** @param {string} dir @returns {string[]} */
-  const modulesUnder = (dir) =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) return entry.name === "enhance" ? [] : modulesUnder(full);
-      return /\.(ts|tsx|mts|mjs|js|jsx)$/.test(entry.name) ? [full] : [];
-    });
-  const routeFiles = modulesUnder(routeDir).sort();
+  const routeFiles = walkFiles(routeDir, {
+    keep: (name) => /\.(ts|tsx|mts|mjs|js|jsx)$/.test(name),
+    skipDir: (name) => name === "enhance",
+  }).sort();
   // Admin first among non-root sheets: an admin page loads root then admin.
   expand(ADMIN_CSS_PATH);
 
@@ -123,17 +131,15 @@ export const THEME_SELECTORS = {
 };
 
 /**
- * Comments are stripped first because the token block's own comment spells out all three
- * selectors. CRLF is normalized first because autocrlf gives a fresh clone CRLF.
+ * Every declaration under the first match of `selector` in app.css, in order. Palette blocks carry
+ * no nested braces, so the first closing brace ends the block.
  *
  * @param {string} label
  * @param {string} selector
- * @returns {Record<string, string>}
+ * @returns {Record<string, string[]>}
  */
-export function tokenBlock(label, selector) {
-  const css = readFileSync(CSS_PATH, "utf8")
-    .replace(/\r\n/g, "\n")
-    .replace(/\/\*[\s\S]*?\*\//g, "");
+export function tokenDeclarations(label, selector) {
+  const css = stripCss(readFileSync(CSS_PATH, "utf8"));
 
   const at = css.indexOf(selector);
   if (at === -1) throw new Error(`${label}: selector not found in app.css: ${selector}`);
@@ -141,15 +147,51 @@ export function tokenBlock(label, selector) {
   const close = css.indexOf("}", open);
   if (open === -1 || close === -1) throw new Error(`${label}: unterminated block`);
 
-  /** @type {Record<string, string>} */
+  /** @type {Record<string, string[]>} */
   const out = {};
   for (const m of css.slice(open + 1, close).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    // The FIRST declaration wins, as in check:contrast and build-tokens: a token declared twice is a
-    // hex followed by the color-mix() recipe that must reproduce it, and the hex is the value.
-    if (!(m[1] in out)) out[m[1]] = m[2].trim();
+    (out[m[1]] ??= []).push(m[2].trim());
   }
   if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
   return out;
+}
+
+/**
+ * The FIRST declaration of each name wins: a token declared twice is a hex followed by the
+ * color-mix() recipe that must reproduce it, and the hex is what a browser that cannot mix paints.
+ *
+ * @param {string} label
+ * @param {string} selector
+ * @returns {Record<string, string>}
+ */
+export function tokenBlock(label, selector) {
+  return Object.fromEntries(
+    Object.entries(tokenDeclarations(label, selector)).map(([name, values]) => [name, values[0]]),
+  );
+}
+
+/**
+ * Follows a `var()` chain to its literal: a figure series slot is declared as a ramp step, and what
+ * ships is the step's color. `value` is null on a missing name or a cycle.
+ *
+ * @param {Record<string, string>} block
+ * @param {string} name
+ * @returns {{ value: string | null, chain: string[] }}
+ */
+export function resolveToken(block, name) {
+  /** @type {string[]} */
+  const chain = [];
+  let current = name;
+  for (let i = 0; i <= Object.keys(block).length; i += 1) {
+    const raw = block[current];
+    if (raw === undefined) return { value: null, chain };
+    const ref = /^var\(\s*(--[a-z0-9-]+)\s*\)$/.exec(raw.trim());
+    if (!ref) return { value: raw.trim(), chain };
+    if (chain.includes(ref[1])) return { value: null, chain };
+    chain.push(ref[1]);
+    current = ref[1];
+  }
+  return { value: null, chain };
 }
 
 /**

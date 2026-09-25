@@ -70,7 +70,8 @@ async function placeholderFor(sitePath) {
   };
 }
 
-async function main() {
+/** Also run in process by build-icons and build-diagrams, the generators that add files to public/. */
+export async function buildAssetManifest() {
   const paths = await walkPublic();
   if (paths.length === 0) {
     throw new Error(`walked public/ and found no files, which cannot be right`);
@@ -113,7 +114,7 @@ async function main() {
 }
 
 if (isMain(import.meta.url)) {
-  main().catch((error) => {
+  buildAssetManifest().catch((error) => {
     console.error(
       `build:assets failed. ${error instanceof Error ? error.message : String(error)}`,
     );
