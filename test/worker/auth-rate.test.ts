@@ -1,6 +1,6 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { RouterContextProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { cloudflareContext } from "~/lib/context";
 import { loader } from "~/routes/api.auth.$";
@@ -8,8 +8,19 @@ import { loader } from "~/routes/api.auth.$";
 const authRequest = (ip: string) =>
   new Request("https://example.com/api/auth/ok", { headers: { "cf-connecting-ip": ip } });
 
+/* On a ten-minute boundary: the limiter counts on a FIXED wall-clock window, so a real clock that
+ * crossed one mid-loop would reset the count and the refusal would arrive late or never. */
+const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("/api/auth rate limit", () => {
   it("lets a sign-in with retries through, then refuses with a 429 and Retry-After", async () => {
+    /* Only `Date` is faked; the Durable Object call underneath is real RPC. */
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(WINDOW_START);
     const ip = "203.0.113.77";
     const statuses: number[] = [];
     let refusal: Response | null = null;
