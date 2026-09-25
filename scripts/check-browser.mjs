@@ -12,7 +12,6 @@ import { fileURLToPath } from "node:url";
 import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
 
 import { assertFloor } from "./lib/floor.mjs";
-import { stripComments, stripTsxComments } from "./lib/strip-comments.mjs";
 import { HEALTH_FACT_SELECTOR, freshHealthRatio } from "./lib/health-tile.mjs";
 
 /* The network profile the /blog layout shift was measured on. */
@@ -29,6 +28,7 @@ import {
 } from "./lib/child-processes.mjs";
 import { createTally } from "./lib/tally.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
+import { sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
@@ -1003,23 +1003,8 @@ try {
         "404 and a case here would compare two renders of the error page.",
     };
 
-    const routeDir = join(root, "app", "routes");
-    const declaring = readdirSync(routeDir)
-      .filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
-      .filter((name) => {
-        const source = readFileSync(join(routeDir, name), "utf8");
-        // `preview.$token.tsx` names the constant only in prose, so comments are stripped first,
-        // by the shared strippers: a hand-rolled one reads a /* inside a string as a comment.
-        const code = name.endsWith(".tsx") ? stripTsxComments(source) : stripComments(source);
-        return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
-      })
-      /* Shared-cached but not HTML: no `<html data-theme>` for a theme to reach. */
-      .filter(
-        (name) =>
-          !/^(blog\.(feed|rss|atom)|blog\.(tags|series)\.\$(tag|series)\.(rss|feed)|blog\.\$slug\[\.md\]|publications(\.\$slug)?\[\.(bib|ris|json)\]|llms-full|sitemap)/.test(
-            name,
-          ),
-      );
+    /* HTML only: the feeds and twins sharing the header have no `<html data-theme>` to reach. */
+    const declaring = sharedCacheHtmlRoutes();
 
     const listed = new Set([
       ...THEME_CACHED.map((r) => r.module),
