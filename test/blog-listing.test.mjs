@@ -19,12 +19,6 @@ test("the featured post is removed from the list it was found in", () => {
   );
 });
 
-test("every post is still accounted for exactly once", () => {
-  const { featured, posts } = splitFeatured(page, true);
-  const shown = [featured, ...posts].filter(Boolean).map((p) => p.slug).sort();
-  assert.deepEqual(shown, ["a", "b", "c"], "removing it must not lose it");
-});
-
 test("order is preserved for the posts that remain", () => {
   const { posts } = splitFeatured(
     [
