@@ -42,7 +42,7 @@ exclude:
 # ## WHY THE JOB'S FOUR ERROR RULES ARE NOT ALL ERRORS
 #
 # The audit opened all 83 in-scope findings and every one was a false positive
-# on this codebase (scratchpad/code-findings.md). As errors against the tree
+# on this codebase (.aislop/code-findings.md). As errors against the tree
 # they would make CI permanently red on things that are correct.
 rules:
   # The type-system escapes, which have no defensible use here: both defeat

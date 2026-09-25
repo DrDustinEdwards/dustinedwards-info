@@ -1,8 +1,0 @@
-{
-  "app/lib/editor/publish.server.ts#12": "The first offender is guarded by VALUE rather than by list length, which is what lets the\nmessage read its fields.",
-  "app/lib/editor/publish.server.ts#14": "ISO strings, matching what `withRelated` compares: string order over ISO timestamps IS\nchronological order.",
-  "app/lib/editor/publish.server.ts#18": "THE CACHE PURGE, AT THE ONE DOOR, because every write that purges `posts` reaches D1 through this\nfunction, which hard rule 18 already made the one door: wiring it here means a sixth writer added\nlater is purged by construction rather than by somebody remembering.\n\nIT PURGES ON A DRAFT SAVE TOO, AND THAT IS THE ACCEPTED COST. The obvious condition is where this\ngets subtly wrong: an UNPUBLISH writes a row whose status is draft while changing every public\nlisting, so \"skip drafts\" would skip the case that most needs it.\n\nIt cannot fail this write, which is hard rule 18's second clause applied to a cache.",
-  "app/lib/editor/publish.server.ts#10": "Absent for anything the manifest does not cover. Absent is a real answer: the image renders\nwithout a placeholder, exactly as it did before this existed.",
-  "app/lib/editor/publish.server.ts#11": "Runs both gates against submitted markdown and renders it, before anything is written anywhere.\nA rejection names the field or the line.",
-  "app/lib/editor/publish.server.ts#17": "`related` is corpus-scope and attached below, which the pipeline's inferred record type does not\ncarry."
-}
