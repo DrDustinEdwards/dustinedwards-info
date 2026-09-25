@@ -1,5 +1,0 @@
-{
-  "app/lib/editor/publish.server.ts#34": "What the save DID, named by the policy module because only it read the prior file, which is the\nonly thing that tells a first publication from a republication.",
-  "app/lib/operator/api.server.ts#9": "Policy refusal. 403, and it names the policy so a caller can branch on it rather than\nstring-matching the prose.",
-  "app/lib/operator/api.server.ts#20": "Same stance the Ask endpoint takes: an absent binding means the feature is not here, rather than\nhere and broken."
-}
