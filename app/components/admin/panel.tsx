@@ -17,7 +17,8 @@ export function Panel({
     <section className="panel">
       <header className="panel-head">
         <div>
-          <h2>{title}</h2>
+          {/* The page's h1: every route that uses Panel uses one, as its whole content. */}
+          <h1>{title}</h1>
           {description ? <p className="muted">{description}</p> : null}
         </div>
         {result ? <SourceChip result={result} /> : null}

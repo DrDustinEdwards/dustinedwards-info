@@ -196,6 +196,8 @@ export function PostEditor({
 
   return (
     <div className="editor-shell">
+      {/* The bar shows the title in a span; the page still needs a heading to be found by. */}
+      <h1 className="sr-only">{isNew ? "New post" : `Edit ${title || "Untitled"}`}</h1>
       {/* `role="alert"`, not a modal: the router already stopped the navigation, and a modal would
           trap focus around a question the author can answer by typing on. */}
       {blocker.state === "blocked" ? (
