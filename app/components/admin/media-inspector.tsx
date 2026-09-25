@@ -45,7 +45,7 @@ export function MediaInspector({
             <>
               {/* Ellipsised, not wrapped: a content-addressed key can wrap to three lines and push the panel down. */}
               <header className="media-detail-head">
-                <h3 title={detail.key}>{detail.originalName ?? detail.key}</h3>
+                <h2 title={detail.key}>{detail.originalName ?? detail.key}</h2>
                 <span className="media-detail-usage-pill">
                   <span
                     className="media-usage-dot"
@@ -82,7 +82,7 @@ export function MediaInspector({
                   <InspectorTagForms detail={detail} />
 
                   <div className="media-detail-copy">
-                    <h4>Copy</h4>
+                    <h3>Copy</h3>
                     {copySnippetsFor({
                       url: detail.url,
                       viewable: detail.viewable,
@@ -102,7 +102,7 @@ export function MediaInspector({
                   {/* Trashing a twin hides it and both addresses keep working, so no published page loses its image. */}
                   {detail.twins.length > 0 ? (
                     <div className="media-detail-twins">
-                      <h4>Identical files</h4>
+                      <h3>Identical files</h3>
                       <ul className="media-detail-refs">
                         {detail.twins.map((twin) => (
                           <li key={twin.key}>
