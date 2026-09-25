@@ -15,6 +15,7 @@ import { brotliCompressSync, constants } from "node:zlib";
 // Comments go first: a gate reading source can be satisfied by a comment.
 import { stripComments } from "./lib/strip-comments.mjs";
 import {
+  findIneffectiveDynamicImports,
   fontsIn,
   reachableAssets,
   stylesheetsFor,
@@ -375,62 +376,25 @@ async function main() {
       `nothing reports what a clean scan reports.`,
   );
 
-  const findIneffectiveDynamicImports = (/** @type {Array<{path: string, source: string}>} */ files) => {
-    // By NORMALISED SPECIFIER, not resolved path, so two spellings of one module do not match.
-    const normalise = (/** @type {string} */ spec, /** @type {string} */ from) => {
-      if (spec.startsWith("~/")) return spec.slice(2);
-      if (!spec.startsWith(".")) return null;
-      const parts = dirname(from).split(/[\\/]/);
-      for (const segment of spec.split("/")) {
-        if (segment === ".") continue;
-        else if (segment === "..") parts.pop();
-        else parts.push(segment);
-      }
-      const joined = parts.join("/");
-      const cut = joined.lastIndexOf("/app/") >= 0 ? joined.lastIndexOf("/app/") + 5 : 0;
-      return joined.slice(cut);
-    };
-
-    /** @type {Map<string, string[]>} module -> files importing it statically */
-    const statics = new Map();
-    /** @type {Array<{module: string, path: string}>} */
-    const dynamics = [];
-
-    for (const { path, source } of files) {
-      const code = stripComments(source);
-      for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) {
-        const key = normalise(m[1], path);
-        if (!key) continue;
-        if (!statics.has(key)) statics.set(key, []);
-        /** @type {string[]} */ (statics.get(key)).push(path);
-      }
-      // `import(` preceded by a type position (`: import(`, `<import(`) is
-      // erased by TypeScript and never reaches the bundler, so it is not one.
-      for (const m of code.matchAll(/(^|[^:<\w])import\(\s*["']([^"']+)["']\s*\)/g)) {
-        const key = normalise(m[2], path);
-        if (key) dynamics.push({ module: key, path });
-      }
-    }
-
-    return dynamics
-      .filter((d) => statics.has(d.module))
-      .map((d) => ({
-        ...d,
-        importers: /** @type {string[]} */ (statics.get(d.module)),
-      }));
-  };
-
   // SELF-TEST on every execution, so the finder is proven able to fire on a tree with none.
   const selfTest = findIneffectiveDynamicImports([
     { path: "app/a.tsx", source: 'import { x } from "~/lib/thing";\nconst y = import("~/lib/thing");' },
     { path: "app/b.tsx", source: 'const z = import("~/lib/only-dynamic");' },
+    // Two spellings of one module: relative with an extension, and ~/ without one.
+    { path: "app/lib/c.ts", source: 'import { p } from "./spelled.mjs";' },
+    { path: "app/d.tsx", source: 'const w = import("~/lib/spelled");' },
+    // Type positions are erased by TypeScript and are not imports at all.
+    { path: "app/lib/e.ts", source: 'import { t } from "./typed";' },
+    { path: "app/f.ts", source: 'let a: typeof import("~/lib/typed");\ntype T = import("~/lib/typed").T;' },
   ]);
   ok(
-    "the dynamic-import finder reports the ineffective case and only that one",
-    selfTest.length === 1 && selfTest[0].module === "lib/thing",
-    `the finder returned ${JSON.stringify(selfTest.map((s) => s.module))} for a pair ` +
-      `built to contain exactly one ineffective import. It cannot be trusted about the ` +
-      `real tree until it can tell these two apart.`,
+    "the dynamic-import finder reports the ineffective cases and only those",
+    selfTest.length === 2 &&
+      selfTest[0].module === "app/lib/thing" &&
+      selfTest[1].module === "app/lib/spelled",
+    `the finder returned ${JSON.stringify(selfTest.map((s) => s.module))} for a fixture ` +
+      `built to contain exactly two ineffective imports, one spelled two ways. It cannot be ` +
+      `trusted about the real tree until it can tell these apart.`,
   );
 
   const ineffective = findIneffectiveDynamicImports(

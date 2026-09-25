@@ -4,7 +4,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { fontsIn, importsOf, reachableAssets, stylesheetsFor } from "../scripts/lib/page-payload.mjs";
+import {
+  findIneffectiveDynamicImports,
+  fontsIn,
+  importsOf,
+  moduleKey,
+  reachableAssets,
+  stylesheetsFor,
+} from "../scripts/lib/page-payload.mjs";
 
 const APP = "/app";
 
@@ -135,4 +142,30 @@ test("fonts come from @font-face only, not from every url()", () => {
     "/assets/inter-normal-AAAAAAAA.woff2",
     "/assets/inter-italic-CCCCCCCC.woff2",
   ]);
+});
+
+test("a module spelled two ways is one module to the dynamic-import finder", () => {
+  // Relative with an extension on one side, ~/ without one on the other: the old key cut at
+  // "/app/", which a repo-relative path never contains, so these never matched.
+  const found = findIneffectiveDynamicImports([
+    { path: "app/lib/content/load.ts", source: 'import { run } from "./pipeline.mjs";' },
+    { path: "app/routes/x.tsx", source: 'const p = await import("~/lib/content/pipeline");' },
+  ]);
+  assert.deepEqual(
+    found.map((f) => f.module),
+    ["app/lib/content/pipeline"],
+  );
+  assert.equal(moduleKey("../lib/x/index.ts", "app/routes/y.tsx"), "app/lib/x");
+  assert.equal(moduleKey("react-router", "app/root.tsx"), null);
+});
+
+test("an import() in a type position is not a dynamic import", () => {
+  const found = findIneffectiveDynamicImports([
+    { path: "app/lib/a.ts", source: 'import { t } from "./typed";' },
+    {
+      path: "app/lib/b.ts",
+      source: 'let a: Promise<typeof import("./typed")>;\ntype T = import("./typed").T;',
+    },
+  ]);
+  assert.deepEqual(found, []);
 });
