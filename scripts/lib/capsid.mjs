@@ -1,5 +1,5 @@
 export const NAMESPACE = "dustinedwards";
-export const CAPSID_MCP = "https://capsid.dustin-edwards.workers.dev/ops/mcp";
+const CAPSID_MCP = "https://capsid.dustin-edwards.workers.dev/ops/mcp";
 
 export const EXPORTED_DOCS = [
   {
@@ -54,19 +54,9 @@ export async function callTool(token, name, args) {
   return JSON.parse(content);
 }
 
-export const STAMP_PREFIX = "capsid-source:";
+const STAMP_PREFIX = "capsid-source:";
 
 /** @param {{namespace: string, path: string, updated_at: string}} doc */
 export function formatStamp(doc) {
   return `<!-- ${STAMP_PREFIX} ${doc.namespace} ${doc.path} ${doc.updated_at} -->`;
-}
-
-/**
- * @param {string} text
- * @returns {{namespace: string, path: string, updated_at: string} | null}
- */
-export function parseStamp(text) {
-  const m = text.match(new RegExp(`<!--\\s*${STAMP_PREFIX}\\s+(\\S+)\\s+(\\S+)\\s+(.+?)\\s*-->`));
-  if (!m) return null;
-  return { namespace: m[1], path: m[2], updated_at: m[3] };
 }
