@@ -1464,8 +1464,6 @@ try {
             return {
               x: box.left + box.width / 2,
               y: box.top + box.height / 2,
-              w: box.width,
-              h: box.height,
             };
           };
           const bar = pick('.site-header-nav a[href="/blog"]');
@@ -3439,7 +3437,7 @@ try {
         sortKey: el.getAttribute("data-sort") || "",
         ariaSort: el.getAttribute("aria-sort") || "",
       }));
-      return { cells, rows: document.querySelectorAll("[data-tile]").length };
+      return { cells };
     });
 
     ok(
@@ -3515,7 +3513,6 @@ try {
         return {
           width: Math.round(r.width),
           height: Math.round(r.height),
-          dialog: panel.getAttribute("role") || panel.closest("[role]")?.getAttribute("role") || "",
           namesKey: (panel.textContent || "").includes(wanted.slice(0, 12)),
           hasClose: !!panel.querySelector(".media-detail-close"),
         };
@@ -3824,7 +3821,7 @@ try {
         };
       });
       const out = kids.filter((k) => k.visible && k.right > Math.round(r.right) + 0.5);
-      return { right: Math.round(r.right), kids, out };
+      return { right: Math.round(r.right), out };
     });
     ok(
       "the admin topbar exists to measure at 320px",
