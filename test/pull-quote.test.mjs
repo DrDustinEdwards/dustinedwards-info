@@ -4,10 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { renderBody } from "../app/lib/content/pipeline.mjs";
-
-/** @param {string} body */
-const render = (body) => renderBody({ file: "test.md", body, resolveImage: () => null });
+import { render } from "./lib/render.mjs";
 
 const SENTENCE = "the measurement is the argument";
 const PARAGRAPH = `The method matters, but :pullquote[${SENTENCE}] and nothing else settles it.`;
