@@ -49,6 +49,16 @@ export function loader({ request, context }: Route.LoaderArgs) {
   return { theme: themeFromRequest(request), nonce: getNonce(context) };
 }
 
+/**
+ * Only on the error path: an unmatched URL matches no route but this one, so without it the 404 page
+ * has no title (WCAG 2.4.2). A matched route's own `meta` wins, so its not-found title stands.
+ */
+export function meta({ error }: Route.MetaArgs) {
+  if (!error) return [];
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
+  return [{ title: `${notFound ? "Page not found" : "Error"} | ${SITE.name}` }];
+}
+
 export const links: Route.LinksFunction = () => [
   // `links` from every matched route are merged and `meta` is NOT, so these ride on every page.
   { rel: "icon", href: "/favicon.ico", sizes: "48x48" },
