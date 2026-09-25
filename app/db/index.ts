@@ -1140,8 +1140,13 @@ export async function receiveWebmention(
       },
     })
     .returning({ id: webmentions.id });
-  /* Unreachable. -1, not a valid-looking rowid. */
-  return rows[0]?.id ?? -1;
+  // An upsert always returns its row; none means the write did not land, and a stand-in id would send
+  // the verifier after a row that does not exist.
+  const id = rows[0]?.id;
+  if (id === undefined) {
+    throw new Error(`receiveWebmention: the upsert for ${fields.sourceUrl} returned no row`);
+  }
+  return id;
 }
 
 export type WebmentionVerdict =
