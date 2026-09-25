@@ -45,8 +45,18 @@ export function ConfirmDialog({
     return () => {
       window.setTimeout(() => {
         if (document.activeElement && document.activeElement !== document.body) return;
-        const back = origin?.isConnected ? origin : document.getElementById("main");
-        back?.focus({ preventScroll: true });
+        // In order: the opener; its menu's summary, when the opener was an item in a row menu that
+        // has since closed and so cannot take focus; the page.
+        const candidates = [
+          origin,
+          origin?.closest("details")?.querySelector("summary"),
+          document.getElementById("main"),
+        ];
+        for (const back of candidates) {
+          if (!back?.isConnected) continue;
+          back.focus({ preventScroll: true });
+          if (document.activeElement === back) return;
+        }
       }, 0);
     };
   }, []);
