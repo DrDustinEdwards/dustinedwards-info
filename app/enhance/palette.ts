@@ -279,7 +279,15 @@ async function runAsk() {
   if (!question) return;
   askHandle?.cancel();
   if (askTrigger) askTrigger.hidden = true;
-  const { ask } = await import("./ask");
+  let ask: typeof import("./ask").ask;
+  try {
+    ({ ask } = await import("./ask"));
+  } catch {
+    // The chunk failed to load: restore the trigger so the reader can retry, and say so.
+    if (askTrigger) askTrigger.hidden = !askAvailable;
+    if (statusLine) statusLine.textContent = "Ask AI could not load. Try again.";
+    return;
+  }
   askHandle = ask(askContainer, question);
 }
 
