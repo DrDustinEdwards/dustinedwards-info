@@ -41,6 +41,103 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
       headers: { "content-type": "application/json" },
     });
 
+  /** Each recorded endpoint: `path` is matched exactly, or as a prefix when `prefix` is set. */
+  const routes: Array<{
+    method: string;
+    path: string;
+    prefix?: boolean;
+    handle: (path: string, body: unknown) => Response | Promise<Response>;
+  }> = [
+    {
+      method: "GET",
+      path: `${REPO_PREFIX}/git/ref/heads/main`,
+      handle: () => json({ object: { sha: head.commitSha } }),
+    },
+    {
+      method: "GET",
+      path: `${REPO_PREFIX}/git/commits/`,
+      prefix: true,
+      handle: () => json({ tree: { sha: head.treeSha } }),
+    },
+    { method: "GET", path: `${REPO_PREFIX}/contents/`, prefix: true, handle: getContents },
+    { method: "POST", path: `${REPO_PREFIX}/git/blobs`, handle: postBlob },
+    { method: "POST", path: `${REPO_PREFIX}/git/trees`, handle: postTree },
+    {
+      method: "POST",
+      path: `${REPO_PREFIX}/git/commits`,
+      handle: () => json({ sha: `commit${String(commitCounter).padStart(34, "0")}` }),
+    },
+    { method: "PATCH", path: `${REPO_PREFIX}/git/refs/heads/main`, handle: patchRef },
+  ];
+
+  async function getContents(path: string) {
+    const target = decodeURI(path.slice(`${REPO_PREFIX}/contents/`.length).split("?")[0] ?? "");
+
+    /* A directory answers with an ARRAY and a file with an OBJECT, and `listDirectory`
+     * refuses anything that is not an array. */
+    const children = [...files.keys()].filter((p) => p.startsWith(`${target}/`));
+    if (!files.has(target) && children.length > 0) {
+      return json(
+        await Promise.all(
+          children.map(async (p) => ({
+            name: p.slice(target.length + 1),
+            path: p,
+            sha: await gitBlobSha(files.get(p) ?? ""),
+            type: "file",
+            size: (files.get(p) ?? "").length,
+          })),
+        ),
+      );
+    }
+
+    const content = files.get(target);
+    if (content === undefined) return json({ message: "Not Found" }, 404);
+    const bytes = new TextEncoder().encode(content);
+    let binary = "";
+    for (const byte of bytes) binary += String.fromCharCode(byte);
+    return json({
+      content: btoa(binary),
+      encoding: "base64",
+      sha: await gitBlobSha(content),
+      size: bytes.byteLength,
+    });
+  }
+
+  async function postBlob(_path: string, body: unknown) {
+    const { content } = body as { content: string };
+    const sha = await gitBlobSha(content);
+    blobBodies.set(sha, content);
+    return json({ sha });
+  }
+
+  function postTree(_path: string, body: unknown) {
+    const { tree } = body as { tree: Array<{ path: string; sha: string | null }> };
+    pendingTree = tree.map((entry) => {
+      if (entry.sha === null) return { path: entry.path, content: null };
+      const content = blobBodies.get(entry.sha);
+      if (content === undefined) {
+        throw new Error(
+          `the tree names blob ${entry.sha}, which no recorded blob POST created.`,
+        );
+      }
+      return { path: entry.path, content };
+    });
+    commitCounter += 1;
+    return json({ sha: `tree-${commitCounter}` });
+  }
+
+  function patchRef(_path: string, body: unknown) {
+    const { sha } = body as { sha: string };
+    for (const entry of pendingTree) {
+      if (entry.content === null) files.delete(entry.path);
+      else files.set(entry.path, entry.content);
+    }
+    pendingTree = [];
+    head.commitSha = sha;
+    head.treeSha = `tree-after-${sha}`;
+    return json({ object: { sha } });
+  }
+
   const stub = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
     if (!url.startsWith(API)) {
@@ -63,83 +160,10 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
       }
     }
 
-    if (method === "GET" && path === `${REPO_PREFIX}/git/ref/heads/main`) {
-      return json({ object: { sha: head.commitSha } });
-    }
-    if (method === "GET" && path.startsWith(`${REPO_PREFIX}/git/commits/`)) {
-      return json({ tree: { sha: head.treeSha } });
-    }
-    if (method === "GET" && path.startsWith(`${REPO_PREFIX}/contents/`)) {
-      const target = decodeURI(path.slice(`${REPO_PREFIX}/contents/`.length).split("?")[0] ?? "");
-
-      /* A directory answers with an ARRAY and a file with an OBJECT, and `listDirectory`
-       * refuses anything that is not an array. */
-      const children = [...files.keys()].filter((p) => p.startsWith(`${target}/`));
-      if (!files.has(target) && children.length > 0) {
-        return json(
-          await Promise.all(
-            children.map(async (p) => ({
-              name: p.slice(target.length + 1),
-              path: p,
-              sha: await gitBlobSha(files.get(p) ?? ""),
-              type: "file",
-              size: (files.get(p) ?? "").length,
-            })),
-          ),
-        );
-      }
-
-      const content = files.get(target);
-      if (content === undefined) return json({ message: "Not Found" }, 404);
-      const bytes = new TextEncoder().encode(content);
-      let binary = "";
-      for (const byte of bytes) binary += String.fromCharCode(byte);
-      return json({
-        content: btoa(binary),
-        encoding: "base64",
-        sha: await gitBlobSha(content),
-        size: bytes.byteLength,
-      });
-    }
-
-    if (method === "POST" && path === `${REPO_PREFIX}/git/blobs`) {
-      const { content } = body as { content: string };
-      const sha = await gitBlobSha(content);
-      blobBodies.set(sha, content);
-      return json({ sha });
-    }
-
-    if (method === "POST" && path === `${REPO_PREFIX}/git/trees`) {
-      const { tree } = body as { tree: Array<{ path: string; sha: string | null }> };
-      pendingTree = tree.map((entry) => {
-        if (entry.sha === null) return { path: entry.path, content: null };
-        const content = blobBodies.get(entry.sha);
-        if (content === undefined) {
-          throw new Error(
-            `the tree names blob ${entry.sha}, which no recorded blob POST created.`,
-          );
-        }
-        return { path: entry.path, content };
-      });
-      commitCounter += 1;
-      return json({ sha: `tree-${commitCounter}` });
-    }
-
-    if (method === "POST" && path === `${REPO_PREFIX}/git/commits`) {
-      return json({ sha: `commit${String(commitCounter).padStart(34, "0")}` });
-    }
-
-    if (method === "PATCH" && path === `${REPO_PREFIX}/git/refs/heads/main`) {
-      const { sha } = body as { sha: string };
-      for (const entry of pendingTree) {
-        if (entry.content === null) files.delete(entry.path);
-        else files.set(entry.path, entry.content);
-      }
-      pendingTree = [];
-      head.commitSha = sha;
-      head.treeSha = `tree-after-${sha}`;
-      return json({ object: { sha } });
-    }
+    const route = routes.find(
+      (r) => r.method === method && (r.prefix ? path.startsWith(r.path) : path === r.path),
+    );
+    if (route) return route.handle(path, body);
 
     throw new Error(
       `the GitHub stub has no recorded shape for ${method} ${path}. ` +
