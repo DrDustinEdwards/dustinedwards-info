@@ -42,7 +42,8 @@ function reapTestRunners(rootPid) {
   const killed = [];
   /** @type {number[]} */
   const failed = [];
-  for (const pid of descendantPids(Number(rootPid), table)) {
+  // The shell is dead, so its direct child must be the npm run it spawned, named by the bound passed to it.
+  for (const pid of descendantPids(Number(rootPid), table, `--test-timeout=${TEST_TIMEOUT_MS}`)) {
     if (!processExists(pid)) continue;
     (killTree(pid) ? killed : failed).push(pid);
   }
