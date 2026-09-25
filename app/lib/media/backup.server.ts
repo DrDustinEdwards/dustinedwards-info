@@ -14,6 +14,10 @@ interface TwinComparison {
 
 interface BackupStatus {
   objects: number;
+  /**
+   * IDENTICAL twins only: a backup copy that differs is counted in `mismatched`, not here. Named
+   * `twins` because the operator API reports it under that key.
+   */
   twins: number;
   missing: string[];
   mismatched: string[];
@@ -77,18 +81,18 @@ async function compareBuckets(env: BackupEnv) {
   const missing: string[] = [];
   const mismatched: string[] = [];
   const mismatchedKeys: string[] = [];
-  let identical = 0;
+  let identicalTwins = 0;
 
   for (const source of sources) {
     const verdict = compare(source, twinByKey.get(source.key) ?? null);
-    if (verdict.identical) identical += 1;
+    if (verdict.identical) identicalTwins += 1;
     else if (verdict.present) {
       mismatched.push(`${verdict.key} (${verdict.reason})`);
       mismatchedKeys.push(verdict.key);
     } else missing.push(verdict.key);
   }
 
-  const status: BackupStatus = { objects: sources.length, twins: identical, missing, mismatched };
+  const status: BackupStatus = { objects: sources.length, twins: identicalTwins, missing, mismatched };
   return { status, mismatchedKeys };
 }
 

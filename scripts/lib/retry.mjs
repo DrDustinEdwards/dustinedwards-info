@@ -82,7 +82,9 @@ export function spawnSyncBounded(command, args = [], { timeoutMs = DEFAULT_TIMEO
     error = `${command} timed out after ${timeoutMs}ms (the hang symptom)`;
     if (Number.isInteger(result.pid) && result.pid > 0) {
       const table = readProcessTable();
-      const orphans = table.size === 0 ? [] : descendantPids(result.pid, table);
+      // A dead shell's direct child must be running the program it was asked to run.
+      const program = options.shell ? (command.trim().split(/\s+/)[0] ?? command) : undefined;
+      const orphans = table.size === 0 ? [] : descendantPids(result.pid, table, program);
       for (const pid of orphans) killTree(pid);
       error +=
         table.size === 0
