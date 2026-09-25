@@ -16,6 +16,7 @@ import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 import { colophonFacts } from "./lib/colophon-facts.mjs";
 import { chunkStem } from "./check-page-payload.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
+import { assertFloor } from "./lib/floor.mjs";
 
 // Derived like the sync and uploader do; a literal key goes stale.
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
@@ -31,6 +32,11 @@ const features = JSON.parse(
 );
 const ORIGIN = process.argv[2] ?? "https://dustinedwards.dustin-edwards.workers.dev";
 const SLUG = "where-should-a-blog-store-its-words";
+
+/* Every request carries a deadline: undici's own is 300 s, so one hung response would stall the run
+   for minutes before anything failed. Ask streams a model answer, so it gets longer. */
+const TIMEOUT_MS = 30_000;
+const ASK_TIMEOUT_MS = 90_000;
 
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
@@ -50,6 +56,7 @@ async function get(path, headers = {}) {
   const res = await fetch(`${ORIGIN}${path}`, {
     headers: { "user-agent": UA, "cache-control": "no-cache", ...headers },
     redirect: "manual",
+    signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   const text = res.headers.get("content-type")?.includes("image/") ? "" : await res.text();
   return { res, text, status: res.status };
@@ -94,10 +101,15 @@ for (const [label, cookie, expected] of [
 
 // Anti-flash: no script sets the attribute.
 {
-  const { text } = await get("/");
-  const head = text.slice(0, text.indexOf("</head>") + 7);
+  const { text, status } = await get("/");
+  const headEnd = text.indexOf("</head>");
+  const head = headEnd === -1 ? "" : text.slice(0, headEnd + 7);
   const inlineSetsTheme = /<script(?![^>]*\bsrc=)[^>]*>[\s\S]*?data-theme[\s\S]*?<\/script>/.test(head);
-  check("theme: no inline script sets data-theme (nothing to flash)", !inlineSetsTheme);
+  check(
+    "theme: no inline script sets data-theme (nothing to flash)",
+    status === 200 && headEnd !== -1 && !inlineSetsTheme,
+    `got ${status}${headEnd === -1 ? ", and no </head> to read, so the head could not be checked" : ""}`,
+  );
 }
 
 for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
@@ -292,12 +304,16 @@ for (const path of ["/admin", "/admin/posts", `/admin/posts/${SLUG}/edit`]) {
 
 {
   const pdfs = readdirSync(join(root, "public", "publications")).filter((f) => f.endsWith(".pdf"));
-  const photos = readdirSync(join(root, "public", "phage-hunters"));
+  // Images only: a desktop.ini or Thumbs.db is not served and is not an asset.
+  const photos = readdirSync(join(root, "public", "phage-hunters")).filter((f) =>
+    /\.(?:jpe?g|png|webp|avif|gif|svg)$/i.test(f),
+  );
   let ok = 0;
   for (const f of pdfs) {
     const r = await fetch(`${ORIGIN}/publications/${encodeURIComponent(f)}`, {
       method: "HEAD",
       headers: { "user-agent": UA },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (r.status === 200) ok += 1;
     else failures.push(`asset 404: /publications/${f} (${r.status})`);
@@ -306,17 +322,29 @@ for (const path of ["/admin", "/admin/posts", `/admin/posts/${SLUG}/edit`]) {
     const r = await fetch(`${ORIGIN}/phage-hunters/${encodeURIComponent(f)}`, {
       method: "HEAD",
       headers: { "user-agent": UA },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (r.status === 200) ok += 1;
     else failures.push(`asset 404: /phage-hunters/${f} (${r.status})`);
   }
   const total = pdfs.length + photos.length;
-  check(`assets: ${ok}/${total} PDFs and photos serve 200`, ok === total);
+  check(
+    `assets: ${ok}/${total} PDFs and photos serve 200`,
+    pdfs.length > 0 && photos.length > 0 && ok === total,
+    `${pdfs.length} PDF(s) and ${photos.length} photo(s) listed; an empty listing checks nothing`,
+  );
   console.log(`  assets checked: ${ok}/${total}`);
 }
 
 /* Ask bills, so its probes are capped. */
 const ASK_PROBE_LIMIT = 3;
+
+/* Ask probes the rate limit refused. A refusal is not evidence of absence, so any makes the run fail. */
+/** @type {string[]} */
+const askRefused = [];
+
+/* Set by the blog section; the floor grows with it. */
+const corpus = { live: 0, drafts: 0 };
 
 {
   const artifact = JSON.parse(
@@ -326,6 +354,8 @@ const ASK_PROBE_LIMIT = 3;
   const drafts = artifact.posts.filter((/** @type {any} */ p) => p.draft === true);
   const live = artifact.posts.filter((/** @type {any} */ p) => p.draft !== true);
   console.log(`  corpus: ${live.length} published, ${drafts.length} draft`);
+  corpus.live = live.length;
+  corpus.drafts = drafts.length;
 
   const pages = pageCount(live.length);
   const fetched = await Promise.all(
@@ -333,6 +363,10 @@ const ASK_PROBE_LIMIT = 3;
   );
 
   check("blog: index renders", fetched[0].status === 200);
+
+  /** `/blog/<slug>` not followed by more slug, so `foo` is not found on `foo-bar`'s page. */
+  const linksTo = (/** @type {string} */ body, /** @type {string} */ slug) =>
+    new RegExp(`/blog/${slug}(?![\\w-])`).test(body);
 
   const onPage = (/** @type {string} */ body) =>
     live.filter((/** @type {any} */ p) => body.includes(`/blog/${p.slug}"`)).length;
@@ -369,7 +403,7 @@ const ASK_PROBE_LIMIT = 3;
     const first = pageForPosition(after + 1);
     const last = pageForPosition(atOrAfter);
     const candidates = Array.from({ length: last - first + 1 }, (_, i) => first + i);
-    const found = candidates.filter((n) => fetched[n - 1]?.text.includes(`/blog/${p.slug}`));
+    const found = candidates.filter((n) => linksTo(fetched[n - 1]?.text ?? "", p.slug));
     check(
       `blog: /blog/${p.slug} is listed on page ${candidates.join(" or ")}`,
       found.length > 0,
@@ -382,11 +416,26 @@ const ASK_PROBE_LIMIT = 3;
     get("/sitemap.xml"),
   ]);
 
+  /* An error page contains no slug either, so "absent" means something only from a feed that served. */
+  for (const [name, doc] of [
+    ["rss.xml", rss],
+    ["feed.json", feed],
+    ["sitemap.xml", sitemap],
+  ]) {
+    check(
+      `feeds: ${name} serves 200 with a body, so a draft's absence from it means something`,
+      doc.status === 200 && doc.text.length > 100,
+      `got ${doc.status}, ${doc.text.length} byte(s)`,
+    );
+  }
+  const served = (/** @type {{status: number, text: string}} */ doc) =>
+    doc.status === 200 && doc.text.length > 100;
+
   for (const p of drafts) {
     const slug = p.slug;
     check(
       `draft ${slug}: absent from all ${pages} page(s) of /blog`,
-      fetched.every((page) => !page.text.includes(`/blog/${slug}`)),
+      fetched.every((page) => !linksTo(page.text, slug)),
     );
 
     const page = await get(`/blog/${slug}`);
@@ -395,16 +444,29 @@ const ASK_PROBE_LIMIT = 3;
     const twin = await get(`/blog/${slug}.md`);
     check(`draft ${slug}: the markdown twin is 404`, twin.status === 404, `got ${twin.status}`);
 
-    check(`draft ${slug}: absent from rss.xml`, !rss.text.includes(slug));
-    check(`draft ${slug}: absent from feed.json`, !feed.text.includes(slug));
-    check(`draft ${slug}: absent from sitemap.xml`, !sitemap.text.includes(slug));
+    check(`draft ${slug}: absent from rss.xml`, served(rss) && !rss.text.includes(slug), `got ${rss.status}`);
+    check(`draft ${slug}: absent from feed.json`, served(feed) && !feed.text.includes(slug), `got ${feed.status}`);
+    check(
+      `draft ${slug}: absent from sitemap.xml`,
+      served(sitemap) && !sitemap.text.includes(slug),
+      `got ${sitemap.status}`,
+    );
 
     const q = encodeURIComponent(`"${p.title}"`);
     const html = await get(`/search?q=${q}`);
-    check(`draft ${slug}: absent from /search results`, !html.text.includes(`/blog/${slug}`));
+    check(
+      `draft ${slug}: absent from /search results`,
+      html.status === 200 && !linksTo(html.text, slug),
+      `got ${html.status}`,
+    );
 
     const json = await get(`/search?q=${q}`, { accept: "application/json" });
-    check(`draft ${slug}: absent from the search JSON`, !json.text.includes(`/blog/${slug}`));
+    check(
+      `draft ${slug}: absent from the search JSON`,
+      json.status === 200 && (json.res.headers.get("content-type") ?? "").includes("json") &&
+        !linksTo(json.text, slug),
+      `got ${json.status} ${json.res.headers.get("content-type") ?? "(no type)"}`,
+    );
   }
 
   /**
@@ -422,11 +484,13 @@ const ASK_PROBE_LIMIT = 3;
         "content-type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({ q }),
+      signal: AbortSignal.timeout(ASK_TIMEOUT_MS),
     });
     const body = await res.text();
     // A refusal is not evidence of absence.
     if (res.status === 429) {
       console.log(`  ask: ${label} refused by the rate limit, not probed`);
+      askRefused.push(label);
       return null;
     }
     const m = body.match(/event: chunks\ndata: (.*)/);
@@ -462,10 +526,12 @@ const ASK_PROBE_LIMIT = 3;
           "content-type": "application/x-www-form-urlencoded",
         },
         body: new URLSearchParams({ q: injection }),
+        signal: AbortSignal.timeout(ASK_TIMEOUT_MS),
       });
       const body = await res.text();
       if (res.status === 429) {
         console.log(`  ask: injection replay ${label} refused by the rate limit, not probed`);
+        askRefused.push(`injection replay ${label}`);
         return null;
       }
       const answer = [...body.matchAll(/data: (\{.*"delta".*\})/g)]
@@ -520,6 +586,13 @@ const ASK_PROBE_LIMIT = 3;
   console.log(
     `  ask probes: ${probes.length} of ${drafts.length} drafts (billed per answer, ` +
       `${drafts.length - probes.length} not probed)`,
+  );
+  check(
+    "ask: every Ask probe was answered rather than refused by the rate limit",
+    askRefused.length === 0,
+    `refused: ${askRefused.join(", ")}. A refused probe is not evidence of absence: the ` +
+      `positive control, the injection replay or a draft probe did not run. Wait out the ` +
+      `limit and run again.`,
   );
 }
 
@@ -757,6 +830,7 @@ const ASK_PROBE_LIMIT = 3;
     const res = await fetch(`${ORIGIN}${path}`, {
       headers: cookie ? { ...UA_ONLY, cookie } : UA_ONLY,
       redirect: "manual",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     const body = res.headers.get("content-type")?.includes("image/") ? "" : await res.text();
     return { res, body, cf: res.headers.get("cf-cache-status") ?? "(none)" };
@@ -857,7 +931,11 @@ const ASK_PROBE_LIMIT = 3;
       const headers = { "user-agent": UA };
       if (opts.cookie) headers.cookie = opts.cookie;
       if (opts.accept) headers.accept = opts.accept;
-      const res = await fetch(`${ORIGIN}${path}`, { headers, redirect: "manual" });
+      const res = await fetch(`${ORIGIN}${path}`, {
+        headers,
+        redirect: "manual",
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
       const body = await res.text();
       return {
         res,
@@ -887,9 +965,11 @@ const ASK_PROBE_LIMIT = 3;
         `cf ${control.cf}. Without this the test below proves nothing.`,
       );
       const controlDark = await req(controlUrl, { cookie: "theme=dark" });
+      /* Not "cf is not HIT": cookied reads cache under the theme key now, and a first read is a MISS
+         whatever the design, so that half proved nothing. What must hold is the policy it is handed. */
       check(
-        `variant ${label}: control cookie-bearing bypasses`,
-        controlDark.cf !== "HIT" && controlDark.cc.includes("no-store"),
+        `variant ${label}: control cookie-bearing response is no-store`,
+        controlDark.cc.includes("no-store"),
         `cf ${controlDark.cf}, cache-control ${controlDark.cc}`,
       );
 
@@ -911,8 +991,8 @@ const ASK_PROBE_LIMIT = 3;
       for (let i = 0; i < 3 && after.cf !== "HIT"; i += 1) after = await req(testUrl);
       const dark = await req(testUrl, { cookie: "theme=dark" });
       check(
-        `variant ${label}: cookie-bearing bypasses AFTER the alternate representation`,
-        dark.cf !== "HIT" && dark.cc.includes("no-store"),
+        `variant ${label}: cookie-bearing response is no-store AFTER the alternate representation`,
+        dark.cc.includes("no-store"),
         `cf ${dark.cf}, cache-control ${dark.cc}. This is the 2026-08-05 defect: ` +
           `a second variant collapsed the Cookie dimension.`,
       );
@@ -1180,10 +1260,20 @@ const ASK_PROBE_LIMIT = 3;
 
   /** @type {string[]} */
   const scriptSrcs = [];
-  for (const script of text.match(/<script[^>]*\bsrc="\/assets\/[^"]+\.js"[^>]*>/g) ?? []) {
-    const src = script.match(/src="\/assets\/([^"]+\.js)"/);
-    if (src) scriptSrcs.push(src[1]);
+  /** @type {string[]} */
+  const offAssets = [];
+  for (const script of text.match(/<script\b[^>]*\bsrc="[^"]*"[^>]*>/g) ?? []) {
+    const src = /** @type {string} */ ((script.match(/\bsrc="([^"]*)"/) ?? [])[1]);
+    const asset = src.match(/^\/assets\/([^"?#]+\.js)$/);
+    if (asset) scriptSrcs.push(asset[1]);
+    else offAssets.push(src);
   }
+  check(
+    "payload: every live script src is under /assets/",
+    offAssets.length === 0,
+    `script src(s) from elsewhere: [${offAssets.join(", ")}]. Only built enhancement bundles ` +
+      `belong on a public page.`,
+  );
   const preloads = text.match(/<link[^>]*rel="modulepreload"[^>]*>/g) ?? [];
 
   check(
@@ -1222,15 +1312,28 @@ const ASK_PROBE_LIMIT = 3;
 
   /** @type {{ slug: string, href: string } | null} */
   let found = null;
+  /** @type {string[]} */
+  const unserved = [];
   for (const slug of slugs) {
     const { text, status } = await get(`/blog/${slug}`);
-    if (status !== 200) continue;
+    if (status !== 200) {
+      unserved.push(`/blog/${slug} (${status})`);
+      continue;
+    }
     const match = text.match(/<a class="image-link" href="([^"]+)"><img\b/);
     if (match) {
       found = { slug, href: match[1] };
       break;
     }
   }
+
+  /* The search stops at the first image, so this covers the posts it reached. */
+  check(
+    "image-link: every published post the search reached serves 200",
+    unserved.length === 0,
+    `${unserved.join(", ")}. A post that errors was skipped by the search, so "no body image" ` +
+      `could be "no post rendered".`,
+  );
 
   if (found === null) {
     console.log(
@@ -1298,10 +1401,16 @@ const ASK_PROBE_LIMIT = 3;
 
 console.log(`\n${passed} passed, ${failures.length} failed`);
 
-/* Floor on executed assertions, measured through a real run: skipped loops look like zero failures. */
-const MINIMUM_CHECKS = 241;
+/* Floor on executed assertions, measured through a real run: skipped loops look like zero failures.
+   241 was measured on 2026-08-29 (d38a780) against 11 published posts and 1 draft. The corpus loops
+   add checks per post and per draft, so a fixed floor would let each new post's checks absorb a
+   skipped section; the corpus part of the floor is derived instead. */
+const corpusChecks = (/** @type {number} */ live, /** @type {number} */ drafts) =>
+  live + pageCount(live) + drafts * 8 + Math.min(drafts, ASK_PROBE_LIMIT);
+const MINIMUM_CHECKS = 241 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
 const executed = passed + failures.length;
-const short = executed < MINIMUM_CHECKS;
+const breach = assertFloor("verify-live", "checks", executed, MINIMUM_CHECKS);
+const short = breach !== null;
 
 if (failures.length > 0) {
   console.error("\nFAILURES:");
@@ -1310,8 +1419,8 @@ if (failures.length > 0) {
 
 if (short) {
   console.error(
-    `\nREFUSED: only ${executed} assertion(s) executed, expected at least ${MINIMUM_CHECKS}.\n` +
-      `  Sections were SKIPPED rather than failing. A pass count is not coverage:\n` +
+    `\nREFUSED: ${breach}\n` +
+      `  A pass count is not coverage:\n` +
       `  count the assertions that ran, not the ones that passed.`,
   );
 }
