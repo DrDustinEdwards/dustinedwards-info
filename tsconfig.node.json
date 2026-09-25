@@ -23,6 +23,9 @@
     // the escaped form the corpus stores, and this project must reach every
     // file a listed file reaches. Dependency-free, so it costs nothing.
     "app/lib/publications/entities.mjs",
+    // Also imported by `app/lib/seo.ts`: `isSiteOwner` matches authors through
+    // the exact alias table here, so this project must reach it too.
+    "app/lib/publications/authors.mjs",
     // Every publication URL and file path, stated once. `check:machine-readable`
     // asserts that each hosted `pdfPath` is the path `paperPdfPath` derives, so
     // the gate has to reach the one function that owns the rule rather than
