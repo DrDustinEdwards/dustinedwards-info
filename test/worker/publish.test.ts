@@ -1,5 +1,5 @@
 import { env } from "cloudflare:test";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished } from "vitest";
 
 import { claimMediaKeyForDelete, upsertMediaRecord } from "~/db";
 import {
@@ -305,12 +305,12 @@ describe("the FTS indexes", () => {
     }
     expect(await ftsEquality()).toMatchObject({ ok: true });
 
-    try {
-      await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('delete-all')`).run();
-      expect(await ftsEquality()).toMatchObject({ ok: false });
-    } finally {
+    /* A hook, not a `finally`: a rebuild that threw there would replace the assertion's failure. */
+    onTestFinished(async () => {
       await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`).run();
-    }
+    });
+    await env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('delete-all')`).run();
+    expect(await ftsEquality()).toMatchObject({ ok: false });
   });
 });
 
