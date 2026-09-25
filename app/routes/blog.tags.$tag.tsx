@@ -5,7 +5,7 @@ import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getBlogTag, listBlogPosts } from "~/db";
-import { POSTS_PER_PAGE, listingFacts } from "~/lib/blog-listing.mjs";
+import { POSTS_PER_PAGE, listingFacts, readPage } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import {
@@ -27,7 +27,7 @@ import "~/styles/entry-list.css";
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const url = new URL(request.url);
-  const page = Number(url.searchParams.get("page")) || 1;
+  const page = readPage(url.searchParams.get("page"));
 
   /* Resolved before the list: an empty list cannot tell "no such tag" from "every post unpublished". */
   const tag = await getBlogTag(env, params.tag);

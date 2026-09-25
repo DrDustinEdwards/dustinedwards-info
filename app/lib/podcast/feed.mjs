@@ -132,14 +132,19 @@ export function parsePodcastFeed(xml) {
  * @returns {PodcastSlot}
  */
 export function parsePodcastSlot(value) {
+  if (!value) return { mode: "latest" };
   try {
-    const parsed = value ? JSON.parse(value) : null;
+    const parsed = JSON.parse(value);
     if (parsed?.mode === "featured" && typeof parsed.guid === "string" && parsed.guid) {
       return { mode: "featured", guid: parsed.guid };
     }
+    if (parsed?.mode === "latest") return { mode: "latest" };
   } catch {
-    // Malformed reads as the default.
+    // Falls through to the logged default below.
   }
+  // Malformed reads as the default so the home page renders, but it is logged: a featured episode the
+  // owner chose has silently become "latest".
+  console.error(JSON.stringify({ alert: "podcast-slot-unreadable", value }));
   return { mode: "latest" };
 }
 

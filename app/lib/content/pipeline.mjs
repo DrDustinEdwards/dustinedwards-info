@@ -356,9 +356,15 @@ export function withBacklinks(posts) {
   });
 }
 
+// A rejection is not cached: one failed wasm load would otherwise fail every render in the isolate.
+// The caller still sees this render's failure; the next render tries again.
 function getHighlighter() {
   if (!highlighterPromise) {
-    highlighterPromise = buildHighlighter();
+    const building = buildHighlighter();
+    highlighterPromise = building;
+    building.catch(() => {
+      if (highlighterPromise === building) highlighterPromise = null;
+    });
   }
   return highlighterPromise;
 }

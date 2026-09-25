@@ -2,7 +2,7 @@ import assetManifest from "../../../content/generated/assets.json";
 
 import { deleteMediaRecord, listMediaRecords, upsertDerivedMedia } from "~/db";
 import { bucketFor, classify, isRaster, roleOf, storageOf } from "./classify.mjs";
-import { placeholderFor } from "./core.server";
+import { measureDimensions, placeholderFor } from "./core.server";
 
 // `alt`, `caption`, `focal_x` and `focal_y` are AUTHORED and recoverable from nothing, so a rebuild
 // upserts derived columns only, never delete-then-insert. R2 wins: rows are removed, objects never.
@@ -15,14 +15,16 @@ export type RebuildReport = {
   failures: string[];
 };
 
-async function dimensionsFor(env: Env, body: ReadableStream) {
+type Measured = { dimensions: { width: number; height: number } | null; failure: string | null };
+
+// A failed read still writes the row (the upsert leaves stored sizes alone) but is reported as a
+// failure, so the rebuild is never counted converged over sizes it could not measure.
+async function dimensionsFor(env: Env, body: ReadableStream | null): Promise<Measured> {
+  if (!body) return { dimensions: null, failure: "the object vanished before it could be measured" };
   try {
-    const info = await env.IMAGES.info(body);
-    // An SVG has no pixel dimensions: record nothing rather than 0.
-    if ("width" in info && "height" in info) return { width: info.width, height: info.height };
-    return null;
-  } catch {
-    return null;
+    return { dimensions: await measureDimensions(env, body), failure: null };
+  } catch (error) {
+    return { dimensions: null, failure: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -104,9 +106,10 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
       const bucket = bucketFor(env, object.key);
       // Two GETs: a body is a stream and can be read only once.
       const measurable = isRaster(object.key);
-      const dimensions = measurable
-        ? await bucket.get(object.key).then((o) => (o ? dimensionsFor(env, o.body) : null))
+      const measured = measurable
+        ? await bucket.get(object.key).then((o) => dimensionsFor(env, o?.body ?? null))
         : null;
+      const dimensions = measured?.dimensions ?? null;
       const placeholder = measurable
         ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
         : null;
@@ -127,6 +130,10 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         placeholder,
         uploadedAt: object.uploaded,
       });
+      if (measured?.failure) {
+        failures.push(`${object.key}: ${measured.failure}`);
+        continue;
+      }
       indexed += 1;
     } catch (error) {
       failures.push(`${object.key}: ${error instanceof Error ? error.message : String(error)}`);
@@ -145,9 +152,10 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
       const buffer = await response.arrayBuffer();
 
       const measurable = isRaster(path);
-      const dimensions = measurable
+      const measured = measurable
         ? await dimensionsFor(env, new Response(buffer.slice(0)).body as ReadableStream)
         : null;
+      const dimensions = measured?.dimensions ?? null;
       const placeholder = measurable
         ? await placeholderFor(env, new Response(buffer.slice(0)).body as ReadableStream)
         : null;
@@ -165,6 +173,10 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
         // No upload event: a build-machine mtime would be an invented fact.
         uploadedAt: null,
       });
+      if (measured?.failure) {
+        failures.push(`${path}: ${measured.failure}`);
+        continue;
+      }
       indexed += 1;
     } catch (error) {
       failures.push(`${path}: ${error instanceof Error ? error.message : String(error)}`);

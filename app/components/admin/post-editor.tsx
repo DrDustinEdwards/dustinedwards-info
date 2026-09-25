@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { Form, Link, useBlocker } from "react-router";
+import { Form, Link, useBlocker, useNavigation } from "react-router";
 
 import {
   SLUG_ATTRIBUTE_PATTERN,
@@ -77,9 +77,10 @@ export function PostEditor({
   fields,
   isNew,
   headSha,
+  headError = null,
+  loadProblems = [],
   previewHtml,
   feedback,
-  busy,
   state,
   everPublished,
   tagOptions,
@@ -94,9 +95,12 @@ export function PostEditor({
   fields: PostFields;
   isNew: boolean;
   headSha: string;
+  /** Why `headSha` is empty, when the read failed; null means no reason is known. */
+  headError?: string | null;
+  /** Sentences for editor data that failed to load, so a failed read never looks like an empty one. */
+  loadProblems?: string[];
   previewHtml?: string | null;
   feedback?: EditorFeedback | null;
-  busy?: boolean;
   state: PostState;
   everPublished: boolean;
   tagOptions: string[];
@@ -130,6 +134,13 @@ export function PostEditor({
   const [layout, setLayout] = useState<Layout>("write");
   const [preview, setPreview] = useState<{ html: string } | { error: string } | null>(null);
   const [previewing, setPreviewing] = useState(false);
+
+  /* While a submit is in flight a second one would carry the same head and read as a false conflict. */
+  const busy = useNavigation().state === "submitting";
+  const busyRef = useRef(busy);
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
 
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -227,8 +238,16 @@ export function PostEditor({
       form.set("slug", fields.slug || slug);
       try {
         const response = await fetch("/admin/preview", { method: "POST", body: form });
-        const result = (await response.json()) as { html?: string; error?: string };
+        // Not JSON is a failed request, such as an expired session answering with a page.
+        const result = (await response.json().catch(() => null)) as {
+          html?: string;
+          error?: string;
+        } | null;
         if (seq !== previewSeq.current) return;
+        if (!result || (!response.ok && !result.error)) {
+          setPreview({ error: `The preview request failed with HTTP ${response.status}.` });
+          return;
+        }
         setPreview(result.error ? { error: result.error } : { html: result.html ?? "" });
       } catch (error) {
         if (seq !== previewSeq.current) return;
@@ -246,7 +265,7 @@ export function PostEditor({
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
       event.preventDefault();
       const form = formRef.current;
-      if (!form) return;
+      if (!form || busyRef.current) return;
       const intentField = keyboardIntentRef.current;
       if (intentField) intentField.disabled = false;
       form.requestSubmit();
@@ -487,9 +506,20 @@ export function PostEditor({
               <div className="editor-notice" role="alert">
                 <strong>Saving unavailable</strong>
                 <p>
-                  GITHUB_TOKEN is not configured on this Worker, so a save cannot
-                  commit. Preview still works.
+                  {headError
+                    ? `The repository could not be read, so a save cannot commit: ${headError}`
+                    : "GITHUB_TOKEN is not configured on this Worker, so a save cannot commit."}{" "}
+                  Preview still works.
                 </p>
+              </div>
+            ) : null}
+
+            {loadProblems.length > 0 ? (
+              <div className="editor-notice">
+                <strong>Some editor data did not load</strong>
+                {loadProblems.map((problem) => (
+                  <p key={problem}>{problem}</p>
+                ))}
               </div>
             ) : null}
 
@@ -647,7 +677,7 @@ export function PostEditor({
               ) : null}
             </div>
 
-            {/* The zero-JS image path only; once CodeMirror mounts, drag-drop, paste and the toolbar do it. */}
+            {/* The image path until CodeMirror mounts, then drag-drop, paste and the toolbar take over. It needs script too: without script the editor has no image upload. */}
             {!richBody ? (
               <ImageUploader
                 onInsert={(snippet) => {
@@ -976,18 +1006,25 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
     }
     setMessage("Uploading");
 
-    const form = new FormData();
-    form.set("file", file);
-    const response = await fetch("/admin/media/upload", { method: "POST", body: form });
-    if (!response.ok) {
-      setMessage(`Upload failed (${response.status}).`);
-      return;
+    // A click handler's rejection is unhandled, so a network error must end here as a message.
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/admin/media/upload", { method: "POST", body: form });
+      if (!response.ok) {
+        // The status is the fallback when the body is not the route's JSON error.
+        const detail = (await response.json().catch(() => ({}))) as { error?: string };
+        setMessage(detail.error ?? `Upload failed (${response.status}).`);
+        return;
+      }
+      const { url } = (await response.json()) as { url: string };
+      onInsert(`\n![${alt.trim()}](${url})\n`);
+      setMessage(`Inserted ${url}`);
+      setAlt("");
+      if (fileRef.current) fileRef.current.value = "";
+    } catch (error) {
+      setMessage(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const { url } = (await response.json()) as { url: string };
-    onInsert(`\n![${alt.trim()}](${url})\n`);
-    setMessage(`Inserted ${url}`);
-    setAlt("");
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (

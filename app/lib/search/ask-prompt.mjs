@@ -84,9 +84,18 @@ export function citedSlugs(chunks) {
 
 /**
  * A zero-chunk answer came from the model's weights, not this site: it is replaced here and not cached.
- * No time-to-first-token cost, since chunks arrive before the first delta; if they never arrive the
- * buffer is flushed unchanged (fail open). Runs before teeForCache so the cache stores what was shown.
+ * No time-to-first-token cost, since chunks arrive before the first delta. FAILS CLOSED: a chunks frame
+ * that does not parse to an array, or a stream that ends without one, cannot be checked for drafts, so it
+ * is replaced too and logged under `ask-guard-unverifiable`, which is how a changed upstream frame order
+ * shows up. Runs before teeForCache so the cache stores what was shown.
  */
+
+/**
+ * @param {string} reason
+ */
+function logUnverifiable(reason) {
+  console.error(JSON.stringify({ alert: "ask-guard-unverifiable", reason }));
+}
 /**
  * @param {ReadableStream} upstream
  * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
@@ -130,6 +139,7 @@ export function guardAnswerStream(upstream, resolveVisible) {
             .join("\n");
 
           let empty = false;
+          let unverifiable = false;
           /** @type {unknown[]} */
           let parsedChunks = [];
           try {
@@ -138,23 +148,25 @@ export function guardAnswerStream(upstream, resolveVisible) {
             if (Array.isArray(parsed)) {
               parsedChunks = parsed;
               empty = parsed.length === 0;
+            } else {
+              unverifiable = true;
             }
           } catch {
-            // Unparseable: not evidence of zero chunks. Pass it through.
-            empty = false;
+            unverifiable = true;
           }
+          if (unverifiable) logUnverifiable("the chunks frame is not a JSON array");
 
           // Same verdict as the cache replay. Refused whole, not filtered: the prose was written from those
           // chunks, so dropping only the link would keep a summary of a post nobody may read.
           const slugs = citedSlugs(parsedChunks);
           let leaked = false;
-          if (!empty && slugs.length > 0) {
+          if (!empty && !unverifiable && slugs.length > 0) {
             const visible = await resolveVisible(slugs);
             leaked = slugs.some((slug) => !visible.has(slug));
           }
 
           decided = true;
-          if (empty || leaked) {
+          if (empty || leaked || unverifiable) {
             for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) {
               controller.enqueue(encoder.encode(piece));
             }
@@ -165,8 +177,13 @@ export function guardAnswerStream(upstream, resolveVisible) {
           for (const piece of held) controller.enqueue(piece);
           held = [];
         }
-        // Closed without ever showing a chunks event. Flush what was held.
-        if (!decided) for (const piece of held) controller.enqueue(piece);
+        // Closed without ever showing a chunks event: nothing held can be checked, so none of it is shown.
+        if (!decided) {
+          logUnverifiable("the stream ended without a chunks frame");
+          for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) {
+            controller.enqueue(encoder.encode(piece));
+          }
+        }
         controller.close();
       } catch (error) {
         controller.error(error);
