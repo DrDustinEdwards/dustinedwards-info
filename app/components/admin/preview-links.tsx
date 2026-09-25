@@ -106,19 +106,22 @@ export function PreviewLinks({
 
 // Not media-copy-button: that would import the media page's keyboard and toast module into the editor.
 function PreviewCopyButton({ url, label }: { url: string; label: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
   return (
     <button
       type="button"
       className="row-action"
       onClick={() => {
-        navigator.clipboard?.writeText(url).then(
-          () => setCopied(true),
-          () => setCopied(false),
-        );
+        // Inside a promise: with no clipboard the call throws before any promise exists.
+        Promise.resolve()
+          .then(() => navigator.clipboard.writeText(url))
+          .then(
+            () => setCopied("copied"),
+            () => setCopied("failed"),
+          );
       }}
     >
-      {copied ? "Copied" : label}
+      {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : label}
     </button>
   );
 }
