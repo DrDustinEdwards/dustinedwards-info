@@ -11,6 +11,7 @@ import {
 import { KEY_SEPARATOR, keyForUrl } from "./ask-keys.mjs";
 import { uploadTwins } from "./ask-twins.mjs";
 import { answerDelta, takeSseFrames } from "./sse.mjs";
+import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
 import { PUBLICATIONS } from "~/data/publications";
@@ -286,12 +287,8 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
   const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperItemKeys()]);
   const present = new Set(listed.map((item) => item.key));
 
-  return {
-    expected: expected.size,
-    present: present.size,
-    missing: [...expected].filter((k) => !present.has(k)).sort(),
-    stale: [...present].filter((k) => !expected.has(k)).sort(),
-  };
+  const { extra, ...drift } = setDrift(expected, present);
+  return { ...drift, stale: extra };
 }
 
 /** On the context because a parent cannot read a child's loader data; a getter, so a route that never asks never pays. */

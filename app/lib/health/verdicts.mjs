@@ -1,6 +1,22 @@
 import { errorMessage } from "../error-message.mjs";
 
 /**
+ * A derived index against its source: the sizes, what it lacks and what it holds beyond the source,
+ * each sorted. Kept apart so a missing key and an extra one cannot cancel out in a count.
+ *
+ * @param {Set<string>} expected
+ * @param {Set<string>} present
+ */
+export function setDrift(expected, present) {
+  return {
+    expected: expected.size,
+    present: present.size,
+    missing: [...expected].filter((k) => !present.has(k)).sort(),
+    extra: [...present].filter((k) => !expected.has(k)).sort(),
+  };
+}
+
+/**
  * Both directions summed: a missing record and a stale one are each a wrong answer. Matches the admin badge.
  *
  * @param {{ expected: number, present: number, missing: string[], stale: string[] }} status
