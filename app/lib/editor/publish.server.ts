@@ -594,13 +594,18 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
     );
   }
 
+  // Through deletePostFromD1, the one delete door: a bare row delete would leave the post in /search
+  // and its media_refs blocking its images' deletion forever.
   const keep = files.map((f) => f.name.slice(0, -".md".length));
   const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
-  await env.DB.prepare(
-    `DELETE FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
+  const orphans = await env.DB.prepare(
+    `SELECT slug FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
   )
     .bind(...keep)
-    .run();
+    .all<{ slug: string }>();
+  for (const { slug } of orphans.results ?? []) {
+    await deletePostFromD1(env, slug);
+  }
 
   for (const entry of files) {
     const slug = entry.name.slice(0, -".md".length);
@@ -614,5 +619,5 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
     await renderAndWrite(env, slug, file.content, entry.sha);
   }
 
-  return { synced: files.length };
+  return { synced: files.length, removed: orphans.results?.length ?? 0 };
 }
