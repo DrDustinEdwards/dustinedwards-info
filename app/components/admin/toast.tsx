@@ -23,8 +23,8 @@ export function MediaToast({ inDialog = false }: { inDialog?: boolean }) {
       const detail = (event as CustomEvent<string>).detail;
       setMessage(detail);
       window.clearTimeout(timer);
-      // Long enough to read a filename, short enough not to sit over the grid.
-      timer = window.setTimeout(() => setMessage(""), 2600);
+      // Long enough to read a filename, short enough not to sit over the grid; a long address gets longer.
+      timer = window.setTimeout(() => setMessage(""), Math.max(2600, detail.length * 60));
     };
     window.addEventListener(TOAST_EVENT, onToast);
     return () => {

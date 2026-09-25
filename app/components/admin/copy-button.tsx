@@ -38,6 +38,10 @@ export function CopyButton({
           .catch(() => {
             button.dataset.copied = "no";
             toast(`Copy failed. The address is ${value}`);
+            // Cleared like success, or "failed" stays on the button after a later copy works.
+            window.setTimeout(() => {
+              delete button.dataset.copied;
+            }, 2400);
           });
       }}
     >
