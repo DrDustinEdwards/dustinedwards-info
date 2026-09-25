@@ -419,8 +419,8 @@ console.error(`cards: ${cards.files.length} preview cards, digest ${cards.digest
  * THE LONG NOTES MOVED TO guidelines/, unchanged and still single-owner: they are
  * copied into `.design-sync/guidelines/`, which `guidelinesGlob` ships, so the
  * canvas still has them one read away. Copied HERE, in the same run that feeds
- * the driver, because `scripts/build-guidelines.mjs` rebuilds that folder from
- * empty and would sweep a copy made earlier.
+ * the driver. `scripts/build-guidelines.mjs` rebuilds that folder and keeps
+ * these two by name (its OTHER_OWNERS), so a rename here is a rename there.
  *
  * `cfg.buildCmd` names this file and NOTHING EXECUTES IT: in the staged skill it
  * appears only in `lib/common.mjs`'s list of known config keys, so neither the

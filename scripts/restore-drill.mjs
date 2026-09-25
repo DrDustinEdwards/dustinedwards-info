@@ -1,12 +1,11 @@
 // D1 Time Travel restores a database in place and no form of it targets another, so it cannot be drilled here.
 
 import { readFile, readdir, mkdir, rm, writeFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
 import { assertFloor } from "./lib/floor.mjs";
-import { retryRead } from "./lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 
@@ -52,12 +51,16 @@ function ok(label, condition, detail = "") {
  * @returns {{ stdout: string, status: number }}
  */
 function wrangler(args) {
-  const result = spawnSync(`npx wrangler ${args}`, {
-    encoding: "utf8",
+  // Bounded for the whole-database export and import, so a hung wrangler fails the drill instead of hanging it.
+  const result = spawnSyncBounded(`npx wrangler ${args}`, [], {
     shell: true,
     maxBuffer: 64 * 1024 * 1024,
+    timeoutMs: 15 * 60_000,
   });
-  return { stdout: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status ?? 1 };
+  return {
+    stdout: `${result.stdout}${result.stderr}${result.error ? `\n${result.error}` : ""}`,
+    status: result.status ?? 1,
+  };
 }
 
 /**

@@ -62,7 +62,12 @@ async function sql(query) {
     shapeShown = true;
   }
   const json = JSON.parse(text);
-  return json.data ?? [];
+  // A reshaped answer read as no rows, which the probe reports as NO RISE: a finding it never made.
+  if (!Array.isArray(json?.data)) {
+    console.error(`SQL API answered without a data array. Body: ${text.slice(0, 400)}`);
+    process.exit(1);
+  }
+  return json.data;
 }
 
 /** @returns {Promise<{ weighted: number, rows: number }>} */
@@ -72,11 +77,20 @@ async function counts() {
       `FROM ${DATASET} ` +
       `WHERE timestamp >= NOW() - INTERVAL '1' DAY AND blob1 = '${PATH}'`,
   );
-  const row = data[0] ?? {};
-  return {
-    weighted: Number(row.origin_requests ?? 0),
-    rows: Number(row.rows ?? 0),
-  };
+  // An aggregate always answers one row. SUM over no rows is null, which is zero only when COUNT agrees.
+  if (data.length !== 1) {
+    console.error(`the count query answered ${data.length} row(s), expected 1: ${JSON.stringify(data).slice(0, 300)}`);
+    process.exit(1);
+  }
+  const row = data[0];
+  const rows = Number(row.rows);
+  // Number(null) is 0, so a null SUM beside a nonzero COUNT is made NaN here to be refused below.
+  const weighted = row.origin_requests === null ? (rows === 0 ? 0 : NaN) : Number(row.origin_requests);
+  if (!Number.isFinite(rows) || !Number.isFinite(weighted)) {
+    console.error(`the count query answered a row without numeric counts: ${JSON.stringify(row)}`);
+    process.exit(1);
+  }
+  return { weighted, rows };
 }
 
 /** @returns {Promise<{ weighted: number, rows: number, waited: number }>} */
@@ -133,8 +147,8 @@ console.log("Analytics Engine cache-interaction probe");
 console.log(`  path    ${PATH}`);
 console.log(`  dataset ${DATASET}`);
 console.log(`  poll    every ${POLL_SECONDS}s, cap ${CAP_SECONDS}s per stage`);
-console.log(`  bypass  cache-control: no-cache, per scripts/verify-live.mjs:108`);
-console.log(`  eligible plain GET, per scripts/verify-live.mjs:992-997\n`);
+console.log(`  bypass  cache-control: no-cache, per get() in scripts/verify-live.mjs`);
+console.log(`  eligible plain GET, per warm() in the cache section of scripts/verify-live.mjs\n`);
 
 const base = await settle();
 console.log(
@@ -181,7 +195,7 @@ console.log(
 if (!producedW || !producedH || !producedN) {
   console.log(
     "ambiguity             a fetch produced no point. writeDataPoint is fire and\n" +
-      "                      forget and workers/app.ts:286 swallows throws, so this\n" +
+      "                      forget and recordTraffic in workers/app.ts swallows throws, so this\n" +
       "                      is consistent with the Worker not running AND with the\n" +
       "                      Worker running and the write being dropped.",
   );

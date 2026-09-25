@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
@@ -112,7 +112,16 @@ function ico(images) {
 }
 
 const outArg = process.argv.indexOf("--out");
-const OUT = outArg === -1 ? join(ROOT, "public") : process.argv[outArg + 1];
+if (outArg !== -1 && !process.argv[outArg + 1]) {
+  console.error("build:icons: --out needs a directory");
+  process.exit(2);
+}
+const PUBLIC = join(ROOT, "public");
+const OUT = outArg === -1 ? PUBLIC : resolve(process.argv[outArg + 1]);
+// Resolved and compared as paths: `--out public` or `--out ./public` wrote into public/ while the
+// string compare below said otherwise and skipped the manifest rebuild.
+const samePath = (/** @type {string} */ a, /** @type {string} */ b) =>
+  process.platform === "win32" ? resolve(a).toLowerCase() === resolve(b).toLowerCase() : resolve(a) === resolve(b);
 mkdirSync(OUT, { recursive: true });
 
 /** @param {string} name @param {Buffer|string} data */
@@ -152,7 +161,7 @@ emit("dustin-edwards-maskable-icon-512x512.png", png(square({ size: 512, mark: D
 emit("dustin-edwards-og-image.png", png(ogCard(), 1200));
 
 // This is the only generator that adds new files to `public/`, so it regenerates the asset manifest.
-if (OUT === join(ROOT, "public")) {
+if (samePath(OUT, PUBLIC)) {
   // cwd pinned to the repo root: the manifest builder resolves relative to the working directory.
   const manifest = spawnSync(process.execPath, [join(ROOT, "scripts", "build-assets.mjs")], {
     cwd: ROOT,

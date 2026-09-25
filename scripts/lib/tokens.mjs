@@ -21,36 +21,61 @@ export const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 const ROOT_MODULE_PATH = join(root, "app", "root.tsx");
 
 /**
+ * A relative `@import` in any spelling CSS accepts: `"./a.css"`, `'./a.css'`, `url("./a.css")` or
+ * `url(./a.css)`. Comments are stripped first, so a commented-out import is not followed.
+ *
+ * @param {string} css
+ * @returns {string[]}
+ */
+export function cssRelativeImports(css) {
+  const code = css.replace(/\r\n/g, "\n").replace(/\/\*[\s\S]*?\*\//g, "");
+  return [...code.matchAll(/@import\s+(?:url\(\s*)?(["']?)(\.[^"')\s;]+)\1\s*\)?/g)].map((m) => m[2]);
+}
+
+/**
+ * A module's CSS imports, both forms (a sheet reachable only through a `?url` import is still the
+ * site's CSS), in either quote, with or without a trailing semicolon.
+ *
+ * @param {string} source
+ * @returns {string[]}
+ */
+export function moduleCssImports(source) {
+  return [
+    ...source
+      .replace(/\r\n/g, "\n")
+      .matchAll(/(?:^import\s+|from\s+)(["'])([^"'\n]+\.css)(?:\?url)?\1/gm),
+  ].map((m) => m[2]);
+}
+
+/**
  * Order comes from root.tsx's CSS imports and each file's own `@import` lines. A sheet named by
  * an `@import` comes before the file that imports it, recursively, which is what the browser does,
  * and CSS requires `@import` before every other rule, so a late `@import` is silently dropped.
+ * Each sheet is listed once, at its first arrival, however many files import it.
  *
  * @returns {string[]}
  */
 export function stylesheetPaths() {
   /** @type {string[]} */
   const out = [];
+  /** @type {Set<string>} */
+  const seen = new Set();
 
   /** @param {string} file */
   const expand = (file) => {
-    const text = readFileSync(file, "utf8").replace(/\r\n/g, "\n");
-    for (const m of text.matchAll(/@import\s+"(\.[^"]+)"/g)) {
-      expand(join(dirname(file), m[1]));
+    if (seen.has(file)) return;
+    seen.add(file);
+    for (const rel of cssRelativeImports(readFileSync(file, "utf8"))) {
+      expand(join(dirname(file), rel));
     }
     out.push(file);
   };
 
-  /**
-   * Both import forms: a sheet reachable only through a `?url` import is still the site's CSS.
-   *
-   * @param {string} source @param {string} base
-   */
+  /** @param {string} source @param {string} base */
   const cssImportsOf = (source, base) =>
-    [
-      ...source
-        .replace(/\r\n/g, "\n")
-        .matchAll(/(?:^import\s+"|from\s+")([^"]+\.css)(?:\?url)?";/gm),
-    ].map((m) => (m[1].startsWith("~/") ? join(root, "app", m[1].slice(2)) : join(base, m[1])));
+    moduleCssImports(source).map((spec) =>
+      spec.startsWith("~/") ? join(root, "app", spec.slice(2)) : join(base, spec),
+    );
 
   const rootSheets = cssImportsOf(readFileSync(ROOT_MODULE_PATH, "utf8"), join(root, "app"));
   if (rootSheets.length === 0) {
@@ -71,19 +96,14 @@ export function stylesheetPaths() {
     readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
       const full = join(dir, entry.name);
       if (entry.isDirectory()) return entry.name === "enhance" ? [] : modulesUnder(full);
-      return /\.(ts|tsx)$/.test(entry.name) ? [full] : [];
+      return /\.(ts|tsx|mts|mjs|js|jsx)$/.test(entry.name) ? [full] : [];
     });
   const routeFiles = modulesUnder(routeDir).sort();
   // Admin first among non-root sheets: an admin page loads root then admin.
   expand(ADMIN_CSS_PATH);
 
-  const seen = new Set(out);
   for (const file of routeFiles) {
-    for (const sheet of cssImportsOf(readFileSync(file, "utf8"), dirname(file))) {
-      if (seen.has(sheet)) continue;
-      expand(sheet);
-      for (const p of out) seen.add(p);
-    }
+    for (const sheet of cssImportsOf(readFileSync(file, "utf8"), dirname(file))) expand(sheet);
   }
 
   return out;
@@ -124,7 +144,9 @@ export function tokenBlock(label, selector) {
   /** @type {Record<string, string>} */
   const out = {};
   for (const m of css.slice(open + 1, close).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    out[m[1]] = m[2].trim();
+    // The FIRST declaration wins, as in check:contrast and build-tokens: a token declared twice is a
+    // hex followed by the color-mix() recipe that must reproduce it, and the hex is the value.
+    if (!(m[1] in out)) out[m[1]] = m[2].trim();
   }
   if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
   return out;

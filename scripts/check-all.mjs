@@ -1,11 +1,19 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
-import { killTree, readProcessTable } from "./lib/child-processes.mjs";
+import {
+  SHIP_LOCK_FILE,
+  SHIP_LOCK_NEEDLE,
+  killTree,
+  lockHolder,
+  readProcessTable,
+  recordedTreeLeftovers,
+} from "./lib/child-processes.mjs";
+import { WINDOWS_CRASH_CODES } from "./lib/tier-outcome.mjs";
 import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -60,8 +68,6 @@ const REMOTE_ARGS = {
 };
 
 const all = process.argv.includes("--all");
-/* The schema test compares the live database only when asked; every spawned gate inherits this. */
-if (all) process.env.SCHEMA_LIVE = "1";
 const ci = process.argv.includes("--ci");
 
 function discoverGates() {
@@ -125,7 +131,11 @@ export function runGate(name, args) {
     ok: !errored && result.status === 0,
     errored,
     status: typeof result.status === "number" ? result.status : null,
-    reason: errored ? `wrote nothing to either stream (${seen})` : "",
+    reason: errored
+      ? `wrote nothing to either stream (${seen})`
+      : result.status !== 0 || result.error
+        ? seen
+        : "",
     ms: Date.now() - started,
     output: `${stdout}${stderr}`,
     /*
@@ -143,16 +153,10 @@ export function runGate(name, args) {
 const NTSTATUS_FAILURE_FLOOR = 0xc0000000;
 const ENVIRONMENT_MAX_MS = 1000;
 
-/** @type {Record<number, string>} */
-const NTSTATUS_NAMES = {
-  0xc0000005: "STATUS_ACCESS_VIOLATION",
-  0xc0000017: "STATUS_NO_MEMORY",
-  0xc0000142: "STATUS_DLL_INIT_FAILED",
-};
-
 /** @param {number} status */
 export function ntstatusName(status) {
-  const name = NTSTATUS_NAMES[status];
+  // One table with ship's verdict, so the two never name the same crash differently.
+  const name = WINDOWS_CRASH_CODES.get(status);
   return `0x${status.toString(16).toUpperCase()}${name ? ` ${name}` : ""}`;
 }
 
@@ -187,7 +191,48 @@ export function classifyEnvironmentFailure(results) {
   return group;
 }
 
+/**
+ * The runner that owned the recorded tree, from the marker line written at truncation.
+ * @returns {number | null}
+ */
+function recordedRunner() {
+  try {
+    const m = /^# runner (\d+)$/m.exec(readFileSync(RSS_FILE, "utf8"));
+    return m ? Number(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ship's process scan is one moment, so a tier started after it would build into the same build/.
+ * A ship's own tier (`npm run check` under ship) is its descendant and runs.
+ */
+function refuseWhileAnotherShipRuns() {
+  const lockPath = join(root, SHIP_LOCK_FILE);
+  if (!existsSync(lockPath)) return;
+  const table = readProcessTable();
+  if (table.size === 0) {
+    throw new Error(
+      `${SHIP_LOCK_FILE} exists and the process table could not be read, so whether a ship is ` +
+        "running on this checkout is unknown. Refusing rather than building under it.",
+    );
+  }
+  const holder = lockHolder(lockPath, table, SHIP_LOCK_NEEDLE);
+  if (holder === null) return;
+  for (let pid = process.pid, hops = 0; pid && hops <= table.size; pid = table.get(pid)?.ppid ?? 0, hops += 1) {
+    if (pid === holder) return;
+  }
+  throw new Error(
+    `a ship (pid ${holder}) is running on this checkout and holds ${SHIP_LOCK_FILE}. A gate run ` +
+      "under it would rebuild build/ while ship reads it. Wait for the ship to finish.",
+  );
+}
+
 function main() {
+  refuseWhileAnotherShipRuns();
+  /* The schema test compares the live database only when asked; every spawned gate inherits this. */
+  if (all) process.env.SCHEMA_LIVE = "1";
   const gates = discoverGates();
 
   /* Built first: `build:content` reads stack.json. */
@@ -267,24 +312,41 @@ function main() {
       `${all ? " (offline + network)" : " (offline tier)"}\n`,
   );
 
-  /* By pid, never by name: a name match for `node` or `chrome` reaches Dustin's own editor and browser. */
+  /*
+   * By pid and parentage, never by name: a name match for `node` or `chrome` reaches Dustin's own
+   * editor and browser, and a pid alone may have been reused since it was recorded.
+   */
   const recorded = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
   if (recorded.length > 0) {
     /* One process table read: a `taskkill` per dead pid makes later gates fail to start. */
     const table = readProcessTable();
-    const leftovers = recorded.filter((pid) => table.has(pid));
-    let reaped = 0;
-    for (const pid of leftovers) if (killTree(pid)) reaped += 1;
-    console.log(
-      `  preflight: ${recorded.length} process(es) recorded by the previous run, ` +
-        `${leftovers.length} still alive, ${reaped} reaped\n`,
-    );
+    const runner = recordedRunner();
+    const runnerLive = runner === null ? undefined : table.get(runner);
+    if (table.size === 0) {
+      console.log(
+        `  preflight: ${recorded.length} process(es) recorded by the previous run, but the process ` +
+          "table could not be read, so none was killed on its pid alone\n",
+      );
+    } else if (runnerLive && runnerLive.command.includes("check-all.mjs")) {
+      console.log(
+        `  preflight: the run that recorded these (pid ${runner}) is still running, so its tree ` +
+          "was left alone\n",
+      );
+    } else {
+      const leftovers = recordedTreeLeftovers(recorded, table, runner);
+      let reaped = 0;
+      for (const pid of leftovers) if (killTree(pid)) reaped += 1;
+      console.log(
+        `  preflight: ${recorded.length} process(es) recorded by the previous run, ` +
+          `${leftovers.length} still alive under that run's tree, ${reaped} reaped\n`,
+      );
+    }
   }
 
   /* `spawnSync` blocks this event loop for the whole of every gate, so the sampler is a separate
      process writing to a file. */
   mkdirSync(join(root, ".gate-pids"), { recursive: true });
-  writeFileSync(RSS_FILE, "");
+  writeFileSync(RSS_FILE, `# runner ${process.pid}\n`);
   const sampler = startRssSampler(RSS_FILE);
 
   /** Kills this run's tree on exit and signals; an OS kill is covered by the next preflight. */
@@ -293,8 +355,10 @@ function main() {
     if (cleanedUp) return;
     cleanedUp = true;
     const table = readProcessTable();
-    const alive = treeSince(RSS_FILE).filter(
-      (pid) => pid !== process.pid && pid !== sampler.pid && table.has(pid),
+    const alive = recordedTreeLeftovers(
+      treeSince(RSS_FILE).filter((pid) => pid !== sampler.pid),
+      table,
+      process.pid,
     );
     for (const pid of alive) killTree(pid);
     sampler.stop();
@@ -357,7 +421,11 @@ function main() {
     );
   }
   for (const name of skipped) {
-    console.log(`  SKIP  ${name.padEnd(18)} needs the network, run: npm run check:all`);
+    const why =
+      TIERS[name] === "offline" && ci && CI_EXCLUDED[name]
+        ? "excluded from CI, see CI_EXCLUDED"
+        : "needs the network, run: npm run check:all";
+    console.log(`  SKIP  ${name.padEnd(18)} ${why}`);
   }
   console.log(`${"-".repeat(52)}`);
 
@@ -400,7 +468,6 @@ function main() {
     const rest = errored.filter((r) => !environmentNames.has(r.name));
     console.log(
       `  ${rest.length} gate(s) ERRORED: ${rest.map((r) => r.name).join(", ")}.\n` +
-      `  ${errored.length} gate(s) ERRORED: ${errored.map((r) => r.name).join(", ")}.\n` +
         "  An errored gate asserted NOTHING about its subject, in either direction. It is\n" +
         "  not a red gate and it is not a green one, so this run does not cover what it\n" +
         "  would have covered. Re-run those gates alone before reading anything into them:\n" +
