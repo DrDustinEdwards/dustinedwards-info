@@ -308,11 +308,5 @@ export const zeroResultQueries = sqliteTable(
   ],
 );
 
-export type Post = typeof posts.$inferSelect;
-export type Tag = typeof tags.$inferSelect;
-export type Setting = typeof settings.$inferSelect;
-export type Media = typeof media.$inferSelect;
 export type MediaRef = typeof mediaRefs.$inferSelect;
-export type SearchDoc = typeof searchDocs.$inferSelect;
 export type Webmention = typeof webmentions.$inferSelect;
-export type ZeroResultQuery = typeof zeroResultQueries.$inferSelect;
