@@ -101,6 +101,12 @@ const INEFFECTIVE_IMPORT_EXEMPT = {
 /** A walk that reads fewer files than this has lost a route or gone vacuous, not gotten lean. */
 const MINIMUM_FILES_WALKED = 8;
 
+/**
+ * app/ and workers/ source files, walked once for both the dynamic-import and the sharp scans. The two
+ * scans had floors of 150 and 100 over the same list; the higher one is kept for both.
+ */
+const MINIMUM_SOURCE_FILES = 150;
+
 /** Floor on the syntax pass, so an empty assets directory cannot pass it. */
 const MINIMUM_ASSETS_SYNTAX_CHECKED = 15;
 
@@ -394,12 +400,11 @@ async function main() {
    * Derived from source, not the build log: a dynamic import splits nothing when some module in the
    * same graph imports it statically.
    */
-  const importScopeDirs = [join(root, "app"), join(root, "workers")];
-  const importScope = importScopeDirs.flatMap((dir) => walkSource(dir));
+  const importScope = [join(root, "app"), join(root, "workers")].flatMap((dir) => walkSource(dir));
 
   ok(
     "the dynamic-import scan walked a non-empty scope",
-    importScope.length >= 150,
+    importScope.length >= MINIMUM_SOURCE_FILES,
     `walked ${importScope.length} source file(s) under app/ and workers/. A scan over ` +
       `nothing reports what a clean scan reports.`,
   );
@@ -455,7 +460,7 @@ async function main() {
       .join("\n        "),
   );
 
-  gradeBuildOnlyDependencies();
+  gradeBuildOnlyDependencies(importScope);
 
   gradeEveryPage();
 
@@ -471,8 +476,10 @@ async function main() {
 /**
  * `workerd` has no filesystem, so a native build-time dependency reaching the Worker fails to start.
  * The third assertion is the point: a source scan says nothing about what shipped.
+ *
+ * @param {string[]} sourceFiles app/ and workers/, walked once in main
  */
-function gradeBuildOnlyDependencies() {
+function gradeBuildOnlyDependencies(sourceFiles) {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
   ok(
@@ -491,12 +498,10 @@ function gradeBuildOnlyDependencies() {
 
   /* Comments stripped: a comment naming the module could satisfy an assertion. */
   const importers = [];
-  for (const dir of ["app", "workers"]) {
-    for (const file of walkSource(join(root, dir))) {
-      const code = stripComments(readFileSync(file, "utf8"));
-      if (/\bfrom\s*["']sharp["']|\brequire\(\s*["']sharp["']\s*\)|\bimport\(\s*["']sharp["']/.test(code)) {
-        importers.push(relative(root, file).split("\\").join("/"));
-      }
+  for (const file of sourceFiles) {
+    const code = stripComments(readFileSync(file, "utf8"));
+    if (/\bfrom\s*["']sharp["']|\brequire\(\s*["']sharp["']\s*\)|\bimport\(\s*["']sharp["']/.test(code)) {
+      importers.push(relative(root, file).split("\\").join("/"));
     }
   }
   ok(
@@ -505,10 +510,10 @@ function gradeBuildOnlyDependencies() {
     `${importers.join(", ")} imports sharp. It is a native Node module; workerd has ` +
       `no native modules, so this is a Worker that does not start.`,
   );
-  const scanned = walkSource(join(root, "app")).length + walkSource(join(root, "workers")).length;
+  const scanned = sourceFiles.length;
   ok(
     "the import scan read a plausible number of source files",
-    scanned >= 100,
+    scanned >= MINIMUM_SOURCE_FILES,
     `scanned ${scanned} file(s) under app/ and workers/. A scan this small is a ` +
       `broken walk, and a broken walk finds no importer either.`,
   );
@@ -695,7 +700,6 @@ function gradeEveryPage() {
 
     const sheets = stylesheetsFor(manifest, ceiling.id);
     const cssText = sheets.map((s) => readFileSync(assetFile(s), "utf8"));
-    const cssTotal = sheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
 
     ok(
       `${path}: links at least one stylesheet`,
@@ -705,13 +709,7 @@ function gradeEveryPage() {
     );
 
     const routeAssets = reachableAssets(routeFile, appDir, read).assets;
-    const bundles = [...new Set([...routeAssets, ...rootAssets])]
-      .filter((a) => a.includes("enhance/dist/"))
-      .map((a) => a.split("/").pop() ?? a)
-      .sort();
-
-    const served = enhancementAssets().filter((b) => bundles.includes(b.module));
-    const bundleTotal = served.reduce((n, b) => n + b.brotli, 0);
+    const { cssTotal, bundles, bundleTotal } = coldLoad(sheets, [...routeAssets, ...rootAssets], assetFile);
     const total = cssTotal + bundleTotal;
 
     console.log(
@@ -774,6 +772,25 @@ function gradeEveryPage() {
   );
 
   gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile);
+}
+
+/**
+ * A page's cold load: its stylesheets and the enhancement bundles its modules reach, in brotli bytes.
+ *
+ * @param {string[]} sheets
+ * @param {Iterable<string>} reachable assets reachable from the route and from root
+ * @param {(p: string) => string} assetFile
+ */
+function coldLoad(sheets, reachable, assetFile) {
+  const cssTotal = sheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
+  const bundles = [...new Set(reachable)]
+    .filter((a) => a.includes("enhance/dist/"))
+    .map((a) => a.split("/").pop() ?? a)
+    .sort();
+  const bundleTotal = enhancementAssets()
+    .filter((b) => bundles.includes(b.module))
+    .reduce((n, b) => n + b.brotli, 0);
+  return { cssTotal, bundles, bundleTotal };
 }
 
 /**
@@ -889,15 +906,8 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
 
   const base = ROUTE_CEILINGS["/blog/:slug"];
   const baseSheets = stylesheetsFor(manifest, base.id);
-  const baseCss = baseSheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
+  const { cssTotal: baseCss, bundleTotal } = coldLoad(baseSheets, [...postAssets, ...rootAssets], assetFile);
   const mathCss = baseCss + brotliSize(mathBytes);
-
-  const bundles = [...new Set([...postAssets, ...rootAssets])]
-    .filter((a) => a.includes("enhance/dist/"))
-    .map((a) => a.split("/").pop() ?? a);
-  const bundleTotal = enhancementAssets()
-    .filter((b) => bundles.includes(b.module))
-    .reduce((n, b) => n + b.brotli, 0);
   const mathTotal = mathCss + bundleTotal;
 
   console.log(
