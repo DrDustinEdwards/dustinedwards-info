@@ -9,7 +9,6 @@
     "workers/*.ts",
     "scripts/*.mjs",
     "scripts/machine-readable/*.mjs",
-    "scripts/measure/*.mjs",
     ".design-sync/*.mjs",
     ".design-sync/*.tsx",
     ".design-sync/previews/*.tsx",

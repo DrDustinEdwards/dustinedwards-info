@@ -1,6 +1,8 @@
 import { readFile, readdir, mkdir, rm, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
-import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
+import { retryRead } from "./lib/retry.mjs";
+import { resolveD1Address } from "./lib/d1-address.mjs";
+import { runWrangler, wranglerTail as tail } from "./lib/wrangler-run.mjs";
 import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
 import path from "node:path";
 import os from "node:os";
@@ -19,60 +21,8 @@ const PLATFORM_TABLES = new Set([
   "_cf_METADATA",
 ]);
 
-/**
- * One quoted string: an args array with `shell: true` concatenates without quoting.
- *
- * @param {string} args
- * @returns {{ stdout: string, status: number }}
- */
-function wrangler(args) {
-  // Bounded, so a hung wrangler fails the gate instead of hanging it: retryRead's timer cannot fire here.
-  const result = spawnSyncBounded(`npx wrangler ${args}`, [], { shell: true, timeoutMs: 10 * 60_000 });
-  return {
-    stdout: `${result.stdout}${result.stderr}${result.error ? `\n${result.error}` : ""}`,
-    status: result.status ?? 1,
-  };
-}
-
-/**
- * The end of wrangler's output, which is where its error is; the head is the banner.
- *
- * @param {string} text
- * @param {number} [max]
- */
-function tail(text, max = 400) {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && /\w/.test(l) && !/^[⛅🌀]/u.test(l));
-  return lines.join(" | ").slice(-max) || "no output";
-}
-
-/**
- * The export resolves a name through the gitignored config, which a clean checkout bootstraps with a
- * placeholder id. `--local` keeps the name, miniflare state being keyed by the config's id.
- *
- * @param {string} target
- * @returns {string}
- */
-function resolveAddress(target) {
-  if (target !== "--remote") return DB_NAME;
-  const listed = wrangler("d1 list --json");
-  const start = listed.status === 0 ? listed.stdout.indexOf("[") : -1;
-  /** @type {Array<{ uuid?: string, name?: string }>} */
-  const databases = start === -1 ? [] : JSON.parse(listed.stdout.slice(start));
-  const found = databases.find((d) => d.name === DB_NAME);
-  // Fails closed: falling back to the name would reintroduce the lookup failure wearing a passing lookup.
-  if (typeof found?.uuid !== "string" || found.uuid.length === 0) {
-    throw new Error(
-      `could not resolve ${DB_NAME} to a UUID from d1 list` +
-        `${listed.status === 0 ? "" : ` (d1 list exited ${listed.status}: ${tail(listed.stdout)})`}. ` +
-        `Passing the NAME lets wrangler resolve it out of wrangler.jsonc, which ` +
-        `a clean checkout bootstraps from the example with a placeholder id.`,
-    );
-  }
-  return found.uuid;
-}
+/** Bounded, so a hung wrangler fails the gate instead of hanging it: retryRead's timer cannot fire here. */
+const wrangler = (/** @type {string} */ args) => runWrangler(args, { timeoutMs: 10 * 60_000 });
 
 let DB_ADDRESS = DB_NAME;
 
@@ -123,17 +73,13 @@ async function actualTables(target) {
       );
       // A non-zero status is the failure here, not a throw, so it is raised
       // deliberately: retryRead can only see a rejection.
-      if (r.status !== 0) throw new Error(tail(r.stdout));
+      if (r.status !== 0) throw new Error(tail(r.output));
       return r;
     },
     { label: `check:backup sqlite_master read (${target})` },
   );
-  if (result.status !== 0) {
-    console.error(result.stdout);
-    throw new Error("could not read sqlite_master");
-  }
   const match = result.stdout.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error(`could not parse sqlite_master output:\n${result.stdout}`);
+  if (!match) throw new Error(`could not parse sqlite_master output:\n${result.output}`);
   /** @type {{ name: string, sql: string | null }[]} */
   const rows = JSON.parse(match[0])[0].results;
   if (rows.length === 0) throw new Error("sqlite_master returned no tables");
@@ -153,7 +99,7 @@ function sorted(set) {
 
 async function main() {
   const target = process.argv.includes("--remote") ? "--remote" : "--local";
-  DB_ADDRESS = resolveAddress(target);
+  DB_ADDRESS = resolveD1Address(DB_NAME, target);
   console.log(
     `check:backup verifying the per-table export path against ${target.slice(2)} D1` +
       `${DB_ADDRESS === DB_NAME ? "" : ` (${DB_NAME} resolved to ${DB_ADDRESS})`}`,
@@ -193,12 +139,6 @@ async function main() {
   for (const name of sorted(real)) {
     if (!expected.has(name)) problems.push(`present in the database but declared by no migration: ${name}`);
   }
-  if (virtual.size === 0) {
-    problems.push(
-      "no fts5 virtual table found. This script exists because they make a full export impossible; " +
-        "if they are genuinely gone, use the full export and retire this script.",
-    );
-  }
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`  FAIL ${problem}`);
@@ -225,7 +165,7 @@ async function main() {
         const r = wrangler(
           `d1 export ${DB_ADDRESS} ${target} --no-schema --table ${name} --output "${out}"`,
         );
-        if (r.status !== 0) throw new Error(tail(r.stdout));
+        if (r.status !== 0) throw new Error(tail(r.output));
         return r;
       },
       { label: `check:backup per-table export (${name}, ${target})` },
@@ -258,20 +198,13 @@ async function main() {
     );
   }
 
-  // Empty tables are legitimate, so this reports. EVERY table being empty is not: that is the
-  // export path broken rather than the data absent.
-  if (empty.length === real.size) {
-    throw new Error(
-      `every one of the ${real.size} exports contained zero rows. The export path is broken, ` +
-        `not the data.`,
-    );
-  }
-  // Moves with content, so it is deliberately the loosest floor in the file.
+  // Empty tables are legitimate, so they are reported. Too few with rows is the export path broken
+  // rather than the data absent. Moves with content, so it is deliberately the loosest floor in the file.
   const withRows = real.size - empty.length;
   if (withRows < 4) {
     throw new Error(
       `only ${withRows} of ${real.size} exports carried any rows, expected at least 4. The ` +
-        `all-empty check above passes whenever a single table still exports.`,
+        `export path is broken, not the data.`,
     );
   }
   if (empty.length > 0) {

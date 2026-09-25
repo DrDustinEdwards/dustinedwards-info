@@ -26,7 +26,7 @@ export function fromRoot(repoPath) {
   return path.join(ROOT, repoPath);
 }
 
-export const CONTENT_DIR = path.join("content", "posts");
+const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
 
 export const ABOUT_SOURCE = path.join("content", "about.md");
@@ -195,13 +195,9 @@ async function main() {
 
 if (isMain(import.meta.url)) {
   main().catch((/** @type {unknown} */ error) => {
-    if (error instanceof ContentError) {
-      console.error(`build:content failed. ${error.message}`);
-    } else {
-      console.error(
-        `build:content failed. ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+    console.error(
+      `build:content failed. ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exit(1);
   });
 }
