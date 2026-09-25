@@ -13,6 +13,7 @@ import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.
 import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
+import { deleteFloor, requirePosts, syncablePostProblems } from "./lib/delete-floor.mjs";
 
 const DB_NAME = "dustinedwards";
 
@@ -35,12 +36,10 @@ function buildSql(posts) {
   const out = [];
 
   // Scoped to rows that came from a file, so hand-authored pages are never touched by a content sync.
+  // Never an unscoped delete: an empty keep list is a collapsed artifact, refused upstream and here.
+  if (posts.length === 0) throw new Error("buildSql refuses to delete every file-sourced post");
   const keep = posts.map((p) => sql(p.sourcePath)).join(", ");
-  out.push(
-    keep.length > 0
-      ? `DELETE FROM posts WHERE source_path IS NOT NULL AND source_path NOT IN (${keep});`
-      : `DELETE FROM posts WHERE source_path IS NOT NULL;`,
-  );
+  out.push(`DELETE FROM posts WHERE source_path IS NOT NULL AND source_path NOT IN (${keep});`);
 
   for (const post of posts) {
     const publishAt = Math.floor(Date.parse(post.publishAt) / 1000);
@@ -115,7 +114,7 @@ function buildSql(posts) {
   out.push(`DELETE FROM media_refs WHERE source_type = 'post';`);
   const seenRefs = new Set();
   for (const post of posts) {
-    for (const ref of post.mediaRefs ?? []) {
+    for (const ref of post.mediaRefs) {
       // The primary key makes the same image cited twice on one line in one form a single row; deduped
       // here rather than left to fail the batch.
       const id = `${ref.key} ${post.slug} ${ref.form} ${ref.detail ?? ""}`;
@@ -205,12 +204,45 @@ async function wranglerImport(args, label) {
 async function main() {
   const target = process.argv.includes("--remote") ? "--remote" : "--local";
 
-  const artifact = await readFile(ARTIFACT_PATH, "utf8");
-  const { posts, records } = JSON.parse(artifact);
-  if (!Array.isArray(records)) {
+  const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
+  // Every delete below converges D1 to this artifact, so an empty one would empty production.
+  const posts = requirePosts(artifact, ARTIFACT_PATH);
+  const { records } = artifact;
+  if (!Array.isArray(records) || records.length === 0) {
     throw new Error(
-      `${ARTIFACT_PATH} carries no records array. Run npm run build:content first.`,
+      `${ARTIFACT_PATH} carries no search records. Run npm run build:content first; ` +
+        `nothing was written.`,
     );
+  }
+  const problems = syncablePostProblems(posts);
+  if (problems.length > 0) {
+    throw new Error(
+      `${ARTIFACT_PATH} has posts sync cannot trust, so nothing was written:\n  ` +
+        problems.join("\n  "),
+    );
+  }
+
+  // search_docs is replaced wholesale, so its floor compares the artifact against what D1 holds now.
+  {
+    const read = wrangler(
+      `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
+        '"SELECT COUNT(*) AS docs FROM search_docs;"',
+    );
+    if (read.status !== 0) {
+      console.error(read.stdout);
+      throw new Error("the pre-write search_docs count failed, so the delete floor cannot hold");
+    }
+    const countMatch = read.stdout.match(/\[[\s\S]*\]/);
+    if (!countMatch) throw new Error(`could not parse the search_docs count:\n${read.stdout}`);
+    const current = JSON.parse(countMatch[0])[0].results[0]?.docs;
+    const searchFloor = deleteFloor({
+      what: "search records",
+      keeping: records.length,
+      removing: Number.isInteger(current) ? Math.max(0, current - records.length) : current,
+    });
+    if (searchFloor) {
+      throw new Error(`REFUSED before any write: ${searchFloor}. D1 is untouched.`);
+    }
   }
 
   // The write runs whatever this finds, because converging D1 to the build is the repair; the exit
@@ -257,6 +289,16 @@ async function main() {
     }
     const extra = rows.filter((r) => !buildSlugs.has(r.slug));
     for (const row of extra) console.log(`  extra-in-d1: ${row.slug} (the write removes it)`);
+
+    // Before the drift line, which ship reads as "every write ran": a refusal must not print it.
+    const postFloor = deleteFloor({
+      what: "file-sourced posts",
+      keeping: posts.length,
+      removing: extra.length,
+    });
+    if (postFloor) {
+      throw new Error(`REFUSED before any write: ${postFloor}. D1 is untouched.`);
+    }
 
     // Ship reads this line, so it prints every run.
     console.log(
@@ -327,6 +369,7 @@ async function main() {
   const verify = wrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
+      '(SELECT COUNT(*) FROM posts WHERE source_path IS NOT NULL) AS file_posts, ' +
       '(SELECT COUNT(*) FROM post_tags) AS post_tags, (SELECT COUNT(*) FROM tags) AS tags, ' +
       '(SELECT COUNT(*) FROM search_docs) AS docs, ' +
       '(SELECT COUNT(*) FROM search_identity_docsize) AS identity, ' +
@@ -353,8 +396,11 @@ async function main() {
       `FTS drift: posts=${row.posts} but posts_fts=${row.fts}. The rebuild did not take.`,
     );
   }
-  if (row.posts < posts.length) {
-    throw new Error(`expected at least ${posts.length} posts in D1, found ${row.posts}`);
+  // File-sourced rows only: hand-authored pages would otherwise make up a shortfall in the posts.
+  if (row.file_posts < posts.length) {
+    throw new Error(
+      `expected at least ${posts.length} file-sourced posts in D1, found ${row.file_posts}`,
+    );
   }
   // Same trap as the post index: a count on either search index reads through to its content table.
   // These count the docsize shadows, which go to zero on a failed rebuild.
