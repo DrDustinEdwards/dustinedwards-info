@@ -1,6 +1,6 @@
 import { Form, data } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
@@ -22,35 +22,34 @@ export function meta() {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const env = getEnv(context);
-  /* Presence only: a name and a boolean per secret, never a value. */
-  // Spread rather than asserted: `Env` is an interface, so it has no implicit index signature.
-  const secrets = auditSecrets({ ...env });
-  const misses = await topZeroResults(env);
-  /* The admin may wait on a cold feed cache so the picker has episodes; the home page never does. */
-  const [feed, slot] = await Promise.all([
-    timed(timings, "tools_podcast_feed", () => readPodcastFeed(context, { wait: true })),
-    timed(timings, "tools_podcast_slot", () => readPodcastSlot(env)),
-  ]);
-  const episodes = (feed?.episodes ?? []).map(({ guid, title, publishedAt }) => ({
-    guid,
-    title,
-    publishedAt,
-  }));
-  const chosen = chooseEpisode(feed?.episodes ?? [], slot);
-  const podcast = {
-    slot,
-    episodes,
-    showing: chosen.episode?.title ?? null,
-    fellBack: chosen.fellBack,
-    fetchedAt: feed?.fetchedAt ?? null,
-    /** Why the last refresh failed; null after one that landed. */
-    lastError: feed?.lastError ?? null,
-  };
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data({ secrets, misses, podcast });
+  return timedLoader(context, async (timings) => {
+    const env = getEnv(context);
+    /* Presence only: a name and a boolean per secret, never a value. */
+    // Spread rather than asserted: `Env` is an interface, so it has no implicit index signature.
+    const secrets = auditSecrets({ ...env });
+    const misses = await topZeroResults(env);
+    /* The admin may wait on a cold feed cache so the picker has episodes; the home page never does. */
+    const [feed, slot] = await Promise.all([
+      timed(timings, "tools_podcast_feed", () => readPodcastFeed(context, { wait: true })),
+      timed(timings, "tools_podcast_slot", () => readPodcastSlot(env)),
+    ]);
+    const episodes = (feed?.episodes ?? []).map(({ guid, title, publishedAt }) => ({
+      guid,
+      title,
+      publishedAt,
+    }));
+    const chosen = chooseEpisode(feed?.episodes ?? [], slot);
+    const podcast = {
+      slot,
+      episodes,
+      showing: chosen.episode?.title ?? null,
+      fellBack: chosen.fellBack,
+      fetchedAt: feed?.fetchedAt ?? null,
+      /** Why the last refresh failed; null after one that landed. */
+      lastError: feed?.lastError ?? null,
+    };
+    return data({ secrets, misses, podcast });
+  });
 }
 
 /**
