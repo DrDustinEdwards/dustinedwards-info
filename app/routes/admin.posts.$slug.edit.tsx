@@ -111,7 +111,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (intent === "preview-link" || intent === "revoke-preview-link") {
     const problem = async (message: string) => ({
       kind: "problem" as const,
-      fields: parsePost(String(form.get("body") ?? "")),
+      /* These forms carry no body, so the editor keeps the loaded fields rather than an empty post. */
+      fields: undefined,
       problem: { message, conflict: false, field: undefined, line: undefined },
       headSha: await headAfterProblem(),
     });
@@ -170,10 +171,26 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (!confirmationSatisfied(typed, 1)) {
       return { kind: "confirm-delete" as const, slug: params.slug };
     }
+    /* Without the head the page was loaded at, a change made since could not be detected, so no delete. */
+    const expectedHeadSha = String(form.get("headSha") ?? "");
+    if (!expectedHeadSha) {
+      return {
+        kind: "problem" as const,
+        fields: undefined,
+        problem: {
+          message:
+            "Delete refused: this page has no repository head, so a change made since it loaded could not be detected. Reload and try again.",
+          conflict: false,
+          field: undefined,
+          line: undefined,
+        },
+        headSha: await headAfterProblem(),
+      };
+    }
     try {
       await deletePost(env, {
         slug: params.slug,
-        expectedHeadSha: String(form.get("headSha") ?? "") || null,
+        expectedHeadSha,
         actor: context.get(adminActorContext),
       });
       return redirect("/admin/posts");
@@ -184,7 +201,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
           : String(error);
       return {
         kind: "problem" as const,
-        fields: parsePost(String(form.get("body") ?? "")),
+        fields: undefined,
         problem: {
           message,
           conflict: error instanceof GitHubError && error.conflict,
