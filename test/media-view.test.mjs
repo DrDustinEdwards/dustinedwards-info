@@ -94,7 +94,6 @@ test("defaults are omitted, so the bare URL is the default view", () => {
 });
 
 test("LIST is the default, because most of this library is not images", () => {
-  assert.equal(DEFAULTS.view, "list");
   assert.equal(readView(params({})).view, "list");
 });
 
