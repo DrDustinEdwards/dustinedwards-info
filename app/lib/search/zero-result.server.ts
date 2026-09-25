@@ -4,7 +4,6 @@ import { getDb } from "~/db";
 import { zeroResultQueries } from "~/db/schema";
 import {
   normaliseZeroResultQuery,
-  ZERO_RESULT_MAX_LENGTH,
   ZERO_RESULT_RETENTION_SECONDS,
 } from "./zero-result.mjs";
 
@@ -35,8 +34,6 @@ export async function purgeZeroResults(env: Env, now = new Date()): Promise<numb
     .run(sql`DELETE FROM zero_result_queries WHERE last_seen < ${cutoff}`);
   return result.meta?.changes ?? 0;
 }
-
-export { ZERO_RESULT_MAX_LENGTH, ZERO_RESULT_RETENTION_SECONDS };
 
 export async function topZeroResults(env: Env, limit = 50) {
   return getDb(env)

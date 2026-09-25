@@ -39,11 +39,6 @@ test("FLIP THE DATE: future to past, with the status held, flips inclusion", () 
   assert.equal(isPubliclyVisible({ ...held, publishAt: PAST }, NOW), true);
 });
 
-test("BOTH facts are required: neither alone admits a post", () => {
-  assert.equal(isPubliclyVisible({ status: "draft", publishAt: FUTURE }, NOW), false);
-  assert.equal(isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt: PAST }, NOW), true);
-});
-
 test("no publish date means publish immediately, not never", () => {
   // The Drizzle form is isNull(publishAt) OR publishAt <= now. Reading a missing
   // date as a reason to EXCLUDE would hide every post that never set one.

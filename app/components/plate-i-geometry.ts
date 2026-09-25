@@ -1,15 +1,15 @@
 // Coordinates are lifted from the approved canvas file (part-c/09-solid-lawn.html), not retyped.
 // One departure: the canvas's 375 frame clips labels i, iv and v, so in NARROW those leaders fold inward.
 
-export type Fill = "paper" | "lawn" | "turbid" | "none";
-export type Stroke = "ink" | "dust" | "none";
+type Fill = "paper" | "lawn" | "turbid" | "none";
+type Stroke = "ink" | "dust" | "none";
 
 type Paint = { fill: Fill; stroke: Stroke; width: number; dash: string | null };
 export type Shape =
   | ({ kind: "circle"; c: [number, number, number] } & Paint)
   | ({ kind: "path"; d: string } & Paint);
 
-export type Segment = [number, number, number, number];
+type Segment = [number, number, number, number];
 
 export type PlateLayout = {
   size: number;
@@ -83,7 +83,7 @@ const CANVAS_WIDE: PlateLayout = {
 
 // 610 is the hero's right half at 1280 with a desktop scrollbar, plus the 90px gap beside the name.
 // Only the dish, plaques, leader starts and 1 cm bar scale; labels, tails and strokes keep canvas size.
-export const WIDE_WIDTH = 610;
+const WIDE_WIDTH = 610;
 // Longest left label is 131 at 14px mono and the one-line legend under it (240) must clear the rim;
 // longest right label is 85.
 const LEFT_LABELS = 198;

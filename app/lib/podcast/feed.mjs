@@ -72,7 +72,7 @@ function attrOf(xml, tag, attr) {
 /**
  * @param {string} value @param {readonly string[]} hosts
  */
-export function allowedHttpsUrl(value, hosts) {
+function allowedHttpsUrl(value, hosts) {
   try {
     const url = new URL(value);
     if (url.protocol !== "https:" || url.username || url.password || url.port) return null;

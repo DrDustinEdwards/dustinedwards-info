@@ -12,7 +12,6 @@ export function MediaConfirm({
   children,
   cancelHref,
   onCancel,
-  method = "post",
 }: {
   open: boolean;
   title: string;
@@ -22,7 +21,6 @@ export function MediaConfirm({
   children: React.ReactNode;
   cancelHref?: string;
   onCancel?: () => void;
-  method?: "post";
 }) {
   const [typed, setTyped] = useState("");
   // Enabled on the server: without script `typed` stays "" forever, and the action re-checks the count.
@@ -101,7 +99,7 @@ export function MediaConfirm({
       >
         <h2 id="media-modal-title">{title}</h2>
         <div className="media-modal-body">{body}</div>
-        <Form method={method} className="media-modal-form">
+        <Form method="post" className="media-modal-form">
           {children}
           {requireTyped ? (
             <label className="media-modal-typed">

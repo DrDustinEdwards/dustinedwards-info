@@ -8,9 +8,9 @@ import { WEBP_QUALITY } from "./encoding.mjs";
 export const MEDIA_PAGE_SIZE = 24;
 
 // A closed set: the width lands in a cache key, and each distinct transform is billed.
-export type ThumbWidth = 160 | 320 | 640;
+type ThumbWidth = 160 | 320 | 640;
 
-export type MediaObject = {
+type MediaObject = {
   key: string;
   url: string;
   size: number;
@@ -29,7 +29,7 @@ export type MediaObject = {
   deletable: boolean;
 };
 
-export type MediaPage = {
+type MediaPage = {
   objects: MediaObject[];
   page: number;
   hasMore: boolean;

@@ -153,7 +153,7 @@ export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
   }
 }
 
-export type FileChange =
+type FileChange =
   | { path: string; content: string }
   | { path: string; content: null };
 
@@ -233,7 +233,7 @@ export async function commitFiles(
   return { commitSha: commit.sha, blobShas };
 }
 
-export type PostCommit = {
+type PostCommit = {
   sha: string;
   message: string;
   author: string;

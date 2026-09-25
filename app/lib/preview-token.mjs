@@ -11,9 +11,9 @@ export const TOKEN_LENGTH = Math.ceil((TOKEN_BYTES * 4) / 3);
 
 export const PREVIEW_TTL_SECONDS = 7 * 24 * 60 * 60;
 
-export const TOKEN_PREFIX = "preview:token:";
+const TOKEN_PREFIX = "preview:token:";
 
-export const POST_PREFIX = "preview:post:";
+const POST_PREFIX = "preview:post:";
 
 /**
  * Anchored and length-exact, because the read path uses it to decide whether to spend a KV read.
