@@ -485,7 +485,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     stale.length === 0,
     "every DOI named here is still a PDF hosted without a license",
     stale.length
-      ? `${stale.join(", ")}. Either the file is gone or a registry now records ` +
+      ? `${stale.map((doi) => `${doi} (recorded as ${HOSTED_WITHOUT_LICENCE.get(doi)})`).join(", ")}. Either the file is gone or a registry now records ` +
           "terms; check which, then remove the entry."
       : "",
   );
