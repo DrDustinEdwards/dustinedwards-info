@@ -19,6 +19,7 @@ export const HEALTH_SNAPSHOT_STALE_AFTER_SECONDS = 3 * HEALTH_POLL_INTERVAL_SECO
  *   | { state: "fresh", ok: boolean, total: number, failed: number, readAt: string, ageSeconds: number }
  *   | { state: "stale", ok: boolean, total: number, failed: number, readAt: string, ageSeconds: number }
  *   | { state: "missing" }
+ *   | { state: "unreadable" }
  * )} HealthTile
  */
 

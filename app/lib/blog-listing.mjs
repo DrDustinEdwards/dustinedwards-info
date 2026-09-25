@@ -3,6 +3,17 @@ export const POSTS_PER_PAGE = 10;
 export const HOME_CARDS = 5;
 
 /**
+ * A `?page=` a listing can use: a positive whole number, else 1. `-3`, `1.5` and `abc` all read as 1.
+ *
+ * @param {string | null} raw
+ */
+export function readPage(raw) {
+  if (raw === null || !/^\d+$/.test(raw)) return 1;
+  const page = Number(raw);
+  return page > 0 && Number.isSafeInteger(page) ? page : 1;
+}
+
+/**
  * @param {number} position 1-based
  * @param {number} [perPage]
  */

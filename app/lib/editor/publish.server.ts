@@ -4,7 +4,7 @@
 import { imageSize } from "image-size";
 
 import { mediaRefKey } from "~/lib/media-ref-key.mjs";
-import { purgePost, purgePosts } from "~/lib/cache-purge.server";
+import { combinePurges, purgePost, purgePosts, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { recordsForPost } from "~/lib/search/records.mjs";
 import { askAvailable, removeAskPost, syncAskPost } from "~/lib/search/ask.server";
 
@@ -293,7 +293,8 @@ export async function savePost(
 
   // No compensating revert, ever: undoing the commit would destroy the source to repair a derived index.
   let record = gated;
-  let purged = false;
+  // False until a write lands: an unreached purge leaves the pages as stale as a failed one.
+  let purged: PurgeOutcome = false;
   const converged = await convergeWithRetry({
     write: async () => {
       ({ record, purged } = await renderAndWrite(
@@ -335,7 +336,7 @@ export async function savePost(
     commitSha,
     record,
     askSync,
-    /** False when the cache purge failed or was never reached: public pages stay stale until expiry. */
+    /** False when the cache purge failed or was never reached, null when the runtime cannot purge. */
     purged,
     d1Retried: converged.retried,
     /** null: not attempted; -1: the attempt threw. */
@@ -583,7 +584,7 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
       `DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`,
     ).bind(slug),
   ]);
-  return { purged: purgedPage && purgedListings };
+  return { purged: combinePurges(purgedPage, purgedListings) };
 }
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */
@@ -610,7 +611,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
     .all<{ slug: string }>();
   let unpurged = 0;
   for (const { slug } of orphans.results ?? []) {
-    if (!(await deletePostFromD1(env, slug)).purged) unpurged += 1;
+    if ((await deletePostFromD1(env, slug)).purged === false) unpurged += 1;
   }
 
   for (const entry of files) {
@@ -622,7 +623,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
           `Main moved mid-rebuild; re-run the regenerate.`,
       );
     }
-    if (!(await renderAndWrite(env, slug, file.content, entry.sha)).purged) unpurged += 1;
+    if ((await renderAndWrite(env, slug, file.content, entry.sha)).purged === false) unpurged += 1;
   }
 
   return { synced: files.length, removed: orphans.results?.length ?? 0, unpurged };

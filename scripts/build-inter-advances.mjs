@@ -4,8 +4,9 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 import puppeteer from "puppeteer";
+import { isMain } from "./lib/is-main.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const INTER_FILE = join(root, "app", "fonts", "inter-latin-normal.woff2");
@@ -57,6 +58,6 @@ async function main() {
   }
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   await main();
 }

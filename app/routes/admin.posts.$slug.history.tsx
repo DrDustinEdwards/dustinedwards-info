@@ -9,7 +9,6 @@ import {
   listCommitsForPath,
   readFile,
 } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.posts.$slug.history";
 
@@ -43,7 +42,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     commits,
     selected,
     patch: patch?.patch ?? null,
-    headSha: await timed(timings, "gh_head", () => currentHead(env).catch(() => "")),
   };
 
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
