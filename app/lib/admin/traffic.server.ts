@@ -62,16 +62,29 @@ const num = (value: unknown) => {
   return n;
 };
 
+/** Both panels' answer when there is no token to query with. */
+const NO_READ_TOKEN = {
+  status: "error",
+  data: null,
+  message:
+    "No Analytics Engine read token is configured, so there is nothing to " +
+    "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn this on.",
+} as const;
+
+/** Both panels' answer when the query failed: named as a failure, never an empty window. */
+function unreadable(error: unknown) {
+  return {
+    status: "error",
+    data: null,
+    message:
+      error instanceof Error
+        ? `Could not read Analytics Engine: ${error.message}`
+        : "Could not read Analytics Engine.",
+  } as const;
+}
+
 export async function fetchTraffic(env: Env): Promise<SourceResult<TrafficReport>> {
-  if (!env.ANALYTICS_READ_TOKEN) {
-    return {
-      status: "error",
-      data: null,
-      message:
-        "No Analytics Engine read token is configured, so this panel has nothing to " +
-        "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn it on.",
-    };
-  }
+  if (!env.ANALYTICS_READ_TOKEN) return NO_READ_TOKEN;
 
   try {
     const [pathRows, totalRows] = await Promise.all([
@@ -97,14 +110,7 @@ export async function fetchTraffic(env: Env): Promise<SourceResult<TrafficReport
       fetchedAt: new Date().toISOString(),
     };
   } catch (error) {
-    return {
-      status: "error",
-      data: null,
-      message:
-        error instanceof Error
-          ? `Could not read Analytics Engine: ${error.message}`
-          : "Could not read Analytics Engine.",
-    };
+    return unreadable(error);
   }
 }
 
@@ -133,15 +139,7 @@ async function readCachedReadership(env: Env): Promise<PostReadership | null> {
 }
 
 export async function fetchPostReadership(env: Env): Promise<SourceResult<PostReadership>> {
-  if (!env.ANALYTICS_READ_TOKEN) {
-    return {
-      status: "error",
-      data: null,
-      message:
-        "No Analytics Engine read token is configured, so there is nothing to " +
-        "query. Set ANALYTICS_READ_TOKEN as a Worker secret to turn this on.",
-    };
-  }
+  if (!env.ANALYTICS_READ_TOKEN) return NO_READ_TOKEN;
 
   const cached = await readCachedReadership(env);
   if (cached !== null) {
@@ -180,13 +178,6 @@ export async function fetchPostReadership(env: Env): Promise<SourceResult<PostRe
 
     return { status: "live", data: report, fetchedAt: new Date().toISOString() };
   } catch (error) {
-    return {
-      status: "error",
-      data: null,
-      message:
-        error instanceof Error
-          ? `Could not read Analytics Engine: ${error.message}`
-          : "Could not read Analytics Engine.",
-    };
+    return unreadable(error);
   }
 }
