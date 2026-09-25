@@ -1,32 +1,38 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
-// Deliberately a disclosure, not role="menu": each item is a submit in its own form, which breaks
-// menuitem ownership. The <details> stays markup so these repair actions open without script.
-function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
+/*
+ * Deliberately a disclosure, not role="menu": each item is a submit in its own form, which breaks
+ * menuitem ownership. The panel is a native popover opened by `popovertarget`, so these repair
+ * actions open without script, the panel sits in the top layer (nothing clips it, the posts table's
+ * scroll box included), and the browser light-dismisses it on an outside click. CSS anchor
+ * positioning puts it under its button; where that is unsupported this hook places it on open.
+ */
+function useDisclosure(ref: React.RefObject<HTMLDivElement | null>) {
   useEffect(() => {
-    const details = ref.current;
-    if (!details) return;
+    const root = ref.current;
+    const button = root?.querySelector<HTMLButtonElement>("button[popovertarget]");
+    const panel = root?.querySelector<HTMLElement>("[popover]");
+    if (!root || !button || !panel) return;
 
-    const summary = details.querySelector("summary");
-    const items = () =>
-      Array.from(details.querySelectorAll<HTMLElement>("[data-menu-item]"));
+    const isOpen = () => panel.matches(":popover-open");
+    const items = () => Array.from(panel.querySelectorAll<HTMLElement>("[data-menu-item]"));
 
     const close = (restoreFocus: boolean) => {
-      if (!details.open) return;
-      details.open = false;
-      if (restoreFocus && summary instanceof HTMLElement) summary.focus();
+      if (!isOpen()) return;
+      panel.hidePopover();
+      if (restoreFocus) button.focus();
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (!details.open) return;
+        if (!isOpen()) return;
         // Stopped, or the same press also reaches the page's own Escape (the media grid clears its selection).
         event.stopPropagation();
         event.preventDefault();
         close(true);
         return;
       }
-      if (!details.open) return;
+      if (!isOpen()) return;
       if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
 
       const list = items();
@@ -43,15 +49,10 @@ function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
       event.preventDefault();
     };
 
-    // pointerdown, not click: close before the thing it landed on reacts.
-    const onPointerDown = (event: PointerEvent) => {
-      if (!details.contains(event.target as Node)) close(false);
-    };
-
     // Tabbing out closes it, or the open panel sits over the next control focus lands on.
     const onFocusOut = (event: FocusEvent) => {
       const next = event.relatedTarget;
-      if (next instanceof Node && !details.contains(next)) close(false);
+      if (next instanceof Node && !root.contains(next)) close(false);
     };
 
     // Items submit real forms and this element survives the navigation, so close on activation.
@@ -60,22 +61,34 @@ function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
       if (target?.closest("[data-menu-item]")) close(false);
     };
 
-    details.addEventListener("keydown", onKeyDown);
-    details.addEventListener("click", onClick);
-    details.addEventListener("focusout", onFocusOut);
-    document.addEventListener("pointerdown", onPointerDown);
+    // The fallback for a browser without anchor positioning: under the button, right edges aligned.
+    const place = (event: Event) => {
+      if ((event as ToggleEvent).newState !== "open") return;
+      const at = button.getBoundingClientRect();
+      panel.style.inset = "auto";
+      panel.style.margin = "0";
+      panel.style.top = `${at.bottom + 4}px`;
+      panel.style.right = `${document.documentElement.clientWidth - at.right}px`;
+    };
+    const anchored = CSS.supports("anchor-name: --menu");
+
+    root.addEventListener("keydown", onKeyDown);
+    root.addEventListener("click", onClick);
+    root.addEventListener("focusout", onFocusOut);
+    if (!anchored) panel.addEventListener("beforetoggle", place);
     return () => {
-      details.removeEventListener("keydown", onKeyDown);
-      details.removeEventListener("click", onClick);
-      details.removeEventListener("focusout", onFocusOut);
-      document.removeEventListener("pointerdown", onPointerDown);
+      root.removeEventListener("keydown", onKeyDown);
+      root.removeEventListener("click", onClick);
+      root.removeEventListener("focusout", onFocusOut);
+      panel.removeEventListener("beforetoggle", place);
     };
   }, [ref]);
 }
 
 /**
- * The shared shell of the overflow and row menus. `name` is the class prefix: the details element,
- * its `-button` summary and its `-panel`. `summaryLabel` names a summary whose content is only an icon.
+ * The shared shell of the overflow and row menus. `name` is the class prefix: the wrapper, its
+ * `-button` popover invoker and its `-panel` popover. `summaryLabel` names a button whose content is
+ * only an icon.
  */
 export function DisclosureMenu({
   name,
@@ -88,15 +101,26 @@ export function DisclosureMenu({
   summaryLabel?: string;
   children: React.ReactNode;
 }) {
-  const ref = useRef<HTMLDetailsElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useDisclosure(ref);
+  const id = useId();
+  // One anchor name per menu, or every panel on the page would sit under the last button.
+  const anchor = `--menu${id.replace(/[^A-Za-z0-9_-]/g, "")}`;
 
   return (
-    <details className={name} ref={ref}>
-      <summary className={`${name}-button`} aria-label={summaryLabel} title={summaryLabel}>
+    <div className={name} ref={ref} style={{ "--menu-anchor": anchor } as React.CSSProperties}>
+      <button
+        type="button"
+        className={`${name}-button`}
+        popoverTarget={`${id}-panel`}
+        aria-label={summaryLabel}
+        title={summaryLabel}
+      >
         {summary}
-      </summary>
-      <div className={`${name}-panel`}>{children}</div>
-    </details>
+      </button>
+      <div className={`${name}-panel`} id={`${id}-panel`} popover="auto">
+        {children}
+      </div>
+    </div>
   );
 }
