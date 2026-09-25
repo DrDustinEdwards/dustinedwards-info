@@ -8,9 +8,10 @@ import {
   getAdminPostRow,
   getDb,
   listPostsForOperator,
+  listWebmentionsForAdmin,
   publiclyVisible,
-} from "~/db/index";
-import { posts as postsTable } from "~/db/schema";
+} from "~/db";
+import { posts as postsTable, webmentions as webmentionsTable } from "~/db/schema";
 import {
   currentHead,
   deletePost,
@@ -22,9 +23,7 @@ import {
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
-import { postPath } from "~/lib/content/slug.mjs";
-import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
-import { listWebmentionsForAdmin } from "~/db";
+import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "~/lib/content/slug.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import {
@@ -38,11 +37,14 @@ import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server"
 import { copyMissingTwins } from "~/lib/media/backup.server";
 import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
 import { storeUpload } from "~/lib/media/upload.server";
-import { listDirectory, readFile } from "~/lib/editor/github.server";
+import { listPostFiles, readFile } from "~/lib/editor/github.server";
+import { readContentSides } from "~/lib/health/checks.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
-
 import type { OperatorEnv } from "./auth.server";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { readCappedBytes } from "~/lib/read-capped.mjs";
+import { base64ToBytes } from "~/lib/bytes.mjs";
 
 // Validated like the write path: the slug goes into a repository path via `encodeURI`, which does not
 // escape `.`, `/` or `?`.
@@ -215,19 +217,18 @@ async function listMentionsTool(
 ): Promise<ToolResult> {
   const status = typeof args.status === "string" ? args.status.trim() : "";
 
-  const rows = await listWebmentionsForAdmin(env);
-
-  if (status) {
-    // A 400, not `[]`: an agent that mistyped a status would conclude the queue was empty.
-    const allowed = ["unverified", "pending", "approved", "rejected", "failed"];
-    if (!allowed.includes(status)) {
-      return {
-        ok: false,
-        status: 400,
-        error: `Unknown status ${JSON.stringify(status)}. One of: ${allowed.join(", ")}.`,
-      };
-    }
+  // A 400, not `[]`: an agent that mistyped a status would conclude the queue was empty. Checked
+  // before the read, and against the schema's own enum, so a new status cannot be refused here.
+  const allowed: readonly string[] = webmentionsTable.status.enumValues;
+  if (status && !allowed.includes(status)) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Unknown status ${JSON.stringify(status)}. One of: ${allowed.join(", ")}.`,
+    };
   }
+
+  const rows = await listWebmentionsForAdmin(env);
 
   const filtered = status ? rows.filter((row) => row.status === status) : rows;
 
@@ -388,7 +389,7 @@ function translate(error: unknown): ToolResult {
   return {
     ok: false,
     status: 500,
-    error: error instanceof Error ? error.message : String(error),
+    error: errorMessage(error),
   };
 }
 
@@ -589,42 +590,12 @@ function readDataUri(value: string): { type: string; payload: string } | null {
 }
 
 function decodeBase64(payload: string): Uint8Array | null {
-  // Base64 picks up whitespace in chats and YAML, and `atob` throws on it.
-  const packed = payload.replace(/\s+/g, "");
+  // Null rather than a throw: the caller answers the agent that sent it with a 400 that says why.
   try {
-    const binary = atob(packed);
-    const out = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) out[i] = binary.charCodeAt(i);
-    return out;
+    return base64ToBytes(payload);
   } catch {
     return null;
   }
-}
-
-// Read in chunks and abandoned at the cap: `Content-Length` is only a claim, and a body need not stop.
-async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promise<Uint8Array | null> {
-  const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > cap) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-
-  const out = new Uint8Array(total);
-  let at = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, at);
-    at += chunk.byteLength;
-  }
-  return out;
 }
 
 function defaultName(type: string, url: string): string {
@@ -727,7 +698,7 @@ async function uploadMediaTool(
       return {
         ok: false,
         status: 502,
-        error: `Fetching ${parsed.href} failed: ${error instanceof Error ? error.message : String(error)}`,
+        error: `Fetching ${parsed.href} failed: ${errorMessage(error)}`,
       };
     }
     // Checked again where it LANDED: `fetch` follows redirects, and https may redirect to http.
@@ -758,7 +729,7 @@ async function uploadMediaTool(
       return { ok: false, status: 502, error: `${parsed.href} answered with no body.` };
     }
 
-    const read = await readCapped(response.body, MAX_BYTES);
+    const read = await readCappedBytes(response, MAX_BYTES);
     if (!read) {
       return {
         ok: false,
@@ -808,18 +779,7 @@ async function uploadMediaTool(
 // Derives its work from the same comparison the health check uses, and every drifted slug goes through
 // the one render door.
 async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
-  const readSides = async () => {
-    const entries = await listDirectory(env, "content/posts");
-    const files = entries
-      .filter((e) => e.type === "file" && e.name.endsWith(".md"))
-      .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
-    const rows = await env.DB.prepare(
-      "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
-    ).all<{ slug: string; source_blob_sha: string | null }>();
-    return { files, rows: rows.results ?? [] };
-  };
-
-  const before = await readSides();
+  const before = await readContentSides(env);
   const drift = contentDriftCompare(before.files, before.rows);
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
@@ -847,7 +807,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   }
 
   // D1 reads its own writes in-request, so drift reported here is real.
-  const after = await readSides();
+  const after = await readContentSides(env);
   const residual = contentDriftCompare(after.files, after.rows);
   const residualCount =
     residual.changed.length + residual.unrowed.length + residual.unfiled.length;
@@ -868,10 +828,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 // Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather
 // than computing a second answer.
 export async function syncStatus(env: OperatorEnv) {
-  const repoEntries = await listDirectory(env, "content/posts");
-  const repoPosts = repoEntries.filter(
-    (e) => e.type === "file" && e.name.endsWith(".md"),
-  ).length;
+  const repoPosts = (await listPostFiles(env)).length;
 
   // Counted through Drizzle: interpolating the predicate into a template string stringifies the object and
   // D1 answers `no such column`. `publiclyVisible()` is reused so the visibility rule has one owner.

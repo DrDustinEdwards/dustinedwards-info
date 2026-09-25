@@ -25,7 +25,7 @@ import {
 } from "../app/lib/media/template-refs.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
-export const TEMPLATE_REFS_PATH = path.join("content", "generated", "template-refs.json");
+const TEMPLATE_REFS_PATH = path.join("content", "generated", "template-refs.json");
 
 /**
  * Forward slashes always: the artifact is committed and compared across machines.
@@ -51,7 +51,7 @@ async function walk(dir) {
 /**
  * @returns {Promise<{ generated: number, refs: Record<string, string[]>, filesRead: number, assetsConsidered: number }>}
  */
-export async function scanTemplateRefs() {
+async function scanTemplateRefs() {
   const assetPaths = assetManifest.paths;
   /** @type {string[]} */
   const files = [];

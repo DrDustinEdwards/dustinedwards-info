@@ -6,7 +6,7 @@ import {
   SLUG_MAX_LENGTH,
   SLUG_PATTERN,
 } from "~/lib/content/slug.mjs";
-import { ACCEPT_ATTRIBUTE } from "~/lib/media/upload-contract.mjs";
+import { ACCEPT_ATTRIBUTE, uploadMedia } from "~/lib/media/upload-contract.mjs";
 
 import {
   bufferDiffers,
@@ -21,14 +21,17 @@ import {
 import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
 import {
+  FIRST_PUBLICATION_NOTE,
   PUBLISH_CONFIRMED_INTENT,
   saveInPlaceIntent,
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
+import { seriesSlug } from "~/lib/series-path.mjs";
 import { PostMetadata } from "./post-metadata";
 import { PublishActions } from "./publish-actions";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // There is no `draft` field: the transition rides in the submitter's `intent`, which a scriptless browser still sends.
 
@@ -56,12 +59,9 @@ function bufferAgeLabel(savedAt: string, now: number): string {
 type Layout = "write" | "split" | "preview";
 
 // Strips rather than transliterates: a wrong guess at a non-ASCII character lands in a permanent URL.
+// The series rule, with apostrophes dropped rather than split on ("don't" is "dont") and a length cap.
 function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+  return seriesSlug(title.replace(/['’]/g, ""))
     .slice(0, 80)
     .replace(/-+$/, "");
 }
@@ -244,7 +244,7 @@ export function PostEditor({
         setPreview(result.error ? { error: result.error } : { html: result.html ?? "" });
       } catch (error) {
         if (seq !== previewSeq.current) return;
-        setPreview({ error: error instanceof Error ? error.message : String(error) });
+        setPreview({ error: errorMessage(error) });
       } finally {
         if (seq === previewSeq.current) setPreviewing(false);
       }
@@ -526,11 +526,7 @@ export function PostEditor({
             {awaitingPublishConfirmation ? (
               <div className="editor-confirm-publish">
                 <h2>Publish this post</h2>
-                <p>
-                  It has never been public. Publishing puts it on the blog, in
-                  the feed, the sitemap, the search index and the AI answer
-                  layer.
-                </p>
+                <p>{FIRST_PUBLICATION_NOTE}</p>
                 <div className="editor-confirm-actions">
                   <Link to="/admin/posts" className="btn-ghost">
                     Cancel
@@ -999,25 +995,15 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
     }
     setMessage("Uploading");
 
-    // A click handler's rejection is unhandled, so a network error must end here as a message.
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      const response = await fetch("/admin/media/upload", { method: "POST", body: form });
-      if (!response.ok) {
-        // The status is the fallback when the body is not the route's JSON error.
-        const detail = (await response.json().catch(() => ({}))) as { error?: string };
-        setMessage(detail.error ?? `Upload failed (${response.status}).`);
-        return;
-      }
-      const { url } = (await response.json()) as { url: string };
-      onInsert(`\n![${alt.trim()}](${url})\n`);
-      setMessage(`Inserted ${url}`);
-      setAlt("");
-      if (fileRef.current) fileRef.current.value = "";
-    } catch (error) {
-      setMessage(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
+    const result = await uploadMedia(file);
+    if ("error" in result) {
+      setMessage(result.error);
+      return;
     }
+    onInsert(`\n![${alt.trim()}](${result.url})\n`);
+    setMessage(`Inserted ${result.url}`);
+    setAlt("");
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (

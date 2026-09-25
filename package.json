@@ -33,6 +33,7 @@
     "bootstrap:config": "node scripts/bootstrap-config.mjs",
     "postinstall": "node scripts/bootstrap-config.mjs && wrangler types",
     "build:og": "node scripts/build-og.mjs",
+    "build:icons": "node scripts/build-icons.mjs",
     "build:diagrams": "node scripts/build-diagrams.mjs",
     "build:katex": "node scripts/build-katex.mjs",
     "build:assets": "node scripts/build-assets.mjs",

@@ -1,3 +1,7 @@
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import {
   recordsForPages,
   recordsForPapers,
@@ -42,4 +46,21 @@ export function serializeArtifact(posts, pages, papers) {
     null,
     2,
   )}\n`;
+}
+
+/** The content artifact on disk, as build:content writes it. */
+export const ARTIFACT_FILE = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "content", "generated", "posts.json");
+
+/** @type {any} */
+let parsed;
+
+/**
+ * The artifact, read and parsed once per process: gates read it in several sections, and each
+ * section parsing its own copy was the same work repeated. Callers read it and never mutate it.
+ *
+ * @returns {{ posts: any[], records: any[] }}
+ */
+export function readArtifact() {
+  parsed ??= JSON.parse(readFileSync(ARTIFACT_FILE, "utf8"));
+  return parsed;
 }

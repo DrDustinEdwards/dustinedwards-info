@@ -2,12 +2,13 @@ import { Link } from "react-router";
 
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { PUBLICATIONS, TOPICS, type Publication } from "~/data/publications";
+import { TOPICS } from "~/data/publications";
 import { getCitationCounts } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
 import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
 import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
+import { publicationBySlug } from "~/lib/publications/by-slug";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { updateNoticeText } from "~/lib/publications/update-notice.mjs";
 import {
@@ -38,10 +39,6 @@ import "~/styles/paper.css";
  * is the DOI: a curated id could be re-chosen after Scholar indexed it.
  */
 
-const BY_SLUG = new Map<string, Publication>(
-  PUBLICATIONS.map((p) => [doiSlug(p.doi), p]),
-);
-
 const TOPIC_LABEL = new Map(TOPICS.map((t) => [t.id, t.label]));
 
 export function headers() {
@@ -49,8 +46,7 @@ export function headers() {
 }
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  const paper = BY_SLUG.get(params.slug ?? "");
-  if (!paper) throw new Response("Not found", { status: 404 });
+  const paper = publicationBySlug(params.slug);
 
   const slug = doiSlug(paper.doi);
   const hosted = paper.access === "self-hosted" && paper.pdfPath !== null;
