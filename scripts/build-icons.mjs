@@ -1,9 +1,10 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
+
+import { buildAssetManifest } from "./build-assets.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -164,15 +165,13 @@ emit("dustin-edwards-og-image.png", png(ogCard(), 1200));
 
 // This is the only generator that adds new files to `public/`, so it regenerates the asset manifest.
 if (samePath(OUT, PUBLIC)) {
-  // cwd pinned to the repo root: the manifest builder resolves relative to the working directory.
-  const manifest = spawnSync(process.execPath, [join(ROOT, "scripts", "build-assets.mjs")], {
-    cwd: ROOT,
-    encoding: "utf8",
-  });
-  process.stdout.write(manifest.stdout ?? "");
-  if (manifest.status !== 0) {
-    process.stderr.write(manifest.stderr ?? "");
-    throw new Error("build:assets failed after icons changed");
+  try {
+    await buildAssetManifest();
+  } catch (error) {
+    throw new Error(
+      `build:assets failed after icons changed. ${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
   console.log(
     "\n  NOTE: the icon assets were rewritten, so the media index is now stale and\n" +
