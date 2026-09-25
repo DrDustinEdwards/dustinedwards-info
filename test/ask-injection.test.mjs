@@ -66,19 +66,39 @@ test("the substituted answer carries an empty chunks frame, so the client render
   assert.match(out, /event: chunks\ndata: \[\]/);
 });
 
-test("a stream that never sends a chunks event is passed through, not swallowed", async () => {
-  // Fail open deliberately: if upstream changes its frame order, pass through rather than
-  // answer every question with "I could not find anything" while every gate stays green.
+test("A STREAM THAT NEVER SENDS A CHUNKS EVENT IS REFUSED, because its sources cannot be checked", async () => {
+  // Fails closed: with no chunks frame there is no way to tell whether the answer summarizes a draft.
+  // A changed upstream frame order is logged as ask-guard-unverifiable rather than passed through.
   const encoder = new TextEncoder();
   const upstream = new ReadableStream({
     start(controller) {
       controller.enqueue(
-        encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "hello" } }] })}\n\n`),
+        encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "a draft says" } }] })}\n\n`),
       );
       controller.close();
     },
   });
-  assert.equal(answerOf(await drain(guardAnswerStream(upstream, ALL_PUBLIC))), "hello");
+  const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
+  assert.equal(answerOf(out), NO_ANSWER_TEXT);
+  assert.ok(!out.includes("a draft says"), `the unchecked answer reached the client: ${out}`);
+});
+
+test("A CHUNKS FRAME THAT DOES NOT PARSE TO AN ARRAY IS REFUSED, not passed through", async () => {
+  const encoder = new TextEncoder();
+  for (const data of ["{not json", JSON.stringify({ chunks: [] })]) {
+    const upstream = new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(`event: chunks\ndata: ${data}\n\n`));
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: "unchecked" } }] })}\n\n`),
+        );
+        controller.close();
+      },
+    });
+    const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
+    assert.equal(answerOf(out), NO_ANSWER_TEXT, data);
+    assert.ok(!out.includes("unchecked"), `the unchecked answer reached the client: ${out}`);
+  }
 });
 
 test("THE LAST MESSAGE IS THE QUESTION AND NOTHING ELSE, BECAUSE IT IS THE RETRIEVAL QUERY", () => {
