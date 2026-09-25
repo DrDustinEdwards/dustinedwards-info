@@ -2,7 +2,7 @@ import matter from "gray-matter";
 
 import { readIntent } from "./intent.mjs";
 import { draftForIntent } from "./publish-transition.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { errorMessage } from "../error-message.mjs";
 
 // Punctuation-bearing scalars are written as JSON strings: valid YAML double-quoted scalars that
 // escape quotes and colons without a YAML serializer.
