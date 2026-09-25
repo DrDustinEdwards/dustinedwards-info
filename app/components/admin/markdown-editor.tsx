@@ -179,10 +179,6 @@ const SCAFFOLD_GLYPHS: Record<ScaffoldName, React.ReactNode> = {
   ),
 };
 
-export type MarkdownEditorHandle = {
-  focus: () => void;
-};
-
 // `state` lets the palette flag a target that is not live: linking a draft would 404 on the published page.
 export type LinkTarget = {
   slug: string;

@@ -38,7 +38,6 @@ import {
   settings,
   tags,
   webmentions,
-  type Media,
   type MediaRef,
 } from "./schema";
 
@@ -46,7 +45,7 @@ export function getDb(env: Env) {
   return drizzle(env.DB, { schema: { ...schema, ...authSchema } });
 }
 
-export type DB = ReturnType<typeof getDb>;
+type DB = ReturnType<typeof getDb>;
 
 export function publiclyVisible() {
   return and(
@@ -569,12 +568,6 @@ export async function listAllPostTagsForAdmin(env: Env) {
     .orderBy(asc(tags.slug));
 }
 
-export async function mediaRecordsFor(env: Env, keys: string[]) {
-  if (keys.length === 0) return new Map<string, Media>();
-  const rows = await getDb(env).select().from(media).where(inArray(media.key, keys));
-  return new Map(rows.map((row) => [row.key, row]));
-}
-
 export async function listMediaRecords(env: Env) {
   return getDb(env).select().from(media);
 }
@@ -600,10 +593,10 @@ function matchesQuery(q: string) {
     OR lower(${media.tags}) LIKE ${needle})`;
 }
 
-export const LARGE_FILE_BYTES = 1048576;
+const LARGE_FILE_BYTES = 1048576;
 
 /** Reconciliation readers must not use this filter, or a rebuild restores trashed rows. */
-export function notTrashed() {
+function notTrashed() {
   return isNull(media.trashedAt);
 }
 
@@ -995,11 +988,6 @@ export async function claimMediaKeyForDelete(env: Env, key: string) {
     )
     .returning({ key: media.key });
   return claimed.length > 0;
-}
-
-export async function existingMediaKeys(env: Env) {
-  const rows = await getDb(env).select({ key: media.key }).from(media);
-  return new Set(rows.map((row) => row.key));
 }
 
 export async function mediaRefsFor(env: Env, keys: string[]) {

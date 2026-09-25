@@ -2,7 +2,7 @@
 // Stored DELIMITER-WRAPPED (`,alpha,beta,`) so an exact match is `LIKE '%,art,%'` and misses `chart`;
 // the empty list is "" so an untagged row cannot match `%,%`.
 
-export const TAG_DELIMITER = ",";
+const TAG_DELIMITER = ",";
 
 export const MAX_TAG_LENGTH = 32;
 

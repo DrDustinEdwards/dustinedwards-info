@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useFetcher } from "react-router";
 
-export type PickedMedia = {
+type PickedMedia = {
   key: string;
   url: string;
   alt: string;

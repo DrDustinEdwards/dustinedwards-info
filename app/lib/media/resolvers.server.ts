@@ -21,7 +21,7 @@ const RESOLVERS: Array<{ name: string; resolve: ReferenceResolver }> = [
   { name: "posts", resolve: postsResolver },
 ];
 
-export type ResolutionResult = {
+type ResolutionResult = {
   citations: Map<string, MediaCitation[]>;
   // False when a resolver threw: a delete must then refuse.
   complete: boolean;
