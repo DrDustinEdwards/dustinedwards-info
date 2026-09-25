@@ -16,11 +16,6 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
 
   /* All derived, no column list here. Virtual, shadow and `sqlite_%` tables are excluded. */
 
-  /** @param {{name: string, sql: string | null}[]} tables */
-  function classifyTables(tables) {
-    return classifySqliteTables(tables);
-  }
-
   /**
    * @param {Map<string, Map<string, string>>} a
    * @param {Map<string, Map<string, string>>} b
@@ -111,7 +106,7 @@ test("schema: columns agree across schema.ts, the migrations and the database", 
           .all()
       )
     );
-    const { real: migrationTables, virtual } = classifyTables(freshTables);
+    const { real: migrationTables, virtual } = classifySqliteTables(freshTables);
 
     /** @type {Map<string, Map<string, string>>} */
     const fromMigrations = new Map();

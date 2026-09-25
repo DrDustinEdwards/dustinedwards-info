@@ -12,7 +12,6 @@ test("AN UNPARSEABLE DATE IS NULL, never the words 'Invalid Date'", () => {
   for (const bad of ["rubbish", "2026-13-45", new Date("nope"), Number.NaN]) {
     const out = longDateUTC(bad);
     assert.equal(out, null, `${String(bad)} must be null`);
-    assert.doesNotMatch(String(out), /Invalid/, "must never reach a reader");
   }
 });
 
