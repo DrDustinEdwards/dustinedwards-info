@@ -89,6 +89,81 @@ export async function mediaIndexStatus(env: Env): Promise<{
   return setDrift(expected, present);
 }
 
+// The failure to report for one R2 object, or null once it is indexed and measured.
+async function indexObject(env: Env, object: MediaSource): Promise<string | null> {
+  try {
+    const { kind, mime } = classify(object.key);
+    // An OG card lives in the OG bucket, so the read follows the key rather than assuming MEDIA.
+    const bucket = bucketFor(env, object.key);
+    // Two GETs: a body is a stream and can be read only once.
+    const measurable = isRaster(object.key);
+    const measured = measurable
+      ? await bucket.get(object.key).then((o) => dimensionsFor(env, o?.body ?? null))
+      : null;
+    const dimensions = measured?.dimensions ?? null;
+    const placeholder = measurable
+      ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
+      : null;
+
+    // The filename is re-derived from the object's custom metadata, so `original_name` is truly derived.
+    const named = await bucket.head(object.key);
+
+    await upsertDerivedMedia(env, {
+      key: object.key,
+      storage: storageOf(object.key),
+      kind,
+      role: roleOf(object.key),
+      originalName: named?.customMetadata?.originalName ?? null,
+      mime,
+      bytes: object.size,
+      width: dimensions?.width ?? null,
+      height: dimensions?.height ?? null,
+      placeholder,
+      uploadedAt: object.uploaded,
+    });
+    return measured?.failure ? `${object.key}: ${measured.failure}` : null;
+  } catch (error) {
+    return `${object.key}: ${errorMessage(error)}`;
+  }
+}
+
+// The failure to report for one static file, or null once it is indexed and measured.
+async function indexStaticFile(env: Env, path: string): Promise<string | null> {
+  try {
+    const { kind, mime } = classify(path);
+    // The ASSETS binding ignores the hostname and matches only the pathname.
+    const response = await env.ASSETS.fetch(new Request(`https://assets.local${path}`));
+    if (!response.ok) return `${path}: ASSETS returned ${response.status}`;
+    const buffer = await response.arrayBuffer();
+
+    const measurable = isRaster(path);
+    const measured = measurable
+      ? await dimensionsFor(env, new Response(buffer.slice(0)).body as ReadableStream)
+      : null;
+    const dimensions = measured?.dimensions ?? null;
+    const placeholder = measurable
+      ? await placeholderFor(env, new Response(buffer.slice(0)).body as ReadableStream)
+      : null;
+
+    await upsertDerivedMedia(env, {
+      key: path,
+      storage: storageOf(path),
+      kind,
+      role: roleOf(path),
+      mime,
+      bytes: buffer.byteLength,
+      width: dimensions?.width ?? null,
+      height: dimensions?.height ?? null,
+      placeholder,
+      // No upload event: a build-machine mtime would be an invented fact.
+      uploadedAt: null,
+    });
+    return measured?.failure ? `${path}: ${measured.failure}` : null;
+  } catch (error) {
+    return `${path}: ${errorMessage(error)}`;
+  }
+}
+
 export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
   const failures: string[] = [];
 
@@ -97,87 +172,15 @@ export async function rebuildMediaIndex(env: Env): Promise<RebuildReport> {
   let indexed = 0;
 
   for (const object of objects) {
-    try {
-      const { kind, mime } = classify(object.key);
-      // An OG card lives in the OG bucket, so the read follows the key rather than assuming MEDIA.
-      const bucket = bucketFor(env, object.key);
-      // Two GETs: a body is a stream and can be read only once.
-      const measurable = isRaster(object.key);
-      const measured = measurable
-        ? await bucket.get(object.key).then((o) => dimensionsFor(env, o?.body ?? null))
-        : null;
-      const dimensions = measured?.dimensions ?? null;
-      const placeholder = measurable
-        ? await bucket.get(object.key).then((o) => (o ? placeholderFor(env, o.body) : null))
-        : null;
-
-      // The filename is re-derived from the object's custom metadata, so `original_name` is truly derived.
-      const named = await bucket.head(object.key);
-
-      await upsertDerivedMedia(env, {
-        key: object.key,
-        storage: storageOf(object.key),
-        kind,
-        role: roleOf(object.key),
-        originalName: named?.customMetadata?.originalName ?? null,
-        mime,
-        bytes: object.size,
-        width: dimensions?.width ?? null,
-        height: dimensions?.height ?? null,
-        placeholder,
-        uploadedAt: object.uploaded,
-      });
-      if (measured?.failure) {
-        failures.push(`${object.key}: ${measured.failure}`);
-        continue;
-      }
-      indexed += 1;
-    } catch (error) {
-      failures.push(`${object.key}: ${errorMessage(error)}`);
-    }
+    const failure = await indexObject(env, object);
+    if (failure) failures.push(failure);
+    else indexed += 1;
   }
 
   for (const path of files) {
-    try {
-      const { kind, mime } = classify(path);
-      // The ASSETS binding ignores the hostname and matches only the pathname.
-      const response = await env.ASSETS.fetch(new Request(`https://assets.local${path}`));
-      if (!response.ok) {
-        failures.push(`${path}: ASSETS returned ${response.status}`);
-        continue;
-      }
-      const buffer = await response.arrayBuffer();
-
-      const measurable = isRaster(path);
-      const measured = measurable
-        ? await dimensionsFor(env, new Response(buffer.slice(0)).body as ReadableStream)
-        : null;
-      const dimensions = measured?.dimensions ?? null;
-      const placeholder = measurable
-        ? await placeholderFor(env, new Response(buffer.slice(0)).body as ReadableStream)
-        : null;
-
-      await upsertDerivedMedia(env, {
-        key: path,
-        storage: storageOf(path),
-        kind,
-        role: roleOf(path),
-        mime,
-        bytes: buffer.byteLength,
-        width: dimensions?.width ?? null,
-        height: dimensions?.height ?? null,
-        placeholder,
-        // No upload event: a build-machine mtime would be an invented fact.
-        uploadedAt: null,
-      });
-      if (measured?.failure) {
-        failures.push(`${path}: ${measured.failure}`);
-        continue;
-      }
-      indexed += 1;
-    } catch (error) {
-      failures.push(`${path}: ${errorMessage(error)}`);
-    }
+    const failure = await indexStaticFile(env, path);
+    if (failure) failures.push(failure);
+    else indexed += 1;
   }
 
   // Last, and from the same enumerations just written from, so a transient read failure cannot delete.
