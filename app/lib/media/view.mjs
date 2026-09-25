@@ -2,6 +2,7 @@
 // parameter, so dropping one has to be a visible act rather than an omission.
 
 import { folderFor, folderRank } from "./folders.mjs";
+import { suggestedAlt } from "./usage.mjs";
 
 export const VIEWS = ["list", "grid"];
 
@@ -294,14 +295,10 @@ export function sortHref(state, key, options = {}) {
 }
 
 /**
+ * A document card's title: the filename read as words, the same reading the alt suggestion makes.
  * Not capitalised: title-casing a filename means guessing which words are proper nouns.
- *
- * @param {string} base a filename, no directory
- * @returns {string}
  */
-export function docTitle(base) {
-  return base.replace(/\.[a-z0-9]+$/i, "").replace(/[-_]+/g, " ").trim();
-}
+export const docTitle = suggestedAlt;
 
 /**
  * @param {typeof DEFAULTS} state

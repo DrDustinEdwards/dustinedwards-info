@@ -4,8 +4,7 @@ import projectsData from "../../content/projects.json";
 import stack from "../../content/generated/stack.json";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { jsonLd } from "~/lib/json-ld.mjs";
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
+import { PageShell } from "~/components/page-shell";
 import {
   PROJECTS_DESCRIPTION,
   PROJECTS_INTRO,
@@ -126,89 +125,86 @@ function formatAsOf(iso: string) {
 
 export default function Projects() {
   return (
-    <>
-      <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
+    <PageShell
+      lead={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLd(itemListJsonLd()) }}
         />
-        <div className="page-inner">
-          <h1 className="page-title">{TITLE}</h1>
-          <p className="page-intro">{PROJECTS_INTRO}</p>
+      }
+    >
+      <h1 className="page-title">{TITLE}</h1>
+      <p className="page-intro">{PROJECTS_INTRO}</p>
 
-          <ul className="project-grid">
-            {PROJECTS.map((project) => (
-              // The id is the search record's anchor; a record citing a fragment the page does not render scrolls nowhere.
-              <li key={project.slug} id={projectAnchor(project.slug)} className="project-card">
-                <p className="project-metric">
-                  <strong className="project-metric-value">
-                    {metricValue(project.metric, METRIC_INPUTS)}
-                  </strong>
-                  <span className="project-metric-label">{project.metric.label}</span>
-                  <MetricProvenance metric={project.metric} />
-                </p>
+      <ul className="project-grid">
+        {PROJECTS.map((project) => (
+          // The id is the search record's anchor; a record citing a fragment the page does not render scrolls nowhere.
+          <li key={project.slug} id={projectAnchor(project.slug)} className="project-card">
+            <p className="project-metric">
+              <strong className="project-metric-value">
+                {metricValue(project.metric, METRIC_INPUTS)}
+              </strong>
+              <span className="project-metric-label">{project.metric.label}</span>
+              <MetricProvenance metric={project.metric} />
+            </p>
 
-                <h2 className="project-name">{project.name}</h2>
-                <p className="project-oneliner">{project.oneLiner}</p>
-                <p className="project-description">{project.description}</p>
+            <h2 className="project-name">{project.name}</h2>
+            <p className="project-oneliner">{project.oneLiner}</p>
+            <p className="project-description">{project.description}</p>
 
-                {project.notable && project.notable.length > 0 && (
-                  <ul className="project-notable">
-                    {project.notable.map((point) => (
-                      <li key={point}>{point}</li>
-                    ))}
-                  </ul>
+            {project.notable && project.notable.length > 0 && (
+              <ul className="project-notable">
+                {project.notable.map((point) => (
+                  <li key={point}>{point}</li>
+                ))}
+              </ul>
+            )}
+
+            <p className="project-meta">
+              <span className="project-role">{project.role}</span>
+              <span className="project-status" data-status={project.status}>
+                {project.status}
+              </span>
+            </p>
+
+            <ul className="project-stack">
+              {project.stack.map((tag) => (
+                <li key={tag} className="project-stack-tag">
+                  {tag}
+                </li>
+              ))}
+            </ul>
+
+            {(project.url || project.repo) && (
+              <ul className="project-links">
+                {project.url && (
+                  <li>
+                    <a href={project.url}>Visit {project.name}</a>
+                  </li>
                 )}
+                {project.repo && (
+                  <li>
+                    <a href={project.repo}>Source</a>
+                  </li>
+                )}
+              </ul>
+            )}
 
-                <p className="project-meta">
-                  <span className="project-role">{project.role}</span>
-                  <span className="project-status" data-status={project.status}>
-                    {project.status}
-                  </span>
-                </p>
-
-                <ul className="project-stack">
-                  {project.stack.map((tag) => (
-                    <li key={tag} className="project-stack-tag">
-                      {tag}
+            {project.evidence && project.evidence.length > 0 && (
+              <div className="project-evidence">
+                <h3 className="project-evidence-title">Evidence</h3>
+                <ul>
+                  {project.evidence.map((item) => (
+                    <li key={`${item.kind}:${item.ref}`}>
+                      <EvidenceLink item={item} />
                     </li>
                   ))}
                 </ul>
-
-                {(project.url || project.repo) && (
-                  <ul className="project-links">
-                    {project.url && (
-                      <li>
-                        <a href={project.url}>Visit {project.name}</a>
-                      </li>
-                    )}
-                    {project.repo && (
-                      <li>
-                        <a href={project.repo}>Source</a>
-                      </li>
-                    )}
-                  </ul>
-                )}
-
-                {project.evidence && project.evidence.length > 0 && (
-                  <div className="project-evidence">
-                    <h3 className="project-evidence-title">Evidence</h3>
-                    <ul>
-                      {project.evidence.map((item) => (
-                        <li key={`${item.kind}:${item.ref}`}>
-                          <EvidenceLink item={item} />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </main>
-      <ShellFooter />
-    </>
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+    </PageShell>
   );
 }

@@ -107,7 +107,7 @@ wrangler.jsonc
 # address in the example.
 wrangler.watchdog.jsonc
 
-# The admin session for check:browser, read by scripts/check-browser.mjs.
+# The admin session for check:browser, read by scripts/lib/browser/credential.mjs.
 #
 #   .admin-session          ignored. Holds a live Better Auth session cookie for
 #                           the single admin. A credential, so it never lands in
@@ -123,7 +123,7 @@ wrangler.watchdog.jsonc
 # the repo by hand.
 .admin-session
 
-# The smoke credential for check:browser, read by scripts/check-browser.mjs via
+# The smoke credential for check:browser, read by scripts/lib/browser/credential.mjs via
 # SMOKE_TOKEN_FILE. A bearer token, so it never lands in git, on the same
 # footing as .dev.vars and .admin-session above. Minted with
 # `node scripts/mint-smoke-token.mjs`; README.md carries the three places it

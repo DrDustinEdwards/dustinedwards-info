@@ -89,19 +89,16 @@ export function truncateForSerp(text: string, limit: number) {
   return `${(lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
 }
 
+/** The About page's Person: the shared facts, with the site description after the role. */
 export function personJsonLd(origin: string) {
+  const { name, jobTitle, ...rest } = personFacts(origin);
   return {
     "@context": "https://schema.org",
     "@type": "Person",
-    name: SITE.name,
-    jobTitle: SITE.role,
+    name,
+    jobTitle,
     description: SITE.description,
-    url: origin,
-    worksFor: {
-      "@type": "CollegeOrUniversity",
-      name: SITE.affiliation,
-    },
-    sameAs: OWNER_SAME_AS,
+    ...rest,
   };
 }
 
@@ -284,6 +281,13 @@ export function personNode(origin: string) {
     "@context": "https://schema.org",
     "@type": "Person",
     "@id": personId(origin),
+    ...personFacts(origin),
+  };
+}
+
+/** What both Person nodes say about the owner, in their key order. */
+function personFacts(origin: string) {
+  return {
     name: SITE.name,
     jobTitle: SITE.role,
     url: origin,
