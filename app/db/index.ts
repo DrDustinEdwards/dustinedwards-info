@@ -384,20 +384,33 @@ export async function getBlogPost(env: Env, slug: string) {
 
   const tagMap = await tagsForPosts(db, [post.id]);
 
-  // Neighbors use the same visibility gate, so prev/next cannot reach a draft.
-  const [previous] = await db
-    .select({ slug: posts.slug, title: posts.title })
-    .from(posts)
-    .where(and(isBlogPost(), lt(posts.publishAt, post.publishAt ?? new Date())))
-    .orderBy(desc(posts.publishAt))
-    .limit(1);
-
-  const [next] = await db
-    .select({ slug: posts.slug, title: posts.title })
-    .from(posts)
-    .where(and(isBlogPost(), gt(posts.publishAt, post.publishAt ?? new Date())))
-    .orderBy(asc(posts.publishAt))
-    .limit(1);
+  // Neighbors use the same visibility gate, so prev/next cannot reach a draft. Ordered as the listing
+  // is (publish_at, then id), so two posts sharing a publish_at are neighbors rather than skipped.
+  const at = post.publishAt ?? new Date();
+  const [[previous], [next]] = await Promise.all([
+    db
+      .select({ slug: posts.slug, title: posts.title })
+      .from(posts)
+      .where(
+        and(
+          isBlogPost(),
+          or(lt(posts.publishAt, at), and(eq(posts.publishAt, at), lt(posts.id, post.id))),
+        ),
+      )
+      .orderBy(desc(posts.publishAt), desc(posts.id))
+      .limit(1),
+    db
+      .select({ slug: posts.slug, title: posts.title })
+      .from(posts)
+      .where(
+        and(
+          isBlogPost(),
+          or(gt(posts.publishAt, at), and(eq(posts.publishAt, at), gt(posts.id, post.id))),
+        ),
+      )
+      .orderBy(asc(posts.publishAt), asc(posts.id))
+      .limit(1),
+  ]);
 
   return {
     ...post,
@@ -672,10 +685,18 @@ export async function listMediaPage(
     if (needle) clauses.push(sql`lower(${media.tags}) LIKE ${needle}`);
   }
 
-  /* `duplicates` is not SQL: the route filters it via `mediaTwins`. */
   if (options.lens === "unattached") clauses.push(uncited(options.templateKeys));
   if (options.lens === "no-alt") clauses.push(eq(media.alt, ""));
   if (options.lens === "large") clauses.push(sql`${media.bytes} > ${LARGE_FILE_BYTES}`);
+  /*
+   * Twins are found by the digest inside the key, which SQLite cannot parse, so `mediaTwins` names
+   * them; the filter is still SQL, before LIMIT and OFFSET, or a page of twins would come back short
+   * or empty. One JSON parameter, not an IN list, so the count never meets D1's bound-parameter cap.
+   */
+  if (options.lens === "duplicates") {
+    const twinKeys = JSON.stringify([...(await mediaTwins(env)).keys()]);
+    clauses.push(sql`${media.key} IN (SELECT value FROM json_each(${twinKeys}))`);
+  }
   const where = clauses.length > 0 ? and(...clauses) : undefined;
 
   const db = getDb(env);
@@ -869,16 +890,17 @@ export async function upsertDerivedMedia(
     role: record.role,
     mime: record.mime ?? null,
     bytes: record.bytes ?? null,
-    width: record.width ?? null,
-    height: record.height ?? null,
     uploadedAt: record.uploadedAt ?? null,
     updatedAt: now,
   };
+  const measured = record.width != null && record.height != null;
   await getDb(env)
     .insert(media)
     .values({
       key: record.key,
       ...derived,
+      width: record.width ?? null,
+      height: record.height ?? null,
       originalName: record.originalName ?? null,
       placeholder: record.placeholder ?? null,
     })
@@ -886,6 +908,8 @@ export async function upsertDerivedMedia(
       target: media.key,
       set: {
         ...derived,
+        // Written when measured, never blanked by a caller whose Images read failed.
+        ...(measured ? { width: record.width, height: record.height } : {}),
         // Written when present, never blanked by a caller that cannot measure one.
         ...(record.placeholder ? { placeholder: record.placeholder } : {}),
         // Written when present, never blanked by a caller with no name.
@@ -1137,8 +1161,13 @@ export async function receiveWebmention(
       },
     })
     .returning({ id: webmentions.id });
-  /* Unreachable. -1, not a valid-looking rowid. */
-  return rows[0]?.id ?? -1;
+  // An upsert always returns its row; none means the write did not land, and a stand-in id would send
+  // the verifier after a row that does not exist.
+  const id = rows[0]?.id;
+  if (id === undefined) {
+    throw new Error(`receiveWebmention: the upsert for ${fields.sourceUrl} returned no row`);
+  }
+  return id;
 }
 
 export type WebmentionVerdict =

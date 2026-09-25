@@ -112,10 +112,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
 
-  /* After the response via `waitUntil`, failure swallowed: demand signal is worth less than the page rendering. */
+  /* After the response via `waitUntil`, failure logged: demand signal is worth less than the page rendering. */
   if (asked && result.total === 0 && !result.parsed.isEmpty) {
     getExecutionContext(context).waitUntil(
-      recordZeroResult(env, params.q).catch(() => {}),
+      recordZeroResult(env, params.q).catch((error: unknown) => {
+        console.error("zero-result record failed", error);
+      }),
     );
   }
 
@@ -242,6 +244,8 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
   const pageCount = Math.max(1, Math.ceil(result.total / result.pageSize));
+  /* A truncated match set makes every count a floor, so it says so rather than reading as exact. */
+  const floor = result.truncated ? "+" : "";
   // `isEmpty` means no matchable text, not no request: a bare year or tag is answered by the browse path.
   const hasQuery = !result.parsed.isEmpty || hasFilters(result.parsed);
 
@@ -373,7 +377,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                           to={facetHref(params, "type", facet.value)}
                           className="search-chip"
                         >
-                          {facet.value} <span className="search-chip-count">{facet.count}</span>
+                          {facet.value} <span className="search-chip-count">{facet.count}{floor}</span>
                         </Link>
                       </li>
                     ))}
@@ -388,7 +392,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                     {facets.tags.map((facet) => (
                       <li key={facet.value}>
                         <Link to={facetHref(params, "tag", facet.value)} className="search-chip">
-                          {facet.value} <span className="search-chip-count">{facet.count}</span>
+                          {facet.value} <span className="search-chip-count">{facet.count}{floor}</span>
                         </Link>
                       </li>
                     ))}
@@ -406,7 +410,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
                           to={facetHref(params, "year", String(facet.value))}
                           className="search-chip"
                         >
-                          {facet.value} <span className="search-chip-count">{facet.count}</span>
+                          {facet.value} <span className="search-chip-count">{facet.count}{floor}</span>
                         </Link>
                       </li>
                     ))}
@@ -462,6 +466,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             )}
             <span>
               Page {result.page} of {pageCount}
+              {floor}
             </span>
             {result.page < pageCount ? (
               <Link rel="next" to={pageHref(params, result.page + 1)}>

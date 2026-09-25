@@ -154,8 +154,14 @@ async function listAllAskItems(env: Env, timings?: Timings) {
     const total = listed.result_info?.total_count;
     if (batch.length < perPage) break;
     if (typeof total === "number" && all.length >= total) break;
-    // Backstop against a server that never shrinks a page.
-    if (page > 200) break;
+    // Backstop against a server that never shrinks a page. Thrown, not a break: a truncated listing
+    // would make every unlisted item look absent to the prune and the drift count.
+    if (page > 200) {
+      throw new Error(
+        `AI Search listing did not end after ${page} pages of ${perPage} (${all.length} items); ` +
+          `refusing to act on a listing that may be truncated.`,
+      );
+    }
   }
   return all;
 }
@@ -365,7 +371,7 @@ export async function askDriftCount(
         .then((late) =>
           late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null,
         )
-        .catch(() => {}),
+        .catch((error) => console.error("ask drift cache write failed after the budget", error)),
     );
     return null;
   }

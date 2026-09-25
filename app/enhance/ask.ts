@@ -48,8 +48,14 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   attach(header, badge, note);
 
   const body = el("p", "ask-body");
-  body.setAttribute("aria-live", "polite");
   body.setAttribute("aria-busy", "true");
+
+  /*
+   * The body is not live: rewritten on every token, it would be announced over and over. This region
+   * exists before anything is written to it, and speaks once, the whole answer or the failure.
+   */
+  const announcer = el("p", "sr-only");
+  announcer.setAttribute("aria-live", "polite");
 
   // Not "Thinking...": the request is retrieval over this site's chunks, and an ellipsis reads as stalling.
   const status = el("p", "ask-status", "Looking it up.");
@@ -60,7 +66,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
   const followUp = el("p", "ask-followup");
   followUp.hidden = true;
 
-  attach(panel, header, status, body, sources, followUp);
+  attach(panel, header, status, body, sources, followUp, announcer);
   attach(container, panel);
 
   let answer = "";
@@ -100,6 +106,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
     status.textContent = message;
     status.hidden = false;
     body.removeAttribute("aria-busy");
+    announcer.textContent = message;
   }
 
   (async () => {
@@ -207,6 +214,7 @@ export function ask(container: HTMLElement, question: string): AskHandle {
 
     body.removeAttribute("aria-busy");
     if (answer.trim().length === 0) fail("No answer for that one.");
+    else announcer.textContent = `AI answer: ${splitFollowUp(answer).answer}`;
   })();
 
   return {
