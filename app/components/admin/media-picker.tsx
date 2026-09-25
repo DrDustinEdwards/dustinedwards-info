@@ -27,14 +27,35 @@ export function MediaPicker({
     if (media.state === "idle" && !media.data) media.load("/admin/media?picker=1");
   }, [media]);
 
-  if (media.state === "loading" && !media.data) {
-    return <p className="muted">Loading media...</p>;
-  }
-
   const objects = media.data?.objects ?? [];
+  // Before the first answer, the idle render included: without data, "no images" would be a guess.
+  const loading = !media.data;
+  /* Mounted empty on the first render and filled after, so the loading and the result are both announced. */
+  const status = (
+    <p className="sr-only" role="status">
+      {media.state === "loading" && loading
+        ? "Loading media"
+        : loading
+          ? ""
+          : objects.length === 0
+            ? "No images yet"
+            : `${objects.length} image${objects.length === 1 ? "" : "s"}`}
+    </p>
+  );
+
+  if (loading) {
+    return (
+      <>
+        {status}
+        <p className="muted">Loading media...</p>
+      </>
+    );
+  }
 
   if (objects.length === 0) {
     return (
+      <>
+      {status}
       <div className="media-picker-empty">
         <p className="muted">
           No images in the bucket yet. Upload one from the body editor by dropping
@@ -46,11 +67,13 @@ export function MediaPicker({
           </button>
         ) : null}
       </div>
+      </>
     );
   }
 
   return (
     <>
+      {status}
       <ul className="media-picker-grid">
         {objects.map((object) => (
           <li key={object.key}>
