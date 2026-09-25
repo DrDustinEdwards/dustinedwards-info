@@ -351,12 +351,21 @@ if (DRIVES_PREVIEW) {
       process.exit(1);
     }
 
-    /* `taskkill` returns before the socket is released, so re-probe until clear. */
+    /* `taskkill` returns before the socket is released, so re-probe until clear. A probe that
+       FAILED (null) is not a released port: it is a kill this gate could not verify. */
     const releasedBy = Date.now() + 5000;
-    let stillHeld = portListeners(PORT) ?? [];
-    while (stillHeld.length > 0 && Date.now() < releasedBy) {
+    let stillHeld = portListeners(PORT);
+    while ((stillHeld === null || stillHeld.length > 0) && Date.now() < releasedBy) {
       await new Promise((resolve) => setTimeout(resolve, 250));
-      stillHeld = portListeners(PORT) ?? [];
+      stillHeld = portListeners(PORT);
+    }
+    if (stillHeld === null) {
+      console.error(
+        `\ncheck:browser REFUSES TO START. Port ${PORT} could not be re-probed after killing ${killed} ` +
+          `leftover(s), so whether it was released is unknown.`,
+      );
+      registry.clear();
+      process.exit(1);
     }
     if (stillHeld.length > 0) {
       console.error(
