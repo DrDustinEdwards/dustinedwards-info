@@ -1,6 +1,7 @@
 import { Form } from "react-router";
 
 import { BulkBar } from "~/components/admin/media-bulk-bar";
+import { useGridKeyboard } from "~/components/admin/media-keyboard";
 import { MediaListHeader } from "~/components/admin/media-list-header";
 import { MediaTile } from "~/components/admin/media-tile";
 import { groupRows } from "~/lib/media/view.mjs";
@@ -21,6 +22,8 @@ export function MediaGrid({
   pending,
   scanComplete,
   tagCounts,
+  tabStop,
+  setActive,
 }: {
   objects: Listing["objects"];
   chosen: string[];
@@ -32,12 +35,23 @@ export function MediaGrid({
   pending: boolean;
   scanComplete: boolean;
   tagCounts: Listing["tagCounts"];
+  /** The one tile whose controls take Tab in the grid view. */
+  tabStop: string;
+  setActive: (key: string) => void;
 }) {
+  const keys = useGridKeyboard({ setActive, setSelected });
+  const grid = view.view === "grid";
+
   return (
         // Not role="grid": the column count follows the container width, so positions mean nothing to a screen reader.
         <Form method="post">
       {/* The form wraps the grid so the checkboxes submit with it; nested in the toolbar it would be
           a form inside a form, which the browser drops. */}
+        {/* In the document before anything is selected, so the first count is announced too; the bar
+            below mounts with its number. */}
+        <p className="sr-only" role="status">
+          {chosen.length > 0 ? `${chosen.length} selected` : ""}
+        </p>
         {chosen.length > 0 ? (
           <BulkBar
             objects={objects}
@@ -72,6 +86,7 @@ export function MediaGrid({
           data-size={view.size}
           data-pending={pending || undefined}
           aria-busy={pending || undefined}
+          {...(grid ? keys : {})}
         >
           {bucket.rows.map((object) => (
             <MediaTile
@@ -82,6 +97,7 @@ export function MediaGrid({
               linkTo={linkTo}
               view={view}
               scanComplete={scanComplete}
+              tabStop={object.key === tabStop}
             />
           ))}
         </ul>

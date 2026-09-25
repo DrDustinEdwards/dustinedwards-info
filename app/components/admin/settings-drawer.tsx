@@ -300,6 +300,13 @@ function CoverField({
   needsAlt: boolean;
 }) {
   const [picking, setPicking] = useState(false);
+  const chooseRef = useRef<HTMLButtonElement>(null);
+  // Picking or cancelling unmounts the picker and the focused control with it, so focus goes back
+  // to the button that opened it.
+  const closePicker = () => {
+    setPicking(false);
+    chooseRef.current?.focus();
+  };
 
   return (
     <div className="field">
@@ -318,6 +325,7 @@ function CoverField({
       ) : null}
 
       <button
+        ref={chooseRef}
         type="button"
         className="row-action"
         aria-expanded={picking}
@@ -331,11 +339,11 @@ function CoverField({
       {picking ? (
         <div className="cover-picker">
           <MediaPicker
-            onCancel={() => setPicking(false)}
+            onCancel={closePicker}
             onPick={(picked) => {
               onSrcChange(picked.url);
               if (picked.alt && !alt.trim()) onAltChange(picked.alt);
-              setPicking(false);
+              closePicker();
             }}
           />
         </div>

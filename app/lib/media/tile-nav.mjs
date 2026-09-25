@@ -81,3 +81,18 @@ export function nextTile(rows, active, dir) {
   }
   return best.id;
 }
+
+/**
+ * Which tile's controls are in the tab order: the one last focused, else the one the inspector is
+ * open on, else the first. One tile only, so Tab crosses the whole grid in that tile's few controls.
+ *
+ * @param {string[]} visible the keys on this page, in document order
+ * @param {string} active the tile focus was last on, or ""
+ * @param {string} inspected the key the inspector is open on, or ""
+ * @returns {string} the key, or "" on an empty page
+ */
+export function rovingKey(visible, active, inspected) {
+  if (active && visible.includes(active)) return active;
+  if (inspected && visible.includes(inspected)) return inspected;
+  return visible[0] ?? "";
+}
