@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
 import { parseSource, ts } from "./lib/syntax.mjs";
+import { stripComments } from "./lib/strip-comments.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
 
@@ -18,7 +19,7 @@ const FORCE = args.includes("--force");
 const MINIMUM_MIGRATIONS = 18;
 
 const tally = createTally();
-const { ok } = tally;
+const { ok, eq } = tally;
 
 /**
  * CRLF collapsed: with autocrlf on, a working tree and its own committed blobs disagree.
@@ -290,6 +291,207 @@ if (existsSync(SHIP)) {
   );
 }
 
+// Ship step ORDER for the derived indexes and the readiness check, read off ship.mjs the way the
+// migration guard above is. Moved from check:policy.
+{
+  const apiSource = stripComments(
+    readFileSync(join(root, "app/lib/operator/api.server.ts"), "utf8"),
+  );
+  /* The tool bodies live beside the dispatcher; the dispatcher names the tool, the body builds the verdict. */
+  const syncToolsSource = stripComments(
+    readFileSync(join(root, "app/lib/operator/sync-tools.server.ts"), "utf8"),
+  );
+  const shipSource = stripComments(readFileSync(join(root, "scripts/ship.mjs"), "utf8"));
+
+  eq("ask sync: the operator API was read", apiSource.length > 2000, true);
+  eq("ask sync: the operator sync tools were read", syncToolsSource.length > 2000, true);
+  eq("ask sync: ship.mjs was read", shipSource.length > 2000, true);
+
+  eq(
+    "ask sync: the operator API exposes sync_ask",
+    /"sync_ask"/.test(apiSource),
+    true,
+  );
+  eq(
+    "ask sync: the tool derives its verdict from a report module, not inline",
+    /askSyncReport\(/.test(syncToolsSource),
+    true,
+  );
+
+  eq("ask sync: SHIP CALLS sync_ask", /"sync_ask"/.test(shipSource), true);
+
+  /* ORDER: the upload writes what the DEPLOYED Worker serves, so it runs after deploy and sync. */
+  const deployAt = shipSource.indexOf('announce("Deploy")');
+  const syncAt = shipSource.indexOf('announce("Sync content to remote D1")');
+  /* The CALL, not the first mention: a message string naming sync_ask would move this check. */
+  const askAt = shipSource.indexOf('operatorSync("sync_ask")');
+  eq("ask sync: the deploy step was located", deployAt !== -1, true);
+  eq("ask sync: the D1 sync step was located", syncAt !== -1, true);
+  eq(
+    "ask sync: THE ASK UPLOAD RUNS AFTER THE DEPLOY AND AFTER THE D1 SYNC",
+    askAt !== -1 && deployAt !== -1 && syncAt !== -1 && askAt > deployAt && askAt > syncAt,
+    true,
+  );
+
+  /* A step whose result is discarded cannot fail. */
+  /* In the sync_ask step, and as the comparison itself: any identifier containing the word passed. */
+  const askStep =
+    askAt === -1 ? "" : shipSource.slice(askAt, shipSource.indexOf("operatorSync(", askAt + 1));
+  eq(
+    "ask sync: ship reads a converged verdict rather than a status code alone",
+    /report\.converged\s*!==\s*true/.test(askStep),
+    true,
+  );
+  /* THE EXIT CONDITION ITSELF: a block that PRINTS the miss keeps the name inside the window. */
+  const lastExit = shipSource.lastIndexOf("process.exit(1)");
+  const guardOpen = shipSource.lastIndexOf("\nif (", lastExit);
+  const guard =
+    guardOpen === -1 ? "" : shipSource.slice(guardOpen, shipSource.indexOf(") {", guardOpen) + 1);
+  eq("sync: the final exit guard was located", guard.length > 0 && guard.length < 200, true);
+
+  eq(
+    "ask sync: SHIP EXITS NONZERO WHEN THE INDEX DID NOT CONVERGE",
+    /\baskMiss\b/.test(guard),
+    true,
+  );
+  const recordAt = shipSource.indexOf('announce("Shipped")');
+  const exitAt = shipSource.lastIndexOf("process.exit(1)");
+  eq(
+    "ask sync: the shipped record prints BEFORE the nonzero exit",
+    recordAt !== -1 && exitAt !== -1 && recordAt < exitAt,
+    true,
+  );
+
+  /* READINESS, BETWEEN DEPLOY AND FIRST WRITE: five 200s are blind to what /api/health reports. */
+  const readinessAt = shipSource.indexOf("READINESS_PATH} reports ok");
+  eq(
+    "readiness: the step was located",
+    readinessAt !== -1,
+    true,
+  );
+  eq(
+    "readiness: ship asks the health endpoint",
+    /const\s+READINESS_PATH\s*=\s*"\/api\/health"/.test(shipSource),
+    true,
+  );
+  eq(
+    "readiness: THE CHECK RUNS AFTER THE DEPLOY AND BEFORE THE D1 SYNC",
+    readinessAt !== -1 &&
+      deployAt !== -1 &&
+      syncAt !== -1 &&
+      readinessAt > deployAt &&
+      readinessAt < syncAt,
+    true,
+  );
+  const readinessSource = stripComments(
+    readFileSync(join(root, "scripts/lib/readiness.mjs"), "utf8"),
+  );
+  eq("readiness: the module was read", readinessSource.length > 1000, true);
+  eq(
+    "readiness: the verdict is decided from the parsed body, not the status",
+    /value\.ok\s*!==\s*true/.test(readinessSource),
+    true,
+  );
+  /* AND A BODY WITH NO CHECKS REFUSES: any JSON on the origin can carry ok:true. */
+  eq(
+    "readiness: a body carrying no checks is refused",
+    /checks\.length\s*===\s*0/.test(readinessSource),
+    true,
+  );
+  eq(
+    "readiness: SHIP REFUSES ON THE VERDICT rather than logging it",
+    /if\s*\(!verdict\.ok\)\s*refuse\(/.test(shipSource),
+    true,
+  );
+
+  /* BOTH HALVES: deferring without the late assertion drops the check, and the reverse deadlocks. */
+  const deferredAt = readinessSource.indexOf("DEFERRED_CHECKS = {");
+  eq("ruling 56: the deferred checks are named in one place", deferredAt !== -1, true);
+  /* ALL THREE, ENUMERATED: a regex for content-drift alone passes once the other two are gone. */
+  for (const name of ["content-drift", "ask-index-drift", "media-index-drift"]) {
+    eq(
+      `ruling 56: ${name} is deferred`,
+      new RegExp(`"${name}":\\s*"the [A-Za-z0-9 ]+"`).test(readinessSource),
+      true,
+    );
+  }
+  eq(
+    "ruling 56: every deferred check names the step that repairs it",
+    !/"[a-z-]+":\s*"",?\s*$/m.test(readinessSource),
+    true,
+  );
+  eq(
+    "ruling 48: the readiness step passes them to the verdict",
+    /readinessVerdict\([^)]*Object\.keys\(DEFERRED_CHECKS\)\)/.test(shipSource),
+    true,
+  );
+  eq(
+    "ruling 48: the module subtracts deferred names rather than reading ok",
+    /gatingFailed/.test(readinessSource),
+    true,
+  );
+  /* AND ASSERTED AFTER THE SYNC, or a check that merely exists is the deadlock again. */
+  const contentDriftAt = shipSource.indexOf("deferredMisses(verdict.checks, DEFERRED_CHECKS");
+  eq("ruling 56: the late assertion was located", contentDriftAt !== -1, true);
+  eq(
+    "ruling 56: THE DEFERRED CHECKS ARE ASSERTED AFTER THE D1 SYNC",
+    contentDriftAt !== -1 && syncAt !== -1 && contentDriftAt > syncAt,
+    true,
+  );
+  eq(
+    "ruling 48: a still-drifted corpus reaches the exit code",
+    /\bdeferredMiss\b/.test(guard),
+    true,
+  );
+  /* EVERY miss ship records, read off its declarations: one that prints but is missing from the
+     guard is a deploy that reports a fault and exits 0. */
+  const missNames = [...shipSource.matchAll(/\blet\s+(\w+Miss)\s*=/g)].map((m) => m[1]);
+  eq("ship: its miss variables were found", missNames.length >= 6, true);
+  for (const name of missNames) {
+    eq(`ship: ${name} reaches the final exit guard`, new RegExp(`\\b${name}\\b`).test(guard), true);
+  }
+
+  eq(
+    "media sync: the operator API exposes sync_media",
+    /"sync_media"/.test(apiSource),
+    true,
+  );
+  eq(
+    "media sync: the tool derives its verdict from a report module, not inline",
+    /mediaSyncReport\(/.test(syncToolsSource),
+    true,
+  );
+  eq(
+    "media sync: the tool repairs THROUGH the derivation, not by writing rows",
+    /rebuildMediaIndex\(env\)/.test(syncToolsSource),
+    true,
+  );
+  eq(
+    "media sync: the verdict comes from a read-back reconciliation",
+    /mediaIndexStatus\(env\)/.test(syncToolsSource),
+    true,
+  );
+
+  eq("media sync: SHIP CALLS sync_media", /"sync_media"/.test(shipSource), true);
+
+  const mediaAt = shipSource.indexOf('"sync_media"');
+  eq(
+    "media sync: THE REBUILD RUNS AFTER THE DEPLOY",
+    mediaAt !== -1 && deployAt !== -1 && mediaAt > deployAt,
+    true,
+  );
+  eq(
+    "media sync: SHIP EXITS NONZERO WHEN THE INDEX DID NOT RECONCILE",
+    /\bmediaMiss\b/.test(guard),
+    true,
+  );
+  eq(
+    "media sync: the shipped record prints BEFORE the media miss can exit",
+    recordAt !== -1 && exitAt !== -1 && recordAt < exitAt && mediaAt < recordAt,
+    true,
+  );
+}
+
 // Read directly, not through wrangler: `d1 execute --local` creates the local database when absent.
 // Opened read only. A missing database emits no assertion, so the floor below is set for CI.
 const D1_STATE = join(root, ".wrangler", "state", "v3", "d1", "miniflare-D1DatabaseObject");
@@ -382,7 +584,7 @@ if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
 
 // Measured by running it, set for the lower environment: without a local database the three
 // assertions comparing the applied set to it do not run.
-const MINIMUM_CHECKS = 65;
+const MINIMUM_CHECKS = 111;
 tally.floor("check:migrations", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {

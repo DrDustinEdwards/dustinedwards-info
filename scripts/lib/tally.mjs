@@ -48,6 +48,19 @@ export function createTally(style = {}) {
   }
 
   /**
+   * `ok` on a JSON comparison, with both sides printed under the label when they differ.
+   *
+   * @param {string} label
+   * @param {unknown} actual
+   * @param {unknown} expected
+   */
+  function eq(label, actual, expected) {
+    const a = JSON.stringify(actual);
+    const b = JSON.stringify(expected);
+    ok(`${label}\n    expected ${b}\n    actual   ${a}`, a === b);
+  }
+
+  /**
    * The whole-gate floor, failed as one more check so the summary line counts it.
    *
    * @param {string} gate
@@ -64,6 +77,7 @@ export function createTally(style = {}) {
 
   return {
     ok,
+    eq,
     fail,
     floor,
     failed,
