@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 
 import { CopyTextButton } from "./copy-button";
+import { useDialogOpen } from "./use-dialog-open";
 import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
 
+import { anHourFromNowLocal, toIso, toLocalInput } from "~/lib/editor/datetime-local";
 import { SERP_DESCRIPTION_LIMIT } from "~/lib/seo";
 
 // Each control carries form={formId}: the editing form is outside the dialog, and association is by
@@ -56,21 +58,7 @@ export function SettingsDrawer({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  // Escape and the backdrop both fire `close`, so the parent syncs from the element.
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    const onNativeClose = () => onClose();
-    dialog.addEventListener("close", onNativeClose);
-    return () => dialog.removeEventListener("close", onNativeClose);
-  }, [onClose]);
+  useDialogOpen(ref, open, onClose);
 
   const overLimit = description.length > SERP_DESCRIPTION_LIMIT;
   const coverNeedsAlt = coverSrc.trim() !== "" && coverAlt.trim() === "";
@@ -421,7 +409,7 @@ function ScheduleField({
           checked={holding}
           onChange={(event) => {
             if (event.target.checked) {
-              const local = defaultScheduleLocal();
+              const local = anHourFromNowLocal();
               setRaw(local);
               setHolding(true);
               onPublishAtChange(toIso(local));
@@ -464,24 +452,4 @@ function ScheduleField({
       <input type="hidden" form={formId} name="publishAt" value={publishAt} />
     </div>
   );
-}
-
-/** `datetime-local` wants `YYYY-MM-DDTHH:mm` in LOCAL time. */
-function toLocalInput(iso: string) {
-  const at = Date.parse(iso);
-  if (Number.isNaN(at)) return "";
-  const local = new Date(at - new Date(at).getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
-}
-
-function toIso(local: string) {
-  if (!local) return "";
-  const at = Date.parse(local);
-  return Number.isNaN(at) ? "" : new Date(at).toISOString();
-}
-
-function defaultScheduleLocal() {
-  const soon = new Date(Date.now() + 60 * 60 * 1000);
-  const local = new Date(soon.getTime() - soon.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 16);
 }
