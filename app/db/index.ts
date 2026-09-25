@@ -685,10 +685,18 @@ export async function listMediaPage(
     if (needle) clauses.push(sql`lower(${media.tags}) LIKE ${needle}`);
   }
 
-  /* `duplicates` is not SQL: the route filters it via `mediaTwins`. */
   if (options.lens === "unattached") clauses.push(uncited(options.templateKeys));
   if (options.lens === "no-alt") clauses.push(eq(media.alt, ""));
   if (options.lens === "large") clauses.push(sql`${media.bytes} > ${LARGE_FILE_BYTES}`);
+  /*
+   * Twins are found by the digest inside the key, which SQLite cannot parse, so `mediaTwins` names
+   * them; the filter is still SQL, before LIMIT and OFFSET, or a page of twins would come back short
+   * or empty. One JSON parameter, not an IN list, so the count never meets D1's bound-parameter cap.
+   */
+  if (options.lens === "duplicates") {
+    const twinKeys = JSON.stringify([...(await mediaTwins(env)).keys()]);
+    clauses.push(sql`${media.key} IN (SELECT value FROM json_each(${twinKeys}))`);
+  }
   const where = clauses.length > 0 ? and(...clauses) : undefined;
 
   const db = getDb(env);
