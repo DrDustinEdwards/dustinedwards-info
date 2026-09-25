@@ -74,9 +74,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     // The home page is tagged with the corpus tag, so this purge reaches it.
     const purged = await purgePosts("home podcast slot");
     return data({
-      message: purged
-        ? "Home podcast saved. The home page shows it now."
-        : "Home podcast saved, but the cache purge failed, so the home page shows the old choice until its cache expires.",
+      message:
+        purged === false
+          ? "Home podcast saved, but the cache purge failed, so the home page shows the old choice until its cache expires."
+          : "Home podcast saved.",
     });
   }
   if (form.get("intent") !== "purge-zero-results") {

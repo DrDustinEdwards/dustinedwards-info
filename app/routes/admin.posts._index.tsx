@@ -315,7 +315,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         message:
           `Unpublished "${slug}". It is a draft now, so it is off the public site, ` +
           `the feeds and the sitemap. Republish it from its editor.` +
-          unpurgedNote(purged ? 0 : 1),
+          unpurgedNote(purged === false ? 1 : 0),
       };
     } catch (error) {
       return {
@@ -360,7 +360,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         try {
           const { purged, askRemoval } = await deletePost(env, { slug, actor });
           done += 1;
-          if (!purged) unpurged += 1;
+          if (purged === false) unpurged += 1;
           if (askRemoval && !askRemoval.ok) askFailures.push(`${slug}: ${askRemoval.message}`);
         } catch (error) {
           failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
@@ -404,7 +404,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           actor,
         });
         done += 1;
-        if (!purged) unpurged += 1;
+        if (purged === false) unpurged += 1;
       } catch (error) {
         failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
       }

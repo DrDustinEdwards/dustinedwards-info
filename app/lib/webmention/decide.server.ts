@@ -44,8 +44,8 @@ export async function decideMention(
       ? await deleteWebmention(env, id)
       : await decideWebmention(env, id, decision === "approve" ? "approved" : "rejected");
 
-  // Null means nothing moved (the write only touches verified rows), so there is nothing to purge.
-  // A failed purge is returned, not raised: the decision is stored and only the page is stale.
+  // Null when nothing moved (the write only touches verified rows) or the runtime cannot purge; only
+  // false is a failed purge, returned, not raised: the decision is stored and only the page is stale.
   const purged = slug ? await purgePost(slug, `mention ${decision}`) : null;
 
   return { changed: slug !== null, slug, purged };

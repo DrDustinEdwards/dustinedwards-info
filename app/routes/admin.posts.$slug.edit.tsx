@@ -197,7 +197,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       /* The delete landed, so it redirects; what it left behind travels to the list page to be said there. */
       const left = new URLSearchParams();
       if (askRemoval && !askRemoval.ok) left.append(DELETE_LEFT_PARAM, "ask");
-      if (!purged) left.append(DELETE_LEFT_PARAM, "purge");
+      if (purged === false) left.append(DELETE_LEFT_PARAM, "purge");
       if (!left.has(DELETE_LEFT_PARAM)) return redirect("/admin/posts");
       left.set("deleted", params.slug);
       return redirect(`/admin/posts?${left}`);
