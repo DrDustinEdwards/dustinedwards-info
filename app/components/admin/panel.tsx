@@ -1,4 +1,4 @@
-import type { HealthStatus, SourceResult } from "~/lib/admin/types";
+import type { SourceResult } from "~/lib/admin/types";
 
 export function Panel({
   title,
@@ -36,42 +36,6 @@ function SourceChip({ result }: { result: SourceResult<unknown> }) {
     <span className="chip chip-error" title={result.message}>
       error
     </span>
-  );
-}
-
-export function StatusDot({ status }: { status: HealthStatus }) {
-  return (
-    <>
-      <span className="status-dot" data-status={status} aria-hidden="true" />
-      <span className="sr-only">{status}</span>
-    </>
-  );
-}
-
-export function CardGrid({ children }: { children: React.ReactNode }) {
-  return <div className="card-grid">{children}</div>;
-}
-
-export function StatCard({
-  label,
-  value,
-  hint,
-  status,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  status: HealthStatus;
-}) {
-  return (
-    <article className="stat-card">
-      <header>
-        <span className="stat-card-label">{label}</span>
-        <StatusDot status={status} />
-      </header>
-      <p className="stat-card-value">{value}</p>
-      {hint ? <p className="stat-card-hint muted">{hint}</p> : null}
-    </article>
   );
 }
 
