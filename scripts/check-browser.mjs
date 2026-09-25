@@ -3395,6 +3395,9 @@ try {
     );
 
     if (slug) {
+      /* Only this navigation's requests: the listener has been on since the sweep began, and an
+         earlier surface fetching the chunk would otherwise satisfy the case below. */
+      fetched.length = 0;
       await admin.goto(`${ADMIN_ORIGIN}${slug}`, { waitUntil: "networkidle0" });
       await new Promise((r) => setTimeout(r, 2500));
       const mounted = await admin.evaluate(() => !!document.querySelector(".cm-editor"));
