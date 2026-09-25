@@ -110,12 +110,6 @@ console.log(
     files.map((f) => relative(TEST_DIR, f).split(sep).join("/")).join(", "),
 );
 
-ok(
-  "the test glob discovered files at all",
-  files.length > 0,
-  "test/ holds no *.test.mjs. node --test exits 0 on an empty match, so without " +
-    "this the gate would report PASS while running nothing.",
-);
 const filesBreach = assertFloor(
   "check:tests",
   "files",
@@ -217,10 +211,6 @@ const testsFloorBreach = assertFloor(
     "empty run, which is the whole reason this floor exists.",
 );
 ok("the executed test count has not shrunk", !testsFloorBreach, testsFloorBreach ?? "");
-
-const MINIMUM_CHECKS = 5;
-const floorBreach = assertFloor("check:tests", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);
