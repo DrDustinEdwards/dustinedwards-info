@@ -5,6 +5,7 @@
 
 import { clientIp } from "~/lib/client-ip";
 import { getEnv } from "~/lib/context";
+import { limitHit } from "~/lib/rate-limit.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { publicHealthBody } from "~/lib/health/verdicts.mjs";
 import { writeHealthSnapshot } from "~/lib/health/snapshot.server";
@@ -39,20 +40,18 @@ export async function loader({ request, context }: Route.LoaderArgs) {
    * First because everything below costs: five checks against D1, R2 and AI Search, unauthenticated.
    * Without the limiter this does not serve.
    */
-  if (!env.ASK_BUDGET) {
-    return healthJson(
-      { ok: false, checks: [{ name: "rate-limiter-unavailable", ok: false }] },
-      503,
-    );
-  }
   /*
    * A limiter that threw is not a limiter that said yes, so 503 rather than fail open. Neither name is
    * in `REPAIRABLE`, so a broken limiter alerts rather than firing a rebuild.
    */
-  let withinRate: boolean;
+  let verdict: Awaited<ReturnType<typeof limitHit>>;
   try {
-    const limiter = env.ASK_BUDGET.get(env.ASK_BUDGET.idFromName(`health:${clientIp(request)}`));
-    ({ ok: withinRate } = await limiter.hit(HEALTH_RATE_LIMIT, HEALTH_RATE_PERIOD_SECONDS));
+    verdict = await limitHit(
+      env,
+      `health:${clientIp(request)}`,
+      HEALTH_RATE_LIMIT,
+      HEALTH_RATE_PERIOD_SECONDS,
+    );
   } catch (error) {
     // Logged by name: the wire body carries names only, so this line is the whole record of why.
     console.error(
@@ -64,7 +63,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     return healthJson({ ok: false, checks: [{ name: "rate-limiter-failed", ok: false }] }, 503);
   }
 
-  if (!withinRate) {
+  if (verdict === "unavailable") {
+    return healthJson(
+      { ok: false, checks: [{ name: "rate-limiter-unavailable", ok: false }] },
+      503,
+    );
+  }
+  if (verdict === "limited") {
     return healthJson(
       { ok: false, checks: [{ name: "rate-limited", ok: false }] },
       429,
