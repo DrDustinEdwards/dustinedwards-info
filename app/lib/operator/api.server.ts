@@ -383,6 +383,8 @@ function translate(error: unknown): ToolResult {
     };
   }
 
+  // Not a recognized failure: logged with its stack, since the caller receives only the message.
+  console.error("operator tool failed with an unrecognized error", error);
   return {
     ok: false,
     status: 500,
