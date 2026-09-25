@@ -8,6 +8,7 @@ import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { blockFrom } from "./lib/source-body.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { headerConstant } from "./lib/header-constants.mjs";
 import { sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -43,20 +44,13 @@ if (!existsSync(APP_PATH)) {
 const source = readFileSync(APP_PATH, "utf8");
 const code = stripComments(source);
 
-const block = code.match(/const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/);
+const securityHeaders = headerConstant(code, "SECURITY_HEADERS");
 ok(
   "workers/app.ts declares a SECURITY_HEADERS constant",
-  Boolean(block),
+  Boolean(securityHeaders),
   "not found after stripping comments. Without it nothing below examines anything.",
 );
-
-/** @type {Record<string, string>} */
-const declared = {};
-if (block) {
-  for (const m of block[1].matchAll(/"([A-Za-z-]+)"\s*:\s*"([^"]*)"/g)) {
-    declared[m[1]] = m[2];
-  }
-}
+const declared = securityHeaders ?? {};
 
 ok(
   "the constant is not empty",
@@ -588,26 +582,13 @@ if (existsSync(PREVIEW_PATH)) {
   const previewSource = readFileSync(PREVIEW_PATH, "utf8");
   const preview = stripComments(previewSource);
 
-  const previewBlock = preview.match(/const\s+PREVIEW_HEADERS\s*(?::[^=]*)?=\s*\{([\s\S]*?)\}\s*;/);
+  const previewHeaders = headerConstant(preview, "PREVIEW_HEADERS");
   ok(
     "the route declares a PREVIEW_HEADERS constant",
-    Boolean(previewBlock),
+    Boolean(previewHeaders),
     "not found after stripping comments. Without it every value assertion below is vacuous.",
   );
-
-  /**
-   * Identifiers are captured as values too, so a swapped-in constant reports as a wrong value rather
-   * than as an absent header.
-   * @type {Record<string, string>}
-   */
-  const previewDeclared = {};
-  if (previewBlock) {
-    for (const m of previewBlock[1].matchAll(
-      /(?:"([A-Za-z-]+)"|([A-Za-z][A-Za-z-]*))\s*:\s*(?:"([^"]*)"|([A-Za-z_$][\w$]*))/g,
-    )) {
-      previewDeclared[m[1] ?? m[2]] = m[3] !== undefined ? m[3] : `<identifier ${m[4]}>`;
-    }
-  }
+  const previewDeclared = previewHeaders ?? {};
 
   ok(
     "PREVIEW_HEADERS is not empty",
@@ -909,22 +890,13 @@ ok(
 if (existsSync(HEALTH_PATH)) {
   const health = stripComments(readFileSync(HEALTH_PATH, "utf8"));
 
-  const healthBlock = health.match(/const\s+HEALTH_HEADERS\s*(?::[^=]*)?=\s*\{([\s\S]*?)\}\s*;/);
+  const healthHeaders = headerConstant(health, "HEALTH_HEADERS");
   ok(
     "the route declares a HEALTH_HEADERS constant",
-    Boolean(healthBlock),
+    Boolean(healthHeaders),
     "not found after stripping comments. Without it every assertion below is vacuous.",
   );
-
-  /** @type {Record<string, string>} */
-  const healthDeclared = {};
-  if (healthBlock) {
-    for (const m of healthBlock[1].matchAll(
-      /(?:"([A-Za-z-]+)"|([A-Za-z][A-Za-z-]*))\s*:\s*(?:"([^"]*)"|([A-Za-z_$][\w$]*))/g,
-    )) {
-      healthDeclared[m[1] ?? m[2]] = m[3] !== undefined ? m[3] : `<identifier ${m[4]}>`;
-    }
-  }
+  const healthDeclared = healthHeaders ?? {};
 
   ok(
     "HEALTH_HEADERS is not empty",
@@ -994,7 +966,7 @@ console.log("  plaintext requests are upgraded before anything else runs");
    * Measured on the wire: plain http returned the full page, and a warmed path came back a HIT carrying
    * the same nonce. So the redirect must sit in the gateway, before the loopback and anything cached.
    */
-  const appCode = stripComments(readFileSync(APP_PATH, "utf8"));
+  const appCode = code;
   const gatewayAt = appCode.search(/export\s+default\s*\{/);
   ok("the Worker exports a default gateway", gatewayAt !== -1, "nothing below examines anything");
   const fetchBody = gatewayAt === -1 ? "" : appCode.slice(gatewayAt);
