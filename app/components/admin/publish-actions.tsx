@@ -39,7 +39,7 @@ export function PublishActions({
             className={
               transition.danger ? "overflow-menu-item is-danger" : "overflow-menu-item"
             }
-            disabled={disabled}
+            disabled={disabled || busy}
           >
             {transition.label}
             <span className="overflow-menu-item-hint">
