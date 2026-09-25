@@ -73,6 +73,16 @@ function readFilters(params: URLSearchParams) {
   };
 }
 
+/** The posts list under these filters, the unset ones left out. */
+function postsHref(filters: { q: string; status: string; tag: string }) {
+  const params = new URLSearchParams();
+  if (filters.q) params.set(FILTER_KEYS.q, filters.q);
+  if (filters.status) params.set(FILTER_KEYS.status, filters.status);
+  if (filters.tag) params.set(FILTER_KEYS.tag, filters.tag);
+  const query = params.toString();
+  return query ? `/admin/posts?${query}` : "/admin/posts";
+}
+
 /** Rounded up: a post live in 30 hours is "in 2 days", never a number that has already passed. */
 function daysUntil(publishAt: Date, now: number) {
   return Math.max(1, Math.ceil((publishAt.getTime() - now) / 86_400_000));
@@ -496,12 +506,7 @@ export default function AdminPosts({
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
     );
 
-  const cancelParams = new URLSearchParams();
-  if (filters.q) cancelParams.set("q", filters.q);
-  if (filters.status) cancelParams.set("status", filters.status);
-  if (filters.tag) cancelParams.set("tag", filters.tag);
-  const cancelQuery = cancelParams.toString();
-  const cancelHref = cancelQuery ? `/admin/posts?${cancelQuery}` : "/admin/posts";
+  const cancelHref = postsHref(filters);
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -594,15 +599,10 @@ export default function AdminPosts({
         <nav className="posts-tabs" aria-label="Filter by status">
           {STATUS_TABS.map((tab) => {
             const on = filters.status === tab.value;
-            const params = new URLSearchParams();
-            if (filters.q) params.set(FILTER_KEYS.q, filters.q);
-            if (filters.tag) params.set(FILTER_KEYS.tag, filters.tag);
-            if (tab.value) params.set(FILTER_KEYS.status, tab.value);
-            const query = params.toString();
             return (
               <Link
                 key={tab.label}
-                to={query ? `/admin/posts?${query}` : "/admin/posts"}
+                to={postsHref({ ...filters, status: tab.value })}
                 aria-current={on ? "page" : undefined}
                 className="posts-tab"
               >
