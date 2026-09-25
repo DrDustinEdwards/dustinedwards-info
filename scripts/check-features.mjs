@@ -1,9 +1,9 @@
-// The route parser does not compose nested prefixes: a feature anchored to a nested public route fails
-// here, and the failure reads like rot in the anchors file when it is really this parser's limit.
+// Routes are read by importing app/routes.ts and walking its children, so a nested route is known by
+// its full path (/admin/tools) and never by its child segment alone (/tools).
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
@@ -79,34 +79,26 @@ function ok(label, condition, detail = "") {
   }
 }
 
-function declaredRoutes() {
-  // Comments first: this file's prose names paths.
-  const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
-
-  /** @type {Set<string>} */
-  const paths = new Set();
-  // index() declares the site root and carries no path argument.
-  if (/\bindex\s*\(/.test(source)) paths.add("/");
-  for (const [, path] of source.matchAll(
-    /\broute\s*\(\s*["'`]([^"'`]+)["'`]/g,
-  )) {
-    paths.add(path.startsWith("/") ? path : `/${path}`);
-  }
-  return paths;
-}
-
-/** @returns {Map<string, string>} */
-function declaredRouteModules() {
-  const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
+/**
+ * Every URL path routes.ts declares, with the module that renders it. Read by IMPORTING the config
+ * and walking children with their parent's prefix: a regex over the file saw `route("tools", ...)`
+ * under /admin as a top-level /tools, and anchors to that nonexistent URL passed.
+ *
+ * @returns {Promise<Map<string, string>>}
+ */
+async function declaredRouteModules() {
+  const { default: config } = await import(pathToFileURL(ROUTES_PATH).href);
   /** @type {Map<string, string>} */
   const out = new Map();
-  const index = source.match(/\bindex\s*\(\s*["'`]([^"'`]+)["'`]/);
-  if (index) out.set("/", join(root, "app", index[1]));
-  for (const [, path, module] of source.matchAll(
-    /\broute\s*\(\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]/g,
-  )) {
-    out.set(path.startsWith("/") ? path : `/${path}`, join(root, "app", module));
-  }
+  const walk = (/** @type {any[]} */ entries, /** @type {string} */ prefix) => {
+    for (const entry of entries) {
+      const path = entry.index ? prefix || "/" : `${prefix}/${entry.path}`.replace(/\/+/g, "/");
+      // An index child renders at its parent's path, so its module is the page there.
+      if (entry.index || !out.has(path)) out.set(path, join(root, "app", entry.file));
+      if (entry.children) walk(entry.children, path === "/" ? "" : path);
+    }
+  };
+  walk(config, "");
   return out;
 }
 
@@ -136,8 +128,8 @@ const artifactRecords =
   JSON.parse(
     readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
   ).records ?? [];
-const routes = declaredRoutes();
-const routeModules = declaredRouteModules();
+const routeModules = await declaredRouteModules();
+const routes = new Set(routeModules.keys());
 const gates = declaredGates();
 
 ok(
@@ -147,9 +139,15 @@ ok(
 );
 ok(
   "routes.ts parsed to a plausible number of routes",
-  routes.size >= 33,
-  `parsed ${routes.size}, floor 33, measured 36. The parser has stopped matching this ` +
-    `file's style, most likely for the nested children under the admin subtree.`,
+  routes.size >= 50,
+  `read ${routes.size}, floor 50, measured 55 with nested paths composed. The walk has ` +
+    `stopped descending into children, or routes.ts has lost routes.`,
+);
+ok(
+  "routes.ts: a nested route is known by its full path, never by its child segment alone",
+  routes.has("/admin/tools") && !routes.has("/tools"),
+  "the walk is flattening children to the top level again, so an anchor to a URL that " +
+    "does not exist would pass",
 );
 ok(
   "package.json declares gates",
