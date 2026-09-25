@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
-import { Form, Link, useBlocker } from "react-router";
+import { Form, Link, useBlocker, useNavigation } from "react-router";
 
 import {
   SLUG_ATTRIBUTE_PATTERN,
@@ -81,7 +81,6 @@ export function PostEditor({
   loadProblems = [],
   previewHtml,
   feedback,
-  busy,
   state,
   everPublished,
   tagOptions,
@@ -102,7 +101,6 @@ export function PostEditor({
   loadProblems?: string[];
   previewHtml?: string | null;
   feedback?: EditorFeedback | null;
-  busy?: boolean;
   state: PostState;
   everPublished: boolean;
   tagOptions: string[];
@@ -136,6 +134,13 @@ export function PostEditor({
   const [layout, setLayout] = useState<Layout>("write");
   const [preview, setPreview] = useState<{ html: string } | { error: string } | null>(null);
   const [previewing, setPreviewing] = useState(false);
+
+  /* While a submit is in flight a second one would carry the same head and read as a false conflict. */
+  const busy = useNavigation().state === "submitting";
+  const busyRef = useRef(busy);
+  useEffect(() => {
+    busyRef.current = busy;
+  }, [busy]);
 
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
@@ -260,7 +265,7 @@ export function PostEditor({
       if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "s") return;
       event.preventDefault();
       const form = formRef.current;
-      if (!form) return;
+      if (!form || busyRef.current) return;
       const intentField = keyboardIntentRef.current;
       if (intentField) intentField.disabled = false;
       form.requestSubmit();
