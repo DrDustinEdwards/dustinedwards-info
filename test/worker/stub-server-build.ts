@@ -1,11 +1,11 @@
-import type { ServerBuild } from "react-router";
-
 import {
   NO_STORE_CACHE_CONTROL,
   SHARED_CACHE_CONTROL,
   HTML_VARY_ACCEPT,
   cacheTags,
 } from "~/lib/seo";
+
+import { stubServerBuild } from "./server-build";
 
 /**
  * Stands in for the vite-built server build, so tests need no app build first and cannot
@@ -95,7 +95,7 @@ const routes: Record<string, StubRoute> = {
   },
 };
 
-const build = {
+const build = stubServerBuild({
   entry: {
     module: {
       /* Throws: every route is a resource route, so a document render means an unintended
@@ -109,21 +109,7 @@ const build = {
     },
   },
   routes,
-  assets: {
-    entry: { imports: [], module: "/stub-entry.js" },
-    routes: {},
-    url: "/stub-manifest.js",
-    version: "stub",
-  },
-  basename: "/",
-  publicPath: "/",
-  assetsBuildDirectory: "build/client",
-  future: {},
-  ssr: true,
-  isSpaMode: false,
-  prerender: [],
-  routeDiscovery: { mode: "initial", manifestPath: "/__manifest" },
-} as unknown as ServerBuild;
+});
 
 export default build;
 /* `createRequestHandler` takes the module namespace, not its default, so the fields are
