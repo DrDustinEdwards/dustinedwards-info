@@ -57,6 +57,13 @@ function flakyD1(failures: number) {
   return { ...env, DB: proxy } as unknown as Parameters<typeof savePost>[0];
 }
 
+/** Asserts `pending` is refused by a PolicyError, and returns the policy it names. */
+async function refusedPolicy(pending: Promise<unknown>) {
+  const error = await pending.catch((e: unknown) => e);
+  expect(error).toBeInstanceOf(PolicyError);
+  return (error as PolicyError).policy;
+}
+
 async function countRows(table: string, where = "", ...binds: unknown[]) {
   const row = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} ${where}`)
     .bind(...binds)
@@ -185,15 +192,16 @@ describe("savePost", () => {
   });
 
   it("REFUSES an operator's first publication, naming the policy", async () => {
-    const error = await savePost(publishEnv(), {
-      slug: "never-public",
-      raw: post("never-public", { draft: false }),
-      isNew: true,
-      actor: { kind: "operator", id: "test" },
-    }).catch((e: unknown) => e);
+    const policy = await refusedPolicy(
+      savePost(publishEnv(), {
+        slug: "never-public",
+        raw: post("never-public", { draft: false }),
+        isNew: true,
+        actor: { kind: "operator", id: "test" },
+      }),
+    );
 
-    expect(error).toBeInstanceOf(PolicyError);
-    expect((error as PolicyError).policy).toBe("first-publish-requires-admin");
+    expect(policy).toBe("first-publish-requires-admin");
     expect(gh.files.has(postPath("never-public"))).toBe(false);
   });
 
@@ -354,13 +362,14 @@ describe("deletePost", () => {
     });
 
     const before = gh.calls.length;
-    const error = await deletePost(publishEnv(), {
-      slug: "operator-cannot-delete",
-      actor: { kind: "operator", id: "test" },
-    }).catch((e: unknown) => e);
+    const policy = await refusedPolicy(
+      deletePost(publishEnv(), {
+        slug: "operator-cannot-delete",
+        actor: { kind: "operator", id: "test" },
+      }),
+    );
 
-    expect(error).toBeInstanceOf(PolicyError);
-    expect((error as PolicyError).policy).toBe("delete-requires-admin");
+    expect(policy).toBe("delete-requires-admin");
     /* The policy check comes first so a refused caller cannot learn which slugs exist
      * from the difference between two error messages. */
     expect(gh.calls.slice(before)).toHaveLength(0);

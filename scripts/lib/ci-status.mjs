@@ -1,5 +1,5 @@
 /** The workflow whose push run IS the review. Another push-triggered workflow being green is not CI. */
-export const CI_WORKFLOW_PATH = ".github/workflows/ci.yml";
+const CI_WORKFLOW_PATH = ".github/workflows/ci.yml";
 
 /**
  * Fails closed: no push run (an empty list reads as "nothing failed"), a run in flight, and any

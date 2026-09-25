@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ChildRegistry, recordedTreeLeftovers } from "../scripts/lib/child-processes.mjs";
+import { ChildRegistry, descendantPids, recordedTreeLeftovers } from "../scripts/lib/child-processes.mjs";
 
 /** @param {string} content */
 function registryWith(content) {
@@ -69,4 +69,17 @@ test("a dead runner's orphans are still found through the runner's recorded pid"
 test("the runner itself and dead pids are never leftovers", () => {
   const table = new Map([[5, { ppid: 1, command: "node scripts/check-all.mjs" }]]);
   assert.deepEqual(recordedTreeLeftovers([5, 6], table, 5), []);
+});
+
+test("THE PLANT: a dead shell's reused pid does not adopt an unrelated orphan", () => {
+  // explorer.exe's parent died long ago with pid 40; the timed-out shell was later handed pid 40.
+  const table = new Map([
+    [7, { ppid: 40, command: "c:/windows/explorer.exe" }],
+    [8, { ppid: 7, command: "chrome.exe" }],
+    [50, { ppid: 40, command: "node npx-cli.js wrangler d1 export" }],
+    [51, { ppid: 50, command: "node wrangler-dist/cli.js" }],
+  ]);
+  const found = descendantPids(40, table, "npx").sort((a, b) => a - b);
+  // Windows never clears a parent pid, so only there is the needle applied; elsewhere orphans are reparented.
+  assert.deepEqual(found, process.platform === "win32" ? [50, 51] : [7, 8, 50, 51]);
 });
