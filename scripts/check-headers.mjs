@@ -8,6 +8,7 @@ import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { blockFrom } from "./lib/source-body.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { parseJsonc } from "./lib/wrangler-surface.mjs";
 import { headerConstant } from "./lib/header-constants.mjs";
 import { sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
@@ -30,7 +31,7 @@ const RATIFIED = {
 };
 
 const tally = createTally({ separator: ": " });
-const { ok } = tally;
+const { ok, eq } = tally;
 
 console.log("\ncheck:headers\n");
 
@@ -1139,8 +1140,26 @@ console.log("  public HTML routes share one headers()");
     );
   }
 }
+/*
+ * WHICH ENTRYPOINT THE PLATFORM MAY CACHE, which a config comparison cannot judge: gateway cache on
+ * hides readership, Renderer cache off renders every request, cross_version on serves stale.
+ */
+{
+  const example = parseJsonc(join(root, "wrangler.jsonc.example"));
+
+  eq("the example config still enables Workers Cache at the top level", example.cache?.enabled, true);
+  eq("the GATEWAY entrypoint has cache DISABLED", example.exports?.default?.cache?.enabled, false);
+  eq("the RENDERER entrypoint has cache ENABLED", example.exports?.Renderer?.cache?.enabled, true);
+  /* ABSENT rather than false: writing it would be a second place to state a safe default. */
+  eq(
+    "cross_version_cache is not enabled, so a deploy invalidates the cache",
+    example.cache?.cross_version_cache ?? false,
+    false,
+  );
+}
+
 /* Measured by running this gate, never summed. */
-const MINIMUM_CHECKS = 228;
+const MINIMUM_CHECKS = 232;
 tally.floor("check:headers", "checks", MINIMUM_CHECKS);
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);

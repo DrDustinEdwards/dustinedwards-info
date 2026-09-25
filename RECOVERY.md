@@ -400,7 +400,7 @@ longer contains. The prune matters: upload alone is an upsert, so a deleted post
 would stay answerable forever.
 
 **Drafts must never reach this index.** It is a public, unauthenticated surface.
-`publishableForAsk()` is the gate and `check:policy` covers it.
+`publishableForAsk()` is the gate and `check:ask-guards` covers it.
 
 ---
 
