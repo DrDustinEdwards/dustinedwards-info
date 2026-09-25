@@ -16,14 +16,14 @@ const CONFIG = join(root, "wrangler.jsonc");
  *
  * @returns {any}
  */
-export function readWranglerConfig() {
+function readWranglerConfig() {
   return parseJsonc(CONFIG);
 }
 
 /**
  * @returns {Record<string, string>}
  */
-export function bucketNames() {
+function bucketNames() {
   const config = readWranglerConfig();
   /** @type {Record<string, string>} */
   const out = {};
