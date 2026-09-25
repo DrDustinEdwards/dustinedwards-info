@@ -440,11 +440,11 @@ const DECLARED_ELSEWHERE = new Map([
 
   /* Scope, both sides: an empty set on either side fails for the wrong reason. */
   assert(
-    `resolution scope: ${used.size} var() token(s) found in app.css`,
+    `resolution scope: ${used.size} var() token(s) found in the source stylesheets`,
     used.size >= 63,
   );
   assert(
-    `resolution scope: ${declaredAnywhere.size} token declaration(s) found in app.css`,
+    `resolution scope: ${declaredAnywhere.size} token declaration(s) found in the source stylesheets`,
     declaredAnywhere.size >= 72,
   );
 
@@ -578,17 +578,34 @@ const NON_PARTICIPATING = new Map([
 }
 
 /**
+ * The declarations under `selector` inside the `@media ${query}` block, and only inside it: the
+ * search is bounded by the block's own closing brace, so a selector missing from the tier throws
+ * rather than matching the next rule of that name further down the file.
+ *
  * @param {string} label
+ * @param {string} query
  * @param {string} selector
  */
-function contrastTierBlock(label, selector) {
-  const at = css.indexOf("@media (prefers-contrast: more)");
-  if (at === -1) throw new Error("prefers-contrast tier not found in app.css");
-  const region = css.slice(at);
+function contrastTierBlock(label, query, selector) {
+  const head = new RegExp(`@media\\s*${query.replace(/[()]/g, "\\$&")}\\s*\\{`).exec(css);
+  if (!head) throw new Error(`${label}: @media ${query} not found in app.css`);
+  let depth = 0;
+  let end = -1;
+  for (let i = head.index + head[0].length - 1; i < css.length; i += 1) {
+    if (css[i] === "{") depth += 1;
+    else if (css[i] === "}" && --depth === 0) {
+      end = i;
+      break;
+    }
+  }
+  if (end === -1) throw new Error(`${label}: @media ${query} is never closed`);
+  const region = css.slice(head.index + head[0].length, end);
   const sel = region.indexOf(selector);
-  if (sel === -1) throw new Error(`${label}: not found inside the tier`);
+  if (sel === -1) throw new Error(`${label}: ${selector} not found inside @media ${query}`);
   const open = region.indexOf("{", sel + selector.length - 1);
+  if (open === -1) throw new Error(`${label}: ${selector} has no block`);
   const close = region.indexOf("}", open);
+  if (close === -1) throw new Error(`${label}: ${selector}'s block is never closed`);
   const body = region.slice(open + 1, close);
 
   /** @type {Record<string, string>} */
@@ -599,14 +616,34 @@ function contrastTierBlock(label, selector) {
 }
 
 {
-  const tierLight = contrastTierBlock("tier light", '[data-theme="light"]');
-  const tierDark = contrastTierBlock("tier dark", '[data-theme="dark"]');
+  const TIER = "(prefers-contrast: more)";
+  const tierLight = contrastTierBlock("tier light", TIER, '[data-theme="light"]');
+  const tierDark = contrastTierBlock("tier dark", TIER, '[data-theme="dark"]');
+  /* A reader on "system" whose OS is dark gets THIS block, not the attribute one. Held to the
+     attribute tier by parity, as the base palettes are, so the one that is measured below is the
+     one they get. */
+  const tierSystemDark = contrastTierBlock(
+    "tier system dark",
+    `${TIER} and (prefers-color-scheme: dark)`,
+    ":root:not([data-theme])",
+  );
+  assert(
+    `system-dark prefers-contrast declares the same tokens as the dark tier ` +
+      `(${Object.keys(tierSystemDark).sort().join(", ")})`,
+    Object.keys(tierSystemDark).sort().join() === Object.keys(tierDark).sort().join(),
+  );
+  for (const [name, value] of Object.entries(tierDark)) {
+    assert(
+      `system-dark prefers-contrast ${name} ${tierSystemDark[name]} equals the dark tier's ${value}`,
+      String(tierSystemDark[name] ?? "").toLowerCase() === value.toLowerCase(),
+    );
+  }
 
   for (const [mode, tier, base] of /** @type {Array<[string, Record<string,string>, Record<string,string>]>} */ ([
     ["light", tierLight, light],
     ["dark", tierDark, darkAttr],
   ])) {
-    for (const surface of ["--paper", "--paper", "--surface-popover"]) {
+    for (const surface of ["--paper", "--surface-popover"]) {
       checks += 1;
       const ratio = contrast(tier["--text-secondary"], base[surface]);
       if (ratio < TEXT) {
@@ -741,8 +778,12 @@ if (existsSync(assetDir)) {
     0,
     ...sheets.map((f) => statSync(join(assetDir, f)).mtimeMs),
   );
-  /* Stale fails, absent does not: editing a source is what makes the build stale. */
-  if (newest < cssMtime) {
+  /* Stale fails, absent does not: editing a source is what makes the build stale. An asset
+     directory with no CSS at all is its own failure, said as itself rather than as "stale". */
+  if (sheets.length === 0) {
+    builtNote = "build/client/assets holds no CSS";
+    fail("build/client/assets exists but carries no CSS. Run npm run build.");
+  } else if (newest < cssMtime) {
     builtNote = "build is OLDER than a source stylesheet";
     fail(
       "the built stylesheet is not stale: a build exists but predates a source " +
@@ -752,10 +793,9 @@ if (existsSync(assetDir)) {
     sheets.length = 0;
   }
   const built = sheets.map((f) => readFileSync(join(assetDir, f), "utf8")).join("\n");
-  if (sheets.length === 0) {
-  } else if (!built) {
-    fail("build/client/assets exists but carries no CSS");
-  } else {
+  if (sheets.length > 0 && !built.trim()) {
+    fail("build/client/assets carries only empty CSS files. Run npm run build.");
+  } else if (sheets.length > 0) {
     // Compare normalized values: Lightning CSS shortens #ffffff to #fff.
     /** @param {string} v */
     const norm = (v) => {
@@ -882,6 +922,8 @@ function opacityExempt(selectorGroup) {
 {
   /** @type {Array<{ file: string, selector: string, value: string }>} */
   const partial = [];
+  /** @type {string[]} */
+  const unparsed = [];
   let declarations = 0;
 
   for (const file of stylesheetPaths()) {
@@ -892,9 +934,17 @@ function opacityExempt(selectorGroup) {
     for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const selector = match[1].trim().split("\n").map((l) => l.trim()).join(" ");
       const block = match[2];
-      for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([0-9.]+)\s*(?:;|$)/g)) {
+      /* Every opacity declaration, whatever its value grammar: one this scan cannot read as a
+         number (var(), calc()) is reported, not skipped, or it would escape classification. */
+      for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([^;]+?)\s*(?:;|$)/g)) {
         declarations += 1;
-        const value = Number(decl[1]);
+        const raw = decl[1].replace(/\s*!important$/, "");
+        const number = /^(\d*\.?\d+)(%?)$/.exec(raw);
+        if (!number) {
+          unparsed.push(`${name} ${selector}: opacity ${decl[1]}`);
+          continue;
+        }
+        const value = Number(number[1]) / (number[2] === "%" ? 100 : 1);
         if (value > 0 && value < 1) partial.push({ file: name, selector, value: decl[1] });
       }
     }
@@ -904,6 +954,13 @@ function opacityExempt(selectorGroup) {
   assert(
     `the opacity scan read declarations at all (${declarations} found)`,
     declarations >= 8,
+  );
+
+  assert(
+    unparsed.length === 0
+      ? "every opacity value is a number this scan can classify"
+      : `UNREADABLE opacity value(s), so they cannot be classified: ${unparsed.join("; ")}`,
+    unparsed.length === 0,
   );
 
   const unclassified = partial.filter((d) => !opacityExempt(d.selector));
