@@ -2,7 +2,7 @@ import { parseHTML } from "linkedom";
 
 import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
 import { readCapped } from "~/lib/read-capped.mjs";
-import { collapseExcerpt, sameDocument } from "~/lib/webmention/urls.mjs";
+import { collapseExcerpt, sameDocument, sourceVerdict } from "~/lib/webmention/urls.mjs";
 
 // linkedom's document, not the DOM's.
 type ParsedDocument = ReturnType<typeof parseHTML>["document"];
@@ -15,6 +15,10 @@ const MAX_SOURCE_BYTES = 1024 * 1024;
 
 const SOURCE_TIMEOUT_MS = 5000;
 
+// Redirects are followed by hand, each hop re-checked: an automatic follow would let a public source
+// bounce the fetch to a loopback name or an IP literal the route refused on the first URL.
+const MAX_REDIRECTS = 5;
+
 // A fixed set, not a message: free text would put a remote server's prose into the admin plane.
 export const FAILURE_REASONS = {
   fetchError: "fetch-error",
@@ -22,6 +26,7 @@ export const FAILURE_REASONS = {
   tooLarge: "too-large",
   notHtml: "not-html",
   noLink: "no-link",
+  redirectRefused: "redirect-refused",
 } as const;
 
 // No h-card: the name is the source's hostname, a fact rather than a guess. `u-url` is kept only if it
@@ -70,19 +75,40 @@ export async function inspectSource(
   // otherwise be misreported as a fetch error.
   const signal = AbortSignal.timeout(SOURCE_TIMEOUT_MS);
 
+  // The target is on this site, so its origin is one the source may not redirect back to.
+  const siteOrigins = [new URL(targetUrl).origin];
   let response: Response;
-  try {
-    response = await fetch(sourceUrl, {
-      method: "GET",
-      headers: { accept: "text/html, application/xhtml+xml" },
-      redirect: "follow",
-      signal,
-    });
-  } catch {
-    return {
-      status: "failed",
-      failureReason: signal.aborted ? FAILURE_REASONS.timeout : FAILURE_REASONS.fetchError,
-    };
+  let at = sourceUrl;
+  for (let hop = 0; ; hop += 1) {
+    try {
+      response = await fetch(at, {
+        method: "GET",
+        headers: { accept: "text/html, application/xhtml+xml" },
+        redirect: "manual",
+        signal,
+      });
+    } catch {
+      return {
+        status: "failed",
+        failureReason: signal.aborted ? FAILURE_REASONS.timeout : FAILURE_REASONS.fetchError,
+      };
+    }
+    const location = response.headers.get("location");
+    if (response.status < 300 || response.status > 399 || !location) break;
+    await response.body?.cancel();
+    if (hop >= MAX_REDIRECTS) {
+      return { status: "failed", failureReason: FAILURE_REASONS.redirectRefused };
+    }
+    let next: string;
+    try {
+      next = new URL(location, at).href;
+    } catch {
+      return { status: "failed", failureReason: FAILURE_REASONS.redirectRefused };
+    }
+    if (!sourceVerdict(next, targetUrl, siteOrigins).ok) {
+      return { status: "failed", failureReason: FAILURE_REASONS.redirectRefused };
+    }
+    at = next;
   }
 
   if (!response.ok) {
