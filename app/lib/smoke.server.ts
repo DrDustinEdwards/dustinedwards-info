@@ -15,7 +15,7 @@ const SMOKE_RATE_PERIOD_SECONDS = 60;
 const MIN_TOKEN_LENGTH = 32;
 
 // `absent` is not a failure: most `/admin` requests are a browser and must fall through to the session gate.
-export type SmokeResult =
+type SmokeResult =
   | { kind: "ok"; id: string; email: string }
   | { kind: "absent" }
   | { kind: "refused"; status: number; error: string; retryAfter?: number };

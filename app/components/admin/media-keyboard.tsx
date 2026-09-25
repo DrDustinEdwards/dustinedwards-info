@@ -9,8 +9,8 @@ export function toast(message: string) {
 }
 
 // Always in the DOM once mounted: a live region inserted when it gets content is often not announced.
-export function MediaToast({ initialMessage = "" }: { initialMessage?: string }) {
-  const [message, setMessage] = useState(initialMessage);
+export function MediaToast() {
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let timer = 0;
@@ -37,8 +37,8 @@ export function MediaToast({ initialMessage = "" }: { initialMessage?: string })
 
 // Rows come from rendered geometry, not a column model: the browser decides the column count, and a
 // second layout engine would disagree with it at the widths nobody tested.
-export function MediaKeyboard({ initialActive = "" }: { initialActive?: string }) {
-  const [active, setActive] = useState(initialActive);
+export function MediaKeyboard() {
+  const [active, setActive] = useState("");
 
   useEffect(() => {
     for (const el of document.querySelectorAll("[data-tile]")) {

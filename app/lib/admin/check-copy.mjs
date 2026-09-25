@@ -7,7 +7,7 @@
  */
 
 /** @type {Record<string, CheckCopy>} */
-export const CHECK_COPY = {
+const CHECK_COPY = {
   "content-drift": {
     name: "Posts on the site",
     failing: (counts) =>

@@ -26,7 +26,6 @@ export async function loader({ context }: Route.LoaderArgs) {
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
   return data({
     checks: health.checks,
-    failed: health.failed.length,
     stores: {
       headSha: stores.headSha,
       artifactPosts: stores.artifactPosts,
