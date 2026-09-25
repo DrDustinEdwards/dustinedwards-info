@@ -209,3 +209,11 @@ test("every deferred check converging leaves no miss", () => {
     "and says so for every one rather than staying quiet",
   );
 });
+
+test("a check whose ok is not exactly true is a failure, not a pass", () => {
+  for (const ok of ["false", 1, null, undefined]) {
+    const body = JSON.stringify({ ok: true, checks: [{ name: "content-drift", ok }] });
+    const verdict = readinessVerdict(200, body);
+    assert.equal(verdict.ok, false, `ok: ${JSON.stringify(ok)} must not pass`);
+  }
+});

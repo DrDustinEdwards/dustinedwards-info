@@ -149,3 +149,21 @@ test("a malformed reading is not mistaken for convergence", async () => {
   assert.equal(out.converged, false);
   assert.equal(out.latest, null);
 });
+
+test("a thrown read's reason reaches the poll callback and the result", async () => {
+  const clock = fakeClock();
+  /** @type {Array<string | null>} */
+  const seen = [];
+  const reading = async () => {
+    throw new Error("ECONNRESET");
+  };
+  const out = await awaitAskConvergence({
+    reading,
+    sleep: clock.sleep,
+    now: clock.now,
+    onPoll: ({ error }) => seen.push(error),
+  });
+  assert.equal(out.converged, false);
+  assert.equal(out.lastError, "ECONNRESET");
+  assert.ok(seen.length > 0 && seen.every((e) => e === "ECONNRESET"));
+});

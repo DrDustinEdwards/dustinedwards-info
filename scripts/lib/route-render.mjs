@@ -5,7 +5,7 @@
 
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
@@ -44,7 +44,9 @@ export async function bundleRoutes(entries) {
   const stubServer = {
     name: "stub-server-only",
     setup(b) {
-      b.onResolve({ filter: /^~\/(db|lib\/context|lib\/auth)/ }, (args) => ({
+      // Bounded and named, so a new `~/lib/authoring` or `~/dbx` is not stubbed by accident. The two
+      // auth-* modules were stubbed by the old unbounded prefix and still are, by name.
+      b.onResolve({ filter: /^~\/(db|lib\/context|lib\/auth|lib\/auth-client|lib\/auth-rate)(?:[/.]|$)/ }, (args) => ({
         path: args.path,
         namespace: "stub",
       }));
@@ -69,30 +71,52 @@ export async function bundleRoutes(entries) {
     },
   };
 
-  await build({
-    entryPoints: entries.map((entry) => join(root, entry)),
-    bundle: true,
-    platform: "node",
-    format: "esm",
-    outdir: outDir,
-    // Same instances as the harness, or the stub router's context never reaches the components.
-    external: ["react", "react/jsx-runtime", "react-dom", "react-dom/server", "react-router"],
-    jsx: "automatic",
-    plugins: [stubServer],
-    logLevel: "silent",
-    // gray-matter calls require("fs") lazily, and esbuild's __require shim throws for it unless a
-    // real `require` is in scope.
-    banner: {
-      js: "import { createRequire as __nodeCreateRequire } from 'node:module';\nconst require = __nodeCreateRequire(import.meta.url);",
-    },
+  /** @type {import("esbuild").BuildResult<{ metafile: true }>} */
+  let result;
+  try {
+    result = await build({
+      entryPoints: entries.map((entry) => join(root, entry)),
+      // The output for each entry is read back from here: esbuild keeps entries' relative directories
+      // under outdir, so a path built from the entry's basename named a file that was not there.
+      metafile: true,
+      bundle: true,
+      platform: "node",
+      format: "esm",
+      outdir: outDir,
+      // Same instances as the harness, or the stub router's context never reaches the components.
+      external: ["react", "react/jsx-runtime", "react-dom", "react-dom/server", "react-router"],
+      jsx: "automatic",
+      plugins: [stubServer],
+      logLevel: "silent",
+      // gray-matter calls require("fs") lazily, and esbuild's __require shim throws for it unless a
+      // real `require` is in scope.
+      banner: {
+        js: "import { createRequire as __nodeCreateRequire } from 'node:module';\nconst require = __nodeCreateRequire(import.meta.url);",
+      },
+    });
+  } catch (error) {
+    // The directory is inside the repo's cache, so a failed build must not leave it behind; the error
+    // still goes to the caller.
+    await rm(outDir, { recursive: true, force: true });
+    throw error;
+  }
+
+  /** @type {Map<string, string>} entry, repo-relative with forward slashes -> absolute output */
+  const byEntry = new Map();
+  for (const [out, meta] of Object.entries(result.metafile.outputs)) {
+    if (!meta.entryPoint) continue;
+    const entry = relative(root, resolve(process.cwd(), meta.entryPoint)).replaceAll("\\", "/");
+    byEntry.set(entry, resolve(process.cwd(), out));
+  }
+  const files = entries.map((entry) => {
+    const file = byEntry.get(entry.replaceAll("\\", "/"));
+    if (!file) throw new Error(`esbuild produced no output for ${entry}`);
+    return file;
   });
 
   return {
     outDir,
-    files: entries.map((entry) => {
-      const base = entry.split("/").pop() ?? entry;
-      return join(outDir, base.replace(/\.tsx?$/, ".js"));
-    }),
+    files,
     cleanup: () => rm(outDir, { recursive: true, force: true }),
   };
 }
