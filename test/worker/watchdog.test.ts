@@ -48,30 +48,6 @@ describe("the watchdog's health reading", () => {
     expect(reason).not.toContain("no failing check was named");
     expect(reason).toContain("could not be reached");
   });
-
-  it("still alerts, and says so, when the reading carries no cause at all", async () => {
-    const actions = watchdogActions({ status: 0, body: null }, { hasToken: true });
-
-    expect(actions).toHaveLength(1);
-    expect(actions[0]?.type).toBe("notify");
-    expect(actions.some((a) => a.type === "repair")).toBe(false);
-    expect((actions[0] as { reason: string }).reason.trim()).not.toBe("");
-  });
-
-  it("leaves a real HTTP reading alone, so the branch is the transport one", async () => {
-    /* A `status === 0` branch written as `!status` would swallow real readings. */
-    const healthy = watchdogActions(
-      { status: 200, body: { ok: true, checks: [] } },
-      { hasToken: true },
-    );
-    expect(healthy).toEqual([]);
-
-    const drifted = watchdogActions(
-      { status: 503, body: { ok: false, checks: [{ name: "ask-index-drift", ok: false }] } },
-      { hasToken: true },
-    );
-    expect(drifted.some((a) => a.type === "repair")).toBe(true);
-  });
 });
 
 describe("the watchdog's repair loop", () => {

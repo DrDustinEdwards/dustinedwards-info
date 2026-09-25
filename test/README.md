@@ -77,6 +77,6 @@ Anything needing the network, a deployed database, a bucket, or a browser.
 Those are `check:all --remote` and `verify-live`, and they are separate because
 they cannot run on a plane and because `verify-live` bills money per Ask probe.
 `test/worker/` is offline too, and structurally so: its setup installs a `fetch`
-that THROWS on any outbound call, and one of its own cases proves that stub is
-installed. It found its first violation of that rule on its first run, when
-`/api/health`'s content-drift check reached `api.github.com` for real.
+that THROWS on any outbound call before every case. It found its first violation
+of that rule on its first run, when `/api/health`'s content-drift check reached
+`api.github.com` for real.

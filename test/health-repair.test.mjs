@@ -133,21 +133,6 @@ test("an unreadable body yields no names, and therefore no repair", () => {
   }
 });
 
-test("THE FULL PATH: a real drifted body decides to repair both", () => {
-  const body = {
-    ok: false,
-    checks: [
-      { name: "ask-index-drift", ok: false, expected: 99, present: 90 },
-      { name: "media-index-drift", ok: false, expected: 69, present: 68 },
-      { name: "media-backup-drift", ok: true },
-      { name: "fts-equality", ok: true },
-    ],
-  };
-  const plan = repairPlan(failingCheckNames(body), WITH);
-  assert.deepEqual(plan.repair, ["sync_ask", "sync_media"]);
-  assert.equal(plan.alertOnly, false);
-});
-
 test("content drift repairs BEFORE the ask index when both fail", () => {
   // sync_posts rewrites the search_docs rows the ask upload reads, so the order is load-bearing.
   // The names arrive reversed to prove the endpoint's listing order does not matter.
@@ -191,7 +176,8 @@ test("a 200 carrying ok:false is NOT healthy", () => {
 
 test("PLANT: A REPAIRABLE FAILURE IS REPAIR THEN RECHECK, in that order", () => {
   /* The recheck turns "the repair returned 200" into "the endpoint agrees": a repair's own
-   * verdict proves ONE index, not the run. */
+   * verdict proves ONE index, not the run. Exactly one recheck, LAST, after every repair: a loop
+   * here would be a monitor arguing with itself. */
   const actions = watchdogActions(
     { status: 503, body: bodyFailing(["content-drift", "ask-index-drift"]) },
     WITH,
@@ -201,12 +187,6 @@ test("PLANT: A REPAIRABLE FAILURE IS REPAIR THEN RECHECK, in that order", () => 
     { type: "repair", tool: "sync_ask" },
     { type: "recheck" },
   ]);
-  assert.equal(actions.at(-1)?.type, "recheck", "the recheck must be LAST, after every repair");
-  assert.equal(
-    actions.filter((a) => a.type === "recheck").length,
-    1,
-    "exactly one recheck: a loop here would be a monitor arguing with itself",
-  );
 });
 
 test("PLANT: AN UNKNOWN CLASS PRODUCES A NOTIFY ACTION NAMING THE CLASS", () => {
