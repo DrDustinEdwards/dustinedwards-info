@@ -64,17 +64,29 @@ export function normalizeBody(body: string) {
 
 /**
  * Loose on purpose, since the schema judges the content. A half entry is dropped: it would fail
- * the save on data the author never typed.
+ * the save on data the author never typed. A value that is not a JSON array is refused, not read as
+ * empty: written as empty, the save would erase the post's further reading.
  */
 function parseFurtherReading(raw: string) {
   if (!raw.trim()) return [] as { title: string; url: string }[];
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
-    return [];
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new FrontmatterError(
+      `The further reading list did not arrive as JSON (${detail}), so nothing was saved rather ` +
+        `than saving the post without it.`,
+      "furtherReading",
+    );
   }
-  if (!Array.isArray(parsed)) return [];
+  if (!Array.isArray(parsed)) {
+    throw new FrontmatterError(
+      "The further reading list did not arrive as a list, so nothing was saved rather than saving " +
+        "the post without it.",
+      "furtherReading",
+    );
+  }
   return parsed.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
     const title = (item as Record<string, unknown>).title;
@@ -85,14 +97,49 @@ function parseFurtherReading(raw: string) {
   });
 }
 
+/** A field value that cannot be written into frontmatter without changing its structure. */
+export class FrontmatterError extends Error {
+  field: string;
+
+  constructor(message: string, field: string) {
+    super(message);
+    this.name = "FrontmatterError";
+    this.field = field;
+  }
+}
+
+// What would end or reshape a plain YAML scalar: a newline, a leading indicator, `: ` or ` #`, or edge
+// whitespace. These keys stay unquoted because quoting changes their type (a date, a number), so an
+// unsafe value is refused by name rather than written.
+const UNSAFE_PLAIN = /[\r\n]|^[\s\-?:,[\]{}#&*!|>'"%@`]|:\s|\s#|:$|\s$/;
+
+function plain(field: keyof PostFields, key: string, value: string) {
+  if (UNSAFE_PLAIN.test(value)) {
+    throw new FrontmatterError(
+      `The ${key} ${JSON.stringify(value)} cannot be written into the frontmatter as it is: it ` +
+        `contains a newline or YAML punctuation that would change the file's structure.`,
+      field,
+    );
+  }
+  return value;
+}
+
+// A tag inside the flow sequence stays bare when it is plainly a word, so existing files keep their
+// bytes; anything else (a comma, a bracket, a `#`, a quote) is written as a JSON string.
+const BARE_TAG = /^[a-z0-9][a-z0-9._+-]*( [a-z0-9._+-]+)*$/;
+
+function tagScalar(tag: string) {
+  return BARE_TAG.test(tag) ? tag : JSON.stringify(tag);
+}
+
 export function serializePost(fields: PostFields) {
   const lines = [
     "---",
     `title: ${JSON.stringify(fields.title)}`,
-    `slug: ${fields.slug}`,
+    `slug: ${plain("slug", "slug", fields.slug)}`,
     `description: ${JSON.stringify(fields.description)}`,
-    `date: ${fields.date}`,
-    `tags: [${fields.tags.join(", ")}]`,
+    `date: ${plain("date", "date", fields.date)}`,
+    `tags: [${fields.tags.map(tagScalar).join(", ")}]`,
     `draft: ${fields.draft ? "true" : "false"}`,
   ];
 
@@ -101,12 +148,14 @@ export function serializePost(fields: PostFields) {
   }
 
   if (fields.firstPublished.trim()) {
-    lines.push(`first_published: ${fields.firstPublished.trim()}`);
+    lines.push(
+      `first_published: ${plain("firstPublished", "first_published", fields.firstPublished.trim())}`,
+    );
   }
 
   if (fields.coverSrc.trim()) {
     lines.push("cover:");
-    lines.push(`  src: ${fields.coverSrc.trim()}`);
+    lines.push(`  src: ${plain("coverSrc", "cover src", fields.coverSrc.trim())}`);
     lines.push(`  alt: ${JSON.stringify(fields.coverAlt)}`);
   }
 
@@ -116,14 +165,16 @@ export function serializePost(fields: PostFields) {
     lines.push(`series: ${JSON.stringify(fields.series.trim())}`);
   }
   // Unquoted: `part` is a number in the schema and a quoted scalar is a string.
-  if (fields.part.trim()) lines.push(`part: ${fields.part.trim()}`);
+  if (fields.part.trim()) lines.push(`part: ${plain("part", "part", fields.part.trim())}`);
   if (fields.ogTitle.trim()) {
     lines.push(`og_title: ${JSON.stringify(fields.ogTitle.trim())}`);
   }
   if (fields.ogDescription.trim()) {
     lines.push(`og_description: ${JSON.stringify(fields.ogDescription.trim())}`);
   }
-  if (fields.updated.trim()) lines.push(`updated: ${fields.updated.trim()}`);
+  if (fields.updated.trim()) {
+    lines.push(`updated: ${plain("updated", "updated", fields.updated.trim())}`);
+  }
 
   const reading = parseFurtherReading(fields.furtherReading);
   if (reading.length > 0) {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Form, Link } from "react-router";
+import { Form, Link, useNavigate } from "react-router";
 
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 
@@ -29,6 +29,7 @@ export function MediaConfirm({
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
   const panel = useRef<HTMLDivElement | null>(null);
+  const navigate = useNavigate();
 
   const satisfied = !requireTyped || typed.trim() === requireTyped;
 
@@ -43,7 +44,9 @@ export function MediaConfirm({
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopPropagation();
-        onCancel?.();
+        // The same exit as the Cancel control: a link when there is one, else the handler.
+        if (cancelHref) navigate(cancelHref, { preventScrollReset: true });
+        else onCancel?.();
         return;
       }
       if (event.key !== "Tab") return;
@@ -68,7 +71,7 @@ export function MediaConfirm({
     };
     window.addEventListener("keydown", onKey, true);
     return () => window.removeEventListener("keydown", onKey, true);
-  }, [open, onCancel]);
+  }, [open, onCancel, cancelHref, navigate]);
 
   if (!open) return null;
 

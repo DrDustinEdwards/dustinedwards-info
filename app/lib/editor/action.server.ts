@@ -6,7 +6,7 @@ import {
   savePost,
   validateAndRender,
 } from "./publish.server";
-import { fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
+import { FrontmatterError, fieldsFromForm, serializePost, type PostFields } from "./frontmatter";
 import type { Actor, SaveOutcome } from "./publish-policy.mjs";
 import { readIntent } from "./intent.mjs";
 import { DRAFT_BY_INTENT, PUBLISH_CONFIRMED_INTENT } from "./publish-transition.mjs";
@@ -35,15 +35,22 @@ export async function handleEditorAction(
   const rawIntent = readIntent(form);
   const isNew = form.get("isNew") === "1";
   const submittedHead = String(form.get("headSha") ?? "");
-  const raw = serializePost(fields);
 
-  const fail = async (message: string, extra: { field?: string; line?: number; conflict?: boolean } = {}) => ({
-    kind: "problem" as const,
-    fields,
-    problem: { message, ...extra },
-    // Re-read head so a retry after a conflict is against current state.
-    headSha: await currentHead(env).catch(() => submittedHead),
-  });
+  const fail = async (message: string, extra: { field?: string; line?: number; conflict?: boolean } = {}) => {
+    // Re-read head so a retry after a conflict is against current state. A failed re-read keeps the
+    // submitted head and says so, because a retry against it may then report a conflict.
+    let headSha = submittedHead;
+    let note = "";
+    try {
+      headSha = await currentHead(env);
+    } catch (error) {
+      console.error("editor could not re-read the head after a failure", error);
+      note =
+        ` (The repository head could not be re-read: ` +
+        `${error instanceof Error ? error.message : String(error)}. A retry may report a conflict.)`;
+    }
+    return { kind: "problem" as const, fields, problem: { message: message + note, ...extra }, headSha };
+  };
 
   if (rawIntent === null) {
     return fail(
@@ -64,6 +71,8 @@ export async function handleEditorAction(
   }
 
   try {
+    // Inside the try: a field that would reshape the frontmatter is refused as a problem on that field.
+    const raw = serializePost(fields);
     if (intent === "preview") {
       const record = await validateAndRender(env, fields.slug, raw);
       return { kind: "preview", fields, previewHtml: record.html, headSha: submittedHead };
@@ -94,9 +103,14 @@ export async function handleEditorAction(
     if (error instanceof EditorError) {
       return fail(error.message, { field: error.field, line: error.line });
     }
+    if (error instanceof FrontmatterError) {
+      return fail(error.message, { field: error.field });
+    }
     if (error instanceof GitHubError) {
       return fail(error.message, { conflict: error.conflict });
     }
+    // Not a recognized failure: logged with its stack, since the editor shows only the message.
+    console.error("editor action failed with an unrecognized error", error);
     return fail(error instanceof Error ? error.message : String(error));
   }
 }

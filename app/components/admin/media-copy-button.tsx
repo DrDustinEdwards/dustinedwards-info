@@ -14,8 +14,9 @@ export function CopyButton({
       title={value}
       onClick={(event) => {
         const button = event.currentTarget;
-        navigator.clipboard
-          .writeText(value)
+        // Inside a promise: with no clipboard (an insecure context) the call throws before any promise exists.
+        Promise.resolve()
+          .then(() => navigator.clipboard.writeText(value))
           .then(() => {
             button.dataset.copied = "yes";
             // Announced too: the data attribute drives a ::after that assistive technology cannot see.
@@ -26,6 +27,7 @@ export function CopyButton({
           })
           .catch(() => {
             button.dataset.copied = "no";
+            toast(`Copy failed. The address is ${value}`);
           });
       }}
     >

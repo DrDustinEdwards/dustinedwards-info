@@ -258,23 +258,30 @@ export default function MarkdownEditor({
     return pool.slice(0, LINK_RESULT_LIMIT);
   })();
 
+  // Callers `void` this, so every failure, a network error included, must end here as a message.
   const uploadFile = async (file: File) => {
     setUploadError(null);
     setUpload({ url: "", name: file.name });
-    const form = new FormData();
-    form.set("file", file);
-    const response = await fetch("/admin/media/upload", { method: "POST", body: form });
-    if (!response.ok) {
-      const detail = await response
-        .json<{ error?: string }>()
-        .catch(() => ({}) as { error?: string });
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/admin/media/upload", { method: "POST", body: form });
+      if (!response.ok) {
+        // The status is the fallback when the body is not the route's JSON error.
+        const detail = await response
+          .json<{ error?: string }>()
+          .catch(() => ({}) as { error?: string });
+        setUpload(null);
+        setUploadError(detail.error ?? `Upload failed (${response.status}).`);
+        return;
+      }
+      const { url } = await response.json<{ url: string }>();
+      setUpload({ url, name: file.name });
+      setAlt("");
+    } catch (error) {
       setUpload(null);
-      setUploadError(detail.error ?? `Upload failed (${response.status}).`);
-      return;
+      setUploadError(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const { url } = await response.json<{ url: string }>();
-    setUpload({ url, name: file.name });
-    setAlt("");
   };
 
   const openLinkPalette = (view: EditorView) => {
