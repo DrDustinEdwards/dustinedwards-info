@@ -1,4 +1,4 @@
-import { cloudflareContext } from "~/lib/context";
+import { getEnv, getExecutionContext } from "~/lib/context";
 import type { RouterContextProvider } from "react-router";
 import { errorMessage } from "~/lib/error-message.mjs";
 
@@ -84,7 +84,8 @@ export async function getCitationCounts(
   context: Readonly<RouterContextProvider>,
   dois: string[],
 ): Promise<Record<string, CitationEntry>> {
-  const { env, ctx } = context.get(cloudflareContext);
+  const env = getEnv(context);
+  const ctx = getExecutionContext(context);
   const kv = env.APP_KV;
 
   const entries = await Promise.all(
