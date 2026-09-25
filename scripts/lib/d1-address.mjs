@@ -12,7 +12,11 @@ function defaultRun(command) {
     shell: true,
     maxBuffer: 32 * 1024 * 1024,
   });
-  return { status: r.status, stdout: `${r.stdout ?? ""}${r.stderr ?? ""}` };
+  // stdout alone is the JSON: stderr appended after it (a deprecation warning, an update notice) made
+  // the text from the first `[` unparseable. A failed spawn is surfaced rather than read as no output.
+  if (r.error) throw new Error(`npx wrangler ${command} could not run: ${r.error.message}`);
+  if (r.status !== 0 && r.stderr) console.error(r.stderr.trim());
+  return { status: r.status, stdout: r.stdout ?? "" };
 }
 
 /** @type {Map<string, string>} */
