@@ -1,8 +1,9 @@
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { parseJsonc, surfaceOf } from "./lib/wrangler-surface.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -87,8 +88,7 @@ export function buildStack() {
   };
 }
 
-// `pathToFileURL`: on Windows a hand-built form never equals `import.meta.url`.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   const stack = buildStack();
   writeFileSync(STACK_PATH, serialize(stack), "utf8");
   console.log(

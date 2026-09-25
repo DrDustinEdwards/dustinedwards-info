@@ -7,7 +7,6 @@ import { readFileSync } from "node:fs";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { Resvg } from "@resvg/resvg-js";
 import satori from "satori";
@@ -28,6 +27,7 @@ import { listForPrune } from "./lib/r2.mjs";
 import { requireTarget } from "./lib/target-flag.mjs";
 import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
 import { bucketFor, databaseFor } from "./lib/wrangler-config.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 /** DERIVED from the wrangler config: a stale name aims a DELETE at whatever answers to it. */
 const BUCKET = bucketFor("OG");
@@ -407,7 +407,7 @@ async function main() {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(
       `build:og failed. ${error instanceof Error ? error.message : String(error)}`,

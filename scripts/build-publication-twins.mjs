@@ -3,13 +3,14 @@
 
 import { readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { citedByFetchedAt, citedByFor } from "../app/lib/publications/cited-by.mjs";
 import { doiSlug, paperPath, paperPdfPath } from "../app/lib/publications/paths.mjs";
 import { paperTwin } from "../app/lib/publications/twin.mjs";
 import { deleteFloor } from "./lib/delete-floor.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(root, "public", "publications");
@@ -99,6 +100,6 @@ async function main() {
 }
 
 // Writes only when run directly, so the gate's import cannot rewrite the files it compares.
-if (pathToFileURL(process.argv[1] ?? "").href === import.meta.url) {
+if (isMain(import.meta.url)) {
   await main();
 }

@@ -3,7 +3,7 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { isMain } from "./is-main.mjs";
 
 // `_ds_needs_recompile` is the sentinel the upload writes first and re-arms last, so it must be here.
 const BUILD_OWNED = [
@@ -113,7 +113,7 @@ export function enforceVerdict(verdict, outDir) {
   };
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (isMain(import.meta.url)) {
   const file = process.argv[2];
   if (!file) {
     console.error("usage: node scripts/lib/ds-upload-scope.mjs <plan.json>");

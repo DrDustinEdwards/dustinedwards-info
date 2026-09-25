@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/is-main.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(ROOT, "app", "data", "publications.ts");
@@ -356,7 +357,7 @@ export function generate() {
 }
 
 // Writes only when run directly, so the gate's import cannot rewrite the file it compares.
-if (pathToFileURL(process.argv[1] ?? "").href === import.meta.url) {
+if (isMain(import.meta.url)) {
   const emitted = generate();
   writeFileSync(OUT_PATH, emitted, "utf8");
   console.log(`wrote app/data/publications.ts (${emitted.length} bytes)`);

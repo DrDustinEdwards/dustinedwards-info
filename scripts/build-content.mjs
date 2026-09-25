@@ -1,7 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import matter from "gray-matter";
 
@@ -13,6 +12,7 @@ import { PUBLICATIONS } from "../app/data/publications.ts";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 export const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
@@ -179,7 +179,7 @@ async function main() {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main().catch((/** @type {unknown} */ error) => {
     if (error instanceof ContentError) {
       console.error(`build:content failed. ${error.message}`);

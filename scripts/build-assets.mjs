@@ -3,13 +3,13 @@
 import { createHash } from "node:crypto";
 import { readdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
 import { classify, excludedFromAssets, isRaster, roleOf } from "../app/lib/media/classify.mjs";
 import { WEBP_QUALITY } from "../app/lib/media/encoding.mjs";
 import { ASSET_MANIFEST_PATH as ASSET_MANIFEST_REPO_PATH } from "../app/lib/media/manifest.mjs";
+import { isMain } from "./lib/is-main.mjs";
 
 export const PUBLIC_DIR = "public";
 // The repo path is POSIX because the Worker hands it to an API verbatim.
@@ -109,7 +109,7 @@ async function main() {
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main().catch((error) => {
     console.error(
       `build:assets failed. ${error instanceof Error ? error.message : String(error)}`,
