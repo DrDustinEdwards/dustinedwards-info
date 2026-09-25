@@ -1,21 +1,11 @@
 // Pure functions of the committed corpus (no clock, no citation count), so check:machine-readable can
-// compare bytes and two downloads match. The alias table is explicit: a surname-plus-initial rule would
-// fold Julie Edwards, a different person in the data, into the owner.
+// compare bytes and two downloads match. Author names go through `canonicalAuthor` in authors.mjs.
 
 import { ORGANISMS } from "../../data/organisms.ts";
+import { canonicalAuthor } from "./authors.mjs";
 import { decodeEntities } from "./entities.mjs";
 
-// Exact spellings seen in the corpus, never patterns.
-const AUTHOR_ALIASES = new Map([
-  ["Dustin C. Edwards", "Dustin Edwards"],
-  ["Dustin Cole Edwards", "Dustin Edwards"],
-]);
-
-/** @param {string} name */
-export function canonicalAuthor(name) {
-  const clean = decodeEntities(name).replace(/\s+/g, " ").trim();
-  return AUTHOR_ALIASES.get(clean) ?? clean;
-}
+export { canonicalAuthor };
 
 /**
  * Best effort; the CSL export does not use this, it reads the structured given and family fields.

@@ -1,4 +1,5 @@
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
+import { canonicalAuthor } from "./publications/authors.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
 
 /**
@@ -294,12 +295,10 @@ export function personNode(origin: string) {
   };
 }
 
-// Registries spell his name several ways, so this matches surname plus a D initial.
+// Registries spell his name several ways, so this reads the exact alias table the exports use: a
+// surname-plus-initial rule claimed any "D* Edwards" co-author as the owner in JSON-LD.
 export function isSiteOwner(name: string) {
-  const parts = name.trim().split(/\s+/);
-  const surname = parts[parts.length - 1] ?? "";
-  const given = parts[0] ?? "";
-  return surname.toLowerCase() === "edwards" && given.toUpperCase().startsWith("D");
+  return canonicalAuthor(name) === SITE.name;
 }
 
 // Only the owner's entry becomes an `@id` reference; replacing the whole array would drop co-authors.
@@ -323,7 +322,7 @@ export function publicationsJsonLd(
       // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
       headline: decodeEntities(p.title),
       author: p.authors.map((name) =>
-        isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name },
+        isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name: canonicalAuthor(name) },
       ),
       datePublished: String(p.year),
       ...(p.journal
