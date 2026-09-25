@@ -25,6 +25,9 @@ export function RevisionList({
   /* Per sha: one shared flag let a finished load clear another's, and read an unloaded diff as "No diff". */
   const [restoring, setRestoring] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  /* Announced inside the drawer: the drawer is modal, so the editor's own notice behind it is inert
+     and a load would otherwise finish in silence. */
+  const [status, setStatus] = useState("");
 
   const toggle = async (sha: string) => {
     setError(null);
@@ -34,6 +37,8 @@ export function RevisionList({
     }
     setOpenSha(sha);
     if (sha in patches) return;
+    const short = sha.slice(0, 7);
+    setStatus(`Loading the diff for ${short}.`);
     try {
       const response = await fetch(
         `/admin/posts/${slug}/revisions?sha=${encodeURIComponent(sha)}`,
@@ -41,7 +46,9 @@ export function RevisionList({
       if (!response.ok) throw new Error(`Could not read that commit (${response.status}).`);
       const body = (await response.json()) as { patch: string | null };
       setPatches((prev) => ({ ...prev, [sha]: body.patch }));
+      setStatus(body.patch ? `Diff for ${short} loaded.` : `No diff recorded for ${short}.`);
     } catch (cause) {
+      setStatus("");
       setError(errorMessage(cause));
       setOpenSha(null);
     }
@@ -50,6 +57,8 @@ export function RevisionList({
   const restore = async (sha: string) => {
     setError(null);
     setRestoring((prev) => ({ ...prev, [sha]: true }));
+    const short = sha.slice(0, 7);
+    setStatus(`Loading ${short} into the editor.`);
     try {
       const response = await fetch(
         `/admin/posts/${slug}/revisions?sha=${encodeURIComponent(sha)}&want=content`,
@@ -60,7 +69,9 @@ export function RevisionList({
       }
       const body = (await response.json()) as { fields: PostFields };
       onRestore(body.fields, sha);
+      setStatus(`Loaded ${short} into the editor. Nothing is written until you save.`);
     } catch (cause) {
+      setStatus("");
       setError(errorMessage(cause));
     } finally {
       setRestoring((prev) => {
@@ -89,6 +100,10 @@ export function RevisionList({
         </p>
       ) : null}
 
+      <p className="sr-only" role="status">
+        {status}
+      </p>
+
       <ol className="history-list">
         {revisions.map((revision, index) => (
           <li key={revision.sha} className="history-entry">
@@ -99,6 +114,7 @@ export function RevisionList({
                 type="button"
                 className="row-action"
                 aria-expanded={openSha === revision.sha}
+                aria-controls={openSha === revision.sha ? `diff-${revision.sha}` : undefined}
                 onClick={() => void toggle(revision.sha)}
               >
                 {openSha === revision.sha ? "Hide diff" : "View diff"}
@@ -118,13 +134,18 @@ export function RevisionList({
             </div>
 
             {openSha === revision.sha ? (
-              !(revision.sha in patches) ? (
-                <p className="muted">Loading diff...</p>
-              ) : patches[revision.sha] ? (
-                <DiffBlock patch={patches[revision.sha] ?? ""} />
-              ) : (
-                <p className="muted">No diff recorded for this commit.</p>
-              )
+              <div id={`diff-${revision.sha}`}>
+                {!(revision.sha in patches) ? (
+                  <p className="muted">Loading diff...</p>
+                ) : patches[revision.sha] ? (
+                  <DiffBlock
+                    patch={patches[revision.sha] ?? ""}
+                    label={`Diff for ${revision.sha.slice(0, 7)}`}
+                  />
+                ) : (
+                  <p className="muted">No diff recorded for this commit.</p>
+                )}
+              </div>
             ) : null}
           </li>
         ))}
@@ -150,10 +171,13 @@ export function RevisionMeta({ revision, current }: { revision: Revision; curren
   );
 }
 
-/** A unified patch, each line tagged for the add, delete and hunk colors. */
-export function DiffBlock({ patch }: { patch: string }) {
+/**
+ * A unified patch, each line tagged for the add, delete and hunk colors. A focusable named region,
+ * because it scrolls both ways and a keyboard can only scroll what it can focus (2.1.1).
+ */
+export function DiffBlock({ patch, label = "Diff" }: { patch: string; label?: string }) {
   return (
-    <pre className="history-diff">
+    <pre className="history-diff" tabIndex={0} role="region" aria-label={label}>
       {patch.split("\n").map((line, i) => (
         <span key={i} data-diff={diffKind(line)}>
           {line}
