@@ -141,10 +141,19 @@ export async function getBlogTag(env: Env, tagSlug: string) {
   return rows[0] ?? null;
 }
 
+/** Groups each row's value under its key, keeping row order within a group. */
+function groupValues<R, K, V>(rows: Iterable<R>, key: (row: R) => K, value: (row: R) => V) {
+  const out = new Map<K, V[]>();
+  for (const row of rows) {
+    const list = out.get(key(row));
+    if (list) list.push(value(row));
+    else out.set(key(row), [value(row)]);
+  }
+  return out;
+}
+
 async function tagsForPosts(db: DB, postIds: number[]) {
-  /** @type Map<number, string[]> */
-  const bySlug = new Map<number, string[]>();
-  if (postIds.length === 0) return bySlug;
+  if (postIds.length === 0) return new Map<number, string[]>();
 
   const rows = await db
     .select({ postId: postTags.postId, name: tags.name, slug: tags.slug })
@@ -153,12 +162,7 @@ async function tagsForPosts(db: DB, postIds: number[]) {
     .where(inArray(postTags.postId, postIds))
     .orderBy(asc(tags.slug));
 
-  for (const row of rows) {
-    const list = bySlug.get(row.postId) ?? [];
-    list.push(row.slug);
-    bySlug.set(row.postId, list);
-  }
-  return bySlug;
+  return groupValues(rows, (row) => row.postId, (row) => row.slug);
 }
 
 export async function listBlogPosts(
@@ -482,11 +486,8 @@ export async function listPostCorpusForRelated(env: Env) {
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
   const tagRows = await listAllPostTagsForAdmin(env);
 
-  const bySlug = new Map(
-    rows.map((r) => [r.slug, { ...r, tags: [] as string[] }]),
-  );
-  for (const row of tagRows) bySlug.get(row.slug)?.tags.push(row.tag);
-  return [...bySlug.values()];
+  const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
+  return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
 /** Drafts included: it filters the linking post itself. Carries `html` because a backlink is read out of a rendered body. */
@@ -535,12 +536,7 @@ export async function listPostsForOperator(env: Env) {
     .orderBy(asc(posts.slug));
   const tagRows = await listAllPostTagsForAdmin(env);
 
-  const tagsBySlug = new Map<string, string[]>();
-  for (const row of tagRows) {
-    const list = tagsBySlug.get(row.slug) ?? [];
-    list.push(row.tag);
-    tagsBySlug.set(row.slug, list);
-  }
+  const tagsBySlug = groupValues(tagRows, (row) => row.slug, (row) => row.tag);
   return rows.map((r) => ({ ...r, tags: tagsBySlug.get(r.slug) ?? [] }));
 }
 
@@ -1012,63 +1008,52 @@ const FEED_COLUMNS = {
   coverImage: posts.coverImage,
 };
 
-/** Visible posts with markdown, newest first; limited in SQL because bodies are heavy. */
-export async function listBlogPostsFullText(
-  env: Env,
-  options: {
-    perPage?: number;
-    tag?: string | null;
-    series?: string | null;
-    /** `part` for a series feed; anything else is newest first. */
-    orderBy?: "date" | "part";
-  } = {},
-) {
-  const db = getDb(env);
-  /* Narrowed in the query: slicing afterwards would cap before narrowing. */
+type FeedOptions = {
+  perPage?: number;
+  tag?: string | null;
+  series?: string | null;
+  /** `part` for a series feed; anything else is newest first. */
+  orderBy?: "date" | "part";
+};
+
+/** The filter and order both feed listings share. Narrowed in the query: slicing afterwards would cap before narrowing. */
+function feedScope(db: DB, options: FeedOptions) {
   const clauses = [isBlogPost()];
   if (options.tag) clauses.push(carriesTag(db, options.tag));
   if (options.series) clauses.push(eq(posts.series, options.series));
-  const where = and(...clauses);
   const order =
     options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
+  return { where: and(...clauses), order };
+}
+
+/** Attaches each row's tags and strips the `id` the join needed. */
+async function withFeedTags<R extends { id: number }>(db: DB, rows: R[]) {
+  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
+  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
+}
+
+/** Visible posts with markdown, newest first; limited in SQL because bodies are heavy. */
+export async function listBlogPostsFullText(env: Env, options: FeedOptions = {}) {
+  const db = getDb(env);
+  const { where, order } = feedScope(db, options);
   const query = db
     .select({ ...FEED_COLUMNS, body: posts.body })
     .from(posts)
     .where(where)
     .orderBy(...order);
-  const rows = await (options.perPage ? query.limit(options.perPage) : query);
-
-  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
-  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
+  return withFeedTags(db, await (options.perPage ? query.limit(options.perPage) : query));
 }
 
 /** Same posts with rendered HTML, for RSS. A sibling, not a union-returning flag. */
-export async function listBlogPostsRendered(
-  env: Env,
-  options: {
-    perPage?: number;
-    tag?: string | null;
-    series?: string | null;
-    /** `part` for a series feed; anything else is newest first. */
-    orderBy?: "date" | "part";
-  } = {},
-) {
+export async function listBlogPostsRendered(env: Env, options: FeedOptions = {}) {
   const db = getDb(env);
-  const clauses = [isBlogPost()];
-  if (options.tag) clauses.push(carriesTag(db, options.tag));
-  if (options.series) clauses.push(eq(posts.series, options.series));
-  const where = and(...clauses);
-  const order =
-    options.orderBy === "part" ? [asc(posts.part), asc(posts.id)] : [desc(posts.publishAt)];
+  const { where, order } = feedScope(db, options);
   const query = db
     .select({ ...FEED_COLUMNS, html: posts.html })
     .from(posts)
     .where(where)
     .orderBy(...order);
-  const rows = await (options.perPage ? query.limit(options.perPage) : query);
-
-  const tagMap = await tagsForPosts(db, rows.map((r) => r.id));
-  return rows.map(({ id, ...rest }) => ({ ...rest, tags: tagMap.get(id) ?? [] }));
+  return withFeedTags(db, await (options.perPage ? query.limit(options.perPage) : query));
 }
 
 export async function getBlogPostMarkdown(env: Env, slug: string) {
