@@ -16,12 +16,12 @@ function light(id: string | null) {
 for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(".plate-plaque, .plate-key-entry")) {
   const id = el.getAttribute("data-plaque");
   if (!id) continue;
-  // Focus stops are added here so a reader without script meets no stop that does nothing.
-  el.setAttribute("tabindex", "0");
-  if (el.classList.contains("plate-key-entry")) {
-    const name = el.querySelector(".plate-key-name")?.textContent?.toLowerCase() ?? "";
-    el.setAttribute("aria-label", `Key entry ${id}, ${name}`);
-  }
+  /*
+   * No focus stops: lighting is a pointer's way of matching a plaque to its key entry, and the key
+   * already pairs them in text. Twelve stops on things that are not controls cost a keyboard reader
+   * more than the highlight gives. The attribute is only the stylesheet's pointer cue.
+   */
+  el.setAttribute("data-plate-live", "");
   // Hover is a mouse's preview; a touch lands as a click below, which pins instead.
   el.addEventListener("pointerenter", (e) => {
     if ((e as PointerEvent).pointerType === "mouse") light(id);
@@ -29,8 +29,6 @@ for (const el of document.querySelectorAll<HTMLElement | SVGGElement>(".plate-pl
   el.addEventListener("pointerleave", (e) => {
     if ((e as PointerEvent).pointerType === "mouse") light(pinned);
   });
-  el.addEventListener("focus", () => light(id));
-  el.addEventListener("blur", () => light(pinned));
   el.addEventListener("click", () => {
     pinned = pinned === id ? null : id;
     light(pinned);
