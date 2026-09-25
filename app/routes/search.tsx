@@ -267,6 +267,85 @@ function Result({ hit }: { hit: SearchHit }) {
   );
 }
 
+/** A search that matched nothing: said plainly, with nearby tags and recent writing to go to instead. */
+function ZeroState({
+  raw,
+  suggestions,
+}: {
+  raw: string;
+  suggestions: NonNullable<Route.ComponentProps["loaderData"]["suggestions"]>;
+}) {
+  return (
+    <div className="search-zero">
+      <p>
+        Nothing matched <strong>{raw}</strong>.
+      </p>
+      {suggestions.nearestTags.length > 0 ? (
+        <section>
+          <h2>Related tags</h2>
+          <ul className="search-chip-row">
+            {suggestions.nearestTags.map((tag) => (
+              <li key={tag}>
+                <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="search-chip">
+                  {tag}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {suggestions.recentPosts.length > 0 ? (
+        <section>
+          <h2>Recent writing</h2>
+          <ul className="search-recent">
+            {suggestions.recentPosts.map((post) => (
+              <li key={post.url}>
+                <Link to={post.url}>{post.title}</Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+/** Previous and next around "Page n of m"; an empty span holds each missing side's place. */
+function Pagination({
+  params,
+  page,
+  pageCount,
+  floor,
+}: {
+  params: SearchParams;
+  page: number;
+  pageCount: number;
+  floor: string;
+}) {
+  return (
+    <nav className="search-pagination" aria-label="Search results pages">
+      {page > 1 ? (
+        <Link rel="prev" to={searchHref(params, { page: page - 1 })}>
+          Previous
+        </Link>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+      <span>
+        Page {page} of {pageCount}
+        {floor}
+      </span>
+      {page < pageCount ? (
+        <Link rel="next" to={searchHref(params, { page: page + 1 })}>
+          Next
+        </Link>
+      ) : (
+        <span aria-hidden="true" />
+      )}
+    </nav>
+  );
+}
+
 export default function SearchPage({ loaderData }: Route.ComponentProps) {
   const { params, result, suggestions, askAvailable } = loaderData;
   const { facets } = result;
@@ -393,60 +472,11 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
         ) : null}
 
         {hasQuery && result.total === 0 && suggestions ? (
-          <div className="search-zero">
-            <p>
-              Nothing matched <strong>{result.parsed.raw}</strong>.
-            </p>
-            {suggestions.nearestTags.length > 0 ? (
-              <section>
-                <h2>Related tags</h2>
-                <ul className="search-chip-row">
-                  {suggestions.nearestTags.map((tag) => (
-                    <li key={tag}>
-                      <Link to={`/search?tag=${encodeURIComponent(tag)}`} className="search-chip">
-                        {tag}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-            {suggestions.recentPosts.length > 0 ? (
-              <section>
-                <h2>Recent writing</h2>
-                <ul className="search-recent">
-                  {suggestions.recentPosts.map((post) => (
-                    <li key={post.url}>
-                      <Link to={post.url}>{post.title}</Link>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-          </div>
+          <ZeroState raw={result.parsed.raw} suggestions={suggestions} />
         ) : null}
 
         {pageCount > 1 ? (
-          <nav className="search-pagination" aria-label="Search results pages">
-            {result.page > 1 ? (
-              <Link rel="prev" to={searchHref(params, { page: result.page - 1 })}>
-                Previous
-              </Link>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-            <span>
-              Page {result.page} of {pageCount}
-              {floor}
-            </span>
-            {result.page < pageCount ? (
-              <Link rel="next" to={searchHref(params, { page: result.page + 1 })}>
-                Next
-              </Link>
-            ) : (
-              <span aria-hidden="true" />
-            )}
-          </nav>
+          <Pagination params={params} page={result.page} pageCount={pageCount} floor={floor} />
         ) : null}
       </main>
       <ShellFooter />
