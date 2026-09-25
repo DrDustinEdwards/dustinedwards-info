@@ -108,35 +108,4 @@ test("the query carries the account, the script and both window bounds", () => {
   assert.equal(built.variables.until, "2026-09-07T20:15:00Z");
 });
 
-/** Answers only a script-filtered query: unfiltered, the watchdog's own invocations would count. */
-async function analyticsFetch(_url, init) {
-  const { query, variables } = JSON.parse(init.body);
-  const filtered = query.includes("scriptName: $script") && variables.script === "dustinedwards";
-  const payload = filtered
-    ? { data: { viewer: { accounts: [{ workersInvocationsAdaptive: rows([["success", 40]]) }] } } }
-    : { data: null, errors: [{ message: "invocations are not filtered on the site's script" }] };
-  return new Response(JSON.stringify(payload), { headers: { "content-type": "application/json" } });
-}
-
-/** @param {{ query: string, variables: Record<string, unknown> }} built */
-async function verdictFromApi(built) {
-  const response = await analyticsFetch("https://api.cloudflare.com/client/v4/graphql", {
-    method: "POST",
-    body: JSON.stringify(built),
-  });
-  const payload = await response.json();
-  return errorRateVerdict(payload?.data?.viewer?.accounts?.[0]?.workersInvocationsAdaptive);
-}
-
-test("the built query is answered with the site's invocations", async () => {
-  const verdict = await verdictFromApi(errorRateQuery(WINDOW));
-  assert.equal(verdict.ok, true);
-  assert.equal(verdict.total, 40);
-});
-
-test("a query the API refuses for want of the script filter fails closed", async () => {
-  const unfiltered = errorRateQuery(WINDOW);
-  unfiltered.query = unfiltered.query.replace("scriptName: $script, ", "");
-  const verdict = await verdictFromApi(unfiltered);
-  assert.equal(verdict.ok, false, "an unanswered query must not read as a healthy window");
-});
+// The watchdog's fetch-and-unwrap around these is tested on the real code in test/worker/watchdog.test.ts.
