@@ -19,11 +19,8 @@ import {
 /* Generation parity, the site and CSL join, the hosted PDFs, their extracted text, PMC links and abstracts. */
 const { tally, ok } = openPart("corpus");
 
-ok(
-  "both source files carry records",
-  siteEntries.length > 0 && Array.isArray(csl) && csl.length > 0,
-  `site ${siteEntries.length}, csl ${Array.isArray(csl) ? csl.length : "not an array"}`,
-);
+/* An empty scope throws from the context before this line runs, failing all five parts, so a
+   "both source files carry records" check here could never fail and is not counted. */
 
 {
   const committed = readFileSync(OUT_PATH, "utf8").replace(/\r\n/g, "\n");
@@ -89,7 +86,6 @@ ok(
   `every record id is unique (${new Set(ids).size} of ${ids.length})`,
   new Set(ids).size === ids.length,
 );
-
 
 const missingPdfs = hosted
   .filter(([, f]) => !existsSync(join(root, "public", f.pdfPath.replace(/^\//, ""))))
@@ -239,5 +235,5 @@ ok(
   "this is the companion the July build added after an assertion passed by reading zero",
 );
 
-/* Measured 23 by running this part on 2026-09-24; the floor sits a little under it. */
-export const outcome = closePart(tally, "corpus", 21);
+/* Measured 22 by running this part on 2026-09-25; the floor sits a little under it. */
+export const outcome = closePart(tally, "corpus", 20);
