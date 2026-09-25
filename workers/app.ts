@@ -25,6 +25,7 @@ import {
 } from "./csp.mjs";
 import { isFeed } from "./feed-types.mjs";
 import { handleMediaEvents } from "./media-events";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export { AskBudget } from "./ask-budget";
 
@@ -131,7 +132,7 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
     console.error(
       JSON.stringify({
         alert: "traffic-write-failed",
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
   }

@@ -10,6 +10,7 @@ import { publicHealthBody } from "~/lib/health/verdicts.mjs";
 import { writeHealthSnapshot } from "~/lib/health/snapshot.server";
 
 import type { Route } from "./+types/api.health";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 const HEALTH_RATE_LIMIT = 20;
 const HEALTH_RATE_PERIOD_SECONDS = 60;
@@ -57,7 +58,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     console.error(
       JSON.stringify({
         alert: "health-rate-limiter-threw",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
     return healthJson({ ok: false, checks: [{ name: "rate-limiter-failed", ok: false }] }, 503);
@@ -98,7 +99,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     console.error(
       JSON.stringify({
         alert: "health-run-threw",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
     return healthJson({ ok: false, checks: [{ name: "health-run", ok: false }] }, 503);

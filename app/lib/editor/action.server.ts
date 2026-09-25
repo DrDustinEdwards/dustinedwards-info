@@ -10,6 +10,7 @@ import { FrontmatterError, fieldsFromForm, serializePost, type PostFields } from
 import type { Actor, SaveOutcome } from "./publish-policy.mjs";
 import { readIntent } from "./intent.mjs";
 import { DRAFT_BY_INTENT, PUBLISH_CONFIRMED_INTENT } from "./publish-transition.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 type EditorActionResult =
   | { kind: "preview"; fields: PostFields; previewHtml: string; headSha: string }
@@ -47,7 +48,7 @@ export async function handleEditorAction(
       console.error("editor could not re-read the head after a failure", error);
       note =
         ` (The repository head could not be re-read: ` +
-        `${error instanceof Error ? error.message : String(error)}. A retry may report a conflict.)`;
+        `${errorMessage(error)}. A retry may report a conflict.)`;
     }
     return { kind: "problem" as const, fields, problem: { message: message + note, ...extra }, headSha };
   };
@@ -111,6 +112,6 @@ export async function handleEditorAction(
     }
     // Not a recognized failure: logged with its stack, since the editor shows only the message.
     console.error("editor action failed with an unrecognized error", error);
-    return fail(error instanceof Error ? error.message : String(error));
+    return fail(errorMessage(error));
   }
 }

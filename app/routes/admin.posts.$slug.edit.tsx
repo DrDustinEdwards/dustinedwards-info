@@ -27,6 +27,7 @@ import { postPath } from "~/lib/content/slug.mjs";
 import { DELETE_LEFT_PARAM } from "~/lib/editor/delete-left.mjs";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /*
  * A handle, not a loader field: the flag other readers use reflects what is saved, and the
@@ -54,7 +55,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       (value) => ({ value, error: null as string | null }),
       (error: unknown) => {
         console.error(`editor ${what} read failed`, error);
-        return { value: [] as T[], error: error instanceof Error ? error.message : String(error) };
+        return { value: [] as T[], error: errorMessage(error) };
       },
     );
 
@@ -145,7 +146,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         };
       } catch (error) {
         return problem(
-          `The preview link could not be created: ${error instanceof Error ? error.message : String(error)}`,
+          `The preview link could not be created: ${errorMessage(error)}`,
         );
       }
     }
@@ -159,7 +160,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       return { kind: "preview-link-revoked" as const };
     } catch (error) {
       return problem(
-        `The preview link could not be revoked: ${error instanceof Error ? error.message : String(error)}`,
+        `The preview link could not be revoked: ${errorMessage(error)}`,
       );
     }
   }

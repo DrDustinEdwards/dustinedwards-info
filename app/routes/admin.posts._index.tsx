@@ -34,6 +34,7 @@ import {
 } from "~/lib/search/ask.server";
 import { readAskBudget, resetAskBudget } from "~/lib/search/ask-guard.server";
 import type { Route } from "./+types/admin.posts._index";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export function meta() {
   return [{ title: "Posts · Admin" }, { name: "robots", content: "noindex" }];
@@ -100,7 +101,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
           console.error("ask budget read failed", error);
           return {
             budget: null,
-            budgetError: error instanceof Error ? error.message : String(error),
+            budgetError: errorMessage(error),
           };
         },
       )
@@ -208,7 +209,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Regenerate failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -245,7 +246,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        message: `Ask sync failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Ask sync failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -287,7 +288,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       return redirect(`/admin/posts/${target}/edit`);
     } catch (error) {
       return {
-        message: `Duplicate failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Duplicate failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -319,7 +320,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        message: `Unpublish failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Unpublish failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -363,7 +364,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           if (purged === false) unpurged += 1;
           if (askRemoval && !askRemoval.ok) askFailures.push(`${slug}: ${askRemoval.message}`);
         } catch (error) {
-          failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
+          failed.push(`${slug}: ${errorMessage(error)}`);
         }
       }
       return {
@@ -406,7 +407,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         done += 1;
         if (purged === false) unpurged += 1;
       } catch (error) {
-        failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
+        failed.push(`${slug}: ${errorMessage(error)}`);
       }
     }
 

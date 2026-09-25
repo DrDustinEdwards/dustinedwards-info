@@ -3,6 +3,7 @@ import { parseHTML } from "linkedom";
 import { recordWebmentionVerdict, type WebmentionVerdict } from "~/db";
 import { readCapped } from "~/lib/read-capped.mjs";
 import { collapseExcerpt, sameDocument, sourceVerdict } from "~/lib/webmention/urls.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // linkedom's document, not the DOM's.
 type ParsedDocument = ReturnType<typeof parseHTML>["document"];
@@ -184,7 +185,7 @@ export async function verifyWebmention(
       JSON.stringify({
         alert: "webmention-verify-threw",
         id,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
     verdict = { status: "failed", failureReason: FAILURE_REASONS.fetchError };
@@ -198,7 +199,7 @@ export async function verifyWebmention(
       JSON.stringify({
         alert: "webmention-verdict-write-failed",
         id,
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
   }

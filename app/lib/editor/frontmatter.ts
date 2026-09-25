@@ -2,6 +2,7 @@ import matter from "gray-matter";
 
 import { readIntent } from "./intent.mjs";
 import { draftForIntent } from "./publish-transition.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Punctuation-bearing scalars are written as JSON strings: valid YAML double-quoted scalars that
 // escape quotes and colons without a YAML serializer.
@@ -73,7 +74,7 @@ function parseFurtherReading(raw: string) {
   try {
     parsed = JSON.parse(raw);
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = errorMessage(error);
     throw new FrontmatterError(
       `The further reading list did not arrive as JSON (${detail}), so nothing was saved rather ` +
         `than saving the post without it.`,

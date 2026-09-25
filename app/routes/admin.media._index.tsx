@@ -78,6 +78,7 @@ import {
   uploadErrorSentence,
 } from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media._index";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export function meta() {
   return [{ title: "Media · Admin" }, { name: "robots", content: "noindex" }];
@@ -375,7 +376,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         );
         done += 1;
       } catch (error) {
-        failed.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
+        failed.push(`${key}: ${errorMessage(error)}`);
       }
     }
 
@@ -423,7 +424,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         if (result.moved) moved += 1;
         else already += 1;
       } catch (error) {
-        failed.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
+        failed.push(`${key}: ${errorMessage(error)}`);
       }
     }
     return {
@@ -498,7 +499,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         await deleteMediaObject(env, key);
         deleted.push(key);
       } catch (error) {
-        refused.push(`${key} (${error instanceof Error ? error.message : String(error)})`);
+        refused.push(`${key} (${errorMessage(error)})`);
       }
     }
     return {

@@ -1,5 +1,6 @@
 import { cloudflareContext } from "~/lib/context";
 import type { RouterContextProvider } from "react-router";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Per DOI only: the OpenAlex author endpoint has works by other people merged into it.
 
@@ -26,7 +27,7 @@ function logFailure(stage: string, doi: string | null, detail: unknown) {
       alert: "citation-count-failed",
       stage,
       doi,
-      detail: detail instanceof Error ? detail.message : String(detail),
+      detail: errorMessage(detail),
     }),
   );
 }

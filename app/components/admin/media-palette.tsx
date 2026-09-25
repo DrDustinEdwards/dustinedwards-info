@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { isTypingTarget } from "~/components/admin/media-keyboard";
 import { copyText } from "~/lib/clipboard";
 import { byteSize } from "~/lib/media/byte-size.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 // Attaches to the existing search input by id rather than replacing it, so the no-script page is unchanged.
 
@@ -84,7 +85,7 @@ export function MediaPalette({
           if (id !== seq.current) return;
           setResults([]);
           setHasMore(false);
-          setSearchError(error instanceof Error ? error.message : String(error));
+          setSearchError(errorMessage(error));
         });
     }, 130);
     return () => window.clearTimeout(timer);
