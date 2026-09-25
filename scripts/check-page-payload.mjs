@@ -61,6 +61,7 @@ function preloadEntries(rootSource) {
 
 const ASSETS_DIR = join(root, "build", "client", "assets");
 const DIST_DIR = join(root, "app", "enhance", "dist");
+const ROUTES_DIR = join(root, "app", "routes");
 
 /**
  * Margins are wide because the bundles are tiny: the job is catching a dependency wandering in.
@@ -133,7 +134,7 @@ function brotliSize(bytes) {
   }).length;
 }
 
-export function readClientManifest() {
+function readClientManifest() {
   /** @type {string[]} */
   let entries;
   try {
@@ -160,16 +161,15 @@ export function readClientManifest() {
 }
 
 /**
- * Minified output writes `from"./x.js"`, bare `import"./x.js"` and `import("./x.js")`.
+ * Minified output writes `from"./x.js"` and bare `import"./x.js"`. A dynamic `import("./x.js")` is
+ * not followed: it loads later, not at hydration.
  *
  * @param {string} source
- * @returns {{ static: string[], dynamic: string[] }}
+ * @returns {string[]}
  */
-export function chunkImports(source) {
+function chunkImports(source) {
   /** @type {string[]} */
   const staticTargets = [];
-  /** @type {string[]} */
-  const dynamicTargets = [];
   for (const match of source.matchAll(/from\s*["'`]\.\/([^"'`]+)["'`]/g)) {
     staticTargets.push(match[1]);
   }
@@ -178,14 +178,11 @@ export function chunkImports(source) {
   for (const match of source.matchAll(/(?<![.(\w])import\s*["'`]\.\/([^"'`]+)["'`]/g)) {
     staticTargets.push(match[1]);
   }
-  for (const match of source.matchAll(/import\s*\(\s*["'`]\.\/([^"'`]+)["'`]\s*\)/g)) {
-    dynamicTargets.push(match[1]);
-  }
-  return { static: staticTargets, dynamic: dynamicTargets };
+  return staticTargets;
 }
 
-/** @returns {{ files: string[], dynamicTargets: Set<string>, manifestFile: string }} */
-export function walkHydrationSet() {
+/** @returns {{ files: string[], manifestFile: string }} */
+function walkHydrationSet() {
   const { manifest, manifestFile } = readClientManifest();
 
   /** @type {Set<string>} */
@@ -212,32 +209,27 @@ export function walkHydrationSet() {
 
   // Re-close transitively over each chunk's own static imports, so a chunk
   // the manifest's flattened arrays under-list is still counted.
-  /** @type {Set<string>} */
-  const dynamicTargets = new Set();
   const queue = [...seed];
   while (queue.length > 0) {
     const name = /** @type {string} */ (queue.pop());
     const source = readFileSync(join(ASSETS_DIR, name), "utf8");
-    const found = chunkImports(source);
-    for (const target of found.static) {
+    for (const target of chunkImports(source)) {
       if (!seed.has(target)) {
         seed.add(target);
         queue.push(target);
       }
     }
-    for (const target of found.dynamic) dynamicTargets.add(target);
   }
 
-  return { files: [...seed].sort(), dynamicTargets, manifestFile };
+  return { files: [...seed].sort(), manifestFile };
 }
 
 /**
- * Exported for verify-live: the stems of these asset names are the only script references a live
- * public page may carry.
+ * The stems of these asset names are the only script references a public page may carry.
  *
  * @returns {Array<{ module: string, assetName: string | null, matches: number, raw: number, brotli: number }>}
  */
-export function enhancementAssets() {
+function enhancementAssets() {
   /** @type {string[]} */
   let distFiles;
   try {
@@ -366,8 +358,7 @@ async function main() {
       // and the Node version, which is what a tail slice grabs instead.
       const errorLine =
         (parsed.stderr || "").split("\n").find((line) => /Error/.test(line)) ??
-        (parsed.stderr || "").trim().split("\n")[0] ??
-        "no stderr";
+        ((parsed.stderr || "").trim().split("\n")[0] || "no stderr");
       invalid.push(`${name}: ${errorLine.trim()}`);
     }
   }
@@ -387,10 +378,9 @@ async function main() {
   );
 
   /* Pinned to admin.tsx and login.tsx by name, so a public route gaining the flag fails HERE. */
-  const routesDir = join(root, "app", "routes");
-  const hydrating = readdirSync(routesDir)
+  const hydrating = readdirSync(ROUTES_DIR)
     .filter((f) => /\.(ts|tsx)$/.test(f))
-    .filter((f) => /hydrate\s*:\s*true/.test(stripComments(readFileSync(join(routesDir, f), "utf8"))))
+    .filter((f) => /hydrate\s*:\s*true/.test(stripComments(readFileSync(join(ROUTES_DIR, f), "utf8"))))
     .sort();
   ok(
     "hydration opt-in is exactly the admin layout and the login door",
@@ -563,37 +553,34 @@ function gradeBuildOnlyDependencies() {
   );
 }
 
-/** Resolved offline by reachability, which over-approximates, the safe direction for a ceiling. */
-
 /* Both palettes ship at once during the redesign; these widenings come down by UPLIFT_EXPIRES or this
    gate fails. */
 const UPLIFT_EXPIRES = "2026-11-30";
-/**
- * Brotli bytes. A raise keeps the slack the field already had, rounded up to the next hundred,
- * rather than adding any. Fonts are asserted separately.
- *
- * @type {Record<string, { id: string, css: number, total: number }>}
- */
-/** @type {Map<string, {css: number, total: number, headCss: number, headTotal: number}>} */
+/** @type {Map<string, {css: number, total: number}>} */
 const REDESIGN_UPLIFT = new Map([
-  ["/",                       { css: 5300, total: 6300, headCss: 4655, headTotal: 5473 }],
-  ["/blog",                   { css: 5800, total: 6800, headCss: 5091, headTotal: 5909 }],
-  ["/blog/:slug",             { css: 7300, total: 10000, headCss: 6709, headTotal: 9315 }],
-  ["/blog/tags/:tag",         { css: 5800, total: 6800, headCss: 4902, headTotal: 5720 }],
-  ["/blog/series/:series",    { css: 5800, total: 6800, headCss: 4902, headTotal: 5720 }],
-  ["/search",                 { css: 6100, total: 8700, headCss: 5335, headTotal: 7537 }],
-  ["/projects",               { css: 5300, total: 6300, headCss: 4756, headTotal: 5574 }],
-  ["/colophon",               { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
-  ["/playground",             { css: 6600, total: 7500, headCss: 5901, headTotal: 6719 }],
-  ["/phage-discovery",        { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
-  ["/privacy",                { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
-  ["/about",                  { css: 5700, total: 6600, headCss: 5065, headTotal: 5883 }],
-  ["/publications",           { css: 5300, total: 6300, headCss: 4971, headTotal: 5789 }],
-  ["/publications/:slug",     { css: 5300, total: 6300, headCss: 4971, headTotal: 5789 }],
+  ["/",                       { css: 5300, total: 6300 }],
+  ["/blog",                   { css: 5800, total: 6800 }],
+  ["/blog/:slug",             { css: 7300, total: 10000 }],
+  ["/blog/tags/:tag",         { css: 5800, total: 6800 }],
+  ["/blog/series/:series",    { css: 5800, total: 6800 }],
+  ["/search",                 { css: 6100, total: 8700 }],
+  ["/projects",               { css: 5300, total: 6300 }],
+  ["/colophon",               { css: 5700, total: 6600 }],
+  ["/playground",             { css: 6600, total: 7500 }],
+  ["/phage-discovery",        { css: 5700, total: 6600 }],
+  ["/privacy",                { css: 5700, total: 6600 }],
+  ["/about",                  { css: 5700, total: 6600 }],
+  ["/publications",           { css: 5300, total: 6300 }],
+  ["/publications/:slug",     { css: 5300, total: 6300 }],
   // The math variant of /blog/:slug, which carries its own ceiling below.
-  ["/blog/:slug (math)",      { css: 10500, total: 13200, headCss: 9528, headTotal: 12134 }],
+  ["/blog/:slug (math)",      { css: 10500, total: 13200 }],
 ]);
 
+/**
+ * Brotli bytes, resolved offline by reachability, which over-approximates: the safe direction for a
+ * ceiling. A raise keeps the slack the field already had, rounded up to the next hundred, rather than
+ * adding any. Fonts are asserted separately.
+ */
 const ROUTE_CEILINGS = {
   "/": { id: "routes/home", css: 8100, total: 10600 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8800 },
@@ -661,17 +648,16 @@ function gradeEveryPage() {
   const { manifest } = readClientManifest();
   const appDir = join(root, "app");
   const clientDir = join(root, "build", "client");
-  const routesDir = join(root, "app", "routes");
   const rootModule = join(appDir, "root.tsx");
   const rootSource = readFileSync(rootModule, "utf8");
 
   const assetFile = (/** @type {string} */ assetPath) =>
     join(clientDir, assetPath.replace(/^\//, ""));
 
-  const publicRoutes = readdirSync(routesDir)
+  const publicRoutes = readdirSync(ROUTES_DIR)
     .filter((name) => name.endsWith(".tsx"))
     .filter((name) => {
-      const code = stripComments(readFileSync(join(routesDir, name), "utf8"));
+      const code = stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"));
       return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
     })
     .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full)/.test(name))
@@ -726,7 +712,7 @@ function gradeEveryPage() {
   console.log("\n  per-route cold load, brotli bytes\n");
 
   for (const [path, ceiling] of Object.entries(ROUTE_CEILINGS)) {
-    const routeFile = join(routesDir, `${ceiling.id.replace("routes/", "")}.tsx`);
+    const routeFile = join(ROUTES_DIR, `${ceiling.id.replace("routes/", "")}.tsx`);
 
     const sheets = stylesheetsFor(manifest, ceiling.id);
     const cssText = sheets.map((s) => readFileSync(assetFile(s), "utf8"));
@@ -885,15 +871,15 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
    * A route rendering `<PostEditor` copies these sheets into its preview iframe, so without the
    * handle an author typing an expression sees it unstyled. Derived, or a later route inherits it.
    */
-  const editorRoutes = readdirSync(join(root, "app", "routes"))
+  const editorRoutes = readdirSync(ROUTES_DIR)
     .filter((name) => name.endsWith(".tsx"))
     .filter((name) =>
-      /<PostEditor/.test(stripComments(readFileSync(join(root, "app", "routes", name), "utf8"))),
+      /<PostEditor/.test(stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"))),
     )
     .sort();
   const optedIn = editorRoutes.filter((name) =>
     /export const handle = \{[^}]*\bmath:\s*true/.test(
-      stripComments(readFileSync(join(root, "app", "routes", name), "utf8")),
+      stripComments(readFileSync(join(ROUTES_DIR, name), "utf8")),
     ),
   );
   ok(
@@ -905,11 +891,10 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `pane. Fewer than two means the derivation stopped finding them.`,
   );
 
-  const routesDir2 = join(root, "app", "routes");
-  const postRoutes = readdirSync(routesDir2)
+  const postRoutes = readdirSync(ROUTES_DIR)
     .filter((name) => name.endsWith(".tsx"))
     .filter((name) =>
-      /blogPostView\(/.test(stripComments(readFileSync(join(routesDir2, name), "utf8"))),
+      /blogPostView\(/.test(stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"))),
     )
     .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
     .sort();

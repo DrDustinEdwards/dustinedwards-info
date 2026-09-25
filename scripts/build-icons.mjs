@@ -60,14 +60,16 @@ function square({ size, mark, tile, pad }) {
   );
 }
 
-function ogCard({ width = 1200, height = 630, mark = DARK, tile = TILE } = {}) {
+function ogCard() {
+  const width = 1200;
+  const height = 630;
   const k = (height * (1 - 2 * 0.14)) / INK_H;
   const body = PATHS.map(
-    ([fill, d]) => `<path fill="${fill === BRAND ? mark : fill}" d="${d}"/>`,
+    ([fill, d]) => `<path fill="${fill === BRAND ? DARK : fill}" d="${d}"/>`,
   ).join("");
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">` +
-    `<rect width="${width}" height="${height}" fill="${tile}"/>` +
+    `<rect width="${width}" height="${height}" fill="${TILE}"/>` +
     `<g transform="translate(${width / 2} ${height / 2}) scale(${k}) translate(${-INK_CX} ${-INK_CY})">${body}</g>` +
     `</svg>`
   );
