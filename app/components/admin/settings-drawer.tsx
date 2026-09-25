@@ -91,7 +91,12 @@ export function SettingsDrawer({
         <div className="field">
           <label className="field-label" htmlFor="field-description">
             Description
-            <span className={overLimit ? "count over" : "count"}>
+            {/* Out of the name, into the description: the count is a hint, not what the field is. */}
+            <span
+              id="description-count"
+              className={overLimit ? "count over" : "count"}
+              aria-hidden="true"
+            >
               {description.length}/{SERP_DESCRIPTION_LIMIT}
             </span>
           </label>
@@ -103,8 +108,8 @@ export function SettingsDrawer({
             onChange={(event) => onDescriptionChange(event.target.value)}
             required
             autoComplete="off"
-            aria-invalid={overLimit}
-            aria-describedby={overLimit ? "description-alarm" : undefined}
+            /* No aria-invalid: the limit is advisory, and the save accepts a long description. */
+            aria-describedby={overLimit ? "description-count description-alarm" : "description-count"}
           />
           {/* Alarms, never blocks: the server gates own validity. */}
           {overLimit ? (
