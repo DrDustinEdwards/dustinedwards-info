@@ -164,7 +164,7 @@ export function ntstatusName(status) {
  * @param {Array<{name: string, errored: boolean, status: number | null, ms: number}>} results
  * @returns {{status: number, names: string[]} | null}
  */
-export function classifyEnvironmentFailure(results) {
+function classifyEnvironmentFailure(results) {
   const candidates = results.filter(
     (r) =>
       r.errored === true &&
