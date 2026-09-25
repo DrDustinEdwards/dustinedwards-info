@@ -289,14 +289,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const uploaded = url.searchParams.get("uploaded");
   const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
 
-  const shown =
-    view.lens === "duplicates"
-      ? listed.objects.filter((o) => (twins.get(o.key) ?? []).length > 0)
-      : listed.objects;
-
   const payload = {
     picker: false as const,
-    objects: shown.map((object) => ({
+    /* The duplicates lens is filtered in SQL before the page is cut, so every row here belongs. */
+    objects: listed.objects.map((object) => ({
       ...object,
       thumb: thumbUrl(object.key, 320),
       viewable: isViewable(object.kind),
