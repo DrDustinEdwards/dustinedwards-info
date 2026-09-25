@@ -18,6 +18,11 @@ export function MediaSearch({
   return (
     <>
       <Form method="get" action="/admin/media" className="media-search" role="search">
+        {/* A visible label, not the placeholder alone, which disappears once anything is typed. The
+            input's fuller aria-label starts with the same word. */}
+        <label htmlFor="media-q" className="media-search-label">
+          Search
+        </label>
         <input
           id="media-q"
           type="search"
