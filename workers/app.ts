@@ -15,7 +15,7 @@ import {
 // Imported here, not in the predicate's .mjs, because Node ESM refuses a bare JSON import.
 import redirects from "../content/redirects.json";
 import { themeFromRequest } from "~/lib/theme";
-import { serverTiming, timingsContext } from "~/lib/timing";
+import { serverTiming, timingsContext, type Timings } from "~/lib/timing";
 import {
   CSP_ENDPOINT_NAME,
   CSP_REPORT_PATH,
@@ -101,7 +101,7 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
     const type = response.headers.get("content-type") ?? "";
     if (!type.includes("text/html")) return;
     if (response.status !== 200) return;
-    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return;
+    if (isAdminPath(url.pathname)) return;
 
     let refererHost = "";
     const referer = request.headers.get("referer");
@@ -138,6 +138,24 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
 }
 
 /**
+ * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
+ * set, the report endpoint, the policy (feeds excepted) and the uncached default.
+ */
+function applyDocumentHeaders(
+  headers: Headers,
+  { timings, reportTo, csp }: { timings: Timings | undefined; reportTo: string; csp: string },
+) {
+  if (timings) headers.set("Server-Timing", serverTiming(timings));
+  applySecurityHeaders(headers);
+  headers.set("Reporting-Endpoints", reportTo);
+  if (!isFeed(headers.get("content-type"))) {
+    headers.set("Content-Security-Policy", csp);
+  }
+  if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
+  applyEdgePolicy(headers);
+}
+
+/**
  * The cacheable entrypoint; `default` has cache disabled. It must not write the traffic row, which
  * would then count only misses. Document headers belong here, or they are absent from every hit.
  */
@@ -169,29 +187,15 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     const csp = contentSecurityPolicy(nonce, isAdminPath(url.pathname));
 
 
+    const document = { timings, reportTo, csp };
+
     // `Response.redirect()` and friends return immutable headers, so a `set` throws; the catch
-    // rebuilds and must apply the same set.
+    // rebuilds and applies the same set.
     try {
-      if (timings) response.headers.set("Server-Timing", serverTiming(timings));
-      applySecurityHeaders(response.headers);
-      response.headers.set("Reporting-Endpoints", reportTo);
-      if (!isFeed(response.headers.get("content-type"))) {
-        response.headers.set("Content-Security-Policy", csp);
-      }
-      if (!response.headers.has("cache-control")) {
-        response.headers.set("cache-control", UNCACHED);
-      }
-      applyEdgePolicy(response.headers);
+      applyDocumentHeaders(response.headers, document);
     } catch {
       const headers = new Headers(response.headers);
-      if (timings) headers.set("Server-Timing", serverTiming(timings));
-      applySecurityHeaders(headers);
-      headers.set("Reporting-Endpoints", reportTo);
-      if (!isFeed(headers.get("content-type"))) {
-        headers.set("Content-Security-Policy", csp);
-      }
-      if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
-      applyEdgePolicy(headers);
+      applyDocumentHeaders(headers, document);
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
