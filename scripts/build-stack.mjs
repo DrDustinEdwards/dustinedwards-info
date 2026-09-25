@@ -32,9 +32,14 @@ export const RUNNERS = new Set(["check:all", "check:ci", "check:changed"]);
  * @param {any} pkg
  */
 export function gateNames(pkg) {
-  return Object.keys(pkg.scripts ?? {})
+  // Zero gates is a package.json that failed to read, and every runner would pass on it.
+  const names = Object.keys(pkg?.scripts ?? {})
     .filter((name) => name.startsWith("check:") && !RUNNERS.has(name))
     .sort();
+  if (names.length === 0) {
+    throw new Error("package.json declares no check: gates, so there is nothing to run or list");
+  }
+  return names;
 }
 
 /** @param {unknown} value */
@@ -51,18 +56,20 @@ export function buildStack() {
   const bindings = [...surface.entries()]
     .map(([id, settings]) => {
       const [kind, name] = id.split(":");
-      return {
-        id,
-        kind,
-        name,
-        settings,
-        what: notes.bindings?.[id]?.what ?? null,
-        whyLoadBearing: notes.bindings?.[id]?.whyLoadBearing ?? null,
-      };
+      const what = notes.bindings?.[id]?.what;
+      const whyLoadBearing = notes.bindings?.[id]?.whyLoadBearing;
+      // A binding without its note used to publish a colophon row that says nothing.
+      if (!what || !whyLoadBearing) {
+        throw new Error(`${NOTES_PATH} has no what or whyLoadBearing for binding ${id}`);
+      }
+      return { id, kind, name, settings, what, whyLoadBearing };
     })
     .sort((a, b) => a.id.localeCompare(b.id));
 
   const d1 = config.d1_databases?.[0];
+  if (typeof d1?.migrations_dir !== "string" || !d1.migrations_dir) {
+    throw new Error("wrangler.jsonc.example names no migrations_dir for its D1 database");
+  }
 
   return {
     /** Bumped when the shape changes, so a consumer of an older shape fails loudly. */
@@ -74,7 +81,7 @@ export function buildStack() {
     },
     bindings,
     dependencies: runtimeVersions(pkg),
-    migrations: migrationFiles(d1?.migrations_dir ?? "drizzle"),
+    migrations: migrationFiles(d1.migrations_dir),
     gates: gateNames(pkg),
     notAdopted: notes.notAdopted ?? [],
   };
