@@ -22,15 +22,7 @@ test("every declared status maps to a non-empty label", () => {
   }
 });
 
-test("an unknown status THROWS rather than returning the raw value", () => {
-  assert.throws(
-    () => statusLabel("not-a-real-status"),
-    /not-a-real-status/,
-    "it returned instead of throwing, or threw without naming the value",
-  );
-});
-
-test("the throw names the value, so the failure is diagnosable", () => {
+test("an unknown status THROWS rather than returning the raw value, and names it", () => {
   assert.throws(
     () => statusLabel("wibble"),
     (error) => {
