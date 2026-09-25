@@ -1,6 +1,5 @@
 import { mkdir, readFile, readdir, unlink, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 
 import { renderMermaid } from "@mermaid-js/mermaid-cli";
@@ -21,8 +20,9 @@ import { deleteFloor } from "./lib/delete-floor.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 import { isMain } from "./lib/is-main.mjs";
+import { buildAssetManifest } from "./build-assets.mjs";
 
-export const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
+const DIAGRAM_DIR = path.join("public", DIAGRAM_ASSET_DIR);
 
 /** Set explicitly so the bytes do not move if the tool's default does. */
 const SVG_ID = "diagram";
@@ -215,14 +215,13 @@ async function main() {
 
   // The media index cannot be rebuilt from here, needing the Worker's binding, so this says so loudly.
   if (written > 0 || pruned > 0) {
-    const manifest = spawnSync("node scripts/build-assets.mjs", {
-      encoding: "utf8",
-      shell: true,
-    });
-    process.stdout.write(manifest.stdout ?? "");
-    if (manifest.status !== 0) {
-      process.stderr.write(manifest.stderr ?? "");
-      throw new Error("build:assets failed after diagrams changed");
+    try {
+      await buildAssetManifest();
+    } catch (error) {
+      throw new Error(
+        `build:assets failed after diagrams changed. ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
     }
     console.log(
       `\n  NOTE: ${written + pruned} diagram asset(s) changed, so the media index is now\n` +
