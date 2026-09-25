@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { DatabaseSync } from "node:sqlite";
 
 import {
   MAX_TAGS,
@@ -11,12 +12,12 @@ import {
   serialiseTags,
 } from "../app/lib/media/tags.mjs";
 
-/** SQLite LIKE, enough of it for these cases: % is any run, _ is any one. */
+const db = new DatabaseSync(":memory:");
+const likeQuery = db.prepare("SELECT lower(?) LIKE ? AS hit");
+
+/** SQLite's own LIKE, spelled as `listMediaPage` spells it, rather than a model of it. */
 const like = (/** @type {string} */ value, /** @type {string} */ pattern) =>
-  new RegExp(
-    `^${pattern.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/%/g, ".*").replace(/_/g, ".")}$`,
-    "i",
-  ).test(value);
+  likeQuery.get(value, pattern)?.hit === 1;
 
 test("THE DECISIVE CASE: an exact tag filter separates art from chart", () => {
   const artRow = serialiseTags(["art"]);

@@ -175,6 +175,7 @@ describe("list_mentions", () => {
     await seedMention("https://elsewhere.example/f", "failed");
 
     const result = await runTool(operatorEnv(), OPERATOR, "list_mentions", { status: "pending" });
+    expect(result).toMatchObject({ ok: true });
     if (result.ok) {
       const data = result.data as { count: number; mentions: Array<{ source: string }> };
       expect(data.count).toBe(1);

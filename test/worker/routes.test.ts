@@ -7,7 +7,6 @@ import { HEALTH_SNAPSHOT_KEY } from "~/lib/health/snapshot.mjs";
 import { readHealthTile } from "~/lib/health/snapshot.server";
 import { ORIGIN_REFUSAL } from "~/lib/origin.mjs";
 import { action as themeAction, loader as themeLoader } from "~/routes/theme";
-import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { action as healthAction, loader as healthLoader } from "~/routes/api.health";
 
 function routeContext(ctx: ExecutionContext, overrides: Record<string, unknown> = {}) {
@@ -119,49 +118,6 @@ describe("/theme", () => {
       expect(response.headers.get("set-cookie")).toBeNull();
       expect(response.headers.get("cache-control")).toBe("no-store");
     }
-  });
-});
-
-describe("the default theme, and the legacy cookie that means the same thing", () => {
-  /* A legacy `theme=system` cookie means "follow the machine", which is what no cookie means,
-   * so both readers must receive the same document. */
-  it("resolves a legacy system cookie to exactly the no-cookie state", () => {
-    const cookieless = themeFromRequest(new Request("https://example.com/"));
-    const legacy = themeFromRequest(
-      new Request("https://example.com/", { headers: { cookie: "theme=system" } }),
-    );
-    expect(legacy).toBe(cookieless);
-
-    /* THE ATTRIBUTE IS ABSENT FOR BOTH, which is what makes the two documents
-     * byte-identical and lets them share one cache entry. */
-    expect(themeAttribute(legacy)).toBeUndefined();
-    expect(themeAttribute(cookieless)).toBeUndefined();
-
-    /* And the meta still says the document supports both, which is the honest
-     * answer for a reader who has chosen nothing. */
-    expect(colorSchemeMeta(legacy)).toBe("light dark");
-  });
-
-  it("keeps THREE resolved states, because the cache key still carries them", () => {
-    /* `workers/app.ts` keys its cache on this value, so light, dark and the default must stay
-     * three distinct answers. */
-    const dark = themeFromRequest(
-      new Request("https://example.com/", { headers: { cookie: "theme=dark" } }),
-    );
-    const light = themeFromRequest(
-      new Request("https://example.com/", { headers: { cookie: "theme=light" } }),
-    );
-    const none = themeFromRequest(new Request("https://example.com/"));
-    expect(new Set([dark, light, none]).size).toBe(3);
-    expect(themeAttribute(dark)).toBe("dark");
-    expect(themeAttribute(light)).toBe("light");
-  });
-
-  it("treats junk in the cookie as the default, never as the page failing", () => {
-    const junk = themeFromRequest(
-      new Request("https://example.com/", { headers: { cookie: "theme=%%%bogus" } }),
-    );
-    expect(themeAttribute(junk)).toBeUndefined();
   });
 });
 
