@@ -1,7 +1,17 @@
 // Windows reuses pids, so nothing here kills on a pid alone: the live command line must still match.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, appendFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { dirname } from "node:path";
 
 const isWindows = process.platform === "win32";
@@ -370,3 +380,82 @@ export function recordedTreeLeftovers(recorded, table, rootPid) {
     return live !== undefined && pid !== rootPid && family.has(live.ppid);
   });
 }
+
+/**
+ * The pid a lock file names while that pid is alive and still the locking script: a crashed
+ * holder's file names a dead pid, or one Windows has handed to something else.
+ *
+ * @param {string} lockPath
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {string} needle what the holder's command line must contain
+ * @returns {number | null}
+ */
+export function lockHolder(lockPath, table, needle) {
+  let text;
+  try {
+    text = readFileSync(lockPath, "utf8");
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return null;
+    throw error;
+  }
+  const pid = Number(text.trim());
+  if (!Number.isInteger(pid) || pid <= 0) return null;
+  const live = table.get(pid);
+  return live && live.command.includes(normaliseCommand(needle)) ? pid : null;
+}
+
+/**
+ * Created exclusively, so two takers cannot both win. A file left by a dead holder is taken over
+ * and reported. Needs a readable table, because only the table can tell a live holder from a dead one.
+ *
+ * @param {string} lockPath
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {string} needle
+ * @param {number} [self]
+ * @returns {{ ok: true, tookOver: number | null } | { ok: false, holder: number }}
+ */
+export function takeLock(lockPath, table, needle, self = process.pid) {
+  mkdirSync(dirname(lockPath), { recursive: true });
+  /** @type {number | null} */
+  let tookOver = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const fd = openSync(lockPath, "wx");
+      writeSync(fd, String(self));
+      closeSync(fd);
+      return { ok: true, tookOver };
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "EEXIST") throw error;
+    }
+    const holder = lockHolder(lockPath, table, needle);
+    if (holder !== null && holder !== self) return { ok: false, holder };
+    tookOver = Number(readFileSync(lockPath, "utf8").trim()) || 0;
+    rmSync(lockPath, { force: true });
+  }
+  // Lost the race for a stale file to another taker, which now holds it.
+  const holder = Number(readFileSync(lockPath, "utf8").trim()) || 0;
+  return { ok: false, holder };
+}
+
+/**
+ * Removes the lock only while this process still holds it.
+ * @param {string} lockPath
+ * @param {number} [self]
+ */
+export function releaseLock(lockPath, self = process.pid) {
+  let text;
+  try {
+    text = readFileSync(lockPath, "utf8");
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return;
+    throw error;
+  }
+  if (text.trim() === String(self)) rmSync(lockPath, { force: true });
+}
+
+/**
+ * Relative to the checkout root. Held for a whole ship, so a gate run started after ship's one-time
+ * process scan still finds it (check-all refuses while a live ship holds it).
+ */
+export const SHIP_LOCK_FILE = ".gate-pids/ship.lock";
+export const SHIP_LOCK_NEEDLE = "ship.mjs";
