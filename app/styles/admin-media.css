@@ -706,6 +706,12 @@
   margin: 0.75rem 0;
 }
 
+.media-search-label {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+
 .media-search-input {
   flex: 1;
   padding: 0.625rem 0.875rem;

@@ -2,12 +2,6 @@ import { useCallback } from "react";
 
 import { bands, nextTile } from "~/lib/media/tile-nav.mjs";
 
-/** A key pressed in a field belongs to the field: the arrows move the caret and "/" is a character. */
-export function isTypingTarget(target: EventTarget | null) {
-  const tag = (target instanceof HTMLElement ? target.tagName : "").toUpperCase();
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
-}
-
 /** The tile's tab stop in the grid: the thumbnail link, which carries the file's name. */
 export function tileLink(key: string) {
   return document.querySelector<HTMLElement>(
