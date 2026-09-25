@@ -11,7 +11,7 @@ import type { Actor, SaveOutcome } from "./publish-policy.mjs";
 import { readIntent } from "./intent.mjs";
 import { DRAFT_BY_INTENT, PUBLISH_CONFIRMED_INTENT } from "./publish-transition.mjs";
 
-export type EditorActionResult =
+type EditorActionResult =
   | { kind: "preview"; fields: PostFields; previewHtml: string; headSha: string }
   | { kind: "problem"; fields: PostFields; problem: { message: string; field?: string; line?: number; conflict?: boolean }; headSha: string }
   /** Carries the fields back so the author's unsaved body survives the confirmation round trip. */

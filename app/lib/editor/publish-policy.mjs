@@ -36,7 +36,7 @@ export class PolicyError extends Error {
 }
 
 /** @returns {string} */
-export function today() {
+function today() {
   return new Date().toISOString().slice(0, 10);
 }
 

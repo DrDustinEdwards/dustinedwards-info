@@ -8,15 +8,11 @@ const THEME_COOKIE = "theme";
 const THEME_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 
 // "system" is a cache-key value but not writable: no control posts it and `/theme` refuses it.
-export const THEMES = ["light", "dark", "system"] as const;
+const THEMES = ["light", "dark", "system"] as const;
 
-export type Theme = (typeof THEMES)[number];
+type Theme = (typeof THEMES)[number];
 
-export function isTheme(value: unknown): value is Theme {
-  return typeof value === "string" && (THEMES as readonly string[]).includes(value);
-}
-
-export const WRITABLE_THEMES = ["light", "dark"] as const;
+const WRITABLE_THEMES = ["light", "dark"] as const;
 
 export type WritableTheme = (typeof WRITABLE_THEMES)[number];
 

@@ -17,6 +17,8 @@ test("SAME ORIGIN IS ACCEPTED", () => {
 test("CROSS ORIGIN IS REFUSED, which is the whole point", () => {
   for (const origin of [
     "https://evil.com",
+    // A SUFFIX ATTACK. Whole origins are compared, not endsWith, because a prefix or suffix
+    // test is how "...workers.dev.evil.com" gets in.
     "https://dustinedwards.dustin-edwards.workers.dev.evil.com",
     "https://sub.dustinedwards.dustin-edwards.workers.dev",
   ]) {
@@ -24,15 +26,6 @@ test("CROSS ORIGIN IS REFUSED, which is the whole point", () => {
     assert.equal(v.ok, false, `${origin} must be refused`);
     assert.equal(v.reason, "cross-origin");
   }
-});
-
-test("A SUFFIX ATTACK DOES NOT PASS", () => {
-  // The reason this compares whole origins rather than calling endsWith: a
-  // prefix or suffix test is how "…workers.dev.evil.com" gets in.
-  assert.equal(
-    originVerdict("https://dustinedwards.dustin-edwards.workers.dev.evil.com", URL_HTTPS).ok,
-    false,
-  );
 });
 
 test("ABSENT Origin IS ACCEPTED, deliberately", () => {

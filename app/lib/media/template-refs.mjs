@@ -7,10 +7,10 @@ export const SOURCE_ROOTS = ["app", "workers"];
 
 export const SOURCE_FILES = ["public/site.webmanifest", "content/features.json"];
 
-export const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js", ".css", ".json", ".webmanifest"];
+const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js", ".css", ".json", ".webmanifest"];
 
 // Checked first because `SOURCE_FILES` bypass the root rule. `assets.json` lists every asset path.
-export const SELF_REFERENTIAL = ["content/generated/assets.json"];
+const SELF_REFERENTIAL = ["content/generated/assets.json"];
 
 /**
  * @param {string} file repo-relative, forward slashes

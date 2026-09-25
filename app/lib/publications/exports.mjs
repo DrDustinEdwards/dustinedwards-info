@@ -12,7 +12,7 @@ export { canonicalAuthor };
  *
  * @param {string} name
  */
-export function splitName(name) {
+function splitName(name) {
   const parts = canonicalAuthor(name).split(" ").filter(Boolean);
   if (parts.length < 2) return { family: parts[0] ?? "", given: "" };
   return {
@@ -55,7 +55,7 @@ const ORGANISM_PATTERN = new RegExp(
  *
  * @param {string} escaped a string already through `escapeBibtex`
  */
-export function protectOrganisms(escaped) {
+function protectOrganisms(escaped) {
   return escaped.replace(ORGANISM_PATTERN, "{$1}");
 }
 

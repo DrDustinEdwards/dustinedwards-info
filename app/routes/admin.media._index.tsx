@@ -88,19 +88,15 @@ const ROLE_IDS = new Set(["content", "generated", "brand", "icon"]);
 const PALETTE_RESULTS = 6;
 
 const MEDIA_SHORTCUTS = [
-  { keys: "cmd K", what: "Focus search from anywhere", evidence: "metaKey" },
-  { keys: "/", what: "Focus search", evidence: 'event.key === "/"' },
-  { keys: "up down", what: "Move through results", evidence: 'event.key === "ArrowDown"' },
-  { keys: "enter", what: "Copy the address", evidence: 'event.key === "Enter"' },
-  { keys: "shift enter", what: "Open details", evidence: "event.shiftKey" },
-  { keys: "arrows", what: "Move through the grid", evidence: 'event.key === "ArrowRight"' },
-  { keys: "x", what: "Select the tile under the cursor", evidence: 'event.key === "x"' },
-  {
-    keys: "c",
-    what: "Copy the address of the tile under the cursor",
-    evidence: 'event.key === "c"',
-  },
-  { keys: "escape", what: "Clear the search or the selection", evidence: 'event.key === "Escape"' },
+  { keys: "cmd K", what: "Focus search from anywhere" },
+  { keys: "/", what: "Focus search" },
+  { keys: "up down", what: "Move through results" },
+  { keys: "enter", what: "Copy the address" },
+  { keys: "shift enter", what: "Open details" },
+  { keys: "arrows", what: "Move through the grid" },
+  { keys: "x", what: "Select the tile under the cursor" },
+  { keys: "c", what: "Copy the address of the tile under the cursor" },
+  { keys: "escape", what: "Clear the search or the selection" },
 ] as const;
 
 const LENS_CHIPS = [
@@ -653,18 +649,13 @@ export function shouldRevalidate({
 export default function AdminMedia({
   loaderData,
   actionData,
-  initialSelection = [],
-  initialConfirmingTrash = false,
-}: Route.ComponentProps & {
-  initialSelection?: string[];
-  initialConfirmingTrash?: boolean;
-}) {
+}: Route.ComponentProps) {
   /* Every hook before the early return: the JSON branches below return null. */
   const [displayParams] = useSearchParams();
   const navigation = useNavigation();
   const here = useLocation();
-  const [selected, setSelected] = useState<string[]>(initialSelection);
-  const [confirmingTrash, setConfirmingTrash] = useState(initialConfirmingTrash);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [confirmingTrash, setConfirmingTrash] = useState(false);
   const anchor = useRef<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
