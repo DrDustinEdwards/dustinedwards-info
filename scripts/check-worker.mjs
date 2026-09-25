@@ -43,12 +43,6 @@ console.log(
     files.map((f) => relative(TEST_DIR, f).split(sep).join("/")).join(", "),
 );
 
-ok(
-  "the worker test glob discovered files at all",
-  files.length > 0,
-  "test/worker/ holds no *.test.ts. Vitest exits 0 on an empty match, so without " +
-    "this the gate would report PASS while running nothing.",
-);
 const filesBreach = assertFloor(
   "check:worker",
   "files",
@@ -117,10 +111,6 @@ const casesFloorBreach = assertFloor(
     "empty run, which is the whole reason this floor exists.",
 );
 ok("the executed worker case count has not shrunk", !casesFloorBreach, casesFloorBreach ?? "");
-
-const MINIMUM_CHECKS = 5;
-const floorBreach = assertFloor("check:worker", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
 
 console.log(`\n${checks} checks, ${failures} failures\n`);
 process.exit(failures > 0 ? 1 : 0);

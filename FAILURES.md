@@ -58,7 +58,7 @@ which is what repeats across people and sessions.
   `bash` passed every session under git bash and refused six times with ENOENT
   at ship step 4 in PowerShell; `shell: true` on Windows joined argv unquoted,
   so a seed SQL string became a program named after its first word. Resolve the
-  binary, skip the shell. `scripts/lib/bash.mjs` `scripts/check-browser.mjs`
+  binary, skip the shell. `dc0ce97` `scripts/check-browser.mjs`
 
 ## Measuring the wrong thing
 
