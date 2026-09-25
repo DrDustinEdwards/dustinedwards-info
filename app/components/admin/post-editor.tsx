@@ -26,6 +26,7 @@ import {
   saveInPlaceIntent,
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
+import { seriesSlug } from "~/lib/series-path.mjs";
 import { PostMetadata } from "./post-metadata";
 import { PublishActions } from "./publish-actions";
 import { RevisionList, type Revision } from "./revision-list";
@@ -58,12 +59,9 @@ function bufferAgeLabel(savedAt: string, now: number): string {
 type Layout = "write" | "split" | "preview";
 
 // Strips rather than transliterates: a wrong guess at a non-ASCII character lands in a permanent URL.
+// The series rule, with apostrophes dropped rather than split on ("don't" is "dont") and a length cap.
 function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/['’]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+  return seriesSlug(title.replace(/['’]/g, ""))
     .slice(0, 80)
     .replace(/-+$/, "");
 }
