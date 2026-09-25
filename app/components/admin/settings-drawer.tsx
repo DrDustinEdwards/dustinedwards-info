@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
+import { CopyTextButton } from "./copy-button";
 import { MediaPicker } from "./media-picker";
 import { OgPreview, SerpPreview, type PreviewPost } from "./social-previews";
 
@@ -190,8 +191,6 @@ function SlugField({
   slug: string;
   isNew: boolean;
 }) {
-  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
-
   if (isNew) {
     return (
       <p className="field-hint muted">
@@ -205,21 +204,7 @@ function SlugField({
       <span className="field-label">URL</span>
       <div className="slug-line">
         <code className="slug-value">/blog/{slug}</code>
-        <button
-          type="button"
-          className="row-action"
-          onClick={() => {
-            // Inside a promise: with no clipboard the call throws before any promise exists.
-            Promise.resolve()
-              .then(() => navigator.clipboard.writeText(`/blog/${slug}`))
-              .then(
-                () => setCopied("copied"),
-                () => setCopied("failed"),
-              );
-          }}
-        >
-          {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : "Copy"}
-        </button>
+        <CopyTextButton value={`/blog/${slug}`} label="Copy" />
       </div>
       {/* Read-only, not disabled: a disabled field submits nothing, and without the slug every save
           looks like a new post. */}

@@ -1,9 +1,10 @@
 import { Form, Link } from "react-router";
 
-import { CopyButton } from "~/components/admin/media-copy-button";
+import { CopyButton } from "~/components/admin/copy-button";
 import { DocumentCard } from "~/components/admin/media-document-card";
 import { MediaListHeader } from "~/components/admin/media-list-header";
-import { toast } from "~/components/admin/media-keyboard";
+import { toast } from "~/components/admin/toast";
+import { copyText } from "~/lib/clipboard";
 import { byteSize } from "~/lib/media/byte-size.mjs";
 import { flagsFor, tileFlagFor, usageDescriptor } from "~/lib/media/usage.mjs";
 import {
@@ -69,8 +70,7 @@ export function MediaGrid({
                   .filter((o) => chosen.includes(o.key))
                   .map((o) => o.url)
                   .join("\n");
-                navigator.clipboard
-                  .writeText(addresses)
+                copyText(addresses)
                   .then(() =>
                     toast(
                       `Copied ${chosen.length} address${chosen.length === 1 ? "" : "es"}`,

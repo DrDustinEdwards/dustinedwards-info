@@ -1,3 +1,4 @@
+import { copyText } from "../lib/clipboard";
 import { textFragment } from "../lib/text-fragment.mjs";
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -117,7 +118,7 @@ function decorateCodeBlock(pre: HTMLElement) {
   button.addEventListener("click", async () => {
     const code = pre.querySelector("code")?.textContent ?? "";
     try {
-      await navigator.clipboard.writeText(code);
+      await copyText(code);
       button.textContent = "Copied";
       announce("Code copied");
     } catch {
@@ -178,8 +179,7 @@ function headingLinks() {
         });
       };
 
-      void navigator.clipboard
-        .writeText(url.href)
+      void copyText(url.href)
         .then(() => {
           anchor.setAttribute("data-copied", "true");
           setTimeout(() => anchor.removeAttribute("data-copied"), 1500);
@@ -343,7 +343,7 @@ function copyMarkdown() {
       const response = await fetch(trigger.getAttribute("href") ?? "");
       // An error page is not the markdown: fail over to opening the link, which shows what went wrong.
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      await navigator.clipboard.writeText(await response.text());
+      await copyText(await response.text());
       trigger.textContent = "Copied";
       announce("Markdown copied");
     } catch {
@@ -413,7 +413,7 @@ function selectionLink() {
         button.textContent = SELECTION_LABEL;
       }, 2000);
     };
-    navigator.clipboard.writeText(url).then(
+    copyText(url).then(
       () => shown("Link copied"),
       () => shown("Copy failed"),
     );
