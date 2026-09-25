@@ -2,6 +2,8 @@ import { listMediaPage } from "~/db";
 
 import { isContentKey } from "./classify.mjs";
 import { WEBP_QUALITY } from "./encoding.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { bytesToBase64 } from "~/lib/bytes.mjs";
 
 // Content-agnostic: nothing post-shaped is imported here; citations arrive through the resolver seam.
 
@@ -97,7 +99,7 @@ export async function measureDimensions(
   } catch (error) {
     throw new Error(
       `Cloudflare Images could not measure the image: ` +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
       { cause: error },
     );
   }
@@ -122,10 +124,7 @@ export async function placeholderFor(
       .transform({ width: PLACEHOLDER_WIDTH })
       .output({ format: "image/webp", quality: WEBP_QUALITY });
     const buffer = await result.response().arrayBuffer();
-    let binary = "";
-    const view = new Uint8Array(buffer);
-    for (const byte of view) binary += String.fromCharCode(byte);
-    return `data:image/webp;base64,${btoa(binary)}`;
+    return `data:image/webp;base64,${bytesToBase64(new Uint8Array(buffer))}`;
   } catch {
     return null;
   }

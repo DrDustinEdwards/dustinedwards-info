@@ -6,7 +6,7 @@
  * would be a dated claim nothing can re-derive.
  *
  * THE SMOKE TOKEN IS NEVER PRINTED. It is read here and attached as an
- * `authorization` header exactly as `scripts/check-browser.mjs` does; nothing
+ * `authorization` header exactly as check:browser does (`scripts/lib/browser/credential.mjs`); nothing
  * writes it to stdout, to a filename, or into a screenshot.
  */
 

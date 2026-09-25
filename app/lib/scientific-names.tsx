@@ -1,17 +1,6 @@
 import type { ReactNode } from "react";
 
-import { ORGANISMS } from "~/data/organisms";
-
-function escapeRegExp(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-// ORGANISMS is ordered longest first and alternation takes the first branch that matches,
-// so the trinomial wins over the binomial.
-const ORGANISM_PATTERN = new RegExp(
-  `\\b(${ORGANISMS.map(escapeRegExp).join("|")})\\b`,
-  "g",
-);
+import { ORGANISM_PATTERN } from "~/data/organisms";
 
 export function italicizeOrganisms(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];

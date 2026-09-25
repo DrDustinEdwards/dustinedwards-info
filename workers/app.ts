@@ -7,24 +7,24 @@ import { cloudflareContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
-import { postRedirectStatus, postRedirectTarget } from "~/lib/slug-redirect.mjs";
+import { postRedirectTarget } from "~/lib/slug-redirect.mjs";
 import {
   paperSlashTarget,
-  pdfRedirectStatus,
   pdfRedirectTarget,
 } from "~/lib/publications/pdf-redirect.mjs";
 // Imported here, not in the predicate's .mjs, because Node ESM refuses a bare JSON import.
 import redirects from "../content/redirects.json";
 import { themeFromRequest } from "~/lib/theme";
-import { serverTiming, timingsContext } from "~/lib/timing";
+import { serverTiming, timingsContext, type Timings } from "~/lib/timing";
 import {
   CSP_ENDPOINT_NAME,
   CSP_REPORT_PATH,
   contentSecurityPolicy,
   isAdminPath,
 } from "./csp.mjs";
-import { isFeed } from "./feed-types.mjs";
+import { isUnpolicedType } from "./feed-types.mjs";
 import { handleMediaEvents } from "./media-events";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export { AskBudget } from "./ask-budget";
 
@@ -101,7 +101,7 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
     const type = response.headers.get("content-type") ?? "";
     if (!type.includes("text/html")) return;
     if (response.status !== 200) return;
-    if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return;
+    if (isAdminPath(url.pathname)) return;
 
     let refererHost = "";
     const referer = request.headers.get("referer");
@@ -131,10 +131,28 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
     console.error(
       JSON.stringify({
         alert: "traffic-write-failed",
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
   }
+}
+
+/**
+ * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
+ * set, the report endpoint, the policy (feeds excepted) and the uncached default.
+ */
+function applyDocumentHeaders(
+  headers: Headers,
+  { timings, reportTo, csp }: { timings: Timings | undefined; reportTo: string; csp: string },
+) {
+  if (timings) headers.set("Server-Timing", serverTiming(timings));
+  applySecurityHeaders(headers);
+  headers.set("Reporting-Endpoints", reportTo);
+  if (!isUnpolicedType(headers.get("content-type"))) {
+    headers.set("Content-Security-Policy", csp);
+  }
+  if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
+  applyEdgePolicy(headers);
 }
 
 /**
@@ -169,29 +187,15 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     const csp = contentSecurityPolicy(nonce, isAdminPath(url.pathname));
 
 
+    const document = { timings, reportTo, csp };
+
     // `Response.redirect()` and friends return immutable headers, so a `set` throws; the catch
-    // rebuilds and must apply the same set.
+    // rebuilds and applies the same set.
     try {
-      if (timings) response.headers.set("Server-Timing", serverTiming(timings));
-      applySecurityHeaders(response.headers);
-      response.headers.set("Reporting-Endpoints", reportTo);
-      if (!isFeed(response.headers.get("content-type"))) {
-        response.headers.set("Content-Security-Policy", csp);
-      }
-      if (!response.headers.has("cache-control")) {
-        response.headers.set("cache-control", UNCACHED);
-      }
-      applyEdgePolicy(response.headers);
+      applyDocumentHeaders(response.headers, document);
     } catch {
       const headers = new Headers(response.headers);
-      if (timings) headers.set("Server-Timing", serverTiming(timings));
-      applySecurityHeaders(headers);
-      headers.set("Reporting-Endpoints", reportTo);
-      if (!isFeed(headers.get("content-type"))) {
-        headers.set("Content-Security-Policy", csp);
-      }
-      if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
-      applyEdgePolicy(headers);
+      applyDocumentHeaders(headers, document);
       return new Response(response.body, {
         status: response.status,
         statusText: response.statusText,
@@ -203,6 +207,18 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
   }
 }
 
+/**
+ * A gateway redirect: 301 for GET and HEAD, 308 otherwise so a form body survives. `no-store` is
+ * load-bearing: the scheme is not in the cache key, so a stored HTTPS redirect would loop HTTPS
+ * readers, and a stored rename would outlive a change to the map.
+ */
+function redirectTo(request: Request, location: string) {
+  return new Response(null, {
+    status: httpsRedirectStatus(request.method),
+    headers: { Location: location, "Cache-Control": "no-store" },
+  });
+}
+
 /*
  * THE GATEWAY. Cache disabled, so it runs on every request (check:urls reads this phrase).
  * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme; the
@@ -210,51 +226,24 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
  */
 export default {
   async fetch(request, env, ctx) {
-    // `no-store` is load-bearing: the scheme is not in the cache key, so a stored redirect would loop
-    // HTTPS readers.
     const secure = httpsRedirectTarget(request.url);
-    if (secure !== null) {
-      return new Response(null, {
-        status: httpsRedirectStatus(request.method),
-        headers: { Location: secure, "Cache-Control": "no-store" },
-      });
-    }
+    if (secure !== null) return redirectTo(request, secure);
 
     const url = new URL(request.url);
 
     const renamed = postRedirectTarget(url.pathname, redirects.posts);
-    if (renamed !== null) {
-      return new Response(null, {
-        status: postRedirectStatus(request.method),
-        headers: {
-          Location: new URL(`${renamed}${url.search}`, url).toString(),
-          "Cache-Control": "no-store",
-        },
-      });
-    }
+    if (renamed !== null) return redirectTo(request, new URL(`${renamed}${url.search}`, url).toString());
 
     // The PDF map runs before the slash redirect because its keys end in `.pdf`.
     const movedPdf = pdfRedirectTarget(url.pathname, redirects.pdfs);
     if (movedPdf !== null) {
-      return new Response(null, {
-        status: pdfRedirectStatus(request.method),
-        headers: {
-          Location: new URL(`${movedPdf}${url.search}`, url).toString(),
-          "Cache-Control": "no-store",
-        },
-      });
+      return redirectTo(request, new URL(`${movedPdf}${url.search}`, url).toString());
     }
 
     // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
     const slashed = paperSlashTarget(url.pathname);
     if (slashed !== null) {
-      return new Response(null, {
-        status: pdfRedirectStatus(request.method),
-        headers: {
-          Location: new URL(`${slashed}${url.search}`, url).toString(),
-          "Cache-Control": "no-store",
-        },
-      });
+      return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
     }
 
     const theme = themeFromRequest(request);

@@ -94,8 +94,9 @@ const ENHANCE_BROTLI_CEILINGS = {
  * @type {Record<string, string>}
  */
 const INEFFECTIVE_IMPORT_EXEMPT = {
-  "app/routes/playground.tsx -> app/lib/content/chart":
-    "its only static importer is pipeline.mjs, which the Worker reaches only through " +
+  "app/lib/playground/chart-options.ts -> app/lib/content/chart":
+    "its only static importer is directives.mjs, reached only from pipeline.mjs, which the " +
+    "Worker reaches only through " +
     "loadPipeline()'s dynamic import, so Plot and linkedom stay out of the chunk a cold " +
     "isolate evaluates (1ac9ae1); a static import in the loader would put them back.",
 };
