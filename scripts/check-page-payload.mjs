@@ -22,6 +22,7 @@ import {
   stylesheetsFor,
 } from "./lib/page-payload.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 import { ROUTES_DIR, routesMatching, sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -256,20 +257,8 @@ function enhancementAssets() {
   });
 }
 
-/**
- * @param {string} dir
- * @returns {string[]}
- */
-function walkSource(dir) {
-  /** @type {string[]} */
-  const out = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walkSource(full));
-    else if (/\.(ts|tsx|mjs)$/.test(entry.name)) out.push(full);
-  }
-  return out;
-}
+/** @param {string} dir */
+const walkSource = (dir) => walkFiles(dir, { keep: (name) => /\.(ts|tsx|mjs)$/.test(name) });
 
 async function main() {
   const { files, manifestFile } = walkHydrationSet();

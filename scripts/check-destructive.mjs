@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 import {
   bindingUses,
   findAction,
@@ -273,21 +274,13 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 // syntax tree because every file touching this binding has a comment naming both.
 {
   /** @param {string} dir @returns {string[]} */
-  const walk = (dir) => {
-    if (!existsSync(dir)) return [];
-    /** @type {string[]} */
-    const out = [];
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name === "node_modules" || entry.name === "dist") continue;
-        out.push(...walk(full));
-      } else if (/\.(ts|tsx|mjs|js)$/.test(entry.name)) {
-        out.push(full);
-      }
-    }
-    return out;
-  };
+  const walk = (dir) =>
+    existsSync(dir)
+      ? walkFiles(dir, {
+          keep: (name) => /\.(ts|tsx|mjs|js)$/.test(name),
+          skipDir: (name) => name === "node_modules" || name === "dist",
+        })
+      : [];
 
   /**
    * Read off the syntax tree: a comment naming the binding is not a use, `env["MEDIA_BACKUP"]` and a

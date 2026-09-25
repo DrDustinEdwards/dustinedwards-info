@@ -18,6 +18,7 @@ import {
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -301,19 +302,11 @@ refuses(
 
   /** @type {string[]} */
   const constructors = [];
-  const walk = (/** @type {string} */ dir) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.(ts|tsx|mjs)$/.test(entry.name)) {
-        const text = stripComments(readFileSync(full, "utf8"));
-        if (/kind:\s*"smoke"/.test(text)) {
-          constructors.push(relative(root, full).split(sep).join("/"));
-        }
-      }
+  for (const full of walkFiles(join(root, "app"), { keep: (name) => /\.(ts|tsx|mjs)$/.test(name) })) {
+    if (/kind:\s*"smoke"/.test(stripComments(readFileSync(full, "utf8")))) {
+      constructors.push(relative(root, full).split(sep).join("/"));
     }
-  };
-  walk(join(root, "app"));
+  }
 
   eq(
     "the smoke-actor scan found the one construction site it expects",

@@ -1,10 +1,11 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test", "worker");
@@ -17,19 +18,9 @@ const MINIMUM_CASES = 128;
 const tally = createTally();
 const { ok } = tally;
 
-/** @param {string} dir @param {string[]} out */
-function testFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) testFiles(full, out);
-    else if (entry.endsWith(".test.ts")) out.push(full);
-  }
-  return out;
-}
-
 console.log("\ntest:worker\n");
 
-const files = testFiles(TEST_DIR);
+const files = walkFiles(TEST_DIR, { keep: (name) => name.endsWith(".test.ts") });
 console.log(
   `  discovered ${files.length} file(s): ` +
     files.map((f) => relative(TEST_DIR, f).split(sep).join("/")).join(", "),

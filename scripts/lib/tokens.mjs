@@ -4,9 +4,10 @@
  * one was in both, and their disagreement over a doubled token was the only difference they had.
  */
 
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { walkFiles } from "./walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -102,14 +103,10 @@ export function stylesheetPaths() {
   // Order between routes is not meaningful, only sorted for stability. Every module under app/,
   // not just routes: the palette's sheet is referenced by a component alone.
   const routeDir = join(root, "app");
-  /** @param {string} dir @returns {string[]} */
-  const modulesUnder = (dir) =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const full = join(dir, entry.name);
-      if (entry.isDirectory()) return entry.name === "enhance" ? [] : modulesUnder(full);
-      return /\.(ts|tsx|mts|mjs|js|jsx)$/.test(entry.name) ? [full] : [];
-    });
-  const routeFiles = modulesUnder(routeDir).sort();
+  const routeFiles = walkFiles(routeDir, {
+    keep: (name) => /\.(ts|tsx|mts|mjs|js|jsx)$/.test(name),
+    skipDir: (name) => name === "enhance",
+  }).sort();
   // Admin first among non-root sheets: an admin page loads root then admin.
   expand(ADMIN_CSS_PATH);
 
