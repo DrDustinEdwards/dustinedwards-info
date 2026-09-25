@@ -636,8 +636,15 @@ export async function renderBody({ file, body, resolveImage }) {
     .use(rehypeSlug)
     .use(rehypeCollectToc, toc)
     .use(rehypeAutolinkHeadings, {
-      // Keyboard-reachable on purpose; the aria-label is the name, because # is not one.
-      properties: { className: ["heading-anchor"], "aria-label": "Link to this section" },
+      /*
+       * Keyboard-reachable on purpose; the aria-label is the name, because # is not one. It carries
+       * the heading, so a links list is not a column of identical "Link to this section" entries.
+       * Called before the # is appended, so the text is the heading's alone.
+       */
+      properties: (/** @type {any} */ heading) => ({
+        className: ["heading-anchor"],
+        "aria-label": `Link to section: ${hastToString(heading).trim()}`,
+      }),
       behavior: "append",
       content: { type: "text", value: "#" },
     })
