@@ -5,6 +5,7 @@ import { RouterContextProvider, createRoutesStub } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { approvedMentionsFor } from "~/db";
+import { adminActorContext } from "~/lib/auth.server";
 import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
@@ -702,9 +703,12 @@ describe("the moderation queue", () => {
 
   async function runAction(body: Record<string, string>) {
     const ctx = createExecutionContext();
+    /* The admin layout sets the actor; the action hands it to `decideMention` for the policy checks. */
+    const context = routeContext(ctx);
+    context.set(adminActorContext, { kind: "admin", email: "admin@example.com" });
     return (await mentionsAction({
       request: adminPost(body),
-      context: routeContext(ctx),
+      context,
     } as never)) as unknown as {
       data: {
         ok?: boolean;
@@ -754,11 +758,16 @@ describe("the moderation queue", () => {
     const a = await seedMention(unverified, "unverified", 1);
     const b = await seedMention(failed, "failed", 1);
 
-    await runAction({ intent: "approve", id: String(a) });
-    await runAction({ intent: "approve", id: String(b) });
+    const first = await runAction({ intent: "approve", id: String(a) });
+    const second = await runAction({ intent: "approve", id: String(b) });
 
     expect(await statusOf(unverified)).toBe("unverified");
     expect(await statusOf(failed)).toBe("failed");
+    /* Nothing moved, so the page must not say "approved". */
+    for (const result of [first, second]) {
+      expect(result.data.ok).toBe(false);
+      expect(result.data.message).toMatch(/^Nothing changed/);
+    }
   });
 
   it("REFUSES A DELETE WITH NO TYPED CONFIRMATION, in the ACTION", async () => {
@@ -1110,5 +1119,33 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     expect(link).toContain(`/blog/${POST_SLUG}.md`);
     /* One header, two values, comma joined, which is how RFC 8288 spells it. */
     expect(link?.split(", ")).toHaveLength(2);
+  });
+});
+
+describe("/webmention on a body stream that breaks", () => {
+  it("answers 400, not a 500, and stores nothing", async () => {
+    const before = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    const broken = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("source=https%3A%2F%2Felsewhere"));
+        controller.error(new Error("planted stream failure"));
+      },
+    });
+    const ctx = createExecutionContext();
+    const response = await webmentionAction({
+      request: new Request(`${SITE_ORIGIN}/webmention`, {
+        method: "POST",
+        headers: {
+          "cf-connecting-ip": "203.0.113.77",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: broken,
+      }),
+      context: routeContext(ctx),
+    } as never);
+
+    expect(response.status).toBe(400);
+    const after = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    expect(after?.n).toBe(before?.n);
   });
 });

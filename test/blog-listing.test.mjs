@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { splitFeatured, startHere } from "../app/lib/blog-listing.mjs";
+import { readPage, splitFeatured, startHere } from "../app/lib/blog-listing.mjs";
 
 const page = [
   { slug: "a", featured: false },
@@ -132,4 +132,11 @@ test("cards is honored, so the count has one owner", () => {
     ["n1"],
     "HOME_CARDS is the default and the section's size is not written twice",
   );
+});
+
+test("readPage accepts only a positive whole number and reads anything else as page 1", () => {
+  assert.equal(readPage("3"), 3);
+  for (const raw of [null, "", "0", "-3", "1.5", "2abc", "abc", "1e3", " 2"]) {
+    assert.equal(readPage(raw), 1, `?page=${raw} must read as 1`);
+  }
 });

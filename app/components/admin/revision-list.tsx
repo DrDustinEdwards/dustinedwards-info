@@ -21,7 +21,8 @@ export function RevisionList({
 }) {
   const [openSha, setOpenSha] = useState<string | null>(null);
   const [patches, setPatches] = useState<Record<string, string | null>>({});
-  const [busy, setBusy] = useState<string | null>(null);
+  /* Per sha: one shared flag let a finished load clear another's, and read an unloaded diff as "No diff". */
+  const [restoring, setRestoring] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
   const toggle = async (sha: string) => {
@@ -32,7 +33,6 @@ export function RevisionList({
     }
     setOpenSha(sha);
     if (sha in patches) return;
-    setBusy(sha);
     try {
       const response = await fetch(
         `/admin/posts/${slug}/revisions?sha=${encodeURIComponent(sha)}`,
@@ -43,14 +43,12 @@ export function RevisionList({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
       setOpenSha(null);
-    } finally {
-      setBusy(null);
     }
   };
 
   const restore = async (sha: string) => {
     setError(null);
-    setBusy(sha);
+    setRestoring((prev) => ({ ...prev, [sha]: true }));
     try {
       const response = await fetch(
         `/admin/posts/${slug}/revisions?sha=${encodeURIComponent(sha)}&want=content`,
@@ -64,7 +62,11 @@ export function RevisionList({
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
-      setBusy(null);
+      setRestoring((prev) => {
+        const next = { ...prev };
+        delete next[sha];
+        return next;
+      });
     }
   };
 
@@ -116,16 +118,16 @@ export function RevisionList({
                 <button
                   type="button"
                   className="row-action"
-                  disabled={busy === revision.sha}
+                  disabled={restoring[revision.sha] === true}
                   onClick={() => void restore(revision.sha)}
                 >
-                  {busy === revision.sha ? "Loading..." : "Load into editor"}
+                  {restoring[revision.sha] ? "Loading..." : "Load into editor"}
                 </button>
               ) : null}
             </div>
 
             {openSha === revision.sha ? (
-              busy === revision.sha ? (
+              !(revision.sha in patches) ? (
                 <p className="muted">Loading diff...</p>
               ) : patches[revision.sha] ? (
                 <pre className="history-diff">
