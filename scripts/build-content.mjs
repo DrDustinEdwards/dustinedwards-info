@@ -33,6 +33,10 @@ export async function buildArtifact() {
   }
 
   const files = entries.filter((name) => name.endsWith(".md")).sort();
+  // An empty artifact is what every downstream delete converges production to.
+  if (files.length === 0) {
+    throw new Error(`${CONTENT_DIR} holds no markdown posts, so no artifact was written.`);
+  }
 
   const posts = [];
   for (const name of files) {
@@ -87,16 +91,23 @@ export async function buildArtifact() {
  * @returns {string | null}
  */
 export function lastCommitDate(file) {
+  // A file with no history is git exiting 0 with no output, the null answer. A throw is git missing
+  // or not a repository, which used to write a null revision date over every real one in D1.
+  let out;
   try {
-    const out = execFileSync(
+    out = execFileSync(
       "git",
       ["log", "-1", "--format=%cd", "--date=format:%Y-%m-%d", "--", file],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     ).trim();
-    return out || null;
-  } catch {
-    return null;
+  } catch (error) {
+    throw new Error(
+      `git log could not read the history of ${file}, so its revision date is unknown: ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
+  return out || null;
 }
 
 /**
