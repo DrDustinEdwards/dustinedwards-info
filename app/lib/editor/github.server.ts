@@ -130,6 +130,14 @@ export async function listDirectory(env: GhEnv, path: string, ref = BRANCH) {
   return entries;
 }
 
+/** The repository's posts: each `content/posts/*.md` file, with the slug its name carries. */
+export async function listPostFiles(env: GhEnv) {
+  const entries = await listDirectory(env, "content/posts");
+  return entries
+    .filter((e) => e.type === "file" && e.name.endsWith(".md"))
+    .map((e) => ({ ...e, slug: e.name.slice(0, -".md".length) }));
+}
+
 /** Raw bytes: readFile's TextDecoder replaces invalid UTF-8, so an image would come back a different length. */
 export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
   try {
