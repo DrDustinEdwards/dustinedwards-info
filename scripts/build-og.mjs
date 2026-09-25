@@ -1,5 +1,6 @@
 // Build time only: satori and resvg cannot run in the Worker. It prunes against the keys the current
 // artifact references while the live site serves D1, so run outside a ship window it deletes live cards.
+// The target is never defaulted: `-- --remote` or `-- --local` on every run that touches R2.
 
 import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -21,8 +22,10 @@ import { longDateUTC } from "../app/lib/long-date.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { ARTIFACT_PATH } from "./build-content.mjs";
+import { deleteFloor, requirePosts } from "./lib/delete-floor.mjs";
 import { markElement } from "./lib/mark.mjs";
 import { listForPrune } from "./lib/r2.mjs";
+import { requireTarget } from "./lib/target-flag.mjs";
 import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./lib/tokens.mjs";
 import { bucketFor, databaseFor } from "./lib/wrangler-config.mjs";
 
@@ -212,7 +215,6 @@ async function liveCardKeys() {
 }
 
 async function main() {
-  const target = process.argv.includes("--local") ? "--local" : "--remote";
   const dryRun = process.argv.includes("--dry-run");
 
   const outFlag = process.argv.indexOf("--out");
@@ -220,8 +222,9 @@ async function main() {
   if (outFlag >= 0 && !outDir) {
     throw new Error("--out needs a directory: npm run build:og -- --out samples");
   }
-  const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
-  const posts = artifact.posts ?? [];
+  // --out renders to disk and never reaches R2, so only it may run without a target.
+  const target = outDir ? null : requireTarget(process.argv.slice(2), "build:og");
+  const posts = requirePosts(JSON.parse(await readFile(ARTIFACT_PATH, "utf8")), ARTIFACT_PATH);
 
   /** @type {any[]} */
   const fonts = [
@@ -313,7 +316,7 @@ async function main() {
 
   // Local render mode returns here, before the prune: after a template bump every existing object is
   // an orphan, and those are what the deployed site still serves.
-  if (outDir) {
+  if (outDir || !target) {
     console.log(
       `\n  ${written} card(s) rendered to ${outDir}. ` +
         `Nothing was uploaded and nothing was pruned.\n`,
@@ -371,6 +374,16 @@ async function main() {
     console.log(
       `  coupling check: ${liveKeys.size} card(s) live in D1, none of them orphaned`,
     );
+  }
+
+  // A template bump orphans exactly the old half; more than that is an artifact that lost posts.
+  const refusal = deleteFloor({
+    what: "social cards",
+    keeping: present.length - orphans.length,
+    removing: orphans.length,
+  });
+  if (refusal) {
+    throw new Error(`build:og REFUSED to prune: ${refusal}. Nothing was pruned.`);
   }
 
   let pruned = 0;
