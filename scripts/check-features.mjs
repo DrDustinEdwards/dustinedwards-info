@@ -32,6 +32,7 @@ import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/th
 import { apca, contrast } from "../app/lib/contrast.mjs";
 import { RRF_K, fuse } from "../app/lib/search/query.mjs";
 import { stripComments, stripTsxComments } from "./lib/strip-comments.mjs";
+import { functionBody } from "./lib/source-body.mjs";
 import {
   CHART_TYPES,
   buildChartModel,
@@ -66,34 +67,6 @@ const codeOf = (file) => {
   const source = normalizeEol(readFileSync(file, "utf8"));
   return file.endsWith(".tsx") ? stripTsxComments(source) : stripped(source);
 };
-
-/**
- * The body of the first function whose declaration matches `declaration`, braces included, or "".
- * String literals are skipped whole, so a brace inside one does not count.
- *
- * @param {string} code @param {RegExp} declaration
- */
-function functionBody(code, declaration) {
-  const at = code.search(declaration);
-  if (at === -1) return "";
-  const open = code.indexOf("{", code.indexOf(")", at));
-  if (open === -1) return "";
-  let depth = 0;
-  for (let i = open; i < code.length; i += 1) {
-    const c = code[i];
-    if (c === '"' || c === "'" || c === "`") {
-      i += 1;
-      while (i < code.length && code[i] !== c) i += code[i] === "\\" ? 2 : 1;
-      continue;
-    }
-    if (c === "{") depth += 1;
-    else if (c === "}") {
-      depth -= 1;
-      if (depth === 0) return code.slice(open, i + 1);
-    }
-  }
-  return "";
-}
 
 /**
  * Letter-digit tokens (D1, FTS5) are names, removed before the digit scan.

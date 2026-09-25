@@ -6,6 +6,7 @@ import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
 import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
+import { blockFrom } from "./lib/source-body.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -49,34 +50,6 @@ if (!existsSync(APP_PATH)) {
 
 const source = readFileSync(APP_PATH, "utf8");
 const code = stripComments(source);
-
-/**
- * The block that opens at the first `{` at or after `from`, braces included, or "" when there is
- * none. String literals are skipped whole, so a brace inside one does not count. Bounded by the
- * code's own structure, so a reformat or a longer argument cannot push a needle out of a fixed
- * character window, and the window cannot run on into the next function.
- *
- * @param {string} src @param {number} from
- */
-function blockFrom(src, from) {
-  const open = src.indexOf("{", from);
-  if (open === -1) return "";
-  let depth = 0;
-  for (let i = open; i < src.length; i += 1) {
-    const c = src[i];
-    if (c === '"' || c === "'" || c === "`") {
-      i += 1;
-      while (i < src.length && src[i] !== c) i += src[i] === "\\" ? 2 : 1;
-      continue;
-    }
-    if (c === "{") depth += 1;
-    else if (c === "}") {
-      depth -= 1;
-      if (depth === 0) return src.slice(open, i + 1);
-    }
-  }
-  return "";
-}
 
 const block = code.match(/const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/);
 ok(
