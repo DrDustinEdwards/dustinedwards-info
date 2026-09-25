@@ -7,6 +7,8 @@ import {
   listMediaPage,
   mediaRefsFor,
   mediaTwins,
+  trashMediaRecord,
+  trashedMediaKeys,
   upsertMediaRecord,
 } from "~/db";
 import { cloudflareContext } from "~/lib/context";
@@ -73,12 +75,12 @@ async function upload(
   return { status: response.status, url: body.url, key: body.key ?? "" };
 }
 
-async function adminMediaAction(fields: Record<string, string>) {
+async function adminMediaAction(fields: Record<string, string>, routeEnv: object = env) {
   const form = new FormData();
   for (const [name, value] of Object.entries(fields)) form.append(name, value);
   return adminAction({
     request: new Request("https://example.com/admin/media", { method: "POST", body: form }),
-    context: routeContext(env),
+    context: routeContext(routeEnv),
   } as never);
 }
 
@@ -353,5 +355,65 @@ describe("the duplicates lens", () => {
     expect(rows).toHaveLength(2);
     for (const row of rows) expect(known.has(row.key), row.key).toBe(true);
     expect(rows.map((row) => row.key).sort()).toEqual([...twins].sort());
+  });
+});
+
+describe("emptying the trash", () => {
+  async function trashedUpload(seed: string) {
+    const { bytes, key } = await uploadKey(seed, { width: 20, height: 20 });
+    await env.MEDIA.put(key, bytes.buffer as ArrayBuffer);
+    await upsertMediaRecord(mediaEnv(), { key, alt: "", storage: "r2", kind: "image" });
+    await trashMediaRecord(mediaEnv(), key);
+    return key;
+  }
+
+  const trashedCount = async () => (await trashedMediaKeys(mediaEnv())).length;
+
+  it("KEEPS a file a post body cites though media_refs has no row for it", async () => {
+    const cited = await trashedUpload("trash-cited");
+    const uncited = await trashedUpload("trash-uncited");
+    await env.DB.prepare(
+      `INSERT INTO posts (slug, kind, title, body, status)
+       VALUES ('cites-a-trashed-file', 'post', 'Cites it', ?1, 'draft')`,
+    )
+      .bind(`An image: ![alt](/media/${cited})`)
+      .run();
+    expect((await mediaRefsFor(mediaEnv(), [cited])).get(cited)).toHaveLength(0);
+
+    const result = (await adminMediaAction({
+      intent: "empty-trash",
+      [CONFIRM_FIELD]: String(await trashedCount()),
+    })) as { message: string };
+
+    expect(await env.MEDIA.get(cited)).toBeTruthy();
+    expect(await mediaRow(cited)).toBeTruthy();
+    expect(result.message).toContain(`${cited} (a post cites it)`);
+    expect(await env.MEDIA.get(uncited)).toBeNull();
+  });
+
+  it("deletes NOTHING when the citation scan fails", async () => {
+    const key = await trashedUpload("trash-scan-fails");
+    /* Only the posts read fails, so the trash listing still works and the scan is the one that breaks. */
+    const brokenDb = new Proxy(env.DB, {
+      get(target, property) {
+        if (property === "prepare") {
+          return (query: string) => {
+            if (/from "posts"/i.test(query)) throw new Error("planted posts read failure");
+            return target.prepare(query);
+          };
+        }
+        const value = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    const result = (await adminMediaAction(
+      { intent: "empty-trash", [CONFIRM_FIELD]: String(await trashedCount()) },
+      { ...env, DB: brokenDb },
+    )) as { message: string };
+
+    expect(result.message).toMatch(/^Nothing was deleted: the reference scan failed/);
+    expect(await env.MEDIA.get(key)).toBeTruthy();
+    expect(await mediaRow(key)).toBeTruthy();
   });
 });

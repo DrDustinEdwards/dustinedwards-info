@@ -448,7 +448,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     };
   }
 
-  /* Iterates the guarded delete per key, so `claimMediaKeyForDelete` still refuses a cited asset. */
+  /* Runs the single delete's citation scan, fails closed on it, then claims per key, so a cited asset is kept. */
   if (intent === "empty-trash") {
     const keys = await trashedMediaKeys(env);
 
@@ -461,12 +461,25 @@ export async function action({ request, context }: Route.ActionArgs) {
           `confirmation read ${typed || "(blank)"}. Type the count exactly to confirm.`,
       };
     }
+    /* The same scan as the single delete: media_refs alone misses a citation the pipeline has not recorded. */
+    const resolution = await resolveCitations(env, keys.filter(isManagedKey));
+    if (!resolution.complete) {
+      return {
+        message:
+          `Nothing was deleted: the reference scan failed (${resolution.failed.join(", ")}), ` +
+          `so it cannot be confirmed that nothing cites these files.`,
+      };
+    }
     const deleted: string[] = [];
     const refused: string[] = [];
     for (const key of keys) {
       // Static rows have no object to remove, so emptying leaves them binned.
       if (!isManagedKey(key)) {
         refused.push(`${key} (static, nothing to delete)`);
+        continue;
+      }
+      if ((resolution.citations.get(key) ?? []).length > 0) {
+        refused.push(`${key} (a post cites it)`);
         continue;
       }
       const claimed = await claimMediaKeyForDelete(env, key);
