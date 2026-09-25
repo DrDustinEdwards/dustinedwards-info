@@ -250,6 +250,16 @@ export function ogImageKey(post) {
 const RELATED_LIMIT = 3;
 
 /**
+ * Newest first, then by slug: a total order, so a tie is never left to array order.
+ *
+ * @param {{ publishAt: string, slug: string }} a
+ * @param {{ publishAt: string, slug: string }} b
+ */
+function newestThenSlug(a, b) {
+  return (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : 0) || (a.slug < b.slug ? -1 : 1);
+}
+
+/**
  * Must run over the whole corpus in both writers: relatedness is a property of the set.
  * isPubliclyVisible, not !draft, because a scheduled post is not a draft. blog.$slug.tsx filters
  * again because a listed post can be unpublished after this list is stored.
@@ -280,9 +290,7 @@ export function withRelated(posts) {
 
     scored.sort(
       (a, b) =>
-        b.shared - a.shared ||
-        (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : 0) ||
-        (a.slug < b.slug ? -1 : 1),
+        b.shared - a.shared || newestThenSlug(a, b),
     );
 
     return {
@@ -341,11 +349,7 @@ export function withBacklinks(posts) {
 
   return posts.map((post) => {
     // Never leave a tie to array order, which is not stable input.
-    const list = (incoming.get(post.slug) ?? []).sort(
-      (a, b) =>
-        (a.publishAt < b.publishAt ? 1 : a.publishAt > b.publishAt ? -1 : 0) ||
-        (a.slug < b.slug ? -1 : 1),
-    );
+    const list = (incoming.get(post.slug) ?? []).sort(newestThenSlug);
     return {
       ...post,
       backlinks: list.map(({ slug, title }) => ({ slug, title })),
@@ -683,6 +687,20 @@ function remarkMathValidate(file, sink) {
 }
 
 /**
+ * Refuses a heading directly inside a container directive, naming the directive and the line.
+ *
+ * @param {string} file
+ * @param {any} node the directive
+ * @param {string} why completes the sentence that names the heading
+ */
+function refuseHeading(file, node, why) {
+  const heading = (node.children ?? []).find((/** @type {any} */ child) => child.type === "heading");
+  if (!heading) return;
+  const line = heading.position?.start?.line;
+  throw new ContentError(file, `:::${node.name} holds a heading${line ? ` on line ${line}` : ""}${why}`);
+}
+
+/**
  * A heading inside is refused: it would put a hidden section in the table of contents. Native
  * <details>, so the text is in the HTML without script.
  *
@@ -698,17 +716,14 @@ function remarkDetails(file) {
         throw new ContentError(file, ":::details requires a summary attribute");
       }
 
-      const heading = (node.children ?? []).find((child) => child.type === "heading");
-      if (heading) {
-        const line = heading.position?.start?.line;
-        throw new ContentError(
-          file,
-          `:::details holds a heading${line ? ` on line ${line}` : ""}, which makes it a section ` +
-            "of the argument rather than supplementary material. A heading is in the table of " +
-            "contents and is a link target, so collapsing it hides a section a reader was sent " +
-            "to. Use it for long methods, raw data or an appendix, and leave the argument open.",
-        );
-      }
+      refuseHeading(
+        file,
+        node,
+        ", which makes it a section of the argument rather than supplementary material. A " +
+          "heading is in the table of contents and is a link target, so collapsing it hides a " +
+          "section a reader was sent to. Use it for long methods, raw data or an appendix, and " +
+          "leave the argument open.",
+      );
 
       node.data = { ...node.data, hName: "details", hProperties: { className: ["post-details"] } };
       node.children = [
@@ -746,16 +761,12 @@ function remarkSidenote(file) {
         );
       }
 
-      const heading = (node.children ?? []).find((child) => child.type === "heading");
-      if (heading) {
-        const line = heading.position?.start?.line;
-        throw new ContentError(
-          file,
-          `:::sidenote holds a heading${line ? ` on line ${line}` : ""}. A heading is a section ` +
-            "of the argument: it lands in the table of contents and is a link target, and the " +
-            "rail is not where a section goes. Keep a note to prose.",
-        );
-      }
+      refuseHeading(
+        file,
+        node,
+        ". A heading is a section of the argument: it lands in the table of contents and is a " +
+          "link target, and the rail is not where a section goes. Keep a note to prose.",
+      );
 
       // Numbered in source order so #sn-1 stays the first note for anyone linking to it.
       noteIndex += 1;
@@ -1097,10 +1108,7 @@ const INTERNAL_LINK_PREFIX = "/blog/";
  * @returns {boolean}
  */
 function isFurtherReadingUrl(value) {
-  if (value.startsWith(INTERNAL_LINK_PREFIX)) {
-    const slug = value.slice(INTERNAL_LINK_PREFIX.length);
-    return SLUG_PATTERN.test(slug);
-  }
+  if (value.startsWith(INTERNAL_LINK_PREFIX)) return internalLinkSlug(value) !== null;
   let parsed;
   try {
     parsed = new URL(value);
