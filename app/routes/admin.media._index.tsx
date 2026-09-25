@@ -12,7 +12,7 @@ import {
 
 import { timed, timingsContext } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
-import { MediaConfirm } from "~/components/admin/media-confirm";
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { MediaDisplayGroup } from "~/components/admin/media-display-group";
 import { MediaEmptyState } from "~/components/admin/media-empty-state";
 import { MediaGrid } from "~/components/admin/media-grid";
@@ -1008,27 +1008,23 @@ export default function AdminMedia({
         </p>
       ) : null}
 
-      <MediaConfirm
-        open={view.confirm === "empty-trash" && trashedCount > 0}
-        title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
-        body={
-          <>
+      {view.confirm === "empty-trash" && trashedCount > 0 ? (
+        <ConfirmDialog
+          title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
+          body={
             <p>
               Addresses are content hashes, so a deleted file cannot be restored
               by re-uploading it under the same URL. Anything a post cites is
               kept and named.
             </p>
-            <p>
-              Type <strong>{trashedCount}</strong> to confirm.
-            </p>
-          </>
-        }
-        requireTyped={String(trashedCount)}
-        confirmLabel="Delete permanently"
-        cancelHref={linkTo({ confirm: "" })}
-      >
-        <input type="hidden" name="intent" value="empty-trash" />
-      </MediaConfirm>
+          }
+          requireTyped={String(trashedCount)}
+          confirmLabel="Delete permanently"
+          cancelHref={linkTo({ confirm: "" })}
+        >
+          <input type="hidden" name="intent" value="empty-trash" />
+        </ConfirmDialog>
+      ) : null}
 
       {/* Usage is what the renderer emitted, so a route-referenced asset reads as uncited. */}
 
@@ -1084,72 +1080,69 @@ export default function AdminMedia({
         />
       )}
 
-      <MediaConfirm
-        open={confirmingTrash && chosen.length > 0}
-        title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
-        body={
-          <p>
-            They stop showing in the library. Every address keeps working and no
-            published page changes, so nothing here can cost a post its image.
-            Restore puts them back.
-          </p>
-        }
-        confirmLabel="Move to trash"
-        onCancel={() => setConfirmingTrash(false)}
-      >
-        <input type="hidden" name="intent" value="bulk-trash" />
-        {chosen.map((key) => (
-          <input key={key} type="hidden" name="key" value={key} />
-        ))}
-      </MediaConfirm>
-
-      <MediaConfirm
-        open={confirmRebuild !== undefined}
-        title="Re-derive the whole media index"
-        body={
-          <>
+      {confirmingTrash && chosen.length > 0 ? (
+        <ConfirmDialog
+          title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
+          body={
             <p>
-              Every derived column is recomputed from the buckets and every
-              authored one is preserved. Rows whose source object is GONE are
-              removed, so running this against a bucket that is only partly
-              readable prunes the index to whatever it managed to see.
+              They stop showing in the library. Every address keeps working and no
+              published page changes, so nothing here can cost a post its image.
+              Restore puts them back.
             </p>
-            <p>
-              The index currently holds{" "}
-              <strong>{confirmRebuild ?? 0}</strong> row(s). Type{" "}
-              <strong>1</strong> to confirm.
-            </p>
-          </>
-        }
-        requireTyped="1"
-        confirmLabel="Rebuild the index"
-        cancelHref={linkTo({})}
-      >
-        <input type="hidden" name="intent" value="rebuild" />
-      </MediaConfirm>
+          }
+          confirmLabel="Move to trash"
+          onCancel={() => setConfirmingTrash(false)}
+        >
+          <input type="hidden" name="intent" value="bulk-trash" />
+          {chosen.map((key) => (
+            <input key={key} type="hidden" name="key" value={key} />
+          ))}
+        </ConfirmDialog>
+      ) : null}
 
-      <MediaConfirm
-        open={Boolean(confirmDelete)}
-        title={`Permanently delete ${confirmDelete ?? ""}`}
-        body={
-          <>
+      {confirmRebuild !== undefined ? (
+        <ConfirmDialog
+          title="Re-derive the whole media index"
+          body={
+            <>
+              <p>
+                Every derived column is recomputed from the buckets and every
+                authored one is preserved. Rows whose source object is GONE are
+                removed, so running this against a bucket that is only partly
+                readable prunes the index to whatever it managed to see.
+              </p>
+              <p>
+                The index currently holds{" "}
+                <strong>{confirmRebuild ?? 0}</strong> row(s).
+              </p>
+            </>
+          }
+          requireTyped="1"
+          confirmLabel="Rebuild the index"
+          cancelHref={linkTo({})}
+        >
+          <input type="hidden" name="intent" value="rebuild" />
+        </ConfirmDialog>
+      ) : null}
+
+      {Boolean(confirmDelete) ? (
+        <ConfirmDialog
+          title={`Permanently delete ${confirmDelete ?? ""}`}
+          body={
             <p>
               This removes the object from R2. Addresses are content hashes, so a
               deleted file cannot be restored by re-uploading it under the same
               URL.
             </p>
-            <p>
-              Type <strong>1</strong> to confirm.
-            </p>
-          </>
-        }
-        requireTyped="1"
-        confirmLabel="Delete permanently"
-        cancelHref={linkTo({ key: confirmDelete ?? "" })}
-      >
-        <input type="hidden" name="intent" value="delete" />
-        <input type="hidden" name="key" value={confirmDelete ?? ""} />
-      </MediaConfirm>
+          }
+          requireTyped="1"
+          confirmLabel="Delete permanently"
+          cancelHref={linkTo({ key: confirmDelete ?? "" })}
+        >
+          <input type="hidden" name="intent" value="delete" />
+          <input type="hidden" name="key" value={confirmDelete ?? ""} />
+        </ConfirmDialog>
+      ) : null}
 
       <MediaToast />
       {view.view === "grid" ? <MediaKeyboard /> : null}

@@ -2,6 +2,7 @@ import { Form, Link, data, redirect } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
 
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { PostEditor } from "~/components/admin/post-editor";
 import {
   CREATE_FORM_ID,
@@ -325,46 +326,26 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
       />
 
       {actionData?.kind === "confirm-delete" ? (
-        <form method="post" className="editor-confirm-delete">
-          <h2>Delete "{actionData.slug}"?</h2>
-          <p>
-            This removes the file and its rows. It is recoverable only through
-            git.
-          </p>
+        <ConfirmDialog
+          title={`Delete "${actionData.slug}"?`}
+          body={
+            <p>
+              This removes the file and its rows. It is recoverable only through
+              git.
+            </p>
+          }
+          requireTyped="1"
+          confirmLabel="Delete permanently"
+          cancelHref={`/admin/posts/${actionData.slug}/edit`}
+        >
+          <input type="hidden" name="intent" value="delete" />
           <input type="hidden" name="headSha" value={headSha} />
-          <label>
-            <span>
-              Type <strong>1</strong> to confirm
-            </span>
-            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
-          </label>
-          <div className="editor-confirm-actions">
-            <Link to={`/admin/posts/${actionData.slug}/edit`} className="btn-ghost">
-              Cancel
-            </Link>
-            <button type="submit" name="intent" value="delete" className="btn-danger">
-              Delete permanently
-            </button>
-          </div>
-        </form>
+        </ConfirmDialog>
       ) : null}
 
-      <Form
-        id="delete-post"
-        method="post"
-        className="editor-delete-form"
-        onSubmit={(event) => {
-          /* Earlier feedback, not the gate: the action checks the same thing server side. */
-          if (!confirm(`Delete "${loaderData.slug}"? This removes the file and its rows.`)) {
-            event.preventDefault();
-            return;
-          }
-          const field = event.currentTarget.elements.namedItem(CONFIRM_FIELD);
-          if (field instanceof HTMLInputElement) field.value = "1";
-        }}
-      >
+      {/* Submits no confirmation, so the action answers with the typed one above, script or not. */}
+      <Form id="delete-post" method="post" className="editor-delete-form">
         <input type="hidden" name="headSha" value={headSha} />
-        <input type="hidden" name={CONFIRM_FIELD} defaultValue="" />
       </Form>
 
       {/* Outside the editing form: the drawer is a `<dialog>` inside it, and a form inside a form is dropped. */}

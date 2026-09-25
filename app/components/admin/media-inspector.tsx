@@ -2,7 +2,6 @@ import { Form, Link } from "react-router";
 
 import { CopyButton } from "~/components/admin/copy-button";
 import { MediaDrawer } from "~/components/admin/media-drawer";
-import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { byteSize } from "~/lib/media/byte-size.mjs";
 import { copySnippetsFor, usageDescriptor } from "~/lib/media/usage.mjs";
 import type { hrefWith } from "~/lib/media/view.mjs";
@@ -349,22 +348,9 @@ export function MediaInspector({
                   )}
 
                   {detail.deletable ? (
-                    <Form
-                      method="post"
-                      onSubmit={(event) => {
-                        /* Earlier feedback only: the action re-checks, since this handler never runs without JavaScript. */
-                        if (!confirm(`Delete ${detail.key}? This removes the object from R2.`)) {
-                          event.preventDefault();
-                          return;
-                        }
-                        const field =
-                          event.currentTarget.elements.namedItem(CONFIRM_FIELD);
-                        if (field instanceof HTMLInputElement) field.value = "1";
-                      }}
-                    >
+                    <Form method="post">
                       <input type="hidden" name="key" value={detail.key} />
-                      {/* Empty with scripting off, which makes the action refuse and open the confirmation below. */}
-                      <input type="hidden" name={CONFIRM_FIELD} defaultValue="" />
+                      {/* No confirmation field: the action refuses and opens the typed confirmation, script or not. */}
                       <button type="submit" name="intent" value="delete" className="btn-danger">
                         Delete
                       </button>
