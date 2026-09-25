@@ -233,8 +233,16 @@ export function PostEditor({
       form.set("slug", fields.slug || slug);
       try {
         const response = await fetch("/admin/preview", { method: "POST", body: form });
-        const result = (await response.json()) as { html?: string; error?: string };
+        // Not JSON is a failed request, such as an expired session answering with a page.
+        const result = (await response.json().catch(() => null)) as {
+          html?: string;
+          error?: string;
+        } | null;
         if (seq !== previewSeq.current) return;
+        if (!result || (!response.ok && !result.error)) {
+          setPreview({ error: `The preview request failed with HTTP ${response.status}.` });
+          return;
+        }
         setPreview(result.error ? { error: result.error } : { html: result.html ?? "" });
       } catch (error) {
         if (seq !== previewSeq.current) return;
