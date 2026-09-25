@@ -748,23 +748,140 @@ function recordServerSurvivors() {
   }
 }
 
-/** `/T`, because the spawned pid is a shell above vite. */
-function stopServer() {
-  if (!server) return;
+/**
+ * The synchronous half of cleanup, which a signal handler can still run: Chrome's tree, the
+ * server's tree (`/T`, because the spawned pid is a shell above vite), then the registry. With
+ * `--keep` nothing is killed and the entries stay, so the next preflight frees the port.
+ *
+ * @param {import("puppeteer").Browser | undefined} openBrowser
+ */
+function killChildren(openBrowser) {
   if (process.argv.includes("--keep")) return;
-  if (server.pid) killTree(server.pid);
+  const chrome = openBrowser?.process();
+  if (chrome?.pid) killTree(chrome.pid);
+  if (server?.pid) killTree(server.pid);
+  registry.clear();
 }
 
 /** @param {import("puppeteer").Browser | undefined} openBrowser */
 async function cleanupChildren(openBrowser) {
-  if (openBrowser) {
-    await openBrowser.close().catch(() => {});
-    const chrome = openBrowser.process();
-    if (chrome?.pid && !process.argv.includes("--keep")) killTree(chrome.pid);
+  await openBrowser?.close().catch(() => {});
+  killChildren(openBrowser);
+}
+
+/** @param {number} ms */
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Reads until `done` holds or the tries run out, and returns the last reading. `sleepFirst` waits
+ * before each read, for a change the gate just caused; otherwise the first read is immediate.
+ *
+ * @template T
+ * @param {() => Promise<T>} read
+ * @param {(value: T) => boolean} done
+ * @param {{ tries?: number, everyMs?: number, sleepFirst?: boolean }} [options]
+ * @returns {Promise<T>}
+ */
+async function pollUntil(read, done, { tries = 25, everyMs = 200, sleepFirst = true } = {}) {
+  let value = /** @type {T} */ (/** @type {unknown} */ (undefined));
+  for (let i = 0; i < tries; i += 1) {
+    if (sleepFirst) await sleep(everyMs);
+    value = await read();
+    if (done(value)) break;
+    if (!sleepFirst) await sleep(everyMs);
   }
-  stopServer();
-  // With `--keep` the entries stay, and the next preflight frees the port.
-  if (!process.argv.includes("--keep")) registry.clear();
+  return value;
+}
+
+/**
+ * Visits each path until one carries `selector`, and leaves the page there.
+ *
+ * @param {import("puppeteer").Page} target
+ * @param {string[]} paths
+ * @param {string} selector
+ * @returns {Promise<{ found: string | null, last: string | null }>} the first path carrying it, and the last one visited
+ */
+async function firstPathWith(target, paths, selector) {
+  /** @type {string | null} */
+  let last = null;
+  for (const path of paths) {
+    await target.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    last = path;
+    const has = await target.evaluate((sel) => document.querySelectorAll(sel).length > 0, selector);
+    if (has) return { found: path, last };
+  }
+  return { found: null, last };
+}
+
+/**
+ * Requests for one enhancement bundle, from the resource timeline rather than the DOM, matched past
+ * the content hash.
+ *
+ * @param {import("puppeteer").Page} target
+ * @param {string} stem
+ */
+const bundleFetches = (target, stem) =>
+  target.evaluate(
+    (/** @type {string} */ s) =>
+      performance
+        .getEntriesByType("resource")
+        .filter((entry) => new RegExp(`/assets/${s}-[^/]*\\.js$`).test(entry.name)).length,
+    stem,
+  );
+
+/* Page functions: each runs inside the page through `evaluate`, so each is self-contained. */
+
+/** The reachable CSS rules; a cross-origin sheet throws on `cssRules` and counts zero. */
+function countCssRules() {
+  return [...document.styleSheets].reduce((n, s) => {
+    try {
+      return n + s.cssRules.length;
+    } catch {
+      return n;
+    }
+  }, 0);
+}
+
+/**
+ * The document's widths and the first four elements reaching past its right edge. Anything left of
+ * -1000px is off-screen by design: the skip link, and a closed drawer translated out of view.
+ */
+function overflowScan() {
+  const doc = document.documentElement;
+  const over = [];
+  for (const el of document.querySelectorAll("body *")) {
+    const r = el.getBoundingClientRect();
+    if (r.left < -1000) continue;
+    if (r.right > doc.clientWidth + 0.5) {
+      const cls = typeof el.className === "string" ? el.className : "";
+      over.push(`${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`);
+    }
+  }
+  return { scrollW: doc.scrollWidth, clientW: doc.clientWidth, over: over.slice(0, 4) };
+}
+
+/** Whether the skip link exists, where it points, and whether anything carries that id. */
+function readSkipLink() {
+  const link = document.querySelector("a.skip-link");
+  if (!link) return { link: false, href: "", target: false };
+  const href = link.getAttribute("href") ?? "";
+  const id = href.startsWith("#") ? href.slice(1) : "";
+  return { link: true, href, target: !!(id && document.getElementById(id)) };
+}
+
+/** The computed text color of the prose and of its first expression. */
+function readMathColours() {
+  const prose = document.querySelector(".prose");
+  const katex = document.querySelector(".prose .katex");
+  return {
+    prose: prose ? getComputedStyle(prose).color : null,
+    katex: katex ? getComputedStyle(katex).color : null,
+  };
+}
+
+/** Every linked stylesheet's href, in document order. */
+function stylesheetHrefs() {
+  return [...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => l.getAttribute("href") ?? "");
 }
 
 /**
@@ -787,12 +904,7 @@ for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIG
       process.exit(1);
     }
     console.error(`\ncheck:browser interrupted by ${signal}. Stopping its children.`);
-    if (browser) {
-      const chrome = browser.process();
-      if (chrome?.pid) killTree(chrome.pid);
-    }
-    if (server?.pid) killTree(server.pid);
-    registry.clear();
+    killChildren(browser);
     process.exit(1);
   });
 }
@@ -825,15 +937,7 @@ try {
   /* Scope first: an unstyled page would pass every layout assertion below. */
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
-  const css = await page.evaluate(() =>
-    [...document.styleSheets].reduce((n, s) => {
-      try {
-        return n + s.cssRules.length;
-      } catch {
-        return n;
-      }
-    }, 0),
-  );
+  const css = await page.evaluate(countCssRules);
   ok(
     "the blog page's stylesheets are actually applied",
     css >= 144,
@@ -1472,11 +1576,11 @@ try {
       await probe.mouse.move(target.x, target.y);
       await new Promise((r) => setTimeout(r, 350));
       await probe.mouse.click(target.x, target.y);
-      for (let i = 0; i < 25; i += 1) {
-        arrived = await probe.evaluate(() => location.pathname).catch(() => "");
-        if (arrived === "/blog") break;
-        await new Promise((r) => setTimeout(r, 150));
-      }
+      arrived = await pollUntil(
+        () => probe.evaluate(() => location.pathname).catch(() => ""),
+        (path) => path === "/blog",
+        { everyMs: 150, sleepFirst: false },
+      );
       /* The event fires on the incoming document, so give it a moment to land. */
       for (let i = 0; i < 6 && reveals.length === 0; i += 1) {
         await new Promise((r) => setTimeout(r, 200));
@@ -1792,13 +1896,7 @@ try {
 
   for (const path of ["/", "/blog", "/search?q=workers", "/colophon"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    const s = await page.evaluate(() => {
-      const link = document.querySelector("a.skip-link");
-      if (!link) return { link: false, href: "", target: false };
-      const href = link.getAttribute("href") ?? "";
-      const id = href.startsWith("#") ? href.slice(1) : "";
-      return { link: true, href, target: !!(id && document.getElementById(id)) };
-    });
+    const s = await page.evaluate(readSkipLink);
     ok(
       `${path}: the skip link exists and its target does`,
       s.link && s.target,
@@ -1848,20 +1946,7 @@ try {
     "/playground?key=dustin-edwards-4f2d7f1a9c3b5e07-1600x900.webp&cookie=theme%3Ddark&md=links&q=fusion",
   ]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    const o = await page.evaluate(() => {
-      const doc = document.documentElement;
-      const over = [];
-      for (const el of document.querySelectorAll("body *")) {
-        const r = el.getBoundingClientRect();
-        // The off-screen skip link is positioned at -9999px by design.
-        if (r.left < -1000) continue;
-        if (r.right > doc.clientWidth + 0.5) {
-          const cls = typeof el.className === "string" ? el.className : "";
-          over.push(`${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`);
-        }
-      }
-      return { scrollW: doc.scrollWidth, clientW: doc.clientWidth, over: over.slice(0, 4) };
-    });
+    const o = await page.evaluate(overflowScan);
     ok(
       `${path}: no horizontal scroll at 320px`,
       o.scrollW <= o.clientW,
@@ -1907,8 +1992,10 @@ try {
         `React "precedence" attribute on the math link puts it above the meta.`,
     );
 
-    const math = await page.evaluate(() => {
-      const doc = document.documentElement;
+    const scan = await page.evaluate(overflowScan);
+    const colours = await page.evaluate(readMathColours);
+    const sheets = await page.evaluate(stylesheetHrefs);
+    const rendered = await page.evaluate(() => {
       const displays = [...document.querySelectorAll(".prose .katex-display")];
       const widest = displays
         .map((el) => ({
@@ -1917,35 +2004,21 @@ try {
           overflowX: getComputedStyle(el).overflowX,
         }))
         .sort((a, b) => b.scroll - b.client - (a.scroll - a.client))[0];
-      const over = [];
-      for (const el of document.querySelectorAll("body *")) {
-        const r = el.getBoundingClientRect();
-        if (r.left < -1000) continue;
-        if (r.right > doc.clientWidth + 0.5) {
-          const cls = typeof el.className === "string" ? el.className : "";
-          over.push(
-            `${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`,
-          );
-        }
-      }
-      const prose = document.querySelector(".prose");
-      const katex = document.querySelector(".prose .katex");
       return {
-        sheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map(
-          (l) => l.getAttribute("href") ?? "",
-        ),
         expressions: document.querySelectorAll(".prose .katex").length,
         mathml: document.querySelectorAll(".prose .katex-mathml math").length,
         errors: document.querySelectorAll(".katex-error").length,
         displays: displays.length,
         widest: widest ?? null,
-        scrollW: doc.scrollWidth,
-        clientW: doc.clientWidth,
-        over: over.slice(0, 4),
-        proseColour: prose ? getComputedStyle(prose).color : null,
-        katexColour: katex ? getComputedStyle(katex).color : null,
       };
     });
+    const math = {
+      ...rendered,
+      ...scan,
+      sheets,
+      proseColour: colours.prose,
+      katexColour: colours.katex,
+    };
 
     ok(
       `${MATH_PATH}: the page renders expressions and no error box`,
@@ -2017,14 +2090,7 @@ try {
         await emulation.send("Emulation.setEmulatedMedia", { features: mode.features });
       }
       await page.goto(`${BASE}${MATH_PATH}`, { waitUntil: "networkidle0" });
-      const colours = await page.evaluate(() => {
-        const prose = document.querySelector(".prose");
-        const katex = document.querySelector(".prose .katex");
-        return {
-          prose: prose ? getComputedStyle(prose).color : null,
-          katex: katex ? getComputedStyle(katex).color : null,
-        };
-      });
+      const colours = await page.evaluate(readMathColours);
       ok(
         `${MATH_PATH}: maths still takes the prose color under ${mode.label}`,
         colours.katex !== null && colours.katex === colours.prose,
@@ -2038,12 +2104,10 @@ try {
     await page.deleteCookie({ url: BASE, name: "theme", path: "/" });
 
     await page.goto(`${BASE}${MATHLESS_POST_PATH}`, { waitUntil: "networkidle0" });
-    const mathless = await page.evaluate(() => ({
-      sheets: [...document.querySelectorAll('link[rel="stylesheet"]')].map(
-        (l) => l.getAttribute("href") ?? "",
-      ),
-      expressions: document.querySelectorAll(".katex").length,
-    }));
+    const mathless = {
+      sheets: await page.evaluate(stylesheetHrefs),
+      expressions: await page.evaluate(() => document.querySelectorAll(".katex").length),
+    };
     ok(
       `${MATHLESS_POST_PATH}: a post with no maths links no math stylesheet`,
       !mathless.sheets.some((href) => href.includes("katex")) && mathless.expressions === 0,
@@ -2218,13 +2282,7 @@ try {
 
   await page.setViewport({ width: 1280, height: 900 });
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle0" });
-  const loginSkip = await page.evaluate(() => {
-    const link = document.querySelector("a.skip-link");
-    if (!link) return { link: false, target: false, href: "" };
-    const href = link.getAttribute("href") ?? "";
-    const id = href.startsWith("#") ? href.slice(1) : "";
-    return { link: true, href, target: !!(id && document.getElementById(id)) };
-  });
+  const loginSkip = await page.evaluate(readSkipLink);
   /* root.tsx renders the skip link on every page, /login included, so its absence is a failure. */
   ok(
     "/login: the skip link exists and its target does",
@@ -2277,17 +2335,7 @@ try {
     "no post link on /blog, so the post-page bundle, copy, footnote and progress cases below " +
       "would have nothing to run on",
   );
-  /* @param {string} stem */
-  const bundleFetches = (/** @type {string} */ stem) =>
-    page.evaluate(
-      (/** @type {string} */ s) =>
-        performance
-          .getEntriesByType("resource")
-          .filter((entry) => new RegExp(`/assets/${s}-[^/]*\\.js$`).test(entry.name)).length,
-      stem,
-    );
-
-  const blogOnIndex = await bundleFetches("blog");
+  const blogOnIndex = await bundleFetches(page, "blog");
   ok(
     "the blog reading bundle is NOT fetched by the listing page",
     blogOnIndex === 0,
@@ -2296,23 +2344,11 @@ try {
       `nothing.`,
   );
 
-  let codePost = null;
-  let probedPost = null;
-  for (const path of postPaths) {
-    await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-    probedPost = path;
-    const hasCode = await page.evaluate(
-      () => document.querySelectorAll(".prose pre[data-lang]").length > 0,
-    );
-    if (hasCode) {
-      codePost = path;
-      break;
-    }
-  }
+  const { found: codePost, last: probedPost } = await firstPathWith(page, postPaths, ".prose pre[data-lang]");
 
   if (probedPost !== null) {
     // The page is sitting on a post, whichever one the loop stopped at.
-    const blogOnPost = await bundleFetches("blog");
+    const blogOnPost = await bundleFetches(page, "blog");
     ok(
       "the blog reading bundle IS fetched by a post page",
       blogOnPost === 1,
@@ -2342,16 +2378,7 @@ try {
     );
   }
 
-  const footnotePost = await (async () => {
-    for (const path of postPaths) {
-      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-      const has = await page.evaluate(
-        () => document.querySelectorAll(".prose a[data-footnote-ref]").length > 0,
-      );
-      if (has) return path;
-    }
-    return null;
-  })();
+  const { found: footnotePost } = await firstPathWith(page, postPaths, ".prose a[data-footnote-ref]");
 
   if (footnotePost === null) {
     skip(
@@ -2783,15 +2810,7 @@ try {
             `back, or a surface still advertises a shortcut that was retired.`,
     );
 
-    /* Counted from the resource timeline, not the DOM; matched loosely past the content hash. */
-    const paletteFetches = () =>
-      page.evaluate(() =>
-        performance
-          .getEntriesByType("resource")
-          .filter((entry) => /\/assets\/palette-[^/]*\.js$/.test(entry.name)).length,
-      );
-
-    const beforeGesture = await paletteFetches();
+    const beforeGesture = await bundleFetches(page, "palette");
     ok(
       "the palette bundle is NOT fetched by a page nobody searched on",
       beforeGesture === 0,
@@ -2809,16 +2828,17 @@ try {
     let paletteOpen = { open: false, focused: false };
     let navigatedToSearch = false;
     if (triggerClicked) {
-      for (let i = 0; i < 25; i += 1) {
-        await new Promise((r) => setTimeout(r, 200));
-        paletteOpen = await page.evaluate(() => ({
-          open: Boolean(document.querySelector("dialog.palette[open]")),
-          focused: document.activeElement?.classList.contains("palette-input") ?? false,
-        }));
-        // The other legal outcome: with no bundle, theme.ts falls back to location.assign('/search').
-        navigatedToSearch = /\/search(\?|$)/.test(page.url());
-        if ((paletteOpen.open && paletteOpen.focused) || navigatedToSearch) break;
-      }
+      ({ paletteOpen, navigatedToSearch } = await pollUntil(
+        async () => ({
+          paletteOpen: await page.evaluate(() => ({
+            open: Boolean(document.querySelector("dialog.palette[open]")),
+            focused: document.activeElement?.classList.contains("palette-input") ?? false,
+          })),
+          // The other legal outcome: with no bundle, theme.ts falls back to location.assign('/search').
+          navigatedToSearch: /\/search(\?|$)/.test(page.url()),
+        }),
+        (r) => (r.paletteOpen.open && r.paletteOpen.focused) || r.navigatedToSearch,
+      ));
     }
     ok(
       "clicking the search trigger opens the palette with focus in its input, or navigates to /search",
@@ -2852,7 +2872,7 @@ try {
         `border here means it did not arrive, or arrived after the modal was up.`,
     );
 
-    const afterGesture = await paletteFetches();
+    const afterGesture = await bundleFetches(page, "palette");
     ok(
       "the gesture fetches the palette bundle, exactly once",
       afterGesture === 1,
@@ -2873,14 +2893,14 @@ try {
       await resultsField.type("cloudflare");
       // The debounce and a cold D1 query both outlast a fixed wait; poll instead.
       let paletteResult = { options: 0, status: "" };
-      for (let i = 0; i < 25; i += 1) {
-        await new Promise((r) => setTimeout(r, 200));
-        paletteResult = await page.evaluate(() => ({
-          options: document.querySelectorAll(".palette-option").length,
-          status: document.querySelector(".palette-status")?.textContent ?? "",
-        }));
-        if (paletteResult.options > 0 || /result|unavailable/i.test(paletteResult.status)) break;
-      }
+      paletteResult = await pollUntil(
+        () =>
+          page.evaluate(() => ({
+            options: document.querySelectorAll(".palette-option").length,
+            status: document.querySelector(".palette-status")?.textContent ?? "",
+          })),
+        (r) => r.options > 0 || /result|unavailable/i.test(r.status),
+      );
       ok(
         "the palette returns live results",
         paletteResult.options > 0,
@@ -2913,12 +2933,10 @@ try {
 
         // Polled rather than slept: the submit is a navigation on some paths and
         // a same-document update on others, and a fixed wait races both.
-        let landed = page.url();
-        for (let i = 0; i < 25; i += 1) {
-          await new Promise((r) => setTimeout(r, 200));
-          landed = page.url();
-          if (/[?&]q=/.test(landed)) break;
-        }
+        const landed = await pollUntil(
+          async () => page.url(),
+          (url) => /[?&]q=/.test(url),
+        );
 
         const carried = (() => {
           try {
@@ -2954,17 +2972,7 @@ try {
       .filter((/** @type {any} */ p) => String(p.html ?? "").includes('class="image-link"'))
       .map((/** @type {any} */ p) => `/blog/${p.slug}`);
 
-    let imagePost = null;
-    for (const path of candidates) {
-      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
-      const has = await page.evaluate(
-        () => document.querySelectorAll(".prose a.image-link > img").length > 0,
-      );
-      if (has) {
-        imagePost = path;
-        break;
-      }
-    }
+    const { found: imagePost } = await firstPathWith(page, candidates, ".prose a.image-link > img");
 
     if (imagePost === null) {
       /* No body image in the corpus is a content fact, not a defect, so this skips loudly. */
@@ -3689,18 +3697,11 @@ try {
     /* A rule count proves `app/admin.css` arrived; the computed style proves the cascade applied it. */
     await admin.setViewport({ width: 1280, height: 900 });
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
+    const rules = await admin.evaluate(countCssRules);
     const adminCss = await admin.evaluate(() => {
-      const rules = [...document.styleSheets].reduce((n, s) => {
-        try {
-          return n + s.cssRules.length;
-        } catch {
-          return n;
-        }
-      }, 0);
       const sidebar = document.querySelector(".admin-sidebar");
       const style = sidebar ? getComputedStyle(sidebar) : null;
       return {
-        rules,
         sheets: [...document.styleSheets].length,
         display: style?.display ?? "",
         width: style ? Math.round(parseFloat(style.width)) : 0,
@@ -3708,7 +3709,7 @@ try {
     });
     ok(
       "the ADMIN stylesheet is actually applied where the layout is measured",
-      adminCss.rules >= 670,
+      rules >= 670,
       `${adminCss.rules} CSS rule(s) across ${adminCss.sheets} sheet(s), floor 670, ` +
         `measured 730 on 2026-08-28. Below this admin.css did not load and every ` +
         `overflow number below is about browser defaults.` +
@@ -3739,23 +3740,7 @@ try {
         ["/admin/mentions", "the mentions queue"],
       ]) {
         await admin.goto(`${ADMIN_ORIGIN}${path}`, { waitUntil: "networkidle0" });
-        const o = await admin.evaluate(() => {
-          const doc = document.documentElement;
-          const over = [];
-          for (const el of document.querySelectorAll("body *")) {
-            const r = el.getBoundingClientRect();
-            // Off-screen by design: the skip link, and the closed drawer, which
-            // is translated fully out of view at the narrow breakpoint.
-            if (r.left < -1000) continue;
-            if (r.right > doc.clientWidth + 0.5) {
-              const cls = typeof el.className === "string" ? el.className : "";
-              over.push(
-                `${el.tagName.toLowerCase()}${cls ? "." + cls.split(/\s+/)[0] : ""}@${Math.round(r.right)}`,
-              );
-            }
-          }
-          return { scrollW: doc.scrollWidth, clientW: doc.clientWidth, over: over.slice(0, 4) };
-        });
+        const o = await admin.evaluate(overflowScan);
         ok(
           `${path}: ${what} does not scroll sideways at ${width}px`,
           o.scrollW <= o.clientW,
