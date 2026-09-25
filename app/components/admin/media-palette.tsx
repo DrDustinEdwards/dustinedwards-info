@@ -10,7 +10,8 @@ import { byteSize } from "~/lib/media/byte-size.mjs";
 // The input becomes an APG combobox over a listbox, the pattern the editor's link palette uses.
 
 const LIST_ID = "media-palette-list";
-const optionId = (key: string) => `media-palette-opt-${key.replace(/[^A-Za-z0-9_-]/g, "_")}`;
+// By position, not key: two keys can sanitise to the same id, and activedescendant would then point at the wrong row.
+const optionId = (index: number) => `media-palette-opt-${index}`;
 
 type PaletteKey =
   | { do: "focus"; select: boolean }
@@ -55,7 +56,7 @@ export function MediaPalette({
   const [copied, setCopied] = useState("");
   const [copyFailed, setCopyFailed] = useState(false);
   const listing = open && results.length > 0 && !searchError;
-  const activeResult = listing ? results[Math.min(cursor, results.length - 1)] : undefined;
+  const activeIndex = listing ? Math.min(cursor, results.length - 1) : -1;
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -82,9 +83,9 @@ export function MediaPalette({
     input.setAttribute("aria-expanded", String(listing));
     if (listing) input.setAttribute("aria-controls", LIST_ID);
     else input.removeAttribute("aria-controls");
-    if (activeResult) input.setAttribute("aria-activedescendant", optionId(activeResult.key));
+    if (activeIndex >= 0) input.setAttribute("aria-activedescendant", optionId(activeIndex));
     else input.removeAttribute("aria-activedescendant");
-  }, [listing, activeResult]);
+  }, [listing, activeIndex]);
 
   // Announced by the page's toast region as well as shown in the count: the count is not a live region.
   const copy = (value: string) => {
@@ -193,7 +194,7 @@ export function MediaPalette({
                   order: the box keeps focus and points at the option. */}
               <a
                 href={`/admin/media?key=${encodeURIComponent(r.key)}`}
-                id={optionId(r.key)}
+                id={optionId(i)}
                 role="option"
                 aria-selected={i === Math.min(cursor, results.length - 1)}
                 tabIndex={-1}
