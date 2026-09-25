@@ -31,14 +31,3 @@ export function classifySqliteTables(rows) {
       .sort(),
   };
 }
-
-/**
- * Never written directly: deleting from any of them corrupts the index. Never counted either: a
- * count on an external-content index reads through to the content table.
- *
- * @param {{ virtual: string[], shadow: string[] }} classified
- * @returns {string[]}
- */
-export function ftsOwnedTables({ virtual, shadow }) {
-  return [...virtual, ...shadow].sort();
-}

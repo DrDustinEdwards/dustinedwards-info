@@ -78,20 +78,28 @@ export function readProcessTable() {
 /**
  * Killing the gate kills the wrapper `spawn()` returned but not its grandchildren, so record those.
  *
+ * A DEAD root needs `childNeedle`: Windows never clears a parent pid, so an unrelated process whose
+ * long-dead parent had the pid the root later reused (explorer.exe, a browser) reads as its child.
+ * The needle is what the root's own direct children must be running; deeper levels follow from them.
+ * Elsewhere an orphan is reparented, so a stale parent pid cannot occur and the needle is not applied.
+ *
  * @param {number} rootPid
  * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {string} [childNeedle]
  * @returns {number[]}
  */
-export function descendantPids(rootPid, table) {
+export function descendantPids(rootPid, table, childNeedle) {
   /** @type {number[]} */
   const found = [];
   let frontier = [rootPid];
+  const needle = isWindows && childNeedle !== undefined ? normaliseCommand(childNeedle) : null;
   // Bounded: a reused pid can manufacture a parentage cycle.
   for (let depth = 0; depth < table.size && frontier.length > 0; depth += 1) {
     /** @type {number[]} */
     const next = [];
     for (const [pid, row] of table) {
       if (pid === rootPid || found.includes(pid)) continue;
+      if (depth === 0 && needle !== null && !row.command.includes(needle)) continue;
       if (frontier.includes(row.ppid)) {
         found.push(pid);
         next.push(pid);
