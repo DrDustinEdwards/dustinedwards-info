@@ -1,16 +1,6 @@
 // Deploy before sync, so `llms.txt` never advertises unserved pages. `check:content` runs before
 // sync because `sync-content.mjs` runs no gate.
 
-import {
-  closeSync,
-  mkdirSync,
-  openSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  statSync,
-  writeSync,
-} from "node:fs";
 import { spawn, spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -38,115 +28,16 @@ import {
 import { dirtyTree } from "./lib/git-tree.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
-import {
-  ASK_POLL_INTERVAL_MS,
-  ASK_POLL_WINDOW_MS,
-  awaitAskConvergence,
-} from "./lib/ask-converge.mjs";
+import { convergeAsk, convergeMedia } from "./lib/operator-sync.mjs";
+import { readOperatorToken } from "./lib/operator-token.mjs";
+import { missReport } from "./lib/ship-misses.mjs";
+import { teeSelfToLog } from "./lib/ship-transcript.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
-/**
- * Gitignored: an untracked log would make the next ship refuse a dirty tree, and the log
- * carries account-scoped ids.
- */
-const LOG_DIR = join(root, ".ship-logs");
-
-/** Pruned by age, never by count: ship's write rate varies, so a count is no fixed duration. */
-const LOG_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
-
-/**
- * Children run with inherited stdio, so wrapping `console` would miss their output.
- * @returns {Promise<number>}
- */
-async function teeSelfToLog() {
-  mkdirSync(LOG_DIR, { recursive: true });
-
-  const now = Date.now();
-  for (const entry of readdirSync(LOG_DIR)) {
-    if (!entry.startsWith("ship-") || !entry.endsWith(".log")) continue;
-    const full = join(LOG_DIR, entry);
-    try {
-      if (now - statSync(full).mtimeMs > LOG_MAX_AGE_MS) rmSync(full, { force: true });
-    } catch {
-      /* a log that vanished under us needs no pruning */
-    }
-  }
-
-  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const logPath = join(LOG_DIR, `ship-${stamp}.log`);
-  const handle = openSync(logPath, "a");
-
-  const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
-    cwd: root,
-    env: { ...process.env, SHIP_TRANSCRIPT: logPath, SHIP_TEE_PARENT: String(process.pid) },
-    stdio: ["inherit", "pipe", "pipe"],
-  });
-
-  /** @param {import("node:stream").Readable} source @param {NodeJS.WriteStream} sink */
-  const forward = (source, sink) => {
-    source.on("data", (chunk) => {
-      sink.write(chunk);
-      writeSync(handle, chunk);
-    });
-  };
-  forward(child.stdout, process.stdout);
-  forward(child.stderr, process.stderr);
-
-  for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM"])) {
-    process.on(signal, () => {
-      try {
-        child.kill(signal);
-      } catch {
-        /* already gone */
-      }
-    });
-  }
-
-  /*
-   * On close, not exit: stdio can still be open at exit, and the tail is the MISSED/REFUSED summary.
-   * Bounded after exit, because a leftover descendant that inherited the pipe (a workerd, a wrangler
-   * child) holds it open and close never fires; the ship itself has finished and its code is known.
-   */
-  const CLOSE_GRACE_MS = 15_000;
-  const code = await new Promise((resolve) => {
-    /** @type {NodeJS.Timeout | undefined} */
-    let grace;
-    child.on("exit", (status) => {
-      grace = setTimeout(() => {
-        const line =
-          `\n  ship exited ${status ?? "on a signal"}, but a process it started still holds its output ` +
-          `open after ${CLOSE_GRACE_MS / 1000}s, so the transcript may be missing that process's last lines.\n`;
-        process.stderr.write(line);
-        writeSync(handle, line);
-        resolve(status ?? 1);
-      }, CLOSE_GRACE_MS);
-    });
-    child.on("close", (status) => {
-      clearTimeout(grace);
-      resolve(status ?? 1);
-    });
-    child.on("error", (error) => {
-      const line = `\n  ship could not start its logged child: ${error.message}\n`;
-      process.stderr.write(line);
-      writeSync(handle, line);
-      resolve(1);
-    });
-  });
-
-  /* Printed last and only on failure, where a reader scrolling back finds it first. */
-  if (code !== 0) {
-    const line = `\n  transcript: ${logPath}\n`;
-    process.stderr.write(line);
-    writeSync(handle, line);
-  }
-  closeSync(handle);
-  return code;
-}
-
 /* The child is recognised by its parent's pid, not by SHIP_TRANSCRIPT, which a shell could have exported. */
 if (process.env.SHIP_TEE_PARENT !== String(process.ppid)) {
-  process.exit(await teeSelfToLog());
+  process.exit(await teeSelfToLog(fileURLToPath(import.meta.url)));
 }
 
 /* Imported from `app/lib/seo.ts`, never restated: a stale copy would poll the wrong host. */
@@ -247,31 +138,9 @@ function runStreaming(command, args) {
  * Checked before the build, so a missing token costs no deploy. Never an argument or printed.
  * The length floor matches `auth.server.ts`.
  */
-const TOKEN_FILE = process.env.OPERATOR_TOKEN_FILE;
-if (!TOKEN_FILE) {
-  refuse(
-    "OPERATOR_TOKEN_FILE is not set, so ship cannot bring the Ask index into step",
-    "Point OPERATOR_TOKEN_FILE at a file holding the operator token. It is a " +
-      "wrangler secret, it is not in the repository, and it must not be pasted " +
-      "into a command line. Nothing has been built or deployed.",
-  );
-}
-let OPERATOR_TOKEN = "";
-try {
-  OPERATOR_TOKEN = readFileSync(TOKEN_FILE, "utf8").trim();
-} catch {
-  refuse(
-    `OPERATOR_TOKEN_FILE points at a file that cannot be read: ${TOKEN_FILE}`,
-    "Nothing has been built or deployed.",
-  );
-}
-if (OPERATOR_TOKEN.length < 32) {
-  refuse(
-    "the token in OPERATOR_TOKEN_FILE is shorter than the 32 characters the Worker requires",
-    "auth.server.ts treats a short secret as a misconfiguration and answers 503. " +
-      "Nothing has been built or deployed.",
-  );
-}
+const operatorToken = readOperatorToken(process.env.OPERATOR_TOKEN_FILE);
+if (operatorToken.why) refuse(operatorToken.why, operatorToken.remedy);
+const OPERATOR_TOKEN = operatorToken.token;
 
 /*
  * Pull `--ff-only`: a merge commit has no CI run. Refuse while another run holds build/client,
@@ -838,171 +707,13 @@ if (!(docs === identity && identity === prose)) {
 
 announce("Bring the Ask index into step");
 
-let askMiss = "";
-
-let askLateConverge = false;
-
-/** Generous: sync_ask uploads every changed document with retries inside one request. */
-const OPERATOR_TIMEOUT_MS = 10 * 60_000;
-
-/**
- * Returns a miss rather than throwing: every failure here happens after the deploy has landed.
- * @param {string} tool
- * @returns {Promise<{ report: any, miss: string }>}
- */
-async function operatorSync(tool) {
-  /** @type {Response | null} */
-  let response = null;
-  /** @type {any} */
-  let body = null;
-  let miss = "";
-
-  try {
-    response = await fetch(`${ORIGIN}/api/operator`, {
-      method: "POST",
-      headers: {
-        // The token goes in a header on a request this process builds. It is
-        // never an argv entry, which every process on the machine can read.
-        authorization: `Bearer ${OPERATOR_TOKEN}`,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ tool, args: {} }),
-      // Bounded: a stalled POST after the deploy has landed would hang ship with the deploy unreported.
-      signal: AbortSignal.timeout(OPERATOR_TIMEOUT_MS),
-    });
-    body = await response.json().catch(() => null);
-  } catch (error) {
-    miss = `the ${tool} call did not complete: ${error instanceof Error ? error.message : String(error)}`;
-  }
-
-  if (!miss && response && !response.ok) {
-    // The token and the request are never echoed. A 401 here means the secret and the file disagree.
-    miss = `the operator API answered ${response.status} to ${tool}`;
-  }
-
-  const report = body && typeof body === "object" ? (body.data ?? body) : null;
-  if (!miss && (!report || typeof report.converged !== "boolean")) {
-    miss = `the operator API answered ${tool} without a converged verdict, so nothing was proven`;
-  }
-
-  return { report, miss };
-}
-
-{
-  const { report, miss } = await operatorSync("sync_ask");
-  askMiss = miss;
-
-  // A named failure is a miss, not drift to wait out: those keys were never written, so the index
-  // will not catch up on its own.
-  if (!askMiss && Array.isArray(report.failed) && report.failed.length > 0) {
-    askMiss =
-      `the Ask upload failed for ${report.failed.length} key(s) after retries: ` +
-      report.failed.map((/** @type {any} */ f) => `${f.key} (${f.error})`).join(", ") +
-      `. Re-run sync_ask once the cause clears`;
-  } else if (!askMiss && report.converged !== true) {
-    /*
-     * AI Search is eventually consistent, so drift is re-read before it is a miss, via `/api/health`,
-     * which writes nothing; `sync_ask` would repair what it measures.
-     */
-    const driftReading = async () => {
-      const res = await fetch(`${ORIGIN}/api/health`, {
-        headers: { "user-agent": "ship", "cache-control": "no-cache" },
-        signal: AbortSignal.timeout(30_000),
-      });
-      // Parsed regardless of status: health answers 503 when ANY check fails,
-      // including ones this loop is not asking about, and the body is still
-      // the answer.
-      const health = await res.json().catch(() => null);
-      return health?.checks?.find((/** @type {any} */ c) => c?.name === "ask-index-drift") ?? null;
-    };
-
-    const firstReading =
-      `${report.expected} expected, ${report.present} present, drift ${report.drift}`;
-    console.log(
-      `  not converged on the write-back (${firstReading}). Re-reading /api/health for up ` +
-        `to ${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
-    );
-
-    const { converged, polls, latest } = await awaitAskConvergence({
-      reading: driftReading,
-      sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
-      onPoll: ({ poll, reading }) => {
-        if (!reading) console.log(`  poll ${poll}: health unreadable`);
-        else if (!reading.ok)
-          console.log(`  poll ${poll}: still behind (${reading.expected} expected, ${reading.present} present)`);
-      },
-    });
-
-    if (converged) {
-      askLateConverge = true;
-      console.log(
-        `  CONVERGED after ${polls} poll(s), roughly ${polls * (ASK_POLL_INTERVAL_MS / 1000)}s. ` +
-          `The write-back read was early, not wrong: nothing was re-uploaded during the ` +
-          `window, so the index caught up on its own.`,
-      );
-    } else {
-      const last = latest
-        ? `${latest.expected} expected, ${latest.present} present`
-        : `health was unreadable on every poll, last write-back reading: ${firstReading}`;
-      askMiss =
-        `the Ask index did not converge within ${ASK_POLL_WINDOW_MS / 1000}s (${last}), ` +
-        `after uploading ${report.uploaded} and removing ${report.removed}`;
-    }
-  }
-
-  if (askMiss) {
-    console.log(`  MISSED: ${askMiss}`);
-  } else if (askLateConverge) {
-    console.log(
-      `  converged inside the window: ${report.uploaded} uploaded, ${report.removed} removed, ` +
-        `${report.cacheDropped} cached answer(s) dropped. The counts are deliberately not ` +
-        `restated here; the write-back pair was stale and health reported the current one.`,
-    );
-  } else {
-    console.log(
-      `  converged: ${report.expected} expected, ${report.present} present, ` +
-        `${report.uploaded} uploaded, ${report.removed} removed, ` +
-        `${report.cacheDropped} cached answer(s) dropped.`,
-    );
-  }
-}
+const askMiss = await convergeAsk({ origin: ORIGIN, token: OPERATOR_TOKEN });
 
 /* After the deploy, since the rebuild reads the serving build. No poll: D1 reads its own writes. */
 
 announce("Bring the media index into step");
 
-let mediaMiss = "";
-
-{
-  const { report, miss } = await operatorSync("sync_media");
-  mediaMiss = miss;
-
-  if (!mediaMiss && report.converged !== true) {
-    const why = [
-      report.missing?.length ? `${report.missing.length} missing` : "",
-      report.extra?.length ? `${report.extra.length} extra` : "",
-      report.failures?.length ? `${report.failures.length} failed to derive` : "",
-    ]
-      .filter(Boolean)
-      .join(", ");
-    mediaMiss =
-      `the media index did not reconcile: ${report.expected} expected, ` +
-      `${report.present} present${why ? ` (${why})` : ""}, after indexing ` +
-      `${report.indexed} and removing ${report.removed}`;
-  }
-
-  if (mediaMiss) {
-    console.log(`  MISSED: ${mediaMiss}`);
-    for (const key of (report?.missing ?? []).slice(0, 10)) console.log(`    missing: ${key}`);
-    for (const key of (report?.extra ?? []).slice(0, 10)) console.log(`    extra:   ${key}`);
-    for (const failure of (report?.failures ?? []).slice(0, 10)) console.log(`    failed:  ${failure}`);
-  } else {
-    console.log(
-      `  converged: ${report.expected} expected, ${report.present} present, ` +
-        `${report.indexed} indexed, ${report.removed} removed.`,
-    );
-  }
-}
+const mediaMiss = await convergeMedia({ origin: ORIGIN, token: OPERATOR_TOKEN });
 
 /*
  * Deferred checks are asserted here, after their repair: refusing before the sync would
@@ -1065,48 +776,17 @@ console.log(`  search index ${docs} records, identity and prose agree`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
 /* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
-const misses = [askMiss, mediaMiss, renderDriftMiss, watchdogMiss, uptimeMiss, deferredMiss, browserMiss];
-if (askMiss || mediaMiss || renderDriftMiss || watchdogMiss || uptimeMiss || deferredMiss || browserMiss) {
-  const behind = [
-    askMiss ? "THE ASK INDEX" : "",
-    mediaMiss ? "THE MEDIA INDEX" : "",
-    renderDriftMiss ? "THE RENDER" : "",
-    watchdogMiss ? "THE WATCHDOG" : "",
-    uptimeMiss ? "THE UPTIME MONITORS" : "",
-    deferredMiss ? "DEFERRED DRIFT" : "",
-    browserMiss ? "THE BROWSER TEST" : "",
-  ]
-    .filter(Boolean)
-    .join(" AND ");
-  const several = misses.filter(Boolean).length > 1;
-  console.error(`\n${"!".repeat(64)}`);
-  console.error(`  DEPLOYED, BUT ${behind} ${several ? "NEED" : "NEEDS"} ATTENTION.`);
-  if (askMiss) console.error(`  ask:      ${askMiss}`);
-  if (mediaMiss) console.error(`  media:    ${mediaMiss}`);
-  if (renderDriftMiss) console.error(`  render:   ${renderDriftMiss}`);
-  if (watchdogMiss) console.error(`  watchdog: ${watchdogMiss}`);
-  if (uptimeMiss) console.error(`  uptime:   ${uptimeMiss}`);
-  if (deferredMiss) console.error(`  deferred: ${deferredMiss}`);
-  if (browserMiss) console.error(`  browser:  ${browserMiss}`);
-  console.error(
-    `\n  The deploy at ${sha} STANDS and the site is serving it. A stale index\n` +
-      `  means Ask can miss recent writing or the media library can misdescribe\n` +
-      `  assets until its sync succeeds; both operations are idempotent: re-run\n` +
-      `  \`npm run ship\`, or call sync_ask / sync_media on the operator API.\n` +
-      `  Render drift here has ALREADY SURVIVED a converge write and a second\n` +
-      `  sync, so it is not the benign ordering artifact of ruling 30, which\n` +
-      `  clears on the second run and is reported as confirmed benign above.\n` +
-      `  Either the sync's write is not taking or something else is writing\n` +
-      `  render_hash. Read the two hashes the sync named, and start at what\n` +
-      `  wrote the D1 one; a re-run is not the repair.\n\n` +
-      `  A WATCHDOG miss is the one line above that is about the WATCHER rather\n` +
-      `  than the site: the previously deployed watchdog keeps firing, so the\n` +
-      `  site is still watched, by older code. Re-run \`npm run ship\`, or deploy\n` +
-      `  it alone with \`npx wrangler deploy -c wrangler.watchdog.jsonc\`.\n\n` +
-      `  The watchdog reads the same index drift every fifteen minutes and\n` +
-      `  attempts the same repair itself before it alerts; the external uptime\n` +
-      `  monitors are the off-platform second opinion.`,
-  );
-  console.error(`${"!".repeat(64)}\n`);
+const misses = [
+  { key: "ask", title: "THE ASK INDEX", text: askMiss },
+  { key: "media", title: "THE MEDIA INDEX", text: mediaMiss },
+  { key: "render", title: "THE RENDER", text: renderDriftMiss },
+  { key: "watchdog", title: "THE WATCHDOG", text: watchdogMiss },
+  { key: "uptime", title: "THE UPTIME MONITORS", text: uptimeMiss },
+  { key: "deferred", title: "DEFERRED DRIFT", text: deferredMiss },
+  { key: "browser", title: "THE BROWSER TEST", text: browserMiss },
+];
+const missLines = missReport(misses, sha);
+if (missLines.length > 0) {
+  console.error(missLines.join("\n"));
   process.exit(1);
 }
