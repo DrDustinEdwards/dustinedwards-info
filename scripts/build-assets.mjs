@@ -96,7 +96,9 @@ async function main() {
   let previous = "";
   try {
     previous = await readFile(ASSET_MANIFEST_PATH, "utf8");
-  } catch {
+  } catch (error) {
+    // Absent is a first build; any other read failure is reported rather than overwritten.
+    if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
   }
   if (previous !== body) await writeFile(ASSET_MANIFEST_PATH, body, "utf8");
 
