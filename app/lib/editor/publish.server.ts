@@ -26,6 +26,7 @@ import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.
 import { listPostCorpusForRelated, listPostLinkCorpus } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { statusForDraft } from "~/lib/search/visibility.mjs";
 
 export { GitHubError, PolicyError };
 export type { Actor };
@@ -421,7 +422,7 @@ async function removeAskForPost(env: PublishEnv, slug: string) {
 export async function syncPostToD1(env: PublishEnv, record: any) {
   const db = env.DB;
   const publishAt = Math.floor(Date.parse(record.publishAt) / 1000);
-  const status = record.draft ? "draft" : "published";
+  const status = statusForDraft(record.draft);
 
   const statements = [
     db
