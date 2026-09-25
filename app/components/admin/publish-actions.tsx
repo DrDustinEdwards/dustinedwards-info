@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import {
   FIRST_PUBLICATION_NOTE,
@@ -28,9 +28,19 @@ export function PublishActions({
   const [ceremony, setCeremony] = useState(false);
   const transitions = transitionsFor(state, everPublished);
   const [primary, ...secondary] = transitions;
+  const rootRef = useRef<HTMLDivElement>(null);
+  /* Opened from the More menu, whose item is hidden once the menu closes: the dialog would hand
+     focus back to it and lose it, so it goes to the menu's own button instead. */
+  const fromMenu = useRef(false);
+  const closeCeremony = () => {
+    setCeremony(false);
+    if (!fromMenu.current) return;
+    fromMenu.current = false;
+    rootRef.current?.querySelector<HTMLElement>("summary")?.focus();
+  };
 
   return (
-    <div className="publish-actions">
+    <div className="publish-actions" ref={rootRef}>
       <OverflowMenu label="More">
         {secondary.map((transition) => (
           <button
@@ -57,7 +67,10 @@ export function PublishActions({
             type="button"
             data-menu-item
             className="overflow-menu-item"
-            onClick={() => setCeremony(true)}
+            onClick={() => {
+              fromMenu.current = true;
+              setCeremony(true);
+            }}
           >
             Reschedule
             <span className="overflow-menu-item-hint">
@@ -86,7 +99,7 @@ export function PublishActions({
           </button>
           <PublishCeremony
             open={ceremony}
-            onClose={() => setCeremony(false)}
+            onClose={closeCeremony}
             publishAt={publishAt}
             onPublishAtChange={onPublishAtChange}
           />
@@ -106,7 +119,7 @@ export function PublishActions({
           {state !== "draft" ? (
             <PublishCeremony
               open={ceremony}
-              onClose={() => setCeremony(false)}
+              onClose={closeCeremony}
               publishAt={publishAt}
               onPublishAtChange={onPublishAtChange}
               reschedule
@@ -134,12 +147,27 @@ function PublishCeremony({
   reschedule?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const whenRef = useRef<HTMLInputElement>(null);
+  const cancelRef = useRef<HTMLButtonElement>(null);
   const [when, setWhen] = useState(() => toLocalInput(publishAt) || anHourFromNowLocal());
   const intent = reschedule ? "save" : PUBLISH_CONFIRMED_INTENT;
-  /* An empty or invalid time would send no publish time, which publishes now: Schedule refuses it. */
+  /* An empty, invalid or past time would publish now: Schedule refuses all three. */
   const scheduleAt = toIso(when);
+  const past = scheduleAt !== "" && Date.parse(scheduleAt) <= Date.now();
+  const problem =
+    scheduleAt === ""
+      ? "Pick a date and time to schedule."
+      : past
+        ? "Pick a time in the future to schedule."
+        : null;
 
   useDialogOpen(ref, open, onClose);
+
+  /* After showModal, which focuses the first control, Publish now: the first focus goes to the
+     least final choice instead, the time when rescheduling and Cancel when publishing. */
+  useEffect(() => {
+    if (open) (reschedule ? whenRef : cancelRef).current?.focus();
+  }, [open, reschedule]);
 
   return (
     <dialog ref={ref} className="ceremony" aria-labelledby="ceremony-title">
@@ -161,24 +189,25 @@ function PublishCeremony({
 
         <div className="ceremony-schedule">
           <label className="field-label" htmlFor="ceremony-when">
-            Or hold until
+            Or hold until (your local time)
           </label>
           <input
+            ref={whenRef}
             id="ceremony-when"
             type="datetime-local"
             value={when}
             onChange={(event) => setWhen(event.target.value)}
-            aria-invalid={scheduleAt === ""}
-            aria-describedby={scheduleAt === "" ? "ceremony-when-problem" : undefined}
+            aria-invalid={problem !== null}
+            aria-describedby={problem ? "ceremony-when-problem" : undefined}
           />
           <button
             type="submit"
             name="intent"
             value={intent}
             className="btn-ghost"
-            disabled={scheduleAt === ""}
+            disabled={problem !== null}
             onClick={(event) => {
-              if (scheduleAt === "") {
+              if (problem !== null) {
                 event.preventDefault();
                 return;
               }
@@ -187,15 +216,22 @@ function PublishCeremony({
           >
             Schedule
           </button>
-          {scheduleAt === "" ? (
+          {problem ? (
             <p className="field-alarm" id="ceremony-when-problem">
-              Pick a date and time to schedule.
+              {problem}
             </p>
           ) : null}
         </div>
       </div>
 
-      <button type="button" className="btn-ghost" onClick={onClose}>
+      {/* Closes the element, whose close event reaches `onClose`: focus is moved once the dialog
+          has let go of it, not while it is still modal. */}
+      <button
+        ref={cancelRef}
+        type="button"
+        className="btn-ghost"
+        onClick={() => ref.current?.close()}
+      >
         Cancel
       </button>
     </dialog>
