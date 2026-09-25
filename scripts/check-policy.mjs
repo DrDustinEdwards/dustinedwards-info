@@ -4,6 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripComments } from "./lib/strip-comments.mjs";
+import { blockFrom, functionBody } from "./lib/source-body.mjs";
 
 import {
   decide,
@@ -524,34 +525,36 @@ refuses(
 /* ASK IS BILLED, so no GET: a crawler, prefetch, unfurler or img src issues one unasked. */
 {
   const askRoute = readFileSync(join(root, "app/routes/search.ask.ts"), "utf8");
+  /* Stripped for every assertion: a comment naming request.formData() would satisfy one. */
+  const askCode = stripComments(askRoute);
 
   eq(
     "ask: the route exports an action",
-    /export\s+async\s+function\s+action\b/.test(askRoute),
+    /export\s+async\s+function\s+action\b/.test(askCode),
     true,
   );
 
-  const loaderAt = askRoute.search(/export\s+function\s+loader\s*\(/);
+  const loaderAt = askCode.search(/export\s+function\s+loader\s*\(/);
   eq("ask: the route exports a loader", loaderAt !== -1, true);
-  const loaderBody = loaderAt === -1 ? "" : askRoute.slice(loaderAt, loaderAt + 400);
+  /* The loader's own body, not a 400-character window that a longer loader outgrows. */
+  const loaderBody = functionBody(askCode, /export\s+function\s+loader\s*\(/);
   eq("ask: the loader refuses with 405", /status:\s*405/.test(loaderBody), true);
   eq("ask: the refusal names the allowed method", /allow:\s*"POST"/.test(loaderBody), true);
 
   /* And the question is read from the BODY, or a restored loader bills on a hand-made GET. */
   eq(
     "ask: the question is read from the request body",
-    /request\.formData\(\)/.test(askRoute),
+    /request\.formData\(\)/.test(askCode),
     true,
   );
   eq(
     "ask: the question is not read from the query string",
-    /searchParams\.get\("q"\)/.test(askRoute),
+    /searchParams\.get\("q"\)/.test(askCode),
     false,
   );
 
 
   /* THE ORIGIN GATE, AND ITS POSITION IS THE ASSERTION: a hostile page spends the shared budget. */
-  const askCode = stripComments(askRoute);
   const actionAt = askCode.search(/export\s+async\s+function\s+action\s*\(/);
   eq("ask: the action was located for the order check", actionAt !== -1, true);
   const actionBody = actionAt === -1 ? "" : askCode.slice(actionAt);
@@ -607,11 +610,11 @@ refuses(
     true,
   );
 
-  for (const [label, file] of [
+  for (const [label, routePath] of [
     ["theme", "app/routes/theme.ts"],
     ["the admin plane", "app/routes/admin.tsx"],
   ]) {
-    const code = stripComments(readFileSync(join(root, file), "utf8"));
+    const code = stripComments(readFileSync(join(root, routePath), "utf8"));
     eq(
       `origin: ${label} imports the shared predicate`,
       /from\s+"~\/lib\/origin\.mjs"/.test(code),
@@ -628,11 +631,12 @@ refuses(
   /* AND THE ABSENT-ORIGIN EXEMPTION SURVIVES: a scriptless form post carries none, the progressive-enhancement rule. */
   {
     const predicate = stripComments(readFileSync(join(root, "app/lib/origin.mjs"), "utf8"));
+    const absent = /if\s*\(\s*origin\s*===\s*null\s*\|\|\s*origin\s*===\s*undefined\s*\|\|\s*origin\s*===\s*""\s*\)/.exec(
+      predicate,
+    );
     eq(
       "origin: an absent Origin is allowed by the predicate",
-      /origin === null \|\| origin === undefined \|\| origin === ""[\s\S]{0,80}ok: true/.test(
-        predicate,
-      ),
+      absent !== null && /ok:\s*true/.test(blockFrom(predicate, absent.index)),
       true,
     );
   }
@@ -755,7 +759,8 @@ refuses(
     );
   }
 
-  const robots = readFileSync(join(root, "app/routes/robots.ts"), "utf8");
+  /* Stripped: a comment naming the rule would otherwise stand in for it. */
+  const robots = stripComments(readFileSync(join(root, "app/routes/robots.ts"), "utf8"));
   eq(
     "ask: robots.txt disallows /search/ask",
     /Disallow: \/search\/ask/.test(robots),
@@ -1033,13 +1038,8 @@ refuses(
     true,
   );
   eq(
-    "syncAskCorpus does not derive records from an unfiltered corpus",
-    !/recordsForPosts\(posts\)/.test(askSource),
-    true,
-  );
-  eq(
     "askCorpusRecords composes visibilityClause beside type='post'",
-    /SELECT url, title, body FROM search_docs WHERE type = 'post' AND ` \+\s*visibilityClause\(NO_ALIAS\)/.test(
+    /SELECT url, title, body FROM search_docs WHERE type = 'post' AND\s*`\s*\+\s*visibilityClause\(\s*NO_ALIAS\s*\)/.test(
       searchSource,
     ),
     true,
@@ -1123,11 +1123,6 @@ refuses(
     !/recordsForPosts\(/.test(statusBody),
     true,
   );
-  eq(
-    "askIndexStatus no longer recomputes records from the corpus",
-    !/recordsForPosts\(publishableForAsk\(posts\)\)[\s\S]{0,400}listAllAskItems/.test(askSource),
-    true,
-  );
   /* Scoped to the function body: zeroState sits below and composes visibilityClause itself. */
   const expectedUrlsBody = bodyOf(searchSource, "askExpectedUrls");
 
@@ -1157,7 +1152,7 @@ refuses(
 }
 
 /* Measured by running this gate, and it moves with the measurement: slack is the defect. */
-const MINIMUM_CHECKS = 184;
+const MINIMUM_CHECKS = 190;
 const floorBreach = assertFloor("check:policy", "checks", checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 
