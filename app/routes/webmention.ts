@@ -1,4 +1,9 @@
-import { countOpenWebmentions, receiveWebmention, webmentionTarget } from "~/db";
+import {
+  countOpenWebmentions,
+  receiveWebmention,
+  recordWebmentionVerdict,
+  webmentionTarget,
+} from "~/db";
 import { clientIp } from "~/lib/client-ip";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { readCapped } from "~/lib/read-capped.mjs";
@@ -125,9 +130,28 @@ export async function action({ request, context }: Route.ActionArgs) {
    * the chunk every cold isolate evaluates.
    */
   getExecutionContext(context).waitUntil(
-    import("~/lib/webmention/verify.server").then(({ verifyWebmention }) =>
-      verifyWebmention(env, id, source, target),
-    ),
+    import("~/lib/webmention/verify.server")
+      .then(({ verifyWebmention }) => verifyWebmention(env, id, source, target))
+      /* `verifyWebmention` never throws, so this is the chunk failing to load: the row is failed, not left counting toward the cap. */
+      .catch(async (error: unknown) => {
+        console.error(
+          JSON.stringify({
+            alert: "webmention-verify-load-failed",
+            id,
+            detail: error instanceof Error ? error.message : String(error),
+          }),
+        );
+        await recordWebmentionVerdict(env, id, { status: "failed", failureReason: "fetch-error" });
+      })
+      .catch((error: unknown) => {
+        console.error(
+          JSON.stringify({
+            alert: "webmention-verdict-write-failed",
+            id,
+            detail: error instanceof Error ? error.message : String(error),
+          }),
+        );
+      }),
   );
 
   return answer("Accepted. It will be verified and reviewed before it appears.", 202);
