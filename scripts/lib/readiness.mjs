@@ -159,3 +159,22 @@ export const DEFERRED_CHECKS = {
   "ask-index-drift": "the Ask converge",
   "media-index-drift": "the media converge",
 };
+
+/**
+ * One uncached read of the readiness endpoint: its status and body, or the error that stopped the
+ * request. `redirect: "manual"`, so a redirect is read as the answer it is, not followed.
+ *
+ * @param {string} url
+ * @returns {Promise<{ status: number, text: string, error: string }>}
+ */
+export async function fetchHealth(url) {
+  try {
+    const res = await fetch(url, {
+      headers: { "user-agent": "ship", "cache-control": "no-cache" },
+      redirect: "manual",
+    });
+    return { status: res.status, text: await res.text(), error: "" };
+  } catch (error) {
+    return { status: 0, text: "", error: error instanceof Error ? error.message : String(error) };
+  }
+}

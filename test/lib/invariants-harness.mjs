@@ -2,7 +2,7 @@
  * clean tree reports. */
 
 import assert from "node:assert/strict";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -56,46 +56,61 @@ export function bundler(cacheName) {
  * @returns {Promise<any>}
  */
 async function bundle(cacheRoot, entry, outfile, stubs) {
-  const { build } = await import("esbuild");
+  const { build } = await import("vite");
   mkdirSync(cacheRoot, { recursive: true });
 
-  /** @type {import("esbuild").Plugin} */
-  const stubPlugin = {
-    name: "stub",
-    setup(b) {
-      b.onResolve({ filter: stubs }, (args) => {
-        // The entry itself must never be stubbed, or the test would compare
-        // two empty objects and pass having examined nothing.
-        if (args.kind === "entry-point") return null;
-        return { path: args.path, namespace: "stub" };
-      });
-      // CommonJS, so one Proxy stub satisfies any named import at runtime. Calling one throws, naming
-      // the import, because a stub quietly returning undefined lets the code under test carry on.
-      b.onLoad({ filter: /.*/, namespace: "stub" }, (args) => ({
-        contents:
-          `const from = ${JSON.stringify(args.path)};\n` +
-          "module.exports = new Proxy({}, {\n" +
-          "  get: (_target, name) => () => {\n" +
-          "    throw new Error(`stubbed import ${String(name)} from ${from} was called; the invariant test stubbed it as unreachable`);\n" +
-          "  },\n" +
-          "  has: () => true,\n" +
-          "});",
-        loader: "js",
-      }));
-    },
-  };
-
-  const out = join(cacheRoot, outfile);
-  await build({
-    entryPoints: [entry],
-    outfile: out,
-    bundle: true,
-    format: "esm",
-    platform: "node",
-    packages: "external",
+  const STUB = "\0stub:";
+  const built = await build({
+    configFile: false,
+    root,
     logLevel: "silent",
-    plugins: [stubPlugin],
-    alias: { "~": join(root, "app") },
+    mode: "production",
+    plugins: [
+      {
+        name: "stub",
+        enforce: "pre",
+        // Matched against the specifier as written, before `~/` is resolved, which is what the
+        // callers' patterns are spelled against.
+        async resolveId(source, importer) {
+          // The entry itself must never be stubbed, or the test would compare
+          // two empty objects and pass having examined nothing.
+          if (!importer) return null;
+          if (stubs.test(source)) return `${STUB}${source}`;
+          if (source.startsWith("~/")) {
+            return this.resolve(join(root, "app", source.slice(2)), importer, { skipSelf: true });
+          }
+          return null;
+        },
+        // CommonJS, so one Proxy stub satisfies any named import at runtime. Calling one throws,
+        // naming the import, because a stub quietly returning undefined lets the code under test
+        // carry on.
+        load(id) {
+          if (!id.startsWith(STUB)) return null;
+          return (
+            `const from = ${JSON.stringify(id.slice(STUB.length))};\n` +
+            "module.exports = new Proxy({}, {\n" +
+            "  get: (_target, name) => () => {\n" +
+            "    throw new Error(`stubbed import ${String(name)} from ${from} was called; the invariant test stubbed it as unreachable`);\n" +
+            "  },\n" +
+            "  has: () => true,\n" +
+            "});"
+          );
+        },
+      },
+    ],
+    build: {
+      write: false,
+      ssr: true,
+      minify: false,
+      rollupOptions: { input: entry, output: { format: "esm", codeSplitting: false } },
+    },
   });
+  const chunk = /** @type {any} */ (Array.isArray(built) ? built[0] : built).output.find(
+    (/** @type {{ type: string }} */ o) => o.type === "chunk",
+  );
+  // Packages stay external in an SSR build, so a module the test imports itself (drizzle's
+  // dialect) is the same instance the bundle uses.
+  const out = join(cacheRoot, outfile);
+  writeFileSync(out, chunk.code);
   return import(pathToFileURL(out).href);
 }
