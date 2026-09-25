@@ -19,7 +19,9 @@ export function MediaListHeader({
   const arrow = view.dir === "asc" ? "↑" : "↓";
 
   return (
-    <div className="media-list-head" role="row">
+    // No row role and no aria-sort: the list is not a grid or a table, so neither would mean anything.
+    // The sorted column says so in words inside its link.
+    <div className="media-list-head">
       <span />
       <span />
       {LIST_COLUMNS.map(([key, label, align]) =>
@@ -35,15 +37,16 @@ export function MediaListHeader({
             // Alignment as data, not nth-of-type: this row mixes anchors and spans, so type counts disagree.
             data-align={align}
             data-sort={key}
-            // `none` on the other columns is what says they are sortable.
-            aria-sort={
-              view.sort === key ? (view.dir === "asc" ? "ascending" : "descending") : "none"
-            }
           >
             {label}
             <span aria-hidden="true" className="media-col-arrow">
               {view.sort === key ? arrow : ""}
             </span>
+            {view.sort === key ? (
+              <span className="sr-only">
+                , sorted {view.dir === "asc" ? "ascending" : "descending"}
+              </span>
+            ) : null}
           </Link>
         ),
       )}

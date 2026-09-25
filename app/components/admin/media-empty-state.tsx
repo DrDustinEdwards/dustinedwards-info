@@ -25,9 +25,14 @@ export function MediaEmptyState({
                 any post. Anything committed to the repository shows up
                 automatically after a deploy.
               </p>
-              <label className="btn media-empty-action" htmlFor="media-file">
+              {/* A button, not a label: a label cannot take focus, so the keyboard could not reach it. */}
+              <button
+                type="button"
+                className="btn media-empty-action"
+                onClick={() => document.getElementById("media-file")?.click()}
+              >
                 Upload the first file
-              </label>
+              </button>
             </>
           ) : q ? (
             <>

@@ -405,6 +405,9 @@
     width: 15rem;
     border-right: 1px solid var(--border-strong);
     transform: translateX(-100%);
+    /* Hidden as well as moved, or its links stay in the tab order off screen. The delay lets the
+       slide finish before the links go. */
+    visibility: hidden;
   }
 
   [data-admin-sidebar="collapsed"] .admin-nav-label {
@@ -420,11 +423,16 @@
 
   .admin[data-drawer="open"] .admin-sidebar {
     transform: none;
+    visibility: visible;
   }
 
   @media (prefers-reduced-motion: no-preference) {
     .admin-sidebar {
-      transition: transform 180ms ease;
+      transition: transform 180ms ease, visibility 0s linear 180ms;
+    }
+
+    .admin[data-drawer="open"] .admin-sidebar {
+      transition: transform 180ms ease, visibility 0s;
     }
   }
 

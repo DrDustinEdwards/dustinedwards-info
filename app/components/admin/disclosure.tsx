@@ -19,6 +19,10 @@ function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (!details.open) return;
+        // Stopped, or the same press also reaches the page's own Escape (the media grid clears its selection).
+        event.stopPropagation();
+        event.preventDefault();
         close(true);
         return;
       }
@@ -44,6 +48,12 @@ function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
       if (!details.contains(event.target as Node)) close(false);
     };
 
+    // Tabbing out closes it, or the open panel sits over the next control focus lands on.
+    const onFocusOut = (event: FocusEvent) => {
+      const next = event.relatedTarget;
+      if (next instanceof Node && !details.contains(next)) close(false);
+    };
+
     // Items submit real forms and this element survives the navigation, so close on activation.
     const onClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
@@ -52,10 +62,12 @@ function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
 
     details.addEventListener("keydown", onKeyDown);
     details.addEventListener("click", onClick);
+    details.addEventListener("focusout", onFocusOut);
     document.addEventListener("pointerdown", onPointerDown);
     return () => {
       details.removeEventListener("keydown", onKeyDown);
       details.removeEventListener("click", onClick);
+      details.removeEventListener("focusout", onFocusOut);
       document.removeEventListener("pointerdown", onPointerDown);
     };
   }, [ref]);

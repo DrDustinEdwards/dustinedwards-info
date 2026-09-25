@@ -9,12 +9,21 @@ export function CopyButton({
   label,
   name,
   showLabel,
-}: { value: string; label: string; name?: string; showLabel?: boolean }) {
+  tabIndex,
+}: {
+  value: string;
+  label: string;
+  name?: string;
+  showLabel?: boolean;
+  /** -1 on a grid tile that is not the grid's tab stop. */
+  tabIndex?: number;
+}) {
   return (
     <button
       type="button"
       className="btn-ghost media-copy"
       title={value}
+      tabIndex={tabIndex}
       onClick={(event) => {
         const button = event.currentTarget;
         copyText(value)
@@ -29,6 +38,10 @@ export function CopyButton({
           .catch(() => {
             button.dataset.copied = "no";
             toast(`Copy failed. The address is ${value}`);
+            // Cleared like success, or "failed" stays on the button after a later copy works.
+            window.setTimeout(() => {
+              delete button.dataset.copied;
+            }, 2400);
           });
       }}
     >
