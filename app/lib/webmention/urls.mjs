@@ -53,7 +53,7 @@ function isLoopbackName(hostname) {
   return host === "localhost" || host.endsWith(".localhost");
 }
 
-export const SOURCE_REFUSALS = {
+const SOURCE_REFUSALS = {
   unparseable: "source is not an absolute URL",
   protocol: "source must be http or https",
   selfOrigin: "source must be another site",
@@ -119,7 +119,7 @@ export function sameDocument(href, target) {
 }
 
 // One owner; the schema comment points here.
-export const EXCERPT_MAX_CHARS = 280;
+const EXCERPT_MAX_CHARS = 280;
 
 /**
  * Plain text by construction: the caller passes `textContent`. This is not a sanitizer.

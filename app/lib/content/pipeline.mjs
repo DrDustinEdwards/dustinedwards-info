@@ -96,7 +96,7 @@ const isoDateTime = z.preprocess(
     .refine((v) => !Number.isNaN(Date.parse(v)), "must be a parseable date-time"),
 );
 
-export { SLUG_ATTRIBUTE_PATTERN, SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "./slug.mjs";
+export { SLUG_ATTRIBUTE_PATTERN, SLUG_PATTERN, postPath } from "./slug.mjs";
 
 export const frontmatterSchema = z.object({
   title: z.string().min(1, "must not be empty"),
@@ -304,7 +304,7 @@ export function withRelated(posts) {
  * @param {string} html
  * @returns {Set<string>}
  */
-export function outgoingPostLinks(html) {
+function outgoingPostLinks(html) {
   const found = new Set();
   for (const match of html.matchAll(/href="\/blog\/([^"#?]+)(?:[#?][^"]*)?"/g)) {
     found.add(match[1]);
@@ -1113,7 +1113,7 @@ export function isAllowedUrl(value) {
   return true;
 }
 
-export const INTERNAL_LINK_PREFIX = "/blog/";
+const INTERNAL_LINK_PREFIX = "/blog/";
 
 /**
  * Composed with isAllowedUrl, never instead of it. The protocol is checked explicitly because the URL
@@ -1122,7 +1122,7 @@ export const INTERNAL_LINK_PREFIX = "/blog/";
  * @param {string} value
  * @returns {boolean}
  */
-export function isFurtherReadingUrl(value) {
+function isFurtherReadingUrl(value) {
   if (value.startsWith(INTERNAL_LINK_PREFIX)) {
     const slug = value.slice(INTERNAL_LINK_PREFIX.length);
     return SLUG_PATTERN.test(slug);

@@ -4,7 +4,7 @@ import { KEY_ICONS, NARROW, WIDE, WIDE_VIEW, type PlateLayout, type Shape } from
 // tree and the tab order, so a reader meets one plate either way.
 
 /** The six, in numeral order. The drawing, its labels and the row all read from this. */
-export const PLAQUES = [
+const PLAQUES = [
   { id: "i", name: "clear", title: "Clear", note: "Complete lysis; lytic." },
   { id: "ii", name: "turbid", title: "Turbid", note: "Lawn survives inside; temperate." },
   { id: "iii", name: "bullseye", title: "Bullseye", note: "Clear center, turbid ring." },

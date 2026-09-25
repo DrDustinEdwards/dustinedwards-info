@@ -22,7 +22,7 @@ export interface HealthCheck {
   counts?: { expected: number; present: number };
 }
 
-export interface HealthRun {
+interface HealthRun {
   checks: HealthCheck[];
   failed: HealthCheck[];
 }

@@ -26,6 +26,8 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
 
+  // The read is the 404: the commits endpoint answers a missing or deleted path with commits or an
+  // empty list, never a not-found.
   const file = await timed(timings, "gh_read_file", () => readFile(env, path));
   if (!file) throw data("Not found", { status: 404 });
 
@@ -47,7 +49,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
   return data(payload);
 }
-
 
 function diffKind(line: string) {
   if (line.startsWith("+") && !line.startsWith("+++")) return "add";

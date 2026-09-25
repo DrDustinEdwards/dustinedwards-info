@@ -165,7 +165,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     filters,
     filtered,
     total: all.length,
-    scheduledTotal: all.filter((post) => post.state === "scheduled").length,
     statusCounts: {
       all: all.length,
       published: all.filter((post) => post.state === "published").length,
@@ -445,9 +444,7 @@ const STATUS_TABS = [
 export default function AdminPosts({
   loaderData,
   actionData,
-  /** Empty in production. It exists for a static render, which dispatches no event. */
-  initialSelection = [],
-}: Route.ComponentProps & { initialSelection?: string[] }) {
+}: Route.ComponentProps) {
   const {
     posts,
     askOn,
@@ -457,32 +454,22 @@ export default function AdminPosts({
     filters,
     filtered,
     total,
-    scheduledTotal,
+    statusCounts,
     tagOptions,
+    readership,
   } = loaderData;
+  const scheduledTotal = statusCounts.scheduled;
   const askUnread = askOn && !ask;
   /* Narrowed by key: the 400 answer carries only `message`, so the union no longer has these on every arm. */
   const confirmSyncAsk =
     actionData && "confirmSyncAsk" in actionData ? actionData.confirmSyncAsk : undefined;
   const confirmDelete =
     actionData && "confirmDelete" in actionData ? actionData.confirmDelete : undefined;
-  /* Defaulted: loader data written before this field existed must render zeros. */
-  const statusCounts = loaderData.statusCounts ?? {
-    all: total,
-    published: 0,
-    draft: 0,
-    scheduled: scheduledTotal,
-  };
 
   /**
    * Three outcomes: a number, a measured zero, or an absence with a sentence. Never a dash, which
    * reads as zero.
    */
-  const readership = loaderData.readership ?? {
-    status: "error" as const,
-    data: null,
-    message: "This view was rendered without a readership source.",
-  };
   const readershipFor = (slug: string): { count: number } | { absent: string } => {
     if (readership.status === "error") {
       return { absent: READERSHIP_ABSENT.source + readership.message };
@@ -501,7 +488,7 @@ export default function AdminPosts({
   const askDrifted = ask ? ask.missing.length > 0 || ask.stale.length > 0 : false;
 
   /* Keyed by slug, not row index, so a re-render or filter change cannot re-point it at another post. */
-  const [selected, setSelected] = useState<string[]>(initialSelection);
+  const [selected, setSelected] = useState<string[]>([]);
   const visible = posts.map((post) => post.slug);
   const chosen = selected.filter((slug) => visible.includes(slug));
   const allShown = chosen.length > 0 && chosen.length === visible.length;

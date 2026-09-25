@@ -8,7 +8,7 @@ export const DIVERGENCE_ERROR_NAME = "D1DivergenceError";
  * @param {{ slug: string, commitSha: string, attempts: number, cause?: unknown }} facts
  * @returns {string}
  */
-export function divergenceMessage({ slug, commitSha, attempts, cause }) {
+function divergenceMessage({ slug, commitSha, attempts, cause }) {
   const reason = cause instanceof Error ? cause.message : String(cause ?? "unknown");
   return (
     `The post "${slug}" WAS committed as ${commitSha}, and the database index ` +
