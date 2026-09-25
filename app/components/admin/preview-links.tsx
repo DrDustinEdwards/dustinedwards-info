@@ -26,9 +26,12 @@ export const revokeFormId = (token: string) => `revoke-preview-link-${token}`;
 export function PreviewLinks({
   links,
   created,
+  error = null,
 }: {
   links: PreviewLinkView[];
   created: { url: string; expiresAt: string } | null;
+  /** Set when the list could not be read: live links may exist that this page cannot show or revoke. */
+  error?: string | null;
 }) {
   return (
     <>
@@ -79,6 +82,11 @@ export function PreviewLinks({
             </li>
           ))}
         </ul>
+      ) : error ? (
+        <p className="field-alarm">
+          The preview links could not be read, so any live link is not listed here and cannot be
+          revoked from this page until it loads: {error}
+        </p>
       ) : (
         <p className="muted">No preview links for this draft.</p>
       )}

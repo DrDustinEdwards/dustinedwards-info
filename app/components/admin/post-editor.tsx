@@ -77,6 +77,8 @@ export function PostEditor({
   fields,
   isNew,
   headSha,
+  headError = null,
+  loadProblems = [],
   previewHtml,
   feedback,
   busy,
@@ -94,6 +96,10 @@ export function PostEditor({
   fields: PostFields;
   isNew: boolean;
   headSha: string;
+  /** Why `headSha` is empty, when the read failed; null means no reason is known. */
+  headError?: string | null;
+  /** Sentences for editor data that failed to load, so a failed read never looks like an empty one. */
+  loadProblems?: string[];
   previewHtml?: string | null;
   feedback?: EditorFeedback | null;
   busy?: boolean;
@@ -487,9 +493,20 @@ export function PostEditor({
               <div className="editor-notice" role="alert">
                 <strong>Saving unavailable</strong>
                 <p>
-                  GITHUB_TOKEN is not configured on this Worker, so a save cannot
-                  commit. Preview still works.
+                  {headError
+                    ? `The repository could not be read, so a save cannot commit: ${headError}`
+                    : "GITHUB_TOKEN is not configured on this Worker, so a save cannot commit."}{" "}
+                  Preview still works.
                 </p>
+              </div>
+            ) : null}
+
+            {loadProblems.length > 0 ? (
+              <div className="editor-notice">
+                <strong>Some editor data did not load</strong>
+                {loadProblems.map((problem) => (
+                  <p key={problem}>{problem}</p>
+                ))}
               </div>
             ) : null}
 
