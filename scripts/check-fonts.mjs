@@ -5,27 +5,14 @@ import { fileURLToPath } from "node:url";
 
 import * as fontkit from "fontkit";
 
-import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "font-baseline.json");
 const update = process.argv.includes("--update");
 
-let failures = 0;
-let checks = 0;
-
-/**
- * @param {boolean} ok
- * @param {string} label
- * @param {string} [detail]
- */
-function assertThat(ok, label, detail) {
-  checks += 1;
-  if (ok) return;
-  failures += 1;
-  console.log(`\n  FAIL  ${label}`);
-  if (detail) console.log(`        ${detail}`);
-}
+const tally = createTally({ blankLine: true });
+const { ok } = tally;
 
 console.log("\ncheck:fonts\n");
 
@@ -106,8 +93,8 @@ for (const b of blocks) {
   if (b.file) withFile.push({ ...b, file: b.file });
   else withoutFile.push(b);
 }
-assertThat(blocks.length >= 20, "the sheets parsed into @font-face blocks", `${blocks.length} parsed, expected at least 20`);
-assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile.length} name a file`);
+ok("the sheets parsed into @font-face blocks", blocks.length >= 20, `${blocks.length} parsed, expected at least 20`);
+ok("blocks naming a file were found", withFile.length >= 20, `${withFile.length} name a file`);
 
 // The local()-only faces are skipped explicitly and listed exactly, so a file-backed block cannot fall
 // into the skip path unnoticed.
@@ -115,9 +102,9 @@ assertThat(withFile.length >= 20, "blocks naming a file were found", `${withFile
 const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback", "Source Serif 4 Web Fallback"];
 {
   const got = withoutFile.map((b) => b.family).sort();
-  assertThat(
-    got.length === FILELESS.length && got.every((f, i) => f === [...FILELESS].sort()[i]),
+  ok(
     `the local()-only faces are exactly the ${FILELESS.length} metric-adjusted fallbacks`,
+    got.length === FILELESS.length && got.every((f, i) => f === [...FILELESS].sort()[i]),
     `skipped [${got.join(", ")}], expected [${[...FILELESS].sort().join(", ")}]. A new fileless face must be ` +
       `named here, or it is a face this gate silently does not check.`,
   );
@@ -132,9 +119,9 @@ for (const dir of [join(root, "app", "fonts"), join(root, "app", "fonts", "katex
 
 const referenced = new Set(withFile.map((b) => b.file));
 for (const file of shipped) {
-  assertThat(
-    referenced.has(file),
+  ok(
     `${relative(root, file)} is referenced by an @font-face block`,
+    referenced.has(file),
     `the file ships and no declaration names it, so nothing asserts what it is`,
   );
 }
@@ -158,7 +145,7 @@ const NAMESPACED = new Map([["Source Serif 4 Web", "Source Serif 4"]]);
 for (const b of withFile) {
   const rel = relative(root, b.file);
   if (!existsSync(b.file)) {
-    assertThat(false, `${rel} exists`, `declared in ${relative(root, b.sheet)} and not on disk`);
+    ok(`${rel} exists`, false, `declared in ${relative(root, b.sheet)} and not on disk`);
     continue;
   }
 
@@ -169,9 +156,9 @@ for (const b of withFile) {
   const expected = NAMESPACED.get(b.family) ?? b.family;
   // The PostScript fallback compares the family part before the style suffix EXACTLY: a prefix match let
   // "InterDisplay-Bold" pass for "Inter".
-  assertThat(
-    font.familyName === expected || font.postscriptName?.split("-")[0] === expected.replace(/\s+/g, ""),
+  ok(
     `${rel} is the family the declaration names`,
+    font.familyName === expected || font.postscriptName?.split("-")[0] === expected.replace(/\s+/g, ""),
     `css says "${b.family}"${
       expected === b.family ? "" : ` (namespaced, and must be "${expected}")`
     }, the file's name table says "${font.familyName}" (${font.postscriptName})`,
@@ -185,35 +172,35 @@ for (const b of withFile) {
   const range = weight.match(/^(\d+)\s+(\d+)$/);
   if (range) {
     const [, lo, hi] = range;
-    assertThat(
-      Boolean(axes.wght),
+    ok(
       `${rel} carries a wght axis, as its declared range promises`,
+      Boolean(axes.wght),
       `css declares "font-weight: ${weight}" and the file has axes [${Object.keys(axes).join(", ") || "none"}]`,
     );
     if (axes.wght) {
-      assertThat(
-        axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
+      ok(
         `${rel} wght range matches the declaration exactly`,
+        axes.wght.min === Number(lo) && axes.wght.max === Number(hi),
         `css declares ${lo} ${hi}, the file's wght is ${axes.wght.min} to ${axes.wght.max}. A narrower file means ` +
           `weights the stylesheet asks for are synthesised rather than drawn.`,
       );
     }
   } else if (/^\d+$/.test(weight)) {
-    assertThat(
-      !axes.wght,
+    ok(
       `${rel} is static, as its single declared weight implies`,
+      !axes.wght,
       `css declares "font-weight: ${weight}" but the file has a wght axis; declare the range instead`,
     );
     const us = font["OS/2"]?.usWeightClass;
-    assertThat(
-      us === Number(weight),
+    ok(
       `${rel} usWeightClass matches the declared weight`,
+      us === Number(weight),
       `css declares ${weight}, the file's OS/2.usWeightClass is ${us}`,
     );
   } else {
-    assertThat(
-      false,
+    ok(
       `${rel} declares a font-weight this gate can read`,
+      false,
       `"font-weight: ${b.weight}" is neither a number, a range nor normal/bold, so nothing checked it`,
     );
   }
@@ -224,15 +211,15 @@ for (const b of withFile) {
     const italicByAngle = font.italicAngle !== 0;
     const italicByName = /italic|oblique/i.test(font.subfamilyName ?? "") || /italic/i.test(font.postscriptName ?? "");
     const isItalic = italicByAngle || italicByName || Boolean(axes.ital) || Boolean(axes.slnt);
-    assertThat(
-      (style !== "normal") === isItalic,
+    ok(
       `${rel} slant matches the declared font-style`,
+      (style !== "normal") === isItalic,
       `css declares "${style}", the file reports italicAngle=${font.italicAngle} subfamily="${font.subfamilyName}"`,
     );
   } else {
-    assertThat(
-      false,
+    ok(
       `${rel} declares a font-style this gate can read`,
+      false,
       `"font-style: ${b.style}" is not normal, italic or oblique, so nothing checked it`,
     );
   }
@@ -240,15 +227,15 @@ for (const b of withFile) {
   const declaredStretch = (b.stretch ?? "").trim().toLowerCase();
   const stretch = declaredStretch.match(/^([\d.]+)%\s+([\d.]+)%$/);
   if (stretch) {
-    assertThat(
-      axes.wdth !== undefined && axes.wdth.min === Number(stretch[1]) && axes.wdth.max === Number(stretch[2]),
+    ok(
       `${rel} wdth range matches the declared font-stretch`,
+      axes.wdth !== undefined && axes.wdth.min === Number(stretch[1]) && axes.wdth.max === Number(stretch[2]),
       `css declares ${stretch[1]}% ${stretch[2]}%, the file's wdth is ${axes.wdth ? `${axes.wdth.min} to ${axes.wdth.max}` : "absent"}`,
     );
   } else if (declaredStretch !== "" && declaredStretch !== "normal" && declaredStretch !== "100%") {
-    assertThat(
-      false,
+    ok(
       `${rel} declares a font-stretch this gate can read`,
+      false,
       `"font-stretch: ${b.stretch}" is not a percentage range or normal, so nothing checked it`,
     );
   }
@@ -258,22 +245,22 @@ for (const b of withFile) {
 // any more is a widened comparison nobody would notice, and an entry whose
 // declared and binary names are equal is not a namespace at all.
 for (const [declared, binary] of NAMESPACED) {
-  assertThat(
-    withFile.some((b) => b.family === declared),
+  ok(
     `namespace entry "${declared}" names a family a sheet still declares`,
+    withFile.some((b) => b.family === declared),
     `no @font-face declares it; the entry is dead and should be removed`,
   );
-  assertThat(
-    declared !== binary,
+  ok(
     `namespace entry "${declared}" actually renames something`,
+    declared !== binary,
     `declared and binary family are identical, so the entry does nothing`,
   );
 }
 
 // A browser clamps an out-of-range axis silently, so the level renders at the wrong optical size.
-assertThat(
-  variationRequests.length >= 16,
+ok(
   "axis requests were found in the sheets",
+  variationRequests.length >= 16,
   `${variationRequests.length} found; a regex that stopped matching would iterate nothing and every ` +
     `assertion below would report a clean sweep`,
 );
@@ -309,9 +296,9 @@ for (const req of variationRequests) {
   // which is the zero-scope class: it would pass by measuring no face at all.
   const wanted = resolveFamily(req.family);
   if (req.level) {
-    assertThat(
-      wanted !== null,
+    ok(
       `${where} resolves to a family this gate can check`,
+      wanted !== null,
       `--t-${req.level}-family is "${req.family}" and no declaration resolves it, so this level's ` +
         `"${req.axis}" ${req.value} would be checked against no face at all`,
     );
@@ -322,10 +309,10 @@ for (const req of variationRequests) {
   const carriers = faces.filter(
     (f) => f.axes[req.axis] && (wanted === null || f.b.family === wanted),
   );
-  assertThat(
-    carriers.length > 0,
+  ok(
     `the "${req.axis}" axis requested in ${where} exists in a shipped face` +
       (wanted ? ` of "${wanted}"` : ""),
+    carriers.length > 0,
     wanted
       ? `no shipped face of "${wanted}" carries "${req.axis}"; the declaration is inert`
       : `no shipped font carries "${req.axis}"; the declaration is inert`,
@@ -333,9 +320,9 @@ for (const req of variationRequests) {
   for (const c of carriers) {
     const a = c.axes[req.axis];
     if (!a) continue;
-    assertThat(
-      req.value >= a.min && req.value <= a.max,
+    ok(
       `"${req.axis}" ${req.value} from ${where} is in range for ${relative(root, c.b.file)}`,
+      req.value >= a.min && req.value <= a.max,
       `the file supports ${a.min} to ${a.max}; a browser CLAMPS ${req.value} silently, so the level renders at the ` +
         `wrong optical size and nothing reports it`,
     );
@@ -352,34 +339,34 @@ const OG_FACES = [
 const servedFamily = (() => {
   const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
   const decl = /--font-sans:\s*([^;]+);/.exec(sheet);
-  assertThat(Boolean(decl), "app.css declares --font-sans", "the served family cannot be read without it");
+  ok("app.css declares --font-sans", Boolean(decl), "the served family cannot be read without it");
   if (!decl) return null;
   return decl[1].trim().split(",")[0].trim().replace(/^['"]|['"]$/g, "");
 })();
 
-assertThat(
+ok(
+  `--font-sans names a family app/fonts/ actually serves ("${servedFamily}")`,
   withFile.some(
     (b) => b.family === servedFamily && b.file.includes(join("app", "fonts")) && !b.file.includes("katex"),
   ),
-  `--font-sans names a family app/fonts/ actually serves ("${servedFamily}")`,
   `the stack's first family is not backed by any self-hosted face, so the cards are compared against a name nothing ships`,
 );
 
 for (const face of OG_FACES) {
   const rel = relative(root, face.file);
   if (!existsSync(face.file)) {
-    assertThat(false, `${rel} exists`, `build-og.mjs reads it to draw every social card`);
+    ok(`${rel} exists`, false, `build-og.mjs reads it to draw every social card`);
     continue;
   }
   const font = fontFor(face.file);
-  assertThat(
-    font.familyName === servedFamily,
+  ok(
     `${rel} is the family the site serves`,
+    font.familyName === servedFamily,
     `the cards would be drawn in "${font.familyName}" while the site renders "${servedFamily}"`,
   );
-  assertThat(
-    font["OS/2"]?.usWeightClass === face.weight,
+  ok(
     `${rel} carries the weight build-og requests`,
+    font["OS/2"]?.usWeightClass === face.weight,
     `build-og draws at ${face.weight}, the file's usWeightClass is ${font["OS/2"]?.usWeightClass}`,
   );
 }
@@ -395,23 +382,23 @@ if (update) {
   console.log(`  --update: rewrote the baseline with ${Object.keys(current).length} digest(s).`);
   console.log("  THIS IS DELIBERATELY LOUD. Commit it only if the font change was intended.\n");
 } else {
-  assertThat(existsSync(FIXTURE), "the font baseline exists", `${relative(root, FIXTURE)} is missing; regenerate with --update`);
+  ok("the font baseline exists", existsSync(FIXTURE), `${relative(root, FIXTURE)} is missing; regenerate with --update`);
   if (existsSync(FIXTURE)) {
     /** @type {Record<string, string>} */
     const pinned = JSON.parse(readFileSync(FIXTURE, "utf8"));
-    assertThat(
-      Object.keys(pinned).length === Object.keys(current).length,
+    ok(
       "the baseline covers every shipped binary",
+      Object.keys(pinned).length === Object.keys(current).length,
       `baseline pins ${Object.keys(pinned).length}, disk has ${Object.keys(current).length}`,
     );
     // Both directions: a count match alone passes when one pinned file is swapped for another.
     for (const name of Object.keys(pinned)) {
-      assertThat(name in current, `${name} is pinned and still on disk`, "the baseline names a binary that is gone");
+      ok(`${name} is pinned and still on disk`, name in current, "the baseline names a binary that is gone");
     }
     for (const [name, sha] of Object.entries(current)) {
-      assertThat(
-        pinned[name] === sha,
+      ok(
         `${name} is byte-identical to its pinned baseline`,
+        pinned[name] === sha,
         pinned[name]
           ? `expected ${pinned[name].slice(0, 16)}, got ${sha.slice(0, 16)}. A re-subset keeps every axis and changes ` +
             `the glyphs; if the change was intended, re-run with --update.`
@@ -423,13 +410,12 @@ if (update) {
 
 // Measured on a plain run: `--update` skips the per-binary baseline comparisons.
 const MINIMUM_CHECKS = 520;
-const breach = assertFloor("check:fonts", "checks", checks, MINIMUM_CHECKS);
-if (breach) assertThat(false, "this gate executed its assertions", breach);
+tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 
 console.log(
   `\n  ${blocks.length} @font-face block(s), ${withFile.length} file-backed, ${withoutFile.length} local()-only, ` +
     `${allBinaries.length} binaries pinned, ${variationRequests.length} axis request(s).`,
 );
-console.log(`  ${checks} check(s), ${failures} failure(s).\n`);
+console.log(`  ${tally.checks} check(s), ${tally.failures} failure(s).\n`);
 
-process.exitCode = failures > 0 ? 1 : 0;
+process.exitCode = tally.failures > 0 ? 1 : 0;

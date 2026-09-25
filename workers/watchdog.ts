@@ -17,6 +17,7 @@ import {
   errorRateVerdict,
 } from "../app/lib/health/error-rate.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo";
+import { errorMessage } from "../app/lib/error-message.mjs";
 
 // A script name, not a hostname, so not derived from SITE_ORIGIN. Must equal the site config's `name`.
 const SITE_SCRIPT_NAME = "dustinedwards";
@@ -50,7 +51,7 @@ async function readState(env: WatchdogEnv): Promise<{ readable: boolean; stored:
     console.error(
       JSON.stringify({
         watchdog: "state-read-failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
     return { readable: false, stored: null };
@@ -69,7 +70,7 @@ async function writeState(
       JSON.stringify({
         alert: "watchdog-state-write-failed",
         watchdog: "state-write-failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
   }
@@ -92,7 +93,7 @@ export async function readHealth(env: WatchdogEnv): Promise<Reading> {
     return {
       status: 0,
       body: null,
-      error: error instanceof Error ? error.message : String(error),
+      error: errorMessage(error),
     };
   }
 }
@@ -118,7 +119,7 @@ async function repair(
     payload = await response.json().catch(() => null);
   } catch (error) {
     return {
-      miss: `${tool} did not complete: ${error instanceof Error ? error.message : String(error)}`,
+      miss: `${tool} did not complete: ${errorMessage(error)}`,
       unrepairable: false,
     };
   }
@@ -158,7 +159,7 @@ async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promis
     console.error(
       JSON.stringify({
         alert: "watchdog-notify-failed",
-        error: error instanceof Error ? error.message : String(error),
+        error: errorMessage(error),
       }),
     );
     return false;
@@ -217,7 +218,7 @@ export async function readErrorRate(
       configured: true,
       detail:
         "the invocations query did not complete, so the error rate is unknown: " +
-        `${error instanceof Error ? error.message : String(error)}`,
+        `${errorMessage(error)}`,
     };
   }
 
@@ -398,7 +399,7 @@ export default {
         throw new Error(`the ${email?.kind} mail did not send, so the alert state was left unchanged`);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = errorMessage(error);
       console.error(JSON.stringify({ watchdog: "threw", error: message }));
       await alert(env, "dustinedwards.info watchdog THREW", [
         "The watchdog itself failed, so this firing proved nothing about the site.",

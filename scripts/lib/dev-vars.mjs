@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-export const DEV_VARS_PATH = join(root, ".dev.vars");
+const DEV_VARS_PATH = join(root, ".dev.vars");
 
 /**
  * @param {string} name

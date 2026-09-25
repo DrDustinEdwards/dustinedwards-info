@@ -134,16 +134,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { name: "twitter:title", content: socialTitle },
     { name: "twitter:description", content: socialDescription },
     { name: "twitter:image", content: image },
-    ...articleOpenGraph(SITE_ORIGIN, {
-      slug: post.slug,
-      title: post.title,
-      description: post.description,
-      publishAt: post.publishAt ? new Date(post.publishAt) : null,
-      updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
-      coverImage: post.coverImage,
-      ogImage: post.ogImage,
-      tags: post.tags,
-    }),
+    ...articleOpenGraph(SITE_ORIGIN, toArticleSeo(post)),
     {
       tagName: "link",
       rel: "alternate",
@@ -153,6 +144,22 @@ export function meta({ loaderData }: Route.MetaArgs) {
     /* A sender looks in two places and stops at the first, so both are emitted. */
     { tagName: "link", rel: "webmention", href: WEBMENTION_URL },
   ];
+}
+
+type LoadedPost = Route.ComponentProps["loaderData"]["post"];
+
+/** The post as the Open Graph and JSON-LD builders read it, so the head and the body describe one article. */
+function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
+  return {
+    slug: post.slug,
+    title: post.title,
+    description: post.description,
+    publishAt: post.publishAt ? new Date(post.publishAt) : null,
+    updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
+    coverImage: post.coverImage,
+    ogImage: post.ogImage,
+    tags: post.tags,
+  };
 }
 
 /** One day: a post synced the day it was published has been deployed, not revised. */
@@ -240,16 +247,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: jsonLd([
-              articleJsonLd(SITE_ORIGIN, {
-                slug: post.slug,
-                title: post.title,
-                description: post.description,
-                publishAt: post.publishAt ? new Date(post.publishAt) : null,
-                updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
-                coverImage: post.coverImage,
-                ogImage: post.ogImage,
-                tags: post.tags,
-              }),
+              articleJsonLd(SITE_ORIGIN, toArticleSeo(post)),
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Blog", "/blog"],

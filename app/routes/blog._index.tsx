@@ -10,7 +10,7 @@ import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blo
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { getEnv } from "~/lib/context";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import {
   cacheTags,
   publicHtmlHeaders,
@@ -34,54 +34,51 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const year = url.searchParams.get("year");
   const page = readPage(url.searchParams.get("page"));
 
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
+  return timedLoader(context, async (timings) => {
+    const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
+      Promise.all([
+        listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
+        timed(timings, "d1_tag_list", () => listBlogTags(env)),
+        timed(timings, "d1_year_list", () => listBlogYears(env)),
+      ]),
+    );
 
-  const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
-    Promise.all([
-      listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
-      timed(timings, "d1_tag_list", () => listBlogTags(env)),
-      timed(timings, "d1_year_list", () => listBlogYears(env)),
-    ]),
-  );
+    /*
+     * Filtered here so the reported count and the rendered items come from one decision.
+     * Known limit: the hero only appears when the featured post falls on page 1.
+     */
+    const { featured, posts } = splitFeatured(
+      listing.posts,
+      !tag && !year && page === 1,
+    );
 
-  /*
-   * Filtered here so the reported count and the rendered items come from one decision.
-   * Known limit: the hero only appears when the featured post falls on page 1.
-   */
-  const { featured, posts } = splitFeatured(
-    listing.posts,
-    !tag && !year && page === 1,
-  );
+    /*
+     * Out of range redirects to the last real page: a 404 would be wrong once posts arrive, and
+     * clamping in place would make the URL lie. 302 because the bound moves.
+     */
+    if (page > listing.pageCount) {
+      const target = new URLSearchParams();
+      if (tag) target.set("tag", tag);
+      if (year) target.set("year", year);
+      if (listing.pageCount > 1) target.set("page", String(listing.pageCount));
+      const qs = target.toString();
+      throw redirect(qs ? `/blog?${qs}` : "/blog");
+    }
 
-  /*
-   * Out of range redirects to the last real page: a 404 would be wrong once posts arrive, and
-   * clamping in place would make the URL lie. 302 because the bound moves.
-   */
-  if (page > listing.pageCount) {
-    const target = new URLSearchParams();
-    if (tag) target.set("tag", tag);
-    if (year) target.set("year", year);
-    if (listing.pageCount > 1) target.set("page", String(listing.pageCount));
-    const qs = target.toString();
-    throw redirect(qs ? `/blog?${qs}` : "/blog");
-  }
+    const payload = {
+      ...listing,
+      // After the spread, so the filtered array wins over `listing.posts`.
+      posts,
+      tags: tagList,
+      years: yearList,
+      activeTag: tag,
+      activeYear: year,
+      featured,
+    };
 
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-
-  const payload = {
-    ...listing,
-    // After the spread, so the filtered array wins over `listing.posts`.
-    posts,
-    tags: tagList,
-    years: yearList,
-    activeTag: tag,
-    activeYear: year,
-    featured,
-  };
-
-  /* The transport writes the header from this array after the handler returns, when it is complete. */
-  return data(payload);
+    /* The transport writes the header from this array after the handler returns, when it is complete. */
+    return data(payload);
+  });
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {

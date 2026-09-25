@@ -1,8 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // Deliberately a disclosure, not role="menu": each item is a submit in its own form, which breaks
 // menuitem ownership. The <details> stays markup so these repair actions open without script.
-export function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
+function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
   useEffect(() => {
     const details = ref.current;
     if (!details) return;
@@ -59,4 +59,32 @@ export function useDisclosure(ref: React.RefObject<HTMLDetailsElement | null>) {
       document.removeEventListener("pointerdown", onPointerDown);
     };
   }, [ref]);
+}
+
+/**
+ * The shared shell of the overflow and row menus. `name` is the class prefix: the details element,
+ * its `-button` summary and its `-panel`. `summaryLabel` names a summary whose content is only an icon.
+ */
+export function DisclosureMenu({
+  name,
+  summary,
+  summaryLabel,
+  children,
+}: {
+  name: string;
+  summary: React.ReactNode;
+  summaryLabel?: string;
+  children: React.ReactNode;
+}) {
+  const ref = useRef<HTMLDetailsElement>(null);
+  useDisclosure(ref);
+
+  return (
+    <details className={name} ref={ref}>
+      <summary className={`${name}-button`} aria-label={summaryLabel} title={summaryLabel}>
+        {summary}
+      </summary>
+      <div className={`${name}-panel`}>{children}</div>
+    </details>
+  );
 }
