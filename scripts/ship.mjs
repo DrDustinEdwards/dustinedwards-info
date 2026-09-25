@@ -31,9 +31,11 @@ import {
 import {
   DEFERRED_CHECKS,
   deferredMisses,
+  fetchHealth,
   readinessLines,
   readinessVerdict,
 } from "./lib/readiness.mjs";
+import { dirtyTree } from "./lib/git-tree.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import {
@@ -101,9 +103,29 @@ async function teeSelfToLog() {
     });
   }
 
-  /* On close, not exit: stdio can still be open at exit, and the tail is the MISSED/REFUSED summary. */
+  /*
+   * On close, not exit: stdio can still be open at exit, and the tail is the MISSED/REFUSED summary.
+   * Bounded after exit, because a leftover descendant that inherited the pipe (a workerd, a wrangler
+   * child) holds it open and close never fires; the ship itself has finished and its code is known.
+   */
+  const CLOSE_GRACE_MS = 15_000;
   const code = await new Promise((resolve) => {
-    child.on("close", (status) => resolve(status ?? 1));
+    /** @type {NodeJS.Timeout | undefined} */
+    let grace;
+    child.on("exit", (status) => {
+      grace = setTimeout(() => {
+        const line =
+          `\n  ship exited ${status ?? "on a signal"}, but a process it started still holds its output ` +
+          `open after ${CLOSE_GRACE_MS / 1000}s, so the transcript may be missing that process's last lines.\n`;
+        process.stderr.write(line);
+        writeSync(handle, line);
+        resolve(status ?? 1);
+      }, CLOSE_GRACE_MS);
+    });
+    child.on("close", (status) => {
+      clearTimeout(grace);
+      resolve(status ?? 1);
+    });
     child.on("error", (error) => {
       const line = `\n  ship could not start its logged child: ${error.message}\n`;
       process.stderr.write(line);
@@ -155,7 +177,6 @@ function refuse(why, remedy) {
 }
 
 /**
- * The signal is returned, not collapsed: `status ?? 1` would read a killed process as a gate's exit 1.
  * A spawn error (npx not found, a timeout) is printed and carried in `text`, so a refusal names it.
  * `timeoutMs` bounds a read: retryRead's own timer cannot fire while spawnSync blocks.
  * @param {string} command @param {string[]} args
@@ -176,20 +197,18 @@ function run(command, args, { capture = false, timeoutMs } = {}) {
             stdout: String(r.stdout ?? ""),
             stderr: String(r.stderr ?? ""),
             status: r.error ? null : r.status,
-            signal: r.signal ?? null,
             error: r.error ? `${command} could not run: ${r.error.message}` : "",
           };
         })()
       : spawnSyncBounded(command, args, { ...options, timeoutMs });
-  const signal = result.signal ?? null;
   const failure = result.error ? `\n  ship: ${result.error}\n` : "";
   if (failure) process.stderr.write(failure);
   if (capture) {
     const text = `${result.stdout}${result.stderr}${failure}`;
     process.stdout.write(text);
-    return { code: result.status ?? 1, signal, text };
+    return { code: result.status ?? 1, text };
   }
-  return { code: result.status ?? 1, signal, text: failure };
+  return { code: result.status ?? 1, text: failure };
 }
 
 /**
@@ -261,12 +280,9 @@ if (OPERATOR_TOKEN.length < 32) {
 announce("Preflight: up to date, and nothing else holding the tree");
 
 {
-  const beforePull = spawnSync("git", ["status", "--porcelain"], {
-    cwd: root,
-    encoding: "utf8",
-  });
-  if (beforePull.status !== 0) refuse("git status failed", "Is this a git repository?");
-  const dirtyNow = (beforePull.stdout ?? "").trim();
+  const beforePull = dirtyTree(root);
+  if (!beforePull.ok) refuse("git status failed", "Is this a git repository?");
+  const dirtyNow = beforePull.dirty;
   if (dirtyNow.length > 0) {
     console.error(dirtyNow);
     refuse(
@@ -330,14 +346,11 @@ announce("Preflight: up to date, and nothing else holding the tree");
 announce("Working tree must be clean");
 
 /* Checked again after the pull: a failed pull can leave files, and this is what gets built. */
-const porcelain = spawnSync("git", ["status", "--porcelain"], {
-  cwd: root,
-  encoding: "utf8",
-});
-if (porcelain.status !== 0) {
+const tree = dirtyTree(root);
+if (!tree.ok) {
   refuse("git status failed", "Is this a git repository?");
 }
-const dirty = (porcelain.stdout ?? "").trim();
+const dirty = tree.dirty;
 if (dirty.length > 0) {
   console.error(dirty);
   refuse(
@@ -628,21 +641,12 @@ console.log(`  ${POLL_COUNT} consecutive 200s.`);
 announce(`Readiness: ${READINESS_PATH} reports ok`);
 
 {
-  const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
-  /** @type {number} */
-  let status = 0;
-  /** @type {string} */
-  let text = "";
-  try {
-    const res = await fetch(url, {
-      headers: { "user-agent": "ship", "cache-control": "no-cache" },
-      redirect: "manual",
-    });
-    status = res.status;
-    text = await res.text();
-  } catch (error) {
+  const { status, text, error: unreachable } = await fetchHealth(
+    `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`,
+  );
+  if (unreachable) {
     refuse(
-      `${READINESS_PATH} could not be reached: ${error instanceof Error ? error.message : error}`,
+      `${READINESS_PATH} could not be reached: ${unreachable}`,
       "The deploy landed and the poll passed, so this is a network problem or the " +
         "endpoint is gone. NOTHING WAS SYNCED.",
     );
@@ -1009,22 +1013,11 @@ announce("The drift checks readiness deferred, asserted");
 let deferredMiss = "";
 {
   /* One read for all: more requests risk the per-IP limiter's 429. */
-  const url = `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`;
-  /** @type {number} */
-  let status = 0;
-  /** @type {string} */
-  let text = "";
-  try {
-    const res = await fetch(url, {
-      headers: { "user-agent": "ship", "cache-control": "no-cache" },
-      redirect: "manual",
-    });
-    status = res.status;
-    text = await res.text();
-  } catch (error) {
-    deferredMiss =
-      `${READINESS_PATH} could not be reached after the sync: ` +
-      `${error instanceof Error ? error.message : error}`;
+  const { status, text, error: unreachable } = await fetchHealth(
+    `${ORIGIN}${READINESS_PATH}?ship=${sha}-${step}`,
+  );
+  if (unreachable) {
+    deferredMiss = `${READINESS_PATH} could not be reached after the sync: ${unreachable}`;
   }
 
   if (!deferredMiss) {

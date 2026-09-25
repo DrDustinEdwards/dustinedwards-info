@@ -45,7 +45,7 @@ export function postLoaderData(record, revisedDate) {
 /**
  * @param {any} record
  */
-export function listingCard(record) {
+function listingCard(record) {
   return {
     slug: record.slug,
     title: record.title,
