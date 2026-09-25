@@ -228,6 +228,7 @@
 /* Opacity AND cursor, so it survives forced-colors. */
 .btn:disabled,
 .btn-brand:disabled,
+.btn-brand[aria-disabled="true"],
 .btn-danger:disabled,
 .btn-secondary:disabled,
 .btn-ghost:disabled,

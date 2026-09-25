@@ -149,6 +149,15 @@
       "fallbackKind": "selector",
       "fallbackAt": ".podcast-audio",
       "why": null
+    },
+    {
+      "id": "sign-in-busy",
+      "module": "app/enhance/login.ts",
+      "enhancement": "On the admin sign-in door, the button reads Redirecting... and refuses a second submit while the Google hop is under way. It replaced hydrating React on /login.",
+      "fallback": "The sign-in form is server-rendered and posts to the route action, which redirects to Google or renders the problem. Only the busy label is lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": "form[data-sign-in]",
+      "why": null
     }
   ]
 }
