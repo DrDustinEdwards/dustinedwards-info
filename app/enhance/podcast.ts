@@ -1,3 +1,5 @@
+import { clockTime } from "~/lib/podcast/clock.mjs";
+
 for (const root of document.querySelectorAll<HTMLElement>("[data-podcast]")) {
   const audio = root.querySelector<HTMLAudioElement>(".podcast-audio");
   const controls = root.querySelector<HTMLElement>("[data-podcast-controls]");
@@ -7,13 +9,6 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-podcast]")) {
   const total = root.querySelector<HTMLElement>("[data-podcast-total]");
   if (!audio || !controls || !play || !seek || !elapsed || !total) continue;
 
-  const clock = (seconds: number) => {
-    const s = Math.max(0, Math.floor(seconds || 0));
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const rest = String(s % 60).padStart(2, "0");
-    return h > 0 ? `${h}:${String(m).padStart(2, "0")}:${rest}` : `${m}:${rest}`;
-  };
   const duration = () =>
     Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : Number(seek.max) || 0;
 
@@ -22,10 +17,10 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-podcast]")) {
   const paint = () => {
     const now = audio.currentTime;
     if (!dragging) seek.value = String(Math.floor(now));
-    elapsed.textContent = clock(dragging ? Number(seek.value) : now);
+    elapsed.textContent = clockTime(dragging ? Number(seek.value) : now);
     seek.setAttribute(
       "aria-valuetext",
-      `${clock(dragging ? Number(seek.value) : now)} of ${clock(duration())}`,
+      `${clockTime(dragging ? Number(seek.value) : now)} of ${clockTime(duration())}`,
     );
   };
 
@@ -70,7 +65,7 @@ for (const root of document.querySelectorAll<HTMLElement>("[data-podcast]")) {
 
   audio.addEventListener("loadedmetadata", () => {
     seek.max = String(Math.floor(duration()));
-    total.textContent = clock(duration());
+    total.textContent = clockTime(duration());
     paint();
   });
   audio.addEventListener("timeupdate", paint);
