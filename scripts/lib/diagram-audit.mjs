@@ -97,34 +97,26 @@ function colourProblem(value, palette) {
 }
 
 /**
- * @param {string} svg
- * @param {string[]} paletteHexes
- * @returns {{ checked: number, skippedRules: number, overridden: number, problems: string[] }}
+ * The `<style>` half: every color declaration a rule can paint. Conditional group rules
+ * (`@media (prefers-color-scheme: dark)`) are recursed into, since they paint whenever their
+ * condition holds; any other at-rule (`@keyframes`) is audited whole, since its colors paint when the
+ * animation runs and it has no element to be unreachable from. A rule no element matches is skipped
+ * and counted.
+ *
+ * @param {Document} document
+ * @param {Set<string>} palette
+ * @returns {{ checked: number, skippedRules: number, problems: string[],
+ *   styling: Array<{ selectors: string[], properties: Set<string> }> }}
  */
-export function auditDiagramSvg(svg, paletteHexes) {
-  const palette = new Set(paletteHexes.map(normalizeHex));
+function auditStylesheets(document, palette) {
   /** @type {string[]} */
   const problems = [];
   let checked = 0;
   let skippedRules = 0;
-  let overridden = 0;
-
-  const { document } = parseHTML(`<!DOCTYPE html><html><body>${svg}</body></html>`);
-  const root = document.querySelector("svg");
-  if (!root) {
-    return { checked: 0, skippedRules: 0, overridden: 0, problems: ["no <svg> element"] };
-  }
-
   /** @type {Array<{ selectors: string[], properties: Set<string> }>} */
   const styling = [];
 
-  /**
-   * Conditional group rules (`@media (prefers-color-scheme: dark)`) are recursed into, since they
-   * paint whenever their condition holds; any other at-rule (`@keyframes`) is audited whole, since
-   * its colors paint when the animation runs and it has no element to be unreachable from.
-   *
-   * @param {string} text
-   */
+  /** @param {string} text */
   const auditRules = (text) => {
     for (const rule of cssRules(text)) {
       if (GROUPING_AT_RULES.test(rule.selector)) {
@@ -169,26 +161,18 @@ export function auditDiagramSvg(svg, paletteHexes) {
   };
   for (const style of document.querySelectorAll("style")) auditRules(style.textContent ?? "");
 
-  /**
-   * A presentation attribute a stylesheet rule overrides is never painted.
-   *
-   * @param {any} element
-   * @param {string} property
-   */
-  const styledBy = (element, property) =>
-    styling.some((rule) => {
-      if (!rule.properties.has(property)) return false;
-      return rule.selectors.some((selector) => {
-        try {
-          return element.matches(selector);
-        } catch {
-          return false;
-        }
-      });
-    });
+  return { checked, skippedRules, problems, styling };
+}
 
-  // Unreferenced `<defs>` children are never painted. A reference is `url(#id)` (markers, gradients)
-  // or an `href` to `#id` (`<use>`), and both keep the target audited.
+/**
+ * Unreferenced `<defs>` children, and everything under them, are never painted. A reference is
+ * `url(#id)` (markers, gradients) or an `href` to `#id` (`<use>`), and both keep the target audited.
+ *
+ * @param {Document} document
+ * @param {Element} root
+ * @returns {Set<Element>}
+ */
+function unpaintedDefs(document, root) {
   const serialized = root.toString();
   /** @type {Set<string>} */
   const hrefs = new Set();
@@ -209,8 +193,45 @@ export function auditDiagramSvg(svg, paletteHexes) {
       }
     }
   }
+  return dead;
+}
 
-  // The root itself carries attributes too (mermaid writes its background into `style`).
+/**
+ * The attribute half: `style` attributes and color presentation attributes on every painted element.
+ * The root itself carries attributes too (mermaid writes its background into `style`).
+ *
+ * @param {Document} document
+ * @param {Element} root
+ * @param {Set<string>} palette
+ * @param {Array<{ selectors: string[], properties: Set<string> }>} styling the stylesheet rules
+ * @returns {{ checked: number, overridden: number, problems: string[] }}
+ */
+function auditAttributes(document, root, palette, styling) {
+  /** @type {string[]} */
+  const problems = [];
+  let checked = 0;
+  let overridden = 0;
+
+  /**
+   * A presentation attribute a stylesheet rule overrides is never painted.
+   *
+   * @param {any} element
+   * @param {string} property
+   */
+  const styledBy = (element, property) =>
+    styling.some((rule) => {
+      if (!rule.properties.has(property)) return false;
+      return rule.selectors.some((selector) => {
+        try {
+          return element.matches(selector);
+        } catch {
+          return false;
+        }
+      });
+    });
+
+  const dead = unpaintedDefs(document, root);
+
   for (const element of [root, ...root.querySelectorAll("*")]) {
     if (dead.has(element)) continue;
     for (const attribute of element.attributes) {
@@ -234,5 +255,30 @@ export function auditDiagramSvg(svg, paletteHexes) {
     }
   }
 
-  return { checked, skippedRules, overridden, problems };
+  return { checked, overridden, problems };
+}
+
+/**
+ * @param {string} svg
+ * @param {string[]} paletteHexes
+ * @returns {{ checked: number, skippedRules: number, overridden: number, problems: string[] }}
+ */
+export function auditDiagramSvg(svg, paletteHexes) {
+  const palette = new Set(paletteHexes.map(normalizeHex));
+
+  const { document } = parseHTML(`<!DOCTYPE html><html><body>${svg}</body></html>`);
+  const root = document.querySelector("svg");
+  if (!root) {
+    return { checked: 0, skippedRules: 0, overridden: 0, problems: ["no <svg> element"] };
+  }
+
+  const sheets = auditStylesheets(document, palette);
+  const attributes = auditAttributes(document, root, palette, sheets.styling);
+
+  return {
+    checked: sheets.checked + attributes.checked,
+    skippedRules: sheets.skippedRules,
+    overridden: attributes.overridden,
+    problems: [...sheets.problems, ...attributes.problems],
+  };
 }
