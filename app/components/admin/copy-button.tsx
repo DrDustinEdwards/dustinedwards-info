@@ -89,9 +89,19 @@ export function CopyTextButton({
 }) {
   const [copied, setCopied] = useState<"" | "copied" | "failed">("");
   const timer = useRef(0);
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      window.clearTimeout(timer.current);
+    };
+  }, []);
 
   const settle = (outcome: "copied" | "failed") => {
+    // A copy that settles after the row is gone (a revoke, a closed drawer) must not start a timer
+    // the unmount cleanup already ran past.
+    if (!mounted.current) return;
     setCopied(outcome);
     window.clearTimeout(timer.current);
     // A failure stays longer: it asks the author to do something.
