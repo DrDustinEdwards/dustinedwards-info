@@ -1,8 +1,7 @@
 import { readFile, readdir, mkdir, stat } from "node:fs/promises";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
-import { retryRead } from "./lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 
@@ -27,8 +26,12 @@ const PLATFORM_TABLES = new Set([
  * @returns {{ stdout: string, status: number }}
  */
 function wrangler(args) {
-  const result = spawnSync(`npx wrangler ${args}`, { encoding: "utf8", shell: true });
-  return { stdout: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status ?? 1 };
+  // Bounded, so a hung wrangler fails the gate instead of hanging it: retryRead's timer cannot fire here.
+  const result = spawnSyncBounded(`npx wrangler ${args}`, [], { shell: true, timeoutMs: 10 * 60_000 });
+  return {
+    stdout: `${result.stdout}${result.stderr}${result.error ? `\n${result.error}` : ""}`,
+    status: result.status ?? 1,
+  };
 }
 
 /**
