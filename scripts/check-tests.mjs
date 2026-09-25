@@ -10,9 +10,9 @@ const TEST_DIR = join(root, "test");
 
 // Measured by running the gate, never summed, and tight: they move up with a test in the same commit,
 // so the set shrinking is noticed.
-const MINIMUM_FILES = 93;
+const MINIMUM_FILES = 118;
 // Catches a test file hollowed out in place. Measured by running the gate.
-const MINIMUM_TESTS = 780;
+const MINIMUM_TESTS = 933;
 
 let checks = 0;
 let failures = 0;
