@@ -211,7 +211,6 @@ test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping",
   const roster = out.find((g) => g.label === "Cohort photographs");
   assert.ok(roster, "the roster section is titled from the table");
   assert.equal(roster.note, "Placed by the roster page template");
-  assert.ok(roster.note.length > 0);
 });
 
 test("folder sections render in TABLE order, roster before publications", () => {
