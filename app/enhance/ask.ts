@@ -1,5 +1,6 @@
 import { labelForUrl, urlForKey } from "~/lib/search/ask-keys.mjs";
 import { splitFollowUp } from "~/lib/search/follow-up.mjs";
+import { answerDelta, takeSseFrames } from "~/lib/search/sse.mjs";
 
 const CHUNKS_EVENT = "chunks";
 
@@ -143,27 +144,10 @@ export function ask(container: HTMLElement, question: string): AskHandle {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        const frames = buffer.split("\n\n");
-        buffer = frames.pop() ?? "";
+        const taken = takeSseFrames(buffer);
+        buffer = taken.rest;
 
-        for (const frame of frames) {
-          let eventName = "";
-          const dataLines: string[] = [];
-          for (const line of frame.split("\n")) {
-            if (line.startsWith("event:")) eventName = line.slice(6).trim();
-            else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
-          }
-          const data = dataLines.join("\n");
-          if (!data) continue;
-          if (data === "[DONE]") continue;
-
-          let parsed: unknown;
-          try {
-            parsed = JSON.parse(data);
-          } catch {
-            continue;
-          }
-
+        for (const { event: eventName, data: parsed } of taken.frames) {
           if (eventName === CHUNKS_EVENT) {
             const chunks: Array<{ item?: { key?: string } }> = Array.isArray(parsed)
               ? parsed
@@ -185,9 +169,8 @@ export function ask(container: HTMLElement, question: string): AskHandle {
             continue;
           }
 
-          const delta = (parsed as { choices?: Array<{ delta?: { content?: string } }> })
-            ?.choices?.[0]?.delta?.content;
-          if (typeof delta === "string" && delta.length > 0) {
+          const delta = answerDelta(parsed);
+          if (delta !== undefined && delta.length > 0) {
             if (firstToken) {
               status.hidden = true;
               firstToken = false;
