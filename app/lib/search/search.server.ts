@@ -111,7 +111,8 @@ function renderSnippet(raw: string): string {
     .join("</mark>");
 }
 
-function parseTags(docTags: string): string[] {
+/** The pipe-delimited `doc_tags` column as a list. */
+function splitDocTags(docTags: string): string[] {
   return docTags.split("|").filter(Boolean);
 }
 
@@ -125,7 +126,7 @@ function toHit(row: RawRow, snippet: string, why: MatchReason[], score: number):
     docTitle: row.doc_title,
     docUrl: row.doc_url,
     anchor: row.anchor,
-    tags: parseTags(row.doc_tags),
+    tags: splitDocTags(row.doc_tags),
     publishAt: row.publish_at,
     snippet,
     why,
@@ -440,7 +441,7 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
 
   const allTags = new Set<string>();
   for (const row of tagRows.results ?? []) {
-    for (const tag of parseTags(row.doc_tags)) allTags.add(tag);
+    for (const tag of splitDocTags(row.doc_tags)) allTags.add(tag);
   }
 
   // Prefix or substring, not edit distance: on a handful of tags, fuzzy matching surfaces confident nonsense.

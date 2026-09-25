@@ -51,7 +51,8 @@ export const EMPTY_FIELDS: PostFields = {
   updated: "",
 };
 
-export function parseTags(input: string) {
+/** Tags as an author types them: comma or newline separated, lower-cased, blanks dropped. */
+export function parseTagInput(input: string) {
   return input
     .split(/[,\n]/)
     .map((t) => t.trim().toLowerCase())
@@ -303,7 +304,7 @@ export function fieldsFromForm(form: FormData): PostFields {
     slug: get("slug").trim().toLowerCase(),
     description: get("description"),
     date: get("date"),
-    tags: parseTags(get("tags")),
+    tags: parseTagInput(get("tags")),
     // From the button pressed, not a hidden field, so it works without script. Unknown means draft.
     draft: draftForIntent(readIntent(form)),
     publishAt: get("publishAt"),
