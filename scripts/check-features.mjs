@@ -31,7 +31,7 @@ import {
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/theme.ts";
 import { apca, contrast } from "../app/lib/contrast.mjs";
 import { RRF_K, fuse } from "../app/lib/search/query.mjs";
-import { stripComments } from "./lib/strip-comments.mjs";
+import { stripComments, stripTsxComments } from "./lib/strip-comments.mjs";
 import {
   CHART_TYPES,
   buildChartModel,
@@ -55,6 +55,45 @@ const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n")
 /** @param {string} source */
 const stripped = (/** @type {string} */ source) =>
   stripComments(source, { preserveLines: true });
+
+/**
+ * A source file with its comments gone, by the parser for TSX: the tokenizer reads an apostrophe in
+ * JSX text as a string opener and can keep every comment after it, which then satisfies a check.
+ *
+ * @param {string} file
+ */
+const codeOf = (file) => {
+  const source = normalizeEol(readFileSync(file, "utf8"));
+  return file.endsWith(".tsx") ? stripTsxComments(source) : stripped(source);
+};
+
+/**
+ * The body of the first function whose declaration matches `declaration`, braces included, or "".
+ * String literals are skipped whole, so a brace inside one does not count.
+ *
+ * @param {string} code @param {RegExp} declaration
+ */
+function functionBody(code, declaration) {
+  const at = code.search(declaration);
+  if (at === -1) return "";
+  const open = code.indexOf("{", code.indexOf(")", at));
+  if (open === -1) return "";
+  let depth = 0;
+  for (let i = open; i < code.length; i += 1) {
+    const c = code[i];
+    if (c === '"' || c === "'" || c === "`") {
+      i += 1;
+      while (i < code.length && code[i] !== c) i += code[i] === "\\" ? 2 : 1;
+      continue;
+    }
+    if (c === "{") depth += 1;
+    else if (c === "}") {
+      depth -= 1;
+      if (depth === 0) return code.slice(open, i + 1);
+    }
+  }
+  return "";
+}
 
 /**
  * Letter-digit tokens (D1, FTS5) are names, removed before the digit scan.
@@ -205,11 +244,13 @@ for (const feature of features) {
 
       const routeFile = routeModules.get(anchor.path);
       if (routeFile && existsSync(routeFile)) {
-        const routeSource = stripComments(readFileSync(routeFile, "utf8"));
+        const routeSource = codeOf(routeFile);
         const isPage = /export\s+default\s+function\b/.test(routeSource);
         const hasLoader = /export\s+(?:async\s+)?function\s+loader\b/.test(routeSource);
-        const loaderRefuses = /status:\s*405/.test(routeSource);
-        const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(routeSource);
+        /* The LOADER's own body: a 405 from an action on a GET-able route is not the loader refusing. */
+        const loaderBody = functionBody(routeSource, /export\s+(?:async\s+)?function\s+loader\b/);
+        const loaderRefuses = /status:\s*405/.test(loaderBody);
+        const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(loaderBody);
         const derived = isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates);
         const declared = anchor.anonymousGet !== false;
         const why = !hasLoader
@@ -559,7 +600,7 @@ if (notAdoptedRecord) {
 
 /* Comments stripped: both files name these values in prose. */
 
-const pageCode = stripComments(pageSource);
+const pageCode = stripTsxComments(normalizeEol(pageSource));
 for (const status of usedStatuses) {
   const label = STATUS_LABEL[status];
   ok(
@@ -712,9 +753,7 @@ ok(
 );
 
 /* Comments stripped, so a comment cannot satisfy a fallback. */
-const sourceBlobs = serverSources.map((file) =>
-  stripped(normalizeEol(readFileSync(file, "utf8"))),
-);
+const sourceBlobs = serverSources.map((file) => codeOf(file));
 
 /* Plus the shared renderer's output (remark-gfm footnotes), from a fixture: the claim is about the
    renderer, not the corpus. */
@@ -1148,7 +1187,7 @@ for (const term of vocabulary) {
   );
 }
 
-const projectsSource = stripped(readFileSync(PROJECTS_ROUTE_PATH, "utf8"));
+const projectsSource = codeOf(PROJECTS_ROUTE_PATH);
 ok(
   "the page imports the roster rather than restating it",
   /import\s+projectsData\s+from\s+["'][^"']*content\/projects\.json["']/.test(projectsSource),
@@ -1316,7 +1355,7 @@ ok(
   `parsed routes: ${[...routes].join(", ")}`,
 );
 
-const playgroundSource = stripped(readFileSync(PLAYGROUND_ROUTE_PATH, "utf8"));
+const playgroundSource = codeOf(PLAYGROUND_ROUTE_PATH);
 
 ok(
   "the page imports the manifest rather than restating it",
