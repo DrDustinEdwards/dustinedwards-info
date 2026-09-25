@@ -79,7 +79,7 @@ const APP_DIR = fileURLToPath(new URL("./app/", import.meta.url));
  * not-configured branch and assert nothing about authentication. Not a secret:
  * it is a literal in a tracked file and grants nothing anywhere.
  */
-export const TEST_OPERATOR_TOKEN = "test-operator-token-0123456789abcdef";
+const TEST_OPERATOR_TOKEN = "test-operator-token-0123456789abcdef";
 
 /**
  * The migrations, read on the NODE side because the worker cannot read a
