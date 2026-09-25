@@ -99,9 +99,13 @@ export function enhanceSearch(): void {
     let data: JsonResponse;
     try {
       const response = await fetch(url, { headers: { Accept: "application/json" } });
-      if (!response.ok) return;
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       data = (await response.json()) as JsonResponse;
     } catch {
+      // Said, not silent: the old results must not stand under a new query as if they answered it.
+      if (mine !== sequence) return;
+      if (results?.isConnected) results.textContent = "";
+      if (count) count.textContent = "Live results are unavailable. Press Enter to search.";
       return;
     }
     if (mine !== sequence) return;
