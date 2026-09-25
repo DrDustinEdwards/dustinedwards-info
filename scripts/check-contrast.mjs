@@ -922,6 +922,8 @@ function opacityExempt(selectorGroup) {
 {
   /** @type {Array<{ file: string, selector: string, value: string }>} */
   const partial = [];
+  /** @type {string[]} */
+  const unparsed = [];
   let declarations = 0;
 
   for (const file of stylesheetPaths()) {
@@ -932,9 +934,17 @@ function opacityExempt(selectorGroup) {
     for (const match of stripped.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const selector = match[1].trim().split("\n").map((l) => l.trim()).join(" ");
       const block = match[2];
-      for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([0-9.]+)\s*(?:;|$)/g)) {
+      /* Every opacity declaration, whatever its value grammar: one this scan cannot read as a
+         number (var(), calc()) is reported, not skipped, or it would escape classification. */
+      for (const decl of block.matchAll(/(?:^|;)\s*opacity\s*:\s*([^;]+?)\s*(?:;|$)/g)) {
         declarations += 1;
-        const value = Number(decl[1]);
+        const raw = decl[1].replace(/\s*!important$/, "");
+        const number = /^(\d*\.?\d+)(%?)$/.exec(raw);
+        if (!number) {
+          unparsed.push(`${name} ${selector}: opacity ${decl[1]}`);
+          continue;
+        }
+        const value = Number(number[1]) / (number[2] === "%" ? 100 : 1);
         if (value > 0 && value < 1) partial.push({ file: name, selector, value: decl[1] });
       }
     }
@@ -944,6 +954,13 @@ function opacityExempt(selectorGroup) {
   assert(
     `the opacity scan read declarations at all (${declarations} found)`,
     declarations >= 8,
+  );
+
+  assert(
+    unparsed.length === 0
+      ? "every opacity value is a number this scan can classify"
+      : `UNREADABLE opacity value(s), so they cannot be classified: ${unparsed.join("; ")}`,
+    unparsed.length === 0,
   );
 
   const unclassified = partial.filter((d) => !opacityExempt(d.selector));
