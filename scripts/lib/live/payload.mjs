@@ -3,8 +3,8 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { chunkStem } from "../../check-page-payload.mjs";
 import { readArtifact } from "../artifact.mjs";
+import { chunkStem } from "../page-payload.mjs";
 import { check, get, root, SLUG } from "./client.mjs";
 
 export async function run() {

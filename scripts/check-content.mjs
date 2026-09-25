@@ -84,8 +84,11 @@ async function main() {
   await checkAbout();
 
   checkInternalFurtherReading(posts);
-  checkMath(posts, postRecords);
-  checkSwatches(posts, postRecords);
+
+  // Each output check returns its failures, so one failing check never hides the next.
+  const failures = [...checkMath(posts, postRecords), ...checkSwatches(posts, postRecords)];
+  for (const failure of failures) console.error(failure);
+  if (failures.length > 0) process.exitCode = 1;
 }
 
 /** Rendered twice and byte-compared, because `about.json` is imported statically into the Worker bundle. */
@@ -131,94 +134,30 @@ async function checkAbout() {
  * @param {Array<{ slug: string, markdown: string, html: string, hasMath?: boolean,
  *   title: string, toc: any[], tags: string[], publishAt: any, draft: boolean }>} posts
  * @param {Array<Record<string, any>>} records the artifact's post records
+ * @returns {string[]} the failure reports, empty on a pass
  */
 function checkMath(posts, records) {
-  /** @type {string[]} */
-  const problems = [];
-
   const withMath = posts.filter((post) => post.hasMath === true);
   const withoutMath = posts.filter((post) => post.hasMath !== true);
 
   if (withMath.length === 0 || withoutMath.length === 0) {
-    console.error(
+    return [
       `check:content failed. the corpus has ${withMath.length} post(s) with math and ` +
         `${withoutMath.length} without. Every math assertion below passes trivially over ` +
         `a corpus missing either side: with none, "no markdown carries KaTeX" is true of ` +
         `nothing, and with all, "a mathless post links no stylesheet" is. The fixture ` +
         `content/posts/math-typesetting-fixture.md exists to keep both sides populated.`,
-    );
-    process.exitCode = 1;
-    return;
+    ];
   }
 
-  for (const post of posts) {
-    const astSaysMath = post.hasMath === true;
-    const htmlSaysMath = htmlHasMath(post.html);
-    if (astSaysMath !== htmlSaysMath) {
-      problems.push(
-        `${post.slug}: the renderer's AST flag says ${astSaysMath} and htmlHasMath says ` +
-          `${htmlSaysMath}. The route reads the second, so they cannot differ.`,
-      );
-    }
-
-    if (post.html.includes("katex-error")) {
-      problems.push(
-        `${post.slug}: the rendered html carries a katex-error span. An expression ` +
-          `reached rehype-katex's fallback render, which remarkMathValidate is supposed ` +
-          `to make impossible.`,
-      );
-    }
-
-    if (post.markdown.includes("katex")) {
-      problems.push(
-        `${post.slug}: the stored markdown carries the string "katex". The four outputs ` +
-          `that serve posts.body verbatim would carry it too.`,
-      );
-    }
-    if (astSaysMath && !/\$/.test(post.markdown)) {
-      problems.push(
-        `${post.slug}: the renderer found math but the stored markdown has no "$" in it, ` +
-          `so the .md twin, llms-full.txt and the JSON feed carry no expression at all.`,
-      );
-    }
-
-    // Carrying both trees: a silent drop to html-only takes the MathML away.
-    if (astSaysMath) {
-      if (!post.html.includes("<math")) {
-        problems.push(
-          `${post.slug}: the rendered html carries no <math> element, so the output mode ` +
-            `is no longer htmlAndMathml and a screen reader gets the layout tree only.`,
-        );
-      }
-      if (!post.html.includes('<annotation encoding="application/x-tex">')) {
-        problems.push(
-          `${post.slug}: the rendered html carries no x-tex annotation. That annotation is ` +
-            `what mathToTex reads to put the feeds back to source, so the feeds would ` +
-            `silently keep their markup.`,
-        );
-      }
-    }
-
-    const feedBody = mathToTex(post.html);
-    if (feedBody.includes("katex")) {
-      problems.push(
-        `${post.slug}: mathToTex left KaTeX markup in the feed body, so RSS and Atom ` +
-          `would ship an expression rendered twice and garbled both times.`,
-      );
-    }
-    if (astSaysMath && !feedBody.includes("$")) {
-      problems.push(`${post.slug}: mathToTex removed the math and left no TeX behind.`);
-    }
-  }
+  const problems = posts.flatMap(mathProblems);
 
   // Both indexes are built from the markdown, so markup would be span soup in a snippet and in Ask.
   if (records.length === 0) {
-    console.error(
+    return [
       `check:content failed. the artifact carries 0 post record(s) over ${posts.length} ` +
         `post(s), so every search assertion below is about an empty set.`,
-    );
-    process.exitCode = 1;
-    return;
+    ];
   }
   const markupRecords = records.filter((r) => String(r.body ?? "").includes("katex"));
   if (markupRecords.length > 0) {
@@ -229,10 +168,9 @@ function checkMath(posts, records) {
   }
 
   if (problems.length > 0) {
-    console.error(`check:content failed. ${problems.length} math output problem(s):`);
-    console.error(nameThem(problems));
-    process.exitCode = 1;
-    return;
+    return [
+      `check:content failed. ${problems.length} math output problem(s):\n${nameThem(problems)}`,
+    ];
   }
 
   const expressions = withMath.reduce(
@@ -244,6 +182,77 @@ function checkMath(posts, records) {
       `${withMath.length} with math (${expressions} expression(s)), ${withoutMath.length} ` +
       `without, ${records.length} search record(s) carrying TeX rather than markup.`,
   );
+  return [];
+}
+
+/**
+ * One post's math outputs against each other: the AST flag, the html, the stored markdown and the
+ * feed body.
+ *
+ * @param {{ slug: string, markdown: string, html: string, hasMath?: boolean }} post
+ * @returns {string[]}
+ */
+function mathProblems(post) {
+  /** @type {string[]} */
+  const problems = [];
+  const astSaysMath = post.hasMath === true;
+  const htmlSaysMath = htmlHasMath(post.html);
+  if (astSaysMath !== htmlSaysMath) {
+    problems.push(
+      `${post.slug}: the renderer's AST flag says ${astSaysMath} and htmlHasMath says ` +
+        `${htmlSaysMath}. The route reads the second, so they cannot differ.`,
+    );
+  }
+
+  if (post.html.includes("katex-error")) {
+    problems.push(
+      `${post.slug}: the rendered html carries a katex-error span. An expression ` +
+        `reached rehype-katex's fallback render, which remarkMathValidate is supposed ` +
+        `to make impossible.`,
+    );
+  }
+
+  if (post.markdown.includes("katex")) {
+    problems.push(
+      `${post.slug}: the stored markdown carries the string "katex". The four outputs ` +
+        `that serve posts.body verbatim would carry it too.`,
+    );
+  }
+  if (astSaysMath && !/\$/.test(post.markdown)) {
+    problems.push(
+      `${post.slug}: the renderer found math but the stored markdown has no "$" in it, ` +
+        `so the .md twin, llms-full.txt and the JSON feed carry no expression at all.`,
+    );
+  }
+
+  // Carrying both trees: a silent drop to html-only takes the MathML away.
+  if (astSaysMath) {
+    if (!post.html.includes("<math")) {
+      problems.push(
+        `${post.slug}: the rendered html carries no <math> element, so the output mode ` +
+          `is no longer htmlAndMathml and a screen reader gets the layout tree only.`,
+      );
+    }
+    if (!post.html.includes('<annotation encoding="application/x-tex">')) {
+      problems.push(
+        `${post.slug}: the rendered html carries no x-tex annotation. That annotation is ` +
+          `what mathToTex reads to put the feeds back to source, so the feeds would ` +
+          `silently keep their markup.`,
+      );
+    }
+  }
+
+  const feedBody = mathToTex(post.html);
+  if (feedBody.includes("katex")) {
+    problems.push(
+      `${post.slug}: mathToTex left KaTeX markup in the feed body, so RSS and Atom ` +
+        `would ship an expression rendered twice and garbled both times.`,
+    );
+  }
+  if (astSaysMath && !feedBody.includes("$")) {
+    problems.push(`${post.slug}: mathToTex removed the math and left no TeX behind.`);
+  }
+  return problems;
 }
 
 /**
@@ -259,79 +268,38 @@ function prosePart(markdown) {
     .replace(/(`+)(?!`)[^\n]*?[^`]\1(?!`)/g, "");
 }
 
+/** A chip's color in the rendered html. Global, and read only through matchAll, which copies it. */
+const SWATCH_HEX = /--swatch:(#[0-9A-Fa-f]+)/g;
+
 /**
  * Two derivations, made to argue: one checked against itself passes on a pipeline that had stopped running.
  *
  * @param {Array<{ slug: string, markdown: string, html: string }>} posts
  * @param {Array<Record<string, any>>} records the artifact's post records
+ * @returns {string[]} the failure reports, empty on a pass
  */
 function checkSwatches(posts, records) {
-  /** @type {string[]} */
-  const problems = [];
-
   const withSwatch = posts.filter((post) => post.html.includes('class="swatch-chip"'));
   const withoutSwatch = posts.filter((post) => !post.html.includes('class="swatch-chip"'));
 
   if (withSwatch.length === 0 || withoutSwatch.length === 0) {
-    console.error(
+    return [
       `check:content failed. the corpus has ${withSwatch.length} post(s) carrying a rendered ` +
         `swatch and ${withoutSwatch.length} without. Every assertion below passes trivially ` +
         `over a corpus missing either side: with none, "no markdown carries chip markup" is ` +
         `true of nothing, and with all, "a swatchless post renders no chip" is. The fixture ` +
         `content/posts/swatches-in-prose-fixture.md exists to keep both sides populated.`,
-    );
-    process.exitCode = 1;
-    return;
+    ];
   }
 
-  let chips = 0;
-  for (const post of posts) {
-    const htmlSaysSwatch = post.html.includes('class="swatch-chip"');
-    const sourceSaysSwatch = /:swatch\[/.test(prosePart(post.markdown));
-
-    if (sourceSaysSwatch !== htmlSaysSwatch) {
-      problems.push(
-        `${post.slug}: the markdown ${sourceSaysSwatch ? "carries" : "carries no"} :swatch ` +
-          `directive outside code, and the rendered html ${htmlSaysSwatch ? "carries" : "carries no"} ` +
-          `chip. One of the two is wrong: a directive that renders nothing is a color the ` +
-          `reader never sees, and a chip with no directive behind it is markup from somewhere ` +
-          `this pipeline does not control.`,
-      );
-    }
-
-    if (post.markdown.includes("swatch-chip") || post.markdown.includes('class="swatch"')) {
-      problems.push(
-        `${post.slug}: the stored markdown carries the rendered chip's markup. The .md twin, ` +
-          `llms-full.txt, the JSON feed, the text/markdown representation and both indexes ` +
-          `serve posts.body verbatim, so all of them would ship a <span> where the source ` +
-          `should carry :swatch[...].`,
-      );
-    }
-    if (htmlSaysSwatch && !post.markdown.includes(":swatch[")) {
-      problems.push(
-        `${post.slug}: the html carries a chip but the stored markdown has no ":swatch[" in ` +
-          `it, so the .md twin, the feeds and llms-full.txt carry no color at all.`,
-      );
-    }
-
-    for (const match of post.html.matchAll(/--swatch:(#[0-9A-Fa-f]+)/g)) {
-      chips += 1;
-      if (match[1] !== match[1].toUpperCase()) {
-        problems.push(
-          `${post.slug}: a chip carries ${match[1]}, which is not upper case. Two spellings ` +
-            `of one color would render as two different pages.`,
-        );
-      }
-    }
-  }
+  const problems = posts.flatMap(swatchProblems);
+  const chips = posts.reduce((n, post) => n + [...post.html.matchAll(SWATCH_HEX)].length, 0);
 
   if (records.length === 0) {
-    console.error(
+    return [
       `check:content failed. the artifact carries 0 post record(s) over ${posts.length} ` +
         `post(s), so the search assertion below is about an empty set.`,
-    );
-    process.exitCode = 1;
-    return;
+    ];
   }
   const markupRecords = records.filter((r) => String(r.body ?? "").includes("swatch-chip"));
   if (markupRecords.length > 0) {
@@ -343,10 +311,9 @@ function checkSwatches(posts, records) {
   }
 
   if (problems.length > 0) {
-    console.error(`check:content failed. ${problems.length} swatch output problem(s):`);
-    console.error(nameThem(problems));
-    process.exitCode = 1;
-    return;
+    return [
+      `check:content failed. ${problems.length} swatch output problem(s):\n${nameThem(problems)}`,
+    ];
   }
 
   console.log(
@@ -355,6 +322,55 @@ function checkSwatches(posts, records) {
       `${withoutSwatch.length} without, ${records.length} search record(s) carrying the ` +
       `directive source rather than markup.`,
   );
+  return [];
+}
+
+/**
+ * One post's swatch directive source against its rendered chips.
+ *
+ * @param {{ slug: string, markdown: string, html: string }} post
+ * @returns {string[]}
+ */
+function swatchProblems(post) {
+  /** @type {string[]} */
+  const problems = [];
+  const htmlSaysSwatch = post.html.includes('class="swatch-chip"');
+  const sourceSaysSwatch = /:swatch\[/.test(prosePart(post.markdown));
+
+  if (sourceSaysSwatch !== htmlSaysSwatch) {
+    problems.push(
+      `${post.slug}: the markdown ${sourceSaysSwatch ? "carries" : "carries no"} :swatch ` +
+        `directive outside code, and the rendered html ${htmlSaysSwatch ? "carries" : "carries no"} ` +
+        `chip. One of the two is wrong: a directive that renders nothing is a color the ` +
+        `reader never sees, and a chip with no directive behind it is markup from somewhere ` +
+        `this pipeline does not control.`,
+    );
+  }
+
+  if (post.markdown.includes("swatch-chip") || post.markdown.includes('class="swatch"')) {
+    problems.push(
+      `${post.slug}: the stored markdown carries the rendered chip's markup. The .md twin, ` +
+        `llms-full.txt, the JSON feed, the text/markdown representation and both indexes ` +
+        `serve posts.body verbatim, so all of them would ship a <span> where the source ` +
+        `should carry :swatch[...].`,
+    );
+  }
+  if (htmlSaysSwatch && !post.markdown.includes(":swatch[")) {
+    problems.push(
+      `${post.slug}: the html carries a chip but the stored markdown has no ":swatch[" in ` +
+        `it, so the .md twin, the feeds and llms-full.txt carry no color at all.`,
+    );
+  }
+
+  for (const match of post.html.matchAll(SWATCH_HEX)) {
+    if (match[1] !== match[1].toUpperCase()) {
+      problems.push(
+        `${post.slug}: a chip carries ${match[1]}, which is not upper case. Two spellings ` +
+          `of one color would render as two different pages.`,
+      );
+    }
+  }
+  return problems;
 }
 
 /**

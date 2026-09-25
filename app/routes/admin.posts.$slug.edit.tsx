@@ -2,6 +2,7 @@ import { Form, Link, data, redirect } from "react-router";
 
 import { timed, timingsContext } from "~/lib/timing";
 
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { PostEditor } from "~/components/admin/post-editor";
 import {
   CREATE_FORM_ID,
@@ -9,13 +10,13 @@ import {
   revokeFormId,
   type PreviewLinkView,
 } from "~/components/admin/preview-links";
-import { listBlogTags } from "~/db";
 import { adminActorContext, adminSessionContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
-import { createPreviewLink, listPreviewLinks, revokePreviewLink } from "~/lib/preview-links.server";
+import { listPreviewLinks } from "~/lib/preview-links.server";
 import { previewUrl } from "~/lib/preview-token.mjs";
-import { loadLinkTargets } from "~/lib/editor/link-targets.server";
+import { loadEditorOptions } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
+import { previewLinkAction } from "~/lib/editor/preview-link-action.server";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { feedbackFromSearch, savedRedirectPath } from "~/lib/editor/feedback";
 import { parsePost } from "~/lib/editor/frontmatter";
@@ -26,6 +27,7 @@ import { postPath } from "~/lib/content/slug.mjs";
 import { DELETE_LEFT_PARAM } from "~/lib/editor/delete-left.mjs";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /*
  * A handle, not a loader field: the flag other readers use reflects what is saved, and the
@@ -53,7 +55,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       (value) => ({ value, error: null as string | null }),
       (error: unknown) => {
         console.error(`editor ${what} read failed`, error);
-        return { value: [] as T[], error: error instanceof Error ? error.message : String(error) };
+        return { value: [] as T[], error: errorMessage(error) };
       },
     );
 
@@ -66,7 +68,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         )
       : { value: [], error: null };
 
-  const tags = await timed(timings, "d1_tags", () => settled("tags", listBlogTags(env)));
+  const options = await loadEditorOptions(env, timings);
 
   const revisions = await timed(timings, "gh_commits", () =>
     settled("revisions", listCommitsForPath(env, postPath(params.slug))),
@@ -85,11 +87,9 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
     previewLinksError: links.error,
     // Only `first_published` in the committed file tells a brand-new draft from a withdrawn one.
     everPublished: fields.firstPublished.trim() !== "",
-    tagOptions: tags.value.map((tag) => tag.slug),
-    loadProblems: tags.error
-      ? [`Existing tags could not be read, so none are suggested: ${tags.error}`]
-      : [],
-    linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
+    tagOptions: options.tagOptions,
+    loadProblems: options.problems,
+    linkTargets: options.linkTargets,
     revisions: revisions.value,
     revisionsError: revisions.error,
   };
@@ -110,57 +110,14 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     });
 
   if (intent === "preview-link" || intent === "revoke-preview-link") {
-    const problem = async (message: string) => ({
-      kind: "problem" as const,
-      /* These forms carry no body, so the editor keeps the loaded fields rather than an empty post. */
-      fields: undefined,
-      problem: { message, conflict: false, field: undefined, line: undefined },
-      headSha: await headAfterProblem(),
+    return previewLinkAction(env, {
+      intent,
+      slug: params.slug,
+      origin: new URL(request.url).origin,
+      form,
+      createdBy: () => context.get(adminSessionContext).user.email,
+      headAfterProblem,
     });
-
-    if (intent === "preview-link") {
-      /*
-       * Server side, not just the UI: minting a capability must not trust the absence of a button.
-       * The committed file is the authority, because the form is the author's unsaved draft.
-       */
-      const committed = await readFile(env, postPath(params.slug));
-      if (!committed) return problem(`No post file exists for "${params.slug}".`);
-      if (parsePost(committed.content).draft !== true) {
-        return problem(
-          "Preview links are only for drafts. This post is already public, so " +
-            "its URL is the link.",
-        );
-      }
-
-      try {
-        const link = await createPreviewLink(env, {
-          slug: params.slug,
-          createdBy: context.get(adminSessionContext).user.email,
-        });
-        return {
-          kind: "preview-link" as const,
-          url: previewUrl(new URL(request.url).origin, link.token),
-          expiresAt: link.expiresAt,
-        };
-      } catch (error) {
-        return problem(
-          `The preview link could not be created: ${error instanceof Error ? error.message : String(error)}`,
-        );
-      }
-    }
-
-    /* Revoke is not draft-gated: removing access must never be blocked by a stale page. */
-    try {
-      await revokePreviewLink(env, {
-        slug: params.slug,
-        token: String(form.get("token") ?? ""),
-      });
-      return { kind: "preview-link-revoked" as const };
-    } catch (error) {
-      return problem(
-        `The preview link could not be revoked: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
   }
 
   if (intent === "delete") {
@@ -325,46 +282,26 @@ export default function EditPost({ loaderData, actionData }: Route.ComponentProp
       />
 
       {actionData?.kind === "confirm-delete" ? (
-        <form method="post" className="editor-confirm-delete">
-          <h2>Delete "{actionData.slug}"?</h2>
-          <p>
-            This removes the file and its rows. It is recoverable only through
-            git.
-          </p>
+        <ConfirmDialog
+          title={`Delete "${actionData.slug}"?`}
+          body={
+            <p>
+              This removes the file and its rows. It is recoverable only through
+              git.
+            </p>
+          }
+          requireTyped="1"
+          confirmLabel="Delete permanently"
+          cancelHref={`/admin/posts/${actionData.slug}/edit`}
+        >
+          <input type="hidden" name="intent" value="delete" />
           <input type="hidden" name="headSha" value={headSha} />
-          <label>
-            <span>
-              Type <strong>1</strong> to confirm
-            </span>
-            <input name={CONFIRM_FIELD} autoComplete="off" inputMode="numeric" />
-          </label>
-          <div className="editor-confirm-actions">
-            <Link to={`/admin/posts/${actionData.slug}/edit`} className="btn-ghost">
-              Cancel
-            </Link>
-            <button type="submit" name="intent" value="delete" className="btn-danger">
-              Delete permanently
-            </button>
-          </div>
-        </form>
+        </ConfirmDialog>
       ) : null}
 
-      <Form
-        id="delete-post"
-        method="post"
-        className="editor-delete-form"
-        onSubmit={(event) => {
-          /* Earlier feedback, not the gate: the action checks the same thing server side. */
-          if (!confirm(`Delete "${loaderData.slug}"? This removes the file and its rows.`)) {
-            event.preventDefault();
-            return;
-          }
-          const field = event.currentTarget.elements.namedItem(CONFIRM_FIELD);
-          if (field instanceof HTMLInputElement) field.value = "1";
-        }}
-      >
+      {/* Submits no confirmation, so the action answers with the typed one above, script or not. */}
+      <Form id="delete-post" method="post" className="editor-delete-form">
         <input type="hidden" name="headSha" value={headSha} />
-        <input type="hidden" name={CONFIRM_FIELD} defaultValue="" />
       </Form>
 
       {/* Outside the editing form: the drawer is a `<dialog>` inside it, and a form inside a form is dropped. */}
