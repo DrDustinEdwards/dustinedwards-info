@@ -190,34 +190,58 @@ export class ChildRegistry {
     try {
       mkdirSync(dirname(this.filePath), { recursive: true });
       appendFileSync(this.filePath, `${JSON.stringify({ pid, kind, needles })}\n`);
-    } catch {
-      // An unwritable registry costs the next run its cleanup, never this run its gate result.
+    } catch (error) {
+      // An unwritable registry costs the next run its cleanup, never this run its gate result,
+      // but it is said out loud: the next run's preflight will not know about this child.
+      process.stderr.write(
+        `  registry: could not record pid ${pid} (${kind}) in ${this.filePath}: ` +
+          `${error instanceof Error ? error.message : String(error)}\n`,
+      );
     }
+  }
+
+  /**
+   * Per line: a run killed mid-append leaves one torn line, and it must not hide the others.
+   *
+   * @returns {{ entries: { pid: number, kind: string, needles: string[] }[], torn: number }}
+   */
+  readAll() {
+    if (!existsSync(this.filePath)) return { entries: [], torn: 0 };
+    const entries = [];
+    let torn = 0;
+    for (const line of readFileSync(this.filePath, "utf8").split("\n")) {
+      if (!line.trim()) continue;
+      let entry;
+      try {
+        entry = JSON.parse(line);
+      } catch {
+        torn += 1;
+        continue;
+      }
+      if (entry && Number.isInteger(entry.pid) && Array.isArray(entry.needles) && entry.needles.length > 0) {
+        entries.push(entry);
+      } else {
+        torn += 1;
+      }
+    }
+    return { entries, torn };
   }
 
   /** @returns {{ pid: number, kind: string, needles: string[] }[]} */
   read() {
-    if (!existsSync(this.filePath)) return [];
-    try {
-      return readFileSync(this.filePath, "utf8")
-        .split("\n")
-        .filter((line) => line.trim())
-        .map((line) => JSON.parse(line))
-        .filter(
-          (entry) =>
-            entry && Number.isInteger(entry.pid) && Array.isArray(entry.needles) && entry.needles.length > 0,
-        );
-    } catch {
-      return [];
-    }
+    return this.readAll().entries;
   }
 
   clear() {
     try {
       mkdirSync(dirname(this.filePath), { recursive: true });
       writeFileSync(this.filePath, "");
-    } catch {
-      /* nothing to clear */
+    } catch (error) {
+      // Safe to carry on: the next preflight re-checks every entry's command line before a kill.
+      process.stderr.write(
+        `  registry: could not clear ${this.filePath}: ` +
+          `${error instanceof Error ? error.message : String(error)}\n`,
+      );
     }
   }
 
@@ -230,7 +254,8 @@ export class ChildRegistry {
    */
   preflight(options = {}) {
     const exclude = options.excludePid ?? process.pid;
-    const entries = this.read().filter((entry) => entry.pid !== exclude);
+    const { entries: recorded, torn } = this.readAll();
+    const entries = recorded.filter((entry) => entry.pid !== exclude);
     const result = {
       cleared: 0,
       stale: 0,
@@ -239,6 +264,11 @@ export class ChildRegistry {
       unverifiable: 0,
       notes: /** @type {string[]} */ ([]),
     };
+    if (torn > 0) {
+      result.notes.push(
+        `${torn} registry line(s) could not be read (a run killed mid-write), so any child they named was not swept`,
+      );
+    }
 
     if (entries.length === 0) {
       this.clear();
