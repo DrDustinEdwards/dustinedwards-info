@@ -25,7 +25,7 @@ const { mark: MARK } = resolveTokens(
  *
  * @returns {Mark}
  */
-export function readMark() {
+function readMark() {
   /** @param {string} file */
   const parse = (file) => {
     const source = readFileSync(join(ROOT, "public", file), "utf8");
