@@ -130,6 +130,25 @@ describe("media upload", () => {
     expect(row?.height).toBeNull();
   });
 
+  it("REFUSES a raster Images cannot measure, and stores nothing under a sizeless key", async () => {
+    const count = async () => (await env.MEDIA.list()).objects.length;
+    const before = await count();
+    const { status } = await upload(
+      { name: "outage.png", type: "image/png", body: "raster bytes: images outage" },
+      { width: 10, height: 10 },
+      {
+        IMAGES: {
+          info: async () => {
+            throw new Error("planted Images outage");
+          },
+        },
+      },
+    );
+
+    expect(status).toBe(503);
+    expect(await count()).toBe(before);
+  });
+
   it("writes the annotation row from the SAME measurement the key was built from", async () => {
     const { key } = await upload(
       { name: "annotated.png", type: "image/png", body: "raster bytes: annotated" },
