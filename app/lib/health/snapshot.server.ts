@@ -6,6 +6,7 @@ import {
   snapshotFromBody,
   type HealthTile,
 } from "./snapshot.mjs";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /**
  * Never throws: bookkeeping must not cost the health endpoint its verdict. Awaited, not waitUntil, so
@@ -25,7 +26,7 @@ export async function writeHealthSnapshot(
     console.error(
       JSON.stringify({
         alert: "health-snapshot-write-failed",
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
   }
@@ -43,7 +44,7 @@ export async function readHealthTile(env: Env): Promise<HealthTile> {
     console.error(
       JSON.stringify({
         alert: "health-snapshot-read-failed",
-        detail: error instanceof Error ? error.message : String(error),
+        detail: errorMessage(error),
       }),
     );
     return { state: "unreadable" };

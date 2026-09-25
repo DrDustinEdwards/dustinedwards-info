@@ -5,7 +5,7 @@ import { RowMenu } from "~/components/admin/row-menu";
 import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { PolicyError } from "~/lib/editor/publish-policy.mjs";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
 import {
@@ -66,16 +66,15 @@ function resolveFilter(requested: string | null, rows: Webmention[]): FilterId {
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const env = getEnv(context);
-  const [mentions, expiring] = await Promise.all([
-    timed(timings, "d1_list_webmentions", () => listWebmentionsForAdmin(env)),
-    timed(timings, "d1_count_expiring_webmentions", () => countExpiringWebmentions(env)),
-  ]);
-  const status = resolveFilter(new URL(request.url).searchParams.get("status"), mentions);
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data({ mentions, expiring, status });
+  return timedLoader(context, async (timings) => {
+    const env = getEnv(context);
+    const [mentions, expiring] = await Promise.all([
+      timed(timings, "d1_list_webmentions", () => listWebmentionsForAdmin(env)),
+      timed(timings, "d1_count_expiring_webmentions", () => countExpiringWebmentions(env)),
+    ]);
+    const status = resolveFilter(new URL(request.url).searchParams.get("status"), mentions);
+    return data({ mentions, expiring, status });
+  });
 }
 
 type ActionResult = {

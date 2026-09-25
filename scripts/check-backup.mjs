@@ -97,14 +97,12 @@ function sorted(set) {
   return [...set].sort();
 }
 
-async function main() {
-  const target = process.argv.includes("--remote") ? "--remote" : "--local";
-  DB_ADDRESS = resolveD1Address(DB_NAME, target);
-  console.log(
-    `check:backup verifying the per-table export path against ${target.slice(2)} D1` +
-      `${DB_ADDRESS === DB_NAME ? "" : ` (${DB_NAME} resolved to ${DB_ADDRESS})`}`,
-  );
-
+/**
+ * The migrations against the database, in both directions and above structural floors. Throws on any
+ * mismatch, before anything is exported.
+ * @param {string} target
+ */
+async function schemaCoverage(target) {
   const expected = await expectedTables();
   const { real, virtual, shadow } = await actualTables(target);
 
@@ -144,10 +142,15 @@ async function main() {
     for (const problem of problems) console.error(`  FAIL ${problem}`);
     throw new Error(`${problems.length} schema/backup mismatch(es)`);
   }
+  return real;
+}
 
-  const dir = path.join(os.tmpdir(), "dustinedwards-backup-check");
-  await mkdir(dir, { recursive: true });
-
+/**
+ * Exports every real table and counts its INSERTs, so a file with no rows is not a backup.
+ * @param {string} target @param {string} dir @param {Set<string>} real
+ * @returns {Promise<number>} the total bytes exported
+ */
+async function exportTables(target, dir, real) {
   let totalBytes = 0;
   /** @type {string[]} */
   const empty = [];
@@ -210,7 +213,14 @@ async function main() {
   if (empty.length > 0) {
     console.log(`  note: ${empty.length} table(s) exported with no rows: ${empty.join(", ")}`);
   }
+  return totalBytes;
+}
 
+/**
+ * Pulls every MEDIA object and checks each landed at the size R2 reported.
+ * @param {string} target @param {string} dir
+ */
+async function mediaCheck(target, dir) {
   // The mirror bucket covers this site's own code deleting an object, not account loss, so this is the
   // only copy outside it. Remote only: miniflare holds no objects.
   let mediaNote = "media objects NOT pulled (--local reads miniflare, which holds none)";
@@ -245,6 +255,24 @@ async function main() {
       (listed.length === 0 ? " (the bucket is empty, so this verified nothing)" : "");
   }
   console.log(`  ${mediaNote}`);
+}
+
+async function main() {
+  const target = process.argv.includes("--remote") ? "--remote" : "--local";
+  DB_ADDRESS = resolveD1Address(DB_NAME, target);
+  console.log(
+    `check:backup verifying the per-table export path against ${target.slice(2)} D1` +
+      `${DB_ADDRESS === DB_NAME ? "" : ` (${DB_NAME} resolved to ${DB_ADDRESS})`}`,
+  );
+
+  const real = await schemaCoverage(target);
+
+  const dir = path.join(os.tmpdir(), "dustinedwards-backup-check");
+  await mkdir(dir, { recursive: true });
+
+  const totalBytes = await exportTables(target, dir, real);
+
+  await mediaCheck(target, dir);
 
   console.log(
     `check:backup ok. ${real.size} table(s), ${totalBytes} bytes total, written under ${dir}`,

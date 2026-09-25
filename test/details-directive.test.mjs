@@ -4,10 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { renderBody } from "../app/lib/content/pipeline.mjs";
-
-/** @param {string} body */
-const render = (body) => renderBody({ file: "test.md", body, resolveImage: () => null });
+import { render } from "./lib/render.mjs";
 
 test("it renders a native details with the summary first", async () => {
   const { html } = await render(':::details{summary="Raw counts"}\nOne paragraph.\n:::\n');
