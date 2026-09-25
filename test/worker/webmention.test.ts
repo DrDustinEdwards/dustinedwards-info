@@ -1,12 +1,8 @@
 import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { RouterContextProvider, createRoutesStub } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { approvedMentionsFor } from "~/db";
 import { adminActorContext } from "~/lib/auth.server";
-import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -19,18 +15,18 @@ import AdminMentions, {
 import { action as webmentionAction, loader as webmentionLoader } from "~/routes/webmention";
 import { loader as blogLoader } from "~/routes/blog.$slug";
 
+import {
+  freezeAtWindowStart,
+  renderRoute,
+  routeContext,
+  textsOf,
+  throughMiddleware,
+  untilRefused,
+} from "./route-helpers";
+import { seedMention as seedMentionRow, seedPost } from "./seed";
+
 /* Every case carries its own client IP: `clientIp` falls back to `unknown` off the edge, so
  * cases would otherwise share one `wm:unknown` rate-limit instance. */
-
-function routeContext(ctx: ExecutionContext, overrides: Record<string, unknown> = {}) {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, { env: { ...env, ...overrides } as never, ctx });
-  return context;
-}
-
-/* On a minute boundary, and frozen: `AskBudget.hit` keys on a FIXED window, so a boundary
- * landing inside a spend loop resets the count and the refusal never arrives. */
-const WINDOW_START = Date.UTC(2026, 8, 4, 12, 0, 0);
 
 const TARGET_SLUG = "a-mentioned-post";
 const TARGET = `${SITE_ORIGIN}/blog/${TARGET_SLUG}`;
@@ -86,16 +82,6 @@ function stubSources(pages: Record<string, StubPage>, gate?: Promise<void>) {
 const pageLinkingTo = (href: string, extra = "") =>
   `<!doctype html><html><body>${extra}<p>I read <a href="${href}">this post</a> today and it was useful.</p></body></html>`;
 
-async function seedPost(slug: string, status: "draft" | "published") {
-  await env.DB.prepare(
-    `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-     VALUES (?1, 'post', ?2, 'A body.', ?3, ?4)
-     ON CONFLICT(slug) DO UPDATE SET status = excluded.status`,
-  )
-    .bind(slug, `Title for ${slug}`, status, Math.floor(Date.UTC(2026, 0, 1) / 1000))
-    .run();
-}
-
 async function mentionRow(sourceUrl: string) {
   return env.DB.prepare(`SELECT * FROM webmentions WHERE source_url = ?1`)
     .bind(sourceUrl)
@@ -110,57 +96,20 @@ async function mentionRow(sourceUrl: string) {
     }>();
 }
 
-async function seedMention(
-  sourceUrl: string,
-  status: string,
-  receivedDaysAgo: number,
-): Promise<number> {
-  const received = Math.floor((Date.now() - receivedDaysAgo * 24 * 60 * 60 * 1000) / 1000);
-  await env.DB.prepare(
-    `INSERT INTO webmentions (source_url, target_slug, status, received_at, excerpt)
-     VALUES (?1, ?2, ?3, ?4, 'An excerpt.')`,
-  )
-    .bind(sourceUrl, TARGET_SLUG, status, received)
-    .run();
-  const row = await env.DB.prepare(`SELECT id FROM webmentions WHERE source_url = ?1`)
-    .bind(sourceUrl)
-    .first<{ id: number }>();
-  return row?.id ?? -1;
+function seedMention(sourceUrl: string, status: string, receivedDaysAgo: number): Promise<number> {
+  const receivedAt = Math.floor((Date.now() - receivedDaysAgo * 24 * 60 * 60 * 1000) / 1000);
+  return seedMentionRow(sourceUrl, TARGET_SLUG, { status, receivedAt });
 }
 
 function renderMentionsPage(url: string, loaderData: unknown, actionData?: unknown) {
-  const Stub = createRoutesStub([
-    {
-      path: "/admin/mentions",
-      Component: () =>
-        createElement(AdminMentions as never, { loaderData, actionData, params: {}, matches: [] }),
-    },
-  ]);
-  return renderToStaticMarkup(createElement(Stub, { initialEntries: [url] }));
-}
-
-async function textsOf(html: string, selector: string): Promise<string[]> {
-  const texts: string[] = [];
-  await new HTMLRewriter()
-    .on(selector, {
-      element() {
-        texts.push("");
-      },
-      text(chunk) {
-        const last = texts.length - 1;
-        texts[last] = (texts[last] ?? "") + chunk.text;
-      },
-    })
-    .transform(new Response(html))
-    .text();
-  return texts.map((t) => t.replace(/\s+/g, " ").trim());
+  return renderRoute("/admin/mentions", AdminMentions, { loaderData, actionData }, url);
 }
 
 beforeEach(async () => {
   /* Emptied between cases: D1 persists for the whole file and the global-cap case asserts an
    * exact count. */
   await env.DB.prepare(`DELETE FROM webmentions`).run();
-  await seedPost(TARGET_SLUG, "published");
+  await seedPost(TARGET_SLUG);
 });
 
 afterEach(() => {
@@ -244,14 +193,9 @@ describe("/webmention refuses before it reads", () => {
 
   it("does NOT serve when the limiter is missing", async () => {
     /* An unprotected public write path does not serve unmetered; it does not serve. */
-    const ctx = createExecutionContext();
-    const { ASK_BUDGET: _removed, ...withoutLimiter } = env as unknown as Record<string, unknown>;
-    const context = new RouterContextProvider();
-    context.set(cloudflareContext, { env: withoutLimiter as never, ctx });
-
     const response = await webmentionAction({
       request: wm(form("https://elsewhere.example/a", TARGET), { ip: "203.0.113.15" }),
-      context,
+      context: routeContext(createExecutionContext(), { ASK_BUDGET: undefined }),
     } as never);
 
     expect(response.status).toBe(503);
@@ -262,26 +206,24 @@ describe("/webmention bound 1: the per-IP rate limit", () => {
   it("REFUSES past 20 per 60 seconds, with a Retry-After to hand back", async () => {
     /* The clock is frozen: `AskBudget.hit` keys on a FIXED window. The target is one this site
      * lacks, so each request spends its rate unit and stops at 400 before touching D1. */
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(WINDOW_START);
+    freezeAtWindowStart();
 
     const ctx = createExecutionContext();
     const context = routeContext(ctx);
-    let refusal: Response | null = null;
-    let accepted = 0;
-    for (let i = 0; i < 40 && refusal === null; i += 1) {
-      const response = await webmentionAction({
-        request: wm(form("https://elsewhere.example/a", "https://elsewhere.example/not-here"), {
-          ip: "203.0.113.20",
-        }),
-        context,
-      } as never);
-      if (response.status === 429) refusal = response;
-      else accepted += 1;
-    }
+    const { refusal, results } = await untilRefused(
+      () =>
+        webmentionAction({
+          request: wm(form("https://elsewhere.example/a", "https://elsewhere.example/not-here"), {
+            ip: "203.0.113.20",
+          }),
+          context,
+        } as never),
+      (response) => response.status === 429,
+      40,
+    );
 
     expect(refusal).not.toBeNull();
-    expect(accepted).toBe(20);
+    expect(results.filter((response) => response.status !== 429)).toHaveLength(20);
     expect(refusal?.headers.get("retry-after")).toBe("60");
     expect(refusal?.headers.get("cache-control")).toBe("private, no-store");
   });
@@ -316,7 +258,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
   it("REFUSES A DRAFT TARGET AND AN UNKNOWN SLUG IDENTICALLY, byte for byte", async () => {
     /* A 400 that told a draft from an unknown slug would let a caller enumerate unpublished
      * slugs from the refusals, so the two are compared on the wire. */
-    await seedPost("an-unpublished-draft", "draft");
+    await seedPost("an-unpublished-draft", { status: "draft" });
 
     const ctx = createExecutionContext();
     const draft = await webmentionAction({
@@ -650,16 +592,13 @@ describe("/webmention bound 3: one row per source and target", () => {
 });
 
 describe("the admin plane refuses the smoke actor", () => {
-  async function throughAdminStack(request: Request, context: RouterContextProvider) {
-    const args = { request, context, params: {} } as never;
-    const run = async (index: number): Promise<unknown> => {
-      const handler = adminMiddleware[index] as unknown as
-        | ((a: never, next: () => Promise<unknown>) => Promise<unknown>)
-        | undefined;
-      return handler ? handler(args, () => run(index + 1)) : mentionsAction(args);
-    };
+  async function throughAdminStack(request: Request, context: ReturnType<typeof routeContext>) {
     try {
-      return await run(0);
+      return await throughMiddleware(adminMiddleware, mentionsAction, {
+        request,
+        context,
+        params: {},
+      } as never);
     } catch (thrown) {
       return thrown;
     }
@@ -993,22 +932,14 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     } = {},
   ) {
     const decided = fields.decidedAt ?? Math.floor(Date.UTC(2026, 7, 20) / 1000);
-    await env.DB.prepare(
-      `INSERT INTO webmentions
-         (source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`,
-    )
-      .bind(
-        sourceUrl,
-        fields.slug ?? POST_SLUG,
-        fields.status ?? "approved",
-        fields.authorName ?? "A Reader",
-        fields.authorUrl ?? null,
-        fields.excerpt ?? "A sentence about the post.",
-        decided,
-        fields.decidedAt === null ? null : decided,
-      )
-      .run();
+    await seedMentionRow(sourceUrl, fields.slug ?? POST_SLUG, {
+      status: fields.status ?? "approved",
+      authorName: fields.authorName ?? "A Reader",
+      authorUrl: fields.authorUrl ?? null,
+      excerpt: fields.excerpt ?? "A sentence about the post.",
+      receivedAt: decided,
+      decidedAt: fields.decidedAt === null ? null : decided,
+    });
   }
 
   async function loadPost(slug: string) {
@@ -1065,12 +996,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   it("A DRAFT'S APPROVED MENTION IS UNREACHABLE, at the route AND at the reader", async () => {
     /* Seeded directly: the endpoint refuses a draft target, but a post unpublished after its
      * mentions were approved reaches this state. */
-    await env.DB.prepare(
-      `INSERT INTO posts (slug, kind, title, body, status) VALUES (?1, 'post', 'A draft', 'Body.', 'draft')
-       ON CONFLICT(slug) DO UPDATE SET status = 'draft'`,
-    )
-      .bind("a-drafted-post")
-      .run();
+    await seedPost("a-drafted-post", { status: "draft", publishAt: null });
     await seedApproved("https://elsewhere.example/on-a-draft", { slug: "a-drafted-post" });
 
     await expect(approvedMentionsFor(env as never, "a-drafted-post")).resolves.toEqual([]);
@@ -1093,13 +1019,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
   it("A SCHEDULED POST'S mentions are refused too, on the same predicate", async () => {
     /* A predicate that only checked status would pass this case while leaking it. */
     const future = Math.floor((Date.now() + 90 * 24 * 60 * 60 * 1000) / 1000);
-    await env.DB.prepare(
-      `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-       VALUES (?1, 'post', 'Scheduled', 'Body.', 'published', ?2)
-       ON CONFLICT(slug) DO UPDATE SET publish_at = excluded.publish_at`,
-    )
-      .bind("a-scheduled-post", future)
-      .run();
+    await seedPost("a-scheduled-post", { publishAt: future });
     await seedApproved("https://elsewhere.example/on-a-schedule", { slug: "a-scheduled-post" });
 
     await expect(approvedMentionsFor(env as never, "a-scheduled-post")).resolves.toEqual([]);
