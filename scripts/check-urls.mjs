@@ -6,8 +6,8 @@ import matter from "gray-matter";
 
 import { frontmatterSchema, isAllowedUrl, renderBody } from "../app/lib/content/pipeline.mjs";
 import { postRedirectStatus, postRedirectTarget } from "../app/lib/slug-redirect.mjs";
-import { assertFloor } from "./lib/floor.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FIXTURE = join(root, "scripts", "fixtures", "url-protocol-cases.json");
@@ -30,16 +30,8 @@ if (!existsSync(FIXTURE)) {
  */
 const fixture = JSON.parse(readFileSync(FIXTURE, "utf8"));
 
-let checks = 0;
-let failures = 0;
-/** @param {string} label @param {boolean} ok @param {string} [detail] */
-function assert(label, ok, detail = "") {
-  checks += 1;
-  if (!ok) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally();
+const { ok: assert } = tally;
 
 for (const probe of fixture.predicateCases) {
   assert(
@@ -202,11 +194,18 @@ for (const [label, property] of SCHEMA_FIELDS) {
 }
 
 {
-  const definitions = findAll(
-    pipelineTree,
-    (n) => ts.isFunctionDeclaration(n) && n.name?.text === "isAllowedUrl",
-  ).length;
-  assert("isAllowedUrl is defined exactly once in pipeline.mjs", definitions === 1, `found ${definitions} definitions`);
+  /* The predicate lives in url-policy.mjs and pipeline.mjs imports it: one definition across the two. */
+  const URL_POLICY = join(root, "app", "lib", "content", "url-policy.mjs");
+  const urlPolicyTree = parseSource(URL_POLICY, readFileSync(URL_POLICY, "utf8"));
+  const definitionsIn = (/** @type {ts.SourceFile} */ tree) =>
+    findAll(tree, (n) => ts.isFunctionDeclaration(n) && n.name?.text === "isAllowedUrl").length;
+  const inPolicy = definitionsIn(urlPolicyTree);
+  const inPipeline = definitionsIn(pipelineTree);
+  assert(
+    "isAllowedUrl is defined exactly once, in url-policy.mjs",
+    inPolicy === 1 && inPipeline === 0,
+    `found ${inPolicy} definition(s) in url-policy.mjs and ${inPipeline} in pipeline.mjs`,
+  );
 }
 
 // A redirect to a 404 is invisible because the gateway resolves the map without the database, and a
@@ -451,11 +450,10 @@ console.log(
 // Measured by running it, with slack smaller than one redirect entry, so deleting a redirect cannot
 // hide inside the tolerance.
 const MINIMUM_CHECKS = 188;
-const floorBreach = assertFloor("check:urls", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) assert("this gate executed its assertions", false, floorBreach);
+tally.floor("check:urls", "checks", MINIMUM_CHECKS);
 
-if (failures > 0) {
-  console.log(`\n${failures} FAILED of ${checks} checks\n`);
+if (tally.failures > 0) {
+  console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
   process.exit(1);
 }
-console.log(`\n${checks} checks, 0 failures\n`);
+console.log(`\n${tally.checks} checks, 0 failures\n`);
