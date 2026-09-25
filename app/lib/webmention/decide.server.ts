@@ -18,7 +18,7 @@ export async function decideMention(
   id: number,
   decision: MentionDecision,
   actor?: Actor,
-): Promise<{ changed: boolean; slug: string | null }> {
+): Promise<{ changed: boolean; slug: string | null; purged: boolean | null }> {
   if (actor) {
     const may = WRITE_CAPABILITIES[actor.kind];
     if (!may.write) {
@@ -44,8 +44,9 @@ export async function decideMention(
       ? await deleteWebmention(env, id)
       : await decideWebmention(env, id, decision === "approve" ? "approved" : "rejected");
 
-  // Null means nothing moved (the write only touches verified rows), so there is nothing to purge.
-  if (slug) await purgePost(slug, `mention ${decision}`);
+  // Null when nothing moved (the write only touches verified rows) or the runtime cannot purge; only
+  // false is a failed purge, returned, not raised: the decision is stored and only the page is stale.
+  const purged = slug ? await purgePost(slug, `mention ${decision}`) : null;
 
-  return { changed: slug !== null, slug };
+  return { changed: slug !== null, slug, purged };
 }

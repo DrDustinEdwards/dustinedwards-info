@@ -125,8 +125,15 @@ function recordTraffic(request: Request, response: Response, env: Env, url: URL)
       // The index is the sampling key; the redacted path keeps per-path counts meaningful.
       indexes: [path],
     });
-  } catch {
-    /* Analytics must never cost a reader their page. */
+  } catch (error) {
+    /* Analytics must never cost a reader their page, but a broken write is logged, or the traffic
+     * view reads a failing binding as a quiet day. */
+    console.error(
+      JSON.stringify({
+        alert: "traffic-write-failed",
+        detail: error instanceof Error ? error.message : String(error),
+      }),
+    );
   }
 }
 

@@ -190,13 +190,11 @@ function writeSingletons(outDir) {
 
   for (const s of SINGLETONS) {
     const abs = join(REPO, s.component);
-    if (!existsSync(abs)) continue;
     const source = readFileSync(abs, "utf8");
 
     const tokens = new Set();
     for (const sheet of s.sheets) {
-      const sheetAbs = join(REPO, sheet);
-      if (existsSync(sheetAbs)) for (const t of tokensRead(readFileSync(sheetAbs, "utf8"))) tokens.add(t);
+      for (const t of tokensRead(readFileSync(join(REPO, sheet), "utf8"))) tokens.add(t);
     }
 
     const classes = classNames(source);
@@ -218,13 +216,24 @@ function writeSingletons(outDir) {
 function main() {
   const sheets = readSheets(REPO);
 
+  // Checked before anything is read or the directory is rebuilt: a missing file used to be skipped,
+  // and the summary still read as a full export.
+  const missing = [
+    ...sheets,
+    ...SINGLETONS.flatMap((s) => [s.component, ...s.sheets]),
+  ].filter((rel) => !existsSync(join(REPO, rel)));
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.length} file(s) the guidelines are built from do not exist: ` +
+        `${[...new Set(missing)].join(", ")}. Fix SHEETS or SINGLETONS; nothing was written.`,
+    );
+  }
+
   /** @type {{ sheet: string, line: number, prose: string, score: number, file: string | null }[]} */
   const all = [];
 
   for (const sheet of sheets) {
-    const abs = join(REPO, sheet);
-    if (!existsSync(abs)) continue;
-    for (const { text, line } of commentBlocks(readFileSync(abs, "utf8"))) {
+    for (const { text, line } of commentBlocks(readFileSync(join(REPO, sheet), "utf8"))) {
       const prose = commentProse(text);
       if (prose.length < MINIMUM_PROSE_BYTES) continue;
 

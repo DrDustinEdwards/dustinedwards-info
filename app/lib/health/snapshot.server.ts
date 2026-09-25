@@ -19,18 +19,34 @@ export async function writeHealthSnapshot(
 ): Promise<void> {
   try {
     await env.APP_KV.put(HEALTH_SNAPSHOT_KEY, JSON.stringify(snapshotFromBody(body, readAt)));
-  } catch {
-    /* A snapshot write must never cost the caller their health verdict. */
+  } catch (error) {
+    /* A snapshot write must never cost the caller their health verdict, but it is logged: an
+     * unwritten snapshot ages the tile to "stale" and reads as a dead watchdog. */
+    console.error(
+      JSON.stringify({
+        alert: "health-snapshot-write-failed",
+        detail: error instanceof Error ? error.message : String(error),
+      }),
+    );
   }
 }
 
-/** A throw is treated as absence: the home page must render whatever KV is doing. */
+/**
+ * A throw renders as `unreadable`, never as `missing`: the home page must render whatever KV is doing,
+ * but a failed read is not the same fact as no snapshot having been written. It is logged.
+ */
 export async function readHealthTile(env: Env): Promise<HealthTile> {
-  let stored: unknown = null;
+  let stored: unknown;
   try {
     stored = await env.APP_KV.get(HEALTH_SNAPSHOT_KEY, "json");
-  } catch {
-    stored = null;
+  } catch (error) {
+    console.error(
+      JSON.stringify({
+        alert: "health-snapshot-read-failed",
+        detail: error instanceof Error ? error.message : String(error),
+      }),
+    );
+    return { state: "unreadable" };
   }
   return healthTile(stored, Date.now());
 }

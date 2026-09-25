@@ -4,7 +4,8 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
+import { isMain } from "./lib/is-main.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -143,9 +144,7 @@ function main() {
   );
 }
 
-// `pathToFileURL`: on this host the two spellings differ in their slashes, so a hand-rolled compare is
-// false forever and the build exits 0 having written nothing.
-if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {
+if (isMain(import.meta.url)) {
   try {
     main();
   } catch (error) {

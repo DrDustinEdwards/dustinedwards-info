@@ -78,7 +78,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
    */
   const healthValue =
     health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
-  const healthAge = health.state === "missing" ? undefined : String(health.ageSeconds);
+  const healthAge = "ageSeconds" in health ? String(health.ageSeconds) : undefined;
 
   /* Every figure in sections 2 and 3 is counted here, never typed: a typed number drifts when a paper lands. */
   const years = PUBLICATIONS.map((p) => p.year).filter((y) => Number.isFinite(y));
@@ -271,7 +271,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               {gates} {gates === 1 ? "check" : "checks"}
             </Link>,
             <span className="evidence-health" data-health-age={healthAge}>
-              <Link to="/api/health">{healthValue} passing</Link>
+              <Link to="/api/health">
+                {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
+                {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
+              </Link>
             </span>,
             <Link to="/blog">
               {posts} {posts === 1 ? "post" : "posts"}

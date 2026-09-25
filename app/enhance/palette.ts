@@ -96,7 +96,7 @@ function build() {
     <p class="palette-footer">
       <span><kbd>up</kbd><kbd>down</kbd> to move</span>
       <span><kbd>Enter</kbd> to open</span>
-      <a href="/search">All results</a>
+      <a href="/search" class="palette-all-results">All results</a>
     </p>
   `;
 
@@ -104,6 +104,7 @@ function build() {
   input = dialog.querySelector(".palette-input");
   listbox = dialog.querySelector(".palette-listbox");
   statusLine = dialog.querySelector(".palette-status");
+  allResultsLink = dialog.querySelector(".palette-all-results");
 
   askTrigger = dialog.querySelector(".palette-ask-trigger");
   askContainer = dialog.querySelector(".palette-ask-container");
@@ -278,7 +279,15 @@ async function runAsk() {
   if (!question) return;
   askHandle?.cancel();
   if (askTrigger) askTrigger.hidden = true;
-  const { ask } = await import("./ask");
+  let ask: typeof import("./ask").ask;
+  try {
+    ({ ask } = await import("./ask"));
+  } catch {
+    // The chunk failed to load: restore the trigger so the reader can retry, and say so.
+    if (askTrigger) askTrigger.hidden = !askAvailable;
+    if (statusLine) statusLine.textContent = "Ask AI could not load. Try again.";
+    return;
+  }
   askHandle = ask(askContainer, question);
 }
 
@@ -365,6 +374,8 @@ function openPalette() {
     input.value = "";
     input.focus();
   }
+  // The cleared field must not leave the link carrying the last session's query.
+  if (allResultsLink) allResultsLink.href = "/search";
   if (statusLine) statusLine.textContent = "";
   renderRecent();
 }
