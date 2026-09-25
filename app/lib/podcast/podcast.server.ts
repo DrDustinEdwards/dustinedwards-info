@@ -1,7 +1,7 @@
 import type { RouterContextProvider } from "react-router";
 
 import { getSetting, setSetting } from "~/db";
-import { cloudflareContext } from "~/lib/context";
+import { getEnv, getExecutionContext } from "~/lib/context";
 import {
   PODCAST_FEED_URL,
   PODCAST_SLOT_KEY,
@@ -101,7 +101,8 @@ export async function readPodcastFeed(
   context: Readonly<RouterContextProvider>,
   { wait = false }: { wait?: boolean } = {},
 ): Promise<CachedFeed | null> {
-  const { env, ctx } = context.get(cloudflareContext);
+  const env = getEnv(context);
+  const ctx = getExecutionContext(context);
   const kv = env.APP_KV;
   const cached = await readCache(kv);
   if (cached && !isStale(cached)) return cached;
@@ -121,7 +122,7 @@ export async function writePodcastSlot(env: Env, slot: PodcastSlot): Promise<voi
 export async function homePodcastEpisode(
   context: Readonly<RouterContextProvider>,
 ): Promise<PodcastEpisode | null> {
-  const env = context.get(cloudflareContext).env;
+  const env = getEnv(context);
   const [feed, slot] = await Promise.all([readPodcastFeed(context), readPodcastSlot(env)]);
   return chooseEpisode(feed?.episodes ?? [], slot).episode;
 }
