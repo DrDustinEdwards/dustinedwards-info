@@ -17,6 +17,7 @@ import { MediaEmptyState } from "~/components/admin/media-empty-state";
 import { MediaGrid } from "~/components/admin/media-grid";
 import { MediaFacets } from "~/components/admin/media-facets";
 import { MediaInspector } from "~/components/admin/media-inspector";
+import { LiveNotice } from "~/components/admin/live-notice";
 import { MediaKeyboard } from "~/components/admin/media-keyboard";
 import { MediaSearch } from "~/components/admin/media-search";
 import { MediaToast } from "~/components/admin/toast";
@@ -329,6 +330,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         message:
           `Nothing was deleted. The trash holds ${keys.length} file(s) and the ` +
           `confirmation read ${typed || "(blank)"}. Type the count exactly to confirm.`,
+        refused: true,
       };
     }
     return emptyMediaTrash(env, keys);
@@ -357,7 +359,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 
   return data(
-    { message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.` },
+    {
+      message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.`,
+      refused: true,
+    },
     { status: 400 },
   );
 }
@@ -392,6 +397,7 @@ export default function AdminMedia({
   const confirmDelete =
     actionData && "confirmDelete" in actionData ? actionData.confirmDelete : undefined;
   const message = actionData && "message" in actionData ? actionData.message : undefined;
+  const refused = !!actionData && "refused" in actionData && actionData.refused === true;
 
   if (loaderData.picker) return null;
   const {
@@ -501,22 +507,19 @@ export default function AdminMedia({
         </p>
       ) : null}
 
-      {message ? (
-        <p className="editor-notice" role="status">
-          {message}
-        </p>
-      ) : null}
-
-      {uploaded ? (
-        <p className="editor-notice" role="status">
-          Uploaded {uploaded}. <Link to={linkTo({ key: uploaded })}>Open it</Link>.
-        </p>
-      ) : null}
-      {uploadError ? (
-        <p className="editor-notice" role="status">
-          {uploadError}
-        </p>
-      ) : null}
+      {/* With the inspector open the result is announced inside it: the page behind a modal is inert. */}
+      <LiveNotice
+        status={
+          uploaded ? (
+            <>
+              Uploaded {uploaded}. <Link to={linkTo({ key: uploaded })}>Open it</Link>.
+            </>
+          ) : message && !refused && !detail ? (
+            message
+          ) : undefined
+        }
+        alert={uploadError ? uploadError : message && refused && !detail ? message : undefined}
+      />
 
       {!scanComplete ? (
         <AdminAlert tone="warning" title="Usage could not be determined" headingId="scan-failed">
@@ -527,7 +530,9 @@ export default function AdminMedia({
         </AdminAlert>
       ) : null}
 
-      {detail ? <MediaInspector detail={detail} linkTo={linkTo} /> : null}
+      {detail ? (
+        <MediaInspector detail={detail} linkTo={linkTo} message={message} refused={refused} />
+      ) : null}
 
       {objects.length === 0 ? (
         <MediaEmptyState q={q} lensCounts={lensCounts} linkTo={linkTo} />

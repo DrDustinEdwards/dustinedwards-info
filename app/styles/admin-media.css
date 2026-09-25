@@ -243,9 +243,37 @@
   border: 0;
   border-left: 1px solid var(--border-strong);
   border-radius: 0;
+  /* A <dialog>: these undo the centred modal box a browser draws, so it stays a drawer. */
+  left: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  color: var(--text);
+}
+
+/* Unopened and not inline, it is hidden, as a closed dialog is. */
+.media-detail:not([open]):not([data-inline]) {
+  display: none;
+}
+
+/* Once modal, the backdrop is the scrim; the link stays for the page without script. */
+.media-detail::backdrop {
+  background: var(--scrim);
+  opacity: 0.28;
+}
+
+.media-detail-scrim:has(+ .media-detail:modal) {
+  display: none;
+}
+
+/* Empty regions sit out of the flex flow, so they add no gap; the header is drawn first although the
+   notice comes first in the document. */
+.media-detail-notice:not(:has(p)) {
+  position: absolute;
 }
 
 .media-detail-head {
+  order: -1;
   position: sticky;
   z-index: var(--z-tile-body);
   top: -1rem;
