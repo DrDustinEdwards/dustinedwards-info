@@ -1,8 +1,9 @@
 import { Link, data } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 
 import { Panel } from "~/components/admin/panel";
+import { DiffBlock, RevisionMeta } from "~/components/admin/revision-list";
 import { getEnv } from "~/lib/context";
 import {
   getCommitPatch,
@@ -23,38 +24,30 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const path = postPath(params.slug);
 
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
+  return timedLoader(context, async (timings) => {
 
-  // The read is the 404: the commits endpoint answers a missing or deleted path with commits or an
-  // empty list, never a not-found.
-  const file = await timed(timings, "gh_read_file", () => readFile(env, path));
-  if (!file) throw data("Not found", { status: 404 });
+    // The read is the 404: the commits endpoint answers a missing or deleted path with commits or an
+    // empty list, never a not-found.
+    const file = await timed(timings, "gh_read_file", () => readFile(env, path));
+    if (!file) throw data("Not found", { status: 404 });
 
-  const commits = await timed(timings, "gh_commits", () => listCommitsForPath(env, path));
+    const commits = await timed(timings, "gh_commits", () => listCommitsForPath(env, path));
 
-  const selected = new URL(request.url).searchParams.get("commit");
-  const patch =
-    selected && commits.some((commit) => commit.sha === selected)
-      ? await timed(timings, "gh_patch", () => getCommitPatch(env, selected, path))
-      : null;
+    const selected = new URL(request.url).searchParams.get("commit");
+    const patch =
+      selected && commits.some((commit) => commit.sha === selected)
+        ? await timed(timings, "gh_patch", () => getCommitPatch(env, selected, path))
+        : null;
 
-  const payload = {
-    slug: params.slug,
-    commits,
-    selected,
-    patch: patch?.patch ?? null,
-  };
+    const payload = {
+      slug: params.slug,
+      commits,
+      selected,
+      patch: patch?.patch ?? null,
+    };
 
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data(payload);
-}
-
-function diffKind(line: string) {
-  if (line.startsWith("+") && !line.startsWith("+++")) return "add";
-  if (line.startsWith("-") && !line.startsWith("---")) return "del";
-  if (line.startsWith("@@")) return "hunk";
-  return undefined;
+    return data(payload);
+  });
 }
 
 export default function PostHistory({ loaderData }: Route.ComponentProps) {
@@ -77,18 +70,7 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
         <ol className="history-list">
           {commits.map((commit, index) => (
             <li key={commit.sha} className="history-entry">
-              <div className="history-meta">
-                <code>{commit.sha.slice(0, 7)}</code>
-                <span className="history-message">{commit.message}</span>
-                <span className="muted">
-                  {commit.author}
-                  {" · "}
-                  {new Date(commit.date).toLocaleString("en-US", {
-                    timeZone: "UTC",
-                  })}
-                  {index === 0 ? " · current" : ""}
-                </span>
-              </div>
+              <RevisionMeta revision={commit} current={index === 0} />
 
               <div className="history-actions">
                 <Link
@@ -104,14 +86,7 @@ export default function PostHistory({ loaderData }: Route.ComponentProps) {
 
               {selected === commit.sha ? (
                 patch ? (
-                  <pre className="history-diff">
-                    {patch.split("\n").map((line, i) => (
-                      <span key={i} data-diff={diffKind(line)}>
-                        {line}
-                        {"\n"}
-                      </span>
-                    ))}
-                  </pre>
+                  <DiffBlock patch={patch} />
                 ) : (
                   <p className="muted">
                     No diff recorded for this commit.

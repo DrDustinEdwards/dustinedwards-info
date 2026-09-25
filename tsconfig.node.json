@@ -66,6 +66,10 @@
     "app/lib/publications/search-inputs.mjs",
     "app/lib/publications/exports.mjs",
     "app/lib/publications/export-response.mjs",
+    // The publication index's listing. check:machine-readable compares its
+    // SHOWCASE_TYPES with export-response.mjs's by importing it, which a route
+    // module (React, a loader) could not be.
+    "app/lib/publications/listing.mjs",
     // Imported by exports.mjs for the brace-protection allowlist, and by the
     // gate through it. The page italicizes from the same list.
     "app/data/organisms.ts",
@@ -73,6 +77,12 @@
     // its own source, which is how the export assertions iterate real records.
     "app/data/publications.ts",
     "app/lib/content/pipeline.mjs",
+    // Split out of pipeline.mjs, which imports and re-exports them, so this
+    // project reaches them through it.
+    "app/lib/content/content-error.mjs",
+    "app/lib/content/corpus.mjs",
+    "app/lib/content/directives.mjs",
+    "app/lib/content/url-policy.mjs",
     "app/lib/content/slug.mjs",
     // Split out of pipeline.mjs so the editor can show a live reading time
     // without pulling shiki into a browser bundle. The pipeline imports it, so
@@ -268,8 +278,16 @@
     // takes the map as an argument rather than importing the JSON: a second
     // copy of "which slug does /blog/x mean now" would be free to disagree with
     // the Worker, and the disagreement would look like a 404 to a reader
-    // following a published URL. Dependency-free, so listing it costs nothing.
-    "app/lib/slug-redirect.mjs"
+    // following a published URL. Its one import is the redirect status rule below.
+    "app/lib/slug-redirect.mjs",
+    // Imported by modules listed above, so this project must reach them too:
+    // the status rule (slug-redirect), the thrown-value reader (pipeline,
+    // upload-contract), the byte and hash encodings (classify, hashes, diagram,
+    // pipeline) and the hast builders (chart, diagram). Each is dependency-free.
+    "app/lib/https-redirect.mjs",
+    "app/lib/error-message.mjs",
+    "app/lib/bytes.mjs",
+    "app/lib/content/hast.mjs"
   ],
   "compilerOptions": {
     "composite": true,
