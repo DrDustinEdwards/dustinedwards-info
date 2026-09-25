@@ -23,7 +23,7 @@ export function AdminKitSection() {
         title="Topbar and rail"
         note="The admin topbar is --paper with a rule beneath, never the purple chrome. The current rail item is marked by an inset brand bar, a surface change and weight."
       >
-        {() => (
+        {(ids) => (
           <div className="admin">
             <div className="admin-topbar">
               <a className="admin-brand" href="/playground/ui">
@@ -37,7 +37,7 @@ export function AdminKitSection() {
               </form>
             </div>
             <div className="admin-body">
-              <nav className="admin-rail" aria-label="Admin sections">
+              <nav className="admin-rail" aria-label={ids.label("Admin sections")}>
                 <a className="admin-rail-item" href="/playground/ui" aria-current="page">
                   Moderation <span className="admin-rail-count">12</span>
                 </a>
