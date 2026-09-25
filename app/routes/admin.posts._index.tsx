@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Form, Link, data, redirect, useNavigation } from "react-router";
 
 import { AdminAlert } from "~/components/admin/alert";
+import { BulkTagControls } from "~/components/admin/bulk-tag-controls";
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { RowMenu } from "~/components/admin/row-menu";
@@ -35,6 +36,7 @@ import {
 import { readAskBudget, resetAskBudget } from "~/lib/search/ask-guard.server";
 import type { Route } from "./+types/admin.posts._index";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { applyBulkTag } from "~/lib/admin/bulk-tag";
 
 export function meta() {
   return [{ title: "Posts · Admin" }, { name: "robots", content: "noindex" }];
@@ -378,36 +380,32 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
 
-    for (const slug of slugs) {
-      try {
+    // A no-op post is skipped: writing it costs a commit and rewrites frontmatter whose key order is
+    // not yet canonical.
+    const tally = await applyBulkTag({
+      ids: slugs,
+      wanted,
+      adding,
+      missing: "no source file",
+      read: async (slug) => {
         const file = await readFile(env, postPath(slug));
-        if (!file) {
-          failed.push(`${slug}: no source file`);
-          continue;
-        }
+        if (!file) return null;
         const fields = parsePost(file.content);
-        const has = fields.tags.includes(wanted);
-        // A no-op post is skipped: writing it costs a commit and rewrites frontmatter whose key order is
-        // not yet canonical.
-        if (adding === has) {
-          skipped += 1;
-          continue;
-        }
-        const tags = adding
-          ? [...fields.tags, wanted]
-          : fields.tags.filter((t) => t !== wanted);
+        return { item: fields, tags: fields.tags };
+      },
+      write: async (slug, fields, tags) => {
         const { purged } = await savePost(env, {
           slug,
           raw: serializePost({ ...fields, tags }),
           isNew: false,
           actor,
         });
-        done += 1;
         if (purged === false) unpurged += 1;
-      } catch (error) {
-        failed.push(`${slug}: ${errorMessage(error)}`);
-      }
-    }
+      },
+    });
+    done = tally.done;
+    skipped = tally.skipped;
+    failed.push(...tally.failed);
 
     const verb = adding ? "Tagged" : "Untagged";
     const why = adding ? "already tagged" : "not tagged";
@@ -775,28 +773,7 @@ export default function AdminPosts({
                   {hydrated ? `${chosen.length} selected` : "With the selected posts"}
                 </p>
 
-                <label className="posts-bulk-tag">
-                  <span>Tag</span>
-                  <input
-                    type="text"
-                    name="tag"
-                    list="posts-bulk-tags"
-                    autoComplete="off"
-                    placeholder="tag name"
-                  />
-                </label>
-                <datalist id="posts-bulk-tags">
-                  {tagOptions.map((tag) => (
-                    <option key={tag} value={tag} />
-                  ))}
-                </datalist>
-
-                <button type="submit" name="intent" value="bulk-add-tag" className="btn">
-                  Add tag
-                </button>
-                <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
-                  Remove tag
-                </button>
+                <BulkTagControls listId="posts-bulk-tags" options={tagOptions} />
                 <button
                   type="submit"
                   name="intent"

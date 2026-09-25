@@ -79,6 +79,7 @@ import {
 } from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media._index";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { applyBulkTag } from "~/lib/admin/bulk-tag";
 
 export function meta() {
   return [{ title: "Media · Admin" }, { name: "robots", content: "noindex" }];
@@ -349,34 +350,18 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
 
-    const failed: string[] = [];
-    let done = 0;
-    let skipped = 0;
-
-    for (const key of keys) {
-      try {
+    // Rows already in the target state are skipped, so updated_at is not touched for nothing.
+    const { done, skipped, failed } = await applyBulkTag({
+      ids: keys,
+      wanted,
+      adding,
+      missing: "no row",
+      read: async (key) => {
         const row = await mediaRecord(env, key);
-        if (!row) {
-          failed.push(`${key}: no row`);
-          continue;
-        }
-        const current = parseTags(row.tags);
-        const has = current.includes(wanted);
-        // Rows already in the target state are skipped, so updated_at is not touched for nothing.
-        if (adding === has) {
-          skipped += 1;
-          continue;
-        }
-        await setMediaTags(
-          env,
-          key,
-          adding ? [...current, wanted] : current.filter((t) => t !== wanted),
-        );
-        done += 1;
-      } catch (error) {
-        failed.push(`${key}: ${errorMessage(error)}`);
-      }
-    }
+        return row ? { item: row, tags: parseTags(row.tags) } : null;
+      },
+      write: (key, _row, tags) => setMediaTags(env, key, tags),
+    });
 
     return {
       message:
