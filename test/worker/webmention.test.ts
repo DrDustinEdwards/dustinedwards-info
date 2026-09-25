@@ -1090,3 +1090,31 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     expect(link?.split(", ")).toHaveLength(2);
   });
 });
+
+describe("/webmention on a body stream that breaks", () => {
+  it("answers 400, not a 500, and stores nothing", async () => {
+    const before = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    const broken = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("source=https%3A%2F%2Felsewhere"));
+        controller.error(new Error("planted stream failure"));
+      },
+    });
+    const ctx = createExecutionContext();
+    const response = await webmentionAction({
+      request: new Request(`${SITE_ORIGIN}/webmention`, {
+        method: "POST",
+        headers: {
+          "cf-connecting-ip": "203.0.113.77",
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: broken,
+      }),
+      context: routeContext(ctx),
+    } as never);
+
+    expect(response.status).toBe(400);
+    const after = await env.DB.prepare(`SELECT COUNT(*) AS n FROM webmentions`).first<{ n: number }>();
+    expect(after?.n).toBe(before?.n);
+  });
+});
