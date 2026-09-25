@@ -247,10 +247,10 @@ async function main() {
     if (result.inserts === 0) empty.push(result.name);
   }
 
-  // Scope: a worker that returned early leaves exports unrun, and every count below then agrees with itself.
-  if (results.length !== names.length) {
+  // Scope: a table left unexported makes every count below agree with itself over a subset.
+  if (results.length !== real.size) {
     throw new Error(
-      `${results.length} of ${names.length} table(s) were exported. The export pool ` +
+      `${results.length} of ${real.size} table(s) were exported. The export loop ` +
         `did not run every table, so every count below would be taken over a subset.`,
     );
   }
