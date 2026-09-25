@@ -101,9 +101,29 @@ async function teeSelfToLog() {
     });
   }
 
-  /* On close, not exit: stdio can still be open at exit, and the tail is the MISSED/REFUSED summary. */
+  /*
+   * On close, not exit: stdio can still be open at exit, and the tail is the MISSED/REFUSED summary.
+   * Bounded after exit, because a leftover descendant that inherited the pipe (a workerd, a wrangler
+   * child) holds it open and close never fires; the ship itself has finished and its code is known.
+   */
+  const CLOSE_GRACE_MS = 15_000;
   const code = await new Promise((resolve) => {
-    child.on("close", (status) => resolve(status ?? 1));
+    /** @type {NodeJS.Timeout | undefined} */
+    let grace;
+    child.on("exit", (status) => {
+      grace = setTimeout(() => {
+        const line =
+          `\n  ship exited ${status ?? "on a signal"}, but a process it started still holds its output ` +
+          `open after ${CLOSE_GRACE_MS / 1000}s, so the transcript may be missing that process's last lines.\n`;
+        process.stderr.write(line);
+        writeSync(handle, line);
+        resolve(status ?? 1);
+      }, CLOSE_GRACE_MS);
+    });
+    child.on("close", (status) => {
+      clearTimeout(grace);
+      resolve(status ?? 1);
+    });
     child.on("error", (error) => {
       const line = `\n  ship could not start its logged child: ${error.message}\n`;
       process.stderr.write(line);
@@ -155,7 +175,6 @@ function refuse(why, remedy) {
 }
 
 /**
- * The signal is returned, not collapsed: `status ?? 1` would read a killed process as a gate's exit 1.
  * A spawn error (npx not found, a timeout) is printed and carried in `text`, so a refusal names it.
  * `timeoutMs` bounds a read: retryRead's own timer cannot fire while spawnSync blocks.
  * @param {string} command @param {string[]} args
@@ -176,20 +195,18 @@ function run(command, args, { capture = false, timeoutMs } = {}) {
             stdout: String(r.stdout ?? ""),
             stderr: String(r.stderr ?? ""),
             status: r.error ? null : r.status,
-            signal: r.signal ?? null,
             error: r.error ? `${command} could not run: ${r.error.message}` : "",
           };
         })()
       : spawnSyncBounded(command, args, { ...options, timeoutMs });
-  const signal = result.signal ?? null;
   const failure = result.error ? `\n  ship: ${result.error}\n` : "";
   if (failure) process.stderr.write(failure);
   if (capture) {
     const text = `${result.stdout}${result.stderr}${failure}`;
     process.stdout.write(text);
-    return { code: result.status ?? 1, signal, text };
+    return { code: result.status ?? 1, text };
   }
-  return { code: result.status ?? 1, signal, text: failure };
+  return { code: result.status ?? 1, text: failure };
 }
 
 /**

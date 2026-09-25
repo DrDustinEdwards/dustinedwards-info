@@ -2,6 +2,7 @@
 
 import { slugForKey } from "./ask-keys.mjs";
 import { FOLLOW_UP_MARKER } from "./follow-up.mjs";
+import { frameFields } from "./sse.mjs";
 
 /**
  * Sent bare: AI Search embeds and searches the final user message, so any decoration is searched too.
@@ -132,11 +133,7 @@ export function guardAnswerStream(upstream, resolveVisible) {
           if (frameEnd === -1) continue;
 
           const frame = buffer.slice(at, frameEnd);
-          const data = frame
-            .split("\n")
-            .filter((line) => line.startsWith("data:"))
-            .map((line) => line.slice(5).trim())
-            .join("\n");
+          const { data } = frameFields(frame);
 
           let empty = false;
           let unverifiable = false;

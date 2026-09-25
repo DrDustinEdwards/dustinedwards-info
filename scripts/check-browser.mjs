@@ -1464,8 +1464,6 @@ try {
             return {
               x: box.left + box.width / 2,
               y: box.top + box.height / 2,
-              w: box.width,
-              h: box.height,
             };
           };
           const bar = pick('.site-header-nav a[href="/blog"]');
@@ -3439,7 +3437,7 @@ try {
         sortKey: el.getAttribute("data-sort") || "",
         ariaSort: el.getAttribute("aria-sort") || "",
       }));
-      return { cells, rows: document.querySelectorAll("[data-tile]").length };
+      return { cells };
     });
 
     ok(
@@ -3515,7 +3513,6 @@ try {
         return {
           width: Math.round(r.width),
           height: Math.round(r.height),
-          dialog: panel.getAttribute("role") || panel.closest("[role]")?.getAttribute("role") || "",
           namesKey: (panel.textContent || "").includes(wanted.slice(0, 12)),
           hasClose: !!panel.querySelector(".media-detail-close"),
         };
@@ -3629,16 +3626,16 @@ try {
         "from an empty trash",
     );
     const modal = await admin.evaluate(() => {
-      const panel = document.querySelector(".media-modal");
+      const panel = document.querySelector("dialog.confirm-dialog");
       if (!panel) return null;
-      const prompt = panel.querySelector(".media-modal-typed .sr-only");
+      const prompt = panel.querySelector(".confirm-dialog-typed span");
       const typed = /Type\s+(\S+)\s+to confirm/i.exec(prompt?.textContent || "");
       return {
-        role: panel.getAttribute("role") || "",
-        modal: panel.getAttribute("aria-modal") || "",
+        // showModal() is what makes it modal; the element alone is only a dialog.
+        modal: panel.matches(":modal"),
         required: typed ? typed[1] : "",
-        hasInput: !!panel.querySelector(".media-modal-typed input"),
-        confirmDisabled: !!panel.querySelector(".media-modal-actions .btn-danger[disabled]"),
+        hasInput: !!panel.querySelector(".confirm-dialog-typed input"),
+        confirmDisabled: !!panel.querySelector(".confirm-dialog-actions .btn-danger[disabled]"),
       };
     });
 
@@ -3659,8 +3656,8 @@ try {
     } else {
       ok(
         "the empty-trash confirmation is a real dialog",
-        modal.role === "dialog" && modal.modal === "true",
-        `role=${JSON.stringify(modal.role)} aria-modal=${JSON.stringify(modal.modal)}. This ` +
+        modal.modal,
+        `a <dialog> that is not open as a modal. This ` +
           `replaced window.prompt(), which was unreadable to a screen reader and which did not ` +
           `run at all with scripting off, submitting the destruction unconfirmed.`,
       );
@@ -3679,12 +3676,12 @@ try {
       );
 
       if (modal.hasInput && modal.required) {
-        const field = ".media-modal-typed input";
+        const field = ".confirm-dialog-typed input";
         // The WRONG value first. A button that enables on any input at all would
         // pass an assertion that only ever typed the right answer.
         await admin.type(field, `${modal.required}x`);
         const afterWrong = await admin.evaluate(
-          () => !!document.querySelector(".media-modal-actions .btn-danger[disabled]"),
+          () => !!document.querySelector(".confirm-dialog-actions .btn-danger[disabled]"),
         );
         ok(
           "a WRONG value leaves the confirm button disabled",
@@ -3706,7 +3703,7 @@ try {
         }, field);
         await admin.type(field, modal.required);
         const afterRight = await admin.evaluate(
-          () => !!document.querySelector(".media-modal-actions .btn-danger[disabled]"),
+          () => !!document.querySelector(".confirm-dialog-actions .btn-danger[disabled]"),
         );
         ok(
           "the exact value ENABLES the confirm button",
@@ -3824,7 +3821,7 @@ try {
         };
       });
       const out = kids.filter((k) => k.visible && k.right > Math.round(r.right) + 0.5);
-      return { right: Math.round(r.right), kids, out };
+      return { right: Math.round(r.right), out };
     });
     ok(
       "the admin topbar exists to measure at 320px",

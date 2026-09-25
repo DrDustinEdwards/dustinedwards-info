@@ -10,15 +10,16 @@ import {
   type ShouldRevalidateFunctionArgs,
 } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { AdminAlert } from "~/components/admin/alert";
-import { MediaConfirm } from "~/components/admin/media-confirm";
+import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { MediaDisplayGroup } from "~/components/admin/media-display-group";
 import { MediaEmptyState } from "~/components/admin/media-empty-state";
 import { MediaGrid } from "~/components/admin/media-grid";
 import { MediaInspector } from "~/components/admin/media-inspector";
 import { DropAnywhere } from "~/components/admin/media-drop-anywhere";
-import { MediaKeyboard, MediaToast } from "~/components/admin/media-keyboard";
+import { MediaKeyboard } from "~/components/admin/media-keyboard";
+import { MediaToast } from "~/components/admin/toast";
 import { MediaPalette } from "~/components/admin/media-palette";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { Panel } from "~/components/admin/panel";
@@ -77,6 +78,8 @@ import {
   uploadErrorSentence,
 } from "~/lib/media/upload-contract.mjs";
 import type { Route } from "./+types/admin.media._index";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { applyBulkTag } from "~/lib/admin/bulk-tag";
 
 export function meta() {
   return [{ title: "Media · Admin" }, { name: "robots", content: "noindex" }];
@@ -187,153 +190,151 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = getEnv(context);
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const url = new URL(request.url);
-  const picker = url.searchParams.get("picker") === "1";
+  return timedLoader(context, async (timings) => {
+    const url = new URL(request.url);
+    const picker = url.searchParams.get("picker") === "1";
 
-  const { page, view, filter, q, list } = listingFor(env, url, picker);
-  const listed = await timed(timings, "d1_list_media", list);
-  const keys = listed.objects.map((object) => object.key);
+    const { page, view, filter, q, list } = listingFor(env, url, picker);
+    const listed = await timed(timings, "d1_list_media", list);
+    const keys = listed.objects.map((object) => object.key);
 
-  if (picker) {
-    return {
-      picker: true as const,
-      objects: listed.objects.map((object) => ({
-        key: object.key,
-        url: object.url,
-        thumb: thumbUrl(object.key, 320),
-        alt: object.alt,
-      })),
-      truncated: listed.hasMore,
-    };
-  }
-
-  /* Starts here, not at the loader top: earlier branches return and would leave a promise unawaited. */
-  const [resolution, refs, twins, trashedCount, tagCounts, lensCounts] = await timed(
-    timings,
-    "group_listing",
-    () =>
-      Promise.all([
-        timed(timings, "resolve_citations", () => resolveCitations(env, keys)),
-        timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
-        timed(timings, "d1_media_twins", () => mediaTwins(env)),
-        timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
-        timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
-        timed(timings, "d1_lens_counts", () => mediaLensCounts(env, TEMPLATE_REF_KEYS)),
-      ]),
-  );
-
-  /* A parameter, not a route: static keys contain `/`. */
-  const detailKey = url.searchParams.get("key");
-  let detail = null;
-  if (detailKey) {
-    const row = await mediaRecord(env, detailKey);
-    if (row) {
-      const [detailResolution, detailRefs] = await Promise.all([
-        resolveCitations(env, [row.key]),
-        mediaRefsFor(env, [row.key]),
-      ]);
-      detail = {
-        found: true as const,
-        key: row.key,
-        url: row.storage === "static" ? row.key : `/media/${row.key}`,
-        thumb: thumbUrl(row.key, 640),
-        viewable: isViewable(row.kind),
-        deletable: row.storage !== "static",
-        originalName: row.originalName,
-        role: row.role,
-        storage: row.storage,
-        kind: row.kind,
-        mime: row.mime,
-        bytes: row.bytes ?? 0,
-        width: row.width,
-        height: row.height,
-        alt: row.alt,
-        caption: row.caption,
-        uploadedAt: row.uploadedAt,
-        placeholder: row.placeholder,
-        refs: (detailRefs.get(row.key) ?? []).map((ref) => ({
-          sourceType: ref.sourceType,
-          sourceId: ref.sourceId,
-          form: ref.form,
-          detail: ref.detail,
+    if (picker) {
+      return {
+        picker: true as const,
+        objects: listed.objects.map((object) => ({
+          key: object.key,
+          url: object.url,
+          thumb: thumbUrl(object.key, 320),
+          alt: object.alt,
         })),
-        citations: detailResolution.citations.get(row.key) ?? [],
-        scanComplete: detailResolution.complete,
-        tags: parseTags(row.tags ?? ""),
-        trashedAt: row.trashedAt,
-        hash: digestFromKey(row.key),
-        twins: twins.get(row.key) ?? [],
-        usage: usageStateOf({
-          postRefs: (detailRefs.get(row.key) ?? []).length,
-          citations: (detailResolution.citations.get(row.key) ?? []).length,
-          templateRefs: (TEMPLATE_REFS[row.key] ?? []).length,
-        }),
-        templateRefs: TEMPLATE_REFS[row.key] ?? [],
-        /** Suggested, never applied: a filename posing as alt hides a defect an empty field shows. */
-        altSuggestion: suggestedAlt(row.originalName ?? row.key.split("/").pop() ?? row.key),
-        tagSuggestions: suggestedTags(row.key).filter(
-          (t) => !parseTags(row.tags ?? "").includes(t),
-        ),
+        truncated: listed.hasMore,
       };
-    } else {
-      detail = { found: false as const, key: detailKey };
     }
-  }
 
-  const uploaded = url.searchParams.get("uploaded");
-  const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
+    /* Starts here, not at the loader top: earlier branches return and would leave a promise unawaited. */
+    const [resolution, refs, twins, trashedCount, tagCounts, lensCounts] = await timed(
+      timings,
+      "group_listing",
+      () =>
+        Promise.all([
+          timed(timings, "resolve_citations", () => resolveCitations(env, keys)),
+          timed(timings, "d1_media_refs", () => mediaRefsFor(env, keys)),
+          timed(timings, "d1_media_twins", () => mediaTwins(env)),
+          timed(timings, "d1_trashed_count", () => mediaTrashedCount(env)),
+          timed(timings, "d1_tag_counts", () => mediaTagCounts(env)),
+          timed(timings, "d1_lens_counts", () => mediaLensCounts(env, TEMPLATE_REF_KEYS)),
+        ]),
+    );
 
-  const payload = {
-    picker: false as const,
-    /* The duplicates lens is filtered in SQL before the page is cut, so every row here belongs. */
-    objects: listed.objects.map((object) => ({
-      ...object,
-      thumb: thumbUrl(object.key, 320),
-      viewable: isViewable(object.kind),
-      citations: resolution.citations.get(object.key) ?? [],
-      refCount: (refs.get(object.key) ?? []).length,
-      tags: parseTags(object.tags ?? ""),
-      twinCount: (twins.get(object.key) ?? []).length,
-      usage: usageStateOf({
-        postRefs: (refs.get(object.key) ?? []).length,
-        citations: (resolution.citations.get(object.key) ?? []).length,
-        templateRefs: (TEMPLATE_REFS[object.key] ?? []).length,
-      }),
-      templateRefs: TEMPLATE_REFS[object.key] ?? [],
-    })),
-    page,
-    hasMore: listed.hasMore,
-    filter,
-    q,
-    detail,
-    uploaded,
-    uploadError,
-    scanComplete: resolution.complete,
-    scanFailed: resolution.failed,
-    view,
-    modified: isModified(view),
-    trashedCount,
-    tagCounts,
+    /* A parameter, not a route: static keys contain `/`. */
+    const detailKey = url.searchParams.get("key");
+    let detail = null;
+    if (detailKey) {
+      const row = await mediaRecord(env, detailKey);
+      if (row) {
+        const [detailResolution, detailRefs] = await Promise.all([
+          resolveCitations(env, [row.key]),
+          mediaRefsFor(env, [row.key]),
+        ]);
+        detail = {
+          found: true as const,
+          key: row.key,
+          url: row.storage === "static" ? row.key : `/media/${row.key}`,
+          thumb: thumbUrl(row.key, 640),
+          viewable: isViewable(row.kind),
+          deletable: row.storage !== "static",
+          originalName: row.originalName,
+          role: row.role,
+          storage: row.storage,
+          kind: row.kind,
+          mime: row.mime,
+          bytes: row.bytes ?? 0,
+          width: row.width,
+          height: row.height,
+          alt: row.alt,
+          caption: row.caption,
+          uploadedAt: row.uploadedAt,
+          placeholder: row.placeholder,
+          refs: (detailRefs.get(row.key) ?? []).map((ref) => ({
+            sourceType: ref.sourceType,
+            sourceId: ref.sourceId,
+            form: ref.form,
+            detail: ref.detail,
+          })),
+          citations: detailResolution.citations.get(row.key) ?? [],
+          scanComplete: detailResolution.complete,
+          tags: parseTags(row.tags ?? ""),
+          trashedAt: row.trashedAt,
+          hash: digestFromKey(row.key),
+          twins: twins.get(row.key) ?? [],
+          usage: usageStateOf({
+            postRefs: (detailRefs.get(row.key) ?? []).length,
+            citations: (detailResolution.citations.get(row.key) ?? []).length,
+            templateRefs: (TEMPLATE_REFS[row.key] ?? []).length,
+          }),
+          templateRefs: TEMPLATE_REFS[row.key] ?? [],
+          /** Suggested, never applied: a filename posing as alt hides a defect an empty field shows. */
+          altSuggestion: suggestedAlt(row.originalName ?? row.key.split("/").pop() ?? row.key),
+          tagSuggestions: suggestedTags(row.key).filter(
+            (t) => !parseTags(row.tags ?? "").includes(t),
+          ),
+        };
+      } else {
+        detail = { found: false as const, key: detailKey };
+      }
+    }
 
-    lensCounts: {
-      ...lensCounts,
-      duplicates: twins.size,
-    },
+    const uploaded = url.searchParams.get("uploaded");
+    const uploadError = uploadErrorSentence(url.searchParams.get("upload-error"));
 
-    /* The scan sees only literal paths and no external links, hence unattached, not unused. */
-    usageNote:
-      "Usage is asked three ways: what a post cites, what the artifact scan " +
-      "finds, and what repository code references. A file none of them names is " +
-      "unattached rather than unused, because a path the code builds at runtime " +
-      "is invisible to the scan and an external site can link anything.",
-  };
+    const payload = {
+      picker: false as const,
+      /* The duplicates lens is filtered in SQL before the page is cut, so every row here belongs. */
+      objects: listed.objects.map((object) => ({
+        ...object,
+        thumb: thumbUrl(object.key, 320),
+        viewable: isViewable(object.kind),
+        citations: resolution.citations.get(object.key) ?? [],
+        refCount: (refs.get(object.key) ?? []).length,
+        tags: parseTags(object.tags ?? ""),
+        twinCount: (twins.get(object.key) ?? []).length,
+        usage: usageStateOf({
+          postRefs: (refs.get(object.key) ?? []).length,
+          citations: (resolution.citations.get(object.key) ?? []).length,
+          templateRefs: (TEMPLATE_REFS[object.key] ?? []).length,
+        }),
+        templateRefs: TEMPLATE_REFS[object.key] ?? [],
+      })),
+      page,
+      hasMore: listed.hasMore,
+      filter,
+      q,
+      detail,
+      uploaded,
+      uploadError,
+      scanComplete: resolution.complete,
+      scanFailed: resolution.failed,
+      view,
+      modified: isModified(view),
+      trashedCount,
+      tagCounts,
 
-  /* Not timing serialization: the framework encodes turbo-stream, so a stringify would mislead. */
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
+      lensCounts: {
+        ...lensCounts,
+        duplicates: twins.size,
+      },
 
-  return data(payload);
+      /* The scan sees only literal paths and no external links, hence unattached, not unused. */
+      usageNote:
+        "Usage is asked three ways: what a post cites, what the artifact scan " +
+        "finds, and what repository code references. A file none of them names is " +
+        "unattached rather than unused, because a path the code builds at runtime " +
+        "is invisible to the scan and an external site can link anything.",
+    };
+
+    /* Not timing serialization: the framework encodes turbo-stream, so a stringify would mislead. */
+    return data(payload);
+  });
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -349,34 +350,18 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
 
-    const failed: string[] = [];
-    let done = 0;
-    let skipped = 0;
-
-    for (const key of keys) {
-      try {
+    // Rows already in the target state are skipped, so updated_at is not touched for nothing.
+    const { done, skipped, failed } = await applyBulkTag({
+      ids: keys,
+      wanted,
+      adding,
+      missing: "no row",
+      read: async (key) => {
         const row = await mediaRecord(env, key);
-        if (!row) {
-          failed.push(`${key}: no row`);
-          continue;
-        }
-        const current = parseTags(row.tags);
-        const has = current.includes(wanted);
-        // Rows already in the target state are skipped, so updated_at is not touched for nothing.
-        if (adding === has) {
-          skipped += 1;
-          continue;
-        }
-        await setMediaTags(
-          env,
-          key,
-          adding ? [...current, wanted] : current.filter((t) => t !== wanted),
-        );
-        done += 1;
-      } catch (error) {
-        failed.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
+        return row ? { item: row, tags: parseTags(row.tags) } : null;
+      },
+      write: (key, _row, tags) => setMediaTags(env, key, tags),
+    });
 
     return {
       message:
@@ -422,7 +407,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         if (result.moved) moved += 1;
         else already += 1;
       } catch (error) {
-        failed.push(`${key}: ${error instanceof Error ? error.message : String(error)}`);
+        failed.push(`${key}: ${errorMessage(error)}`);
       }
     }
     return {
@@ -497,7 +482,7 @@ export async function action({ request, context }: Route.ActionArgs) {
         await deleteMediaObject(env, key);
         deleted.push(key);
       } catch (error) {
-        refused.push(`${key} (${error instanceof Error ? error.message : String(error)})`);
+        refused.push(`${key} (${errorMessage(error)})`);
       }
     }
     return {
@@ -1007,27 +992,23 @@ export default function AdminMedia({
         </p>
       ) : null}
 
-      <MediaConfirm
-        open={view.confirm === "empty-trash" && trashedCount > 0}
-        title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
-        body={
-          <>
+      {view.confirm === "empty-trash" && trashedCount > 0 ? (
+        <ConfirmDialog
+          title={`Permanently delete ${trashedCount} file${trashedCount === 1 ? "" : "s"}`}
+          body={
             <p>
               Addresses are content hashes, so a deleted file cannot be restored
               by re-uploading it under the same URL. Anything a post cites is
               kept and named.
             </p>
-            <p>
-              Type <strong>{trashedCount}</strong> to confirm.
-            </p>
-          </>
-        }
-        requireTyped={String(trashedCount)}
-        confirmLabel="Delete permanently"
-        cancelHref={linkTo({ confirm: "" })}
-      >
-        <input type="hidden" name="intent" value="empty-trash" />
-      </MediaConfirm>
+          }
+          requireTyped={String(trashedCount)}
+          confirmLabel="Delete permanently"
+          cancelHref={linkTo({ confirm: "" })}
+        >
+          <input type="hidden" name="intent" value="empty-trash" />
+        </ConfirmDialog>
+      ) : null}
 
       {/* Usage is what the renderer emitted, so a route-referenced asset reads as uncited. */}
 
@@ -1056,7 +1037,7 @@ export default function AdminMedia({
       ) : null}
 
       {!scanComplete ? (
-        <AdminAlert title="Usage could not be determined" headingId="scan-failed">
+        <AdminAlert tone="warning" title="Usage could not be determined" headingId="scan-failed">
           <p>
             The reference scan failed ({scanFailed.join(", ")}), so nothing below is
             labeled unused and every delete will be refused until it succeeds.
@@ -1083,72 +1064,69 @@ export default function AdminMedia({
         />
       )}
 
-      <MediaConfirm
-        open={confirmingTrash && chosen.length > 0}
-        title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
-        body={
-          <p>
-            They stop showing in the library. Every address keeps working and no
-            published page changes, so nothing here can cost a post its image.
-            Restore puts them back.
-          </p>
-        }
-        confirmLabel="Move to trash"
-        onCancel={() => setConfirmingTrash(false)}
-      >
-        <input type="hidden" name="intent" value="bulk-trash" />
-        {chosen.map((key) => (
-          <input key={key} type="hidden" name="key" value={key} />
-        ))}
-      </MediaConfirm>
-
-      <MediaConfirm
-        open={confirmRebuild !== undefined}
-        title="Re-derive the whole media index"
-        body={
-          <>
+      {confirmingTrash && chosen.length > 0 ? (
+        <ConfirmDialog
+          title={`Move ${chosen.length} file${chosen.length === 1 ? "" : "s"} to the trash`}
+          body={
             <p>
-              Every derived column is recomputed from the buckets and every
-              authored one is preserved. Rows whose source object is GONE are
-              removed, so running this against a bucket that is only partly
-              readable prunes the index to whatever it managed to see.
+              They stop showing in the library. Every address keeps working and no
+              published page changes, so nothing here can cost a post its image.
+              Restore puts them back.
             </p>
-            <p>
-              The index currently holds{" "}
-              <strong>{confirmRebuild ?? 0}</strong> row(s). Type{" "}
-              <strong>1</strong> to confirm.
-            </p>
-          </>
-        }
-        requireTyped="1"
-        confirmLabel="Rebuild the index"
-        cancelHref={linkTo({})}
-      >
-        <input type="hidden" name="intent" value="rebuild" />
-      </MediaConfirm>
+          }
+          confirmLabel="Move to trash"
+          onCancel={() => setConfirmingTrash(false)}
+        >
+          <input type="hidden" name="intent" value="bulk-trash" />
+          {chosen.map((key) => (
+            <input key={key} type="hidden" name="key" value={key} />
+          ))}
+        </ConfirmDialog>
+      ) : null}
 
-      <MediaConfirm
-        open={Boolean(confirmDelete)}
-        title={`Permanently delete ${confirmDelete ?? ""}`}
-        body={
-          <>
+      {confirmRebuild !== undefined ? (
+        <ConfirmDialog
+          title="Re-derive the whole media index"
+          body={
+            <>
+              <p>
+                Every derived column is recomputed from the buckets and every
+                authored one is preserved. Rows whose source object is GONE are
+                removed, so running this against a bucket that is only partly
+                readable prunes the index to whatever it managed to see.
+              </p>
+              <p>
+                The index currently holds{" "}
+                <strong>{confirmRebuild ?? 0}</strong> row(s).
+              </p>
+            </>
+          }
+          requireTyped="1"
+          confirmLabel="Rebuild the index"
+          cancelHref={linkTo({})}
+        >
+          <input type="hidden" name="intent" value="rebuild" />
+        </ConfirmDialog>
+      ) : null}
+
+      {confirmDelete ? (
+        <ConfirmDialog
+          title={`Permanently delete ${confirmDelete}`}
+          body={
             <p>
               This removes the object from R2. Addresses are content hashes, so a
               deleted file cannot be restored by re-uploading it under the same
               URL.
             </p>
-            <p>
-              Type <strong>1</strong> to confirm.
-            </p>
-          </>
-        }
-        requireTyped="1"
-        confirmLabel="Delete permanently"
-        cancelHref={linkTo({ key: confirmDelete ?? "" })}
-      >
-        <input type="hidden" name="intent" value="delete" />
-        <input type="hidden" name="key" value={confirmDelete ?? ""} />
-      </MediaConfirm>
+          }
+          requireTyped="1"
+          confirmLabel="Delete permanently"
+          cancelHref={linkTo({ key: confirmDelete })}
+        >
+          <input type="hidden" name="intent" value="delete" />
+          <input type="hidden" name="key" value={confirmDelete} />
+        </ConfirmDialog>
+      ) : null}
 
       <MediaToast />
       {view.view === "grid" ? <MediaKeyboard /> : null}

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { Form, Link, data, redirect, useNavigation } from "react-router";
 
+import { AdminAlert } from "~/components/admin/alert";
+import { BulkTagControls } from "~/components/admin/bulk-tag-controls";
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { RowMenu } from "~/components/admin/row-menu";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
 import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
-import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
+import { parsePost, parseTagInput, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
 import {
   deletePost,
@@ -33,6 +35,8 @@ import {
 } from "~/lib/search/ask.server";
 import { readAskBudget, resetAskBudget } from "~/lib/search/ask-guard.server";
 import type { Route } from "./+types/admin.posts._index";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { applyBulkTag } from "~/lib/admin/bulk-tag";
 
 export function meta() {
   return [{ title: "Posts · Admin" }, { name: "robots", content: "noindex" }];
@@ -69,116 +73,124 @@ function readFilters(params: URLSearchParams) {
   };
 }
 
+/** The posts list under these filters, the unset ones left out. */
+function postsHref(filters: { q: string; status: string; tag: string }) {
+  const params = new URLSearchParams();
+  if (filters.q) params.set(FILTER_KEYS.q, filters.q);
+  if (filters.status) params.set(FILTER_KEYS.status, filters.status);
+  if (filters.tag) params.set(FILTER_KEYS.tag, filters.tag);
+  const query = params.toString();
+  return query ? `/admin/posts?${query}` : "/admin/posts";
+}
+
 /** Rounded up: a post live in 30 hours is "in 2 days", never a number that has already passed. */
 function daysUntil(publishAt: Date, now: number) {
   return Math.max(1, Math.ceil((publishAt.getTime() - now) / 86_400_000));
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const env = getEnv(context);
-  const filters = readFilters(new URL(request.url).searchParams);
-  const deleteLeft = deleteLeftBehind(new URL(request.url).searchParams);
+  return timedLoader(context, async (timings) => {
+    const env = getEnv(context);
+    const filters = readFilters(new URL(request.url).searchParams);
+    const deleteLeft = deleteLeftBehind(new URL(request.url).searchParams);
 
-  const askPromise = timed(timings, "ask_status_uncached", () =>
-    context.get(askStatusContext)(),
-  );
-  const askOn = askAvailable(env);
-  /*
-   * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
-   * rejection. A failing budget read must not take the page down, and it renders as a failure.
-   */
-  const budgetPromise: Promise<
-    | { budget: Awaited<ReturnType<typeof readAskBudget>>; budgetError: null }
-    | { budget: null; budgetError: string | null }
-  > = askOn
-    ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
-        (budget) => ({ budget, budgetError: null }),
-        (error: unknown) => {
-          console.error("ask budget read failed", error);
-          return {
-            budget: null,
-            budgetError: error instanceof Error ? error.message : String(error),
-          };
-        },
-      )
-    : Promise.resolve({ budget: null, budgetError: null });
-
-  const readershipPromise = timed(timings, "ae_post_readership", () =>
-    fetchPostReadership(env),
-  );
-
-  const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
-    Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
-  );
-
-  const tagsBySlug = new Map<string, string[]>();
-  for (const row of tagRows) {
-    const list = tagsBySlug.get(row.slug);
-    if (list) list.push(row.tag);
-    else tagsBySlug.set(row.slug, [row.tag]);
-  }
-
-  const now = Date.now();
-  const all = rows.map((post) => {
-    const state = statusOf(post.status, post.publishAt, now);
-    return {
-      ...post,
-      state,
-      tags: tagsBySlug.get(post.slug) ?? [],
-      // A number by the time the component sees it: rendering from a date reads the clock, and server
-      // and hydration would disagree near a day boundary.
-      scheduledInDays:
-        state === "scheduled" && post.publishAt ? daysUntil(post.publishAt, now) : null,
-    };
-  });
-
-  const needle = filters.q.toLowerCase();
-  const posts = all.filter((post) => {
-    if (filters.status && post.state !== filters.status) return false;
-    if (filters.tag && !post.tags.includes(filters.tag)) return false;
-    if (!needle) return true;
-    return (
-      post.title.toLowerCase().includes(needle) || post.slug.toLowerCase().includes(needle)
+    const askPromise = timed(timings, "ask_status_uncached", () =>
+      context.get(askStatusContext)(),
     );
+    const askOn = askAvailable(env);
+    /*
+     * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
+     * rejection. A failing budget read must not take the page down, and it renders as a failure.
+     */
+    const budgetPromise: Promise<
+      | { budget: Awaited<ReturnType<typeof readAskBudget>>; budgetError: null }
+      | { budget: null; budgetError: string | null }
+    > = askOn
+      ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
+          (budget) => ({ budget, budgetError: null }),
+          (error: unknown) => {
+            console.error("ask budget read failed", error);
+            return {
+              budget: null,
+              budgetError: errorMessage(error),
+            };
+          },
+        )
+      : Promise.resolve({ budget: null, budgetError: null });
+
+    const readershipPromise = timed(timings, "ae_post_readership", () =>
+      fetchPostReadership(env),
+    );
+
+    const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
+      Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
+    );
+
+    const tagsBySlug = new Map<string, string[]>();
+    for (const row of tagRows) {
+      const list = tagsBySlug.get(row.slug);
+      if (list) list.push(row.tag);
+      else tagsBySlug.set(row.slug, [row.tag]);
+    }
+
+    const now = Date.now();
+    const all = rows.map((post) => {
+      const state = statusOf(post.status, post.publishAt, now);
+      return {
+        ...post,
+        state,
+        tags: tagsBySlug.get(post.slug) ?? [],
+        // A number by the time the component sees it: rendering from a date reads the clock, and server
+        // and hydration would disagree near a day boundary.
+        scheduledInDays:
+          state === "scheduled" && post.publishAt ? daysUntil(post.publishAt, now) : null,
+      };
+    });
+
+    const needle = filters.q.toLowerCase();
+    const posts = all.filter((post) => {
+      if (filters.status && post.state !== filters.status) return false;
+      if (filters.tag && !post.tags.includes(filters.tag)) return false;
+      if (!needle) return true;
+      return (
+        post.title.toLowerCase().includes(needle) || post.slug.toLowerCase().includes(needle)
+      );
+    });
+
+    const filtered = Boolean(filters.q || filters.status || filters.tag);
+
+    // An admin page may await the AI layer; no public route ever does.
+    const ask = await askPromise;
+
+    const { budget, budgetError } = await budgetPromise;
+
+    const readership = await readershipPromise;
+
+    const payload = {
+      posts,
+      /* With Ask on, a null `ask` is a failed status read, never "up to date". */
+      askOn,
+      /** What a delete from the editor left behind, when it redirected here. */
+      deleteLeft,
+      ask,
+      budget,
+      budgetError,
+      filters,
+      filtered,
+      total: all.length,
+      statusCounts: {
+        all: all.length,
+        published: all.filter((post) => post.state === "published").length,
+        draft: all.filter((post) => post.state === "draft").length,
+        scheduled: all.filter((post) => post.state === "scheduled").length,
+      },
+      tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
+      /** The whole report: only `complete` and the error arm tell a measured zero from an unasked question. */
+      readership,
+    };
+
+    return data(payload);
   });
-
-  const filtered = Boolean(filters.q || filters.status || filters.tag);
-
-  // An admin page may await the AI layer; no public route ever does.
-  const ask = await askPromise;
-
-  const { budget, budgetError } = await budgetPromise;
-
-  const readership = await readershipPromise;
-
-  const payload = {
-    posts,
-    /* With Ask on, a null `ask` is a failed status read, never "up to date". */
-    askOn,
-    /** What a delete from the editor left behind, when it redirected here. */
-    deleteLeft,
-    ask,
-    budget,
-    budgetError,
-    filters,
-    filtered,
-    total: all.length,
-    statusCounts: {
-      all: all.length,
-      published: all.filter((post) => post.state === "published").length,
-      draft: all.filter((post) => post.state === "draft").length,
-      scheduled: all.filter((post) => post.state === "scheduled").length,
-    },
-    tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
-    /** The whole report: only `complete` and the error arm tell a measured zero from an unasked question. */
-    readership,
-  };
-
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-
-  return data(payload);
 }
 
 /** Appended when a write landed but its cache purge did not: the public pages are stale until expiry. */
@@ -207,7 +219,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Regenerate failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -244,7 +256,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        message: `Ask sync failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Ask sync failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -286,7 +298,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       return redirect(`/admin/posts/${target}/edit`);
     } catch (error) {
       return {
-        message: `Duplicate failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Duplicate failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -318,7 +330,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     } catch (error) {
       return {
-        message: `Unpublish failed. ${error instanceof Error ? error.message : String(error)}`,
+        message: `Unpublish failed. ${errorMessage(error)}`,
       };
     }
   }
@@ -362,7 +374,7 @@ export async function action({ request, context }: Route.ActionArgs) {
           if (purged === false) unpurged += 1;
           if (askRemoval && !askRemoval.ok) askFailures.push(`${slug}: ${askRemoval.message}`);
         } catch (error) {
-          failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
+          failed.push(`${slug}: ${errorMessage(error)}`);
         }
       }
       return {
@@ -374,40 +386,36 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     }
 
-    const wanted = parseTags(String(form.get("tag") ?? ""))[0];
+    const wanted = parseTagInput(String(form.get("tag") ?? ""))[0];
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
 
-    for (const slug of slugs) {
-      try {
+    // A no-op post is skipped: writing it costs a commit and rewrites frontmatter whose key order is
+    // not yet canonical.
+    const tally = await applyBulkTag({
+      ids: slugs,
+      wanted,
+      adding,
+      missing: "no source file",
+      read: async (slug) => {
         const file = await readFile(env, postPath(slug));
-        if (!file) {
-          failed.push(`${slug}: no source file`);
-          continue;
-        }
+        if (!file) return null;
         const fields = parsePost(file.content);
-        const has = fields.tags.includes(wanted);
-        // A no-op post is skipped: writing it costs a commit and rewrites frontmatter whose key order is
-        // not yet canonical.
-        if (adding === has) {
-          skipped += 1;
-          continue;
-        }
-        const tags = adding
-          ? [...fields.tags, wanted]
-          : fields.tags.filter((t) => t !== wanted);
+        return { item: fields, tags: fields.tags };
+      },
+      write: async (slug, fields, tags) => {
         const { purged } = await savePost(env, {
           slug,
           raw: serializePost({ ...fields, tags }),
           isNew: false,
           actor,
         });
-        done += 1;
         if (purged === false) unpurged += 1;
-      } catch (error) {
-        failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
+      },
+    });
+    done = tally.done;
+    skipped = tally.skipped;
+    failed.push(...tally.failed);
 
     const verb = adding ? "Tagged" : "Untagged";
     const why = adding ? "already tagged" : "not tagged";
@@ -498,12 +506,7 @@ export default function AdminPosts({
       prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug],
     );
 
-  const cancelParams = new URLSearchParams();
-  if (filters.q) cancelParams.set("q", filters.q);
-  if (filters.status) cancelParams.set("status", filters.status);
-  if (filters.tag) cancelParams.set("tag", filters.tag);
-  const cancelQuery = cancelParams.toString();
-  const cancelHref = cancelQuery ? `/admin/posts?${cancelQuery}` : "/admin/posts";
+  const cancelHref = postsHref(filters);
 
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
@@ -596,15 +599,10 @@ export default function AdminPosts({
         <nav className="posts-tabs" aria-label="Filter by status">
           {STATUS_TABS.map((tab) => {
             const on = filters.status === tab.value;
-            const params = new URLSearchParams();
-            if (filters.q) params.set(FILTER_KEYS.q, filters.q);
-            if (filters.tag) params.set(FILTER_KEYS.tag, filters.tag);
-            if (tab.value) params.set(FILTER_KEYS.status, tab.value);
-            const query = params.toString();
             return (
               <Link
                 key={tab.label}
-                to={query ? `/admin/posts?${query}` : "/admin/posts"}
+                to={postsHref({ ...filters, status: tab.value })}
                 aria-current={on ? "page" : undefined}
                 className="posts-tab"
               >
@@ -730,36 +728,24 @@ export default function AdminPosts({
       {/* Surfaced here: a save can succeed while its Ask sync fails, and then it redirects. */}
       {askDrifted && ask ? (
         /* A standing condition, so a named region and never a live one. */
-        <section className="admin-notice" data-tone="warning" aria-labelledby="ask-drift">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-          </svg>
-          <div className="admin-notice-body">
-            <h2 id="ask-drift">Search is answering from older text</h2>
-            <p>
-              {`${ask.missing.length} post(s) are missing from the answer index and ` +
-                `${ask.stale.length} record(s) in it no longer match the site, so an ` +
-                `answer may quote text that has changed.`}
-            </p>
-          </div>
-          <Form method="post" className="admin-notice-action">
-            <button type="submit" name="intent" value="sync-ask" className="btn">
-              Rebuild the answer index
-            </button>
-          </Form>
-        </section>
+        <AdminAlert
+          tone="warning"
+          title="Search is answering from older text"
+          headingId="ask-drift"
+          action={
+            <Form method="post">
+              <button type="submit" name="intent" value="sync-ask" className="btn">
+                Rebuild the answer index
+              </button>
+            </Form>
+          }
+        >
+          <p>
+            {`${ask.missing.length} post(s) are missing from the answer index and ` +
+              `${ask.stale.length} record(s) in it no longer match the site, so an ` +
+              `answer may quote text that has changed.`}
+          </p>
+        </AdminAlert>
       ) : null}
 
       {posts.length === 0 ? (
@@ -787,28 +773,7 @@ export default function AdminPosts({
                   {hydrated ? `${chosen.length} selected` : "With the selected posts"}
                 </p>
 
-                <label className="posts-bulk-tag">
-                  <span>Tag</span>
-                  <input
-                    type="text"
-                    name="tag"
-                    list="posts-bulk-tags"
-                    autoComplete="off"
-                    placeholder="tag name"
-                  />
-                </label>
-                <datalist id="posts-bulk-tags">
-                  {tagOptions.map((tag) => (
-                    <option key={tag} value={tag} />
-                  ))}
-                </datalist>
-
-                <button type="submit" name="intent" value="bulk-add-tag" className="btn">
-                  Add tag
-                </button>
-                <button type="submit" name="intent" value="bulk-remove-tag" className="btn">
-                  Remove tag
-                </button>
+                <BulkTagControls listId="posts-bulk-tags" options={tagOptions} />
                 <button
                   type="submit"
                   name="intent"

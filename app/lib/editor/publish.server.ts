@@ -15,7 +15,7 @@ import { ASSET_MANIFEST_PATH } from "~/lib/media/manifest.mjs";
 import {
   commitFiles,
   getHead,
-  listDirectory,
+  listPostFiles,
   readFile,
   readBinaryFile,
   GitHubError,
@@ -25,6 +25,8 @@ import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { listPostCorpusForRelated, listPostLinkCorpus } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
+import { errorMessage } from "~/lib/error-message.mjs";
+import { statusForDraft } from "~/lib/search/visibility.mjs";
 
 export { GitHubError, PolicyError };
 export type { Actor };
@@ -73,7 +75,7 @@ export function makeResolveImage(env: PublishEnv) {
       } catch (error) {
         throw new EditorError(
           `${ASSET_MANIFEST_PATH} did not parse: ` +
-            `${error instanceof Error ? error.message : String(error)}`,
+            `${errorMessage(error)}`,
         );
       }
     });
@@ -145,61 +147,56 @@ export async function validateAndRender(
   }
 }
 
+/**
+ * Runs a whole-corpus computation for the saved post alone and returns its entry. The other posts
+ * come from D1 with their status and date in the pipeline's shape; the saved post comes from its
+ * fresh render and goes LAST, so its entry is at a position that cannot miss.
+ */
+function computeForSaved<C extends { slug: string; status: string; publishAt: Date | null }, E>(
+  record: any,
+  corpus: C[],
+  fields: (post: C) => E,
+  saved: E,
+  compute: (posts: any[]) => any[],
+) {
+  const others = corpus
+    .filter((p) => p.slug !== record.slug)
+    .map((p) => ({
+      slug: p.slug,
+      ...fields(p),
+      draft: p.status === "draft",
+      // ISO strings: string order over ISO timestamps is chronological order.
+      publishAt: p.publishAt ? p.publishAt.toISOString() : "",
+    }));
+  const computed = compute([
+    ...others,
+    { slug: record.slug, ...saved, draft: record.draft, publishAt: record.publishAt },
+  ]);
+  return computed[computed.length - 1];
+}
+
 /** Only this post's list is written: relatedness is corpus-wide, so other rows wait for the bulk sync. */
 async function relatedFor(env: PublishEnv, record: any) {
   const { withRelated } = await loadPipeline();
-  const corpus = await listPostCorpusForRelated(env);
-  const others = corpus
-    .filter((p) => p.slug !== record.slug)
-    .map((p) => ({
-      slug: p.slug,
-      title: p.title,
-      description: p.description,
-      tags: p.tags,
-      draft: p.status === "draft",
-      // ISO strings: string order over ISO timestamps is chronological order.
-      publishAt: p.publishAt ? p.publishAt.toISOString() : "",
-    }));
-  // The saved post goes LAST, so its entry is at a position that cannot miss.
-  const computed = withRelated([
-    ...others,
-    {
-      slug: record.slug,
-      title: record.title,
-      description: record.description,
-      tags: record.tags,
-      draft: record.draft,
-      publishAt: record.publishAt,
-    },
-  ]);
-  return computed[computed.length - 1].related;
+  return computeForSaved(
+    record,
+    await listPostCorpusForRelated(env),
+    (p) => ({ title: p.title, description: p.description, tags: p.tags }),
+    { title: record.title, description: record.description, tags: record.tags },
+    withRelated,
+  ).related;
 }
 
-/** Only this post's list is written, as in relatedFor; the saved post goes LAST for the same reason. */
+/** Only this post's list is written, as in relatedFor. */
 async function backlinksFor(env: PublishEnv, record: any) {
   const { withBacklinks } = await loadPipeline();
-  const corpus = await listPostLinkCorpus(env);
-  const others = corpus
-    .filter((p) => p.slug !== record.slug)
-    .map((p) => ({
-      slug: p.slug,
-      title: p.title,
-      html: p.html ?? "",
-      draft: p.status === "draft",
-      // ISO strings: string order over ISO timestamps is chronological order.
-      publishAt: p.publishAt ? p.publishAt.toISOString() : "",
-    }));
-  const computed = withBacklinks([
-    ...others,
-    {
-      slug: record.slug,
-      title: record.title,
-      html: record.html,
-      draft: record.draft,
-      publishAt: record.publishAt,
-    },
-  ]);
-  return computed[computed.length - 1].backlinks;
+  return computeForSaved(
+    record,
+    await listPostLinkCorpus(env),
+    (p) => ({ title: p.title, html: p.html ?? "" }),
+    { title: record.title, html: record.html },
+    withBacklinks,
+  ).backlinks;
 }
 
 /**
@@ -368,7 +365,7 @@ async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
     return { ok: true as const, ...result };
   } catch (error) {
     console.error("ask index sync failed after save", error);
-    return { ok: false as const, message: error instanceof Error ? error.message : String(error) };
+    return { ok: false as const, message: errorMessage(error) };
   }
 }
 
@@ -411,16 +408,30 @@ async function removeAskForPost(env: PublishEnv, slug: string) {
       ok: false as const,
       message:
         `The post was deleted but its Ask records were not removed, so Ask can still quote it: ` +
-        `${error instanceof Error ? error.message : String(error)}. Re-run the Ask sync to prune them.`,
+        `${errorMessage(error)}. Re-run the Ask sync to prune them.`,
     };
   }
 }
+
+// One post's derived rows, cleared and rebuilt by the same statements whether it is saved or deleted.
+const clearPostTags = (db: D1Database, slug: string) =>
+  db.prepare(`DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`).bind(slug);
+const clearSearchDocs = (db: D1Database, slug: string) =>
+  db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${slug}`);
+const clearMediaRefs = (db: D1Database, slug: string) =>
+  db.prepare(`DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`).bind(slug);
+const rebuildPostsFts = (db: D1Database) =>
+  db.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`);
+const rebuildSearchIndexes = (db: D1Database) => [
+  db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+  db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+];
 
 /** One batch, so the row, its tags and the index move together. FTS is rebuilt, as the bulk sync does. */
 export async function syncPostToD1(env: PublishEnv, record: any) {
   const db = env.DB;
   const publishAt = Math.floor(Date.parse(record.publishAt) / 1000);
-  const status = record.draft ? "draft" : "published";
+  const status = statusForDraft(record.draft);
 
   const statements = [
     db
@@ -482,11 +493,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         .prepare(`INSERT OR IGNORE INTO tags (slug, name) VALUES (?1, ?1)`)
         .bind(tag),
     ),
-    db
-      .prepare(
-        `DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`,
-      )
-      .bind(record.slug),
+    clearPostTags(db, record.slug),
     ...record.tags.map((tag: string) =>
       db
         .prepare(
@@ -495,7 +502,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         )
         .bind(record.slug, tag),
     ),
-    db.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`),
+    rebuildPostsFts(db),
     ...searchStatements(db, record),
     ...mediaRefStatements(db, record),
   ];
@@ -505,11 +512,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
 
 /** Scoped to this slug, unlike the bulk sync, and in the post's batch so citations land with the save. */
 function mediaRefStatements(db: D1Database, record: any) {
-  const statements = [
-    db.prepare(`DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`).bind(
-      record.slug,
-    ),
-  ];
+  const statements = [clearMediaRefs(db, record.slug)];
   const seen = new Set<string>();
   for (const ref of record.mediaRefs ?? []) {
     // mediaRefKey joins with NUL: any printable separator collides, since details carry spaces.
@@ -536,7 +539,7 @@ function mediaRefStatements(db: D1Database, record: any) {
 function searchStatements(db: D1Database, record: any) {
   const records = recordsForPost(record);
   return [
-    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${record.slug}`),
+    clearSearchDocs(db, record.slug),
     ...records.map((r) =>
       db
         .prepare(
@@ -561,8 +564,7 @@ function searchStatements(db: D1Database, record: any) {
           r.publishAt ? Math.floor(Date.parse(r.publishAt) / 1000) : null,
         ),
     ),
-    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+    ...rebuildSearchIndexes(db),
   ];
 }
 
@@ -571,26 +573,21 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
   // Purged BEFORE the delete: a purge landing after a slow delete could re-store the removed page.
   const purgedPage = await purgePost(slug, `deletePostFromD1 ${slug}`);
   const purgedListings = await purgePosts(`deletePostFromD1 ${slug}`);
-  await env.DB.batch([
-    env.DB.prepare(
-      `DELETE FROM post_tags WHERE post_id = (SELECT id FROM posts WHERE slug = ?1)`,
-    ).bind(slug),
-    env.DB.prepare(`DELETE FROM posts WHERE slug = ?1`).bind(slug),
-    env.DB.prepare(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild')`),
-    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(`post:${slug}`),
-    env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
-    env.DB.prepare(
-      `DELETE FROM media_refs WHERE source_type = 'post' AND source_id = ?1`,
-    ).bind(slug),
+  const db = env.DB;
+  await db.batch([
+    clearPostTags(db, slug),
+    db.prepare(`DELETE FROM posts WHERE slug = ?1`).bind(slug),
+    rebuildPostsFts(db),
+    clearSearchDocs(db, slug),
+    ...rebuildSearchIndexes(db),
+    clearMediaRefs(db, slug),
   ]);
   return { purged: combinePurges(purgedPage, purgedListings) };
 }
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */
 export async function regenerateAllFromRepo(env: PublishEnv) {
-  const entries = await listDirectory(env, "content/posts");
-  const files = entries.filter((e) => e.type === "file" && e.name.endsWith(".md"));
+  const files = await listPostFiles(env);
 
   // An empty listing is a broken read or a deleted directory; converging on it would delete every row.
   if (files.length === 0) {
@@ -602,7 +599,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
 
   // Through deletePostFromD1, the one delete door: a bare row delete would leave the post in /search
   // and its media_refs blocking its images' deletion forever.
-  const keep = files.map((f) => f.name.slice(0, -".md".length));
+  const keep = files.map((f) => f.slug);
   const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
   const orphans = await env.DB.prepare(
     `SELECT slug FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
@@ -615,7 +612,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
   }
 
   for (const entry of files) {
-    const slug = entry.name.slice(0, -".md".length);
+    const slug = entry.slug;
     const file = await readFile(env, entry.path);
     if (!file) {
       throw new EditorError(
