@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
-import { readdirSync, statSync } from "node:fs";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
 import { descendantPids, killTree, processExists, readProcessTable } from "./lib/child-processes.mjs";
+import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const TEST_DIR = join(root, "test");
@@ -14,17 +15,8 @@ const MINIMUM_FILES = 92;
 // Catches a test file hollowed out in place. Measured by running the gate.
 const MINIMUM_TESTS = 771;
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally();
+const { ok } = tally;
 
 /**
  * By parentage from this gate's own spawn, never by a machine-wide command-line match: another
@@ -93,19 +85,9 @@ function slowestTests(text) {
   return [...longest.values()].sort((a, b) => b.ms - a.ms).slice(0, 5);
 }
 
-/** @param {string} dir @param {string[]} out */
-function testFiles(dir, out = []) {
-  for (const entry of readdirSync(dir)) {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) testFiles(full, out);
-    else if (entry.endsWith(".test.mjs")) out.push(full);
-  }
-  return out;
-}
-
 console.log("\ncheck:tests\n");
 
-const files = testFiles(TEST_DIR);
+const files = walkFiles(TEST_DIR, { keep: (name) => name.endsWith(".test.mjs") });
 console.log(
   `  discovered ${files.length} file(s): ` +
     files.map((f) => relative(TEST_DIR, f).split(sep).join("/")).join(", "),
@@ -213,5 +195,5 @@ const testsFloorBreach = assertFloor(
 );
 ok("the executed test count has not shrunk", !testsFloorBreach, testsFloorBreach ?? "");
 
-console.log(`\n${checks} checks, ${failures} failures\n`);
-process.exit(failures > 0 ? 1 : 0);
+console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
+process.exit(tally.failures > 0 ? 1 : 0);

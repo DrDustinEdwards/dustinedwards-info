@@ -16,6 +16,7 @@ import { KNOWN_DIRECTIVES } from "../app/lib/content/pipeline.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   basename(diagramAssetPath(key, theme));
@@ -24,28 +25,19 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const DIAGRAM_DIR = join(root, "public", DIAGRAM_ASSET_DIR);
 const ARTIFACT = join(root, "content", "generated", "posts.json");
 
-let checks = 0;
 let declarations = 0;
-/** @type {string[]} */
-const failures = [];
-
-/** @param {string} label @param {boolean} ok */
-function assert(label, ok) {
-  checks += 1;
-  if (!ok) failures.push(label);
-}
+const tally = createTally({ print: false });
+const { ok: assert, failed: failures } = tally;
 
 function assertThrows(/** @type {string} */ label, /** @type {() => unknown} */ fn, /** @type {RegExp} */ pattern) {
-  checks += 1;
+  let message = null;
   try {
     fn();
-    failures.push(`${label}: expected a throw, got none`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!pattern.test(message)) {
-      failures.push(`${label}: threw "${message}", which does not match ${pattern}`);
-    }
+    message = error instanceof Error ? error.message : String(error);
   }
+  if (message === null) assert(`${label}: expected a throw, got none`, false);
+  else assert(`${label}: threw "${message}", which does not match ${pattern}`, pattern.test(message));
 }
 
 const SOURCE = "flowchart LR\n  A[one] --> B[two]\n";
@@ -176,11 +168,12 @@ for (const [key, token] of Object.entries(DIAGRAM_THEME_TOKENS)) {
 
 /** @param {"light" | "dark"} theme */
 function paletteFor(theme) {
-  checks += 1;
   try {
-    return resolveTokens(DIAGRAM_THEME_TOKENS, themeBlocks[theme], theme);
+    const palette = resolveTokens(DIAGRAM_THEME_TOKENS, themeBlocks[theme], theme);
+    assert(`the ${theme} palette resolves`, true);
+    return palette;
   } catch (error) {
-    failures.push(error instanceof Error ? error.message : String(error));
+    assert(error instanceof Error ? error.message : String(error), false);
     return {};
   }
 }
@@ -266,7 +259,7 @@ if (!existsSync(ARTIFACT)) {
 
 // Measured by running it, never summed: 221 checks and 202 declarations on 2026-09-24, over 3 diagrams.
 const MINIMUM_CHECKS = 210;
-const floorBreach = assertFloor("check:diagrams", "checks", checks, MINIMUM_CHECKS);
+const floorBreach = assertFloor("check:diagrams", "checks", tally.checks, MINIMUM_CHECKS);
 if (floorBreach) failures.push(floorBreach);
 const MINIMUM_DECLARATIONS = 190;
 const declarationBreach = assertFloor(
@@ -279,9 +272,9 @@ const declarationBreach = assertFloor(
 if (declarationBreach) failures.push(declarationBreach);
 
 if (failures.length > 0) {
-  console.error(`check:diagrams FAILED ${failures.length} of ${checks} assertions\n`);
+  console.error(`check:diagrams FAILED ${tally.failures} of ${tally.checks} assertions\n`);
   for (const failure of failures) console.error(`  ${failure}`);
   process.exit(1);
 }
 
-console.log(`check:diagrams passed ${checks} assertions`);
+console.log(`check:diagrams passed ${tally.checks} assertions`);

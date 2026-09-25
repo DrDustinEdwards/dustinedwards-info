@@ -21,6 +21,9 @@ import {
   reachableAssets,
   stylesheetsFor,
 } from "./lib/page-payload.mjs";
+import { createTally } from "./lib/tally.mjs";
+import { walkFiles } from "./lib/walk-files.mjs";
+import { ROUTES_DIR, routesMatching, sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -61,7 +64,6 @@ function preloadEntries(rootSource) {
 
 const ASSETS_DIR = join(root, "build", "client", "assets");
 const DIST_DIR = join(root, "app", "enhance", "dist");
-const ROUTES_DIR = join(root, "app", "routes");
 
 /**
  * Margins are wide because the bundles are tiny: the job is catching a dependency wandering in.
@@ -100,22 +102,17 @@ const INEFFECTIVE_IMPORT_EXEMPT = {
 /** A walk that reads fewer files than this has lost a route or gone vacuous, not gotten lean. */
 const MINIMUM_FILES_WALKED = 8;
 
+/**
+ * app/ and workers/ source files, walked once for both the dynamic-import and the sharp scans. The two
+ * scans had floors of 150 and 100 over the same list; the higher one is kept for both.
+ */
+const MINIMUM_SOURCE_FILES = 150;
+
 /** Floor on the syntax pass, so an empty assets directory cannot pass it. */
 const MINIMUM_ASSETS_SYNTAX_CHECKED = 15;
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (condition) {
-    console.log(`  ok    ${label}`);
-  } else {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally({ printPass: true });
+const { ok } = tally;
 
 /**
  * Stems, because verify-live may face a deploy whose hashes predate this disk. Anchored on the
@@ -260,20 +257,8 @@ function enhancementAssets() {
   });
 }
 
-/**
- * @param {string} dir
- * @returns {string[]}
- */
-function walkSource(dir) {
-  /** @type {string[]} */
-  const out = [];
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) out.push(...walkSource(full));
-    else if (/\.(ts|tsx|mjs)$/.test(entry.name)) out.push(full);
-  }
-  return out;
-}
+/** @param {string} dir */
+const walkSource = (dir) => walkFiles(dir, { keep: (name) => /\.(ts|tsx|mjs)$/.test(name) });
 
 async function main() {
   const { files, manifestFile } = walkHydrationSet();
@@ -378,10 +363,7 @@ async function main() {
   );
 
   /* Pinned to admin.tsx and login.tsx by name, so a public route gaining the flag fails HERE. */
-  const hydrating = readdirSync(ROUTES_DIR)
-    .filter((f) => /\.(ts|tsx)$/.test(f))
-    .filter((f) => /hydrate\s*:\s*true/.test(stripComments(readFileSync(join(ROUTES_DIR, f), "utf8"))))
-    .sort();
+  const hydrating = routesMatching(/hydrate\s*:\s*true/, { ts: true });
   ok(
     "hydration opt-in is exactly the admin layout and the login door",
     hydrating.join(", ") === "admin.tsx, login.tsx",
@@ -407,12 +389,11 @@ async function main() {
    * Derived from source, not the build log: a dynamic import splits nothing when some module in the
    * same graph imports it statically.
    */
-  const importScopeDirs = [join(root, "app"), join(root, "workers")];
-  const importScope = importScopeDirs.flatMap((dir) => walkSource(dir));
+  const importScope = [join(root, "app"), join(root, "workers")].flatMap((dir) => walkSource(dir));
 
   ok(
     "the dynamic-import scan walked a non-empty scope",
-    importScope.length >= 150,
+    importScope.length >= MINIMUM_SOURCE_FILES,
     `walked ${importScope.length} source file(s) under app/ and workers/. A scan over ` +
       `nothing reports what a clean scan reports.`,
   );
@@ -468,24 +449,26 @@ async function main() {
       .join("\n        "),
   );
 
-  gradeBuildOnlyDependencies();
+  gradeBuildOnlyDependencies(importScope);
 
   gradeEveryPage();
 
   await gradeRenderedHtml();
 
-  if (failures > 0) {
-    console.log(`\n${failures} FAILED of ${checks} checks\n`);
+  if (tally.failures > 0) {
+    console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
     process.exit(1);
   }
-  console.log(`\n${checks} checks, 0 failures\n`);
+  console.log(`\n${tally.checks} checks, 0 failures\n`);
 }
 
 /**
  * `workerd` has no filesystem, so a native build-time dependency reaching the Worker fails to start.
  * The third assertion is the point: a source scan says nothing about what shipped.
+ *
+ * @param {string[]} sourceFiles app/ and workers/, walked once in main
  */
-function gradeBuildOnlyDependencies() {
+function gradeBuildOnlyDependencies(sourceFiles) {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
   ok(
@@ -504,12 +487,10 @@ function gradeBuildOnlyDependencies() {
 
   /* Comments stripped: a comment naming the module could satisfy an assertion. */
   const importers = [];
-  for (const dir of ["app", "workers"]) {
-    for (const file of walkSource(join(root, dir))) {
-      const code = stripComments(readFileSync(file, "utf8"));
-      if (/\bfrom\s*["']sharp["']|\brequire\(\s*["']sharp["']\s*\)|\bimport\(\s*["']sharp["']/.test(code)) {
-        importers.push(relative(root, file).split("\\").join("/"));
-      }
+  for (const file of sourceFiles) {
+    const code = stripComments(readFileSync(file, "utf8"));
+    if (/\bfrom\s*["']sharp["']|\brequire\(\s*["']sharp["']\s*\)|\bimport\(\s*["']sharp["']/.test(code)) {
+      importers.push(relative(root, file).split("\\").join("/"));
     }
   }
   ok(
@@ -518,10 +499,10 @@ function gradeBuildOnlyDependencies() {
     `${importers.join(", ")} imports sharp. It is a native Node module; workerd has ` +
       `no native modules, so this is a Worker that does not start.`,
   );
-  const scanned = walkSource(join(root, "app")).length + walkSource(join(root, "workers")).length;
+  const scanned = sourceFiles.length;
   ok(
     "the import scan read a plausible number of source files",
-    scanned >= 100,
+    scanned >= MINIMUM_SOURCE_FILES,
     `scanned ${scanned} file(s) under app/ and workers/. A scan this small is a ` +
       `broken walk, and a broken walk finds no importer either.`,
   );
@@ -654,15 +635,7 @@ function gradeEveryPage() {
   const assetFile = (/** @type {string} */ assetPath) =>
     join(clientDir, assetPath.replace(/^\//, ""));
 
-  const publicRoutes = readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx"))
-    .filter((name) => {
-      const code = stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"));
-      return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
-    })
-    .filter((name) => !/^(blog\.(feed|rss)|blog\.\$slug\[\.md\]|llms-full)/.test(name))
-    .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
-    .sort();
+  const publicRoutes = sharedCacheHtmlRoutes().map((name) => `routes/${name.replace(/\.tsx$/, "")}`);
 
   const declaredIds = Object.values(ROUTE_CEILINGS)
     .map((r) => r.id)
@@ -716,7 +689,6 @@ function gradeEveryPage() {
 
     const sheets = stylesheetsFor(manifest, ceiling.id);
     const cssText = sheets.map((s) => readFileSync(assetFile(s), "utf8"));
-    const cssTotal = sheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
 
     ok(
       `${path}: links at least one stylesheet`,
@@ -726,13 +698,7 @@ function gradeEveryPage() {
     );
 
     const routeAssets = reachableAssets(routeFile, appDir, read).assets;
-    const bundles = [...new Set([...routeAssets, ...rootAssets])]
-      .filter((a) => a.includes("enhance/dist/"))
-      .map((a) => a.split("/").pop() ?? a)
-      .sort();
-
-    const served = enhancementAssets().filter((b) => bundles.includes(b.module));
-    const bundleTotal = served.reduce((n, b) => n + b.brotli, 0);
+    const { cssTotal, bundles, bundleTotal } = coldLoad(sheets, [...routeAssets, ...rootAssets], assetFile);
     const total = cssTotal + bundleTotal;
 
     console.log(
@@ -795,6 +761,25 @@ function gradeEveryPage() {
   );
 
   gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile);
+}
+
+/**
+ * A page's cold load: its stylesheets and the enhancement bundles its modules reach, in brotli bytes.
+ *
+ * @param {string[]} sheets
+ * @param {Iterable<string>} reachable assets reachable from the route and from root
+ * @param {(p: string) => string} assetFile
+ */
+function coldLoad(sheets, reachable, assetFile) {
+  const cssTotal = sheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
+  const bundles = [...new Set(reachable)]
+    .filter((a) => a.includes("enhance/dist/"))
+    .map((a) => a.split("/").pop() ?? a)
+    .sort();
+  const bundleTotal = enhancementAssets()
+    .filter((b) => bundles.includes(b.module))
+    .reduce((n, b) => n + b.brotli, 0);
+  return { cssTotal, bundles, bundleTotal };
 }
 
 /**
@@ -871,17 +856,9 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
    * A route rendering `<PostEditor` copies these sheets into its preview iframe, so without the
    * handle an author typing an expression sees it unstyled. Derived, or a later route inherits it.
    */
-  const editorRoutes = readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx"))
-    .filter((name) =>
-      /<PostEditor/.test(stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"))),
-    )
-    .sort();
-  const optedIn = editorRoutes.filter((name) =>
-    /export const handle = \{[^}]*\bmath:\s*true/.test(
-      stripComments(readFileSync(join(ROUTES_DIR, name), "utf8")),
-    ),
-  );
+  const editorRoutes = routesMatching(/<PostEditor/);
+  const mathHandles = routesMatching(/export const handle = \{[^}]*\bmath:\s*true/);
+  const optedIn = editorRoutes.filter((name) => mathHandles.includes(name));
   ok(
     "every route that renders the editor opts into the math stylesheet",
     editorRoutes.length >= 2 && optedIn.length === editorRoutes.length,
@@ -891,13 +868,7 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `pane. Fewer than two means the derivation stopped finding them.`,
   );
 
-  const postRoutes = readdirSync(ROUTES_DIR)
-    .filter((name) => name.endsWith(".tsx"))
-    .filter((name) =>
-      /blogPostView\(/.test(stripComments(readFileSync(join(ROUTES_DIR, name), "utf8"))),
-    )
-    .map((name) => `routes/${name.replace(/\.tsx$/, "")}`)
-    .sort();
+  const postRoutes = routesMatching(/blogPostView\(/).map((name) => `routes/${name.replace(/\.tsx$/, "")}`);
   const namedInRoot = [...rootStripped.matchAll(/useRouteLoaderData\(\s*"([^"]+)"/g)]
     .map((m) => m[1])
     .filter((id) => id !== "root")
@@ -924,15 +895,8 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
 
   const base = ROUTE_CEILINGS["/blog/:slug"];
   const baseSheets = stylesheetsFor(manifest, base.id);
-  const baseCss = baseSheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
+  const { cssTotal: baseCss, bundleTotal } = coldLoad(baseSheets, [...postAssets, ...rootAssets], assetFile);
   const mathCss = baseCss + brotliSize(mathBytes);
-
-  const bundles = [...new Set([...postAssets, ...rootAssets])]
-    .filter((a) => a.includes("enhance/dist/"))
-    .map((a) => a.split("/").pop() ?? a);
-  const bundleTotal = enhancementAssets()
-    .filter((b) => bundles.includes(b.module))
-    .reduce((n, b) => n + b.brotli, 0);
   const mathTotal = mathCss + bundleTotal;
 
   console.log(
