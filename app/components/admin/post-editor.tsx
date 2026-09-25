@@ -1006,18 +1006,25 @@ function ImageUploader({ onInsert }: { onInsert: (snippet: string) => void }) {
     }
     setMessage("Uploading");
 
-    const form = new FormData();
-    form.set("file", file);
-    const response = await fetch("/admin/media/upload", { method: "POST", body: form });
-    if (!response.ok) {
-      setMessage(`Upload failed (${response.status}).`);
-      return;
+    // A click handler's rejection is unhandled, so a network error must end here as a message.
+    try {
+      const form = new FormData();
+      form.set("file", file);
+      const response = await fetch("/admin/media/upload", { method: "POST", body: form });
+      if (!response.ok) {
+        // The status is the fallback when the body is not the route's JSON error.
+        const detail = (await response.json().catch(() => ({}))) as { error?: string };
+        setMessage(detail.error ?? `Upload failed (${response.status}).`);
+        return;
+      }
+      const { url } = (await response.json()) as { url: string };
+      onInsert(`\n![${alt.trim()}](${url})\n`);
+      setMessage(`Inserted ${url}`);
+      setAlt("");
+      if (fileRef.current) fileRef.current.value = "";
+    } catch (error) {
+      setMessage(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    const { url } = (await response.json()) as { url: string };
-    onInsert(`\n![${alt.trim()}](${url})\n`);
-    setMessage(`Inserted ${url}`);
-    setAlt("");
-    if (fileRef.current) fileRef.current.value = "";
   }
 
   return (
