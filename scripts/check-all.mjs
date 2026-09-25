@@ -1,11 +1,18 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
 import { gateNames } from "./build-stack.mjs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { assertFloor } from "./lib/floor.mjs";
-import { killTree, readProcessTable, recordedTreeLeftovers } from "./lib/child-processes.mjs";
+import {
+  SHIP_LOCK_FILE,
+  SHIP_LOCK_NEEDLE,
+  killTree,
+  lockHolder,
+  readProcessTable,
+  recordedTreeLeftovers,
+} from "./lib/child-processes.mjs";
 import { WINDOWS_CRASH_CODES } from "./lib/tier-outcome.mjs";
 import { mb, peakBetween, startRssSampler, treeSince } from "./lib/rss.mjs";
 
@@ -197,7 +204,33 @@ function recordedRunner() {
   }
 }
 
+/**
+ * Ship's process scan is one moment, so a tier started after it would build into the same build/.
+ * A ship's own tier (`npm run check` under ship) is its descendant and runs.
+ */
+function refuseWhileAnotherShipRuns() {
+  const lockPath = join(root, SHIP_LOCK_FILE);
+  if (!existsSync(lockPath)) return;
+  const table = readProcessTable();
+  if (table.size === 0) {
+    throw new Error(
+      `${SHIP_LOCK_FILE} exists and the process table could not be read, so whether a ship is ` +
+        "running on this checkout is unknown. Refusing rather than building under it.",
+    );
+  }
+  const holder = lockHolder(lockPath, table, SHIP_LOCK_NEEDLE);
+  if (holder === null) return;
+  for (let pid = process.pid, hops = 0; pid && hops <= table.size; pid = table.get(pid)?.ppid ?? 0, hops += 1) {
+    if (pid === holder) return;
+  }
+  throw new Error(
+    `a ship (pid ${holder}) is running on this checkout and holds ${SHIP_LOCK_FILE}. A gate run ` +
+      "under it would rebuild build/ while ship reads it. Wait for the ship to finish.",
+  );
+}
+
 function main() {
+  refuseWhileAnotherShipRuns();
   /* The schema test compares the live database only when asked; every spawned gate inherits this. */
   if (all) process.env.SCHEMA_LIVE = "1";
   const gates = discoverGates();

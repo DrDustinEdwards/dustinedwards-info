@@ -21,8 +21,12 @@ import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import {
   SHIP_BUSY_NEEDLES,
+  SHIP_LOCK_FILE,
+  SHIP_LOCK_NEEDLE,
   busyProcesses,
   readProcessTable,
+  releaseLock,
+  takeLock,
 } from "./lib/child-processes.mjs";
 import {
   DEFERRED_CHECKS,
@@ -309,6 +313,18 @@ announce("Preflight: up to date, and nothing else holding the tree");
     }
     console.log(`  ${table.size} process(es) scanned, none of them a gate run, a preview or another ship.`);
   }
+
+  /* The scan above is one moment; the lock lasts the whole ship, and check-all refuses while it is held. */
+  const lockPath = join(root, SHIP_LOCK_FILE);
+  const lock = takeLock(lockPath, table, SHIP_LOCK_NEEDLE);
+  if (!lock.ok) {
+    refuse(
+      `another ship (pid ${lock.holder}) holds ${SHIP_LOCK_FILE}`,
+      "Two ships on one checkout build into one build/. Wait for it to finish. Nothing has been built or deployed.",
+    );
+  }
+  process.on("exit", () => releaseLock(lockPath));
+  if (lock.tookOver) console.log(`  took over ${SHIP_LOCK_FILE} from pid ${lock.tookOver}, which is no longer a ship.`);
 }
 
 announce("Working tree must be clean");
