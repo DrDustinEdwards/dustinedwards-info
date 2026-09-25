@@ -22,7 +22,7 @@ import {
   contentSecurityPolicy,
   isAdminPath,
 } from "./csp.mjs";
-import { isFeed } from "./feed-types.mjs";
+import { isUnpolicedType } from "./feed-types.mjs";
 import { handleMediaEvents } from "./media-events";
 import { errorMessage } from "~/lib/error-message.mjs";
 
@@ -148,7 +148,7 @@ function applyDocumentHeaders(
   if (timings) headers.set("Server-Timing", serverTiming(timings));
   applySecurityHeaders(headers);
   headers.set("Reporting-Endpoints", reportTo);
-  if (!isFeed(headers.get("content-type"))) {
+  if (!isUnpolicedType(headers.get("content-type"))) {
     headers.set("Content-Security-Policy", csp);
   }
   if (!headers.has("cache-control")) headers.set("cache-control", UNCACHED);
