@@ -115,16 +115,18 @@ test("an unparseable payload refuses rather than reading as empty", () => {
 
 test("PLANT 3: an unreachable API throws rather than returning a pass", async () => {
   // What matters is that a network failure does NOT resolve to a value ciVerdict could read as success.
+  // A port just released on loopback refuses at once, offline, where a DNS name would wait on the resolver.
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const { port } = server.address();
+  await new Promise((resolve) => server.close(resolve));
+
   await assert.rejects(
-    () =>
-      fetchCiRuns({
-        owner: "x",
-        repo: "y",
-        sha: SHA,
-        apiBase: "https://api.github.invalid-host-that-does-not-resolve",
-      }),
+    () => fetchCiRuns({ owner: "x", repo: "y", sha: SHA, apiBase: `http://127.0.0.1:${port}` }),
     (error) => {
       assert.ok(error instanceof Error, "must throw an Error the caller can name");
+      assert.match(error.message, /fetch failed/);
+      assert.equal(error.cause?.code, "ECONNREFUSED", "the refusal is the transport's, not an answer");
       return true;
     },
   );
