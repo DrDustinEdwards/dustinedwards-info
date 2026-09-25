@@ -5,6 +5,7 @@ import * as Plot from "@observablehq/plot";
 import { parseHTML } from "linkedom";
 
 import { CHART_TYPES } from "./chart-types.mjs";
+import { h, text } from "./hast.mjs";
 
 export { CHART_TYPES };
 
@@ -290,17 +291,6 @@ function domToHast(node) {
       .map(domToHast),
   };
 }
-
-/** @param {string} tagName @param {Record<string, any>} properties @param {any[]} children */
-const h = (tagName, properties, children) => ({
-  type: "element",
-  tagName,
-  properties,
-  children,
-});
-
-/** @param {string} value */
-const text = (value) => ({ type: "text", value });
 
 /**
  * Printed from the original CSV cells, not parsed numbers, to avoid a float round-trip. Must sit

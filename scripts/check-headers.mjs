@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
-import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
+import { UNPOLICED_TYPES, isUnpolicedType } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { blockFrom } from "./lib/source-body.mjs";
 import { assertFloor } from "./lib/floor.mjs";
@@ -121,16 +121,22 @@ ok(
 
 /*
  * Declaring the set and applying it differ: app.ts has two exits, and one helper call means
- * redirects ship bare.
+ * redirects ship bare. Both exits call applyDocumentHeaders, which applies the set.
  */
-const applications = [...code.matchAll(/applySecurityHeaders\s*\(/g)].length;
+const documentHeaders = code.match(/function\s+applyDocumentHeaders\s*\([\s\S]*?\n\}/)?.[0] ?? "";
+const applications = [...code.matchAll(/applyDocumentHeaders\s*\(/g)].length;
 ok(
   "applySecurityHeaders is defined",
   /function\s+applySecurityHeaders\s*\(/.test(code),
   "the constant is declared but nothing applies it",
 );
 ok(
-  "applySecurityHeaders is called on BOTH exits (mutable and the immutable rebuild)",
+  "applyDocumentHeaders applies the security set",
+  /applySecurityHeaders\s*\(/.test(documentHeaders),
+  "the helper both exits call does not call applySecurityHeaders, so neither exit ships the set",
+);
+ok(
+  "applyDocumentHeaders is called on BOTH exits (mutable and the immutable rebuild)",
   applications >= 3,
   `found ${applications} occurrence(s) including the definition; expected the definition ` +
     `plus one call per exit. A redirect that misses it ships with no security headers.`,
@@ -163,18 +169,21 @@ ok(
     `intermediaries and the browser treat it the same way.`,
 );
 
-const guards = [...code.matchAll(/if\s*\(\s*!\s*(?:\w+\.)?headers\.has\(\s*"cache-control"\s*\)\s*\)/g)];
+/* In the helper both exits call, which the assertion on applyDocumentHeaders above counts. */
+const guards = [
+  ...documentHeaders.matchAll(/if\s*\(\s*!\s*(?:\w+\.)?headers\.has\(\s*"cache-control"\s*\)\s*\)/g),
+];
 ok(
-  "the no-Cache-Control default is applied on BOTH exits (mutable and the immutable rebuild)",
-  guards.length >= 2,
-  `found ${guards.length} guard(s); expected one per exit. A redirect that misses it ` +
+  "the no-Cache-Control default is applied in applyDocumentHeaders, so on BOTH exits",
+  guards.length >= 1,
+  `found ${guards.length} guard(s) in the helper both exits call. A redirect that misses it ` +
     `is stored in a shared cache, and /admin returns 302.`,
 );
 
 let guardsSettingUncached = 0;
 for (const guard of guards) {
   /* The guard's own consequent: a braced block, or the one statement it governs. */
-  const rest = code.slice(guard.index + guard[0].length);
+  const rest = documentHeaders.slice((guard.index ?? 0) + guard[0].length);
   const after = /^\s*\{/.test(rest) ? blockFrom(rest, 0) : rest.slice(0, rest.indexOf(";") + 1);
   if (/headers\.set\(\s*"cache-control"\s*,\s*UNCACHED\s*\)/.test(after)) guardsSettingUncached += 1;
 }
@@ -222,10 +231,10 @@ console.log("\n  edge policy");
     `EDGE_CACHE_HEADER is ${JSON.stringify(edgeHeader?.[1])}. CDN-Cache-Control passes downstream; ` +
       `Cache-Control would reach the browser and defeat every purge.`,
   );
-  const stamps = [...code.matchAll(/\bapplyEdgePolicy\(\s*(?:response\.)?headers\s*\)/g)];
+  const stamps = [...documentHeaders.matchAll(/\bapplyEdgePolicy\(\s*headers\s*\)/g)];
   ok(
-    "the Renderer stamps the edge policy on BOTH exits",
-    stamps.length >= 2,
+    "the Renderer stamps the edge policy on BOTH exits, through applyDocumentHeaders",
+    stamps.length >= 1,
     `found ${stamps.length} call(s). A shared response that misses it carries no edge policy and ` +
       `falls back to Cache-Control, which is max-age=0.`,
   );
@@ -306,48 +315,45 @@ for (const name of [
   }
 }
 
-/* The types are read out of the route files and isFeed() is called, so the two owners cannot drift. */
+/* The types are read out of the feed module and isUnpolicedType() is called, so the two owners
+   cannot drift. */
 {
   /** Named rather than globbed: the assertion is about THESE THREE, and a glob quietly shrinks. */
-  const FEED_ROUTES = [
-    "blog.rss[.xml].ts",
-    "blog.atom[.xml].ts",
-    "blog.feed[.json].ts",
-  ];
+  const FEED_FORMATS = ["rss", "atom", "json"];
+  const feedModule = join(root, "app", "lib", "feed-response.ts");
+  const feedSource = existsSync(feedModule)
+    ? stripComments(readFileSync(feedModule, "utf8"))
+    : "";
+  ok("the feed module app/lib/feed-response.ts exists", feedSource !== "", "not on disk");
+  const typesBlock = /FEED_CONTENT_TYPES\s*=\s*\{([^}]*)\}/.exec(feedSource)?.[1] ?? "";
 
-  for (const file of FEED_ROUTES) {
-    const routePath = join(root, "app", "routes", file);
-    if (!existsSync(routePath)) {
-      ok(`the feed route ${file} exists`, false, "not on disk");
-      continue;
-    }
-    const source = stripComments(readFileSync(routePath, "utf8"));
-    const declared = source.match(/"content-type":\s*"([^"]+)"/);
+  for (const format of FEED_FORMATS) {
+    const declared = new RegExp(`\\b${format}:\\s*"([^"]+)"`).exec(typesBlock);
     ok(
-      `${file} declares a content-type this gate can read`,
+      `the ${format} feed declares a content-type this gate can read`,
       Boolean(declared),
-      "no `\"content-type\": \"...\"` literal found, so the next assertion would " +
+      `no \`${format}: "..."\` entry in FEED_CONTENT_TYPES, so the next assertion would ` +
         "have nothing to test and would pass",
     );
     if (!declared) continue;
     ok(
-      `${file} serves "${declared[1]}", which isFeed() exempts from the CSP`,
-      isFeed(declared[1]),
-      `isFeed("${declared[1]}") is false, so this feed is served a policy with a ` +
+      `the ${format} feed serves "${declared[1]}", which isUnpolicedType() exempts from the CSP`,
+      isUnpolicedType(declared[1]),
+      `isUnpolicedType("${declared[1]}") is false, so this feed is served a policy with a ` +
         `per-request nonce on a shared-cached body. Exempt types: ` +
         `${[...UNPOLICED_TYPES].join(", ")}`,
     );
   }
 
-  /* THE NEGATIVE, so the three above cannot pass by isFeed() having become a constant true. */
+  /* THE NEGATIVE, so the three above cannot pass by isUnpolicedType() having become a constant true. */
   for (const type of ["text/html", "text/html; charset=utf-8", "image/svg+xml", ""]) {
     ok(
-      `isFeed(${JSON.stringify(type)}) is false, so a document still gets a policy`,
-      !isFeed(type),
-      "isFeed() exempts a type a browser renders as a browsing context",
+      `isUnpolicedType(${JSON.stringify(type)}) is false, so a document still gets a policy`,
+      !isUnpolicedType(type),
+      "isUnpolicedType() exempts a type a browser renders as a browsing context",
     );
   }
-  ok("isFeed(null) is false", !isFeed(null));
+  ok("isUnpolicedType(null) is false", !isUnpolicedType(null));
 }
 
 /* The public branch matters most: granting the nonce everywhere silences a report and breaks nothing
@@ -489,8 +495,8 @@ ok(
     "seven HTML routes and accepting the ten-minute nonce window.",
 );
 ok(
-  "the CSP is applied on BOTH exits, like the static set",
-  [...code.matchAll(/headers\.set\(\s*"Content-Security-Policy"/g)].length >= 2,
+  "the CSP is applied on BOTH exits, like the static set, through applyDocumentHeaders",
+  /headers\.set\(\s*"Content-Security-Policy"/.test(documentHeaders),
   "a redirect that misses it is UNPROTECTED, not merely unreported",
 );
 /* REPORTING SURVIVES ENFORCEMENT: a policy blocks silently, so the reports are the only signal. */
@@ -697,10 +703,15 @@ ok(
   `parsed ${captureBody.length} characters, so every assertion below would be vacuous`,
 );
 
+const adminRule =
+  stripComments(readFileSync(join(root, "workers", "csp.mjs"), "utf8")).match(
+    /function\s+isAdminPath[\s\S]*?\n\}/,
+  )?.[0] ?? "";
 ok(
   "the capture excludes the /admin plane",
-  /pathname\s*===\s*"\/admin"/.test(captureBody) &&
-    /pathname\.startsWith\(\s*"\/admin\/"\s*\)/.test(captureBody),
+  /isAdminPath\(\s*url\.pathname\s*\)/.test(captureBody) &&
+    /pathname\s*===\s*"\/admin"/.test(adminRule) &&
+    /pathname\.startsWith\(\s*"\/admin\/"\s*\)/.test(adminRule),
   "THE OPERATOR IS NOT AN AUDIENCE. Both forms are needed: the bare /admin and " +
     "the subtree. A panel that counts its own author is worse than no panel.",
 );
@@ -1040,11 +1051,12 @@ console.log("  plaintext requests are upgraded before anything else runs");
   );
 
   /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. */
-  /* The `if (secure !== null) { ... }` that follows the decision, whole. */
-  const redirectBlock = redirectAt === -1 ? "" : blockFrom(fetchBody, redirectAt);
+  /* The decision answers through redirectTo, whose body is the response every redirect gets. */
+  const decision = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 200);
+  const redirectBlock = appCode.match(/function\s+redirectTo\s*\([\s\S]*?\n\}/)?.[0] ?? "";
   ok(
     "the redirect block was located",
-    redirectBlock.includes("Location"),
+    /redirectTo\(\s*request\s*,\s*secure\s*\)/.test(decision) && redirectBlock.includes("Location"),
     "the assertion below would examine the wrong bytes",
   );
   ok(
