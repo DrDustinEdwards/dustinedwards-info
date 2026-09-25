@@ -21,6 +21,7 @@ import {
 import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
 import {
+  FIRST_PUBLICATION_NOTE,
   PUBLISH_CONFIRMED_INTENT,
   saveInPlaceIntent,
   type PostState,
@@ -526,11 +527,7 @@ export function PostEditor({
             {awaitingPublishConfirmation ? (
               <div className="editor-confirm-publish">
                 <h2>Publish this post</h2>
-                <p>
-                  It has never been public. Publishing puts it on the blog, in
-                  the feed, the sitemap, the search index and the AI answer
-                  layer.
-                </p>
+                <p>{FIRST_PUBLICATION_NOTE}</p>
                 <div className="editor-confirm-actions">
                   <Link to="/admin/posts" className="btn-ghost">
                     Cancel
