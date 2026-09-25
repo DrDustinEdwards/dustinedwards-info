@@ -44,6 +44,8 @@ export async function loader({ context }: Route.LoaderArgs) {
     showing: chosen.episode?.title ?? null,
     fellBack: chosen.fellBack,
     fetchedAt: feed?.fetchedAt ?? null,
+    /** Why the last refresh failed; null after one that landed. */
+    lastError: feed?.lastError ?? null,
   };
   timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
   return data({ secrets, misses, podcast });
@@ -161,10 +163,15 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
       </h3>
       <p className="muted" data-podcast-showing>
         {podcast.showing === null
-          ? "The feed has not been read yet, or the last read failed, so the home page links to germomics.com instead."
+          ? podcast.lastError
+            ? `The last read failed: ${podcast.lastError}. The home page links to germomics.com instead.`
+            : "The feed has not been read yet, so the home page links to germomics.com instead."
           : podcast.fellBack
             ? `The featured episode is no longer in the feed, so the home page is playing the latest: ${podcast.showing}.`
             : `The home page is playing: ${podcast.showing}.`}
+        {podcast.showing !== null && podcast.lastError
+          ? ` The last read failed: ${podcast.lastError}. This is from the last good read.`
+          : null}
       </p>
       <Form method="post" aria-labelledby="home-podcast">
         <input type="hidden" name="intent" value="podcast-slot" />
