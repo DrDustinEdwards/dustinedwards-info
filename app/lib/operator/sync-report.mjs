@@ -49,7 +49,7 @@ export function askSyncReport(counts) {
  * @param {unknown} expectedRaw @param {unknown} presentRaw
  * @returns {{ expected: number, present: number, drift: number, converged: boolean }}
  */
-export function convergence(expectedRaw, presentRaw) {
+function convergence(expectedRaw, presentRaw) {
   const expected = whole(expectedRaw);
   const present = whole(presentRaw);
   const drift = Math.abs(expected - present);
