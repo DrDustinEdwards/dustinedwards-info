@@ -38,13 +38,5 @@ export function postRedirectTarget(pathname, map) {
   return `${BLOG_PREFIX}${target}${markdown ? MARKDOWN_SUFFIX : ""}`;
 }
 
-/**
- * Same split as the HTTPS redirect, so the two helpers never teach different rules.
- *
- * @param {string} method
- * @returns {number}
- */
-export function postRedirectStatus(method) {
-  const m = String(method ?? "").toUpperCase();
-  return m === "GET" || m === "HEAD" ? 301 : 308;
-}
+// The HTTPS redirect's own rule, so the two helpers never teach different rules.
+export { httpsRedirectStatus as postRedirectStatus } from "./https-redirect.mjs";

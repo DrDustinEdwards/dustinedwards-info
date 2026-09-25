@@ -19,7 +19,7 @@ import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { DRIFT_CACHE_TTL_SECONDS } from "~/lib/search/ask-guard.server";
 import { ORIGIN_REFUSAL, originVerdict } from "~/lib/origin.mjs";
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader, timingsContext } from "~/lib/timing";
 import {
   askAvailable,
   askDriftCount,
@@ -114,31 +114,29 @@ export const middleware: Route.MiddlewareFunction[] = [
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  /*
-   * The badge reads a cached count from KV, never AI Search. /admin/posts calls the reader uncached,
-   * because the page that fixes drift must not act on a stale number.
-   */
-  const [drift, counts] = await Promise.all([
-    /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
-    timed(timings, "layout_ask_drift", () =>
-      askDriftCount(getEnv(context), getExecutionContext(context), timings),
-    ),
-    timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
-  ]);
-  const payload = {
-    email: context.get(adminActorContext).email,
-    counts,
-    /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
-    askDrift: askAvailable(getEnv(context)) ? drift : 0,
-    askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
-  };
+  return timedLoader(context, async (timings) => {
+    /*
+     * The badge reads a cached count from KV, never AI Search. /admin/posts calls the reader uncached,
+     * because the page that fixes drift must not act on a stale number.
+     */
+    const [drift, counts] = await Promise.all([
+      /* The ExecutionContext travels because the miss path finishes its cache write on `waitUntil`. */
+      timed(timings, "layout_ask_drift", () =>
+        askDriftCount(getEnv(context), getExecutionContext(context), timings),
+      ),
+      timed(timings, "layout_nav_counts", () => adminNavCounts(getEnv(context))),
+    ]);
+    const payload = {
+      email: context.get(adminActorContext).email,
+      counts,
+      /* Null only when Ask is on and the count failed or ran out of time: unknown, never a clean 0. */
+      askDrift: askAvailable(getEnv(context)) ? drift : 0,
+      askDriftMaxAgeSeconds: DRIFT_CACHE_TTL_SECONDS,
+    };
 
-  /* The layout's own total: its marks run in parallel and one nests, so summing them overcounts. */
-  timings?.push({ name: "layout_total", ms: performance.now() - loaderStart });
-
-  return data(payload);
+    return data(payload);
+    // The layout's own total: its marks run in parallel and one nests, so summing them overcounts.
+  }, "layout_total");
 }
 
 /** localStorage, a per-device preference: the server cannot know it, hence the blocking script below. */
@@ -223,14 +221,23 @@ function navName(
   );
 }
 
-function Glyph({ children }: { children: React.ReactNode }) {
+function Glyph({
+  children,
+  className,
+  strokeWidth = "1.75",
+}: {
+  children: React.ReactNode;
+  /** Added to `admin-nav-icon`, never in place of it. */
+  className?: string;
+  strokeWidth?: string;
+}) {
   return (
     <svg
-      className="admin-nav-icon"
+      className={className ? `admin-nav-icon ${className}` : "admin-nav-icon"}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.75"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -429,20 +436,11 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             aria-label="View site, leaves the admin"
             title="View site, leaves the admin"
           >
-            <svg
-              className="admin-nav-icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.75"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
+            <Glyph>
               <path d="M15 3h6v6" />
               <path d="M10 14 21 3" />
               <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            </svg>
+            </Glyph>
             <span className="admin-nav-label">View site</span>
           </a>
 
@@ -455,18 +453,9 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             onClick={toggle}
           >
-            <svg
-              className="admin-nav-icon admin-sidebar-chevron"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
+            <Glyph className="admin-sidebar-chevron" strokeWidth="2">
               <path d="m15 18-6-6 6-6" />
-            </svg>
+            </Glyph>
             <span className="admin-nav-label">Collapse</span>
           </button>
         </div>

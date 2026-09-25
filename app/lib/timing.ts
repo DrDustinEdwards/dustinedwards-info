@@ -1,4 +1,4 @@
-import { createContext } from "react-router";
+import { createContext, type RouterContextProvider } from "react-router";
 
 export type Timings = Array<{ name: string; ms: number }>;
 
@@ -21,6 +21,19 @@ export async function timed<T>(
   } finally {
     into.push({ name, ms: performance.now() - start });
   }
+}
+
+/**
+ * Runs a loader body as one timed mark, `loader_total` unless named. Wrapping the body rather than
+ * pushing before the last return is what counts the early returns and the throws too.
+ */
+export function timedLoader<T>(
+  context: Readonly<RouterContextProvider>,
+  fn: (timings: Timings | undefined) => Promise<T>,
+  name = "loader_total",
+): Promise<T> {
+  const timings = context.get(timingsContext).timings;
+  return timed(timings, name, () => fn(timings));
 }
 
 // For synchronous calls like `createAuth()`: the async `timed` would add an await to the unmeasured path.

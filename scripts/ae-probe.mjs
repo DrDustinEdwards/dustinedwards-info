@@ -84,7 +84,8 @@ async function counts() {
   }
   const row = data[0];
   const rows = Number(row.rows);
-  const weighted = row.origin_requests === null && rows === 0 ? 0 : Number(row.origin_requests);
+  // Number(null) is 0, so a null SUM beside a nonzero COUNT is made NaN here to be refused below.
+  const weighted = row.origin_requests === null ? (rows === 0 ? 0 : NaN) : Number(row.origin_requests);
   if (!Number.isFinite(rows) || !Number.isFinite(weighted)) {
     console.error(`the count query answered a row without numeric counts: ${JSON.stringify(row)}`);
     process.exit(1);
@@ -146,8 +147,8 @@ console.log("Analytics Engine cache-interaction probe");
 console.log(`  path    ${PATH}`);
 console.log(`  dataset ${DATASET}`);
 console.log(`  poll    every ${POLL_SECONDS}s, cap ${CAP_SECONDS}s per stage`);
-console.log(`  bypass  cache-control: no-cache, per get() in scripts/verify-live.mjs`);
-console.log(`  eligible plain GET, per warm() in the cache section of scripts/verify-live.mjs\n`);
+console.log(`  bypass  cache-control: no-cache, per get() in scripts/lib/live/client.mjs`);
+console.log(`  eligible plain GET, per warm() in scripts/lib/live/cache.mjs\n`);
 
 const base = await settle();
 console.log(

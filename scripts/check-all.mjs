@@ -51,6 +51,8 @@ export const TIERS = {
   "check:secrets": "offline",
   "check:migrations": "offline",
   "check:policy": "offline",
+  "check:ask-guards": "offline",
+  "check:enhance-a11y": "offline",
   "check:headers": "offline",
   "check:urls": "offline",
   "check:destructive": "offline",
@@ -229,93 +231,62 @@ function refuseWhileAnotherShipRuns() {
   );
 }
 
-function main() {
-  refuseWhileAnotherShipRuns();
-  /* The schema test compares the live database only when asked; every spawned gate inherits this. */
-  if (all) process.env.SCHEMA_LIVE = "1";
-  const gates = discoverGates();
-
+/**
+ * The build products the gates read, in order. A failed one is refused here, before any gate reads
+ * it: a broken build is not a red gate.
+ * @type {Array<{ name: string, what: string, missing: string }>}
+ */
+const PREREQS = [
   /* Built first: `build:content` reads stack.json. */
-  process.stdout.write("  build:stack (the colophon artifact build:content reads) ... ");
-  const stacked = runGate("build:stack", []);
-  if (!stacked.ok) {
-    console.log("FAILED");
-    console.log(stacked.output.trimEnd());
-    throw new Error(
+  {
+    name: "build:stack",
+    what: "the colophon artifact build:content reads",
+    missing:
       "build:stack failed, so content/generated/stack.json does not exist on disk. " +
-        "Nothing below ran; fix the stack build first.",
-    );
-  }
-  console.log(`ok (${(stacked.ms / 1000).toFixed(1)}s)`);
-  /* Refused here, before any gate reads it: a broken build is not a red gate. */
-  process.stdout.write("  build:content (the local build product the tier reads) ... ");
-  const built = runGate("build:content", []);
-  if (!built.ok) {
-    console.log("FAILED");
-    console.log(built.output.trimEnd());
-    throw new Error(
+      "Nothing below ran; fix the stack build first.",
+  },
+  {
+    name: "build:content",
+    what: "the local build product the tier reads",
+    missing:
       "build:content failed, so the tier's subject does not exist on disk. " +
-        "Nothing below ran; fix the build first.",
-    );
-  }
-  console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
-  process.stdout.write("  build:publication-twins (the twins check:machine-readable compares) ... ");
-  const twinned = runGate("build:publication-twins", []);
-  if (!twinned.ok) {
-    console.log("FAILED");
-    console.log(twinned.output.trimEnd());
-    throw new Error(
+      "Nothing below ran; fix the build first.",
+  },
+  {
+    name: "build:publication-twins",
+    what: "the twins check:machine-readable compares",
+    missing:
       "build:publication-twins failed, so the markdown twins do not exist on " +
-        "disk. Nothing below ran; fix the twin build first.",
-    );
-  }
-  console.log(`ok (${(twinned.ms / 1000).toFixed(1)}s)`);
+      "disk. Nothing below ran; fix the twin build first.",
+  },
   /* Gitignored; the app build's `?url` imports need them. */
-  process.stdout.write("  build:enhance (the bundles the app build's ?url imports serve) ... ");
-  const enhanced = runGate("build:enhance", []);
-  if (!enhanced.ok) {
-    console.log("FAILED");
-    console.log(enhanced.output.trimEnd());
-    throw new Error(
+  {
+    name: "build:enhance",
+    what: "the bundles the app build's ?url imports serve",
+    missing:
       "build:enhance failed, so the enhancement bundles do not exist on disk. " +
-        "Nothing below ran; fix the bundle build first.",
-    );
-  }
-  console.log(`ok (${(enhanced.ms / 1000).toFixed(1)}s)`);
-  const offline = gates.filter((name) => TIERS[name] === "offline");
-  const selected = all
-    ? gates
-    : ci
-      ? offline.filter((name) => !CI_EXCLUDED[name])
-      : offline;
-  const skipped = gates.filter((name) => !selected.includes(name));
+      "Nothing below ran; fix the bundle build first.",
+  },
+];
 
-  if (ci) {
-    /* An exclusion naming a gate nobody declares would silently exclude nothing and report a full CI
-       run while being the plain offline tier. */
-    const unknown = Object.keys(CI_EXCLUDED).filter((name) => !gates.includes(name));
-    if (unknown.length > 0) {
-      throw new Error(
-        `CI_EXCLUDED names ${unknown.length} gate(s) package.json does not declare: ` +
-          `${unknown.join(", ")}. Refusing to run rather than excluding nothing.`,
-      );
+function buildPrereqs() {
+  for (const prereq of PREREQS) {
+    process.stdout.write(`  ${prereq.name} (${prereq.what}) ... `);
+    const built = runGate(prereq.name, []);
+    if (!built.ok) {
+      console.log("FAILED");
+      console.log(built.output.trimEnd());
+      throw new Error(prereq.missing);
     }
-    const applied = offline.filter((name) => CI_EXCLUDED[name]);
-    console.log(
-      `  CI tier: ${selected.length} of ${offline.length} offline gate(s). ` +
-        `Excluded, with reasons in CI_EXCLUDED: ${applied.join(", ")}`,
-    );
+    console.log(`ok (${(built.ms / 1000).toFixed(1)}s)`);
   }
+}
 
-  console.log(
-    `\n${all ? "check:all" : "check"} running ${selected.length} of ${gates.length} gate(s)` +
-      `${all ? " (offline + network)" : " (offline tier)"}\n`,
-  );
-
-  /*
-   * By pid and parentage, never by name: a name match for `node` or `chrome` reaches Dustin's own
-   * editor and browser, and a pid alone may have been reused since it was recorded.
-   */
+/*
+ * By pid and parentage, never by name: a name match for `node` or `chrome` reaches Dustin's own
+ * editor and browser, and a pid alone may have been reused since it was recorded.
+ */
+function reapOrphans() {
   const recorded = treeSince(RSS_FILE).filter((pid) => pid !== process.pid);
   if (recorded.length > 0) {
     /* One process table read: a `taskkill` per dead pid makes later gates fail to start. */
@@ -342,7 +313,13 @@ function main() {
       );
     }
   }
+}
 
+/**
+ * Runs every selected gate under the RSS sampler, and installs the cleanup that kills this run's tree.
+ * @param {string[]} selected
+ */
+function runSelected(selected) {
   /* `spawnSync` blocks this event loop for the whole of every gate, so the sampler is a separate
      process writing to a file. */
   mkdirSync(join(root, ".gate-pids"), { recursive: true });
@@ -394,7 +371,16 @@ function main() {
           : `FAILED (${seconds}s${peak})`,
     );
   }
+  return { results, sampler, cleanUp };
+}
 
+/**
+ * Prints the failed gates' output, the result table and the verdict lines.
+ * @param {ReturnType<typeof runGate>[]} results
+ * @param {string[]} skipped
+ * @param {{ available: boolean }} sampler
+ */
+function summarize(results, skipped, sampler) {
   // An errored gate produced no verdict: calling it a failure invents one, calling it a pass hides one.
   const errored = results.filter((r) => r.errored);
   const failed = results.filter((r) => !r.ok && !r.errored);
@@ -482,6 +468,51 @@ function main() {
         "  covers verify-live, which needs a deploy.\n",
     );
   }
+  return { failed, errored, environment };
+}
+
+function main() {
+  refuseWhileAnotherShipRuns();
+  /* The schema test compares the live database only when asked; every spawned gate inherits this. */
+  if (all) process.env.SCHEMA_LIVE = "1";
+  const gates = discoverGates();
+
+  buildPrereqs();
+
+  const offline = gates.filter((name) => TIERS[name] === "offline");
+  const selected = all
+    ? gates
+    : ci
+      ? offline.filter((name) => !CI_EXCLUDED[name])
+      : offline;
+  const skipped = gates.filter((name) => !selected.includes(name));
+
+  if (ci) {
+    /* An exclusion naming a gate nobody declares would silently exclude nothing and report a full CI
+       run while being the plain offline tier. */
+    const unknown = Object.keys(CI_EXCLUDED).filter((name) => !gates.includes(name));
+    if (unknown.length > 0) {
+      throw new Error(
+        `CI_EXCLUDED names ${unknown.length} gate(s) package.json does not declare: ` +
+          `${unknown.join(", ")}. Refusing to run rather than excluding nothing.`,
+      );
+    }
+    const applied = offline.filter((name) => CI_EXCLUDED[name]);
+    console.log(
+      `  CI tier: ${selected.length} of ${offline.length} offline gate(s). ` +
+        `Excluded, with reasons in CI_EXCLUDED: ${applied.join(", ")}`,
+    );
+  }
+
+  console.log(
+    `\n${all ? "check:all" : "check"} running ${selected.length} of ${gates.length} gate(s)` +
+      `${all ? " (offline + network)" : " (offline tier)"}\n`,
+  );
+
+  reapOrphans();
+
+  const { results, sampler, cleanUp } = runSelected(selected);
+  const { failed, errored, environment } = summarize(results, skipped, sampler);
 
   /*
    * Exit code set, not taken: process.exit() can cut the report short. cleanUp() is explicit

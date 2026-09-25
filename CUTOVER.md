@@ -117,6 +117,7 @@ one admin login; the `max-age` header already covers every request after the
 first. Committing every future subdomain of a personal domain to HTTPS in
 shipped browser binaries, permanently, is not a trade worth making for that.
 
-Changing the value means editing `scripts/check-headers.mjs` in the same commit,
-by design: the gate holds the ratified value against the source in both
-directions, and `verify-live` section 14 then asserts it on the wire.
+Changing the value means editing `RATIFIED` in
+`scripts/lib/headers/static-set-and-cache.mjs` in the same commit, by design:
+the gate holds the ratified value against the source in both directions, and
+`verify-live` section 14 then asserts it on the wire.

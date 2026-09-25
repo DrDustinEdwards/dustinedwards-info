@@ -168,12 +168,12 @@
       "anchors": [
         {
           "kind": "gate",
-          "gate": "check:policy"
+          "gate": "check:ask-guards"
         },
         {
           "kind": "assertion",
-          "gate": "check:policy",
-          "text": "readState distinguishes a withdrawn post from a new draft"
+          "gate": "check:ask-guards",
+          "text": "a withdrawn post is not Ask-publishable"
         }
       ]
     },
