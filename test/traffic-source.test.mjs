@@ -82,3 +82,15 @@ test("a good response becomes the live state, sampling weighted", async () => {
   assert.equal(result.data.totalOriginRequests, 940);
   assert.equal(result.data.pathsReturned, 23);
 });
+
+test("an answer with no data array, or a count that is not a number, is an error, not zero traffic", async () => {
+  for (const answer of [{}, { data: [{ path: "/", origin_requests: "n/a", sampled_rows: "1" }] }]) {
+    globalThis.fetch = async () => Response.json(answer);
+    const result = await fetchTraffic({
+      CLOUDFLARE_ACCOUNT_ID: "acct",
+      ANALYTICS_READ_TOKEN: "t",
+    });
+    globalThis.fetch = realFetch;
+    assert.equal(result.status, "error", JSON.stringify(answer));
+  }
+});
