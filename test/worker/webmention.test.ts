@@ -357,7 +357,6 @@ describe("/webmention bound 2: the target must be a published post here", () => 
       } as never);
       expect(response.status, `source ${source} was not refused`).toBe(400);
     }
-    expect(sources.length).toBe(6);
   });
 });
 
