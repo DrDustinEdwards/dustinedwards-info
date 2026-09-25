@@ -17,6 +17,19 @@ export function keyForUrl(url) {
 }
 
 /**
+ * Whether an item key is one of this post's: its document key or one of its section keys. Exact key
+ * or section prefix, never startsWith(slug), which would sweep up a longer slug.
+ *
+ * @param {string} slug
+ * @returns {(key: string) => boolean}
+ */
+export function ownsAskKey(slug) {
+  const documentKey = keyForUrl(`/blog/${slug}`);
+  const sectionPrefix = `${documentKey.replace(/\.md$/, "")}${KEY_SEPARATOR}`;
+  return (key) => key === documentKey || key.startsWith(sectionPrefix);
+}
+
+/**
  * Null for a key this site did not write: an instance can hold items from another source.
  *
  * @param {string} key

@@ -6,28 +6,11 @@ import {
   deferredMisses,
   readinessVerdict,
 } from "../scripts/lib/readiness.mjs";
+import { bodyDrifted, HEALTHY as HEALTHY_BODY } from "./lib/health-bodies.mjs";
 
-const HEALTHY = JSON.stringify({
-  ok: true,
-  checks: [
-    { name: "ask-index-drift", ok: true },
-    { name: "media-index-drift", ok: true },
-    { name: "media-backup-drift", ok: true },
-    { name: "content-drift", ok: true },
-    { name: "fts-equality", ok: true },
-  ],
-});
+const HEALTHY = JSON.stringify(HEALTHY_BODY);
 
-const UNHEALTHY = JSON.stringify({
-  ok: false,
-  checks: [
-    { name: "ask-index-drift", ok: false, expected: 99, present: 90 },
-    { name: "media-index-drift", ok: true },
-    { name: "media-backup-drift", ok: true },
-    { name: "content-drift", ok: true },
-    { name: "fts-equality", ok: true },
-  ],
-});
+const UNHEALTHY = JSON.stringify(bodyDrifted({ "ask-index-drift": { expected: 99, present: 90 } }));
 
 test("a healthy report passes and carries its checks", () => {
   const verdict = readinessVerdict(200, HEALTHY);
@@ -93,16 +76,9 @@ test("ok is required to be exactly true, not merely truthy", () => {
 
 // A drifted corpus must not block its own repair: the D1 sync that converges
 // content-drift runs after readiness.
-const DRIFTED_CORPUS = JSON.stringify({
-  ok: false,
-  checks: [
-    { name: "ask-index-drift", ok: true },
-    { name: "media-index-drift", ok: true },
-    { name: "media-backup-drift", ok: true },
-    { name: "content-drift", ok: false, expected: 16, present: 14 },
-    { name: "fts-equality", ok: true },
-  ],
-});
+const DRIFTED_CORPUS = JSON.stringify(
+  bodyDrifted({ "content-drift": { expected: 16, present: 14 } }),
+);
 
 test("THE PLANT: a corpus missing a post from D1 ships, and does not refuse", () => {
   const gated = readinessVerdict(503, DRIFTED_CORPUS);
@@ -152,16 +128,9 @@ test("an endpoint disagreeing with itself still refuses, even with a deferral", 
 
 // The Ask converge that repairs ask-index-drift runs AFTER readiness, so readiness must
 // defer it and the post-repair assertion must then name it.
-const ASK_DRIFTED = JSON.stringify({
-  ok: false,
-  checks: [
-    { name: "ask-index-drift", ok: false, expected: 121, present: 120 },
-    { name: "media-index-drift", ok: true },
-    { name: "media-backup-drift", ok: true },
-    { name: "content-drift", ok: true },
-    { name: "fts-equality", ok: true },
-  ],
-});
+const ASK_DRIFTED = JSON.stringify(
+  bodyDrifted({ "ask-index-drift": { expected: 121, present: 120 } }),
+);
 
 test("THE PLANT: ask-index-drift reaches the converge that repairs it", () => {
   const gated = readinessVerdict(503, ASK_DRIFTED);
