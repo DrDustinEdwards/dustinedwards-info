@@ -15,9 +15,9 @@ import { COLOPHON_SECTIONS } from "../app/lib/colophon-sections.mjs";
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../app/lib/health/snapshot.mjs";
 import { colophonFacts } from "./lib/colophon-facts.mjs";
 import { chunkStem } from "./check-page-payload.mjs";
-import { stripComments } from "./lib/strip-comments.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { declaredSecurityHeaders } from "./lib/header-constants.mjs";
 import { readArtifact } from "./lib/artifact.mjs";
 
 // Derived like the sync and uploader do; a literal key goes stale.
@@ -1032,15 +1032,7 @@ const corpus = { live: 0, drafts: 0 };
 }
 
 {
-  // Comments first, or docblock prose parses.
-  const appSource = stripComments(readFileSync(join(root, "workers", "app.ts"), "utf8"));
-  const declBlock = appSource.match(
-    /const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/,
-  );
-  /** @type {[string, string][]} */
-  const expected = declBlock
-    ? [...declBlock[1].matchAll(/"([A-Za-z-]+)"\s*:\s*"([^"]*)"/g)].map((m) => [m[1], m[2]])
-    : [];
+  const expected = Object.entries(declaredSecurityHeaders() ?? {});
 
   check(
     "security: the ratified header set was parsed from workers/app.ts",
