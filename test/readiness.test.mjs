@@ -210,3 +210,11 @@ test("every deferred check converging leaves no miss", () => {
   assert.deepEqual(misses, [], "a clean run reports nothing");
   assert.equal(converged.length, 3, "and says so for all three rather than staying quiet");
 });
+
+test("a check whose ok is not exactly true is a failure, not a pass", () => {
+  for (const ok of ["false", 1, null, undefined]) {
+    const body = JSON.stringify({ ok: true, checks: [{ name: "content-drift", ok }] });
+    const verdict = readinessVerdict(200, body);
+    assert.equal(verdict.ok, false, `ok: ${JSON.stringify(ok)} must not pass`);
+  }
+});

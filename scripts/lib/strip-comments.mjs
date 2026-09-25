@@ -1,6 +1,8 @@
 /**
- * A JavaScript tokenizer, so not for CSS, where `//` is never a comment, and it reads an
- * apostrophe in SVG or JSX text as opening a string; `stripTsxComments` is the one for TSX.
+ * A JavaScript tokenizer, so not for CSS, where `//` is never a comment. An apostrophe in JSX or SVG
+ * text is read as a string only when a matching quote closes it on the same line, which still
+ * misreads two apostrophes on one line; `stripTsxComments` is the one for TSX, and for anything
+ * that must be exact, read the syntax tree (scripts/lib/syntax.mjs).
  */
 
 import { createRequire } from "node:module";
@@ -46,7 +48,12 @@ function scan(source, options) {
           j += 2;
           continue;
         }
-        if (source[j] === "\n") newlines += "\n";
+        // Only a template literal spans lines. A quote whose line ends first was never a string (an
+        // apostrophe in JSX text, say), and reading it as one hid everything after it.
+        if (source[j] === "\n") {
+          if (quote !== "`") break;
+          newlines += "\n";
+        }
         if (source[j] === quote) {
           j += 1;
           closed = true;
@@ -55,8 +62,10 @@ function scan(source, options) {
         j += 1;
       }
       if (!closed) {
-        out += source.slice(i);
-        break;
+        // Kept as a plain character and scanning goes on, so the comments after it are still stripped.
+        out += c;
+        i += 1;
+        continue;
       }
       // Keep the newlines a string spanned: readers compute line numbers from this text.
       out += blankStrings ? `""${newlines}` : source.slice(i, j);
@@ -92,9 +101,11 @@ function scan(source, options) {
       }
     }
 
-    if (c === "/" && source[i + 1] === "*") {
+    // An opener with no closer (a glob like `src/**/x` in JSX text) is not a comment: swallowing the
+    // rest of the file would hand every scan an empty tail to agree with.
+    if (c === "/" && source[i + 1] === "*" && source.indexOf("*/", i + 2) !== -1) {
       const end = source.indexOf("*/", i + 2);
-      const stop = end === -1 ? source.length : end + 2;
+      const stop = end + 2;
       const span = source.slice(i, stop);
       out += preserveLines ? "\n".repeat((span.match(/\n/g) ?? []).length) : " ";
       i = stop;
