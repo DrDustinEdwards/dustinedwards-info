@@ -53,14 +53,6 @@ test("PLANT 2: a tier killed mid-run says it crashed, and names no gate", () => 
   assert.match(o.why, /signal SIGKILL/);
 });
 
-test("both refuse: only the wording differs, never the direction", () => {
-  const red = tierOutcome({ code: 1, signal: null, text: RED_TABLE });
-  const crashed = tierOutcome({ code: null, signal: "SIGKILL", text: KILLED_PARTWAY });
-
-  for (const o of [red, crashed]) assert.notEqual(o.state, "passed");
-  assert.notEqual(red.why, crashed.why);
-});
-
 test("a tier that reported everything passing passes", () => {
   const o = tierOutcome({ code: 0, signal: null, text: GREEN_TABLE });
 

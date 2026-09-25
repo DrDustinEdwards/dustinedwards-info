@@ -9,11 +9,10 @@ const coldKv = () => ({
   put: async () => {},
 });
 
-const envWith = (fetchImpl) => ({
+const analyticsEnv = () => ({
   ANALYTICS_READ_TOKEN: "test-token",
   CLOUDFLARE_ACCOUNT_ID: "acct",
   APP_KV: coldKv(),
-  __fetch: fetchImpl,
 });
 
 /** Restored in `finally` so a failing assertion cannot leave the global patched. */
@@ -38,7 +37,7 @@ test("THE DEFECT: no read token gives an absence with a reason, not a zero", asy
 test("a nonexistent dataset gives an absence carrying the status", async () => {
   const result = await withFetch(
     async () => new Response("no such dataset", { status: 404 }),
-    () => fetchPostReadership(envWith()),
+    () => fetchPostReadership(analyticsEnv()),
   );
   assert.equal(result.status, "error");
   assert.equal(result.data, null);
@@ -50,7 +49,7 @@ test("a nonexistent dataset gives an absence carrying the status", async () => {
 test("a malformed 200 does not become a report full of zeros", async () => {
   const result = await withFetch(
     async () => new Response("not json", { status: 200 }),
-    () => fetchPostReadership(envWith()),
+    () => fetchPostReadership(analyticsEnv()),
   );
   assert.equal(result.status, "error", "an unparseable body must not read as live data");
 });
@@ -67,7 +66,7 @@ test("a live read indexes by path and reports the window", async () => {
         : [{ origin_requests: 15, paths: 2 }];
       return new Response(JSON.stringify({ data }), { status: 200 });
     },
-    () => fetchPostReadership(envWith()),
+    () => fetchPostReadership(analyticsEnv()),
   );
   assert.equal(result.status, "live");
   assert.equal(result.data.windowDays, WINDOW_DAYS);
@@ -88,7 +87,7 @@ test("COMPLETE IS FALSE when more paths had activity than came back", async () =
         }),
         { status: 200 },
       ),
-    () => fetchPostReadership(envWith()),
+    () => fetchPostReadership(analyticsEnv()),
   );
   assert.equal(result.status, "live");
   assert.equal(result.data.complete, false);
@@ -111,7 +110,7 @@ test("COMPLETE IS FALSE when the limit itself was reached", async () => {
         }),
         { status: 200 },
       ),
-    () => fetchPostReadership(envWith()),
+    () => fetchPostReadership(analyticsEnv()),
   );
   assert.equal(result.data.complete, false, "a full page is a cut, whatever the total claims");
 });

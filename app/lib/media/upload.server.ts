@@ -4,13 +4,13 @@ import { measureDimensions } from "./core.server";
 import { ALLOWED, validateUpload } from "./upload-contract.mjs";
 
 // `type` is the caller's claim: checked against `ALLOWED`, never sniffed.
-export type UploadInput = {
+type UploadInput = {
   bytes: ArrayBuffer;
   type: string;
   name: string;
 };
 
-export type StoreUploadResult =
+type StoreUploadResult =
   | {
       ok: true;
       key: string;

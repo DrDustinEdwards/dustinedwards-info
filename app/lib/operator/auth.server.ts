@@ -9,7 +9,7 @@ const MIN_TOKEN_LENGTH = 32;
 
 export type OperatorEnv = Env & { OPERATOR_TOKEN?: string };
 
-export type AuthResult =
+type AuthResult =
   | { ok: true; id: string }
   | { ok: false; status: number; error: string; retryAfter?: number };
 

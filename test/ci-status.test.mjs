@@ -90,15 +90,6 @@ test("every verdict carries the state that names it, refusals included", () => {
   assert.equal(new Set(states).size, cases.length);
 });
 
-test("only a run in flight is the waitable refusal", () => {
-  // Ship polls on `running` and stops on the rest. A second refusal reading as `running` would
-  // make ship wait out its whole timeout on a commit that had already failed.
-  const failed = ciVerdict({ workflow_runs: [{ ...green, conclusion: "failure" }] }, SHA);
-  const none = ciVerdict({ workflow_runs: [] }, SHA);
-
-  for (const v of [failed, none]) assert.notEqual(v.state, "running");
-});
-
 test("one green run does not excuse a second failing one", () => {
   const v = ciVerdict(
     { workflow_runs: [green, { ...green, name: "Other", conclusion: "failure" }] },

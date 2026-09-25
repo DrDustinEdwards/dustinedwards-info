@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 // Its sheet is imported by each consuming route, not here, so every sheet a page
 // loads stays visible in the route's own imports.
-export const EVIDENCE_FACTS = 3;
+const EVIDENCE_FACTS = 3;
 
 export function EvidenceRow({
   facts,

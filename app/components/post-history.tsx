@@ -1,6 +1,6 @@
 // No `dt-` class on these dates: the rail already publishes `dt-published` and `dt-updated`,
 // and a second set in the same tree would tell a parser the post has many update times.
-export type ChangelogEntry = { date: string; note: string };
+type ChangelogEntry = { date: string; note: string };
 
 export function PostHistory({
   entries,

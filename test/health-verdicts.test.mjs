@@ -9,6 +9,8 @@ import {
   ftsEqualityVerdict,
   mediaBackupDriftVerdict,
   publicHealthBody,
+  withTimeout,
+  CHECK_TIMEOUT_MS,
 } from "../app/lib/health/verdicts.mjs";
 
 const HEALTHY_FTS = { posts: 12, postsFts: 12, docs: 46, identity: 46, prose: 46 };
@@ -140,9 +142,7 @@ test("FAIL CLOSED: a non-integer count is unreadable, not coerced", () => {
   assert.match(verdict.detail, /identity/);
 });
 
-test("the wire body carries names and booleans only", async () => {
-  const { publicHealthBody } = await import("../app/lib/health/verdicts.mjs");
-
+test("the wire body carries names and booleans only", () => {
   // Row counts, index sizes and an R2 object key: none of it may reach an unauthenticated endpoint.
   const run = {
     checks: [
@@ -171,8 +171,7 @@ test("the wire body carries names and booleans only", async () => {
   );
 });
 
-test("ok is true only when every check passed", async () => {
-  const { publicHealthBody } = await import("../app/lib/health/verdicts.mjs");
+test("ok is true only when every check passed", () => {
   const pass = { name: "a", ok: true, detail: "" };
   const fail = { name: "b", ok: false, detail: "" };
 
@@ -181,8 +180,7 @@ test("ok is true only when every check passed", async () => {
   assert.equal(publicHealthBody({ checks: [fail] }).ok, false);
 });
 
-test("a field added to a check later cannot leak by inheritance", async () => {
-  const { publicHealthBody } = await import("../app/lib/health/verdicts.mjs");
+test("a field added to a check later cannot leak by inheritance", () => {
   // The body is rebuilt field by field rather than spread, so this stays true
   // when someone adds a field to HealthCheck without thinking about the wire.
   const body = publicHealthBody({
@@ -193,13 +191,11 @@ test("a field added to a check later cannot leak by inheritance", async () => {
 });
 
 test("a check that answers in time is passed through untouched", async () => {
-  const { withTimeout } = await import("../app/lib/health/verdicts.mjs");
   const verdict = await withTimeout(Promise.resolve({ ok: true, detail: "fine" }), 50, "quick");
   assert.deepEqual(verdict, { ok: true, detail: "fine" });
 });
 
 test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
-  const { withTimeout } = await import("../app/lib/health/verdicts.mjs");
   // Never settles. Without the timeout this hangs the endpoint, which is indistinguishable
   // from the site being down.
   const started = Date.now();
@@ -211,14 +207,12 @@ test("A HUNG CHECK IS A FAILED CHECK, not a hung response", async () => {
 });
 
 test("a rejecting check is a failed check carrying its message", async () => {
-  const { withTimeout } = await import("../app/lib/health/verdicts.mjs");
   const verdict = await withTimeout(Promise.reject(new Error("D1 unreachable")), 50, "db");
   assert.equal(verdict.ok, false);
   assert.match(verdict.detail, /D1 unreachable/);
 });
 
-test("the timeout clears the day's slowest measured healthy path", async () => {
-  const { CHECK_TIMEOUT_MS } = await import("../app/lib/health/verdicts.mjs");
+test("the timeout clears the day's slowest measured healthy path", () => {
   // ask-index-drift was measured at a 2332ms maximum on production 2026-08-19.
   // A timeout at or under that turns a known-healthy tail into a false alarm.
   assert.ok(

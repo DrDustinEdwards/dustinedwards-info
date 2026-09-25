@@ -816,10 +816,6 @@
     outline: 1px solid transparent;
   }
 
-  .status-dot {
-    border: 1px solid currentColor;
-  }
-
   .palette-option[aria-selected="true"] {
     outline-offset: -2px;
   }

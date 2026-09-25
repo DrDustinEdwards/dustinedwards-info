@@ -16,7 +16,6 @@ export const STUB_PATHS = {
   page: "/stub-page",
   negotiated: "/stub-negotiated",
   silent: "/stub-silent",
-  cookieSetter: "/stub-cookie-setter",
 } as const;
 
 export const STUB_PAGE_BODY = "stub page body";
@@ -92,22 +91,6 @@ const routes: Record<string, StubRoute> = {
     path: STUB_PATHS.silent.slice(1),
     module: {
       loader: () => new Response("silent", { headers: { "content-type": "text/html" } }),
-    },
-  },
-  cookieSetter: {
-    id: "cookieSetter",
-    parentId: "root",
-    path: STUB_PATHS.cookieSetter.slice(1),
-    module: {
-      loader: () =>
-        new Response(STUB_PAGE_BODY, {
-          headers: {
-            "content-type": "text/html; charset=utf-8",
-            "cache-control": SHARED_CACHE_CONTROL,
-            "cache-tag": cacheTags(),
-            "set-cookie": "planted=1; Path=/",
-          },
-        }),
     },
   },
 };
