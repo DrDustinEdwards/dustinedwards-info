@@ -417,3 +417,14 @@ describe("emptying the trash", () => {
     expect(await mediaRow(key)).toBeTruthy();
   });
 });
+
+describe("an unknown intent", () => {
+  it("answers 400 with a sentence, not a silent 200", async () => {
+    const result = (await adminMediaAction({ intent: "no-such-intent" })) as {
+      data: { message: string };
+      init: { status: number };
+    };
+    expect(result.init.status).toBe(400);
+    expect(result.data.message).toContain("no-such-intent");
+  });
+});
