@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Form, Link, data, redirect, useNavigation } from "react-router";
 
+import { AdminAlert } from "~/components/admin/alert";
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { RowMenu } from "~/components/admin/row-menu";
@@ -730,36 +731,24 @@ export default function AdminPosts({
       {/* Surfaced here: a save can succeed while its Ask sync fails, and then it redirects. */}
       {askDrifted && ask ? (
         /* A standing condition, so a named region and never a live one. */
-        <section className="admin-notice" data-tone="warning" aria-labelledby="ask-drift">
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
-            <path d="M12 9v4" />
-            <path d="M12 17h.01" />
-          </svg>
-          <div className="admin-notice-body">
-            <h2 id="ask-drift">Search is answering from older text</h2>
-            <p>
-              {`${ask.missing.length} post(s) are missing from the answer index and ` +
-                `${ask.stale.length} record(s) in it no longer match the site, so an ` +
-                `answer may quote text that has changed.`}
-            </p>
-          </div>
-          <Form method="post" className="admin-notice-action">
-            <button type="submit" name="intent" value="sync-ask" className="btn">
-              Rebuild the answer index
-            </button>
-          </Form>
-        </section>
+        <AdminAlert
+          tone="warning"
+          title="Search is answering from older text"
+          headingId="ask-drift"
+          action={
+            <Form method="post">
+              <button type="submit" name="intent" value="sync-ask" className="btn">
+                Rebuild the answer index
+              </button>
+            </Form>
+          }
+        >
+          <p>
+            {`${ask.missing.length} post(s) are missing from the answer index and ` +
+              `${ask.stale.length} record(s) in it no longer match the site, so an ` +
+              `answer may quote text that has changed.`}
+          </p>
+        </AdminAlert>
       ) : null}
 
       {posts.length === 0 ? (
