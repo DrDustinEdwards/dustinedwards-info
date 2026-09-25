@@ -1,5 +1,6 @@
 import { readFileSync, existsSync } from "node:fs";
-import { retryRead, spawnSyncBounded } from "../lib/retry.mjs";
+import { retryRead } from "../lib/retry.mjs";
+import { runWrangler, wranglerTail } from "../lib/wrangler-run.mjs";
 import { createHash } from "node:crypto";
 import { resolveD1Address } from "../lib/d1-address.mjs";
 import { dirname, join } from "node:path";
@@ -73,13 +74,12 @@ if (target) {
   const result = await retryRead(
     () => {
       // Bounded on the spawn: retryRead's timer cannot fire while spawnSync blocks the event loop.
-      const r = spawnSyncBounded(
-        `npx wrangler d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
+      const r = runWrangler(
+        `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
           `"SELECT value FROM settings WHERE key = 'llms.txt'"`,
-        [],
-        { shell: true },
+        { timeoutMs: 90_000 },
       );
-      if (r.status !== 0) throw new Error(r.error || (r.stdout || r.stderr || "no output").slice(0, 200));
+      if (r.status !== 0) throw new Error(wranglerTail(r.output));
       return r;
     },
     { label: `check:machine-readable llms.txt settings row read (${target})` },
