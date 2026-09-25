@@ -12,8 +12,7 @@ import {
   COLOPHON_URL,
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
+import { PageShell } from "~/components/page-shell";
 import { publicHtmlHeaders, SITE,
   pageMeta,
 } from "~/lib/seo";
@@ -119,130 +118,124 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
 
 export default function Colophon() {
   return (
-    <>
-      <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
-        <div className="page-inner">
-          <h1 className="page-title">{COLOPHON_TITLE}</h1>
+    <PageShell>
+      <h1 className="page-title">{COLOPHON_TITLE}</h1>
 
-          <div className="prose">
-            <p>{COLOPHON_INTRO}</p>
+      <div className="prose">
+        <p>{COLOPHON_INTRO}</p>
 
-            <SectionHead id="runtime" />
-            <dl>
-              <dt>Compatibility date</dt>
-              <dd>
-                <code>{stack.runtime.compatibilityDate}</code>
-              </dd>
-              <dt>Compatibility flags</dt>
-              <dd>
-                {stack.runtime.compatibilityFlags.length > 0
-                  ? stack.runtime.compatibilityFlags.join(", ")
-                  : "none"}
-              </dd>
-              <dt>Node</dt>
-              <dd>
-                <code>{stack.runtime.nodeVersion}</code>
-              </dd>
-            </dl>
+        <SectionHead id="runtime" />
+        <dl>
+          <dt>Compatibility date</dt>
+          <dd>
+            <code>{stack.runtime.compatibilityDate}</code>
+          </dd>
+          <dt>Compatibility flags</dt>
+          <dd>
+            {stack.runtime.compatibilityFlags.length > 0
+              ? stack.runtime.compatibilityFlags.join(", ")
+              : "none"}
+          </dd>
+          <dt>Node</dt>
+          <dd>
+            <code>{stack.runtime.nodeVersion}</code>
+          </dd>
+        </dl>
 
-            <SectionHead id="bindings" />
-            <p>{stack.bindings.length} resources.</p>
-            {stack.bindings.map((binding) => (
-              <section key={binding.id} aria-labelledby={`binding-${binding.name}`}>
-                <h3 id={`binding-${binding.name}`}>
-                  <code>{binding.name}</code>{" "}
-                  <span className="muted">({binding.kind})</span>
-                </h3>
-                <p>{binding.what}</p>
-                <p>
-                  <strong>Why it is load-bearing.</strong> {binding.whyLoadBearing}
-                </p>
+        <SectionHead id="bindings" />
+        <p>{stack.bindings.length} resources.</p>
+        {stack.bindings.map((binding) => (
+          <section key={binding.id} aria-labelledby={`binding-${binding.name}`}>
+            <h3 id={`binding-${binding.name}`}>
+              <code>{binding.name}</code>{" "}
+              <span className="muted">({binding.kind})</span>
+            </h3>
+            <p>{binding.what}</p>
+            <p>
+              <strong>Why it is load-bearing.</strong> {binding.whyLoadBearing}
+            </p>
+          </section>
+        ))}
+
+        <SectionHead id="schema" />
+        <p>{stack.migrations.length} migrations.</p>
+        <ul>
+          {stack.migrations.map((file) => (
+            <li key={file}>
+              <code>{file}</code>
+            </li>
+          ))}
+        </ul>
+
+        <SectionHead id="gates" />
+        <p>{stack.gates.length} checks.</p>
+        <ul>
+          {stack.gates.map((gate) => (
+            <li key={gate}>
+              <code>{gate}</code>
+            </li>
+          ))}
+        </ul>
+
+        <SectionHead id="dependencies" />
+        <p>{stack.dependencies.length} runtime dependencies.</p>
+        <ul>
+          {stack.dependencies.map((dep) => (
+            <li key={dep.name}>
+              <code>{dep.name}</code> <span className="muted">{dep.range}</span>
+            </li>
+          ))}
+        </ul>
+
+        <SectionHead id="features" />
+        <p>{features.features.length} entries.</p>
+
+        {byComponent().map(([component, entries]) => (
+          <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
+            <h3 id={`c-${component.replace(/\s+/g, "-")}`}>{component}</h3>
+            {entries.map((feature) => (
+              <section key={feature.name}>
+                <h4>{feature.name}</h4>
+                <p>{feature.what}</p>
+                <ul>
+                  {(feature.anchors as Anchor[]).map((anchor, i) => (
+                    <AnchorItem key={i} anchor={anchor} />
+                  ))}
+                </ul>
               </section>
             ))}
+          </section>
+        ))}
 
-            <SectionHead id="schema" />
-            <p>{stack.migrations.length} migrations.</p>
-            <ul>
-              {stack.migrations.map((file) => (
-                <li key={file}>
-                  <code>{file}</code>
-                </li>
-              ))}
-            </ul>
+        <SectionHead id="security" />
+        {SECURITY_TRADEOFF.map((sentence) => (
+          <p key={sentence.slice(0, 32)}>{sentence}</p>
+        ))}
 
-            <SectionHead id="gates" />
-            <p>{stack.gates.length} checks.</p>
-            <ul>
-              {stack.gates.map((gate) => (
-                <li key={gate}>
-                  <code>{gate}</code>
-                </li>
-              ))}
-            </ul>
+        <SectionHead id="ai" />
+        {AI_DISCLOSURE.map((sentence) => (
+          <p key={sentence.slice(0, 32)}>{sentence}</p>
+        ))}
 
-            <SectionHead id="dependencies" />
-            <p>{stack.dependencies.length} runtime dependencies.</p>
-            <ul>
-              {stack.dependencies.map((dep) => (
-                <li key={dep.name}>
-                  <code>{dep.name}</code> <span className="muted">{dep.range}</span>
-                </li>
-              ))}
-            </ul>
+        <SectionHead id="not-adopted" />
+        <p>{stack.notAdopted.length} entries.</p>
+        <dl>
+          {stack.notAdopted.map((entry) => (
+            <div key={entry.name}>
+              <dt>
+                {entry.name}{" "}
+                <span className="muted">({statusLabel(entry.status)})</span>
+              </dt>
+              <dd>{entry.reason}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
 
-            <SectionHead id="features" />
-            <p>{features.features.length} entries.</p>
-
-            {byComponent().map(([component, entries]) => (
-              <section key={component} aria-labelledby={`c-${component.replace(/\s+/g, "-")}`}>
-                <h3 id={`c-${component.replace(/\s+/g, "-")}`}>{component}</h3>
-                {entries.map((feature) => (
-                  <section key={feature.name}>
-                    <h4>{feature.name}</h4>
-                    <p>{feature.what}</p>
-                    <ul>
-                      {(feature.anchors as Anchor[]).map((anchor, i) => (
-                        <AnchorItem key={i} anchor={anchor} />
-                      ))}
-                    </ul>
-                  </section>
-                ))}
-              </section>
-            ))}
-
-            <SectionHead id="security" />
-            {SECURITY_TRADEOFF.map((sentence) => (
-              <p key={sentence.slice(0, 32)}>{sentence}</p>
-            ))}
-
-            <SectionHead id="ai" />
-            {AI_DISCLOSURE.map((sentence) => (
-              <p key={sentence.slice(0, 32)}>{sentence}</p>
-            ))}
-
-            <SectionHead id="not-adopted" />
-            <p>{stack.notAdopted.length} entries.</p>
-            <dl>
-              {stack.notAdopted.map((entry) => (
-                <div key={entry.name}>
-                  <dt>
-                    {entry.name}{" "}
-                    <span className="muted">({statusLabel(entry.status)})</span>
-                  </dt>
-                  <dd>{entry.reason}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-
-          <p className="muted">
-            For what the site records about a visit, and where each of those facts lives in
-            the code, see <Link to="/privacy">privacy</Link>.
-          </p>
-        </div>
-      </main>
-      <ShellFooter />
-    </>
+      <p className="muted">
+        For what the site records about a visit, and where each of those facts lives in
+        the code, see <Link to="/privacy">privacy</Link>.
+      </p>
+    </PageShell>
   );
 }

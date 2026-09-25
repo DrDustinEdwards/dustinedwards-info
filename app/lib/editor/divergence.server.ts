@@ -1,3 +1,5 @@
+import { errorMessage } from "~/lib/error-message.mjs";
+
 // KV, not D1, because the record says D1 failed. One key per slug, because one shared
 // array is a read-modify-write that loses a record when two saves fail at once.
 
@@ -49,7 +51,7 @@ export async function listDivergences(
   } catch (error) {
     return {
       known: false,
-      reason: error instanceof Error ? error.message : String(error),
+      reason: errorMessage(error),
     };
   }
 }

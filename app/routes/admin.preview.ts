@@ -4,6 +4,7 @@ import { normalizeBody } from "~/lib/editor/frontmatter";
 import { EditorError, makeResolveImage } from "~/lib/editor/publish.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import type { Route } from "./+types/admin.preview";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /**
  * Returns what `renderBody` gives back, unmodified, so the preview is what publishes. Read only
@@ -36,7 +37,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
     // Anything else is this endpoint failing, not the author's markdown: logged, and a 500.
     console.error("admin preview render failed", error);
-    const message = error instanceof Error ? error.message : String(error);
+    const message = errorMessage(error);
     return Response.json({ error: `The preview failed: ${message}` }, { status: 500 });
   }
 }

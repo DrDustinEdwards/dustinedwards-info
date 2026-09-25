@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import {
+  FIRST_PUBLICATION_NOTE,
   PUBLISH_CONFIRMED_INTENT,
   transitionsFor,
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
+import { anHourFromNowLocal, toIso, toLocalInput } from "~/lib/editor/datetime-local";
 import { OverflowMenu } from "./overflow-menu";
+import { useDialogOpen } from "./use-dialog-open";
 
 export function PublishActions({
   state,
@@ -73,7 +76,7 @@ export function PublishActions({
             name="intent"
             value={primary.id}
             className="btn"
-            disabled={disabled}
+            disabled={disabled || busy}
             onClick={(event) => {
               event.preventDefault();
               setCeremony(true);
@@ -95,7 +98,7 @@ export function PublishActions({
             name="intent"
             value={primary.id}
             className="btn"
-            disabled={disabled}
+            disabled={disabled || busy}
           >
             {busy ? "Saving" : primary.label}
           </button>
@@ -131,37 +134,19 @@ function PublishCeremony({
   reschedule?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const [when, setWhen] = useState(() => localInput(publishAt) || soonLocal());
+  const [when, setWhen] = useState(() => toLocalInput(publishAt) || anHourFromNowLocal());
   const intent = reschedule ? "save" : PUBLISH_CONFIRMED_INTENT;
   /* An empty or invalid time would send no publish time, which publishes now: Schedule refuses it. */
-  const scheduleAt = iso(when);
+  const scheduleAt = toIso(when);
 
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
-  }, [open]);
-
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    const sync = () => onClose();
-    dialog.addEventListener("close", sync);
-    return () => dialog.removeEventListener("close", sync);
-  }, [onClose]);
+  useDialogOpen(ref, open, onClose);
 
   return (
     <dialog ref={ref} className="ceremony" aria-labelledby="ceremony-title">
       <h2 id="ceremony-title">
         {reschedule ? "When does this go live?" : "Publish this post"}
       </h2>
-      {reschedule ? null : (
-        <p>
-          It has never been public. Publishing puts it on the blog, in the feed,
-          the sitemap, the search index and the AI answer layer.
-        </p>
-      )}
+      {reschedule ? null : <p>{FIRST_PUBLICATION_NOTE}</p>}
 
       <div className="ceremony-choice">
         <button
@@ -215,21 +200,4 @@ function PublishCeremony({
       </button>
     </dialog>
   );
-}
-
-function localInput(value: string) {
-  const at = Date.parse(value);
-  if (Number.isNaN(at)) return "";
-  return new Date(at - new Date(at).getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-}
-
-function iso(local: string) {
-  if (!local) return "";
-  const at = Date.parse(local);
-  return Number.isNaN(at) ? "" : new Date(at).toISOString();
-}
-
-function soonLocal() {
-  const soon = new Date(Date.now() + 60 * 60 * 1000);
-  return new Date(soon.getTime() - soon.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
