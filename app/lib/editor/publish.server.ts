@@ -15,7 +15,7 @@ import { ASSET_MANIFEST_PATH } from "~/lib/media/manifest.mjs";
 import {
   commitFiles,
   getHead,
-  listDirectory,
+  listPostFiles,
   readFile,
   readBinaryFile,
   GitHubError,
@@ -587,8 +587,7 @@ export async function deletePostFromD1(env: PublishEnv, slug: string) {
 
 /** Every row arrives through renderAndWrite, the same door a save uses, with the blob sha to prove its bytes. */
 export async function regenerateAllFromRepo(env: PublishEnv) {
-  const entries = await listDirectory(env, "content/posts");
-  const files = entries.filter((e) => e.type === "file" && e.name.endsWith(".md"));
+  const files = await listPostFiles(env);
 
   // An empty listing is a broken read or a deleted directory; converging on it would delete every row.
   if (files.length === 0) {
@@ -600,7 +599,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
 
   // Through deletePostFromD1, the one delete door: a bare row delete would leave the post in /search
   // and its media_refs blocking its images' deletion forever.
-  const keep = files.map((f) => f.name.slice(0, -".md".length));
+  const keep = files.map((f) => f.slug);
   const placeholders = keep.map((_, i) => `?${i + 1}`).join(", ");
   const orphans = await env.DB.prepare(
     `SELECT slug FROM posts WHERE source_path IS NOT NULL AND slug NOT IN (${placeholders})`,
@@ -613,7 +612,7 @@ export async function regenerateAllFromRepo(env: PublishEnv) {
   }
 
   for (const entry of files) {
-    const slug = entry.name.slice(0, -".md".length);
+    const slug = entry.slug;
     const file = await readFile(env, entry.path);
     if (!file) {
       throw new EditorError(

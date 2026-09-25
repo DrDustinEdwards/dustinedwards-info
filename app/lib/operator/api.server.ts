@@ -37,7 +37,8 @@ import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server"
 import { copyMissingTwins } from "~/lib/media/backup.server";
 import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contract.mjs";
 import { storeUpload } from "~/lib/media/upload.server";
-import { listDirectory, readFile } from "~/lib/editor/github.server";
+import { listPostFiles, readFile } from "~/lib/editor/github.server";
+import { readContentSides } from "~/lib/health/checks.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 import type { OperatorEnv } from "./auth.server";
@@ -781,18 +782,7 @@ async function uploadMediaTool(
 // Derives its work from the same comparison the health check uses, and every drifted slug goes through
 // the one render door.
 async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
-  const readSides = async () => {
-    const entries = await listDirectory(env, "content/posts");
-    const files = entries
-      .filter((e) => e.type === "file" && e.name.endsWith(".md"))
-      .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
-    const rows = await env.DB.prepare(
-      "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
-    ).all<{ slug: string; source_blob_sha: string | null }>();
-    return { files, rows: rows.results ?? [] };
-  };
-
-  const before = await readSides();
+  const before = await readContentSides(env);
   const drift = contentDriftCompare(before.files, before.rows);
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
@@ -820,7 +810,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   }
 
   // D1 reads its own writes in-request, so drift reported here is real.
-  const after = await readSides();
+  const after = await readContentSides(env);
   const residual = contentDriftCompare(after.files, after.rows);
   const residualCount =
     residual.changed.length + residual.unrowed.length + residual.unfiled.length;
@@ -841,10 +831,7 @@ async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 // Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather
 // than computing a second answer.
 export async function syncStatus(env: OperatorEnv) {
-  const repoEntries = await listDirectory(env, "content/posts");
-  const repoPosts = repoEntries.filter(
-    (e) => e.type === "file" && e.name.endsWith(".md"),
-  ).length;
+  const repoPosts = (await listPostFiles(env)).length;
 
   // Counted through Drizzle: interpolating the predicate into a template string stringifies the object and
   // D1 answers `no such column`. `publiclyVisible()` is reused so the visibility rule has one owner.
