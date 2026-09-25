@@ -24,6 +24,7 @@ import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as searchLoader, middleware as searchMiddleware } from "~/routes/search";
 
+import { post } from "./fixtures";
 import { renderRoute, routeContext, textsOf, throughMiddleware } from "./route-helpers";
 
 /* The published post is the control that proves each surface was actually read. */
@@ -56,26 +57,6 @@ const SORTED = Array.from({ length: 6 }, (_, i) => ({
   date: `2026-0${6 - i}-01`,
   repeats: i + 1,
 }));
-
-function markdown(
-  slug: string,
-  fm: { title: string; date: string; draft: boolean; tags: string[]; series?: [string, number] },
-  body: string,
-) {
-  return [
-    "---",
-    `title: "${fm.title}"`,
-    `slug: ${slug}`,
-    `description: "A description for ${slug} that is long enough to read like real frontmatter."`,
-    `date: ${fm.date}`,
-    `tags: [${fm.tags.join(", ")}]`,
-    `draft: ${fm.draft}`,
-    ...(fm.series ? [`series: "${fm.series[0]}"`, `part: ${fm.series[1]}`] : []),
-    "---",
-    "",
-    body,
-  ].join("\n");
-}
 
 const publishEnv = () => env as unknown as Parameters<typeof renderAndWrite>[0];
 
@@ -147,14 +128,20 @@ beforeAll(async () => {
   for (const s of SORTED) {
     await write(
       s.slug,
-      markdown(s.slug, { title: `Sorting sample ${s.slug}`, date: s.date, draft: false, tags: ["sorting"] }, [
-        `${Array(s.repeats).fill("sortterm").join(" ")} opens this post.`,
-        "",
-        "## Later",
-        "",
-        "The sortterm appears in this section as well.",
-        "",
-      ].join("\n")),
+      post(s.slug, {
+        title: `Sorting sample ${s.slug}`,
+        date: s.date,
+        draft: false,
+        tags: "[sorting]",
+        body: [
+          `${Array(s.repeats).fill("sortterm").join(" ")} opens this post.`,
+          "",
+          "## Later",
+          "",
+          "The sortterm appears in this section as well.",
+          "",
+        ].join("\n"),
+      }),
     );
   }
 
@@ -170,26 +157,35 @@ beforeAll(async () => {
     ].join("\n");
   await write(
     DRAFT.slug,
-    markdown(
-      DRAFT.slug,
-      { title: DRAFT.title, date: "2026-07-02", draft: true, tags: [TAG], series: [SERIES, 2] },
-      linkingBody(DRAFT.term),
-    ),
+    post(DRAFT.slug, {
+      title: DRAFT.title,
+      date: "2026-07-02",
+      draft: true,
+      tags: `[${TAG}]`,
+      series: [SERIES, 2],
+      body: linkingBody(DRAFT.term),
+    }),
   );
   await write(
     SCHEDULED.slug,
-    markdown(
-      SCHEDULED.slug,
-      { title: SCHEDULED.title, date: "2099-01-01", draft: false, tags: [TAG], series: [SERIES, 3] },
-      linkingBody(SCHEDULED.term),
-    ),
+    post(SCHEDULED.slug, {
+      title: SCHEDULED.title,
+      date: "2099-01-01",
+      draft: false,
+      tags: `[${TAG}]`,
+      series: [SERIES, 3],
+      body: linkingBody(SCHEDULED.term),
+    }),
   );
   await write(
     LIVE.slug,
-    markdown(
-      LIVE.slug,
-      { title: LIVE.title, date: "2026-07-01", draft: false, tags: [TAG], series: [SERIES, 1] },
-      [
+    post(LIVE.slug, {
+      title: LIVE.title,
+      date: "2026-07-01",
+      draft: false,
+      tags: `[${TAG}]`,
+      series: [SERIES, 1],
+      body: [
         `This mentions crawlshared and ${LIVE.term}.`,
         "",
         "## Details",
@@ -197,7 +193,7 @@ beforeAll(async () => {
         `More about ${LIVE.term} and crawlshared.`,
         "",
       ].join("\n"),
-    ),
+    }),
   );
   /* Nine full renders, and the layer's case budget does not cover hooks. */
 }, 120_000);
@@ -358,7 +354,7 @@ describe("the home page's post count", () => {
 
     const extra = "crawl-count-extra";
     const raw = (draft: boolean) =>
-      markdown(extra, { title: "Counted Extra", date: "2026-05-15", draft, tags: ["sorting"] }, "A body.\n");
+      post(extra, { title: "Counted Extra", date: "2026-05-15", draft, tags: "[sorting]", body: "A body.\n" });
     await write(extra, raw(false));
     expect(await countLink()).toBe(published + 1);
 
