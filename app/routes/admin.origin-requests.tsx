@@ -57,7 +57,13 @@ export default function AdminTraffic({ loaderData }: Route.ComponentProps) {
         />
       ) : (
         <>
-          <div className="origin-table-scroll">
+          {/* Focusable and named, as the posts table is: a keyboard can only scroll what it can focus. */}
+          <div
+            className="origin-table-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Origin requests by path"
+          >
             <table className="origin-table">
               <thead>
                 <tr>
