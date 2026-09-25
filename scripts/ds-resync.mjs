@@ -23,6 +23,12 @@ const DEFAULTS = [
 ];
 
 const passthrough = process.argv.slice(2);
+// The scope check reads --out as a separate argument. `--out=x` would leave the default --out appended
+// too, and the check would read a directory the driver did not write.
+if (passthrough.some((a) => a.startsWith("--out="))) {
+  console.error("✗ pass --out as two arguments (--out <dir>), not --out=<dir>.");
+  process.exit(2);
+}
 
 if (!existsSync(join(REPO, DRIVER))) {
   console.error(
@@ -104,13 +110,20 @@ if (driver.status !== 0) {
 }
 
 const outIndex = args.indexOf("--out");
+if (outIndex === -1 || !args[outIndex + 1]) {
+  console.error("✗ no --out directory reached the driver, so its upload plan cannot be checked.");
+  process.exit(2);
+}
 const outDir = resolve(REPO, args[outIndex + 1]);
 let parsed;
 try {
   parsed = JSON.parse(driver.stdout);
-} catch {
+} catch (error) {
   process.stdout.write(driver.stdout ?? "");
-  console.error("✗ the driver's verdict is not JSON, so its upload plan cannot be checked.");
+  console.error(
+    `✗ the driver's verdict is not JSON (${error instanceof Error ? error.message : String(error)}), ` +
+      "so its upload plan cannot be checked.",
+  );
   process.exit(1);
 }
 
@@ -123,7 +136,7 @@ const { verdict, violations } = enforceVerdict(parsed, outDir);
 if (violations.length) {
   writeFileSync(join(outDir, ".resync-verdict.json"), JSON.stringify(verdict, null, 2) + "\n");
   process.stdout.write(JSON.stringify(verdict, null, 2) + "\n");
-  console.error(`✗ upload plan refused, ${violations.length} path(s) outside the build's scope:`);
+  console.error(`✗ upload plan refused, ${violations.length} problem(s) with the build's scope:`);
   for (const v of violations) console.error(`  ${v}`);
   process.exit(1);
 }

@@ -10,8 +10,12 @@ export function classifySqliteTables(rows) {
     .filter((r) => /CREATE\s+VIRTUAL\s+TABLE/i.test(r.sql ?? ""))
     .map((r) => r.name);
 
+  // The suffixes FTS3/4/5 give their shadow tables. Any `${v}_` prefix took a real table that merely
+  // began with a virtual table's name (`search_prose_notes`) out of the real set.
+  const SHADOW_SUFFIXES = ["data", "idx", "content", "docsize", "config", "segments", "segdir", "stat"];
   /** @param {string} name */
-  const isShadow = (name) => virtual.some((v) => name !== v && name.startsWith(`${v}_`));
+  const isShadow = (name) =>
+    virtual.some((v) => SHADOW_SUFFIXES.some((suffix) => name === `${v}_${suffix}`));
   /** @param {string} name */
   const isInternal = (name) => name.toLowerCase().startsWith("sqlite_");
 

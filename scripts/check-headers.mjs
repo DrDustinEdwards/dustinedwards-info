@@ -6,6 +6,7 @@ import { ALLOWED } from "../app/lib/media/upload-contract.mjs";
 import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
 import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
+import { blockFrom } from "./lib/source-body.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -172,7 +173,9 @@ ok(
 
 let guardsSettingUncached = 0;
 for (const guard of guards) {
-  const after = code.slice(guard.index, guard.index + 160);
+  /* The guard's own consequent: a braced block, or the one statement it governs. */
+  const rest = code.slice(guard.index + guard[0].length);
+  const after = /^\s*\{/.test(rest) ? blockFrom(rest, 0) : rest.slice(0, rest.indexOf(";") + 1);
   if (/headers\.set\(\s*"cache-control"\s*,\s*UNCACHED\s*\)/.test(after)) guardsSettingUncached += 1;
 }
 ok(
@@ -776,14 +779,16 @@ console.log(
  * origin. Kept even though the CSP blocks it, so it does not depend on the policy.
  */
 {
-  const mediaRoute = readFileSync(join(root, "app/routes/media.$.ts"), "utf8");
+  /* Stripped like every other source here: a comment naming a type, the disposition or
+     `new Response(object.body` would otherwise satisfy or inflate the checks below. */
+  const mediaRoute = stripComments(readFileSync(join(root, "app/routes/media.$.ts"), "utf8"));
 
   const helperAt = mediaRoute.search(/function attachIfActive/);
   ok("media: the svg attachment helper exists", helperAt !== -1,
     "nothing sets Content-Disposition, so an uploaded SVG renders inline");
 
   // Scoped to the helper's own body: asserting the file mentions attachment would pass on a comment.
-  const helperBody = helperAt === -1 ? "" : mediaRoute.slice(helperAt, helperAt + 700);
+  const helperBody = helperAt === -1 ? "" : blockFrom(mediaRoute, helperAt);
   /* DERIVED FROM THE UPLOAD ALLOWLIST, never restated, or a NEW capable type joins with no rule. */
   const CAPABLE = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
   const uploadableCapable = [...ALLOWED.keys()].filter((t) => CAPABLE.includes(t));
@@ -1035,7 +1040,8 @@ console.log("  plaintext requests are upgraded before anything else runs");
   );
 
   /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. */
-  const redirectBlock = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 420);
+  /* The `if (secure !== null) { ... }` that follows the decision, whole. */
+  const redirectBlock = redirectAt === -1 ? "" : blockFrom(fetchBody, redirectAt);
   ok(
     "the redirect block was located",
     redirectBlock.includes("Location"),

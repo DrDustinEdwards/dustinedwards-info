@@ -1,9 +1,14 @@
 import { readFileSync, existsSync } from "node:fs";
-import { spawnSync } from "node:child_process";
-import { retryRead } from "../lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "../lib/retry.mjs";
 import { createHash } from "node:crypto";
 import { resolveD1Address } from "../lib/d1-address.mjs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { assertFloor } from "../lib/floor.mjs";
 
+// Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+const fromRoot = (/** @type {string} */ repoPath) => join(ROOT, repoPath);
 const LLMS_PATH = "content/llms.txt";
 const ROUTE_PATH = "app/routes/llms.ts";
 
@@ -30,13 +35,13 @@ const sha = (buf) => createHash("sha256").update(buf).digest("hex").slice(0, 16)
 
 console.log("\n  llms.txt\n");
 
-if (!existsSync(LLMS_PATH)) {
+if (!existsSync(fromRoot(LLMS_PATH))) {
   console.log(`\n  FAIL  ${LLMS_PATH} is missing. It is the source of the settings row.`);
   throw new Error(`${LLMS_PATH} is missing`);
 }
 
 // Read as bytes and decode explicitly: the platform text layer is not UTF-8 on this host.
-const fileBytes = readFileSync(LLMS_PATH);
+const fileBytes = readFileSync(fromRoot(LLMS_PATH));
 const fileText = fileBytes.toString("utf8");
 
 assertThat(fileBytes.length > 0, "content/llms.txt is not empty");
@@ -53,7 +58,7 @@ assertThat(
 );
 assertThat(fileText.endsWith("\n"), "content/llms.txt ends with a newline");
 
-const route = readFileSync(ROUTE_PATH, "utf8");
+const route = readFileSync(fromRoot(ROUTE_PATH), "utf8");
 assertThat(
   /import\s+\w+\s+from\s+["']\.\.\/\.\.\/content\/llms\.txt\?raw["']/.test(route),
   "the route imports content/llms.txt",
@@ -79,12 +84,14 @@ const target = process.argv.includes("--remote")
 if (target) {
   const result = await retryRead(
     () => {
-      const r = spawnSync(
+      // Bounded on the spawn: retryRead's timer cannot fire while spawnSync blocks the event loop.
+      const r = spawnSyncBounded(
         `npx wrangler d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
           `"SELECT value FROM settings WHERE key = 'llms.txt'"`,
-        { encoding: "utf8", shell: true },
+        [],
+        { shell: true },
       );
-      if (r.status !== 0) throw new Error((r.stdout || r.stderr || "no output").slice(0, 200));
+      if (r.status !== 0) throw new Error(r.error || (r.stdout || r.stderr || "no output").slice(0, 200));
       return r;
     },
     { label: `check:machine-readable llms.txt settings row read (${target})` },
@@ -106,7 +113,7 @@ if (target) {
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     console.log(`\n  FAIL  query output was not JSON: ${detail}`);
-    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`);
+    throw new Error(`the llms.txt settings row query output was not JSON: ${detail}`, { cause: error });
   }
   const rows = parsed?.[0]?.results ?? [];
   assertThat(
@@ -136,7 +143,7 @@ console.log(
 // A tracked text file cannot import SITE_ORIGIN, so this binds its contact line to it. At DNS
 // cutover it goes red until llms.txt follows, which is the point.
 {
-  const seoSource = readFileSync("app/lib/seo.ts", "utf8");
+  const seoSource = readFileSync(fromRoot("app/lib/seo.ts"), "utf8");
   const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
 
   assertThat(
@@ -157,6 +164,21 @@ console.log(
     `llms.txt says ${contact} and SITE_ORIGIN is ${origin}. The file crawlers read ` +
       `points somewhere this site is not served from.`,
   );
+}
+
+/* Measured 9 on the pure tier by running this part on 2026-09-24, floor a little under. --local and
+   --remote add the D1 comparison on top, so the pure count bounds every mode. */
+const floorBreach = assertFloor(
+  "check:machine-readable/llms",
+  "checks",
+  checks,
+  8,
+  "The runner fails a part only on zero checks, so without this a refactor could drop " +
+    "most of its sweeps and still pass.",
+);
+if (floorBreach) {
+  failures += 1;
+  console.log(`\n  FAIL  ${floorBreach}`);
 }
 
 export const outcome = { checks, failures };

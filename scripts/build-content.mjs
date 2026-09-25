@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import matter from "gray-matter";
 
@@ -14,6 +15,17 @@ import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipel
 import { ContentError, renderPost } from "./lib/content.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
+/**
+ * The paths below stay repo-relative because they name files in messages and in the render; every
+ * read and write goes through `fromRoot`, so the result does not depend on the working directory.
+ */
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/** @param {string} repoPath */
+export function fromRoot(repoPath) {
+  return path.join(ROOT, repoPath);
+}
+
 export const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
 
@@ -25,10 +37,12 @@ export async function buildArtifact() {
   /** @type {string[]} */
   let entries;
   try {
-    entries = await readdir(CONTENT_DIR);
-  } catch {
+    entries = await readdir(fromRoot(CONTENT_DIR));
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
     throw new Error(
       `${CONTENT_DIR} does not exist. Create it and add at least one markdown post.`,
+      { cause: error },
     );
   }
 
@@ -41,7 +55,7 @@ export async function buildArtifact() {
   const posts = [];
   for (const name of files) {
     const file = path.join(CONTENT_DIR, name);
-    const raw = await readFile(file, "utf8");
+    const raw = await readFile(fromRoot(file), "utf8");
     posts.push(await renderPost(file, raw));
   }
 
@@ -58,18 +72,18 @@ export async function buildArtifact() {
   // Read rather than imported: a JSON import needs an attribute this repo's compiler settings reject.
   // Depends on the stack artifact, so that build must run first.
   const stack = JSON.parse(
-    await readFile(path.join("content", "generated", "stack.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "generated", "stack.json")), "utf8"),
   );
   const features = JSON.parse(
-    await readFile(path.join("content", "features.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "features.json")), "utf8"),
   );
 
   const projects = JSON.parse(
-    await readFile(path.join("content", "projects.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "projects.json")), "utf8"),
   );
 
   const playground = JSON.parse(
-    await readFile(path.join("content", "playground.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "playground.json")), "utf8"),
   );
 
   return serializeArtifact(
@@ -98,7 +112,7 @@ export function lastCommitDate(file) {
     out = execFileSync(
       "git",
       ["log", "-1", "--format=%cd", "--date=format:%Y-%m-%d", "--", file],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     ).trim();
   } catch (error) {
     throw new Error(
@@ -129,7 +143,7 @@ export function revisedDate(post) {
  * @returns {Promise<string>}
  */
 export async function buildAbout() {
-  const raw = await readFile(ABOUT_SOURCE, "utf8");
+  const raw = await readFile(fromRoot(ABOUT_SOURCE), "utf8");
   const parsed = matter(raw);
   const title = String(parsed.data.title ?? "");
   const description = String(parsed.data.description ?? "");
@@ -167,12 +181,12 @@ export async function buildAbout() {
 
 async function main() {
   const artifact = await buildArtifact();
-  await mkdir(path.dirname(ARTIFACT_PATH), { recursive: true });
-  await writeFile(ARTIFACT_PATH, artifact, "utf8");
+  await mkdir(path.dirname(fromRoot(ARTIFACT_PATH)), { recursive: true });
+  await writeFile(fromRoot(ARTIFACT_PATH), artifact, "utf8");
   const { posts } = JSON.parse(artifact);
 
   const about = await buildAbout();
-  await writeFile(ABOUT_ARTIFACT_PATH, about, "utf8");
+  await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts) and ${ABOUT_ARTIFACT_PATH}`,

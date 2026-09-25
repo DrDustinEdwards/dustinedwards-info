@@ -1,3 +1,4 @@
+import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 
 import { bundleRoutes, importBundled, renderRoute } from "../lib/route-render.mjs";
@@ -10,6 +11,7 @@ import {
   startHere,
 } from "../../app/lib/blog-listing.mjs";
 import { postPath } from "../../app/lib/content/pipeline.mjs";
+import { assertFloor } from "../lib/floor.mjs";
 
 const { mf2 } = await import("microformats-parser");
 
@@ -90,7 +92,7 @@ try {
       `If this names content/generated/stack.json, run npm run build:stack first; ` +
       `check:all builds it for the tier.\n`,
   );
-  throw new Error("microformats: the corpus would not build");
+  throw new Error("microformats: the corpus would not build", { cause: error });
 }
 const published = artifact.posts.filter((/** @type {any} */ p) => !p.draft);
 
@@ -113,8 +115,16 @@ const routes = await bundleRoutes([
   "app/routes/blog._index.tsx",
   "app/routes/home.tsx",
 ]);
+// Registered at once, so an assertion that throws anywhere below cannot leave the bundles behind:
+// a top-level try/finally would re-indent the whole gate. rmSync throws on a real failure.
+const removeRoutes = () => rmSync(routes.outDir, { recursive: true, force: true });
+process.once("exit", removeRoutes);
 const identity = await bundleRoutes(["app/lib/seo.ts"]);
+const removeIdentity = () => rmSync(identity.outDir, { recursive: true, force: true });
+process.once("exit", removeIdentity);
 const cleanup = async () => {
+  process.off("exit", removeRoutes);
+  process.off("exit", removeIdentity);
   await routes.cleanup();
   await identity.cleanup();
 };
@@ -507,7 +517,8 @@ if (cards.length === 1) {
 }
 
 const homeEntries = home.items.filter((/** @type {any} */ i) => i.type.includes("h-entry"));
-const homeExpected = [homeFeatured, ...homeRecent];
+// The null lead already failed above; it is left out here rather than read as `null.slug`.
+const homeExpected = homeFeatured ? [homeFeatured, ...homeRecent] : homeRecent;
 assert(
   "/: the Start here list is h-entries, one per card",
   homeEntries.length === homeExpected.length,
@@ -585,6 +596,17 @@ for (const [label, html] of /** @type {Array<[string, string]>} */ ([
 }
 
 await cleanup();
+
+/* Measured 230 by running this part on 2026-09-24; the floor sits a little under it. */
+const floorBreach = assertFloor(
+  "check:machine-readable/microformats",
+  "checks",
+  checks,
+  216,
+  "The runner fails a part only on zero checks, so without this a refactor could drop " +
+    "most of its sweeps and still pass.",
+);
+if (floorBreach) failures.push(floorBreach);
 
 for (const f of failures) console.log(`  FAIL  ${f}`);
 console.log(

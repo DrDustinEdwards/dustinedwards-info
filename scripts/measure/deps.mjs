@@ -5,9 +5,11 @@
 
 import { execFileSync } from "node:child_process";
 import { readFileSync, readdirSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 
-const ROOT = process.cwd();
+// The repo, not the cwd: run from anywhere else it measured whatever package.json it found there.
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const AS_JSON = process.argv.includes("--json");
 
 /** The root is in the list: the build configs there are what import the build plugins. */
@@ -39,10 +41,12 @@ try {
 } catch (error) {
   const e = /** @type {{ stdout?: string, stderr?: string }} */ (error);
   lsRaw = e.stdout ?? "";
+  // Every line npm wrote to stderr, not only the three kinds expected: an unexpected error is exactly
+  // the one a reader needs to see beside the table.
   lsProblems = String(e.stderr ?? "")
     .split("\n")
-    .filter((l) => /invalid:|extraneous:|missing:/.test(l))
-    .map((l) => l.replace(/^npm error\s*/, "").trim());
+    .map((l) => l.replace(/^npm error\s*/, "").trim())
+    .filter(Boolean);
 }
 if (!lsRaw.trim()) {
   console.error("npm ls produced no tree. Nothing below could be measured; refusing to print a table.");
@@ -66,6 +70,10 @@ function transitiveCount(/** @type {any} */ node) {
 
 const wholeTree = transitiveCount(tree);
 
+/** Directories a walk could not read. Reported with the table, never skipped silently. */
+/** @type {string[]} */
+const unreadable = [];
+
 function dirSize(/** @type {string} */ dir) {
   let total = 0;
   let stack = [dir];
@@ -79,7 +87,8 @@ function dirSize(/** @type {string} */ dir) {
     let entries;
     try {
       entries = readdirSync(current, { withFileTypes: true });
-    } catch {
+    } catch (error) {
+      unreadable.push(`${relative(ROOT, current)} (${/** @type {NodeJS.ErrnoException} */ (error).code ?? error})`);
       continue;
     }
     for (const entry of entries) {
@@ -113,7 +122,8 @@ function sourceFiles() {
       let entries;
       try {
         entries = readdirSync(current, { withFileTypes: true });
-      } catch {
+      } catch (error) {
+        unreadable.push(`${relative(ROOT, current)} (${/** @type {NodeJS.ErrnoException} */ (error).code ?? error})`);
         continue;
       }
       for (const entry of entries) {
@@ -146,8 +156,8 @@ function findImport(/** @type {string} */ name) {
     const lines = file.text.split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       if (needle.test(lines[i])) {
-        // A type-only import ships nothing.
-        const typeOnly = /^\s*import\s+type\b/.test(lines[i]);
+        // A type-only import or re-export ships nothing.
+        const typeOnly = /^\s*(?:import|export)\s+type\b/.test(lines[i]);
         hits.push({
           where: `${relative(ROOT, file.path).replace(/\\/g, "/")}:${i + 1}`,
           ships: file.ships && !typeOnly,
@@ -164,6 +174,7 @@ const rows = direct.map(({ name, pin, kind }) => {
   const node = tree.dependencies?.[name];
   const hits = findImport(name);
   const ships = hits.some((h) => h.ships);
+  const valueHits = hits.filter((h) => !h.typeOnly);
   return {
     name,
     kind,
@@ -178,9 +189,12 @@ const rows = direct.map(({ name, pin, kind }) => {
         ? "unused"
         : ships
           ? "worker"
-          : hits.every((h) => h.typeOnly)
+          : valueHits.length === 0
             ? "types"
-            : "build",
+            : // Imported only by tests is not a build dependency, and the old label said it was.
+              valueHits.every((h) => h.where.startsWith("test/"))
+              ? "test"
+              : "build",
   };
 });
 
@@ -188,7 +202,7 @@ const nodeModules = dirSize(join(ROOT, "node_modules"));
 const kib = (/** @type {number|null} */ n) => (n === null ? "  n/a" : `${(n / 1024).toFixed(0)}`);
 
 if (AS_JSON) {
-  console.log(JSON.stringify({ rows, wholeTree, nodeModules, lsProblems }, null, 2));
+  console.log(JSON.stringify({ rows, wholeTree, nodeModules, lsProblems, unreadable }, null, 2));
 } else {
   const w = { name: 34, kind: 8, pin: 12, tr: 5, disk: 9, reach: 7 };
   console.log(
@@ -208,8 +222,12 @@ if (AS_JSON) {
     `${direct.length} direct (${direct.filter((d) => d.kind === "runtime").length} runtime, ` +
       `${direct.filter((d) => d.kind === "dev").length} dev), ` +
       `${wholeTree} distinct packages in the installed tree, ` +
-      `node_modules ${((nodeModules ?? 0) / 1024 / 1024).toFixed(0)} MiB`,
+      `node_modules ${nodeModules === null ? "not found" : `${(nodeModules / 1024 / 1024).toFixed(0)} MiB`}`,
   );
+  if (unreadable.length > 0) {
+    console.log(`\n${unreadable.length} director(ies) could not be read, so the counts above miss them:`);
+    for (const d of unreadable.slice(0, 8)) console.log(`  ${d}`);
+  }
   if (lsProblems.length > 0) {
     console.log(`\nnpm ls reported ${lsProblems.length} tree problem(s):`);
     for (const p of lsProblems.slice(0, 8)) console.log(`  ${p}`);

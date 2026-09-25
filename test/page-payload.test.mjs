@@ -4,7 +4,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { fontsIn, importsOf, reachableAssets, stylesheetsFor } from "../scripts/lib/page-payload.mjs";
+import {
+  findIneffectiveDynamicImports,
+  fontsIn,
+  importsOf,
+  moduleKey,
+  reachableAssets,
+  stylesheetsFor,
+} from "../scripts/lib/page-payload.mjs";
 
 const APP = "/app";
 
@@ -92,6 +99,12 @@ test("an unresolvable specifier is skipped rather than thrown on", () => {
   assert.deepEqual([...assets], []);
 });
 
+test("an entry that resolves to no file throws instead of walking an empty graph", () => {
+  // A misnamed route file would otherwise read as a page that carries no bundles at all.
+  const read = tree({ "/app/routes/x.tsx": "export default () => null;" });
+  assert.throws(() => reachableAssets("/app/routes/y.tsx", APP, read), /resolves to no file/);
+});
+
 test("stylesheets are root's then the route's, deduplicated", () => {
   const manifest = {
     routes: {
@@ -105,9 +118,16 @@ test("stylesheets are root's then the route's, deduplicated", () => {
   ]);
 });
 
-test("a route the manifest does not list still gets root's sheets", () => {
+test("a route id the manifest does not list throws instead of grading root's sheets alone", () => {
+  // A misspelled ceiling id would otherwise carry only root's CSS, which is always under the bar.
   const manifest = { routes: { root: { css: ["/assets/root-a.css"] } } };
-  assert.deepEqual(stylesheetsFor(manifest, "routes/nope"), ["/assets/root-a.css"]);
+  assert.throws(() => stylesheetsFor(manifest, "routes/nope"), /no route routes\/nope/);
+  assert.throws(() => stylesheetsFor({ routes: {} }, "root"), /no root route/);
+});
+
+test("a listed route with no css of its own gets root's sheets", () => {
+  const manifest = { routes: { root: { css: ["/assets/root-a.css"] }, "routes/x": {} } };
+  assert.deepEqual(stylesheetsFor(manifest, "routes/x"), ["/assets/root-a.css"]);
 });
 
 test("fonts come from @font-face only, not from every url()", () => {
@@ -122,4 +142,30 @@ test("fonts come from @font-face only, not from every url()", () => {
     "/assets/inter-normal-AAAAAAAA.woff2",
     "/assets/inter-italic-CCCCCCCC.woff2",
   ]);
+});
+
+test("a module spelled two ways is one module to the dynamic-import finder", () => {
+  // Relative with an extension on one side, ~/ without one on the other: the old key cut at
+  // "/app/", which a repo-relative path never contains, so these never matched.
+  const found = findIneffectiveDynamicImports([
+    { path: "app/lib/content/load.ts", source: 'import { run } from "./pipeline.mjs";' },
+    { path: "app/routes/x.tsx", source: 'const p = await import("~/lib/content/pipeline");' },
+  ]);
+  assert.deepEqual(
+    found.map((f) => f.module),
+    ["app/lib/content/pipeline"],
+  );
+  assert.equal(moduleKey("../lib/x/index.ts", "app/routes/y.tsx"), "app/lib/x");
+  assert.equal(moduleKey("react-router", "app/root.tsx"), null);
+});
+
+test("an import() in a type position is not a dynamic import", () => {
+  const found = findIneffectiveDynamicImports([
+    { path: "app/lib/a.ts", source: 'import { t } from "./typed";' },
+    {
+      path: "app/lib/b.ts",
+      source: 'let a: Promise<typeof import("./typed")>;\ntype T = import("./typed").T;',
+    },
+  ]);
+  assert.deepEqual(found, []);
 });
