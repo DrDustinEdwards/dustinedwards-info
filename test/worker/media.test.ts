@@ -19,6 +19,7 @@ import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
 
 import { routeContext } from "./route-helpers";
+import { seedPost } from "./seed";
 
 /**
  * `IMAGES` has no local emulation, so cases hand it a binding with a recorded shape. The pool
@@ -366,12 +367,12 @@ describe("emptying the trash", () => {
   it("KEEPS a file a post body cites though media_refs has no row for it", async () => {
     const cited = await trashedUpload("trash-cited");
     const uncited = await trashedUpload("trash-uncited");
-    await env.DB.prepare(
-      `INSERT INTO posts (slug, kind, title, body, status)
-       VALUES ('cites-a-trashed-file', 'post', 'Cites it', ?1, 'draft')`,
-    )
-      .bind(`An image: ![alt](/media/${cited})`)
-      .run();
+    await seedPost("cites-a-trashed-file", {
+      status: "draft",
+      title: "Cites it",
+      body: `An image: ![alt](/media/${cited})`,
+      publishAt: null,
+    });
     expect((await mediaRefsFor(mediaEnv(), [cited])).get(cited)).toHaveLength(0);
 
     const result = (await adminMediaAction({
