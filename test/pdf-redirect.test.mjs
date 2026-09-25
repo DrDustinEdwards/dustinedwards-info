@@ -97,7 +97,9 @@ test("301 for GET and HEAD, 308 otherwise", () => {
 test("the COMMITTED map resolves end to end, for every entry", () => {
   /* `check:machine-readable` checks the map as data; this checks the PREDICATE agrees, so a
    * map that is correct but unreachable through the function still fails. */
-  const { pdfs } = JSON.parse(readFileSync("content/redirects.json", "utf8"));
+  const { pdfs } = JSON.parse(
+    readFileSync(new URL("../content/redirects.json", import.meta.url), "utf8"),
+  );
   const entries = Object.entries(pdfs);
   assert.ok(entries.length > 0, "the committed map is populated");
   for (const [from, to] of entries) {

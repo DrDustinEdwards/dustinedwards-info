@@ -48,6 +48,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   const url = result.response?.url;
   if (!url) {
+    console.error("sign-in: Better Auth returned no authorize URL", result.response);
     return { problem: "Sign-in is unavailable right now." };
   }
 
@@ -60,6 +61,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 
 export default function Login({ actionData }: Route.ComponentProps) {
   const [busy, setBusy] = useState(false);
+  const [clientProblem, setClientProblem] = useState<string | null>(null);
+  const problem = clientProblem ?? actionData?.problem;
   // `id="main"`: root always renders the skip link, on this route too.
   return (
     <main className="gate" id="main">
@@ -67,9 +70,9 @@ export default function Login({ actionData }: Route.ComponentProps) {
         <SiteLogo className="gate-mark" />
         <h1>Admin sign in</h1>
         <p className="muted">Access is limited to the site owner.</p>
-        {actionData?.problem ? (
+        {problem ? (
           <p className="field-alarm" role="alert">
-            {actionData.problem}
+            {problem}
           </p>
         ) : null}
         {/* A plain form, not `<Form>`: the submission ends in a cross-origin redirect, which a native submission follows. */}
@@ -78,13 +81,24 @@ export default function Login({ actionData }: Route.ComponentProps) {
             type="submit"
             className="btn-brand"
             disabled={busy}
-            onClick={(event) => {
+            onClick={async (event) => {
               event.preventDefault();
               setBusy(true);
-              void authClient.signIn.social({
-                provider: "google",
-                callbackURL: AFTER_SIGN_IN,
-              });
+              setClientProblem(null);
+              /* On success the page navigates away; anything else must free the button and say why. */
+              const failed = (detail: string) => {
+                setBusy(false);
+                setClientProblem(`Sign-in could not start: ${detail}`);
+              };
+              try {
+                const { error } = await authClient.signIn.social({
+                  provider: "google",
+                  callbackURL: AFTER_SIGN_IN,
+                });
+                if (error) failed(error.message ?? error.statusText ?? `HTTP ${error.status}`);
+              } catch (error) {
+                failed(error instanceof Error ? error.message : String(error));
+              }
             }}
           >
             {busy ? "Redirecting..." : "Continue with Google"}

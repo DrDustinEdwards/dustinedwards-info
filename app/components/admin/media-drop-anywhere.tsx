@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 // Never auto-submits: a drop is easy to do by accident and an upload writes to R2.
 export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInputElement | null> }) {
   const [over, setOver] = useState(false);
+  const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     // A counter, not a boolean: dragenter and dragleave fire for every nested element the pointer crosses.
@@ -23,7 +24,13 @@ export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInput
       depth = 0;
       setOver(false);
       const files = event.dataTransfer?.files;
-      if (!files || files.length === 0) return;
+      if (!files || files.length === 0) {
+        // A dropped link or text would otherwise navigate away from the page; a field still takes its text.
+        const target = event.target as HTMLElement | null;
+        const editable = target?.closest("input, textarea, [contenteditable='true']");
+        if (!editable) event.preventDefault();
+        return;
+      }
       event.preventDefault();
       const input = inputRef.current;
       if (!input) return;
@@ -33,6 +40,11 @@ export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInput
       one.items.add(first);
       input.files = one.files;
       input.focus();
+      setNote(
+        files.length > 1
+          ? `Only ${first.name} was loaded. The form takes one file, so the other ${files.length - 1} were left out.`
+          : null,
+      );
     };
 
     window.addEventListener("dragover", stop);
@@ -47,7 +59,13 @@ export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInput
     };
   }, [inputRef]);
 
-  if (!over) return null;
+  if (!over) {
+    return note ? (
+      <p className="media-drop-hint" role="status">
+        {note}
+      </p>
+    ) : null;
+  }
   return (
     <p className="media-drop-hint" role="status">
       Drop to load it into the upload form. Nothing uploads until you press

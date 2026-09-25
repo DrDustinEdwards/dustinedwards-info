@@ -50,16 +50,27 @@ export async function call(key, path, { method = "GET", body } = {}) {
 export async function listMonitors(key) {
   const all = [];
   const pageSize = 50;
-  for (let offset = 0, page = 0; page < 20; page += 1, offset += pageSize) {
+  const maxPages = 20;
+  for (let offset = 0, page = 0; page < maxPages; page += 1, offset += pageSize) {
     const res = await call(key, `/monitors?limit=${pageSize}&offset=${offset}`);
     if (!res.ok) {
       throw new Error(`UptimeRobot GET /monitors answered ${res.status}: ${res.text.slice(0, 300)}`);
     }
-    const rows = Array.isArray(res.body?.data) ? res.body.data : [];
+    // A reshaped body read as "no monitors" would make the writer create every monitor again.
+    if (!Array.isArray(res.body?.data)) {
+      throw new Error(
+        `UptimeRobot GET /monitors answered with no data array: ${res.text.slice(0, 300)}`,
+      );
+    }
+    const rows = res.body.data;
     all.push(...rows);
     if (rows.length < pageSize) return all;
   }
-  return all;
+  // A listing cut at the cap is incomplete, and a monitor past it would be created a second time.
+  throw new Error(
+    `UptimeRobot listed ${all.length} monitors across ${maxPages} full pages and may have more; ` +
+      `the listing is incomplete, so nothing is compared against it.`,
+  );
 }
 
 /**

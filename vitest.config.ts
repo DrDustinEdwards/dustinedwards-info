@@ -161,6 +161,9 @@ export default defineConfig({
         bindings: {
           OPERATOR_TOKEN: TEST_OPERATOR_TOKEN,
           GITHUB_TOKEN: "test-github-token",
+          /* `createAuth` refuses to run without both, as production would. */
+          BETTER_AUTH_SECRET: "test-better-auth-secret-at-least-32-characters",
+          BETTER_AUTH_URL: "https://example.com",
           /* Handed to the worker so `setup.ts` can apply them. A JSON binding
            * is the only channel: the test isolate has no filesystem. */
           TEST_D1_MIGRATIONS: D1_MIGRATIONS,

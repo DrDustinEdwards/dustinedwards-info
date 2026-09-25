@@ -186,7 +186,7 @@ function headingLinks() {
           announce("Link copied");
         })
         // A refused clipboard must not cost the reader the navigation, so landing happens either way.
-        .catch(() => {})
+        .catch(() => announce("Copy failed. The link is in the address bar."))
         .finally(land);
     });
   }
@@ -317,8 +317,17 @@ function lightbox() {
   );
   for (const image of diagrams) {
     image.classList.add("zoomable");
-    image.addEventListener("click", () => {
+    /* A button to assistive technology and the keyboard too, not only to a pointer. */
+    image.tabIndex = 0;
+    image.setAttribute("role", "button");
+    image.setAttribute("aria-label", `Enlarge diagram: ${image.alt}`);
+    const open = () =>
       openOverlay(image.src, image.alt, () => image.focus({ preventScroll: true }));
+    image.addEventListener("click", open);
+    image.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      open();
     });
   }
 }
@@ -332,6 +341,8 @@ function copyMarkdown() {
     const original = trigger.textContent;
     try {
       const response = await fetch(trigger.getAttribute("href") ?? "");
+      // An error page is not the markdown: fail over to opening the link, which shows what went wrong.
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       await navigator.clipboard.writeText(await response.text());
       trigger.textContent = "Copied";
       announce("Markdown copied");
@@ -395,13 +406,17 @@ function selectionLink() {
   button.addEventListener("mousedown", (event) => event.preventDefault());
 
   button.addEventListener("click", () => {
-    void navigator.clipboard.writeText(url).then(() => {
-      button.textContent = "Link copied";
-      announce("Link copied");
+    const shown = (label: string) => {
+      button.textContent = label;
+      announce(label);
       setTimeout(() => {
         button.textContent = SELECTION_LABEL;
       }, 2000);
-    });
+    };
+    navigator.clipboard.writeText(url).then(
+      () => shown("Link copied"),
+      () => shown("Copy failed"),
+    );
   });
 
   // `selectionchange` fires on every character of a drag, so pointer drags update only on release.

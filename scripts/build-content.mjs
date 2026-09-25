@@ -13,6 +13,18 @@ import { PUBLICATIONS } from "../app/data/publications.ts";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
+import { isMain } from "./lib/is-main.mjs";
+
+/**
+ * The paths below stay repo-relative because they name files in messages and in the render; every
+ * read and write goes through `fromRoot`, so the result does not depend on the working directory.
+ */
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+/** @param {string} repoPath */
+export function fromRoot(repoPath) {
+  return path.join(ROOT, repoPath);
+}
 
 export const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
@@ -25,19 +37,25 @@ export async function buildArtifact() {
   /** @type {string[]} */
   let entries;
   try {
-    entries = await readdir(CONTENT_DIR);
-  } catch {
+    entries = await readdir(fromRoot(CONTENT_DIR));
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
     throw new Error(
       `${CONTENT_DIR} does not exist. Create it and add at least one markdown post.`,
+      { cause: error },
     );
   }
 
   const files = entries.filter((name) => name.endsWith(".md")).sort();
+  // An empty artifact is what every downstream delete converges production to.
+  if (files.length === 0) {
+    throw new Error(`${CONTENT_DIR} holds no markdown posts, so no artifact was written.`);
+  }
 
   const posts = [];
   for (const name of files) {
     const file = path.join(CONTENT_DIR, name);
-    const raw = await readFile(file, "utf8");
+    const raw = await readFile(fromRoot(file), "utf8");
     posts.push(await renderPost(file, raw));
   }
 
@@ -54,18 +72,18 @@ export async function buildArtifact() {
   // Read rather than imported: a JSON import needs an attribute this repo's compiler settings reject.
   // Depends on the stack artifact, so that build must run first.
   const stack = JSON.parse(
-    await readFile(path.join("content", "generated", "stack.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "generated", "stack.json")), "utf8"),
   );
   const features = JSON.parse(
-    await readFile(path.join("content", "features.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "features.json")), "utf8"),
   );
 
   const projects = JSON.parse(
-    await readFile(path.join("content", "projects.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "projects.json")), "utf8"),
   );
 
   const playground = JSON.parse(
-    await readFile(path.join("content", "playground.json"), "utf8"),
+    await readFile(fromRoot(path.join("content", "playground.json")), "utf8"),
   );
 
   return serializeArtifact(
@@ -87,16 +105,23 @@ export async function buildArtifact() {
  * @returns {string | null}
  */
 export function lastCommitDate(file) {
+  // A file with no history is git exiting 0 with no output, the null answer. A throw is git missing
+  // or not a repository, which used to write a null revision date over every real one in D1.
+  let out;
   try {
-    const out = execFileSync(
+    out = execFileSync(
       "git",
       ["log", "-1", "--format=%cd", "--date=format:%Y-%m-%d", "--", file],
-      { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
+      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
     ).trim();
-    return out || null;
-  } catch {
-    return null;
+  } catch (error) {
+    throw new Error(
+      `git log could not read the history of ${file}, so its revision date is unknown: ` +
+        `${error instanceof Error ? error.message : String(error)}`,
+      { cause: error },
+    );
   }
+  return out || null;
 }
 
 /**
@@ -118,7 +143,7 @@ export function revisedDate(post) {
  * @returns {Promise<string>}
  */
 export async function buildAbout() {
-  const raw = await readFile(ABOUT_SOURCE, "utf8");
+  const raw = await readFile(fromRoot(ABOUT_SOURCE), "utf8");
   const parsed = matter(raw);
   const title = String(parsed.data.title ?? "");
   const description = String(parsed.data.description ?? "");
@@ -156,19 +181,19 @@ export async function buildAbout() {
 
 async function main() {
   const artifact = await buildArtifact();
-  await mkdir(path.dirname(ARTIFACT_PATH), { recursive: true });
-  await writeFile(ARTIFACT_PATH, artifact, "utf8");
+  await mkdir(path.dirname(fromRoot(ARTIFACT_PATH)), { recursive: true });
+  await writeFile(fromRoot(ARTIFACT_PATH), artifact, "utf8");
   const { posts } = JSON.parse(artifact);
 
   const about = await buildAbout();
-  await writeFile(ABOUT_ARTIFACT_PATH, about, "utf8");
+  await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts) and ${ABOUT_ARTIFACT_PATH}`,
   );
 }
 
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
+if (isMain(import.meta.url)) {
   main().catch((/** @type {unknown} */ error) => {
     if (error instanceof ContentError) {
       console.error(`build:content failed. ${error.message}`);

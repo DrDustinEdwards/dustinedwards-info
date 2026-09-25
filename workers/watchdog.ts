@@ -67,6 +67,7 @@ async function writeState(
   } catch (error) {
     console.error(
       JSON.stringify({
+        alert: "watchdog-state-write-failed",
         watchdog: "state-write-failed",
         error: error instanceof Error ? error.message : String(error),
       }),
@@ -167,8 +168,9 @@ async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promis
 /**
  * Not a health check: `ship` refuses unless `/api/health` is ok, so an error spike there would block
  * deploying the fix. Never throws, and any failure to read the rate is reported as not ok.
+ * Exported only so the worker test can drive it against a stubbed analytics API.
  */
-async function readErrorRate(
+export async function readErrorRate(
   env: WatchdogEnv,
 ): Promise<{ ok: boolean; detail: string; configured: boolean }> {
   const account = env.CLOUDFLARE_ACCOUNT_ID ?? "";
@@ -351,6 +353,8 @@ export default {
         alerting = true;
         failing = [...failing, "error-rate"];
       }
+      // An unconfigured rate reads ok, so every mail says it was not checked rather than implying it was.
+      const errorRateNote = errorRate.configured ? [] : ["", errorRate.detail];
 
       const { readable, stored } = await readState(env);
       const now = new Date().toISOString();
@@ -377,6 +381,7 @@ export default {
                 "You will not be mailed again about this until it recovers.",
                 "",
                 ...lines,
+                ...errorRateNote,
               ])
             : alert(env, "dustinedwards.info recovered", [
                 `Health is green again after ${formatDuration(email?.durationMs ?? null)}.`,
@@ -384,6 +389,7 @@ export default {
                 `Was failing: ${email?.checks.join(", ") || "(the endpoint named none)"}.`,
                 "",
                 renderBody(reading),
+                ...errorRateNote,
               ]),
         write: () => writeState(env, transition.state),
       });

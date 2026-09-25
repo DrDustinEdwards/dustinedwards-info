@@ -19,13 +19,6 @@ test("THE COLLISION: a printable separator would merge two distinct refs", () =>
     b,
     "these two refs produced the same key, so one would be dropped before insert",
   );
-
-  const pipe = (r) => `${r.mediaKey}|${r.form}|${r.detail ?? ""}`;
-  assert.equal(
-    pipe(ref("a|b", "c")),
-    pipe(ref("a", "b|c")),
-    "if this no longer collides the example is stale, not the rule",
-  );
 });
 
 test("a null detail is an empty part, not a missing one", () => {

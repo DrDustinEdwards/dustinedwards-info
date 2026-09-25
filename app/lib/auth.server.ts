@@ -7,14 +7,23 @@ import { getDb } from "~/db";
 import { timed, timedSync, type Timings } from "~/lib/timing";
 import * as authSchema from "~/db/auth-schema";
 
-// Per request, not a module singleton: bindings and secrets are per request on Workers.
+// Per request, not a module singleton: bindings and secrets are per request on Workers. A missing secret
+// or URL is refused here, the first code that needs them: Better Auth would otherwise sign sessions
+// with its built-in default secret and build callbacks against whatever host the request named.
 export function createAuth(env: Env) {
   const adminEmail = env.ADMIN_EMAIL?.trim().toLowerCase();
+  const missing = (["BETTER_AUTH_SECRET", "BETTER_AUTH_URL"] as const).filter((name) => !env[name]);
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.join(" and ")} ${missing.length === 1 ? "is" : "are"} not set on this Worker, so ` +
+        `sign-in is refused. Set with \`wrangler secret put\` (RECOVERY.md lists both).`,
+    );
+  }
 
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: env.BETTER_AUTH_URL ? [env.BETTER_AUTH_URL] : [],
+    trustedOrigins: [env.BETTER_AUTH_URL],
     database: drizzleAdapter(getDb(env), {
       provider: "sqlite",
       schema: {

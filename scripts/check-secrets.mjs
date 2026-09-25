@@ -4,7 +4,7 @@ import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { REQUIRED_SECRETS } from "../app/lib/secrets.mjs";
-import { stripCommentsAndStrings } from "./lib/strip-comments.mjs";
+import { interfaceMembers, parseSource, propertyReads } from "./lib/syntax.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { readDevVar } from "./lib/dev-vars.mjs";
 
@@ -51,17 +51,15 @@ if (!existsSync(ENV_TYPES)) {
   process.exit(1);
 }
 
-// A secret nobody declared is a secret nobody reviewed.
-const types = readFileSync(ENV_TYPES, "utf8");
-const declaredBlock = types.match(/interface\s+Env\s*\{([\s\S]*?)\n\s*\}/);
+// A secret nobody declared is a secret nobody reviewed. Read off the syntax tree: a regex stopped at
+// the first line holding a closing brace, so a nested type in Env hid every member after it.
+const envInterface = interfaceMembers(parseSource(ENV_TYPES, readFileSync(ENV_TYPES, "utf8")), "Env");
 ok(
   "app/env.d.ts declares an Env interface",
-  Boolean(declaredBlock),
+  envInterface.found,
   "not found, so the declaration assertions below would examine nothing",
 );
-const declared = new Set(
-  [...(declaredBlock?.[1] ?? "").matchAll(/^\s*([A-Z][A-Z0-9_]+)\??\s*:/gm)].map((m) => m[1]),
-);
+const declared = envInterface.members;
 
 for (const name of SECRETS) {
   ok(
@@ -139,10 +137,12 @@ ok(
 );
 
 /**
- * Anchored on `env.` so `import.meta.env.MODE` cannot match a secret name, and
- * so a local variable that merely shares a name is not a false positive.
+ * A read is any property read of a secret's name, off any receiver: `env.X`, `getEnv(c).X`,
+ * `env["X"]` and `const { X } = env`. The old matcher required the receiver to be spelled `env`
+ * and saw none of the others. Read off the syntax tree, so comments, strings and an object-literal
+ * key naming a secret (a status field) are not reads.
  */
-const pattern = new RegExp(`\\benv\\.(${SECRETS.join("|")})\\b`, "g");
+const SECRET_NAMES = new Set(SECRETS);
 
 /** @type {Array<{ path: string, name: string }>} */
 const violations = [];
@@ -151,12 +151,8 @@ let serverReads = 0;
 
 for (const file of files) {
   const path = relative(root, file).split(sep).join("/");
-  // Comments and strings both go: this file's prose names every secret, and status fields and operator
-  // copy name tokens too.
-  const code = stripCommentsAndStrings(readFileSync(file, "utf8"));
-  for (const match of code.matchAll(pattern)) {
+  for (const { name } of propertyReads(parseSource(file, readFileSync(file, "utf8")), SECRET_NAMES)) {
     readsFound += 1;
-    const name = match[1];
     if (isServerOnly(path)) {
       serverReads += 1;
       continue;
@@ -323,12 +319,17 @@ if (existsSync(examplePath)) {
   const uptimeKey = readDevVar("UPTIMEROBOT_API_KEY");
   const cloudflareToken = readDevVar("CLOUDFLARE_API_TOKEN");
 
+  /** @type {string[]} */
+  const unreadable = [];
   for (const rel of scanned) {
     let text;
     try {
+      // A binary file decodes to replacement characters rather than throwing; only a real read
+      // failure lands here, and a file that could not be read was not scanned.
       text = readFileSync(join(root, rel), "utf8");
-    } catch {
-      continue; // unreadable or binary; the shape scan is text-only by nature
+    } catch (error) {
+      unreadable.push(`${rel} (${/** @type {NodeJS.ErrnoException} */ (error).code ?? error})`);
+      continue;
     }
     if (UPTIMEROBOT_SHAPE.test(text)) shapeHits.push(rel);
     // Guarded on length, or an empty value matches every file and reports a plausible number, which
@@ -342,6 +343,13 @@ if (existsSync(examplePath)) {
       }
     }
   }
+
+  ok(
+    "every tracked file in scope was read",
+    unreadable.length === 0,
+    `${unreadable.join(", ")}. An unread file reported clean would be a credential scan that ` +
+      `never looked.`,
+  );
 
   ok(
     "no tracked file carries anything shaped like an UptimeRobot API key",

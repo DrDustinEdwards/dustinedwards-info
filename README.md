@@ -80,7 +80,8 @@ content/posts/*.md                    the source of truth
 ```
 
 Order matters: `build:content` first, then `build:og` and `build:diagrams`
-(both read the local build product), then `sync:content`. The gate runners
+(both read the local build product), then `sync:content`. `build:og` takes
+its target on every run, `-- --remote` or `-- --local`, and refuses without one. The gate runners
 build before the tier reads, so a checkout never needs the file committed.
 
 **Editing a post** means editing and committing the markdown; nothing else is

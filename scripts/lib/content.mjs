@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { imageSize } from "image-size";
 
@@ -7,11 +8,13 @@ import {
   ContentError,
   renderPost as renderPostShared,
 } from "../../app/lib/content/pipeline.mjs";
-import { dimensionsFromKey } from "../../app/lib/media/classify.mjs";
+import { dimensionsFromKey, isRaster, roleOf } from "../../app/lib/media/classify.mjs";
 import { ASSET_MANIFEST_PATH } from "../../app/lib/media/manifest.mjs";
 
 export { ContentError };
 
+// Repo-relative for messages; reads go through ROOT so the working directory does not matter.
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const PUBLIC_DIR = "public";
 
 /**
@@ -21,9 +24,14 @@ const PUBLIC_DIR = "public";
  */
 let placeholderMemo = null;
 function assetPlaceholders() {
-  placeholderMemo ??= readFile(ASSET_MANIFEST_PATH, "utf8").then(
-    (text) => JSON.parse(text).placeholders ?? {},
-  );
+  placeholderMemo ??= readFile(path.join(ROOT, ASSET_MANIFEST_PATH), "utf8").then((text) => {
+    const { placeholders } = JSON.parse(text);
+    // A manifest without the map would strip every placeholder from every post without a word.
+    if (!placeholders || typeof placeholders !== "object") {
+      throw new Error(`${ASSET_MANIFEST_PATH} carries no placeholders map. Run npm run build:assets.`);
+    }
+    return placeholders;
+  });
   return placeholderMemo;
 }
 
@@ -57,8 +65,10 @@ export function makeResolveImage(file) {
     /** @type {Buffer} */
     let bytes;
     try {
-      bytes = await readFile(onDisk);
-    } catch {
+      bytes = await readFile(path.join(ROOT, onDisk));
+    } catch (error) {
+      // Only absence is "not found"; a permissions or I/O error is reported as itself.
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
       throw new ContentError(file, `image "${src}" not found at ${onDisk}`);
     }
     const size = imageSize(bytes);
@@ -66,6 +76,13 @@ export function makeResolveImage(file) {
       throw new ContentError(file, `image "${src}" has no readable dimensions`);
     }
     const placeholder = (await assetPlaceholders())[src]?.lqip;
+    // build:assets derives one for every raster content image, so a miss is a stale manifest.
+    if (!placeholder && isRaster(src) && roleOf(src) === "content") {
+      throw new ContentError(
+        file,
+        `image "${src}" has no placeholder in ${ASSET_MANIFEST_PATH}; run npm run build:assets`,
+      );
+    }
     return { width: size.width, height: size.height, ...(placeholder ? { placeholder } : {}) };
   };
 }

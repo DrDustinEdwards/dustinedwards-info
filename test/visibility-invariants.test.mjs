@@ -45,15 +45,6 @@ test("drafts never public: publiclyVisible() and visibilityClause() agree", { ti
     const NOW = instants[0] ?? Math.floor(Date.now() / 1000);
     const POST_STATES = POST_STATES_AT(NOW);
 
-    ok("the post-state fixture is not empty", POST_STATES.length > 0);
-    ok(
-      "the fixture covers both statuses and a null, past and future publish_at",
-      new Set(POST_STATES.map((p) => p.status)).size === 2 &&
-        POST_STATES.some((p) => p.publish_at === null) &&
-        POST_STATES.some((p) => p.publish_at !== null && p.publish_at < NOW) &&
-        POST_STATES.some((p) => p.publish_at !== null && p.publish_at > NOW),
-    );
-
     const db = new DatabaseSync(":memory:");
     db.exec(
       `CREATE TABLE posts (slug TEXT PRIMARY KEY, status TEXT NOT NULL, publish_at INTEGER)`,

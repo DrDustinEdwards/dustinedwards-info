@@ -17,6 +17,7 @@ import {
   savePost,
 } from "~/lib/editor/publish.server";
 import { copySlugCandidates } from "~/lib/editor/duplicate.mjs";
+import { deleteLeftBehind } from "~/lib/editor/delete-left.mjs";
 import {
   CACHE_SENTENCE,
   READERSHIP_ABSENT,
@@ -78,21 +79,31 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const loaderStart = performance.now();
   const env = getEnv(context);
   const filters = readFilters(new URL(request.url).searchParams);
+  const deleteLeft = deleteLeftBehind(new URL(request.url).searchParams);
 
   const askPromise = timed(timings, "ask_status_uncached", () =>
     context.get(askStatusContext)(),
   );
+  const askOn = askAvailable(env);
   /*
    * The catch is attached at creation: a promise that rejects before it is awaited is an unhandled
-   * rejection. A failing budget read must not take the page down.
+   * rejection. A failing budget read must not take the page down, and it renders as a failure.
    */
-  const budgetPromise: Promise<Awaited<ReturnType<typeof readAskBudget>> | null> =
-    askAvailable(env)
-      ? timed(timings, "ask_budget_do", () => readAskBudget(env)).catch((error) => {
+  const budgetPromise: Promise<
+    | { budget: Awaited<ReturnType<typeof readAskBudget>>; budgetError: null }
+    | { budget: null; budgetError: string | null }
+  > = askOn
+    ? timed(timings, "ask_budget_do", () => readAskBudget(env)).then(
+        (budget) => ({ budget, budgetError: null }),
+        (error: unknown) => {
           console.error("ask budget read failed", error);
-          return null;
-        })
-      : Promise.resolve(null);
+          return {
+            budget: null,
+            budgetError: error instanceof Error ? error.message : String(error),
+          };
+        },
+      )
+    : Promise.resolve({ budget: null, budgetError: null });
 
   const readershipPromise = timed(timings, "ae_post_readership", () =>
     fetchPostReadership(env),
@@ -138,14 +149,19 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // An admin page may await the AI layer; no public route ever does.
   const ask = await askPromise;
 
-  const budget = await budgetPromise;
+  const { budget, budgetError } = await budgetPromise;
 
   const readership = await readershipPromise;
 
   const payload = {
     posts,
+    /* With Ask on, a null `ask` is a failed status read, never "up to date". */
+    askOn,
+    /** What a delete from the editor left behind, when it redirected here. */
+    deleteLeft,
     ask,
     budget,
+    budgetError,
     filters,
     filtered,
     total: all.length,
@@ -166,6 +182,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return data(payload);
 }
 
+/** Appended when a write landed but its cache purge did not: the public pages are stale until expiry. */
+function unpurgedNote(count: number) {
+  return count > 0
+    ? ` The cache purge failed for ${count} post(s), so public pages may show the old version until their cache expires.`
+    : "";
+}
+
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const env = getEnv(context);
@@ -175,8 +198,14 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "regenerate") {
     try {
-      const { synced } = await regenerateAllFromRepo(env);
-      return { message: `Re-rendered ${synced} posts from the repository.` };
+      const { synced, removed, unpurged } = await regenerateAllFromRepo(env);
+      return {
+        message:
+          `Re-rendered ${synced} posts from the repository` +
+          (removed > 0 ? ` and removed ${removed} no longer in it` : "") +
+          "." +
+          unpurgedNote(unpurged),
+      };
     } catch (error) {
       return {
         message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
@@ -276,7 +305,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (fields.draft) return { message: `"${slug}" is already a draft. Nothing changed.` };
 
     try {
-      await savePost(env, {
+      const { purged } = await savePost(env, {
         slug,
         raw: serializePost({ ...fields, draft: true }),
         isNew: false,
@@ -285,7 +314,8 @@ export async function action({ request, context }: Route.ActionArgs) {
       return {
         message:
           `Unpublished "${slug}". It is a draft now, so it is off the public site, ` +
-          `the feeds and the sitemap. Republish it from its editor.`,
+          `the feeds and the sitemap. Republish it from its editor.` +
+          unpurgedNote(purged === false ? 1 : 0),
       };
     } catch (error) {
       return {
@@ -309,6 +339,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const failed: string[] = [];
     let done = 0;
     let skipped = 0;
+    let unpurged = 0;
 
     if (intent === "bulk-delete") {
       /*
@@ -324,10 +355,13 @@ export async function action({ request, context }: Route.ActionArgs) {
             `confirmation read ${typed || "(blank)"}. Type the count exactly to confirm.`,
         };
       }
+      const askFailures: string[] = [];
       for (const slug of slugs) {
         try {
-          await deletePost(env, { slug, actor });
+          const { purged, askRemoval } = await deletePost(env, { slug, actor });
           done += 1;
+          if (purged === false) unpurged += 1;
+          if (askRemoval && !askRemoval.ok) askFailures.push(`${slug}: ${askRemoval.message}`);
         } catch (error) {
           failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -335,7 +369,9 @@ export async function action({ request, context }: Route.ActionArgs) {
       return {
         message:
           `Deleted ${done} of ${slugs.length}.` +
-          (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+          (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : "") +
+          (askFailures.length > 0 ? ` Ask removal failed on ${askFailures.join("; ")}` : "") +
+          unpurgedNote(unpurged),
       };
     }
 
@@ -361,13 +397,14 @@ export async function action({ request, context }: Route.ActionArgs) {
         const tags = adding
           ? [...fields.tags, wanted]
           : fields.tags.filter((t) => t !== wanted);
-        await savePost(env, {
+        const { purged } = await savePost(env, {
           slug,
           raw: serializePost({ ...fields, tags }),
           isNew: false,
           actor,
         });
         done += 1;
+        if (purged === false) unpurged += 1;
       } catch (error) {
         failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -380,7 +417,8 @@ export async function action({ request, context }: Route.ActionArgs) {
         `${verb} ${done} with "${wanted}"` +
         (skipped > 0 ? `, skipped ${skipped} ${why}` : "") +
         "." +
-        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : "") +
+        unpurgedNote(unpurged),
     };
   }
 
@@ -391,7 +429,10 @@ export async function action({ request, context }: Route.ActionArgs) {
     return { message: `Ask budget reset. ${after.count} of ${after.limit} used today.` };
   }
 
-  return { message: null };
+  return data(
+    { message: `Nothing was done: ${String(intent ?? "(none)")} is not an action this page knows.` },
+    { status: 400 },
+  );
 }
 
 const STATUS_TABS = [
@@ -407,8 +448,24 @@ export default function AdminPosts({
   /** Empty in production. It exists for a static render, which dispatches no event. */
   initialSelection = [],
 }: Route.ComponentProps & { initialSelection?: string[] }) {
-  const { posts, ask, budget, filters, filtered, total, scheduledTotal, tagOptions } =
-    loaderData;
+  const {
+    posts,
+    askOn,
+    ask,
+    budget,
+    budgetError,
+    filters,
+    filtered,
+    total,
+    scheduledTotal,
+    tagOptions,
+  } = loaderData;
+  const askUnread = askOn && !ask;
+  /* Narrowed by key: the 400 answer carries only `message`, so the union no longer has these on every arm. */
+  const confirmSyncAsk =
+    actionData && "confirmSyncAsk" in actionData ? actionData.confirmSyncAsk : undefined;
+  const confirmDelete =
+    actionData && "confirmDelete" in actionData ? actionData.confirmDelete : undefined;
   /* Defaulted: loader data written before this field existed must render zeros. */
   const statusCounts = loaderData.statusCounts ?? {
     all: total,
@@ -479,7 +536,11 @@ export default function AdminPosts({
             `${statusCounts.published} published and ${statusCounts.draft} draft(s).` +
             (askDrifted && ask
               ? ` ${ask.missing.length + ask.stale.length} of them have changed since search last read them.`
-              : " Search is up to date with all of them.")}
+              : askUnread
+                ? " The search index status could not be read, so whether search is up to date is unknown."
+                : ask
+                  ? " Search is up to date with all of them."
+                  : "")}
         </p>
       </div>
       <div className="posts-toolbar">
@@ -623,6 +684,12 @@ export default function AdminPosts({
         </p>
       ) : null}
 
+      {loaderData.deleteLeft ? (
+        <p className="admin-notice" role="status">
+          {`Deleted "${loaderData.deleteLeft.slug}". ${loaderData.deleteLeft.problems.join(" ")}`}
+        </p>
+      ) : null}
+
       {/* A live announcement, unlike the drift region: it reports what the submit just did. */}
       {actionData?.message ? (
         <p className="admin-notice" role="status">
@@ -630,14 +697,14 @@ export default function AdminPosts({
         </p>
       ) : null}
 
-      {actionData?.confirmSyncAsk !== undefined ? (
+      {confirmSyncAsk !== undefined ? (
         <ConfirmDialog
           title="Rebuild the search answer index?"
           body={
             <p>
               Every record not in this run is removed from the index, and saved
               answers are dropped. The site currently has{" "}
-              <strong>{actionData.confirmSyncAsk}</strong> post(s), so that is
+              <strong>{confirmSyncAsk}</strong> post(s), so that is
               what the index will hold afterwards.
             </p>
           }
@@ -649,10 +716,10 @@ export default function AdminPosts({
         </ConfirmDialog>
       ) : null}
 
-      {actionData?.confirmDelete ? (
+      {confirmDelete ? (
         <ConfirmDialog
-          title={`Delete ${actionData.confirmDelete.count} post${
-            actionData.confirmDelete.count === 1 ? "" : "s"
+          title={`Delete ${confirmDelete.count} post${
+            confirmDelete.count === 1 ? "" : "s"
           }`}
           body={
             <p>
@@ -660,14 +727,14 @@ export default function AdminPosts({
               nothing else does.
             </p>
           }
-          stake={actionData.confirmDelete.slugs}
-          requireTyped={String(actionData.confirmDelete.count)}
+          stake={confirmDelete.slugs}
+          requireTyped={String(confirmDelete.count)}
           confirmLabel="Delete permanently"
           cancelHref={cancelHref}
         >
           {/* The intent is a field: a disabled submitter sends neither its name nor its value. */}
           <input type="hidden" name="intent" value="bulk-delete" />
-          {actionData.confirmDelete.slugs.map((slug) => (
+          {confirmDelete.slugs.map((slug) => (
             <input key={slug} type="hidden" name="slug" value={slug} />
           ))}
         </ConfirmDialog>
@@ -924,20 +991,23 @@ export default function AdminPosts({
           <details className="posts-explain">
             <summary>What the read count includes, and what it misses</summary>
             <p>
-              {`Only reads that reached the server, over the last ${
-                readership.status === "live" ? readership.data.windowDays : 0
-              } days, sampling weighted. ` + CACHE_SENTENCE}
+              {readership.status === "live"
+                ? `Only reads that reached the server, over the last ${readership.data.windowDays} days, sampling weighted. ` +
+                  CACHE_SENTENCE
+                : `Read counts could not be loaded: ${readership.message} ` + CACHE_SENTENCE}
             </p>
           </details>
 
-          {filtered || ask || budget ? (
+          {filtered || askOn ? (
             <p className="posts-meta">
               {filtered ? `Showing ${posts.length} of ${total} posts. ` : null}
               {ask ? `Search has read ${ask.present} of ${ask.expected} posts.` : null}
-              {ask && budget ? " " : null}
+              {askUnread ? "The search index status could not be read." : null}
+              {askOn ? " " : null}
               {budget
                 ? `Budget ${budget.count} of ${budget.limit} answers used on ${budget.day} (UTC); cached answers do not count.`
                 : null}
+              {budgetError ? `The Ask budget could not be read: ${budgetError}` : null}
             </p>
           ) : null}
         </div>

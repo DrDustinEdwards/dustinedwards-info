@@ -18,10 +18,24 @@ export type CitationEntry = {
 // DOIs are case-insensitive per spec. The `v2` prefix bump forced a cold refresh when `url` arrived.
 const key = (doi: string) => `citations:v2:${doi.trim().toLowerCase()}`;
 
+// The page still renders no count on any failure, but every failure is logged under one alert key, so
+// a revoked key or a KV outage is visible rather than looking like a cold cache.
+function logFailure(stage: string, doi: string | null, detail: unknown) {
+  console.error(
+    JSON.stringify({
+      alert: "citation-count-failed",
+      stage,
+      doi,
+      detail: detail instanceof Error ? detail.message : String(detail),
+    }),
+  );
+}
+
 async function readOne(kv: KVNamespace, doi: string): Promise<CitationEntry | null> {
   try {
     return await kv.get<CitationEntry>(key(doi), "json");
-  } catch {
+  } catch (error) {
+    logFailure("kv-read", doi, error);
     return null;
   }
 }
@@ -38,15 +52,25 @@ async function fetchOne(apiKey: string, doi: string): Promise<CitationEntry | nu
     const res = await fetch(url, {
       headers: { "user-agent": USER_AGENT },
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // 401 and 403 are configuration (a revoked or wrong key), and name it so; a 404 is a DOI
+      // OpenAlex does not hold.
+      const stage = res.status === 401 || res.status === 403 ? "openalex-key-refused" : "openalex-status";
+      logFailure(stage, doi, `HTTP ${res.status}`);
+      return null;
+    }
     const body = (await res.json()) as { cited_by_count?: number; id?: string };
-    if (typeof body.cited_by_count !== "number") return null;
+    if (typeof body.cited_by_count !== "number") {
+      logFailure("openalex-shape", doi, "the response carried no cited_by_count");
+      return null;
+    }
     return {
       count: body.cited_by_count,
       fetchedAt: new Date().toISOString().slice(0, 10),
       url: typeof body.id === "string" ? body.id : null,
     };
-  } catch {
+  } catch (error) {
+    logFailure("openalex-fetch", doi, error);
     return null;
   }
 }
@@ -74,6 +98,9 @@ export async function getCitationCounts(
   }
 
   const apiKey = env.OPENALEX_API_KEY;
+  if (cold.length > 0 && !apiKey) {
+    logFailure("config", null, `OPENALEX_API_KEY is not set, so ${cold.length} cold DOI(s) never refresh`);
+  }
 
   if (cold.length > 0 && apiKey) {
     ctx.waitUntil(
@@ -85,8 +112,9 @@ export async function getCitationCounts(
             await kv.put(key(doi), JSON.stringify(fresh), {
               expirationTtl: TTL_SECONDS,
             });
-          } catch {
+          } catch (error) {
             // The next request tries again.
+            logFailure("kv-write", doi, error);
           }
         }
       })(),

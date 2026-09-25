@@ -72,8 +72,12 @@ test("a real uploaded_at from the deployed table renders in both", () => {
   assert.equal(formatAdded("2026-08-23T20:38:59.620Z"), "23 Aug 2026");
 });
 
-test("NO CLOCK IS READ: the same input renders the same string whatever today is", () => {
+test("NO CLOCK IS READ: the same input renders the same string whatever today is", (t) => {
   const iso = "2020-06-15T12:00:00.000Z";
-  assert.equal(monthOf(iso), "June 2020");
-  assert.equal(formatAdded(iso), "15 Jun 2020");
+  t.mock.timers.enable({ apis: ["Date"] });
+  for (const today of [Date.UTC(2020, 5, 15, 12), Date.UTC(2031, 0, 1), Date.UTC(1999, 11, 31, 23, 59)]) {
+    t.mock.timers.setTime(today);
+    assert.equal(monthOf(iso), "June 2020", `with today at ${new Date(today).toISOString()}`);
+    assert.equal(formatAdded(iso), "15 Jun 2020", `with today at ${new Date(today).toISOString()}`);
+  }
 });

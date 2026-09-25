@@ -31,16 +31,13 @@ test("an unknown status THROWS rather than returning the raw value", () => {
 });
 
 test("the throw names the value, so the failure is diagnosable", () => {
-  try {
-    statusLabel("wibble");
-    assert.fail("did not throw");
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    assert.match(message, /wibble/, "the error does not name the offending status");
-    assert.match(
-      message,
-      /STATUS_LABEL/,
-      "the error does not say where to add the missing label",
-    );
-  }
+  assert.throws(
+    () => statusLabel("wibble"),
+    (error) => {
+      assert.ok(error instanceof Error, "it threw a non-Error");
+      assert.match(error.message, /wibble/, "the error does not name the offending status");
+      assert.match(error.message, /STATUS_LABEL/, "the error does not say where to add the missing label");
+      return true;
+    },
+  );
 });

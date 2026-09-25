@@ -26,7 +26,13 @@ function gitExecPath() {
  */
 export function bashCandidates() {
   /** @type {{ path: string, source: string }[]} */
-  const candidates = [{ path: "bash", source: "PATH" }];
+  const candidates = [];
+  const onPath = { path: "bash", source: "PATH" };
+  // On Windows a bare `bash` can be System32's WSL launcher, which runs the hook in a Linux
+  // distribution with its own tools and paths; Git's bash is what the hooks are written for, so it
+  // is tried first there and PATH last.
+  const windows = process.platform === "win32";
+  if (!windows) candidates.push(onPath);
 
   const execPath = gitExecPath();
   if (execPath) {
@@ -46,6 +52,7 @@ export function bashCandidates() {
   }
 
   candidates.push({ path: GIT_FOR_WINDOWS_DEFAULT, source: "Git for Windows default install" });
+  if (windows) candidates.push(onPath);
 
   /** @type {Set<string>} */
   const seen = new Set();

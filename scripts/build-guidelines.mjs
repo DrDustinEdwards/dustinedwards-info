@@ -50,6 +50,10 @@ const FILES = [
       /--z-[a-z]/i,
       /\bstacking\b/i,
       /\.tracks\b/,
+      // The sheets now say "track" and "rail" for the grid, not the selector: paper.css's rail-track rule
+      // is real layout reasoning, and without these the file classified nothing.
+      /\btracks?\b/i,
+      /\brail\b/i,
       /\bsite-inset\b/i,
       /\bgutter\b/i,
       /\bgrid-template\b/i,
@@ -69,7 +73,8 @@ const FILES = [
       /\bfont-weight\b/i,
       /\bline-height\b/i,
       /\bfont-display\b/i,
-      /\b@font-face\b/i,
+      // No leading word boundary: `@` is not a word character, so one there only matched after a letter.
+      /@font-face\b/i,
       /\bcontrol-h\b/i,
       /\bhit target\b/i,
       /\btype scale\b/i,
@@ -91,7 +96,8 @@ const FILES = [
       /\bcontrast\b/i,
       /\bcolor-mix\b/i,
       /\bAPCA\b/i,
-      /\b\d+(?:\.\d+):1\b/,
+      // The decimal is optional: "4.5:1" and "3:1" are both ratios.
+      /\b\d+(?:\.\d+)?:1\b/,
       /\bWCAG\b/i,
     ],
   },
@@ -190,13 +196,11 @@ function writeSingletons(outDir) {
 
   for (const s of SINGLETONS) {
     const abs = join(REPO, s.component);
-    if (!existsSync(abs)) continue;
     const source = readFileSync(abs, "utf8");
 
     const tokens = new Set();
     for (const sheet of s.sheets) {
-      const sheetAbs = join(REPO, sheet);
-      if (existsSync(sheetAbs)) for (const t of tokensRead(readFileSync(sheetAbs, "utf8"))) tokens.add(t);
+      for (const t of tokensRead(readFileSync(join(REPO, sheet), "utf8"))) tokens.add(t);
     }
 
     const classes = classNames(source);
@@ -218,13 +222,24 @@ function writeSingletons(outDir) {
 function main() {
   const sheets = readSheets(REPO);
 
+  // Checked before anything is read or the directory is rebuilt: a missing file used to be skipped,
+  // and the summary still read as a full export.
+  const missing = [
+    ...sheets,
+    ...SINGLETONS.flatMap((s) => [s.component, ...s.sheets]),
+  ].filter((rel) => !existsSync(join(REPO, rel)));
+  if (missing.length > 0) {
+    throw new Error(
+      `${missing.length} file(s) the guidelines are built from do not exist: ` +
+        `${[...new Set(missing)].join(", ")}. Fix SHEETS or SINGLETONS; nothing was written.`,
+    );
+  }
+
   /** @type {{ sheet: string, line: number, prose: string, score: number, file: string | null }[]} */
   const all = [];
 
   for (const sheet of sheets) {
-    const abs = join(REPO, sheet);
-    if (!existsSync(abs)) continue;
-    for (const { text, line } of commentBlocks(readFileSync(abs, "utf8"))) {
+    for (const { text, line } of commentBlocks(readFileSync(join(REPO, sheet), "utf8"))) {
       const prose = commentProse(text);
       if (prose.length < MINIMUM_PROSE_BYTES) continue;
 
@@ -256,11 +271,23 @@ function main() {
     );
   }
 
-  // Rebuild the directory so a removed comment cannot survive as a stale file.
-  // capsid/ is written by a different step and must not be swept away with it.
+  // A spec that classified nothing would be written as a header with no content and reported as built.
+  const empty = FILES.filter((spec) => !all.some((b) => b.file === spec.name)).map((s) => s.name);
+  if (empty.length > 0) {
+    throw new Error(
+      `${empty.join(", ")} classified zero blocks, and would ship as a header with nothing under ` +
+        "it. Either a needle stopped matching or the sheets no longer carry that reasoning; " +
+        "fix the needles or remove the file from FILES.",
+    );
+  }
+
+  // Rebuild the directory so a removed comment cannot survive as a stale file. Entries written by
+  // other steps must not be swept away with it: capsid/ by build-capsid-guidelines.mjs, and the two
+  // long notes by .design-sync/build-inputs.mjs (its LONG_NOTES), which may run before this.
+  const OTHER_OWNERS = new Set(["capsid", "canvas-constraints.md", "conventions.md"]);
   if (existsSync(OUT_DIR)) {
     for (const entry of readdirSync(OUT_DIR)) {
-      if (entry === "capsid") continue;
+      if (OTHER_OWNERS.has(entry)) continue;
       rmSync(join(OUT_DIR, entry), { recursive: true, force: true });
     }
   }
