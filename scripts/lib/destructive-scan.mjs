@@ -79,7 +79,7 @@ function hasGuardCall(node, predicate) {
   return found;
 }
 
-/** @param {ts.Statement} stmt */
+/** @param {ts.Statement} stmt @returns {boolean} */
 function exits(stmt) {
   if (ts.isReturnStatement(stmt) || ts.isThrowStatement(stmt)) return true;
   if (ts.isBlock(stmt)) {
@@ -248,6 +248,7 @@ export function propertyValue(obj, key) {
  * A non-empty string built from literals: "a", `a`, or "a" + "b".
  *
  * @param {ts.Expression | null} expr
+ * @returns {boolean}
  */
 export function isLiteralString(expr) {
   if (!expr) return false;
