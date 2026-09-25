@@ -44,6 +44,7 @@ import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 import type { OperatorEnv } from "./auth.server";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { readCappedBytes } from "~/lib/read-capped.mjs";
 
 // Validated like the write path: the slug goes into a repository path via `encodeURI`, which does not
 // escape `.`, `/` or `?`.
@@ -602,32 +603,6 @@ function decodeBase64(payload: string): Uint8Array | null {
   }
 }
 
-// Read in chunks and abandoned at the cap: `Content-Length` is only a claim, and a body need not stop.
-async function readCapped(body: ReadableStream<Uint8Array>, cap: number): Promise<Uint8Array | null> {
-  const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > cap) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-
-  const out = new Uint8Array(total);
-  let at = 0;
-  for (const chunk of chunks) {
-    out.set(chunk, at);
-    at += chunk.byteLength;
-  }
-  return out;
-}
-
 function defaultName(type: string, url: string): string {
   if (url) {
     try {
@@ -759,7 +734,7 @@ async function uploadMediaTool(
       return { ok: false, status: 502, error: `${parsed.href} answered with no body.` };
     }
 
-    const read = await readCapped(response.body, MAX_BYTES);
+    const read = await readCappedBytes(response, MAX_BYTES);
     if (!read) {
       return {
         ok: false,
