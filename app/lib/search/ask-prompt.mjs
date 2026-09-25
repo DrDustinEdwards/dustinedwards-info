@@ -97,6 +97,47 @@ export function citedSlugs(chunks) {
 function logUnverifiable(reason) {
   console.error(JSON.stringify({ alert: "ask-guard-unverifiable", reason }));
 }
+
+/**
+ * Whether the chunks frame refuses the answer: it is empty, it is not a JSON array, or it cites a post
+ * `resolveVisible` does not return.
+ *
+ * @param {string} frame
+ * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
+ * @returns {Promise<boolean>}
+ */
+async function chunksVerdict(frame, resolveVisible) {
+  const { data } = frameFields(frame);
+
+  let empty = false;
+  let unverifiable = false;
+  /** @type {unknown[]} */
+  let parsedChunks = [];
+  try {
+    /** @type {unknown} */
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed)) {
+      parsedChunks = parsed;
+      empty = parsed.length === 0;
+    } else {
+      unverifiable = true;
+    }
+  } catch {
+    unverifiable = true;
+  }
+  if (unverifiable) logUnverifiable("the chunks frame is not a JSON array");
+
+  // Same verdict as the cache replay. Refused whole, not filtered: the prose was written from those
+  // chunks, so dropping only the link would keep a summary of a post nobody may read.
+  const slugs = citedSlugs(parsedChunks);
+  let leaked = false;
+  if (!empty && !unverifiable && slugs.length > 0) {
+    const visible = await resolveVisible(slugs);
+    leaked = slugs.some((slug) => !visible.has(slug));
+  }
+  return empty || leaked || unverifiable;
+}
+
 /**
  * @param {ReadableStream} upstream
  * @param {(slugs: string[]) => Promise<Set<string>>} resolveVisible
@@ -133,37 +174,10 @@ export function guardAnswerStream(upstream, resolveVisible) {
           if (frameEnd === -1) continue;
 
           const frame = buffer.slice(at, frameEnd);
-          const { data } = frameFields(frame);
-
-          let empty = false;
-          let unverifiable = false;
-          /** @type {unknown[]} */
-          let parsedChunks = [];
-          try {
-            /** @type {unknown} */
-            const parsed = JSON.parse(data);
-            if (Array.isArray(parsed)) {
-              parsedChunks = parsed;
-              empty = parsed.length === 0;
-            } else {
-              unverifiable = true;
-            }
-          } catch {
-            unverifiable = true;
-          }
-          if (unverifiable) logUnverifiable("the chunks frame is not a JSON array");
-
-          // Same verdict as the cache replay. Refused whole, not filtered: the prose was written from those
-          // chunks, so dropping only the link would keep a summary of a post nobody may read.
-          const slugs = citedSlugs(parsedChunks);
-          let leaked = false;
-          if (!empty && !unverifiable && slugs.length > 0) {
-            const visible = await resolveVisible(slugs);
-            leaked = slugs.some((slug) => !visible.has(slug));
-          }
+          const refuse = await chunksVerdict(frame, resolveVisible);
 
           decided = true;
-          if (empty || leaked || unverifiable) {
+          if (refuse) {
             for (const piece of replayFrames({ answer: NO_ANSWER_TEXT, chunks: [] })) {
               controller.enqueue(encoder.encode(piece));
             }
