@@ -689,7 +689,8 @@ if (existsSync(ENHANCEMENTS_PATH)) {
 
 const enhanceFiles = existsSync(ENHANCE_DIR)
   ? readdirSync(ENHANCE_DIR)
-      .filter((name) => name.endsWith(".ts"))
+      // Every script extension, or a .tsx or .mjs enhancement escapes the count and the inventory.
+      .filter((name) => /\.(?:ts|tsx|mjs|js)$/.test(name))
       .sort()
   : [];
 
@@ -1466,7 +1467,7 @@ for (const swatch of swatches) {
   ok(
     `contrast lab: ${swatch.label} computes ${swatch.ratio} to 1`,
     Math.abs(actual - swatch.ratio) < 0.05,
-    `app/lib/contrast.mjs returned ${actual.toFixed(2)}, design-tokens.md records ${swatch.ratio}`,
+    `app/lib/contrast.mjs returned ${actual.toFixed(2)}, content/playground.json records ${swatch.ratio}`,
   );
   const expectedVerdict = swatch.ratio >= 4.5;
   ok(
@@ -1612,12 +1613,14 @@ for (const preset of keyPresets) {
     `the module says ${roleOf(preset.key)}`,
   );
 
-  /* "refused" is an answer, so the throw branch runs. */
+  /* "refused" is an answer, so the throw branch runs. Only the classifier's own refusal counts: any
+     other exception is a crash, and reading it as "refused" would pass every refusal preset. */
   let actualKind;
   try {
     actualKind = classify(preset.key).kind;
-  } catch {
-    actualKind = "refused";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    actualKind = message.startsWith("unclassified asset ") ? "refused" : `a crash: ${message}`;
   }
   ok(
     `media key: ${label} classifies as ${expect.kind}`,
@@ -1862,7 +1865,15 @@ ok(
       );
       continue;
     }
-    if (!rendered) continue;
+    if (!rendered) {
+      ok(
+        `markdown: ${label} rendered to something`,
+        false,
+        `renderBody resolved to ${JSON.stringify(rendered)} without throwing, so every ` +
+          `per-snippet check below would have been skipped`,
+      );
+      continue;
+    }
 
     const anchors = rendered.toc.map((/** @type {any} */ h) => h.id);
     ok(
@@ -1939,7 +1950,8 @@ ok(
 );
 ok(
   "markdown: the wrapper's image resolver refuses",
-  /resolveImage:\s*async/.test(snippetRendererSource) && /throw new Error/.test(snippetRendererSource),
+  /* Inside the resolver itself: a throw anywhere in the file is not this resolver refusing. */
+  /resolveImage:\s*async\s*\([^)]*\)\s*=>\s*\{\s*throw new Error\(/.test(snippetRendererSource),
   "a resolver that reached a bucket on behalf of fixture text is a door this " +
     "demo has no reason to open",
 );
@@ -2049,7 +2061,8 @@ ok(
    draft APCA is developed in), and WCAG 2.2 is already required above as the target. */
 ok(
   "the page states the input cap it enforces",
-  /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),
+  /* Through the constant only: a literal "100" would pass on stale text once the cap moved. */
+  /up to \{QUERY_CAP\} characters/i.test(playgroundSource),
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
 ok(
