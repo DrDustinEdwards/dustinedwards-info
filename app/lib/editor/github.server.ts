@@ -142,12 +142,9 @@ export async function readBinaryFile(env: GhEnv, path: string, ref = BRANCH) {
       env,
       `/repos/${OWNER}/${REPO}/contents/${encodeURI(path)}?ref=${ref}`,
     );
-    if (file.encoding !== "base64" || file.content.length === 0) {
-      throw new GitHubError(
-        `"${path}" is ${file.size} bytes and did not come back as base64 ` +
-          `content; the Contents API caps at 1 MB.`,
-        422,
-      );
+    const capped = contentsCapMessage(file, path);
+    if (capped) {
+      throw new GitHubError(capped, 422);
     }
     return base64ToBytes(file.content);
   } catch (error) {
