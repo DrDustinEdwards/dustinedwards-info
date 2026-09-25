@@ -18,7 +18,7 @@ export async function applyBulkTag<T>({
   adding: boolean;
   missing: string;
   read: (id: string) => Promise<{ item: T; tags: string[] } | null>;
-  write: (id: string, item: T, tags: string[]) => Promise<void>;
+  write: (id: string, item: T, tags: string[]) => Promise<unknown>;
 }) {
   const failed: string[] = [];
   let done = 0;

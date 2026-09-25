@@ -2,7 +2,7 @@ import { Link } from "react-router";
 
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { PUBLICATIONS, TOPICS, type Publication } from "~/data/publications";
+import { TOPICS } from "~/data/publications";
 import { getCitationCounts } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
