@@ -108,6 +108,22 @@ export function failingCheckNames(body) {
  */
 
 /**
+ * A 200 whose body says `ok: true`; anything else, a 503 included, is unhealthy.
+ *
+ * @param {HealthReading | null | undefined} reading
+ * @returns {boolean}
+ */
+function isHealthyReading(reading) {
+  const body = reading?.body;
+  return (
+    Number(reading?.status) === 200 &&
+    !!body &&
+    typeof body === "object" &&
+    /** @type {any} */ (body).ok === true
+  );
+}
+
+/**
  * Anything but a healthy 200 takes the same path: a 503 is how this endpoint reports a failing check.
  *
  * @param {HealthReading} reading
@@ -117,10 +133,8 @@ export function failingCheckNames(body) {
 export function watchdogActions(reading, { hasToken }) {
   const status = Number(reading?.status);
   const body = reading?.body;
-  const healthy =
-    status === 200 && !!body && typeof body === "object" && /** @type {any} */ (body).ok === true;
 
-  if (healthy) return [];
+  if (isHealthyReading(reading)) return [];
 
   // A transport failure is reported with its cause: a timeout and a 1042 are different pages, and
   // without the cause the mail says "no failing check was named" about a fetch that never happened.
@@ -163,12 +177,7 @@ export function watchdogOutcome({ misses, recheck }) {
     reasons.push("the re-check did not complete, so the repair proved nothing.");
   } else {
     const stillFailing = failingCheckNames(recheck.body);
-    const ok =
-      Number(recheck.status) === 200 &&
-      !!recheck.body &&
-      typeof recheck.body === "object" &&
-      /** @type {any} */ (recheck.body).ok === true;
-    if (!ok) {
+    if (!isHealthyReading(recheck)) {
       reasons.push(
         `self-repair ran and the endpoint is STILL unhealthy (HTTP ${recheck.status}` +
           `${stillFailing.length ? `, failing: ${stillFailing.join(", ")}` : ""}).`,

@@ -1,5 +1,4 @@
 import { createExecutionContext, env } from "cloudflare:test";
-import { RouterContextProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -11,7 +10,6 @@ import {
   trashedMediaKeys,
   upsertMediaRecord,
 } from "~/db";
-import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
@@ -20,45 +18,23 @@ import { action as adminAction, middleware as adminMediaMiddleware } from "~/rou
 import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
 
-/**
- * `IMAGES` has no local emulation, so cases hand it a binding with a recorded shape. The pool
- * shares one D1 and R2 across cases, so every case seeds its own bytes or keys would collide.
- */
+import { bytesFor, envWithImages, pngKey } from "./media-fixtures";
+import { routeContext } from "./route-helpers";
+import { seedPost } from "./seed";
 
 const mediaEnv = () => env as unknown as Parameters<typeof upsertMediaRecord>[0];
 
-/** `null` models an SVG: the real binding answers with no `width`. */
-function envWithImages(dimensions: { width: number; height: number } | null) {
-  return {
-    ...env,
-    IMAGES: {
-      info: async (stream: ReadableStream) => {
-        /* Drained, because the real binding consumes the stream. */
-        await new Response(stream).arrayBuffer();
-        return dimensions ?? { format: "image/svg+xml" };
-      },
-    },
-  } as unknown as Parameters<typeof measureDimensions>[0];
-}
-
-function bytesFor(seed: string) {
-  return new TextEncoder().encode(`fake-image-bytes:${seed}`);
-}
-
 async function uploadKey(seed: string, dimensions: { width: number; height: number } | null) {
   const bytes = bytesFor(seed);
-  const measured = await measureDimensions(envWithImages(dimensions), bytes.buffer as ArrayBuffer);
-  const key = contentKey(await crypto.subtle.digest("SHA-256", bytes), "png", measured);
+  const measured = await measureDimensions(
+    envWithImages(dimensions) as unknown as Parameters<typeof measureDimensions>[0],
+    bytes.buffer as ArrayBuffer,
+  );
+  const key = await pngKey(seed, measured);
   return { bytes, measured, key };
 }
 
 type Dimensions = { width: number; height: number } | null;
-
-function routeContext(routeEnv: object) {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, { env: routeEnv as never, ctx: createExecutionContext() });
-  return context;
-}
 
 async function upload(
   file: { name: string; type: string; body: string },
@@ -69,7 +45,7 @@ async function upload(
   form.append("file", new File([file.body], file.name, { type: file.type }));
   const response = (await uploadAction({
     request: new Request("https://example.com/admin/media/upload", { method: "POST", body: form }),
-    context: routeContext({ ...envWithImages(dimensions), ...overrides }),
+    context: routeContext(createExecutionContext(), { ...envWithImages(dimensions), ...overrides }),
   } as never)) as Response;
   const body = (await response.json()) as { url?: string; key?: string };
   return { status: response.status, url: body.url, key: body.key ?? "" };
@@ -80,7 +56,7 @@ async function adminMediaAction(fields: Record<string, string>, routeEnv: object
   for (const [name, value] of Object.entries(fields)) form.append(name, value);
   return adminAction({
     request: new Request("https://example.com/admin/media", { method: "POST", body: form }),
-    context: routeContext(routeEnv),
+    context: routeContext(createExecutionContext(), routeEnv),
   } as never);
 }
 
@@ -88,7 +64,7 @@ async function serve(key: string) {
   return (await mediaLoader({
     params: { "*": key },
     request: new Request(`https://example.com/media/${key}`),
-    context: routeContext(env),
+    context: routeContext(),
   } as never)) as Response;
 }
 
@@ -330,12 +306,7 @@ describe("the duplicates lens", () => {
       contentKey(digest, "png", { width: 10, height: 10 }, name),
     );
     const singles = await Promise.all(
-      ["single-a", "single-b", "single-c"].map(async (seed) =>
-        contentKey(await crypto.subtle.digest("SHA-256", bytesFor(seed)), "png", {
-          width: 10,
-          height: 10,
-        }),
-      ),
+      ["single-a", "single-b", "single-c"].map((seed) => pngKey(seed, { width: 10, height: 10 })),
     );
     /* The singles are newest, so an unfiltered first page would be all singles. */
     for (const [i, key] of [...twins, ...singles].entries()) {
@@ -372,12 +343,12 @@ describe("emptying the trash", () => {
   it("KEEPS a file a post body cites though media_refs has no row for it", async () => {
     const cited = await trashedUpload("trash-cited");
     const uncited = await trashedUpload("trash-uncited");
-    await env.DB.prepare(
-      `INSERT INTO posts (slug, kind, title, body, status)
-       VALUES ('cites-a-trashed-file', 'post', 'Cites it', ?1, 'draft')`,
-    )
-      .bind(`An image: ![alt](/media/${cited})`)
-      .run();
+    await seedPost("cites-a-trashed-file", {
+      status: "draft",
+      title: "Cites it",
+      body: `An image: ![alt](/media/${cited})`,
+      publishAt: null,
+    });
     expect((await mediaRefsFor(mediaEnv(), [cited])).get(cited)).toHaveLength(0);
 
     const result = (await adminMediaAction({
@@ -444,7 +415,7 @@ describe("a thumbnail whose transform fails", () => {
     const served = (await mediaLoader({
       params: { "*": key },
       request: new Request(`https://example.com/media/${key}?w=320`),
-      context: routeContext({ ...env, IMAGES: failingImages }),
+      context: routeContext(createExecutionContext(), { IMAGES: failingImages }),
     } as never)) as Response;
 
     expect(served.status).toBe(200);
@@ -475,7 +446,7 @@ describe("the media palette", () => {
         request: new Request("https://example.com/admin/media?palette=1&q=zanzibar", {
           headers: { accept: "application/json" },
         }),
-        context: routeContext(env),
+        context: routeContext(),
         params: {},
       } as never,
       async () => new Response("the page, not the palette", { status: 500 }),

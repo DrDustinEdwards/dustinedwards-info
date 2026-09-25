@@ -11,9 +11,9 @@ const TEST_DIR = join(root, "test");
 
 // Measured by running the gate, never summed, and tight: they move up with a test in the same commit,
 // so the set shrinking is noticed.
-const MINIMUM_FILES = 92;
+const MINIMUM_FILES = 94;
 // Catches a test file hollowed out in place. Measured by running the gate.
-const MINIMUM_TESTS = 771;
+const MINIMUM_TESTS = 783;
 
 const tally = createTally();
 const { ok } = tally;
@@ -34,7 +34,8 @@ function reapTestRunners(rootPid) {
   const killed = [];
   /** @type {number[]} */
   const failed = [];
-  for (const pid of descendantPids(Number(rootPid), table)) {
+  // The shell is dead, so its direct child must be the npm run it spawned, named by the bound passed to it.
+  for (const pid of descendantPids(Number(rootPid), table, `--test-timeout=${TEST_TIMEOUT_MS}`)) {
     if (!processExists(pid)) continue;
     (killTree(pid) ? killed : failed).push(pid);
   }
