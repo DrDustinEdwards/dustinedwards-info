@@ -71,7 +71,8 @@ export function readinessVerdict(status, text, path = "/api/health", deferred = 
   }
 
   const deferredNames = Array.isArray(deferred) ? deferred.filter((n) => typeof n === "string") : [];
-  const failed = checks.filter((c) => !c.ok).map((c) => c.name ?? "(unnamed)");
+  // `=== true`, as the deferred read below does: a string "false" or a missing ok is not a pass.
+  const failed = checks.filter((c) => c.ok !== true).map((c) => c.name ?? "(unnamed)");
   const gatingFailed = failed.filter((name) => !deferredNames.includes(name));
 
   // Not the endpoint's own `ok`: that is false when any check fails, deferred ones included.

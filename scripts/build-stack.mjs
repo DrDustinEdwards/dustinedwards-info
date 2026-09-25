@@ -71,6 +71,10 @@ export function buildStack() {
   if (typeof d1?.migrations_dir !== "string" || !d1.migrations_dir) {
     throw new Error("wrangler.jsonc.example names no migrations_dir for its D1 database");
   }
+  // Defaulted to [], a missing list published "nothing was turned down" on the colophon.
+  if (!Array.isArray(notes.notAdopted)) {
+    throw new Error(`${NOTES_PATH} carries no notAdopted array`);
+  }
 
   return {
     /** Bumped when the shape changes, so a consumer of an older shape fails loudly. */
@@ -84,7 +88,7 @@ export function buildStack() {
     dependencies: runtimeVersions(pkg),
     migrations: migrationFiles(d1.migrations_dir),
     gates: gateNames(pkg),
-    notAdopted: notes.notAdopted ?? [],
+    notAdopted: notes.notAdopted,
   };
 }
 

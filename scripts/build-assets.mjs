@@ -3,6 +3,7 @@
 import { createHash } from "node:crypto";
 import { readdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import sharp from "sharp";
 
@@ -11,9 +12,11 @@ import { WEBP_QUALITY } from "../app/lib/media/encoding.mjs";
 import { ASSET_MANIFEST_PATH as ASSET_MANIFEST_REPO_PATH } from "../app/lib/media/manifest.mjs";
 import { isMain } from "./lib/is-main.mjs";
 
-export const PUBLIC_DIR = "public";
+// Anchored to the repo, not the working directory: a run from elsewhere walked nothing or the wrong tree.
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+export const PUBLIC_DIR = path.join(ROOT, "public");
 // The repo path is POSIX because the Worker hands it to an API verbatim.
-export const ASSET_MANIFEST_PATH = path.join(...ASSET_MANIFEST_REPO_PATH.split("/"));
+export const ASSET_MANIFEST_PATH = path.join(ROOT, ...ASSET_MANIFEST_REPO_PATH.split("/"));
 
 /**
  * The exclusion is applied inside the walk because the gate imports this and diffs it against D1.
@@ -70,7 +73,7 @@ async function placeholderFor(sitePath) {
 async function main() {
   const paths = await walkPublic();
   if (paths.length === 0) {
-    throw new Error(`walked ${PUBLIC_DIR}/ and found no files, which cannot be right`);
+    throw new Error(`walked public/ and found no files, which cannot be right`);
   }
 
   // Classify every path here rather than at rebuild time, so an unclassified extension stops THIS
@@ -82,7 +85,7 @@ async function main() {
   const wanted = placeholderPaths(paths);
   if (wanted.length === 0) {
     throw new Error(
-      `walked ${PUBLIC_DIR}/ and found no content raster images, so no post can ` +
+      `walked public/ and found no content raster images, so no post can ` +
         `carry a placeholder. That is a broken classifier, not an empty directory.`,
     );
   }
@@ -103,7 +106,7 @@ async function main() {
   if (previous !== body) await writeFile(ASSET_MANIFEST_PATH, body, "utf8");
 
   console.log(
-    `build:assets ${paths.length} file(s) under ${PUBLIC_DIR}/, ` +
+    `build:assets ${paths.length} file(s) under public/, ` +
       `${wanted.length} placeholder(s) derived` +
       `${previous === body ? " (unchanged)" : ""}`,
   );
