@@ -5,6 +5,8 @@ import { runTool } from "~/lib/operator/api.server";
 import { MENTION_POLICIES } from "~/lib/webmention/decide.server";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 
+import { seedMention as seedMentionRow, seedPost } from "./seed";
+
 const OPERATOR: Actor = { kind: "operator", id: "test-operator" };
 const SMOKE: Actor = { kind: "smoke", id: "test-smoke" };
 const ADMIN: Actor = { kind: "admin" };
@@ -12,28 +14,25 @@ const ADMIN: Actor = { kind: "admin" };
 const SLUG = "a-mentioned-post";
 const operatorEnv = () => env as unknown as Parameters<typeof runTool>[0];
 
-async function seedPost() {
-  await env.DB.prepare(
-    `INSERT INTO posts (slug, kind, title, body, status, publish_at)
-     VALUES (?1, 'post', 'A post', 'Body.', 'published', ?2)
-     ON CONFLICT(slug) DO UPDATE SET status = 'published'`,
-  )
-    .bind(SLUG, Math.floor(Date.UTC(2026, 0, 1) / 1000))
-    .run();
+function seedMention(source: string, status = "pending"): Promise<number> {
+  const now = Math.floor(Date.UTC(2026, 8, 5) / 1000);
+  return seedMentionRow(source, SLUG, {
+    status,
+    authorName: "A Reader",
+    receivedAt: now,
+    verifiedAt: now,
+  });
 }
 
-async function seedMention(source: string, status = "pending"): Promise<number> {
-  const now = Math.floor(Date.UTC(2026, 8, 5) / 1000);
-  await env.DB.prepare(
-    `INSERT INTO webmentions (source_url, target_slug, status, author_name, excerpt, received_at, verified_at)
-     VALUES (?1, ?2, ?3, 'A Reader', 'An excerpt.', ?4, ?4)`,
-  )
-    .bind(source, SLUG, status, now)
-    .run();
-  const row = await env.DB.prepare(`SELECT id FROM webmentions WHERE source_url = ?1`)
-    .bind(source)
-    .first<{ id: number }>();
-  return row?.id ?? -1;
+/** Seeds a mention in `status` and has the operator approve it, which must succeed. */
+async function approveAsOperator(source: string, status?: string) {
+  const id = await seedMention(source, status);
+  const result = await runTool(operatorEnv(), OPERATOR, "decide_mention", {
+    id,
+    decision: "approve",
+  });
+  expect(result).toMatchObject({ ok: true });
+  return result.ok ? result.data : undefined;
 }
 
 const statusOf = async (source: string) =>
@@ -45,7 +44,7 @@ const statusOf = async (source: string) =>
 
 beforeEach(async () => {
   await env.DB.prepare(`DELETE FROM webmentions`).run();
-  await seedPost();
+  await seedPost(SLUG);
 });
 
 describe("decide_mention: who may decide", () => {
@@ -65,17 +64,12 @@ describe("decide_mention: who may decide", () => {
 
   it("ALLOWS THE OPERATOR to approve, and reports the post it purged", async () => {
     const source = "https://elsewhere.example/operator-approve";
-    const id = await seedMention(source);
 
-    const result = await runTool(operatorEnv(), OPERATOR, "decide_mention", {
-      id,
-      decision: "approve",
+    expect(await approveAsOperator(source)).toMatchObject({
+      changed: true,
+      slug: SLUG,
+      purged: `post:${SLUG}`,
     });
-
-    expect(result).toMatchObject({ ok: true });
-    if (result.ok) {
-      expect(result.data).toMatchObject({ changed: true, slug: SLUG, purged: `post:${SLUG}` });
-    }
     expect(await statusOf(source)).toBe("approved");
   });
 
@@ -125,15 +119,12 @@ describe("decide_mention: who may decide", () => {
     /* `changed: false` is the honest answer; purging for a page that did not change would
      * spend a rate-limited call on nothing. */
     const source = "https://elsewhere.example/unverified";
-    const id = await seedMention(source, "unverified");
 
-    const result = await runTool(operatorEnv(), OPERATOR, "decide_mention", {
-      id,
-      decision: "approve",
+    expect(await approveAsOperator(source, "unverified")).toMatchObject({
+      changed: false,
+      slug: null,
+      purged: null,
     });
-
-    expect(result).toMatchObject({ ok: true });
-    if (result.ok) expect(result.data).toMatchObject({ changed: false, slug: null, purged: null });
     expect(await statusOf(source)).toBe("unverified");
   });
 

@@ -2,48 +2,20 @@ import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
 import { mediaRecord, upsertMediaRecord } from "~/db";
-import { contentKey } from "~/lib/media/classify.mjs";
 import { handleMediaEvents } from "../../workers/media-events";
+
+import { bytesFor, envWithImages as imagesEnv, pngKey } from "./media-fixtures";
 
 /* An absent placeholder must never be written as NULL over one a bulk pass derived, and nothing
  * in the consumer mentions the column. `IMAGES` has no local emulation, so each case hands it a
  * RECORDED shape; `MEDIA_BACKUP` is absent, so the mirror step fails as it does in production. */
 
-/** Distinct bytes per case, so distinct content-addressed keys. */
-function bytesFor(seed: string) {
-  return new TextEncoder().encode(`fake-image-bytes:${seed}`);
-}
-
-const PLACEHOLDER_BODY = new Uint8Array([0x52, 0x49, 0x46, 0x46]);
+/* What the recorded transformer's RIFF bytes read as once stored. */
 const PLACEHOLDER_URI = `data:image/webp;base64,${btoa("RIFF")}`;
 
-/* `encodes: false` is the unreadable-source case: an SVG, a PDF or a corrupt upload makes
- * `placeholderFor` return null rather than throw. */
-function envWithImages(
-  dimensions: { width: number; height: number } | null,
-  encodes: boolean,
-) {
-  return {
-    ...env,
-    IMAGES: {
-      info: async (stream: ReadableStream) => {
-        await new Response(stream).arrayBuffer();
-        return dimensions ?? { format: "image/svg+xml" };
-      },
-      input: (stream: ReadableStream) => ({
-        transform: () => ({
-          output: async () => {
-            /* Drained, because the real binding consumes the stream and a case
-             * that left it open would not be exercising the same call. */
-            await new Response(stream).arrayBuffer();
-            if (!encodes) throw new Error("the transformer could not read this source");
-            return { response: () => new Response(PLACEHOLDER_BODY) };
-          },
-        }),
-      }),
-    },
-  } as unknown as Parameters<typeof handleMediaEvents>[1];
-}
+/* `encodes: false` is the unreadable-source case. */
+const envWithImages = (dimensions: { width: number; height: number } | null, encodes: boolean) =>
+  imagesEnv(dimensions, encodes) as unknown as Parameters<typeof handleMediaEvents>[1];
 
 /** One `PutObject` notification, in the shape R2 actually sends. */
 function batchFor(key: string) {
@@ -61,12 +33,8 @@ function batchFor(key: string) {
 }
 
 async function seedObject(seed: string) {
-  const bytes = bytesFor(seed);
-  const key = contentKey(await crypto.subtle.digest("SHA-256", bytes), "png", {
-    width: 800,
-    height: 600,
-  });
-  await env.MEDIA.put(key, bytes);
+  const key = await pngKey(seed, { width: 800, height: 600 });
+  await env.MEDIA.put(key, bytesFor(seed));
   return key;
 }
 

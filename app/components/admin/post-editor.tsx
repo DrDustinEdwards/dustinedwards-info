@@ -1,23 +1,9 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useRef, useState } from "react";
 import { Form, Link, useBlocker, useNavigation } from "react-router";
 
-import {
-  SLUG_ATTRIBUTE_PATTERN,
-  SLUG_MAX_LENGTH,
-  SLUG_PATTERN,
-} from "~/lib/content/slug.mjs";
 import { ACCEPT_ATTRIBUTE, uploadMedia } from "~/lib/media/upload-contract.mjs";
 
-import {
-  bufferDiffers,
-  clearAllBuffersFor,
-  draftKey,
-  purgeLegacyBuffers,
-  readBuffer,
-  readForm,
-  writeBuffer,
-  type DraftBuffer,
-} from "~/lib/editor/draft-buffer";
+import { clearAllBuffersFor, type DraftBuffer } from "~/lib/editor/draft-buffer";
 import type { EditorFeedback } from "~/lib/editor/feedback";
 import type { PostFields } from "~/lib/editor/frontmatter";
 import {
@@ -26,12 +12,13 @@ import {
   saveInPlaceIntent,
   type PostState,
 } from "~/lib/editor/publish-transition.mjs";
-import { seriesSlug } from "~/lib/series-path.mjs";
+import { EditorBar } from "./editor-bar";
 import { PostMetadata } from "./post-metadata";
-import { PublishActions } from "./publish-actions";
 import { RevisionList, type Revision } from "./revision-list";
 import { SettingsDrawer } from "./settings-drawer";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { TitleSlugRow } from "./title-slug-row";
+import { useDraftBuffer } from "./use-draft-buffer";
+import { useLivePreview } from "./use-live-preview";
 
 // There is no `draft` field: the transition rides in the submitter's `intent`, which a scriptless browser still sends.
 
@@ -41,30 +28,8 @@ const MarkdownEditor = lazy(() => import("./markdown-editor"));
 /** Type-only, so importing it does not pull the CodeMirror chunk in eagerly. */
 type LinkTarget = import("./markdown-editor").LinkTarget;
 
-const TITLE_LIMIT = 70;
 const AUTOSAVE_DELAY_MS = 800;
-const PREVIEW_DELAY_MS = 600;
-// The label reads in whole minutes, so 30s lags by at most half a unit; a 1s tick would re-render sixty times per change.
-const BUFFER_AGE_TICK_MS = 30_000;
 const FORM_ID = "post-editor";
-const LAYOUT_KEY = "post-editor:layout";
-
-// Rendered only beside "Unsaved changes", so the local buffer never reads as a save.
-function bufferAgeLabel(savedAt: string, now: number): string {
-  const minutes = Math.floor((now - new Date(savedAt).getTime()) / 60_000);
-  if (!Number.isFinite(minutes) || minutes < 1) return "just now";
-  return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
-}
-
-type Layout = "write" | "split" | "preview";
-
-// Strips rather than transliterates: a wrong guess at a non-ASCII character lands in a permanent URL.
-// The series rule, with apostrophes dropped rather than split on ("don't" is "dont") and a length cap.
-function slugify(title: string) {
-  return seriesSlug(title.replace(/['’]/g, ""))
-    .slice(0, 80)
-    .replace(/-+$/, "");
-}
 
 export function PostEditor({
   fields,
@@ -116,17 +81,9 @@ export function PostEditor({
   const [publishAt, setPublishAt] = useState(fields.publishAt);
   const [body, setBody] = useState(fields.body);
   const [dirty, setDirty] = useState(false);
-  const [savedAt, setSavedAt] = useState<string | null>(null);
-  const [ageNow, setAgeNow] = useState(() => Date.now());
-  // writeBuffer returns null both before it has run and when storage refuses, so the attempt is tracked separately.
-  const [bufferTried, setBufferTried] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [offer, setOffer] = useState<DraftBuffer | null>(null);
   const [restoredFrom, setRestoredFrom] = useState<string | null>(null);
   const [richBody, setRichBody] = useState(false);
-  const [layout, setLayout] = useState<Layout>("write");
-  const [preview, setPreview] = useState<{ html: string } | { error: string } | null>(null);
-  const [previewing, setPreviewing] = useState(false);
 
   /* While a submit is in flight a second one would carry the same head and read as a false conflict. */
   const busy = useNavigation().state === "submitting";
@@ -138,42 +95,17 @@ export function PostEditor({
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const keyboardIntentRef = useRef<HTMLInputElement>(null);
-  const autosaveTimer = useRef<number>(0);
-  const storageKey = draftKey(fields.slug, headSha);
 
-  // Never commits: a browser-local crash net. The save path is the only writer.
-  const persist = useCallback(() => {
-    const form = formRef.current;
-    if (!form) return;
-    setBufferTried(true);
-    setSavedAt(writeBuffer(storageKey, readForm(form)));
-  }, [storageKey]);
-
-  useEffect(() => {
-    purgeLegacyBuffers();
-  }, []);
-
-  // Restoring is never automatic: replacing committed content with older local text is the surprise this prevents.
-  useEffect(() => {
-    const form = formRef.current;
-    if (!form) return;
-    const stored = readBuffer(storageKey);
-    if (!stored) return;
-    if (!bufferDiffers(stored, readForm(form))) {
-      clearAllBuffersFor(fields.slug);
-      return;
-    }
-    setOffer(stored);
-  }, [storageKey, fields.slug]);
-
-  useEffect(() => {
-    if (!feedback || feedback.state === "failed") return;
-    clearAllBuffersFor(fields.slug);
-    if (isNew) clearAllBuffersFor("");
-    setOffer(null);
-    setDirty(false);
-    setRestoredFrom(null);
-  }, [feedback, fields.slug, isNew]);
+  const { offer, setOffer, savedAt, ageNow, bufferTried, persist, autosaveTimer } = useDraftBuffer({
+    formRef,
+    slug: fields.slug,
+    headSha,
+    isNew,
+    feedback,
+    dirty,
+    setDirty,
+    setRestoredFrom,
+  });
 
   useEffect(() => {
     if (!dirty) return;
@@ -193,64 +125,11 @@ export function PostEditor({
     if (blocker.state === "blocked" && !dirty) blocker.reset();
   }, [blocker, dirty]);
 
-  useEffect(() => {
-    if (!dirty || !savedAt) return;
-    setAgeNow(Date.now());
-    const id = window.setInterval(() => setAgeNow(Date.now()), BUFFER_AGE_TICK_MS);
-    return () => window.clearInterval(id);
-  }, [dirty, savedAt]);
-
-  // Read after mount, not during render, so the server and the first client paint agree.
-  useEffect(() => {
-    try {
-      const stored = window.localStorage.getItem(LAYOUT_KEY);
-      if (stored === "write" || stored === "split" || stored === "preview") setLayout(stored);
-    } catch {
-      // Storage disabled. The editor opens in Write, which is the default anyway.
-    }
-  }, []);
-
-  const chooseLayout = (next: Layout) => {
-    setLayout(next);
-    try {
-      window.localStorage.setItem(LAYOUT_KEY, next);
-    } catch {
-      // As above. The choice still applies to this session.
-    }
-  };
-
-  // A sequence number guards the response: with two renders in flight the slower can land last.
-  const previewSeq = useRef(0);
-  useEffect(() => {
-    if (layout === "write") return;
-    const seq = (previewSeq.current += 1);
-    setPreviewing(true);
-    const timer = window.setTimeout(async () => {
-      const form = new FormData();
-      form.set("body", body);
-      form.set("slug", fields.slug || slug);
-      try {
-        const response = await fetch("/admin/preview", { method: "POST", body: form });
-        // Not JSON is a failed request, such as an expired session answering with a page.
-        const result = (await response.json().catch(() => null)) as {
-          html?: string;
-          error?: string;
-        } | null;
-        if (seq !== previewSeq.current) return;
-        if (!result || (!response.ok && !result.error)) {
-          setPreview({ error: `The preview request failed with HTTP ${response.status}.` });
-          return;
-        }
-        setPreview(result.error ? { error: result.error } : { html: result.html ?? "" });
-      } catch (error) {
-        if (seq !== previewSeq.current) return;
-        setPreview({ error: errorMessage(error) });
-      } finally {
-        if (seq === previewSeq.current) setPreviewing(false);
-      }
-    }, PREVIEW_DELAY_MS);
-    return () => window.clearTimeout(timer);
-  }, [body, layout, fields.slug, slug]);
+  const { layout, chooseLayout, preview, previewing } = useLivePreview({
+    body,
+    fieldsSlug: fields.slug,
+    slug,
+  });
 
   // Sends the in-place intent explicitly by enabling a disabled hidden field: an absent intent on a write path is refused.
   useEffect(() => {
@@ -315,11 +194,6 @@ export function PostEditor({
     window.setTimeout(persist, 0);
   };
 
-  const slugValid = SLUG_PATTERN.test(slug);
-  const slugTaken = isNew && slug !== "" && existingSlugs.includes(slug);
-  const slugProblem = slug === "" ? null : !slugValid ? "lowercase kebab-case only" : slugTaken ? "already taken" : null;
-  const shortHead = headSha ? headSha.slice(0, 7) : "";
-
   return (
     <div className="editor-shell">
       {/* `role="alert"`, not a modal: the router already stopped the navigation, and a modal would
@@ -368,130 +242,28 @@ export function PostEditor({
         {/* No `draft` field on purpose: the intent carries the transition, so a scriptless request
             cannot send the post's current state instead of the one the author pressed. */}
 
-        <header className="editor-bar">
-          <div className="editor-bar-group editor-bar-left">
-            <Link to="/admin/posts" className="editor-back">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-              Posts
-            </Link>
-            <span className="editor-identity">
-              <span className="editor-identity-title">{title || "Untitled"}</span>
-              <span className="status-pill" data-state={state}>
-                {state}
-              </span>
-            </span>
-          </div>
-
-          {/* Gated on CodeMirror mounting: in the preview layout the write pane is `display:none`, and a
-              required control that is not displayed blocks submission unreachably. */}
-          <div className="editor-bar-group editor-bar-center">
-            {richBody ? (
-              <div className="editor-layout-toggle" role="group" aria-label="Editor layout">
-                {(["write", "split", "preview"] as Layout[]).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    className="editor-layout-option"
-                    aria-pressed={layout === option}
-                    onClick={() => chooseLayout(option)}
-                  >
-                    {option === "write" ? "Write" : option === "split" ? "Split" : "Preview"}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="editor-bar-group editor-bar-right">
-            <span className={dirty ? "editor-dirty is-dirty" : "editor-dirty"}>
-              <span className="editor-dirty-dot" aria-hidden="true" />
-              {!headSha
-                ? "Saving unavailable"
-                : dirty
-                  ? "Unsaved changes"
-                  : feedback && feedback.state !== "failed"
-                    ? `Saved ${feedback.sha}`
-                    : `Saved ${shortHead}`}
-            </span>
-
-            {/* Nothing renders on the server, so the static harness render is unchanged. */}
-            {dirty && savedAt ? (
-              <span className="editor-buffer-age" aria-live="polite">
-                last written {bufferAgeLabel(savedAt, ageNow)}
-              </span>
-            ) : dirty && bufferTried ? (
-              /* Muted, not warning: its neighbor is already warning-tinted, and two would read as two problems. */
-              <span className="editor-buffer-age" aria-live="polite">
-                Not backed up: browser storage unavailable
-              </span>
-            ) : null}
-
-            {/* The zero-JS preview path. Removed rather than hidden once scripted: it carries no value
-                the save path needs. */}
-            {!richBody ? (
-              <button
-                type="submit"
-                name="intent"
-                value="preview"
-                className="btn-ghost editor-preview-submit"
-                disabled={busy}
-              >
-                Render
-              </button>
-            ) : null}
-
-            <button
-              type="button"
-              className="editor-icon-button"
-              aria-expanded={drawerOpen}
-              aria-haspopup="dialog"
-              aria-label="Post settings"
-              title="Post settings"
-              onClick={() => setDrawerOpen(true)}
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.14.3.38.55.67.7H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-            </button>
-
-            <div className="editor-primary">
-              <PublishActions
-                state={state}
-                everPublished={everPublished}
-                publishAt={publishAt}
-                onPublishAtChange={(value) => {
-                  setPublishAt(value);
-                  setDirty(true);
-                }}
-                busy={busy}
-                disabled={!headSha}
-              />
-            </div>
-          </div>
-        </header>
+        <EditorBar
+          title={title}
+          state={state}
+          richBody={richBody}
+          layout={layout}
+          chooseLayout={chooseLayout}
+          dirty={dirty}
+          headSha={headSha}
+          feedback={feedback}
+          savedAt={savedAt}
+          ageNow={ageNow}
+          bufferTried={bufferTried}
+          busy={busy}
+          drawerOpen={drawerOpen}
+          openDrawer={() => setDrawerOpen(true)}
+          everPublished={everPublished}
+          publishAt={publishAt}
+          onPublishAtChange={(value) => {
+            setPublishAt(value);
+            setDirty(true);
+          }}
+        />
 
         <div className="editor-canvas" data-layout={layout}>
           <div className="editor-page">
@@ -567,66 +339,16 @@ export function PostEditor({
               </p>
             ) : null}
 
-            <div className="editor-title-row">
-              <label className="sr-only" htmlFor="field-title">
-                Title
-              </label>
-              <input
-                id="field-title"
-                name="title"
-                className="editor-title"
-                value={title}
-                onChange={(event) => {
-                  setTitle(event.target.value);
-                  if (isNew && !slugPinned) setSlug(slugify(event.target.value));
-                }}
-                placeholder="Untitled"
-                required
-                autoComplete="off"
-              />
-              <span className={title.length > TITLE_LIMIT ? "count over" : "count"}>
-                {title.length}/{TITLE_LIMIT}
-              </span>
-            </div>
-
-            {isNew ? (
-              <div className="editor-slug-row">
-                <label className="field-label" htmlFor="field-slug">
-                  Slug
-                  {slugProblem ? <span className="count over">{slugProblem}</span> : null}
-                </label>
-                <div className="editor-slug-input">
-                  <span className="muted">/blog/</span>
-                  <input
-                    id="field-slug"
-                    name="slug"
-                    value={slug}
-                    onChange={(event) => {
-                      setSlugPinned(true);
-                      setSlug(event.target.value);
-                    }}
-                    required
-                    pattern={SLUG_ATTRIBUTE_PATTERN}
-                    /* An HTML pattern cannot carry a length without a lookahead, so the bound is its own attribute. */
-                    maxLength={SLUG_MAX_LENGTH}
-                    aria-invalid={slugProblem !== null}
-                    aria-describedby={slugProblem ? "slug-problem" : undefined}
-                    autoComplete="off"
-                  />
-                </div>
-                {slugProblem ? (
-                  <p className="field-alarm" id="slug-problem">
-                    {slugTaken
-                      ? `A post already lives at /blog/${slug}. Saving would be refused.`
-                      : "Lowercase letters, digits and single hyphens."}
-                  </p>
-                ) : null}
-                <span className="field-hint muted">
-                  Derived from the title until you change it. Fixed after the
-                  first save, because it is the filename and the public URL.
-                </span>
-              </div>
-            ) : null}
+            <TitleSlugRow
+              title={title}
+              setTitle={setTitle}
+              slug={slug}
+              setSlug={setSlug}
+              slugPinned={slugPinned}
+              setSlugPinned={setSlugPinned}
+              isNew={isNew}
+              existingSlugs={existingSlugs}
+            />
 
             <div className="editor-panes">
               <div className="editor-pane editor-pane-write">
