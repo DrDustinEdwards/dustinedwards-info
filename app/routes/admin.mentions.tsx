@@ -2,7 +2,9 @@ import { Form, Link, data } from "react-router";
 
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { RowMenu } from "~/components/admin/row-menu";
+import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
+import { PolicyError } from "~/lib/editor/publish-policy.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
@@ -121,24 +123,46 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
   }
 
+  /*
+   * Shared with the operator API: `decideMention` keeps the write and the purge together, and the
+   * actor runs the same policy checks it does. `changed` false means no row moved, which is not success.
+   */
+  const decide = async (decision: "delete" | "approve" | "reject", done: string, unchanged: string) => {
+    try {
+      const { changed } = await decideMention(env, id, decision, context.get(adminActorContext));
+      return changed
+        ? data<ActionResult>({ ok: true, message: done })
+        : data<ActionResult>({ ok: false, message: unchanged }, { status: 409 });
+    } catch (error) {
+      if (error instanceof PolicyError) {
+        return data<ActionResult>({ ok: false, message: error.message }, { status: 403 });
+      }
+      throw error;
+    }
+  };
+
   if (intent === "delete") {
     if (!confirmationSatisfied(typed, 1)) {
       return data<ActionResult>({ confirmDelete: id });
     }
-    // Shared with the operator API: `decideMention` keeps the write and the purge together.
-    await decideMention(env, id, "delete");
-    return data<ActionResult>({ ok: true, message: "Mention deleted." });
+    return decide("delete", "Mention deleted.", `Nothing changed: mention ${id} no longer exists.`);
   }
 
   if (intent === "approve") {
-    await decideMention(env, id, "approve");
-    return data<ActionResult>({ ok: true, message: "Mention approved." });
+    return decide(
+      "approve",
+      "Mention approved.",
+      `Nothing changed: mention ${id} is gone or not verified, so it cannot be approved. Reload to see its state.`,
+    );
   }
 
   if (intent === "reject") {
     // Rejecting removes a rendered mention, so it purges the same tag.
-    await decideMention(env, id, "reject");
-    return data<ActionResult>({ ok: true, message: "Mention rejected." });
+    return decide(
+      "reject",
+      "Mention rejected.",
+      `Nothing changed: mention ${id} is gone or not verified, so it cannot be rejected. Reload to see its state.`,
+    );
   }
 
   /*

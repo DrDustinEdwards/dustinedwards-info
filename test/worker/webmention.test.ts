@@ -5,6 +5,7 @@ import { RouterContextProvider, createRoutesStub } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { approvedMentionsFor } from "~/db";
+import { adminActorContext } from "~/lib/auth.server";
 import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
@@ -671,9 +672,12 @@ describe("the moderation queue", () => {
 
   async function runAction(body: Record<string, string>) {
     const ctx = createExecutionContext();
+    /* The admin layout sets the actor; the action hands it to `decideMention` for the policy checks. */
+    const context = routeContext(ctx);
+    context.set(adminActorContext, { kind: "admin", email: "admin@example.com" });
     return (await mentionsAction({
       request: adminPost(body),
-      context: routeContext(ctx),
+      context,
     } as never)) as unknown as {
       data: {
         ok?: boolean;
@@ -723,11 +727,16 @@ describe("the moderation queue", () => {
     const a = await seedMention(unverified, "unverified", 1);
     const b = await seedMention(failed, "failed", 1);
 
-    await runAction({ intent: "approve", id: String(a) });
-    await runAction({ intent: "approve", id: String(b) });
+    const first = await runAction({ intent: "approve", id: String(a) });
+    const second = await runAction({ intent: "approve", id: String(b) });
 
     expect(await statusOf(unverified)).toBe("unverified");
     expect(await statusOf(failed)).toBe("failed");
+    /* Nothing moved, so the page must not say "approved". */
+    for (const result of [first, second]) {
+      expect(result.data.ok).toBe(false);
+      expect(result.data.message).toMatch(/^Nothing changed/);
+    }
   });
 
   it("REFUSES A DELETE WITH NO TYPED CONFIRMATION, in the ACTION", async () => {
