@@ -112,10 +112,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
 
-  /* After the response via `waitUntil`, failure swallowed: demand signal is worth less than the page rendering. */
+  /* After the response via `waitUntil`, failure logged: demand signal is worth less than the page rendering. */
   if (asked && result.total === 0 && !result.parsed.isEmpty) {
     getExecutionContext(context).waitUntil(
-      recordZeroResult(env, params.q).catch(() => {}),
+      recordZeroResult(env, params.q).catch((error: unknown) => {
+        console.error("zero-result record failed", error);
+      }),
     );
   }
 
