@@ -50,6 +50,34 @@ if (!existsSync(APP_PATH)) {
 const source = readFileSync(APP_PATH, "utf8");
 const code = stripComments(source);
 
+/**
+ * The block that opens at the first `{` at or after `from`, braces included, or "" when there is
+ * none. String literals are skipped whole, so a brace inside one does not count. Bounded by the
+ * code's own structure, so a reformat or a longer argument cannot push a needle out of a fixed
+ * character window, and the window cannot run on into the next function.
+ *
+ * @param {string} src @param {number} from
+ */
+function blockFrom(src, from) {
+  const open = src.indexOf("{", from);
+  if (open === -1) return "";
+  let depth = 0;
+  for (let i = open; i < src.length; i += 1) {
+    const c = src[i];
+    if (c === '"' || c === "'" || c === "`") {
+      i += 1;
+      while (i < src.length && src[i] !== c) i += src[i] === "\\" ? 2 : 1;
+      continue;
+    }
+    if (c === "{") depth += 1;
+    else if (c === "}") {
+      depth -= 1;
+      if (depth === 0) return src.slice(open, i + 1);
+    }
+  }
+  return "";
+}
+
 const block = code.match(/const\s+SECURITY_HEADERS\s*:[^=]*=\s*\{([\s\S]*?)\}\s*;/);
 ok(
   "workers/app.ts declares a SECURITY_HEADERS constant",
@@ -172,7 +200,9 @@ ok(
 
 let guardsSettingUncached = 0;
 for (const guard of guards) {
-  const after = code.slice(guard.index, guard.index + 160);
+  /* The guard's own consequent: a braced block, or the one statement it governs. */
+  const rest = code.slice(guard.index + guard[0].length);
+  const after = /^\s*\{/.test(rest) ? blockFrom(rest, 0) : rest.slice(0, rest.indexOf(";") + 1);
   if (/headers\.set\(\s*"cache-control"\s*,\s*UNCACHED\s*\)/.test(after)) guardsSettingUncached += 1;
 }
 ok(
@@ -776,14 +806,16 @@ console.log(
  * origin. Kept even though the CSP blocks it, so it does not depend on the policy.
  */
 {
-  const mediaRoute = readFileSync(join(root, "app/routes/media.$.ts"), "utf8");
+  /* Stripped like every other source here: a comment naming a type, the disposition or
+     `new Response(object.body` would otherwise satisfy or inflate the checks below. */
+  const mediaRoute = stripComments(readFileSync(join(root, "app/routes/media.$.ts"), "utf8"));
 
   const helperAt = mediaRoute.search(/function attachIfActive/);
   ok("media: the svg attachment helper exists", helperAt !== -1,
     "nothing sets Content-Disposition, so an uploaded SVG renders inline");
 
   // Scoped to the helper's own body: asserting the file mentions attachment would pass on a comment.
-  const helperBody = helperAt === -1 ? "" : mediaRoute.slice(helperAt, helperAt + 700);
+  const helperBody = helperAt === -1 ? "" : blockFrom(mediaRoute, helperAt);
   /* DERIVED FROM THE UPLOAD ALLOWLIST, never restated, or a NEW capable type joins with no rule. */
   const CAPABLE = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
   const uploadableCapable = [...ALLOWED.keys()].filter((t) => CAPABLE.includes(t));
@@ -1035,7 +1067,8 @@ console.log("  plaintext requests are upgraded before anything else runs");
   );
 
   /* The redirect's own caching is a safety property: the scheme is NOT in the cache key. */
-  const redirectBlock = redirectAt === -1 ? "" : fetchBody.slice(redirectAt, redirectAt + 420);
+  /* The `if (secure !== null) { ... }` that follows the decision, whole. */
+  const redirectBlock = redirectAt === -1 ? "" : blockFrom(fetchBody, redirectAt);
   ok(
     "the redirect block was located",
     redirectBlock.includes("Location"),
