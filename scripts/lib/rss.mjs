@@ -146,34 +146,6 @@ export function mb(/** @type {number | null | undefined} */ bytes) {
 }
 
 /**
- * Pids, never names: a sweep matching a process name would reach the user's own browser and editor.
- *
- * @param {string} outPath
- * @returns {number[]}
- */
-export function lastTree(outPath) {
-  let text = "";
-  try {
-    text = readFileSync(outPath, "utf8");
-  } catch {
-    return [];
-  }
-
-  const lines = text.split("\n").filter((line) => line.includes(","));
-  for (let i = lines.length - 1; i >= 0; i -= 1) {
-    const parts = lines[i].split(",");
-    if (parts.length < 3) continue;
-    const pids = parts[2]
-      .trim()
-      .split(/\s+/)
-      .map((value) => Number(value))
-      .filter((value) => Number.isInteger(value) && value > 0);
-    if (pids.length > 0) return pids;
-  }
-  return [];
-}
-
-/**
  * A window, not one sample, because a dead run's heavy processes were spawned minutes earlier; not
  * the whole file, because Windows reuses pids and this list is fed to a kill.
  *

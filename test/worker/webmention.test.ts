@@ -10,7 +10,7 @@ import { cloudflareContext } from "~/lib/context";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
-import { FAILURE_REASONS } from "~/lib/webmention/verify.server";
+import { FAILURE_REASONS, inspectSource } from "~/lib/webmention/verify.server";
 import { middleware as adminMiddleware } from "~/routes/admin";
 import AdminMentions, {
   action as mentionsAction,
@@ -556,6 +556,37 @@ describe("/webmention accepts and verifies", () => {
 
       expect((await mentionRow(source))?.failure_reason).toBe(FAILURE_REASONS.redirectRefused);
     }
+  });
+
+  it("REFUSES a redirect onto the canonical origin when the target names the other host", async () => {
+    /* Before the cutover the route accepts targets on the request's host too, so a hop back to
+     * SITE_ORIGIN must be refused even when the target's own origin is a different one. */
+    const source = "https://elsewhere.example/to-canonical";
+    stubSources({ [source]: { redirect: `${SITE_ORIGIN}/blog/${TARGET_SLUG}` } });
+    const verdict = await inspectSource(source, `https://other-host.example/blog/${TARGET_SLUG}`);
+    expect(verdict).toEqual({ status: "failed", failureReason: FAILURE_REASONS.redirectRefused });
+  });
+
+  it("ANSWERS 400 WHEN THE REQUEST BODY BREAKS MID-READ, never a 500", async () => {
+    const body = new ReadableStream({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("source=https://a.example/"));
+        controller.error(new Error("planted connection reset"));
+      },
+    });
+    const request = new Request(`${SITE_ORIGIN}/webmention`, {
+      method: "POST",
+      headers: {
+        "cf-connecting-ip": "203.0.113.90",
+        "content-type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+    const response = await webmentionAction({
+      request,
+      context: routeContext(createExecutionContext()),
+    } as never);
+    expect(response.status).toBe(400);
   });
 
   it("STORES A SCRIPT-SHAPED AUTHOR NAME AS THAT LITERAL TEXT", async () => {

@@ -12,7 +12,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const CSS_PATH = join(root, "app", "app.css");
 
 /** Gates reading "the stylesheets" must follow both entries or silently narrow to the public plane. */
-export const ADMIN_CSS_PATH = join(root, "app", "admin.css");
+const ADMIN_CSS_PATH = join(root, "app", "admin.css");
 
 /**
  * Root matches every route, so its CSS imports are the sheets every page loads. The order lives
