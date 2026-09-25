@@ -66,9 +66,6 @@ the bug.
 - **`status-label.test.mjs`** `statusLabel()` throws and does not substitute.
   Replays the colophon defect where `STATUS_LABEL[s] ?? s` rendered the raw enum
   on the page and in the index at once, looking like working output in both.
-- **`sql-literals.test.mjs`** `joinConcatenatedLiterals()` against `og_titl` and
-  `titl`. Replays the two defects that made a raw-SQL column scan blind to
-  `sync-content.mjs`, which builds its SQL by concatenation.
 
 ## What does NOT belong here
 
