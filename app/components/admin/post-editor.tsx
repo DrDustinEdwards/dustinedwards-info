@@ -677,7 +677,7 @@ export function PostEditor({
               ) : null}
             </div>
 
-            {/* The zero-JS image path only; once CodeMirror mounts, drag-drop, paste and the toolbar do it. */}
+            {/* The image path until CodeMirror mounts, then drag-drop, paste and the toolbar take over. It needs script too: without script the editor has no image upload. */}
             {!richBody ? (
               <ImageUploader
                 onInsert={(snippet) => {
