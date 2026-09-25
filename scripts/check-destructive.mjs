@@ -180,7 +180,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
 // The operator API is a bearer-token POST dispatched on a tool name, which the intent vocabulary cannot
 // see. For a machine caller the credential is the ceremony, so each tool declares a policy instead.
 {
-  const apiPath = join(root, "app", "lib", "operator", "api.server.ts");
+  const apiPath = join(root, "app", "lib", "operator", "descriptors.ts");
   const apiTree = parseSource(apiPath, readFileSync(apiPath, "utf8"));
 
   const toolsBlock = stringArrayConst(apiTree, "TOOLS");
