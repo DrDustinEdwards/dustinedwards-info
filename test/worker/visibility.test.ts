@@ -1,11 +1,7 @@
-import { createExecutionContext, env } from "cloudflare:test";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { RouterContextProvider, createRoutesStub } from "react-router";
+import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { renderAndWrite } from "~/lib/editor/publish.server";
-import { cloudflareContext } from "~/lib/context";
 import { syncAskCorpus, syncAskPost } from "~/lib/search/ask.server";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
@@ -27,6 +23,8 @@ import { loader as sitemapLoader } from "~/routes/sitemap";
 import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as searchLoader, middleware as searchMiddleware } from "~/routes/search";
+
+import { renderRoute, routeContext, textsOf, throughMiddleware } from "./route-helpers";
 
 /* The published post is the control that proves each surface was actually read. */
 
@@ -81,15 +79,6 @@ function markdown(
 
 const publishEnv = () => env as unknown as Parameters<typeof renderAndWrite>[0];
 
-function routeContext(overrides: Record<string, unknown> = {}) {
-  const context = new RouterContextProvider();
-  context.set(cloudflareContext, {
-    env: { ...env, ...overrides } as never,
-    ctx: createExecutionContext(),
-  });
-  return context;
-}
-
 async function read(
   loader: Loader,
   path: string,
@@ -118,13 +107,7 @@ async function searchJson(query: string) {
     headers: { accept: "application/json" },
   });
   const args = { request, params: {}, context: routeContext() } as never;
-  const run = async (index: number): Promise<unknown> => {
-    const handler = searchMiddleware[index] as unknown as
-      | ((a: never, next: () => Promise<unknown>) => Promise<unknown>)
-      | undefined;
-    return handler ? handler(args, () => run(index + 1)) : searchLoader(args);
-  };
-  const response = (await run(0)) as Response;
+  const response = (await throughMiddleware(searchMiddleware, searchLoader, args)) as Response;
   return (await response.json()) as {
     total: number;
     results: Array<{ url: string; title: string; publishedAt: string | null }>;
@@ -357,33 +340,14 @@ describe("search sorted by date", () => {
 });
 
 describe("the home page's post count", () => {
-  function renderHome(loaderData: unknown) {
-    const Stub = createRoutesStub([
-      {
-        path: "/",
-        Component: () => createElement(Home as never, { loaderData, params: {}, matches: [] }),
-      },
-    ]);
-    return renderToStaticMarkup(createElement(Stub, { initialEntries: ["/"] }));
-  }
-
   async function countLink() {
-    const html = renderHome(
-      await homeLoader({
-        request: new Request(`${SITE_ORIGIN}/`),
-        params: {},
-        context: routeContext(),
-      } as never),
-    );
-    const counts: string[] = [];
-    await new HTMLRewriter()
-      .on('a[href="/blog"]', {
-        text(chunk) {
-          counts.push(chunk.text);
-        },
-      })
-      .transform(new Response(html))
-      .text();
+    const loaderData = await homeLoader({
+      request: new Request(`${SITE_ORIGIN}/`),
+      params: {},
+      context: routeContext(),
+    } as never);
+    const html = renderRoute("/", Home, { loaderData });
+    const counts = await textsOf(html, 'a[href="/blog"]');
     const match = /(\d+)\s+posts?\b/.exec(counts.join(" "));
     return match ? Number(match[1]) : null;
   }
