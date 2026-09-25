@@ -178,6 +178,13 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return data(payload);
 }
 
+/** Appended when a write landed but its cache purge did not: the public pages are stale until expiry. */
+function unpurgedNote(count: number) {
+  return count > 0
+    ? ` The cache purge failed for ${count} post(s), so public pages may show the old version until their cache expires.`
+    : "";
+}
+
 export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData();
   const env = getEnv(context);
@@ -187,8 +194,14 @@ export async function action({ request, context }: Route.ActionArgs) {
 
   if (intent === "regenerate") {
     try {
-      const { synced } = await regenerateAllFromRepo(env);
-      return { message: `Re-rendered ${synced} posts from the repository.` };
+      const { synced, removed, unpurged } = await regenerateAllFromRepo(env);
+      return {
+        message:
+          `Re-rendered ${synced} posts from the repository` +
+          (removed > 0 ? ` and removed ${removed} no longer in it` : "") +
+          "." +
+          unpurgedNote(unpurged),
+      };
     } catch (error) {
       return {
         message: `Regenerate failed. ${error instanceof Error ? error.message : String(error)}`,
@@ -288,7 +301,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     if (fields.draft) return { message: `"${slug}" is already a draft. Nothing changed.` };
 
     try {
-      await savePost(env, {
+      const { purged } = await savePost(env, {
         slug,
         raw: serializePost({ ...fields, draft: true }),
         isNew: false,
@@ -297,7 +310,8 @@ export async function action({ request, context }: Route.ActionArgs) {
       return {
         message:
           `Unpublished "${slug}". It is a draft now, so it is off the public site, ` +
-          `the feeds and the sitemap. Republish it from its editor.`,
+          `the feeds and the sitemap. Republish it from its editor.` +
+          unpurgedNote(purged ? 0 : 1),
       };
     } catch (error) {
       return {
@@ -321,6 +335,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const failed: string[] = [];
     let done = 0;
     let skipped = 0;
+    let unpurged = 0;
 
     if (intent === "bulk-delete") {
       /*
@@ -336,10 +351,13 @@ export async function action({ request, context }: Route.ActionArgs) {
             `confirmation read ${typed || "(blank)"}. Type the count exactly to confirm.`,
         };
       }
+      const askFailures: string[] = [];
       for (const slug of slugs) {
         try {
-          await deletePost(env, { slug, actor });
+          const { purged, askRemoval } = await deletePost(env, { slug, actor });
           done += 1;
+          if (!purged) unpurged += 1;
+          if (askRemoval && !askRemoval.ok) askFailures.push(`${slug}: ${askRemoval.message}`);
         } catch (error) {
           failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -347,7 +365,9 @@ export async function action({ request, context }: Route.ActionArgs) {
       return {
         message:
           `Deleted ${done} of ${slugs.length}.` +
-          (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+          (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : "") +
+          (askFailures.length > 0 ? ` Ask removal failed on ${askFailures.join("; ")}` : "") +
+          unpurgedNote(unpurged),
       };
     }
 
@@ -373,13 +393,14 @@ export async function action({ request, context }: Route.ActionArgs) {
         const tags = adding
           ? [...fields.tags, wanted]
           : fields.tags.filter((t) => t !== wanted);
-        await savePost(env, {
+        const { purged } = await savePost(env, {
           slug,
           raw: serializePost({ ...fields, tags }),
           isNew: false,
           actor,
         });
         done += 1;
+        if (!purged) unpurged += 1;
       } catch (error) {
         failed.push(`${slug}: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -392,7 +413,8 @@ export async function action({ request, context }: Route.ActionArgs) {
         `${verb} ${done} with "${wanted}"` +
         (skipped > 0 ? `, skipped ${skipped} ${why}` : "") +
         "." +
-        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : ""),
+        (failed.length > 0 ? ` Failed on ${failed.join("; ")}` : "") +
+        unpurgedNote(unpurged),
     };
   }
 
