@@ -8,7 +8,7 @@ import { AI_DISCLOSURE, SECURITY_TRADEOFF, statusLabel } from "../../app/lib/col
  *
  * @param {string} v
  */
-export const el = (v) => `>${v}<`;
+const el = (v) => `>${v}<`;
 
 /**
  * Status goes through `statusLabel()`, since the page renders the label, not the raw enum.

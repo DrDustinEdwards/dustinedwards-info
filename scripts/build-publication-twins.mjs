@@ -11,12 +11,10 @@ import { doiSlug, paperPath, paperPdfPath } from "../app/lib/publications/paths.
 import { paperTwin } from "../app/lib/publications/twin.mjs";
 import { deleteFloor } from "./lib/delete-floor.mjs";
 import { isMain } from "./lib/is-main.mjs";
+import { doiKey } from "./build-publications.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = join(root, "public", "publications");
-
-/** @param {string} doi */
-const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
 /**
  * Exported so the gate can generate and compare without writing.

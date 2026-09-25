@@ -374,6 +374,8 @@ function openPalette() {
     input.value = "";
     input.focus();
   }
+  // The cleared field must not leave the link carrying the last session's query.
+  if (allResultsLink) allResultsLink.href = "/search";
   if (statusLine) statusLine.textContent = "";
   renderRecent();
 }
