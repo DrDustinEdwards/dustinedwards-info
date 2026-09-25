@@ -655,6 +655,18 @@
   margin-left: auto;
 }
 
+/* Empty, it sits out of the flex row, so it adds no gap; it stays in the document as a live region. */
+.media-drop-status:empty {
+  position: absolute;
+}
+
+.media-upload-chosen {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  overflow-wrap: anywhere;
+}
+
 .media-upload-label {
   padding: 0.4375rem 0.75rem;
   font-size: 0.8125rem;
