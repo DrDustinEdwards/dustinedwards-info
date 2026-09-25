@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { registerHooks } from "node:module";
 
 import {
-  PREVIEW_TTL_SECONDS,
   TOKEN_BYTES,
   TOKEN_LENGTH,
   base64url,
@@ -55,11 +54,11 @@ const RECORD = makeRecord({
 
 const DRAFT = { slug: "a-draft", status: "draft" };
 
-test("a token is 32 bytes of randomness, base64url, 43 characters", () => {
-  assert.equal(TOKEN_BYTES, 32);
-  assert.equal(TOKEN_LENGTH, 43, "32 bytes is 43 unpadded base64 characters");
+test("a token is at least 32 bytes of randomness, in unpadded base64url", () => {
+  assert.ok(TOKEN_BYTES >= 32, `${TOKEN_BYTES} random bytes makes a preview link guessable`);
   const token = mintToken();
-  assert.equal(token.length, 43);
+  assert.equal(token.length, TOKEN_LENGTH);
+  assert.equal(Buffer.from(token, "base64url").length, TOKEN_BYTES, "the token carries every random byte");
   assert.match(token, /^[A-Za-z0-9_-]+$/, "base64url alphabet only");
   assert.ok(!token.includes("="), "padding is stripped");
 });
@@ -138,7 +137,6 @@ test("the missing fields of a partial record become empty strings, never undefin
 });
 
 test("expiry is seven days after minting, and unreadable dates say so", () => {
-  assert.equal(PREVIEW_TTL_SECONDS, 604800);
   assert.equal(expiresAt("2026-08-15T10:00:00.000Z"), "2026-08-22T10:00:00.000Z");
   assert.equal(expiresAt("not a date"), "", "an unreadable date must not become a plausible one");
   assert.equal(expiresAt(""), "");

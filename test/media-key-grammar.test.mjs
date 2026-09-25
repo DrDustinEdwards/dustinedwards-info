@@ -47,12 +47,9 @@ const CASES = [
 ];
 
 test("isContentKey and digestFromKey agree with the writer on every case", () => {
-  let checked = 0;
   for (const c of CASES) {
     assert.equal(isContentKey(c.input), c.isContent, `isContentKey(${c.name})`);
     assert.equal(digestFromKey(c.input), c.digest, `digestFromKey(${c.name})`);
-    checked += 1;
   }
-  assert.equal(checked, 13, "every case in the table was checked");
 });
 

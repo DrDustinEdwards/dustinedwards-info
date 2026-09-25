@@ -37,6 +37,8 @@ test("no tracked text file carries a raw control or invisible character", async 
     let skipped = 0;
     /** @type {string[]} */
     const offences = [];
+    /** @type {string[]} */
+    const unreadable = [];
 
     for (const rel of tracked) {
       if (BINARY.test(rel)) {
@@ -46,7 +48,9 @@ test("no tracked text file carries a raw control or invisible character", async 
       let buf;
       try {
         buf = readFileSync(join(root, rel));
-      } catch {
+      } catch (error) {
+        // An unread file was not scanned, so skipping it quietly would report it clean.
+        unreadable.push(`${rel}: ${error instanceof Error ? error.message : String(error)}`);
         continue;
       }
       scanned += 1;
@@ -75,6 +79,11 @@ test("no tracked text file carries a raw control or invisible character", async 
       scanned >= 400 && skipped >= 50,
       `scanned ${scanned} text file(s) and skipped ${skipped} binary file(s). Below either floor the ` +
         `scan has stopped reading the repository and the result below means nothing.`,
+    );
+    ok(
+      "every tracked text file could be read",
+      unreadable.length === 0,
+      `${unreadable.length} could not be read, so were not scanned:\n      ${unreadable.join("\n      ")}`,
     );
     ok(
       "no tracked text file carries a raw control or invisible character",

@@ -290,7 +290,7 @@
           "kind": "assertion",
           "gate": "check:tests",
           "file": "test/write-path-invariants.test.mjs",
-          "text": "the fixture contains both resolvable and unresolvable keys"
+          "text": "the fixture produced both resolutions and refusals"
         }
       ]
     },

@@ -36,11 +36,14 @@ test("a healthy report passes and carries its checks", () => {
 });
 
 test("THE PLANT: a 200 whose body does not say ok refuses, naming the check", () => {
-  const verdict = readinessVerdict(503, UNHEALTHY);
-  assert.equal(verdict.ok, false);
-  assert.match(verdict.why, /not healthy/);
-  assert.match(verdict.why, /ask-index-drift/);
-  assert.match(verdict.remedy, /NOTHING WAS SYNCED/);
+  // 200 is the plant: the status alone would pass. 503 is what the endpoint really sends.
+  for (const status of [200, 503]) {
+    const verdict = readinessVerdict(status, UNHEALTHY);
+    assert.equal(verdict.ok, false, `HTTP ${status}`);
+    assert.match(verdict.why, /not healthy/);
+    assert.match(verdict.why, /ask-index-drift/);
+    assert.match(verdict.remedy, /NOTHING WAS SYNCED/);
+  }
 });
 
 test("THE PLANT, second form: a 200 carrying ok:true but no checks still refuses", () => {
@@ -199,14 +202,21 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
 
 test("a deferred check the endpoint stopped reporting is a MISS, not a pass", () => {
   const { misses } = deferredMisses([{ name: "content-drift", ok: true }], SHIP_DEFERRED);
-  assert.equal(misses.length, 2, "the two absent checks are both named");
-  assert.match(misses.join(" "), /no ask-index-drift check, so nothing was proven/);
-  assert.match(misses.join(" "), /no media-index-drift check, so nothing was proven/);
+  const absent = Object.keys(SHIP_DEFERRED).filter((name) => name !== "content-drift");
+  assert.ok(absent.length > 0, "the case needs at least one deferred check left unreported");
+  assert.equal(misses.length, absent.length, "every absent check is named");
+  for (const name of absent) {
+    assert.match(misses.join(" "), new RegExp(`no ${name} check, so nothing was proven`));
+  }
 });
 
 test("every deferred check converging leaves no miss", () => {
   const healthy = JSON.parse(HEALTHY).checks;
   const { misses, converged } = deferredMisses(healthy, SHIP_DEFERRED);
   assert.deepEqual(misses, [], "a clean run reports nothing");
-  assert.equal(converged.length, 3, "and says so for all three rather than staying quiet");
+  assert.deepEqual(
+    converged.sort(),
+    Object.keys(SHIP_DEFERRED).sort(),
+    "and says so for every one rather than staying quiet",
+  );
 });
