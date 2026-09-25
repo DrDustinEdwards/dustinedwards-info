@@ -21,7 +21,6 @@ import {
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 import {
-  NO_ANSWER_TEXT,
   answerLeaksPrompt,
   askMessages,
   citedSlugs,
@@ -29,7 +28,7 @@ import {
   replayFrames,
 } from "./ask-prompt.mjs";
 
-export { NO_ANSWER_TEXT, answerLeaksPrompt, citedSlugs, guardAnswerStream };
+export { answerLeaksPrompt, citedSlugs, guardAnswerStream };
 
 const ASK_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
@@ -39,13 +38,6 @@ const MAX_CHUNKS = 6;
 /** A property check, not a try/catch: only a removed binding, not an erroring instance, should hide Ask. */
 export function askAvailable(env: Env): boolean {
   return Boolean(env.AI_SEARCH);
-}
-
-export interface AskCitation {
-  url: string;
-  title: string;
-  isSection: boolean;
-  score: number;
 }
 
 /** The raw upstream SSE is handed through untouched: the client already parses SSE. */
@@ -131,7 +123,7 @@ export function replayCachedAnswer(cached: {
   });
 }
 
-export interface CorpusSyncResult {
+interface CorpusSyncResult {
   uploaded: number;
   keys: string[];
   /** Non-empty means the sync did NOT converge. */
@@ -318,7 +310,7 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
 }
 
 /** On the context because a parent cannot read a child's loader data; a getter, so a route that never asks never pays. */
-export type AskStatusReader = () => Promise<AskIndexStatus | null>;
+type AskStatusReader = () => Promise<AskIndexStatus | null>;
 
 export const askStatusContext = createContext<AskStatusReader>();
 

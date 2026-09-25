@@ -4,7 +4,7 @@
 import { pacedAllowance, secondsPerPacedUnit } from "~/lib/search/ask-pacing.mjs";
 
 /** Per IP per minute: more than a reading human asks, far less than a loop wants. */
-export const ASK_RATE_LIMIT = 5;
+const ASK_RATE_LIMIT = 5;
 export const ASK_RATE_LIMIT_PERIOD_SECONDS = 60;
 
 /** A ceiling on the bill: a number a real reader never reaches and a scraper will. */
@@ -53,7 +53,7 @@ export async function questionKey(question: string): Promise<string> {
   return `${ANSWER_CACHE_PREFIX}${hex}`;
 }
 
-export interface GuardVerdict {
+interface GuardVerdict {
   ok: boolean;
   retryAfter?: number;
   reason?: "rate" | "budget" | "unprotected";
