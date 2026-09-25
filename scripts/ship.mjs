@@ -21,8 +21,12 @@ import { applyCommand, readMigrationList } from "./lib/pending-migrations.mjs";
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import {
   SHIP_BUSY_NEEDLES,
+  SHIP_LOCK_FILE,
+  SHIP_LOCK_NEEDLE,
   busyProcesses,
   readProcessTable,
+  releaseLock,
+  takeLock,
 } from "./lib/child-processes.mjs";
 import {
   DEFERRED_CHECKS,
@@ -30,7 +34,7 @@ import {
   readinessLines,
   readinessVerdict,
 } from "./lib/readiness.mjs";
-import { retryRead } from "./lib/retry.mjs";
+import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import {
   ASK_POLL_INTERVAL_MS,
@@ -73,7 +77,7 @@ async function teeSelfToLog() {
 
   const child = spawn(process.execPath, [fileURLToPath(import.meta.url), ...process.argv.slice(2)], {
     cwd: root,
-    env: { ...process.env, SHIP_TRANSCRIPT: logPath },
+    env: { ...process.env, SHIP_TRANSCRIPT: logPath, SHIP_TEE_PARENT: String(process.pid) },
     stdio: ["inherit", "pipe", "pipe"],
   });
 
@@ -97,9 +101,15 @@ async function teeSelfToLog() {
     });
   }
 
+  /* On close, not exit: stdio can still be open at exit, and the tail is the MISSED/REFUSED summary. */
   const code = await new Promise((resolve) => {
-    child.on("exit", (status) => resolve(status ?? 1));
-    child.on("error", () => resolve(1));
+    child.on("close", (status) => resolve(status ?? 1));
+    child.on("error", (error) => {
+      const line = `\n  ship could not start its logged child: ${error.message}\n`;
+      process.stderr.write(line);
+      writeSync(handle, line);
+      resolve(1);
+    });
   });
 
   /* Printed last and only on failure, where a reader scrolling back finds it first. */
@@ -112,7 +122,8 @@ async function teeSelfToLog() {
   return code;
 }
 
-if (!process.env.SHIP_TRANSCRIPT) {
+/* The child is recognised by its parent's pid, not by SHIP_TRANSCRIPT, which a shell could have exported. */
+if (process.env.SHIP_TEE_PARENT !== String(process.ppid)) {
   process.exit(await teeSelfToLog());
 }
 
@@ -145,22 +156,40 @@ function refuse(why, remedy) {
 
 /**
  * The signal is returned, not collapsed: `status ?? 1` would read a killed process as a gate's exit 1.
+ * A spawn error (npx not found, a timeout) is printed and carried in `text`, so a refusal names it.
+ * `timeoutMs` bounds a read: retryRead's own timer cannot fire while spawnSync blocks.
  * @param {string} command @param {string[]} args
+ * @param {{ capture?: boolean, timeoutMs?: number }} [options]
  */
-function run(command, args, { capture = false } = {}) {
-  const result = spawnSync(command, args, {
+function run(command, args, { capture = false, timeoutMs } = {}) {
+  const options = {
     cwd: root,
     shell: process.platform === "win32",
-    stdio: capture ? ["inherit", "pipe", "pipe"] : "inherit",
-    encoding: "utf8",
-  });
+    stdio: /** @type {any} */ (capture ? ["inherit", "pipe", "pipe"] : "inherit"),
+    encoding: /** @type {const} */ ("utf8"),
+  };
+  const result =
+    timeoutMs === undefined
+      ? (() => {
+          const r = spawnSync(command, args, options);
+          return {
+            stdout: String(r.stdout ?? ""),
+            stderr: String(r.stderr ?? ""),
+            status: r.error ? null : r.status,
+            signal: r.signal ?? null,
+            error: r.error ? `${command} could not run: ${r.error.message}` : "",
+          };
+        })()
+      : spawnSyncBounded(command, args, { ...options, timeoutMs });
   const signal = result.signal ?? null;
+  const failure = result.error ? `\n  ship: ${result.error}\n` : "";
+  if (failure) process.stderr.write(failure);
   if (capture) {
-    const text = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+    const text = `${result.stdout}${result.stderr}${failure}`;
     process.stdout.write(text);
     return { code: result.status ?? 1, signal, text };
   }
-  return { code: result.status ?? 1, signal, text: "" };
+  return { code: result.status ?? 1, signal, text: failure };
 }
 
 /**
@@ -262,8 +291,15 @@ announce("Preflight: up to date, and nothing else holding the tree");
   /* Needles live in `child-processes.mjs` so the test imports the list ship uses. */
   const table = readProcessTable();
   if (table.size === 0) {
-    console.log("  could not read the process table, so nothing was proven about orphans.");
-  } else {
+    refuse(
+      "the process table could not be read, so nothing proves no gate run, preview or other ship is " +
+        "writing build/ or production D1",
+      "This guard is the only thing between two writers of build/ (the 2026-09-24 collision), so an " +
+        "unknown refuses rather than proceeds. Re-run ship; if it repeats, check that powershell.exe " +
+        "(Windows) or ps can list processes. Nothing has been built or deployed.",
+    );
+  }
+  {
     const busy = busyProcesses(table, SHIP_BUSY_NEEDLES, process.pid);
     if (busy.length > 0) {
       console.error(busy.map(({ pid, what }) => `    pid ${pid}  ${what}`).join("\n"));
@@ -277,6 +313,18 @@ announce("Preflight: up to date, and nothing else holding the tree");
     }
     console.log(`  ${table.size} process(es) scanned, none of them a gate run, a preview or another ship.`);
   }
+
+  /* The scan above is one moment; the lock lasts the whole ship, and check-all refuses while it is held. */
+  const lockPath = join(root, SHIP_LOCK_FILE);
+  const lock = takeLock(lockPath, table, SHIP_LOCK_NEEDLE);
+  if (!lock.ok) {
+    refuse(
+      `another ship (pid ${lock.holder}) holds ${SHIP_LOCK_FILE}`,
+      "Two ships on one checkout build into one build/. Wait for it to finish. Nothing has been built or deployed.",
+    );
+  }
+  process.on("exit", () => releaseLock(lockPath));
+  if (lock.tookOver) console.log(`  took over ${SHIP_LOCK_FILE} from pid ${lock.tookOver}, which is no longer a ship.`);
 }
 
 announce("Working tree must be clean");
@@ -305,6 +353,13 @@ const sha = (head.stdout ?? "").trim();
 // Full sha: `head_sha=` returns nothing for an abbreviated one.
 const headFull = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" });
 const shaFull = (headFull.stdout ?? "").trim();
+// An empty sha would ask GitHub for runs with an empty head_sha filter, which is not this commit.
+if (head.status !== 0 || headFull.status !== 0 || !/^[0-9a-f]{40}$/.test(shaFull) || !shaFull.startsWith(sha) || !sha) {
+  refuse(
+    `git rev-parse HEAD did not name a commit (status ${head.status}/${headFull.status}, "${shaFull}")`,
+    "CI is read for this exact sha, so an unread HEAD cannot be checked. Nothing has been built or deployed.",
+  );
+}
 console.log(`  HEAD is ${sha}`);
 
 /*
@@ -404,7 +459,7 @@ try {
       const listed = run(
         "npx",
         ["wrangler", "d1", "migrations", "list", DATABASE, "--remote"],
-        { capture: true },
+        { capture: true, timeoutMs: 90_000 },
       );
       const verdict = readMigrationList({ code: listed.code, text: listed.text });
       // The ONE retryable outcome. Thrown rather than returned so the wrapper
@@ -645,7 +700,7 @@ let watchdogMiss = "";
     } else {
       console.log(`  watchdog version ${watchdogVersion}`);
       /* Read back from wrangler: a configured cron is not a registered one. A miss, not a refusal. */
-      if (!/schedule|cron|trigger/i.test(deployed.text)) {
+      if (!/^\s*schedule:\s*\S/m.test(deployed.text)) {
         watchdogMiss =
           "the watchdog deployed but wrangler's output named no cron trigger, so the " +
           "schedule may not be registered and the Worker would never fire";
@@ -783,6 +838,9 @@ let askMiss = "";
 
 let askLateConverge = false;
 
+/** Generous: sync_ask uploads every changed document with retries inside one request. */
+const OPERATOR_TIMEOUT_MS = 10 * 60_000;
+
 /**
  * Returns a miss rather than throwing: every failure here happens after the deploy has landed.
  * @param {string} tool
@@ -805,6 +863,8 @@ async function operatorSync(tool) {
         "content-type": "application/json",
       },
       body: JSON.stringify({ tool, args: {} }),
+      // Bounded: a stalled POST after the deploy has landed would hang ship with the deploy unreported.
+      signal: AbortSignal.timeout(OPERATOR_TIMEOUT_MS),
     });
     body = await response.json().catch(() => null);
   } catch (error) {
@@ -843,6 +903,7 @@ async function operatorSync(tool) {
     const driftReading = async () => {
       const res = await fetch(`${ORIGIN}/api/health`, {
         headers: { "user-agent": "ship", "cache-control": "no-cache" },
+        signal: AbortSignal.timeout(30_000),
       });
       // Parsed regardless of status: health answers 503 when ANY check fails,
       // including ones this loop is not asking about, and the body is still
@@ -967,11 +1028,17 @@ let deferredMiss = "";
   }
 
   if (!deferredMiss) {
-    // Only deferred rows are consulted; the rest, `fts-equality` included, were gated at readiness.
-    const verdict = readinessVerdict(status, text, READINESS_PATH);
-    const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
-    for (const name of converged) console.log(`  ${name} ok, after ${DEFERRED_CHECKS[name]}.`);
-    deferredMiss = misses.join("; ");
+    // Deferred rows are asserted here; a non-deferred row (fts-equality) gone red since readiness is a miss too.
+    const verdict = readinessVerdict(status, text, READINESS_PATH, Object.keys(DEFERRED_CHECKS));
+    if (!verdict.ok && verdict.checks.length === 0) {
+      // A 429 or an unparseable body: name that, not three "reported no check" misses.
+      deferredMiss = verdict.why;
+    } else {
+      const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
+      for (const name of converged) console.log(`  ${name} ok, after ${DEFERRED_CHECKS[name]}.`);
+      if (!verdict.ok) misses.unshift(verdict.why);
+      deferredMiss = misses.join("; ");
+    }
   }
 
   if (deferredMiss) console.log(`  MISS: ${deferredMiss}`);

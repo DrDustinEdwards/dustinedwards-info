@@ -112,3 +112,59 @@ test("a red table with a nonzero exit but no FAIL rows still refuses and counts"
   assert.deepEqual(o.failing, []);
   assert.match(o.why, /3 failed/);
 });
+
+test("a zero exit over a nonzero failed count is red, not passed", () => {
+  const text = `\n${"-".repeat(52)}\n  PASS  check:content 1.0s\n${"-".repeat(52)}\n\n34 passed, 1 failed\n`;
+  const o = tierOutcome({ code: 0, signal: null, text });
+
+  assert.equal(o.state, "red");
+  assert.match(o.why, /1 failed/);
+});
+
+test("0 passed, 0 failed is not a pass: a tier that ran nothing asserted nothing", () => {
+  const o = tierOutcome({ code: 0, signal: null, text: "\n0 passed, 0 failed\n" });
+
+  assert.notEqual(o.state, "passed");
+  assert.match(o.why, /ran no gate/);
+});
+
+test("the LAST summary line is the tier's: a failed gate's own summary above the table is not read", () => {
+  // check-all prints each failed gate's output ABOVE the table, and a gate can print its own tally.
+  const text =
+    "\ncheck:tests\n  3 passed, 0 failed\n" +
+    `\n${"-".repeat(52)}\n  FAIL  check:tests 9.0s\n${"-".repeat(52)}\n\n20 passed, 1 failed\n`;
+  const o = tierOutcome({ code: 1, signal: null, text });
+
+  assert.equal(o.state, "red");
+  assert.deepEqual(o.failing, ["check:tests"]);
+  assert.match(o.why, /20 passed, 1 failed/);
+});
+
+test("FAIL lines in a gate's own output are not named as failing gates", () => {
+  const text =
+    "\ncheck:content\n  FAIL  every post has a date\n" +
+    `\n${"-".repeat(52)}\n  FAIL  check:content 2.0s\n  PASS  check:urls 1.0s\n${"-".repeat(52)}\n\n1 passed, 1 failed\n`;
+  const o = tierOutcome({ code: 1, signal: null, text });
+
+  assert.deepEqual(o.failing, ["check:content"]);
+});
+
+test("errored gates with nothing failed are no verdict, never a pass", () => {
+  const o = tierOutcome({ code: 1, signal: null, text: "\n30 passed, 0 failed, 2 errored\n" });
+
+  assert.equal(o.state, "crashed");
+  assert.match(o.why, /2 gate\(s\) errored/);
+});
+
+test("a zero exit with an errored count still does not pass", () => {
+  const o = tierOutcome({ code: 0, signal: null, text: "\n30 passed, 0 failed, 1 errored\n" });
+
+  assert.notEqual(o.state, "passed");
+});
+
+test("the heap-corruption NTSTATUS is a crash, the same table check-all names", () => {
+  const o = tierOutcome({ code: 0xc0000374, signal: null, text: GREEN_TABLE });
+
+  assert.equal(o.state, "crashed");
+  assert.match(o.why, /STATUS_HEAP_CORRUPTION/);
+});
