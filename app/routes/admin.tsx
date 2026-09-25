@@ -142,6 +142,8 @@ export async function loader({ context }: Route.LoaderArgs) {
 /** localStorage, a per-device preference: the server cannot know it, hence the blocking script below. */
 const SIDEBAR_KEY = "admin-sidebar";
 const SIDEBAR_ATTR = "data-admin-sidebar";
+/** The width at which the sidebar becomes a drawer; the same figure as admin-shell.css. */
+const DRAWER_QUERY = "(max-width: 800px)";
 
 /**
  * Sets the attribute before the sidebar paints, so nothing snaps after hydration. In the admin
@@ -321,25 +323,47 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
     });
   }, []);
 
+  const sidebarRef = useRef<HTMLElement>(null);
+  /*
+   * Where focus goes once the drawer has closed. Moved in an effect, not the handler: while the drawer
+   * is open the topbar and main are inert, and an inert element refuses focus.
+   */
+  const focusAfterClose = useRef<HTMLElement | null>(null);
+
   const closeDrawer = useCallback(() => {
+    focusAfterClose.current = menuButtonRef.current;
     setDrawerOpen(false);
-    menuButtonRef.current?.focus();
   }, []);
 
   useEffect(() => {
-    if (!drawerOpen) return;
+    if (!drawerOpen) {
+      focusAfterClose.current?.focus();
+      focusAfterClose.current = null;
+      return;
+    }
+    // Into the drawer on open, as a modal dialog does: the rest of the page is inert behind it.
+    sidebarRef.current?.querySelector<HTMLElement>("a[href]")?.focus();
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") closeDrawer();
     };
+    // Widening past the drawer breakpoint turns the drawer back into the sidebar, so nothing may stay inert.
+    const narrow = window.matchMedia(DRAWER_QUERY);
+    const onWiden = () => {
+      if (!narrow.matches) setDrawerOpen(false);
+    };
     document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
+    narrow.addEventListener("change", onWiden);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      narrow.removeEventListener("change", onWiden);
+    };
   }, [drawerOpen, closeDrawer]);
 
   /* Picking a section in the mobile drawer closes it and puts focus on the page it opens, not a hidden link. */
   const pickSection = useCallback(() => {
     if (!drawerOpen) return;
+    focusAfterClose.current = mainRef.current;
     setDrawerOpen(false);
-    mainRef.current?.focus();
   }, [drawerOpen]);
 
   return (
@@ -347,7 +371,8 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
       {/* Before the sidebar, so the attribute is set before it is painted. */}
       <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
 
-      <header className="admin-topbar">
+      {/* Inert behind the open drawer, so Tab and a screen reader stay inside it. */}
+      <header className="admin-topbar" inert={drawerOpen}>
         <Link to="/admin" className="admin-brand">
           <SiteLogoHeader className="admin-brand-mark" />
           {/* Wrapped: a bare text node cannot carry `text-overflow`. */}
@@ -362,7 +387,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
             className="admin-menu-button"
             aria-expanded={drawerOpen}
             aria-controls="admin-sidebar"
-            aria-label="Admin sections"
+            aria-label="Open admin menu"
             onClick={() => setDrawerOpen(true)}
           >
             <svg
@@ -394,7 +419,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         </div>
       </header>
 
-      <aside className="admin-sidebar" id="admin-sidebar">
+      <aside className="admin-sidebar" id="admin-sidebar" ref={sidebarRef}>
         <nav className="admin-nav" aria-label="Admin sections">
           {NAV.map((item) => {
             const drift: number | null = item.drift ? loaderData.askDrift : 0;
@@ -447,10 +472,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
           <button
             type="button"
             className="admin-sidebar-toggle"
-            aria-expanded={!collapsed}
-            aria-controls="admin-sidebar"
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            /* A fixed name and a pressed state: a name that flips as well would say the change twice. */
+            aria-pressed={collapsed}
+            aria-label="Collapse sidebar"
+            title="Collapse sidebar"
             onClick={toggle}
           >
             <Glyph className="admin-sidebar-chevron" strokeWidth="2">
@@ -467,7 +492,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         aria-hidden="true"
       />
 
-      <div className="admin-main">
+      <div className="admin-main" inert={drawerOpen}>
         <main className="admin-content" id="main" ref={mainRef} tabIndex={-1}>
           <Outlet />
         </main>
