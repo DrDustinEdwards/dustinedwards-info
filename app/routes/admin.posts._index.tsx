@@ -17,6 +17,7 @@ import {
   savePost,
 } from "~/lib/editor/publish.server";
 import { copySlugCandidates } from "~/lib/editor/duplicate.mjs";
+import { deleteLeftBehind } from "~/lib/editor/delete-left.mjs";
 import {
   CACHE_SENTENCE,
   READERSHIP_ABSENT,
@@ -78,6 +79,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const loaderStart = performance.now();
   const env = getEnv(context);
   const filters = readFilters(new URL(request.url).searchParams);
+  const deleteLeft = deleteLeftBehind(new URL(request.url).searchParams);
 
   const askPromise = timed(timings, "ask_status_uncached", () =>
     context.get(askStatusContext)(),
@@ -155,6 +157,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     posts,
     /* With Ask on, a null `ask` is a failed status read, never "up to date". */
     askOn,
+    /** What a delete from the editor left behind, when it redirected here. */
+    deleteLeft,
     ask,
     budget,
     budgetError,
@@ -677,6 +681,12 @@ export default function AdminPosts({
           {scheduledTotal} post{scheduledTotal === 1 ? " is" : "s are"} scheduled and not yet
           public.{" "}
           <Link to={`/admin/posts?${FILTER_KEYS.status}=scheduled`}>Show the queue</Link>
+        </p>
+      ) : null}
+
+      {loaderData.deleteLeft ? (
+        <p className="admin-notice" role="status">
+          {`Deleted "${loaderData.deleteLeft.slug}". ${loaderData.deleteLeft.problems.join(" ")}`}
         </p>
       ) : null}
 

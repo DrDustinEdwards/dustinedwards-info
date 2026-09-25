@@ -23,6 +23,7 @@ import { stateOf } from "~/lib/editor/publish-transition.mjs";
 import { currentHead, deletePost, EditorError, GitHubError } from "~/lib/editor/publish.server";
 import { readHead } from "~/lib/editor/head.server";
 import { postPath } from "~/lib/content/slug.mjs";
+import { DELETE_LEFT_PARAM } from "~/lib/editor/delete-left.mjs";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import type { Route } from "./+types/admin.posts.$slug.edit";
 
@@ -188,12 +189,18 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       };
     }
     try {
-      await deletePost(env, {
+      const { purged, askRemoval } = await deletePost(env, {
         slug: params.slug,
         expectedHeadSha,
         actor: context.get(adminActorContext),
       });
-      return redirect("/admin/posts");
+      /* The delete landed, so it redirects; what it left behind travels to the list page to be said there. */
+      const left = new URLSearchParams();
+      if (askRemoval && !askRemoval.ok) left.append(DELETE_LEFT_PARAM, "ask");
+      if (!purged) left.append(DELETE_LEFT_PARAM, "purge");
+      if (!left.has(DELETE_LEFT_PARAM)) return redirect("/admin/posts");
+      left.set("deleted", params.slug);
+      return redirect(`/admin/posts?${left}`);
     } catch (error) {
       const message =
         error instanceof EditorError || error instanceof GitHubError
