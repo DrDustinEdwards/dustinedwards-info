@@ -27,6 +27,7 @@ import {
   portListeners,
   readProcessTable,
 } from "./lib/child-processes.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
@@ -249,8 +250,8 @@ function smokeRepair(status) {
   return `status ${status || "(no response)"}`;
 }
 
-let checks = 0;
-let failures = 0;
+const tally = createTally();
+const { ok } = tally;
 const skipped = [];
 
 /* The gate's own fetches carry a deadline, like the readiness probes: a hung origin would otherwise
@@ -262,15 +263,6 @@ let adminCasesRan = false;
 
 /** @type {{ ok: boolean, status: number, error?: string }} */
 let AUTH_RESULT = { ok: false, status: 0 };
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
 
 /**
  * Fails one case on a missing selector, where `page.click` would end the run.
@@ -3921,7 +3913,7 @@ if (subjectReachable) {
   /* Each floor sits `max(3, ceil(count * 0.05))` under a measured run; re-measure when touching this file. */
   const MINIMUM_CHECKS = DRIVES_PREVIEW ? 248 : 230;
   console.log(
-    `\n${checks} checks, ${failures} failures` +
+    `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
       "\n",
   );
@@ -3960,13 +3952,13 @@ if (subjectReachable) {
   const floorBreach = assertFloor(
     "check:browser",
     DRIVES_PREVIEW ? "checks:preview" : "checks:deployed",
-    checks,
+    tally.checks,
     MINIMUM_CHECKS,
   );
   if (floorBreach) {
     console.error(`check:browser REFUSED: ${floorBreach}`);
-    failures += 1;
+    tally.fail(floorBreach);
   }
-  process.exitCode = failures > 0 ? 1 : 0;
+  process.exitCode = tally.failures > 0 ? 1 : 0;
 
 }

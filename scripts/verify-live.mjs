@@ -17,6 +17,7 @@ import { colophonFacts } from "./lib/colophon-facts.mjs";
 import { chunkStem } from "./check-page-payload.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 // Derived like the sync and uploader do; a literal key goes stale.
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
@@ -41,15 +42,8 @@ const ASK_TIMEOUT_MS = 90_000;
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
 
-let passed = 0;
-/** @type {string[]} */
-const failures = [];
-
-/** @param {string} label @param {boolean} ok @param {string} [detail] */
-function check(label, ok, detail = "") {
-  if (ok) passed += 1;
-  else failures.push(`${label}${detail ? `\n      ${detail}` : ""}`);
-}
+const tally = createTally({ separator: "\n      ", print: false });
+const { ok: check, failed: failures } = tally;
 
 /** @param {string} path @param {Record<string,string>} [headers] */
 async function get(path, headers = {}) {
@@ -316,7 +310,7 @@ for (const path of ["/admin", "/admin/posts", `/admin/posts/${SLUG}/edit`]) {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (r.status === 200) ok += 1;
-    else failures.push(`asset 404: /publications/${f} (${r.status})`);
+    else check(`asset 404: /publications/${f} (${r.status})`, false);
   }
   for (const f of photos) {
     const r = await fetch(`${ORIGIN}/phage-hunters/${encodeURIComponent(f)}`, {
@@ -325,7 +319,7 @@ for (const path of ["/admin", "/admin/posts", `/admin/posts/${SLUG}/edit`]) {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     if (r.status === 200) ok += 1;
-    else failures.push(`asset 404: /phage-hunters/${f} (${r.status})`);
+    else check(`asset 404: /phage-hunters/${f} (${r.status})`, false);
   }
   const total = pdfs.length + photos.length;
   check(
@@ -1397,7 +1391,7 @@ const corpus = { live: 0, drafts: 0 };
   );
 }
 
-console.log(`\n${passed} passed, ${failures.length} failed`);
+console.log(`\n${tally.checks - tally.failures} passed, ${tally.failures} failed`);
 
 /* Floor on executed assertions, measured through a real run: skipped loops look like zero failures.
    241 was measured on 2026-08-29 (d38a780) against 11 published posts and 1 draft. The corpus loops
@@ -1406,8 +1400,7 @@ console.log(`\n${passed} passed, ${failures.length} failed`);
 const corpusChecks = (/** @type {number} */ live, /** @type {number} */ drafts) =>
   live + pageCount(live) + drafts * 8 + Math.min(drafts, ASK_PROBE_LIMIT);
 const MINIMUM_CHECKS = 241 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
-const executed = passed + failures.length;
-const breach = assertFloor("verify-live", "checks", executed, MINIMUM_CHECKS);
+const breach = assertFloor("verify-live", "checks", tally.checks, MINIMUM_CHECKS);
 const short = breach !== null;
 
 if (failures.length > 0) {

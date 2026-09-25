@@ -12,24 +12,14 @@ import {
 } from "../../app/lib/blog-listing.mjs";
 import { postPath } from "../../app/lib/content/pipeline.mjs";
 import { assertFloor } from "../lib/floor.mjs";
+import { createTally } from "../lib/tally.mjs";
 
 const { mf2 } = await import("microformats-parser");
 
 console.log("\n  microformats\n");
 
-/** @type {string[]} */
-const failures = [];
-let checks = 0;
-
-/**
- * @param {string} label
- * @param {boolean} passed
- * @param {string} [detail]
- */
-function assert(label, passed, detail = "") {
-  checks += 1;
-  if (!passed) failures.push(detail ? `${label}: ${detail}` : label);
-}
+const tally = createTally({ separator: ": ", print: false });
+const { ok: assert, failed: failures } = tally;
 
 /**
  * A second, narrow read on purpose: asking the pipeline would make the assertion `x === x`.
@@ -601,18 +591,18 @@ await cleanup();
 const floorBreach = assertFloor(
   "check:machine-readable/microformats",
   "checks",
-  checks,
+  tally.checks,
   216,
   "The runner fails a part only on zero checks, so without this a refactor could drop " +
     "most of its sweeps and still pass.",
 );
-if (floorBreach) failures.push(floorBreach);
+if (floorBreach) tally.fail(floorBreach);
 
 for (const f of failures) console.log(`  FAIL  ${f}`);
 console.log(
-  `  ${checks} assertions: ${postsParsed} post page(s) as h-entry, ${feedsParsed} index ` +
+  `  ${tally.checks} assertions: ${postsParsed} post page(s) as h-entry, ${feedsParsed} index ` +
     `page(s) as h-feed, the home h-card, and the rel="me" set on two rendered pages. ` +
     `${failures.length} failure(s).`,
 );
 
-export const outcome = { checks, failures: failures.length };
+export const outcome = { checks: tally.checks, failures: tally.failures };

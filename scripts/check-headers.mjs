@@ -7,7 +7,7 @@ import { contentSecurityPolicy, isAdminPath } from "../workers/csp.mjs";
 import { UNPOLICED_TYPES, isFeed } from "../workers/feed-types.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
 import { blockFrom } from "./lib/source-body.mjs";
-import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const APP_PATH = join(root, "workers", "app.ts");
@@ -27,17 +27,8 @@ const RATIFIED = {
   "Cross-Origin-Resource-Policy": "cross-origin",
 };
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `: ${detail}` : ""}`);
-  }
-}
+const tally = createTally({ separator: ": " });
+const { ok } = tally;
 
 console.log("\ncheck:headers\n");
 
@@ -1182,8 +1173,7 @@ console.log("  public HTML routes share one headers()");
 }
 /* Measured by running this gate, never summed. */
 const MINIMUM_CHECKS = 228;
-const floorBreach = assertFloor("check:headers", "checks", checks, MINIMUM_CHECKS);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
+tally.floor("check:headers", "checks", MINIMUM_CHECKS);
 
-console.log(`\n${checks} checks, ${failures} failures\n`);
-process.exit(failures > 0 ? 1 : 0);
+console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
+process.exit(tally.failures > 0 ? 1 : 0);

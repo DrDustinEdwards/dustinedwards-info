@@ -39,6 +39,7 @@ import {
   renderChartHast,
 } from "../app/lib/content/chart.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FEATURES_PATH = join(root, "content", "features.json");
@@ -48,8 +49,8 @@ const PLAYGROUND_PATH = join(root, "content", "playground.json");
 const PLAYGROUND_ROUTE_PATH = join(root, "app", "routes", "playground.tsx");
 const ROUTES_PATH = join(root, "app", "routes.ts");
 
-let checks = 0;
-let failures = 0;
+const tally = createTally({ separator: ": " });
+const { ok } = tally;
 
 const normalizeEol = (/** @type {string} */ text) => text.replace(/\r\n/g, "\n");
 
@@ -77,19 +78,6 @@ const withoutIdentifiers = (text) =>
   text
     .replace(/\b[A-Za-z]+[0-9][A-Za-z0-9]*\b/g, " ")
     .replace(/\b[0-9]+[A-Za-z][A-Za-z0-9]*\b/g, " ");
-
-/**
- * @param {string} label
- * @param {boolean} condition
- * @param {string} [detail]
- */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `: ${detail}` : ""}`);
-  }
-}
 
 /**
  * Every URL path routes.ts declares, with the module that renders it. Read by IMPORTING the config
@@ -877,7 +865,7 @@ console.log("\n  projects roster");
 const projectsDoc = JSON.parse(readFileSync(PROJECTS_PATH, "utf8"));
 const projects = projectsDoc.projects ?? [];
 const vocabulary = projectsDoc.stackVocabulary ?? [];
-const projectsChecksBefore = checks;
+const projectsChecksBefore = tally.checks;
 
 const METRIC_INPUTS = {
   stack: JSON.parse(
@@ -1248,7 +1236,7 @@ for (const anchor of recordAnchors) {
 }
 
 /* Executed-count floor, measured by running the gate, never by summing. */
-const projectsChecks = checks - projectsChecksBefore;
+const projectsChecks = tally.checks - projectsChecksBefore;
 const MINIMUM_PROJECT_CHECKS = 281;
 const projectsFloorBreach = assertFloor(
   "check:features",
@@ -1275,7 +1263,7 @@ const datasets = playgroundDoc.datasets ?? {};
 const keyPresets = playgroundDoc.keyPresets ?? [];
 const cookiePresets = playgroundDoc.cookiePresets ?? [];
 const snippets = playgroundDoc.markdownSnippets ?? [];
-const playgroundChecksBefore = checks;
+const playgroundChecksBefore = tally.checks;
 
 /** Serialized the way the content pipeline does, so this sees the artifact's HTML. */
 const serializeHast = (/** @type {any[]} */ children) =>
@@ -2085,7 +2073,7 @@ for (const anchor of playgroundRecordAnchors) {
 }
 
 /* Measured by running the section, never by summing. */
-const playgroundChecks = checks - playgroundChecksBefore;
+const playgroundChecks = tally.checks - playgroundChecksBefore;
 const MINIMUM_PLAYGROUND_CHECKS = 294;
 const playgroundFloorBreach = assertFloor(
   "check:features",
@@ -2110,14 +2098,7 @@ console.log(
 /* Whole-gate floor: section floors cannot see another section stopping. */
 /* Re-measure by running the gate. */
 const MINIMUM_CHECKS = 930;
-const floorBreach = assertFloor(
-  "check:features",
-  "checks",
-  checks,
-  MINIMUM_CHECKS,
-  "A SECTION was skipped rather than failing.",
-);
-if (floorBreach) ok("this gate executed its assertions", false, floorBreach);
+tally.floor("check:features", "checks", MINIMUM_CHECKS, "A SECTION was skipped rather than failing.");
 
-console.log(`\n${checks} checks, ${failures} failures\n`);
-process.exit(failures > 0 ? 1 : 0);
+console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
+process.exit(tally.failures > 0 ? 1 : 0);

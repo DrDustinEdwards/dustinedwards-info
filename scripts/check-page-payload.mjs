@@ -21,6 +21,7 @@ import {
   reachableAssets,
   stylesheetsFor,
 } from "./lib/page-payload.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -103,19 +104,8 @@ const MINIMUM_FILES_WALKED = 8;
 /** Floor on the syntax pass, so an empty assets directory cannot pass it. */
 const MINIMUM_ASSETS_SYNTAX_CHECKED = 15;
 
-let checks = 0;
-let failures = 0;
-
-/** @param {string} label @param {boolean} condition @param {string} [detail] */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (condition) {
-    console.log(`  ok    ${label}`);
-  } else {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ""}`);
-  }
-}
+const tally = createTally({ printPass: true });
+const { ok } = tally;
 
 /**
  * Stems, because verify-live may face a deploy whose hashes predate this disk. Anchored on the
@@ -474,11 +464,11 @@ async function main() {
 
   await gradeRenderedHtml();
 
-  if (failures > 0) {
-    console.log(`\n${failures} FAILED of ${checks} checks\n`);
+  if (tally.failures > 0) {
+    console.log(`\n${tally.failures} FAILED of ${tally.checks} checks\n`);
     process.exit(1);
   }
-  console.log(`\n${checks} checks, 0 failures\n`);
+  console.log(`\n${tally.checks} checks, 0 failures\n`);
 }
 
 /**
