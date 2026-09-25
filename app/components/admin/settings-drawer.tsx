@@ -190,7 +190,7 @@ function SlugField({
   slug: string;
   isNew: boolean;
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<"" | "copied" | "failed">("");
 
   if (isNew) {
     return (
@@ -209,13 +209,16 @@ function SlugField({
           type="button"
           className="row-action"
           onClick={() => {
-            navigator.clipboard?.writeText(`/blog/${slug}`).then(
-              () => setCopied(true),
-              () => setCopied(false),
-            );
+            // Inside a promise: with no clipboard the call throws before any promise exists.
+            Promise.resolve()
+              .then(() => navigator.clipboard.writeText(`/blog/${slug}`))
+              .then(
+                () => setCopied("copied"),
+                () => setCopied("failed"),
+              );
           }}
         >
-          {copied ? "Copied" : "Copy"}
+          {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : "Copy"}
         </button>
       </div>
       {/* Read-only, not disabled: a disabled field submits nothing, and without the slug every save
