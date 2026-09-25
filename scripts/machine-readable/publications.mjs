@@ -33,8 +33,17 @@ import {
 } from "../../app/lib/publications/exports.mjs";
 import { assertFloor } from "../lib/floor.mjs";
 import { createTally } from "../lib/tally.mjs";
+import { stripTsxComments } from "../lib/strip-comments.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
+
+/**
+ * The paper route, read once and stripped by the TSX parser: the route discusses the builders it
+ * calls in prose, and a `//` regex also ate every `https://` inside a string.
+ */
+const SLUG_ROUTE = stripTsxComments(
+  readFileSync(join(root, "app", "routes", "publications.$slug.tsx"), "utf8"),
+);
 
 const tally = createTally({ printPass: true });
 const { ok } = tally;
@@ -553,13 +562,7 @@ const HOSTED_WITHOUT_LICENCE = new Map([
     tagFailures.slice(0, 6).join("; "),
   );
 
-  /* Comments stripped: this file and the route both discuss the builder in prose. */
-  const routeSource = readFileSync(
-    join(root, "app", "routes", "publications.$slug.tsx"),
-    "utf8",
-  )
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/\/\/[^\n]*/g, " ");
+  const routeSource = SLUG_ROUTE;
   ok(
     "the paper route calls buildCitationTags",
     /buildCitationTags\s*\(/.test(routeSource),
@@ -1038,10 +1041,7 @@ ok(
       : "",
   );
 
-  /* Comments stripped, because the route's own comment names `paperAskUrl`. */
-  const routeSource = readFileSync(join(root, "app", "routes", "publications.$slug.tsx"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  const routeSource = SLUG_ROUTE;
   ok(
     "the paper page calls paperAskUrl and imports it from paths.mjs",
     /paperAskUrl\(/.test(routeSource) &&
@@ -1075,9 +1075,7 @@ ok(
     malformed.map((m) => `${m.id}: ${m.problem}`).join("; "),
   );
 
-  const routeSource = readFileSync(join(root, "app", "routes", "publications.$slug.tsx"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  const routeSource = SLUG_ROUTE;
   ok(
     "the paper page renders the notice through updateNoticeText",
     /updateNoticeText\(/.test(routeSource),
