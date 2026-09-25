@@ -54,6 +54,14 @@ export async function scanTemplateRefs() {
   files.push(...SOURCE_FILES);
 
   const kept = files.filter(isSourceFile);
+  // The media admin reports template references from this artifact, so a scan of nothing clears them.
+  if (!Array.isArray(assetPaths) || assetPaths.length === 0 || kept.length === 0) {
+    throw new Error(
+      `build:template-refs scanned ${kept.length} source file(s) against ` +
+        `${Array.isArray(assetPaths) ? assetPaths.length : "no"} known asset(s). An empty scope ` +
+        `reports the same as a repo with no references, so nothing was written.`,
+    );
+  }
   /** @type {Array<{ file: string, assets: string[] }>} */
   const scanned = [];
   for (const file of kept) {
