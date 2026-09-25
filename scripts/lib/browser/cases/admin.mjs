@@ -670,17 +670,17 @@ export async function run({ browser }) {
           `controls are being clipped.`,
     );
 
-    // Compared by accessible name, since a swap holds a count steady. Opened via the `open`
-    // property, as a scriptless `<summary>` click does.
+    // Compared by accessible name, since a swap holds a count steady. Opened via showPopover(), as a
+    // scriptless click on a `popovertarget` button does.
     const NARROW = 375;
-    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openDetails) => {
+    const topbarActions = async (/** @type {number} */ width, /** @type {boolean} */ openPanels) => {
       await admin.setViewport({ width, height: 800 });
       await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
       return admin.evaluate((shouldOpen) => {
         const bar = document.querySelector(".admin-topbar");
-        if (!bar) return { names: [], details: 0, summary: "" };
-        const detailsEls = [...bar.querySelectorAll("details")];
-        if (shouldOpen) for (const d of detailsEls) d.open = true;
+        if (!bar) return { names: [], popovers: 0, invoked: false };
+        const panels = [...bar.querySelectorAll("[popover]")];
+        if (shouldOpen) for (const p of panels) /** @type {HTMLElement} */ (p).showPopover();
         const names = [];
         for (const el of bar.querySelectorAll(
           'a[href], button, summary, input:not([type="hidden"]), select, textarea',
@@ -700,10 +700,13 @@ export async function run({ browser }) {
         }
         return {
           names: [...new Set(names)].sort(),
-          details: detailsEls.length,
-          summary: detailsEls[0]?.querySelector("summary")?.tagName ?? "",
+          popovers: panels.length,
+          // Declarative: a button naming the panel by popovertarget opens it with script off.
+          invoked:
+            panels.length > 0 &&
+            bar.querySelector(`button[popovertarget="${CSS.escape(panels[0].id)}"]`) !== null,
         };
-      }, openDetails);
+      }, openPanels);
     };
 
     const wide = await topbarActions(1280, false);
@@ -717,10 +720,10 @@ export async function run({ browser }) {
         `The subset assertion below would agree with anything.`,
     );
     ok(
-      `the folded topbar is a native disclosure at ${NARROW}px`,
-      narrow.details >= 1 && narrow.summary === "SUMMARY",
-      `${narrow.details} <details> in the bar, first summary tag ` +
-        `${JSON.stringify(narrow.summary)}. The fold has to open with no script, so a ` +
+      `the folded topbar is a native popover disclosure at ${NARROW}px`,
+      narrow.popovers >= 1 && narrow.invoked,
+      `${narrow.popovers} [popover] in the bar, the first one ` +
+        `${narrow.invoked ? "has" : "has NO"} button[popovertarget] naming it. The fold has to open with no script, so a ` +
         `button plus a state hook is not the shape; the progressive-enhancement rule and the admin plane's ` +
         `own no-script door.`,
     );
