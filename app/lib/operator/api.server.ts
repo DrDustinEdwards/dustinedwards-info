@@ -8,9 +8,10 @@ import {
   getAdminPostRow,
   getDb,
   listPostsForOperator,
+  listWebmentionsForAdmin,
   publiclyVisible,
-} from "~/db/index";
-import { posts as postsTable } from "~/db/schema";
+} from "~/db";
+import { posts as postsTable, webmentions as webmentionsTable } from "~/db/schema";
 import {
   currentHead,
   deletePost,
@@ -22,9 +23,7 @@ import {
   PolicyError,
   type Actor,
 } from "~/lib/editor/publish.server";
-import { postPath } from "~/lib/content/slug.mjs";
-import { SLUG_MAX_LENGTH, SLUG_PATTERN } from "~/lib/content/slug.mjs";
-import { listWebmentionsForAdmin } from "~/db";
+import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "~/lib/content/slug.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import {
@@ -40,7 +39,6 @@ import { ALLOWED, MAX_BYTES, uploadSuccessBody } from "~/lib/media/upload-contra
 import { storeUpload } from "~/lib/media/upload.server";
 import { listDirectory, readFile } from "~/lib/editor/github.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
-
 
 import type { OperatorEnv } from "./auth.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -217,19 +215,18 @@ async function listMentionsTool(
 ): Promise<ToolResult> {
   const status = typeof args.status === "string" ? args.status.trim() : "";
 
-  const rows = await listWebmentionsForAdmin(env);
-
-  if (status) {
-    // A 400, not `[]`: an agent that mistyped a status would conclude the queue was empty.
-    const allowed = ["unverified", "pending", "approved", "rejected", "failed"];
-    if (!allowed.includes(status)) {
-      return {
-        ok: false,
-        status: 400,
-        error: `Unknown status ${JSON.stringify(status)}. One of: ${allowed.join(", ")}.`,
-      };
-    }
+  // A 400, not `[]`: an agent that mistyped a status would conclude the queue was empty. Checked
+  // before the read, and against the schema's own enum, so a new status cannot be refused here.
+  const allowed: readonly string[] = webmentionsTable.status.enumValues;
+  if (status && !allowed.includes(status)) {
+    return {
+      ok: false,
+      status: 400,
+      error: `Unknown status ${JSON.stringify(status)}. One of: ${allowed.join(", ")}.`,
+    };
   }
+
+  const rows = await listWebmentionsForAdmin(env);
 
   const filtered = status ? rows.filter((row) => row.status === status) : rows;
 
