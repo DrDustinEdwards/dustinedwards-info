@@ -71,9 +71,11 @@ test("the predicate is wider than prefersType, never narrower", () => {
     "text/*",
     "application/xhtml+xml",
   ];
+  let preferred = 0;
   for (const accept of cases) {
     for (const wanted of ["text/markdown", "application/json"]) {
       if (prefersType(req(accept), wanted)) {
+        preferred += 1;
         assert.equal(
           negotiatesAwayFromHtml(req(accept)),
           true,
@@ -83,6 +85,7 @@ test("the predicate is wider than prefersType, never narrower", () => {
       }
     }
   }
+  assert.ok(preferred > 0, "no case made prefersType fire, so the implication above was never tested");
 });
 
 test("q-values parse: highest wins on a repeated range, a bare range is 1", () => {
