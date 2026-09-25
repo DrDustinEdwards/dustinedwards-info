@@ -221,6 +221,9 @@ function TagField({
   options: string[];
 }) {
   const [entry, setEntry] = useState("");
+  // What the last add or remove did, for the status region: a token appearing is silent otherwise.
+  const [note, setNote] = useState("");
+  const entryRef = useRef<HTMLInputElement>(null);
   const listId = "tag-options";
 
   const add = (raw: string) => {
@@ -230,7 +233,13 @@ function TagField({
       return;
     }
     onChange([...tags, value]);
+    setNote(`Added tag ${value}.`);
     setEntry("");
+  };
+
+  const remove = (tag: string) => {
+    onChange(tags.filter((t) => t !== tag));
+    setNote(`Removed tag ${tag}.`);
   };
 
   return (
@@ -246,7 +255,11 @@ function TagField({
               <button
                 type="button"
                 className="tag-token-remove"
-                onClick={() => onChange(tags.filter((t) => t !== tag))}
+                onClick={() => {
+                  remove(tag);
+                  // The button goes with its token, so focus moves to the field rather than to the page.
+                  entryRef.current?.focus();
+                }}
               >
                 <span aria-hidden="true">x</span>
                 <span className="sr-only">Remove tag {tag}</span>
@@ -256,6 +269,7 @@ function TagField({
         ))}
       </ul>
       <input
+        ref={entryRef}
         value={entry}
         list={listId}
         aria-label="Add a tag"
@@ -271,8 +285,9 @@ function TagField({
             event.preventDefault();
             add(entry);
           }
-          if (event.key === "Backspace" && entry === "" && tags.length > 0) {
-            onChange(tags.slice(0, -1));
+          const last = tags[tags.length - 1];
+          if (event.key === "Backspace" && entry === "" && last !== undefined) {
+            remove(last);
           }
         }}
         onBlur={() => add(entry)}
@@ -285,6 +300,9 @@ function TagField({
           ))}
       </datalist>
       <input type="hidden" form={formId} name="tags" value={tags.join(", ")} />
+      <p className="sr-only" role="status">
+        {note}
+      </p>
     </div>
   );
 }
