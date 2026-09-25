@@ -191,3 +191,21 @@ test("an unterminated literal keeps the rest of the file rather than eating it",
   const out = stripCommentsAndStrings(src);
   assert.match(out, /const b = keep;/, "the remainder must survive an unterminated literal");
 });
+
+test("an apostrophe in JSX text does not shield the comments after it", () => {
+  const src = [
+    `const p = <p>Don${APOSTROPHE}t do this</p>;`,
+    "// confirmationSatisfied() is only named here",
+    "const b = keep;",
+  ].join("\n");
+  const out = stripComments(src);
+  assert.doesNotMatch(out, /confirmationSatisfied/, "the comment after the apostrophe must go");
+  assert.match(out, /const b = keep;/);
+});
+
+test("an unclosed block-comment opener is text, not the rest of the file", () => {
+  const src = "const glob = <code>src/*.ts</code>;\nconst b = keep; // gone";
+  const out = stripComments(src);
+  assert.match(out, /const b = keep;/);
+  assert.doesNotMatch(out, /gone/);
+});
