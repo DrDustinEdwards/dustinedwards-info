@@ -111,6 +111,36 @@ export function startRssSampler(outPath, intervalMs = 400) {
 }
 
 /**
+ * The sampler's rows, `stamp,bytes,pids` as it writes them, split once for both readers. Null when
+ * the file cannot be read, which a gate faster than the interval does legitimately.
+ *
+ * @param {string} outPath
+ * @returns {Array<{ stamp: number, bytes: number, pids: number[], columns: number }> | null}
+ */
+function readSamples(outPath) {
+  let text = "";
+  try {
+    text = readFileSync(outPath, "utf8");
+  } catch {
+    return null;
+  }
+  const rows = [];
+  for (const line of text.split("\n")) {
+    const parts = line.split(",");
+    if (parts.length < 2) continue;
+    const stamp = Number(parts[0]);
+    if (!Number.isFinite(stamp)) continue;
+    const pids = (parts[2] ?? "")
+      .trim()
+      .split(/\s+/)
+      .map((value) => Number(value))
+      .filter((value) => Number.isInteger(value) && value > 0);
+    rows.push({ stamp, bytes: Number(parts[1]), pids, columns: parts.length });
+  }
+  return rows;
+}
+
+/**
  * Null, not zero, when nothing was sampled: a gate faster than the interval lands here legitimately.
  *
  * @param {string} outPath
@@ -119,22 +149,9 @@ export function startRssSampler(outPath, intervalMs = 400) {
  * @returns {number | null}
  */
 export function peakBetween(outPath, fromMs, toMs) {
-  let text = "";
-  try {
-    text = readFileSync(outPath, "utf8");
-  } catch {
-    return null;
-  }
-
   let peak = null;
-  for (const line of text.split("\n")) {
-    const comma = line.indexOf(",");
-    if (comma === -1) continue;
-    const stamp = Number(line.slice(0, comma));
-    const rest = line.slice(comma + 1);
-    const second = rest.indexOf(",");
-    const bytes = Number(second === -1 ? rest : rest.slice(0, second));
-    if (!Number.isFinite(stamp) || !Number.isFinite(bytes)) continue;
+  for (const { stamp, bytes } of readSamples(outPath) ?? []) {
+    if (!Number.isFinite(bytes)) continue;
     if (stamp < fromMs || stamp > toMs) continue;
     if (peak === null || bytes > peak) peak = bytes;
   }
@@ -154,26 +171,7 @@ export function mb(/** @type {number | null | undefined} */ bytes) {
  * @returns {number[]}
  */
 export function treeSince(outPath, windowMs = 90000) {
-  let text = "";
-  try {
-    text = readFileSync(outPath, "utf8");
-  } catch {
-    return [];
-  }
-
-  const rows = [];
-  for (const line of text.split("\n")) {
-    const parts = line.split(",");
-    if (parts.length < 3) continue;
-    const stamp = Number(parts[0]);
-    if (!Number.isFinite(stamp)) continue;
-    const pids = parts[2]
-      .trim()
-      .split(/\s+/)
-      .map((value) => Number(value))
-      .filter((value) => Number.isInteger(value) && value > 0);
-    rows.push({ stamp, pids });
-  }
+  const rows = (readSamples(outPath) ?? []).filter((row) => row.columns >= 3);
   if (rows.length === 0) return [];
 
   const newest = rows[rows.length - 1].stamp;
