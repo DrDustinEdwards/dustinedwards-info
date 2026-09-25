@@ -69,10 +69,17 @@ async function bundle(cacheRoot, entry, outfile, stubs) {
         if (args.kind === "entry-point") return null;
         return { path: args.path, namespace: "stub" };
       });
-      // CommonJS, so one Proxy stub satisfies any named import at runtime.
-      b.onLoad({ filter: /.*/, namespace: "stub" }, () => ({
+      // CommonJS, so one Proxy stub satisfies any named import at runtime. Calling one throws, naming
+      // the import, because a stub quietly returning undefined lets the code under test carry on.
+      b.onLoad({ filter: /.*/, namespace: "stub" }, (args) => ({
         contents:
-          "module.exports = new Proxy({}, { get: () => () => {}, has: () => true });",
+          `const from = ${JSON.stringify(args.path)};\n` +
+          "module.exports = new Proxy({}, {\n" +
+          "  get: (_target, name) => () => {\n" +
+          "    throw new Error(`stubbed import ${String(name)} from ${from} was called; the invariant test stubbed it as unreachable`);\n" +
+          "  },\n" +
+          "  has: () => true,\n" +
+          "});",
         loader: "js",
       }));
     },

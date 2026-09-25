@@ -48,7 +48,7 @@ describe("operator authentication", () => {
     /* Same length as the real one: a wrong token inside the length bound reaches
      * `constantTimeEqual`, while a very long one is refused earlier and proves nothing. */
     const wrong = "x".repeat(testEnv.OPERATOR_TOKEN.length);
-    expect(wrong).toHaveLength(testEnv.OPERATOR_TOKEN.length);
+    expect(wrong).not.toBe(testEnv.OPERATOR_TOKEN);
     const result = await authenticateOperator(operatorEnv(), bearer(wrong));
     expect(result).toMatchObject({ ok: false, status: 401 });
   });

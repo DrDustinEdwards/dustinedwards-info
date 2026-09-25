@@ -129,7 +129,6 @@ test("EVERY REFUSAL validateUpload can return is a code the form can render", ()
     validateUpload({ type: "image/png", bytes: svg }),
   ];
 
-  assert.equal(refusals.length, 3);
   for (const refusal of refusals) {
     assert.ok(refusal, "a refusing case returned the accepting answer");
     assert.ok(

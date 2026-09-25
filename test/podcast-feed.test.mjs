@@ -97,13 +97,16 @@ test("durations in all three itunes forms, and garbage is null", () => {
   assert.equal(clockTime(3849), "1:04:09");
 });
 
-test("the slot defaults to latest, and a featured episode that left the feed falls back", () => {
-  const eps = parsePodcastFeed(
-    feed(item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }), item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" })),
-  );
+test("an unreadable or incomplete slot setting defaults to latest", () => {
   for (const bad of [null, "", "{", '{"mode":"featured"}', '{"mode":"other"}']) {
     assert.deepEqual(parsePodcastSlot(bad), { mode: "latest" }, String(bad));
   }
+});
+
+test("the chosen episode is the latest or the featured one, and a featured episode that left the feed falls back", () => {
+  const eps = parsePodcastFeed(
+    feed(item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }), item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" })),
+  );
   assert.deepEqual(chooseEpisode(eps, { mode: "latest" }), { episode: eps[0], fellBack: false });
   assert.deepEqual(chooseEpisode(eps, parsePodcastSlot('{"mode":"featured","guid":"a"}')), {
     episode: eps[1],
