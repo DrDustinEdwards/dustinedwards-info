@@ -69,7 +69,8 @@ const FILES = [
       /\bfont-weight\b/i,
       /\bline-height\b/i,
       /\bfont-display\b/i,
-      /\b@font-face\b/i,
+      // No leading word boundary: `@` is not a word character, so one there only matched after a letter.
+      /@font-face\b/i,
       /\bcontrol-h\b/i,
       /\bhit target\b/i,
       /\btype scale\b/i,
@@ -91,7 +92,8 @@ const FILES = [
       /\bcontrast\b/i,
       /\bcolor-mix\b/i,
       /\bAPCA\b/i,
-      /\b\d+(?:\.\d+):1\b/,
+      // The decimal is optional: "4.5:1" and "3:1" are both ratios.
+      /\b\d+(?:\.\d+)?:1\b/,
       /\bWCAG\b/i,
     ],
   },
@@ -265,11 +267,23 @@ function main() {
     );
   }
 
-  // Rebuild the directory so a removed comment cannot survive as a stale file.
-  // capsid/ is written by a different step and must not be swept away with it.
+  // A spec that classified nothing would be written as a header with no content and reported as built.
+  const empty = FILES.filter((spec) => !all.some((b) => b.file === spec.name)).map((s) => s.name);
+  if (empty.length > 0) {
+    throw new Error(
+      `${empty.join(", ")} classified zero blocks, and would ship as a header with nothing under ` +
+        "it. Either a needle stopped matching or the sheets no longer carry that reasoning; " +
+        "fix the needles or remove the file from FILES.",
+    );
+  }
+
+  // Rebuild the directory so a removed comment cannot survive as a stale file. Entries written by
+  // other steps must not be swept away with it: capsid/ by build-capsid-guidelines.mjs, and the two
+  // long notes by .design-sync/build-inputs.mjs (its LONG_NOTES), which may run before this.
+  const OTHER_OWNERS = new Set(["capsid", "canvas-constraints.md", "conventions.md"]);
   if (existsSync(OUT_DIR)) {
     for (const entry of readdirSync(OUT_DIR)) {
-      if (entry === "capsid") continue;
+      if (OTHER_OWNERS.has(entry)) continue;
       rmSync(join(OUT_DIR, entry), { recursive: true, force: true });
     }
   }
