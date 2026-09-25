@@ -24,9 +24,6 @@ export const FAILURE_REASONS = {
   noLink: "no-link",
 } as const;
 
-// The sentinel `readCapped` returns when the stream itself errored.
-const UNREADABLE = "(unreadable)";
-
 // No h-card: the name is the source's hostname, a fact rather than a guess. `u-url` is kept only if it
 // resolves to absolute http(s).
 function readAuthor(
@@ -69,8 +66,8 @@ export async function inspectSource(
   sourceUrl: string,
   targetUrl: string,
 ): Promise<WebmentionVerdict> {
-  // One signal, read at both sites: a timeout during the body read yields the unreadable sentinel, which
-  // would otherwise be misreported as `no-link`.
+  // One signal, read at both sites: a timeout during the body read makes the read throw, which would
+  // otherwise be misreported as a fetch error.
   const signal = AbortSignal.timeout(SOURCE_TIMEOUT_MS);
 
   let response: Response;
@@ -98,15 +95,20 @@ export async function inspectSource(
     return { status: "failed", failureReason: FAILURE_REASONS.notHtml };
   }
 
-  const body = await readCapped(response, MAX_SOURCE_BYTES);
+  let body: string | null;
+  try {
+    body = await readCapped(response, MAX_SOURCE_BYTES);
+  } catch {
+    return {
+      status: "failed",
+      failureReason: signal.aborted ? FAILURE_REASONS.timeout : FAILURE_REASONS.fetchError,
+    };
+  }
   if (body === null) {
     return { status: "failed", failureReason: FAILURE_REASONS.tooLarge };
   }
   if (signal.aborted) {
     return { status: "failed", failureReason: FAILURE_REASONS.timeout };
-  }
-  if (body === UNREADABLE) {
-    return { status: "failed", failureReason: FAILURE_REASONS.fetchError };
   }
 
   const { document } = parseHTML(body);
