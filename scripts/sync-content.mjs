@@ -2,7 +2,6 @@
 // bulk path deletes the search index and replaces the media citations wholesale.
 
 import { readFile, writeFile, mkdir } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
 
 import { retryRead } from "./lib/retry.mjs";
 import path from "node:path";
@@ -13,17 +12,13 @@ import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.
 import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
+import { runWrangler } from "./lib/wrangler-run.mjs";
+import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { deleteFloor, requirePosts, syncablePostProblems } from "./lib/delete-floor.mjs";
 
 const DB_NAME = "dustinedwards";
 
 const LLMS_PATH = "content/llms.txt";
-
-/** @param {string | null} value */
-function sql(value) {
-  if (value === null || value === undefined) return "NULL";
-  return `'${String(value).replace(/'/g, "''")}'`;
-}
 
 /** @param {number | null} value */
 function num(value) {
@@ -164,34 +159,20 @@ function buildSearchSql(records) {
 }
 
 /**
- * One command string: an args array alongside shell:true is deprecated, and npx needs a shell on Windows.
- *
- * @param {string} args
- * @returns {{ stdout: string, status: number }}
- */
-function wrangler(args) {
-  const result = spawnSync(`npx wrangler ${args}`, {
-    encoding: "utf8",
-    shell: true,
-  });
-  return { stdout: `${result.stdout ?? ""}${result.stderr ?? ""}`, status: result.status ?? 1 };
-}
-
-/**
  * Retried once, which is safe only because every file this runs deletes-and-replaces or upserts and
  * none appends.
  *
- * @param {string} args @param {string} label @returns {Promise<{stdout: string, status: number}>}
+ * @param {string} args @param {string} label @returns {Promise<{ status: number, stdout: string, output: string }>}
  */
 async function wranglerImport(args, label) {
-  /** @type {{stdout: string, status: number}} */
-  let last = { stdout: "", status: 1 };
+  /** @type {{ status: number, stdout: string, output: string }} */
+  let last = { status: 1, stdout: "", output: "" };
   try {
     return await retryRead(
       () => {
-        last = wrangler(args);
+        last = runWrangler(args);
         // retryRead can only see a rejection; wrangler RETURNS on failure.
-        if (last.status !== 0) throw new Error((last.stdout || "no output").slice(0, 200));
+        if (last.status !== 0) throw new Error((last.output || "no output").slice(0, 200));
         return last;
       },
       { label },
@@ -224,16 +205,16 @@ async function main() {
 
   // search_docs is replaced wholesale, so its floor compares the artifact against what D1 holds now.
   {
-    const read = wrangler(
+    const read = runWrangler(
       `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
         '"SELECT COUNT(*) AS docs FROM search_docs;"',
     );
     if (read.status !== 0) {
-      console.error(read.stdout);
+      console.error(read.output);
       throw new Error("the pre-write search_docs count failed, so the delete floor cannot hold");
     }
     const countMatch = read.stdout.match(/\[[\s\S]*\]/);
-    if (!countMatch) throw new Error(`could not parse the search_docs count:\n${read.stdout}`);
+    if (!countMatch) throw new Error(`could not parse the search_docs count:\n${read.output}`);
     const current = JSON.parse(countMatch[0])[0].results[0]?.docs;
     const searchFloor = deleteFloor({
       what: "search records",
@@ -250,16 +231,16 @@ async function main() {
   /** @type {string[]} */
   const renderDrift = [];
   {
-    const read = wrangler(
+    const read = runWrangler(
       `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
         '"SELECT slug, source_blob_sha, render_hash FROM posts WHERE source_path IS NOT NULL;"',
     );
     if (read.status !== 0) {
-      console.error(read.stdout);
+      console.error(read.output);
       throw new Error("the pre-write drift read failed, so drift cannot be reported");
     }
     const rowsMatch = read.stdout.match(/\[[\s\S]*\]/);
-    if (!rowsMatch) throw new Error(`could not parse the drift read:\n${read.stdout}`);
+    if (!rowsMatch) throw new Error(`could not parse the drift read:\n${read.output}`);
     /** @type {Array<{slug: string, source_blob_sha: string | null, render_hash: string | null}>} */
     const rows = JSON.parse(rowsMatch[0])[0].results;
 
@@ -320,7 +301,7 @@ async function main() {
     `sync:content posts import (${target})`,
   );
   if (applied.status !== 0) {
-    console.error(applied.stdout);
+    console.error(applied.output);
     throw new Error("wrangler d1 execute failed");
   }
 
@@ -346,7 +327,7 @@ async function main() {
     `sync:content llms.txt import (${target})`,
   );
   if (settingsApplied.status !== 0) {
-    console.error(settingsApplied.stdout);
+    console.error(settingsApplied.output);
     throw new Error("wrangler d1 execute failed for the llms.txt settings row");
   }
 
@@ -360,13 +341,13 @@ async function main() {
     `sync:content search index import (${target})`,
   );
   if (indexed.status !== 0) {
-    console.error(indexed.stdout);
+    console.error(indexed.output);
     throw new Error("wrangler d1 execute failed for the search index");
   }
 
   // Counts the FTS docsize shadow: a count on an external-content fts5 table reads through to the
   // content table.
-  const verify = wrangler(
+  const verify = runWrangler(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
       '"SELECT (SELECT COUNT(*) FROM posts) AS posts, (SELECT COUNT(*) FROM posts_fts_docsize) AS fts, ' +
       '(SELECT COUNT(*) FROM posts WHERE source_path IS NOT NULL) AS file_posts, ' +
@@ -376,12 +357,12 @@ async function main() {
       '(SELECT COUNT(*) FROM search_prose_docsize) AS prose;"',
   );
   if (verify.status !== 0) {
-    console.error(verify.stdout);
+    console.error(verify.output);
     throw new Error("post-sync verification query failed");
   }
 
   const match = verify.stdout.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error(`could not parse verification output:\n${verify.stdout}`);
+  if (!match) throw new Error(`could not parse verification output:\n${verify.output}`);
   const row = JSON.parse(match[0])[0].results[0];
 
   console.log(

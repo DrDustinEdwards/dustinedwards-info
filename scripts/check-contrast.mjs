@@ -5,56 +5,30 @@ import { fileURLToPath } from "node:url";
 // Imported from the pipeline so the gate cannot check a theme the renderer does not use.
 import { LANGUAGES, SHIKI_THEMES } from "../app/lib/content/pipeline.mjs";
 
-import { apca, contrast } from "../app/lib/contrast.mjs";
+import { apca, channels, contrast } from "../app/lib/contrast.mjs";
 
-import { allSourceCss, stylesheetPaths } from "./lib/tokens.mjs";
+import {
+  allSourceCss,
+  CSS_PATH,
+  normalizeHex,
+  resolveToken,
+  stripCss,
+  stylesheetPaths,
+  THEME_SELECTORS,
+  tokenBlock,
+  tokenDeclarations,
+} from "./lib/tokens.mjs";
 import { assertFloor } from "./lib/floor.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 const { light: githubLight, dark: githubDark } = SHIKI_THEMES;
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const CSS_PATH = join(root, "app", "app.css");
+/** Stripped once for the @media tier reader below; the palette blocks come from lib/tokens. */
+const css = stripCss(readFileSync(CSS_PATH, "utf8"));
 
-const cssSource = readFileSync(CSS_PATH, "utf8");
-
-/** Strip comments first: the token block's comment names its selectors. */
-const css = cssSource
-  // CRLF first: a Windows clone gets CRLF and multi-line matches fail.
-  .replace(/\r\n/g, "\n")
-  .replace(/\/\*[\s\S]*?\*\//g, "");
-
-/**
- * Blocks carry no nested braces, so the first closing brace ends the block.
- * @param {string} label
- * @param {string} selector
- */
-function tokenBlock(label, selector) {
-  const at = css.indexOf(selector);
-  if (at === -1) throw new Error(`${label}: selector not found in app.css: ${selector}`);
-  const open = css.indexOf("{", at + selector.length - 1);
-  const close = css.indexOf("}", open);
-  if (open === -1 || close === -1) throw new Error(`${label}: unterminated block`);
-  const body = css.slice(open + 1, close);
-
-  /** @type {Record<string, string>} */
-  const out = {};
-  /**
-   * Every declaration, in order: a mixed fill ships its hex, then its `color-mix` recipe.
-   * @type {Record<string, string[]>}
-   */
-  const allDecls = {};
-  for (const m of body.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
-    const name = m[1];
-    const value = m[2].trim();
-    (allDecls[name] ??= []).push(value);
-    // The FIRST declaration is the measured one: it is the hex both branches
-    // paint, and the second is the recipe that must reproduce it.
-    if (!(name in out)) out[name] = value;
-  }
-  if (Object.keys(out).length === 0) throw new Error(`${label}: parsed zero tokens`);
-  Object.defineProperty(out, "__decls", { value: allDecls, enumerable: false });
-  return out;
-}
+/** 0 to 255 per channel, from the same parser the ratios use. */
+const bytes = (/** @type {string} */ hex) => channels(hex).map((c) => Math.round(c * 255));
 
 /**
  * A browser composites `color-mix(in srgb, ...)` of two opaque colors as plain linear
@@ -69,15 +43,14 @@ function compositeMix(expr) {
   if (!m) return null;
   const [, a, pct, b] = m;
   const p = Number(pct) / 100;
-  /** @param {string} hex @param {number} i */
-  const ch = (hex, i) => parseInt(hex.slice(1 + i * 2, 3 + i * 2), 16);
-  const out = [0, 1, 2].map((i) => Math.round(ch(a, i) * p + ch(b, i) * (1 - p)));
+  const [from, to] = [bytes(a), bytes(b)];
+  const out = [0, 1, 2].map((i) => Math.round(from[i] * p + to[i] * (1 - p)));
   return `#${out.map((v) => v.toString(16).padStart(2, "0")).join("")}`;
 }
 
-const light = tokenBlock("light", ':root,\n[data-theme="light"]');
-const darkMedia = tokenBlock("dark (prefers-color-scheme)", ":root:not([data-theme])");
-const darkAttr = tokenBlock("dark (attribute)", '[data-theme="dark"]');
+const light = tokenBlock("light", THEME_SELECTORS.light);
+const darkMedia = tokenBlock("dark (prefers-color-scheme)", THEME_SELECTORS.darkSystem);
+const darkAttr = tokenBlock("dark (attribute)", THEME_SELECTORS.dark);
 
 /* Canary: the first selector match wins; `--paper` is only in the palette blocks. */
 /** @type {Array<[string, Record<string, string>]>} */
@@ -95,22 +68,22 @@ for (const [label, block] of PALETTE_BLOCKS) {
   }
 }
 
-let checks = 0;
-/** @type {string[]} */
-const failures = [];
-
-/** @param {string} label */
-function fail(label) {
-  failures.push(label);
-}
+const tally = createTally({ print: false });
+const { ok: assert, fail } = tally;
 
 /**
- * @param {string} label
- * @param {boolean} ok
+ * One measured pair, counted once and failed below `min`, in the one shape every pair reports.
+ *
+ * @param {string} head
+ * @param {string} fg
+ * @param {string} bg
+ * @param {number} min
+ * @param {{ fgShown?: string, bgShown?: string }} [shown] the names printed beside the values
  */
-function assert(label, ok) {
-  checks += 1;
-  if (!ok) fail(label);
+function assertPair(head, fg, bg, min, { fgShown = fg, bgShown = bg } = {}) {
+  const ratio = contrast(fg, bg);
+  assert(`${head}\n    ${fgShown} on ${bgShown}\n    ${ratio.toFixed(2)}:1, needs ${min}:1`, !(ratio < min));
+  return ratio;
 }
 
 // Name parity: a token missing from dark keeps its light value there.
@@ -144,27 +117,6 @@ function assert(label, ok) {
   );
 }
 
-/**
- * @param {Record<string, string>} block
- * @param {string} name
- * @returns {{value: string|null, chain: string[]}}
- */
-function resolveToken(block, name) {
-  /** @type {string[]} */
-  const chain = [];
-  let current = name;
-  for (let i = 0; i <= Object.keys(block).length; i += 1) {
-    const raw = block[current];
-    if (raw === undefined) return { value: null, chain };
-    const ref = /^var\(\s*(--[a-z0-9-]+)\s*\)$/.exec(raw.trim());
-    if (!ref) return { value: raw.trim(), chain };
-    if (chain.includes(ref[1])) return { value: null, chain };
-    chain.push(ref[1]);
-    current = ref[1];
-  }
-  return { value: null, chain };
-}
-
 /** @type {Array<[string, Record<string, string>]>} */
 const MODES = [
   ["light", light],
@@ -181,10 +133,14 @@ for (const [mode, block] of MODES) {
   }
 }
 
-for (const [mode, block] of MODES) {
-  const decls = /** @type {Record<string, string[]>} */ (
-    /** @type {any} */ (block).__decls
-  );
+/** @type {Record<string, Record<string, string[]>>} */
+const DECLARATIONS = {
+  light: tokenDeclarations("light", THEME_SELECTORS.light),
+  dark: tokenDeclarations("dark (attribute)", THEME_SELECTORS.dark),
+};
+
+for (const [mode] of MODES) {
+  const decls = DECLARATIONS[mode];
   for (const [name, values] of Object.entries(decls)) {
     if (values.length === 1) continue;
     assert(
@@ -198,11 +154,9 @@ for (const [mode, block] of MODES) {
       composite !== null,
     );
     if (composite === null) continue;
-    /** @param {string} h @param {number} i */
-    const ch = (h, i) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16);
     const close =
       /^#[0-9a-fA-F]{6}$/.test(hex) &&
-      [0, 1, 2].every((i) => Math.abs(ch(hex, i) - ch(composite, i)) <= 1);
+      [0, 1, 2].every((i) => Math.abs(bytes(hex)[i] - bytes(composite)[i]) <= 1);
     assert(
       `${mode} ${name}: the recipe composites to the hex beside it` +
         (close ? "" : `\n    ${recipe}\n    composites to ${composite}, declared ${hex}`),
@@ -386,20 +340,15 @@ for (const [mode, block] of MODES) {
     // ratio that ships is the ramp's hex.
     const fg = resolveToken(block, fgName).value;
     const bg = resolveToken(block, bgName).value;
-    checks += 1;
     if (!fg || !bg) {
-      fail(`${mode}: ${note} references a token that does not exist (${fgName} on ${bgName})`);
+      assert(`${mode}: ${note} references a token that does not exist (${fgName} on ${bgName})`, false);
       continue;
     }
-    const ratio = contrast(fg, bg);
-    const lc = apca(fg, bg);
-    advisory.push({ mode, note, lc, ratio });
-    if (ratio < min) {
-      fail(
-        `${mode}: ${note}\n    ${fgName} ${fg} on ${bgName} ${bg}` +
-          `\n    ${ratio.toFixed(2)}:1, needs ${min}:1`,
-      );
-    }
+    const ratio = assertPair(`${mode}: ${note}`, fg, bg, min, {
+      fgShown: `${fgName} ${fg}`,
+      bgShown: `${bgName} ${bg}`,
+    });
+    advisory.push({ mode, note, lc: apca(fg, bg), ratio });
   }
 }
 
@@ -549,7 +498,7 @@ const NON_PARTICIPATING = new Map([
 }
 
 // A Worker cannot read a stylesheet, so the swatches come from a committed build product. Re-derived
-// here with this parser, not the generator's, so agreement means two readings of the sheet agree.
+// here from the sheet as it is now, so a disagreement means the committed file is stale.
 {
   const inventory = JSON.parse(readFileSync(join(root, "content", "tokens.json"), "utf8"));
   /** @type {Array<{name: string, light: string, dark: string}>} */
@@ -644,29 +593,9 @@ function contrastTierBlock(label, query, selector) {
     ["dark", tierDark, darkAttr],
   ])) {
     for (const surface of ["--paper", "--surface-popover"]) {
-      checks += 1;
-      const ratio = contrast(tier["--text-secondary"], base[surface]);
-      if (ratio < TEXT) {
-        fail(
-          `${mode} prefers-contrast: muted on ${surface}` +
-            `
-    ${tier["--text-secondary"]} on ${base[surface]}` +
-            `
-    ${ratio.toFixed(2)}:1, needs ${TEXT}:1`,
-        );
-      }
+      assertPair(`${mode} prefers-contrast: muted on ${surface}`, tier["--text-secondary"], base[surface], TEXT);
     }
-    checks += 1;
-    const borderRatio = contrast(tier["--border"], base["--paper"]);
-    if (borderRatio < UI) {
-      fail(
-        `${mode} prefers-contrast: border on --paper` +
-          `
-    ${tier["--border"]} on ${base["--paper"]}` +
-          `
-    ${borderRatio.toFixed(2)}:1, needs ${UI}:1`,
-      );
-    }
+    assertPair(`${mode} prefers-contrast: border on --paper`, tier["--border"], base["--paper"], UI);
 
     // The tier must be strictly better than the default, or it is a different mode, not a high-contrast one.
     assert(
@@ -733,33 +662,22 @@ for (const [mode, theme, block] of shikiCases) {
   for (const rule of rules) {
     if (rule.bg) {
       // Paired: measured against its own background, which is what ships.
-      checks += 1;
       shikiTokensChecked += 1;
       const ratio = contrast(rule.fg, rule.bg);
-      if (ratio >= TEXT) continue;
-
-      const unreachable = !diffReachable && VCS_SCOPE.test(rule.scope);
       const detail =
         `${mode}: shiki ${rule.scope}\n    ${rule.fg} on its own bg ${rule.bg}` +
         `\n    ${ratio.toFixed(2)}:1, needs ${TEXT}:1`;
-      if (unreachable) {
-        shikiUnreachable.push(detail);
-      } else {
-        fail(detail);
-      }
+      const unreachable = !(ratio >= TEXT) && !diffReachable && VCS_SCOPE.test(rule.scope);
+      if (unreachable) shikiUnreachable.push(detail);
+      assert(detail, ratio >= TEXT || unreachable);
       continue;
     }
     for (const surfaceName of ["--paper", "--surface-popover"]) {
       const surface = block[surfaceName];
-      checks += 1;
       shikiTokensChecked += 1;
-      const ratio = contrast(rule.fg, surface);
-      if (ratio < TEXT) {
-        fail(
-          `${mode}: shiki ${rule.scope}\n    ${rule.fg} on ${surfaceName} ${surface}` +
-            `\n    ${ratio.toFixed(2)}:1, needs ${TEXT}:1`,
-        );
-      }
+      assertPair(`${mode}: shiki ${rule.scope}`, rule.fg, surface, TEXT, {
+        bgShown: `${surfaceName} ${surface}`,
+      });
     }
   }
 }
@@ -797,24 +715,11 @@ if (existsSync(assetDir)) {
     fail("build/client/assets carries only empty CSS files. Run npm run build.");
   } else if (sheets.length > 0) {
     // Compare normalized values: Lightning CSS shortens #ffffff to #fff.
-    /** @param {string} v */
-    const norm = (v) => {
-      const h = v.trim().toLowerCase().replace("#", "");
-      const full =
-        h.length === 3
-          ? h
-              .split("")
-              .map((c) => c + c)
-              .join("")
-          : h;
-      return `#${full}`;
-    };
-
     /** @type {Map<string, Set<string>>} */
     const shipped = new Map();
     for (const m of built.matchAll(/(--[a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{3,8})/g)) {
       if (!shipped.has(m[1])) shipped.set(m[1], new Set());
-      shipped.get(m[1])?.add(norm(m[2]));
+      shipped.get(m[1])?.add(normalizeHex(m[2]));
     }
     // Slots ship as `var()`, minified without the space after the colon.
     for (const m of built.matchAll(/(--[a-z0-9-]+)\s*:\s*(var\(\s*--[a-z0-9-]+\s*\))/g)) {
@@ -825,17 +730,16 @@ if (existsSync(assetDir)) {
     let missing = 0;
     for (const [mode, block] of MODES) {
       for (const [name, value] of Object.entries(block)) {
-        checks += 1;
         const wanted = value.trim().startsWith("var(")
           ? value.replace(/\s+/g, "")
-          : norm(value);
-        if (!shipped.get(name)?.has(wanted)) {
-          missing += 1;
-          fail(
-            `built CSS does not carry ${mode} ${name}: ${value}` +
-              `\n    shipped values for that token: ${[...(shipped.get(name) ?? [])].join(", ") || "none"}`,
-          );
-        }
+          : normalizeHex(value);
+        const carried = shipped.get(name)?.has(wanted) ?? false;
+        if (!carried) missing += 1;
+        assert(
+          `built CSS does not carry ${mode} ${name}: ${value}` +
+            `\n    shipped values for that token: ${[...(shipped.get(name) ?? [])].join(", ") || "none"}`,
+          carried,
+        );
       }
     }
     const total = Object.keys(light).length + Object.keys(darkAttr).length;
@@ -1020,7 +924,7 @@ const MINIMUM_CHECKS = buildPresent ? 818 : 628;
 const floorBreach = assertFloor(
   "check:contrast",
   buildPresent ? "checks-build-present" : "checks-build-absent",
-  checks,
+  tally.checks,
   MINIMUM_CHECKS,
   `Build ${buildPresent ? "present" : "absent"}. RE-MEASURED 2026-08-28 by RUNNING ` +
     `the gate in BOTH branches, taken by moving build/ aside rather than by reasoning ` +
@@ -1031,12 +935,12 @@ const floorBreach = assertFloor(
     `count. A floor arrived at by arithmetic over a floor arrived at by arithmetic ` +
     `is a number nobody has measured.`,
 );
-if (floorBreach) failures.push(floorBreach);
+if (floorBreach) fail(floorBreach);
 
-if (failures.length > 0) {
-  console.error(`\n${failures.length} FAILED of ${checks} checks:\n`);
-  for (const f of failures) console.error(`  ${f}`);
+if (tally.failures > 0) {
+  console.error(`\n${tally.failures} FAILED of ${tally.checks} checks:\n`);
+  for (const f of tally.failed) console.error(`  ${f}`);
   process.exit(1);
 }
 
-console.log(`\n${checks} checks, 0 failures`);
+console.log(`\n${tally.checks} checks, 0 failures`);
