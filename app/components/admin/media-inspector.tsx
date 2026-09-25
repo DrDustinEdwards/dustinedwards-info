@@ -1,6 +1,6 @@
 import { Form, Link } from "react-router";
 
-import { CopyButton } from "~/components/admin/media-copy-button";
+import { CopyButton } from "~/components/admin/copy-button";
 import { MediaDrawer } from "~/components/admin/media-drawer";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { byteSize } from "~/lib/media/byte-size.mjs";
