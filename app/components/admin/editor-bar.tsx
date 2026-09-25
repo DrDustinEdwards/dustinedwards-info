@@ -129,7 +129,8 @@ export function EditorBar({
 
             {/* Nothing renders on the server, so the static harness render is unchanged. */}
             {dirty && savedAt ? (
-              <span className="editor-buffer-age" aria-live="polite">
+              /* Not live: the age ticks every minute, and each tick would interrupt the author. */
+              <span className="editor-buffer-age">
                 last written {bufferAgeLabel(savedAt, ageNow)}
               </span>
             ) : dirty && bufferTried ? (
