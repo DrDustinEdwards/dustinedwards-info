@@ -389,17 +389,26 @@ export async function deletePost(
 
   await deletePostFromD1(env, options.slug);
 
-  // The Ask index cannot fail the delete, but a post still answerable through Ask is reported, not swallowed.
-  let askRemoved: number | null = null;
-  if (askAvailable(env)) {
-    try {
-      askRemoved = await removeAskPost(env, options.slug);
-    } catch (error) {
-      console.error("ask index removal failed after delete", error);
-    }
-  }
+  return { commitSha, askRemoval: await removeAskForPost(env, options.slug) };
+}
 
-  return { commitSha, askRemoved };
+/**
+ * The Ask index cannot fail the delete, but a post still answerable through Ask is reported, not
+ * swallowed. Null means Ask is not configured; a failure is `ok: false`, never the same null.
+ */
+async function removeAskForPost(env: PublishEnv, slug: string) {
+  if (!askAvailable(env)) return null;
+  try {
+    return { ok: true as const, removed: await removeAskPost(env, slug) };
+  } catch (error) {
+    console.error("ask index removal failed after delete", error);
+    return {
+      ok: false as const,
+      message:
+        `The post was deleted but its Ask records were not removed, so Ask can still quote it: ` +
+        `${error instanceof Error ? error.message : String(error)}. Re-run the Ask sync to prune them.`,
+    };
+  }
 }
 
 /** One batch, so the row, its tags and the index move together. FTS is rebuilt, as the bulk sync does. */

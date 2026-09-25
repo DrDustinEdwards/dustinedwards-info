@@ -501,7 +501,7 @@ async function deletePostTool(
 
   return {
     ok: true,
-    data: { slug, commitSha: result.commitSha, askRemoved: result.askRemoved },
+    data: { slug, commitSha: result.commitSha, askRemoval: result.askRemoval },
   };
 }
 
