@@ -18,7 +18,6 @@ import { MediaGrid } from "~/components/admin/media-grid";
 import { MediaFacets } from "~/components/admin/media-facets";
 import { MediaInspector } from "~/components/admin/media-inspector";
 import { LiveNotice } from "~/components/admin/live-notice";
-import { MediaKeyboard } from "~/components/admin/media-keyboard";
 import { MediaSearch } from "~/components/admin/media-search";
 import { MediaToast } from "~/components/admin/toast";
 import { MediaTrashControls } from "~/components/admin/media-trash-controls";
@@ -54,6 +53,7 @@ import {
   readDisplayAxes,
   readView,
 } from "~/lib/media/view.mjs";
+import { rovingKey } from "~/lib/media/tile-nav.mjs";
 import { MEDIA_PAGE_SIZE, isViewable, listMedia, thumbUrl } from "~/lib/media/core.server";
 import {
   bulkTagMedia,
@@ -389,6 +389,8 @@ export default function AdminMedia({
   const here = useLocation();
   const [selected, setSelected] = useState<string[]>([]);
   const [confirmingTrash, setConfirmingTrash] = useState(false);
+  /* The grid tile focus was last on: the roving tab stop follows it. */
+  const [activeTile, setActiveTile] = useState("");
   const anchor = useRef<string | null>(null);
 
   /* Narrowed by key: the 400 answer carries only `message`, so the union no longer has these on every arm. */
@@ -548,6 +550,8 @@ export default function AdminMedia({
           pending={pending}
           scanComplete={scanComplete}
           tagCounts={tagCounts}
+          tabStop={rovingKey(visible, activeTile, view.key)}
+          setActive={setActiveTile}
         />
       )}
 
@@ -561,7 +565,6 @@ export default function AdminMedia({
       />
 
       <MediaToast />
-      {view.view === "grid" ? <MediaKeyboard /> : null}
 
       {hasMore || page > 1 ? (
         <p className="posts-toolbar">

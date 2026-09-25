@@ -6,7 +6,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { bands, nextTile } from "../app/lib/media/tile-nav.mjs";
+import { bands, nextTile, rovingKey } from "../app/lib/media/tile-nav.mjs";
 
 /** A grid of `count` tiles, `cols` to a row, 100px square with a 10px gap. */
 function grid(count, cols) {
@@ -76,4 +76,14 @@ test("nextTile moves up and down to the nearest centre, and stops at the top and
   assert.equal(nextTile(rows, "t2", "down"), "t4");
   assert.equal(nextTile(rows, "t0", "up"), null);
   assert.equal(nextTile(rows, "t3", "down"), null);
+});
+
+test("rovingKey keeps the tile focus was last on while it is still on the page", () => {
+  assert.equal(rovingKey(["a", "b", "c"], "b", "c"), "b");
+});
+
+test("rovingKey falls back to the inspected tile, then the first, never a key off the page", () => {
+  assert.equal(rovingKey(["a", "b", "c"], "gone", "c"), "c");
+  assert.equal(rovingKey(["a", "b", "c"], "", "gone"), "a");
+  assert.equal(rovingKey([], "a", "b"), "");
 });

@@ -184,8 +184,8 @@
   justify-content: center;
   /* margin-top: 0 resets .btn-ghost's stacked-button margin. */
   margin: 0;
-  width: 1.375rem;
-  height: 1.375rem;
+  width: 1.5rem;
+  height: 1.5rem;
   padding: 0;
 }
 
@@ -752,9 +752,13 @@
   box-shadow: inset 0.1875rem 0 0 0 var(--brand);
 }
 
+/* The label is the target, so it holds the 24px floor round a native box that draws at about 13px. */
 .media-check-label {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
 }
 
 .media-grid[data-view="grid"] .media-check-label {
@@ -1034,8 +1038,8 @@
 
 .media-caption .media-copy {
   flex: none;
-  width: 1.125rem;
-  height: 1.125rem;
+  width: 1.5rem;
+  height: 1.5rem;
   color: var(--on-scrim);
 }
 
@@ -1089,8 +1093,7 @@
 .media-grid[data-view="grid"] .media-card:hover .media-card-body,
 .media-grid[data-view="grid"] .media-card:focus-within .media-card-body,
 .media-grid[data-view="grid"] .media-card[data-selected] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active-tile="yes"] .media-card-body {
+.media-grid[data-view="grid"] .media-card[data-active] .media-card-body {
   opacity: 1;
 }
 
@@ -1103,8 +1106,7 @@
 .media-grid[data-view="grid"] .media-card:hover .media-card-body,
 .media-grid[data-view="grid"] .media-card:focus-within .media-card-body,
 .media-grid[data-view="grid"] .media-card[data-selected] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active] .media-card-body,
-.media-grid[data-view="grid"] .media-card[data-active-tile="yes"] .media-card-body {
+.media-grid[data-view="grid"] .media-card[data-active] .media-card-body {
   visibility: visible;
 }
 
@@ -1146,9 +1148,10 @@
   color: var(--on-scrim);
 }
 
+/* Transparent, never visibility: hidden, which took the box out of the tab order: the roving tab
+   stop decides which tile's box takes Tab, and focusing it reveals it. */
 .media-grid[data-view="grid"] .media-check-label {
   opacity: 0;
-  visibility: hidden;
   transition: opacity 0.15s ease;
 }
 
@@ -1156,10 +1159,8 @@
 .media-grid[data-view="grid"] .media-card:focus-within .media-check-label,
 .media-grid[data-view="grid"] .media-card[data-selected] .media-check-label,
 .media-grid[data-view="grid"] .media-card[data-active] .media-check-label,
-.media-grid[data-view="grid"] .media-card[data-active-tile="yes"] .media-check-label,
 .media-grid[data-view="grid"]:has(.media-card[data-selected]) .media-check-label {
   opacity: 1;
-  visibility: visible;
 }
 
 .media-grid[data-view="grid"] .media-card {
