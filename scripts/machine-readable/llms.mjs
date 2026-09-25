@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { resolveD1Address } from "../lib/d1-address.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertFloor } from "../lib/floor.mjs";
 
 // Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -162,6 +163,21 @@ console.log(
     `llms.txt says ${contact} and SITE_ORIGIN is ${origin}. The file crawlers read ` +
       `points somewhere this site is not served from.`,
   );
+}
+
+/* Measured 9 on the pure tier by running this part on 2026-09-24, floor a little under. --local and
+   --remote add the D1 comparison on top, so the pure count bounds every mode. */
+const floorBreach = assertFloor(
+  "check:machine-readable/llms",
+  "checks",
+  checks,
+  8,
+  "The runner fails a part only on zero checks, so without this a refactor could drop " +
+    "most of its sweeps and still pass.",
+);
+if (floorBreach) {
+  failures += 1;
+  console.log(`\n  FAIL  ${floorBreach}`);
 }
 
 export const outcome = { checks, failures };

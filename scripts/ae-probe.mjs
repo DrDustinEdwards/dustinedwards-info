@@ -146,8 +146,8 @@ console.log("Analytics Engine cache-interaction probe");
 console.log(`  path    ${PATH}`);
 console.log(`  dataset ${DATASET}`);
 console.log(`  poll    every ${POLL_SECONDS}s, cap ${CAP_SECONDS}s per stage`);
-console.log(`  bypass  cache-control: no-cache, as verify-live's get() sends`);
-console.log(`  eligible plain GET with no cache-control, as verify-live's cache sweep sends\n`);
+console.log(`  bypass  cache-control: no-cache, per get() in scripts/verify-live.mjs`);
+console.log(`  eligible plain GET, per warm() in the cache section of scripts/verify-live.mjs\n`);
 
 const base = await settle();
 console.log(

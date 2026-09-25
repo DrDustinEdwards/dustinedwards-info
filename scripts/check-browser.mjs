@@ -4,7 +4,7 @@
 // Admin cases always drive ADMIN_ORIGIN, because sessions live in production KV.
 
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import puppeteer, { PredefinedNetworkConditions } from "puppeteer";
 
 import { assertFloor } from "./lib/floor.mjs";
+import { stripComments, stripTsxComments } from "./lib/strip-comments.mjs";
 import { HEALTH_FACT_SELECTOR, freshHealthRatio } from "./lib/health-tile.mjs";
 
 /* The network profile the /blog layout shift was measured on. */
@@ -252,6 +253,10 @@ let checks = 0;
 let failures = 0;
 const skipped = [];
 
+/* The gate's own fetches carry a deadline, like the readiness probes: a hung origin would otherwise
+   stall the run until CI's job timeout, with nothing saying which request hung. */
+const FETCH_TIMEOUT_MS = 30_000;
+
 /** Not `skipped.length`: that cannot tell a rejected session from a completed run. */
 let adminCasesRan = false;
 
@@ -351,12 +356,21 @@ if (DRIVES_PREVIEW) {
       process.exit(1);
     }
 
-    /* `taskkill` returns before the socket is released, so re-probe until clear. */
+    /* `taskkill` returns before the socket is released, so re-probe until clear. A probe that
+       FAILED (null) is not a released port: it is a kill this gate could not verify. */
     const releasedBy = Date.now() + 5000;
-    let stillHeld = portListeners(PORT) ?? [];
-    while (stillHeld.length > 0 && Date.now() < releasedBy) {
+    let stillHeld = portListeners(PORT);
+    while ((stillHeld === null || stillHeld.length > 0) && Date.now() < releasedBy) {
       await new Promise((resolve) => setTimeout(resolve, 250));
-      stillHeld = portListeners(PORT) ?? [];
+      stillHeld = portListeners(PORT);
+    }
+    if (stillHeld === null) {
+      console.error(
+        `\ncheck:browser REFUSES TO START. Port ${PORT} could not be re-probed after killing ${killed} ` +
+          `leftover(s), so whether it was released is unknown.`,
+      );
+      registry.clear();
+      process.exit(1);
     }
     if (stillHeld.length > 0) {
       console.error(
@@ -417,25 +431,61 @@ const MENTION_HOSTILE_NAME = "<script>alert(1)</script>";
 
 const MENTION_SEED_ROWS = 2;
 
+/** SQL string literal: the only escaping a --file path needs. */
+const q = (/** @type {unknown} */ v) =>
+  v === null || v === undefined ? "NULL" : `'${String(v).split("'").join("''")}'`;
+
+/**
+ * Seeds go through files, never a cmd command string: the hostile row carries <script>, quotes and
+ * a %, and cmd.exe quoting is not SQL quoting. One directory for every seed, removed once each has
+ * been applied, so a run does not leave the fixture SQL in the temp folder.
+ */
+const SEED_DIR = DRIVES_PREVIEW ? mkdtempSync(join(tmpdir(), "gate-seed-")) : "";
+const removeSeedDir = () => {
+  if (SEED_DIR) rmSync(SEED_DIR, { recursive: true, force: true });
+};
+/* On every exit too, refusals included; removing it twice is harmless. */
+process.on("exit", removeSeedDir);
+
 if (DRIVES_PREVIEW) {
   /* Delete then insert, so the count means this run wrote the rows. */
-  const sql = [
-    `DELETE FROM webmentions WHERE source_url LIKE '${MENTION_SEED_PREFIX}%'`,
-    `INSERT INTO webmentions ` +
-      `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES ` +
-      `('${MENTION_SEED_PREFIX}ordinary', '${MENTION_SLUG}', 'approved', 'A Reader', ` +
-      `'https://gate.example/about', 'A sentence somebody wrote about this post.', ` +
-      `${MENTION_DECIDED_AT}, ${MENTION_DECIDED_AT})`,
-    `INSERT INTO webmentions ` +
-      `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES ` +
-      `('${MENTION_SEED_PREFIX}hostile', '${MENTION_SLUG}', 'approved', '${MENTION_HOSTILE_NAME}', ` +
-      `'javascript:alert(1)', 'An excerpt from a page that cannot be linked to.', ` +
-      `${MENTION_DECIDED_AT - 60}, ${MENTION_DECIDED_AT - 60})`,
-  ].join("; ");
+  const mentionFile = join(SEED_DIR, "mentions.sql");
+  writeFileSync(
+    mentionFile,
+    [
+      `DELETE FROM webmentions WHERE source_url LIKE ${q(`${MENTION_SEED_PREFIX}%`)};`,
+      `INSERT INTO webmentions ` +
+        `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES (` +
+        [
+          q(`${MENTION_SEED_PREFIX}ordinary`),
+          q(MENTION_SLUG),
+          q("approved"),
+          q("A Reader"),
+          q("https://gate.example/about"),
+          q("A sentence somebody wrote about this post."),
+          String(MENTION_DECIDED_AT),
+          String(MENTION_DECIDED_AT),
+        ].join(", ") +
+        `);`,
+      `INSERT INTO webmentions ` +
+        `(source_url, target_slug, status, author_name, author_url, excerpt, received_at, decided_at) VALUES (` +
+        [
+          q(`${MENTION_SEED_PREFIX}hostile`),
+          q(MENTION_SLUG),
+          q("approved"),
+          q(MENTION_HOSTILE_NAME),
+          q("javascript:alert(1)"),
+          q("An excerpt from a page that cannot be linked to."),
+          String(MENTION_DECIDED_AT - 60),
+          String(MENTION_DECIDED_AT - 60),
+        ].join(", ") +
+        `);`,
+    ].join("\n"),
+    "utf8",
+  );
 
-  /* One quoted string: with `shell: true` on Windows an argv array is joined unquoted. */
   const seeded = spawnSync(
-    `npx wrangler d1 execute dustinedwards --local --command "${sql}"`,
+    `npx wrangler d1 execute dustinedwards --local --file "${mentionFile}"`,
     { cwd: root, encoding: "utf8", shell: true, maxBuffer: 16 * 1024 * 1024 },
   );
   if (seeded.status !== 0) {
@@ -480,12 +530,8 @@ if (DRIVES_PREVIEW) {
     process.exit(1);
   }
 
-  /** SQL string literal: the only escaping a --file path needs. */
-  const q = (/** @type {unknown} */ v) =>
-    v === null || v === undefined ? "NULL" : `'${String(v).split("'").join("''")}'`;
-
   const publishAt = Math.floor(new Date(fixture.publishAt).getTime() / 1000);
-  const sqlFile = join(mkdtempSync(join(tmpdir(), "gate-math-")), "seed.sql");
+  const sqlFile = join(SEED_DIR, "math.sql");
   writeFileSync(
     sqlFile,
     [
@@ -529,11 +575,15 @@ if (DRIVES_PREVIEW) {
     createdAt: Date.UTC(2026, 8, 6),
     label: "check:browser math fixture",
   });
+  /* The value from a file too: JSON with escaped quotes inside a cmd string held only by MSVCRT rules. */
+  const recordFile = join(SEED_DIR, "preview-token.json");
+  writeFileSync(recordFile, record, "utf8");
   const kv = spawnSync(
     `npx wrangler kv key put --binding APP_KV --local ` +
-      `"preview:token:${MATH_PREVIEW_TOKEN}" "${record.split('"').join('\\"')}"`,
+      `"preview:token:${MATH_PREVIEW_TOKEN}" --path "${recordFile}"`,
     { cwd: root, encoding: "utf8", shell: true, maxBuffer: 8 * 1024 * 1024 },
   );
+  removeSeedDir();
   if (kv.status !== 0) {
     console.error("check:browser failed. the preview token did not reach local KV.");
     console.error((kv.stderr || kv.stdout || "").slice(-1200));
@@ -688,16 +738,29 @@ function serverDiagnosis() {
 
 /** Held in memory because the registry is append-only. */
 const recorded = new Set();
+let survivorsUnverifiable = false;
 
 function recordServerSurvivors() {
   if (!server?.pid) return;
   const table = readProcessTable();
-  if (table.size === 0) return;
+  /* An empty table means "cannot verify", not "no descendants": said once, so an orphan the next
+     preflight cannot identify has a cause on record. */
+  if (table.size === 0) {
+    if (!survivorsUnverifiable) {
+      console.log(
+        "  NOTE  the process table could not be read, so the preview server's descendants were " +
+          "not recorded; if this run is killed hard, the next preflight cannot identify them",
+      );
+      survivorsUnverifiable = true;
+    }
+    return;
+  }
   for (const pid of descendantPids(server.pid, table)) {
     if (recorded.has(pid)) continue;
     const live = table.get(pid);
     if (!live) continue;
-    if (!VITE_NEEDLES.every((needle) => live.command.includes(needle.toLowerCase()))) continue;
+    // The same matcher the port preflight uses, so one needle set has one meaning.
+    if (!VITE_NEEDLES.every((needle) => live.command.includes(normaliseCommand(needle)))) continue;
     registry.record(pid, "the vite preview server", VITE_NEEDLES);
     recorded.add(pid);
   }
@@ -735,6 +798,12 @@ let browser;
  */
 for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM", "SIGHUP", "SIGBREAK"])) {
   process.on(signal, () => {
+    /* --keep holds here too: an interrupted --keep run keeps what the flag asked to keep, and its
+       registry entries, which the next preflight needs to free the port. */
+    if (process.argv.includes("--keep")) {
+      console.error(`\ncheck:browser interrupted by ${signal}. --keep: its children are left running.`);
+      process.exit(1);
+    }
     console.error(`\ncheck:browser interrupted by ${signal}. Stopping its children.`);
     if (browser) {
       const chrome = browser.process();
@@ -822,7 +891,10 @@ try {
      */
     const before = await readTile("before");
 
-    const primed = await fetch(`${BASE}/api/health`, { headers: { accept: "application/json" } });
+    const primed = await fetch(`${BASE}/api/health`, {
+      headers: { accept: "application/json" },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     const primedBody = await primed.text();
     ok(
       "the health endpoint answered, so a snapshot could be written",
@@ -950,8 +1022,9 @@ try {
       .filter((name) => name.endsWith(".tsx") || name.endsWith(".ts"))
       .filter((name) => {
         const source = readFileSync(join(routeDir, name), "utf8");
-        // `preview.$token.tsx` names the constant only in prose, so comments are stripped first.
-        const code = source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/[^\n]*/g, "$1 ");
+        // `preview.$token.tsx` names the constant only in prose, so comments are stripped first,
+        // by the shared strippers: a hand-rolled one reads a /* inside a string as a comment.
+        const code = name.endsWith(".tsx") ? stripTsxComments(source) : stripComments(source);
         return /publicHtmlHeaders\(/.test(code) || /SHARED_CACHE_CONTROL/.test(code);
       })
       /* Shared-cached but not HTML: no `<html data-theme>` for a theme to reach. */
@@ -1004,13 +1077,23 @@ try {
      */
     const RUN_IDENTITY = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
 
+    /**
+     * Every status fetchDoc saw, by path: two error pages are byte-identical too, so identity and
+     * theme-diff mean something only for a path that answered 200 to every variant.
+     *
+     * @type {Map<string, number[]>}
+     */
+    const docStatuses = new Map();
+
     /** @param {string} path @param {Record<string,string>} headers */
     const fetchDoc = async (path, headers) => {
       const sep = path.includes("?") ? "&" : "?";
       const res = await fetch(`${BASE}${path}${sep}identity=${RUN_IDENTITY}`, {
         headers: { "cache-control": "no-cache", ...headers },
         redirect: "manual",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
+      docStatuses.set(path, [...(docStatuses.get(path) ?? []), res.status]);
       return mask(await res.text());
     };
 
@@ -1039,7 +1122,13 @@ try {
     let footerOrderCompared = 0;
 
     for (const { path } of THEME_CACHED) {
-      await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      const visited = await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+      ok(
+        `${path}: the page answers 200 in the browser`,
+        visited?.status() === 200,
+        `answered ${visited?.status() ?? "(no response)"}. Every case on this path below would ` +
+          `be about an error page.`,
+      );
 
       // 3.2.6 asks for the same relative order on every page, never a fixed index. `/colophon`
       // appears twice in the footer, as a nav link and as prose, and that is the markup.
@@ -1091,6 +1180,14 @@ try {
 
       const dark = await fetchDoc(path, { cookie: "theme=dark" });
       const light = await fetchDoc(path, { cookie: "theme=light" });
+
+      const statuses = docStatuses.get(path) ?? [];
+      ok(
+        `${path}: every variant fetched for the identity and theme checks answered 200`,
+        statuses.length > 0 && statuses.every((s) => s === 200),
+        `answered [${statuses.join(", ")}]. Two error pages are byte-identical as well, so the ` +
+          `checks beside this one would pass on a route that fails for every reader.`,
+      );
 
       /* Without this, both assertions below pass on a site that stopped rendering the theme. */
       ok(
@@ -1212,6 +1309,7 @@ try {
       const negotiated = await fetch(key, {
         headers: { cookie: "theme=dark", accept },
         redirect: "manual",
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       const type = negotiated.headers.get("content-type") ?? "";
       ok(
@@ -2005,6 +2103,18 @@ try {
       [...document.querySelectorAll("section.playground-demo")].map((s) => s.id),
     );
     const declared = manifest.demos.map((/** @type {any} */ d) => `demo-${d.slug}`);
+    /* Each list below is looped over; an emptied one would pass every loop by running none. */
+    for (const [name, list] of [
+      ["demos", manifest.demos],
+      ["cookiePresets", manifest.cookiePresets],
+      ["markdownSnippets", manifest.markdownSnippets],
+    ]) {
+      ok(
+        `content/playground.json lists ${name} to drive`,
+        Array.isArray(list) && list.length > 0,
+        `${name} is ${JSON.stringify(list)}, so the cases that loop over it would assert nothing`,
+      );
+    }
     ok(
       "/playground renders a section for every demo in the manifest",
       declared.every((/** @type {string} */ id) => sections.includes(id)),
@@ -2075,6 +2185,7 @@ try {
     }
 
     /* workerd refuses `WebAssembly.instantiate()` on raw bytes; only a Worker sees this. */
+    let tocAnchorsChecked = 0;
     for (const snippet of manifest.markdownSnippets) {
       await page.goto(`${BASE}/playground?md=${encodeURIComponent(snippet.slug)}`, {
         waitUntil: "networkidle0",
@@ -2092,6 +2203,7 @@ try {
       }
 
       for (const anchor of snippet.expect.toc) {
+        tocAnchorsChecked += 1;
         ok(
           `the markdown demo reports the "${anchor}" anchor it collected`,
           text.includes(anchor),
@@ -2118,6 +2230,13 @@ try {
             a.getAttribute("href"),
           ),
         );
+        /* A pane that rendered nothing has no refused link either; the allowed ones must be there. */
+        const allowed = (snippet.source.match(/\]\(/g) ?? []).length - snippet.expect.blockedCount;
+        ok(
+          `the markdown demo renders the ${allowed} link(s) it allows`,
+          liveHrefs.length >= allowed,
+          `rendered ${liveHrefs.length} anchor(s): ${liveHrefs.join(", ") || "none"}`,
+        );
         ok(
           `the markdown demo emits no refused protocol as a live link`,
           liveHrefs.every((/** @type {string | null} */ href) => !/^javascript:/i.test(href ?? "")),
@@ -2125,6 +2244,11 @@ try {
         );
       }
     }
+    ok(
+      "the markdown demo checked at least one collected heading anchor",
+      tocAnchorsChecked > 0,
+      "no snippet in content/playground.json expects a toc, so the anchor case asserted nothing",
+    );
   }
 
   await page.setViewport({ width: 1280, height: 900 });
@@ -2136,11 +2260,14 @@ try {
     const id = href.startsWith("#") ? href.slice(1) : "";
     return { link: true, href, target: !!(id && document.getElementById(id)) };
   });
+  /* root.tsx renders the skip link on every page, /login included, so its absence is a failure. */
   ok(
-    "/login: the skip link target exists",
-    !loginSkip.link || loginSkip.target,
-    `the login page renders a skip link to ${JSON.stringify(loginSkip.href)} and nothing ` +
-      `carries that id, so keyboard focus goes nowhere`,
+    "/login: the skip link exists and its target does",
+    loginSkip.link && loginSkip.target,
+    loginSkip.link
+      ? `the login page renders a skip link to ${JSON.stringify(loginSkip.href)} and nothing ` +
+          `carries that id, so keyboard focus goes nowhere`
+      : "there is no .skip-link on /login at all",
   );
 
   /* The Ask stream is not driven because it bills. Console errors are asserted at the end, where CSP refusals show. */
@@ -2178,6 +2305,12 @@ try {
         /* A post is one segment: each row also links its tags (/blog/tags/x). */
         .filter((h) => h && /^\/blog\/[^/.]+$/.test(h)),
     )].slice(0, 6),
+  );
+  ok(
+    "the /blog listing yields post links to probe",
+    postPaths.length > 0,
+    "no post link on /blog, so the post-page bundle, copy, footnote and progress cases below " +
+      "would have nothing to run on",
   );
   /* @param {string} stem */
   const bundleFetches = (/** @type {string} */ stem) =>
@@ -2266,7 +2399,9 @@ try {
       page.evaluate(() => Boolean(document.querySelector(".footnote-preview")));
 
     // The page is already open on footnotePost from the walk above.
-    await page.hover(".prose a[data-footnote-ref]");
+    const footnoteRef = await page.$(".prose a[data-footnote-ref]");
+    if (footnoteRef) await footnoteRef.hover();
+    else ok(`${footnotePost}: the footnote reference is there to hover`, false, "it vanished after the walk found it");
     await new Promise((r) => setTimeout(r, 150));
     ok(
       `${footnotePost}: hovering a footnote reference shows the preview`,
@@ -2326,44 +2461,46 @@ try {
       `focus went from ${focusBefore} to ${afterEscape.focus}. Dismissing content must ` +
         `not cost the reader their place, which is what 1.4.13 asks for.`,
     );
+  }
 
-    /* Asserted on the `role="status"` region; speech is not observable. */
-    const codePost = await page.evaluate(
-      () => document.querySelectorAll(".prose pre[data-lang] .code-copy").length > 0,
+  /* Asserted on the `role="status"` region; speech is not observable. On the code post the walk
+     found, not on whichever post had footnotes: that only ran when one post had both. */
+  if (codePost === null) {
+    skip(
+      "the copy controls announce through a status region",
+      `none of the first ${postPaths.length} posts carries a code block, so there is no copy ` +
+        `control to press`,
     );
-    if (!codePost) {
-      skip(
-        "the copy controls announce through a status region",
-        "this post carries no code block, so there is no copy control to press",
-      );
-    } else {
-      await page.evaluate(() => {
-        const button = document.querySelector(".prose pre[data-lang] .code-copy");
-        if (button instanceof HTMLElement) button.click();
-      });
-      await new Promise((r) => setTimeout(r, 250));
-      const status = await page.evaluate(() => {
-        const region = document.querySelector('[role="status"]');
-        return {
-          exists: Boolean(region),
-          text: region?.textContent?.trim() ?? "",
-          hidden: region ? !region.classList.contains("sr-only") : false,
-        };
-      });
-      ok(
-        `${footnotePost}: 4.1.3 the copy control writes into a role=status region`,
-        status.exists && status.text.length > 0,
-        `region present ${status.exists}, text ${JSON.stringify(status.text)}. A button ` +
-          `that relabels itself is a change of NAME, not a status message, and generated ` +
-          `::after content is not in the accessibility tree at all.`,
-      );
-      ok(
-        `${footnotePost}: the status region is visually hidden, not a second visible label`,
-        !status.hidden,
-        `the region is not .sr-only, so the announcement is also painted on screen ` +
-          `beside the control's own feedback.`,
-      );
-    }
+  } else {
+    await page.goto(`${BASE}${codePost}`, { waitUntil: "networkidle0" });
+    await page.evaluate(() => {
+      const button = document.querySelector(".prose pre[data-lang] .code-copy");
+      if (button instanceof HTMLElement) button.click();
+    });
+    await new Promise((r) => setTimeout(r, 250));
+    const status = await page.evaluate(() => {
+      const region = document.querySelector('[role="status"]');
+      return {
+        exists: Boolean(region),
+        text: region?.textContent?.trim() ?? "",
+        visuallyHidden: region ? region.classList.contains("sr-only") : false,
+      };
+    });
+    ok(
+      `${codePost}: 4.1.3 the copy control writes into a role=status region`,
+      status.exists && status.text.length > 0,
+      `region present ${status.exists}, text ${JSON.stringify(status.text)}. A button ` +
+        `that relabels itself is a change of NAME, not a status message, and generated ` +
+        `::after content is not in the accessibility tree at all.`,
+    );
+    ok(
+      `${codePost}: the status region is visually hidden, not a second visible label`,
+      status.exists && status.visuallyHidden,
+      status.exists
+        ? `the region is not .sr-only, so the announcement is also painted on screen ` +
+            `beside the control's own feedback.`
+        : "there is no role=status region at all",
+    );
   }
 
   /* The cases below navigate for themselves. */
@@ -2447,6 +2584,8 @@ try {
     await new Promise((r) => setTimeout(r, 250));
     /** @type {{ attr: string | null, sameDocument: boolean, shownValue: string | null, shownCount: number, scrollY: number } | null} */
     let flipped = null;
+    /** Any other failure of the read, kept so it is not reported as a navigation. */
+    let flipReadError = "";
     try {
       flipped = await page.evaluate(() => {
         const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
@@ -2460,7 +2599,10 @@ try {
           scrollY: window.scrollY,
         };
       });
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // A real navigation destroys the context the read ran in; nothing else means that.
+      if (!/Execution context was destroyed/i.test(message)) flipReadError = message;
       flipped = null;
     }
     if (themeClicked) ok(
@@ -2480,7 +2622,9 @@ try {
         flipped.shownValue === "light" &&
         flipped.shownCount === 1,
       flipped === null
-        ? "the click caused a real navigation: the theme bundle did not intercept the " +
+        ? flipReadError
+          ? `reading the page after the click failed: ${flipReadError}`
+          : "the click caused a real navigation: the theme bundle did not intercept the " +
             "submit (the form fallback is what carried the click)"
         : `data-theme=${JSON.stringify(flipped.attr)}, same document ${flipped.sameDocument}, ` +
             `the visible button now posts ${JSON.stringify(flipped.shownValue)} and there ` +
@@ -2520,39 +2664,49 @@ try {
          * Click the button just read as visible, never by position: the shared cookie jar may have
          * hidden the first one, and puppeteer throws on a hidden element.
          */
-        await Promise.all([
-          scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
-          clickOrFail(
-            scriptless,
-            `.theme-toggle button[value="${before.value}"]`,
-            "the scriptless theme control is present to click",
-          ),
-        ]);
-
-        const after = await scriptless.evaluate(() => ({
-          attr: document.documentElement.getAttribute("data-theme"),
-          hash: location.hash,
-          path: location.pathname,
-        }));
+        /* A navigation is awaited only for a click that happened: waiting on one that never comes
+           throws after 30 s and ends the whole run, which is what clickOrFail exists to prevent. */
+        const toggle =
+          before.value === "light" || before.value === "dark"
+            ? await scriptless.$(`.theme-toggle button[value="${before.value}"]`)
+            : null;
         ok(
-          "with script OFF the form post changes the theme and returns the reader to the same page",
-          after.attr === before.value && after.path === postForShape,
-          `asked for ${JSON.stringify(before.value)}, came back with ` +
-            `data-theme=${JSON.stringify(after.attr)} at ` +
-            `${after.path}${after.hash}. The no-script path is the one the progressive-enhancement rule ` +
-            `requires to work: the enhancement is allowed to fail, this is not.`,
+          "the scriptless theme control is present to click",
+          toggle !== null,
+          `no visible .theme-toggle button with a light or dark value ` +
+            `(read ${JSON.stringify(before.value)})`,
         );
-        /*
-         * Reported, not asserted: the fragment is unreachable by construction, so a failure here
-         * would be permanent and say nothing about the code.
-         */
-        if (after.hash !== hash) {
-          report(
-            `the scriptless theme post drops the fragment (${JSON.stringify(hash)} -> ` +
-              `${JSON.stringify(after.hash)}). Not a defect and not fixable server-side: ` +
-              `Referer never carries a fragment (RFC 9110), so /theme cannot learn it. ` +
-              `The scripted path holds the reader's position by not navigating at all.`,
+        if (toggle) {
+          await Promise.all([
+            scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
+            toggle.click(),
+          ]);
+
+          const after = await scriptless.evaluate(() => ({
+            attr: document.documentElement.getAttribute("data-theme"),
+            hash: location.hash,
+            path: location.pathname,
+          }));
+          ok(
+            "with script OFF the form post changes the theme and returns the reader to the same page",
+            after.attr === before.value && after.path === postForShape,
+            `asked for ${JSON.stringify(before.value)}, came back with ` +
+              `data-theme=${JSON.stringify(after.attr)} at ` +
+              `${after.path}${after.hash}. The no-script path is the one the progressive-enhancement rule ` +
+              `requires to work: the enhancement is allowed to fail, this is not.`,
           );
+          /*
+           * Reported, not asserted: the fragment is unreachable by construction, so a failure here
+           * would be permanent and say nothing about the code.
+           */
+          if (after.hash !== hash) {
+            report(
+              `the scriptless theme post drops the fragment (${JSON.stringify(hash)} -> ` +
+                `${JSON.stringify(after.hash)}). Not a defect and not fixable server-side: ` +
+                `Referer never carries a fragment (RFC 9110), so /theme cannot learn it. ` +
+                `The scripted path holds the reader's position by not navigating at all.`,
+            );
+          }
         }
       } finally {
         await scriptless.close();
@@ -2585,27 +2739,41 @@ try {
             `so an absent or hidden one is a header with no navigation at all.`,
         );
 
-        await noScript.click(".site-header-menu-button");
+        const opened = await clickOrFail(
+          noScript,
+          ".site-header-menu-button",
+          "the scriptless header menu button is present to click",
+        );
+        const isOpen = await noScript.evaluate(() => {
+          const d = document.querySelector("[data-header-menu]");
+          return d instanceof HTMLDetailsElement && d.open;
+        });
         ok(
           "the header menu OPENS with no script, because it is a details element",
-          await noScript.$eval("[data-header-menu]", (d) => /** @type {HTMLDetailsElement} */ (d).open),
+          opened && isOpen,
           "clicking the summary did not open it. A menu that needs script to open is not rule " +
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        const target = await noScript.$eval(".site-header-menu-panel a", (a) =>
-          a.getAttribute("href"),
-        );
-        await Promise.all([
-          noScript.waitForNavigation({ waitUntil: "domcontentloaded" }),
-          noScript.click(".site-header-menu-panel a"),
-        ]);
+        const link = await noScript.$(".site-header-menu-panel a");
+        const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
-          "a header menu link NAVIGATES with no script",
-          new URL(noScript.url()).pathname === target,
-          `landed on ${new URL(noScript.url()).pathname}, expected ${target}. Opening is half the ` +
-            `contract; the other half is that the thing inside goes somewhere.`,
+          "the open header menu offers a link to follow",
+          link !== null && Boolean(target),
+          "no link inside .site-header-menu-panel, so there is nothing for the reader to follow",
         );
+        if (link && target) {
+          await Promise.all([
+            noScript.waitForNavigation({ waitUntil: "domcontentloaded" }),
+            link.click(),
+          ]);
+          ok(
+            "a header menu link NAVIGATES with no script",
+            new URL(noScript.url()).pathname === target,
+            `landed on ${new URL(noScript.url()).pathname}, expected ${target}. Opening is half the ` +
+              `contract; the other half is that the thing inside goes somewhere.`,
+          );
+        }
       } finally {
         await noScript.close();
       }
@@ -2850,20 +3018,26 @@ try {
               `the preview build it is a real defect and should be read as one.`,
       );
     } else {
+      /* Closed in a finally, like the other scriptless pages: a throw here would leave it open. */
       const scriptless = await browser.newPage();
-      await scriptless.setJavaScriptEnabled(false);
-      await scriptless.goto(`${BASE}${imagePost}`, { waitUntil: "networkidle0" });
-      const served = await scriptless.evaluate(() => {
-        const image = document.querySelector(".prose img");
-        const parent = image?.parentElement ?? null;
-        return {
-          image: Boolean(image),
-          anchor: parent?.tagName === "A",
-          klass: parent?.className ?? "",
-          href: parent?.getAttribute("href") ?? "",
-        };
-      });
-      await scriptless.close();
+      // Overwritten below or the throw propagates, so these values are never read.
+      let served = { image: false, anchor: false, klass: "", href: "" };
+      try {
+        await scriptless.setJavaScriptEnabled(false);
+        await scriptless.goto(`${BASE}${imagePost}`, { waitUntil: "networkidle0" });
+        served = await scriptless.evaluate(() => {
+          const image = document.querySelector(".prose img");
+          const parent = image?.parentElement ?? null;
+          return {
+            image: Boolean(image),
+            anchor: parent?.tagName === "A",
+            klass: parent?.className ?? "",
+            href: parent?.getAttribute("href") ?? "",
+          };
+        });
+      } finally {
+        await scriptless.close();
+      }
 
       ok(
         `${imagePost}: with script off, the image's parent is an image-link anchor`,
@@ -2875,7 +3049,9 @@ try {
 
       let delivered = { status: 0, type: "" };
       if (served.href) {
-        const response = await fetch(new URL(served.href, BASE));
+        const response = await fetch(new URL(served.href, BASE), {
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        });
         delivered = {
           status: response.status,
           type: response.headers.get("content-type") ?? "",
@@ -2889,7 +3065,7 @@ try {
       );
 
       // The page is already open on imagePost from the walk above.
-      await page.click(".prose a.image-link");
+      await clickOrFail(page, ".prose a.image-link", `${imagePost}: the image link is there to click`);
       await new Promise((r) => setTimeout(r, 250));
       const overlay = await page.evaluate(() => {
         const shown = document.querySelector(".lightbox img");
@@ -3054,7 +3230,14 @@ try {
     ok(
       `the ${CREDENTIAL} credential supplied in ${CREDENTIAL_SOURCE} authenticates against ${ADMIN_ORIGIN}`,
       false,
-      CREDENTIAL === "smoke"
+      /* Status 0 is a request that never got an answer (DNS, TLS, timeout): no credential was
+         judged, so neither repair below applies, and the cause is the error itself. */
+      AUTH_RESULT.status === 0
+        ? `GET /admin never got an answer: ${AUTH_RESULT.error ?? "no error was recorded"}. ` +
+          `No credential was judged, so this is ${ADMIN_ORIGIN} being unreachable from here, ` +
+          `not an expired session or a drifted token.\n` +
+          `        The admin cases below did not run.`
+        : CREDENTIAL === "smoke"
         ? `GET /admin with it did not return 200. The status NAMES the repair, which is why ` +
           `the smoke path reports one rather than guessing:\n` +
           `        ${smokeRepair(AUTH_RESULT.status)}\n` +
@@ -3129,11 +3312,17 @@ try {
     }
 
     /* Asserted as resolved color against the token, never a hex: @import order decides what wins. */
+    /* Throws on anything but a hex: parseInt("") is NaN, NaN shifts to 0, and rgb(0, 0, 0) is also
+       SVG's default fill, so an unresolved --brand and a lost fill rule would agree and pass. */
     const rgb = (/** @type {string} */ hex) => {
       const h = hex.trim().replace("#", "");
+      if (!/^(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(h)) {
+        throw new Error(`rgb(): ${JSON.stringify(hex)} is not a 3 or 6 digit hex`);
+      }
       const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
       return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
     };
+    const isHex = (/** @type {string} */ v) => /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(v.trim());
 
     await admin.goto(`${ADMIN_ORIGIN}/admin`, { waitUntil: "networkidle0" });
     const adminMark = await admin.evaluate(() => {
@@ -3152,9 +3341,12 @@ try {
     );
     ok(
       "the admin mark's fill resolves to --brand, the base binding in app.css",
-      adminMark.present && adminMark.fill === rgb(adminMark.brand),
-      `fill is ${JSON.stringify(adminMark.fill)} and --brand is ${JSON.stringify(adminMark.brand)} ` +
-        `(${rgb(adminMark.brand || "#000")}). The base rule in app.css is not reaching the admin mark.`,
+      adminMark.present && isHex(adminMark.brand) && adminMark.fill === rgb(adminMark.brand),
+      isHex(adminMark.brand)
+        ? `fill is ${JSON.stringify(adminMark.fill)} and --brand is ${JSON.stringify(adminMark.brand)} ` +
+            `(${rgb(adminMark.brand)}). The base rule in app.css is not reaching the admin mark.`
+        : `--brand resolved to ${JSON.stringify(adminMark.brand)} on the admin plane, not a hex, so ` +
+            `there is nothing for the fill to be compared with.`,
     );
 
     await admin.goto(`${ADMIN_ORIGIN}/`, { waitUntil: "networkidle0" });
@@ -3176,9 +3368,11 @@ try {
     );
     ok(
       "the public header mark's purple resolves to --brand, the base binding in app.css",
-      publicMark.brand.length > 0 && publicMark.brand.every((f) => f === rgb(publicMark.token)),
+      publicMark.brand.length > 0 &&
+        isHex(publicMark.token) &&
+        publicMark.brand.every((f) => f === rgb(publicMark.token)),
       `fills are ${JSON.stringify(publicMark.brand)} and --brand is ` +
-        `${JSON.stringify(publicMark.token)} (${rgb(publicMark.token || "#000")}). Ruling 118.2 ` +
+        `${JSON.stringify(publicMark.token)} (${isHex(publicMark.token) ? rgb(publicMark.token) : "not a hex"}). Ruling 118.2 ` +
         `removed the header override, so the (0,1,0) base in app.css has to reach the mark, ` +
         `which is what the sixteen-file split put at risk.`,
     );
@@ -3207,6 +3401,9 @@ try {
     );
 
     if (slug) {
+      /* Only this navigation's requests: the listener has been on since the sweep began, and an
+         earlier surface fetching the chunk would otherwise satisfy the case below. */
+      fetched.length = 0;
       await admin.goto(`${ADMIN_ORIGIN}${slug}`, { waitUntil: "networkidle0" });
       await new Promise((r) => setTimeout(r, 2500));
       const mounted = await admin.evaluate(() => !!document.querySelector(".cm-editor"));
@@ -3417,6 +3614,20 @@ try {
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?confirm=empty-trash`, {
       waitUntil: "networkidle0",
     });
+    /* The Trash chip's count, so "no modal" can be told apart from "empty trash". */
+    const trashed = await admin.evaluate(() => {
+      const chip = [...document.querySelectorAll(".admin-chip")].find((a) =>
+        /^\s*Trash\b/.test(a.textContent ?? ""),
+      );
+      const count = chip?.querySelector(".admin-chip-count")?.textContent?.trim() ?? "";
+      return /^\d+$/.test(count) ? Number(count) : null;
+    });
+    ok(
+      "/admin/media shows how many files are in the trash",
+      trashed !== null,
+      "no Trash chip with a numeric count, so an absent confirmation could not be told apart " +
+        "from an empty trash",
+    );
     const modal = await admin.evaluate(() => {
       const panel = document.querySelector(".media-modal");
       if (!panel) return null;
@@ -3431,12 +3642,19 @@ try {
       };
     });
 
-    if (!modal) {
+    if (!modal && trashed === 0) {
       skip(
         "/admin/media?confirm=empty-trash: the typed-confirmation ladder",
-        "the confirmation did not render, which on this deployment means the trash is EMPTY: " +
-          "the modal is gated on trashedCount > 0. Nothing is wrong and nothing was measured. " +
-          "This case covers itself again as soon as one object is trashed.",
+        "the trash is EMPTY on this deployment and the modal is gated on trashedCount > 0. " +
+          "Nothing is wrong and nothing was measured. This case covers itself again as soon as " +
+          "one object is trashed.",
+      );
+    } else if (!modal) {
+      ok(
+        "/admin/media?confirm=empty-trash renders the typed-confirmation dialog",
+        false,
+        `the trash holds ${trashed ?? "an unknown number of"} file(s) and the confirmation did ` +
+          `not render, so the destructive action has lost its confirmation or its route.`,
       );
     } else {
       ok(

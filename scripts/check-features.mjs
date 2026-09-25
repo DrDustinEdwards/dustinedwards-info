@@ -1,9 +1,9 @@
-// The route parser does not compose nested prefixes: a feature anchored to a nested public route fails
-// here, and the failure reads like rot in the anchors file when it is really this parser's limit.
+// Routes are read by importing app/routes.ts and walking its children, so a nested route is known by
+// its full path (/admin/tools) and never by its child segment alone (/tools).
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import rehypeStringify from "rehype-stringify";
 import { unified } from "unified";
@@ -31,7 +31,8 @@ import {
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "../app/lib/theme.ts";
 import { apca, contrast } from "../app/lib/contrast.mjs";
 import { RRF_K, fuse } from "../app/lib/search/query.mjs";
-import { stripComments } from "./lib/strip-comments.mjs";
+import { stripComments, stripTsxComments } from "./lib/strip-comments.mjs";
+import { functionBody } from "./lib/source-body.mjs";
 import {
   CHART_TYPES,
   buildChartModel,
@@ -57,6 +58,17 @@ const stripped = (/** @type {string} */ source) =>
   stripComments(source, { preserveLines: true });
 
 /**
+ * A source file with its comments gone, by the parser for TSX: the tokenizer reads an apostrophe in
+ * JSX text as a string opener and can keep every comment after it, which then satisfies a check.
+ *
+ * @param {string} file
+ */
+const codeOf = (file) => {
+  const source = normalizeEol(readFileSync(file, "utf8"));
+  return file.endsWith(".tsx") ? stripTsxComments(source) : stripped(source);
+};
+
+/**
  * Letter-digit tokens (D1, FTS5) are names, removed before the digit scan.
  *
  * @param {string} text
@@ -79,34 +91,26 @@ function ok(label, condition, detail = "") {
   }
 }
 
-function declaredRoutes() {
-  // Comments first: this file's prose names paths.
-  const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
-
-  /** @type {Set<string>} */
-  const paths = new Set();
-  // index() declares the site root and carries no path argument.
-  if (/\bindex\s*\(/.test(source)) paths.add("/");
-  for (const [, path] of source.matchAll(
-    /\broute\s*\(\s*["'`]([^"'`]+)["'`]/g,
-  )) {
-    paths.add(path.startsWith("/") ? path : `/${path}`);
-  }
-  return paths;
-}
-
-/** @returns {Map<string, string>} */
-function declaredRouteModules() {
-  const source = stripped(readFileSync(ROUTES_PATH, "utf8"));
+/**
+ * Every URL path routes.ts declares, with the module that renders it. Read by IMPORTING the config
+ * and walking children with their parent's prefix: a regex over the file saw `route("tools", ...)`
+ * under /admin as a top-level /tools, and anchors to that nonexistent URL passed.
+ *
+ * @returns {Promise<Map<string, string>>}
+ */
+async function declaredRouteModules() {
+  const { default: config } = await import(pathToFileURL(ROUTES_PATH).href);
   /** @type {Map<string, string>} */
   const out = new Map();
-  const index = source.match(/\bindex\s*\(\s*["'`]([^"'`]+)["'`]/);
-  if (index) out.set("/", join(root, "app", index[1]));
-  for (const [, path, module] of source.matchAll(
-    /\broute\s*\(\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]/g,
-  )) {
-    out.set(path.startsWith("/") ? path : `/${path}`, join(root, "app", module));
-  }
+  const walk = (/** @type {any[]} */ entries, /** @type {string} */ prefix) => {
+    for (const entry of entries) {
+      const path = entry.index ? prefix || "/" : `${prefix}/${entry.path}`.replace(/\/+/g, "/");
+      // An index child renders at its parent's path, so its module is the page there.
+      if (entry.index || !out.has(path)) out.set(path, join(root, "app", entry.file));
+      if (entry.children) walk(entry.children, path === "/" ? "" : path);
+    }
+  };
+  walk(config, "");
   return out;
 }
 
@@ -136,8 +140,8 @@ const artifactRecords =
   JSON.parse(
     readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
   ).records ?? [];
-const routes = declaredRoutes();
-const routeModules = declaredRouteModules();
+const routeModules = await declaredRouteModules();
+const routes = new Set(routeModules.keys());
 const gates = declaredGates();
 
 ok(
@@ -147,9 +151,15 @@ ok(
 );
 ok(
   "routes.ts parsed to a plausible number of routes",
-  routes.size >= 33,
-  `parsed ${routes.size}, floor 33, measured 36. The parser has stopped matching this ` +
-    `file's style, most likely for the nested children under the admin subtree.`,
+  routes.size >= 50,
+  `read ${routes.size}, floor 50, measured 55 with nested paths composed. The walk has ` +
+    `stopped descending into children, or routes.ts has lost routes.`,
+);
+ok(
+  "routes.ts: a nested route is known by its full path, never by its child segment alone",
+  routes.has("/admin/tools") && !routes.has("/tools"),
+  "the walk is flattening children to the top level again, so an anchor to a URL that " +
+    "does not exist would pass",
 );
 ok(
   "package.json declares gates",
@@ -207,11 +217,13 @@ for (const feature of features) {
 
       const routeFile = routeModules.get(anchor.path);
       if (routeFile && existsSync(routeFile)) {
-        const routeSource = stripComments(readFileSync(routeFile, "utf8"));
+        const routeSource = codeOf(routeFile);
         const isPage = /export\s+default\s+function\b/.test(routeSource);
         const hasLoader = /export\s+(?:async\s+)?function\s+loader\b/.test(routeSource);
-        const loaderRefuses = /status:\s*405/.test(routeSource);
-        const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(routeSource);
+        /* The LOADER's own body: a 405 from an action on a GET-able route is not the loader refusing. */
+        const loaderBody = functionBody(routeSource, /export\s+(?:async\s+)?function\s+loader\b/);
+        const loaderRefuses = /status:\s*405/.test(loaderBody);
+        const loaderAuthenticates = /\bauthenticateOperator\s*\(/.test(loaderBody);
         const derived = isPage || (hasLoader && !loaderRefuses && !loaderAuthenticates);
         const declared = anchor.anonymousGet !== false;
         const why = !hasLoader
@@ -561,7 +573,7 @@ if (notAdoptedRecord) {
 
 /* Comments stripped: both files name these values in prose. */
 
-const pageCode = stripComments(pageSource);
+const pageCode = stripTsxComments(normalizeEol(pageSource));
 for (const status of usedStatuses) {
   const label = STATUS_LABEL[status];
   ok(
@@ -650,7 +662,8 @@ if (existsSync(ENHANCEMENTS_PATH)) {
 
 const enhanceFiles = existsSync(ENHANCE_DIR)
   ? readdirSync(ENHANCE_DIR)
-      .filter((name) => name.endsWith(".ts"))
+      // Every script extension, or a .tsx or .mjs enhancement escapes the count and the inventory.
+      .filter((name) => /\.(?:ts|tsx|mjs|js)$/.test(name))
       .sort()
   : [];
 
@@ -714,9 +727,7 @@ ok(
 );
 
 /* Comments stripped, so a comment cannot satisfy a fallback. */
-const sourceBlobs = serverSources.map((file) =>
-  stripped(normalizeEol(readFileSync(file, "utf8"))),
-);
+const sourceBlobs = serverSources.map((file) => codeOf(file));
 
 /* Plus the shared renderer's output (remark-gfm footnotes), from a fixture: the claim is about the
    renderer, not the corpus. */
@@ -1150,7 +1161,7 @@ for (const term of vocabulary) {
   );
 }
 
-const projectsSource = stripped(readFileSync(PROJECTS_ROUTE_PATH, "utf8"));
+const projectsSource = codeOf(PROJECTS_ROUTE_PATH);
 ok(
   "the page imports the roster rather than restating it",
   /import\s+projectsData\s+from\s+["'][^"']*content\/projects\.json["']/.test(projectsSource),
@@ -1318,7 +1329,7 @@ ok(
   `parsed routes: ${[...routes].join(", ")}`,
 );
 
-const playgroundSource = stripped(readFileSync(PLAYGROUND_ROUTE_PATH, "utf8"));
+const playgroundSource = codeOf(PLAYGROUND_ROUTE_PATH);
 
 ok(
   "the page imports the manifest rather than restating it",
@@ -1429,7 +1440,7 @@ for (const swatch of swatches) {
   ok(
     `contrast lab: ${swatch.label} computes ${swatch.ratio} to 1`,
     Math.abs(actual - swatch.ratio) < 0.05,
-    `app/lib/contrast.mjs returned ${actual.toFixed(2)}, design-tokens.md records ${swatch.ratio}`,
+    `app/lib/contrast.mjs returned ${actual.toFixed(2)}, content/playground.json records ${swatch.ratio}`,
   );
   const expectedVerdict = swatch.ratio >= 4.5;
   ok(
@@ -1575,12 +1586,14 @@ for (const preset of keyPresets) {
     `the module says ${roleOf(preset.key)}`,
   );
 
-  /* "refused" is an answer, so the throw branch runs. */
+  /* "refused" is an answer, so the throw branch runs. Only the classifier's own refusal counts: any
+     other exception is a crash, and reading it as "refused" would pass every refusal preset. */
   let actualKind;
   try {
     actualKind = classify(preset.key).kind;
-  } catch {
-    actualKind = "refused";
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    actualKind = message.startsWith("unclassified asset ") ? "refused" : `a crash: ${message}`;
   }
   ok(
     `media key: ${label} classifies as ${expect.kind}`,
@@ -1825,7 +1838,15 @@ ok(
       );
       continue;
     }
-    if (!rendered) continue;
+    if (!rendered) {
+      ok(
+        `markdown: ${label} rendered to something`,
+        false,
+        `renderBody resolved to ${JSON.stringify(rendered)} without throwing, so every ` +
+          `per-snippet check below would have been skipped`,
+      );
+      continue;
+    }
 
     const anchors = rendered.toc.map((/** @type {any} */ h) => h.id);
     ok(
@@ -1902,7 +1923,8 @@ ok(
 );
 ok(
   "markdown: the wrapper's image resolver refuses",
-  /resolveImage:\s*async/.test(snippetRendererSource) && /throw new Error/.test(snippetRendererSource),
+  /* Inside the resolver itself: a throw anywhere in the file is not this resolver refusing. */
+  /resolveImage:\s*async\s*\([^)]*\)\s*=>\s*\{\s*throw new Error\(/.test(snippetRendererSource),
   "a resolver that reached a bucket on behalf of fixture text is a door this " +
     "demo has no reason to open",
 );
@@ -2012,7 +2034,8 @@ ok(
    draft APCA is developed in), and WCAG 2.2 is already required above as the target. */
 ok(
   "the page states the input cap it enforces",
-  /up to \{QUERY_CAP\} characters|up to 100 characters/i.test(playgroundSource),
+  /* Through the constant only: a literal "100" would pass on stale text once the cap moved. */
+  /up to \{QUERY_CAP\} characters/i.test(playgroundSource),
   "a cap enforced in the loader and unstated in the UI is a silent truncation",
 );
 ok(
