@@ -17,6 +17,8 @@ import {
 const fileName = (/** @type {string} */ key, /** @type {string} */ theme) =>
   path.basename(diagramAssetPath(key, theme));
 import { ARTIFACT_PATH } from "./build-content.mjs";
+import { diagramsFrom } from "./lib/artifact-diagrams.mjs";
+import { deleteFloor } from "./lib/delete-floor.mjs";
 import { auditDiagramSvg } from "./lib/diagram-audit.mjs";
 import { resolveTokens, THEME_SELECTORS, tokenBlock } from "./lib/tokens.mjs";
 
@@ -118,24 +120,7 @@ async function render(browser, source, theme, colours, label) {
 async function main() {
   const force = process.argv.includes("--force");
 
-  const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
-  /** @type {Array<{ posts: string[], key: string, source: string }>} */
-  const diagrams = [];
-  /** @type {Map<string, number>} */
-  const seen = new Map();
-  for (const post of artifact.posts ?? []) {
-    for (const diagram of post.diagrams ?? []) {
-      const at = seen.get(diagram.key);
-      if (at !== undefined) {
-        // The same drawing in two posts is one asset, by construction: the key
-        // is a hash of the source and nothing else.
-        diagrams[at].posts.push(post.slug);
-        continue;
-      }
-      seen.set(diagram.key, diagrams.length);
-      diagrams.push({ posts: [post.slug], key: diagram.key, source: diagram.source });
-    }
-  }
+  const diagrams = diagramsFrom(JSON.parse(await readFile(ARTIFACT_PATH, "utf8")), ARTIFACT_PATH);
 
   const light = resolveTokens(
     DIAGRAM_THEME_TOKENS,
@@ -203,9 +188,21 @@ async function main() {
   const live = new Set(
     diagrams.flatMap((d) => DIAGRAM_THEMES.map((t) => fileName(d.key, t))),
   );
+  const onDisk = (await readdir(DIAGRAM_DIR)).filter((name) => name.endsWith(".svg"));
+  const stale = onDisk.filter((name) => !live.has(name));
+  const refusal = deleteFloor({
+    what: "diagram files",
+    keeping: onDisk.length - stale.length,
+    removing: stale.length,
+  });
+  if (refusal) {
+    throw new Error(
+      `REFUSED to prune: ${refusal}. Nothing was deleted from ${DIAGRAM_DIR}; check the artifact ` +
+        `with npm run build:content before deleting diagrams by hand.`,
+    );
+  }
   let pruned = 0;
-  for (const name of await readdir(DIAGRAM_DIR)) {
-    if (!name.endsWith(".svg") || live.has(name)) continue;
+  for (const name of stale) {
     await unlink(path.join(DIAGRAM_DIR, name));
     pruned += 1;
     console.log(`  pruned /${DIAGRAM_ASSET_DIR}/${name}`);
