@@ -13,17 +13,12 @@ import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
+import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { deleteFloor, requirePosts, syncablePostProblems } from "./lib/delete-floor.mjs";
 
 const DB_NAME = "dustinedwards";
 
 const LLMS_PATH = "content/llms.txt";
-
-/** @param {string | null} value */
-function sql(value) {
-  if (value === null || value === undefined) return "NULL";
-  return `'${String(value).replace(/'/g, "''")}'`;
-}
 
 /** @param {number | null} value */
 function num(value) {

@@ -29,6 +29,7 @@ import {
 import { createTally } from "./lib/tally.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 import { sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
+import { sqlLiteral as q } from "./lib/sql-literal.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PORT = 4173;
@@ -434,10 +435,6 @@ const MENTION_DECIDED_AT = Math.floor(Date.UTC(2026, 7, 20) / 1000);
 const MENTION_HOSTILE_NAME = "<script>alert(1)</script>";
 
 const MENTION_SEED_ROWS = 2;
-
-/** SQL string literal: the only escaping a --file path needs. */
-const q = (/** @type {unknown} */ v) =>
-  v === null || v === undefined ? "NULL" : `'${String(v).split("'").join("''")}'`;
 
 /**
  * Seeds go through files, never a cmd command string: the hostile row carries <script>, quotes and
