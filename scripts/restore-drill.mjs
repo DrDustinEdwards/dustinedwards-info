@@ -4,10 +4,12 @@ import { readFile, readdir, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
 
-import { assertFloor } from "./lib/floor.mjs";
-import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
+import { retryRead } from "./lib/retry.mjs";
+import { listD1Databases } from "./lib/d1-address.mjs";
+import { runWrangler, wranglerTail as tail } from "./lib/wrangler-run.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
+import { createTally } from "./lib/tally.mjs";
 
 /** The database this drill READS and must never write to. */
 const PRODUCTION_DB = "dustinedwards";
@@ -26,56 +28,11 @@ const MEDIA_BACKUP_BUCKET = "dustinedwards-media-backup";
 const SCRATCH_PREFIX = "restore-drill-";
 const SCRATCH_DB = `${SCRATCH_PREFIX}${new Date().toISOString().slice(0, 10)}-${process.pid}`;
 
-let checks = 0;
-let failures = 0;
+const tally = createTally({ separator: ": " });
+const { ok } = tally;
 
-/**
- * The argument order every gate here uses: a string in the condition slot is always truthy.
- *
- * @param {string} label
- * @param {boolean} condition
- * @param {string} [detail]
- */
-function ok(label, condition, detail = "") {
-  checks += 1;
-  if (!condition) {
-    failures += 1;
-    console.log(`  FAIL  ${label}${detail ? `: ${detail}` : ""}`);
-  }
-}
-
-/**
- * One already-quoted command string: with `shell: true` an array concatenates without quoting.
- *
- * @param {string} args
- * @returns {{ stdout: string, status: number }}
- */
-function wrangler(args) {
-  // Bounded for the whole-database export and import, so a hung wrangler fails the drill instead of hanging it.
-  const result = spawnSyncBounded(`npx wrangler ${args}`, [], {
-    shell: true,
-    maxBuffer: 64 * 1024 * 1024,
-    timeoutMs: 15 * 60_000,
-  });
-  return {
-    stdout: `${result.stdout}${result.stderr}${result.error ? `\n${result.error}` : ""}`,
-    status: result.status ?? 1,
-  };
-}
-
-/**
- * The END of wrangler's output, which is where its error is: a head slice reported the banner.
- *
- * @param {string} text
- * @param {number} [max]
- */
-function tail(text, max = 400) {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && /\w/.test(l) && !/^[⛅🌀]/u.test(l));
-  return lines.join(" | ").slice(-max) || "no output";
-}
+/** Bounded for the whole-database export and import, so a hung wrangler fails the drill instead of hanging it. */
+const wrangler = runWrangler;
 
 /**
  * The one place a write learns its target: the scratch prefix AND not production's id, the second
@@ -116,7 +73,7 @@ async function query(db, sql) {
   const result = await retryRead(
     () => {
       const r = wrangler(`d1 execute ${db} --remote --json --command "${sql}"`);
-      if (r.status !== 0) throw new Error(tail(r.stdout));
+      if (r.status !== 0) throw new Error(tail(r.output));
       return r;
     },
     { label: `check:restore query (${db})` },
@@ -140,7 +97,6 @@ async function migrationFiles() {
   return files;
 }
 
-/** @returns {Promise<string[]>} */
 /**
  * Dependency order despite the export's PRAGMA: `defer_foreign_keys` resets at every COMMIT and
  * `--file` batches across transactions.
@@ -239,18 +195,15 @@ async function main() {
   /* Sweep first, because `finally` does not run on a hard kill. Only the prefix and only older than
      the window, so a concurrent run is safe. */
   const SWEEP_AFTER_MS = 2 * 60 * 60 * 1000;
-  const listed = wrangler("d1 list --json");
   /* Outside the sweep's `if`: the sweep is best-effort, but UUID resolution must fail closed. */
-  const listedStart = listed.status === 0 ? listed.stdout.indexOf("[") : -1;
-  /** @type {Array<{ uuid?: string, name?: string, created_at?: string }>} */
-  const databases = listedStart === -1 ? [] : JSON.parse(listed.stdout.slice(listedStart));
+  const { databases, failure: listFailure } = listD1Databases(wrangler);
 
   /* Fails closed: falling back to the name reintroduces the placeholder-id lookup failure. */
   const production = databases.find((d) => d.name === PRODUCTION_DB);
   if (typeof production?.uuid !== "string" || production.uuid.length === 0) {
     throw new Error(
       `could not resolve ${PRODUCTION_DB} to a UUID from d1 list` +
-        `${listed.status === 0 ? "" : ` (d1 list exited ${listed.status}: ${tail(listed.stdout)})`}. ` +
+        `${listFailure}. ` +
         `Passing the NAME to d1 export lets wrangler resolve it out of ` +
         `wrangler.jsonc, which CI bootstraps from the example with a ` +
         `placeholder database_id, so the read would fail as 7404.`,
@@ -259,7 +212,7 @@ async function main() {
   PRODUCTION_ID = production.uuid;
   console.log(`  ${PRODUCTION_DB} resolved to ${PRODUCTION_ID}`);
 
-  if (listed.status === 0) {
+  if (listFailure === "") {
     const leaked = databases.filter(
       (d) =>
         typeof d.name === "string" && d.name.startsWith(SCRATCH_PREFIX) && d.name !== SCRATCH_DB,
@@ -282,7 +235,7 @@ async function main() {
     for (const old of stale) {
       const dropped = wrangler(`d1 delete ${scratch(String(old.name))} --skip-confirmation`);
       if (dropped.status !== 0) {
-        unswept.push(`${old.name} (exited ${dropped.status}: ${tail(dropped.stdout)})`);
+        unswept.push(`${old.name} (exited ${dropped.status}: ${tail(dropped.output)})`);
       }
     }
     if (stale.length > 0) {
@@ -335,7 +288,7 @@ async function main() {
           const r = wrangler(
             `d1 export ${PRODUCTION_ID} --remote --no-schema --table ${table} --output "${out}"`,
           );
-          if (r.status !== 0) throw new Error(tail(r.stdout));
+          if (r.status !== 0) throw new Error(tail(r.output));
           return r;
         },
         { label: `check:restore export (${table})` },
@@ -371,7 +324,7 @@ async function main() {
     ok(
       "the scratch database is created",
       create.status === 0,
-      `wrangler d1 create exited ${create.status}: ${tail(create.stdout)}`,
+      `wrangler d1 create exited ${create.status}: ${tail(create.output)}`,
     );
     if (create.status !== 0) throw new Error("could not create the scratch database");
     created = true;
@@ -384,7 +337,7 @@ async function main() {
       ok(
         `migration ${file} applies to an empty database`,
         run.status === 0,
-        `wrangler d1 execute exited ${run.status}: ${tail(run.stdout)}. The ` +
+        `wrangler d1 execute exited ${run.status}: ${tail(run.output)}. The ` +
           `schema half of a restore is the migrations; if one does not apply ` +
           `cleanly there is nothing to load into.`,
       );
@@ -406,7 +359,7 @@ async function main() {
     ok(
       "the migrated database is emptied before the restore",
       clear.status === 0,
-      `wrangler d1 execute exited ${clear.status}: ${tail(clear.stdout)}. A ` +
+      `wrangler d1 execute exited ${clear.status}: ${tail(clear.output)}. A ` +
         `migration seeds settings, so a restore into a freshly migrated database ` +
         `collides on that row unless the seed is cleared first.`,
     );
@@ -429,7 +382,7 @@ async function main() {
     ok(
       "THE WHOLE DUMP LOADS INTO THE RESTORED DATABASE",
       load.status === 0,
-      `wrangler d1 execute exited ${load.status}: ${tail(load.stdout)}. The ${loaded} ` +
+      `wrangler d1 execute exited ${load.status}: ${tail(load.output)}. The ${loaded} ` +
         `table(s) with rows are written parents first, so a foreign key failure ` +
         `here is a genuinely broken reference rather than a load order.`,
     );
@@ -444,7 +397,7 @@ async function main() {
     ok(
       "the three FTS indexes rebuild on the restored database",
       rebuild.status === 0,
-      `wrangler d1 execute exited ${rebuild.status}: ${tail(rebuild.stdout)}. ` +
+      `wrangler d1 execute exited ${rebuild.status}: ${tail(rebuild.output)}. ` +
         `The per-table backup rule: the repair is ('rebuild'), never DELETE FROM.`,
     );
     timings.restore = Date.now() - restoreStart;
@@ -586,7 +539,7 @@ async function main() {
       ok(
         "THE SCRATCH DATABASE IS DELETED",
         dropped.status === 0,
-        `wrangler d1 delete exited ${dropped.status}: ${tail(dropped.stdout)}. ` +
+        `wrangler d1 delete exited ${dropped.status}: ${tail(dropped.output)}. ` +
           `A drill that leaks a database per run is a resource leak no other ` +
           `assertion here would ever notice. Delete ${SCRATCH_DB} by hand.`,
       );
@@ -608,17 +561,16 @@ async function main() {
 
   /* Measured by running the gate; moves with the number of migration files, not the table list. */
   const MINIMUM_CHECKS = 32;
-  const breach = assertFloor("check:restore", "checks", checks, MINIMUM_CHECKS);
-  if (breach) ok("[scope] this gate executed its assertions", false, breach);
+  tally.floor("check:restore", "checks", MINIMUM_CHECKS, "", "[scope] this gate executed its assertions");
 
   console.log(
     `\n  timings: export ${timings.export ?? 0}ms, restore ${timings.restore ?? 0}ms, ` +
       `total ${timings.total}ms`,
   );
-  console.log(`${checks} checks, ${failures} failures\n`);
+  console.log(`${tally.checks} checks, ${tally.failures} failures\n`);
 
   /* `exitCode` rather than `process.exit()`, which tears the process down mid stdout write. */
-  process.exitCode = failures > 0 ? 1 : 0;
+  process.exitCode = tally.failures > 0 ? 1 : 0;
 }
 
 await main().catch((/** @type {unknown} */ error) => {
