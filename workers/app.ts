@@ -7,10 +7,9 @@ import { cloudflareContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
-import { postRedirectStatus, postRedirectTarget } from "~/lib/slug-redirect.mjs";
+import { postRedirectTarget } from "~/lib/slug-redirect.mjs";
 import {
   paperSlashTarget,
-  pdfRedirectStatus,
   pdfRedirectTarget,
 } from "~/lib/publications/pdf-redirect.mjs";
 // Imported here, not in the predicate's .mjs, because Node ESM refuses a bare JSON import.
@@ -204,6 +203,18 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
   }
 }
 
+/**
+ * A gateway redirect: 301 for GET and HEAD, 308 otherwise so a form body survives. `no-store` is
+ * load-bearing: the scheme is not in the cache key, so a stored HTTPS redirect would loop HTTPS
+ * readers, and a stored rename would outlive a change to the map.
+ */
+function redirectTo(request: Request, location: string) {
+  return new Response(null, {
+    status: httpsRedirectStatus(request.method),
+    headers: { Location: location, "Cache-Control": "no-store" },
+  });
+}
+
 /*
  * THE GATEWAY. Cache disabled, so it runs on every request (check:urls reads this phrase).
  * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme; the
@@ -211,51 +222,24 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
  */
 export default {
   async fetch(request, env, ctx) {
-    // `no-store` is load-bearing: the scheme is not in the cache key, so a stored redirect would loop
-    // HTTPS readers.
     const secure = httpsRedirectTarget(request.url);
-    if (secure !== null) {
-      return new Response(null, {
-        status: httpsRedirectStatus(request.method),
-        headers: { Location: secure, "Cache-Control": "no-store" },
-      });
-    }
+    if (secure !== null) return redirectTo(request, secure);
 
     const url = new URL(request.url);
 
     const renamed = postRedirectTarget(url.pathname, redirects.posts);
-    if (renamed !== null) {
-      return new Response(null, {
-        status: postRedirectStatus(request.method),
-        headers: {
-          Location: new URL(`${renamed}${url.search}`, url).toString(),
-          "Cache-Control": "no-store",
-        },
-      });
-    }
+    if (renamed !== null) return redirectTo(request, new URL(`${renamed}${url.search}`, url).toString());
 
     // The PDF map runs before the slash redirect because its keys end in `.pdf`.
     const movedPdf = pdfRedirectTarget(url.pathname, redirects.pdfs);
     if (movedPdf !== null) {
-      return new Response(null, {
-        status: pdfRedirectStatus(request.method),
-        headers: {
-          Location: new URL(`${movedPdf}${url.search}`, url).toString(),
-          "Cache-Control": "no-store",
-        },
-      });
+      return redirectTo(request, new URL(`${movedPdf}${url.search}`, url).toString());
     }
 
     // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
     const slashed = paperSlashTarget(url.pathname);
     if (slashed !== null) {
-      return new Response(null, {
-        status: pdfRedirectStatus(request.method),
-        headers: {
-          Location: new URL(`${slashed}${url.search}`, url).toString(),
-          "Cache-Control": "no-store",
-        },
-      });
+      return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
     }
 
     const theme = themeFromRequest(request);
