@@ -38,6 +38,7 @@ import {
   trashedMediaKeys,
   upsertMediaRecord,
 } from "~/db";
+import { readPage } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
 import templateRefs from "../../content/generated/template-refs.json";
 import { digestFromKey, storageOf } from "~/lib/media/classify.mjs";
@@ -128,7 +129,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const timings = context.get(timingsContext).timings;
   const loaderStart = performance.now();
   const url = new URL(request.url);
-  const page = Number(url.searchParams.get("page") ?? "1") || 1;
+  const page = readPage(url.searchParams.get("page"));
 
   const picker = url.searchParams.get("picker") === "1";
 
