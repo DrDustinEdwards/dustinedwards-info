@@ -371,7 +371,7 @@ export async function askDriftCount(
         .then((late) =>
           late ? writeCachedDrift(env, late.missing.length + late.stale.length) : null,
         )
-        .catch(() => {}),
+        .catch((error) => console.error("ask drift cache write failed after the budget", error)),
     );
     return null;
   }
