@@ -155,7 +155,6 @@ function refuse(why, remedy) {
 }
 
 /**
- * The signal is returned, not collapsed: `status ?? 1` would read a killed process as a gate's exit 1.
  * A spawn error (npx not found, a timeout) is printed and carried in `text`, so a refusal names it.
  * `timeoutMs` bounds a read: retryRead's own timer cannot fire while spawnSync blocks.
  * @param {string} command @param {string[]} args
@@ -176,20 +175,18 @@ function run(command, args, { capture = false, timeoutMs } = {}) {
             stdout: String(r.stdout ?? ""),
             stderr: String(r.stderr ?? ""),
             status: r.error ? null : r.status,
-            signal: r.signal ?? null,
             error: r.error ? `${command} could not run: ${r.error.message}` : "",
           };
         })()
       : spawnSyncBounded(command, args, { ...options, timeoutMs });
-  const signal = result.signal ?? null;
   const failure = result.error ? `\n  ship: ${result.error}\n` : "";
   if (failure) process.stderr.write(failure);
   if (capture) {
     const text = `${result.stdout}${result.stderr}${failure}`;
     process.stdout.write(text);
-    return { code: result.status ?? 1, signal, text };
+    return { code: result.status ?? 1, text };
   }
-  return { code: result.status ?? 1, signal, text: failure };
+  return { code: result.status ?? 1, text: failure };
 }
 
 /**
