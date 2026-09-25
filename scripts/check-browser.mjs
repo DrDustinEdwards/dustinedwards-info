@@ -3608,6 +3608,20 @@ try {
     await admin.goto(`${ADMIN_ORIGIN}/admin/media?confirm=empty-trash`, {
       waitUntil: "networkidle0",
     });
+    /* The Trash chip's count, so "no modal" can be told apart from "empty trash". */
+    const trashed = await admin.evaluate(() => {
+      const chip = [...document.querySelectorAll(".admin-chip")].find((a) =>
+        /^\s*Trash\b/.test(a.textContent ?? ""),
+      );
+      const count = chip?.querySelector(".admin-chip-count")?.textContent?.trim() ?? "";
+      return /^\d+$/.test(count) ? Number(count) : null;
+    });
+    ok(
+      "/admin/media shows how many files are in the trash",
+      trashed !== null,
+      "no Trash chip with a numeric count, so an absent confirmation could not be told apart " +
+        "from an empty trash",
+    );
     const modal = await admin.evaluate(() => {
       const panel = document.querySelector(".media-modal");
       if (!panel) return null;
@@ -3622,12 +3636,19 @@ try {
       };
     });
 
-    if (!modal) {
+    if (!modal && trashed === 0) {
       skip(
         "/admin/media?confirm=empty-trash: the typed-confirmation ladder",
-        "the confirmation did not render, which on this deployment means the trash is EMPTY: " +
-          "the modal is gated on trashedCount > 0. Nothing is wrong and nothing was measured. " +
-          "This case covers itself again as soon as one object is trashed.",
+        "the trash is EMPTY on this deployment and the modal is gated on trashedCount > 0. " +
+          "Nothing is wrong and nothing was measured. This case covers itself again as soon as " +
+          "one object is trashed.",
+      );
+    } else if (!modal) {
+      ok(
+        "/admin/media?confirm=empty-trash renders the typed-confirmation dialog",
+        false,
+        `the trash holds ${trashed ?? "an unknown number of"} file(s) and the confirmation did ` +
+          `not render, so the destructive action has lost its confirmation or its route.`,
       );
     } else {
       ok(
