@@ -351,3 +351,22 @@ export const SHIP_BUSY_NEEDLES = [
   // Two ships on one checkout run two builds into one build/ (2026-09-24: one wiped the other's manifest).
   { needle: "scripts/ship.mjs", what: "another ship" },
 ];
+
+/**
+ * A recorded pid is killed only while it still hangs off the recorded tree: alive, and its live
+ * parent is the recorded runner or another recorded pid. Windows reuses pids, so a recorded pid
+ * alone may now be anything; a reused pid's parent is almost never in the same recorded set.
+ *
+ * @param {number[]} recorded pids sampled from the runner's tree
+ * @param {Map<number, { ppid: number, command: string }>} table
+ * @param {number | null} rootPid the runner that owned the tree, when known
+ * @returns {number[]}
+ */
+export function recordedTreeLeftovers(recorded, table, rootPid) {
+  const family = new Set(recorded);
+  if (rootPid !== null && rootPid > 0) family.add(rootPid);
+  return recorded.filter((pid) => {
+    const live = table.get(pid);
+    return live !== undefined && pid !== rootPid && family.has(live.ppid);
+  });
+}

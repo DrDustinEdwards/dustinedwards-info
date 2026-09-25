@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { ChildRegistry } from "../scripts/lib/child-processes.mjs";
+import { ChildRegistry, recordedTreeLeftovers } from "../scripts/lib/child-processes.mjs";
 
 /** @param {string} content */
 function registryWith(content) {
@@ -48,4 +48,25 @@ test("a parseable line with no needles is counted as unreadable, never killed on
 test("a missing registry is empty, not an error", () => {
   const registry = new ChildRegistry(join(tmpdir(), "child-registry-absent", "none.jsonl"));
   assert.deepEqual(registry.readAll(), { entries: [], torn: 0 });
+});
+
+test("THE PLANT: a recorded pid now owned by something else is not a leftover", () => {
+  // Pid 30 was a gate's child; Windows handed it to a browser tab whose parent is the browser.
+  const table = new Map([
+    [10, { ppid: 5, command: "cmd.exe /c npm run check:tests" }],
+    [11, { ppid: 10, command: "node --test" }],
+    [30, { ppid: 900, command: "chrome.exe --type=renderer" }],
+  ]);
+  assert.deepEqual(recordedTreeLeftovers([10, 11, 30], table, 5), [10, 11]);
+});
+
+test("a dead runner's orphans are still found through the runner's recorded pid", () => {
+  const table = new Map([[10, { ppid: 5, command: "cmd.exe" }]]);
+  assert.deepEqual(recordedTreeLeftovers([10], table, 5), [10]);
+  assert.deepEqual(recordedTreeLeftovers([10], table, null), [], "without the runner, its direct child is unproven");
+});
+
+test("the runner itself and dead pids are never leftovers", () => {
+  const table = new Map([[5, { ppid: 1, command: "node scripts/check-all.mjs" }]]);
+  assert.deepEqual(recordedTreeLeftovers([5, 6], table, 5), []);
 });
