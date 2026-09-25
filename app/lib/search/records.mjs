@@ -1,8 +1,6 @@
 // Section-grained: a reader lands on the matching heading, and fusion needs more than one hit per
 // index to do anything. Pure: no clock, filesystem or git, so a record never carries a revision date.
 
-export const RECORD_TYPES = /** @type {const} */ (["post", "page"]);
-
 /**
  * Fenced code is kept: the identifiers readers search for live in code blocks as often as in prose.
  *
@@ -49,7 +47,7 @@ function plainText(markdown) {
  * @param {Array<{ depth: number, id: string, text: string }>} toc
  * @returns {{ intro: string, sections: Array<{ anchor: string, title: string, depth: number, body: string }> }}
  */
-export function splitSections(markdown, toc) {
+function splitSections(markdown, toc) {
   const lines = markdown.split(/\r?\n/);
   /*
    * @type {Array<{ line: number, depth: number }>}
@@ -179,7 +177,7 @@ export function recordsForPosts(posts) {
  *           sections: Array<{ anchor: string, title: string, body: string }> }} page
  * @returns {Array<Record<string, any>>}
  */
-export function recordsForPage(page) {
+function recordsForPage(page) {
   // Fail closed: no sections loses every deep link, and a duplicate anchor collides on uid.
   if (page.sections.length === 0) {
     throw new Error(
