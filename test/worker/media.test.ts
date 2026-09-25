@@ -428,3 +428,28 @@ describe("an unknown intent", () => {
     expect(result.data.message).toContain("no-such-intent");
   });
 });
+
+describe("a thumbnail whose transform fails", () => {
+  it("serves the original with a short cache life, and an SVG as an attachment", async () => {
+    const key = "dustin-edwards-transform-fails-00000000000000bb.svg";
+    await env.MEDIA.put(key, '<svg xmlns="http://www.w3.org/2000/svg"></svg>', {
+      httpMetadata: { contentType: "image/svg+xml" },
+    });
+    const failingImages = {
+      input: () => {
+        throw new Error("planted transform failure");
+      },
+    };
+
+    const served = (await mediaLoader({
+      params: { "*": key },
+      request: new Request(`https://example.com/media/${key}?w=320`),
+      context: routeContext({ ...env, IMAGES: failingImages }),
+    } as never)) as Response;
+
+    expect(served.status).toBe(200);
+    expect(served.headers.get("x-media-thumb")).toBe("original-fallback");
+    expect(served.headers.get("cache-control")).not.toContain("immutable");
+    expect(served.headers.get("content-disposition")).toContain("attachment");
+  });
+});
