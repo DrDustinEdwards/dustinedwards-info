@@ -1109,9 +1109,9 @@ export default function AdminMedia({
         </ConfirmDialog>
       ) : null}
 
-      {Boolean(confirmDelete) ? (
+      {confirmDelete ? (
         <ConfirmDialog
-          title={`Permanently delete ${confirmDelete ?? ""}`}
+          title={`Permanently delete ${confirmDelete}`}
           body={
             <p>
               This removes the object from R2. Addresses are content hashes, so a
@@ -1121,10 +1121,10 @@ export default function AdminMedia({
           }
           requireTyped="1"
           confirmLabel="Delete permanently"
-          cancelHref={linkTo({ key: confirmDelete ?? "" })}
+          cancelHref={linkTo({ key: confirmDelete })}
         >
           <input type="hidden" name="intent" value="delete" />
-          <input type="hidden" name="key" value={confirmDelete ?? ""} />
+          <input type="hidden" name="key" value={confirmDelete} />
         </ConfirmDialog>
       ) : null}
 
