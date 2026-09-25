@@ -1,12 +1,31 @@
+/** The workflow whose push run IS the review. Another push-triggered workflow being green is not CI. */
+export const CI_WORKFLOW_PATH = ".github/workflows/ci.yml";
+
 /**
  * Fails closed: no push run (an empty list reads as "nothing failed"), a run in flight, and any
- * conclusion but success (canceled, timed out) all refuse. Callers branch on `state`, not `why`.
+ * conclusion but success (canceled, timed out) all refuse. So do an answer that is not about this
+ * sha (a run whose head_sha is another commit, which is what an ignored or empty filter returns), a
+ * page that does not hold every run, and a set of push runs without the CI workflow among them.
+ * Callers branch on `state`, not `why`.
  *
  * @param {unknown} payload
- * @param {string} sha
+ * @param {string} sha the commit, full or abbreviated to at least 7 hex characters
+ * @param {{ workflowPath?: string }} [options]
  * @returns {{ ok: boolean, state: "green" | "running" | "failed" | "no-run" | "unparseable", why: string, remedy: string }}
  */
-export function ciVerdict(payload, sha) {
+export function ciVerdict(payload, sha, { workflowPath = CI_WORKFLOW_PATH } = {}) {
+  // An empty or short sha would prefix-match every run below.
+  if (typeof sha !== "string" || !/^[0-9a-f]{7,40}$/i.test(sha)) {
+    return {
+      ok: false,
+      state: "unparseable",
+      why: `${JSON.stringify(sha)} is not a commit sha`,
+      remedy:
+        "Without a sha there is nothing to match the runs against, so any run would do. " +
+        "Nothing was deployed.",
+    };
+  }
+
   const runs = /** @type {any} */ (payload)?.workflow_runs;
   if (!Array.isArray(runs)) {
     return {
@@ -19,7 +38,33 @@ export function ciVerdict(payload, sha) {
     };
   }
 
-  const push = runs.filter((r) => r && r.event === "push");
+  // GitHub filtered by head_sha, so a run for any other commit means the filter was not applied.
+  const foreign = runs.filter(
+    (r) => !r || typeof r.head_sha !== "string" || !r.head_sha.toLowerCase().startsWith(sha.toLowerCase()),
+  );
+  if (foreign.length > 0) {
+    return {
+      ok: false,
+      state: "unparseable",
+      why: `the GitHub API returned ${foreign.length} run(s) that are not for ${sha}`,
+      remedy:
+        `The first is for ${JSON.stringify(foreign[0]?.head_sha)}. The head_sha filter was not ` +
+        "applied, so this list says nothing about this commit. Nothing was deployed.",
+    };
+  }
+
+  // per_page tops out at 100; a list shorter than the total hides runs that may have failed.
+  const total = /** @type {any} */ (payload)?.total_count;
+  if (typeof total === "number" && total > runs.length) {
+    return {
+      ok: false,
+      state: "unparseable",
+      why: `the GitHub API returned ${runs.length} of ${total} run(s) for ${sha}`,
+      remedy: "The unread runs could hold a failure, so a partial page is not a verdict. Nothing was deployed.",
+    };
+  }
+
+  const push = runs.filter((r) => r.event === "push");
 
   if (push.length === 0) {
     return {
@@ -30,6 +75,18 @@ export function ciVerdict(payload, sha) {
         `GitHub reports ${runs.length} run(s) for this sha and none triggered by a push. ` +
         "Either the commit is not pushed, or CI has not started yet. Push, wait for the " +
         "run, and re-run ship. Nothing was deployed.",
+    };
+  }
+
+  if (!push.some((r) => r.path === workflowPath)) {
+    return {
+      ok: false,
+      state: "no-run",
+      why: `no ${workflowPath} push run exists for ${sha}`,
+      remedy:
+        `GitHub reports push run(s) from ${push.map((r) => r.path ?? r.name).join(", ")}, and none is ` +
+        "CI. Another workflow being green is not CI being green. Push, wait for CI, and re-run " +
+        "ship. Nothing was deployed.",
     };
   }
 
