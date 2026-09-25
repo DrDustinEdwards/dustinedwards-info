@@ -11,7 +11,7 @@ import { adminActorContext } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
-import { parsePost, parseTags, serializePost } from "~/lib/editor/frontmatter";
+import { parsePost, parseTagInput, serializePost } from "~/lib/editor/frontmatter";
 import { readFile } from "~/lib/editor/github.server";
 import {
   deletePost,
@@ -386,7 +386,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       };
     }
 
-    const wanted = parseTags(String(form.get("tag") ?? ""))[0];
+    const wanted = parseTagInput(String(form.get("tag") ?? ""))[0];
     if (!wanted) return { message: "Enter a tag first." };
     const adding = intent === "bulk-add-tag";
 
