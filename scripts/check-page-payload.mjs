@@ -76,6 +76,8 @@ const ENHANCE_BROTLI_CEILINGS = {
   "blog.js": 2500,
   /* Measured 431 brotli on its first build. Site-wide, so every public document pays for it. */
   "header.js": 700,
+  /* Measured 209 brotli on its first build; /login only, the busy label that replaced hydration. */
+  "login.js": 400,
   "palette.js": 6000,
   /* Measured 727 brotli on its first build; home page only. */
   "plate.js": 1000,
@@ -259,16 +261,19 @@ function gradeAssetSyntax() {
   );
 }
 
-/** Only the admin layout and the login door hydrate, and root renders <Scripts> behind that guard. */
+/**
+ * Only the admin layout hydrates, and root renders <Scripts> behind that guard. The login door
+ * stopped hydrating on 2026-09-25: React was about 60 KB for a busy label, now login.js.
+ */
 function gradeHydrationOptIn() {
-  /* Pinned to admin.tsx and login.tsx by name, so a public route gaining the flag fails HERE. */
+  /* Pinned to admin.tsx by name, so a public route (or the login door) gaining the flag fails HERE. */
   const hydrating = routesMatching(/hydrate\s*:\s*true/, { ts: true });
   ok(
-    "hydration opt-in is exactly the admin layout and the login door",
-    hydrating.join(", ") === "admin.tsx, login.tsx",
+    "hydration opt-in is exactly the admin layout",
+    hydrating.join(", ") === "admin.tsx",
     `route file(s) carrying hydrate: true: [${hydrating.join(", ")}], expected ` +
-      `[admin.tsx, login.tsx]. A public route opted into hydration, or the admin ` +
-      `plane lost it.`,
+      `[admin.tsx]. A public route or the login door opted into hydration, or the ` +
+      `admin plane lost it.`,
   );
 
   const rootSource = stripComments(readFileSync(join(root, "app", "root.tsx"), "utf8"));
