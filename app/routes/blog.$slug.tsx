@@ -1,6 +1,10 @@
 import { Link, data } from "react-router";
 import { PostHeadBlocks, type WritingStatus } from "~/components/post-head-blocks";
+import { PostBacklinks } from "~/components/post-backlinks";
 import { PostHistory } from "~/components/post-history";
+import { PostMentions } from "~/components/post-mentions";
+import { PostRail, ymd } from "~/components/post-rail";
+import { SeriesNav } from "~/components/post-series-nav";
 import { EvidenceRow } from "~/components/evidence-row";
 import { ENHANCE_GZIP_BYTES } from "~/lib/enhance-sizes.generated";
 
@@ -15,13 +19,11 @@ import {
   publiclyVisibleSlugs,
 } from "~/db";
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
-import { safeHttpHref } from "~/lib/webmention/urls.mjs";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
-import { seriesPath } from "~/lib/series-path.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
 import {
   HTML_VARY_ACCEPT,
@@ -134,16 +136,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
     { name: "twitter:title", content: socialTitle },
     { name: "twitter:description", content: socialDescription },
     { name: "twitter:image", content: image },
-    ...articleOpenGraph(SITE_ORIGIN, {
-      slug: post.slug,
-      title: post.title,
-      description: post.description,
-      publishAt: post.publishAt ? new Date(post.publishAt) : null,
-      updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
-      coverImage: post.coverImage,
-      ogImage: post.ogImage,
-      tags: post.tags,
-    }),
+    ...articleOpenGraph(SITE_ORIGIN, toArticleSeo(post)),
     {
       tagName: "link",
       rel: "alternate",
@@ -155,62 +148,29 @@ export function meta({ loaderData }: Route.MetaArgs) {
   ];
 }
 
+type LoadedPost = Route.ComponentProps["loaderData"]["post"];
+
+/** The post as the Open Graph and JSON-LD builders read it, so the head and the body describe one article. */
+function toArticleSeo(post: LoadedPost): Parameters<typeof articleJsonLd>[1] {
+  return {
+    slug: post.slug,
+    title: post.title,
+    description: post.description,
+    publishAt: post.publishAt ? new Date(post.publishAt) : null,
+    updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
+    coverImage: post.coverImage,
+    ogImage: post.ogImage,
+    tags: post.tags,
+  };
+}
+
 /** One day: a post synced the day it was published has been deployed, not revised. */
 const REVISED_THRESHOLD_MS = 24 * 60 * 60 * 1000;
-
-/** Below this, a contents list is furniture rather than a map. */
-const TOC_MIN = 3;
-
-function ymd(value: Date | string | number) {
-  return new Date(value).toISOString().slice(0, 10);
-}
-
-/**
- * Mention text is third party: rendered as escaped React children, never `dangerouslySetInnerHTML`,
- * and the one `href` is re-parsed by `safeHttpHref`.
- */
-function Mention({
-  mention,
-}: {
-  mention: Route.ComponentProps["loaderData"]["mentions"][number];
-}) {
-  /* A row whose URLs both fail still renders as text: dropping it would hide something the admin approved. */
-  const href = safeHttpHref(mention.authorUrl) ?? safeHttpHref(mention.sourceUrl);
-
-  /* Falls back to the source URL, a fact, never an invented name attributed to a real person. */
-  const name = mention.authorName ?? mention.sourceUrl;
-  const decided = longDateUTC(mention.decidedAt);
-
-  return (
-    <li>
-      {href ? (
-        <a href={href} rel="nofollow ugc noopener noreferrer">
-          {name}
-        </a>
-      ) : (
-        <span>{name}</span>
-      )}
-      {mention.excerpt ? <p className="post-mention-excerpt">{mention.excerpt}</p> : null}
-      {decided ? (
-        <time className="post-mention-date" dateTime={new Date(mention.decidedAt!).toISOString()}>
-          {decided}
-        </time>
-      ) : null}
-    </li>
-  );
-}
 
 export default function BlogPost({ loaderData }: Route.ComponentProps) {
   const { post, toc, seriesParts, mentions } = loaderData;
 
   const { canonical, description: dek } = postSocial(post);
-
-  const partIndex = seriesParts.findIndex((entry) => entry.slug === post.slug);
-  const seriesPrevious = partIndex > 0 ? seriesParts[partIndex - 1] : undefined;
-  const seriesNext =
-    partIndex >= 0 && partIndex < seriesParts.length - 1
-      ? seriesParts[partIndex + 1]
-      : undefined;
 
   const published = post.publishAt ? new Date(post.publishAt).getTime() : null;
   const revised = post.updatedAt ? new Date(post.updatedAt).getTime() : null;
@@ -240,16 +200,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: jsonLd([
-              articleJsonLd(SITE_ORIGIN, {
-                slug: post.slug,
-                title: post.title,
-                description: post.description,
-                publishAt: post.publishAt ? new Date(post.publishAt) : null,
-                updatedAt: post.updatedAt ? new Date(post.updatedAt) : null,
-                coverImage: post.coverImage,
-                ogImage: post.ogImage,
-                tags: post.tags,
-              }),
+              articleJsonLd(SITE_ORIGIN, toArticleSeo(post)),
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
                 ["Blog", "/blog"],
@@ -272,45 +223,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           </p>
         </header>
 
-        {/* One authored date: `created_at` is when the sync ran, not when the post was written. */}
-        <div className="post-rail u-rail">
-          <p className="post-machine">
-            {post.publishAt && (
-              <>
-                <b>
-                  <time className="dt-published" dateTime={new Date(post.publishAt).toISOString()}>
-                    {ymd(post.publishAt)}
-                  </time>
-                </b>
-                first published
-              </>
-            )}
-            {/* Conditional: emitting `updatedAt` regardless would publish a sync timestamp as an edit. */}
-            {revisedLabel && (
-              <>
-                <b>
-                  <time className="dt-updated" dateTime={new Date(post.updatedAt!).toISOString()}>
-                    {ymd(post.updatedAt!)}
-                  </time>
-                </b>
-                Updated
-              </>
-            )}
-          </p>
-
-          {sections.length >= TOC_MIN && (
-            <nav className="post-toc" aria-labelledby="contents-heading">
-              <p id="contents-heading">Contents</p>
-              <ol>
-                {sections.map((entry) => (
-                  <li key={entry.id}>
-                    <a href={`#${entry.id}`}>{entry.text}</a>
-                  </li>
-                ))}
-              </ol>
-            </nav>
-          )}
-        </div>
+        <PostRail post={post} revisedLabel={revisedLabel} sections={sections} />
 
         <article className="post post-body">
           <PostHeadBlocks
@@ -335,39 +248,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           )}
 
           {post.series && seriesParts.length > 1 && (
-            <nav className="post-series" aria-labelledby="series-heading">
-              <h2 id="series-heading">
-                Part {post.part} of {seriesParts.length}:{" "}
-                <Link to={seriesPath(post.series)}>{post.series}</Link>
-              </h2>
-              <ol>
-                {seriesParts.map((entry) => (
-                  <li key={entry.slug} aria-current={entry.slug === post.slug ? "true" : undefined}>
-                    {entry.slug === post.slug ? (
-                      <span>{entry.title}</span>
-                    ) : (
-                      <Link to={`/blog/${entry.slug}`}>{entry.title}</Link>
-                    )}
-                  </li>
-                ))}
-              </ol>
-              {(seriesPrevious || seriesNext) && (
-                <div className="post-series-steps">
-                  {seriesPrevious && (
-                    <Link className="post-nav-target" to={`/blog/${seriesPrevious.slug}`}>
-                      <span className="post-nav-label">Previous part</span>
-                      <span className="post-nav-title">{seriesPrevious.title}</span>
-                    </Link>
-                  )}
-                  {seriesNext && (
-                    <Link className="post-nav-target" to={`/blog/${seriesNext.slug}`}>
-                      <span className="post-nav-label">Next part</span>
-                      <span className="post-nav-title">{seriesNext.title}</span>
-                    </Link>
-                  )}
-                </div>
-              )}
-            </nav>
+            <SeriesNav post={post} series={post.series} seriesParts={seriesParts} />
           )}
 
           {/* Build-time HTML from markdown we author; no third-party input, so it can be injected. */}
@@ -426,16 +307,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             </a>
           </nav>
 
-          {mentions.length > 0 && (
-            <section className="post-mentions" aria-labelledby="mentions-heading">
-              <h2 id="mentions-heading">Mentions</h2>
-              <ul>
-                {mentions.map((mention) => (
-                  <Mention key={mention.id} mention={mention} />
-                ))}
-              </ul>
-            </section>
-          )}
+          {mentions.length > 0 && <PostMentions mentions={mentions} />}
 
           <p className="post-colophon-note">
             Built on the stack described at <Link to="/colophon">/colophon</Link>.
@@ -449,18 +321,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             />
           )}
 
-          {post.backlinks.length > 0 && (
-            <nav className="post-backlinks" aria-labelledby="backlinks-heading">
-              <p id="backlinks-heading">Linked from</p>
-              <ul>
-                {post.backlinks.map((item) => (
-                  <li key={item.slug}>
-                    <Link to={`/blog/${item.slug}`}>{item.title}</Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          )}
+          {post.backlinks.length > 0 && <PostBacklinks backlinks={post.backlinks} />}
 
           <nav className="post-nav" aria-label="More posts">
             {post.previous && (

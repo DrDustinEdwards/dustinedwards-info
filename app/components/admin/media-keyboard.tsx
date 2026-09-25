@@ -1,42 +1,14 @@
 import { useEffect, useState } from "react";
 
-const TOAST_EVENT = "media-toast";
+import { bands, nextTile } from "~/lib/media/tile-nav.mjs";
 
-// A custom event, not context: a provider would put the toast in the server render, where it has nothing to say.
-export function toast(message: string) {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(TOAST_EVENT, { detail: message }));
+/** A key pressed in a field belongs to the field: the arrows move the caret and "/" is a character. */
+export function isTypingTarget(target: EventTarget | null) {
+  const tag = (target instanceof HTMLElement ? target.tagName : "").toUpperCase();
+  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
 }
 
-// Always in the DOM once mounted: a live region inserted when it gets content is often not announced.
-export function MediaToast() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    let timer = 0;
-    const onToast = (event: Event) => {
-      const detail = (event as CustomEvent<string>).detail;
-      setMessage(detail);
-      window.clearTimeout(timer);
-      // Long enough to read a filename, short enough not to sit over the grid.
-      timer = window.setTimeout(() => setMessage(""), 2600);
-    };
-    window.addEventListener(TOAST_EVENT, onToast);
-    return () => {
-      window.removeEventListener(TOAST_EVENT, onToast);
-      window.clearTimeout(timer);
-    };
-  }, []);
-
-  return (
-    <p className="media-toast" role="status" aria-live="polite" data-showing={message ? "yes" : undefined}>
-      {message}
-    </p>
-  );
-}
-
-// Rows come from rendered geometry, not a column model: the browser decides the column count, and a
-// second layout engine would disagree with it at the widths nobody tested.
+// Rows come from rendered geometry, not a column model: `bands()` in tile-nav.mjs says why.
 export function MediaKeyboard() {
   const [active, setActive] = useState("");
 
@@ -48,82 +20,22 @@ export function MediaKeyboard() {
   }, [active]);
 
   useEffect(() => {
-    /** Visual rows, from the rendered boxes. Tiles within 6px share a row. */
-    const bands = () => {
-      const out: Array<{ top: number; items: Array<{ id: string; mid: number }> }> = [];
-      for (const el of document.querySelectorAll("[data-tile]")) {
-        const r = el.getBoundingClientRect();
-        if (!r.width) continue;
-        const id = el.getAttribute("data-tile") ?? "";
-        const entry = { id, mid: r.left + r.width / 2 };
-        const band = out.find((b) => Math.abs(b.top - r.top) < 6);
-        if (band) band.items.push(entry);
-        else out.push({ top: r.top, items: [entry] });
-      }
-      out.sort((a, b) => a.top - b.top);
-      for (const b of out) b.items.sort((x, y) => x.mid - y.mid);
-      return out;
-    };
-
     const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      const tag = (target?.tagName ?? "").toUpperCase();
-      // Never inside a field, where the arrow keys move the caret.
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (isTypingTarget(event.target)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
 
-      const rows = bands();
-      const flat = rows.flatMap((b) => b.items.map((i) => i.id));
-      const firstId = flat[0];
-      if (firstId === undefined) return;
+      const rows = bands(
+        [...document.querySelectorAll("[data-tile]")].map((el) => {
+          const r = el.getBoundingClientRect();
+          return { id: el.getAttribute("data-tile") ?? "", top: r.top, left: r.left, width: r.width };
+        }),
+      );
+      if (rows.length === 0) return;
 
       const move = (dir: "left" | "right" | "up" | "down") => {
         event.preventDefault();
-        if (!active) {
-          setActive(firstId);
-          return;
-        }
-        let ri = -1;
-        let ci = -1;
-        rows.forEach((b, i) =>
-          b.items.forEach((it, j) => {
-            if (it.id === active) {
-              ri = i;
-              ci = j;
-            }
-          }),
-        );
-        if (ri < 0) {
-          setActive(firstId);
-          return;
-        }
-        const row = rows[ri];
-        const current = row?.items[ci];
-        if (!row || !current) return;
-        if (dir === "left" || dir === "right") {
-          const next = row.items[ci + (dir === "right" ? 1 : -1)];
-          if (next) setActive(next.id);
-          else {
-            const k = flat.indexOf(active) + (dir === "right" ? 1 : -1);
-            const wrapped = flat[k];
-            if (wrapped) setActive(wrapped);
-          }
-          return;
-        }
-        const band = rows[ri + (dir === "down" ? 1 : -1)];
-        if (!band) return;
-        const mid = current.mid;
-        let best = band.items[0];
-        if (!best) return;
-        let bestD = Infinity;
-        for (const it of band.items) {
-          const d = Math.abs(it.mid - mid);
-          if (d < bestD) {
-            bestD = d;
-            best = it;
-          }
-        }
-        setActive(best.id);
+        const next = nextTile(rows, active, dir);
+        if (next !== null) setActive(next);
       };
 
       const tile = () => document.querySelector(`[data-tile="${CSS.escape(active)}"]`);

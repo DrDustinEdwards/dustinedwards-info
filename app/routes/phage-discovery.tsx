@@ -1,5 +1,4 @@
-import { ShellFooter } from "~/components/shell-footer";
-import { SiteHeader } from "~/components/site-header";
+import { PageShell } from "~/components/page-shell";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { publicHtmlHeaders, SITE,
   pageMeta,
@@ -27,47 +26,41 @@ export function meta() {
 
 export default function Roster() {
   return (
-    <>
-      <SiteHeader />
-      <main className="page" id="main" tabIndex={-1}>
-        <div className="page-inner">
-          <h1 className="page-title">Roster</h1>
+    <PageShell>
+      <h1 className="page-title">Roster</h1>
 
-          <div className="prose">
-            {PHAGE_YEARS.map((entry, index) => (
-              <section key={entry.year} aria-labelledby={`year-${entry.year}`}>
-                <h2 id={`year-${entry.year}`}>{entry.year}</h2>
+      <div className="prose">
+        {PHAGE_YEARS.map((entry, index) => (
+          <section key={entry.year} aria-labelledby={`year-${entry.year}`}>
+            <h2 id={`year-${entry.year}`}>{entry.year}</h2>
 
-                {entry.photo ? (
-                  <figure>
-                    <img
-                      src={entry.photo.src}
-                      width={entry.photo.width}
-                      height={entry.photo.height}
-                      alt={entry.photo.alt}
-                      // Only the first photo is above the fold on every viewport.
-                      loading={index === 0 ? "eager" : "lazy"}
-                      decoding="async"
-                    />
-                  </figure>
-                ) : null}
+            {entry.photo ? (
+              <figure>
+                <img
+                  src={entry.photo.src}
+                  width={entry.photo.width}
+                  height={entry.photo.height}
+                  alt={entry.photo.alt}
+                  // Only the first photo is above the fold on every viewport.
+                  loading={index === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                />
+              </figure>
+            ) : null}
 
-                {entry.researchers.length > 0 ? (
-                  <ul>
-                    {entry.researchers.map((name) => (
-                      <li key={name}>{name}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  // Not dead: each October a new year lands with a photo before its roster does.
-                  <p className="muted">Roster to be added.</p>
-                )}
-              </section>
-            ))}
-          </div>
-        </div>
-      </main>
-      <ShellFooter />
-    </>
+            {entry.researchers.length > 0 ? (
+              <ul>
+                {entry.researchers.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            ) : (
+              // Not dead: each October a new year lands with a photo before its roster does.
+              <p className="muted">Roster to be added.</p>
+            )}
+          </section>
+        ))}
+      </div>
+    </PageShell>
   );
 }

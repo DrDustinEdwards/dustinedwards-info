@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { fetchPostReadership } from "../app/lib/admin/traffic.server.ts";
 import { READERSHIP_PATH_LIMIT, WINDOW_DAYS } from "../app/lib/admin/origin-requests.mjs";
+import { withFetch } from "./lib/http.mjs";
 
 const coldKv = () => ({
   get: async () => null,
@@ -14,17 +15,6 @@ const analyticsEnv = () => ({
   CLOUDFLARE_ACCOUNT_ID: "acct",
   APP_KV: coldKv(),
 });
-
-/** Restored in `finally` so a failing assertion cannot leave the global patched. */
-async function withFetch(impl, run) {
-  const original = globalThis.fetch;
-  globalThis.fetch = impl;
-  try {
-    return await run();
-  } finally {
-    globalThis.fetch = original;
-  }
-}
 
 test("THE DEFECT: no read token gives an absence with a reason, not a zero", async () => {
   const result = await fetchPostReadership({ APP_KV: coldKv() });
