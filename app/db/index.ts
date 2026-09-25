@@ -384,20 +384,33 @@ export async function getBlogPost(env: Env, slug: string) {
 
   const tagMap = await tagsForPosts(db, [post.id]);
 
-  // Neighbors use the same visibility gate, so prev/next cannot reach a draft.
-  const [previous] = await db
-    .select({ slug: posts.slug, title: posts.title })
-    .from(posts)
-    .where(and(isBlogPost(), lt(posts.publishAt, post.publishAt ?? new Date())))
-    .orderBy(desc(posts.publishAt))
-    .limit(1);
-
-  const [next] = await db
-    .select({ slug: posts.slug, title: posts.title })
-    .from(posts)
-    .where(and(isBlogPost(), gt(posts.publishAt, post.publishAt ?? new Date())))
-    .orderBy(asc(posts.publishAt))
-    .limit(1);
+  // Neighbors use the same visibility gate, so prev/next cannot reach a draft. Ordered as the listing
+  // is (publish_at, then id), so two posts sharing a publish_at are neighbors rather than skipped.
+  const at = post.publishAt ?? new Date();
+  const [[previous], [next]] = await Promise.all([
+    db
+      .select({ slug: posts.slug, title: posts.title })
+      .from(posts)
+      .where(
+        and(
+          isBlogPost(),
+          or(lt(posts.publishAt, at), and(eq(posts.publishAt, at), lt(posts.id, post.id))),
+        ),
+      )
+      .orderBy(desc(posts.publishAt), desc(posts.id))
+      .limit(1),
+    db
+      .select({ slug: posts.slug, title: posts.title })
+      .from(posts)
+      .where(
+        and(
+          isBlogPost(),
+          or(gt(posts.publishAt, at), and(eq(posts.publishAt, at), gt(posts.id, post.id))),
+        ),
+      )
+      .orderBy(asc(posts.publishAt), asc(posts.id))
+      .limit(1),
+  ]);
 
   return {
     ...post,
