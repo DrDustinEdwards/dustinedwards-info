@@ -26,16 +26,8 @@ export function pdfRedirectTarget(pathname, map) {
   return target;
 }
 
-/**
- * Matches postRedirectStatus on purpose, so the two redirect helpers never disagree.
- *
- * @param {string} method
- * @returns {number}
- */
-export function pdfRedirectStatus(method) {
-  const m = String(method ?? "").toUpperCase();
-  return m === "GET" || m === "HEAD" ? 301 : 308;
-}
+// The HTTPS redirect's own rule, so the redirect helpers never disagree.
+export { httpsRedirectStatus as pdfRedirectStatus } from "../https-redirect.mjs";
 
 /**
  * Skips anything with a dot so the PDF inside the directory still reaches the asset handler.

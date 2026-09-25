@@ -1,17 +1,18 @@
 import { data, redirect } from "react-router";
 
-import { timed, timingsContext } from "~/lib/timing";
+import { timed, timedLoader } from "~/lib/timing";
 
 import { PostEditor } from "~/components/admin/post-editor";
-import { listAllPostsForAdmin, listBlogTags } from "~/db";
+import { listAllPostsForAdmin } from "~/db";
 import { getEnv } from "~/lib/context";
-import { loadLinkTargets } from "~/lib/editor/link-targets.server";
+import { loadEditorOptions } from "~/lib/editor/link-targets.server";
 import { handleEditorAction } from "~/lib/editor/action.server";
 import { savedRedirectPath } from "~/lib/editor/feedback";
 import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
 import { readHead } from "~/lib/editor/head.server";
 import { adminActorContext } from "~/lib/auth.server";
 import type { Route } from "./+types/admin.posts.new";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 /* Always: the exact-preview pane copies this document's stylesheets into its iframe. */
 export const handle = { math: true };
@@ -21,41 +22,36 @@ export function meta() {
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const timings = context.get(timingsContext).timings;
-  const loaderStart = performance.now();
-  const env = getEnv(context);
-  const today = new Date().toISOString().slice(0, 10);
-  // A broken token must not blank the page: preview does not touch GitHub, and the editor names the failure.
-  const { headSha, headError } = await timed(timings, "gh_head", () => readHead(env));
-  const loadProblems: string[] = [];
-  const failed = (what: string, sentence: string) => (error: unknown) => {
-    console.error(`editor ${what} read failed`, error);
-    loadProblems.push(`${sentence}: ${error instanceof Error ? error.message : String(error)}`);
-    return [];
-  };
-  const payload = {
-    headSha,
-    headError,
-    fields: { ...EMPTY_FIELDS, date: today },
-    tagOptions: (
-      await timed(timings, "d1_tags", () =>
-        listBlogTags(env).catch(failed("tags", "Existing tags could not be read, so none are suggested")),
-      )
-    ).map((tag) => tag.slug),
-    linkTargets: await timed(timings, "d1_link_targets", () => loadLinkTargets(env)),
-    // The save gate remains the authority; this only saves a wasted submit.
-    existingSlugs: (
-      await timed(timings, "d1_all_posts", () =>
-        listAllPostsForAdmin(env).catch(
-          failed("posts", "Existing posts could not be read, so a taken slug is only caught on save"),
-        ),
-      )
-    ).map((post) => post.slug),
-    loadProblems,
-  };
+  return timedLoader(context, async (timings) => {
+    const env = getEnv(context);
+    const today = new Date().toISOString().slice(0, 10);
+    // A broken token must not blank the page: preview does not touch GitHub, and the editor names the failure.
+    const { headSha, headError } = await timed(timings, "gh_head", () => readHead(env));
+    const { tagOptions, linkTargets, problems: loadProblems } = await loadEditorOptions(env, timings);
+    const failed = (what: string, sentence: string) => (error: unknown) => {
+      console.error(`editor ${what} read failed`, error);
+      loadProblems.push(`${sentence}: ${errorMessage(error)}`);
+      return [];
+    };
+    const payload = {
+      headSha,
+      headError,
+      fields: { ...EMPTY_FIELDS, date: today },
+      tagOptions,
+      linkTargets,
+      // The save gate remains the authority; this only saves a wasted submit.
+      existingSlugs: (
+        await timed(timings, "d1_all_posts", () =>
+          listAllPostsForAdmin(env).catch(
+            failed("posts", "Existing posts could not be read, so a taken slug is only caught on save"),
+          ),
+        )
+      ).map((post) => post.slug),
+      loadProblems,
+    };
 
-  timings?.push({ name: "loader_total", ms: performance.now() - loaderStart });
-  return data(payload);
+    return data(payload);
+  });
 }
 
 

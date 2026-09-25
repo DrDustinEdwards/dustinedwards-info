@@ -1,3 +1,5 @@
+import { toHex } from "../bytes.mjs";
+
 const TYPES = new Map([
   ["png", { kind: "image", mime: "image/png" }],
   ["jpg", { kind: "image", mime: "image/jpeg" }],
@@ -166,9 +168,7 @@ export function cropSafe(pathOrKey) {
  * @param {string | null} [name]
  */
 export function contentKey(digest, extension, dimensions = null, name = null) {
-  const hex = [...new Uint8Array(digest)]
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
+  const hex = toHex(digest);
   const size =
     dimensions && dimensions.width > 0 && dimensions.height > 0
       ? `-${dimensions.width}x${dimensions.height}`
