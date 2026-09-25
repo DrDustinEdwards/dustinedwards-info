@@ -4,6 +4,8 @@
  * revocation is a delete and there is nothing in it to read, edit or forge.
  */
 
+import { bytesToBase64 } from "./bytes.mjs";
+
 export const TOKEN_BYTES = 32;
 
 /** Derived rather than a typed 43, so it cannot go quietly wrong if the byte count changes. */
@@ -37,9 +39,7 @@ export function mintToken() {
  * @returns {string}
  */
 export function base64url(bytes) {
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 /**

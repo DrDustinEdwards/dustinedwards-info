@@ -8,6 +8,18 @@ import { ThemeToggle } from "~/components/theme-toggle";
 import { NAV } from "~/lib/nav";
 import { SITE } from "~/lib/seo";
 
+/** The destinations, rendered in both the inline nav and the narrow-width menu. */
+function NavLinks() {
+  return (
+    <>
+      {NAV.map((item) => (
+        <NavLink key={item.to} to={item.to} end={item.end}>
+          {item.label}
+        </NavLink>
+      ))}
+    </>
+  );
+}
 
 /**
  * The narrow-width threshold is a property of the current label widths: re-measure it after a
@@ -25,11 +37,7 @@ export function SiteHeader() {
       </Link>
       {/* Named: two unlabelled nav landmarks are indistinguishable to a screen reader. */}
       <nav className="site-header-nav" aria-label="Main">
-        {NAV.map((item) => (
-          <NavLink key={item.to} to={item.to} end={item.end}>
-            {item.label}
-          </NavLink>
-        ))}
+        <NavLinks />
       </nav>
       {/* Outside the nav, so the destinations can drop to their own line while these stay by the wordmark. */}
       <div className="site-header-tools">
@@ -42,11 +50,7 @@ export function SiteHeader() {
           {/* Not a duplicate landmark: `display: none` takes one of the two navs out of the
               accessibility tree at any width, so label them the same. */}
           <nav className="site-header-menu-panel" aria-label="Main">
-            {NAV.map((item) => (
-              <NavLink key={item.to} to={item.to} end={item.end}>
-                {item.label}
-              </NavLink>
-            ))}
+            <NavLinks />
           </nav>
         </details>
       </div>
