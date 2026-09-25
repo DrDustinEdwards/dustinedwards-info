@@ -63,22 +63,32 @@ export async function action({ request, context }: Route.ActionArgs) {
     );
     const feed = await readPodcastFeed(context, { wait: true });
     if (slot.mode === "featured" && !feed?.episodes.some((e) => e.guid === slot.guid)) {
-      return data({ purged: null }, { status: 400 });
+      return data(
+        { message: "Nothing was saved: that episode is not in the feed. Reload and pick again." },
+        { status: 400 },
+      );
     }
     await writePodcastSlot(env, slot);
     // The home page is tagged with the corpus tag, so this purge reaches it.
-    await purgePosts("home podcast slot");
-    return data({ purged: null });
+    const purged = await purgePosts("home podcast slot");
+    return data({
+      message: purged
+        ? "Home podcast saved. The home page shows it now."
+        : "Home podcast saved, but the cache purge failed, so the home page shows the old choice until its cache expires.",
+    });
   }
   if (form.get("intent") !== "purge-zero-results") {
-    return data({ purged: null }, { status: 400 });
+    return data(
+      { message: `Nothing was done: ${String(form.get("intent") ?? "(none)")} is not an action this page knows.` },
+      { status: 400 },
+    );
   }
   const purged = await purgeZeroResults(getEnv(context));
-  return data({ purged });
+  return data({ message: `Removed ${purged} expired quer${purged === 1 ? "y" : "ies"}.` });
 }
 
 
-export default function AdminTools({ loaderData }: Route.ComponentProps) {
+export default function AdminTools({ loaderData, actionData }: Route.ComponentProps) {
   const { secrets, misses, podcast } = loaderData;
   const missing = secrets.filter((s) => !s.present);
   return (
@@ -86,6 +96,13 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
       title="Tools"
       description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
+      {/* A live announcement: it reports what the submit just did. */}
+      {actionData?.message ? (
+        <p className="admin-notice" role="status">
+          {actionData.message}
+        </p>
+      ) : null}
+
       <h3 className="tool-audit-heading">
         Secrets{" "}
         <span className="chip">
@@ -144,7 +161,7 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
       </h3>
       <p className="muted" data-podcast-showing>
         {podcast.showing === null
-          ? "The feed has not been read yet, so the home page links to germomics.com instead."
+          ? "The feed has not been read yet, or the last read failed, so the home page links to germomics.com instead."
           : podcast.fellBack
             ? `The featured episode is no longer in the feed, so the home page is playing the latest: ${podcast.showing}.`
             : `The home page is playing: ${podcast.showing}.`}
