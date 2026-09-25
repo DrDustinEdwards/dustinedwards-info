@@ -62,27 +62,33 @@ test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180
         ),
       );
 
+      /**
+       * @param {(s: string) => Promise<{width: number, height: number}>} fn
+       * @param {string} src
+       */
+      const settle = async (fn, src) => {
+        try {
+          return { ok: true, value: await fn(src) };
+        } catch (error) {
+          return { ok: false, value: String(error) };
+        }
+      };
+      // Same size with different placeholders is still two documents.
+      const dims = (/** @type {{ok: boolean, value: any}} */ r) =>
+        r.ok
+          ? `${r.value.width}x${r.value.height} lqip=${r.value.placeholder ? "yes" : "none"}`
+          : "refused";
+      const lqip = (/** @type {{ok: boolean, value: any}} */ r) =>
+        Boolean(r.ok && r.value.placeholder);
+
       let resolutions = 0;
       let refusals = 0;
       for (const { src, resolves } of MEDIA_SRCS) {
-        /** @param {(s: string) => Promise<{width: number, height: number}>} fn */
-        const settle = async (fn) => {
-          try {
-            return { ok: true, value: await fn(src) };
-          } catch (error) {
-            return { ok: false, value: String(error) };
-          }
-        };
-        const a = await settle(nodeResolve);
-        const b = await settle(workerResolve);
+        const a = await settle(nodeResolve, src);
+        const b = await settle(workerResolve, src);
         if (a.ok && b.ok) resolutions += 1;
         if (!a.ok && !b.ok) refusals += 1;
 
-        // Same size with different placeholders is still two documents.
-        const dims = (/** @type {{ok: boolean, value: any}} */ r) =>
-          r.ok
-            ? `${r.value.width}x${r.value.height} lqip=${r.value.placeholder ? "yes" : "none"}`
-            : "refused";
         ok(
           `both resolvers agree on ${src}`,
           a.ok === b.ok && dims(a) === dims(b),
@@ -94,8 +100,6 @@ test("write paths: the Node and Worker resolveImage paths agree", { timeout: 180
           `Node ${a.ok ? "resolved" : `refused: ${a.value}`}, Worker ${b.ok ? "resolved" : `refused: ${b.value}`}`,
         );
         // Agreement is not correctness: both inventing a placeholder fails.
-        const lqip = (/** @type {{ok: boolean, value: any}} */ r) =>
-          Boolean(r.ok && r.value.placeholder);
         ok(
           `neither resolver returns a placeholder for ${src}`,
           !lqip(a) && !lqip(b),

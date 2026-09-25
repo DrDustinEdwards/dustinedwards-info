@@ -40,7 +40,6 @@ test("a full item carries every field the feed emits, and only those", () => {
     "title",
     "url",
   ]);
-  assert.equal(fields.length, 9, "the item shape has exactly nine fields");
 
   assert.equal(item.id, `${ORIGIN}/blog/a-post`);
   assert.equal(item.url, `${ORIGIN}/blog/a-post`);

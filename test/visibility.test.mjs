@@ -17,6 +17,9 @@ test("A DRAFT IS EXCLUDED, which is the July leak", () => {
     false,
     "a draft with a past publish date must still be excluded",
   );
+  // Neither fact holding must not admit a post either: an equality of the two facts would pass
+  // both flip tests below and still publish a future-dated draft.
+  assert.equal(isPubliclyVisible({ status: "draft", publishAt: FUTURE }, NOW), false);
 });
 
 test("A FUTURE-DATED POST IS EXCLUDED", () => {
@@ -37,11 +40,6 @@ test("FLIP THE DATE: future to past, with the status held, flips inclusion", () 
   const held = { status: PUBLISHED_STATUS };
   assert.equal(isPubliclyVisible({ ...held, publishAt: FUTURE }, NOW), false);
   assert.equal(isPubliclyVisible({ ...held, publishAt: PAST }, NOW), true);
-});
-
-test("BOTH facts are required: neither alone admits a post", () => {
-  assert.equal(isPubliclyVisible({ status: "draft", publishAt: FUTURE }, NOW), false);
-  assert.equal(isPubliclyVisible({ status: PUBLISHED_STATUS, publishAt: PAST }, NOW), true);
 });
 
 test("no publish date means publish immediately, not never", () => {

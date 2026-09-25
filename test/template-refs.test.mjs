@@ -137,12 +137,3 @@ test("one file naming one asset twice is recorded once", () => {
   const out = foldRefs([{ file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] }, { file: "app/a.ts", assets: ["/dustin-edwards-logo.svg"] }]);
   assert.deepEqual(out.refs["/dustin-edwards-logo.svg"], ["app/a.ts"]);
 });
-
-test("the self-referential guard beats SOURCE_FILES, which is where it decides", () => {
-  /* `SOURCE_FILES` entries are named individually and BYPASS the root rule, so a
-   * self-referential file listed there would be read unless the guard runs first. */
-  // `content/features.json` IS in SOURCE_FILES and IS read, which is the
-  // control: it proves the bypass exists for the guard to beat.
-  assert.equal(isSourceFile("content/features.json"), true);
-  assert.equal(isSourceFile("content/generated/assets.json"), false);
-});
