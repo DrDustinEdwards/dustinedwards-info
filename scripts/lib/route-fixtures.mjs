@@ -8,6 +8,10 @@
  * @param {(record: any) => Date | null} revisedDate
  */
 export function postLoaderData(record, revisedDate) {
+  // Defaulted to "", a record without its body measured and parsed an empty page and passed.
+  if (typeof record?.html !== "string" || record.html.length === 0) {
+    throw new Error(`postLoaderData: ${record?.slug ?? "a record"} carries no rendered html`);
+  }
   return {
     toc: record.toc ?? [],
     seriesParts: [],
@@ -16,7 +20,7 @@ export function postLoaderData(record, revisedDate) {
       slug: record.slug,
       title: record.title,
       description: record.description ?? null,
-      html: record.html ?? "",
+      html: record.html,
       publishAt: record.publishAt ?? null,
       updatedAt: revisedDate(record),
       coverImage: record.cover?.src ?? null,
