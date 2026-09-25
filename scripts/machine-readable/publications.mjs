@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { generate } from "../build-publications.mjs";
+import { doiKey, generate } from "../build-publications.mjs";
 import { generateTwins } from "../build-publication-twins.mjs";
 import {
   doiSlug,
@@ -47,9 +47,6 @@ const SLUG_ROUTE = stripTsxComments(
 
 const tally = createTally({ printPass: true });
 const { ok } = tally;
-
-/** @param {string} doi */
-const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
 console.log("\n  publications\n");
 
