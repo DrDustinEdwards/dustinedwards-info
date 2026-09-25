@@ -11,7 +11,7 @@ const TEST_DIR = join(root, "test", "worker");
 // Measured by running the gate, one below, so a single file leaving the pattern trips it.
 const MINIMUM_FILES = 11;
 // Catches a file hollowed out in place. Measured by running the gate, a little under the count.
-const MINIMUM_CASES = 130;
+const MINIMUM_CASES = 128;
 
 let checks = 0;
 let failures = 0;

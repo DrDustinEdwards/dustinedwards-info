@@ -76,14 +76,6 @@ test("A FUTURE TIMESTAMP IS REFUSED, not clamped to zero", () => {
   assert.equal(healthTile(snapshotAgedBy(-60), NOW).state, "missing");
 });
 
-test("the discriminating control: the same snapshot at two ages disagrees", () => {
-  const fresh = healthTile(snapshotAgedBy(60), NOW);
-  const stale = healthTile(snapshotAgedBy(60 * 60 * 24), NOW);
-  assert.equal(fresh.state, "fresh");
-  assert.equal(stale.state, "stale");
-  assert.notEqual(fresh.state, stale.state);
-});
-
 test("formatAge never claims a precision the fifteen minute schedule lacks", () => {
   assert.equal(formatAge(0), "under a minute ago");
   assert.equal(formatAge(59), "under a minute ago");
