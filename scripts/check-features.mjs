@@ -40,6 +40,7 @@ import {
 } from "../app/lib/content/chart.mjs";
 import { assertFloor } from "./lib/floor.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { readArtifact } from "./lib/artifact.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const FEATURES_PATH = join(root, "content", "features.json");
@@ -124,10 +125,7 @@ if (!existsSync(FEATURES_PATH)) {
 
 const features = JSON.parse(readFileSync(FEATURES_PATH, "utf8")).features ?? [];
 
-const artifactRecords =
-  JSON.parse(
-    readFileSync(join(root, "content", "generated", "posts.json"), "utf8"),
-  ).records ?? [];
+const artifactRecords = readArtifact().records ?? [];
 const routeModules = await declaredRouteModules();
 const routes = new Set(routeModules.keys());
 const gates = declaredGates();
@@ -914,9 +912,7 @@ const SCHEMA_TYPES = ["SoftwareApplication", "WebPage"];
 const EVIDENCE_KINDS = ["post", "page", "repo"];
 const seenSlugs = new Set();
 
-const artifactPostRows =
-  JSON.parse(readFileSync(join(root, "content", "generated", "posts.json"), "utf8")).posts ??
-  [];
+const artifactPostRows = readArtifact().posts ?? [];
 /** PUBLISHED only: a draft citation would link the live site to a 404. */
 const publishedTitles = new Map(
   artifactPostRows
