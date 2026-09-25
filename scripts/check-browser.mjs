@@ -2584,6 +2584,8 @@ try {
     await new Promise((r) => setTimeout(r, 250));
     /** @type {{ attr: string | null, sameDocument: boolean, shownValue: string | null, shownCount: number, scrollY: number } | null} */
     let flipped = null;
+    /** Any other failure of the read, kept so it is not reported as a navigation. */
+    let flipReadError = "";
     try {
       flipped = await page.evaluate(() => {
         const shown = [...document.querySelectorAll(".theme-toggle button")].filter(
@@ -2597,7 +2599,10 @@ try {
           scrollY: window.scrollY,
         };
       });
-    } catch {
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      // A real navigation destroys the context the read ran in; nothing else means that.
+      if (!/Execution context was destroyed/i.test(message)) flipReadError = message;
       flipped = null;
     }
     if (themeClicked) ok(
@@ -2617,7 +2622,9 @@ try {
         flipped.shownValue === "light" &&
         flipped.shownCount === 1,
       flipped === null
-        ? "the click caused a real navigation: the theme bundle did not intercept the " +
+        ? flipReadError
+          ? `reading the page after the click failed: ${flipReadError}`
+          : "the click caused a real navigation: the theme bundle did not intercept the " +
             "submit (the form fallback is what carried the click)"
         : `data-theme=${JSON.stringify(flipped.attr)}, same document ${flipped.sameDocument}, ` +
             `the visible button now posts ${JSON.stringify(flipped.shownValue)} and there ` +
@@ -2657,39 +2664,49 @@ try {
          * Click the button just read as visible, never by position: the shared cookie jar may have
          * hidden the first one, and puppeteer throws on a hidden element.
          */
-        await Promise.all([
-          scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
-          clickOrFail(
-            scriptless,
-            `.theme-toggle button[value="${before.value}"]`,
-            "the scriptless theme control is present to click",
-          ),
-        ]);
-
-        const after = await scriptless.evaluate(() => ({
-          attr: document.documentElement.getAttribute("data-theme"),
-          hash: location.hash,
-          path: location.pathname,
-        }));
+        /* A navigation is awaited only for a click that happened: waiting on one that never comes
+           throws after 30 s and ends the whole run, which is what clickOrFail exists to prevent. */
+        const toggle =
+          before.value === "light" || before.value === "dark"
+            ? await scriptless.$(`.theme-toggle button[value="${before.value}"]`)
+            : null;
         ok(
-          "with script OFF the form post changes the theme and returns the reader to the same page",
-          after.attr === before.value && after.path === postForShape,
-          `asked for ${JSON.stringify(before.value)}, came back with ` +
-            `data-theme=${JSON.stringify(after.attr)} at ` +
-            `${after.path}${after.hash}. The no-script path is the one the progressive-enhancement rule ` +
-            `requires to work: the enhancement is allowed to fail, this is not.`,
+          "the scriptless theme control is present to click",
+          toggle !== null,
+          `no visible .theme-toggle button with a light or dark value ` +
+            `(read ${JSON.stringify(before.value)})`,
         );
-        /*
-         * Reported, not asserted: the fragment is unreachable by construction, so a failure here
-         * would be permanent and say nothing about the code.
-         */
-        if (after.hash !== hash) {
-          report(
-            `the scriptless theme post drops the fragment (${JSON.stringify(hash)} -> ` +
-              `${JSON.stringify(after.hash)}). Not a defect and not fixable server-side: ` +
-              `Referer never carries a fragment (RFC 9110), so /theme cannot learn it. ` +
-              `The scripted path holds the reader's position by not navigating at all.`,
+        if (toggle) {
+          await Promise.all([
+            scriptless.waitForNavigation({ waitUntil: "networkidle0" }),
+            toggle.click(),
+          ]);
+
+          const after = await scriptless.evaluate(() => ({
+            attr: document.documentElement.getAttribute("data-theme"),
+            hash: location.hash,
+            path: location.pathname,
+          }));
+          ok(
+            "with script OFF the form post changes the theme and returns the reader to the same page",
+            after.attr === before.value && after.path === postForShape,
+            `asked for ${JSON.stringify(before.value)}, came back with ` +
+              `data-theme=${JSON.stringify(after.attr)} at ` +
+              `${after.path}${after.hash}. The no-script path is the one the progressive-enhancement rule ` +
+              `requires to work: the enhancement is allowed to fail, this is not.`,
           );
+          /*
+           * Reported, not asserted: the fragment is unreachable by construction, so a failure here
+           * would be permanent and say nothing about the code.
+           */
+          if (after.hash !== hash) {
+            report(
+              `the scriptless theme post drops the fragment (${JSON.stringify(hash)} -> ` +
+                `${JSON.stringify(after.hash)}). Not a defect and not fixable server-side: ` +
+                `Referer never carries a fragment (RFC 9110), so /theme cannot learn it. ` +
+                `The scripted path holds the reader's position by not navigating at all.`,
+            );
+          }
         }
       } finally {
         await scriptless.close();
@@ -2722,27 +2739,41 @@ try {
             `so an absent or hidden one is a header with no navigation at all.`,
         );
 
-        await noScript.click(".site-header-menu-button");
+        const opened = await clickOrFail(
+          noScript,
+          ".site-header-menu-button",
+          "the scriptless header menu button is present to click",
+        );
+        const isOpen = await noScript.evaluate(() => {
+          const d = document.querySelector("[data-header-menu]");
+          return d instanceof HTMLDetailsElement && d.open;
+        });
         ok(
           "the header menu OPENS with no script, because it is a details element",
-          await noScript.$eval("[data-header-menu]", (d) => /** @type {HTMLDetailsElement} */ (d).open),
+          opened && isOpen,
           "clicking the summary did not open it. A menu that needs script to open is not rule " +
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        const target = await noScript.$eval(".site-header-menu-panel a", (a) =>
-          a.getAttribute("href"),
-        );
-        await Promise.all([
-          noScript.waitForNavigation({ waitUntil: "domcontentloaded" }),
-          noScript.click(".site-header-menu-panel a"),
-        ]);
+        const link = await noScript.$(".site-header-menu-panel a");
+        const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
-          "a header menu link NAVIGATES with no script",
-          new URL(noScript.url()).pathname === target,
-          `landed on ${new URL(noScript.url()).pathname}, expected ${target}. Opening is half the ` +
-            `contract; the other half is that the thing inside goes somewhere.`,
+          "the open header menu offers a link to follow",
+          link !== null && Boolean(target),
+          "no link inside .site-header-menu-panel, so there is nothing for the reader to follow",
         );
+        if (link && target) {
+          await Promise.all([
+            noScript.waitForNavigation({ waitUntil: "domcontentloaded" }),
+            link.click(),
+          ]);
+          ok(
+            "a header menu link NAVIGATES with no script",
+            new URL(noScript.url()).pathname === target,
+            `landed on ${new URL(noScript.url()).pathname}, expected ${target}. Opening is half the ` +
+              `contract; the other half is that the thing inside goes somewhere.`,
+          );
+        }
       } finally {
         await noScript.close();
       }
