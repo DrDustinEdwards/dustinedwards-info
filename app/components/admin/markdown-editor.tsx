@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 
 // Split out of pipeline.mjs so this browser chunk can reach it without pulling shiki in.
 import { countWords, minutesForWords } from "~/lib/content/reading-time.mjs";
-import { errorMessage } from "~/lib/error-message.mjs";
+import { uploadMedia } from "~/lib/media/upload-contract.mjs";
 
 // CodeMirror must never reach a public bundle; it stays its own chunk because it is dynamically imported.
 
@@ -255,30 +255,18 @@ export default function MarkdownEditor({
     return pool.slice(0, LINK_RESULT_LIMIT);
   })();
 
-  // Callers `void` this, so every failure, a network error included, must end here as a message.
+  // Callers `void` this; `uploadMedia` never rejects, so every failure ends here as a message.
   const uploadFile = async (file: File) => {
     setUploadError(null);
     setUpload({ url: "", name: file.name });
-    try {
-      const form = new FormData();
-      form.set("file", file);
-      const response = await fetch("/admin/media/upload", { method: "POST", body: form });
-      if (!response.ok) {
-        // The status is the fallback when the body is not the route's JSON error.
-        const detail = await response
-          .json<{ error?: string }>()
-          .catch(() => ({}) as { error?: string });
-        setUpload(null);
-        setUploadError(detail.error ?? `Upload failed (${response.status}).`);
-        return;
-      }
-      const { url } = await response.json<{ url: string }>();
-      setUpload({ url, name: file.name });
-      setAlt("");
-    } catch (error) {
+    const result = await uploadMedia(file);
+    if ("error" in result) {
       setUpload(null);
-      setUploadError(`Upload failed: ${errorMessage(error)}`);
+      setUploadError(result.error);
+      return;
     }
+    setUpload({ url: result.url, name: file.name });
+    setAlt("");
   };
 
   const openLinkPalette = (view: EditorView) => {
