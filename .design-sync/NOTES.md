@@ -43,9 +43,10 @@ that as the scope, not as a shortfall.
 
 ## The build
 
-**RUN `npm run design:resync`. It is the whole command.** It regenerates the
-derived inputs and then runs the staged driver, in that order, stopping if the
-first step fails. Flags pass through, so `npm run design:resync -- --remote
+**RUN `npm run design:resync`. It is the whole command.** It rebuilds the two
+guideline folders (`build-capsid-guidelines.mjs`, then `build-guidelines.mjs`),
+regenerates the derived inputs and then runs the staged driver, in that order,
+stopping at the first step that fails. Flags pass through, so `npm run design:resync -- --remote
 <sidecar.json>` is the anchored run.
 
 `scripts/ds-resync.mjs` exists because **`cfg.buildCmd` IS NOT A HOOK AND
@@ -218,7 +219,7 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
   `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because no
   `decisions-vol-*.md` is an exported document and conventions.md does not
   restate them. Two consequences: `build-capsid-guidelines.mjs` must run before
-  a sync or the export directory is missing, and a ruling added to the volume after a sync is invisible to the canvas until
+  a sync or the export directory is missing (the wrapper runs it first), and a ruling added to the volume after a sync is invisible to the canvas until
   someone patches the brief. That is how a job built a figure haze in PR #57
   that ruling 124 forbids.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because

@@ -6,9 +6,13 @@ import { isMain } from "./lib/is-main.mjs";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(ROOT, "app", "data", "publications.ts");
 
-/** DOI names are case-insensitive: a raw join silently drops records rather than throwing. */
-/** @param {string | null | undefined} doi */
-const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
+/**
+ * DOI names are case-insensitive: a raw join silently drops records rather than throwing. The one
+ * key the build, the twin build and check:machine-readable all join on, so it has one definition.
+ *
+ * @param {string | null | undefined} doi
+ */
+export const doiKey = (doi) => (doi ?? "").trim().toLowerCase();
 
 const SPACE_BEFORE_PUNCTUATION = /\s+([,;:.)\]])/g;
 const SPACE_AFTER_OPENING = /([([])\s+/g;
