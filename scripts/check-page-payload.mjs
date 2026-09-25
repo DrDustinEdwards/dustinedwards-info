@@ -82,6 +82,20 @@ const ENHANCE_BROTLI_CEILINGS = {
   "theme.js": 1000,
 };
 
+/**
+ * Dynamic imports the finder reports that are deliberate, keyed `importer -> module`, each with its
+ * reason. The finder is a source-level over-approximation: it pairs a dynamic import with ANY static
+ * importer, including one that is itself only reached dynamically.
+ *
+ * @type {Record<string, string>}
+ */
+const INEFFECTIVE_IMPORT_EXEMPT = {
+  "app/routes/playground.tsx -> app/lib/content/chart":
+    "its only static importer is pipeline.mjs, which the Worker reaches only through " +
+    "loadPipeline()'s dynamic import, so Plot and linkedom stay out of the chunk a cold " +
+    "isolate evaluates (1ac9ae1); a static import in the loader would put them back.",
+};
+
 /** A walk that reads fewer files than this has lost a route or gone vacuous, not gotten lean. */
 const MINIMUM_FILES_WALKED = 8;
 
@@ -434,11 +448,22 @@ async function main() {
       `trusted about the real tree until it can tell these apart.`,
   );
 
-  const ineffective = findIneffectiveDynamicImports(
+  const found = findIneffectiveDynamicImports(
     importScope.map((path) => ({
       path: relative(root, path).split("\\").join("/"),
       source: readFileSync(path, "utf8"),
     })),
+  );
+  const exemptKey = (/** @type {{path: string, module: string}} */ d) => `${d.path} -> ${d.module}`;
+  const ineffective = found.filter((d) => !Object.hasOwn(INEFFECTIVE_IMPORT_EXEMPT, exemptKey(d)));
+  const staleExemptions = Object.keys(INEFFECTIVE_IMPORT_EXEMPT).filter(
+    (key) => !found.some((d) => exemptKey(d) === key),
+  );
+  ok(
+    "every dynamic-import exemption still names a pair the finder reports",
+    staleExemptions.length === 0,
+    `stale: ${staleExemptions.join(", ")}. An exemption that matches nothing hides whatever ` +
+      `replaced it; delete it.`,
   );
   ok(
     "no dynamic import is defeated by a static import of the same module",
