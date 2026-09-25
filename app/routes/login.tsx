@@ -15,6 +15,7 @@ import type { Route } from "./+types/login";
  * needs `.field-alarm` and `.btn-brand:disabled` from it.
  */
 import "~/admin.css";
+import { errorMessage } from "~/lib/error-message.mjs";
 
 export function meta() {
   return [{ title: "Sign in" }, { name: "robots", content: "noindex" }];
@@ -97,7 +98,7 @@ export default function Login({ actionData }: Route.ComponentProps) {
                 });
                 if (error) failed(error.message ?? error.statusText ?? `HTTP ${error.status}`);
               } catch (error) {
-                failed(error instanceof Error ? error.message : String(error));
+                failed(errorMessage(error));
               }
             }}
           >

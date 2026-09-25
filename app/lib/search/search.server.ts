@@ -9,6 +9,9 @@ import {
   toMatchExpression,
 } from "./query.mjs";
 import { applySort, parseSort, type SearchSort } from "./sort.mjs";
+import { PUBLISHED_STATUS } from "./visibility.mjs";
+import { clampWords } from "~/lib/content/og-card-text.mjs";
+import { escapeXml } from "~/lib/rss-feed.mjs";
 
 type ParsedQuery = ReturnType<typeof parseQuery>;
 
@@ -100,31 +103,35 @@ interface RawRow {
   snippet: string;
 }
 
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
 function renderSnippet(raw: string): string {
-  return escapeHtml(raw)
+  return escapeXml(raw)
     .split(MARK_START)
     .join("<mark>")
     .split(MARK_END)
     .join("</mark>");
 }
 
-function parseTags(docTags: string): string[] {
+/** The pipe-delimited `doc_tags` column as a list. */
+function splitDocTags(docTags: string): string[] {
   return docTags.split("|").filter(Boolean);
 }
 
-function truncateWords(value: string, limit: number): string {
-  if (value.length <= limit) return value;
-  const cut = value.slice(0, limit);
-  const lastSpace = cut.lastIndexOf(" ");
-  return `${lastSpace > 0 ? cut.slice(0, lastSpace) : cut}…`;
+/** One index row as a result; the caller decides the snippet, the reasons and the rank. */
+function toHit(row: RawRow, snippet: string, why: MatchReason[], score: number): SearchHit {
+  return {
+    uid: row.uid,
+    url: row.url,
+    type: row.type,
+    title: row.title,
+    docTitle: row.doc_title,
+    docUrl: row.doc_url,
+    anchor: row.anchor,
+    tags: splitDocTags(row.doc_tags),
+    publishAt: row.publish_at,
+    snippet,
+    why,
+    score,
+  };
 }
 
 /**
@@ -133,7 +140,7 @@ function truncateWords(value: string, limit: number): string {
  */
 export function visibilityClause(alias = "d"): string {
   const q = alias ? `${alias}.` : "";
-  return `${q}status = 'published' AND (${q}publish_at IS NULL OR ${q}publish_at <= ?)`;
+  return `${q}status = '${PUBLISHED_STATUS}' AND (${q}publish_at IS NULL OR ${q}publish_at <= ?)`;
 }
 
 /** Named, not a bare "": an empty literal between SQL literals misleads the raw-SQL scans. DO NOT INLINE. */
@@ -280,21 +287,10 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   if (!match) {
     const rows = await runBrowse(env.DB, filters);
     const browseTook = Date.now() - started;
-    const browseHits: SearchHit[] = rows.map((item, index) => ({
-      uid: item.uid,
-      url: item.url,
-      type: item.type,
-      title: item.title,
-      docTitle: item.doc_title,
-      docUrl: item.doc_url,
-      anchor: item.anchor,
-      tags: parseTags(item.doc_tags),
-      publishAt: item.publish_at,
-      snippet: renderSnippet(truncateWords(item.snippet, 200)),
-      why: ["filter"],
+    const browseHits: SearchHit[] = rows.map((item, index) =>
       // Rank is the date order this came back in, not a relevance score.
-      score: rows.length - index,
-    }));
+      toHit(item, renderSnippet(clampWords(item.snippet, 200)), ["filter"], rows.length - index),
+    );
     return {
       parsed,
       hits: browseHits.slice((page - 1) * pageSize, page * pageSize),
@@ -326,25 +322,19 @@ export async function search(env: Env, options: SearchOptions): Promise<SearchRe
   const proseUids = new Set(proseRows.map((r) => r.uid));
   const fused = fuse<RawRow & { uid: string }>([identityRows, proseRows]);
 
-  const fusedHits: SearchHit[] = fused.map(({ item, score }) => ({
-    uid: item.uid,
-    url: item.url,
-    type: item.type,
-    title: item.title,
-    docTitle: item.doc_title,
-    docUrl: item.doc_url,
-    anchor: item.anchor,
-    tags: parseTags(item.doc_tags),
-    publishAt: item.publish_at,
-    // The prose snippet has sentences; the identity one is just the title, already shown.
-    snippet: renderSnippet(
-      (proseUids.has(item.uid)
-        ? proseRows.find((r) => r.uid === item.uid)?.snippet
-        : item.snippet) ?? item.snippet,
+  const fusedHits: SearchHit[] = fused.map(({ item, score }) =>
+    toHit(
+      item,
+      // The prose snippet has sentences; the identity one is just the title, already shown.
+      renderSnippet(
+        (proseUids.has(item.uid)
+          ? proseRows.find((r) => r.uid === item.uid)?.snippet
+          : item.snippet) ?? item.snippet,
+      ),
+      whyMatched(item, parsed, proseUids.has(item.uid)),
+      score,
     ),
-    why: whyMatched(item, parsed, proseUids.has(item.uid)),
-    score,
-  }));
+  );
 
   const hits = applySort(fusedHits, sort);
 
@@ -451,7 +441,7 @@ export async function zeroState(env: Env, parsed: ParsedQuery, now = new Date())
 
   const allTags = new Set<string>();
   for (const row of tagRows.results ?? []) {
-    for (const tag of parseTags(row.doc_tags)) allTags.add(tag);
+    for (const tag of splitDocTags(row.doc_tags)) allTags.add(tag);
   }
 
   // Prefix or substring, not edit distance: on a handful of tags, fuzzy matching surfaces confident nonsense.
