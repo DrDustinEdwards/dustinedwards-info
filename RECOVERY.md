@@ -633,7 +633,10 @@ and each reaches Dustin's inbox by email:
   mail is sent before the state that suppresses the next one is stored, so a
   failed send is retried on the next firing, and the firing records as failed.
 - **The external uptime monitors** (UptimeRobot, `scripts/uptime-monitors.json`,
-  reconciled by every ship). Two monitors, the home page and `/api/health`,
+  reconciled by every ship that holds `UPTIMEROBOT_API_KEY`; a ship without it,
+  such as a GitHub deploy run, records the step as SKIPPED, leaves the monitors
+  where they were, and does not end red; they are reconciled at the domain move
+  by hand or by a local ship). Two monitors, the home page and `/api/health`,
   from OUTSIDE Cloudflare, which the watchdog cannot be (a Worker cannot make an
   ordinary request to a Worker on its own zone). `/api/health` answers 503 when
   any check fails, so the second monitor catches a failing check as well as an
