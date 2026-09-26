@@ -24,8 +24,8 @@ that as the scope, not as a shortfall.
 - **Out, and why:** `site-header` and `site-footer` are page singletons.
   `theme-toggle`, `ask-panel`, `search-trigger`, `blog-enhancements`,
   `site-speculation` and `enhancement-script` exist to inject the nonced
-  enhancement bundles the no-framework-script rule requires; `theme-toggle` additionally imports
-  `~/enhance/dist/theme.js?url`, a Vite specifier esbuild does not resolve.
+  enhancement bundles the no-framework-script rule requires; `theme-toggle` additionally reaches
+  `virtual:enhance`, a Vite virtual module no other bundler resolves.
   Nothing there is composable by a design agent. The header and footer still
   reach the pane, as PREVIEW CARDS rather than components; see "The preview
   cards" below.

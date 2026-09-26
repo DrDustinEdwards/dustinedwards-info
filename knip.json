@@ -22,15 +22,16 @@
     "test/**/*.{ts,mjs}",
     ".design-sync/**/*.{ts,tsx,mjs}"
   ],
-  "ignore": ["app/enhance/dist/**", "scratchpad/**"],
+  "ignore": ["scratchpad/**"],
   "ignoreDependencies": [
     "cloudflare",
     "cloudflare:test",
     "cloudflare:workers",
+    "virtual:enhance",
     "virtual:header-render",
     "virtual:react-router/server-build",
     "mermaid"
   ],
   "ignoreBinaries": ["netstat"],
-  "ignoreUnresolved": ["\\+types/", "^~/enhance/dist/", "enhance-sizes\\.generated$"]
+  "ignoreUnresolved": ["\\+types/"]
 }

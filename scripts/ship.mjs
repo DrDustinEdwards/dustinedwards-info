@@ -405,12 +405,6 @@ if (run("npm", ["run", "build:publication-twins"]).code !== 0) {
     "Fix build:publication-twins. Nothing was deployed.",
   );
 }
-// The enhancement bundles next: the app build's ?url imports name files under
-// the gitignored app/enhance/dist/, so a build without this step fails on a
-// missing file that is not the tree's fault.
-if (run("npm", ["run", "build:enhance"]).code !== 0) {
-  refuse("the enhancement bundle build failed", "Fix build:enhance. Nothing was deployed.");
-}
 /* This build feeds only `check:page-payload`; `npm run deploy` builds what ships. */
 if (ciGreenEarly) {
   console.log("  skipped: react-router build. Its only local reader is the tier below, which CI ran.");
