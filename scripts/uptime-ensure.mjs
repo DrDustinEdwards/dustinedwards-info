@@ -5,6 +5,7 @@ import { writeFileSync } from "node:fs";
 
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import { readDevVar } from "./lib/dev-vars.mjs";
+import { KEY_ABSENT_EXIT, KEY_ABSENT_LINE, keylessRunIsExpected } from "./lib/uptime-step.mjs";
 import {
   COMPARED_FIELDS,
   MANIFEST_PATH,
@@ -21,8 +22,14 @@ console.log("\nuptime-ensure\n");
 
 const key = readDevVar("UPTIMEROBOT_API_KEY");
 if (!key) {
+  // Its own code and line, on a GitHub runner only: ship records that one outcome as a skip. A
+  // missing key anywhere else is a lost credential and exits 1, which ship records as a miss.
+  if (keylessRunIsExpected(process.env)) {
+    console.error(KEY_ABSENT_LINE);
+    process.exit(KEY_ABSENT_EXIT);
+  }
   console.error(
-    "UPTIMEROBOT_API_KEY is not in .dev.vars, so there is nothing to authenticate with.\n" +
+    "UPTIMEROBOT_API_KEY is missing or empty in .dev.vars, so there is nothing to authenticate with.\n" +
       "It is an operator credential for this machine rather than a wrangler secret, because\n" +
       "no deployed code reads it. Add the line to .dev.vars, which is gitignored, and rerun.",
   );

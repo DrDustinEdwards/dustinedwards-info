@@ -489,6 +489,40 @@ if (existsSync(SHIP)) {
     eq(`ship: ${name} reaches the final exit guard`, new RegExp(`\\b${name}\\b`).test(missTable), true);
   }
 
+  /* The uptime step: an absent key is a skip, decided in one tested function, and every other
+     outcome of uptime-ensure stays a miss. */
+  eq(
+    "uptime: ship decides the step through uptimeStepOutcome on uptime-ensure's code and output",
+    /uptimeStepOutcome\(\s*ensured\.code\s*,\s*ensured\.text\s*\)/.test(shipSource),
+    true,
+  );
+  eq(
+    "uptime: THE SKIP STAYS OUT OF THE MISSES TABLE, so an absent key does not end the run red",
+    /\buptimeSkip\b/.test(missTable),
+    false,
+  );
+  const skipRecordAt = shipSource.indexOf("if (uptimeSkip) console.log(");
+  eq(
+    "uptime: the skip note is repeated in the shipped record, before the exit guard",
+    skipRecordAt !== -1 && skipRecordAt > recordAt && skipRecordAt < exitAt,
+    true,
+  );
+  /* ONE skip exit, and only on a GitHub runner: a second exit with that code, or one outside the
+     runner guard, would turn a lost key on the operator machine into a green ship. */
+  const ensureSource = stripComments(readFileSync(join(root, "scripts/uptime-ensure.mjs"), "utf8"));
+  eq(
+    "uptime: uptime-ensure has exactly one exit with KEY_ABSENT_EXIT",
+    [...ensureSource.matchAll(/process\.exit\(\s*KEY_ABSENT_EXIT\s*\)/g)].length,
+    1,
+  );
+  eq(
+    "uptime: that exit sits inside the GitHub-runner guard",
+    /if\s*\(\s*keylessRunIsExpected\(\s*process\.env\s*\)\s*\)\s*\{[^}]*process\.exit\(\s*KEY_ABSENT_EXIT\s*\)/.test(
+      ensureSource,
+    ),
+    true,
+  );
+
   eq(
     "media sync: the operator API exposes sync_media",
     /"sync_media"/.test(apiSource),
@@ -626,7 +660,7 @@ if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
 
 // Measured by running it, set for the lower environment: without a local database the three
 // assertions comparing the applied set to it do not run.
-const MINIMUM_CHECKS = 115;
+const MINIMUM_CHECKS = 120;
 tally.floor("check:migrations", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {
