@@ -1,5 +1,5 @@
-/* A security test, not a formatting one: shared-cached readers share a CSP nonce, which is safe
- * only while nothing user-writable can put script into those pages. Raw HTML is dropped only by
+/* A security test, not a formatting one: the CSP trusts whatever the hashed loader inserts, so a
+ * post that could carry raw markup could carry a marker or a script. Raw HTML is dropped only by
  * DEFAULT, and `allowDangerousHtml: true` is a one-word change no other gate would notice. */
 
 import test from "node:test";

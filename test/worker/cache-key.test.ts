@@ -2,6 +2,7 @@ import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:
 import { describe, expect, it } from "vitest";
 
 import worker, { cacheDimensions } from "../../workers/app";
+import { enhanceLoaderHash } from "../../workers/csp.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
 import { STUB_PATHS, STUB_PAGE_BODY, STUB_MARKDOWN_BODY } from "./stub-server-build";
@@ -123,25 +124,27 @@ describe("the cache-header rule: the platform caches silence", () => {
     expect(response.headers.get("cache-control")).toBe("private, no-store");
   });
 
-  it("stamps the security headers and a per-request CSP nonce on every response", async () => {
+  it("stamps the security headers and a nonce-free CSP on a public response", async () => {
     const first = await fetchThrough(new Request(`${ORIGIN}${freshPath(STUB_PATHS.page)}`));
     expect(first.headers.get("x-content-type-options")).toBe("nosniff");
     expect(first.headers.get("x-frame-options")).toBe("DENY");
-    expect(first.headers.get("content-security-policy")).toContain("nonce-");
+    /* The response is shared-cached with its header, so a nonce here would be every reader's.
+     * The page's one inline script is allowed by the loader's hash instead. */
+    const policy = first.headers.get("content-security-policy") ?? "";
+    expect(policy).not.toContain("nonce-");
+    expect(policy).toContain(`script-src '${await enhanceLoaderHash()}' 'strict-dynamic'`);
 
+    /* Nothing per-request is left in a public policy, so two renders agree byte for byte. The
+     * admin nonce, which does vary, is test/worker/ssr-nonce.test.ts's. */
     const second = await fetchThrough(new Request(`${ORIGIN}${freshPath(STUB_PATHS.page)}`));
-    /* A static or derived nonce looks exactly like success. It is generated in the RENDERER
-     * because it must exist before `<Scripts nonce>` stamps it. */
-    expect(second.headers.get("content-security-policy")).not.toBe(
-      first.headers.get("content-security-policy"),
-    );
+    expect(second.headers.get("content-security-policy")).toBe(policy);
   });
 });
 
 describe("http is redirected before anything else happens", () => {
   it("sends a plaintext GET to https with an explicit no-store", async () => {
     /* The shared cache does not separate schemes, so a plaintext request would otherwise get
-     * the cached HTTPS response, CSP nonce included. */
+     * the cached HTTPS response. */
     const response = await fetchThrough(new Request("http://example.com/stub-page"));
     expect(response.status).toBe(301);
     expect(response.headers.get("location")).toBe("https://example.com/stub-page");

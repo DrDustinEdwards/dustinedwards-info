@@ -30,7 +30,7 @@ const source = readFileSync(APP_PATH, "utf8");
 const code = stripComments(source);
 
 const { declared, applications } = staticSetAndCache.run(code);
-csp.run(code);
+await csp.run(code);
 noncePropagation.run();
 runPreview();
 analyticsCapture.run(code);
@@ -43,7 +43,7 @@ runHealth();
 gatewayAndPublicRoutes.run(code);
 entrypointCache.run();
 /* Measured by running this gate, never summed. */
-const MINIMUM_CHECKS = 234;
+const MINIMUM_CHECKS = 247;
 tally.floor("check:headers", "checks", MINIMUM_CHECKS);
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);

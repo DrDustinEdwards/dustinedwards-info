@@ -116,9 +116,9 @@ test("the chosen episode is the latest or the featured one, and a featured episo
   assert.deepEqual(chooseEpisode([], { mode: "latest" }), { episode: null, fellBack: false });
 });
 
-test("the CSP's media-src allows exactly the hosts the parser accepts", () => {
-  for (const styleNonce of [false, true]) {
-    const media = contentSecurityPolicy("n", styleNonce)
+test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
+  for (const adminNonce of [undefined, "n"]) {
+    const media = (await contentSecurityPolicy(adminNonce))
       .split("; ")
       .find((d) => d.startsWith("media-src "));
     assert.ok(media, "no media-src directive");

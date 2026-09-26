@@ -1,17 +1,19 @@
 // The content security policy: both branches called rather than parsed, the feed exemption, the
-// style nonce on the admin branch only, and the enforced header on both exits.
+// nonce on the admin branch only, the loader hash on both, and the enforced header on both exits.
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { contentSecurityPolicy, isAdminPath } from "../../../workers/csp.mjs";
+import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
+import { contentSecurityPolicy, enhanceLoaderHash, isAdminPath } from "../../../workers/csp.mjs";
 import { UNPOLICED_TYPES, isUnpolicedType } from "../../../workers/feed-types.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
 import { documentHeadersOf } from "./static-set-and-cache.mjs";
 
 /** @param {string} code workers/app.ts with its comments stripped */
-export function run(code) {
+export async function run(code) {
   /*
    * unsafe-inline IS THE ASSERTION THAT MATTERS: it silences the report, breaks nothing, and is
    * what an injected script needs. strict-dynamic makes browsers ignore it until it is dropped.
@@ -21,8 +23,8 @@ export function run(code) {
 
   /* The policy is called, not parsed: a regex sees both branches exist, not which one a request gets. */
   const NONCE = "gate-fixture-nonce-not-a-real-one";
-  const publicCsp = contentSecurityPolicy(NONCE, false);
-  const adminCsp = contentSecurityPolicy(NONCE, true);
+  const publicCsp = await contentSecurityPolicy(undefined);
+  const adminCsp = await contentSecurityPolicy(NONCE);
 
   /** @param {string} csp */
   const directivesOf = (csp) => csp.split("; ").filter(Boolean);
@@ -42,7 +44,7 @@ export function run(code) {
   ok(
     "the two branches actually differ",
     publicCsp !== adminCsp,
-    "contentSecurityPolicy returns the same string for both arms, so the styleNonce " +
+    "contentSecurityPolicy returns the same string for both arms, so the adminNonce " +
       "argument is being ignored and every branch assertion below compares one policy " +
       "with itself.",
   );
@@ -102,8 +104,8 @@ export function run(code) {
       ok(
         `the ${format} feed serves "${declared[1]}", which isUnpolicedType() exempts from the CSP`,
         isUnpolicedType(declared[1]),
-        `isUnpolicedType("${declared[1]}") is false, so this feed is served a policy with a ` +
-          `per-request nonce on a shared-cached body. Exempt types: ` +
+        `isUnpolicedType("${declared[1]}") is false, so this feed is served a policy it ` +
+          `cannot use on every shared-cached response. Exempt types: ` +
           `${[...UNPOLICED_TYPES].join(", ")}`,
       );
     }
@@ -119,8 +121,8 @@ export function run(code) {
     ok("isUnpolicedType(null) is false", !isUnpolicedType(null));
   }
 
-  /* The public branch matters most: granting the nonce everywhere silences a report and breaks nothing
-     visible, while header and body share one public cache entry. */
+  /* The public branch matters most: a nonce there silences a report and breaks nothing visible,
+     while header and body share one public cache entry, so every reader would share it. */
   const publicStyleSrc = directiveIn(publicCsp, "style-src");
   const adminStyleSrc = directiveIn(adminCsp, "style-src");
 
@@ -129,9 +131,8 @@ export function run(code) {
     !publicStyleSrc.includes("nonce-"),
     "public style-src is " +
       JSON.stringify(publicStyleSrc) +
-      ". Every shared-cached public HTML route is edge-cached, so its nonce is stable " +
-        "for up to ten minutes and a nonce source there widens the accepted script-src " +
-        "exposure to styles. " +
+      ". Every shared-cached public HTML route is edge-cached, so a nonce there is one " +
+        "value every reader shares for the cache lifetime. " +
       "Nothing public injects an inline stylesheet, so it buys nothing and costs that.",
   );
   ok(
@@ -189,11 +190,11 @@ export function run(code) {
     "/admin.data",
   ]) {
     ok(
-      path + " is NOT an admin path, so it gets the absolute style-src",
+      path + " is NOT an admin path, so it gets the nonce-free policy",
       !isAdminPath(path),
       "isAdminPath(" +
         JSON.stringify(path) +
-        ") is true, so this route would be served a policy carrying a style nonce.",
+        ") is true, so this route would be served a policy carrying a nonce.",
     );
   }
   for (const path of [
@@ -214,36 +215,98 @@ export function run(code) {
     );
   }
 
+  /*
+   * THE LOADER HASH, recomputed here with node:crypto from the constant root.tsx renders, so the
+   * policy's hash and the page's script are held to one text by a second implementation.
+   */
+  const expectedHash =
+    "sha256-" + createHash("sha256").update(ENHANCE_LOADER, "utf8").digest("base64");
+  const computedHash = await enhanceLoaderHash();
+  ok(
+    "the loader hash is the sha256 of ENHANCE_LOADER in app/lib/enhance-loader.mjs",
+    computedHash === expectedHash,
+    "enhanceLoaderHash() returned " +
+      JSON.stringify(computedHash) +
+      ", node:crypto says " +
+      JSON.stringify(expectedHash) +
+      ". Every page's one inline script would be refused, and every enhancement with it.",
+  );
+  ok(
+    "the loader never contains `<`, so React renders it raw and the bytes stay the hashed bytes",
+    ENHANCE_LOADER.length > 0 && !ENHANCE_LOADER.includes("<"),
+    "a `<` can close the script element or open a comment, and the text the browser " +
+      "hashes is then not the text the policy names",
+  );
+
   const scriptSrc = directiveIn(publicCsp, "script-src");
+  const adminScriptSrc = directiveIn(adminCsp, "script-src");
+  /** @param {string} directive */
+  const sourcesOf = (directive) => directive.split(" ").slice(1);
+
+  /* PUBLIC: no nonce at all, since a cached page would share it, and exactly this one hash. */
   ok(
-    "script-src carries the per-request nonce, not a literal",
-    scriptSrc.includes("'nonce-" + NONCE + "'"),
-    "script-src is " +
+    "the PUBLIC policy carries no nonce source anywhere",
+    !publicCsp.includes("'nonce-"),
+    "public policy is " +
+      JSON.stringify(publicCsp) +
+      ". Public pages are edge-cached with their header, so a nonce there is one value " +
+      "every reader shares for the cache lifetime, which is what the loader hash replaced.",
+  );
+  ok(
+    "the PUBLIC script-src is exactly the loader hash, 'strict-dynamic' and 'inline-speculation-rules'",
+    JSON.stringify(sourcesOf(scriptSrc)) ===
+      JSON.stringify([`'${expectedHash}'`, "'strict-dynamic'", "'inline-speculation-rules'"]),
+    "public script-src is " +
       JSON.stringify(scriptSrc) +
-      ". A literal nonce is a static nonce, which renders correctly and protects nothing.",
+      ". A second hash is a second inline script nobody reviewed; a missing one refuses the " +
+      "loader; without 'inline-speculation-rules' the header's rules are refused silently.",
+  );
+
+  /* ADMIN: the same sources plus this render's nonce, which <Scripts> and the sidebar script need. */
+  ok(
+    "the ADMIN script-src carries the per-request nonce, not a literal",
+    adminScriptSrc.includes("'nonce-" + NONCE + "'"),
+    "admin script-src is " +
+      JSON.stringify(adminScriptSrc) +
+      ". A literal nonce is a static nonce, which renders correctly and protects nothing, " +
+      "and without the argument's nonce the admin plane's hydration scripts are refused.",
   );
   ok(
-    "script-src is identical on both branches",
-    scriptSrc === directiveIn(adminCsp, "script-src"),
-    "the style branch changed script-src, which it has no business touching",
+    "the ADMIN script-src is the public one plus the nonce and nothing else",
+    JSON.stringify(sourcesOf(adminScriptSrc)) ===
+      JSON.stringify([`'nonce-${NONCE}'`, ...sourcesOf(scriptSrc)]),
+    "admin script-src is " + JSON.stringify(adminScriptSrc) + ", public is " + JSON.stringify(scriptSrc),
   );
-  ok(
-    "script-src carries 'strict-dynamic'",
-    scriptSrc.includes("'strict-dynamic'"),
-    "script-src is " + JSON.stringify(scriptSrc),
-  );
-  ok(
-    "script-src does NOT carry 'unsafe-inline'",
-    !scriptSrc.includes("'unsafe-inline'"),
-    "adding it is the easy way to silence a violation report and it reduces the " +
-      "policy to decoration. 'strict-dynamic' makes browsers ignore it, so this " +
-      "change would look harmless and would not be.",
-  );
-  ok(
-    "script-src does NOT carry 'unsafe-eval'",
-    !scriptSrc.includes("'unsafe-eval'"),
-    "nothing on this site evals, and adding it would be silencing a report rather than fixing it",
-  );
+
+  for (const [arm, directive] of [
+    ["public", scriptSrc],
+    ["admin", adminScriptSrc],
+  ]) {
+    ok(
+      `the ${arm} script-src does NOT carry 'unsafe-inline'`,
+      !directive.includes("'unsafe-inline'"),
+      "adding it is the easy way to silence a violation report and it reduces the " +
+        "policy to decoration. 'strict-dynamic' makes browsers ignore it, so this " +
+        "change would look harmless and would not be.",
+    );
+    ok(
+      `the ${arm} script-src does NOT carry 'unsafe-eval'`,
+      !directive.includes("'unsafe-eval'"),
+      "nothing on this site evals, and adding it would be silencing a report rather than fixing it",
+    );
+  }
+  for (const [arm, csp] of [
+    ["public", publicCsp],
+    ["admin", adminCsp],
+  ]) {
+    ok(
+      `the ${arm} policy keeps object-src 'none' and base-uri 'none'`,
+      directiveIn(csp, "object-src") === "object-src 'none'" &&
+        directiveIn(csp, "base-uri") === "base-uri 'none'",
+      "a hash-and-strict-dynamic policy is strict only with both: a plugin object or an " +
+        "injected <base> moves where the trusted scripts load from",
+    );
+  }
 
   /*
    * ENFORCED, NOT REPORT-ONLY: a revert leaves the page working, the header present and the
@@ -253,9 +316,9 @@ export function run(code) {
     "the CSP is applied as ENFORCED, not Report-Only",
     /headers\.set\(\s*"Content-Security-Policy"/.test(code) &&
       !code.includes('"Content-Security-Policy-Report-Only"'),
-    "the header reverted to Report-Only. Ruled 2026-08-17: the existing nonce " +
-      "plus strict-dynamic policy is ENFORCED, keeping shared caching on the " +
-      "seven HTML routes and accepting the ten-minute nonce window.",
+    "the header reverted to Report-Only. Ruled 2026-08-17: the policy is ENFORCED, " +
+      "with shared caching kept on the public HTML routes, which since the loader " +
+      "hash carry no nonce at all.",
   );
   ok(
     "the CSP is applied on BOTH exits, like the static set, through applyDocumentHeaders",
