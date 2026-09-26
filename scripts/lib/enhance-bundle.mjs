@@ -16,7 +16,7 @@ import { gzipSync, constants } from "node:zlib";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const ENHANCE_DIR = join(root, "app", "enhance");
 
-/** The id `app/` imports the URLs and sizes from. `app/env.d.ts` declares its shape. */
+/** The id `app/` imports the URLs and sizes from. `app/virtual-enhance.d.ts` declares its shape. */
 export const ENHANCE_MODULE_ID = "virtual:enhance";
 const RESOLVED_ID = `\0${ENHANCE_MODULE_ID}`;
 
