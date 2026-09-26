@@ -121,10 +121,14 @@ export function refuseUnlessRan(result, output, why) {
   process.exit(1);
 }
 
+/** The build and the server this gate starts, without the two remote bindings (vite.config.ts). */
+const previewEnv = { ...process.env, PREVIEW_LOCAL: "1" };
+
 /** @param {string} script */
 const npmRun = (script) => {
   const r = spawnSync("npm", ["run", script], {
     cwd: root,
+    env: previewEnv,
     encoding: "utf8",
     shell: true,
     maxBuffer: 64 * 1024 * 1024,
@@ -173,6 +177,7 @@ export function startServer() {
   server = DRIVES_PREVIEW
     ? spawn("npx", ["vite", "preview", "--port", String(PORT), "--strictPort"], {
         cwd: root,
+        env: previewEnv,
         shell: true,
         stdio: ["ignore", "pipe", "pipe"],
         detached: false,

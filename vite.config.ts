@@ -27,12 +27,31 @@ import { enhancePlugin } from "./scripts/lib/enhance-bundle.mjs";
  */
 const BUILD_ID = Date.now().toString(36);
 
+/**
+ * Set only by `npm run preview:local` and a local `check:browser`, in their children's environment.
+ * AI_SEARCH and IMAGES have no local emulation, so the plugin would open a remote proxy session for
+ * them, and that needs a Cloudflare token. This build leaves them out instead, so wrangler.jsonc is
+ * never swapped. Ask is off in such a build (askAvailable reads the binding). `npm run deploy`
+ * rebuilds without the variable, so a build made this way never ships.
+ */
+const PREVIEW_LOCAL = process.env.PREVIEW_LOCAL === "1";
+
 export default defineConfig({
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
   },
   plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    cloudflare({
+      viteEnvironment: { name: "ssr" },
+      config: PREVIEW_LOCAL
+        ? (config) => {
+            // The customizer's result is merged, so a key can only be removed from the object itself.
+            const bindings: { ai_search?: unknown; images?: unknown } = config;
+            delete bindings.ai_search;
+            delete bindings.images;
+          }
+        : undefined,
+    }),
     reactRouter(),
     // The enhancement bundles, built beside the app and emitted into its client assets.
     enhancePlugin(),
