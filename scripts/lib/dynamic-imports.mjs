@@ -21,6 +21,20 @@ export function moduleKey(spec, from) {
 }
 
 /**
+ * True when the build erases the whole statement: `import type { X }`, `export type * from`. A
+ * braced list whose every specifier is `type X` is NOT erased: under this repo's
+ * verbatimModuleSyntax the oxc transform Vite runs keeps it as the side-effect import
+ * `import "x"` (measured 2026-09-25 with rolldown/utils transformSync), which still loads the
+ * module statically. `import type from "x"` is a default import named `type`.
+ *
+ * @param {string} clause the text between `import`/`export` and `from`
+ */
+function isTypeOnlyClause(clause) {
+  // Trimmed, so a bare `type` (the default import named type) has nothing after it and fails.
+  return /^type(?:\s+[\w${*]|\s*[{*])/.test(clause.trim());
+}
+
+/**
  * A dynamic import splits nothing when some module in the same graph imports it statically.
  * Files are `{ path, source }` with repo-relative paths.
  *
@@ -34,8 +48,13 @@ export function findIneffectiveDynamicImports(files) {
 
   for (const { path, source } of files) {
     const code = stripComments(source);
-    for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) {
-      const key = moduleKey(m[1], path);
+    // The clause is everything between the nearest `import`/`export` and `from`, so a statement
+    // before it on an unterminated line cannot lend it a type-only reading or take one away.
+    for (const m of code.matchAll(
+      /\b(?:import|export)\s+((?:(?!\b(?:import|export)\b)[^;"'`])*?)\bfrom\s*["']([^"']+)["']/g,
+    )) {
+      if (isTypeOnlyClause(m[1])) continue;
+      const key = moduleKey(m[2], path);
       if (!key) continue;
       if (!statics.has(key)) statics.set(key, []);
       /** @type {string[]} */ (statics.get(key)).push(path);

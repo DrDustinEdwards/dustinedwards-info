@@ -16,3 +16,10 @@
 .skip-link:focus {
   left: 0;
 }
+
+/* The brand ring, inset: the link is paper, not a brand fill, so the on-brand ring measured about
+   1.1:1 against it. Inset because the link sits at the viewport's corner. */
+.skip-link:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -4px;
+}

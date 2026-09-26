@@ -38,7 +38,8 @@ export function CompositesSection() {
           highlighted code carries its colors inline from the build, so what is measurable
           here is the block itself: mono type on the code surface, inside a run of body text.
         </p>
-        <pre>
+        {/* Focusable so a keyboard can scroll it (WCAG 2.1.1), and named so the stop says what it is. */}
+        <pre tabIndex={0} role="region" aria-label="Code sample">
           <code>
             {"export function headers() {\n  return new Headers(publicHtmlHeaders());\n}"}
           </code>

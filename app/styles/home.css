@@ -359,8 +359,8 @@
 }
 
 /* app/enhance/plate.ts sets .is-lit. */
-.plate-plaque[tabindex],
-.plate-key-entry[tabindex] {
+.plate-plaque[data-plate-live],
+.plate-key-entry[data-plate-live] {
   cursor: pointer;
 }
 
@@ -377,10 +377,6 @@
 .plate-leader.is-lit .plate-label,
 .plate-key-entry.is-lit .plate-key-num {
   font-weight: 700;
-}
-
-.plate-plaque:focus-visible {
-  outline: none;
 }
 
 

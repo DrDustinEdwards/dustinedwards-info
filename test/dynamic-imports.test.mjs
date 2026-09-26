@@ -58,6 +58,36 @@ test("every static importer of a defeated module is named", () => {
   assert.deepEqual(found[0].importers, ["app/one.tsx", "app/lib/two.ts"]);
 });
 
+test("an `import type` statement is erased and defeats nothing", () => {
+  // The shape that was reported: use-link-palette.ts reads a type from markdown-editor, which
+  // post-editor.tsx loads lazily.
+  const found = findIneffectiveDynamicImports([
+    { path: "app/a.ts", source: 'import type { LinkTarget } from "./editor";\nexport type * from "./editor";' },
+    { path: "app/b.tsx", source: 'const E = lazy(() => import("./editor"));' },
+  ]);
+  assert.deepEqual(found, []);
+});
+
+test("a braced list where every specifier is `type` still defeats the dynamic import", () => {
+  // Under verbatimModuleSyntax the oxc transform keeps this as `import "./editor"`, a static load.
+  const found = findIneffectiveDynamicImports([
+    { path: "app/a.ts", source: 'import {\n  type A,\n  type B,\n} from "./editor";' },
+    { path: "app/b.tsx", source: 'const E = import("./editor");' },
+  ]);
+  assert.equal(found.length, 1);
+  assert.deepEqual(found[0].importers, ["app/a.ts"]);
+});
+
+test("a mixed list with one value specifier still defeats the dynamic import", () => {
+  const found = findIneffectiveDynamicImports([
+    { path: "app/a.ts", source: 'import { type A, b } from "./editor";' },
+    { path: "app/c.ts", source: 'import type from "./editor";' },
+    { path: "app/b.tsx", source: 'const E = import("./editor");' },
+  ]);
+  assert.equal(found.length, 1);
+  assert.deepEqual(found[0].importers, ["app/a.ts", "app/c.ts"]);
+});
+
 test("a package or a static import named only in a comment defeats nothing", () => {
   const found = findIneffectiveDynamicImports([
     { path: "app/a.tsx", source: 'import { h } from "react";\nconst r = import("react");' },
