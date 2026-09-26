@@ -585,8 +585,8 @@ let watchdogMiss = "";
   if (watchdogMiss) console.log(`  MISSED: ${watchdogMiss}`);
 }
 
-/* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss; an
-   absent key, and only that, is a skip (a GitHub deploy run has no .dev.vars). */
+/* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss; a
+   keyless run on a GitHub runner, and only that, is a skip. A missing key locally is a miss. */
 announce("Point the uptime monitors at this deploy");
 
 let uptimeMiss = "";

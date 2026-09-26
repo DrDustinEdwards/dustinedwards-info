@@ -1,19 +1,32 @@
-// How ship reads uptime-ensure. An absent key is the one outcome that is a skip rather than a miss,
-// and it is recognised only by the exit code AND the line uptime-ensure prints for it, never by a
-// failure that merely looks like one.
+// How ship reads uptime-ensure. A ship on a GitHub runner, which holds no UptimeRobot key by
+// design, is the one outcome that is a skip rather than a miss. It is recognised only by the exit
+// code AND the line uptime-ensure prints for it, never by a failure that merely looks like one. A
+// missing key on any other machine is a lost credential, and stays a miss.
 
-/** uptime-ensure's exit code when UPTIMEROBOT_API_KEY is not in .dev.vars, and for nothing else. */
+/** uptime-ensure's exit code for a keyless GitHub-runner run, and for nothing else. */
 export const KEY_ABSENT_EXIT = 3;
 
 /** The line uptime-ensure prints with that exit code. */
-export const KEY_ABSENT_LINE = "uptime-ensure: UPTIMEROBOT_API_KEY is absent; no monitor was read or written.";
+export const KEY_ABSENT_LINE =
+  "uptime-ensure: GitHub runner without UPTIMEROBOT_API_KEY; no monitor was read or written.";
 
-/** What ship prints when the step is skipped: what was not done, and when it will be. */
+/** What ship prints when the step is skipped: the real cause, what was not done, and when it will be. */
 export const UPTIME_SKIP_NOTE =
-  "UPTIMEROBOT_API_KEY is not on this machine (no .dev.vars, as on a GitHub deploy run), so the " +
-  "external uptime monitors were NOT touched and keep pointing where they pointed before this " +
-  "deploy. They are reconciled at the domain move, by hand in UptimeRobot or by a local " +
-  "`npm run ship` on a machine that holds the key";
+  "this ship ran on a GitHub runner, which holds no UptimeRobot key by design, so the external " +
+  "uptime monitors were NOT touched and keep pointing where they pointed before this deploy. " +
+  "They are reconciled at the domain move, by hand in UptimeRobot or by a local `npm run ship` " +
+  "on the operator machine, which holds the key";
+
+/**
+ * Whether a missing key is the expected state rather than a lost credential: only on GitHub
+ * Actions, which sets GITHUB_ACTIONS=true on every runner.
+ *
+ * @param {Record<string, string | undefined>} env
+ * @returns {boolean}
+ */
+export function keylessRunIsExpected(env) {
+  return env.GITHUB_ACTIONS === "true";
+}
 
 /**
  * @typedef {{ state: "applied", changes: number }
