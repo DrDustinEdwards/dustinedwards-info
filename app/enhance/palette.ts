@@ -23,6 +23,7 @@ let dialog: HTMLDialogElement | null = null;
 let askAvailable = false;
 let askHandle: { cancel(): void } | null = null;
 let askTrigger: HTMLButtonElement | null = null;
+let askLoading = false;
 let askContainer: HTMLDivElement | null = null;
 let input: HTMLInputElement | null = null;
 let listbox: HTMLUListElement | null = null;
@@ -305,18 +306,27 @@ async function runAsk() {
   if (!askContainer || !input) return;
   const question = input.value.trim();
   if (!question) return;
+  // The trigger stays visible while the chunk loads, so a second click must not start a second billed answer.
+  if (askLoading) return;
   askHandle?.cancel();
-  if (askTrigger) askTrigger.hidden = true;
   let ask: typeof import("./ask").ask;
+  askLoading = true;
   try {
     ({ ask } = await import("./ask"));
   } catch {
-    // The chunk failed to load: restore the trigger so the reader can retry, and say so.
-    if (askTrigger) askTrigger.hidden = !askAvailable;
+    // The chunk failed to load: the trigger stays so the reader can retry, and the status says so.
     if (statusLine) statusLine.textContent = "Ask AI could not load. Try again.";
     return;
+  } finally {
+    askLoading = false;
   }
   askHandle = ask(askContainer, question);
+  /*
+   * The trigger hides only once focus is on the answer panel: hiding it while focused drops focus to
+   * <body>, which inside a modal dialog leaves the reader nowhere (WCAG 2.4.3).
+   */
+  askContainer.querySelector<HTMLElement>(".ask-panel")?.focus();
+  if (askTrigger) askTrigger.hidden = true;
 }
 
 function resetAsk() {

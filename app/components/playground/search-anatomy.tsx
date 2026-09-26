@@ -57,7 +57,8 @@ export function SearchAnatomyDemo({ anatomy, anatomyError, qRaw, carry }: Props)
             <code>search_identity</code>, {anatomy.explain.proseCount} from{" "}
             <code>search_prose</code>.
           </p>
-          <div className="playground-table-scroll">
+          {/* Focusable so a keyboard can scroll it (WCAG 2.1.1), and named so the stop says what it is. */}
+          <div className="playground-table-scroll" tabIndex={0} role="region" aria-label="Ranking table">
             <table className="playground-table">
               <caption>
                 Within each layer, ordering comes from bm25. Values from

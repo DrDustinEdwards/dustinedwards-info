@@ -51,6 +51,11 @@
   font-size: 0.9375rem;
 }
 
+/* Present but empty before a query, as a live region must be; it holds no space until it speaks. */
+.search-count:empty {
+  margin: 0;
+}
+
 .search-body {
   display: grid;
   gap: 2rem;

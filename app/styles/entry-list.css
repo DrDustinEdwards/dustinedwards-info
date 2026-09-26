@@ -124,4 +124,11 @@
   .entry-summary {
     font-size: 0.9375rem;
   }
+  /* At this width the tags wrap into rows 19.5px tall with no gap, under the 24px target (WCAG
+     2.5.8), so each tag's box carries the minimum. */
+  .entry-tags a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--control-min-dense);
+  }
 }
