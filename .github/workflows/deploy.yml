@@ -183,9 +183,12 @@ jobs:
       # script refuses five ways rather than patching partially; its header says
       # why each one is a named refusal.
       - name: Put the redacted values into the wrangler configs
+        # CLOUDFLARE_ACCOUNT_ID joined the script's list on 2026-08-29 (vars.CLOUDFLARE_ACCOUNT_ID)
+        # and this step never passed it, so every dispatch since refused here before building.
         env:
           D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
           KV_NAMESPACE_ID: ${{ secrets.KV_NAMESPACE_ID }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           ALERT_EMAIL: ${{ secrets.ALERT_EMAIL }}
         run: node scripts/apply-config-ids.mjs
 
