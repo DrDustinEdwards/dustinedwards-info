@@ -489,6 +489,25 @@ if (existsSync(SHIP)) {
     eq(`ship: ${name} reaches the final exit guard`, new RegExp(`\\b${name}\\b`).test(missTable), true);
   }
 
+  /* The uptime step: an absent key is a skip, decided in one tested function, and every other
+     outcome of uptime-ensure stays a miss. */
+  eq(
+    "uptime: ship decides the step through uptimeStepOutcome on uptime-ensure's code and output",
+    /uptimeStepOutcome\(\s*ensured\.code\s*,\s*ensured\.text\s*\)/.test(shipSource),
+    true,
+  );
+  eq(
+    "uptime: THE SKIP STAYS OUT OF THE MISSES TABLE, so an absent key does not end the run red",
+    /\buptimeSkip\b/.test(missTable),
+    false,
+  );
+  const skipRecordAt = shipSource.indexOf("if (uptimeSkip) console.log(");
+  eq(
+    "uptime: the skip note is repeated in the shipped record, before the exit guard",
+    skipRecordAt !== -1 && skipRecordAt > recordAt && skipRecordAt < exitAt,
+    true,
+  );
+
   eq(
     "media sync: the operator API exposes sync_media",
     /"sync_media"/.test(apiSource),
@@ -626,7 +645,7 @@ if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
 
 // Measured by running it, set for the lower environment: without a local database the three
 // assertions comparing the applied set to it do not run.
-const MINIMUM_CHECKS = 115;
+const MINIMUM_CHECKS = 118;
 tally.floor("check:migrations", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {
