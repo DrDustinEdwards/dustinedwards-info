@@ -5,6 +5,7 @@ import { writeFileSync } from "node:fs";
 
 import { SITE_ORIGIN } from "../app/lib/seo.ts";
 import { readDevVar } from "./lib/dev-vars.mjs";
+import { KEY_ABSENT_EXIT, KEY_ABSENT_LINE } from "./lib/uptime-step.mjs";
 import {
   COMPARED_FIELDS,
   MANIFEST_PATH,
@@ -26,7 +27,9 @@ if (!key) {
       "It is an operator credential for this machine rather than a wrangler secret, because\n" +
       "no deployed code reads it. Add the line to .dev.vars, which is gitignored, and rerun.",
   );
-  process.exit(1);
+  // Its own code and line: ship records this one outcome as a skip, and every other failure as a miss.
+  console.error(KEY_ABSENT_LINE);
+  process.exit(KEY_ABSENT_EXIT);
 }
 
 const contactsRes = await call(key, "/alert-contacts");

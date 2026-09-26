@@ -31,6 +31,7 @@ import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import { convergeAsk, convergeMedia } from "./lib/operator-sync.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
 import { missReport } from "./lib/ship-misses.mjs";
+import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
 import { teeSelfToLog } from "./lib/ship-transcript.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -584,30 +585,24 @@ let watchdogMiss = "";
   if (watchdogMiss) console.log(`  MISSED: ${watchdogMiss}`);
 }
 
-/* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss. */
+/* After readiness, like the watchdog. URLs derive from `SITE_ORIGIN`. A failure is a miss; an
+   absent key, and only that, is a skip (a GitHub deploy run has no .dev.vars). */
 announce("Point the uptime monitors at this deploy");
 
 let uptimeMiss = "";
+let uptimeSkip = "";
 
 {
   const ensured = run("node", ["scripts/uptime-ensure.mjs"], { capture: true });
-  if (ensured.code !== 0) {
-    uptimeMiss =
-      "uptime-ensure did not complete, so the external monitors may still point at the " +
-      "previous hostname or may not exist. The deploy stands and is healthy; what is " +
-      "unproven is whether anything outside Cloudflare is watching it";
+  const outcome = uptimeStepOutcome(ensured.code, ensured.text);
+  if (outcome.state === "skipped") {
+    uptimeSkip = outcome.note;
+    console.log(`  SKIPPED: ${uptimeSkip}`);
+  } else if (outcome.state === "missed") {
+    uptimeMiss = outcome.miss;
     console.log(`  MISSED: ${uptimeMiss}`);
   } else {
-    /* The change count is read, never inferred from exit 0. */
-    const applied = ensured.text.match(/(\d+) change\(s\) applied/);
-    if (!applied) {
-      uptimeMiss =
-        "uptime-ensure exited 0 without reporting a change count, so nothing proves it " +
-        "reconciled the monitors";
-      console.log(`  MISSED: ${uptimeMiss}`);
-    } else {
-      console.log(`  monitors reconciled, ${applied[1]} change(s)`);
-    }
+    console.log(`  monitors reconciled, ${outcome.changes} change(s)`);
   }
 }
 
@@ -773,6 +768,8 @@ announce("Shipped");
 console.log(`  commit       ${sha}`);
 console.log(`  version      ${version}`);
 console.log(`  search index ${docs} records, identity and prose agree`);
+/* A skip is not a miss, so it stays out of the misses table and the exit code, but is repeated here. */
+if (uptimeSkip) console.log(`\n  SKIPPED, uptime monitors: ${uptimeSkip}.`);
 console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:all --remote.\n`);
 
 /* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
