@@ -29,7 +29,6 @@
   .post-actions,
   .post-nav,
   .tag-chips,
-  .year-archive,
   .code-copy,
   .code-lang,
   .selection-link,
@@ -43,8 +42,7 @@
   }
 
   .post,
-  .further-reading,
-  .related-posts {
+  .further-reading {
     max-width: none;
   }
 
