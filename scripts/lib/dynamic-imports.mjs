@@ -21,6 +21,26 @@ export function moduleKey(spec, from) {
 }
 
 /**
+ * True when TypeScript erases the whole statement: `import type { X }`, `export type * from`, or a
+ * braced list whose EVERY specifier is `type X`. One value specifier keeps the import, so a mixed
+ * list still defeats a dynamic import. `import type from "x"` is a default import named `type`.
+ *
+ * @param {string} clause the text between `import`/`export` and `from`
+ */
+function isTypeOnlyClause(clause) {
+  const text = clause.trim();
+  // Trimmed, so a bare `type` (the default import named type) has nothing after it and fails both.
+  if (/^type(?:\s+[\w${*]|\s*[{*])/.test(text)) return true;
+  const braced = /^\{([^}]*)\}$/.exec(text);
+  if (!braced) return false;
+  const specifiers = braced[1]
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return specifiers.length > 0 && specifiers.every((s) => /^type\s+(?!as\b)[\w$]/.test(s));
+}
+
+/**
  * A dynamic import splits nothing when some module in the same graph imports it statically.
  * Files are `{ path, source }` with repo-relative paths.
  *
@@ -34,8 +54,13 @@ export function findIneffectiveDynamicImports(files) {
 
   for (const { path, source } of files) {
     const code = stripComments(source);
-    for (const m of code.matchAll(/\bfrom\s*["']([^"']+)["']/g)) {
-      const key = moduleKey(m[1], path);
+    // The clause is everything between the nearest `import`/`export` and `from`, so a statement
+    // before it on an unterminated line cannot lend it a type-only reading or take one away.
+    for (const m of code.matchAll(
+      /\b(?:import|export)\s+((?:(?!\b(?:import|export)\b)[^;"'`])*?)\bfrom\s*["']([^"']+)["']/g,
+    )) {
+      if (isTypeOnlyClause(m[1])) continue;
+      const key = moduleKey(m[2], path);
       if (!key) continue;
       if (!statics.has(key)) statics.set(key, []);
       /** @type {string[]} */ (statics.get(key)).push(path);
