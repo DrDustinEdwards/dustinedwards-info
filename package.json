@@ -39,6 +39,7 @@
     "build:assets": "node scripts/build-assets.mjs",
     "build:template-refs": "node scripts/build-template-refs.mjs",
     "build:stack": "node scripts/build-stack.mjs",
+    "build:preview": "node scripts/build-preview.mjs",
     "design:inputs": "node .design-sync/build-inputs.mjs",
     "design:resync": "node scripts/ds-resync.mjs",
     "check:backup": "node scripts/check-backup.mjs",
