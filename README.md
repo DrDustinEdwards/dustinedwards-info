@@ -59,6 +59,14 @@ npm install          # postinstall copies wrangler.jsonc.example into place
 npm run dev
 ```
 
+`npm run preview:local` builds and serves the production build on
+`http://localhost:4173` with no Cloudflare token. That build leaves out AI Search
+and Images, which have no local emulation, so Ask is off in it; `wrangler.jsonc`
+is not touched. Its processes are killed when it exits, and a run that crashed
+is cleaned up by the next one. A fresh worktree needs its local D1 first:
+`npx wrangler d1 migrations apply dustinedwards --local`, then
+`npm run sync:content -- --local`.
+
 `wrangler.jsonc` is **gitignored** and `wrangler.jsonc.example` is tracked. That
 is a portfolio-wide rule rather than this repo's choice: real resource ids stay
 out of git. The two files must declare the same binding surface, so **adding a
