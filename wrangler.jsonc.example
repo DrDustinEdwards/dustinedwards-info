@@ -238,8 +238,11 @@
 	//
 	// The REAL id stays in the real config and nowhere tracked; nothing checks
 	// that any more, so do not paste it back.
+	// PREVIEW is empty here and "1" in `previews.vars`, so production never
+	// carries it set. workers/app.ts and routes/robots.ts read it for noindex.
 	"vars": {
-		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000"
+		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000",
+		"PREVIEW": ""
 	},
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:
@@ -330,5 +333,69 @@
 			"tag": "v1",
 			"new_sqlite_classes": ["AskBudget"]
 		}
-	]
+	],
+	// WORKER PREVIEWS (job_c5a6f3e8ce6d). Cloudflare's Git integration builds each
+	// PR branch with `npm run build:preview` and publishes it with `npx wrangler
+	// preview`; nothing here is read by a production deploy. Previews inherit NO
+	// top-level binding, so every binding a page needs is restated below, and each
+	// one points at a preview-only resource. Nothing a preview does can reach
+	// production data.
+	//
+	// Deliberately absent: AI_SEARCH (Ask renders off and /search is pure D1), the
+	// queue consumer (it would compete with production for the production queue),
+	// every secret (so admin and sign-in do not work), and the crons.
+	//
+	// The two ids are placeholders that scripts/build-preview.mjs fills by looking
+	// the resources up BY NAME, so no id is pasted anywhere. The R2 buckets and the
+	// Analytics Engine dataset are named, which is all they need. ASK_BUDGET gets a
+	// fresh Durable Object namespace per preview automatically; it is restated only
+	// because the code reads it from env.
+	"previews": {
+		"vars": {
+			"PREVIEW": "1"
+		},
+		"d1_databases": [
+			{
+				"binding": "DB",
+				"database_name": "dustinedwards-preview",
+				"database_id": "set-by-build-preview",
+				"migrations_dir": "drizzle"
+			}
+		],
+		"kv_namespaces": [
+			{
+				"binding": "APP_KV",
+				"id": "set-by-build-preview"
+			}
+		],
+		"r2_buckets": [
+			{
+				"binding": "MEDIA",
+				"bucket_name": "dustinedwards-preview-media"
+			},
+			{
+				"binding": "OG",
+				"bucket_name": "dustinedwards-preview-og"
+			},
+			{
+				"binding": "MEDIA_BACKUP",
+				"bucket_name": "dustinedwards-preview-media-backup"
+			}
+		],
+		"images": { "binding": "IMAGES" },
+		"analytics_engine_datasets": [
+			{
+				"binding": "ANALYTICS",
+				"dataset": "dustinedwards_preview_traffic"
+			}
+		],
+		"durable_objects": {
+			"bindings": [
+				{
+					"name": "ASK_BUDGET",
+					"class_name": "AskBudget"
+				}
+			]
+		}
+	}
 }
