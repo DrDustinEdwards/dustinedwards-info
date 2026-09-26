@@ -1,10 +1,11 @@
-/* A `?url` import is not a fetch: the page puts the URL on an attribute and only a gesture
+/* A bundle's URL is not a fetch: the page puts the URL on an attribute and only a gesture
  * fetches it, so counting it would charge every route for the search dialog. */
 
 import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  ENHANCE_ASSET_PREFIX,
   fontsIn,
   importsOf,
   reachableAssets,
@@ -16,11 +17,11 @@ const APP = "/app";
 const tree = (/** @type {Record<string, string>} */ files) => (path) =>
   Object.hasOwn(files, path.split("\\").join("/")) ? files[path.split("\\").join("/")] : null;
 
-test("a ?url import of an enhancement bundle does NOT count as a fetch", () => {
+test("an enhancement bundle's URL on an attribute does NOT count as a fetch", () => {
   const source = `
-    import paletteUrl from "~/enhance/dist/palette.js?url";
+    import { ENHANCE_URLS } from "~/components/enhance";
     export function Trigger() {
-      return <a data-palette={paletteUrl} />;
+      return <a data-palette={ENHANCE_URLS.palette} />;
     }
   `;
   const { assets } = importsOf(source, "/app/components/bar-search-submit.tsx", APP);
@@ -32,12 +33,13 @@ test("<Enhance module> counts its bundle, and the registry's imports count nothi
     import { Enhance } from "~/components/enhance";
     export function Post() { return <Enhance module="blog" />; }
   `;
-  assert.deepEqual(importsOf(page, "/app/routes/post.tsx", APP).assets, ["~/enhance/dist/blog.js"]);
+  assert.deepEqual(importsOf(page, "/app/routes/post.tsx", APP).assets, [
+    `${ENHANCE_ASSET_PREFIX}blog.js`,
+  ]);
 
   const registry = `
-    import blogUrl from "~/enhance/dist/blog.js?url";
-    import plateUrl from "~/enhance/dist/plate.js?url";
-    export const ENHANCE_URLS = { blog: blogUrl, plate: plateUrl };
+    import { ENHANCE_URLS } from "virtual:enhance";
+    export { ENHANCE_URLS };
   `;
   assert.deepEqual(
     importsOf(registry, "/app/components/enhance.tsx", APP).assets,
@@ -79,7 +81,7 @@ test("the walk follows ~/ and relative imports and is cycle-safe", () => {
   });
 
   const { assets, visited } = reachableAssets("/app/routes/post.tsx", APP, read);
-  assert.deepEqual([...assets], ["~/enhance/dist/blog.js"]);
+  assert.deepEqual([...assets], [`${ENHANCE_ASSET_PREFIX}blog.js`]);
   assert.equal(visited.size, 3, "every module in the graph is expanded exactly once");
 });
 

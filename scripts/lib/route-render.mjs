@@ -9,6 +9,8 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { pathToFileURL } from "node:url";
 
+import { bundleEnhancements, enhanceModuleSource } from "./enhance-bundle.mjs";
+
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const URL_ASSET = "asset-url-stubbed-by-route-render";
@@ -60,11 +62,22 @@ export async function bundleRoutes(entries) {
         contents: "module.exports = new Proxy({}, { get: () => () => {} });",
         loader: "js",
       }));
-      // esbuild reads Vite's `?url` as part of the filename, and several targets do not exist before
-      // the enhancement build, so it resolves to a sentinel: no gate here may assert on an enhancement URL.
+      // esbuild reads Vite's `?url` as part of the filename, and a generated target may not exist yet,
+      // so it resolves to a sentinel: no gate here may assert on an asset URL.
       b.onResolve({ filter: /\?url$/ }, (args) => ({ path: args.path, namespace: "urlasset" }));
       b.onLoad({ filter: /.*/, namespace: "urlasset" }, () => ({
         contents: `module.exports = ${JSON.stringify(URL_ASSET)};`,
+        loader: "js",
+      }));
+      // The app build's own module source, from the same bundler, so the "kB gzipped" line is real.
+      // Every URL is the same sentinel as above, empty file name under a sentinel base: the HTML
+      // ceilings were measured over it, and a hash would move them each time a bundle changed.
+      b.onResolve({ filter: /^virtual:enhance$/ }, (args) => ({ path: args.path, namespace: "enhance" }));
+      b.onLoad({ filter: /.*/, namespace: "enhance" }, async () => ({
+        contents: enhanceModuleSource(
+          (await bundleEnhancements()).map((bundle) => ({ ...bundle, fileName: "" })),
+          URL_ASSET,
+        ),
         loader: "js",
       }));
       b.onResolve({ filter: /^~\// }, (args) => ({ path: resolveAppPath(args.path) }));

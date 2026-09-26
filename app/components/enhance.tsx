@@ -1,33 +1,16 @@
 import { useRouteLoaderData } from "react-router";
+import { ENHANCE_URLS } from "virtual:enhance";
 
-import askUrl from "~/enhance/dist/ask.js?url";
-import blogUrl from "~/enhance/dist/blog.js?url";
-import headerUrl from "~/enhance/dist/header.js?url";
-import loginUrl from "~/enhance/dist/login.js?url";
-import paletteUrl from "~/enhance/dist/palette.js?url";
-import plateUrl from "~/enhance/dist/plate.js?url";
-import podcastUrl from "~/enhance/dist/podcast.js?url";
-import searchUrl from "~/enhance/dist/search.js?url";
-import themeUrl from "~/enhance/dist/theme.js?url";
 import type { loader as rootLoader } from "~/root";
 
 /*
  * The one way a public piece becomes interactive: <Enhance module="plate" /> where the markup it
- * enhances is rendered. The bundles must be prebuilt, since `?url` serves a file verbatim and
- * pointed at the `.ts` source would serve raw TypeScript. check:page-payload reads
- * `<Enhance module="…"` in a route's source to know which bundles that route serves.
+ * enhances is rendered. The URLs come from the app build, which bundles each `app/enhance/*.ts`
+ * in isolation and emits it as a self-contained asset (scripts/lib/enhance-bundle.mjs).
+ * check:page-payload reads `<Enhance module="…"` in a route's source to know which bundles that
+ * route serves.
  */
-export const ENHANCE_URLS = {
-  ask: askUrl,
-  blog: blogUrl,
-  header: headerUrl,
-  login: loginUrl,
-  palette: paletteUrl,
-  plate: plateUrl,
-  podcast: podcastUrl,
-  search: searchUrl,
-  theme: themeUrl,
-} as const;
+export { ENHANCE_URLS };
 
 export type EnhanceModule = keyof typeof ENHANCE_URLS;
 

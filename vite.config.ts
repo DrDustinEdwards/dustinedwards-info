@@ -2,6 +2,8 @@ import { reactRouter } from "@react-router/dev/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
+import { enhancePlugin } from "./scripts/lib/enhance-bundle.mjs";
+
 /**
  * A value that is DIFFERENT FOR EVERY BUILD, and its only job is to namespace
  * the Worker's own HTML cache.
@@ -32,23 +34,21 @@ export default defineConfig({
   plugins: [
     cloudflare({ viteEnvironment: { name: "ssr" } }),
     reactRouter(),
+    // The enhancement bundles, built beside the app and emitted into its client assets.
+    enhancePlugin(),
   ],
   resolve: {
     tsconfigPaths: true,
   },
   build: {
     /*
-     * The enhancement bundles are ALWAYS emitted as real assets, never inlined.
-     * Two of the four sit under the default 4096-byte inline limit, and an
-     * inlined bundle becomes a data: URI in a <script src>, which works only
-     * because the element carries a nonce, bloats every page it rides on, and
-     * is invisible to check:page-payload's byte-equality pass against
-     * app/enhance/dist/.
+     * **A WEBFONT IS NEVER INLINED, and this is a CSP refusal rather than a
+     * preference.** The enhancement bundles never reach this rule: the plugin
+     * above emits them as named assets, which no inline limit applies to.
      *
-     * **AND NEITHER IS A WEBFONT, and this one is a CSP refusal rather than a
-     * preference.** MEASURED 2026-09-06 on the first build after the math
-     * stylesheet landed: `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under the
-     * same 4096-byte limit, and Vite inlined it as a base64 `data:` URI inside
+     * MEASURED 2026-09-06 on the first build after the math stylesheet landed:
+     * `KaTeX_Size3-Regular.woff2` is 3,624 bytes, under the default 4096-byte
+     * inline limit, and Vite inlined it as a base64 `data:` URI inside
      * the stylesheet. `font-src` is `'self'` and does NOT carry `data:` (only
      * `img-src` does), so the browser would have refused that one face while
      * fetching the other nineteen, and the symptom is a big delimiter rendered
@@ -63,7 +63,6 @@ export default defineConfig({
      */
     assetsInlineLimit: (filePath) => {
       const path = filePath.split("\\").join("/");
-      if (path.includes("app/enhance/dist/")) return false;
       if (path.endsWith(".woff2")) return false;
       return undefined;
     },
