@@ -17,12 +17,6 @@
     // list has to be handed to it at build time.
     "content/generated/assets.json"
   ],
-  // The gitignored enhancement bundles under app/enhance/dist/ are minified
-  // build product; with checkJs on, tsc would grade the minifier's output.
-  // Their source is app/enhance/*.ts, which stays included above. The ?url
-  // imports of the bundles resolve through env.d.ts's `*?url` declaration, so
-  // nothing type-level needs the files themselves.
-  "exclude": ["app/enhance/dist"],
   "compilerOptions": {
     "composite": true,
     "strict": true,

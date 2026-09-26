@@ -137,11 +137,7 @@ export function build() {
   /* Builds rather than trusting build/, which may be stale. */
   if (DRIVES_PREVIEW) {
     console.log("  building ...");
-    // Enhancement bundles first: the app build imports them, and this gate runs alone.
-    const bundled = npmRun("build:enhance");
-    refuseUnlessRan(bundled, bundled.output, [
-      "check:browser failed. build:enhance did not succeed, so the build below cannot.",
-    ]);
+    // The app build emits the enhancement bundles itself.
     const built = npmRun("build");
     refuseUnlessRan(built, built.output, [
       "check:browser failed. the build did not succeed, so there is nothing to lay out.",
