@@ -118,6 +118,27 @@
   margin: 0;
 }
 
+/*
+ * Where anchor positioning exists, blog.ts shows the preview as a manual popover: in the top layer,
+ * so no z-index, and held under its reference (flipped above it near the viewport's bottom) as the
+ * page scrolls. Otherwise it keeps the absolute placement above.
+ */
+/* Only the reference being previewed names the preview, so exactly one element is the anchor. */
+.prose a[data-footnote-ref][aria-describedby~="footnote-preview"] {
+  anchor-name: --footnote-ref;
+}
+
+.footnote-preview:popover-open {
+  position: fixed;
+  position-anchor: --footnote-ref;
+  inset: auto;
+  top: calc(anchor(bottom) + 8px);
+  left: max(8px, calc(anchor(left) - 20px));
+  margin: 0;
+  color: var(--text);
+  position-try-fallbacks: flip-block;
+}
+
 .prose img.zoomable {
   cursor: zoom-in;
 }
