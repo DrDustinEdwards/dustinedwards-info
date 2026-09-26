@@ -184,7 +184,8 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
 
     // Absolute, because `Reporting-Endpoints` ignores a non-secure or relative endpoint.
     const reportTo = `${CSP_ENDPOINT_NAME}="${url.origin}${CSP_REPORT_PATH}"`;
-    const csp = await contentSecurityPolicy(adminNonce);
+    // The same pathname React Router reads off this request, so the hashed rules are the rendered ones.
+    const csp = await contentSecurityPolicy(url.pathname, adminNonce);
 
 
     const document = { timings, reportTo, csp };

@@ -43,7 +43,7 @@ runHealth();
 gatewayAndPublicRoutes.run(code);
 entrypointCache.run();
 /* Measured by running this gate, never summed. */
-const MINIMUM_CHECKS = 247;
+const MINIMUM_CHECKS = 264;
 tally.floor("check:headers", "checks", MINIMUM_CHECKS);
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);

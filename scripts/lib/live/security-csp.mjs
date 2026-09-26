@@ -2,7 +2,8 @@
 // public pages, a per-render nonce on the admin plane.
 
 import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
-import { enhanceLoaderHash } from "../../../workers/csp.mjs";
+import { buildSpeculationRules } from "../../../app/lib/speculation.mjs";
+import { enhanceLoaderHash, speculationRulesHash } from "../../../workers/csp.mjs";
 import { declaredSecurityHeaders } from "../header-constants.mjs";
 import { check, get } from "./client.mjs";
 
@@ -96,10 +97,13 @@ export async function run() {
     }
 
     /*
-     * PUBLIC: exactly the loader's hash and no nonce, on a render and on a cached copy alike, and the
-     * page's one executable inline script is the loader, byte for byte.
+     * PUBLIC: exactly the loader's hash and the page's rules hash and no nonce, on a render and on a
+     * cached copy alike; the one executable inline script is the loader, and the rules are the
+     * builder's text for the path, byte for byte. Both probes are of `/`.
      */
     const loaderSource = `'${await enhanceLoaderHash()}'`;
+    const rulesSource = `'${await speculationRulesHash("/")}'`;
+    const rulesText = buildSpeculationRules({ pathname: "/" });
     /** @param {string} label @param {{ res: Response, text: string }} probe */
     const assertPublic = (label, { res, text }) => {
       const policy = res.headers.get(ENFORCED) ?? "";
@@ -111,10 +115,19 @@ export async function run() {
           `reader of that copy would share the nonce.`,
       );
       check(
-        `csp (${label}): the public policy names exactly one hash, the loader's`,
-        hashes.length === 1 && hashes[0] === loaderSource,
-        `hashes ${JSON.stringify(hashes)}, expected [${loaderSource}]. The deployed loader and ` +
-          `this checkout disagree, or a second inline script was allowed.`,
+        `csp (${label}): the public policy names exactly the loader's hash and the page's rules hash`,
+        JSON.stringify(hashes) === JSON.stringify([loaderSource, rulesSource]),
+        `hashes ${JSON.stringify(hashes)}, expected [${loaderSource}, ${rulesSource}]. The ` +
+          `deployed code and this checkout disagree, or another inline script was allowed.`,
+      );
+      const rules = [...text.matchAll(/<script type="speculationrules">([\s\S]*?)<\/script>/g)].map(
+        (m) => m[1],
+      );
+      check(
+        `csp (${label}): the one speculationrules block is buildSpeculationRules("/"), byte for byte`,
+        rules.length === 1 && rules[0] === rulesText,
+        `${rules.length} block(s). Different text hashes differently, and Chrome refuses the ` +
+          `block silently.`,
       );
       check(
         `csp (${label}): the document carries no nonce attribute`,

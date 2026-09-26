@@ -132,7 +132,7 @@ describe("the cache-header rule: the platform caches silence", () => {
      * The page's one inline script is allowed by the loader's hash instead. */
     const policy = first.headers.get("content-security-policy") ?? "";
     expect(policy).not.toContain("nonce-");
-    expect(policy).toContain(`script-src '${await enhanceLoaderHash()}' 'strict-dynamic'`);
+    expect(policy).toContain(`script-src '${await enhanceLoaderHash()}' 'sha256-`);
 
     /* Nothing per-request is left in a public policy, so two renders agree byte for byte. The
      * admin nonce, which does vary, is test/worker/ssr-nonce.test.ts's. */

@@ -118,7 +118,7 @@ test("the chosen episode is the latest or the featured one, and a featured episo
 
 test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {
   for (const adminNonce of [undefined, "n"]) {
-    const media = (await contentSecurityPolicy(adminNonce))
+    const media = (await contentSecurityPolicy("/", adminNonce))
       .split("; ")
       .find((d) => d.startsWith("media-src "));
     assert.ok(media, "no media-src directive");

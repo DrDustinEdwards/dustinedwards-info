@@ -2,9 +2,10 @@ import { useLocation } from "react-router";
 
 import { buildSpeculationRules } from "~/lib/speculation.mjs";
 
-// No nonce: the rules vary by page, so they have no build-time hash, and `script-src` admits them
-// through 'inline-speculation-rules' instead (workers/csp.mjs). Without that keyword the block is
-// refused silently. JSON-LD is not gated by `script-src` at all.
+// No nonce: `script-src` admits the block by the hash of these exact rules, which the Worker
+// computes per response from the request's pathname with the same builder (workers/csp.mjs). So
+// the pathname here must stay `useLocation().pathname`, and the text must stay raw. A refused block
+// fails silently. JSON-LD is not gated by `script-src` at all.
 // Chrome will not prerender with CDP attached, so no gate can assert what activation did.
 export function SiteSpeculation() {
   const { pathname } = useLocation();

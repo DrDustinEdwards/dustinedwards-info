@@ -49,15 +49,30 @@ export function run() {
   );
 
   /*
-   * THE SPECULATION BLOCK, and there is exactly ONE: its rules vary by page, so it has no hash and
-   * is admitted by 'inline-speculation-rules'. A nonce on it would be a public nonce.
+   * THE SPECULATION BLOCK, and there is exactly ONE: its rules vary by page, so the Worker hashes
+   * them per response from the request's pathname. The two sides must build from the same input.
    */
   const siteSpeculation = source("app", "components", "site-speculation.tsx");
   ok(
     "SiteSpeculation renders a speculationrules script with no nonce",
     /type="speculationrules"/.test(siteSpeculation) && !/nonce/.test(siteSpeculation),
     "a nonce on a public page is served to every reader of the cached copy; the block is " +
-      "admitted by 'inline-speculation-rules' instead",
+      "admitted by the hash of its rules instead",
+  );
+  ok(
+    "SiteSpeculation renders buildSpeculationRules of useLocation().pathname, raw",
+    /const\s*\{\s*pathname\s*\}\s*=\s*useLocation\(\)/.test(siteSpeculation) &&
+      /buildSpeculationRules\(\s*\{\s*pathname\s*\}\s*\)/.test(siteSpeculation) &&
+      /dangerouslySetInnerHTML=\{\{\s*__html:\s*rules\s*\}\}/.test(siteSpeculation),
+    "the Worker hashes buildSpeculationRules of the request pathname; any other input or an " +
+      "escaped rendering makes the rendered text differ from the hashed text",
+  );
+  ok(
+    "workers/app.ts builds the policy from the request URL's pathname",
+    /contentSecurityPolicy\(\s*url\.pathname\s*,\s*adminNonce\s*\)/.test(app) &&
+      /const\s+url\s*=\s*new\s+URL\(\s*request\.url\s*\)/.test(app),
+    "React Router's location is the request URL's pathname; a normalized or rewritten one " +
+      "hashes rules the page did not render",
   );
   ok(
     "SiteHeader renders SiteSpeculation, which is what puts it on every public page",

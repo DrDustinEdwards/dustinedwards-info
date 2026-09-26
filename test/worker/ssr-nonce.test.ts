@@ -4,6 +4,7 @@ import { Outlet } from "react-router";
 import { expect, it, vi } from "vitest";
 
 import worker from "../../workers/app";
+import { speculationRulesHash } from "../../workers/csp.mjs";
 
 /*
  * An admin document route whose one Suspense boundary resolves after the shell has flushed, so
@@ -70,6 +71,10 @@ it("stamps the admin CSP header's nonce on every inline script, the late boundar
 
   const nonce = nonceOf(response);
   expect(nonce, "the admin response carries no script nonce in its CSP").toBeTruthy();
+  /* The admin error page renders the site header, whose rules carry no nonce either. */
+  expect(response.headers.get("content-security-policy")).toContain(
+    `'${await speculationRulesHash("/admin")}'`,
+  );
 
   expect(html).toContain('id="late"');
   const scripts = [...html.matchAll(/<script\b[^>]*>/g)].map((m) => m[0]);

@@ -6,7 +6,16 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
-import { contentSecurityPolicy, enhanceLoaderHash, isAdminPath } from "../../../workers/csp.mjs";
+import { buildSpeculationRules } from "../../../app/lib/speculation.mjs";
+import {
+  contentSecurityPolicy,
+  enhanceLoaderHash,
+  isAdminPath,
+  speculationRulesHash,
+} from "../../../workers/csp.mjs";
+
+/** @param {string} text */
+const nodeHash = (text) => "sha256-" + createHash("sha256").update(text, "utf8").digest("base64");
 import { UNPOLICED_TYPES, isUnpolicedType } from "../../../workers/feed-types.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
@@ -23,8 +32,10 @@ export async function run(code) {
 
   /* The policy is called, not parsed: a regex sees both branches exist, not which one a request gets. */
   const NONCE = "gate-fixture-nonce-not-a-real-one";
-  const publicCsp = await contentSecurityPolicy(undefined);
-  const adminCsp = await contentSecurityPolicy(NONCE);
+  /* One pathname for both arms, so they can differ only by the nonce. */
+  const PATH = "/";
+  const publicCsp = await contentSecurityPolicy(PATH, undefined);
+  const adminCsp = await contentSecurityPolicy(PATH, NONCE);
 
   /** @param {string} csp */
   const directivesOf = (csp) => csp.split("; ").filter(Boolean);
@@ -219,8 +230,7 @@ export async function run(code) {
    * THE LOADER HASH, recomputed here with node:crypto from the constant root.tsx renders, so the
    * policy's hash and the page's script are held to one text by a second implementation.
    */
-  const expectedHash =
-    "sha256-" + createHash("sha256").update(ENHANCE_LOADER, "utf8").digest("base64");
+  const expectedHash = nodeHash(ENHANCE_LOADER);
   const computedHash = await enhanceLoaderHash();
   ok(
     "the loader hash is the sha256 of ENHANCE_LOADER in app/lib/enhance-loader.mjs",
@@ -243,7 +253,35 @@ export async function run(code) {
   /** @param {string} directive */
   const sourcesOf = (directive) => directive.split(" ").slice(1);
 
-  /* PUBLIC: no nonce at all, since a cached page would share it, and exactly this one hash. */
+  /*
+   * THE SPECULATION RULES HASH, per pathname: the rules exclude the page itself, so each path has
+   * its own text. Recomputed with node:crypto from the builder SiteSpeculation renders with.
+   */
+  /** @type {string[]} */
+  const ruleHashes = [];
+  for (const path of ["/", "/blog", "/blog/some-post", "/admin", "/no-such-page", "/blog/", "/a%20b"]) {
+    const got = await speculationRulesHash(path);
+    ruleHashes.push(got);
+    ok(
+      `the speculation rules hash for ${path} is the sha256 of buildSpeculationRules for it`,
+      got === nodeHash(buildSpeculationRules({ pathname: path })),
+      `speculationRulesHash(${JSON.stringify(path)}) returned ${JSON.stringify(got)}. The ` +
+        "block is then refused silently and the page speculates nothing.",
+    );
+    ok(
+      `the rules for ${path} never contain \`<\`, so React renders them raw`,
+      !buildSpeculationRules({ pathname: path }).includes("<"),
+      "a `<` in the rules can end the script element, and the hashed text is then not the rendered text",
+    );
+  }
+  ok(
+    "the rules hash differs by pathname, so it is taken from the request, not a constant",
+    new Set(ruleHashes).size === ruleHashes.length,
+    `hashes ${JSON.stringify(ruleHashes)}`,
+  );
+  const expectedRules = nodeHash(buildSpeculationRules({ pathname: PATH }));
+
+  /* PUBLIC: no nonce at all, since a cached page would share it, and exactly these two hashes. */
   ok(
     "the PUBLIC policy carries no nonce source anywhere",
     !publicCsp.includes("'nonce-"),
@@ -253,13 +291,14 @@ export async function run(code) {
       "every reader shares for the cache lifetime, which is what the loader hash replaced.",
   );
   ok(
-    "the PUBLIC script-src is exactly the loader hash, 'strict-dynamic' and 'inline-speculation-rules'",
+    "the PUBLIC script-src is exactly the loader hash, the page's rules hash and 'strict-dynamic'",
     JSON.stringify(sourcesOf(scriptSrc)) ===
-      JSON.stringify([`'${expectedHash}'`, "'strict-dynamic'", "'inline-speculation-rules'"]),
+      JSON.stringify([`'${expectedHash}'`, `'${expectedRules}'`, "'strict-dynamic'"]),
     "public script-src is " +
       JSON.stringify(scriptSrc) +
-      ". A second hash is a second inline script nobody reviewed; a missing one refuses the " +
-      "loader; without 'inline-speculation-rules' the header's rules are refused silently.",
+      ". A third hash is an inline script nobody reviewed; a missing loader hash refuses every " +
+      "enhancement; a missing rules hash refuses the speculation block silently. " +
+      "'inline-speculation-rules' is not a substitute: Chrome and WebKit refuse the block with it.",
   );
 
   /* ADMIN: the same sources plus this render's nonce, which <Scripts> and the sidebar script need. */

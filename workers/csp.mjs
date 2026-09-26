@@ -2,6 +2,7 @@
 
 import { ENHANCE_LOADER } from "../app/lib/enhance-loader.mjs";
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
+import { buildSpeculationRules } from "../app/lib/speculation.mjs";
 
 export const CSP_REPORT_PATH = "/api/csp-report";
 
@@ -19,21 +20,44 @@ export function isAdminPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+/**
+ * A CSP hash source for an inline script's text. Web Crypto rather than node:crypto, so the Worker
+ * and the gates run one function.
+ *
+ * @param {string} text
+ * @returns {Promise<string>} `sha256-<base64>`, without the quotes the policy puts round it
+ */
+async function scriptHash(text) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return `sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}`;
+}
+
 /** @type {Promise<string> | undefined} */
 let loaderHash;
 
 /**
  * The hash source for the one inline script every page runs, derived from the constant the page
- * renders, so the two cannot drift. Web Crypto rather than node:crypto, so the Worker and the gates
- * run one function; computed on first use, once per isolate.
+ * renders, so the two cannot drift. Computed on first use, once per isolate.
  *
- * @returns {Promise<string>} `sha256-<base64>`, without the quotes the policy puts round it
+ * @returns {Promise<string>}
  */
 export function enhanceLoaderHash() {
-  loaderHash ??= crypto.subtle
-    .digest("SHA-256", new TextEncoder().encode(ENHANCE_LOADER))
-    .then((digest) => `sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}`);
+  loaderHash ??= scriptHash(ENHANCE_LOADER);
   return loaderHash;
+}
+
+/**
+ * The hash source for the page's speculationrules block. Its rules exclude the page itself, so
+ * they vary by pathname, and are hashed per response from the same builder SiteSpeculation renders
+ * with. Deterministic in the pathname, which is in the cache key, so a cached copy stays correct.
+ * 'inline-speculation-rules' does not stand in for this: Chrome and WebKit refuse the block under
+ * this policy without a hash.
+ *
+ * @param {string} pathname the request URL's pathname, which is what `useLocation()` reports
+ * @returns {Promise<string>}
+ */
+export function speculationRulesHash(pathname) {
+  return scriptHash(buildSpeculationRules({ pathname }));
 }
 
 /**
@@ -43,17 +67,17 @@ export function enhanceLoaderHash() {
  * so its per-request nonce is sound, and it keeps it for <Scripts>, the sidebar script and
  * CodeMirror's inline <style>. The hash is on both, because the loader renders on every page.
  *
+ * @param {string} pathname the request URL's pathname, for the speculation rules' hash
  * @param {string | undefined} adminNonce this render's nonce on an admin path, else undefined
  * @returns {Promise<string>}
  */
-export async function contentSecurityPolicy(adminNonce) {
-  const hash = await enhanceLoaderHash();
+export async function contentSecurityPolicy(pathname, adminNonce) {
+  const loader = await enhanceLoaderHash();
+  const rules = await speculationRulesHash(pathname);
   const nonce = adminNonce ? ` 'nonce-${adminNonce}'` : "";
   return [
     "default-src 'self'",
-    // 'inline-speculation-rules' admits the header's speculationrules block, whose rules vary by
-    // page and so have no build-time hash. It admits no executable script.
-    `script-src${nonce} '${hash}' 'strict-dynamic' 'inline-speculation-rules'`,
+    `script-src${nonce} '${loader}' '${rules}' 'strict-dynamic'`,
     // Admin only: CodeMirror mounts an inline <style> that needs a nonce source, and it cannot be
     // turned off.
     `style-src 'self'${nonce}`,
