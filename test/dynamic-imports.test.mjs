@@ -68,12 +68,14 @@ test("an `import type` statement is erased and defeats nothing", () => {
   assert.deepEqual(found, []);
 });
 
-test("a braced list where every specifier is `type` is erased and defeats nothing", () => {
+test("a braced list where every specifier is `type` still defeats the dynamic import", () => {
+  // Under verbatimModuleSyntax the oxc transform keeps this as `import "./editor"`, a static load.
   const found = findIneffectiveDynamicImports([
     { path: "app/a.ts", source: 'import {\n  type A,\n  type B,\n} from "./editor";' },
     { path: "app/b.tsx", source: 'const E = import("./editor");' },
   ]);
-  assert.deepEqual(found, []);
+  assert.equal(found.length, 1);
+  assert.deepEqual(found[0].importers, ["app/a.ts"]);
 });
 
 test("a mixed list with one value specifier still defeats the dynamic import", () => {

@@ -21,23 +21,17 @@ export function moduleKey(spec, from) {
 }
 
 /**
- * True when TypeScript erases the whole statement: `import type { X }`, `export type * from`, or a
- * braced list whose EVERY specifier is `type X`. One value specifier keeps the import, so a mixed
- * list still defeats a dynamic import. `import type from "x"` is a default import named `type`.
+ * True when the build erases the whole statement: `import type { X }`, `export type * from`. A
+ * braced list whose every specifier is `type X` is NOT erased: under this repo's
+ * verbatimModuleSyntax the oxc transform Vite runs keeps it as the side-effect import
+ * `import "x"` (measured 2026-09-25 with rolldown/utils transformSync), which still loads the
+ * module statically. `import type from "x"` is a default import named `type`.
  *
  * @param {string} clause the text between `import`/`export` and `from`
  */
 function isTypeOnlyClause(clause) {
-  const text = clause.trim();
-  // Trimmed, so a bare `type` (the default import named type) has nothing after it and fails both.
-  if (/^type(?:\s+[\w${*]|\s*[{*])/.test(text)) return true;
-  const braced = /^\{([^}]*)\}$/.exec(text);
-  if (!braced) return false;
-  const specifiers = braced[1]
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  return specifiers.length > 0 && specifiers.every((s) => /^type\s+(?!as\b)[\w$]/.test(s));
+  // Trimmed, so a bare `type` (the default import named type) has nothing after it and fails.
+  return /^type(?:\s+[\w${*]|\s*[{*])/.test(clause.trim());
 }
 
 /**
