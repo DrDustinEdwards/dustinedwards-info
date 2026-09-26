@@ -199,7 +199,17 @@ function footnotePreviews() {
   if (!notes) return;
 
   let bubble: HTMLElement | null = null;
+  // The reference being previewed, and the aria-describedby it had before ("footnote-label").
+  let owner: HTMLElement | null = null;
+  let prior = "";
   let pending: ReturnType<typeof setTimeout> | null = null;
+  /*
+   * A manual popover, so the top layer lifts it over everything and CSS anchor positioning keeps it
+   * under its reference (post-enhancements.css). Without anchor positioning it is placed once, in
+   * document coordinates, as before. Every engine with anchor positioning shipped popover first, so
+   * one probe answers both.
+   */
+  const anchored = CSS.supports("anchor-name: --a");
 
   const cancelHide = () => {
     if (pending !== null) clearTimeout(pending);
@@ -210,6 +220,8 @@ function footnotePreviews() {
     cancelHide();
     bubble?.remove();
     bubble = null;
+    owner?.setAttribute("aria-describedby", prior);
+    owner = null;
   };
 
   /*
@@ -230,7 +242,8 @@ function footnotePreviews() {
       if (!target) return;
       hide();
       bubble = document.createElement("div");
-      bubble.className = "footnote-preview";
+      // One preview at a time, so its class can double as its id.
+      bubble.id = bubble.className = "footnote-preview";
       bubble.setAttribute("role", "note");
       bubble.innerHTML = target.innerHTML;
       for (const back of bubble.querySelectorAll("[data-footnote-backref]")) back.remove();
@@ -238,7 +251,16 @@ function footnotePreviews() {
       bubble.addEventListener("mouseenter", cancelHide);
       bubble.addEventListener("mouseleave", scheduleHide);
 
+      // 1.3.1: the reference is described by the note it previews, so a screen reader hears it on focus.
+      owner = ref;
+      prior = ref.getAttribute("aria-describedby") ?? "";
+      ref.setAttribute("aria-describedby", `${bubble.id} ${prior}`);
       document.body.appendChild(bubble);
+      if (anchored) {
+        bubble.popover = "manual";
+        bubble.showPopover();
+        return;
+      }
       const box = ref.getBoundingClientRect();
       bubble.style.top = `${box.bottom + window.scrollY + 8}px`;
       bubble.style.left = `${Math.max(8, box.left + window.scrollX - 20)}px`;
