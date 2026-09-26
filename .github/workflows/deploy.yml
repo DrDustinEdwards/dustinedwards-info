@@ -129,8 +129,29 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           ref: ${{ inputs.ref }}
-          # Ship reads `git rev-parse HEAD` and asks GitHub about that exact
-          # sha. A shallow clone still has HEAD, which is all it needs.
+          # Full history, because ship's first step is `git pull --ff-only`
+          # against origin/main, and a fast-forward check needs the ancestry.
+          fetch-depth: 0
+
+      # SHIP PULLS BEFORE IT DOES ANYTHING ELSE, and a checkout of a sha is a
+      # detached HEAD with no upstream, so run 36218900911 refused at step 1
+      # ("You are not currently on a branch"). The requested commit goes onto a
+      # local main tracking origin/main, and must BE origin/main's tip: ship
+      # deploys the tip of main, locally and here, so a stale ref is refused
+      # rather than silently fast-forwarded past the commit that was asked for.
+      - name: Put the requested commit on main, and refuse unless it is main's tip
+        env:
+          REQUESTED: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          want="$(git rev-parse HEAD)"
+          tip="$(git rev-parse origin/main)"
+          if [ "$want" != "$tip" ]; then
+            echo "::error::${REQUESTED} is ${want}, but origin/main is ${tip}. Ship deploys main's tip; dispatch with ref=main or with that sha. Nothing was built or deployed."
+            exit 1
+          fi
+          git checkout -B main "$want"
+          git branch --set-upstream-to=origin/main main
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
         with:
