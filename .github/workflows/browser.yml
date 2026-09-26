@@ -122,8 +122,9 @@ jobs:
       # wants the expectations the build product carries, not a local database,
       # which is why there are no migrations and no sync here.
       #
-      # `build:enhance` rides along on the same footing: `app/enhance/dist/` is
-      # gitignored too, and the enhancement cases assert against those bundles.
+      # The enhancement bundles are not built here: the enhancement cases know
+      # them by the module names under app/enhance/, which a checkout has, and
+      # the app build emits the bundles itself wherever one runs.
       #
       # AND IT WENT RED AGAIN ON 2026-09-09, THE SAME WAY, FOR THE ARTIFACT
       # RULING 39a MOVED NEXT. `content/generated/stack.json` became gitignored
@@ -142,11 +143,10 @@ jobs:
       # `build:publication-twins` is deliberately NOT here. It is the same class
       # of artifact, but this job drives the DEPLOYED site and reads nothing
       # from public/; the twins it would care about are the ones that shipped.
-      - name: Stack, content and enhancement bundles
+      - name: Stack and content
         run: |
           npm run build:stack
           npm run build:content
-          npm run build:enhance
 
       # CHROMIUM KEEPS ITS SANDBOX; THE RUNNER GIVES UP A RESTRICTION.
       #

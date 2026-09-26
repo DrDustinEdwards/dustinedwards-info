@@ -270,14 +270,6 @@ const PREREQS = [
       "build:publication-twins failed, so the markdown twins do not exist on " +
       "disk. Nothing below ran; fix the twin build first.",
   },
-  /* Gitignored; the app build's `?url` imports need them. */
-  {
-    name: "build:enhance",
-    what: "the bundles the app build's ?url imports serve",
-    missing:
-      "build:enhance failed, so the enhancement bundles do not exist on disk. " +
-      "Nothing below ran; fix the bundle build first.",
-  },
 ];
 
 function buildPrereqs() {
