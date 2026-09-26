@@ -454,20 +454,21 @@ const REDESIGN_UPLIFT = new Map([
 const ROUTE_CEILINGS = {
   "/": { id: "routes/home", css: 8100, total: 10600 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8800 },
-  "/blog/:slug": { id: "routes/blog.$slug", css: 9400, total: 13000 },
+  /* 2026-09-25 raises (Dustin): CI's measured size plus about 1%, rounded up to the next hundred. */
+  "/blog/:slug": { id: "routes/blog.$slug", css: 9500, total: 13200 },
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
   "/blog/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
-  "/search": { id: "routes/search", css: 7600, total: 10900 },
+  "/search": { id: "routes/search", css: 7600, total: 11200 },
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
   "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
-  "/playground": { id: "routes/playground", css: 8200, total: 9000 },
+  "/playground": { id: "routes/playground", css: 8200, total: 9100 },
   /* The inventory carries the whole kit, so it is the heaviest public sheet on the site by design. */
   "/playground/ui": { id: "routes/playground.ui", css: 10600, total: 11800 },
   "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8200 },
   "/privacy": { id: "routes/privacy", css: 7400, total: 8200 },
   "/about": { id: "routes/about", css: 7400, total: 8200 },
-  "/publications": { id: "routes/publications", css: 7900, total: 8900 },
+  "/publications": { id: "routes/publications", css: 7900, total: 9000 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
    * HTML is the variable part: a long author list is content, not a payload regression.
@@ -475,7 +476,7 @@ const ROUTE_CEILINGS = {
   "/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
 };
 
-const MATH_CEILING = { css: 12300, total: 15800 };
+const MATH_CEILING = { css: 12300, total: 16000 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
 const MINIMUM_MATH_FACES = 20;

@@ -91,10 +91,10 @@ jobs:
       # emits the colophon artifact build:content reads, build:content renders
       # the corpus, sync reads what build:content wrote.
       # build:enhance rides here too: app/enhance/dist/ is gitignored, so a
-      # checkout has enhancement source and no bundles. The gates that read
-      # the bundles or the build are CI-excluded today, but the tier is
-      # derived, and a future gate that reads them should find them built
-      # rather than silently absent.
+      # checkout has enhancement source and no bundles, and the app build in
+      # the last step imports them by ?url. The tier is derived, and a future
+      # gate that reads them should find them built rather than silently
+      # absent.
       #
       # content/generated/stack.json is derived here rather than committed, so
       # a dependency PR is judged on its dependency.
@@ -137,3 +137,20 @@ jobs:
 
       - name: Gates
         run: npm run check:ci
+
+      # THE PAGE BUDGETS, against a real client build. check:page-payload reads
+      # build/client, which does not exist while the tier above runs, so it is
+      # in CI_EXCLUDED and named in CI_AFTER_BUILD, and check:ci refuses if
+      # this step stops running it.
+      #
+      # The order is ship's: build:stack, build:content,
+      # build:publication-twins and build:enhance, then `npm run build`. check:ci
+      # rebuilt those four in that order as its prereqs a moment ago, so only
+      # the app build is left. Ship's green-CI path skips its own app build and
+      # trusts this run for the budgets, so without this step nobody measured
+      # them at all. The build needs no secrets: the Cloudflare plugin starts
+      # its remote-binding proxy (AI_SEARCH, IMAGES) for dev and preview only.
+      - name: Client build and page payload
+        run: |
+          npm run build
+          npm run check:page-payload
