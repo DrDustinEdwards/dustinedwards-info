@@ -19,9 +19,6 @@ const SELF_REFERENTIAL = ["content/generated/assets.json"];
 export function isSourceFile(file) {
   if (SELF_REFERENTIAL.includes(file)) return false;
   if (SOURCE_FILES.includes(file)) return true;
-  // Gitignored build product: counting it would make the committed artifact depend on whether
-  // build:enhance has run on this machine.
-  if (file.startsWith("app/enhance/dist/")) return false;
   const root = file.split("/")[0] ?? "";
   if (!SOURCE_ROOTS.includes(root)) return false;
   return SOURCE_EXTENSIONS.some((ext) => file.endsWith(ext));

@@ -8,6 +8,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompressSync, constants } from "node:zlib";
 
+import { contentHash, enhanceModules } from "./enhance-bundle.mjs";
+
+/**
+ * How the reachability walk names an enhancement bundle a route serves: a key rather than a path,
+ * because the bundle exists only in the build. The part after the prefix is `<module>.js`.
+ */
+export const ENHANCE_ASSET_PREFIX = "virtual:enhance/";
+
 /**
  * @param {string} source @param {string} file @param {string} appDir
  */
@@ -16,19 +24,18 @@ export function importsOf(source, file, appDir) {
   const modules = [];
   /** @type {string[]} */
   const assets = [];
-  // An enhancement bundle is served where `<Enhance module="x"` renders it. Its `?url` import alone
-  // is not a fetch: the registry imports all eight, and the palette's URL rides a data attribute.
+  // An enhancement bundle is served where `<Enhance module="x"` renders it. Its URL alone is not a
+  // fetch: the registry holds every one, and the palette's URL rides a data attribute.
   // Comments stripped first, or a comment naming <Enhance> would charge every importer for it.
   const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:])\/\/[^\n]*/g, "$1");
   for (const m of code.matchAll(/<Enhance\s+module="([a-z-]+)"/g)) {
-    assets.push(`~/enhance/dist/${m[1]}.js`);
+    assets.push(`${ENHANCE_ASSET_PREFIX}${m[1]}.js`);
   }
 
   for (const m of source.matchAll(/(?:from\s*|import\s*\(?\s*)["']([^"']+)["']/g)) {
     const spec = m[1];
     if (spec.includes("?url")) {
-      const asset = spec.replace(/\?url$/, "");
-      if (!asset.includes("enhance/dist/")) assets.push(asset);
+      assets.push(spec.replace(/\?url$/, ""));
       continue;
     }
     if (spec.endsWith(".css")) continue;
@@ -126,7 +133,6 @@ export function fontsIn(cssText) {
 /* The build on disk, read by check:page-payload and by nothing that builds. */
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const ASSETS_DIR = join(root, "build", "client", "assets");
-const DIST_DIR = join(root, "app", "enhance", "dist");
 
 /**
  * Stems, because verify-live may face a deploy whose hashes predate this disk. Anchored on the
@@ -238,35 +244,29 @@ export function walkHydrationSet() {
 /**
  * The stems of these asset names are the only script references a public page may carry.
  *
+ * Found by name AND content: the app build names each bundle `<module>-<hash>.js` after its own
+ * bytes (scripts/lib/enhance-bundle.mjs), so a route chunk sharing the stem, as routes/login.tsx and
+ * routes/theme.ts do, never matches. Zero matches means the build emitted no bundle for a module
+ * that exists, which a stale build also shows; the sizes are then measured over nothing, and the
+ * served-verbatim assertion is the one that fails.
+ *
  * @returns {Array<{ module: string, assetName: string | null, matches: number, raw: number, brotli: number }>}
  */
 export function enhancementAssets() {
-  /** @type {string[]} */
-  let distFiles;
-  try {
-    distFiles = readdirSync(DIST_DIR).filter((f) => f.endsWith(".js"));
-  } catch {
-    throw new Error(
-      `${DIST_DIR} is missing. The bundles are built by npm run build:enhance, ` +
-        `which every runner executes before this gate; run it first.`,
-    );
-  }
-  if (distFiles.length === 0) {
-    throw new Error(`${DIST_DIR} holds no bundles; run npm run build:enhance.`);
-  }
-
   const assetNames = readdirSync(ASSETS_DIR).filter((f) => f.endsWith(".js"));
-  return distFiles.sort().map((module) => {
-    const distBytes = readFileSync(join(DIST_DIR, module));
-    const matches = assetNames.filter((name) =>
-      distBytes.equals(readFileSync(join(ASSETS_DIR, name))),
+  return enhanceModules().map((name) => {
+    const matches = assetNames.filter(
+      (file) =>
+        chunkStem(file) === name &&
+        file === `${name}-${contentHash(readFileSync(join(ASSETS_DIR, file)))}.js`,
     );
+    const bytes = matches.length > 0 ? readFileSync(join(ASSETS_DIR, matches[0])) : Buffer.alloc(0);
     return {
-      module,
+      module: `${name}.js`,
       assetName: matches.length === 1 ? matches[0] : null,
       matches: matches.length,
-      raw: distBytes.length,
-      brotli: brotliSize(distBytes),
+      raw: bytes.length,
+      brotli: brotliSize(bytes),
     };
   });
 }

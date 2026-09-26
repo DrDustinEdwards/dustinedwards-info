@@ -15,9 +15,11 @@ import { fileURLToPath } from "node:url";
 // Comments go first: a gate reading source can be satisfied by a comment.
 import { stripComments } from "./lib/strip-comments.mjs";
 import { findIneffectiveDynamicImports } from "./lib/dynamic-imports.mjs";
+import { moduleDependencyOf } from "./lib/enhance-bundle.mjs";
 import {
   ASSETS_DIR,
   brotliSize,
+  ENHANCE_ASSET_PREFIX,
   enhancementAssets,
   fontsIn,
   readClientManifest,
@@ -30,6 +32,7 @@ import { walkFiles } from "./lib/walk-files.mjs";
 import { ROUTES_DIR, routesMatching, sharedCacheHtmlRoutes } from "./lib/route-source.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const VIRTUAL_ENHANCE_TYPES = join(root, "app", "virtual-enhance.d.ts");
 
 /**
  * Null only when there is no module at that path (missing, or a directory the resolver tried as a
@@ -135,7 +138,7 @@ async function main() {
   }
   console.log("");
 
-  gradeHydrationWalk(files, bundles);
+  await gradeHydrationWalk(files, bundles);
 
   gradeAssetSyntax();
 
@@ -168,7 +171,7 @@ async function main() {
  *
  * @param {string[]} files @param {ReturnType<typeof enhancementAssets>} bundles
  */
-function gradeHydrationWalk(files, bundles) {
+async function gradeHydrationWalk(files, bundles) {
   ok(
     `the manifest walk read at least ${MINIMUM_FILES_WALKED} file(s)`,
     files.length >= MINIMUM_FILES_WALKED,
@@ -178,13 +181,22 @@ function gradeHydrationWalk(files, bundles) {
 
   for (const b of bundles) {
     ok(
-      `${b.module} is served verbatim: exactly one byte-equal asset`,
+      `${b.module} is served verbatim: exactly one asset named for its own bytes`,
       b.matches === 1,
-      `${b.matches} asset(s) in build/client/assets are byte-equal to ` +
-        `app/enhance/dist/${b.module}. Zero means the ?url import stopped serving ` +
-        `the bundle (or the build is stale relative to dist: rebuild both); the ` +
+      `${b.matches} asset(s) in build/client/assets are named ` +
+        `${b.module.replace(/\.js$/, "")}-<hash of their bytes>.js. Zero means the app ` +
+        `build stopped emitting the bundle, or build/ predates the module: rebuild; the ` +
         `syntax pass below names the file if raw TypeScript is being served.`,
     );
+    if (b.assetName) {
+      const dependency = await moduleDependencyOf(readFileSync(join(ASSETS_DIR, b.assetName), "utf8"));
+      ok(
+        `${b.module} is self-contained as served: no import, dynamic import or re-export`,
+        dependency === null,
+        `${b.assetName} carries a ${dependency}. It is served from /assets/, where only ` +
+          `hashed names exist, so the page loses its enhancement at runtime.`,
+      );
+    }
 
     const ceiling = ENHANCE_BROTLI_CEILINGS[b.module];
     ok(
@@ -211,6 +223,23 @@ function gradeHydrationWalk(files, bundles) {
     `${ceilingOnly.join(", ")} carry ceilings but no bundle; the map is describing ` +
       `a repo that no longer exists.`,
   );
+
+  /* The type is the only place the names are written by hand, so it is held to the directory. */
+  const declared = [
+    ...(stripComments(readFileSync(VIRTUAL_ENHANCE_TYPES, "utf8")).match(
+      /type\s+EnhanceModuleName\s*=([^;]*);/,
+    )?.[1] ?? "").matchAll(/"([a-z-]+)"/g),
+  ].map((m) => `${m[1]}.js`);
+  const modules = bundles.map((b) => b.module);
+  const undeclared = modules.filter((m) => !declared.includes(m));
+  const unbuilt = declared.filter((m) => !modules.includes(m));
+  ok(
+    "the virtual:enhance type names exactly the modules in app/enhance/",
+    declared.length > 0 && undeclared.length === 0 && unbuilt.length === 0,
+    `app/virtual-enhance.d.ts leaves out [${undeclared.join(", ")}] and names ` +
+      `[${unbuilt.join(", ")}] that no module builds. A name with no module types ` +
+      `<Enhance module="x"> as valid and renders a script whose src is undefined.`,
+  );
 }
 
 /** No TypeScript is served as an asset, and every served script parses as a module. */
@@ -225,7 +254,7 @@ function gradeAssetSyntax() {
     "no TypeScript source is emitted as an asset",
     tsAssets.length === 0,
     `[${tsAssets.join(", ")}] under build/client/assets. A ?url import is pointed at ` +
-      `a .ts source instead of its dist bundle; the browser will be served raw ` +
+      `a .ts source instead of built JavaScript; the browser will be served raw ` +
       `TypeScript.`,
   );
   /** @type {string[]} */
@@ -257,7 +286,7 @@ function gradeAssetSyntax() {
     "every served .js asset parses as a module (node --check)",
     invalid.length === 0,
     `unparseable asset(s), most likely a ?url import pointed at TypeScript ` +
-      `source instead of its dist bundle:\n        ${invalid.join("\n        ")}`,
+      `source instead of built JavaScript:\n        ${invalid.join("\n        ")}`,
   );
 }
 
@@ -645,8 +674,8 @@ function gradeEveryPage() {
 
   ok(
     "the search palette is not imported into any page's cold load",
-    ![...rootAssets].some((a) => a.includes("enhance/dist/palette")),
-    "root reaches app/enhance/dist/palette.js through an import, so a search dialog is " +
+    !rootAssets.has(`${ENHANCE_ASSET_PREFIX}palette.js`),
+    "root renders <Enhance module=\"palette\"> somewhere it reaches, so a search dialog is " +
       "on every document again. It is fetched on the gesture; see bar-search-submit.tsx.",
   );
 
@@ -663,8 +692,8 @@ function gradeEveryPage() {
 function coldLoad(sheets, reachable, assetFile) {
   const cssTotal = sheets.reduce((n, s) => n + brotliSize(readFileSync(assetFile(s))), 0);
   const bundles = [...new Set(reachable)]
-    .filter((a) => a.includes("enhance/dist/"))
-    .map((a) => a.split("/").pop() ?? a)
+    .filter((a) => a.startsWith(ENHANCE_ASSET_PREFIX))
+    .map((a) => a.slice(ENHANCE_ASSET_PREFIX.length))
     .sort();
   const bundleTotal = enhancementAssets()
     .filter((b) => bundles.includes(b.module))

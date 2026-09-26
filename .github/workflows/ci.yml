@@ -89,27 +89,22 @@ jobs:
       #
       # The order is load-bearing: migrations build the schema, build:stack
       # emits the colophon artifact build:content reads, build:content renders
-      # the corpus, sync reads what build:content wrote.
-      # build:enhance rides here too: app/enhance/dist/ is gitignored, so a
-      # checkout has enhancement source and no bundles, and the app build in
-      # the last step imports them by ?url. The tier is derived, and a future
-      # gate that reads them should find them built rather than silently
-      # absent.
+      # the corpus, sync reads what build:content wrote. The enhancement
+      # bundles are not a step: the app build emits them itself.
       #
       # content/generated/stack.json is derived here rather than committed, so
       # a dependency PR is judged on its dependency.
       #
-      # build:publication-twins is here for the plainest reason of the four:
+      # build:publication-twins is here for the plainest reason of the three:
       # check:machine-readable compares the twins on disk against a fresh
       # generation, and a checkout has no twins at all, so without this step
       # that comparison reads an empty directory.
-      - name: Migrations, stack and content build, publication twins, enhancement bundles, local sync
+      - name: Migrations, stack and content build, publication twins, local sync
         run: |
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:stack
           npm run build:content
           npm run build:publication-twins
-          npm run build:enhance
           npm run sync:content -- --local
 
       # ONE COMMAND, derived. The tier is the offline tier minus CI_EXCLUDED,
@@ -143,12 +138,12 @@ jobs:
       # in CI_EXCLUDED and named in CI_AFTER_BUILD, and check:ci refuses if
       # this step stops running it.
       #
-      # The order is ship's: build:stack, build:content,
-      # build:publication-twins and build:enhance, then `npm run build`. check:ci
-      # rebuilt those four in that order as its prereqs a moment ago, so only
-      # the app build is left. Ship's green-CI path skips its own app build and
-      # trusts this run for the budgets, so without this step nobody measured
-      # them at all. The build needs no secrets: the Cloudflare plugin starts
+      # The order is ship's: build:stack, build:content and
+      # build:publication-twins, then `npm run build`, which emits the
+      # enhancement bundles. check:ci rebuilt those three in that order as its
+      # prereqs a moment ago, so only the app build is left. Ship's green-CI
+      # path skips its own app build and trusts this run for the budgets, so
+      # without this step nobody measured them at all. The build needs no secrets: the Cloudflare plugin starts
       # its remote-binding proxy (AI_SEARCH, IMAGES) for dev and preview only.
       - name: Client build and page payload
         run: |
