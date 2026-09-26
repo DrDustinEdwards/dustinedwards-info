@@ -31,8 +31,9 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
         (s) => s.getAttribute("src") ?? "",
       ),
       preloads: document.querySelectorAll('link[rel="modulepreload"]').length,
+      /* Resolved as the loader resolves them, since it sets `src` to the absolute URL. */
       markers: [...document.querySelectorAll("template[data-enhance]")].map(
-        (t) => t.getAttribute("data-enhance") ?? "",
+        (t) => new URL(t.getAttribute("data-enhance") ?? "", location.href).href,
       ),
       /* Executable inline scripts: JSON-LD and speculation rules are data, not script. */
       inline: [...document.querySelectorAll("script:not([src])")]
