@@ -20,8 +20,9 @@ consequence of it.
   page works with scripting disabled; client JS only ever upgrades markup that
   already functions. Since 2026-08-26 the public plane ships no framework
   script at all: public pages do not hydrate React, and their only JavaScript
-  is a set of small self-contained enhancement bundles loaded by nonced script tags
-  (`app/enhance/`, measured and gated by `check:page-payload`). That
+  is a set of small self-contained enhancement bundles, inserted by one inline
+  loader the CSP allows by its hash (`app/enhance/`, `app/lib/enhance-loader.mjs`,
+  measured and gated by `check:page-payload`). That
   includes the ADMIN DOOR: `/login` is a real form, and the browser client is
   layered on top of it. The admin plane behind that door is exempt, hydrates,
   and does use script. This used to read "zero JavaScript", which was the

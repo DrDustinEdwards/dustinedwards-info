@@ -12,6 +12,7 @@ import {
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getNonce } from "~/lib/context";
+import { ENHANCE_LOADER } from "~/lib/enhance-loader.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
@@ -46,6 +47,7 @@ export const middleware: Route.MiddlewareFunction[] = [
 
 export function loader({ request, context }: Route.LoaderArgs) {
   // The nonce is carried through the loader because `Layout` cannot reach the request context.
+  // Admin only: undefined on every public page, which is edge-cached and trusted by hash instead.
   return { theme: themeFromRequest(request), nonce: getNonce(context) };
 }
 
@@ -140,14 +142,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
           Skip to content
         </a>
         {children}
-        {/* The two ld+json blocks are deliberately NOT nonced: see `contentSecurityPolicy` in
-            workers/csp.mjs. */}
+        {/* JSON-LD blocks carry no nonce: `script-src` does not gate application/ld+json. */}
         {hydrates ? (
           <>
             <ScrollRestoration nonce={nonce} />
             <Scripts nonce={nonce} />
           </>
         ) : null}
+        {/* Last, so every <Enhance> marker is parsed before it runs. Allowed by its sha256 in the
+            policy; raw HTML, because the hash is of these exact bytes. The nonce is admin's. */}
+        <script nonce={nonce} dangerouslySetInnerHTML={{ __html: ENHANCE_LOADER }} />
       </body>
     </html>
   );

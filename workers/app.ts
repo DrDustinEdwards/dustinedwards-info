@@ -92,9 +92,6 @@ function applySecurityHeaders(headers: Headers) {
   }
 }
 
-// The shared-cache nonce exposure is accepted: header and body are cached together, so one nonce is
-// valid for the cache lifetime.
-
 // No client identifier: no cookie, IP, user agent or anything derived from them. Wrapped, because
 // "returns immediately" is not "never throws".
 function recordTraffic(request: Request, response: Response, env: Env, url: URL) {
@@ -169,10 +166,12 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
     const context = new RouterContextProvider();
     context.set(cloudflareContext, { env, ctx });
 
-    // A static or derived nonce looks exactly like success: every page renders and the policy is
-    // worth nothing.
-    const nonce = crypto.randomUUID();
-    context.set(nonceContext, nonce);
+    // Admin only: a public page is edge-cached with its header, so a nonce there would be shared
+    // by every reader; its one inline script is allowed by hash instead (workers/csp.mjs). A static
+    // or derived nonce looks exactly like success: every page renders and the policy is worth
+    // nothing.
+    const adminNonce = isAdminPath(url.pathname) ? crypto.randomUUID() : undefined;
+    context.set(nonceContext, adminNonce);
 
     // Stamped here because loaders run concurrently on one shared `timings` array; only after the
     // handler returns is it complete.
@@ -185,7 +184,7 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
 
     // Absolute, because `Reporting-Endpoints` ignores a non-secure or relative endpoint.
     const reportTo = `${CSP_ENDPOINT_NAME}="${url.origin}${CSP_REPORT_PATH}"`;
-    const csp = contentSecurityPolicy(nonce, isAdminPath(url.pathname));
+    const csp = await contentSecurityPolicy(adminNonce);
 
 
     const document = { timings, reportTo, csp };

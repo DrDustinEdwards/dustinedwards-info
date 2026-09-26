@@ -1,4 +1,4 @@
-// Without the redirect, http:// and https:// share a cache entry, CSP nonce included.
+// Without the redirect, http:// and https:// share a cache entry.
 
 import test from "node:test";
 import assert from "node:assert/strict";

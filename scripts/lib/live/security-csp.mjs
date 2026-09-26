@@ -1,7 +1,26 @@
-// The ratified security headers by exact value, and the enforced CSP with its per-render nonce.
+// The ratified security headers by exact value, and the enforced CSP: the loader hash and no nonce on
+// public pages, a per-render nonce on the admin plane.
 
+import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
+import { enhanceLoaderHash } from "../../../workers/csp.mjs";
 import { declaredSecurityHeaders } from "../header-constants.mjs";
 import { check, get } from "./client.mjs";
+
+/**
+ * The executable inline scripts in a document: no `src`, and not a data block (JSON-LD) or
+ * speculation rules, which `script-src` either does not gate or admits by keyword.
+ *
+ * @param {string} html
+ * @returns {string[]} each script's text
+ */
+export function inlineExecutableScripts(html) {
+  return [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/g)]
+    .filter(([, attrs]) => {
+      const type = /\btype="([^"]*)"/.exec(attrs ?? "")?.[1] ?? "";
+      return !/\bsrc=/.test(attrs ?? "") && type !== "application/ld+json" && type !== "speculationrules";
+    })
+    .map(([, , text]) => text ?? "");
+}
 
 export async function run() {
   const expected = Object.entries(declaredSecurityHeaders() ?? {});
@@ -45,7 +64,7 @@ export async function run() {
     `  security headers: ${expected.length} asserted by exact value on a 200 and the /admin 302`,
   );
 
-  /* A static nonce is visible only on the wire. */
+  /* What the policy trusts is visible only on the wire. */
   {
     const ENFORCED = "content-security-policy";
     const RO = "content-security-policy-report-only";
@@ -76,66 +95,75 @@ export async function run() {
       );
     }
 
-    /* A cache-busting query per probe forces two renders. */
-    const nonceOf = (/** @type {string} */ p) => (p.match(/'nonce-([^']+)'/) ?? [])[1] ?? "";
-    const nonceProbe = (/** @type {number} */ n) =>
-      get(`/?nonce-probe=${Date.now()}-${n}`, { cookie: "theme=dark" });
-    const first = await nonceProbe(1);
-    const second = await nonceProbe(2);
-    const n1 = nonceOf(first.res.headers.get(ENFORCED) ?? "");
-    const n2 = nonceOf(second.res.headers.get(ENFORCED) ?? "");
-    const m1 = first.res.headers.get("cf-cache-status") ?? "(none)";
-    const m2 = second.res.headers.get("cf-cache-status") ?? "(none)";
+    /*
+     * PUBLIC: exactly the loader's hash and no nonce, on a render and on a cached copy alike, and the
+     * page's one executable inline script is the loader, byte for byte.
+     */
+    const loaderSource = `'${await enhanceLoaderHash()}'`;
+    /** @param {string} label @param {{ res: Response, text: string }} probe */
+    const assertPublic = (label, { res, text }) => {
+      const policy = res.headers.get(ENFORCED) ?? "";
+      const hashes = policy.match(/'sha256-[^']+'/g) ?? [];
+      check(
+        `csp (${label}): the public policy carries no nonce`,
+        !policy.includes("'nonce-"),
+        `got ${JSON.stringify(policy)}. A public page is edge-cached with its header, so every ` +
+          `reader of that copy would share the nonce.`,
+      );
+      check(
+        `csp (${label}): the public policy names exactly one hash, the loader's`,
+        hashes.length === 1 && hashes[0] === loaderSource,
+        `hashes ${JSON.stringify(hashes)}, expected [${loaderSource}]. The deployed loader and ` +
+          `this checkout disagree, or a second inline script was allowed.`,
+      );
+      check(
+        `csp (${label}): the document carries no nonce attribute`,
+        !/\snonce=/.test(text),
+        "a nonce on a cached public page is shared by every reader of the copy",
+      );
+      const inline = inlineExecutableScripts(text);
+      check(
+        `csp (${label}): the one executable inline script is the loader, byte for byte`,
+        inline.length === 1 && inline[0] === ENHANCE_LOADER,
+        `${inline.length} executable inline script(s): ` +
+          `${JSON.stringify(inline.map((t) => t.slice(0, 60)))}. Anything else is refused by ` +
+          `the policy, and a loader that differs from its hash is refused with every enhancement.`,
+      );
+    };
 
-    check("csp: the header carries a nonce", n1.length >= 16, `got ${JSON.stringify(n1)}`);
-    check(
-      "csp: both nonce probes were rendered, not replayed from cache",
-      m1 !== "HIT" && m2 !== "HIT",
-      `cf-cache-status ${JSON.stringify(m1)} and ${JSON.stringify(m2)}. The assertion ` +
-        `below compares two GENERATIONS; served a stored copy it would compare one ` +
-        `generation with itself and report a static nonce on a correct site. Each ` +
-        `probe carries its own cache-busting query, so a HIT here means the query is ` +
-        `no longer part of the key.`,
-    );
-    check(
-      "csp: THE NONCE VARIES between two Worker-rendered responses",
-      n1.length > 0 && n2.length > 0 && n1 !== n2,
-      `both responses carried ${JSON.stringify(n1)}. A static nonce renders perfectly ` +
-        `and protects nothing.`,
-    );
-    check(
-      "csp: the header nonce matches the one stamped on the document's scripts",
-      n1.length > 0 && first.text.includes(`nonce="${n1}"`),
-      `header nonce ${JSON.stringify(n1)} does not appear as a nonce attribute in the body`,
-    );
-    console.log(`  csp: ENFORCED, nonce varies (${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`);
+    /* A cache-busting query forces a render; the warmed bare path is the stored copy. */
+    const rendered = await get(`/?csp-probe=${Date.now()}`, { cookie: "theme=dark" });
+    assertPublic("rendered /", rendered);
 
-    /* Pins the accepted shared-nonce window on a HIT; red if it changes. */
     let warm = await get("/");
     for (let i = 0; i < 5 && (warm.res.headers.get("cf-cache-status") ?? "") !== "HIT"; i += 1) {
       warm = await get("/");
     }
     const warmCf = warm.res.headers.get("cf-cache-status") ?? "(none)";
-    if (warmCf === "HIT") {
-      const again = await get("/");
-      const c1 = nonceOf(warm.res.headers.get(ENFORCED) ?? "");
-      const c2 = nonceOf(again.res.headers.get(ENFORCED) ?? "");
-      check(
-        "csp: cookieless readers on a cache HIT SHARE one nonce (the enforcement blocker, pinned)",
-        c1.length > 0 && c1 === c2,
-        `two cookieless HITs carried ${JSON.stringify(c1)} and ${JSON.stringify(c2)}. ` +
-          `If these now DIFFER the shared-cache tension is gone, which is good news and ` +
-          `means the enforcement ruling is unblocked: update workers/app.ts and remove ` +
-          `this assertion in the same commit as the decision.`,
-      );
-      console.log(`  csp: shared-cache nonce reused across cookieless HITs (${c1.slice(0, 8)}…)`);
-    } else {
-      check(
-        "csp: the shared-cache nonce case was actually observed",
-        false,
-        `never reached a cache HIT on / after 6 attempts (last cf-cache-status ${warmCf}). ` +
-          `The blocker assertion examined nothing rather than passing quietly.`,
-      );
-    }
+    check(
+      "csp: a cache HIT on / was observed",
+      warmCf === "HIT",
+      `never reached a cache HIT on / after 6 attempts (last cf-cache-status ${warmCf}). ` +
+        `The stored copy is what readers share, so the assertion below examined nothing.`,
+    );
+    if (warmCf === "HIT") assertPublic("cached /", warm);
+
+    /* ADMIN: a per-render nonce, which varies. The anonymous 302 is uncached, so two probes render twice. */
+    const nonceOf = (/** @type {string} */ p) => (p.match(/'nonce-([^']+)'/) ?? [])[1] ?? "";
+    const a1 = await get("/admin");
+    const a2 = await get("/admin");
+    const n1 = nonceOf(a1.res.headers.get(ENFORCED) ?? "");
+    const n2 = nonceOf(a2.res.headers.get(ENFORCED) ?? "");
+    check("csp: the admin header carries a nonce", n1.length >= 16, `got ${JSON.stringify(n1)}`);
+    check(
+      "csp: THE ADMIN NONCE VARIES between two Worker-rendered responses",
+      n1.length > 0 && n2.length > 0 && n1 !== n2,
+      `both responses carried ${JSON.stringify(n1)}. A static nonce renders perfectly ` +
+        `and protects nothing.`,
+    );
+    console.log(
+      `  csp: ENFORCED, public carries the loader hash and no nonce, admin nonce varies ` +
+        `(${n1.slice(0, 8)}… then ${n2.slice(0, 8)}…)`,
+    );
   }
 }

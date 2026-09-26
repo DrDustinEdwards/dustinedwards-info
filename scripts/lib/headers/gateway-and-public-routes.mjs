@@ -15,8 +15,8 @@ export function run(code) {
 
   {
     /*
-     * Measured on the wire: plain http returned the full page, and a warmed path came back a HIT carrying
-     * the same nonce. So the redirect must sit in the gateway, before the loopback and anything cached.
+     * Measured on the wire: plain http returned the full page, and a warmed path came back a HIT: the
+     * cached HTTPS response. So the redirect must sit in the gateway, before the loopback and anything cached.
      */
     const appCode = code;
     const gatewayAt = appCode.search(/export\s+default\s*\{/);
@@ -115,8 +115,8 @@ export function run(code) {
       ok(
         name + " is shared-cacheable with its own Vary",
         routeCode.includes("SHARED_CACHE_CONTROL") && /Vary|HTML_VARY/.test(routeCode),
-        "this route is counted in the shared-cache nonce exposure; if it stops being " +
-          "shared-cacheable the exposure narrows and the narration in workers/app.ts must follow",
+        "this route is counted among the shared-cached HTML routes, whose policy carries no " +
+          "nonce (workers/csp.mjs); if it stops being shared-cacheable, this list must follow",
       );
     }
 
@@ -158,8 +158,8 @@ export function run(code) {
       ok(
         "every shared-cached HTML route is named in one of the two lists",
         unlisted.length === 0,
-        `unlisted: ${unlisted.join(", ")}. A new shared-cached page widens the shared-cache ` +
-          `nonce exposure described in workers/app.ts, so it joins a list here`,
+        `unlisted: ${unlisted.join(", ")}. A new shared-cached page is one more cached body ` +
+          `whose policy must carry no nonce (workers/csp.mjs), so it joins a list here`,
       );
       const missing = [...listed].filter((f) => !found.includes(f));
       ok(
