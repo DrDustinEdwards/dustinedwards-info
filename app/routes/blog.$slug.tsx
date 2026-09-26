@@ -6,7 +6,7 @@ import { PostMentions } from "~/components/post-mentions";
 import { PostRail, ymd } from "~/components/post-rail";
 import { SeriesNav } from "~/components/post-series-nav";
 import { EvidenceRow } from "~/components/evidence-row";
-import { ENHANCE_GZIP_BYTES } from "~/lib/enhance-sizes.generated";
+import { ENHANCE_GZIP_BYTES } from "virtual:enhance";
 
 import { Enhance } from "~/components/enhance";
 import { ShellFooter } from "~/components/shell-footer";

@@ -1,13 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
 
 import { FOLLOW_UP_MARKER, splitFollowUp } from "../app/lib/search/follow-up.mjs";
 import { FOLLOW_UP_INSTRUCTION, SYSTEM_PROMPT } from "../app/lib/search/ask-prompt.mjs";
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+import { bundleEnhancement } from "../scripts/lib/enhance-bundle.mjs";
 
 test("an answer with a follow-up splits into both", () => {
   assert.deepEqual(splitFollowUp("The answer.\nNEXT: What else is here?"), {
@@ -55,12 +51,10 @@ test("an answer written the way the prompt asks splits into the right follow-up"
   });
 });
 
-// Reads the built artifact: the import that leaked the prompt was correct-looking source.
-test("the built client bundle carries NO system prompt text", () => {
-  const bundle = join(root, "app/enhance/dist/ask.js");
-  /* Scope first: an absent bundle would pass this by having nothing to find. */
-  assert.ok(existsSync(bundle), "run build:enhance before this test can measure anything");
-  const built = readFileSync(bundle, "utf8");
+// Reads the built artifact: the import that leaked the prompt was correct-looking source. Built here
+// by the app build's own bundler, so the bytes are the ones the page is served.
+test("the built client bundle carries NO system prompt text", async () => {
+  const { code: built } = await bundleEnhancement("ask");
 
   /* The needle is the prompt itself, so it cannot drift from what is actually secret. */
   const firstSentence = SYSTEM_PROMPT.split(". ")[0];

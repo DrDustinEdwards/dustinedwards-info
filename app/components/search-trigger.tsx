@@ -7,8 +7,8 @@ import askCss from "~/styles/ask.css?url";
 /**
  * The shortcut hint ships `hidden` and `theme.ts` unhides it once the listener is attached, so a
  * reader without script is never promised a shortcut. `data-palette` sits on the trigger, not the
- * document, so a page without this component has no palette rather than a broken one; the bundle
- * must be prebuilt, because `?url` copies the file verbatim.
+ * document, so a page without this component has no palette rather than a broken one. The URL is
+ * the palette bundle's, fetched on the gesture, never a <script> on the page.
  */
 // One constant for the id, because a mismatched `aria-describedby` stops being announced silently.
 const HINT_ID = "search-shortcut-hint";
