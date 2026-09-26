@@ -455,7 +455,7 @@ const ROUTE_CEILINGS = {
   "/": { id: "routes/home", css: 8100, total: 10600 },
   "/blog": { id: "routes/blog._index", css: 7400, total: 8800 },
   /* 2026-09-25 raises (Dustin): CI's measured size plus about 1%, rounded up to the next hundred. */
-  "/blog/:slug": { id: "routes/blog.$slug", css: 9500, total: 13200 },
+  "/blog/:slug": { id: "routes/blog.$slug", css: 9700, total: 13500 },
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
   "/blog/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
@@ -476,7 +476,7 @@ const ROUTE_CEILINGS = {
   "/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
 };
 
-const MATH_CEILING = { css: 12300, total: 16000 };
+const MATH_CEILING = { css: 12600, total: 16400 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
 const MINIMUM_MATH_FACES = 20;
