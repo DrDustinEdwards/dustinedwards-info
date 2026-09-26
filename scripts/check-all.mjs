@@ -31,9 +31,20 @@ export const CI_EXCLUDED = {
   /* Needs gitignored local D1 content. Kept off ship: a slow preview boot on a loaded machine would
      fail a ship for a reason that is not the site. */
   "check:browser": "its public cases need gitignored local D1 content; the admin cases are CI-capable via SMOKE_TOKEN. Ruled 2026-09-14: stays on the network tier and the daily schedule, because a preview-server boot past the readiness ceiling on a loaded machine would fail a ship for a reason that is not the site.",
-  /* A CI client build would measure a build nothing deploys. */
-  "check:page-payload": "reads gitignored build output under build/client; the CI job does not build the client.",
+  /* Out of this tier only because the tier runs before a build exists. CI_AFTER_BUILD runs it. */
+  "check:page-payload": "reads gitignored build output under build/client, which does not exist when check:ci runs; CI runs it in its own step after `npm run build`, see CI_AFTER_BUILD.",
 };
+
+/**
+ * CI_EXCLUDED gates that CI still runs, in their own step after `npm run build` in ci.yml. The CI
+ * build is the one ship's green-CI path trusts in place of its own, and it is built from the same
+ * sources by the same commands as the bundle `npm run deploy` uploads, so it is the bundle's
+ * measurement and not some other build's. Checked against ci.yml in CI, so deleting the step fails
+ * the run instead of silently leaving the gate unrun.
+ *
+ * @type {string[]}
+ */
+export const CI_AFTER_BUILD = ["check:page-payload"];
 
 /** @type {Record<string, "offline" | "network" | undefined>} */
 export const TIERS = {
@@ -408,9 +419,11 @@ function summarize(results, skipped, sampler) {
   }
   for (const name of skipped) {
     const why =
-      TIERS[name] === "offline" && ci && CI_EXCLUDED[name]
-        ? "excluded from CI, see CI_EXCLUDED"
-        : "needs the network, run: npm run check:all";
+      TIERS[name] === "offline" && ci && CI_AFTER_BUILD.includes(name)
+        ? "runs in CI's own step after the client build"
+        : TIERS[name] === "offline" && ci && CI_EXCLUDED[name]
+          ? "excluded from CI, see CI_EXCLUDED"
+          : "needs the network, run: npm run check:all";
     console.log(`  SKIP  ${name.padEnd(18)} ${why}`);
   }
   console.log(`${"-".repeat(52)}`);
@@ -495,6 +508,21 @@ function main() {
       throw new Error(
         `CI_EXCLUDED names ${unknown.length} gate(s) package.json does not declare: ` +
           `${unknown.join(", ")}. Refusing to run rather than excluding nothing.`,
+      );
+    }
+    /* CI_AFTER_BUILD is a promise ci.yml keeps, so ci.yml is read for it rather than trusted. */
+    const workflowLines = readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8")
+      .split(/\r?\n/)
+      .map((line) => line.trim().replace(/^run:\s*/, ""));
+    const unrun = CI_AFTER_BUILD.filter(
+      (name) =>
+        !CI_EXCLUDED[name] || !gates.includes(name) || !workflowLines.includes(`npm run ${name}`),
+    );
+    if (unrun.length > 0) {
+      throw new Error(
+        `CI_AFTER_BUILD names ${unrun.join(", ")}, but each must be a declared gate in ` +
+          "CI_EXCLUDED that .github/workflows/ci.yml runs as `npm run <gate>` on its own line. " +
+          "Refusing to report a CI tier that silently drops it.",
       );
     }
     const applied = offline.filter((name) => CI_EXCLUDED[name]);

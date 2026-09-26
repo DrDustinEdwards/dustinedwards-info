@@ -9,7 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { gateNames } from "./build-stack.mjs";
-import { CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
+import { CI_AFTER_BUILD, CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
 import { reachableAssets } from "./lib/page-payload.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -286,12 +286,13 @@ function main() {
     );
   }
 
-  // CI-excluded gates run here too: they are excluded because CI cannot run them, so a local run is
-  // the only run they get.
+  // CI-excluded gates run here too: most are excluded because CI cannot run them, so a local run is
+  // the only run they get. CI_AFTER_BUILD ones (check:page-payload) CI does run, in its own step after
+  // `npm run build`; here they read whatever build is on disk, so a stale local build reads stale.
   const gateKeys = [...wanted.keys()].filter((g) => g !== RELATED);
   const selected = gateKeys.filter((g) => TIERS[g] === "offline").sort();
   const deferred = gateKeys.filter((g) => TIERS[g] !== "offline").sort();
-  const onlyHere = selected.filter((g) => CI_EXCLUDED[g]);
+  const onlyHere = selected.filter((g) => CI_EXCLUDED[g] && !CI_AFTER_BUILD.includes(g));
 
   /** @param {string} path */
   const readSource = (path) => {
