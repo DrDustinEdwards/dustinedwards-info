@@ -36,6 +36,22 @@ const FIELDS = [
     env: "CLOUDFLARE_ACCOUNT_ID",
     placeholder: "00000000000000000000000000000000",
   },
+  // The watchdog binds the same KV namespace and reads the same account id. Without these two, run
+  // 36219656356 deployed the site and then failed the watchdog deploy on a namespace of zeros.
+  {
+    config: "wrangler.watchdog.jsonc",
+    name: "kv_namespaces[0].id",
+    key: "id",
+    env: "KV_NAMESPACE_ID",
+    placeholder: "00000000000000000000000000000000",
+  },
+  {
+    config: "wrangler.watchdog.jsonc",
+    name: "vars.CLOUDFLARE_ACCOUNT_ID",
+    key: "CLOUDFLARE_ACCOUNT_ID",
+    env: "CLOUDFLARE_ACCOUNT_ID",
+    placeholder: "00000000000000000000000000000000",
+  },
   {
     config: "wrangler.watchdog.jsonc",
     name: "vars.ALERT_EMAIL",
