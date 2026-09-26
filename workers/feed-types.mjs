@@ -1,6 +1,6 @@
 /**
- * Content types that get no CSP: a feed or sitemap is parsed, never rendered as a document, and a
- * per-request nonce on a shared-cached body is served to every later reader. Named types, never a
+ * Content types that get no CSP: a feed or sitemap is parsed, never rendered as a document, so a
+ * policy there is bytes on every shared-cached response that protect nothing. Named types, never a
  * negation of text/html, so an unforeseen document type keeps its policy. Safe only while
  * `nosniff` stays on every response.
  */

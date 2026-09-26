@@ -21,7 +21,8 @@ describe("/login without React", () => {
     const html = renderRoute("/login", login.default, { actionData: undefined, loaderData: null });
     expect(html).toMatch(/<form data-sign-in="" method="post">/);
     expect(html).toMatch(/<button type="submit" class="btn-brand">Continue with Google<\/button>/);
-    expect(html).toMatch(/<script type="module" src="[^"]*login[^"]*\.js"/);
+    // A marker, not a script: the root's hashed loader turns it into the module script.
+    expect(html).toMatch(/<template data-enhance="[^"]*login[^"]*\.js"><\/template>/);
   });
 
   it("renders an action's problem as an alert on the page, which is the no-script error state", async () => {

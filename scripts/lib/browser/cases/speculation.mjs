@@ -1,6 +1,8 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
+import { buildSpeculationRules } from "../../../../app/lib/speculation.mjs";
+import { speculationRulesHash } from "../../../../workers/csp.mjs";
 import { BASE, ok } from "../harness.mjs";
 
 /*
@@ -10,7 +12,7 @@ import { BASE, ok } from "../harness.mjs";
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ browser }) {
   const PAGES = ["/", "/blog", "/blog/ten-years-on-cloudflare", "/colophon", "/privacy"];
-  /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], actions: string[], eagerness: string[], blocks: number}>} */
+  /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], actions: string[], eagerness: string[], blocks: number, text: string, policy: string}>} */
   const seen = new Map();
 
   for (const path of PAGES) {
@@ -39,7 +41,8 @@ export async function run({ browser }) {
       }
     });
 
-    await probe.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    const response = await probe.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
+    const policy = response?.headers()["content-security-policy"] ?? "";
     /* The candidate list is computed after the rules are parsed, so it needs
        a window; a zero read too early is not a zero. */
     await new Promise((r) => setTimeout(r, 1200));
@@ -65,6 +68,7 @@ export async function run({ browser }) {
       }
       return {
         blocks: blocks.length,
+        text: blocks[0]?.textContent ?? "",
         actions,
         eagerness,
         hrefs: [
@@ -82,6 +86,7 @@ export async function run({ browser }) {
       accepted: ruleSets > 0 && errors.length === 0,
       errors,
       candidates: [...candidates],
+      policy,
       ...page,
     });
   }
@@ -103,7 +108,19 @@ export async function run({ browser }) {
           `identically to a good one and speculates nothing.`
         : `no Preload.ruleSetUpdated event at all, so the block never reached the ` +
           `speculation machinery. Under the enforced CSP the usual cause is a ` +
-          `missing nonce on the element.`,
+          `script-src without this page's rules hash.`,
+    );
+    ok(
+      `${path}: the rendered rules are byte-identical to buildSpeculationRules for the path`,
+      s.text === buildSpeculationRules({ pathname: path }),
+      `rendered ${JSON.stringify(s.text.slice(0, 120))}. The Worker hashes the builder's text ` +
+        `for the request pathname, so any difference is a refused block.`,
+    );
+    const rulesSource = `'${await speculationRulesHash(path)}'`;
+    ok(
+      `${path}: the page's CSP carries its rules hash`,
+      s.policy.includes(rulesSource),
+      `expected ${rulesSource} in ${JSON.stringify(s.policy)}`,
     );
     ok(
       `${path}: THE ACTION IS PREFETCH`,

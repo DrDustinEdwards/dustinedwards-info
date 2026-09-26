@@ -1,6 +1,7 @@
 // No "apply the stored theme on load" step: the server already wrote the attribute, so a script
 // that re-applied it could only agree, or race.
 
+import { ENHANCE_URL_PREFIX } from "~/lib/enhance-url.mjs";
 import { serializeThemeCookie, isWritableTheme, type WritableTheme } from "~/lib/theme";
 
 function enhanceThemeToggle() {
@@ -32,15 +33,26 @@ const PALETTE_OPEN = "palette:open";
 let requested = false;
 
 /**
- * The caller has already prevented the anchor's default, so a load failure must fall back to
- * `/search`, never to nothing.
+ * The caller has already prevented the anchor's default, so a refusal or a load failure must fall
+ * back to `/search`, never to nothing, and says why in the console first.
  */
+function toSearch(reason: unknown) {
+  console.error("palette:", reason);
+  location.assign("/search");
+}
+
 function openPalette() {
   const trigger = document.querySelector<HTMLElement>("[data-palette]");
   // The URL is hashed by the app build; the `?url` import in `search-trigger.tsx` is its one statement.
-  const url = trigger?.dataset.palette;
-  if (!url) {
-    location.assign("/search");
+  // Held to the loader's rule, because the inserted script inherits 'strict-dynamic' trust. The
+  // element resolves and normalizes the URL, so `..` is gone before the check reads it, and the
+  // origin is followed by the prefix's own `/`, so a longer host cannot match. Inline rather than a
+  // shared function: every public page loads this bundle, and its budget has no room for one.
+  const raw = trigger?.dataset.palette;
+  const script = document.createElement("script");
+  if (raw) script.src = raw;
+  if (!script.src.startsWith(location.origin + ENHANCE_URL_PREFIX)) {
+    toSearch(raw);
     return;
   }
 
@@ -65,20 +77,18 @@ function openPalette() {
       document.head.appendChild(link);
     }
 
-    const script = document.createElement("script");
     script.type = "module";
-    script.src = url;
     pending.push(
       new Promise((resolve, reject) => {
         script.addEventListener("load", () => resolve(null));
-        script.addEventListener("error", () => reject(new Error("palette bundle")));
+        script.addEventListener("error", reject);
       }),
     );
     document.head.appendChild(script);
 
     void Promise.all(pending).then(
       () => document.dispatchEvent(new Event(PALETTE_OPEN)),
-      () => location.assign("/search"),
+      toSearch,
     );
     return;
   }
