@@ -25,6 +25,7 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { handleMediaEvents } from "./media-events";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { isWorkerPreview } from "~/lib/worker-preview";
 
 export { AskBudget } from "./ask-budget";
 
@@ -219,6 +220,24 @@ function redirectTo(request: Request, location: string) {
   });
 }
 
+/** A fetched response's headers can be immutable, so a refused set rebuilds it around a copy. */
+function withHeader(response: Response, name: string, value: string): Response {
+  try {
+    response.headers.set(name, value);
+    return response;
+  } catch {
+    const headers = new Headers(response.headers);
+    headers.set(name, value);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+}
+
+type FetchArgs = Parameters<NonNullable<ExportedHandler<Env>["fetch"]>>;
+
 /*
  * THE GATEWAY. Cache disabled, so it runs on every request (check:urls reads this phrase).
  * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme; the
@@ -226,54 +245,10 @@ function redirectTo(request: Request, location: string) {
  */
 export default {
   async fetch(request, env, ctx) {
-    const secure = httpsRedirectTarget(request.url);
-    if (secure !== null) return redirectTo(request, secure);
-
-    const url = new URL(request.url);
-
-    const renamed = postRedirectTarget(url.pathname, redirects.posts);
-    if (renamed !== null) return redirectTo(request, new URL(`${renamed}${url.search}`, url).toString());
-
-    // The PDF map runs before the slash redirect because its keys end in `.pdf`.
-    const movedPdf = pdfRedirectTarget(url.pathname, redirects.pdfs);
-    if (movedPdf !== null) {
-      return redirectTo(request, new URL(`${movedPdf}${url.search}`, url).toString());
-    }
-
-    // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
-    const slashed = paperSlashTarget(url.pathname);
-    if (slashed !== null) {
-      return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
-    }
-
-    const theme = themeFromRequest(request);
-    const { cacheKey, props } = cacheDimensions(url, request, theme);
-
-    const response = await ctx.exports.Renderer({ props }).fetch(request, {
-      cf: { cacheKey },
-    });
-
-    // Tells browsers and proxies not to hold a per-reader document. Not in the Renderer, whose
-    // response is the one the platform stores. Any cookie counts, failing closed.
-    const shared = response.headers.get("cache-control") === SHARED_CACHE_CONTROL;
-    let out = response;
-    if (shared && request.headers.has("cookie")) {
-      try {
-        response.headers.set("cache-control", UNCACHED);
-      } catch {
-        const headers = new Headers(response.headers);
-        headers.set("cache-control", UNCACHED);
-        out = new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
-          headers,
-        });
-      }
-    }
-
-    recordTraffic(request, out, env, url);
-
-    return out;
+    const response = await gateway(request, env, ctx);
+    // Every exit, redirects included, which never pass through applyDocumentHeaders. Static assets
+    // are served before the Worker runs, so robots.txt's Disallow is what covers those.
+    return isWorkerPreview(env) ? withHeader(response, "X-Robots-Tag", "noindex") : response;
   },
 
   async queue(batch, env) {
@@ -281,3 +256,42 @@ export default {
   },
 
 } satisfies ExportedHandler<Env>;
+
+async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
+  const secure = httpsRedirectTarget(request.url);
+  if (secure !== null) return redirectTo(request, secure);
+
+  const url = new URL(request.url);
+
+  const renamed = postRedirectTarget(url.pathname, redirects.posts);
+  if (renamed !== null) return redirectTo(request, new URL(`${renamed}${url.search}`, url).toString());
+
+  // The PDF map runs before the slash redirect because its keys end in `.pdf`.
+  const movedPdf = pdfRedirectTarget(url.pathname, redirects.pdfs);
+  if (movedPdf !== null) {
+    return redirectTo(request, new URL(`${movedPdf}${url.search}`, url).toString());
+  }
+
+  // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
+  const slashed = paperSlashTarget(url.pathname);
+  if (slashed !== null) {
+    return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
+  }
+
+  const theme = themeFromRequest(request);
+  const { cacheKey, props } = cacheDimensions(url, request, theme);
+
+  const response = await ctx.exports.Renderer({ props }).fetch(request, {
+    cf: { cacheKey },
+  });
+
+  // Tells browsers and proxies not to hold a per-reader document. Not in the Renderer, whose
+  // response is the one the platform stores. Any cookie counts, failing closed.
+  const shared = response.headers.get("cache-control") === SHARED_CACHE_CONTROL;
+  const out =
+    shared && request.headers.has("cookie") ? withHeader(response, "cache-control", UNCACHED) : response;
+
+  recordTraffic(request, out, env, url);
+
+  return out;
+}
