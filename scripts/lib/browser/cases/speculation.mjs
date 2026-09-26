@@ -103,7 +103,7 @@ export async function run({ browser }) {
           `identically to a good one and speculates nothing.`
         : `no Preload.ruleSetUpdated event at all, so the block never reached the ` +
           `speculation machinery. Under the enforced CSP the usual cause is a ` +
-          `missing nonce on the element.`,
+          `script-src without 'inline-speculation-rules'.`,
     );
     ok(
       `${path}: THE ACTION IS PREFETCH`,

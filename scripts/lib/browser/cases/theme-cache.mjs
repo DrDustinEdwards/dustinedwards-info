@@ -8,7 +8,8 @@ import { MENTION_POST_PATH } from "../seed.mjs";
 
 /*
  * Keying the public cache on path plus theme is sound only if public bytes depend on
- * the theme alone. The nonce is masked: it differs per request by design.
+ * the theme alone. Nothing is masked for the CSP: public pages carry no nonce, so one
+ * appearing is a difference this case should report.
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ page, browser }) {
@@ -65,7 +66,6 @@ export async function run({ page, browser }) {
   /** @param {string} html */
   const mask = (html) =>
     html
-      .replace(/nonce="[^"]*"/g, 'nonce="N"')
       .replace(/csp-endpoint="[^"]*"/g, 'csp-endpoint="E"')
       .replace(/data-health-age="\d+"/g, 'data-health-age="A"')
       /*

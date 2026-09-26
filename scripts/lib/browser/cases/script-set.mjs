@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
+import { ENHANCE_LOADER } from "../../../../app/lib/enhance-loader.mjs";
 import { BASE, ok } from "../harness.mjs";
 
 /**
@@ -30,6 +31,15 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
         (s) => s.getAttribute("src") ?? "",
       ),
       preloads: document.querySelectorAll('link[rel="modulepreload"]').length,
+      markers: [...document.querySelectorAll("template[data-enhance]")].map(
+        (t) => t.getAttribute("data-enhance") ?? "",
+      ),
+      /* Executable inline scripts: JSON-LD and speculation rules are data, not script. */
+      inline: [...document.querySelectorAll("script:not([src])")]
+        .filter((s) => !["application/ld+json", "speculationrules"].includes(s.getAttribute("type") ?? ""))
+        .map((s) => s.textContent ?? ""),
+      /* hasAttribute, because a browser hides a nonce's value from getAttribute. */
+      nonced: document.querySelectorAll("[nonce]").length,
     }));
     const foreign = shape.srcs.filter((src) => {
       const name = src.split("/").pop() ?? "";
@@ -42,6 +52,19 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
       `script srcs [${shape.srcs.join(", ")}], ${shape.preloads} modulepreload(s). ` +
         `A framework chunk is riding on a public page again, or the enhancement ` +
         `tags vanished entirely.`,
+    );
+    ok(
+      `${path}: the loader inserted exactly the bundles the markers name`,
+      JSON.stringify([...new Set(shape.markers)].sort()) === JSON.stringify([...shape.srcs].sort()),
+      `markers [${shape.markers.join(", ")}], scripts [${shape.srcs.join(", ")}]. A marker with ` +
+        `no script means the loader did not run or was refused by the policy.`,
+    );
+    ok(
+      `${path}: the one executable inline script is the loader, and nothing carries a nonce`,
+      shape.inline.length === 1 && shape.inline[0] === ENHANCE_LOADER && shape.nonced === 0,
+      `${shape.inline.length} inline script(s), ${shape.nonced} nonced element(s). The public ` +
+        `policy allows the loader by hash and nothing else inline, and a nonce on a cached ` +
+        `page is shared by every reader.`,
     );
   }
 
