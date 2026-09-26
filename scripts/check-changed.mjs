@@ -66,9 +66,10 @@ export const MAP = [
     gates: ["check:page-payload"],
   },
   {
-    /* check-headers asserts the CSP nonce is passed through entry.server.tsx. */
-    what: "the server entry",
-    test: /^app\/entry\.server\.tsx$/,
+    /* check-headers asserts where the admin nonce goes and that public scripts need none: the server
+       entry, the loader root renders, the marker <Enhance> renders and the speculation block. */
+    what: "the server entry or a script the CSP trusts",
+    test: /^app\/(entry\.server\.tsx|root\.tsx|lib\/(context\.ts|enhance-loader\.mjs)|components\/(enhance|site-speculation)\.tsx)$/,
     gates: ["check:headers"],
   },
   {

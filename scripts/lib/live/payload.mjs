@@ -24,28 +24,36 @@ export async function run() {
       "app/enhance/ lists no modules, so the comparison below would expect nothing",
     );
 
+    /* The page's scripts are the ones the loader inserts from its <Enhance> markers. */
     /** @type {string[]} */
     const scriptSrcs = [];
     /** @type {string[]} */
     const offAssets = [];
-    for (const script of text.match(/<script\b[^>]*\bsrc="[^"]*"[^>]*>/g) ?? []) {
-      const src = /** @type {string} */ ((script.match(/\bsrc="([^"]*)"/) ?? [])[1]);
+    for (const marker of text.match(/<template\b[^>]*\bdata-enhance="[^"]*"[^>]*>/g) ?? []) {
+      const src = /** @type {string} */ ((marker.match(/\bdata-enhance="([^"]*)"/) ?? [])[1]);
       const asset = src.match(/^\/assets\/([^"?#]+\.js)$/);
       if (asset) scriptSrcs.push(asset[1]);
       else offAssets.push(src);
     }
     check(
-      "payload: every live script src is under /assets/",
+      "payload: every live enhancement marker is under /assets/",
       offAssets.length === 0,
-      `script src(s) from elsewhere: [${offAssets.join(", ")}]. Only built enhancement bundles ` +
-        `belong on a public page.`,
+      `marker URL(s) from elsewhere: [${offAssets.join(", ")}]. Only built enhancement bundles ` +
+        `belong on a public page, and the loader refuses anything else.`,
     );
     const preloads = text.match(/<link[^>]*rel="modulepreload"[^>]*>/g) ?? [];
+    const parserScripts = text.match(/<script\b[^>]*\bsrc=[^>]*>/g) ?? [];
 
     check(
-      "payload: the live page references at least one script",
+      "payload: the live page references at least one enhancement",
       scriptSrcs.length > 0,
-      "zero script-src references found; the enhancement tags vanished or this extraction moved",
+      "zero <template data-enhance> markers found; the markers vanished or this extraction moved",
+    );
+    check(
+      "payload: the live page carries no parser-inserted script src",
+      parserScripts.length === 0,
+      `${parserScripts.length} <script src> tag(s) in the served HTML: [${parserScripts.join(", ")}]. ` +
+        `The public policy has no nonce, so such a tag is refused; bundles arrive through the loader.`,
     );
     check(
       "payload: the live post page carries no modulepreload",
@@ -55,7 +63,7 @@ export async function run() {
     );
     const foreign = scriptSrcs.map(chunkStem).filter((stem) => !enhanceStems.has(stem)).sort();
     check(
-      "payload: every live script src is an enhancement bundle",
+      "payload: every live marker is an enhancement bundle",
       foreign.length === 0,
       `non-enhancement stem(s) on the wire: [${foreign.join(", ")}]`,
     );
