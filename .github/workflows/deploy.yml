@@ -272,11 +272,16 @@ jobs:
       # imports. Ship builds them again itself; building here too means a
       # bundle-build failure surfaces before the gate tier rather than inside
       # the ship window.
+      # build:stack and build:publication-twins match ci.yml's step. stack.json
+      # became a build product on 2026-09-08 and build:content reads it, so this
+      # step refused with ENOENT on the first dispatch after (run 36218330627).
       - name: Create the local D1 the gate tier reads
         run: |
           set -euo pipefail
           npx wrangler d1 migrations apply dustinedwards --local
+          npm run build:stack
           npm run build:content
+          npm run build:publication-twins
           npm run build:enhance
           npm run sync:content -- --local
 
