@@ -178,7 +178,6 @@
 }
 
 .further-reading,
-.related-posts,
 .post-backlinks,
 .post-mentions {
   max-width: 44rem;
@@ -188,7 +187,6 @@
 }
 
 .further-reading h2,
-.related-posts h2,
 .post-backlinks h2,
 .post-mentions h2 {
   margin: 0 0 0.75rem;
@@ -196,7 +194,6 @@
 }
 
 .further-reading ul,
-.related-posts ul,
 .post-backlinks ul,
 .post-mentions ul {
   margin: 0;
@@ -206,8 +203,7 @@
   font-size: 0.9375rem;
 }
 
-.further-reading a,
-.related-posts a {
+.further-reading a {
   text-decoration: none;
 }
 
