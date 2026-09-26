@@ -184,3 +184,12 @@ test("ANY URL CARRYING A QUERY IS EXCLUDED, as a search component", () => {
     "the query exclusion is not a search-component pattern",
   );
 });
+
+test("the rules text can never end its script element, whatever the pathname", () => {
+  /* Rendered raw and hashed as-is, so the escaping is the only thing between a hostile path and
+   * `</script`. A real URL pathname percent-encodes these, which is why this passes one directly. */
+  const pathname = "/</script><!--&x";
+  const text = buildSpeculationRules({ pathname });
+  assert.doesNotMatch(text, /[<>&]/, `unescaped markup characters in ${text}`);
+  assert.ok(exclusions(pathname).includes(pathname), "the escaped rules do not parse back to the path");
+});
