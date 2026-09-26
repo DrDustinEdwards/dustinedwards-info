@@ -240,6 +240,10 @@
     // of the policy, and because the drift it exists to catch is between the
     // list and the routes.
     "workers/feed-types.mjs",
+    // Listed because csp.mjs IMPORTS it: the policy's script hash is computed
+    // from the loader text this module holds, which is what keeps the two from
+    // drifting. Dependency-free.
+    "app/lib/enhance-loader.mjs",
     // Listed because csp.mjs IMPORTS it: `media-src` is written from the same
     // audio host list the podcast feed parser accepts episodes against, so the
     // policy cannot refuse audio the home page renders. Dependency-free.

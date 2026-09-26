@@ -9,13 +9,14 @@ export default async function handleRequest(
   responseStatusCode: number,
   responseHeaders: Headers,
   routerContext: EntryContext,
-  // The request context `workers/app.ts` built and set `nonceContext` into.
+  // The request context `workers/app.ts` built and set `nonceContext` into (admin paths only).
   loadContext: RouterContextProvider,
 ) {
   let shellRendered = false;
 
   // The ServerRouter prop nonces React Router's streaming scripts; without it an enforcing CSP blocks
   // the hydration payload. react-dom's own inline scripts take the nonce only from the render option.
+  // Undefined on public pages, which do not hydrate and stream no inline script of their own.
   const nonce = getNonce(loadContext);
 
   const body = await renderToReadableStream(
