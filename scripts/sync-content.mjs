@@ -16,7 +16,10 @@ import { runWrangler } from "./lib/wrangler-run.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
 import { deleteFloor, requirePosts, syncablePostProblems } from "./lib/delete-floor.mjs";
 
-const DB_NAME = "dustinedwards";
+// `--preview` converges the Worker Previews database instead (scripts/build-preview.mjs). It is
+// remote by nature and named, so no flag combination can point a preview build at production.
+const PREVIEW = process.argv.includes("--preview");
+const DB_NAME = PREVIEW ? "dustinedwards-preview" : "dustinedwards";
 
 const LLMS_PATH = "content/llms.txt";
 
@@ -352,7 +355,7 @@ function verify(target, posts, records) {
 }
 
 async function main() {
-  const target = process.argv.includes("--remote") ? "--remote" : "--local";
+  const target = PREVIEW || process.argv.includes("--remote") ? "--remote" : "--local";
 
   const artifact = JSON.parse(await readFile(ARTIFACT_PATH, "utf8"));
   // Every delete below converges D1 to this artifact, so an empty one would empty production.

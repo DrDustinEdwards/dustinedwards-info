@@ -90,6 +90,8 @@
 # every typecheck. A derived file that regenerates whenever the config changes.
 worker-configuration.d.ts
 wrangler.jsonc
+# Written by scripts/build-preview.mjs on every preview build: the preview database for migrations.
+wrangler.preview-migrations.jsonc
 # The watchdog Worker's config, on exactly the same split as the pair above.
 #   wrangler.watchdog.jsonc          ignored. It differs from its example in one
 #                                    value, ALERT_EMAIL, which is a personal
