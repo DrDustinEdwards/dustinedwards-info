@@ -507,6 +507,21 @@ if (existsSync(SHIP)) {
     skipRecordAt !== -1 && skipRecordAt > recordAt && skipRecordAt < exitAt,
     true,
   );
+  /* ONE skip exit, and only on a GitHub runner: a second exit with that code, or one outside the
+     runner guard, would turn a lost key on the operator machine into a green ship. */
+  const ensureSource = stripComments(readFileSync(join(root, "scripts/uptime-ensure.mjs"), "utf8"));
+  eq(
+    "uptime: uptime-ensure has exactly one exit with KEY_ABSENT_EXIT",
+    [...ensureSource.matchAll(/process\.exit\(\s*KEY_ABSENT_EXIT\s*\)/g)].length,
+    1,
+  );
+  eq(
+    "uptime: that exit sits inside the GitHub-runner guard",
+    /if\s*\(\s*keylessRunIsExpected\(\s*process\.env\s*\)\s*\)\s*\{[^}]*process\.exit\(\s*KEY_ABSENT_EXIT\s*\)/.test(
+      ensureSource,
+    ),
+    true,
+  );
 
   eq(
     "media sync: the operator API exposes sync_media",
@@ -645,7 +660,7 @@ if (ledger === null && ledgers.length === 0 && process.env.CI === "true") {
 
 // Measured by running it, set for the lower environment: without a local database the three
 // assertions comparing the applied set to it do not run.
-const MINIMUM_CHECKS = 118;
+const MINIMUM_CHECKS = 120;
 tally.floor("check:migrations", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {
