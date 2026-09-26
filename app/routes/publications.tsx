@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { Form, Link } from "react-router";
 
 import { EvidenceRow } from "~/components/evidence-row";
@@ -8,6 +9,7 @@ import type { Publication, TopicId } from "~/data/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
+import { interWidthEm } from "~/lib/inter-width";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { SORTS, publicationListing } from "~/lib/publications/listing.mjs";
 import { PUBLICATIONS_PATH, doiSlug, paperPath } from "~/lib/publications/paths.mjs";
@@ -27,6 +29,16 @@ import type { Route } from "./+types/publications";
 import "~/styles/evidence-row.css";
 import "~/styles/listing.css";
 import "~/styles/publications.css";
+
+/*
+ * The search row's controls are sized from Inter's own advances, as the filter links are, so the row
+ * wraps the same way in whichever face draws it. Sized by the fallback it fit on one line at 390 px,
+ * and Apply dropped to a second when Inter arrived (CLS 0.085 without Arial).
+ */
+const SEARCH_CONTROL_WIDTHS = {
+  "--sort-w": `${Math.max(...SORTS.map((s) => interWidthEm(s.label, 400)))}em`,
+  "--apply-w": `${interWidthEm("Apply", 400)}em`,
+} as CSSProperties;
 
 const TOPIC_META: Record<TopicId, { title: string; description: string }> = {
   "human-simian-retroviruses": {
@@ -292,7 +304,12 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
           ) : null}
         </nav>
 
-        <Form method="get" className="list-search paper-search" role="search">
+        <Form
+          method="get"
+          className="list-search paper-search"
+          role="search"
+          style={SEARCH_CONTROL_WIDTHS}
+        >
           {topics.map((t) => (
             <input key={t} type="hidden" name="topic" value={t} />
           ))}
