@@ -7,7 +7,8 @@ import assert from "node:assert/strict";
 
 import { render } from "./lib/render.mjs";
 
-const EXECUTABLE = /<script|<iframe|<object|<embed|\son\w+\s*=/i;
+// `<template` and `data-enhance` too: the loader turns such a marker into a trusted script.
+const EXECUTABLE = /<script|<iframe|<object|<embed|<template|data-enhance|\son\w+\s*=/i;
 
 test("raw HTML in a post body never reaches the output", async () => {
   const cases = [
@@ -17,6 +18,8 @@ test("raw HTML in a post body never reaches the output", async () => {
     ["an object", '<object data="evil.swf"></object>'],
     ["a raw div", '<div class="raw">hello</div>'],
     ["svg carrying a script", "<svg><script>alert(1)</script></svg>"],
+    ["an enhancement marker", '<template data-enhance="/assets/x.js"></template>'],
+    ["a marker attribute on a raw element", '<span data-enhance="/assets/x.js">x</span>'],
   ];
   for (const [label, body] of cases) {
     const { html } = await render(body);
