@@ -55,3 +55,31 @@ export async function awaitAskConvergence({
 
   return { converged: false, polls, latest, lastError };
 }
+
+/**
+ * Ship's post-repair assertion reads health seconds after the Ask upload, and the index can list
+ * short then even when the upload's own write-back read was full (157 then 155, deploy run
+ * 36274700184). A failing row gets the same bounded window as the write-back; one that converges
+ * is ok, and one that does not keeps its latest counts and the time waited, for the miss.
+ *
+ * @param {object} options
+ * @param {import("./readiness.mjs").HealthCheckRow | undefined} options.row the ask-index-drift row
+ * @param {() => Promise<{ ok: boolean, expected?: number, present?: number } | null>} options.reading
+ * @param {(ms: number) => Promise<unknown>} options.sleep
+ * @param {() => number} [options.now]
+ * @param {(event: { poll: number, reading: any, error: string | null }) => void} [options.onPoll]
+ * @returns {Promise<import("./readiness.mjs").HealthCheckRow | undefined>}
+ */
+export async function settleAskDrift({ row, reading, sleep, now = Date.now, onPoll }) {
+  if (!row || row.ok === true) return row;
+
+  const started = now();
+  const { converged, latest } = await awaitAskConvergence({ reading, sleep, now, onPoll });
+  // The row's own counts are the stale ones; a converged row carries none, as health's ok rows do.
+  if (converged) return { name: row.name, ok: true };
+  const counts =
+    latest && typeof latest.expected === "number" && typeof latest.present === "number"
+      ? { expected: latest.expected, present: latest.present }
+      : {};
+  return { ...row, ...counts, waitedMs: now() - started };
+}

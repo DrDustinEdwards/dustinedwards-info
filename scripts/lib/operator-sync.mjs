@@ -58,6 +58,25 @@ async function operatorSync(tool, { origin, token }) {
 }
 
 /**
+ * The ask-index-drift row from /api/health. AI Search is eventually consistent, so drift is re-read
+ * before it is a miss, and through health, which writes nothing; `sync_ask` would repair what it
+ * measures.
+ *
+ * @param {string} origin
+ * @returns {Promise<any>} the row, or null when health did not report one
+ */
+export async function readAskDrift(origin) {
+  const res = await fetch(`${origin}/api/health`, {
+    headers: { "user-agent": "ship", "cache-control": "no-cache" },
+    signal: AbortSignal.timeout(30_000),
+  });
+  // Parsed regardless of status: health answers 503 when ANY check fails, including ones this
+  // reading is not asking about, and the body is still the answer.
+  const health = await res.json().catch(() => null);
+  return health?.checks?.find((/** @type {any} */ c) => c?.name === "ask-index-drift") ?? null;
+}
+
+/**
  * sync_ask, then, when the write-back read has not converged, re-reads /api/health for the Ask
  * index to catch up on its own.
  *
@@ -81,21 +100,7 @@ export async function convergeAsk(target) {
       report.failed.map((/** @type {any} */ f) => `${f.key} (${f.error})`).join(", ") +
       `. Re-run sync_ask once the cause clears`;
   } else if (!askMiss && report.converged !== true) {
-    /*
-     * AI Search is eventually consistent, so drift is re-read before it is a miss, via `/api/health`,
-     * which writes nothing; `sync_ask` would repair what it measures.
-     */
-    const driftReading = async () => {
-      const res = await fetch(`${origin}/api/health`, {
-        headers: { "user-agent": "ship", "cache-control": "no-cache" },
-        signal: AbortSignal.timeout(30_000),
-      });
-      // Parsed regardless of status: health answers 503 when ANY check fails,
-      // including ones this loop is not asking about, and the body is still
-      // the answer.
-      const health = await res.json().catch(() => null);
-      return health?.checks?.find((/** @type {any} */ c) => c?.name === "ask-index-drift") ?? null;
-    };
+    const driftReading = () => readAskDrift(origin);
 
     const firstReading =
       `${report.expected} expected, ${report.present} present, drift ${report.drift}`;

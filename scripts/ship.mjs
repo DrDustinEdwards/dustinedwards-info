@@ -28,7 +28,8 @@ import {
 import { dirtyTree } from "./lib/git-tree.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
-import { convergeAsk, convergeMedia } from "./lib/operator-sync.mjs";
+import { convergeAsk, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
+import { ASK_POLL_WINDOW_MS, settleAskDrift } from "./lib/ask-converge.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
 import { missReport } from "./lib/ship-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
@@ -727,6 +728,21 @@ let deferredMiss = "";
       // A 429 or an unparseable body: name that, not three "reported no check" misses.
       deferredMiss = verdict.why;
     } else {
+      // The Ask index can list short seconds after a full write-back, so a failing row is re-read
+      // at 10s intervals (well under health's 20 a minute) before it counts as a miss.
+      const askAt = verdict.checks.findIndex((c) => c.name === "ask-index-drift");
+      if (askAt >= 0 && verdict.checks[askAt].ok !== true) {
+        console.log(
+          `  ask-index-drift is behind; re-reading ${READINESS_PATH} for up to ` +
+            `${ASK_POLL_WINDOW_MS / 1000}s before calling it a miss.`,
+        );
+        const settled = await settleAskDrift({
+          row: verdict.checks[askAt],
+          reading: () => readAskDrift(ORIGIN),
+          sleep: (ms) => new Promise((r) => setTimeout(r, ms)),
+        });
+        if (settled) verdict.checks[askAt] = settled;
+      }
       const { misses, converged } = deferredMisses(verdict.checks, DEFERRED_CHECKS, READINESS_PATH);
       for (const name of converged) console.log(`  ${name} ok, after ${DEFERRED_CHECKS[name]}.`);
       if (!verdict.ok) misses.unshift(verdict.why);

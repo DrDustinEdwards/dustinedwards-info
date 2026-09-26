@@ -1,5 +1,5 @@
 /**
- * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number }} HealthCheckRow
+ * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number, waitedMs?: number }} HealthCheckRow
  */
 
 /**
@@ -140,8 +140,12 @@ export function deferredMisses(checks, deferred, path = "/api/health") {
       typeof row.expected === "number" && typeof row.present === "number"
         ? ` (expected ${row.expected}, present ${row.present})`
         : "";
+    const waited =
+      typeof row.waitedMs === "number"
+        ? `, after re-reading for ${Math.round(row.waitedMs / 1000)}s`
+        : "";
     misses.push(
-      `${name} is STILL failing after ${repairedBy}${counts}. The endpoint withholds ` +
+      `${name} is STILL failing after ${repairedBy}${counts}${waited}. The endpoint withholds ` +
         `its detail on purpose; the why is in Workers Logs under alert=health-check-failed`,
     );
   }

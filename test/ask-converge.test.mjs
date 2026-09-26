@@ -6,7 +6,9 @@ import {
   ASK_POLL_INTERVAL_MS,
   ASK_POLL_WINDOW_MS,
   awaitAskConvergence,
+  settleAskDrift,
 } from "../scripts/lib/ask-converge.mjs";
+import { DEFERRED_CHECKS, deferredMisses } from "../scripts/lib/readiness.mjs";
 
 /* Time moves only when the loop sleeps, so the two-minute deadline is tested without waiting. */
 function fakeClock() {
@@ -165,4 +167,46 @@ test("a thrown read's reason reaches the poll callback and the result", async ()
   assert.equal(out.converged, false);
   assert.equal(out.lastError, "ECONNRESET");
   assert.ok(seen.length > 0 && seen.every((e) => e === "ECONNRESET"));
+});
+
+/* Deploy run 36274700184: the write-back read 157, health read 155 two seconds later. */
+const SHORT_ROW = { name: "ask-index-drift", ok: false, expected: 157, present: 155 };
+const ASK_ONLY = { "ask-index-drift": DEFERRED_CHECKS["ask-index-drift"] };
+
+test("THE LATE COUNT: a row that lists short after the upload settles, and is no miss", async () => {
+  const clock = fakeClock();
+  const { reading, state } = readingAfter(2, { expected: 157, present: 156 });
+  const row = await settleAskDrift({ row: SHORT_ROW, reading, sleep: clock.sleep, now: clock.now });
+
+  assert.deepEqual(row, { name: "ask-index-drift", ok: true });
+  assert.equal(state.calls, 3);
+  const { misses, converged } = deferredMisses([row], ASK_ONLY);
+  assert.deepEqual(misses, []);
+  assert.deepEqual(converged, ["ask-index-drift"]);
+});
+
+test("THE REAL SHORTFALL: a count that never arrives is a miss naming the last count and the wait", async () => {
+  const clock = fakeClock();
+  const { reading } = readingAfter(Infinity, { expected: 157, present: 154 });
+  const row = await settleAskDrift({ row: SHORT_ROW, reading, sleep: clock.sleep, now: clock.now });
+
+  assert.equal(row?.ok, false);
+  const { misses } = deferredMisses(row ? [row] : [], ASK_ONLY);
+  assert.equal(misses.length, 1);
+  assert.match(
+    misses[0],
+    new RegExp(
+      `^ask-index-drift is STILL failing after the Ask converge \\(expected 157, present 154\\), ` +
+        `after re-reading for ${ASK_POLL_WINDOW_MS / 1000}s\\.`,
+    ),
+  );
+});
+
+test("a row that is already ok is not re-read", async () => {
+  const clock = fakeClock();
+  const { reading, state } = readingAfter(0);
+  const ok = { name: "ask-index-drift", ok: true };
+  assert.equal(await settleAskDrift({ row: ok, reading, sleep: clock.sleep, now: clock.now }), ok);
+  assert.equal(state.calls, 0);
+  assert.deepEqual(clock.state.slept, []);
 });
