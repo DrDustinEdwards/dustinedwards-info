@@ -10,6 +10,8 @@ import { dirname, join } from "node:path";
 
 import { build } from "vite";
 
+import { enhancePlugin } from "../scripts/lib/enhance-bundle.mjs";
+
 import {
   DOCUMENT_ACTION,
   buildSpeculationRules,
@@ -52,6 +54,8 @@ const built = await build({
   resolve: { alias: [{ find: /^~\//, replacement: `${join(root, "app")}/` }] },
   ssr: { noExternal: true },
   plugins: [
+    // The header renders <Enhance module="header">, which reads its URL from `virtual:enhance`.
+    enhancePlugin(),
     {
       name: "header-render-entry",
       enforce: "pre",

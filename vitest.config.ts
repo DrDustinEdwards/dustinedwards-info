@@ -3,6 +3,8 @@ import { fileURLToPath } from "node:url";
 import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-plugin";
 import { defineConfig } from "vitest/config";
 
+import { enhancePlugin } from "./scripts/lib/enhance-bundle.mjs";
+
 /**
  * The Worker test layer: real modules, real workerd, real bindings.
  *
@@ -115,6 +117,8 @@ export default defineConfig({
     ],
   },
   plugins: [
+    // Route modules render <Enhance>, whose URLs come from `virtual:enhance`, as in the real build.
+    enhancePlugin(),
     cloudflareTest({
       /**
        * The Durable Object class has to be defined by SOME worker script for
