@@ -459,16 +459,16 @@ const ROUTE_CEILINGS = {
   /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
   "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
   "/blog/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
-  "/search": { id: "routes/search", css: 7600, total: 11200 },
+  "/search": { id: "routes/search", css: 7600, total: 11400 },
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
-  "/colophon": { id: "routes/colophon", css: 7400, total: 8200 },
-  "/playground": { id: "routes/playground", css: 8200, total: 9100 },
+  "/colophon": { id: "routes/colophon", css: 7400, total: 8400 },
+  "/playground": { id: "routes/playground", css: 8200, total: 9200 },
   /* The inventory carries the whole kit, so it is the heaviest public sheet on the site by design. */
   "/playground/ui": { id: "routes/playground.ui", css: 10600, total: 11800 },
-  "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8200 },
-  "/privacy": { id: "routes/privacy", css: 7400, total: 8200 },
-  "/about": { id: "routes/about", css: 7400, total: 8200 },
-  "/publications": { id: "routes/publications", css: 7900, total: 9000 },
+  "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8400 },
+  "/privacy": { id: "routes/privacy", css: 7400, total: 8400 },
+  "/about": { id: "routes/about", css: 7400, total: 8400 },
+  "/publications": { id: "routes/publications", css: 7900, total: 9100 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
    * HTML is the variable part: a long author list is content, not a payload regression.

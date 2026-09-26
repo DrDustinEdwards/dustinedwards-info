@@ -38,6 +38,17 @@ function enhanceMenu() {
     close(details, false);
   });
 
+  /*
+   * Tabbing out closes the panel, or it stays open over the next things focus lands on (WCAG 2.4.11).
+   * Only when focus went somewhere: a null relatedTarget is the window losing focus, not the reader
+   * leaving the menu.
+   */
+  details.addEventListener("focusout", (event) => {
+    const next = event.relatedTarget;
+    if (!details.open || !(next instanceof Node) || details.contains(next)) return;
+    close(details, false);
+  });
+
   details.addEventListener("toggle", () => {
     if (details.open) document.documentElement.removeAttribute("data-header-hidden");
   });

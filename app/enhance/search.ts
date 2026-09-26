@@ -114,6 +114,8 @@ export function enhanceSearch(): void {
     if (!target) return;
     target.textContent = "";
     for (const hit of data.results ?? []) target.appendChild(renderHit(hit));
+    // The server's "Nothing matched" answered the query the page opened with, not this one.
+    if (target.childElementCount > 0) document.querySelector(".search-zero")?.remove();
 
     if (count) {
       const total = data.total ?? 0;

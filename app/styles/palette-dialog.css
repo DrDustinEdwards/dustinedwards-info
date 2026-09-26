@@ -127,8 +127,12 @@
   cursor: pointer;
 }
 
+/* The tint alone measured about 1.1:1 against the pane, so the active option also carries the brand
+   ring the focus indicator uses (WCAG 1.4.11): it is where Enter goes. */
 .palette-option[aria-selected="true"] {
   background: var(--tint-brand);
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
 }
 
 .palette-title {

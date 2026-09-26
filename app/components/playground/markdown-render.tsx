@@ -45,7 +45,8 @@ export function MarkdownRenderDemo({ markdown, markdownRefusal, snippetError, sn
 
       <div className="playground-result">
         <h3 className="playground-subhead">In</h3>
-        <pre className="playground-source">
+        {/* Focusable so a keyboard can scroll it (WCAG 2.1.1), and named so the stop says what it is. */}
+        <pre className="playground-source" tabIndex={0} role="region" aria-label="Markdown source">
           <code>{markdown?.source ?? SNIPPETS.find((s) => s.slug === snippetSlug)?.source}</code>
         </pre>
         <p className="playground-note">{snippetNote}</p>
