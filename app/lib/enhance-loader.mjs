@@ -11,16 +11,27 @@
  * THE TEXT IS THE HASH: any edit here changes the policy, and the gates recompute it from this
  * string. It must never contain `<`, so React can render it raw and the bytes stay identical.
  *
- * - Deduplicated, in document order, like the parser-inserted tags it replaces.
+ * - Deduplicated by resolved URL, in document order, like the parser-inserted tags it replaces.
  * - `async = false` keeps that order: a dynamic module script is otherwise run as it arrives.
- * - Only same-origin `/assets/` URLs: a marker smuggled into a page cannot borrow the trust.
- *   Refusing one throws, so it reaches the console and check:browser's error sweep.
+ * - Only the rule in app/lib/enhance-url.mjs, which the palette trigger applies too: resolved
+ *   against the page, same origin, and a normalized path under `/assets/`, so a marker
+ *   smuggled into a page cannot borrow the trust and `..` cannot climb out.
+ *   test/enhance-loader.test.mjs runs this text and the palette's rule over the same cases.
+ * - A refused marker is skipped, and one error naming every refusal is thrown after the loop, so
+ *   later bundles still load and the refusal still reaches the console.
+ * - Document methods are taken from `Document.prototype`, because a named element such as
+ *   `<img name="querySelectorAll">` shadows the ones on `document` itself.
  */
 
-/** Where the app build emits the bundles (scripts/lib/enhance-bundle.mjs), under Vite's base `/`. */
-export const ENHANCE_URL_PREFIX = "/assets/";
+import { ENHANCE_URL_PREFIX } from "./enhance-url.mjs";
+
+export { ENHANCE_URL_PREFIX };
 
 export const ENHANCE_LOADER =
-  'for(const u of new Set(Array.from(document.querySelectorAll("template[data-enhance]"),t=>t.dataset.enhance))){' +
-  `if(!u.startsWith("${ENHANCE_URL_PREFIX}"))throw new Error("enhance: refused "+u);` +
-  'const s=document.createElement("script");s.type="module";s.async=false;s.src=u;document.head.appendChild(s)}';
+  '{const d=document,P=Document.prototype,h=P.querySelector.call(d,"head"),seen=new Set,bad=[];' +
+  'for(const t of P.querySelectorAll.call(d,"template[data-enhance]")){' +
+  'const r=t.getAttribute("data-enhance");let u;try{u=new URL(r,location.href)}catch{}' +
+  `if(!u||u.origin!==location.origin||!u.pathname.startsWith("${ENHANCE_URL_PREFIX}")){bad.push(r);continue}` +
+  "if(seen.has(u.href))continue;seen.add(u.href);" +
+  'const s=P.createElement.call(d,"script");s.type="module";s.async=false;s.src=u.href;h.appendChild(s)}' +
+  'if(bad.length)throw new Error("enhance: refused "+bad.join(", "))}';

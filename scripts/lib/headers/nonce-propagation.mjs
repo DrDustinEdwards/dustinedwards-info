@@ -91,8 +91,8 @@ export function run() {
   );
   ok(
     "the loader looks for the marker <Enhance> renders",
-    ENHANCE_LOADER.includes('querySelectorAll("template[data-enhance]")') &&
-      ENHANCE_LOADER.includes("dataset.enhance"),
+    ENHANCE_LOADER.includes('"template[data-enhance]"') &&
+      ENHANCE_LOADER.includes('getAttribute("data-enhance")'),
     "the loader and the marker disagree, so every enhancement on every page stops loading " +
       "with nothing in the console",
   );

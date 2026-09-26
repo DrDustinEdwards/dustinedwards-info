@@ -244,9 +244,13 @@
     // from the loader text this module holds, which is what keeps the two from
     // drifting. Dependency-free.
     "app/lib/enhance-loader.mjs",
+    // Imported by enhance-loader.mjs for the URL prefix. Dependency-free.
+    "app/lib/enhance-url.mjs",
     // Listed because csp.mjs IMPORTS it too: the speculation rules' hash is
     // computed from the builder SiteSpeculation renders with. Dependency-free.
     "app/lib/speculation.mjs",
+    // Imported by speculation.mjs, which escapes its rules with it.
+    "app/lib/json-ld.mjs",
     // Listed because csp.mjs IMPORTS it: `media-src` is written from the same
     // audio host list the podcast feed parser accepts episodes against, so the
     // policy cannot refuse audio the home page renders. Dependency-free.
