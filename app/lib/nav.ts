@@ -101,7 +101,7 @@ const RESEARCH: Menu = {
             {
               to: "/teaching/phage-discovery",
               label: "Phage discovery guide",
-              description: "Steps and the Ward’s kit",
+              description: "Finding a new phage, step by step",
             },
             {
               to: "/research/protocols/phage-isolation",
