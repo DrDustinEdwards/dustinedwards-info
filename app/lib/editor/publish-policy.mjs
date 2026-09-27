@@ -1,7 +1,7 @@
 import matter from "gray-matter";
 
 /**
- * @typedef {{ kind: "admin" } | { kind: "operator", id: string } | { kind: "smoke", id: string }} Actor
+ * @typedef {{ kind: "admin" } | { kind: "operator", id: string } | { kind: "smoke", id: string } | { kind: "carrel", changeId: string }} Actor
  */
 
 export const SMOKE_READ_ONLY_POLICY = "smoke-is-read-only";
@@ -15,6 +15,11 @@ export const SMOKE_READ_ONLY_POLICY = "smoke-is-read-only";
 export const WRITE_CAPABILITIES = {
   admin: { write: true, firstPublish: true, destroy: true },
   operator: { write: true, firstPublish: false, destroy: false },
+  /**
+   * Carrel's key, through /api/carrel/v1 only. It may publish for the first time (Carrel design
+   * decision 2: Carrel decides who triggers it) and may not delete, which Carrel's contract never asks.
+   */
+  carrel: { write: true, firstPublish: true, destroy: false },
   /**
    * Every capability false; check:policy asserts it. Read-only is not safe: it still sees drafts and
    * the operator email (not stubbed, since the topbar's narrow-width measurement depends on it).
