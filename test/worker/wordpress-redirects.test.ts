@@ -55,9 +55,9 @@ describe("pattern rules, on the apex host", () => {
     }
   });
 
-  it("/directory-*/ goes to /research/phage-discovery", async () => {
-    await expectMoved("/directory-2023-phage-researchers/", "/research/phage-discovery");
-    await expectMoved("/directory-research-group/", "/research/phage-discovery");
+  it("/directory-*/ goes to /research/science-education", async () => {
+    await expectMoved("/directory-2023-phage-researchers/", "/research/science-education");
+    await expectMoved("/directory-research-group/", "/research/science-education");
   });
 
   it("student and author profiles answer 410, query and all", async () => {
