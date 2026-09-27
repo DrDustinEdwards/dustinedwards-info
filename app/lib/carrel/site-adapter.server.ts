@@ -10,7 +10,7 @@ import { RouterContextProvider } from "react-router";
 import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
 import { postPath } from "~/lib/content/slug.mjs";
-import { cloudflareContext, postPreviewContext } from "~/lib/context";
+import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
@@ -314,8 +314,11 @@ export function carrelSiteAdapter(options: {
         }
         const post = await previewPost(env, record);
 
+        // Every context the Renderer sets for a public path: the nonce is undefined there, as a
+        // public page carries none (workers/csp.mjs).
         const context = new RouterContextProvider();
         context.set(cloudflareContext, { env, ctx });
+        context.set(nonceContext, undefined);
         context.set(postPreviewContext, post);
         const response = await renderDocument(
           new Request(`${origin}/blog/${slug}`, { headers: { accept: "text/html" } }),
