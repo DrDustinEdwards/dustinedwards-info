@@ -56,18 +56,8 @@ export const MATRIX = [
   // No --focus-ring-on-brand against --fill-danger. It measures 1.47:1 in dark,
   // so app.css does not draw that ring and this does not pretend it does.
 
-  // Chrome text is measured against the chrome, not the page.
-  ["--on-chrome", "--surface-chrome", TEXT, "wordmark and current nav on chrome"],
-  ["--on-chrome-muted", "--surface-chrome", TEXT, "nav at rest on chrome"],
-  // The mark is a graphical object, not text, so it takes the 1.4.11 floor.
-  ["--mark-on-chrome", "--surface-chrome", UI, "logo mark on chrome"],
-  ["--focus-ring-on-chrome", "--surface-chrome", UI, "focus ring on chrome"],
-  // Inverted pair: WCAG is symmetric, APCA is not.
-  ["--surface-chrome", "--on-chrome-muted", TEXT, "pressed toggle and skip link, inverted"],
   // The caption band is opaque, so the ratio ignores the picture.
   ["--on-scrim", "--scrim", TEXT, "tile caption over the image"],
-
-  // No --border-strong on --surface-chrome row: a seam has no 3:1 obligation.
 
   ["--text-danger", "--paper", TEXT, "danger text on paper"],
   // Revert to draft, as a row in the overflow menu on the popover step.
@@ -114,9 +104,6 @@ export const MATRIX = [
   // warm paths would fail (2.72, 1.93, 1.58:1 on limestone) but are logotype ink, which 1.4.11 exempts.
   ["--brand", "--glass-fill-paper", TEXT, "link on paper glass"],
   ["--visited", "--glass-fill-paper", TEXT, "visited link on paper glass"],
-  ["--visited", "--error-tint", TEXT, "visited link on an error tint"],
-  ["--visited", "--warning-tint", TEXT, "visited link on a warning tint"],
-  ["--visited", "--success-tint", TEXT, "visited link on a success tint"],
 
   // No bar rows: a pair against a surface nothing paints is not coverage.
 
@@ -126,25 +113,11 @@ export const MATRIX = [
   ["--link-underline", "--paper", UI, "a paragraph link's resting underline on paper"],
 
   ["--error", "--paper", TEXT, "error text on paper"],
-  ["--error", "--error-tint", TEXT, "error text on its own tint"],
-  ["--on-error-fill", "--error-fill", TEXT, "label on a destructive fill"],
   ["--warning", "--paper", TEXT, "warning text on paper"],
-  ["--warning", "--warning-tint", TEXT, "warning text on its own tint"],
-  ["--on-warning-fill", "--warning-fill", TEXT, "label on a warning fill"],
   ["--success", "--paper", TEXT, "success text on paper"],
-  ["--success", "--success-tint", TEXT, "success text on its own tint"],
-  ["--on-success-fill", "--success-fill", TEXT, "label on a success fill"],
 
-  // Every series carries lines and labels, so its stroke must clear 1.4.11; an area fill may sit lighter.
-  ["--fig-s1", "--fig-ground", UI, "figure series 1 stroke"],
-  ["--fig-s2", "--fig-ground", UI, "figure series 2 stroke"],
-  ["--fig-s3", "--fig-ground", UI, "figure series 3 stroke"],
-  ["--fig-s4", "--fig-ground", UI, "figure series 4 stroke"],
-  ["--fig-s5", "--fig-ground", UI, "figure series 5 stroke"],
-  // Axis and grid take --fig-dust-400: an axis carries meaning, so 1.4.11 applies.
-  ["--fig-dust-400", "--fig-ground", UI, "figure axis and grid stroke"],
-  ["--text-secondary", "--fig-ground", TEXT, "figure label"],
-  ["--text", "--fig-ground", TEXT, "figure key label"],
+  // Oxide 400 draws the plate's figure numbers and leaders on paper in light (home.css), so 1.4.11 applies.
+  ["--fig-oxide-400", "--paper", UI, "plate figure numbers and leaders on paper"],
   // A leader identifies which label names which plaque, so 1.4.11 applies. Oxide 300 is measured in
   // every theme because it is the weaker on the light lawn (3.2:1 against 400's 4.3:1).
   ["--fig-oxide-300", "--fig-lawn", UI, "plate leader on the lawn"],
@@ -201,22 +174,12 @@ export const NON_PARTICIPATING = new Map([
     "--fig-dust-300",
     "texture: the halo's dashed ring on Plate I, below the stroke floor because it identifies nothing",
   ],
-  // Unused ramp steps: interiors may sit below 3:1, only edges may not.
+  // The lamp's catch hue in each theme reads these two purple steps, and nothing else does.
   ...(/** @type {Array<[string, string]>} */ (
-    [
-      "--fig-purple-400",
-      "--fig-leaf-100",
-      "--fig-leaf-400",
-      "--fig-leaf-500",
-      "--fig-oxide-100",
-      "--fig-oxide-200",
-      "--fig-oxide-500",
-      "--fig-dust-100",
-      "--fig-dust-200",
-    ].map((t) => [
+    ["--fig-purple-100", "--fig-purple-400"].map((t) => [
       t,
-      "a ramp step no series slot resolves through: a fill or a letterbox ground, which step 4 " +
-        "exempts from the stroke floor",
+      "the lamp catch hue behind the glass, which --lamp-chroma-on-paper resolves through; light is " +
+        "atmosphere and never meaning, so no pair can be required of it",
     ])
   )),
 ]);

@@ -333,6 +333,7 @@ for (const req of variationRequests) {
 const OG_FACES = [
   { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
   { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
+  { file: join(root, "assets", "fonts", "SourceSerif4-Display-Bold.ttf"), weight: 700 },
 ];
 
 for (const face of OG_FACES) {
