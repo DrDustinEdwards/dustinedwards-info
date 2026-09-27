@@ -132,5 +132,13 @@ export function run() {
     ok("the paths declared here are the ones this site means to declare",
       paths.every((p) => p === "/assets/*" || p === "/research/publications/*.md"),
       `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
+
+    /* The paper twins are assets, so this file is the only place their canonical Link can be set. */
+    const twins = blocks.find((b) => b.path === "/research/publications/*.md");
+    ok("the paper twins name their page with Link rel=canonical",
+      twins?.directives.some((d) =>
+        /^Link:\s*<\/research\/publications\/:splat\/>;\s*rel="canonical"$/i.test(d)) ?? false,
+      "every other markdown twin and llms file carries canonicalLink (app/lib/markdown-twin.ts); " +
+        "without this line a paper twin is the one machine document that does not say which page it stands for");
   }
 }

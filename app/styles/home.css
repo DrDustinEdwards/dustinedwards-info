@@ -127,18 +127,6 @@
   text-decoration: none;
 }
 
-.home-machines {
-  margin-block-start: var(--s-7);
-}
-
-.home-machines p {
-  max-width: 62ch;
-  margin: 0;
-  font-family: var(--font-serif);
-  font-size: 1.0625rem;
-  line-height: 1.7;
-}
-
 @media (max-width: 47.99rem) {
   .intro-name {
     font-size: 2.75rem;

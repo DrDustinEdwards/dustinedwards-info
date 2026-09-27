@@ -1,5 +1,6 @@
 import { getSetting } from "~/db";
 import { getEnv } from "~/lib/context";
+import { canonicalLink } from "~/lib/markdown-twin";
 import llmsTxt from "../../content/llms.txt?raw";
 import type { Route } from "./+types/llms";
 
@@ -16,6 +17,8 @@ export async function loader({ context }: Route.LoaderArgs) {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "x-robots-tag": "noindex",
+      // The site it describes: a crawler that lands here is pointed at the page people read.
+      link: canonicalLink("/"),
       "cache-control": "public, max-age=3600",
     },
   });
