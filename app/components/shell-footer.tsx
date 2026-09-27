@@ -75,55 +75,58 @@ export function ShellFooter() {
             </div>
           </div>
 
-          {FOOTER_COLUMNS.map((column) => (
-            <nav key={column.id} className="footer-col" aria-labelledby={`footer-${column.id}`}>
-              <h2 className="footer-heading" id={`footer-${column.id}`}>
-                {column.heading}
-              </h2>
-              <ul className="footer-links">
-                {column.items.map((item) =>
-                  isPair(item) ? (
-                    <li key={item.label} className="footer-pair">
-                      <span>{item.label}</span>
-                      {item.links.map((link) => (
-                        <FooterAnchor key={link.to} link={link} />
-                      ))}
-                    </li>
-                  ) : (
-                    <li key={item.to}>
-                      <FooterAnchor link={item} />
-                    </li>
-                  ),
-                )}
-              </ul>
-              {column.id === "site" ? (
-                <ul className="footer-links footer-private" aria-label="Private tools">
-                  {PRIVATE_TOOLS.map((tool) => {
-                    const Icon = PRIVATE_ICONS[tool.icon];
-                    const content = (
-                      <>
-                        <Icon className="footer-private-icon" />
-                        {tool.label}
-                      </>
-                    );
-                    return (
-                      <li key={tool.to}>
-                        {tool.external ? (
-                          <a href={tool.to} className="footer-private-link" aria-label={tool.name}>
-                            {content}
-                          </a>
-                        ) : (
-                          <Link to={tool.to} className="footer-private-link" aria-label={tool.name}>
-                            {content}
-                          </Link>
-                        )}
+          {/* Beside the brand block on desktop: the link columns, three across and two rows deep. */}
+          <div className="footer-columns">
+            {FOOTER_COLUMNS.map((column) => (
+              <nav key={column.id} className="footer-col" aria-labelledby={`footer-${column.id}`}>
+                <h2 className="footer-heading" id={`footer-${column.id}`}>
+                  {column.heading}
+                </h2>
+                <ul className="footer-links">
+                  {column.items.map((item) =>
+                    isPair(item) ? (
+                      <li key={item.label} className="footer-pair">
+                        <span>{item.label}</span>
+                        {item.links.map((link) => (
+                          <FooterAnchor key={link.to} link={link} />
+                        ))}
                       </li>
-                    );
-                  })}
+                    ) : (
+                      <li key={item.to}>
+                        <FooterAnchor link={item} />
+                      </li>
+                    ),
+                  )}
                 </ul>
-              ) : null}
-            </nav>
-          ))}
+                {column.id === "site" ? (
+                  <ul className="footer-links footer-private" aria-label="Private tools">
+                    {PRIVATE_TOOLS.map((tool) => {
+                      const Icon = PRIVATE_ICONS[tool.icon];
+                      const content = (
+                        <>
+                          <Icon className="footer-private-icon" />
+                          {tool.label}
+                        </>
+                      );
+                      return (
+                        <li key={tool.to}>
+                          {tool.external ? (
+                            <a href={tool.to} className="footer-private-link" aria-label={tool.name}>
+                              {content}
+                            </a>
+                          ) : (
+                            <Link to={tool.to} className="footer-private-link" aria-label={tool.name}>
+                              {content}
+                            </Link>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+              </nav>
+            ))}
+          </div>
         </div>
         {/* The end year is computed at render: an edge-cached page can show last year's for a few days after
             January 1, which Dustin accepted (2026-09-27) over a year that is edited by hand. */}
