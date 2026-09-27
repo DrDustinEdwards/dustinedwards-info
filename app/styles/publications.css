@@ -133,6 +133,10 @@
 .paper-search {
   flex-wrap: wrap;
   row-gap: var(--s-3);
+  /* publications.tsx sets these from Inter on the element. Declared here so a missing inline style
+     still has a length, and so calc(var(--sort-w)) is not an undeclared custom property. */
+  --sort-w: 5.72em;
+  --apply-w: 2.72em;
 }
 
 .paper-field {
