@@ -3,7 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { RELATED, changedFiles, gatesFor } from "../scripts/check-changed.mjs";
+import { RELATED, changedFiles, gatesFor, reachedModules } from "../scripts/check-changed.mjs";
 
 /**
  * A fake git answering by the joined argument list.
@@ -60,8 +60,8 @@ test("untracked, staged, unstaged and committed paths are all listed, once each"
 
 const DECLARED = new Set([
   "check:policy",
+  "check:ask-guards",
   "check:headers",
-  "check:page-payload",
   "check:features",
   "check:machine-readable",
   "check:urls",
@@ -69,15 +69,41 @@ const DECLARED = new Set([
 
 test("THE PLANT: a route edit reaches the three gates that parse routes", () => {
   const { gates } = gatesFor("app/routes/search.ask.ts", DECLARED);
-  for (const gate of ["check:policy", "check:headers", "check:page-payload"]) {
+  for (const gate of ["check:policy", "check:ask-guards", "check:headers"]) {
     assert.ok(gates.includes(gate), `${gate} reads route modules and must run on a route edit`);
   }
   assert.ok(gates.includes(RELATED));
 });
 
-test("root.tsx reaches page-payload and entry.server.tsx reaches headers", () => {
-  assert.ok(gatesFor("app/root.tsx", DECLARED).gates.includes("check:page-payload"));
+test("root.tsx and entry.server.tsx reach headers", () => {
+  assert.ok(gatesFor("app/root.tsx", DECLARED).gates.includes("check:headers"));
   assert.ok(gatesFor("app/entry.server.tsx", DECLARED).gates.includes("check:headers"));
+});
+
+test("the related-test walk follows ~/ and relative imports, is cycle-safe, and skips what it cannot resolve", () => {
+  /** @type {Record<string, string>} */
+  const files = {
+    "/test/x.test.mjs": `import { Body } from "../app/components/body.tsx";`,
+    "/app/components/body.tsx": `
+      import { Loop } from "./loop";
+      import { helper } from "~/lib/helper";
+      import { createRequestHandler } from "react-router";
+      import font from "./font.woff2?url";
+      import "./body.css";
+      import { Missing } from "./does-not-exist";
+    `,
+    // Imports its own importer. A walk without a seen-set never returns.
+    "/app/components/loop.tsx": `import { Body } from "./body"; export const Loop = () => null;`,
+    "/app/lib/helper.ts": "export const helper = 1;",
+  };
+  const read = (/** @type {string} */ path) => files[path.split("\\").join("/")] ?? null;
+  const seen = [...reachedModules("/test/x.test.mjs", "/app", read)].map((p) => p.split("\\").join("/"));
+  assert.deepEqual(seen.sort(), [
+    "/app/components/body.tsx",
+    "/app/components/loop.tsx",
+    "/app/lib/helper.ts",
+    "/test/x.test.mjs",
+  ]);
 });
 
 test("a component edit does not pull in the route-only gates", () => {

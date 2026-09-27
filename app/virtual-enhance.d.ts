@@ -1,7 +1,7 @@
 /**
  * Served by `enhancePlugin()` in scripts/lib/enhance-bundle.mjs, one entry per `app/enhance/*.ts`.
- * The names are stated here because a type cannot read a directory; check:page-payload holds this
- * list equal to the modules in both directions.
+ * The names are stated here because a type cannot read a directory, so this list has to be kept
+ * equal to the modules by hand when one is added or removed.
  *
  * Its own file, with no import or export, so the declaration is ambient: inside a module such as
  * env.d.ts it would be read as an augmentation of a module that does not exist.

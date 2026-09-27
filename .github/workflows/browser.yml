@@ -84,7 +84,8 @@ jobs:
   drive:
     name: Drive the deployed site
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 15 for check:browser, plus about 10 for web-vitals's twelve Lighthouse runs.
+    timeout-minutes: 25
 
     steps:
       # PINNED BY COMMIT SHA, not by tag, for the reason ci.yml states: a tag is
@@ -234,6 +235,16 @@ jobs:
           ADMIN_ORIGIN: ${{ steps.origin.outputs.origin }}
           SMOKE_TOKEN_FILE: ${{ runner.temp }}/smoke-token
         run: npm run check:browser
+
+      # REAL SPEED, NOT BYTES (job_e89fda4818a6): Lighthouse's mobile profile on the home
+      # page, one research page, one protocol and the newest article, against the same deploy.
+      # It exits 0 on warnings, so a page over a threshold is reported here and blocks nothing;
+      # it exits 1 only when a page is more than TWICE a threshold, and 2 when a page could not
+      # be measured, because an unmeasured page is not a pass. INP cannot be measured in a lab;
+      # the gate prints TBT as its proxy and says so. Three runs per page, median reported:
+      # MEASURED 2026-09-27, one run put a page's TBT at 967ms that three runs put at 13ms.
+      - name: Core Web Vitals (lab) against the deployed site
+        run: npm run web-vitals -- "${{ steps.origin.outputs.origin }}" --runs 3
 
       # The credential is removed even when the gate fails. The runner is
       # ephemeral and this is belt beside braces, but a credential that outlives

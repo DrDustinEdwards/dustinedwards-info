@@ -38,10 +38,10 @@ export function GapsSection() {
           already ships: <code>app/enhance/blog.ts</code> creates it, and it is styled in
           <code>post-enhancements.css</code>. A specimen here costs the whole of that sheet,
           because the bar is one rule of seventeen class families in it and a copy of the
-          rule would be a second owner free to drift. Measured: the import puts this route
-          at 10,689 brotli bytes of stylesheet against a 10,600 ceiling and 11,503 against
-          an 11,500 cold-load ceiling. Raising either is a no-framework-script rule decision, so the bar
-          waits for one rather than taking it.
+          rule would be a second owner free to drift. It was held back by a byte ceiling on the
+          stylesheet of this route (10,689 brotli bytes against 10,600, measured). Speed is now
+          judged by Core Web Vitals rather than byte counts, so that reason no longer stands and
+          the specimen can be added when someone wants it.
         </li>
         <li>
           <b>A filled error alert.</b> Ruled allowed on 13 September, and the kit refuses it
@@ -56,8 +56,9 @@ export function GapsSection() {
           of it here would put five headers in one document and measure none of them.
         </li>
         <li>
-          <b>The lamp on the search field.</b> The glass fill is legal on /search over paper
-          and nowhere else, and the utility that applies it does not exist yet.
+          <b>The lamp on the search field.</b> An earlier ruling placed the glass fill on
+          /search over paper only; that is a default, not a law, and the utility that applies
+          it does not exist yet.
         </li>
       </ul>
     </section>

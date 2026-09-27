@@ -11,8 +11,8 @@ import { ASK_PROBE_LIMIT } from "./lib/live/blog-drafts-ask.mjs";
 import * as cache from "./lib/live/cache.mjs";
 import { ORIGIN, failures, tally } from "./lib/live/client.mjs";
 import * as header from "./lib/live/header.mjs";
+import * as imageLink from "./lib/live/image-link.mjs";
 import * as pages from "./lib/live/pages.mjs";
-import * as payload from "./lib/live/payload.mjs";
 import * as preview from "./lib/live/preview.mjs";
 import * as securityCsp from "./lib/live/security-csp.mjs";
 import * as themeCss from "./lib/live/theme-css.mjs";
@@ -29,18 +29,19 @@ await pages.run();
 await cache.run();
 await securityCsp.run();
 await preview.run();
-await payload.run();
+await imageLink.run();
 await watchdog.run();
 
 console.log(`\n${tally.checks - tally.failures} passed, ${tally.failures} failed`);
 
 /* Floor on executed assertions, measured through a real run: skipped loops look like zero failures.
-   241 was measured on 2026-08-29 (d38a780) against 11 published posts and 1 draft. The corpus loops
+   241 was measured on 2026-08-29 (d38a780) against 11 published posts and 1 draft, less the 7
+   script-set checks removed with the page-payload section on 2026-09-27. The corpus loops
    add checks per post and per draft, so a fixed floor would let each new post's checks absorb a
    skipped section; the corpus part of the floor is derived instead. */
 const corpusChecks = (/** @type {number} */ live, /** @type {number} */ drafts) =>
   live + pageCount(live) + drafts * 8 + Math.min(drafts, ASK_PROBE_LIMIT);
-const MINIMUM_CHECKS = 241 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
+const MINIMUM_CHECKS = 234 + Math.max(0, corpusChecks(corpus.live, corpus.drafts) - corpusChecks(11, 1));
 const breach = assertFloor("verify-live", "checks", tally.checks, MINIMUM_CHECKS);
 const short = breach !== null;
 
