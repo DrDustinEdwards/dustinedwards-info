@@ -294,9 +294,46 @@ test("the prompt stops the session at once when the Capsid jobs tool is missing,
   assert.match(actionStep(), /action "claim", namespace "dustinedwards"/);
 });
 
-const DIAG_KEYS = ["capsid_jobs_loaded", "denied_tools", "init_seen", "mcp_servers", "read_error", "result_seen"];
+// The first block-mode canary here (actions run 36308451713) never committed. CLAUDE.md sends
+// every actor but the site session to a worktree, and the project hooks run outside the
+// sandbox, one of them running lint on every push.
 
-function runDiagnostics(executionFile) {
+test("the prompt tells the session its runner checkout is its own clone", () => {
+  assert.match(actionStep(), /This runner checkout is your own clone\. It is not the main checkout that\n {12}CLAUDE\.md or a ruling reserves for another session; work here, on a new branch\./);
+});
+
+test("every hook is off through flag settings, which outrank the repo's own settings", () => {
+  const m = /--settings '([^']*)'/.exec(actionStep());
+  assert.ok(m, "no --settings in claude_args");
+  assert.deepEqual(JSON.parse(m[1]), { disableAllHooks: true });
+  // In the Action's settings input it would land in user scope, which the repo's project or
+  // local settings outrank.
+  assert.equal("disableAllHooks" in settings(), false, "disableAllHooks is in the user-scope settings input");
+});
+
+const TRIPWIRE_PATH = "${{ runner.temp }}/hook-tripwire";
+
+test("a local-scope hook tripwire is planted after checkout and before the session, and never overwrites a file", () => {
+  const at = stepIndex(/^name: Plant a hook tripwire/);
+  assert.ok(at > stepIndex(/^uses: actions\/checkout@/) && at < stepIndex(/^uses: anthropics\/claude-code-action@/), "the tripwire is not between checkout and the session");
+  const step = steps()[at];
+  assert.match(step, /set -euo pipefail/);
+  assert.match(step, /if \[ -e \.claude\/settings\.local\.json \]; then[^\n]*exit 1; fi/, "the tripwire would overwrite an existing local settings file");
+  assert.match(step, /echo "\.claude\/settings\.local\.json" >> \.git\/info\/exclude/);
+  const body = /cat > \.claude\/settings\.local\.json <<'EOF'\n {10}(.*)\n {10}EOF\n/.exec(step);
+  assert.ok(body, "no tripwire settings heredoc parsed");
+  const hooks = JSON.parse(body[1]).hooks;
+  assert.deepEqual(Object.keys(hooks).sort(), ["PreToolUse", "SessionStart", "UserPromptSubmit"]);
+  for (const [event, groups] of Object.entries(hooks)) {
+    for (const g of groups) for (const h of g.hooks) assert.equal(h.command, `touch ${TRIPWIRE_PATH}`, `${event} does something besides touching the tripwire`);
+  }
+  const diag = steps()[stepIndex(/^name: Report the session's MCP servers and denied tools/)] ?? "";
+  assert.ok(diag.includes(`TRIPWIRE: ${TRIPWIRE_PATH}`), "the report step reads a different tripwire path");
+});
+
+const DIAG_KEYS = ["capsid_jobs_loaded", "denied_bash", "denied_tools", "hooks_fired", "init_seen", "mcp_servers", "read_error", "result_seen"];
+
+function runDiagnostics(executionFile, tripwire = join(tmpdir(), "no-such-hook-tripwire"), expectStatus = 0) {
   const all = steps();
   const at = stepIndex(/^name: Report the session's MCP servers and denied tools/);
   assert.ok(at > stepIndex(/^uses: anthropics\/claude-code-action@/), "the diagnostics step does not follow the Action");
@@ -305,10 +342,12 @@ function runDiagnostics(executionFile) {
   assert.match(step, /EXECUTION_FILE: \$\{\{ steps\.session\.outputs\.execution_file \}\}/);
   const script = /node -e '\n([\s\S]*?)\n {10}'/.exec(step)?.[1];
   assert.ok(script, "no node script parsed in the diagnostics step");
-  const r = spawnSync(process.execPath, ["-e", script], { env: { ...process.env, EXECUTION_FILE: executionFile }, encoding: "utf8" });
-  assert.equal(r.status, 0, r.stderr);
+  const r = spawnSync(process.execPath, ["-e", script], { env: { ...process.env, EXECUTION_FILE: executionFile, TRIPWIRE: tripwire }, encoding: "utf8" });
+  assert.equal(r.status, expectStatus, r.stderr);
   return r.stdout;
 }
+
+const parseDiag = (out) => JSON.parse(out.trim().slice("SESSION_DIAG ".length));
 
 test("the diagnostics step prints names, statuses and booleans only, from a transcript full of secrets", () => {
   const dir = mkdtempSync(join(tmpdir(), "seat-diag-"));
@@ -319,7 +358,16 @@ test("the diagnostics step prints names, statuses and booleans only, from a tran
     JSON.stringify([
       { type: "system", subtype: "init", model: "m", apiKeySource: SECRET, cwd: `/home/${SECRET}`, tools: ["Read", "mcp__capsid__jobs"], mcp_servers: [{ name: "capsid", status: "connected", config: { headers: { Authorization: `Bearer ${SECRET}` } } }] },
       { type: "assistant", message: { content: [{ type: "text", text: SECRET }] } },
-      { type: "result", subtype: "success", result: SECRET, permission_denials: [{ tool_name: "ToolSearch", tool_use_id: "x", tool_input: { query: SECRET } }] },
+      {
+        type: "result",
+        subtype: "success",
+        result: SECRET,
+        permission_denials: [
+          { tool_name: "ToolSearch", tool_use_id: "x", tool_input: { query: SECRET } },
+          { tool_name: "Bash", tool_use_id: "y", tool_input: { command: `git worktree add ../wt ${SECRET}` } },
+          { tool_name: "Bash", tool_use_id: "z", tool_input: { command: `${SECRET} curl -H "Authorization: Bearer ${SECRET}"` } },
+        ],
+      },
     ]),
   );
   const out = runDiagnostics(file);
@@ -330,13 +378,24 @@ test("the diagnostics step prints names, statuses and booleans only, from a tran
   const diag = JSON.parse(lines[0].slice("SESSION_DIAG ".length));
   assert.deepEqual(Object.keys(diag).sort(), DIAG_KEYS);
   assert.deepEqual(diag.mcp_servers, [{ name: "capsid", status: "connected" }]);
-  assert.deepEqual(diag.denied_tools, ["ToolSearch"]);
+  assert.deepEqual(diag.denied_tools, ["ToolSearch", "Bash", "Bash"]);
+  // First two words only; a word that is not a command word prints as <redacted>.
+  assert.deepEqual(diag.denied_bash, ["git worktree", "<redacted> curl"]);
   assert.equal(diag.capsid_jobs_loaded, true);
+  assert.equal(diag.hooks_fired, false);
   assert.equal(diag.read_error, false);
 });
 
 test("the diagnostics step says so when there is no transcript, rather than printing nothing", () => {
-  const diag = JSON.parse(runDiagnostics(join(tmpdir(), "no-such-execution-file.json")).trim().slice("SESSION_DIAG ".length));
+  const diag = parseDiag(runDiagnostics(join(tmpdir(), "no-such-execution-file.json")));
   assert.equal(diag.read_error, true);
   assert.equal(diag.init_seen, false);
+});
+
+test("a fired hook tripwire is reported and fails the run", () => {
+  const dir = mkdtempSync(join(tmpdir(), "seat-tripwire-"));
+  const tripwire = join(dir, "hook-tripwire");
+  writeFileSync(tripwire, "");
+  const diag = parseDiag(runDiagnostics(join(dir, "no-execution-file.json"), tripwire, 1));
+  assert.equal(diag.hooks_fired, true);
 });
