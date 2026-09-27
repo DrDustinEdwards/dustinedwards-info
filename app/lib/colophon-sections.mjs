@@ -91,6 +91,13 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
       "that before it owes you anything else.",
   },
   {
+    id: "run",
+    title: "How the site is run",
+    lead:
+      "Two other systems of mine sit behind this one. Neither is part of this " +
+      "repository.",
+  },
+  {
     id: "not-adopted",
     title: "What was not adopted",
     lead:
@@ -135,6 +142,19 @@ export const AI_DISCLOSURE = Object.freeze([
     "on this page. The review above is the guarantee instead, which is why it " +
     "is stated as a practice and not as a badge.",
 ]);
+
+/** @type {ReadonlyArray<string>} */
+export const SITE_OPERATION = Object.freeze([
+  "Capsid is the site's memory and job queue. It stores the project's " +
+    "decisions and current state, and it hands work from a conversation to a " +
+    "working session as a signed job that ends in a pull request.",
+  "Carrel is my private writing hub, behind a login, where articles are " +
+    "written before they are published here. A finished article reaches this " +
+    "site through a small keyed API.",
+]);
+
+/** Carrel is deliberately not linked here: it sits behind a login, and the footer carries its link. */
+export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
 
 export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
 
@@ -214,6 +234,9 @@ function colophonPageInput(stack, features) {
     }
     if (id === "ai") {
       return AI_DISCLOSURE.join(" ");
+    }
+    if (id === "run") {
+      return `${SITE_OPERATION.join(" ")} Capsid's source is public at ${CAPSID_REPO_URL}.`;
     }
     if (id === "not-adopted") {
       // The label, never `n.status`: the page shows the label, so the index must.

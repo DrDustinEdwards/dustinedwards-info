@@ -6,7 +6,9 @@ import {
   COLOPHON_INTRO,
   COLOPHON_SECTIONS,
   AI_DISCLOSURE,
+  CAPSID_REPO_URL,
   SECURITY_TRADEOFF,
+  SITE_OPERATION,
   COLOPHON_TITLE,
   statusLabel,
   COLOPHON_URL,
@@ -216,6 +218,14 @@ export default function Colophon() {
         {AI_DISCLOSURE.map((sentence) => (
           <p key={sentence.slice(0, 32)}>{sentence}</p>
         ))}
+
+        <SectionHead id="run" />
+        {SITE_OPERATION.map((sentence) => (
+          <p key={sentence.slice(0, 32)}>{sentence}</p>
+        ))}
+        <p>
+          Capsid's source is public at <a href={CAPSID_REPO_URL}>{CAPSID_REPO_URL}</a>.
+        </p>
 
         <SectionHead id="not-adopted" />
         <p>{stack.notAdopted.length} entries.</p>
