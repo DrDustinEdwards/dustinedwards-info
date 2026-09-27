@@ -23,9 +23,9 @@ AI-first: everything machines use (content, data, structure, citations, dates, f
 
 That file decides whether the hooks run at all, so a session that changes it can switch off its own limits.
 
-### 16. Only `npm run ship` deploys.
+### 16. Only the ship script deploys, run by Dustin or by the deploy workflow after green CI.
 
-`scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, and converges Ask last. Every step fails closed and none is optional, and there is no override flag, because a flag would be used on exactly the day the check was right. A ship window owns the tree from its first step to its last. Procedure: the `ship` skill.
+Ruling 148, until the domain move: a merge to main deploys through `.github/workflows/deploy.yml` once CI passes on main, unless the `AUTO_DEPLOY` repository variable is `off`. A session merges its own PR only with `node scripts/merge-pr.mjs <number>`, which refuses unless CI is green on the PR's exact head and refuses a PR labelled `visual`; a change a visitor would see is labelled `visual` and waits for Dustin's yes. `scripts/ship.mjs` requires green CI for the exact sha, checks the operator token before the build, and converges Ask last. Every step fails closed and none is optional, and there is no override flag, because a flag would be used on exactly the day the check was right. A ship window owns the tree from its first step to its last. Procedure: the `ship` skill.
 
 ### 18. UNGATED. Indexes converge toward the repo, never the reverse.
 
@@ -33,7 +33,7 @@ D1, both FTS indexes, the Ask index, the media table and the social cards are DE
 
 ## How a session works
 
-Mainline only until the DNS cutover. Everything lands on `main`, committed and pushed immediately. **The gates are the review.**
+Mainline only until the DNS cutover. Everything lands on `main`, committed and pushed immediately. **The gates are the review.** Small changes (copy, a color or spacing tweak, a quick fix) may be asked of a session directly, without a Capsid job (ruling 148).
 
 **THIS FOLDER IS THE MAIN CHECKOUT AND THE SITE SESSION'S ALONE (ruling 60).** Every other actor works in a worktree under `C:\Users\email\dev\worktrees\`, on its own branch, landing by PULL REQUEST on green CI. Renovate is the other exception and sessions do not merge its PRs; a red one is a REPORT, repaired by a scoped commit on `main`.
 

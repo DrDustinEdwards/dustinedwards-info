@@ -8,7 +8,23 @@ description: How to get work from a clean gate run onto the deployed site on dus
 The deploy CONTRACT is hard rule 16 in `CLAUDE.md`, and it is not restated
 here: what ship refuses and why lives there. This is the PROCEDURE around it.
 
-## The order
+## From a pull request (ruling 148, the usual path until the domain move)
+
+1. Open the PR. If it changes anything a visitor would see (copy, layout, a page, a
+   color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and stop:
+   it waits for Dustin's yes on the Worker Preview link or on shots. Say so in the PR.
+2. Otherwise, once CI concludes success on the PR's head, merge it with
+   `node scripts/merge-pr.mjs <n>`. It refuses a `visual` PR, a draft, a PR not to
+   main, and any head whose CI is not green, and merges with `--match-head-commit`.
+   A bare `gh pr merge` is not the session's path.
+3. The merge deploys itself: after CI passes on main, `.github/workflows/deploy.yml`
+   runs `npm run ship` on that exact sha. Watch that run (`gh run list --workflow
+   deploy.yml`) and write the report below from its log. If Dustin has set the
+   `AUTO_DEPLOY` variable to `off`, dispatch it by hand:
+   `gh workflow run deploy.yml --ref main -f ref=<main tip sha>`.
+4. Run `npm run verify-live` against the deploy.
+
+## The order, shipping from this machine
 
 1. `git pull --ff-only`. Ship deploys local HEAD, so a seat-side merge you do
    not have is a deploy nobody asked for.
