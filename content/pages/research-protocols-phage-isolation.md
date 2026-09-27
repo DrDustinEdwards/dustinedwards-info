@@ -37,7 +37,7 @@ The guide protocols this page follows, by the guide's own numbering:
 
 ## Hosts and safety
 
-The lab runs at Biosafety Level 1 (BSL-1). The bacterial hosts are Risk Group 1 organisms: *Mycobacterium smegmatis* mc2 155 and *Microbacterium foliorum*. The guide has a host page for each ([*M. smegmatis*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-msmegmatis), [*M. foliorum*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum)).
+The lab runs at Biosafety Level 2 (BSL-2), both the teaching lab and the research lab, even though the bacterial hosts are Risk Group 1 organisms: *Mycobacterium smegmatis* mc2 155 and *Microbacterium foliorum*. The guide has a host page for each ([*M. smegmatis*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-msmegmatis), [*M. foliorum*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum)).
 
 Which host, by year, as the notebooks record it:
 
@@ -376,7 +376,7 @@ In these notebooks, serial flooding gave anything from about a 10-fold gain in t
 ## Storage
 
 - In the notebooks, lysates, filtrates and plates waiting to be read or flooded are held at 4 °C. Archiving is the guide's Protocol 7.3.
-- The notebooks record 5 x 10^9 pfu/ml as the minimum titer for an archived lysate. One lysate was archived at about 10^7 pfu/ml, far below it, so titer the high titer lysate before archiving.
+- The [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) defines a high-titer lysate as at least 5 x 10^9 pfu/ml (Protocols 6.4 and 6.5), and that is the titer to reach before extracting DNA or archiving. One lysate in the notebooks was archived at about 10^7 pfu/ml, far below it, so titer the high titer lysate before archiving.
 - A high-volume lysate is split: about 10 ml for archiving and about 10 ml for [phage DNA extraction](/research/protocols/phage-dna-extraction).
 - Read plates are parafilmed and refrigerated. Keep plates away from the back of the refrigerator, where one froze.
 - Each new phage is entered in the Actinobacteriophage Database, [PhagesDB](https://phagesdb.org/) (guide Protocol 7.2).

@@ -103,7 +103,7 @@ Protocol: [yields](/research/protocols/phage-isolation#yields).
 
 ## What counts as a high titer lysate?
 
-The notebooks record 5 x 10^9 pfu/ml as the minimum titer for archiving a lysate, and one lysate was archived at about 10^7, far below it. High titer lysates in the notebooks mostly titered between 10^9 and 10^11 pfu/ml: 5.3 x 10^9, 6.0 x 10^9, 1.5 x 10^10, 2.04 x 10^10, 2.2 x 10^11 and 3.8 x 10^11. One *M. foliorum* phage stayed at 2.5 to 2.7 x 10^8 however its plates were flooded, which the notebook recorded as below the threshold.
+The [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) defines a high-titer lysate as one with a titer of at least 5 x 10^9 pfu/ml (Protocols 6.4 and 6.5); by its spot-titer rule of thumb, at least three plaques in the 10^-7 spot is high enough to extract DNA and archive. One lysate in the notebooks was archived at about 10^7, far below it. High titer lysates in the notebooks mostly titered between 10^9 and 10^11 pfu/ml: 5.3 x 10^9, 6.0 x 10^9, 1.5 x 10^10, 2.04 x 10^10, 2.2 x 10^11 and 3.8 x 10^11. One *M. foliorum* phage stayed at 2.5 to 2.7 x 10^8 however its plates were flooded, which the notebook recorded as below the threshold.
 
 To reach it, improve the web first. Flooding with 16 ml instead of 8 ml did not work (6.0 x 10^8 pfu/ml at best). Serial flooding, using one plate's lysate to flood a second webbed plate, took one lysate from 9.4 x 10^9 to 8.4 x 10^10 pfu/ml but did nothing for others.
 
