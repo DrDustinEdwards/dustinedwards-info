@@ -2,7 +2,9 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
-import { FOOTER_COLUMNS, PRIVATE_TOOLS, footerHrefs } from "../app/lib/footer.ts";
+import { readFileSync } from "node:fs";
+
+import { FOOTER_COLUMNS, PRIVATE_TOOLS, SOCIAL_LINKS, footerHrefs } from "../app/lib/footer.ts";
 import { OWNER_PROFILES } from "../app/lib/seo.ts";
 
 test("every internal footer link is a route app/routes.ts declares", async () => {
@@ -27,13 +29,15 @@ test("the columns are the first pass's five, with no Students column and no old 
   assert.ok(!hrefs.some((to) => to.includes("faculty.tarleton.edu")));
 });
 
-test("profile links are plain text, and rel=me marks exactly the owner's profiles", () => {
+test("profile links are plain text, X sits with Germomics as social media, and rel=me marks exactly the owner's profiles", () => {
   const profiles = FOOTER_COLUMNS.find((column) => column.id === "profiles");
   assert.ok(profiles);
   assert.deepEqual(
     profiles.items.map((item) => ("label" in item ? item.label : "")),
-    ["Google Scholar", "ORCID", "PubMed", "X"],
+    ["Google Scholar", "ORCID", "PubMed"],
   );
+  assert.deepEqual(SOCIAL_LINKS.map((link) => link.mark), ["germomics", "x"]);
+  assert.ok(SOCIAL_LINKS.every((link) => !link.me));
   const me = footerHrefs().filter((link) => link.me).map((link) => link.to);
   assert.deepEqual([...me].sort(), [...OWNER_PROFILES].sort());
 });
@@ -49,3 +53,14 @@ test("the private tools are Carrel, Admin and Console, with Admin on this site's
   );
   assert.equal(PRIVATE_TOOLS.find((tool) => tool.label === "Admin")?.to, "/login");
 });
+
+test("the copyright line runs from 2006 to a year computed at render, with nothing else on it", () => {
+  const source = readFileSync(new URL("../app/components/shell-footer.tsx", import.meta.url), "utf8");
+  const start = source.indexOf('className="site-shell-footer-note"');
+  const note = source.slice(start, source.indexOf("</p>", start));
+  assert.ok(note.includes("&copy; 2006&ndash;{new Date().getFullYear()} {SITE.name}"), note);
+  // Neither the stack line nor the colophon link, and no hard-coded end year.
+  assert.ok(!/Cloudflare|colophon/.test(note), note);
+  assert.deepEqual(note.match(/\b20\d\d\b/g), ["2006"]);
+});
+

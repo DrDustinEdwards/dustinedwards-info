@@ -1,5 +1,5 @@
 // Relative, so test/footer.test.mjs can import this file under plain node.
-import { GERMOMICS_X_URL, OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "./seo.ts";
+import { GERMOMICS_URL, GERMOMICS_X_URL, OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "./seo.ts";
 
 /*
  * The footer's links, in the columns of the 2026-09-27 first pass (job_bdad16b2c719). Data, not markup,
@@ -78,13 +78,11 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   {
     id: "profiles",
     heading: "Profiles",
-    // Plain text: no ORCID logo or iD, no raw address. The only X account the site has is Germomics's,
-    // so X carries no rel="me".
+    // Plain text: no ORCID logo or iD, no raw address.
     items: [
       { to: OWNER_SCHOLAR, label: "Google Scholar", external: true, me: true },
       { to: OWNER_ORCID, label: "ORCID", external: true, me: true },
       { to: OWNER_PUBMED, label: "PubMed", external: true, me: true },
-      { to: GERMOMICS_X_URL, label: "X", external: true },
     ],
   },
   {
@@ -100,6 +98,15 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/privacy", label: "Privacy" },
     ],
   },
+];
+
+/**
+ * Social media, beside the name as marks (Dustin, 2026-09-27): the Germomics podcast and its X account,
+ * the only X account the site has, so neither carries rel="me". The label is each mark's accessible name.
+ */
+export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
+  { to: GERMOMICS_URL, label: "Germomics podcast", external: true, mark: "germomics" },
+  { to: GERMOMICS_X_URL, label: "Germomics on X", external: true, mark: "x" },
 ];
 
 export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string };
@@ -126,6 +133,7 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
 export function footerHrefs(): FooterLink[] {
   return [
     ...FOOTER_COLUMNS.flatMap((column) => column.items.flatMap((item) => (isPair(item) ? item.links : [item]))),
+    ...SOCIAL_LINKS,
     ...PRIVATE_TOOLS,
   ];
 }
