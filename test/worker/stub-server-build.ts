@@ -16,9 +16,13 @@ export const STUB_PATHS = {
   page: "/stub-page",
   negotiated: "/stub-negotiated",
   silent: "/stub-silent",
+  // The real path, not a stub one: the gateway renders "/gone" for a removed WordPress address.
+  gone: "/gone",
 } as const;
 
 export const STUB_PAGE_BODY = "stub page body";
+
+export const STUB_GONE_BODY = "stub gone body";
 
 export const STUB_MARKDOWN_BODY = "# stub markdown\n";
 
@@ -83,6 +87,18 @@ const routes: Record<string, StubRoute> = {
           },
         });
       },
+    },
+  },
+  gone: {
+    id: "gone",
+    parentId: "root",
+    path: STUB_PATHS.gone.slice(1),
+    module: {
+      loader: () =>
+        new Response(STUB_GONE_BODY, {
+          status: 410,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        }),
     },
   },
   silent: {
