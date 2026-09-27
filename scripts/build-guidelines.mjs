@@ -20,15 +20,11 @@ const MINIMUM_PROSE_BYTES = 120;
 const FILES = [
   {
     name: "chrome-and-bars.md",
-    title: "Chrome, bars and the header",
+    title: "The header, the wordmark and the footer",
     blurb:
-      "The fixed bar, the wordmark, the footer, and the token family that paints them. " +
-      "These are the rules the 2026-09 redesign broke by inventing a token instead of " +
-      "reading one.",
+      "The sticky paper header, the wordmark, the footer, and the rules their sheets carry. " +
+      "Both are paper with one dust rule.",
     needles: [
-      /\bon-chrome\b/i,
-      /\bsurface-chrome\b/i,
-      /\bmark-on-chrome\b/i,
       /\bsite-header\b/i,
       /\bsite-footer\b/i,
       /\bwordmark\b/i,
@@ -136,24 +132,19 @@ const SINGLETONS = [
 /** Hand-written: the code carries a ruling's effect, not its authority. */
 const SINGLETON_PREAMBLE = `These four are real parts of every public page and are NOT in the component
 library, because none of them can be instantiated by a design agent: they are
-page singletons, and two of them exist to inject the enhancement bundles public
-pages use while they do not hydrate (the current shape, not a law).
+page singletons, rendered once by the root layout, and the search trigger and
+the theme toggle come alive through small enhancement scripts.
 
 They are described here anyway. Not being able to compose the header is a
 different thing from not being allowed to know what it is, and a redesign that
 did not know produced a header with invented tokens, a wordmark that turned
 visited-colored, and a search control that did not work.
 
-**The header is a default, not a law.** Earlier design rulings on it (and on
-color and glass) are defaults that a better design overrides. What follows
-describes the header as it is today.
-
-**The header has no width breakpoints.** It is \`flex-wrap: wrap\` on both the
-header and the nav, the only media query touching it is \`print\`, and it WRAPS
-onto a second line rather than overflowing. The
-thresholds below are measured values from the component's own comment, dated in
-the source; they are properties of the current link labels, so a longer word
-moves them and they are re-measured rather than reasoned from.
+**The header is a default, not a law.** It is paper and sticky, with one dust rule
+under it. On a narrow screen its destinations move into a labelled Menu; on a wide
+one they sit inline. The width at which that happens is a measured value from the
+stylesheet, a property of the current link labels, so a longer word moves it and
+it is re-measured rather than reasoned from.
 
 Everything under "from the source" below is extracted from the files named. The
 source is the owner: where this file and the component disagree, the component
