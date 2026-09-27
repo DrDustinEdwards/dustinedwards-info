@@ -96,11 +96,12 @@ async function searchJson(query: string) {
 }
 
 async function searchPage(query: string) {
-  return (await searchLoader({
+  const page = await searchLoader({
     request: new Request(`${SITE_ORIGIN}/search${query}`),
     params: {},
     context: routeContext(),
-  } as never)) as {
+  } as never);
+  return page.data as {
     result: { total: number; hits: Array<{ url: string; title: string; publishAt: number | null }> };
   };
 }
@@ -337,12 +338,12 @@ describe("search sorted by date", () => {
 
 describe("the home page's post count", () => {
   async function countLink() {
-    const loaderData = await homeLoader({
+    const result = await homeLoader({
       request: new Request(`${SITE_ORIGIN}/`),
       params: {},
       context: routeContext(),
     } as never);
-    const html = renderRoute("/", Home, { loaderData });
+    const html = renderRoute("/", Home, { loaderData: result.data });
     const counts = await textsOf(html, 'a[href="/writing"]');
     const match = /(\d+)\s+posts?\b/.exec(counts.join(" "));
     return match ? Number(match[1]) : null;

@@ -1,9 +1,10 @@
-import { Form, Link } from "react-router";
+import { Form, Link, data } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
 import { Enhance } from "~/components/enhance";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
+import { nextScheduledPublishAt } from "~/db";
 import { getEnv, getExecutionContext } from "~/lib/context";
 import { prefersType } from "~/lib/negotiate.mjs";
 import { hasFilters } from "~/lib/search/query.mjs";
@@ -17,9 +18,11 @@ import {
   type SearchHit,
 } from "~/lib/search/search.server";
 import {
+  EDGE_CACHE_HEADER,
   NO_STORE_CACHE_CONTROL,
   HTML_VARY_ACCEPT,
   cacheTags,
+  scheduledEdgeCacheControl,
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -107,7 +110,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const params = readParams(url);
   const env = getEnv(context);
 
-  const result = await search(env, { ...params, pageSize: PAGE_SIZE });
+  const [result, nextPublishAt] = await Promise.all([
+    search(env, { ...params, pageSize: PAGE_SIZE }),
+    nextScheduledPublishAt(env),
+  ]);
 
   const asked = !result.parsed.isEmpty || hasFilters(result.parsed);
   const suggestions = asked && result.total === 0 ? await zeroState(env, result.parsed) : null;
@@ -122,16 +128,22 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   }
 
   // The loader that renders classic results must never wait on the AI layer.
-  return { params, result, suggestions, askAvailable: askAvailable(env) };
+  return data(
+    { params, result, suggestions, askAvailable: askAvailable(env) },
+    { headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) } },
+  );
 }
 
-export function headers() {
-  return new Headers({
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  const headers = new Headers({
     // `Accept` stays: this URL also serves JSON.
     "Cache-Control": SHARED_CACHE_CONTROL,
     "Cache-Tag": cacheTags(),
     Vary: HTML_VARY_ACCEPT,
   });
+  const edge = loaderHeaders.get(EDGE_CACHE_HEADER);
+  if (edge) headers.set(EDGE_CACHE_HEADER, edge);
+  return headers;
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
