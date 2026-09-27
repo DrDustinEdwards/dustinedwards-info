@@ -7,6 +7,7 @@ import { buildSpeculationRules } from "~/lib/speculation.mjs";
 
 import worker from "../../workers/app";
 import { enhanceLoaderHash, speculationRulesHash } from "../../workers/csp.mjs";
+import { checkSecurityHeaders, failures } from "../../packages/security-headers/check.mjs";
 
 /*
  * A public page through the REAL root (its Layout, loader and middleware) and the real server
@@ -121,3 +122,11 @@ it.each(["/", "/Blog/", "/no-such-page", "/a%20b/%C3%A9"])(
     expect(policy).toContain(`'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`);
   },
 );
+
+/* The shared package's check (packages/security-headers), on this site's real response: the reusable
+ * gate foxing and txasm run on theirs. The public arm here; the admin arm is in ssr-nonce.test.ts's
+ * territory and is held by test/security-headers-package.test.mjs against the same policy builder. */
+it("passes the shared security-headers check on a rendered public page", async () => {
+  const { response } = await render("/");
+  expect(failures(checkSecurityHeaders(response.headers))).toEqual([]);
+});
