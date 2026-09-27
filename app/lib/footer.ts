@@ -2,9 +2,12 @@
 import { GERMOMICS_URL, GERMOMICS_X_URL, OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "./seo.ts";
 
 /*
- * The footer's links, in the columns of the 2026-09-27 first pass (job_bdad16b2c719). Data, not markup,
- * so test/footer.test.mjs can hold every internal href against the routes app/routes.ts declares:
- * a footer link that 404s is the failure this file exists to rule out.
+ * The footer's links (Dustin, 2026-09-27): five link columns and the Workspace group fill a grid three across
+ * and two deep. Data, not markup, so test/footer.test.mjs can hold every internal href against the routes
+ * app/routes.ts declares: a footer link that 404s is the failure this file exists to rule out.
+ *
+ * Nothing here is for machines only. Agents find llms.txt, the feeds and the markdown twins through the
+ * page head, robots.txt and the sitemap, the standard way (job_5670dd43eef2).
  */
 
 export type FooterLink = {
@@ -16,14 +19,7 @@ export type FooterLink = {
   me?: boolean;
 };
 
-/** A label followed by short links on one line: Citations BibTeX RIS. */
-export type FooterPair = { label: string; links: FooterLink[] };
-
-export type FooterItem = FooterLink | FooterPair;
-
-export type FooterColumn = { id: string; heading: string; items: FooterItem[] };
-
-export const isPair = (item: FooterItem): item is FooterPair => "links" in item;
+export type FooterColumn = { id: string; heading: string; items: FooterLink[] };
 
 export const FOOTER_COLUMNS: FooterColumn[] = [
   {
@@ -34,13 +30,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/research/phages", label: "Phages" },
       { to: "/research/protocols", label: "Protocols" },
       { to: "/research/publications", label: "Publications" },
-      {
-        label: "Citations",
-        links: [
-          { to: "/research/publications.bib", label: "BibTeX" },
-          { to: "/research/publications.ris", label: "RIS" },
-        ],
-      },
     ],
   },
   {
@@ -57,22 +46,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     id: "writing",
     heading: "Writing",
     items: [
-      { to: "/writing", label: "Writing" },
-      {
-        label: "Feeds",
-        links: [
-          { to: "/writing/rss.xml", label: "RSS" },
-          { to: "/writing/atom.xml", label: "Atom" },
-          { to: "/writing/feed.json", label: "JSON" },
-        ],
-      },
-      {
-        label: "For machines",
-        links: [
-          { to: "/llms.txt", label: "llms.txt" },
-          { to: "/llms-full.txt", label: "llms-full.txt" },
-        ],
-      },
+      { to: "/writing", label: "All articles" },
+      { to: "/writing/rss.xml", label: "RSS feed" },
     ],
   },
   {
@@ -92,7 +67,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/about", label: "About" },
       { to: "/projects", label: "Projects" },
       { to: "/playground", label: "Playground" },
-      { to: "/search", label: "Search" },
       { to: "/contact", label: "Contact" },
       { to: "/colophon", label: "Colophon" },
       { to: "/privacy", label: "Privacy" },
@@ -101,20 +75,22 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
 ];
 
 /**
- * Social media, beside the name as marks (Dustin, 2026-09-27): the Germomics podcast and its X account,
- * the only X account the site has, so neither carries rel="me". The label is each mark's accessible name.
+ * Social media, in the brand block (Dustin, 2026-09-27): the Germomics podcast and its X account, the only
+ * X account the site has, so neither carries rel="me". `label` is the link's accessible name and appears
+ * beside the mark on hover and keyboard focus.
  */
 export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
   { to: GERMOMICS_URL, label: "Germomics podcast", external: true, mark: "germomics" },
-  { to: GERMOMICS_X_URL, label: "Germomics on X", external: true, mark: "x" },
+  { to: GERMOMICS_X_URL, label: "X", external: true, mark: "x" },
 ];
 
 export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string };
 
 /**
- * The three logins, set apart from the pages anyone can read. The accessible names say what each one is
+ * The three logins, the Workspace group in the grid's sixth slot. The accessible names say what each one is
  * for, and begin with the visible word so speech input still works. Admin is this site's sign-in page.
  */
+export const TOOLS_HEADING = "Workspace";
 export const PRIVATE_TOOLS: PrivateTool[] = [
   // Behind Cloudflare Access since 2026-09-26.
   { to: "https://carrel.dustinedwards.info", label: "Carrel", name: "Carrel, writing", icon: "lamp", external: true },
@@ -129,11 +105,7 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
   },
 ];
 
-/** Every href the footer renders, private tools included. */
+/** Every href the footer renders, social links and tools included. */
 export function footerHrefs(): FooterLink[] {
-  return [
-    ...FOOTER_COLUMNS.flatMap((column) => column.items.flatMap((item) => (isPair(item) ? item.links : [item]))),
-    ...SOCIAL_LINKS,
-    ...PRIVATE_TOOLS,
-  ];
+  return [...FOOTER_COLUMNS.flatMap((column) => column.items), ...SOCIAL_LINKS, ...PRIVATE_TOOLS];
 }

@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { assertFloor } from "../lib/floor.mjs";
 import { createTally } from "../lib/tally.mjs";
+import { CONTENT_PAGE_PATHS } from "../../app/lib/content-pages.mjs";
 
 // Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -46,6 +47,27 @@ ok(
   "It is pinned to LF in .gitattributes. CR here would sync CRLF into D1.",
 );
 ok("content/llms.txt ends with a newline", fileText.endsWith("\n"));
+
+// The Research and Teaching pages have no twin, so llms.txt naming them is how an agent is told they
+// exist without a link on the page. Derived from the list the routes and the sitemap read, both ways.
+{
+  const listed = new Set(
+    [...fileText.matchAll(/^\s{2}(\/(?:research|teaching)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
+  );
+  const unlisted = CONTENT_PAGE_PATHS.filter((path) => !listed.has(path));
+  ok(
+    `llms.txt lists every Research and Teaching page (${CONTENT_PAGE_PATHS.length})`,
+    unlisted.length === 0,
+    `absent from ${LLMS_PATH}: ${unlisted.join(", ")}`,
+  );
+  const known = new Set(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS));
+  const stray = [...listed].filter((path) => !known.has(path));
+  ok(
+    "llms.txt lists no Research or Teaching page CONTENT_PAGE_PATHS does not have",
+    stray.length === 0,
+    `listed but not a page: ${stray.join(", ")}`,
+  );
+}
 
 const route = readFileSync(fromRoot(ROUTE_PATH), "utf8");
 ok(

@@ -28,6 +28,38 @@ export async function run() {
       twinType.includes("text/markdown"),
       `got ${twinType || "(none)"}`,
     );
+    // The origin is SITE_ORIGIN's, which need not be the one probed, so only the path is held.
+    const twinLink = liveRes.headers.get("link") ?? "";
+    check(
+      "md twin: Link names the post as canonical",
+      twinLink.startsWith("<https://") && twinLink.endsWith(`/writing/${SLUG}>; rel="canonical"`),
+      `got ${twinLink || "(none)"}`,
+    );
+  }
+
+  {
+    /* The paper twins are assets, so this is the one check that the platform expands `:splat` in public/_headers. */
+    const twin = readdirSync(join(root, "public", "research", "publications")).find((f) => f.endsWith(".md"));
+    check("paper twin: a built twin exists to probe", Boolean(twin));
+    if (twin) {
+      const slug = twin.slice(0, -".md".length);
+      const { res, status } = await get(`/research/publications/${twin}`);
+      check(`paper twin: /research/publications/${twin} serves`, status === 200, `got ${status}`);
+      const link = res.headers.get("link") ?? "";
+      check(
+        "paper twin: Link names the paper page as canonical",
+        link === `</research/publications/${slug}/>; rel="canonical"`,
+        `got ${link || "(none)"}`,
+      );
+    }
+
+    const llms = await get("/llms.txt");
+    const llmsLink = llms.res.headers.get("link") ?? "";
+    check(
+      "llms.txt: Link names the home page as canonical",
+      llmsLink.startsWith("<https://") && llmsLink.endsWith(`/>; rel="canonical"`),
+      `got ${llmsLink || "(none)"}`,
+    );
   }
 
   {

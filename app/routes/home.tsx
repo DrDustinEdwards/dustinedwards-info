@@ -264,19 +264,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
         <HomePodcast episode={podcast} />
 
-        <section className="home-machines" aria-labelledby="machines-heading">
-          <h2 id="machines-heading" className="home-section-heading">
-            Reading this as a machine
-          </h2>
-          <p>
-            Every post is also served as its markdown source: add <code>.md</code> to any
-            post URL, or send <code>Accept: text/markdown</code>. The whole corpus is at{" "}
-            <a href="/llms-full.txt">llms-full.txt</a>, and{" "}
-            <a href="/llms.txt">llms.txt</a> describes what is here. How the site is
-            built, and what it costs, is on the <Link to="/colophon">colophon</Link>.
-          </p>
-        </section>
-
         {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
         <EvidenceRow
           facts={[
