@@ -886,9 +886,11 @@ const HTML_CEILINGS = {
   "/blog/:slug": { brotli: 12300, measured: 10660 },
   "/blog/tags/:tag": { brotli: 4900, measured: 4200 },
   "/blog/series/:series": { brotli: 4900, measured: 4215 },
-  "/projects": { brotli: 6400, measured: 5559 },
+  /* Raised 2026-09-27 for the footer's private-tools set (three inline icons on every page). It comes
+   * down only if that set leaves the footer. */
+  "/projects": { brotli: 7600, measured: 6569 },
   "/colophon": { brotli: 13900, measured: 12043 },
-  "/playground": { brotli: 6300, measured: 5435 },
+  "/playground": { brotli: 7500, measured: 6512 },
   "/playground/ui": { brotli: 13600, measured: 11789 },
   "/phage-discovery": { brotli: 4300, measured: 3659 },
   "/privacy": { brotli: 4100, measured: 3529 },
