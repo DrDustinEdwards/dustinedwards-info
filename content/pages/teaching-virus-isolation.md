@@ -36,7 +36,7 @@ An additional on-site safety training covers lab-specific hazards, the location 
 
 ## Biosafety level and hosts
 
-The teaching lab operates as a Biosafety Level 1 (BSL-1) environment. The bacterial hosts are the Risk Group 1 (RG-1) organisms *Mycobacterium smegmatis* mc²155 and *Microbacterium foliorum*. Culture plates and tubes containing biological agents are stored in secondary containment bins, and no biological agent, including contaminated material, leaves the lab.
+The teaching lab operates at Biosafety Level 2 (BSL-2), as the research lab does. The bacterial hosts are the Risk Group 1 (RG-1) organisms *Mycobacterium smegmatis* mc²155 and *Microbacterium foliorum*. Culture plates and tubes containing biological agents are stored in secondary containment bins, and no biological agent, including contaminated material, leaves the lab.
 
 ## Lab rules
 

@@ -18,7 +18,7 @@ Both methods start from a filter-sterilized, high-titer phage lysate. How to mak
 
 ## Method 1: PEG precipitation and resin column
 
-This is the "Phage DNA Extraction Procedure" that was posted on the old site as a two-page PDF, known in the lab as the Baylor protocol. The document itself names no author or institution. It uses a PEG8000/NaCl precipitant, a guanidinium thiocyanate DNA Clean Up Resin, 80% isopropanol washes on a vacuum manifold, and a heated Elution Buffer.
+This is the "Phage DNA Extraction Procedure" that was posted on the old site as a two-page PDF, given here as written. The lab has long called this the Baylor protocol. It uses a PEG8000/NaCl precipitant, a guanidinium thiocyanate DNA Clean Up Resin, 80% isopropanol washes on a vacuum manifold, and a heated Elution Buffer.
 
 The goal of this procedure is to obtain high quality DNA from your concentrated phage lysate. You should have a phage titer of at least 1 x 10^8 PFU/ml in order to perform this extraction. Store your phage lysate at 4 °C. Store your purified DNA in the freezer.
 
@@ -51,11 +51,11 @@ Wear gloves and do not vortex. Longer precipitation times may give larger pellet
 1. Add 2 mL of 37 °C DNA Clean Up Resin directly to the re-suspended pellet. Mix the resin before pipetting. To pipette the thick resin easily, cut the tip off a p-1000 tip. The resin contains guanidinium thiocyanate, a chemical that denatures protein. It is a skin irritant, so you must wear gloves.
 2. Uncoat the phage particles by gently pipetting up and down. Gently swirl to mix.
 
-The guanidinium thiocyanate breaks open the phage capsid and denatures the enzymes and the phage proteins. The resin in the mixture is a DNA binding resin, and you will have to recover all of the resin to recover your DNA. To avoid DNA degradation, do not let the phage DNA and resin mixture stand too long at room temperature, do not store it at 4 °C and do not place it at 37 °C. Move on to the next step.
+The guanidinium thiocyanate breaks open the phage capsid and denatures the enzymes and the phage proteins. The resin in the mixture is a DNA binding resin. You will have to remove all of the resin in order to remove your DNA. To avoid DNA degradation, do not let the phage DNA and resin mixture stand too long at room temperature, do not store it at 4 °C and do not place it at 37 °C. Move on to the next step.
 
 ### E. Isolate the phage genomic DNA
 
-1. Distribute the re-suspended pellet with the resin into 2 microfuge tubes, about 1.5 mL per tube. Transfer as much resin as possible. The microfuge tubes make it easy to spin and remove the liquid from the pellet.
+1. Distribute the re-suspended pellet with the resin into 2 microfuge tubes, about 1.5 mL per tube. Remove as much resin as possible. The transfer to microfuge tubes makes it easy to spin and remove the liquid from the pellet.
 2. Spin each tube at high speed, 12-13k x g, for 3 minutes.
 3. Pull off the supernatant with a bulb pipet or p-1000 tip. Be careful not to disturb the pellet.
 4. Wash the salts and proteins off the DNA sample:
@@ -83,7 +83,7 @@ The guanidinium thiocyanate breaks open the phage capsid and denatures the enzym
 
 ### Notes on Method 1 from this lab
 
-- **The spin speed matters.** Where the swinging-bucket centrifuge topped out at about 4,000 rpm, spins of 25 to 40 minutes at that speed gave no PEG pellet, and splitting the precipitate and spinning at 12,000 rpm for 1 hour did not rescue it. Those groups moved to Method 2. One group did get 780 ng/µl with a 1 hour spin at 4,100 rpm in a swinging bucket, a 6 minute resin spin at 10,000 g, two 1 ml 80% isopropanol washes and a 100 µl elution in 80 °C water, against 3.6 to 12.7 ng/µl from the Wizard column kit on the same phage. Other recorded runs of this protocol failed, so results were mixed.
+- **The spin speed matters.** Where the swinging-bucket centrifuge topped out at about 4,000 rpm, spins of 25 to 40 minutes at that speed gave no PEG pellet, and splitting the precipitate and spinning at 12,000 rpm for 1 hour did not rescue it. Those groups moved to Method 2. One group did get 780 ng/µl with a 1 hour spin at 4,100 rpm in a swinging bucket (about 3,500 x g; a 2017 lab notebook entry records both figures), a 6 minute resin spin at 10,000 g, two 1 ml 80% isopropanol washes and a 100 µl elution in 80 °C water, against 3.6 to 12.7 ng/µl from the Wizard column kit on the same phage. Other recorded runs of this protocol failed, so results were mixed.
 - **Making the precipitant.** A PEG 8000/NaCl solution that would not dissolve after hours of heating and stirring went into solution when the PEG was added first and the NaCl second.
 - Holding the PEG precipitation at 4 °C for days gave a small yellow pellet but still too little DNA.
 
@@ -91,18 +91,24 @@ The guanidinium thiocyanate breaks open the phage capsid and denatures the enzym
 
 This is the lab's own phage DNA isolation method, labeled "Alternate 3.5" or "Alternative DNA Isolation Protocol 3.5" in the course materials and used as the standard extraction from 2019 to 2023, mostly for *Microbacterium foliorum* phages. It needs no kit or column. Zinc chloride precipitates the phage particles, SDS in the TES buffer and proteinase K strip the capsid, potassium acetate removes the protein and SDS, and isopropanol precipitates the DNA. It runs over two days.
 
+The lab's published genome announcements describe this as "a modified zinc chloride precipitation method," citing Santos (1991, *Nucleic Acids Research* 19:5442) and the SEA-PHAGES Phage Discovery Guide. Examples are the announcements for [Finny](/research/publications/10-1128-mra-01039-19/), [IndyLu](/research/publications/10-1128-mra-01079-21/), [Fizzles](/research/publications/10-1128-mra-01077-21/), [Loca](/research/publications/10-1128-mra-00783-22/) and [Godfather](/research/publications/10-1128-mra-00888-24/).
+
 ### Reagents
 
-| Reagent | As given in the lab's protocol |
+| Reagent | Amount and source |
 | --- | --- |
-| Nuclease mix | 20 µl per 5 ml of lysate (composition not stated in the ZnCl2 protocol) |
+| Nuclease mix | 20 µl per 5 ml of lysate. The lab's protocol and notebooks name it only as DNase I plus RNase A (see the recipe below). |
 | Zinc chloride | 2 M ZnCl2 |
-| TES buffer | 0.1 M Tris (pH 8), 0.1 M EDTA, 0.5% SDS |
-| Proteinase K | 10 mg/ml |
+| TES buffer | 0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS (the lab's ZnCl2 protocol as copied into its notebooks, 2018 and 2019) |
+| Proteinase K | 10 mg/ml in the lab's protocol. The [Finny genome announcement](/research/publications/10-1128-mra-01039-19/) reports 20 mg/ml, as does the Phage Discovery Guide. The sources do not settle the difference. |
 | Potassium acetate | 3 M, pH 5.2 |
-| Isopropanol | 500 µl per tube |
-| Ethanol | 70% |
+| Isopropanol | 500 µl per tube. The protocol names no strength. The lab has used both 100% and 80% isopropanol with good results (lab notebooks, 2018 to 2025). |
+| Ethanol | 70%, 250 µl per wash, with a 1 minute spin (lab notebook, 2018) |
 | Nuclease-free water | 50 µl in total |
+
+The lab's sources do not give a recipe for the nuclease mix beyond DNase I plus RNase A. For reference, the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) gives this one (the guide's recipe, not the lab's): per 5 ml, 150 mM NaCl, DNase I at 0.25 mg/ml (from a 5 mg/ml stock), RNase A at 0.25 mg/ml (from a 10 mg/ml stock) and 50% glycerol, stored at -20 °C.
+
+Centrifuge speeds below are in rpm, as used in the lab's microcentrifuge. The notebooks do not name the rotor, so no g-force is given.
 
 ### Day 1
 
@@ -114,7 +120,7 @@ This is the lab's own phage DNA isolation method, labeled "Alternate 3.5" or "Al
 6. Add 1 µl of proteinase K (10 mg/ml). Incubate at 37 °C for 10 minutes. In this lab, the prep has been paused overnight at 4 °C after this step.
 7. Add 60 µl of 3 M potassium acetate (pH 5.2). Mix well and put on ice for 15 minutes. A white precipitate of capsid protein forms.
 8. Spin at 12,000 rpm for 1 minute at 4 °C. Keep the supernatant; the pellet is protein.
-9. Add 500 µl of isopropanol to the supernatant and leave it on ice overnight.
+9. Add 500 µl of isopropanol (100% or 80%; see the reagents table) to the supernatant and leave it on ice overnight.
 
 ### Day 2
 

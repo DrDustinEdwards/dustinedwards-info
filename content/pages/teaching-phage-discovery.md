@@ -110,7 +110,7 @@ The guide's archive uses 4 ml of high-titer lysate with 280 µl DMSO (about 7% D
 
 - The lysate and DMSO are mixed by inversion in a 15 ml conical inside the fume hood, where the DMSO is kept, then 1 ml goes into each of three tubes with a 2 ml serological pipette. Check the phage's entry on PhagesDB first.
 - Two barcoded tubes are held at 4 C to ship to Pittsburgh, and a third, unbarcoded tube stays in the Tarleton freezer (frozen immediately, or at -20 C short term). Finished tubes go to the instructor for storage.
-- Aim for the guide's minimum titer of 5 x 10^9 pfu/ml. One phage was archived at about 10^7 pfu/ml, far below it.
+- Aim for a high-titer lysate, which the current [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) defines as at least 5 x 10^9 pfu/ml (Protocols 6.4 and 6.5). One phage was archived at about 10^7 pfu/ml, far below it.
 - Check the bottle: DMF was once used by mistake for DMSO.
 
 Older practice, before the current guide: through 2021 the tubes were filled with sterile glass or cryo beads to about 1.5 cm below the rim (or three-quarters full), with the lysate and DMSO just covering them. Volumes were 1.4 ml + 100 µl DMSO split into three 400 µl tubes (2017), 2.8 ml + 200 µl (2019 to 2021) and 4 ml + 280 µl (2021 on). Beads were hard to load and were moved with a cut pipette tip and a conical-tube lid. By 2022 the lab used no beads.
@@ -121,14 +121,9 @@ DNA that is unique by its digest pattern, and of high enough quality and quantit
 
 ## Stage 8: Genome annotation
 
-In the spring course, the class annotates the sequenced genomes. The workflow used here:
+In the spring course, the class annotates the sequenced genomes. Annotation now happens in PHEONA, the HHMI web-based annotation tool, following the current SEA-PHAGES [Phage Genomics Guide](https://genomicsguide.seaphages.org/), whose June 2026 update removed DNA Master from the workflow. The steps, from downloading the genome to the GenBank submission, are on the [Phage Bioinformatics](/teaching/phage-bioinformatics) course page.
 
-1. Start from the Starterator report for the genome.
-2. Annotate each gene in PECAAN, using evidence from HHpred, GeneMarkS, Phamerator (against phages in the same cluster), PhagesDB BLAST, NCBI BLAST and transmembrane prediction.
-3. For each gene, fill in the function (NKF, no known function, when the evidence disagrees), the Starterator codes (SS, NI, NA), coding capacity yes or no, a synteny note (conservation in the cluster and the neighboring genes), and a note giving the percentages from function frequency and the HHpred probability.
-4. Check for tRNAs with tRNAscan-SE.
-5. In PECAAN, use Export CDS Full Annotation, paste the text into the Documentation of a new DNA Master file, Parse, and save as a .dnam5 draft (DNA Master 5.23.3, build 2604 in these notes).
-6. An instructor pass, sometimes months later, re-adds or removes evidence and settles start sites.
+Older practice, before PHEONA: the class notebooks record an earlier workflow. The class started from the Starterator report, annotated each gene in PECAAN with evidence from HHpred, GeneMarkS, Phamerator, PhagesDB and NCBI BLAST and transmembrane prediction, checked for tRNAs with tRNAscan-SE, and exported the annotation from PECAAN into a DNA Master (.dnam5) file. An instructor pass, sometimes months later, re-added or removed evidence and settled start sites. The notes below come from genomes annotated that way, and the problems they describe still come up.
 
 ### Annotation problems that come up
 
