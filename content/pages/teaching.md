@@ -37,14 +37,13 @@ Undergraduates can do research in the lab beyond the courses. Authentic, mentore
 
 ### What to expect
 
-Research in the lab carries more responsibilities than a course, because of the nature of the research and the lab environment. Project proposals and protocols usually must first be approved by Tarleton's Institutional Biosafety Committee (IBC), Institutional Animal Care and Use Committee (IACUC) and/or Institutional Review Board (IRB). All work follows The Texas A&M University System policies and regulations, Tarleton State University rules and procedures, and state and federal laws and regulations. Before starting, a new researcher needs:
+Research in the lab carries more responsibilities than a course. Projects that involve animals or human subjects must first be approved by Tarleton's Institutional Animal Care and Use Committee (IACUC) or Institutional Review Board (IRB). All work follows The Texas A&M University System policies and regulations, Tarleton State University rules and procedures, and state and federal laws and regulations. Before starting, a new researcher needs:
 
-- **Training.** Regular safety training, in the courses the project requires. Training records must be current and kept in the Laboratory Biosafety Manual.
-  - [CITI Program](https://about.citiprogram.org/), valid for three years: Responsible Conduct of Research, Basic Introduction to Biosafety, Wildlife Research, and Social and Behavioral Research.
-  - Texas A&M University System [TrainTraq](https://traintraq.tamus.edu/), valid for one year: Lab Safety, Biosafety Level 1 Training, Biosafety Level 2 Training, Bloodborne Pathogens Online Training, Effective Use of Class II Biological Safety Cabinets, and Handling Laboratory Animals at Biosafety Level 1.
-- **Occupational health.** Enrollment in the Biosafety Occupational Health Program (BOHP).
-- **Lab access.** The research lab normally operates at Biosafety Level 2 (BSL-2), with restricted, logged swipe-card entry and keys for specific equipment and chemicals. Unauthorized entry is prohibited. Swipe-card access must be approved by Dr. Dustin Edwards and by the Dean of the College of Science and Technology. After-hours access needs the same approvals and registration with the Tarleton State University Police Department.
+- **Training.** The courses the project requires, with training records kept current.
+  - [CITI Program](https://about.citiprogram.org/), valid for three years: Responsible Conduct of Research, Wildlife Research, and Social and Behavioral Research.
+  - Texas A&M University System [TrainTraq](https://traintraq.tamus.edu/), valid for one year: Lab Safety and Bloodborne Pathogens Online Training.
+- **Lab access.** The research lab has restricted, logged swipe-card entry and keys for specific equipment and chemicals. Unauthorized entry is prohibited. Swipe-card access must be approved by Dr. Dustin Edwards and by the Dean of the College of Science and Technology. After-hours access needs the same approvals and registration with the Tarleton State University Police Department.
 
 ### Reporting a concern
 
-Concerns about biosafety go to Tarleton's IBC office. Concerns about the welfare or ethical treatment of research animals go to Tarleton's IACUC office.
+Concerns about the welfare or ethical treatment of research animals go to Tarleton's IACUC office.

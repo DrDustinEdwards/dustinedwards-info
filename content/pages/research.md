@@ -23,7 +23,7 @@ The [phage table](/research/phages) lists all 80 bacteriophages isolated in the 
 
 The [protocols index](/research/protocols) groups the lab's methods. Each protocol has its own page:
 
-- [Phage discovery guide](/teaching/phage-discovery): a bacteriophage from soil sample to annotated genome, stage by stage, with what this lab has learned beyond the SEA-PHAGES Phage Discovery Guide.
+- [Phage discovery guide](/teaching/phage-discovery): the Phage Discovery Program at Tarleton, the path from soil sample to annotated genome, and where the lab's practice differs from the official SEA-PHAGES Phage Discovery Guide.
 - [Phage isolation protocol](/research/protocols/phage-isolation): direct and enriched isolation, plaque purification, spot and full plate titers, webbed plates and high-titer lysates.
 - [Phage DNA extraction protocol](/research/protocols/phage-dna-extraction): a PEG and resin column method and a column-free ZnCl2/TES method, with checks of DNA quantity and quality before sequencing.
 - [COI primers](/research/protocols/coi-primers): the LCO1490 and HCO2198 (Folmer) primers and PCR conditions for COI barcoding of invertebrate mitochondrial DNA.

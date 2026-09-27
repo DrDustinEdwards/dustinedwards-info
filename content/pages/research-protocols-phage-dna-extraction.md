@@ -138,7 +138,7 @@ Salt carried into the final DNA is the most common failure of this method. It sh
 - **Spin the potassium acetate step twice** (the second spin 3 minutes) so no precipitate is carried into the isopropanol.
 - **Give the isopropanol time.** At least 3 to 4 hours on ice, or overnight. 1.5 hours failed twice. Holds of 2 to 5 days on ice, and -20 °C for 6 hours, also gave DNA.
 - **Never skip the 70% ethanol wash, and do it twice.** One group failed five times running without it (5.7 to 21.5 ng/µl, A260/230 0.03 to 0.07, pellets too salty to dissolve). A second 250 µl wash raised A260/230 from 0.87 to 1.37 in another.
-- **Dry the pellets fully.** Under-dried pellets gave unusable readings and lost DNA. Drying that worked: inverted on a paper towel or Kimwipe at room temperature for 1 to 3.5 hours; inverted, then a 30 °C incubator for 20 minutes to 1 hour; a heat block with lids open at 30 °C for 30 to 40 minutes, or at 60 °C for 10 to 20 minutes; or the fan of a biosafety or fume hood for 25 minutes to 1 hour 45 minutes.
+- **Dry the pellets fully.** Under-dried pellets gave unusable readings and lost DNA. Drying that worked: inverted on a paper towel or Kimwipe at room temperature for 1 to 3.5 hours; inverted, then a 30 °C incubator for 20 minutes to 1 hour; a heat block with lids open at 30 °C for 30 to 40 minutes, or at 60 °C for 10 to 20 minutes; or the fan of a hood for 25 minutes to 1 hour 45 minutes.
 - **Use TES, not phage buffer.** Resuspending the ZnCl2 pellet in phage buffer failed, and the notebook marks it as never to be done.
 - **A white, viscous "pellet" that soaks up the 50 µl of water is salt, not DNA.** One read 100 ng/µl on the NanoDrop and failed PCR prep.
 
@@ -146,7 +146,7 @@ When it worked, the method gave 616 to 1,803 ng/µl with A260/280 of 1.88 to 2.1
 
 ### Scaling up for low yield
 
-- The 5 ml, 5 tube scale is the reliable one. One lab scaled to 10 ml of lysate in 10 tubes with 40 µl of nuclease mix and got a gel in the potassium acetate step and a final "salt block." Other groups ran 10 tubes (or 10 x 1 ml aliquots) to raise a low yield, and one ran three 5 ml preps in parallel (15 tubes) and pooled them.
+- The method is written for 5 ml in 5 tubes, and scaling it up has gone both ways. One lab scaled to 10 ml of lysate in 10 tubes with 40 µl of nuclease mix and got a gel in the potassium acetate step and a final "salt block." Other groups ran 10 tubes (or 10 x 1 ml aliquots) to raise a low yield, and one ran three 5 ml preps in parallel (15 tubes) and pooled them.
 - To top up a low-yield prep, run a second 5 ml prep and resuspend its pellets in the first prep's 50 µl.
 - Re-resuspending an already used pellet set a second time also recovered extra DNA.
 
