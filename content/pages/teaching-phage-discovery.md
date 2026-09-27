@@ -2,7 +2,7 @@
 path: /teaching/phage-discovery
 title: "Phage Discovery Program"
 seo_title: "Phage Discovery Program and SEA-PHAGES discovery guide"
-description: "Tarleton's SEA-PHAGES Phage Discovery Program and a phage discovery guide from soil sample to annotated genome, with notes on the Ward's kit 470024-492."
+description: "Tarleton's SEA-PHAGES Phage Discovery Program, and a phage discovery guide that goes from soil sample to annotated genome, step by step."
 ---
 
 The Phage Discovery Program is Tarleton State University's two-semester undergraduate research program in the HHMI SEA-PHAGES collaboration. Students isolate bacteriophages (viruses that infect bacteria) from soil, purify them, image them, extract their DNA, send the best for sequencing and annotate the genomes. This page describes the program and then works as a phage discovery guide, stage by stage, that goes past the SEA-PHAGES Phage Discovery Guide with what this lab has learned from years of student notebooks. It is for students in the program and for instructors running phage discovery elsewhere. Every phage the program has found is in the [phage table](/research/phages), and the research side of the program, including the genome announcements students co-author, is on the [science education](/research/science-education) page.
@@ -16,12 +16,6 @@ We are part of the SEA-PHAGES national collaboration in bacteriophage genomics, 
 **Second semester (spring): [Phage Bioinformatics](/teaching/phage-bioinformatics).** Students annotate the whole genome of the sequenced phages: they find the genes, choose their start sites and assign functions from the evidence, and the finished annotation is submitted to GenBank. A class can then write the genome up as a short genome announcement. After both courses, students can keep characterizing their phages as independent research.
 
 The hosts used in this lab have been *Mycobacterium smegmatis* (2017 notebooks) and, from 2018 on, *Microbacterium foliorum*. One notebook used *Mycobacterium fortuitum*.
-
-## Ward's phage discovery kit 470024-492
-
-Ward's Science sells a phage discovery kit for classrooms under catalog number 470024-492. This program does not use it: neither the old pages of this site nor the program's lab notebooks mention it, and the notebooks record the SEA-PHAGES workflow described on this page instead. So this page cannot tell you what the kit contains, what host it uses or how its protocol runs. For that, use the kit's own instructions or ask Ward's.
-
-If you are planning a classroom phage hunt with the kit, the guide below shows what a full phage discovery project involves, from collecting soil to an annotated genome. Compare its stages with the kit's instructions to see which ones the kit covers and which would need other materials.
 
 ## The phage discovery guide
 
