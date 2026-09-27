@@ -44,6 +44,24 @@ export function createAuth(env: Env) {
         );
       },
       delete: (key) => env.APP_KV.delete(key),
+      // 1.7 requires both methods on every SecondaryStorage. They are not a KV
+      // implementation: verification is consumed in D1, and the limiter below
+      // stays in memory. A call is a bug, so it fails instead of faking atomicity.
+      getAndDelete: () => {
+        throw new Error(
+          "Verification tokens are stored in the database. KV does not consume them.",
+        );
+      },
+      increment: () => {
+        throw new Error("Better Auth rate limits use memory storage. KV is not a counter.");
+      },
+    },
+    // With secondary storage set, 1.7 would store its own limiter there and call increment.
+    rateLimit: {
+      storage: "memory",
+    },
+    verification: {
+      storeInDatabase: true,
     },
     socialProviders: {
       google: {
