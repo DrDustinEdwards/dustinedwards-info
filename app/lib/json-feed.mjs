@@ -16,8 +16,8 @@
  */
 export function feedItem(post, origin) {
   return {
-    id: `${origin}/blog/${post.slug}`,
-    url: `${origin}/blog/${post.slug}`,
+    id: `${origin}/writing/${post.slug}`,
+    url: `${origin}/writing/${post.slug}`,
     title: post.title,
     // JSON Feed 1.1 requires content_html or content_text on every item.
     content_text: post.body,

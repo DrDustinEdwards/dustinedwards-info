@@ -4,7 +4,7 @@ import { SLUG_PATTERN } from "../content/slug.mjs";
 // a constant: the site answers on two hosts across the cutover. The slug uses the imported `SLUG_PATTERN`;
 // a local regex would fail silently in the permissive direction.
 
-const BLOG_PREFIX = "/blog/";
+const BLOG_PREFIX = "/writing/";
 
 /**
  * Null for every rejection: distinct refusals would let a caller map this site's URL space.
@@ -99,7 +99,7 @@ export function sourceVerdict(source, target, allowedOrigins) {
 
 /**
  * A trailing slash and the fragment are ignored; the QUERY is not, because a query can name a different
- * document (the `/blog` index filters with one).
+ * document (the `/writing` index filters with one).
  *
  * @param {string} href an absolute URL, already resolved against the source
  * @param {string} target the target URL

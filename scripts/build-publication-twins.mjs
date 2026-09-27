@@ -14,7 +14,7 @@ import { isMain } from "./lib/is-main.mjs";
 import { doiKey } from "./build-publications.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const OUT_DIR = join(root, "public", "publications");
+const OUT_DIR = join(root, "public", "research", "publications");
 
 /**
  * Exported so the gate can generate and compare without writing.

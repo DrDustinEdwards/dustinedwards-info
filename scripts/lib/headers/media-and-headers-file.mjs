@@ -130,7 +130,7 @@ export function run() {
     );
 
     ok("the paths declared here are the ones this site means to declare",
-      paths.every((p) => p === "/assets/*" || p === "/publications/*.md"),
+      paths.every((p) => p === "/assets/*" || p === "/research/publications/*.md"),
       `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
   }
 }

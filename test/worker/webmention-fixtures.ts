@@ -7,7 +7,7 @@ import { seedPost } from "./seed";
 /* Shared by the three webmention files: the endpoint, the moderation queue and the post loader. */
 
 export const TARGET_SLUG = "a-mentioned-post";
-export const TARGET = `${SITE_ORIGIN}/blog/${TARGET_SLUG}`;
+export const TARGET = `${SITE_ORIGIN}/writing/${TARGET_SLUG}`;
 
 export async function mentionRow(sourceUrl: string) {
   return env.DB.prepare(`SELECT * FROM webmentions WHERE source_url = ?1`)

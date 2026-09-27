@@ -93,7 +93,7 @@ export function useLinkPalette({
       return;
     }
     const chosen = linkMatches[linkIndex];
-    if (chosen) insertLink(`/blog/${chosen.slug}`, chosen.title);
+    if (chosen) insertLink(`/writing/${chosen.slug}`, chosen.title);
   };
 
   return {

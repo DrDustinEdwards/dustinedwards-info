@@ -7,6 +7,7 @@ import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/c
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { movedPathTarget } from "~/lib/path-moves.mjs";
 import { postRedirectTarget } from "~/lib/slug-redirect.mjs";
 import {
   paperSlashTarget,
@@ -265,19 +266,20 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
 
   const url = new URL(request.url);
 
-  const renamed = postRedirectTarget(url.pathname, redirects.posts);
-  if (renamed !== null) return redirectTo(request, new URL(`${renamed}${url.search}`, url).toString());
+  // A moved section (/blog, /publications) first, and the rules below read the moved path, so an old
+  // post slug or an old PDF name under an old section still resolves in one hop.
+  const moved = movedPathTarget(url.pathname);
+  const path = moved ?? url.pathname;
 
+  const renamed = postRedirectTarget(path, redirects.posts);
   // The PDF map runs before the slash redirect because its keys end in `.pdf`.
-  const movedPdf = pdfRedirectTarget(url.pathname, redirects.pdfs);
-  if (movedPdf !== null) {
-    return redirectTo(request, new URL(`${movedPdf}${url.search}`, url).toString());
-  }
-
+  const movedPdf = renamed === null ? pdfRedirectTarget(path, redirects.pdfs) : null;
   // The slash form is canonical: Scholar honors `citation_pdf_url` only in the page's subdirectory.
-  const slashed = paperSlashTarget(url.pathname);
-  if (slashed !== null) {
-    return redirectTo(request, new URL(`${slashed}${url.search}`, url).toString());
+  const slashed = renamed === null && movedPdf === null ? paperSlashTarget(path) : null;
+
+  const target = renamed ?? movedPdf ?? slashed ?? moved;
+  if (target !== null) {
+    return redirectTo(request, new URL(`${target}${url.search}`, url).toString());
   }
 
   const theme = themeFromRequest(request);

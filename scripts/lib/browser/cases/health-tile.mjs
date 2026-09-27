@@ -128,6 +128,6 @@ export async function run({ page }) {
       `show, and seeing it here means the age assertions above passed on the wrong element.`,
   );
 
-  /* Back to /blog: every case below reuses this page. */
-  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  /* Back to /writing: every case below reuses this page. */
+  await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
 }

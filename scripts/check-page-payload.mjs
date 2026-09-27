@@ -458,10 +458,10 @@ const UPLIFT_EXPIRES = "2026-11-30";
 /** @type {Map<string, {css: number, total: number}>} */
 const REDESIGN_UPLIFT = new Map([
   ["/",                       { css: 5300, total: 6300 }],
-  ["/blog",                   { css: 5800, total: 6800 }],
-  ["/blog/:slug",             { css: 7300, total: 10000 }],
-  ["/blog/tags/:tag",         { css: 5800, total: 6800 }],
-  ["/blog/series/:series",    { css: 5800, total: 6800 }],
+  ["/writing",                   { css: 5800, total: 6800 }],
+  ["/writing/:slug",             { css: 7300, total: 10000 }],
+  ["/writing/tags/:tag",         { css: 5800, total: 6800 }],
+  ["/writing/series/:series",    { css: 5800, total: 6800 }],
   ["/search",                 { css: 6100, total: 8700 }],
   ["/projects",               { css: 5300, total: 6300 }],
   ["/colophon",               { css: 5700, total: 6600 }],
@@ -469,10 +469,10 @@ const REDESIGN_UPLIFT = new Map([
   ["/phage-discovery",        { css: 5700, total: 6600 }],
   ["/privacy",                { css: 5700, total: 6600 }],
   ["/about",                  { css: 5700, total: 6600 }],
-  ["/publications",           { css: 5300, total: 6300 }],
-  ["/publications/:slug",     { css: 5300, total: 6300 }],
-  // The math variant of /blog/:slug, which carries its own ceiling below.
-  ["/blog/:slug (math)",      { css: 10500, total: 13200 }],
+  ["/research/publications",           { css: 5300, total: 6300 }],
+  ["/research/publications/:slug",     { css: 5300, total: 6300 }],
+  // The math variant of /writing/:slug, which carries its own ceiling below.
+  ["/writing/:slug (math)",      { css: 10500, total: 13200 }],
 ]);
 
 /**
@@ -482,12 +482,12 @@ const REDESIGN_UPLIFT = new Map([
  */
 const ROUTE_CEILINGS = {
   "/": { id: "routes/home", css: 8100, total: 10600 },
-  "/blog": { id: "routes/blog._index", css: 7400, total: 8800 },
+  "/writing": { id: "routes/blog._index", css: 7400, total: 8800 },
   /* 2026-09-25 raises (Dustin): CI's measured size plus about 1%, rounded up to the next hundred. */
-  "/blog/:slug": { id: "routes/blog.$slug", css: 9700, total: 13500 },
-  /* `/blog`'s ceilings: the same listing from the same sheets, graded against one bar. */
-  "/blog/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
-  "/blog/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
+  "/writing/:slug": { id: "routes/blog.$slug", css: 9700, total: 13500 },
+  /* `/writing`'s ceilings: the same listing from the same sheets, graded against one bar. */
+  "/writing/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
+  "/writing/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
   "/search": { id: "routes/search", css: 7600, total: 11400 },
   "/projects": { id: "routes/projects", css: 7100, total: 7900 },
   "/colophon": { id: "routes/colophon", css: 7400, total: 8400 },
@@ -497,12 +497,12 @@ const ROUTE_CEILINGS = {
   "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8400 },
   "/privacy": { id: "routes/privacy", css: 7400, total: 8400 },
   "/about": { id: "routes/about", css: 7400, total: 8400 },
-  "/publications": { id: "routes/publications", css: 7900, total: 9100 },
+  "/research/publications": { id: "routes/publications", css: 7900, total: 9100 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
    * HTML is the variable part: a long author list is content, not a payload regression.
    */
-  "/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
+  "/research/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
 };
 
 const MATH_CEILING = { css: 12600, total: 16400 };
@@ -572,7 +572,7 @@ function gradeEveryPage() {
   /* A widening that cannot expire is just a higher ceiling with a story attached. */
   for (const [route, before] of REDESIGN_UPLIFT) {
     const now =
-      route === "/blog/:slug (math)"
+      route === "/writing/:slug (math)"
         ? MATH_CEILING
         : /** @type {Record<string, {css: number, total: number}>} */ (ROUTE_CEILINGS)[route];
     ok(
@@ -709,7 +709,7 @@ function coldLoad(sheets, reachable, assetFile) {
  * @param {string} clientDir @param {(p: string) => string} assetFile
  */
 function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile) {
-  console.log("\n  the math variant of /blog/:slug\n");
+  console.log("\n  the math variant of /writing/:slug\n");
 
   /* Reachable from root, so the no-manifest assertion below is not vacuous. */
 
@@ -812,25 +812,25 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
       `every equation renders unstyled, with no type error anywhere.`,
   );
 
-  const base = ROUTE_CEILINGS["/blog/:slug"];
+  const base = ROUTE_CEILINGS["/writing/:slug"];
   const baseSheets = stylesheetsFor(manifest, base.id);
   const { cssTotal: baseCss, bundleTotal } = coldLoad(baseSheets, [...postAssets, ...rootAssets], assetFile);
   const mathCss = baseCss + brotliSize(mathBytes);
   const mathTotal = mathCss + bundleTotal;
 
   console.log(
-    `  ${"/blog/:slug (math)".padEnd(18)} css ${String(mathCss).padStart(5)} ` +
+    `  ${"/writing/:slug (math)".padEnd(18)} css ${String(mathCss).padStart(5)} ` +
       `(${baseSheets.length + 1} sheet) bundles ${String(bundleTotal).padStart(5)} ` +
       `total ${String(mathTotal).padStart(5)} of ${MATH_CEILING.total}\n`,
   );
 
   ok(
-    `/blog/:slug (math): stylesheets are under ${MATH_CEILING.css} brotli`,
+    `/writing/:slug (math): stylesheets are under ${MATH_CEILING.css} brotli`,
     mathCss <= MATH_CEILING.css,
     `${mathCss} bytes: ${baseCss} of route sheets plus ${brotliSize(mathBytes)} of math.`,
   );
   ok(
-    `/blog/:slug (math): the whole cold load is under ${MATH_CEILING.total} brotli`,
+    `/writing/:slug (math): the whole cold load is under ${MATH_CEILING.total} brotli`,
     mathTotal <= MATH_CEILING.total,
     `${mathTotal} bytes: ${mathCss} of stylesheet and ${bundleTotal} of enhancement bundles.`,
   );
@@ -875,17 +875,17 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
  * Brotli ceilings on the markup the route's own components render, not the served document. The
  * served shell measured a fixed 540 to 590 brotli on three routes, so no route's ceiling carries it.
  * Margin is 15% over the measurement, rounded up to the next 100. `measured` is provenance and never
- * compared with the page, because /blog and /blog/:slug move with the corpus.
+ * compared with the page, because /writing and /writing/:slug move with the corpus.
  *
  * @type {Record<string, { brotli: number, measured: number }>}
  */
 const HTML_CEILINGS = {
   "/": { brotli: 12000, measured: 10428 },
-  "/blog": { brotli: 5200, measured: 4495 },
+  "/writing": { brotli: 5200, measured: 4495 },
   /* The LONGEST post in the corpus, which is what this route's worst case means. */
-  "/blog/:slug": { brotli: 12300, measured: 10660 },
-  "/blog/tags/:tag": { brotli: 4900, measured: 4200 },
-  "/blog/series/:series": { brotli: 4900, measured: 4215 },
+  "/writing/:slug": { brotli: 12300, measured: 10660 },
+  "/writing/tags/:tag": { brotli: 4900, measured: 4200 },
+  "/writing/series/:series": { brotli: 4900, measured: 4215 },
   "/projects": { brotli: 6400, measured: 5559 },
   "/colophon": { brotli: 13900, measured: 12043 },
   "/playground": { brotli: 6300, measured: 5435 },
@@ -908,12 +908,12 @@ const HTML_UNMEASURED = {
     "its size IS the query: a result page for one word and a result page for a common " +
     "one are different documents, and its loader reaches search.server.ts, which the render " +
     "harness stubs. There is no single number for this route to be under.",
-  "/publications":
+  "/research/publications":
     "its loader computes twenty fields over the paper data and the citation counts, " +
     "through citations.server.ts. A fabricated payload would measure the fabrication. The " +
     "Part B job for this page is the commit that should make it renderable and ceiling it.",
-  "/publications/:slug":
-    "the same citations.server.ts call, for one paper. It follows /publications in " +
+  "/research/publications/:slug":
+    "the same citations.server.ts call, for one paper. It follows /research/publications in " +
     "and out of this list.",
 };
 
@@ -990,25 +990,25 @@ async function gradeRenderedHtml() {
   /** @type {[string, string, string, unknown, Record<string, string>][]} */
   const cases = [
     ["/", "app/routes/home.tsx", "/", homeLoaderData(ordered, HOME_CARDS), {}],
-    ["/blog", "app/routes/blog._index.tsx", "/blog", listing, {}],
+    ["/writing", "app/routes/blog._index.tsx", "/writing", listing, {}],
     [
-      "/blog/:slug",
+      "/writing/:slug",
       "app/routes/blog.$slug.tsx",
-      `/blog/${longest.slug}`,
+      `/writing/${longest.slug}`,
       postLoaderData(longest, revisedDate),
       { slug: longest.slug },
     ],
     [
-      "/blog/tags/:tag",
+      "/writing/tags/:tag",
       "app/routes/blog.tags.$tag.tsx",
-      "/blog/tags/cloudflare",
+      "/writing/tags/cloudflare",
       { ...listing, tag: { slug: "cloudflare", name: "cloudflare", total: listing.total } },
       { tag: "cloudflare" },
     ],
     [
-      "/blog/series/:series",
+      "/writing/series/:series",
       "app/routes/blog.series.$series.tsx",
-      "/blog/series/ten-years-on-cloudflare",
+      "/writing/series/ten-years-on-cloudflare",
       {
         ...listing,
         series: { name: longest.series ?? "A series", total: listing.posts.length },

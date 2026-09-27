@@ -7,7 +7,7 @@
  * requires it, so no JSON import works in both.
  */
 
-const BLOG_PREFIX = "/blog/";
+const BLOG_PREFIX = "/writing/";
 
 const MARKDOWN_SUFFIX = ".md";
 
@@ -24,13 +24,13 @@ export function postRedirectTarget(pathname, map) {
   if (!pathname.startsWith(BLOG_PREFIX)) return null;
 
   const rest = pathname.slice(BLOG_PREFIX.length);
-  // `/blog/tags/x` and `/blog/series/x` share the prefix; a slash means another route's URL.
+  // `/writing/tags/x` and `/writing/series/x` share the prefix; a slash means another route's URL.
   if (rest.includes("/")) return null;
 
   const markdown = rest.endsWith(MARKDOWN_SUFFIX);
   const slug = markdown ? rest.slice(0, -MARKDOWN_SUFFIX.length) : rest;
 
-  // Own property only: a bare lookup would redirect `/blog/constructor` via an inherited key.
+  // Own property only: a bare lookup would redirect `/writing/constructor` via an inherited key.
   if (!Object.hasOwn(map, slug)) return null;
 
   const target = map[slug];

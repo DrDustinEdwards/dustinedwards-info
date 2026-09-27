@@ -59,7 +59,7 @@ test("an escaped `<` stays escaped, because the item is parsed as HTML", () => {
 });
 
 test("surrounding markup is untouched, byte for byte", () => {
-  const before = '<p>Before <a href="/blog/x">a link</a></p>';
+  const before = '<p>Before <a href="/writing/x">a link</a></p>';
   const after = '<p><img src="/media/y.png" alt="y"> after</p>';
   const out = mathToTex(`${before}${render("x", false)}${after}`);
   assert.equal(out, `${before}$x$${after}`);

@@ -38,7 +38,7 @@ ok(
   "every assertion below iterates this map, so a short map is a quiet pass",
 );
 
-const TWIN_DIR = join(root, "public", "publications");
+const TWIN_DIR = join(root, "public", "research", "publications");
 const missingTwins = [...twins.keys()].filter((name) => !existsSync(join(TWIN_DIR, name)));
 ok(
   "every twin exists on disk",
@@ -76,7 +76,7 @@ ok(
 /* Matched on the URL, because a count passes on a list naming the wrong papers. */
 const llms = readFileSync(join(root, "content", "llms.txt"), "utf8");
 const advertised = new Set(
-  [...llms.matchAll(/^\s{2}(\/publications\/[a-z0-9-]+\.md)$/gm)].map((m) => m[1]),
+  [...llms.matchAll(/^\s{2}(\/research\/publications\/[a-z0-9-]+\.md)$/gm)].map((m) => m[1]),
 );
 ok(
   `llms.txt lists markdown twins (${advertised.size} found)`,
@@ -84,7 +84,7 @@ ok(
   "an empty set here would make both directions below vacuous",
 );
 
-const expectedTwinUrls = new Set([...twins.keys()].map((name) => `/publications/${name}`));
+const expectedTwinUrls = new Set([...twins.keys()].map((name) => `/research/publications/${name}`));
 const unadvertised = [...expectedTwinUrls].filter((url) => !advertised.has(url));
 ok(
   `every twin is listed in llms.txt (${expectedTwinUrls.size} twins)`,
@@ -202,7 +202,7 @@ ok(
     const key = keyForUrl(paperPath(slug));
     return { slug, key, back: urlForKey(key) };
   }).filter(
-    ({ slug, key, back }) => key !== `publications/${slug}.md` || back !== paperPath(slug),
+    ({ slug, key, back }) => key !== `research/publications/${slug}.md` || back !== paperPath(slug),
   );
   ok(
     `every paper's Ask key is its twin and maps back to its page (${PUBLICATIONS.length} papers)`,

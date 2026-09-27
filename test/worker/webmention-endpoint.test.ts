@@ -199,7 +199,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
 
   it("REFUSES a path on this origin that is not a post", async () => {
     const ctx = createExecutionContext();
-    for (const target of [`${SITE_ORIGIN}/colophon`, `${SITE_ORIGIN}/blog`, `${SITE_ORIGIN}/`]) {
+    for (const target of [`${SITE_ORIGIN}/colophon`, `${SITE_ORIGIN}/writing`, `${SITE_ORIGIN}/`]) {
       const response = await webmentionAction({
         request: wm(form("https://elsewhere.example/a", target), { ip: "203.0.113.31" }),
         context: routeContext(ctx),
@@ -216,14 +216,14 @@ describe("/webmention bound 2: the target must be a published post here", () => 
     const ctx = createExecutionContext();
     const draft = await webmentionAction({
       request: wm(
-        form("https://elsewhere.example/a", `${SITE_ORIGIN}/blog/an-unpublished-draft`),
+        form("https://elsewhere.example/a", `${SITE_ORIGIN}/writing/an-unpublished-draft`),
         { ip: "203.0.113.32" },
       ),
       context: routeContext(ctx),
     } as never);
     const unknown = await webmentionAction({
       request: wm(
-        form("https://elsewhere.example/a", `${SITE_ORIGIN}/blog/no-such-post-anywhere`),
+        form("https://elsewhere.example/a", `${SITE_ORIGIN}/writing/no-such-post-anywhere`),
         { ip: "203.0.113.32" },
       ),
       context: routeContext(ctx),
@@ -243,7 +243,7 @@ describe("/webmention bound 2: the target must be a published post here", () => 
   it("REFUSES a source that is this origin, an IP literal, or localhost", async () => {
     const ctx = createExecutionContext();
     const sources = [
-      `${SITE_ORIGIN}/blog/some-other-post`,
+      `${SITE_ORIGIN}/writing/some-other-post`,
       "http://192.0.2.7/a-post",
       "https://[2001:db8::1]/a-post",
       "http://localhost:8787/a-post",
@@ -358,7 +358,7 @@ describe("/webmention accepts and verifies", () => {
   it("FAILS with no-link when the source does not link to the target", async () => {
     const source = "https://elsewhere.example/links-elsewhere";
     stubSources({
-      [source]: { body: pageLinkingTo(`${SITE_ORIGIN}/blog/a-different-post`) },
+      [source]: { body: pageLinkingTo(`${SITE_ORIGIN}/writing/a-different-post`) },
     });
 
     const ctx = createExecutionContext();
@@ -457,7 +457,7 @@ describe("/webmention accepts and verifies", () => {
     /* Before the cutover the route accepts targets on the request's host too, so a hop back to
      * SITE_ORIGIN must be refused even when the target's own origin is a different one. */
     const source = "https://elsewhere.example/to-canonical";
-    stubSources({ [source]: { redirect: `${SITE_ORIGIN}/blog/${TARGET_SLUG}` } });
+    stubSources({ [source]: { redirect: `${SITE_ORIGIN}/writing/${TARGET_SLUG}` } });
     const verdict = await inspectSource(source, `https://other-host.example/blog/${TARGET_SLUG}`);
     expect(verdict).toEqual({ status: "failed", failureReason: FAILURE_REASONS.redirectRefused });
   });
@@ -499,7 +499,7 @@ describe("/webmention bound 3: one row per source and target", () => {
     expect((await mentionRow(source))?.status).toBe("pending");
 
     /* The source has stopped linking here, so the row must be re-decided, not left stale. */
-    stubSources({ [source]: { body: pageLinkingTo(`${SITE_ORIGIN}/blog/somewhere-else`) } });
+    stubSources({ [source]: { body: pageLinkingTo(`${SITE_ORIGIN}/writing/somewhere-else`) } });
     const second = createExecutionContext();
     const response = await webmentionAction({
       request: wm(form(source, TARGET), { ip: "203.0.113.60" }),

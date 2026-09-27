@@ -50,8 +50,8 @@ test("a live read indexes by path and reports the window", async () => {
       const query = String(init.body);
       const data = query.includes("GROUP BY")
         ? [
-            { path: "/blog/one", origin_requests: 12, sampled_rows: 12 },
-            { path: "/blog/two", origin_requests: 3, sampled_rows: 3 },
+            { path: "/writing/one", origin_requests: 12, sampled_rows: 12 },
+            { path: "/writing/two", origin_requests: 3, sampled_rows: 3 },
           ]
         : [{ origin_requests: 15, paths: 2 }];
       return new Response(JSON.stringify({ data }), { status: 200 });
@@ -60,7 +60,7 @@ test("a live read indexes by path and reports the window", async () => {
   );
   assert.equal(result.status, "live");
   assert.equal(result.data.windowDays, WINDOW_DAYS);
-  assert.deepEqual(result.data.byPath, { "/blog/one": 12, "/blog/two": 3 });
+  assert.deepEqual(result.data.byPath, { "/writing/one": 12, "/writing/two": 3 });
   assert.equal(result.data.complete, true, "two paths, two rows, nothing was cut");
 });
 
@@ -70,7 +70,7 @@ test("COMPLETE IS FALSE when more paths had activity than came back", async () =
       new Response(
         JSON.stringify({
           data: String(init.body).includes("GROUP BY")
-            ? [{ path: "/blog/one", origin_requests: 12, sampled_rows: 12 }]
+            ? [{ path: "/writing/one", origin_requests: 12, sampled_rows: 12 }]
             : // The total says nine hundred paths had activity and one row came
               // back, so a post missing from `byPath` is UNKNOWN, not zero.
               [{ origin_requests: 99999, paths: 900 }],
@@ -86,7 +86,7 @@ test("COMPLETE IS FALSE when more paths had activity than came back", async () =
 
 test("COMPLETE IS FALSE when the limit itself was reached", async () => {
   const rows = Array.from({ length: READERSHIP_PATH_LIMIT }, (_, i) => ({
-    path: `/blog/p${i}`,
+    path: `/writing/p${i}`,
     origin_requests: 1,
     sampled_rows: 1,
   }));

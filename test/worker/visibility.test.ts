@@ -148,7 +148,7 @@ beforeAll(async () => {
   /* Hidden posts first, so the live post's related and backlink lists are computed with them in the corpus. */
   const linkingBody = (term: string) =>
     [
-      `This mentions crawlshared and ${term}, and links to [the live post](/blog/${LIVE.slug}).`,
+      `This mentions crawlshared and ${term}, and links to [the live post](/writing/${LIVE.slug}).`,
       "",
       "## Details",
       "",
@@ -205,9 +205,9 @@ describe("the draft and the scheduled post are on no public surface", () => {
   it("listings, feeds, the sitemap and llms-full show only the published post", async () => {
     const surfaces: Array<[string, Loader, string, Record<string, string>?]> = [
       ["home", homeLoader as Loader, "/"],
-      ["blog index", blogIndexLoader as Loader, "/blog"],
-      ["blog index by tag", blogIndexLoader as Loader, `/blog?tag=${TAG}`],
-      ["blog index by year", blogIndexLoader as Loader, "/blog?year=2026"],
+      ["blog index", blogIndexLoader as Loader, "/writing"],
+      ["blog index by tag", blogIndexLoader as Loader, `/writing?tag=${TAG}`],
+      ["blog index by year", blogIndexLoader as Loader, "/writing?year=2026"],
       ["tag page", tagLoader as Loader, tagPath(TAG), { tag: tagParam }],
       ["tag rss", tagRssLoader as Loader, `${tagPath(TAG)}/rss.xml`, { tag: tagParam }],
       ["tag json feed", tagFeedLoader as Loader, `${tagPath(TAG)}/feed.json`, { tag: tagParam }],
@@ -219,9 +219,9 @@ describe("the draft and the scheduled post are on no public surface", () => {
         `${seriesPath(SERIES)}/feed.json`,
         { series: seriesParam },
       ],
-      ["rss", rssLoader as Loader, "/blog/rss.xml"],
-      ["atom", atomLoader as Loader, "/blog/atom.xml"],
-      ["json feed", jsonFeedLoader as Loader, "/blog/feed.json"],
+      ["rss", rssLoader as Loader, "/writing/rss.xml"],
+      ["atom", atomLoader as Loader, "/writing/atom.xml"],
+      ["json feed", jsonFeedLoader as Loader, "/writing/feed.json"],
       ["sitemap", sitemapLoader as Loader, "/sitemap.xml"],
       ["llms-full.txt", llmsFullLoader as Loader, "/llms-full.txt"],
     ];
@@ -237,12 +237,12 @@ describe("the draft and the scheduled post are on no public surface", () => {
   });
 
   it("the post page, its related posts, backlinks and series parts omit both", async () => {
-    const page = await read(postLoader as Loader, `/blog/${LIVE.slug}`, { slug: LIVE.slug });
+    const page = await read(postLoader as Loader, `/writing/${LIVE.slug}`, { slug: LIVE.slug });
     expect(page.status).toBe(200);
     expect(page.text).toContain(LIVE.title);
     expectNoHidden(page.text, "the live post page");
 
-    const twin = await read(twinLoader as Loader, `/blog/${LIVE.slug}.md`, { slug: LIVE.slug });
+    const twin = await read(twinLoader as Loader, `/writing/${LIVE.slug}.md`, { slug: LIVE.slug });
     expect(twin.status).toBe(200);
     expect(twin.text).toContain(LIVE.term);
     expectNoHidden(twin.text, "the live markdown twin");
@@ -250,11 +250,11 @@ describe("the draft and the scheduled post are on no public surface", () => {
 
   it("the hidden posts' own URLs and markdown twins are 404", async () => {
     for (const hidden of HIDDEN) {
-      const page = await read(postLoader as Loader, `/blog/${hidden.slug}`, { slug: hidden.slug });
+      const page = await read(postLoader as Loader, `/writing/${hidden.slug}`, { slug: hidden.slug });
       expect(page.status, hidden.slug).toBe(404);
       expectNoHidden(page.text, `${hidden.slug} page`);
 
-      const twin = await read(twinLoader as Loader, `/blog/${hidden.slug}.md`, { slug: hidden.slug });
+      const twin = await read(twinLoader as Loader, `/writing/${hidden.slug}.md`, { slug: hidden.slug });
       expect(twin.status, `${hidden.slug}.md`).toBe(404);
       expect(twin.text).not.toContain(hidden.term);
     }
@@ -309,7 +309,7 @@ describe("the draft and the scheduled post are on no public surface", () => {
       await syncAskPost(askEnv, written[slug] as never);
     }
 
-    const postKeys = [...items.keys()].filter((key) => key.startsWith("blog/"));
+    const postKeys = [...items.keys()].filter((key) => key.startsWith("writing/"));
     expect(postKeys.some((key) => key.includes(LIVE.slug))).toBe(true);
     for (const hidden of HIDDEN) {
       expect(postKeys.filter((key) => key.includes(hidden.slug)), hidden.slug).toEqual([]);
@@ -343,7 +343,7 @@ describe("the home page's post count", () => {
       context: routeContext(),
     } as never);
     const html = renderRoute("/", Home, { loaderData });
-    const counts = await textsOf(html, 'a[href="/blog"]');
+    const counts = await textsOf(html, 'a[href="/writing"]');
     const match = /(\d+)\s+posts?\b/.exec(counts.join(" "));
     return match ? Number(match[1]) : null;
   }

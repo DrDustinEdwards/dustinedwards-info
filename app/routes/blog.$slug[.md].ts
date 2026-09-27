@@ -14,6 +14,6 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     });
   }
 
-  /* Publicly cached: this URL has one representation, unlike the negotiated `/blog/:slug`. */
+  /* Publicly cached: this URL has one representation, unlike the negotiated `/writing/:slug`. */
   return markdownResponse(params.slug, post.body, SHARED_CACHE_CONTROL);
 }

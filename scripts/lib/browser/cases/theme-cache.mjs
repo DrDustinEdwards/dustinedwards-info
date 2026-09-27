@@ -15,8 +15,8 @@ import { MENTION_POST_PATH } from "../seed.mjs";
 export async function run({ page, browser }) {
   const THEME_CACHED = [
     { path: "/", module: "home.tsx" },
-    { path: "/blog", module: "blog._index.tsx" },
-    { path: "/blog/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
+    { path: "/writing", module: "blog._index.tsx" },
+    { path: "/writing/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
     { path: "/projects", module: "projects.tsx" },
     { path: "/playground", module: "playground.tsx" },
     { path: "/playground/ui", module: "playground.ui.tsx" },
@@ -25,17 +25,17 @@ export async function run({ page, browser }) {
     { path: "/search?q=cloudflare", module: "search.tsx" },
     { path: "/privacy", module: "privacy.tsx" },
     /* The most-carried tag, so one post being retagged cannot remove the case. */
-    { path: "/blog/tags/cloudflare", module: "blog.tags.$tag.tsx" },
+    { path: "/writing/tags/cloudflare", module: "blog.tags.$tag.tsx" },
     { path: "/about", module: "about.tsx" },
-    { path: "/publications", module: "publications.tsx" },
+    { path: "/research/publications", module: "publications.tsx" },
     /* The trailing slash is canonical; the slashless form redirects. */
-    { path: "/publications/10-1128-mra-00888-24/", module: "publications.$slug.tsx" },
+    { path: "/research/publications/10-1128-mra-00888-24/", module: "publications.$slug.tsx" },
   ];
 
   /* Shared-cached HTML with no corpus URL; a 404 would compare two error pages. */
   const THEME_CACHED_PENDING = {
     "blog.series.$series.tsx":
-      "no post in the corpus carries a series, so every /blog/series/ URL is a " +
+      "no post in the corpus carries a series, so every /writing/series/ URL is a " +
       "404 and a case here would compare two renders of the error page.",
   };
 
@@ -78,7 +78,7 @@ export async function run({ page, browser }) {
       );
 
   /**
-   * One cache-buster per run, never per fetch: `/publications` renders the request URL into its
+   * One cache-buster per run, never per fetch: `/research/publications` renders the request URL into its
    * search form, so per-fetch values made the three reads of a page differ.
    */
   const RUN_IDENTITY = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
@@ -296,7 +296,7 @@ export async function run({ page, browser }) {
 
   const NEGOTIATED = [
     {
-      path: "/blog/ten-years-on-cloudflare",
+      path: "/writing/ten-years-on-cloudflare",
       accept: "text/markdown",
       wanted: "text/markdown",
       label: "the markdown twin",
@@ -394,7 +394,7 @@ export async function run({ page, browser }) {
       const context = await browser.createBrowserContext();
       const probe = await context.newPage();
       await probe.setCookie({ url: BASE, name: "theme", value: theme, path: "/" });
-      await probe.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+      await probe.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
       const seen = await probe.evaluate(() => ({
         meta: document.querySelector('meta[name="color-scheme"]')?.getAttribute("content") ?? null,
         computed: getComputedStyle(document.documentElement).colorScheme,

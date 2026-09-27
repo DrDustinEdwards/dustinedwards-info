@@ -26,7 +26,7 @@ export const READERSHIP_PATH_LIMIT = 200;
  * @returns {string}
  */
 export function postReadershipPath(slug) {
-  return `/blog/${slug}`;
+  return `/writing/${slug}`;
 }
 
 // One sentence per cause: a dash with no sentence beside it reads as zero.

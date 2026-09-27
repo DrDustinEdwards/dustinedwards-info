@@ -1,5 +1,5 @@
 // The trailing slash is load-bearing: Scholar requires citation_pdf_url in the same subdirectory as the
-// abstract page, which only /publications/<slug>/ satisfies. The slug derives from the DOI, never the
+// abstract page, which only /research/publications/<slug>/ satisfies. The slug derives from the DOI, never the
 // curated id, so it cannot be re-decided after Scholar has indexed it.
 
 import { ASSET_PREFIX } from "../media/classify.mjs";
@@ -19,7 +19,7 @@ export function doiSlug(doi) {
     .replace(/^-+|-+$/g, "");
 }
 
-export const PUBLICATIONS_PATH = "/publications";
+export const PUBLICATIONS_PATH = "/research/publications";
 
 /**
  * @param {string} slug from `doiSlug`
@@ -58,5 +58,5 @@ export function paperAskUrl(title) {
  * @param {string} slug from `doiSlug`
  */
 export function paperPdfDiskPath(slug) {
-  return `public/publications/${slug}/${ASSET_PREFIX}${slug}.pdf`;
+  return `public/research/publications/${slug}/${ASSET_PREFIX}${slug}.pdf`;
 }

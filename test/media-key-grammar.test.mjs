@@ -38,7 +38,7 @@ const CASES = [
   { name: "raster path with transform query", input: `/media/${RASTER_KEY}?w=320`, isContent: false, digest: HEX16 },
   { name: "og/ derived key", input: `og/some-post-65777080.png`, isContent: false, digest: null },
   { name: "og/ prefix on a real key", input: `og/${RASTER_KEY}`, isContent: false, digest: null },
-  { name: "static asset path", input: "/publications/paper.pdf", isContent: false, digest: null },
+  { name: "static asset path", input: "/research/publications/paper.pdf", isContent: false, digest: null },
   { name: "traversal segment", input: `../${SVG_KEY}`, isContent: false, digest: null },
   { name: "bare hex with no extension", input: HEX16, isContent: false, digest: null },
   { name: "named key with a slug", input: NAMED_KEY, isContent: true, digest: HEX16 },

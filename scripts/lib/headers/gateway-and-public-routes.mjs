@@ -99,7 +99,7 @@ export function run(code) {
       "privacy.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",
-      // /blog is here rather than with the negotiating routes: no twin representation, and with the
+      // /writing is here rather than with the negotiating routes: no twin representation, and with the
       // theme in the cache key it has no reason for a Vary at all.
       "blog._index.tsx",
     ];

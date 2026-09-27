@@ -118,7 +118,7 @@ const PRELUDE = `/**
  * Publication record for the CV and publications surfaces.
  *
  * Structured content edited by commit, following phage-hunters.ts. PDFs are committed under
- * public/publications/ and served as static assets, which cost the Worker bundle nothing.
+ * public/research/publications/ and served as static assets, which cost the Worker bundle nothing.
  *
  * Every record carries \`access\` even though most are self-hosted, so one can be switched to an
  * external link without a schema change. Year is the Crossref published-print year, which is

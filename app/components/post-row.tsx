@@ -31,7 +31,7 @@ export function PostRow({ post, mark }: { post: RowPost; mark?: string }) {
       </p>
       <div className="entry-body">
         <h2 className="entry-title p-name">
-          <Link className="u-url" to={`/blog/${post.slug}`}>
+          <Link className="u-url" to={`/writing/${post.slug}`}>
             {post.title}
           </Link>
         </h2>

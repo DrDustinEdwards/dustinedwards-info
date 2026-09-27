@@ -143,7 +143,7 @@ export function recordsForPost(post) {
   const { intro, sections } = splitSections(post.markdown, post.toc);
   const doc = {
     uid: `post:${post.slug}`,
-    url: `/blog/${post.slug}`,
+    url: `/writing/${post.slug}`,
     type: /** @type {const} */ ("post"),
     title: post.title,
     docTags,

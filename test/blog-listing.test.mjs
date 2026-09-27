@@ -93,7 +93,7 @@ test("the featured post is never also one of the others", () => {
   assert.ok(
     !recent.some((p) => p.slug === featured.slug),
     "the caller queries others as featured = 0, and printing the lead twice is the " +
-      "defect splitFeatured exists to prevent on /blog",
+      "defect splitFeatured exists to prevent on /writing",
   );
 });
 

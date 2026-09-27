@@ -5,5 +5,5 @@
  * @returns {string} a site-absolute path
  */
 export function tagPath(slug) {
-  return `/blog/tags/${encodeURIComponent(slug)}`;
+  return `/writing/tags/${encodeURIComponent(slug)}`;
 }

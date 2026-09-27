@@ -68,7 +68,7 @@ const NOT_ASSETS = new Map([
 // gitignored build product, not media; llms.txt lists them and check:machine-readable reconciles it.
 const NOT_ASSET_PATTERNS = [
   {
-    test: /^\/publications\/[a-z0-9-]+\.md$/,
+    test: /^\/research\/publications\/[a-z0-9-]+\.md$/,
     why:
       "A generated markdown twin of a paper, gitignored build product served " +
       "as an asset. Listed in llms.txt and reconciled by check:machine-readable; " +

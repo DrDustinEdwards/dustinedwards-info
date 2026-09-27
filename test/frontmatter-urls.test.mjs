@@ -21,19 +21,19 @@ const CASES = [
   ["cover: a rendered diagram asset", cover, "/diagrams/d.svg", true],
   ["further_reading: an ordinary https url", furtherReading, "https://example.com/a", true],
   // A path, not an absolute URL, because the origin changes at cutover and a path survives it.
-  ["further_reading: an internal /blog/ path", furtherReading, "/blog/a-real-post", true],
+  ["further_reading: an internal /writing/ path", furtherReading, "/writing/a-real-post", true],
 
   ["cover: protocol-relative host (finding B008)", cover, "//evil.com/x.png", false],
   ["cover: javascript scheme", cover, "javascript:alert(1)", false],
   ["cover: a full absolute url", cover, "https://evil.com/x.png", false],
   ["further_reading: javascript scheme (finding B001)", furtherReading, "javascript:alert(1)", false],
   ["further_reading: data url", furtherReading, "data:text/html,x", false],
-  // Further reading is things to READ: http(s) or a `/blog/` path only, though `isAllowedUrl` permits mailto.
+  // Further reading is things to READ: http(s) or a `/writing/` path only, though `isAllowedUrl` permits mailto.
   ["further_reading: mailto", furtherReading, "mailto:a@b.c", false],
   // Accepting paths means protocol-relative is no longer refused as a side effect, so it is pinned here.
   ["further_reading: protocol-relative host", furtherReading, "//evil.com/x", false],
   ["further_reading: a site path that is not a post", furtherReading, "/about", false],
-  ["further_reading: /blog/ with no slug", furtherReading, "/blog/", false],
+  ["further_reading: /writing/ with no slug", furtherReading, "/writing/", false],
 ];
 
 for (const [label, field, value, expected] of CASES) {

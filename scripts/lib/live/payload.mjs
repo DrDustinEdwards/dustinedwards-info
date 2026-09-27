@@ -10,7 +10,7 @@ import { check, get, root, SLUG } from "./client.mjs";
 export async function run() {
   /* A modulepreload means a public page hydrates. */
   {
-    const { text, status } = await get(`/blog/${SLUG}`);
+    const { text, status } = await get(`/writing/${SLUG}`);
     check("payload: post page fetched for the script-set comparison", status === 200);
 
     const enhanceStems = new Set(
@@ -87,9 +87,9 @@ export async function run() {
     /** @type {string[]} */
     const unserved = [];
     for (const slug of slugs) {
-      const { text, status } = await get(`/blog/${slug}`);
+      const { text, status } = await get(`/writing/${slug}`);
       if (status !== 200) {
-        unserved.push(`/blog/${slug} (${status})`);
+        unserved.push(`/writing/${slug} (${status})`);
         continue;
       }
       const match = text.match(/<a class="image-link" href="([^"]+)"><img\b/);
@@ -117,7 +117,7 @@ export async function run() {
       const { res, status } = await get(found.href);
       const type = res.headers.get("content-type") ?? "";
       check(
-        `image-link: /blog/${found.slug} wraps its image in an anchor to ${found.href}`,
+        `image-link: /writing/${found.slug} wraps its image in an anchor to ${found.href}`,
         !found.href.includes("?"),
         `the href carries a query, so it is a transform of the original rather than ` +
           `the original: ${found.href}`,

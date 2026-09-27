@@ -325,14 +325,14 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
             {filtered ? (
               <>
                 {" "}
-                <Link to="/publications">Clear</Link>
+                <Link to="/research/publications">Clear</Link>
               </>
             ) : null}
           </span>
           {/* Always the full list: a citation file carrying only the filtered subset is one nobody asked for. */}
           <span>
-            Export all <a href="/publications.bib">BibTeX</a>{" "}
-            <a href="/publications.ris">RIS</a> <a href="/publications.json">CSL JSON</a>
+            Export all <a href="/research/publications.bib">BibTeX</a>{" "}
+            <a href="/research/publications.ris">RIS</a> <a href="/research/publications.json">CSL JSON</a>
           </span>
         </p>
 

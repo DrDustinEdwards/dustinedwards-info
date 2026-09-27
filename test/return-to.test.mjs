@@ -12,28 +12,28 @@ const post = (referer) =>
   });
 
 test("CONTROL: an ordinary same-origin path is returned", () => {
-  assert.equal(safeReturnTo(post(`${SITE}/blog/ten-years-on-cloudflare`)), "/blog/ten-years-on-cloudflare");
+  assert.equal(safeReturnTo(post(`${SITE}/writing/ten-years-on-cloudflare`)), "/writing/ten-years-on-cloudflare");
 });
 
 test("THE FRAGMENT IS KEPT, which is the defect", () => {
   assert.equal(
-    safeReturnTo(post(`${SITE}/blog/ten-years-on-cloudflare#the-numbers`)),
-    "/blog/ten-years-on-cloudflare#the-numbers",
+    safeReturnTo(post(`${SITE}/writing/ten-years-on-cloudflare#the-numbers`)),
+    "/writing/ten-years-on-cloudflare#the-numbers",
   );
 });
 
 test("the query survives alongside the fragment", () => {
   assert.equal(
-    safeReturnTo(post(`${SITE}/blog?tag=d1&page=2#post-list`)),
-    "/blog?tag=d1&page=2#post-list",
+    safeReturnTo(post(`${SITE}/writing?tag=d1&page=2#post-list`)),
+    "/writing?tag=d1&page=2#post-list",
   );
 });
 
 test("a percent-encoded fragment is echoed, not decoded", () => {
   /* This function ECHOES the fragment rather than parsing it, exactly as it does the query:
    * decoding would be having an opinion about a heading id. */
-  const out = safeReturnTo(post(`${SITE}/blog/a#a%20b`));
-  assert.equal(out, "/blog/a#a%20b");
+  const out = safeReturnTo(post(`${SITE}/writing/a#a%20b`));
+  assert.equal(out, "/writing/a#a%20b");
 });
 
 test("no Referer means the site root", () => {
