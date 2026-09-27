@@ -283,6 +283,9 @@
     // of REPAIRABLE would be two answers to "may this fire an unattended write
     // against production", which is the one table where rule 17 is expensive.
     "app/lib/health/repair.mjs",
+    // The Ask settle loop, which repair.mjs imports and ship's two Ask steps call: one cadence and
+    // one window for the watchdog and the deploy.
+    "app/lib/health/ask-converge.mjs",
     // The renamed-post redirect predicate. The gateway resolves every request
     // through it and check:urls asserts the map against the corpus with it, so
     // both projects must reach the one predicate. That is the whole reason it

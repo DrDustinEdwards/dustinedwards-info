@@ -1,13 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { ASK_POLL_INTERVAL_MS, ASK_POLL_WINDOW_MS } from "../app/lib/health/ask-converge.mjs";
 import {
   failingCheckNames,
   repairPlan,
+  settleAskRecheck,
   watchdogActions,
   watchdogOutcome,
 } from "../app/lib/health/repair.mjs";
-import { bodyFailing, HEALTHY } from "./lib/health-bodies.mjs";
+import { bodyDrifted, bodyFailing, HEALTHY } from "./lib/health-bodies.mjs";
 
 const WITH = { hasToken: true };
 const WITHOUT = { hasToken: false };
@@ -272,3 +274,71 @@ test("a recheck that never completed notifies rather than passing", () => {
   assert.match(reasonOf(actions[0]), /proved nothing/);
 });
 
+
+/* The watchdog's own sync_ask re-uploads the corpus, and the index can list short for about a minute
+ * afterwards: deploy run 36274700184 read 157 then 155. Time moves only when the loop sleeps. */
+const settleClock = () => {
+  const state = { t: 1_000_000 };
+  return { now: () => state.t, sleep: async (ms) => void (state.t += ms), state };
+};
+const short = (present) => ({ status: 503, body: bodyDrifted({ "ask-index-drift": { expected: 157, present } }) });
+
+test("THE LATE COUNT: a short Ask index after the watchdog's own sync_ask settles, and nothing alerts", async () => {
+  const clock = settleClock();
+  const reads = [short(156), { status: 200, body: HEALTHY }];
+  const { reading, polls } = await settleAskRecheck({
+    recheck: short(155),
+    attempted: ["sync_ask"],
+    reread: async () => reads.shift() ?? { status: 200, body: HEALTHY },
+    sleep: clock.sleep,
+    now: clock.now,
+  });
+  assert.equal(polls, 2);
+  assert.equal(reading?.status, 200);
+  assert.deepEqual(watchdogOutcome({ misses: [], recheck: reading }), []);
+});
+
+test("THE REAL SHORTFALL: a count that never arrives still alerts, and the alert names the counts", async () => {
+  const clock = settleClock();
+  const { reading, polls } = await settleAskRecheck({
+    recheck: short(155),
+    attempted: ["sync_ask"],
+    reread: async () => short(154),
+    sleep: clock.sleep,
+    now: clock.now,
+  });
+  assert.ok(polls > 1 && clock.state.t - 1_000_000 <= ASK_POLL_WINDOW_MS + ASK_POLL_INTERVAL_MS);
+  const actions = watchdogOutcome({ misses: [], recheck: reading });
+  assert.deepEqual(actions.map((a) => a.type), ["notify"]);
+  assert.match(reasonOf(actions[0]), /ask-index-drift \(expected 157, present 154\)/);
+});
+
+test("a re-check is not waited on when sync_ask did not run, or when the Ask row is not failing", async () => {
+  let rereads = 0;
+  const reread = async () => {
+    rereads += 1;
+    return { status: 200, body: HEALTHY };
+  };
+  const clock = settleClock();
+  await settleAskRecheck({ recheck: short(155), attempted: ["sync_media"], reread, ...clock });
+  await settleAskRecheck({
+    recheck: { status: 503, body: bodyFailing(["media-index-drift"]) },
+    attempted: ["sync_ask", "sync_media"],
+    reread,
+    ...clock,
+  });
+  assert.equal(rereads, 0);
+});
+
+test("a re-read that never arrived does not replace the last real reading", async () => {
+  const clock = settleClock();
+  const { reading } = await settleAskRecheck({
+    recheck: short(155),
+    attempted: ["sync_ask"],
+    reread: async () => ({ status: 0, body: null, error: "timeout" }),
+    sleep: clock.sleep,
+    now: clock.now,
+  });
+  assert.equal(reading?.status, 503);
+  assert.match(reasonOf(watchdogOutcome({ misses: [], recheck: reading })[0]), /present 155/);
+});

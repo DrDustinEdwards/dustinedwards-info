@@ -7,7 +7,7 @@ import {
   ASK_POLL_WINDOW_MS,
   awaitAskConvergence,
   settleAskDrift,
-} from "../scripts/lib/ask-converge.mjs";
+} from "../app/lib/health/ask-converge.mjs";
 import { DEFERRED_CHECKS, deferredMisses } from "../scripts/lib/readiness.mjs";
 
 /* Time moves only when the loop sleeps, so the two-minute deadline is tested without waiting. */

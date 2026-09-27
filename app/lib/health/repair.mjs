@@ -1,6 +1,8 @@
 // Repairs only when EVERY failing check is a known drift class: an unknown one blocks all repair, since
 // a compound failure may share a root cause. No token still fails the run: alert-only, never silence.
 
+import { awaitAskConvergence } from "./ask-converge.mjs";
+
 /** Only idempotent repairs through the operator API, since this runs unattended. Map order is repair order. */
 export const REPAIRABLE = /** @type {const} */ ({
   // Content first: sync_ask reads search_docs, which sync_posts rewrites, so the reverse uploads a stale corpus.
@@ -176,7 +178,7 @@ export function watchdogOutcome({ misses, recheck }) {
   if (recheck === null || recheck === undefined) {
     reasons.push("the re-check did not complete, so the repair proved nothing.");
   } else {
-    const stillFailing = failingCheckNames(recheck.body);
+    const stillFailing = failingWithCounts(recheck.body);
     if (!isHealthyReading(recheck)) {
       reasons.push(
         `self-repair ran and the endpoint is STILL unhealthy (HTTP ${recheck.status}` +
@@ -186,6 +188,60 @@ export function watchdogOutcome({ misses, recheck }) {
   }
 
   return reasons.length > 0 ? [{ type: "notify", reason: reasons.join(" ") }] : [];
+}
+
+/**
+ * Each failing check by name, with the counts the public body carries for a failing drift check.
+ *
+ * @param {unknown} body
+ * @returns {string[]}
+ */
+function failingWithCounts(body) {
+  const checks = /** @type {any} */ (body)?.checks;
+  if (!Array.isArray(checks)) return [];
+  return checks
+    .filter((c) => c && typeof c === "object" && c.ok === false && typeof c.name === "string")
+    .map((c) =>
+      typeof c.expected === "number" && typeof c.present === "number"
+        ? `${c.name} (expected ${c.expected}, present ${c.present})`
+        : c.name,
+    );
+}
+
+/**
+ * After the watchdog's own sync_ask, the Ask index can list short for up to about a minute: it is
+ * eventually consistent, and a full re-upload is followed by a short count (157 then 155 in deploy
+ * run 36274700184). So a re-check still failing only on that is re-read on ship's cadence and window
+ * (awaitAskConvergence) before it can alert. The last full reading is returned, so another failing
+ * check, or a count that never arrives, still alerts with its counts.
+ *
+ * @param {{
+ *   recheck: HealthReading | null,
+ *   attempted: string[],
+ *   reread: () => Promise<HealthReading>,
+ *   sleep: (ms: number) => Promise<unknown>,
+ *   now?: () => number,
+ * }} options
+ * @returns {Promise<{ reading: HealthReading | null, polls: number }>}
+ */
+export async function settleAskRecheck({ recheck, attempted, reread, sleep, now }) {
+  if (!recheck || !attempted.includes("sync_ask")) return { reading: recheck, polls: 0 };
+  if (!failingCheckNames(recheck.body).includes("ask-index-drift")) return { reading: recheck, polls: 0 };
+
+  let latest = recheck;
+  const { polls } = await awaitAskConvergence({
+    reading: async () => {
+      const reading = await reread();
+      // A reading that never arrived names no drift, so the last real one stands.
+      if (Number(reading?.status) === 0) return null;
+      latest = reading;
+      const checks = /** @type {any} */ (reading.body)?.checks;
+      return Array.isArray(checks) ? (checks.find((c) => c?.name === "ask-index-drift") ?? null) : null;
+    },
+    sleep,
+    now,
+  });
+  return { reading: latest, polls };
 }
 
 /**
