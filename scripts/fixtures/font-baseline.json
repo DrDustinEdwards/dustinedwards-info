@@ -32,5 +32,6 @@
   "app/fonts/source-serif-4-math-italic.woff2": "a107b7db8b718c0796d2b2b77c547fd524af4a1a3195c49863fc22270f23a7c7",
   "app/fonts/source-serif-4-math-normal.woff2": "a73065dbc87efa9de03c9210b6e3a3c06197abecdbc5a8752843272fb0ef6ca9",
   "assets/fonts/Inter-Bold.ttf": "288316099b1e0a47a4716d159098005eef7c0066921f34e3200393dbdb01947f",
-  "assets/fonts/Inter-Regular.ttf": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82"
+  "assets/fonts/Inter-Regular.ttf": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82",
+  "assets/fonts/SourceSerif4-Display-Bold.ttf": "21cdf0cfb165ef9dd8d3eefd77cca32be863e9b86ce7165bae046121cc603dea"
 }
