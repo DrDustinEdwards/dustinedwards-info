@@ -7,6 +7,13 @@ import matter from "gray-matter";
 
 import { serializeArtifact } from "./lib/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
+import {
+  CONTENT_PAGE_PATHS,
+  DESCRIPTION_MAX,
+  SEO_TITLE_MAX,
+  contentPageFile,
+  contentPageSearchInputs,
+} from "../app/lib/content-pages.mjs";
 import { playgroundPages } from "../app/lib/playground-page.mjs";
 import { projectsPages } from "../app/lib/projects-page.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
@@ -31,6 +38,71 @@ export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
 
 export const ABOUT_SOURCE = path.join("content", "about.md");
 export const ABOUT_ARTIFACT_PATH = path.join("content", "generated", "about.json");
+
+const PAGES_DIR = path.join("content", "pages");
+export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json");
+
+/**
+ * The Research and Teaching pages, rendered like the About page: no image pipeline, and a refused link
+ * or a missing field fails the build instead of shipping an empty tag. Every file must be one of
+ * CONTENT_PAGE_PATHS and every path must have its file, so routes, sitemap and pages cannot drift.
+ */
+export async function renderContentPages() {
+  const names = (await readdir(fromRoot(PAGES_DIR))).filter((name) => name.endsWith(".md")).sort();
+  const expected = new Map(CONTENT_PAGE_PATHS.map((p) => [contentPageFile(p), p]));
+
+  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> }>} */
+  const pages = [];
+  for (const name of names) {
+    const file = path.join(PAGES_DIR, name);
+    const parsed = matter(await readFile(fromRoot(file), "utf8"));
+    const fm = parsed.data;
+    const page = {
+      path: String(fm.path ?? ""),
+      title: String(fm.title ?? ""),
+      seoTitle: String(fm.seo_title ?? ""),
+      description: String(fm.description ?? ""),
+    };
+    if (expected.get(name) !== page.path) {
+      throw new ContentError(
+        file,
+        `declares path "${page.path}", but the file for that path is ${contentPageFile(page.path)} and ` +
+          `every page must be listed in CONTENT_PAGE_PATHS (app/lib/content-pages.mjs).`,
+      );
+    }
+    if (!page.title || !page.seoTitle || !page.description) {
+      throw new ContentError(file, "must carry title, seo_title and description in its frontmatter.");
+    }
+    if (page.seoTitle.length > SEO_TITLE_MAX || page.description.length > DESCRIPTION_MAX) {
+      throw new ContentError(
+        file,
+        `seo_title is ${page.seoTitle.length} characters (at most ${SEO_TITLE_MAX}) and the description ` +
+          `${page.description.length} (at most ${DESCRIPTION_MAX}); Google would clip the longer one.`,
+      );
+    }
+
+    const rendered = await renderBody({
+      file,
+      body: parsed.content,
+      resolveImage: async (src) => {
+        throw new ContentError(file, `references an image ("${src}") and these pages have no image pipeline.`);
+      },
+    });
+    if (rendered.blockedUrls.length > 0) {
+      throw new ContentError(
+        file,
+        `carries link(s) the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
+      );
+    }
+    pages.push({ ...page, html: rendered.html, markdown: parsed.content, toc: rendered.toc });
+  }
+
+  const missing = CONTENT_PAGE_PATHS.filter((p) => !pages.some((page) => page.path === p));
+  if (missing.length > 0) {
+    throw new ContentError(PAGES_DIR, `has no page for ${missing.join(", ")}.`);
+  }
+  return pages.sort((a, b) => a.path.localeCompare(b.path));
+}
 
 /** @returns {Promise<string>} */
 export async function buildArtifact() {
@@ -93,6 +165,7 @@ export async function buildArtifact() {
       ...colophonPages(stack, features),
       ...projectsPages(projects),
       ...playgroundPages(playground),
+      ...contentPageSearchInputs(await renderContentPages()),
     ],
     paperSearchInputs(PUBLICATIONS),
   );
@@ -188,8 +261,18 @@ async function main() {
   const about = await buildAbout();
   await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
+  // Only what the route renders: the markdown and outline are build inputs for search, not page weight.
+  const contentPages = (await renderContentPages()).map(({ path: p, title, seoTitle, description, html }) => ({
+    path: p,
+    title,
+    seoTitle,
+    description,
+    html,
+  }));
+  await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: contentPages }, null, 2)}\n`, "utf8");
+
   console.log(
-    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts) and ${ABOUT_ARTIFACT_PATH}`,
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH} and ${PAGES_ARTIFACT_PATH}`,
   );
 }
 

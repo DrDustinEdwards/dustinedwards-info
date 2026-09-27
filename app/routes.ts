@@ -42,6 +42,10 @@ export default [
   route("research/publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
   route("research/publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
   route("research/publications/:slug", "routes/publications.$slug.tsx"),
+  // The Research pages (app/lib/content-pages.mjs), rendered from markdown at build time. A splat, so the
+  // more specific research/publications routes above still win; a path with no page answers 404.
+  route("research/*", "routes/content-page.tsx"),
+  route("teaching/*", "routes/teaching.tsx"),
   route("about", "routes/about.tsx"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),
