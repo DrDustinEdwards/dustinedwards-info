@@ -1,6 +1,11 @@
-import { listBlogPosts, listBlogSeries, listBlogTags } from "~/db";
+import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { getEnv } from "~/lib/context";
-import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  SHARED_CACHE_CONTROL,
+  SITE_ORIGIN,
+  scheduledEdgeCacheControl,
+} from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { PUBLICATIONS } from "~/data/publications";
@@ -30,10 +35,11 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   /* No `lastmod`: a tag has no modification date of its own. */
-  const [blog, tagList, seriesList] = await Promise.all([
+  const [blog, tagList, seriesList, nextPublishAt] = await Promise.all([
     listBlogPosts(env, { perPage: 1000 }),
     listBlogTags(env),
     listBlogSeries(env),
+    nextScheduledPublishAt(env),
   ]);
 
   const urls = [
@@ -79,6 +85,7 @@ ${urls
       "content-type": "application/xml; charset=utf-8",
       /* No `Vary`: this document embeds no reader state. */
       "cache-control": SHARED_CACHE_CONTROL,
+      [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });
 }

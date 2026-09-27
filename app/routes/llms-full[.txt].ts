@@ -1,6 +1,6 @@
-import { listBlogPostsFullText } from "~/db";
+import { listBlogPostsFullText, nextScheduledPublishAt } from "~/db";
 import { getEnv } from "~/lib/context";
-import { SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL, scheduledEdgeCacheControl } from "~/lib/seo";
 import type { Route } from "./+types/llms-full[.txt]";
 
 /**
@@ -8,7 +8,11 @@ import type { Route } from "./+types/llms-full[.txt]";
  * scheduled for next week must be absent today and present then.
  */
 export async function loader({ context }: Route.LoaderArgs) {
-  const posts = await listBlogPostsFullText(getEnv(context));
+  const env = getEnv(context);
+  const [posts, nextPublishAt] = await Promise.all([
+    listBlogPostsFullText(env),
+    nextScheduledPublishAt(env),
+  ]);
 
   const sections = posts.map((post) =>
     [
@@ -44,6 +48,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       "content-type": "text/plain; charset=utf-8",
       "x-robots-tag": "noindex",
       "cache-control": SHARED_CACHE_CONTROL,
+      [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });
 }

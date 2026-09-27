@@ -5,10 +5,17 @@ import {
   listingHref,
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
-import { getBlogTag, listBlogPosts } from "~/db";
+import { getBlogTag, listBlogPosts, nextScheduledPublishAt } from "~/db";
 import { POSTS_PER_PAGE, readPage } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
-import { SITE, pageMeta, cacheTags, publicHtmlHeaders } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  SITE,
+  pageMeta,
+  cacheTags,
+  publicHtmlHeaders,
+  scheduledEdgeCacheControl,
+} from "~/lib/seo";
 import { tagPath } from "~/lib/tag-path.mjs";
 import type { Route } from "./+types/blog.tags.$tag";
 
@@ -26,20 +33,24 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const tag = await getBlogTag(env, params.tag);
   if (!tag) throw data("Not found", { status: 404 });
 
-  const listing = await listBlogPosts(env, {
-    tag: tag.slug,
-    page,
-    perPage: POSTS_PER_PAGE,
-  });
+  const [listing, nextPublishAt] = await Promise.all([
+    listBlogPosts(env, { tag: tag.slug, page, perPage: POSTS_PER_PAGE }),
+    nextScheduledPublishAt(env),
+  ]);
 
   redirectPastLastPage(page, listing.pageCount, tagPath(tag.slug));
 
-  return data({ ...listing, tag });
+  return data(
+    { ...listing, tag },
+    { headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) } },
+  );
 }
 
-export function headers() {
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
   /* Not `HTML_VARY_ACCEPT`: this page negotiates no twin representation on `Accept`. */
-  return new Headers(publicHtmlHeaders(cacheTags()));
+  return new Headers(
+    publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
+  );
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

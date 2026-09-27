@@ -15,6 +15,7 @@ import {
   type SQL,
 } from "drizzle-orm";
 import { HOME_CARDS, POSTS_PER_PAGE, pageCount, startHere } from "../lib/blog-listing.mjs";
+import { PUBLISHED_STATUS } from "../lib/search/visibility.mjs";
 import { seriesSlug } from "../lib/series-path.mjs";
 import { timed, type Timings } from "../lib/timing";
 import { media, postTags, posts, tags } from "./schema";
@@ -31,6 +32,26 @@ export async function publiclyVisibleSlugs(
     .from(posts)
     .where(and(inArray(posts.slug, slugs), publiclyVisible()));
   return new Set(rows.map((r) => r.slug));
+}
+
+/**
+ * The earliest publish_at still ahead on a published post, or null. Nothing purges when one passes,
+ * so the pages that list posts cap their edge lifetime at it.
+ */
+export async function nextScheduledPublishAt(env: Env): Promise<Date | null> {
+  const [row] = await getDb(env)
+    .select({ publishAt: posts.publishAt })
+    .from(posts)
+    .where(
+      and(
+        eq(posts.kind, "post"),
+        eq(posts.status, PUBLISHED_STATUS),
+        gt(posts.publishAt, new Date()),
+      ),
+    )
+    .orderBy(asc(posts.publishAt))
+    .limit(1);
+  return row?.publishAt ?? null;
 }
 
 /** Columns the index and feed need. Deliberately excludes body and html. */

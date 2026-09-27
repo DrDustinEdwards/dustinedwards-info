@@ -110,14 +110,21 @@ export function personJsonLd(origin: string) {
 export const SHARED_CACHE_CONTROL = "public, max-age=0";
 
 /**
- * A day fresh is safe because every write purges by tag and every deploy starts cold. Never parse a
- * lifetime back out of a string: a failed parse has to substitute a false lifetime.
+ * A day fresh is safe because every write purges by tag, every deploy starts cold, and a page that
+ * lists posts expires at the next scheduled publish_at. Never parse a lifetime back out of a string:
+ * a failed parse has to substitute a false lifetime.
  */
 const EDGE_FRESH_SECONDS = 86_400;
 const EDGE_STALE_SECONDS = 604_800;
 
 // Short because the home page's site-health tile age is the watchdog's liveness.
-const HOME_EDGE_FRESH_SECONDS = 600;
+export const HOME_EDGE_FRESH_SECONDS = 600;
+
+/**
+ * A publish_at seconds away would otherwise send a max-age near zero, and every read until it passed
+ * would be a render. A minute is the most a scheduled post can lag its time for it.
+ */
+const SCHEDULED_FLOOR_SECONDS = 60;
 
 const edgeCacheControl = (fresh: number) =>
   `max-age=${fresh}, stale-while-revalidate=${EDGE_STALE_SECONDS}`;
@@ -127,7 +134,20 @@ const edgeCacheControl = (fresh: number) =>
  * Cloudflare refuses to serve stale and every read past the lifetime blocks on a render.
  */
 export const EDGE_CACHE_CONTROL = edgeCacheControl(EDGE_FRESH_SECONDS);
-export const HOME_EDGE_CACHE_CONTROL = edgeCacheControl(HOME_EDGE_FRESH_SECONDS);
+
+/**
+ * The edge policy for a page that lists posts. A scheduled post goes live with no write to purge on,
+ * so the page expires when the next one does; with nothing scheduled it is the plain policy.
+ */
+export function scheduledEdgeCacheControl(
+  now: Date,
+  nextPublishAt: Date | null,
+  fresh: number = EDGE_FRESH_SECONDS,
+): string {
+  if (!nextPublishAt) return edgeCacheControl(fresh);
+  const untilPublish = Math.ceil((nextPublishAt.getTime() - now.getTime()) / 1000);
+  return edgeCacheControl(Math.min(fresh, Math.max(SCHEDULED_FLOOR_SECONDS, untilPublish)));
+}
 
 export const EDGE_CACHE_HEADER = "Cloudflare-CDN-Cache-Control";
 

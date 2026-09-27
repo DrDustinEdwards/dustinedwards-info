@@ -1,9 +1,9 @@
-import { Link } from "react-router";
+import { Link, data } from "react-router";
 
 import stack from "../../content/generated/stack.json";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { listHomeStartHere } from "~/db";
+import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
 import { readHealthTile } from "~/lib/health/snapshot.server";
@@ -11,8 +11,10 @@ import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
   cacheTags,
-  HOME_EDGE_CACHE_CONTROL,
+  EDGE_CACHE_HEADER,
+  HOME_EDGE_FRESH_SECONDS,
   publicHtmlHeaders,
+  scheduledEdgeCacheControl,
   personJsonLd,
   SITE,
   SITE_ORIGIN,
@@ -35,8 +37,8 @@ import "~/styles/evidence-row.css";
 import "~/styles/home.css";
 
 /** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the health tile. */
-export function headers() {
-  return publicHtmlHeaders(cacheTags(), HOME_EDGE_CACHE_CONTROL);
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  return publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined);
 }
 
 export function meta() {
@@ -52,20 +54,32 @@ export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
-  const [start, tile, podcast] = await Promise.all([
+  const [start, tile, podcast, nextPublishAt] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_health", () => readHealthTile(env)),
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
+    timed(timings, "home_next_scheduled", () => nextScheduledPublishAt(env)),
   ]);
 
-  return {
-    gates: stack.gates.length,
-    posts: start.total,
-    featured: start.featured,
-    recent: start.recent,
-    health: tile,
-    podcast,
-  };
+  return data(
+    {
+      gates: stack.gates.length,
+      posts: start.total,
+      featured: start.featured,
+      recent: start.recent,
+      health: tile,
+      podcast,
+    },
+    {
+      headers: {
+        [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(
+          new Date(),
+          nextPublishAt,
+          HOME_EDGE_FRESH_SECONDS,
+        ),
+      },
+    },
+  );
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {

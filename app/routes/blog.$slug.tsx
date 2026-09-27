@@ -16,6 +16,7 @@ import {
   getBlogPost,
   getBlogPostMarkdown,
   listSeriesParts,
+  nextScheduledPublishAt,
   publiclyVisibleSlugs,
 } from "~/db";
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
@@ -29,6 +30,8 @@ import {
   HTML_VARY_ACCEPT,
   NO_STORE_CACHE_CONTROL,
   cacheTags,
+  EDGE_CACHE_HEADER,
+  scheduledEdgeCacheControl,
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
@@ -81,7 +84,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   );
 
   /* Here, not in `blogPostView`: `/preview/:token` shares that projection, and a draft preview must not grow mentions. */
-  const mentions = await approvedMentionsFor(getEnv(context), post.slug);
+  const [mentions, nextPublishAt] = await Promise.all([
+    approvedMentionsFor(getEnv(context), post.slug),
+    /* The previous and next links, the series parts and the related list can each name it once live. */
+    nextScheduledPublishAt(getEnv(context)),
+  ]);
 
   return data(
     {
@@ -99,6 +106,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
         Link: [linkToMarkdown(post.slug), linkToWebmention()].join(", "),
         /* Set in the loader: `HeadersArgs` carries no `params`, so the slug is not in scope there. */
         "Cache-Tag": cacheTags(post.slug),
+        [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
       },
     },
   );
@@ -115,6 +123,8 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
   if (link) headers.set("Link", link);
   const tag = loaderHeaders.get("Cache-Tag");
   if (tag) headers.set("Cache-Tag", tag);
+  const edge = loaderHeaders.get(EDGE_CACHE_HEADER);
+  if (edge) headers.set(EDGE_CACHE_HEADER, edge);
   return headers;
 }
 

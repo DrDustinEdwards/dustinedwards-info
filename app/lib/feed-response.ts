@@ -1,8 +1,14 @@
-import { listBlogPostsFullText, listBlogPostsRendered } from "~/db";
+import { listBlogPostsFullText, listBlogPostsRendered, nextScheduledPublishAt } from "~/db";
 import { atomDocument } from "~/lib/atom-feed.mjs";
 import { jsonFeedDocument } from "~/lib/json-feed.mjs";
 import { rssDocument } from "~/lib/rss-feed.mjs";
-import { SHARED_CACHE_CONTROL, SITE, SITE_ORIGIN } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  SHARED_CACHE_CONTROL,
+  SITE,
+  SITE_ORIGIN,
+  scheduledEdgeCacheControl,
+} from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 
@@ -99,10 +105,13 @@ export async function feedResponse(env: Env, format: FeedFormat, scope: FeedScop
           });
   }
 
+  const nextPublishAt = await nextScheduledPublishAt(env);
+
   return new Response(body, {
     headers: {
       "content-type": FEED_CONTENT_TYPES[format],
       "cache-control": SHARED_CACHE_CONTROL,
+      [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });
 }
