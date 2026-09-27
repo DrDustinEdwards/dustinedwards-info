@@ -8,6 +8,7 @@ import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.m
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { movedPathTarget } from "~/lib/path-moves.mjs";
+import { isApexHost, wordpressDisposition } from "~/lib/wordpress-redirects.mjs";
 import { postRedirectTarget } from "~/lib/slug-redirect.mjs";
 import {
   paperSlashTarget,
@@ -266,6 +267,12 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
 
   const url = new URL(request.url);
 
+  // The old WordPress addresses, on the apex host only: the new site's own paths never reach this map.
+  const wordpress = isApexHost(url.hostname) ? wordpressDisposition(url.pathname) : null;
+  if (wordpress?.status === 301) {
+    return redirectTo(request, new URL(wordpress.location, url).toString());
+  }
+
   // A moved section (/blog, /publications) first, and the rules below read the moved path, so an old
   // post slug or an old PDF name under an old section still resolves in one hop.
   const moved = movedPathTarget(url.pathname);
@@ -282,10 +289,14 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
     return redirectTo(request, new URL(`${target}${url.search}`, url).toString());
   }
 
-  const theme = themeFromRequest(request);
-  const { cacheKey, props } = cacheDimensions(url, request, theme);
+  // A removed WordPress address renders the Gone page in its place: the address bar keeps the old URL
+  // and the status is 410. Every redirect above was decided first; none of them names a removed path.
+  const gone = wordpress?.status === 410 ? new URL("/gone", url) : null;
 
-  const response = await ctx.exports.Renderer({ props }).fetch(request, {
+  const theme = themeFromRequest(request);
+  const { cacheKey, props } = cacheDimensions(gone ?? url, request, theme);
+
+  const response = await ctx.exports.Renderer({ props }).fetch(gone ? new Request(gone, request) : request, {
     cf: { cacheKey },
   });
 
