@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, FETCH_TIMEOUT_MS, ok, pollUntil } from "../harness.mjs";
+import { BASE, FETCH_TIMEOUT_MS, ok, pollUntil, skip } from "../harness.mjs";
 
 /*
  * The header's mega menus (app/components/site-header.tsx, app/enhance/header.ts): a disclosure
@@ -146,7 +146,22 @@ export async function run({ browser }) {
       const box = document.querySelector('.site-nav-word[href="/research"]')?.getBoundingClientRect();
       return box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null;
     });
-    if (word) {
+    /* The header opens on hover only for a fine, hovering pointer (app/enhance/header.ts), and a
+       headless Linux runner reports neither, which failed this check on every deploy from
+       2026-09-27. Emulate a mouse through the protocol (Puppeteer's own helper refuses these two
+       features); if the browser still does not match, the check is skipped, never passed. */
+    const cdp = await page.createCDPSession();
+    await cdp.send("Emulation.setEmulatedMedia", {
+      features: [
+        { name: "hover", value: "hover" },
+        { name: "pointer", value: "fine" },
+      ],
+    });
+    await page.reload({ waitUntil: "networkidle0" });
+    const canHover = await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    if (!canHover) {
+      skip("hover opens the panel", "this browser reports no fine, hovering pointer even under emulation");
+    } else if (word) {
       // From off the header, or the pointer left on the chevron by the clicks above is already inside.
       await page.mouse.move(640, 880);
       await page.mouse.move(word.x, word.y, { steps: 4 });
@@ -167,6 +182,10 @@ export async function run({ browser }) {
     } else {
       ok("the Research word is laid out for the hover check", false, "no .site-nav-word for /research");
     }
+
+    // Back to the browser's own profile, so the phone checks below see a touch screen's media.
+    await cdp.send("Emulation.setEmulatedMedia", { features: [] });
+    await cdp.detach();
 
     const roles = await page.evaluate(() => document.querySelectorAll('[role="menu"], [role="menubar"], [role="menuitem"]').length);
     ok("no role=menu, menubar or menuitem after the enhancement ran", roles === 0, `${roles} found`);
