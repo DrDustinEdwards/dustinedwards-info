@@ -70,7 +70,7 @@ export function ShellFooter() {
             </ul>
           </div>
 
-          {/* Beside the brand block: five link columns and Tools, three across and two deep. */}
+          {/* Beside the brand block: five link columns and Workspace, three across and two deep. */}
           <div className="footer-columns">
             {FOOTER_COLUMNS.map((column) => (
               <nav key={column.id} className="footer-col" aria-labelledby={`footer-${column.id}`}>
@@ -86,8 +86,8 @@ export function ShellFooter() {
                 </ul>
               </nav>
             ))}
-            <nav className="footer-col" aria-labelledby="footer-tools">
-              <h2 className="footer-heading" id="footer-tools">
+            <nav className="footer-col" aria-labelledby="footer-workspace">
+              <h2 className="footer-heading" id="footer-workspace">
                 {TOOLS_HEADING}
               </h2>
               <ul className="footer-links">

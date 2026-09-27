@@ -2,7 +2,7 @@
 import { GERMOMICS_URL, GERMOMICS_X_URL, OWNER_ORCID, OWNER_PUBMED, OWNER_SCHOLAR } from "./seo.ts";
 
 /*
- * The footer's links (Dustin, 2026-09-27): five link columns and the Tools group fill a grid three across
+ * The footer's links (Dustin, 2026-09-27): five link columns and the Workspace group fill a grid three across
  * and two deep. Data, not markup, so test/footer.test.mjs can hold every internal href against the routes
  * app/routes.ts declares: a footer link that 404s is the failure this file exists to rule out.
  *
@@ -30,8 +30,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/research/phages", label: "Phages" },
       { to: "/research/protocols", label: "Protocols" },
       { to: "/research/publications", label: "Publications" },
-      // The publications page carries every paper's citation and the BibTeX and RIS downloads.
-      { to: "/research/publications", label: "Cite this site" },
     ],
   },
   {
@@ -69,7 +67,6 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/about", label: "About" },
       { to: "/projects", label: "Projects" },
       { to: "/playground", label: "Playground" },
-      { to: "/search", label: "Search" },
       { to: "/contact", label: "Contact" },
       { to: "/colophon", label: "Colophon" },
       { to: "/privacy", label: "Privacy" },
@@ -79,8 +76,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
 
 /**
  * Social media, in the brand block (Dustin, 2026-09-27): the Germomics podcast and its X account, the only
- * X account the site has, so neither carries rel="me". `label` is shown beside the mark and is the link's
- * accessible name.
+ * X account the site has, so neither carries rel="me". `label` is the link's accessible name and appears
+ * beside the mark on hover and keyboard focus.
  */
 export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
   { to: GERMOMICS_URL, label: "Germomics podcast", external: true, mark: "germomics" },
@@ -90,10 +87,10 @@ export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
 export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string };
 
 /**
- * The three logins, the Tools group in the grid's sixth slot. The accessible names say what each one is
+ * The three logins, the Workspace group in the grid's sixth slot. The accessible names say what each one is
  * for, and begin with the visible word so speech input still works. Admin is this site's sign-in page.
  */
-export const TOOLS_HEADING = "Tools";
+export const TOOLS_HEADING = "Workspace";
 export const PRIVATE_TOOLS: PrivateTool[] = [
   // Behind Cloudflare Access since 2026-09-26.
   { to: "https://carrel.dustinedwards.info", label: "Carrel", name: "Carrel, writing", icon: "lamp", external: true },

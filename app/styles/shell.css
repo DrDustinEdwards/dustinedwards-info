@@ -124,33 +124,57 @@
   letter-spacing: -0.01em;
 }
 
-/* The social marks share the footer's ink, each with its name beside it (Dustin, 2026-09-27). */
+/*
+ * The social marks share the footer's ink (Dustin, 2026-09-27). Each link's name is its text, read by
+ * screen readers always and shown as a small label on hover and keyboard focus.
+ */
 .footer-social {
   display: flex;
-  flex-direction: column;
-  gap: var(--s-1);
+  gap: var(--s-3);
   margin: var(--s-4) 0 0;
   padding: 0;
   list-style: none;
 }
 
 .footer-social-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: var(--s-2);
+  justify-content: center;
+  min-inline-size: var(--control-min-dense);
   min-block-size: var(--control-min-dense);
   color: var(--text);
-  font-family: var(--font-sans);
-  font-size: 0.875rem;
   text-decoration: none;
+}
+
+.footer-social-link:hover,
+.footer-social-link:focus-visible {
+  color: var(--brand);
+}
+
+/* Visually hidden until hover or focus, never display:none, so it stays the accessible name. */
+.footer-social-label {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 50%;
+  translate: -50% var(--s-1);
+  padding: 2px var(--s-2);
+  border: var(--line-w) solid var(--dust);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  clip-path: inset(50%);
+  opacity: 0;
 }
 
 .footer-social-link:hover .footer-social-label,
 .footer-social-link:focus-visible .footer-social-label {
-  color: var(--brand);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-thickness: var(--line-w);
+  clip-path: none;
+  opacity: 1;
 }
 
 .footer-social-glyph {
@@ -160,7 +184,7 @@
 .footer-social-mark {
   display: block;
   inline-size: auto;
-  block-size: 1.25rem;
+  block-size: 1.5rem;
 }
 
 /* The G inside the inlined Germomics hexagon, knocked out to the footer's own ground. */
