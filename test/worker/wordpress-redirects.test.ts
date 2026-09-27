@@ -55,9 +55,9 @@ describe("pattern rules, on the apex host", () => {
     }
   });
 
-  it("/directory-*/ goes to /teaching/phage-discovery", async () => {
+  it("/directory-*/ goes to /teaching/phage-discovery, but the lab's own directory to Join the lab", async () => {
     await expectMoved("/directory-2023-phage-researchers/", "/teaching/phage-discovery");
-    await expectMoved("/directory-research-group/", "/teaching/phage-discovery");
+    await expectMoved("/directory-research-group/", "/teaching#join-the-lab");
   });
 
   it("Dustin's own author page goes to /about, ahead of the profile rule", async () => {

@@ -42,5 +42,5 @@ Run the product on the 2% agarose gel in TBE beside the 100 bp ladder and look f
 ## Related pages
 
 - [REV PCR primers](/research/protocols/rev-lpdv-primers)
-- [REV and LPDV research](/research/retroviruses)
+- [REV and LPDV research](/research/retroviruses/avian)
 - [COI primers](/research/protocols/coi-primers)

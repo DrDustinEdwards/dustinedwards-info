@@ -9,7 +9,7 @@ This is the hub for Dustin Edwards's research. Dustin Edwards, Ph.D., is a virol
 
 ## Research areas
 
-- [Retroviruses](/research/retroviruses): HTLV-1 research on the Tax oncoprotein and the accessory proteins p12, p8, p13 and p30, and surveillance and genome sequencing of the avian retroviruses REV and LPDV in Texas wild turkeys and Attwater's prairie chickens.
+- [Retroviruses](/research/retroviruses): [human retroviruses](/research/retroviruses/human), HTLV-1 research on the Tax oncoprotein and the accessory proteins p12, p8, p13 and p30; and [avian retroviruses](/research/retroviruses/avian), detection and genome sequencing of REV and LPDV in Texas wild turkeys and Attwater's prairie chickens.
 - [Bacteriophages](/research/bacteriophages): discovery, genomics and structure of *Microbacterium* and *Mycobacterium* phages isolated from Texas soil by undergraduates, including the cluster O mycobacteriophage Ryadel and its elongated capsid.
 - [Science education](/research/science-education): the SEA-PHAGES course-based research experience at Tarleton, the genome announcements students co-author, and research with the SEA-PHAGES faculty community on how research courses are taught and assessed.
 

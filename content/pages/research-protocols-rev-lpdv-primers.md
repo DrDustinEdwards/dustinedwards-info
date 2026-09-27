@@ -5,7 +5,7 @@ seo_title: "REV PCR primers: reticuloendotheliosis virus LTR and pol"
 description: "Reticuloendotheliosis virus (REV) PCR primers for the 3′ LTR (8000-8297) and pol (2500-3075, 4777-5575): sequences, cycling tables, product sizes."
 ---
 
-These are the PCR protocols my lab used to detect reticuloendotheliosis virus (REV) in avian DNA, part of the [REV and LPDV research](/research/retroviruses) on avian retroviruses. There are three primer sets, each named for the REV nucleotide positions it amplifies: one in the 3′ LTR (long terminal repeat) and two in the *pol* gene. All three sets target REV. For a control that confirms a sample holds amplifiable bird DNA, see the [pan-avian GAPDH PCR](/research/protocols/pan-avian-gapdh).
+These are the PCR protocols my lab used to detect reticuloendotheliosis virus (REV) in avian DNA, part of the [REV and LPDV research](/research/retroviruses/avian) on avian retroviruses. There are three primer sets, each named for the REV nucleotide positions it amplifies: one in the 3′ LTR (long terminal repeat) and two in the *pol* gene. All three sets target REV. For a control that confirms a sample holds amplifiable bird DNA, see the [pan-avian GAPDH PCR](/research/protocols/pan-avian-gapdh).
 
 ## Where the amplicons sit on the REV genome
 
@@ -95,7 +95,7 @@ The cycling is the same as for pol 2500-3075, including the 60◺50 annealing va
 
 ## Related pages
 
-- [REV and LPDV research](/research/retroviruses)
+- [REV and LPDV research](/research/retroviruses/avian)
 - [Pan-avian GAPDH PCR](/research/protocols/pan-avian-gapdh)
 - [COI primers](/research/protocols/coi-primers)
 - [Publications](/research/publications)
