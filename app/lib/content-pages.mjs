@@ -32,6 +32,16 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
 ]);
 
 /**
+ * The headings on these pages that the header menus link to by anchor, as `path#id`. A menu shows a
+ * section link only once it is listed here, and the build refuses an entry whose page has no heading
+ * with that id, so no menu link lands on the top of a page for want of its heading. Empty until Join
+ * the lab and Teaching philosophy are written into /teaching (cutover.md).
+ *
+ * @type {readonly string[]}
+ */
+export const CONTENT_PAGE_SECTIONS = [];
+
+/**
  * The markdown file a path is written in: slashes to hyphens, `/research/phages` in research-phages.md.
  *
  * @param {string} path

@@ -9,6 +9,7 @@ import { serializeArtifact } from "./lib/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import {
   CONTENT_PAGE_PATHS,
+  CONTENT_PAGE_SECTIONS,
   DESCRIPTION_MAX,
   SEO_TITLE_MAX,
   contentPageFile,
@@ -100,6 +101,16 @@ export async function renderContentPages() {
   const missing = CONTENT_PAGE_PATHS.filter((p) => !pages.some((page) => page.path === p));
   if (missing.length > 0) {
     throw new ContentError(PAGES_DIR, `has no page for ${missing.join(", ")}.`);
+  }
+  const headless = CONTENT_PAGE_SECTIONS.filter((section) => {
+    const [pagePath, id] = section.split("#");
+    return !pages.find((page) => page.path === pagePath)?.toc.some((heading) => heading.id === id);
+  });
+  if (headless.length > 0) {
+    throw new ContentError(
+      PAGES_DIR,
+      `has no heading for ${headless.join(", ")}, which CONTENT_PAGE_SECTIONS (app/lib/content-pages.mjs) lists.`,
+    );
   }
   return pages.sort((a, b) => a.path.localeCompare(b.path));
 }
