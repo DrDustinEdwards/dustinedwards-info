@@ -85,6 +85,13 @@ const RESEARCH: Menu = {
             },
           ],
         },
+        {
+          label: "Retroviruses",
+          links: [
+            { to: "/research/retroviruses/human", label: "Human retroviruses", description: "HTLV-1 and HIV" },
+            { to: "/research/retroviruses/avian", label: "Avian retroviruses", description: "REV and LPDV in wild turkeys" },
+          ],
+        },
       ],
     },
     {

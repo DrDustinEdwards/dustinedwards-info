@@ -13,7 +13,7 @@ Sorted by year, then by name.
 
 | Phage | Year | Host | County | PhagesDB | Paper |
 |---|---|---|---|---|---|
-| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc2 155 | Texas | [PhagesDB](https://phagesdb.org/phages/Acorn15/) |  |
+| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc2 155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Acorn15/) |  |
 | [Allene](#allene) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Allene/) |  |
 | [Arlo](#arlo) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Arlo/) | [Paper](/research/publications/10-1128-mra-01242-18/) |
 | [Ferdie](#ferdie) | 2017 | *M. smegmatis* mc2 155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Ferdie/) |  |
@@ -46,7 +46,7 @@ Sorted by year, then by name.
 | [Fizzles](#fizzles) | 2019 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Fizzles/) | [Paper](/research/publications/10-1128-mra-01077-21/) |
 | [Lahey](#lahey) | 2019 | *M. foliorum* | Williamson County | [PhagesDB](https://phagesdb.org/phages/Lahey/) |  |
 | [NeonMoon](#neonmoon) | 2019 | *M. foliorum* | Hood County | [PhagesDB](https://phagesdb.org/phages/NeonMoon/) |  |
-| [Rathburn](#rathburn) | 2019 | *M. foliorum* | Texas | [PhagesDB](https://phagesdb.org/phages/Rathburn/) |  |
+| [Rathburn](#rathburn) | 2019 | *M. foliorum* | Hood County | [PhagesDB](https://phagesdb.org/phages/Rathburn/) |  |
 | [Titoz](#titoz) | 2019 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Titoz/) |  |
 | [Virsces](#virsces) | 2019 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Virsces/) |  |
 | [Wednesday](#wednesday) | 2019 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Wednesday/) |  |
@@ -61,7 +61,7 @@ Sorted by year, then by name.
 | [DopeGoat](#dopegoat) | 2021 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/DopeGoat/) |  |
 | [Enchi](#enchi) | 2021 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Enchi/) |  |
 | [EnderDragon](#enderdragon) | 2021 | *M. foliorum* | Somervell County | [PhagesDB](https://phagesdb.org/phages/EnderDragon/) |  |
-| [Grapple](#grapple) | 2021 | *M. foliorum* | Texas | [PhagesDB](https://phagesdb.org/phages/Grapple/) |  |
+| [Grapple](#grapple) | 2021 | *M. foliorum* | Williamson County | [PhagesDB](https://phagesdb.org/phages/Grapple/) |  |
 | [HandsomeSquid](#handsomesquid) | 2021 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/HandsomeSquid/) |  |
 | [Interrobang](#interrobang) | 2021 | *M. foliorum* | Somervell County | [PhagesDB](https://phagesdb.org/phages/Interrobang/) |  |
 | [LemonZest](#lemonzest) | 2021 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/LemonZest/) |  |
@@ -90,7 +90,7 @@ Sorted by year, then by name.
 | [SoftSoap](#softsoap) | 2024 | *M. foliorum* | Bell County | [PhagesDB](https://phagesdb.org/phages/Softsoap/) |  |
 | [Blimey](#blimey) | 2025 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Blimey/) |  |
 | [Carino](#carino) | 2025 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Carino/) |  |
-| [PaleRider](#palerider) | 2025 | *M. foliorum* | Texas | [PhagesDB](https://phagesdb.org/phages/PaleRider/) |  |
+| [PaleRider](#palerider) | 2025 | *M. foliorum* | Milam County | [PhagesDB](https://phagesdb.org/phages/PaleRider/) |  |
 | [Rira](#rira) | 2025 | *M. foliorum* | Milam County | [PhagesDB](https://phagesdb.org/phages/Rira/) |  |
 | [Triri](#triri) | 2025 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Triri/) |  |
 
@@ -98,7 +98,7 @@ Sorted by year, then by name.
 
 ### Acorn15
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Texas.
+Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Hood County, Texas.
 
 [Acorn15 on PhagesDB](https://phagesdb.org/phages/Acorn15/).
 
@@ -166,7 +166,7 @@ Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Hood County, Texas.
 
 Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
 
-[Ryadel on PhagesDB](https://phagesdb.org/phages/Ryadel/). [Genome announcement](/research/publications/10-1128-mra-01594-18/).
+[Ryadel on PhagesDB](https://phagesdb.org/phages/Ryadel/). [Genome announcement](/research/publications/10-1128-mra-01594-18/). A manuscript on its cryo-EM structure is submitted.
 
 ### Sniffles
 
@@ -288,7 +288,7 @@ Host: *Microbacterium foliorum*. Found in 2019, Hood County, Texas.
 
 ### Rathburn
 
-Host: *Microbacterium foliorum*. Found in 2019, Texas.
+Host: *Microbacterium foliorum*. Found in 2019, Hood County, Texas.
 
 [Rathburn on PhagesDB](https://phagesdb.org/phages/Rathburn/).
 
@@ -378,7 +378,7 @@ Host: *Microbacterium foliorum*. Found in 2021, Somervell County, Texas.
 
 ### Grapple
 
-Host: *Microbacterium foliorum*. Found in 2021, Texas.
+Host: *Microbacterium foliorum*. Found in 2021, Williamson County, Texas.
 
 [Grapple on PhagesDB](https://phagesdb.org/phages/Grapple/).
 
@@ -544,7 +544,7 @@ Host: *Microbacterium foliorum*. Found in 2025, Erath County, Texas.
 
 ### PaleRider
 
-Host: *Microbacterium foliorum*. Found in 2025, Texas.
+Host: *Microbacterium foliorum*. Found in 2025, Milam County, Texas.
 
 [PaleRider on PhagesDB](https://phagesdb.org/phages/PaleRider/).
 
@@ -552,7 +552,7 @@ Host: *Microbacterium foliorum*. Found in 2025, Texas.
 
 Host: *Microbacterium foliorum*. Found in 2025, Milam County, Texas.
 
-[Rira on PhagesDB](https://phagesdb.org/phages/Rira/).
+[Rira on PhagesDB](https://phagesdb.org/phages/Rira/). A manuscript on Rira is submitted.
 
 ### Triri
 

@@ -13,6 +13,8 @@ import { splitSections } from "./search/records.mjs";
 export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/research",
   "/research/retroviruses",
+  "/research/retroviruses/human",
+  "/research/retroviruses/avian",
   "/research/bacteriophages",
   "/research/science-education",
   "/research/phages",
@@ -29,17 +31,17 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/teaching/virus-isolation/faq",
   "/teaching/phage-bioinformatics",
   "/teaching/central-dogma",
+  "/teaching/study-skills",
 ]);
 
 /**
  * The headings on these pages that the header menus link to by anchor, as `path#id`. A menu shows a
  * section link only once it is listed here, and the build refuses an entry whose page has no heading
- * with that id, so no menu link lands on the top of a page for want of its heading. Empty until Join
- * the lab and Teaching philosophy are written into /teaching (cutover.md).
+ * with that id, so no menu link lands on the top of a page for want of its heading.
  *
  * @type {readonly string[]}
  */
-export const CONTENT_PAGE_SECTIONS = [];
+export const CONTENT_PAGE_SECTIONS = ["/teaching#join-the-lab", "/teaching#teaching-philosophy"];
 
 /**
  * The markdown file a path is written in: slashes to hyphens, `/research/phages` in research-phages.md.

@@ -16,7 +16,7 @@ These are the lab protocols used in Dustin Edwards's lab at Tarleton State Unive
 ## PCR and primers
 
 - [COI primers: LCO1490 and HCO2198](/research/protocols/coi-primers): the Folmer primer sequences for COI barcoding PCR of invertebrate mitochondrial DNA, with the materials, the cycling table and the expected 708 bp product.
-- [REV PCR primers](/research/protocols/rev-lpdv-primers): three primer sets used to detect reticuloendotheliosis virus (REV) in avian DNA, one in the 3′ LTR (8000-8297) and two in the *pol* gene (2500-3075 and 4777-5575), with sequences, cycling tables and product sizes. The research behind them is on the [retroviruses](/research/retroviruses) page.
+- [REV PCR primers](/research/protocols/rev-lpdv-primers): three primer sets used to detect reticuloendotheliosis virus (REV) in avian DNA, one in the 3′ LTR (8000-8297) and two in the *pol* gene (2500-3075 and 4777-5575), with sequences, cycling tables and product sizes. The research behind them is on the [avian retroviruses](/research/retroviruses/avian) page.
 - [Pan-avian GAPDH PCR](/research/protocols/pan-avian-gapdh): primer sequences and PCR conditions for a 534 bp avian GAPDH product, used as a control that a bird DNA extraction holds DNA that will amplify, so a negative REV result can be trusted.
 
 ## Retired protocols
