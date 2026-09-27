@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { CapsidIcon, LampIcon, PadlockIcon } from "~/components/private-tool-icons";
 import { SiteLogoHeader } from "~/components/site-logo";
 import {
   GERMOMICS_URL,
@@ -10,6 +11,11 @@ import {
   OWNER_SCHOLAR,
   SITE,
 } from "~/lib/seo";
+
+// Behind Cloudflare Access since 2026-09-26.
+const CARREL_URL = "https://carrel.dustinedwards.info";
+// Capsid's admin page, per its docs/console.md; GitHub login, one admin.
+const CAPSID_CONSOLE_URL = "https://capsid.dustin-edwards.workers.dev/console";
 
 /**
  * `/llms.txt` and the feeds stay in every footer: they are how an agent reads this site. The
@@ -161,8 +167,27 @@ export function ShellFooter() {
               <li>
                 <Link to="/privacy">Privacy</Link>
               </li>
+            </ul>
+            {/* The three logins, set apart from the pages anyone can read. The accessible names say
+             * what each one is for; they begin with the visible word, so speech input still works. */}
+            <ul className="footer-links footer-private" aria-label="Private tools">
               <li>
-                <Link to="/login">Log in</Link>
+                <a href={CARREL_URL} className="footer-private-link" aria-label="Carrel, writing">
+                  <LampIcon className="footer-private-icon" />
+                  Carrel
+                </a>
+              </li>
+              <li>
+                <Link to="/login" className="footer-private-link" aria-label="Admin, this site">
+                  <PadlockIcon className="footer-private-icon" />
+                  Admin
+                </Link>
+              </li>
+              <li>
+                <a href={CAPSID_CONSOLE_URL} className="footer-private-link" aria-label="Console, Capsid">
+                  <CapsidIcon className="footer-private-icon" />
+                  Console
+                </a>
               </li>
             </ul>
           </nav>

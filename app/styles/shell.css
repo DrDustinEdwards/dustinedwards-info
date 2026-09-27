@@ -228,6 +228,30 @@
   block-size: 1rem;
 }
 
+/* The private tools: set apart from the public links by a dust hairline, the site's line color. */
+.footer-private {
+  margin-block-start: var(--s-3);
+  padding-block-start: var(--s-3);
+  border-block-start: var(--line-w) solid var(--dust);
+}
+
+.footer-private-link {
+  gap: var(--s-2);
+}
+
+/* Ink at rest, purple on hover and focus, like every clickable thing (ruling 122). */
+.footer-private-icon {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--text);
+}
+
+.footer-private-link:hover .footer-private-icon,
+.footer-private-link:focus-visible .footer-private-icon {
+  color: var(--brand);
+}
+
 .site-shell-footer-note {
   margin-block-start: var(--s-6);
   color: var(--text-secondary);
