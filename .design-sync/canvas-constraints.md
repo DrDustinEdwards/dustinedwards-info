@@ -1,8 +1,9 @@
 # What is already decided
 
 Read this before designing anything for dustinedwards.info. Everything below is
-ruled, measured or load-bearing, and none of it is yours to re-decide. It is
-short on purpose: it rides in the README the design agent is guaranteed to read,
+the site as it stands, measured or load-bearing. Design choices here are defaults a
+better design overrides (core.md); accessibility and security are the fixed parts,
+and a proposal that changes a default says so. It is short on purpose: it rides in the README the design agent is guaranteed to read,
 and every line here is one that has already been broken once.
 
 Where this file and a stylesheet disagree, **the stylesheet is right**. It is the

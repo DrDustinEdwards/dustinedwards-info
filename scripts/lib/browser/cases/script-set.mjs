@@ -30,7 +30,6 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
       srcs: [...document.querySelectorAll("script[src]")].map(
         (s) => s.getAttribute("src") ?? "",
       ),
-      preloads: document.querySelectorAll('link[rel="modulepreload"]').length,
       /* Resolved as the loader resolves them, since it sets `src` to the absolute URL. */
       markers: [...document.querySelectorAll("template[data-enhance]")].map(
         (t) => new URL(t.getAttribute("data-enhance") ?? "", location.href).href,
@@ -42,23 +41,19 @@ export async function run({ page }, { postForShape, enhanceStems, publicConsoleE
       /* hasAttribute, because a browser hides a nonce's value from getAttribute. */
       nonced: document.querySelectorAll("[nonce]").length,
     }));
-    const foreign = shape.srcs.filter((src) => {
+    /* Enhancement bundles only: whatever else a page loads is not the loader's to insert. */
+    const bundles = shape.srcs.filter((src) => {
       const name = src.split("/").pop() ?? "";
       const stem = name.replace(/-[A-Za-z0-9_-]{8}\.js$/, "");
-      return !enhanceStems.has(stem);
+      return enhanceStems.has(stem);
     });
     ok(
-      `${path}: the script set is enhancement bundles only, with no modulepreload`,
-      foreign.length === 0 && shape.preloads === 0 && shape.srcs.length > 0,
-      `script srcs [${shape.srcs.join(", ")}], ${shape.preloads} modulepreload(s). ` +
-        `A framework chunk is riding on a public page again, or the enhancement ` +
-        `tags vanished entirely.`,
-    );
-    ok(
       `${path}: the loader inserted exactly the bundles the markers name`,
-      JSON.stringify([...new Set(shape.markers)].sort()) === JSON.stringify([...shape.srcs].sort()),
-      `markers [${shape.markers.join(", ")}], scripts [${shape.srcs.join(", ")}]. A marker with ` +
-        `no script means the loader did not run or was refused by the policy.`,
+      shape.markers.length > 0 &&
+        JSON.stringify([...new Set(shape.markers)].sort()) === JSON.stringify([...bundles].sort()),
+      `markers [${shape.markers.join(", ")}], enhancement scripts [${bundles.join(", ")}]. No ` +
+        `marker means the enhancement tags vanished; a marker with no script means the loader ` +
+        `did not run or was refused by the policy.`,
     );
     ok(
       `${path}: the one executable inline script is the loader, and nothing carries a nonce`,

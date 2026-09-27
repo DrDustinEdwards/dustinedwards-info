@@ -9,8 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { gateNames } from "./build-stack.mjs";
-import { CI_AFTER_BUILD, CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
-import { reachableAssets } from "./lib/page-payload.mjs";
+import { CI_EXCLUDED, TIERS, runGate } from "./check-all.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -26,7 +25,7 @@ export const MAP = [
   {
     what: "a stylesheet",
     test: /^app\/(app\.css|styles\/.+\.css)$/,
-    gates: ["check:contrast", "check:page-payload"],
+    gates: ["check:contrast"],
   },
   {
     what: "a route, component or other app source",
@@ -34,12 +33,10 @@ export const MAP = [
     gates: ["check:features", "check:machine-readable", "check:urls", RELATED],
   },
   {
-    /* check-policy, check-ask-guards and check-headers read route files by name and scan app/routes;
-       check-page-payload walks every route module for its hydration flag, editor handle and
-       stylesheet set. */
+    /* check-policy, check-ask-guards and check-headers read route files by name and scan app/routes. */
     what: "a route module",
     test: /^app\/routes\/.+\.(ts|tsx)$/,
-    gates: ["check:policy", "check:ask-guards", "check:headers", "check:page-payload"],
+    gates: ["check:policy", "check:ask-guards", "check:headers"],
   },
   {
     /* check-ask-guards reads the origin predicate, the operator bearer and API, and the Ask corpus. */
@@ -58,12 +55,6 @@ export const MAP = [
     what: "the operator API ship calls",
     test: /^app\/lib\/operator\/(api|sync-tools)\.server\.ts$/,
     gates: ["check:migrations"],
-  },
-  {
-    /* check-page-payload reads root.tsx for the <Scripts> guard and the site-wide stylesheets. */
-    what: "the root route",
-    test: /^app\/root\.tsx$/,
-    gates: ["check:page-payload"],
   },
   {
     /* check-headers asserts where the admin nonce goes and that public scripts need none: the server
@@ -95,7 +86,7 @@ export const MAP = [
   {
     what: "a served asset",
     test: /^public\/.+/,
-    gates: ["check:urls", "check:page-payload", "check:fonts"],
+    gates: ["check:urls", "check:fonts"],
   },
   {
     /* check-headers asserts which entrypoint wrangler.jsonc.example lets the platform cache. */
@@ -140,6 +131,45 @@ export function gatesFor(file, declared) {
     (g) => g === RELATED || declared.has(g),
   );
   return { own, rules, gates: [...new Set(gates)] };
+}
+
+/**
+ * Every source file `entry` reaches through relative and `~/` imports, itself included. A specifier
+ * that resolves to nothing (a package, a `?url` asset, a stylesheet) is skipped: the walk only has to
+ * find the repo files a test depends on.
+ *
+ * @param {string} entry
+ * @param {string} appDir
+ * @param {(path: string) => string | null} read
+ * @returns {Set<string>}
+ */
+export function reachedModules(entry, appDir, read) {
+  /** @type {Set<string>} */
+  const seen = new Set();
+  const queue = [entry];
+  while (queue.length > 0) {
+    const file = /** @type {string} */ (queue.pop());
+    const resolved = resolveModule(file, read);
+    if (!resolved || seen.has(resolved.path)) continue;
+    seen.add(resolved.path);
+    for (const m of resolved.source.matchAll(/(?:from\s*|import\s*\(?\s*)["']([^"'?]+)["']/g)) {
+      const spec = m[1];
+      if (spec.endsWith(".css")) continue;
+      if (spec.startsWith("~/")) queue.push(join(appDir, spec.slice(2)));
+      else if (spec.startsWith(".")) queue.push(join(dirname(resolved.path), spec));
+    }
+  }
+  return seen;
+}
+
+/** @param {string} path @param {(path: string) => string | null} read */
+function resolveModule(path, read) {
+  const candidates = [path, `${path}.ts`, `${path}.tsx`, `${path}.mjs`, join(path, "index.ts"), join(path, "index.tsx")];
+  for (const candidate of candidates) {
+    const source = read(candidate);
+    if (source !== null) return { path: candidate, source };
+  }
+  return null;
 }
 
 // A runner, a shared library or the stack builder is read by every gate, so it maps to the whole tier.
@@ -287,13 +317,12 @@ function main() {
     );
   }
 
-  // CI-excluded gates run here too: most are excluded because CI cannot run them, so a local run is
-  // the only run they get. CI_AFTER_BUILD ones (check:page-payload) CI does run, in its own step after
-  // `npm run build`; here they read whatever build is on disk, so a stale local build reads stale.
+  // CI-excluded gates run here too: they are excluded because CI cannot run them, so a local run is
+  // the only run they get.
   const gateKeys = [...wanted.keys()].filter((g) => g !== RELATED);
   const selected = gateKeys.filter((g) => TIERS[g] === "offline").sort();
   const deferred = gateKeys.filter((g) => TIERS[g] !== "offline").sort();
-  const onlyHere = selected.filter((g) => CI_EXCLUDED[g] && !CI_AFTER_BUILD.includes(g));
+  const onlyHere = selected.filter((g) => CI_EXCLUDED[g]);
 
   /** @param {string} path */
   const readSource = (path) => {
@@ -314,7 +343,7 @@ function main() {
       .filter((f) => f.endsWith(".test.mjs"))
       .map((f) => join(root, "test", f))
       .filter((t) =>
-        [...reachableAssets(t, join(root, "app"), readSource).visited].some((v) => changedPaths.has(v)),
+        [...reachedModules(t, join(root, "app"), readSource)].some((v) => changedPaths.has(v)),
       )
       .sort();
   }

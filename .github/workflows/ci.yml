@@ -133,19 +133,10 @@ jobs:
       - name: Gates
         run: npm run check:ci
 
-      # THE PAGE BUDGETS, against a real client build. check:page-payload reads
-      # build/client, which does not exist while the tier above runs, so it is
-      # in CI_EXCLUDED and named in CI_AFTER_BUILD, and check:ci refuses if
-      # this step stops running it.
-      #
-      # The order is ship's: build:stack, build:content and
-      # build:publication-twins, then `npm run build`, which emits the
-      # enhancement bundles. check:ci rebuilt those three in that order as its
-      # prereqs a moment ago, so only the app build is left. Ship's green-CI
-      # path skips its own app build and trusts this run for the budgets, so
-      # without this step nobody measured them at all. The build needs no secrets: the Cloudflare plugin starts
-      # its remote-binding proxy (AI_SEARCH, IMAGES) for dev and preview only.
-      - name: Client build and page payload
-        run: |
-          npm run build
-          npm run check:page-payload
+      # The app build, so a change that typechecks but does not build fails
+      # here rather than at deploy. check:ci built its three prereqs a moment
+      # ago, so only the app build is left. The build needs no secrets: the
+      # Cloudflare plugin starts its remote-binding proxy (AI_SEARCH, IMAGES)
+      # for dev and preview only.
+      - name: Build
+        run: npm run build

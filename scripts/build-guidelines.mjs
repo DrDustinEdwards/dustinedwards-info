@@ -136,18 +136,17 @@ const SINGLETONS = [
 /** Hand-written: the code carries a ruling's effect, not its authority. */
 const SINGLETON_PREAMBLE = `These four are real parts of every public page and are NOT in the component
 library, because none of them can be instantiated by a design agent: they are
-page singletons, and two of them exist only to inject the nonced enhancement
-bundles the no-hydration law requires.
+page singletons, and two of them exist to inject the enhancement bundles public
+pages use while they do not hydrate (the current shape, not a law).
 
 They are described here anyway. Not being able to compose the header is a
 different thing from not being allowed to know what it is, and a redesign that
 did not know produced a header with invented tokens, a wordmark that turned
 visited-colored, and a search control that did not work.
 
-**The header is not open for redesign.** It is restored byte-identical to a
-specific commit on Dustin's order, and two standing design rulings are SUSPENDED
-for it rather than satisfied by it. Nothing about it changes without that
-suspension being lifted.
+**The header is a default, not a law.** Earlier design rulings on it (and on
+color and glass) are defaults that a better design overrides. What follows
+describes the header as it is today.
 
 **The header has no width breakpoints.** It is \`flex-wrap: wrap\` on both the
 header and the nav, the only media query touching it is \`print\`, and it WRAPS

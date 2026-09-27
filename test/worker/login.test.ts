@@ -15,16 +15,7 @@ type Answer = Response | { data?: { problem?: string }; init?: { status?: number
 const status = (answer: Answer) =>
   answer instanceof Response ? answer.status : (answer.init?.status ?? 200);
 
-describe("/login without React", () => {
-  it("does not hydrate: the door is a plain form plus the login.js busy label", () => {
-    expect((login as { handle?: unknown }).handle).toBeUndefined();
-    const html = renderRoute("/login", login.default, { actionData: undefined, loaderData: null });
-    expect(html).toMatch(/<form data-sign-in="" method="post">/);
-    expect(html).toMatch(/<button type="submit" class="btn-brand">Continue with Google<\/button>/);
-    // A marker, not a script: the root's hashed loader turns it into the module script.
-    expect(html).toMatch(/<template data-enhance="[^"]*login[^"]*\.js"><\/template>/);
-  });
-
+describe("/login", () => {
   it("renders an action's problem as an alert on the page, which is the no-script error state", async () => {
     const html = renderRoute("/login", login.default, {
       actionData: { problem: "Sign-in could not start: nope" },

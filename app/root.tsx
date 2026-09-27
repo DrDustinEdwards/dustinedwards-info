@@ -100,14 +100,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // No fallback: a made-up nonce would satisfy the markup while matching nothing in the header.
   const nonce = data?.nonce;
 
-  // Hydration is opt-in by route (`handle = { hydrate: true }`); check:page-payload pins the set.
+  // Hydration is opt-in by route (`handle = { hydrate: true }`).
   const matches = useMatches();
   const hydrates = matches.some(
     (match) => (match.handle as { hydrate?: boolean } | undefined)?.hydrate === true,
   );
 
   // Not React's `precedence` hoisting: it lifts the sheet above the color-scheme meta, which must
-  // arrive before the first stylesheet request. check:page-payload reconciles these route ids.
+  // arrive before the first stylesheet request.
   const postData = useRouteLoaderData("routes/blog.$slug") as { hasMath?: boolean } | undefined;
   const previewData = useRouteLoaderData("routes/preview.$token") as
     | { hasMath?: boolean }

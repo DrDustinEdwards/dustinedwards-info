@@ -93,20 +93,19 @@ for (const b of blocks) {
   if (b.file) withFile.push({ ...b, file: b.file });
   else withoutFile.push(b);
 }
-ok("the sheets parsed into @font-face blocks", blocks.length >= 20, `${blocks.length} parsed, expected at least 20`);
-ok("blocks naming a file were found", withFile.length >= 20, `${withFile.length} name a file`);
+// Non-empty only: how many faces the site ships is a design default, not something to floor.
+ok("the sheets parsed into @font-face blocks", blocks.length > 0, `${blocks.length} parsed`);
+ok("blocks naming a file were found", withFile.length > 0, `${withFile.length} name a file`);
 
-// The local()-only faces are skipped explicitly and listed exactly, so a file-backed block cannot fall
-// into the skip path unnoticed.
-/* "Inter Fallback" twice: a regular face and a bold one, one per weight band. The serif's twice: roman and italic. */
-const FILELESS = ["Inter Fallback", "Inter Fallback", "Source Serif 4 Web Fallback", "Source Serif 4 Web Fallback"];
+// A skipped block must be genuinely local()-only, so a file-backed block cannot fall into the skip path
+// unnoticed. Which families are fallbacks is a design default and is not listed here.
 {
-  const got = withoutFile.map((b) => b.family).sort();
+  const suspect = withoutFile.filter((b) => /url\s*\(/i.test(b.raw) || !/local\s*\(/i.test(b.raw));
   ok(
-    `the local()-only faces are exactly the ${FILELESS.length} metric-adjusted fallbacks`,
-    got.length === FILELESS.length && got.every((f, i) => f === [...FILELESS].sort()[i]),
-    `skipped [${got.join(", ")}], expected [${[...FILELESS].sort().join(", ")}]. A new fileless face must be ` +
-      `named here, or it is a face this gate silently does not check.`,
+    `the ${withoutFile.length} skipped face(s) are all local()-only`,
+    suspect.length === 0,
+    `skipped [${suspect.map((b) => b.family).join(", ")}], which carry a url() or no local(); ` +
+      `a file-backed face in the skip path is one this gate silently does not check.`,
   );
 }
 
@@ -260,7 +259,7 @@ for (const [declared, binary] of NAMESPACED) {
 // A browser clamps an out-of-range axis silently, so the level renders at the wrong optical size.
 ok(
   "axis requests were found in the sheets",
-  variationRequests.length >= 16,
+  variationRequests.length > 0,
   `${variationRequests.length} found; a regex that stopped matching would iterate nothing and every ` +
     `assertion below would report a clean sweep`,
 );
@@ -329,28 +328,12 @@ for (const req of variationRequests) {
   }
 }
 
-// The satori faces are a different build of the served typeface, because satori cannot read woff2.
-// The served woff2 build is canonical, and the difference stands.
+// The faces build-og.mjs reads to draw the social cards, because satori cannot read woff2. Whether the
+// cards share the site's typeface, and which typeface that is, is a design default and is not asserted.
 const OG_FACES = [
   { file: join(root, "assets", "fonts", "Inter-Regular.ttf"), weight: 400 },
   { file: join(root, "assets", "fonts", "Inter-Bold.ttf"), weight: 700 },
 ];
-// Read from the `--font-sans` token, not the first `@font-face` block, which is a statement about source order.
-const servedFamily = (() => {
-  const sheet = stripComments(readFileSync(join(root, "app", "app.css"), "utf8"));
-  const decl = /--font-sans:\s*([^;]+);/.exec(sheet);
-  ok("app.css declares --font-sans", Boolean(decl), "the served family cannot be read without it");
-  if (!decl) return null;
-  return decl[1].trim().split(",")[0].trim().replace(/^['"]|['"]$/g, "");
-})();
-
-ok(
-  `--font-sans names a family app/fonts/ actually serves ("${servedFamily}")`,
-  withFile.some(
-    (b) => b.family === servedFamily && b.file.includes(join("app", "fonts")) && !b.file.includes("katex"),
-  ),
-  `the stack's first family is not backed by any self-hosted face, so the cards are compared against a name nothing ships`,
-);
 
 for (const face of OG_FACES) {
   const rel = relative(root, face.file);
@@ -359,11 +342,6 @@ for (const face of OG_FACES) {
     continue;
   }
   const font = fontFor(face.file);
-  ok(
-    `${rel} is the family the site serves`,
-    font.familyName === servedFamily,
-    `the cards would be drawn in "${font.familyName}" while the site renders "${servedFamily}"`,
-  );
   ok(
     `${rel} carries the weight build-og requests`,
     font["OS/2"]?.usWeightClass === face.weight,

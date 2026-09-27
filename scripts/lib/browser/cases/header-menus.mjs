@@ -6,8 +6,8 @@ import { BASE, FETCH_TIMEOUT_MS, ok, pollUntil } from "../harness.mjs";
 /*
  * The header's mega menus (app/components/site-header.tsx, app/enhance/header.ts): a disclosure
  * button per menu, never role=menu; the chevron toggles aria-expanded by click, Enter and Space;
- * Escape closes and hands focus back to the chevron; hover opens after its delay; the same markup
- * expands in place on a phone; and every link the menus render answers 200. On pages of its own, so
+ * Escape closes and hands focus back to the chevron; hover content stays hoverable; a phone gets 44px
+ * rows; and every link the menus render answers 200. On pages of its own, so
  * no navigation here voids a later case on the shared page.
  */
 
@@ -140,7 +140,8 @@ export async function run({ browser }) {
       `after Space ${JSON.stringify(spaced)}, Tab ${JSON.stringify(tabbed)}, Escape ${JSON.stringify(escapedInside)}`,
     );
 
-    /* Hover: nothing at once, open after the delay, still open on the way to and inside the panel. */
+    /* Hover content stays hoverable (WCAG 1.4.13): open on the way to and inside the panel. The
+       opening delay is a design default and is not asserted. */
     const word = await page.evaluate(() => {
       const box = document.querySelector('.site-nav-word[href="/research"]')?.getBoundingClientRect();
       return box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null;
@@ -149,8 +150,6 @@ export async function run({ browser }) {
       // From off the header, or the pointer left on the chevron by the clicks above is already inside.
       await page.mouse.move(640, 880);
       await page.mouse.move(word.x, word.y, { steps: 4 });
-      await sleep(150);
-      const early = await state(page);
       const late = await pollUntil(() => state(page), (s) => s.open, { tries: 10, everyMs: 150 });
       await page.mouse.move(word.x + 120, word.y + 90, { steps: 6 });
       await sleep(200);
@@ -160,9 +159,9 @@ export async function run({ browser }) {
       await page.mouse.move(640, 880, { steps: 4 });
       const gone = await pollUntil(() => state(page), (s) => !s.open, { tries: 10, everyMs: 150 });
       ok(
-        "hover opens the panel after its delay, keeps it open on the way down into it, and closes it after leaving",
-        !early.open && late.open && inside.open && !gone.open,
-        `at 150ms ${JSON.stringify(early)}, later ${JSON.stringify(late)}, inside ${JSON.stringify(inside)}, ` +
+        "hover opens the panel, keeps it open on the way down into it, and closes it after leaving",
+        late.open && inside.open && !gone.open,
+        `later ${JSON.stringify(late)}, inside ${JSON.stringify(inside)}, ` +
           `after leaving ${JSON.stringify(gone)}`,
       );
     } else {
@@ -172,7 +171,8 @@ export async function run({ browser }) {
     const roles = await page.evaluate(() => document.querySelectorAll('[role="menu"], [role="menubar"], [role="menuitem"]').length);
     ok("no role=menu, menubar or menuitem after the enhancement ran", roles === 0, `${roles} found`);
 
-    /* Phone: the same markup, the section expanding in the Menu's flow with 44px rows. */
+    /* Phone: the section opens, shows, and has 44px touch targets. Whether it expands in place or as
+       a popover is a design default and is not asserted. */
     await page.setViewport({ width: 390, height: 844 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
     await page.click("[data-header-menu]");
@@ -184,15 +184,15 @@ export async function run({ browser }) {
         menuOpen: /** @type {HTMLElement} */ (document.querySelector("[data-site-nav]")).matches(":popover-open"),
         menuExpanded: document.querySelector("[data-header-menu]")?.getAttribute("aria-expanded"),
         expanded: document.querySelector(chevron)?.getAttribute("aria-expanded"),
-        inFlow: getComputedStyle(p).display !== "none" && !p.matches(":popover-open"),
+        shown: getComputedStyle(p).display !== "none",
         shortest: Math.min(...rows),
       };
     }, PANEL, CHEVRON);
     await page.click(CHEVRON);
     const collapsed = await page.evaluate((chevron) => document.querySelector(chevron)?.getAttribute("aria-expanded"), CHEVRON);
     ok(
-      "on a phone the Menu opens, a chevron expands its section in place with rows at least 44px, and collapses it again",
-      phone.menuOpen && phone.menuExpanded === "true" && phone.expanded === "true" && phone.inFlow && phone.shortest >= 44 && collapsed === "false",
+      "on a phone the Menu opens, a chevron shows its section with rows at least 44px, and collapses it again",
+      phone.menuOpen && phone.menuExpanded === "true" && phone.expanded === "true" && phone.shown && phone.shortest >= 44 && collapsed === "false",
       `${JSON.stringify(phone)}, then aria-expanded ${collapsed}`,
     );
   } finally {

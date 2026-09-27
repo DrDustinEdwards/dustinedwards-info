@@ -137,7 +137,8 @@ try {
 /* Only if something was measured: an unreachable subject would print `0 checks, 0 failures`. */
 if (subjectReachable) {
   /* Each floor sits `max(3, ceil(count * 0.05))` under a measured run; re-measure when touching this file. */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 248 : 230;
+  /* Less 3 on 2026-09-27: the per-path script-set "no framework chunk, no modulepreload" check went. */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 245 : 227;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

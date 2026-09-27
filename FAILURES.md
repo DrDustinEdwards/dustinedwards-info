@@ -36,7 +36,7 @@ which is what repeats across people and sessions.
   result is read, and must produce the NAMED failure.** Exit 1 only proves
   something failed. A 30 KB constant planted in source was folded to 3e4 by the
   minifier: the gated chunk grew 17 bytes and the plant never applied.
-  `VERIFICATION.md` `scripts/check-page-payload.mjs`
+  `VERIFICATION.md` (the since-retired page-payload gate)
 - **A search with an empty scope or an empty needle returns a plausible
   number.** A scan that examined no files reports what a clean sweep reports;
   an empty needle matched every line and two files reported "436 CRLF lines"

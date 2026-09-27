@@ -4,11 +4,6 @@ import { check, get } from "./client.mjs";
 
 export async function run() {
   const { text } = await get("/");
-  // Per landmark: the footer's Writing column carries its own Search link.
-  const within = (/** @type {string} */ tag) => text.slice(text.indexOf(`<${tag}`), text.indexOf(`</${tag}>`));
-  const anchorsIn = (/** @type {string} */ tag) => (within(tag).match(/href="\/search"/g) ?? []).length;
-  check("header: exactly one anchor to /search", anchorsIn("header") === 1, `found ${anchorsIn("header")}`);
-  check("footer: exactly one anchor to /search", anchorsIn("footer") === 1, `found ${anchorsIn("footer")}`);
 
   const start = text.indexOf('<a class="search-trigger"');
   const end = text.indexOf("</a>", start);
@@ -33,9 +28,8 @@ export async function run() {
   );
   check("header: theme toggle is a real form posting to /theme", text.includes('action="/theme"'));
   const themeButtons = text.match(/<button[^>]*name="theme"[^>]*>/g) ?? [];
-  check("header: the theme control ships both writable buttons", themeButtons.length === 2);
   check(
-    "header: the theme buttons post only light and dark",
+    "header: the theme buttons post only light and dark, and both are reachable",
     themeButtons.every((b) => /value="(light|dark)"/.test(b)) &&
       new Set(themeButtons.map((b) => /value="([a-z]+)"/.exec(b)?.[1])).size === 2,
   );

@@ -192,8 +192,8 @@ export const NON_PARTICIPATING = new Map([
   ],
   [
     "--lamp-chroma-on-paper",
-    "a catch hue mixed in behind the one paper glass surface. The brief's rule is that light is " +
-      "atmosphere and never meaning, so nothing reads it and no pair can be required of it. Its " +
+    "a catch hue mixed in behind the one paper glass surface. Light is atmosphere and never " +
+      "meaning, so nothing reads it and no pair can be required of it. Its " +
       "companion --lamp-chroma-on-bar was deleted 2026-09-14 with the bar it lit",
   ],
   // Dust 300 is texture on Plate I, the halo's dashed outer ring: it marks an edge and identifies nothing.

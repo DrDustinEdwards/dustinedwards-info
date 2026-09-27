@@ -200,7 +200,7 @@ export async function checkEnhancements({ ok, routes }) {
       ok(
         `enhancements ${id}: a fallback of nothing carries its reason`,
         typeof entry.why === "string" && entry.why.trim().length > 0,
-        "the law requires the nothing to be WRITTEN DOWN, because that is what " +
+        "a fallback of nothing is WRITTEN DOWN, because that is what " +
           "distinguishes a decision from an omission",
       );
     }

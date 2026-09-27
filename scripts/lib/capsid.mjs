@@ -12,7 +12,7 @@ export const EXPORTED_DOCS = [
   },
   {
     path: "TASK-redesign-brief-2026-09.md",
-    why: "the redesign brief itself: Paper, Glass, Light and the ratified design law",
+    why: "the redesign brief itself: Paper, Glass, Light and its design rulings, now defaults a better design overrides",
   },
 ];
 

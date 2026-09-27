@@ -78,7 +78,7 @@ order they are written in, so the chart reads in the order the markdown does.
    the chart and never emit a legend, because hue is never the sole channel
    (design-tokens.md rule 3). Verified under forced colors: when every fill
    collapses to one system colour the chart still reads.
-3. **Colours are the ratified ladder, as tokens, assigned automatically:**
+3. **Colours are the palette's chart ladder, as tokens, assigned automatically:**
    `--chart-cadet`, `--chart-purple`, `--chart-claret`, `--chart-sage`,
    `--chart-gold`, then extended `--chart-rust`. NEVER write a hex, and never ask
    for a specific colour. One stored SVG serves light and dark because the custom
@@ -188,7 +188,7 @@ GitHub, and anywhere else reading the markdown instead of the page.
    alt IS the structure: name the boxes and the arrows. "Flowchart of the save
    path" is a failure. The worked example below is the standard.
 2. **You never choose a colour, and there is no colour vocabulary.** Every
-   colour comes from the ratified tokens, mapped once in
+   colour comes from the palette tokens, mapped once in
    `app/lib/content/diagram.mjs` and resolved from `app.css` at build time.
    A diagram says what it means with SHAPE and LABEL: a refusal is an edge
    labelled `403`, not a red arrow. A colour mermaid derives rather than takes
