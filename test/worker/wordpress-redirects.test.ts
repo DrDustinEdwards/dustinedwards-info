@@ -55,9 +55,13 @@ describe("pattern rules, on the apex host", () => {
     }
   });
 
-  it("/directory-*/ goes to /research/science-education", async () => {
-    await expectMoved("/directory-2023-phage-researchers/", "/research/science-education");
-    await expectMoved("/directory-research-group/", "/research/science-education");
+  it("/directory-*/ goes to /teaching/phage-discovery", async () => {
+    await expectMoved("/directory-2023-phage-researchers/", "/teaching/phage-discovery");
+    await expectMoved("/directory-research-group/", "/teaching/phage-discovery");
+  });
+
+  it("Dustin's own author page goes to /about, ahead of the profile rule", async () => {
+    await expectMoved("/author/dustin/", "/about");
   });
 
   it("student and author profiles answer 410, query and all", async () => {
@@ -114,7 +118,7 @@ describe("pattern rules, on the apex host", () => {
 
 describe("the map's edges", () => {
   it("www answers the same map", async () => {
-    await expectMoved("/virus-isolation/", "/research/protocols/phage-isolation", "https://www.dustinedwards.info");
+    await expectMoved("/virus-isolation/", "/teaching/virus-isolation", "https://www.dustinedwards.info");
   });
 
   it("NEVER applies on another host: workers.dev passes the path to the Renderer", async () => {
