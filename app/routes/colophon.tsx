@@ -226,7 +226,7 @@ export default function Colophon() {
           <p key={sentence.slice(0, 32)}>{sentence}</p>
         ))}
         <p>
-          Capsid's source is public at <a href={CAPSID_REPO_URL}>{CAPSID_REPO_URL}</a>.
+          Capsid's source is public <a href={CAPSID_REPO_URL}>on GitHub</a>.
         </p>
 
         <SectionHead id="not-adopted" />
