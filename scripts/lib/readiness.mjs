@@ -1,5 +1,5 @@
 /**
- * @typedef {{ name?: string, ok?: boolean, expected?: number, present?: number, waitedMs?: number }} HealthCheckRow
+ * @typedef {import("../../app/lib/health/ask-converge.mjs").HealthCheckRow} HealthCheckRow
  */
 
 /**

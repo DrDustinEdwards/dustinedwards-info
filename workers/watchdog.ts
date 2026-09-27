@@ -3,6 +3,7 @@
 import {
   failingCheckNames,
   refusalMiss,
+  settleAskRecheck,
   watchdogActions,
   watchdogOutcome,
 } from "../app/lib/health/repair.mjs";
@@ -277,7 +278,15 @@ async function runRepairs(
     }
   }
 
-  const recheck = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
+  const first = actions.some((a) => a.type === "recheck") ? await readHealth(env) : null;
+  // Its own sync_ask can leave the Ask index listing short for about a minute; a cron run may wait
+  // up to 15 minutes of wall time, and waiting spends no CPU, so the re-check settles here.
+  const { reading: recheck, polls: settlePolls } = await settleAskRecheck({
+    recheck: first,
+    attempted,
+    reread: () => readHealth(env),
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+  });
   const outcome = watchdogOutcome({ misses, recheck });
 
   console.log(
@@ -286,6 +295,7 @@ async function runRepairs(
       attempted,
       misses,
       recheckStatus: recheck?.status ?? null,
+      settlePolls,
       alerting: outcome.length > 0,
     }),
   );

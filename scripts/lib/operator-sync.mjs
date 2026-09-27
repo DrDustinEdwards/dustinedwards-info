@@ -6,7 +6,7 @@ import {
   ASK_POLL_INTERVAL_MS,
   ASK_POLL_WINDOW_MS,
   awaitAskConvergence,
-} from "./ask-converge.mjs";
+} from "../../app/lib/health/ask-converge.mjs";
 
 /** @typedef {{ origin: string, token: string }} OperatorTarget the site and its operator token */
 

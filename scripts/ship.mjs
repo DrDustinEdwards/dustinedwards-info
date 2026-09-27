@@ -29,7 +29,7 @@ import { dirtyTree } from "./lib/git-tree.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
 import { convergeAsk, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
-import { ASK_POLL_WINDOW_MS, settleAskDrift } from "./lib/ask-converge.mjs";
+import { ASK_POLL_WINDOW_MS, settleAskDrift } from "../app/lib/health/ask-converge.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
 import { missReport } from "./lib/ship-misses.mjs";
 import { uptimeStepOutcome } from "./lib/uptime-step.mjs";
