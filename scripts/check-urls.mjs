@@ -244,7 +244,7 @@ for (const slug of retiredSlugs) {
   assert(
     `redirects: retired slug ${slug} still has a redirect`,
     Object.hasOwn(redirects.posts ?? {}, slug),
-    `/blog/${slug} was published and content/redirects.json no longer names it, so that URL ` +
+    `/writing/${slug} was published and content/redirects.json no longer names it, so that URL ` +
       `now 404s. Entries are append-only: if the post really is gone for good, that is a ` +
       `decision for Dustin, not a deletion from a map.`,
   );
@@ -253,7 +253,7 @@ for (const from of redirectSources) {
   assert(
     `redirects: redirect source ${from} is recorded as retired`,
     retiredSlugs.includes(from),
-    `content/redirects.json redirects /blog/${from} and scripts/fixtures/retired-slugs.json ` +
+    `content/redirects.json redirects /writing/${from} and scripts/fixtures/retired-slugs.json ` +
       `does not list it. Add it there in the same commit, or the next reader cannot tell a ` +
       `real retired URL from a typo.`,
   );
@@ -298,13 +298,13 @@ assert(
 for (const [from, to] of Object.entries(redirects.posts ?? {})) {
   const target = corpus.get(to);
   assert(
-    `redirects: /blog/${from} points at a post that exists`,
+    `redirects: /writing/${from} points at a post that exists`,
     target !== undefined,
-    `the map sends it to /blog/${to}, and no file in content/posts declares that slug. ` +
+    `the map sends it to /writing/${to}, and no file in content/posts declares that slug. ` +
       `That is a 301 into a 404.`,
   );
   assert(
-    `redirects: /blog/${to} is published, so the 301 lands on a 200`,
+    `redirects: /writing/${to} is published, so the 301 lands on a 200`,
     target !== undefined && target.published,
     target === undefined
       ? "the target does not exist at all, which the assertion above reports"
@@ -316,7 +316,7 @@ for (const [from, to] of Object.entries(redirects.posts ?? {})) {
     !corpus.has(from),
     `the post file ${corpus.get(from)?.file ?? "?"} declares slug "${from}", which this map ` +
       `redirects away. The gateway runs before the router, so that post would be UNREACHABLE: ` +
-      `every request for it 301s to /blog/${to}.`,
+      `every request for it 301s to /writing/${to}.`,
   );
   assert(
     `redirects: ${from} and ${to} are different slugs`,
@@ -327,14 +327,14 @@ for (const [from, to] of Object.entries(redirects.posts ?? {})) {
 
 for (const from of redirectSources) {
   assert(
-    `redirects: the predicate resolves /blog/${from}`,
-    postRedirectTarget(`/blog/${from}`, redirects.posts) === `/blog/${redirects.posts[from]}`,
-    `got ${JSON.stringify(postRedirectTarget(`/blog/${from}`, redirects.posts))}`,
+    `redirects: the predicate resolves /writing/${from}`,
+    postRedirectTarget(`/writing/${from}`, redirects.posts) === `/writing/${redirects.posts[from]}`,
+    `got ${JSON.stringify(postRedirectTarget(`/writing/${from}`, redirects.posts))}`,
   );
   assert(
-    `redirects: the predicate resolves the markdown twin /blog/${from}.md`,
-    postRedirectTarget(`/blog/${from}.md`, redirects.posts) === `/blog/${redirects.posts[from]}.md`,
-    `got ${JSON.stringify(postRedirectTarget(`/blog/${from}.md`, redirects.posts))}`,
+    `redirects: the predicate resolves the markdown twin /writing/${from}.md`,
+    postRedirectTarget(`/writing/${from}.md`, redirects.posts) === `/writing/${redirects.posts[from]}.md`,
+    `got ${JSON.stringify(postRedirectTarget(`/writing/${from}.md`, redirects.posts))}`,
   );
 }
 
@@ -343,14 +343,14 @@ for (const from of redirectSources) {
  * answer from the prototype. Removing one is removing the check.
  */
 for (const path of [
-  "/blog",
-  "/blog/",
-  "/blog/tags/cloudflare",
-  "/blog/series/ten-years",
-  "/blog/constructor",
-  "/blog/toString",
-  "/blog/__proto__",
-  "/blog/hasOwnProperty.md",
+  "/writing",
+  "/writing/",
+  "/writing/tags/cloudflare",
+  "/writing/series/ten-years",
+  "/writing/constructor",
+  "/writing/toString",
+  "/writing/__proto__",
+  "/writing/hasOwnProperty.md",
   "/",
   "/projects",
 ]) {
@@ -363,9 +363,9 @@ for (const path of [
 
 assert(
   "redirects: no live post slug is claimed by the predicate",
-  [...corpus.keys()].every((slug) => postRedirectTarget(`/blog/${slug}`, redirects.posts) === null),
+  [...corpus.keys()].every((slug) => postRedirectTarget(`/writing/${slug}`, redirects.posts) === null),
   `${[...corpus.keys()]
-    .filter((slug) => postRedirectTarget(`/blog/${slug}`, redirects.posts) !== null)
+    .filter((slug) => postRedirectTarget(`/writing/${slug}`, redirects.posts) !== null)
     .join(", ")} would be redirected away from its own URL`,
 );
 

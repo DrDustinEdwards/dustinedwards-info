@@ -172,9 +172,9 @@ test("house style: no wide dash reaches the summary separator", () => {
 
 test("GROUPING IS PAGE-LOCAL: it arranges the rows it is given and fetches nothing", () => {
   const rows = [
-    { key: "/publications/a.pdf", uploaded: null },
+    { key: "/research/publications/a.pdf", uploaded: null },
     { key: "aaaa000000000000.png", uploaded: "2026-03-02T10:00:00.000Z" },
-    { key: "/publications/b.pdf", uploaded: null },
+    { key: "/research/publications/b.pdf", uploaded: null },
   ];
   const out = groupRows(rows, "folder");
   const flat = out.flatMap((g) => g.rows);
@@ -203,7 +203,7 @@ test("SORT ORDER SURVIVES GROUPING, within a group", () => {
 test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping", () => {
   const out = groupRows(
     [
-      { key: "/publications/a.pdf", uploaded: null },
+      { key: "/research/publications/a.pdf", uploaded: null },
       { key: "/phage-hunters/x.jpg", uploaded: null },
     ],
     "folder",
@@ -216,7 +216,7 @@ test("FOLDER SECTIONS CARRY THE NOTE, which is the whole point of the grouping",
 test("folder sections render in TABLE order, roster before publications", () => {
   const out = groupRows(
     [
-      { key: "/publications/a.pdf", uploaded: null },
+      { key: "/research/publications/a.pdf", uploaded: null },
       { key: "/phage-hunters/x.jpg", uploaded: null },
     ],
     "folder",
@@ -231,7 +231,7 @@ test("an unknown folder is titled from its own directory, never mislabelled", ()
 });
 
 test("folders: a static path has one, a content-addressed key says so", () => {
-  assert.equal(folderOf("/publications/a-paper.pdf"), "/publications");
+  assert.equal(folderOf("/research/publications/a-paper.pdf"), "/research/publications");
   assert.equal(folderOf("/dustin-edwards-logo.svg"), "Uploads", "a root-level path has no meaningful folder");
   assert.equal(folderOf("1234abcd5678ef90.png"), "Uploads");
   assert.equal(folderOf("/phage-hunters/2019/x.jpg"), "/phage-hunters/2019");

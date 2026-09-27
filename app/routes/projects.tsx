@@ -91,7 +91,7 @@ function itemListJsonLd() {
 
 /** A post ref is a slug, not a path: the gate checks it against the built corpus. Fails closed on an unknown kind. */
 function EvidenceLink({ item }: { item: Evidence }) {
-  if (item.kind === "post") return <Link to={`/blog/${item.ref}`}>{item.label}</Link>;
+  if (item.kind === "post") return <Link to={`/writing/${item.ref}`}>{item.label}</Link>;
   if (item.kind === "page") return <Link to={item.ref}>{item.label}</Link>;
   if (item.kind === "repo") return <a href={item.ref}>{item.label}</a>;
   throw new Error(

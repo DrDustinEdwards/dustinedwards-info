@@ -23,5 +23,5 @@ export function seriesSlug(name) {
  * @returns {string} a site-absolute path
  */
 export function seriesPath(name) {
-  return `/blog/series/${encodeURIComponent(seriesSlug(name))}`;
+  return `/writing/series/${encodeURIComponent(seriesSlug(name))}`;
 }

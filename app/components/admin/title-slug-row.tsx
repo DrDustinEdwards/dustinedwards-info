@@ -81,7 +81,7 @@ export function TitleSlugRow({
                   ) : null}
                 </label>
                 <div className="editor-slug-input">
-                  <span className="muted">/blog/</span>
+                  <span className="muted">/writing/</span>
                   <input
                     id="field-slug"
                     name="slug"
@@ -102,7 +102,7 @@ export function TitleSlugRow({
                 {slugProblem ? (
                   <p className="field-alarm" id="slug-problem">
                     {slugTaken
-                      ? `A post already lives at /blog/${slug}. Saving would be refused.`
+                      ? `A post already lives at /writing/${slug}. Saving would be refused.`
                       : "Lowercase letters, digits and single hyphens."}
                   </p>
                 ) : null}

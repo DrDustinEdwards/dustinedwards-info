@@ -607,8 +607,8 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
           </p>
           <p>
             Live at{" "}
-            <a href={`/blog/${feedback.slug}`} target="_blank" rel="noreferrer">
-              /blog/{feedback.slug}
+            <a href={`/writing/${feedback.slug}`} target="_blank" rel="noreferrer">
+              /writing/{feedback.slug}
             </a>
           </p>
         </div>
@@ -624,8 +624,8 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
           <strong>Republished.</strong>
           <p>
             Public again at{" "}
-            <a href={`/blog/${feedback.slug}`} target="_blank" rel="noreferrer">
-              /blog/{feedback.slug}
+            <a href={`/writing/${feedback.slug}`} target="_blank" rel="noreferrer">
+              /writing/{feedback.slug}
             </a>
             . Commit {feedback.sha}.
           </p>
@@ -641,7 +641,7 @@ function FeedbackMessage({ feedback }: { feedback: EditorFeedback }) {
         <div>
           <strong>Unpublished.</strong>
           <p>
-            /blog/{feedback.slug} now returns 404, and the post is out of the
+            /writing/{feedback.slug} now returns 404, and the post is out of the
             feed, the sitemap, search and the Ask index. Commit {feedback.sha}.
           </p>
         </div>

@@ -14,7 +14,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     [
       `# ${post.title}`,
       "",
-      `URL: /blog/${post.slug}`,
+      `URL: /writing/${post.slug}`,
       post.publishAt
         ? `Published: ${new Date(post.publishAt).toISOString().slice(0, 10)}`
         : null,
@@ -30,8 +30,8 @@ export async function loader({ context }: Route.LoaderArgs) {
     "# dustinedwards.info, full post text",
     "",
     "Every published post on this site, in markdown, newest first.",
-    "Each post is also served individually at /blog/<slug>.md, and the same",
-    "content is returned from /blog/<slug> with an Accept: text/markdown header.",
+    "Each post is also served individually at /writing/<slug>.md, and the same",
+    "content is returned from /writing/<slug> with an Accept: text/markdown header.",
     "",
     "---",
     "",

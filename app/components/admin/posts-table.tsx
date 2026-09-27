@@ -184,7 +184,7 @@ export function PostsTable({
                       </Link>
                       {post.state === "published" ? (
                         <a
-                          href={`/blog/${post.slug}`}
+                          href={`/writing/${post.slug}`}
                           target="_blank"
                           rel="noreferrer"
                           className="row-menu-item"

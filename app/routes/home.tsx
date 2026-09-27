@@ -168,7 +168,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                   </span>
                   <span className="home-row-body">
                     <span className="home-row-title p-name">
-                      <Link className="u-url" to={`/blog/${post.slug}`}>
+                      <Link className="u-url" to={`/writing/${post.slug}`}>
                         {post.title}
                       </Link>
                     </span>
@@ -180,7 +180,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
               ))}
             </ol>
             <p className="home-more">
-              <Link to="/blog">All {posts} posts</Link>
+              <Link to="/writing">All {posts} posts</Link>
             </p>
           </section>
         ) : null}
@@ -201,7 +201,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 <span className="home-row-date">{paper.year}</span>
                 <span className="home-row-body">
                   <span className="home-row-title">
-                    <Link to={`/publications/${doiSlug(paper.doi)}/`}>
+                    <Link to={`/research/publications/${doiSlug(paper.doi)}/`}>
                       {decodeEntities(paper.title)}
                     </Link>
                   </span>
@@ -213,7 +213,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             ))}
           </ol>
           <p className="home-more">
-            <Link to="/publications">All {PUBLICATIONS.length} papers</Link>
+            <Link to="/research/publications">All {PUBLICATIONS.length} papers</Link>
           </p>
           <figure className="home-figure">
             <FigurePapersPerYear />
@@ -276,7 +276,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
               </Link>
             </span>,
-            <Link to="/blog">
+            <Link to="/writing">
               {posts} {posts === 1 ? "post" : "posts"}
             </Link>,
           ]}

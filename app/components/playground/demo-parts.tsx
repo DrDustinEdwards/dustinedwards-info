@@ -33,7 +33,7 @@ export function DemoHeader({ slug }: { slug: string }) {
       <p className="playground-demo-lede">{demo.lede}</p>
       <p className="playground-demo-runs">
         Runs <code>{demo.realPath.split(",")[0]}</code>.{" "}
-        <Link to={`/blog/${demo.homeArticle.slug}`}>{demo.homeArticle.title}</Link>
+        <Link to={`/writing/${demo.homeArticle.slug}`}>{demo.homeArticle.title}</Link>
       </p>
     </>
   );

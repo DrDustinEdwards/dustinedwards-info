@@ -42,8 +42,8 @@ test("every other path passes through completely unchanged", () => {
   // secret would be wrong in both directions and silently.
   for (const path of [
     "/",
-    "/blog",
-    "/blog/where-should-a-blog-store-its-words",
+    "/writing",
+    "/writing/where-should-a-blog-store-its-words",
     "/colophon",
     "/projects",
     "/playground",

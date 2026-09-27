@@ -13,6 +13,7 @@ import * as healthTile from "./lib/browser/cases/health-tile.mjs";
 import * as layout from "./lib/browser/cases/layout.mjs";
 import * as lightbox from "./lib/browser/cases/lightbox.mjs";
 import * as math from "./lib/browser/cases/math.mjs";
+import * as movedPaths from "./lib/browser/cases/moved-paths.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
 import * as playground from "./lib/browser/cases/playground.mjs";
 import * as postControls from "./lib/browser/cases/post-controls.mjs";
@@ -98,12 +99,12 @@ try {
 
   /* Scope first: an unstyled page would pass every layout assertion below. */
   await page.setViewport({ width: 1280, height: 900 });
-  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
   const css = await page.evaluate(countCssRules);
   ok(
     "the blog page's stylesheets are actually applied",
     css >= 144,
-    `${css} CSS rule(s) reachable on /blog, floor 144, measured 157 on 2026-08-27 ` +
+    `${css} CSS rule(s) reachable on /writing, floor 144, measured 157 on 2026-08-27 ` +
       `after the per-route CSS split. Below this the page is effectively unstyled ` +
       `and every layout assertion below is measuring browser defaults.`,
   );
@@ -113,6 +114,7 @@ try {
   await themeCache.run(ctx);
   await navigation.run(ctx);
   await speculation.run(ctx);
+  await movedPaths.run(ctx);
   await layout.run(ctx);
   await math.run(ctx, mathPreviewSeeded);
   await playground.run(ctx);

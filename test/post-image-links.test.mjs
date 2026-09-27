@@ -5,7 +5,7 @@ import { attr, fixedSize, render as renderWith } from "./lib/render.mjs";
 
 const MEDIA_KEY = "dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
 const MEDIA_SRC = `/media/${MEDIA_KEY}`;
-const STATIC_SRC = "/publications/measured-latency.png";
+const STATIC_SRC = "/research/publications/measured-latency.png";
 
 // Fixed, and deliberately not the dimensions in the key: an assertion that
 // the width reached the img must be able to tell the two apart.

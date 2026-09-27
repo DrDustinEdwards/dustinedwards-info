@@ -14,7 +14,7 @@ export function PostBacklinks({
       <ul>
         {backlinks.map((item) => (
           <li key={item.slug}>
-            <Link to={`/blog/${item.slug}`}>{item.title}</Link>
+            <Link to={`/writing/${item.slug}`}>{item.title}</Link>
           </li>
         ))}
       </ul>

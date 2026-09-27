@@ -17,8 +17,8 @@ const features = JSON.parse(
 
 export async function run() {
   {
-    // Never a prefix rule: /publications/* and /phage-hunters/* are kept files.
-    for (const path of ["/research", "/publications", "/teaching", "/phage-hunters"]) {
+    // Never a prefix rule: /research/publications/* and /phage-hunters/* are kept files.
+    for (const path of ["/research", "/research/publications", "/teaching", "/phage-hunters"]) {
       const { status } = await get(path);
       check(`retired: ${path} is a bare 404`, status === 404, `got ${status}`);
     }
@@ -116,7 +116,7 @@ export async function run() {
         `If this fails, sync:content -- --remote has not run since the file changed.`,
     );
 
-    const post = await get(`/blog/${SLUG}`);
+    const post = await get(`/writing/${SLUG}`);
     check(
       "colophon: a post links to /colophon in its footer line",
       strip(post.text).includes('href="/colophon"'),

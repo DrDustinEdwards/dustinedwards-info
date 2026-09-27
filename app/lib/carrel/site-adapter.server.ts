@@ -189,7 +189,7 @@ export function carrelSiteAdapter(options: {
             title: row.title,
             status,
             // D1 cannot tell a withdrawn post from one never published, so a draft has no public path.
-            path: status === "draft" ? null : `/blog/${row.slug}`,
+            path: status === "draft" ? null : `/writing/${row.slug}`,
             publishAt: status === "scheduled" && at !== null ? new Date(at).toISOString() : null,
             publishedAt: status === "published" && at !== null ? new Date(at).toISOString() : null,
             updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
@@ -223,7 +223,7 @@ export function carrelSiteAdapter(options: {
           kind: "post",
           title: fields.title || id,
           status,
-          path: firstPublished ? `/blog/${id}` : null,
+          path: firstPublished ? `/writing/${id}` : null,
           publishAt: status === "scheduled" ? new Date(Date.parse(fields.publishAt)).toISOString() : null,
           publishedAt: firstPublished ? `${firstPublished}T00:00:00.000Z` : null,
           updatedAt: updated ? new Date(updated.updated_at * 1000).toISOString() : null,
@@ -321,7 +321,7 @@ export function carrelSiteAdapter(options: {
         context.set(nonceContext, undefined);
         context.set(postPreviewContext, post);
         const response = await renderDocument(
-          new Request(`${origin}/blog/${slug}`, { headers: { accept: "text/html" } }),
+          new Request(`${origin}/writing/${slug}`, { headers: { accept: "text/html" } }),
           context,
         );
         if (!response.ok) {

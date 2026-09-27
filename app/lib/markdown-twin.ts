@@ -2,11 +2,11 @@ import { prefersType } from "./negotiate.mjs";
 import { NO_STORE_CACHE_CONTROL, SITE_ORIGIN } from "./seo";
 
 export function linkToMarkdown(slug: string) {
-  return `<${SITE_ORIGIN}/blog/${slug}.md>; rel="alternate"; type="text/markdown"`;
+  return `<${SITE_ORIGIN}/writing/${slug}.md>; rel="alternate"; type="text/markdown"`;
 }
 
 function linkToHtml(slug: string) {
-  return `<${SITE_ORIGIN}/blog/${slug}>; rel="alternate"; type="text/html"`;
+  return `<${SITE_ORIGIN}/writing/${slug}>; rel="alternate"; type="text/html"`;
 }
 
 export function prefersMarkdown(request: Request) {
@@ -14,7 +14,7 @@ export function prefersMarkdown(request: Request) {
 }
 
 /**
- * The negotiated `/blog/:slug` variant must never be stored: under `Vary: Accept, Cookie` a second
+ * The negotiated `/writing/:slug` variant must never be stored: under `Vary: Accept, Cookie` a second
  * stored variant lets a cookie-bearing request HIT the cookieless one, skipping the Worker's
  * `private, no-store` downgrade. Do not "optimize" it to `SHARED_CACHE_CONTROL`.
  */

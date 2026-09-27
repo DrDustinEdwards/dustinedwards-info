@@ -61,7 +61,7 @@ export function ShellFooter() {
             </h2>
             <ul className="footer-links">
               <li>
-                <Link to="/publications">Publications</Link>
+                <Link to="/research/publications">Publications</Link>
               </li>
               <li>
                 <Link to="/projects">Projects</Link>
@@ -71,8 +71,8 @@ export function ShellFooter() {
               </li>
               <li className="footer-pair">
                 <span>Citations</span>
-                <a href="/publications.bib">BibTeX</a>
-                <a href="/publications.ris">RIS</a>
+                <a href="/research/publications.bib">BibTeX</a>
+                <a href="/research/publications.ris">RIS</a>
               </li>
             </ul>
           </nav>
@@ -83,16 +83,16 @@ export function ShellFooter() {
             </h2>
             <ul className="footer-links">
               <li>
-                <Link to="/blog">Blog</Link>
+                <Link to="/writing">Writing</Link>
               </li>
               <li>
                 <Link to="/search">Search</Link>
               </li>
               <li className="footer-pair">
                 <span>Feeds</span>
-                <a href="/blog/rss.xml">RSS</a>
-                <a href="/blog/atom.xml">Atom</a>
-                <a href="/blog/feed.json">JSON</a>
+                <a href="/writing/rss.xml">RSS</a>
+                <a href="/writing/atom.xml">Atom</a>
+                <a href="/writing/feed.json">JSON</a>
               </li>
               <li className="footer-pair">
                 <span>For machines</span>

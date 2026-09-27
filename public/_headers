@@ -24,7 +24,7 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The markdown twin of every paper, written into public/publications/ by
+# The markdown twin of every paper, written into public/research/publications/ by
 # `build:publication-twins`. An ASSET rather than a route, so it is the one
 # machine-readable surface on this site whose headers cannot be set in code:
 # the Worker is never invoked for it. The grounds for that trade, and the
@@ -45,6 +45,6 @@
 # holding the same title and abstract is the duplicate that costs a paper its
 # ranking on the page that was built for it. The twin is for agents, and
 # llms.txt is where they are told about it. Same treatment as llms.txt itself.
-/publications/*.md
+/research/publications/*.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex

@@ -21,9 +21,9 @@
     },
     {
       "label": "site absolute path",
-      "markdown": "[x](/blog/thing)",
+      "markdown": "[x](/writing/thing)",
       "expect": "allowed",
-      "url": "/blog/thing"
+      "url": "/writing/thing"
     },
     {
       "label": "relative dotted path",
@@ -316,9 +316,9 @@
       "expect": "allowed"
     },
     {
-      "label": "further_reading internal /blog/ path",
+      "label": "further_reading internal /writing/ path",
       "field": "further_reading",
-      "value": "/blog/a-real-post",
+      "value": "/writing/a-real-post",
       "expect": "allowed"
     },
     {
@@ -366,7 +366,7 @@
     {
       "label": "cover nested site-absolute path",
       "field": "cover",
-      "value": "/publications/a-paper.pdf",
+      "value": "/research/publications/a-paper.pdf",
       "expect": "allowed"
     },
     {
@@ -388,15 +388,15 @@
       "expect": "blocked"
     },
     {
-      "label": "further_reading /blog/ with no slug",
+      "label": "further_reading /writing/ with no slug",
       "field": "further_reading",
-      "value": "/blog/",
+      "value": "/writing/",
       "expect": "blocked"
     },
     {
-      "label": "further_reading /blog/ with a nested path",
+      "label": "further_reading /writing/ with a nested path",
       "field": "further_reading",
-      "value": "/blog//evil.example",
+      "value": "/writing//evil.example",
       "expect": "blocked"
     }
   ]

@@ -187,8 +187,8 @@ export async function run(code) {
   /* WHAT DECIDES THE BRANCH, on real paths rather than on the caller's if, which would mirror it. */
   for (const path of [
     "/",
-    "/blog",
-    "/blog/some-post",
+    "/writing",
+    "/writing/some-post",
     "/colophon",
     "/projects",
     "/playground",
@@ -259,7 +259,7 @@ export async function run(code) {
    */
   /** @type {string[]} */
   const ruleHashes = [];
-  for (const path of ["/", "/blog", "/blog/some-post", "/admin", "/no-such-page", "/blog/", "/a%20b"]) {
+  for (const path of ["/", "/writing", "/writing/some-post", "/admin", "/no-such-page", "/writing/", "/a%20b"]) {
     const got = await speculationRulesHash(path);
     ruleHashes.push(got);
     ok(

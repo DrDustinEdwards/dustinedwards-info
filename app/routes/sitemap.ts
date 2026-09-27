@@ -14,9 +14,9 @@ import type { Route } from "./+types/sitemap";
 const STATIC_PATHS = [
   "/",
   "/about",
-  "/blog",
+  "/writing",
   "/phage-discovery",
-  "/publications",
+  "/research/publications",
   "/colophon",
   "/projects",
   "/playground",
@@ -47,7 +47,7 @@ export async function loader({ context }: Route.LoaderArgs) {
       lastmod: null as Date | null,
     })),
     ...blog.posts.map((p) => ({
-      loc: `${origin}/blog/${p.slug}`,
+      loc: `${origin}/writing/${p.slug}`,
       lastmod: p.updatedAt,
     })),
     ...tagList.map((t) => ({

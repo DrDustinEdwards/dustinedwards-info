@@ -12,7 +12,7 @@ export async function run({ page, browser }) {
   const candidates = artifact.posts
     .filter((/** @type {any} */ p) => p.draft !== true)
     .filter((/** @type {any} */ p) => String(p.html ?? "").includes('class="image-link"'))
-    .map((/** @type {any} */ p) => `/blog/${p.slug}`);
+    .map((/** @type {any} */ p) => `/writing/${p.slug}`);
 
   const { found: imagePost } = await firstPathWith(page, candidates, ".prose a.image-link > img");
 

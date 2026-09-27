@@ -43,7 +43,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     return blogLoader({
       params: { slug },
       context: routeContext(ctx),
-      request: new Request(`${SITE_ORIGIN}/blog/${slug}`),
+      request: new Request(`${SITE_ORIGIN}/writing/${slug}`),
     } as never);
   }
 
@@ -131,7 +131,7 @@ describe("the post loader carries approved mentions and advertises the endpoint"
     expect(link).toContain(`${SITE_ORIGIN}/webmention`);
     /* A header that gained the endpoint by replacing the twin would be a silent regression. */
     expect(link).toContain(`rel="alternate"`);
-    expect(link).toContain(`/blog/${POST_SLUG}.md`);
+    expect(link).toContain(`/writing/${POST_SLUG}.md`);
     /* One header, two values, comma joined, which is how RFC 8288 spells it. */
     expect(link?.split(", ")).toHaveLength(2);
   });

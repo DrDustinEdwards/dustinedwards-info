@@ -17,8 +17,8 @@ export async function run() {
 
   const HTML_ROUTES = [
     "/",
-    "/blog",
-    `/blog/${SLUG}`,
+    "/writing",
+    `/writing/${SLUG}`,
     "/search?q=d1",
     "/phage-discovery",
     "/colophon",
@@ -117,7 +117,7 @@ export async function run() {
 
     for (const [label, base, accept, altType] of [
       ["/search", "/search?q=d1", "application/json", "application/json"],
-      [`/blog/:slug`, `/blog/${SLUG}`, "text/markdown", "text/markdown"],
+      [`/writing/:slug`, `/writing/${SLUG}`, "text/markdown", "text/markdown"],
     ]) {
       const join = base.includes("?") ? "&" : "?";
 
@@ -170,8 +170,8 @@ export async function run() {
       );
     }
 
-    const negotiated = await req(`/blog/${SLUG}`, { accept: "text/markdown" });
-    const byPath = await req(`/blog/${SLUG}.md`);
+    const negotiated = await req(`/writing/${SLUG}`, { accept: "text/markdown" });
+    const byPath = await req(`/writing/${SLUG}.md`);
     check(
       "variant: the Accept form and the .md path return the same markdown",
       negotiated.type === "text/markdown" &&

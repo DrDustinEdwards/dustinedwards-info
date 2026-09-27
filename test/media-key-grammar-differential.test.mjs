@@ -43,7 +43,7 @@ const DIMENSION_CASES = [
   [`og/${RASTER_KEY}`, null],
   [`../${RASTER_KEY}`, null],
   ["og/some-post-65777080.png", null],
-  ["/publications/paper.pdf", null],
+  ["/research/publications/paper.pdf", null],
   ["", null],
   [`${P}${HEX16}`, null],
   [`${P}${HEX16}-0800x600.webp`, null],

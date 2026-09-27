@@ -9,7 +9,7 @@ const FOLDERS = [
   ["/phage-hunters/", "Cohort photographs", "Placed by the roster page template"],
   ["og/", "Social cards", "Generated at build time"],
   ["/diagrams/", "Diagrams", ""],
-  ["/publications/", "Publications", ""],
+  ["/research/publications/", "Publications", ""],
   ["/site/", "Site", ""],
   ["/uploads/", "Uploads", "Dropped here, not yet placed anywhere"],
   ["/teaching/", "Teaching", ""],

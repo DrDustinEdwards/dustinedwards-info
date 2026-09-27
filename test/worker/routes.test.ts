@@ -27,20 +27,20 @@ describe("/theme", () => {
     const response = await themeAction({
       request: themePost("theme=dark", {
         origin: "https://example.com",
-        referer: "https://example.com/blog/a-post",
+        referer: "https://example.com/writing/a-post",
       }),
     } as never);
 
     expect(response.status).toBe(303);
     expect(response.headers.get("set-cookie")).toContain("theme=dark");
-    expect(response.headers.get("location")).toBe("/blog/a-post");
+    expect(response.headers.get("location")).toBe("/writing/a-post");
   });
 
   it("REFUSES A FOREIGN ORIGIN (measured 2026-08-27: it used to set the cookie)", async () => {
     const response = await themeAction({
       request: themePost("theme=dark", {
         origin: "https://evil.example",
-        referer: "https://example.com/blog/a-post",
+        referer: "https://example.com/writing/a-post",
       }),
     } as never);
 

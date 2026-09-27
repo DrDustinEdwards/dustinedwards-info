@@ -151,11 +151,11 @@ let unrevisedSeen = 0;
 
 for (const record of published) {
   const slug = record.slug;
-  const canonical = `${SITE_ORIGIN}/blog/${slug}`;
+  const canonical = `${SITE_ORIGIN}/writing/${slug}`;
 
   const html = await renderRoute(postModule, {
-    path: "/blog/:slug",
-    url: `/blog/${slug}`,
+    path: "/writing/:slug",
+    url: `/writing/${slug}`,
     loaderData: postLoaderData(record, revisedDate),
     params: { slug },
   });
@@ -320,9 +320,9 @@ let feedsParsed = 0;
 const INDEX_PAGES = new Set([1, totalPages]);
 for (const page of INDEX_PAGES) {
   const payload = indexLoaderData(page);
-  const url = page === 1 ? "/blog" : `/blog?page=${page}`;
+  const url = page === 1 ? "/writing" : `/writing?page=${page}`;
   const html = await renderRoute(indexModule, {
-    path: "/blog",
+    path: "/writing",
     url,
     loaderData: payload,
   });
@@ -330,7 +330,7 @@ for (const page of INDEX_PAGES) {
   const feeds = parsed.items.filter((/** @type {any} */ i) => i.type.includes("h-feed"));
 
   assert(
-    `/blog page ${page}: exactly one h-feed`,
+    `/writing page ${page}: exactly one h-feed`,
     feeds.length === 1,
     `parsed ${feeds.length}. The index is one feed, and two would make a reader ` +
       `choose which of them is the blog.`,
@@ -341,7 +341,7 @@ for (const page of INDEX_PAGES) {
   const feed = feeds[0];
   const feedName = prop(feed, "name");
   assert(
-    `/blog page ${page}: the feed carries p-name`,
+    `/writing page ${page}: the feed carries p-name`,
     typeof feedName === "string" && feedName.length > 0,
     `feed name parsed as ${JSON.stringify(feedName)}. Without the class on ` +
       `the <h1> a parser implies nothing here, because the feed has nested children.`,
@@ -352,7 +352,7 @@ for (const page of INDEX_PAGES) {
   );
 
   assert(
-    `/blog page ${page}: the feed holds every entry the page rendered`,
+    `/writing page ${page}: the feed holds every entry the page rendered`,
     children.length === payload.expectedEntries,
     `the feed has ${children.length} h-entry child(ren) and the loader paged ` +
       `${payload.expectedEntries} post(s) (${payload.posts.length} in the list, ` +
@@ -367,43 +367,43 @@ for (const page of INDEX_PAGES) {
   ];
   for (const slug of expectedSlugs) {
     const record = ordered.find((/** @type {any} */ p) => p.slug === slug);
-    const wanted = `${SITE_ORIGIN}/blog/${slug}`;
+    const wanted = `${SITE_ORIGIN}/writing/${slug}`;
     const child = children.find((/** @type {any} */ c) => prop(c, "url") === wanted);
     assert(
-      `/blog page ${page}: ${slug} is an entry in the feed`,
+      `/writing page ${page}: ${slug} is an entry in the feed`,
       Boolean(child),
       `no h-entry in the feed carries u-url ${wanted}.`,
     );
     if (!child) continue;
 
     assert(
-      `/blog page ${page}: ${slug} carries p-name`,
+      `/writing page ${page}: ${slug} carries p-name`,
       prop(child, "name") === record.title,
       `entry name is ${JSON.stringify(prop(child, "name"))}, expected ` +
         `${JSON.stringify(record.title)}.`,
     );
     assert(
-      `/blog page ${page}: ${slug} carries dt-published from the frontmatter`,
+      `/writing page ${page}: ${slug} carries dt-published from the frontmatter`,
       prop(child, "published") === (await frontmatterDate(slug)),
       `entry published is ${JSON.stringify(prop(child, "published"))}, ` +
         `${postPath(slug)} says ${await frontmatterDate(slug)}.`,
     );
     assert(
-      `/blog page ${page}: ${slug} carries p-summary exactly when it has a description`,
+      `/writing page ${page}: ${slug} carries p-summary exactly when it has a description`,
       (prop(child, "summary") !== undefined) === Boolean(record.description),
       `entry summary is ${JSON.stringify(prop(child, "summary"))} and the post's ` +
         `description is ${JSON.stringify(record.description)}.`,
     );
     if (record.description) {
       assert(
-        `/blog page ${page}: ${slug} p-summary is the description`,
+        `/writing page ${page}: ${slug} p-summary is the description`,
         prop(child, "summary") === record.description,
         `entry summary is ${JSON.stringify(prop(child, "summary"))}.`,
       );
     }
 
     assert(
-      `/blog page ${page}: ${slug} publishes no e-content`,
+      `/writing page ${page}: ${slug} publishes no e-content`,
       child.properties?.content === undefined,
       `the card parsed an e-content of ${JSON.stringify(child.properties?.content)}. A ` +
         `listing entry is a summary; the body lives at its u-url.`,
@@ -483,7 +483,7 @@ assert(
     `the assertion that stops the two surfaces drifting.`,
 );
 for (const record of homeExpected) {
-  const wanted = `${SITE_ORIGIN}/blog/${record.slug}`;
+  const wanted = `${SITE_ORIGIN}/writing/${record.slug}`;
   const entry = homeEntries.find((/** @type {any} */ e) => prop(e, "url") === wanted);
   assert(
     `/: ${record.slug} is an h-entry in the Start here list`,
@@ -524,10 +524,10 @@ assert(
 for (const [label, html] of /** @type {Array<[string, string]>} */ ([
   ["/", homeHtml],
   [
-    "/blog/" + published[0].slug,
+    "/writing/" + published[0].slug,
     await renderRoute(postModule, {
-      path: "/blog/:slug",
-      url: `/blog/${published[0].slug}`,
+      path: "/writing/:slug",
+      url: `/writing/${published[0].slug}`,
       loaderData: postLoaderData(published[0], revisedDate),
       params: { slug: published[0].slug },
     }),

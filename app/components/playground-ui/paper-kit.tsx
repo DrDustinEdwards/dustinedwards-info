@@ -248,7 +248,7 @@ export function PaperKitSection() {
               No posts tagged <b>cryo</b> yet.
             </p>
             <p className="empty-next">
-              <a href="/blog">All writing</a>
+              <a href="/writing">All writing</a>
             </p>
           </div>
         )}

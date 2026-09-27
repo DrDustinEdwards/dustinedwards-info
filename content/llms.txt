@@ -38,40 +38,40 @@ shows you what it showed whoever sent it.
 
 ## Blog
 
-Posts are listed at /blog and can be filtered by tag at /blog?tag=<tag>.
-Every post has a plain markdown twin at /blog/<slug>.md, which is the source
-the page was rendered from. Requesting /blog/<slug> with an
+Posts are listed at /writing and can be filtered by tag at /writing?tag=<tag>.
+Every post has a plain markdown twin at /writing/<slug>.md, which is the source
+the page was rendered from. Requesting /writing/<slug> with an
 Accept: text/markdown header returns the same markdown. The feed is at
-/blog/rss.xml and /blog/feed.json.
+/writing/rss.xml and /writing/feed.json.
 
 ## Publications
 
-Peer-reviewed work is listed at /publications, filterable by topic at
-/publications?topic=<topic> and searchable at /publications?q=<query>. Every
+Peer-reviewed work is listed at /research/publications, filterable by topic at
+/research/publications?topic=<topic> and searchable at /research/publications?q=<query>. Every
 filter and every search is an ordinary GET, so each view is a real URL.
 
-Each paper has its own page at /publications/<doi-slug>/, where the slug is the
+Each paper has its own page at /research/publications/<doi-slug>/, where the slug is the
 DOI with every run of punctuation folded to a hyphen: 10.1128/mra.00888-24
-becomes /publications/10-1128-mra-00888-24/. The page carries the title, the
+becomes /research/publications/10-1128-mra-00888-24/. The page carries the title, the
 full author list, the abstract in visible text, the venue, the DOI, PMC and
 preprint links where they exist, open-access status, and a citation count from
 OpenAlex labelled with the date it was read. Where the licence permits and the
 file is hosted here, the PDF sits beside the page at
-/publications/<doi-slug>/<doi-slug>.pdf.
+/research/publications/<doi-slug>/<doi-slug>.pdf.
 
 Citations export as files rather than as a copy button:
 
-  /publications.bib          BibTeX, the whole list
-  /publications.ris          RIS, the whole list
-  /publications.json         CSL JSON, every record including the three
+  /research/publications.bib          BibTeX, the whole list
+  /research/publications.ris          RIS, the whole list
+  /research/publications.json         CSL JSON, every record including the three
                              conference abstracts the page does not show
-  /publications/<slug>.bib   one paper
-  /publications/<slug>.ris   one paper
+  /research/publications/<slug>.bib   one paper
+  /research/publications/<slug>.ris   one paper
 
 The bibliographic data is from Crossref and DataCite, with abstracts backfilled
 from Europe PMC where a publisher deposited none. Counts are OpenAlex.
 
-Every paper also has a markdown twin at /publications/<slug>.md. It carries the
+Every paper also has a markdown twin at /research/publications/<slug>.md. It carries the
 record as YAML frontmatter, the abstract, and, where the PDF is hosted here,
 the machine-extracted text of that PDF. That is the form to read if you are a
 program: the page says those things across HTML, meta tags and a JSON-LD block,
@@ -81,44 +81,44 @@ this file, so the paper's own page is the one that gets indexed.
 The full set, which is every paper on the index plus the conference abstracts
 the index does not show:
 
-  /publications/10-1002-9780470025079-chap06-pub2.md
-  /publications/10-1080-07448481-2025-2472184.md
-  /publications/10-1128-jmbe-00313-25.md
-  /publications/10-1128-jvi-00356-08.md
-  /publications/10-1128-jvi-01788-13.md
-  /publications/10-1128-jvi-02150-14.md
-  /publications/10-1128-jvi-03444-13.md
-  /publications/10-1128-mra-00173-22.md
-  /publications/10-1128-mra-00174-22.md
-  /publications/10-1128-mra-00556-21.md
-  /publications/10-1128-mra-00558-21.md
-  /publications/10-1128-mra-00778-23.md
-  /publications/10-1128-mra-00783-22.md
-  /publications/10-1128-mra-00888-24.md
-  /publications/10-1128-mra-01039-19.md
-  /publications/10-1128-mra-01077-21.md
-  /publications/10-1128-mra-01079-21.md
-  /publications/10-1128-mra-01242-18.md
-  /publications/10-1128-mra-01594-18.md
-  /publications/10-1186-1742-4690-11-s1-o13.md
-  /publications/10-1186-1742-4690-11-s1-p122.md
-  /publications/10-1186-1742-4690-8-s1-a124.md
-  /publications/10-1187-cbe-21-03-0057.md
-  /publications/10-1371-journal-pone-0042123.md
-  /publications/10-1371-journal-ppat-1004454.md
-  /publications/10-25334-8cxe-6883.md
-  /publications/10-25334-b5bs-f125.md
-  /publications/10-3389-feduc-2023-1279921.md
-  /publications/10-3389-feduc-2024-1442306.md
-  /publications/10-3389-feduc-2024-1442318.md
-  /publications/10-3390-ijerph22071139.md
-  /publications/10-3390-v3060861.md
-  /publications/10-3390-v3101815.md
-  /publications/10-7589-2018-08-187.md
-  /publications/10-7589-2019-04-088.md
-  /publications/10-7589-jwd-d-22-00023.md
+  /research/publications/10-1002-9780470025079-chap06-pub2.md
+  /research/publications/10-1080-07448481-2025-2472184.md
+  /research/publications/10-1128-jmbe-00313-25.md
+  /research/publications/10-1128-jvi-00356-08.md
+  /research/publications/10-1128-jvi-01788-13.md
+  /research/publications/10-1128-jvi-02150-14.md
+  /research/publications/10-1128-jvi-03444-13.md
+  /research/publications/10-1128-mra-00173-22.md
+  /research/publications/10-1128-mra-00174-22.md
+  /research/publications/10-1128-mra-00556-21.md
+  /research/publications/10-1128-mra-00558-21.md
+  /research/publications/10-1128-mra-00778-23.md
+  /research/publications/10-1128-mra-00783-22.md
+  /research/publications/10-1128-mra-00888-24.md
+  /research/publications/10-1128-mra-01039-19.md
+  /research/publications/10-1128-mra-01077-21.md
+  /research/publications/10-1128-mra-01079-21.md
+  /research/publications/10-1128-mra-01242-18.md
+  /research/publications/10-1128-mra-01594-18.md
+  /research/publications/10-1186-1742-4690-11-s1-o13.md
+  /research/publications/10-1186-1742-4690-11-s1-p122.md
+  /research/publications/10-1186-1742-4690-8-s1-a124.md
+  /research/publications/10-1187-cbe-21-03-0057.md
+  /research/publications/10-1371-journal-pone-0042123.md
+  /research/publications/10-1371-journal-ppat-1004454.md
+  /research/publications/10-25334-8cxe-6883.md
+  /research/publications/10-25334-b5bs-f125.md
+  /research/publications/10-3389-feduc-2023-1279921.md
+  /research/publications/10-3389-feduc-2024-1442306.md
+  /research/publications/10-3389-feduc-2024-1442318.md
+  /research/publications/10-3390-ijerph22071139.md
+  /research/publications/10-3390-v3060861.md
+  /research/publications/10-3390-v3101815.md
+  /research/publications/10-7589-2018-08-187.md
+  /research/publications/10-7589-2019-04-088.md
+  /research/publications/10-7589-jwd-d-22-00023.md
 
-/publications.json carries the bibliographic record for all of them in CSL JSON,
+/research/publications.json carries the bibliographic record for all of them in CSL JSON,
 if one fetch is better than one per paper.
 
 ## Search
@@ -150,7 +150,7 @@ search this site as a tool without scraping it:
 It needs no authentication and provides one tool, "search". Results carry the
 same section-grained keys the rest of the site uses: blog/<slug>.md is a whole
 post and blog/<slug>__<anchor>.md is one heading within it, which maps back to
-/blog/<slug>#<anchor>.
+/writing/<slug>#<anchor>.
 
 This is semantic retrieval and it is not the same thing as the JSON endpoint
 above. It finds passages that answer a question phrased in a sentence, and it

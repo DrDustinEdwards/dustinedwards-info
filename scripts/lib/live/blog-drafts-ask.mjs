@@ -58,17 +58,17 @@ export async function run() {
 
     const pages = pageCount(live.length);
     const fetched = await Promise.all(
-      Array.from({ length: pages }, (_, i) => get(i === 0 ? "/blog" : `/blog?page=${i + 1}`)),
+      Array.from({ length: pages }, (_, i) => get(i === 0 ? "/writing" : `/writing?page=${i + 1}`)),
     );
 
     check("blog: index renders", fetched[0].status === 200);
 
-    /** `/blog/<slug>` not followed by more slug, so `foo` is not found on `foo-bar`'s page. */
+    /** `/writing/<slug>` not followed by more slug, so `foo` is not found on `foo-bar`'s page. */
     const linksTo = (/** @type {string} */ body, /** @type {string} */ slug) =>
-      new RegExp(`/blog/${slug}(?![\\w-])`).test(body);
+      new RegExp(`/writing/${slug}(?![\\w-])`).test(body);
 
     const onPage = (/** @type {string} */ body) =>
-      live.filter((/** @type {any} */ p) => body.includes(`/blog/${p.slug}"`)).length;
+      live.filter((/** @type {any} */ p) => body.includes(`/writing/${p.slug}"`)).length;
 
     check(
       `blog: the last page (${pages} of ${pages}) carries posts`,
@@ -76,7 +76,7 @@ export async function run() {
       `page ${pages} listed ${onPage(fetched[pages - 1].text)} of ${live.length} published`,
     );
 
-    const overflow = await get(`/blog?page=${pages + 1}`);
+    const overflow = await get(`/writing?page=${pages + 1}`);
     check(
       `blog: page ${pages + 1} is past the end and lists nothing`,
       onPage(overflow.text) === 0,
@@ -104,14 +104,14 @@ export async function run() {
       const candidates = Array.from({ length: last - first + 1 }, (_, i) => first + i);
       const found = candidates.filter((n) => linksTo(fetched[n - 1]?.text ?? "", p.slug));
       check(
-        `blog: /blog/${p.slug} is listed on page ${candidates.join(" or ")}`,
+        `blog: /writing/${p.slug} is listed on page ${candidates.join(" or ")}`,
         found.length > 0,
       );
     }
 
     const [rss, feed, sitemap] = await Promise.all([
-      get("/blog/rss.xml"),
-      get("/blog/feed.json"),
+      get("/writing/rss.xml"),
+      get("/writing/feed.json"),
       get("/sitemap.xml"),
     ]);
 
@@ -133,14 +133,14 @@ export async function run() {
     for (const p of drafts) {
       const slug = p.slug;
       check(
-        `draft ${slug}: absent from all ${pages} page(s) of /blog`,
+        `draft ${slug}: absent from all ${pages} page(s) of /writing`,
         fetched.every((page) => !linksTo(page.text, slug)),
       );
 
-      const page = await get(`/blog/${slug}`);
-      check(`draft ${slug}: /blog/${slug} is 404`, page.status === 404, `got ${page.status}`);
+      const page = await get(`/writing/${slug}`);
+      check(`draft ${slug}: /writing/${slug} is 404`, page.status === 404, `got ${page.status}`);
 
-      const twin = await get(`/blog/${slug}.md`);
+      const twin = await get(`/writing/${slug}.md`);
       check(`draft ${slug}: the markdown twin is 404`, twin.status === 404, `got ${twin.status}`);
 
       check(`draft ${slug}: absent from rss.xml`, served(rss) && !rss.text.includes(slug), `got ${rss.status}`);

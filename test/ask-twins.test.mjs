@@ -5,11 +5,11 @@ import { TWIN_ATTEMPTS, uploadTwins, withRetry } from "../app/lib/search/ask-twi
 import { askSyncReport, askSyncSummary } from "../app/lib/operator/sync-report.mjs";
 
 const TWINS = [
-  { key: "publications/10-1128-jvi-02150-14.md", path: "/publications/10-1128-jvi-02150-14.md" },
-  { key: "publications/10-1128-mra-01077-21.md", path: "/publications/10-1128-mra-01077-21.md" },
-  { key: "publications/10-3389-feduc-2024-1442306.md", path: "/publications/10-3389-feduc-2024-1442306.md" },
+  { key: "research/publications/10-1128-jvi-02150-14.md", path: "/research/publications/10-1128-jvi-02150-14.md" },
+  { key: "research/publications/10-1128-mra-01077-21.md", path: "/research/publications/10-1128-mra-01077-21.md" },
+  { key: "research/publications/10-3389-feduc-2024-1442306.md", path: "/research/publications/10-3389-feduc-2024-1442306.md" },
 ];
-const FAILING = "publications/10-1128-mra-01077-21.md";
+const FAILING = "research/publications/10-1128-mra-01077-21.md";
 
 function transient() {
   const e = new Error("unable_to_connect_to_ai_search");
@@ -85,7 +85,7 @@ test("a twin that cannot be fetched is retried, then reported", async () => {
   const { failed } = await uploadTwins([TWINS[0]], {
     fetchText: async () => {
       fetches += 1;
-      throw new Error("twin /publications/x.md answered 404");
+      throw new Error("twin /research/publications/x.md answered 404");
     },
     upload: async () => assert.fail("nothing to upload when the fetch never succeeded"),
     log: () => {},
