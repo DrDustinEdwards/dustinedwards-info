@@ -13,15 +13,19 @@ The REV and GAPDH protocols are the ones published in [Stewart et al. 2019, J Wi
 
 The original pages each showed a map of the REV provirus: LTRs at both ends, the primer binding site near the 5′ LTR, then *gag* (MA, R, CA, NC), *pol* (protease, reverse transcriptase, integrase) and *env* (SU, TM), on a scale of about 8 kb. The three amplicons sit as follows:
 
-| Primer set | Region | Product size (from the gel) |
-| --- | --- | --- |
-| PCR REV 3′ LTR 8000-8297 | 3′ LTR | 297 bp |
-| PCR REV pol 2500-3075 | *pol*: protease and reverse transcriptase | 575 bp |
-| PCR REV pol 4777-5575 | *pol*: reverse transcriptase and integrase | 798 bp |
+| Primer set | Region | Product on DQ387450 (computed) | Position on DQ387450 | Product (from the gel) |
+| --- | --- | --- | --- | --- |
+| PCR REV 3′ LTR 8000-8297 | LTR | 282 bp | 8000-8280, and 258-538 in the 5′ LTR | 297 bp |
+| PCR REV pol 2500-3075 | *pol*: protease and reverse transcriptase | 574 bp | 2492-3065 | 575 bp |
+| PCR REV pol 4777-5575 | *pol*: reverse transcriptase and integrase | 801 bp | 4766-5566 | 798 bp |
 
-The set names are the lab's rounded labels for the regions each set amplifies, not exact genome coordinates. The REV reference genome (GenBank [DQ387450](https://www.ncbi.nlm.nih.gov/nuccore/DQ387450)) is 8,286 nt long, so "8297" in the LTR set's name is a label only. Stewart et al. 2019 give the two *pol* segments as 2500-3075 and 4777-5575.
+The computed sizes come from the published primer sequences placed on GenBank [DQ387450](https://www.ncbi.nlm.nih.gov/nuccore/DQ387450) (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019 compared their sequences against. The code that places them is tested, and it measures each product from one primer's 5′ end to the other's. Against DQ387450:
 
-Product sizes are read from the gel images on the original pages, not calculated from a sequence. Each gel showed a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder.
+- **3′ LTR set:** the forward primer has one base (a G) that the reference lacks, and the reverse primer one mismatch, so the product is one base longer than the 281 bases it spans. An LTR sits at each end of the provirus, so the same product can come from either one.
+- **pol 2500-3075:** both primers match exactly.
+- **pol 4777-5575:** the reverse primer has one mismatch.
+
+The set names are the lab's rounded labels, not exact genome coordinates; "8297" in the LTR set's name is a label only, since the genome is 8,286 nt long. The gel sizes are read from the gel images on the original pages, beside a 100 bp ladder; each gel showed a band in the REV-positive lane and none in the negative lane. A gel reading is an estimate, and field strains can differ from DQ387450, so the two columns need not agree exactly.
 
 ## Materials
 
@@ -47,7 +51,7 @@ Cox et al. 2022 used the same master mix in 25 µL reactions with 2 µL of elute
 
 ## PCR REV 3′ LTR 8000-8297
 
-Amplifies a region of the REV 3′ LTR. Product: 297 bp, read from the gel.
+Amplifies a region of the REV 3′ LTR. Product: 282 bp computed on DQ387450; 297 bp read from the gel.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -67,7 +71,7 @@ The extension in each cycle is 68 °C, 60 s + 1 s per cycle: it starts at 60 s a
 
 ## PCR REV pol 2500-3075 (protease and reverse transcriptase)
 
-Amplifies REV *pol* segment 2500-3075 (protease and reverse transcriptase). Product: 575 bp, read from the gel.
+Amplifies REV *pol* segment 2500-3075 (protease and reverse transcriptase). Product: 574 bp computed on DQ387450; 575 bp read from the gel.
 
 The old site titled this set "PCR REV pol 2500-3750". The "3750" was an error: Stewart et al. 2019 give the segment as 2500-3075 in the main text and in the supplement, and the protocol text, genome map and gel on the old page agreed.
 
@@ -92,7 +96,7 @@ The first 15 cycles are a touchdown: the annealing temperature steps down from 6
 
 ## PCR REV pol 4777-5575 (reverse transcriptase and integrase)
 
-Amplifies REV *pol* segment 4777-5575 (reverse transcriptase and integrase). Product: 798 bp, read from the gel.
+Amplifies REV *pol* segment 4777-5575 (reverse transcriptase and integrase). Product: 801 bp computed on DQ387450; 798 bp read from the gel.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -115,7 +119,9 @@ The cycling is the same as for pol 2500-3075, as in the Stewart et al. 2019 supp
 
 ## PCR LPDV p31/CA
 
-Amplifies the p31/CA region of LPDV. The protocol is from Cox et al. 2022 and its supplement, which took the primers from Allison et al. 2014. Use the reaction mix above. This page gives no product size for this set, because no gel or source for one has been checked here.
+Amplifies the p31/CA region of LPDV. The protocol is from Cox et al. 2022 and its supplement, which took the primers from Allison et al. 2014. Use the reaction mix above.
+
+This page gives no product size for this set yet. The reverse primer is printed two ways: `TGATGGCGTCAGGGCTTTTG` in the Cox et al. 2022 supplement (the sequence below) and `TGATGGCGTCAGGGCTATTTG` in Allison et al. 2014, which designed the primers on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)). Which one the lab ordered decides the product, so the size waits until that is confirmed.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
