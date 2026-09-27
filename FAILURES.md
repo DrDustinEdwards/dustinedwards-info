@@ -62,6 +62,12 @@ which is what repeats across people and sessions.
 
 ## Measuring the wrong thing
 
+- **A fresh worktree measures the example config, not the site's.** `npm ci`'s
+  postinstall copies `wrangler.jsonc.example` into place, so a copy-if-missing of
+  the real config never runs and the gates grade placeholders; the empty local D1
+  then turns the home page into a 500 that a menu check passed straight through.
+  Copy both real configs over after `npm ci`, and seed D1 with `--local` only.
+  2026-09-27, on the #211 preview.
 - **An instrument only sees what it was threaded through. Prefer structure.** A
   timing instrument threaded through one call site proved nothing about the
   other. `5940242`
