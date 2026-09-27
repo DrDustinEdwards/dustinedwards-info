@@ -15,7 +15,6 @@
     U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-
 @font-face {
   font-family: "Inter";
   font-style: italic;
@@ -241,7 +240,7 @@
   --t-h3-weight: 620;
   --t-h3-vars: "opsz" 22, "wght" 620;
 
-  /* 2rem fixed, never fluid: the serif is not cut for less than 32px. */
+  /* 2rem, not fluid. A post's h2 drops to 1.5rem (24px) on phones: styles/post-shell.css. */
   --t-h2-family: var(--font-serif);
   --t-h2-size: 2rem;
   --t-h2-leading: 1.2;
@@ -254,31 +253,15 @@
   --t-h1-weight: 680;
   --t-h1-vars: "opsz" 32, "wght" 680;
 
-  --t-display-family: var(--font-serif);
-  --t-display-size: clamp(2rem, 0.35rem + 5.15vw, 3.25rem);
-  --t-display-leading: 1.05;
-  --t-display-weight: 700;
-  --t-display-vars: "opsz" 32, "wght" 700;
-
-  --t-h3-tracking: -0.008em;
   --t-h1-tracking: -0.012em;
-  --t-display-tracking: -0.012em;
 
   --t-nav-strong: 620;
-
-  --t-caption-family: var(--t-small-family);
-  --t-caption-size: var(--t-small-size);
-  --t-caption-leading: var(--t-small-leading);
-  --t-caption-weight: var(--t-small-weight);
-  --t-caption-vars: var(--t-small-vars);
-  --t-caption-strong: var(--t-nav-strong);
 }
 
 /* Only the serif levels step here: Inter's opsz axis stops at 32. */
 @media (min-width: 48rem) {
   :root {
     --t-h1-vars: "opsz" 48, "wght" 680;
-    --t-display-vars: "opsz" 48, "wght" 700;
   }
 }
 
@@ -323,13 +306,8 @@
   /* Not 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device. */
   --motion-instant: 90ms;
   --motion-state: 160ms;
-  /* Not --motion-reveal: a view() timeline ignores duration. */
-  --motion-panel: 260ms;
-  --motion-page: 320ms;
 
-  --ease-enter: cubic-bezier(0.16, 0.68, 0.28, 1);
   --ease-state: cubic-bezier(0.2, 0, 0.38, 1);
-  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
 }
 
 /* Hexes copied from design-tokens.md, never derived. The light and dark blocks do not cascade into
@@ -356,13 +334,6 @@
   --visited: #5a2b63;
   --selection-bg: #d9ccee;
   --focus-ring-on-brand: #f3e3b8;
-
-  /* The logo's fills read --mark-on-chrome; change both in one commit. */
-  --surface-chrome: #4f2d7f;
-  --on-chrome: #ffffff;
-  --on-chrome-muted: #ede8f5;
-  --mark-on-chrome: #b7a5e0;
-  --focus-ring-on-chrome: #f3e3b8;
 
   /* Opaque on purpose: a fade makes the photograph the backdrop, so text contrast would vary by image. */
   --scrim: #1a1614;
@@ -427,52 +398,18 @@
   --glass-fill-paper: #e2ddd5;
   --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #f4efe6);
   --error: #8e1024;
-  --error-fill: #8e1024;
-  --on-error-fill: #ffffff;
-  --error-tint: #f7e4e4;
   --warning: #6b4f07;
-  --warning-fill: #8a4f1e;
-  --on-warning-fill: #ffffff;
-  --warning-tint: #f6eac8;
   --success: #375445;
-  --success-fill: #375445;
-  --on-success-fill: #ffffff;
-  --success-tint: #e6ecdf;
 
   /* Figures only: no semantic color ever appears in one. */
-  /* figures sit on paper, never on raised */
-  --fig-ground: var(--paper);
   --fig-purple-100: #e3dcf0;
-  --fig-purple-200: #9279b9;
-  --fig-purple-300: #6b4a9b;
   --fig-purple-400: #4f2d7f;
-  --fig-purple-500: #3a1f5e;
-  --fig-leaf-100: #dfe5e0;
-  --fig-leaf-200: #9aa89c;
-  --fig-leaf-300: #6b7a70;
-  --fig-leaf-400: #5f6d63;
-  --fig-leaf-500: #3b453e;
-  --fig-oxide-100: #f0ddd4;
-  --fig-oxide-200: #c48972;
   --fig-oxide-300: #a8604a;
   --fig-oxide-400: #8f4e3a;
-  --fig-oxide-500: #5e3125;
-  --fig-dust-100: #ece6da;
-  --fig-dust-200: #c9c0b4;
   --fig-dust-300: #a89d8d;
-  --fig-dust-400: #7d7263;
-  --fig-dust-500: #4e463c;
   /* Figure fills only, never a page surface. */
   --fig-lawn: #ddd3c4;
   --fig-turbid: #e9e1d5;
-
-  /* A chart reads --fig-s1 to --fig-s5, never a hue or tint index, so one markup is correct in both
-     themes. */
-  --fig-s1: var(--fig-purple-500);
-  --fig-s2: var(--fig-dust-500);
-  --fig-s3: var(--fig-oxide-400);
-  --fig-s4: var(--fig-leaf-300);
-  --fig-s5: var(--fig-purple-200);
 
   /* The lamp catch hue follows the backdrop, not the theme. */
   --lamp-chroma-on-paper: var(--fig-purple-100);
@@ -498,14 +435,6 @@
     --visited: #a898cd;
     --selection-bg: #4a3a6b;
     --focus-ring-on-brand: #2f2410;
-
-    /* The ring is --focus-ring-on-chrome, never --focus-ring-on-brand, which is invisible on deep
-       purple. */
-    --surface-chrome: #3d2a5c;
-    --on-chrome: #ede6dc;
-    --on-chrome-muted: #c9baea;
-    --mark-on-chrome: #b7a5e0;
-    --focus-ring-on-chrome: #f3e3b8;
 
     --scrim: #1a1614;
     --on-scrim: #ffffff;
@@ -558,47 +487,16 @@
     --glass-fill-paper: #1c1916;
     --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #1c1916);
     --error: #f0a9b4;
-    --error-fill: #e08a98;
-    --on-error-fill: #1a1614;
-    --error-tint: #3a2226;
     --warning: #cf9f5e;
-    --warning-fill: #a97c3f;
-    --on-warning-fill: #1a1614;
-    --warning-tint: #332619;
     --success: #79baa8;
-    --success-fill: #8fac77;
-    --on-success-fill: #1a1614;
-    --success-tint: #1b2b28;
 
-    --fig-ground: var(--paper);
     --fig-purple-100: #e0d7f2;
-    --fig-purple-200: #c0aee6;
-    --fig-purple-300: #a48fd0;
     --fig-purple-400: #7f66a8;
-    --fig-purple-500: #5a4479;
-    --fig-leaf-100: #dfe5e0;
-    --fig-leaf-200: #a9b7ab;
-    --fig-leaf-300: #8b9a8e;
-    --fig-leaf-400: #6f7e73;
-    --fig-leaf-500: #4a5851;
-    --fig-oxide-100: #f0ddd4;
-    --fig-oxide-200: #d6a189;
     --fig-oxide-300: #c07f66;
     --fig-oxide-400: #a3654d;
-    --fig-oxide-500: #74422f;
-    --fig-dust-100: #e8e1d5;
-    --fig-dust-200: #cfc6ba;
     --fig-dust-300: #ab9f8f;
-    --fig-dust-400: #82776a;
-    --fig-dust-500: #564e44;
     --fig-lawn: #383129;
     --fig-turbid: #2a2520;
-
-    --fig-s1: var(--fig-purple-100);
-    --fig-s2: var(--fig-leaf-200);
-    --fig-s3: var(--fig-oxide-300);
-    --fig-s4: var(--fig-dust-400);
-    --fig-s5: var(--fig-purple-300);
 
     --lamp-chroma-on-paper: var(--fig-purple-400);
   }
@@ -625,12 +523,6 @@
   --visited: #a898cd;
   --selection-bg: #4a3a6b;
   --focus-ring-on-brand: #2f2410;
-
-  --surface-chrome: #3d2a5c;
-  --on-chrome: #ede6dc;
-  --on-chrome-muted: #c9baea;
-  --mark-on-chrome: #b7a5e0;
-  --focus-ring-on-chrome: #f3e3b8;
 
   --scrim: #1a1614;
   --on-scrim: #ffffff;
@@ -682,47 +574,16 @@
   --glass-fill-paper: #1c1916;
   --glass-fill-paper: color-mix(in srgb, #1a1614 8.1%, #1c1916);
   --error: #f0a9b4;
-  --error-fill: #e08a98;
-  --on-error-fill: #1a1614;
-  --error-tint: #3a2226;
   --warning: #cf9f5e;
-  --warning-fill: #a97c3f;
-  --on-warning-fill: #1a1614;
-  --warning-tint: #332619;
   --success: #79baa8;
-  --success-fill: #8fac77;
-  --on-success-fill: #1a1614;
-  --success-tint: #1b2b28;
 
-  --fig-ground: var(--paper);
   --fig-purple-100: #e0d7f2;
-  --fig-purple-200: #c0aee6;
-  --fig-purple-300: #a48fd0;
   --fig-purple-400: #7f66a8;
-  --fig-purple-500: #5a4479;
-  --fig-leaf-100: #dfe5e0;
-  --fig-leaf-200: #a9b7ab;
-  --fig-leaf-300: #8b9a8e;
-  --fig-leaf-400: #6f7e73;
-  --fig-leaf-500: #4a5851;
-  --fig-oxide-100: #f0ddd4;
-  --fig-oxide-200: #d6a189;
   --fig-oxide-300: #c07f66;
   --fig-oxide-400: #a3654d;
-  --fig-oxide-500: #74422f;
-  --fig-dust-100: #e8e1d5;
-  --fig-dust-200: #cfc6ba;
   --fig-dust-300: #ab9f8f;
-  --fig-dust-400: #82776a;
-  --fig-dust-500: #564e44;
   --fig-lawn: #383129;
   --fig-turbid: #2a2520;
-
-  --fig-s1: var(--fig-purple-100);
-  --fig-s2: var(--fig-leaf-200);
-  --fig-s3: var(--fig-oxide-300);
-  --fig-s4: var(--fig-dust-400);
-  --fig-s5: var(--fig-purple-300);
 
   --lamp-chroma-on-paper: var(--fig-purple-400);
 }

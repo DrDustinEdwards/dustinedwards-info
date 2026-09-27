@@ -37,23 +37,23 @@ const WIDTH = 1200;
 const HEIGHT = 630;
 
 /**
- * Taken entirely from the dark block: the chrome tokens are ratified against `--surface-chrome`
- * within a theme, so mixing blocks leaves every measured pair.
+ * Ink on paper, from the light block: a card is drawn once and shown in feeds with no idea of the
+ * reader's theme, and the paper ground is the site's own. Every pair here is measured on --paper.
  */
-const CHROME_BLOCK = tokenBlock("build:og", THEME_SELECTORS.dark);
+const PAPER_BLOCK = tokenBlock("build:og", THEME_SELECTORS.light);
 const {
   ground: GROUND,
-  onGround: ON_GROUND,
-  onGroundMuted: ON_GROUND_MUTED,
-  accent: ACCENT,
+  ink: INK,
+  muted: MUTED,
+  rule: RULE,
 } = resolveTokens(
   {
-    ground: "--surface-chrome",
-    onGround: "--on-chrome",
-    onGroundMuted: "--on-chrome-muted",
-    accent: "--focus-ring-on-chrome",
+    ground: "--paper",
+    ink: "--text-heading",
+    muted: "--text-secondary",
+    rule: "--dust",
   },
-  CHROME_BLOCK,
+  PAPER_BLOCK,
   "build:og",
 );
 
@@ -136,11 +136,12 @@ function card(post) {
       {
         style: {
           display: "flex",
+          fontFamily: "Source Serif 4",
           fontSize: titleFontSize(title),
           fontWeight: 700,
-          color: ON_GROUND,
-          lineHeight: 1.1,
-          letterSpacing: "-0.02em",
+          color: INK,
+          lineHeight: 1.12,
+          letterSpacing: "-0.01em",
           // Satori honours `wordBreak` but ignores `overflowWrap`.
           wordBreak: "break-word",
         },
@@ -156,7 +157,7 @@ function card(post) {
               display: "flex",
               marginTop: 22,
               fontSize: 26,
-              color: ON_GROUND_MUTED,
+              color: MUTED,
               lineHeight: 1.4,
               // Same reason as the title's, and the same measurement. A URL in
               // a description is the realistic form of an unbreakable word.
@@ -166,20 +167,17 @@ function card(post) {
           description,
         )
       : null,
-    // The only pale gold with a ratified pair against this surface. A decorative gold would be a new
-    // token, not a literal hex here.
-    el("div", { style: { display: "flex", width: 84, height: 5, marginTop: 40, background: ACCENT } }),
+    // A dust hairline, the site's rule, across the measure: lines are dust, never type.
+    el("div", { style: { display: "flex", height: 2, marginTop: 40, background: RULE } }),
     el(
       "div",
       {
         style: {
           display: "flex",
           marginTop: 22,
-          fontSize: 22,
-          fontWeight: 700,
-          color: ON_GROUND_MUTED,
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
+          fontSize: 24,
+          fontWeight: 400,
+          color: MUTED,
         },
       },
       [SITE_NAME, date].filter(Boolean).join("  ·  "),
@@ -409,6 +407,14 @@ async function main() {
       weight: 700,
       style: "normal",
       data: await readFile(path.join("assets", "fonts", "Inter-Bold.ttf")),
+    },
+    {
+      // A static instance of the served variable file (wght 700, opsz 60): satori reads neither
+      // woff2 nor variation axes. check:fonts pins it to the served family.
+      name: "Source Serif 4",
+      weight: 700,
+      style: "normal",
+      data: await readFile(path.join("assets", "fonts", "SourceSerif4-Display-Bold.ttf")),
     },
   ];
 
