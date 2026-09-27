@@ -77,5 +77,7 @@ export default [
   route("api/csp-report", "routes/api.csp-report.ts"),
   // Bearer token, not the session, so it sits outside the /admin subtree the middleware gates.
   route("api/operator", "routes/api.operator.ts"),
+  // Carrel's key, not the session, and only this prefix: the site-api package guards it.
+  route("api/carrel/v1/*", "routes/api.carrel.v1.$.ts"),
   route("api/auth/*", "routes/api.auth.$.ts"),
 ] satisfies RouteConfig;
