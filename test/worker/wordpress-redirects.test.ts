@@ -91,6 +91,13 @@ describe("pattern rules, on the apex host", () => {
     await expectGone("/tag/fall-2025/");
   });
 
+  it("the Baylor DNA extraction PDF goes to its protocol page", async () => {
+    await expectMoved(
+      "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf",
+      "/research/protocols/phage-dna-extraction",
+    );
+  });
+
   it("the 2019 CV PDF goes to /about", async () => {
     await expectMoved("/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/about");
   });

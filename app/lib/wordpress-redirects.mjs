@@ -18,15 +18,17 @@ export function isApexHost(hostname) {
   return APEX_HOSTS.has(hostname.toLowerCase());
 }
 
-/** The PDF kept at its old path, served from R2 once job_1c20d727924c has saved it. */
+/**
+ * Not kept, and not put in R2: its protocol is rewritten as a page, so the old PDF address, which
+ * still earns clicks, points there (Dustin, 2026-09-27).
+ */
 export const BAYLOR_PDF = "/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf";
 const CV_PDF = "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf";
 
 /**
  * Targets whose pages do not exist yet. Every 301 into one of these answers 404 until its page job
  * lands, so the switch checklist reads this list: it must be empty, or each entry accepted, before
- * DNS moves. Kept pages that are not built yet (`/contact`) and the Baylor PDF are here for the same
- * reason.
+ * DNS moves. A kept page that is not built yet (`/contact`) is here for the same reason.
  */
 export const PENDING_TARGETS = [
   "/research",
@@ -36,25 +38,23 @@ export const PENDING_TARGETS = [
   "/research/wolbachia",
   "/research/protocols",
   "/research/protocols/coi-primers",
+  "/research/protocols/phage-dna-extraction",
   "/research/protocols/phage-isolation",
   "/research/protocols/rev-lpdv-primers",
   "/research/protocols/pan-avian-gapdh",
   "/research/protocols/wolbachia-16s",
   "/teaching",
   "/contact",
-  BAYLOR_PDF,
 ];
 
 /**
- * @typedef {{ status: 301, location: string } | { status: 410 } | { status: "keep" }} Disposition
+ * @typedef {{ status: 301, location: string } | { status: 410 }} Disposition
  */
 
 /** @type {(location: string) => Disposition} */
 const moved = (location) => ({ status: 301, location });
 /** @type {Disposition} */
 const GONE = { status: 410 };
-/** @type {Disposition} */
-const KEEP = { status: "keep" };
 
 /**
  * Pattern rules, in order; each reads the path without its trailing slash. `null` passes to the next.
@@ -79,7 +79,7 @@ const PATTERNS = [
       : null,
   (p) => (/^\/knowledge-base\/category(?:\/.*)?$/.test(p) ? moved("/research/protocols") : null),
   (p) => (/^\/(?:category|tag)(?:\/.*)?$/.test(p) ? GONE : null),
-  (p) => (p === BAYLOR_PDF ? KEEP : null),
+  (p) => (p === BAYLOR_PDF ? moved("/research/protocols/phage-dna-extraction") : null),
   (p) => (p === CV_PDF ? moved("/about") : null),
   (p) => (p.startsWith("/wp-content/uploads/") ? GONE : null),
 ];
@@ -154,7 +154,7 @@ export function wordpressDisposition(pathname) {
   }
   const row = Object.hasOwn(ROWS, path) ? ROWS[path] : undefined;
   if (!disposition && row) disposition = moved(row);
-  if (!disposition || disposition.status === "keep") return null;
+  if (!disposition) return null;
 
   // A row that rebuilds a page at its own address (`/research/` to `/research`) redirects only the
   // slashed form; the bare form is the page, and redirecting it to itself would loop.

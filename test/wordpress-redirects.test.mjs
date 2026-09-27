@@ -78,13 +78,14 @@ test("slashed and bare forms match; a row rebuilt in place never loops", () => {
 });
 
 test("kept pages and the new site's own paths pass through", () => {
-  for (const path of ["/", "/contact/", "/login/", "/about", "/writing/a-post", "/research/publications", BAYLOR_PDF]) {
+  for (const path of ["/", "/contact/", "/login/", "/about", "/writing/a-post", "/research/publications"]) {
     assert.equal(wordpressDisposition(path), null, path);
   }
 });
 
-test("the switch checklist's pending list names the Baylor PDF and every unbuilt target", () => {
-  assert.ok(PENDING_TARGETS.includes(BAYLOR_PDF));
+test("the Baylor PDF goes to its protocol page, which the switch checklist lists as pending", () => {
+  assert.deepEqual(wordpressDisposition(BAYLOR_PDF), { status: 301, location: "/research/protocols/phage-dna-extraction" });
+  assert.ok(PENDING_TARGETS.includes("/research/protocols/phage-dna-extraction"));
   assert.ok(PENDING_TARGETS.includes("/research/protocols/coi-primers"));
   assert.ok(PENDING_TARGETS.includes("/teaching"));
 });
