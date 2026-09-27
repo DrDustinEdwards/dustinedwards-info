@@ -3,6 +3,7 @@
 import { ENHANCE_LOADER } from "../app/lib/enhance-loader.mjs";
 import { PODCAST_AUDIO_HOSTS } from "../app/lib/podcast/feed.mjs";
 import { buildSpeculationRules } from "../app/lib/speculation.mjs";
+import { buildPolicy, scriptHash } from "../packages/security-headers/csp.mjs";
 
 export const CSP_REPORT_PATH = "/api/csp-report";
 
@@ -18,18 +19,6 @@ export const CSP_ENDPOINT_NAME = "csp-endpoint";
  */
 export function isAdminPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/");
-}
-
-/**
- * A CSP hash source for an inline script's text. Web Crypto rather than node:crypto, so the Worker
- * and the gates run one function.
- *
- * @param {string} text
- * @returns {Promise<string>} `sha256-<base64>`, without the quotes the policy puts round it
- */
-async function scriptHash(text) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return `sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}`;
 }
 
 /** @type {Promise<string> | undefined} */
@@ -75,7 +64,7 @@ export async function contentSecurityPolicy(pathname, adminNonce) {
   const loader = await enhanceLoaderHash();
   const rules = await speculationRulesHash(pathname);
   const nonce = adminNonce ? ` 'nonce-${adminNonce}'` : "";
-  return [
+  return buildPolicy([
     "default-src 'self'",
     `script-src${nonce} '${loader}' '${rules}' 'strict-dynamic'`,
     // Admin only: CodeMirror mounts an inline <style> that needs a nonce source, and it cannot be
@@ -93,5 +82,5 @@ export async function contentSecurityPolicy(pathname, adminNonce) {
     "frame-ancestors 'none'",
     `report-uri ${CSP_REPORT_PATH}`,
     `report-to ${CSP_ENDPOINT_NAME}`,
-  ].join("; ");
+  ]);
 }

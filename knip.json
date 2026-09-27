@@ -13,14 +13,17 @@
     ".design-sync/*.tsx",
     ".design-sync/previews/*.tsx",
     "test/**/*.test.mjs",
-    "test/worker/**/*.test.ts"
+    "test/worker/**/*.test.ts",
+    "packages/*/index.mjs",
+    "packages/*/bin/*.mjs"
   ],
   "project": [
     "app/**/*.{ts,tsx,mjs}",
     "workers/**/*.{ts,mjs}",
     "scripts/**/*.mjs",
     "test/**/*.{ts,mjs}",
-    ".design-sync/**/*.{ts,tsx,mjs}"
+    ".design-sync/**/*.{ts,tsx,mjs}",
+    "packages/**/*.mjs"
   ],
   "ignore": ["scratchpad/**"],
   "ignoreDependencies": [
