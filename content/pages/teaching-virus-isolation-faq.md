@@ -5,7 +5,7 @@ seo_title: "Phage Lab Calculations: pfu/ml, Spot Titer, Webbed Plates"
 description: "Worked phage lab calculations from the Tarleton Virus Isolation Course: pfu/ml titers, spot titer dilutions, webbed plate volumes and lysate yields."
 ---
 
-These are the calculations and questions that come up most in the [Virus Isolation Course](/teaching/virus-isolation), the first semester of the Tarleton SEA-PHAGES program. Each answer gives the formula, a worked example with real numbers from the course's lab notebooks, and a link to the step in the [Phage Isolation and Purification Protocol](/research/protocols/phage-isolation). Unless a question says otherwise, the host is *Microbacterium foliorum* in PYCa, plated with 250 µl of host culture.
+These are the calculations and questions that come up most in the [Virus Isolation Course](/teaching/virus-isolation), the first semester of the Tarleton SEA-PHAGES program. The bench protocols are in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/); this page is the lab's own arithmetic and findings. Each answer gives the formula, a worked example with real numbers from the course's lab notebooks, and a link to the lab's notes in [Phage Isolation and Purification](/research/protocols/phage-isolation). Unless a question says otherwise, the host is *Microbacterium foliorum* in PYCa, plated with 250 µl of host culture.
 
 ## How do you calculate the titer of a phage lysate in pfu/ml?
 
@@ -39,7 +39,7 @@ Protocol: [titer arithmetic](/research/protocols/phage-isolation#titer-arithmeti
 
     titer (pfu/ml) = plaques in the spot / µl spotted x 1,000 µl/ml x dilution factor
 
-Make a 10-fold series (10 µl into 90 µl phage buffer at each step) and spot the same small volume of each dilution into its own section. The lab spots 3 µl.
+The lab spots 3 µl of each tenfold dilution.
 
 Worked example: 6 plaques in a 3 µl spot of the 10^-3 dilution.
 
@@ -83,7 +83,7 @@ Protocol: [the bracketing shortcut](/research/protocols/phage-isolation#the-brac
 
     10 µl phage + 90 µl phage buffer = 1/10
 
-Vortex, then take 10 µl of that tube into the next 90 µl, and so on. The first tube is 10^-1.
+The lab's series carries 10 µl of each tube into the next 90 µl, and the first tube is 10^-1.
 
 Errors from the notebooks: 10 µl phage into 100 µl buffer is 1/11, not 1/10. An extra "original" tube (10 µl lysate into 100 µl buffer) before the 10^-1 tube shifts every plate one step, so every titer is off 10-fold. Each purification round restarts at 10^-1 from the new pick; numbering a new round as if it continued the old series (10^-11 to 10^-14) led one group to plate 10^-10 and 10^-11 four times with nothing, when the dilution that webbed was 10^-2.
 
@@ -91,7 +91,7 @@ Protocol: [phage purification](/research/protocols/phage-isolation#phage-purific
 
 ## How much lysate do you get from a flooded webbed plate?
 
-About 5 to 7 ml per plate when each plate is flooded with 8 ml of phage buffer. The agar keeps the rest. The guide gives about 4 ml per plate.
+About 5 to 7 ml per plate when each plate is flooded with 8 ml of phage buffer. The agar keeps the rest. That is more than the Guide's estimate of about 4 ml per plate.
 
     plates needed = ml of lysate wanted / 5 to 7 ml per plate
 
@@ -103,7 +103,7 @@ Protocol: [yields](/research/protocols/phage-isolation#yields).
 
 ## What counts as a high titer lysate?
 
-The [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) defines a high-titer lysate as one with a titer of at least 5 x 10^9 pfu/ml (Protocols 6.4 and 6.5); by its spot-titer rule of thumb, at least three plaques in the 10^-7 spot is high enough to extract DNA and archive. One lysate in the notebooks was archived at about 10^7, far below it. High titer lysates in the notebooks mostly titered between 10^9 and 10^11 pfu/ml: 5.3 x 10^9, 6.0 x 10^9, 1.5 x 10^10, 2.04 x 10^10, 2.2 x 10^11 and 3.8 x 10^11. One *M. foliorum* phage stayed at 2.5 to 2.7 x 10^8 however its plates were flooded, which the notebook recorded as below the threshold.
+The lab works to the high-titer threshold in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/), 5 x 10^9 pfu/ml. One lysate in the notebooks was archived at about 10^7, far below it. High titer lysates in the notebooks mostly titered between 10^9 and 10^11 pfu/ml: 5.3 x 10^9, 6.0 x 10^9, 1.5 x 10^10, 2.04 x 10^10, 2.2 x 10^11 and 3.8 x 10^11. One *M. foliorum* phage stayed at 2.5 to 2.7 x 10^8 however its plates were flooded, which the notebook recorded as below the threshold.
 
 To reach it, improve the web first. Flooding with 16 ml instead of 8 ml did not work (6.0 x 10^8 pfu/ml at best). Serial flooding, using one plate's lysate to flood a second webbed plate, took one lysate from 9.4 x 10^9 to 8.4 x 10^10 pfu/ml but did nothing for others.
 

@@ -11,12 +11,12 @@ My lab's bacteriophage research centers on phages isolated from soil by undergra
 
 Bacteriophages are viruses that infect bacteria. They are the most numerous biological entities known, and most of them have never been sampled. Because nearly every phage a student isolates from soil is new, phage discovery is research with a real chance of finding something unknown, which is why it works as a course.
 
-The lab has isolated phages on two hosts, both harmless soil actinobacteria:
+The lab has isolated phages on two hosts, both soil actinobacteria:
 
-- *Mycobacterium smegmatis* (strain mc2 155), a fast-growing relative of the bacterium that causes tuberculosis. The lab used this host in 2017.
+- *Mycobacterium smegmatis* mc²155 (ATCC 700084), a fast-growing relative of the bacterium that causes tuberculosis. The lab used this host in 2017.
 - *Microbacterium foliorum* (NRRL B-24224), used from 2018 on. Its phages are called microbacteriophages.
 
-The questions are the ones every new phage raises: how its genome is organized, which known phages it is related to (its cluster), what its genes do, and what the particle looks like. The lab has isolated 80 phages from 2017 through 2025: 19 on *Mycobacterium smegmatis* mc2 155 (all in 2017) and 59 on *Microbacterium foliorum*, with 2 that have no host on record. Every phage is listed in the [phage table](/research/phages).
+The questions are the ones every new phage raises: how its genome is organized, which known phages it is related to (its cluster), what its genes do, and what the particle looks like. The lab has isolated 80 phages from 2017 through 2025: 19 on *Mycobacterium smegmatis* mc²155 (all in 2017) and 59 on *Microbacterium foliorum*, with 2 that have no host on record. Every phage is listed in the [phage table](/research/phages).
 
 Phage research also has a clinical side. A survey of 196 US healthcare providers found that 49 percent knew about phage therapy for resistant bacterial infections and 56 percent would consider using it ([phage therapy survey](/research/publications/10-3390-ijerph22071139/)).
 
@@ -80,7 +80,7 @@ Student projects also compare the predicted structure of single gene products. I
 
 The bench and analysis methods behind this work are on the protocol pages:
 
-- [Phage discovery guide](/teaching/phage-discovery): the whole workflow from sample to annotated genome.
+- [Phage discovery guide](/teaching/phage-discovery): the Phage Discovery Program and a link to the official SEA-PHAGES Phage Discovery Guide.
 - [Phage isolation protocol](/research/protocols/phage-isolation): direct and enriched isolation, purification, titers and lysates.
 - [Phage DNA extraction](/research/protocols/phage-dna-extraction): preparing genomic DNA for digests and sequencing.
 - [All protocols](/research/protocols).
