@@ -9,6 +9,7 @@ import puppeteer from "puppeteer";
 
 import * as admin from "./lib/browser/cases/admin.mjs";
 import * as enhancements from "./lib/browser/cases/enhancements.mjs";
+import * as headerMenus from "./lib/browser/cases/header-menus.mjs";
 import * as healthTile from "./lib/browser/cases/health-tile.mjs";
 import * as layout from "./lib/browser/cases/layout.mjs";
 import * as lightbox from "./lib/browser/cases/lightbox.mjs";
@@ -113,6 +114,7 @@ try {
   await healthTile.run(ctx);
   await themeCache.run(ctx);
   await navigation.run(ctx);
+  await headerMenus.run(ctx);
   await speculation.run(ctx);
   await movedPaths.run(ctx);
   await layout.run(ctx);
