@@ -70,8 +70,8 @@ export async function bundleRoutes(entries) {
         loader: "js",
       }));
       // The app build's own module source, from the same bundler, so the "kB gzipped" line is real.
-      // Every URL is the same sentinel as above, empty file name under a sentinel base: the HTML
-      // ceilings were measured over it, and a hash would move them each time a bundle changed.
+      // Every URL is the same sentinel as above, empty file name under a sentinel base, so the
+      // rendered HTML does not change each time a bundle hash does.
       b.onResolve({ filter: /^virtual:enhance$/ }, (args) => ({ path: args.path, namespace: "enhance" }));
       b.onLoad({ filter: /.*/, namespace: "enhance" }, async () => ({
         contents: enhanceModuleSource(

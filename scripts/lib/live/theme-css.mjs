@@ -80,18 +80,14 @@ export async function run() {
         `${adminCss.length} bytes`,
       );
 
+      /* No palette hex is pinned here: the palette is a default a redesign may change. The two
+         token rows are read from content/tokens.json, so they follow app.css and only prove the
+         deployed sheet is the committed one; the two media tiers are accessibility. */
       for (const [label, needle] of [
-        ["dark sage locked to #93B29B", "93b29b"],
         [`dark body text ${token("--text", "dark")}`, token("--text", "dark").slice(1)],
-        ["dark heading #EDE6DC", "ede6dc"],
         [`light paper ${token("--paper", "light")}`, token("--paper", "light").slice(1)],
-        ["dark bg prairie night #1A1614", "1a1614"],
         ["prefers-contrast tier present", "prefers-contrast"],
         ["forced-colors policy present", "forced-colors"],
-        ["prefers-contrast light muted #4A423A", "4a423a"],
-        ["prefers-contrast dark muted #C6BDAF", "c6bdaf"],
-        ["mark is prairie gold #F3E3B8", "f3e3b8"],
-        ["danger fill #8E1024", "8e1024"],
       ]) {
         check(`css: ${label}`, css.toLowerCase().includes(needle));
       }

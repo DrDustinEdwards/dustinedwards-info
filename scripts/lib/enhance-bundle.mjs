@@ -4,7 +4,8 @@
  *
  * ISOLATED ON PURPOSE. Each module gets its own build with no config file, so it can share no chunk
  * with the framework and no framework code can reach it; the app build only carries the finished
- * bytes. That is what keeps React and React Router off the public plane.
+ * bytes. That is what keeps React and React Router off the public plane for as long as public pages
+ * do not hydrate, which is the current shape and not a law (how far to hydrate is undecided).
  */
 
 import { createHash } from "node:crypto";
@@ -39,8 +40,7 @@ export function enhanceModules() {
 /**
  * Eight characters of base64url, so the name matches the `-[A-Za-z0-9_-]{8}.js` stem pattern every
  * script-set check strips. Derived from the bytes, so the client and server builds agree on the URL
- * without talking to each other, and check:page-payload can tell the bundle from a route chunk that
- * shares its stem by rehashing what is on disk.
+ * without talking to each other.
  *
  * @param {string | Buffer} bytes
  */
@@ -90,8 +90,7 @@ function findModuleDependency(node) {
 }
 
 /**
- * What stops `code` standing alone, or null. The build refuses on it, and check:page-payload asks
- * again of the bytes actually served.
+ * What stops `code` standing alone, or null. The build refuses on it.
  *
  * @param {string} code
  * @returns {Promise<string | null>}
@@ -106,7 +105,7 @@ export async function moduleDependencyOf(code) {
  * @returns {Promise<EnhanceBundle>}
  */
 export async function bundleEnhancement(name) {
-  // Imported here, so the readers of `contentHash` (check:page-payload, verify-live) do not load Vite.
+  // Imported here, so a reader of `contentHash` alone does not load Vite.
   const { build } = await import("vite");
   const input = join(ENHANCE_DIR, `${name}.ts`);
   const result = await build({

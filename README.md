@@ -16,19 +16,16 @@ consequence of it.
   `check:*` scripts is what stands between a change and production. Since
   2026-08-20 [CI](.github/workflows/ci.yml) runs most of them on a clean
   checkout, which is the closest thing here to a second opinion.
-- **Progressive enhancement is a requirement, not a preference.** Every public
-  page works with scripting disabled; client JS only ever upgrades markup that
-  already functions. Since 2026-08-26 the public plane ships no framework
-  script at all: public pages do not hydrate React, and their only JavaScript
-  is a set of small self-contained enhancement bundles, inserted by one inline
-  loader the CSP allows by its hash (`app/enhance/`, `app/lib/enhance-loader.mjs`,
-  measured and gated by `check:page-payload`). That
-  includes the ADMIN DOOR: `/login` is a real form, and the browser client is
-  layered on top of it. The admin plane behind that door is exempt, hydrates,
-  and does use script. This used to read "zero JavaScript", which was the
-  wrong name for the law (the progressive-enhancement rule calls it progressive enhancement) and
-  was also untrue at the door, where the only way in was a button that did
-  nothing without script.
+- **Content and links arrive as HTML from the server.** Machines get every fact
+  without script (CLAUDE.md, "Machines and people"). For people, script is
+  welcome wherever it makes the site better: interaction, animation, motion.
+  Speed is judged by real-user measures (Core Web Vitals), not byte counts, and
+  how far to hydrate public pages is still to be decided. Today, since
+  2026-08-26, public pages do not hydrate React: their JavaScript is a set of
+  small self-contained enhancement bundles, inserted by one inline loader the
+  CSP allows by its hash (`app/enhance/`, `app/lib/enhance-loader.mjs`). That is
+  the current shape, not a law. `/login` is a real form with the browser client
+  layered on top of it, and the admin plane behind it hydrates.
 
 Rebuilding the platform from nothing is a different job with its own document:
 see **[RECOVERY.md](RECOVERY.md)** for every binding, the order they have to be

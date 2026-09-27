@@ -1,11 +1,10 @@
 import { ENHANCE_URLS } from "virtual:enhance";
 
 /*
- * The one way a public piece becomes interactive: <Enhance module="plate" /> where the markup it
- * enhances is rendered. The URLs come from the app build, which bundles each `app/enhance/*.ts`
- * in isolation and emits it as a self-contained asset (scripts/lib/enhance-bundle.mjs).
- * check:page-payload reads `<Enhance module="…"` in a route's source to know which bundles that
- * route serves.
+ * How a public piece becomes interactive today, while public pages do not hydrate:
+ * <Enhance module="plate" /> where the markup it enhances is rendered. The URLs come from the app
+ * build, which bundles each `app/enhance/*.ts` in isolation and emits it as a self-contained asset
+ * (scripts/lib/enhance-bundle.mjs).
  */
 export { ENHANCE_URLS };
 

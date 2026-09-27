@@ -406,7 +406,7 @@ if (run("npm", ["run", "build:publication-twins"]).code !== 0) {
     "Fix build:publication-twins. Nothing was deployed.",
   );
 }
-/* This build feeds only `check:page-payload`; `npm run deploy` builds what ships. */
+/* This build feeds only the offline tier below (check:contrast reads build/client); `npm run deploy` builds what ships. */
 if (ciGreenEarly) {
   console.log("  skipped: react-router build. Its only local reader is the tier below, which CI ran.");
   console.log("  the deploy builds the bundle it ships, on this path and on the other one.");

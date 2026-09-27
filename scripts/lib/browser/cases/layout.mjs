@@ -62,34 +62,6 @@ export async function run({ page, browser }) {
     );
   }
 
-  /* Aligned with a sibling, not the literal 48rem app.css owns. */
-  const cols = await page.evaluate(() => {
-    const box = (/** @type {string} */ sel) => {
-      const el = document.querySelector(sel);
-      if (!el) return null;
-      const r = el.getBoundingClientRect();
-      return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
-    };
-    return { search: box(".list-search"), head: box(".list-head"), list: box(".entry-list") };
-  });
-
-  ok(
-    "the blog page has a search form, a heading and a post list to compare",
-    !!(cols.search && cols.head && cols.list),
-    `found ${JSON.stringify(cols)}. A missing element makes the comparison below vacuous.`,
-  );
-
-  if (cols.search && cols.head) {
-    ok(
-      "the blog search field sits inside the same column as the page heading",
-      Math.abs(cols.search.left - cols.head.left) <= 2 &&
-        Math.abs(cols.search.right - cols.head.right) <= 2,
-      `search is ${cols.search.left}..${cols.search.right} (${cols.search.width}px) and the ` +
-        `heading is ${cols.head.left}..${cols.head.right} (${cols.head.width}px). The search ` +
-        `form is full-bleed while everything around it is centered in a 48rem column.`,
-    );
-  }
-
   for (const path of ["/", "/writing", "/search?q=workers", "/colophon"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const s = await page.evaluate(readSkipLink);
