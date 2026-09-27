@@ -14,6 +14,14 @@ export const COLOPHON_DESCRIPTION =
   "generated from the repository's own configuration, with what was " +
   "deliberately not adopted and why.";
 
+/**
+ * The site's versions. WordPress is named for version 2 because the WordPress export's earliest item is
+ * dated 2016-12-05; version 1's platform is not recorded anywhere this repo can read, so it is not named.
+ */
+export const COLOPHON_VERSIONS =
+  "This is the third version of dustinedwards.info. The first launched in 2006, the second, " +
+  "on WordPress, in 2016, and this one in 2026.";
+
 export const COLOPHON_INTRO =
   "Everything below is generated from this repository's own configuration and " +
   "checked against it in both directions on every build. If a binding is added " +
@@ -259,7 +267,7 @@ function colophonPageInput(stack, features) {
     uid: "page:colophon",
     title: COLOPHON_TITLE,
     description: COLOPHON_DESCRIPTION,
-    intro: COLOPHON_INTRO,
+    intro: `${COLOPHON_VERSIONS} ${COLOPHON_INTRO}`,
     sections: COLOPHON_SECTIONS.map((section) => ({
       anchor: section.id,
       title: section.title,
