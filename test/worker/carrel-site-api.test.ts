@@ -184,6 +184,11 @@ describe("the preview", () => {
     const raw = post("carrel-preview-match", { draft: false, first_published: "2026-07-01" });
     gh.files.set(postPath("carrel-preview-match"), raw);
     await renderAndWrite(siteEnv(), "carrel-preview-match", raw);
+    /* Older than this run, so a preview that stamps its own time cannot match by landing in the
+     * same second as the sync. */
+    await testEnv.DB.prepare(`UPDATE posts SET updated_at = 1767225600 WHERE slug = ?1`)
+      .bind("carrel-preview-match")
+      .run();
 
     const published = await getBlogPost(siteEnv(), "carrel-preview-match");
     const preview = await previewPost(siteEnv(), await renderRecord(siteEnv(), "carrel-preview-match", raw));
