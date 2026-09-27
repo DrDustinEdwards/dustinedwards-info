@@ -14,6 +14,7 @@ import * as healthTile from "./lib/browser/cases/health-tile.mjs";
 import * as layout from "./lib/browser/cases/layout.mjs";
 import * as lightbox from "./lib/browser/cases/lightbox.mjs";
 import * as math from "./lib/browser/cases/math.mjs";
+import * as mediaSvg from "./lib/browser/cases/media-svg.mjs";
 import * as movedPaths from "./lib/browser/cases/moved-paths.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
 import * as playground from "./lib/browser/cases/playground.mjs";
@@ -123,6 +124,7 @@ try {
   const { publicConsoleErrors, enhanceStems, codePost, probedPost } = await enhancements.run(ctx);
   const postForShape = await postControls.run(ctx, { codePost, probedPost });
   await lightbox.run(ctx);
+  await mediaSvg.run(ctx);
   await scriptSet.run(ctx, { postForShape, enhanceStems, publicConsoleErrors });
   adminCasesRan = await admin.run(ctx);
 
@@ -138,7 +140,8 @@ try {
 if (subjectReachable) {
   /* Each floor sits `max(3, ceil(count * 0.05))` under a measured run; re-measure when touching this file. */
   /* Less 3 on 2026-09-27: the per-path script-set "no framework chunk, no modulepreload" check went. */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 245 : 227;
+  /* Plus 7 on the preview on 2026-09-27: the media-svg case (it skips against a deployed origin). */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 252 : 227;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

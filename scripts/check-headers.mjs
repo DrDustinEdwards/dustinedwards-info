@@ -38,7 +38,7 @@ analyticsCapture.run(code);
 console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
 );
-mediaAndHeadersFile.run();
+await mediaAndHeadersFile.run();
 runHealth();
 gatewayAndPublicRoutes.run(code);
 entrypointCache.run();

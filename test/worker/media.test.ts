@@ -13,7 +13,7 @@ import {
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { contentKey, dimensionsFromKey } from "~/lib/media/classify.mjs";
 import { deleteMediaObject, isManagedKey, measureDimensions } from "~/lib/media/core.server";
-import { ALLOWED } from "~/lib/media/upload-contract.mjs";
+import { ALLOWED, uploadErrorSentence } from "~/lib/media/upload-contract.mjs";
 import { action as adminAction, middleware as adminMediaMiddleware } from "~/routes/admin.media._index";
 import { action as uploadAction } from "~/routes/admin.media.upload";
 import { loader as mediaLoader } from "~/routes/media.$";
@@ -47,8 +47,8 @@ async function upload(
     request: new Request("https://example.com/admin/media/upload", { method: "POST", body: form }),
     context: routeContext(createExecutionContext(), { ...envWithImages(dimensions), ...overrides }),
   } as never)) as Response;
-  const body = (await response.json()) as { url?: string; key?: string };
-  return { status: response.status, url: body.url, key: body.key ?? "" };
+  const body = (await response.json()) as { url?: string; key?: string; error?: string };
+  return { status: response.status, url: body.url, key: body.key ?? "", error: body.error };
 }
 
 async function adminMediaAction(fields: Record<string, string>, routeEnv: object = env) {
@@ -97,21 +97,18 @@ describe("media upload", () => {
     expect(object?.httpMetadata?.cacheControl).toContain("immutable");
   });
 
-  it("stores and serves a source with NO intrinsic size, recording no dimensions", async () => {
+  it("REFUSES an SVG with a sentence that says why, and stores nothing", async () => {
+    const count = async () => (await env.MEDIA.list()).objects.length;
+    const before = await count();
     const svg =
-      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>';
-    const { status, key } = await upload({ name: "vector.svg", type: "image/svg+xml", body: svg }, null);
-    expect(status).toBe(200);
-    expect(dimensionsFromKey(key)).toBeNull();
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><script>alert(1)</script></svg>';
+    const { status, key, error } = await upload({ name: "vector.svg", type: "image/svg+xml", body: svg }, null);
 
-    const served = await serve(key);
-    expect(served.status).toBe(200);
-    expect(await served.text()).toBe(svg);
-
-    const row = await mediaRow(key);
-    expect(row).toBeTruthy();
-    expect(row?.width).toBeNull();
-    expect(row?.height).toBeNull();
+    expect(status).toBe(415);
+    expect(key).toBe("");
+    expect(error).toBe(uploadErrorSentence("svg-refused"));
+    expect(error).toMatch(/SVG is not accepted/);
+    expect(await count()).toBe(before);
   });
 
   it("REFUSES a raster Images cannot measure, and stores nothing under a sizeless key", async () => {
@@ -182,7 +179,7 @@ describe("media upload", () => {
   });
 });
 
-describe("serving an allowed type that can carry script", () => {
+describe("serving a stored object that can carry script", () => {
   const SCRIPT_CAPABLE = [
     "image/svg+xml",
     "text/html",
@@ -191,21 +188,21 @@ describe("serving an allowed type that can carry script", () => {
     "application/xml",
   ];
 
-  it("serves every one as a nosniff attachment, never inline", async () => {
-    const capable = [...ALLOWED].filter(([type]) => SCRIPT_CAPABLE.includes(type));
-    expect(capable.length).toBeGreaterThan(0);
+  it("allows none of them at upload", () => {
+    expect([...ALLOWED.keys()].filter((type) => SCRIPT_CAPABLE.includes(type))).toEqual([]);
+  });
 
-    for (const [type, extension] of capable) {
-      const key = `dustin-edwards-script-${extension}-00000000000000aa.${extension}`;
-      await env.MEDIA.put(key, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', {
-        httpMetadata: { contentType: type },
-      });
+  // Upload refuses SVG, but one stored before that, or put by hand, can still be in the bucket.
+  it("serves a stored SVG as a nosniff attachment, never inline", async () => {
+    const key = "dustin-edwards-script-svg-00000000000000aa.svg";
+    await env.MEDIA.put(key, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', {
+      httpMetadata: { contentType: "image/svg+xml" },
+    });
 
-      const served = await serve(key);
-      expect(served.status, type).toBe(200);
-      expect(served.headers.get("content-disposition"), type).toContain("attachment");
-      expect(served.headers.get("x-content-type-options"), type).toBe("nosniff");
-    }
+    const served = await serve(key);
+    expect(served.status).toBe(200);
+    expect(served.headers.get("content-disposition")).toContain("attachment");
+    expect(served.headers.get("x-content-type-options")).toBe("nosniff");
   });
 });
 

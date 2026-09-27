@@ -142,7 +142,8 @@ export const TOOL_DESCRIPTORS: Readonly<
     policy:
       "MEDIA is the irreplaceable bucket and there is no delete tool over " +
       "this token, so an object put here stays until an admin removes it. " +
-      "Accepts only the image types in ALLOWED, refuses anything over " +
+      "Accepts only the raster image types in ALLOWED (SVG is refused: it " +
+      "can carry script), refuses anything over " +
       "MAX_BYTES, and fetches only https URLs.",
   },
 };
