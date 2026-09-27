@@ -86,26 +86,10 @@
   gap: var(--s-6) var(--s-5);
 }
 
+/* Two rows of three from tablet width up (Dustin, 2026-09-27): the identity block and five link columns. */
 @media (min-width: 48rem) {
   .footer-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .footer-identity {
-    grid-column: 1 / -1;
-  }
-}
-
-@media (min-width: 72rem) {
-  .footer-grid {
-    grid-template-columns:
-      minmax(8rem, 1fr) minmax(0, 1.2fr) minmax(0, 1.9fr) minmax(0, 1fr) minmax(0, 2.3fr)
-      minmax(0, 0.8fr);
-    column-gap: var(--s-4);
-  }
-
-  .footer-identity {
-    grid-column: auto;
   }
 }
 
@@ -149,6 +133,21 @@
   display: block;
   inline-size: auto;
   block-size: 1.75rem;
+}
+
+/* X's two permitted colors, and nothing else: black on the light theme, white on the dark. */
+.footer-x {
+  color: black;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .footer-x {
+    color: white;
+  }
+}
+
+[data-theme="dark"] .footer-x {
+  color: white;
 }
 
 .footer-heading {
