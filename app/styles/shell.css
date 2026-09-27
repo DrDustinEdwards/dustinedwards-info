@@ -80,15 +80,23 @@
   grid-column: wide;
 }
 
-.footer-grid {
+.footer-grid,
+.footer-columns {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--s-6) var(--s-5);
 }
 
-/* Two rows of three from tablet width up (Dustin, 2026-09-27): the identity block and five link columns. */
+/*
+ * Dustin, 2026-09-27: the brand block (logo and social links, nothing else) on the left, and the link
+ * columns beside it, three across and two rows deep.
+ */
 @media (min-width: 48rem) {
   .footer-grid {
+    grid-template-columns: minmax(10rem, 1fr) minmax(0, 3fr);
+  }
+
+  .footer-columns {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
