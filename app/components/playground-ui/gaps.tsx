@@ -21,7 +21,7 @@ export function GapsSection() {
         </li>
         <li>
           <b>The publication entry.</b> The kit calls it a reference rather than a redraw. It
-          ships on <a href="/publications">the publications page</a> with its microdata and
+          ships on <a href="/research/publications">the publications page</a> with its microdata and
           its export links, and redrawing it here would make a second copy to drift.
         </li>
         <li>

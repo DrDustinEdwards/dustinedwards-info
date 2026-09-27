@@ -36,7 +36,7 @@ export function SeriesNav({
             {entry.slug === post.slug ? (
               <span>{entry.title}</span>
             ) : (
-              <Link to={`/blog/${entry.slug}`}>{entry.title}</Link>
+              <Link to={`/writing/${entry.slug}`}>{entry.title}</Link>
             )}
           </li>
         ))}
@@ -44,13 +44,13 @@ export function SeriesNav({
       {(seriesPrevious || seriesNext) && (
         <div className="post-series-steps">
           {seriesPrevious && (
-            <Link className="post-nav-target" to={`/blog/${seriesPrevious.slug}`}>
+            <Link className="post-nav-target" to={`/writing/${seriesPrevious.slug}`}>
               <span className="post-nav-label">Previous part</span>
               <span className="post-nav-title">{seriesPrevious.title}</span>
             </Link>
           )}
           {seriesNext && (
-            <Link className="post-nav-target" to={`/blog/${seriesNext.slug}`}>
+            <Link className="post-nav-target" to={`/writing/${seriesNext.slug}`}>
               <span className="post-nav-label">Next part</span>
               <span className="post-nav-title">{seriesNext.title}</span>
             </Link>

@@ -92,4 +92,4 @@ Two smaller rules that earn their keep once the gate exists. Keep the palette's 
 
 What you get at the end is fifty-odd tokens per mode, every ratio recorded, a handful of binding rules, and a build that refuses to ship a regression. The method costs one evening more than picking colors by eye. The difference is that when someone asks whether your palette is accessible, you can answer with a script instead of an adjective, and when you change a color next year, the build will tell you what you broke before your readers do.
 
-This is the second post in [a series on rebuilding this site on Cloudflare's developer platform](/blog/ten-years-on-cloudflare); the next one covers [the git-backed content pipeline](/blog/posts-in-git-served-from-d1) that gates this palette's check script alongside everything else.
+This is the second post in [a series on rebuilding this site on Cloudflare's developer platform](/writing/ten-years-on-cloudflare); the next one covers [the git-backed content pipeline](/writing/posts-in-git-served-from-d1) that gates this palette's check script alongside everything else.

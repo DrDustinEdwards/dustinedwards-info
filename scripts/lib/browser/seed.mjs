@@ -12,8 +12,8 @@ import { DRIVES_PREVIEW, root } from "./harness.mjs";
 import { refuseUnlessRan, registry } from "./preview-server.mjs";
 
 /* Hand-written: the endpoint refuses the hostile row `safeHttpHref` must render. */
-export const MENTION_POST_PATH = "/blog/ten-years-on-cloudflare";
-const MENTION_SLUG = MENTION_POST_PATH.slice("/blog/".length);
+export const MENTION_POST_PATH = "/writing/ten-years-on-cloudflare";
+const MENTION_SLUG = MENTION_POST_PATH.slice("/writing/".length);
 const MENTION_SEED_PREFIX = "https://gate.example/";
 /** A fixed instant, so the rendered date is the same in every fetch. */
 const MENTION_DECIDED_AT = Math.floor(Date.UTC(2026, 7, 20) / 1000);
@@ -25,7 +25,7 @@ const MENTION_SEED_ROWS = 2;
 const MATH_SLUG = "math-typesetting-fixture";
 /** Fixed, so a re-run overwrites one KV record. `isWellFormedToken` is length-exact. */
 export const MATH_PREVIEW_TOKEN = "gate0000000000000000000000000000000000math0";
-export const MATHLESS_POST_PATH = "/blog/ten-years-on-cloudflare";
+export const MATHLESS_POST_PATH = "/writing/ten-years-on-cloudflare";
 
 /**
  * Writes every seed a preview run needs, and refuses the run when one does not apply. Returns whether

@@ -1,8 +1,8 @@
-// Old flat PDF URLs redirect into /publications/<slug>/, because a published URL is a promise. A map,
+// Old flat PDF URLs redirect into /research/publications/<slug>/, because a published URL is a promise. A map,
 // not a rule: the old names are curated ids with no function to the DOI slug. The map is an argument,
 // not an import, because vite and node --test disagree about JSON import attributes.
 
-const PUBLICATIONS_PREFIX = "/publications/";
+const PUBLICATIONS_PREFIX = "/research/publications/";
 
 /**
  * Returns a path the caller resolves against the request's own origin, so it cannot name another host.

@@ -115,7 +115,7 @@ export function publicationListing(params) {
     const next = linkParams();
     for (const t of list) next.append("topic", t);
     const s = next.toString();
-    return s ? `/publications?${s}` : "/publications";
+    return s ? `/research/publications?${s}` : "/research/publications";
   };
 
   const chips = TOPICS.map((topic) => {
@@ -171,7 +171,7 @@ export function publicationListing(params) {
       if (!selectedOnly) next.set("selected", "1");
       for (const t of topics) next.append("topic", t);
       const s = next.toString();
-      return s ? `/publications?${s}` : "/publications";
+      return s ? `/research/publications?${s}` : "/research/publications";
     })(),
     filtered,
     span,

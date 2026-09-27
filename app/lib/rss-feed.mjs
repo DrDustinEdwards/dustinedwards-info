@@ -132,7 +132,7 @@ function spanEnd(source, start) {
  * @param {string} origin the site origin, no trailing slash
  */
 export function rssItem(post, origin) {
-  const url = `${origin}/blog/${post.slug}`;
+  const url = `${origin}/writing/${post.slug}`;
   const published = post.publishAt
     ? new Date(/** @type {any} */ (post.publishAt)).toUTCString()
     : null;

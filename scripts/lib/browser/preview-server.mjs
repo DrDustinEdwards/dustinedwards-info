@@ -207,7 +207,7 @@ export async function waitForServer(timeoutMs = 180_000) {
   /* A deployed origin is not booting: one attempt, status reported, no retry. */
   if (!DRIVES_PREVIEW) {
     try {
-      const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(10_000) });
+      const res = await fetch(`${BASE}/writing`, { signal: AbortSignal.timeout(10_000) });
       originStatus = res.status;
       if (res.ok) {
         console.log(`  ${BASE} answered in ${Date.now() - started}ms`);
@@ -229,14 +229,14 @@ export async function waitForServer(timeoutMs = 180_000) {
       lastCapture = Date.now();
     }
     try {
-      const res = await fetch(`${BASE}/blog`, { signal: AbortSignal.timeout(4000) });
+      const res = await fetch(`${BASE}/writing`, { signal: AbortSignal.timeout(4000) });
       if (res.ok) {
         console.log(`  preview server answered in ${Date.now() - started}ms`);
         recordServerSurvivors();
         return true;
       }
       // Answered and said no: a wrong probe path, not a slow boot.
-      readiness = { state: "answered-not-ok", detail: `HTTP ${res.status} on ${BASE}/blog` };
+      readiness = { state: "answered-not-ok", detail: `HTTP ${res.status} on ${BASE}/writing` };
     } catch (error) {
       const cause = /** @type {any} */ (error);
       const code = cause?.cause?.code ?? cause?.name ?? String(error);
@@ -278,14 +278,14 @@ export function serverDiagnosis() {
   if (!DRIVES_PREVIEW) {
     if (originStatus !== null) {
       return (
-        `${BASE}/blog answered ${originStatus}, not 200. PUBLIC_ORIGIN names a DEPLOYED site ` +
+        `${BASE}/writing answered ${originStatus}, not 200. PUBLIC_ORIGIN names a DEPLOYED site ` +
         `and this run starts no server of its own, so this is the origin ANSWERING and ` +
         `refusing the path, not a server that failed to come up. Check PUBLIC_ORIGIN: a ` +
         `404 here means the host is serving something that is not this site.`
       );
     }
     return (
-      `${BASE}/blog could not be reached at all: ${originError || "no response and no error"}. ` +
+      `${BASE}/writing could not be reached at all: ${originError || "no response and no error"}. ` +
       `PUBLIC_ORIGIN names a DEPLOYED site, so the host is down, the name does not resolve, ` +
       `or the network from here cannot reach it.`
     );

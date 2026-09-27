@@ -55,7 +55,7 @@ export function TaxonomyListing({
             __html: jsonLd(
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
-                ["Blog", "/blog"],
+                ["Writing", "/writing"],
                 [name, base],
               ]),
             ),
@@ -65,7 +65,7 @@ export function TaxonomyListing({
         <header className="list-head">
           <h1 className="list-label">{heading}</h1>
           <p className="list-dek">
-            {dek} <Link to="/blog">All posts</Link>
+            {dek} <Link to="/writing">All posts</Link>
           </p>
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>

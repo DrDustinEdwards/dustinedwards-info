@@ -54,7 +54,7 @@ const answerOf = (sse) =>
     .join("");
 
 test("CONTROL: a normal answer passes through the guard unchanged", async () => {
-  const upstream = sseStream([{ url: "/blog/a" }], ["D1 is ", "Cloudflare's SQL database."]);
+  const upstream = sseStream([{ url: "/writing/a" }], ["D1 is ", "Cloudflare's SQL database."]);
   const out = await drain(guardAnswerStream(upstream, ALL_PUBLIC));
   assert.equal(answerOf(out), "D1 is Cloudflare's SQL database.");
   assert.ok(out.includes('event: chunks'), "the chunks frame still reaches the client");
@@ -128,7 +128,7 @@ test("the audit question itself is not mistaken for a leak", () => {
   assert.equal(answerLeaksPrompt(AUDIT_QUESTION), false);
 });
 
-const chunk = (slug) => ({ item: { key: `blog/${slug}.md` } });
+const chunk = (slug) => ({ item: { key: `writing/${slug}.md` } });
 
 test("citedSlugs reads the chunk shape once, for both paths", () => {
   assert.deepEqual(citedSlugs([chunk("a"), chunk("b"), chunk("a")]), ["a", "b"]);

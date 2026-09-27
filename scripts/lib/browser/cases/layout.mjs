@@ -5,13 +5,13 @@ import { PredefinedNetworkConditions } from "puppeteer";
 
 import { BASE, ok, overflowScan, readSkipLink } from "../harness.mjs";
 
-/* The network profile the /blog layout shift was measured on. */
+/* The network profile the /writing layout shift was measured on. */
 const SLOW_4G = PredefinedNetworkConditions["Slow 4G"];
 
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ page, browser }) {
-  /* The cases below read the current page and expect /blog. */
-  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  /* The cases below read the current page and expect /writing. */
+  await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
 
   /*
    * Throttled, or a local font arrives in time and CLS can never fail. A missing observer
@@ -35,7 +35,7 @@ export async function run({ page, browser }) {
     });
     await probe.emulateNetworkConditions(SLOW_4G);
     await probe.emulateCPUThrottling(4);
-    await probe.goto(`${BASE}/blog`, { waitUntil: "networkidle0", timeout: 300_000 });
+    await probe.goto(`${BASE}/writing`, { waitUntil: "networkidle0", timeout: 300_000 });
     // CLS accumulates after load; a reading taken at load is the first frame.
     await new Promise((r) => setTimeout(r, 4000));
     const shift = await probe.evaluate(() => {
@@ -51,7 +51,7 @@ export async function run({ page, browser }) {
         "0.0000 a stable page does.",
     );
     ok(
-      "/blog does not shift while the font arrives (CLS under 0.02)",
+      "/writing does not shift while the font arrives (CLS under 0.02)",
       shift !== null && shift < 0.02,
       `CLS ${shift === null ? "(unobserved)" : shift.toFixed(4)} on Slow 4G with a cold ` +
         `cache, ceiling 0.02, measured 0.0000 on 2026-08-28. It was 0.0674 with ` +
@@ -90,7 +90,7 @@ export async function run({ page, browser }) {
     );
   }
 
-  for (const path of ["/", "/blog", "/search?q=workers", "/colophon"]) {
+  for (const path of ["/", "/writing", "/search?q=workers", "/colophon"]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const s = await page.evaluate(readSkipLink);
     ok(
@@ -103,10 +103,10 @@ export async function run({ page, browser }) {
     );
   }
 
-  /* `NavLink` without `end` marks Blog current on every `/blog/*` page. */
-  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  /* `NavLink` without `end` marks Blog current on every `/writing/*` page. */
+  await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
   const firstPost = await page.evaluate(() => {
-    const a = document.querySelector('.entry-list a[href^="/blog/"]');
+    const a = document.querySelector('.entry-list a[href^="/writing/"]');
     return a ? a.getAttribute("href") : null;
   });
 
@@ -135,7 +135,7 @@ export async function run({ page, browser }) {
   await page.setViewport({ width: 320, height: 800 });
   for (const path of [
     "/",
-    "/blog",
+    "/writing",
     "/search?q=workers",
     "/colophon",
     "/projects",

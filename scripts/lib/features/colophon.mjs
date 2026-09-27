@@ -31,7 +31,7 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
   );
 
   /* Every page record lives at a declared route; papers share one parameterized route. */
-  const PAPER_ROUTE = "/publications/:slug";
+  const PAPER_ROUTE = "/research/publications/:slug";
   const paperRecords = pageRecords.filter((/** @type {any} */ r) =>
     String(r.uid).startsWith("paper:"),
   );
@@ -49,12 +49,12 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
   ok(
     `every paper record is under the paper route (${paperRecords.length} checked)`,
     paperRecords.every((/** @type {any} */ r) =>
-      /^\/publications\/[a-z0-9-]+\/$/.test(String(r.url)),
+      /^\/research\/publications\/[a-z0-9-]+\/$/.test(String(r.url)),
     ),
-    `a paper record whose URL is not /publications/<slug>/ is not served by ` +
+    `a paper record whose URL is not /research/publications/<slug>/ is not served by ` +
       `${PAPER_ROUTE}: ` +
       paperRecords
-        .filter((/** @type {any} */ r) => !/^\/publications\/[a-z0-9-]+\/$/.test(String(r.url)))
+        .filter((/** @type {any} */ r) => !/^\/research\/publications\/[a-z0-9-]+\/$/.test(String(r.url)))
         .map((/** @type {any} */ r) => r.url)
         .join(", "),
   );

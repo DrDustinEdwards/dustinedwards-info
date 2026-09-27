@@ -8,8 +8,8 @@ export const KEY_SEPARATOR = "__";
 /**
  * The trailing slash is stripped, so a paper's key is exactly its markdown twin's URL.
  *
- * @param {string} url `/blog/<slug>`, `/blog/<slug>#<anchor>` or `/publications/<slug>/`
- * @returns {string} `blog/<slug>.md`, `blog/<slug>__<anchor>.md` or `publications/<slug>.md`
+ * @param {string} url `/writing/<slug>`, `/writing/<slug>#<anchor>` or `/research/publications/<slug>/`
+ * @returns {string} `writing/<slug>.md`, `writing/<slug>__<anchor>.md` or `research/publications/<slug>.md`
  */
 export function keyForUrl(url) {
   const [path, anchor] = url.replace(/^\//, "").replace(/\/$/, "").split("#");
@@ -24,7 +24,7 @@ export function keyForUrl(url) {
  * @returns {(key: string) => boolean}
  */
 export function ownsAskKey(slug) {
-  const documentKey = keyForUrl(`/blog/${slug}`);
+  const documentKey = keyForUrl(`/writing/${slug}`);
   const sectionPrefix = `${documentKey.replace(/\.md$/, "")}${KEY_SEPARATOR}`;
   return (key) => key === documentKey || key.startsWith(sectionPrefix);
 }
@@ -43,8 +43,8 @@ export function urlForKey(key) {
   const [path, anchor] = parts;
   if (!path) return null;
   // A paper cites its page, not its twin, with the canonical trailing slash (the slashless form redirects).
-  if (path.startsWith("publications/")) return anchor ? null : `/${path}/`;
-  if (!path.startsWith("blog/")) return null;
+  if (path.startsWith("research/publications/")) return anchor ? null : `/${path}/`;
+  if (!path.startsWith("writing/")) return null;
   return anchor ? `/${path}#${anchor}` : `/${path}`;
 }
 
@@ -57,8 +57,8 @@ export function slugForKey(key) {
   if (!url) return null;
   // Posts only: a paper has no posts row, and passing its URL as a slug would make every answer citing
   // it unreplayable forever.
-  if (!url.startsWith("/blog/")) return null;
-  const slug = (url.split("#")[0] ?? "").replace(/^\/blog\//, "");
+  if (!url.startsWith("/writing/")) return null;
+  const slug = (url.split("#")[0] ?? "").replace(/^\/writing\//, "");
   return slug.length > 0 ? slug : null;
 }
 
@@ -69,10 +69,10 @@ export function slugForKey(key) {
 export function labelForUrl(url) {
   const [path, anchor] = url.split("#");
   // The slug, not a DOI: the DOI-to-slug fold is lossy, and a plausible reconstruction is worse than none.
-  if ((path ?? "").startsWith("/publications/")) {
-    return `Paper ${(path ?? "").replace(/^\/publications\//, "").replace(/\/$/, "")}`;
+  if ((path ?? "").startsWith("/research/publications/")) {
+    return `Paper ${(path ?? "").replace(/^\/research\/publications\//, "").replace(/\/$/, "")}`;
   }
-  const target = anchor ?? (path ?? "").replace(/^\/blog\//, "");
+  const target = anchor ?? (path ?? "").replace(/^\/writing\//, "");
   const words = target
     .replace(/^\d+-/, "")
     .split("-")

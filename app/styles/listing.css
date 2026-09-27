@@ -22,7 +22,7 @@
 
 .list-dek {
   margin: 0 0 1.75rem;
-  /* 54ch: /publications' sentence is four lines at 46 and three at 54. */
+  /* 54ch: /research/publications' sentence is four lines at 46 and three at 54. */
   max-width: 54ch;
   color: var(--text-secondary);
   font-family: var(--font-serif);

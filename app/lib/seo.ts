@@ -34,7 +34,7 @@ type PostSocialFields = {
 };
 
 export function postSocial(post: PostSocialFields) {
-  const canonical = `${SITE_ORIGIN}/blog/${post.slug}`;
+  const canonical = `${SITE_ORIGIN}/writing/${post.slug}`;
   const description = post.description ?? SITE.description;
   const socialImage = post.coverImage ?? post.ogImage ?? null;
   return {
@@ -214,7 +214,7 @@ export function articleJsonLd(origin: string, post: ArticleSeo) {
       ogImage: post.ogImage ?? null,
     }).image,
     keywords: facts.tags.length > 0 ? facts.tags.join(", ") : undefined,
-    mainEntityOfPage: { "@type": "WebPage", "@id": `${origin}/blog/${post.slug}` },
+    mainEntityOfPage: { "@type": "WebPage", "@id": `${origin}/writing/${post.slug}` },
     author: { "@type": "Person", name: facts.authorName, url: facts.authorUrl },
     publisher: { "@type": "Person", name: SITE.name, url: origin },
   };
@@ -243,7 +243,7 @@ export function webSiteJsonLd(origin: string) {
   };
 }
 
-export const PUBLICATIONS_URL = "/publications";
+export const PUBLICATIONS_URL = "/research/publications";
 
 export const PUBLICATIONS_DESCRIPTION =
   "Peer-reviewed work by Dustin Edwards on retroviruses, bacteriophage genomics, and science education, with full text hosted here.";

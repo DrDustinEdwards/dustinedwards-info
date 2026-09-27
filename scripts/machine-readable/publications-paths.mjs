@@ -69,7 +69,7 @@ ok(
 
 /* What Scholar cares about: `paperPdfPath` can move while the equality above passes. */
 const outsideOwnDirectory = siteEntries
-  .filter(([doi, f]) => f.pdfPath && !f.pdfPath.startsWith(`/publications/${doiSlug(doi)}/`))
+  .filter(([doi, f]) => f.pdfPath && !f.pdfPath.startsWith(`/research/publications/${doiSlug(doi)}/`))
   .map(([, f]) => f.id);
 ok(
   "every hosted PDF is in the same subdirectory as its paper's page",

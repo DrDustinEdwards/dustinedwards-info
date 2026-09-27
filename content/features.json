@@ -8,7 +8,7 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/blog"
+          "path": "/writing"
         },
         {
           "kind": "gate",
@@ -23,7 +23,7 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/blog/:slug"
+          "path": "/writing/:slug"
         },
         {
           "kind": "gate",
@@ -38,7 +38,7 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/blog/:slug.md"
+          "path": "/writing/:slug.md"
         },
         {
           "kind": "gate",
@@ -365,11 +365,11 @@
       "anchors": [
         {
           "kind": "route",
-          "path": "/blog/rss.xml"
+          "path": "/writing/rss.xml"
         },
         {
           "kind": "route",
-          "path": "/blog/feed.json"
+          "path": "/writing/feed.json"
         },
         {
           "kind": "route",

@@ -45,9 +45,9 @@
 # already in git once as data/publications.text.json.
 #
 # The PDFs in the per-paper subdirectories beside these ARE tracked. Only the
-# .md files directly under public/publications/ are generated, which is why
+# .md files directly under public/research/publications/ are generated, which is why
 # this line is not a directory.
-/public/publications/*.md
+/public/research/publications/*.md
 
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json

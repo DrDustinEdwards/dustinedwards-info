@@ -22,7 +22,7 @@ export function pageForPosition(position, perPage = POSTS_PER_PAGE) {
 }
 
 /**
- * An empty corpus still has one page, because /blog renders an empty state rather than a 404.
+ * An empty corpus still has one page, because /writing renders an empty state rather than a 404.
  *
  * @param {number} total
  * @param {number} [perPage]

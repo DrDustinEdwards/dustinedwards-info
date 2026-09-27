@@ -395,11 +395,11 @@ export default function MarkdownEditor({
                     className="md-link-item"
                     data-active={index === linkIndex ? "" : undefined}
                     onMouseEnter={() => setLinkIndex(index)}
-                    onClick={() => insertLink(`/blog/${target.slug}`, target.title)}
+                    onClick={() => insertLink(`/writing/${target.slug}`, target.title)}
                   >
                     <strong>{target.title}</strong>
                     <span className="muted">
-                      /blog/{target.slug}
+                      /writing/{target.slug}
                       {/* In words inside the option text, so a screen reader announces it, not just a color. */}
                       {target.state !== "published" ? (
                         <span className="md-link-state"> not live yet ({target.state})</span>

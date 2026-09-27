@@ -206,8 +206,8 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
               articleJsonLd(SITE_ORIGIN, toArticleSeo(post)),
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
-                ["Blog", "/blog"],
-                [post.title, `/blog/${post.slug}`],
+                ["Writing", "/writing"],
+                [post.title, `/writing/${post.slug}`],
               ]),
             ]),
           }}
@@ -278,15 +278,15 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
           <nav className="post-actions" aria-label="Use this post elsewhere">
             <a
               className="post-action"
-              href={`/blog/${post.slug}.md`}
-              data-copy-markdown={`${SITE_ORIGIN}/blog/${post.slug}.md`}
+              href={`/writing/${post.slug}.md`}
+              data-copy-markdown={`${SITE_ORIGIN}/writing/${post.slug}.md`}
             >
               Copy as Markdown
             </a>
             <a
               className="post-action"
               href={`https://claude.ai/new?q=${encodeURIComponent(
-                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarize it.`,
+                `Read ${SITE_ORIGIN}/writing/${post.slug}.md and summarize it.`,
               )}`}
               rel="noopener noreferrer"
             >
@@ -295,7 +295,7 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
             <a
               className="post-action"
               href={`https://chatgpt.com/?q=${encodeURIComponent(
-                `Read ${SITE_ORIGIN}/blog/${post.slug}.md and summarize it.`,
+                `Read ${SITE_ORIGIN}/writing/${post.slug}.md and summarize it.`,
               )}`}
               rel="noopener noreferrer"
             >
@@ -328,13 +328,13 @@ export default function BlogPost({ loaderData }: Route.ComponentProps) {
 
           <nav className="post-nav" aria-label="More posts">
             {post.previous && (
-              <Link className="post-nav-target" to={`/blog/${post.previous.slug}`} rel="prev">
+              <Link className="post-nav-target" to={`/writing/${post.previous.slug}`} rel="prev">
                 <span className="post-nav-label">Previous</span>
                 <span className="post-nav-title">{post.previous.title}</span>
               </Link>
             )}
             {post.next && (
-              <Link className="post-nav-target" to={`/blog/${post.next.slug}`} rel="next">
+              <Link className="post-nav-target" to={`/writing/${post.next.slug}`} rel="next">
                 <span className="post-nav-label">Next</span>
                 <span className="post-nav-title">{post.next.title}</span>
               </Link>

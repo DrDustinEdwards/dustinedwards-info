@@ -8,7 +8,7 @@ const ORIGIN = "https://example.test";
 const FULL = {
   slug: "a-post",
   title: "A post about D1 & FTS5",
-  html: '<p>Body with <a href="/blog/other">a link</a> and <img src="/media/x.png" alt="x"></p>',
+  html: '<p>Body with <a href="/writing/other">a link</a> and <img src="/media/x.png" alt="x"></p>',
   description: "One sentence about it.",
   publishAt: new Date("2026-08-01T00:00:00.000Z"),
   tags: ["cloudflare", "d1"],
@@ -32,7 +32,7 @@ test("a row with no rendered html omits the element rather than emitting it empt
   // tells it to follow the link.
   const item = rssItem({ ...FULL, html: null }, ORIGIN);
   assert.doesNotMatch(item, /content:encoded/);
-  assert.match(item, /<link>https:\/\/example\.test\/blog\/a-post<\/link>/);
+  assert.match(item, /<link>https:\/\/example\.test\/writing\/a-post<\/link>/);
 });
 
 test("a title with an ampersand is escaped, and escaped once", () => {
@@ -77,10 +77,10 @@ test("CDATA leaves ordinary content alone", () => {
 
 test("root-relative href and src become absolute", () => {
   const out = absolutiseUrls(
-    '<a href="/blog/x">x</a><img src="/media/y.png">',
+    '<a href="/writing/x">x</a><img src="/media/y.png">',
     ORIGIN,
   );
-  assert.match(out, /href="https:\/\/example\.test\/blog\/x"/);
+  assert.match(out, /href="https:\/\/example\.test\/writing\/x"/);
   assert.match(out, /src="https:\/\/example\.test\/media\/y\.png"/);
 });
 
@@ -112,7 +112,7 @@ test("a fragment or a query-only href is left alone", () => {
 
 test("the item's body is absolutised, which is the whole point of the pass", () => {
   const item = rssItem(FULL, ORIGIN);
-  assert.match(item, /href="https:\/\/example\.test\/blog\/other"/);
+  assert.match(item, /href="https:\/\/example\.test\/writing\/other"/);
   assert.match(item, /src="https:\/\/example\.test\/media\/x\.png"/);
   assert.doesNotMatch(item, /src="\/media/, "a root-relative src reached the feed");
 });

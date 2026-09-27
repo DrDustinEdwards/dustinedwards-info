@@ -245,7 +245,7 @@ export const FR_URL = "frUrl";
 export const FR_INTERNAL = "frInternal";
 
 /** Mirrors the schema's rule for internal links. */
-const INTERNAL_PREFIX = "/blog/";
+const INTERNAL_PREFIX = "/writing/";
 
 type ReadingItem = { title: string; url: string };
 

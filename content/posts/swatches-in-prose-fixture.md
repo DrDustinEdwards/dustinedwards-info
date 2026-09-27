@@ -7,7 +7,7 @@ tags: [design, color]
 draft: true
 further_reading:
   - title: "Images in prose, the sibling fixture"
-    url: /blog/images-in-prose-fixture
+    url: /writing/images-in-prose-fixture
 ---
 
 This post is a fixture, on the same footing as the math and chart fixtures

@@ -32,16 +32,16 @@ describe("the cache key the gateway builds", () => {
   it("is STABLE for the same path and theme", async () => {
     /* Props are in the platform's key too, so a stable string with unstable props would still
      * fragment the cache. */
-    const a = dimensionsFor(`${ORIGIN}/blog/a-post`, "dark");
-    const b = dimensionsFor(`${ORIGIN}/blog/a-post`, "dark");
+    const a = dimensionsFor(`${ORIGIN}/writing/a-post`, "dark");
+    const b = dimensionsFor(`${ORIGIN}/writing/a-post`, "dark");
     expect(a.cacheKey).toBe(b.cacheKey);
     expect(a.props).toEqual(b.props);
     expect(a.props).toEqual({ theme: "dark" });
   });
 
   it("SEPARATES BY THEME, so one reader's colors never reach another", async () => {
-    const dark = dimensionsFor(`${ORIGIN}/blog/a-post`, "dark");
-    const light = dimensionsFor(`${ORIGIN}/blog/a-post`, "light");
+    const dark = dimensionsFor(`${ORIGIN}/writing/a-post`, "dark");
+    const light = dimensionsFor(`${ORIGIN}/writing/a-post`, "light");
 
     expect(dark.cacheKey).not.toBe(light.cacheKey);
     expect(dark.props).not.toEqual(light.props);
@@ -50,8 +50,8 @@ describe("the cache key the gateway builds", () => {
   });
 
   it("separates by PATH and by QUERY", async () => {
-    const post = dimensionsFor(`${ORIGIN}/blog/a-post`);
-    expect(post.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/blog/another-post`).cacheKey);
+    const post = dimensionsFor(`${ORIGIN}/writing/a-post`);
+    expect(post.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/writing/another-post`).cacheKey);
 
     const cloudflare = dimensionsFor(`${ORIGIN}/search?q=cloudflare`, "dark");
     expect(cloudflare.cacheKey).not.toBe(dimensionsFor(`${ORIGIN}/search?q=d1`, "dark").cacheKey);

@@ -61,7 +61,7 @@ export function isAllowedUrl(value) {
   return true;
 }
 
-const INTERNAL_LINK_PREFIX = "/blog/";
+const INTERNAL_LINK_PREFIX = "/writing/";
 
 /**
  * Composed with isAllowedUrl, never instead of it. The protocol is checked explicitly because the URL

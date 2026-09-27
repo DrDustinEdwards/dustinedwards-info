@@ -18,7 +18,7 @@ import { absolutiseUrls, cdata, escapeXml, mathToTex } from "./rss-feed.mjs";
  * @returns {string}
  */
 export function atomEntry(post, origin) {
-  const url = `${origin}/blog/${post.slug}`;
+  const url = `${origin}/writing/${post.slug}`;
   const published = post.publishAt ? new Date(/** @type {any} */ (post.publishAt)) : null;
   const updated = post.updatedAt ? new Date(/** @type {any} */ (post.updatedAt)) : published;
 

@@ -66,7 +66,7 @@ export function withRelated(posts) {
  */
 function outgoingPostLinks(html) {
   const found = new Set();
-  for (const match of html.matchAll(/href="\/blog\/([^"#?]+)(?:[#?][^"]*)?"/g)) {
+  for (const match of html.matchAll(/href="\/writing\/([^"#?]+)(?:[#?][^"]*)?"/g)) {
     found.add(match[1]);
   }
   return found;

@@ -54,26 +54,26 @@ export async function run({ page }) {
   await page.setViewport({ width: 1280, height: 900 });
 
   /* Found by walking the listing, since a pinned slug goes stale. */
-  await page.goto(`${BASE}/blog`, { waitUntil: "networkidle0" });
+  await page.goto(`${BASE}/writing`, { waitUntil: "networkidle0" });
   const postPaths = await page.evaluate(() =>
     [...new Set(
-      [...document.querySelectorAll('.entry-list a[href^="/blog/"]')]
+      [...document.querySelectorAll('.entry-list a[href^="/writing/"]')]
         .map((a) => a.getAttribute("href"))
-        /* A post is one segment: each row also links its tags (/blog/tags/x). */
-        .filter((h) => h && /^\/blog\/[^/.]+$/.test(h)),
+        /* A post is one segment: each row also links its tags (/writing/tags/x). */
+        .filter((h) => h && /^\/writing\/[^/.]+$/.test(h)),
     )].slice(0, 6),
   );
   ok(
-    "the /blog listing yields post links to probe",
+    "the /writing listing yields post links to probe",
     postPaths.length > 0,
-    "no post link on /blog, so the post-page bundle, copy, footnote and progress cases below " +
+    "no post link on /writing, so the post-page bundle, copy, footnote and progress cases below " +
       "would have nothing to run on",
   );
   const blogOnIndex = await bundleFetches(page, "blog");
   ok(
     "the blog reading bundle is NOT fetched by the listing page",
     blogOnIndex === 0,
-    `${blogOnIndex} request(s) for the blog bundle on /blog. Every enhancement in it ` +
+    `${blogOnIndex} request(s) for the blog bundle on /writing. Every enhancement in it ` +
       `targets markup only a rendered post carries, so this is bytes spent to find ` +
       `nothing.`,
   );

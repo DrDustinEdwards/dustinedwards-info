@@ -41,8 +41,8 @@ test("a full item carries every field the feed emits, and only those", () => {
     "url",
   ]);
 
-  assert.equal(item.id, `${ORIGIN}/blog/a-post`);
-  assert.equal(item.url, `${ORIGIN}/blog/a-post`);
+  assert.equal(item.id, `${ORIGIN}/writing/a-post`);
+  assert.equal(item.url, `${ORIGIN}/writing/a-post`);
   assert.equal(item.title, "A post");
   assert.equal(item.summary, "One sentence about it.");
   assert.equal(item.date_published, "2026-08-01T00:00:00.000Z");
@@ -62,5 +62,5 @@ test("optional fields serialize away rather than emitting null", () => {
   }
   // The required pair survives the same round trip.
   assert.equal(wire.content_text, FULL.body);
-  assert.equal(wire.id, `${ORIGIN}/blog/a-post`);
+  assert.equal(wire.id, `${ORIGIN}/writing/a-post`);
 });

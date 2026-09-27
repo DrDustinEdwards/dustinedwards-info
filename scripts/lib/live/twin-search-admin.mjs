@@ -8,8 +8,8 @@ import { check, get, ORIGIN, root, SLUG, strip, TIMEOUT_MS, UA } from "./client.
 
 export async function run() {
   {
-    const { res: liveRes, text: live, status } = await get(`/blog/${SLUG}.md`);
-    check(`md twin: /blog/${SLUG}.md serves`, status === 200);
+    const { res: liveRes, text: live, status } = await get(`/writing/${SLUG}.md`);
+    check(`md twin: /writing/${SLUG}.md serves`, status === 200);
 
     // The artifact's body, not the repo file, which also carries frontmatter.
     const artifact = readArtifact();
@@ -52,20 +52,20 @@ export async function run() {
   }
 
   {
-    const pdfs = readdirSync(join(root, "public", "publications")).filter((f) => f.endsWith(".pdf"));
+    const pdfs = readdirSync(join(root, "public", "research", "publications")).filter((f) => f.endsWith(".pdf"));
     // Images only: a desktop.ini or Thumbs.db is not served and is not an asset.
     const photos = readdirSync(join(root, "public", "phage-hunters")).filter((f) =>
       /\.(?:jpe?g|png|webp|avif|gif|svg)$/i.test(f),
     );
     let ok = 0;
     for (const f of pdfs) {
-      const r = await fetch(`${ORIGIN}/publications/${encodeURIComponent(f)}`, {
+      const r = await fetch(`${ORIGIN}/research/publications/${encodeURIComponent(f)}`, {
         method: "HEAD",
         headers: { "user-agent": UA },
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
       if (r.status === 200) ok += 1;
-      else check(`asset 404: /publications/${f} (${r.status})`, false);
+      else check(`asset 404: /research/publications/${f} (${r.status})`, false);
     }
     for (const f of photos) {
       const r = await fetch(`${ORIGIN}/phage-hunters/${encodeURIComponent(f)}`, {

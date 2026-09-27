@@ -73,14 +73,14 @@ export const links: Route.LinksFunction = () => [
     rel: "alternate",
     type: "application/rss+xml",
     title: `${SITE.name} blog`,
-    href: `${SITE_ORIGIN}/blog/rss.xml`,
+    href: `${SITE_ORIGIN}/writing/rss.xml`,
   },
   {
     tagName: "link",
     rel: "alternate",
     type: "application/feed+json",
     title: `${SITE.name} blog`,
-    href: `${SITE_ORIGIN}/blog/feed.json`,
+    href: `${SITE_ORIGIN}/writing/feed.json`,
   },
   // `crossorigin` is mandatory: fonts are fetched in anonymous CORS mode whatever their origin, so a
   // preload without it is a different request and the file is fetched twice.

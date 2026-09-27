@@ -38,9 +38,9 @@ test("an unrecognised extensionless file still stops the build", () => {
 test("the exclusion is anchored at the root of public/", () => {
   // Cloudflare's contract is root-only. A control file one directory down is
   // not a control file, and must fail the way any other unknown file fails.
-  assert.equal(excludedFromAssets("/publications/_headers"), null);
+  assert.equal(excludedFromAssets("/research/publications/_headers"), null);
   assert.equal(excludedFromAssets("/diagrams/_redirects"), null);
-  assert.throws(() => classify("/publications/_headers"), /unclassified asset/);
+  assert.throws(() => classify("/research/publications/_headers"), /unclassified asset/);
 });
 
 test("a real asset is not excluded", () => {

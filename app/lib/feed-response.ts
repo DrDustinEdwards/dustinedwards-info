@@ -32,7 +32,7 @@ interface FeedScope {
 }
 
 export const blogFeed: FeedScope = {
-  path: "/blog",
+  path: "/writing",
   title: `${SITE.name} blog`,
   description: "Writing on building for the web, mostly on Cloudflare.",
   list: { perPage: FEED_ITEMS },

@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import { attr, fixedSize, images, render as renderWith, twoImages } from "./lib/render.mjs";
 
 const FIRST = "/media/dustin-edwards-a1b2c3d4e5f60718-1600x900.webp";
-const SECOND = "/publications/measured-latency.png";
+const SECOND = "/research/publications/measured-latency.png";
 
 /** @param {string} body */
 const render = (body) => renderWith(body, fixedSize);

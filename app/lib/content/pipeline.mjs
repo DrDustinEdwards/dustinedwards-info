@@ -153,11 +153,11 @@ export const frontmatterSchema = z.object({
         title: z.string().min(1, "must not be empty"),
         /**
          * isAllowedUrl is the SAME predicate the render layer uses (check:urls reads this phrase): z.url()
-         * accepts javascript:, and rehypeUrlProtocols never sees frontmatter. Internal links are /blog/ paths, not absolute URLs, so they survive the origin change at cutover.
+         * accepts javascript:, and rehypeUrlProtocols never sees frontmatter. Internal links are /writing/ paths, not absolute URLs, so they survive the origin change at cutover.
          */
         url: z
           .string()
-          .refine(isFurtherReadingUrl, "must be an absolute http(s) URL or a /blog/ path")
+          .refine(isFurtherReadingUrl, "must be an absolute http(s) URL or a /writing/ path")
           .refine(isAllowedUrl, "protocol is not allowed (https, http, mailto or relative only)"),
       }),
     )

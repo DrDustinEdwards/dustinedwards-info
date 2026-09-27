@@ -62,7 +62,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       if (year) target.set("year", year);
       if (listing.pageCount > 1) target.set("page", String(listing.pageCount));
       const qs = target.toString();
-      throw redirect(qs ? `/blog?${qs}` : "/blog");
+      throw redirect(qs ? `/writing?${qs}` : "/writing");
     }
 
     const payload = {
@@ -94,7 +94,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
   const filterLabel = [loaderData?.activeTag, loaderData?.activeYear]
     .filter(Boolean)
     .join(", ");
-  const title = filterLabel ? `Blog: ${filterLabel} | ${SITE.name}` : `Blog | ${SITE.name}`;
+  const title = filterLabel ? `Writing: ${filterLabel} | ${SITE.name}` : `Writing | ${SITE.name}`;
   const description = "Writing on building for the web, mostly on Cloudflare.";
   /* Built from the same axes as `filterHref`, in order, so the canonical is byte-identical to the link. */
   const canonicalParams = new URLSearchParams();
@@ -112,8 +112,8 @@ export function meta({ loaderData }: Route.MetaArgs) {
         loaderData?.page && loaderData.page > 1 ? `?page=${loaderData.page}` : ""
       }`
     : canonicalQuery
-      ? `/blog?${canonicalQuery}`
-      : "/blog";
+      ? `/writing?${canonicalQuery}`
+      : "/writing";
 
   return pageMeta({ title, description, path });
 }
@@ -136,7 +136,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
     if (year) params.set("year", year);
     if (override.page && override.page > 1) params.set("page", String(override.page));
     const qs = params.toString();
-    return qs ? `/blog?${qs}` : "/blog";
+    return qs ? `/writing?${qs}` : "/writing";
   };
 
   const pageHref = (n: number) => filterHref({ page: n });
@@ -152,7 +152,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
             __html: jsonLd(
               breadcrumbJsonLd(SITE_ORIGIN, [
                 ["Home", "/"],
-                ["Blog", "/blog"],
+                ["Writing", "/writing"],
               ]),
             ),
           }}
@@ -160,7 +160,7 @@ export default function BlogIndex({ loaderData }: Route.ComponentProps) {
 
         <header className="list-head">
           {/* Implied properties are skipped for a root containing nested microformats, so this class supplies the only name. */}
-          <h1 className="list-label p-name">Blog</h1>
+          <h1 className="list-label p-name">Writing</h1>
           <p className="list-dek">Writing on building for the web, mostly on Cloudflare.</p>
           <EvidenceRow facts={listingFacts(total, span)} />
         </header>

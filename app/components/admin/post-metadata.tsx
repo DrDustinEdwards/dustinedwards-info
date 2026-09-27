@@ -35,7 +35,7 @@ export function PostMetadata({
 }) {
   const reading = splitReading(furtherReading);
   const chosen = new Set(
-    reading.internal.map((item) => item.url.replace(/^\/blog\//, "")),
+    reading.internal.map((item) => item.url.replace(/^\/writing\//, "")),
   );
 
   // Published only: further reading is public, so offering a draft would be offering a link that 404s.

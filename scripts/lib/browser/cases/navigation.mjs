@@ -65,9 +65,9 @@ export async function run({ browser }) {
             y: box.top + box.height / 2,
           };
         };
-        const bar = pick('.site-header-nav a[href="/blog"]');
+        const bar = pick('.site-header-nav a[href="/writing"]');
         if (bar) return { ...bar, via: "the header nav" };
-        const menu = pick('.site-shell-menu a[href="/blog"]');
+        const menu = pick('.site-shell-menu a[href="/writing"]');
         return menu ? { ...menu, via: "the overflow menu" } : null;
       });
 
@@ -88,9 +88,9 @@ export async function run({ browser }) {
   const target = await openTarget();
   const clickable = target !== null;
   ok(
-    "the header carries a laid-out /blog link for the navigation case to click",
+    "the header carries a laid-out /writing link for the navigation case to click",
     clickable,
-    'neither `.site-header-nav a[href="/blog"]` nor `.site-shell-menu a[href="/blog"]` ' +
+    'neither `.site-header-nav a[href="/writing"]` nor `.site-shell-menu a[href="/writing"]` ' +
       "is present with a non-zero box, even with the overflow disclosure opened. A " +
       "hidden link puts the click at the document corner and the navigation " +
       "assertions below then measure nothing, which is how one breakpoint read as " +
@@ -106,20 +106,20 @@ export async function run({ browser }) {
     await probe.mouse.click(target.x, target.y);
     arrived = await pollUntil(
       () => probe.evaluate(() => location.pathname).catch(() => ""),
-      (path) => path === "/blog",
+      (path) => path === "/writing",
       { everyMs: 150, sleepFirst: false },
     );
     /* The event fires on the incoming document, so give it a moment to land. */
     for (let i = 0; i < 6 && reveals.length === 0; i += 1) {
       await new Promise((r) => setTimeout(r, 200));
     }
-    reveal = reveals.find((r) => r.path === "/blog") ?? reveals[reveals.length - 1] ?? null;
+    reveal = reveals.find((r) => r.path === "/writing") ?? reveals[reveals.length - 1] ?? null;
   }
   await context.close();
 
   ok(
-    "the header click reaches /blog, so the navigation below was real",
-    arrived === "/blog",
+    "the header click reaches /writing, so the navigation below was real",
+    arrived === "/writing",
     `landed on ${JSON.stringify(arrived)}. Everything after this measures a ` +
       `navigation, and a click that did not navigate makes it vacuous.`,
   );

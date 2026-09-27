@@ -29,7 +29,7 @@ export async function run() {
     );
   }
 
-  for (const path of ["/", "/blog", `/blog/${SLUG}`, "/search?q=blog"]) {
+  for (const path of ["/", "/writing", `/writing/${SLUG}`, "/search?q=blog"]) {
     const { text, status } = await get(path, { cookie: "theme=dark" });
     const got = (htmlTag(text).match(/data-theme="([a-z]+)"/) ?? [])[1] ?? null;
     check(`theme persists on ${path}`, status === 200 && got === "dark", `got ${status} ${got}`);

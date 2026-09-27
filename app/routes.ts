@@ -2,33 +2,46 @@ import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
 export default [
   index("routes/home.tsx"),
-  route("blog", "routes/blog._index.tsx"),
+  // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
+  // blog.* names; only the addresses moved. Every other /blog address 301s in the gateway
+  // (app/lib/path-moves.mjs).
+  route("writing", "routes/blog._index.tsx"),
   // Ordered before the :slug routes so the feed is not read as a post slug.
-  route("blog/rss.xml", "routes/blog.rss[.xml].ts"),
-  route("blog/feed.json", "routes/blog.feed[.json].ts"),
-  route("blog/atom.xml", "routes/blog.atom[.xml].ts"),
-  route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts"),
-  route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts"),
-  route("blog/tags/:tag", "routes/blog.tags.$tag.tsx"),
-  route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts"),
-  route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts"),
-  route("blog/series/:series", "routes/blog.series.$series.tsx"),
-  route("blog/:slug.md", "routes/blog.$slug[.md].ts"),
-  route("blog/:slug", "routes/blog.$slug.tsx"),
+  route("writing/rss.xml", "routes/blog.rss[.xml].ts"),
+  route("writing/feed.json", "routes/blog.feed[.json].ts"),
+  route("writing/atom.xml", "routes/blog.atom[.xml].ts"),
+  route("writing/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts"),
+  route("writing/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts"),
+  route("writing/tags/:tag", "routes/blog.tags.$tag.tsx"),
+  route("writing/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts"),
+  route("writing/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts"),
+  route("writing/series/:series", "routes/blog.series.$series.tsx"),
+  route("writing/:slug.md", "routes/blog.$slug[.md].ts"),
+  route("writing/:slug", "routes/blog.$slug.tsx"),
+  // The old feed addresses keep answering with the feed itself, not a redirect: a feed reader is
+  // told the address once and may never follow a 301. Same modules, their own route ids.
+  route("blog/rss.xml", "routes/blog.rss[.xml].ts", { id: "legacy-blog-rss" }),
+  route("blog/feed.json", "routes/blog.feed[.json].ts", { id: "legacy-blog-feed" }),
+  route("blog/atom.xml", "routes/blog.atom[.xml].ts", { id: "legacy-blog-atom" }),
+  route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts", { id: "legacy-tag-rss" }),
+  route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts", { id: "legacy-tag-feed" }),
+  route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts", { id: "legacy-series-rss" }),
+  route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", { id: "legacy-series-feed" }),
   // Top level, never under the post route: that route sends public cache headers, Workers Cache
   // does not key on cookies and a preview link is cookieless, so sharing it would cache a draft.
   route("preview/:token", "routes/preview.$token.tsx"),
   // The legacy WordPress URL, which is indexed, so the Worker takes it over rather than redirecting.
   route("phage-discovery", "routes/phage-discovery.tsx"),
-  route("publications", "routes/publications.tsx"),
+  // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
+  route("research/publications", "routes/publications.tsx"),
   // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages
   // take a trailing slash: page and PDF in one directory is Scholar's condition for citation_pdf_url.
-  route("publications.bib", "routes/publications[.bib].ts"),
-  route("publications.ris", "routes/publications[.ris].ts"),
-  route("publications.json", "routes/publications[.json].ts"),
-  route("publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
-  route("publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
-  route("publications/:slug", "routes/publications.$slug.tsx"),
+  route("research/publications.bib", "routes/publications[.bib].ts"),
+  route("research/publications.ris", "routes/publications[.ris].ts"),
+  route("research/publications.json", "routes/publications[.json].ts"),
+  route("research/publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
+  route("research/publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
+  route("research/publications/:slug", "routes/publications.$slug.tsx"),
   route("about", "routes/about.tsx"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),

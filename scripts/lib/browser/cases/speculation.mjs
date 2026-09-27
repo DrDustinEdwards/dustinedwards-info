@@ -11,7 +11,7 @@ import { BASE, ok } from "../harness.mjs";
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ browser }) {
-  const PAGES = ["/", "/blog", "/blog/ten-years-on-cloudflare", "/colophon", "/privacy"];
+  const PAGES = ["/", "/writing", "/writing/ten-years-on-cloudflare", "/colophon", "/privacy"];
   /** @type {Map<string, {accepted: boolean, errors: string[], candidates: string[], hrefs: string[], actions: string[], eagerness: string[], blocks: number, text: string, policy: string}>} */
   const seen = new Map();
 
@@ -156,16 +156,16 @@ export async function run({ browser }) {
     );
   }
 
-  const fromBlog = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get("/blog"));
+  const fromBlog = /** @type {NonNullable<ReturnType<typeof seen.get>>} */ (seen.get("/writing"));
   ok(
-    "/blog: the candidate list is non-empty, so the assertions below are about something",
+    "/writing: the candidate list is non-empty, so the assertions below are about something",
     fromBlog.candidates.length > 0,
     "Chrome resolved no candidates at all. Every exclusion assertion below would " +
       "then pass on an empty set, which is the zero-scope class of the vacuity rule.",
   );
-  for (const destination of ["/colophon", "/privacy", "/search", "/blog/ten-years-on-cloudflare"]) {
+  for (const destination of ["/colophon", "/privacy", "/search", "/writing/ten-years-on-cloudflare"]) {
     ok(
-      `/blog: ${destination} is a speculation candidate`,
+      `/writing: ${destination} is a speculation candidate`,
       fromBlog.candidates.includes(destination),
       `it is not, so a click to it is a cold document load. ${destination} is linked ` +
         `from this page and is a public HTML route, which is exactly the set the ` +
@@ -182,7 +182,7 @@ export async function run({ browser }) {
        * comment opener, hiding the `ok()` calls after it from any comment-stripping reader.
        */
       why:
-        "a filtered view is a database read per variant, and /blog renders one chip " +
+        "a filtered view is a database read per variant, and /writing renders one chip " +
         "per tag; speculating them is a crawl of the tag index. The exclusion has to " +
         "name the URLPattern `search` component. A pathname pattern that spells the " +
         "query with a literal question mark reads it as part of the path, and planting " +
@@ -194,7 +194,7 @@ export async function run({ browser }) {
       matches: (/** @type {string} */ href) => /\.(md|xml|json|txt)(\?|$)/.test(href),
       why:
         "feeds, the sitemap, robots, the llms pair and the .md representation twins are " +
-        "not documents a reader navigates to. /blog/rss.xml WAS a candidate under the " +
+        "not documents a reader navigates to. /writing/rss.xml WAS a candidate under the " +
         "old blog-prefix rule, measured 2026-08-28. The rule is not spelled out here " +
         "for the slash-star reason given above.",
     },
@@ -207,14 +207,14 @@ export async function run({ browser }) {
   for (const exclusion of EXCLUSIONS) {
     const links = fromBlog.hrefs.filter(exclusion.matches);
     ok(
-      `/blog renders at least one link with ${exclusion.label}, so the exclusion has a subject`,
+      `/writing renders at least one link with ${exclusion.label}, so the exclusion has a subject`,
       links.length > 0,
       `none found among ${fromBlog.hrefs.length} same-origin links. The assertion below ` +
         `would pass because the page changed, not because the rule works.`,
     );
     const leaked = fromBlog.candidates.filter(exclusion.matches);
     ok(
-      `NO CANDIDATE ON /blog CARRIES ${exclusion.label.toUpperCase()}`,
+      `NO CANDIDATE ON /writing CARRIES ${exclusion.label.toUpperCase()}`,
       leaked.length === 0,
       `Chrome resolved ${JSON.stringify(leaked)} as speculation candidates. ${exclusion.why}`,
     );
