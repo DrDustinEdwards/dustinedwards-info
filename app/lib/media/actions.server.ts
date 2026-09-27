@@ -9,6 +9,7 @@ import {
   trashMediaRecord,
   upsertMediaRecord,
 } from "~/db";
+import type { MediaRef } from "~/db/schema";
 import { applyBulkTag } from "~/lib/admin/bulk-tag";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { storageOf } from "./classify.mjs";
@@ -220,10 +221,54 @@ export async function rebuildMedia(env: Env): Promise<Message> {
   return { message: `${parts.join(". ")}.` };
 }
 
+/** Every place one key is used, on a fresh read: the resolver scan and the pipeline's recorded refs. */
+export async function mediaUsage(env: Env, key: string) {
+  const [resolution, refs] = await Promise.all([
+    resolveCitations(env, [key]),
+    mediaRefsFor(env, [key]),
+  ]);
+  return {
+    complete: resolution.complete,
+    failed: resolution.failed,
+    citations: resolution.citations.get(key) ?? [],
+    refs: refs.get(key) ?? [],
+  };
+}
+
+/**
+ * Whether one key may be deleted, as a verdict rather than prose, so the admin action and Carrel's
+ * media adapter refuse on the same checks. `clear` still has to win the atomic claim.
+ */
+export type MediaDeleteVerdict =
+  | { kind: "static" }
+  | { kind: "unmanaged" }
+  | { kind: "scan-failed"; failed: string[] }
+  | { kind: "cited"; citations: MediaCitation[]; refs: MediaRef[] }
+  | { kind: "clear" };
+
+export async function mediaDeleteVerdict(env: Env, key: string): Promise<MediaDeleteVerdict> {
+  // Refused in the action, not by hiding a button: a deleted row would return on the next rebuild.
+  if (storageOf(key) === "static") return { kind: "static" };
+  if (!isManagedKey(key)) return { kind: "unmanaged" };
+
+  // Server side on a fresh read: a post may have cited the object since the page rendered.
+  const usage = await mediaUsage(env, key);
+
+  // Fail closed: a failed scan is not "nothing cites it".
+  if (!usage.complete) return { kind: "scan-failed", failed: usage.failed };
+
+  // The refcount: content-addressed keys let posts share a blob, so any citation blocks the delete.
+  if (usage.refs.length > 0 || usage.citations.length > 0) {
+    return { kind: "cited", citations: usage.citations, refs: usage.refs };
+  }
+  return { kind: "clear" };
+}
+
 /** Deletes one object the route has confirmed, refusing a static key or anything cited. */
 export async function deleteMedia(env: Env, key: string): Promise<Message> {
-  // Refused in the action, not by hiding a button: a deleted row would return on the next rebuild.
-  if (storageOf(key) === "static") {
+  const verdict = await mediaDeleteVerdict(env, key);
+
+  if (verdict.kind === "static") {
     return {
       message:
         `Delete refused: ${key} is a static asset, served from the repo rather than R2. ` +
@@ -232,33 +277,24 @@ export async function deleteMedia(env: Env, key: string): Promise<Message> {
     };
   }
 
-  if (!isManagedKey(key)) return { message: "Not a managed media key.", refused: true };
+  if (verdict.kind === "unmanaged") return { message: "Not a managed media key.", refused: true };
 
-  // Server side on a fresh read: a post may have cited the object since the page rendered.
-  const [resolution, refs] = await Promise.all([
-    resolveCitations(env, [key]),
-    mediaRefsFor(env, [key]),
-  ]);
-
-  // Fail closed: a failed scan is not "nothing cites it".
-  if (!resolution.complete) {
+  if (verdict.kind === "scan-failed") {
     return {
-      message: `Delete refused: the reference scan failed (${resolution.failed.join(", ")}), so it cannot be confirmed that nothing cites this object.`,
+      message: `Delete refused: the reference scan failed (${verdict.failed.join(", ")}), so it cannot be confirmed that nothing cites this object.`,
       refused: true,
     };
   }
 
-  // The refcount: content-addressed keys let posts share a blob, so any citation blocks the delete.
-  const rows = refs.get(key) ?? [];
-  const citations = resolution.citations.get(key) ?? [];
-  if (rows.length > 0 || citations.length > 0) {
+  if (verdict.kind === "cited") {
+    const rows = verdict.refs;
     const sources = new Set(rows.map((row) => `${row.sourceType}:${row.sourceId}`));
     const refNote =
       rows.length > 0
         ? ` The pipeline recorded ${rows.length} reference(s) across ${sources.size} item(s).`
         : "";
     return {
-      message: `Delete refused. ${describeCitations(citations)}${refNote}`,
+      message: `Delete refused. ${describeCitations(verdict.citations)}${refNote}`,
       refused: true,
     };
   }

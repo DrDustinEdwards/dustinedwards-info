@@ -1,6 +1,7 @@
 // The dustinedwards.info side of Carrel's site API (carrel/design.md section 4): the package owns the
 // route, the key, the rate limit and every body's shape; this adapter maps its content and preview
 // calls onto the site's own save, render and history code. Nothing here writes around savePost.
+// Media (v0.2.0) is its own module, over the site's media code.
 
 import { RefusedError, VersionConflictError, type SiteAdapter } from "@dustinedwards/site-api";
 import type { ContentStatus, ContentSummary, WriteResult } from "@dustinedwards/site-api";
@@ -9,6 +10,7 @@ import { RouterContextProvider } from "react-router";
 
 import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
+import { carrelMediaAdapter } from "~/lib/carrel/media-adapter.server";
 import { postPath } from "~/lib/content/slug.mjs";
 import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
@@ -330,5 +332,7 @@ export function carrelSiteAdapter(options: {
         return response.text();
       },
     },
+
+    media: carrelMediaAdapter(env),
   };
 }

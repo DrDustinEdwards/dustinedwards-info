@@ -1,5 +1,5 @@
 // The media library's D1 index: listing, counts, trash, tags and the upserts that keep it in step with R2.
-import { and, asc, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 import { digestFromKey } from "../lib/media/classify.mjs";
 import { exactTagNeedle, parseTags, serialiseTags } from "../lib/media/tags.mjs";
 import { LARGE_FILE_BYTES } from "../lib/media/usage.mjs";
@@ -84,6 +84,8 @@ export async function listMediaPage(
     dir?: string;
     /** Trashed rows only. A flag, not a `role`: trash is orthogonal to role. */
     trashed?: boolean;
+    /** Bucket rows only, no static assets: their keys are repo paths, not storage keys. */
+    storedOnly?: boolean;
   } = {},
 ) {
   const limit = options.limit ?? 24;
@@ -99,6 +101,7 @@ export async function listMediaPage(
   clauses.push(options.trashed ? isNotNull(media.trashedAt) : notTrashed());
   if (options.insertableOnly) clauses.push(insertable);
   if (options.role) clauses.push(eq(media.role, options.role));
+  if (options.storedOnly) clauses.push(ne(media.storage, "static"));
   // Pipeline citations only; the card's resolver scan stays the authority.
   if (options.unusedOnly) clauses.push(uncited(options.templateKeys));
   // In SQL because this listing paginates: a post-filter would search one page.
