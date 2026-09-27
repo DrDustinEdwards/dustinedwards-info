@@ -14,10 +14,18 @@
 # both of those are a human remembering. A runner checks out a sha into an empty
 # machine and there is no working tree to diverge: the class cannot occur.
 #
-# **DEPLOY STAYS A DECISION.** `workflow_dispatch` only. There is deliberately
-# no `on: push`, because option B (push-to-deploy) was considered and refused in
-# the same ruling: it would make every merge a release and take the last human
-# checkpoint out of the path.
+# **A MERGE TO MAIN DEPLOYS (ruling 148, Dustin 2026-09-23, reversing option
+# C's "deploy stays a decision" for the development phase).** The decision moved
+# to the merge: a session merges only a PR whose CI is green on its exact head
+# and which is not labelled "visual" (scripts/merge-pr.mjs); a change a visitor
+# sees waits for Dustin's yes. After CI concludes success on main, this workflow
+# ships that exact sha. It is still one pipeline, `npm run ship`, with every
+# refusal ship already carries. Not `on: push`: `workflow_run` after CI, so
+# nothing deploys a commit whose CI failed.
+#
+# **THE SWITCH.** `gh variable set AUTO_DEPLOY --body off` stops automatic runs;
+# `gh variable delete AUTO_DEPLOY` (or any other value) turns them back on. A
+# manual dispatch works either way. Reviewed at the domain move.
 #
 # ## THE PRICE, STATED
 #
@@ -93,6 +101,12 @@ on:
         description: "Branch, tag or sha to deploy. CI must be green for it."
         required: false
         default: main
+  # Ruling 148: after CI finishes on main. The `decide` job below turns this into a deploy only when CI
+  # succeeded on a push to main, AUTO_DEPLOY is not "off", and the commit is still main's tip.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
 
 # `actions: write` is not decoration. Ship reads the Actions API to learn whether
 # CI concluded success for this exact sha, and refuses if it cannot; and its last
@@ -114,8 +128,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # WHAT TO DEPLOY, AND WHETHER. A dispatch deploys what it names, and the ship job's own step still refuses
+  # anything but main's tip. An automatic run deploys the sha CI just passed, and only when:
+  #   - CI concluded success, on a PUSH (a PR's CI never deploys), to main;
+  #   - the AUTO_DEPLOY repository variable is not "off" (Dustin's switch);
+  #   - that sha is still main's tip. A newer merge means a newer CI run, which deploys the newer tip, so
+  #     an older one is skipped quietly here rather than failing the ship job's tip check and alerting.
+  decide:
+    name: Decide
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      deploy: ${{ steps.decide.outputs.deploy }}
+      ref: ${{ steps.decide.outputs.ref }}
+    steps:
+      - id: decide
+        env:
+          EVENT: ${{ github.event_name }}
+          DISPATCH_REF: ${{ inputs.ref }}
+          CI_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          CI_EVENT: ${{ github.event.workflow_run.event }}
+          CI_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          CI_SHA: ${{ github.event.workflow_run.head_sha }}
+          AUTO_DEPLOY: ${{ vars.AUTO_DEPLOY }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "Dispatched for ${DISPATCH_REF}."
+            { echo "deploy=true"; echo "ref=${DISPATCH_REF}"; } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          skip() { echo "Not deploying: $1"; echo "deploy=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          [ "$CI_CONCLUSION" = "success" ] || skip "CI concluded ${CI_CONCLUSION} on ${CI_SHA}."
+          [ "$CI_EVENT" = "push" ] || skip "CI ran for a ${CI_EVENT}, not a push to main."
+          [ "$CI_BRANCH" = "main" ] || skip "CI ran on ${CI_BRANCH}, not main."
+          [ "$AUTO_DEPLOY" != "off" ] || skip "AUTO_DEPLOY is off. Deploy by hand with: gh workflow run deploy.yml --ref main"
+          tip="$(gh api "repos/${REPO}/commits/main" --jq .sha)"
+          [ "$CI_SHA" = "$tip" ] || skip "${CI_SHA} is no longer main's tip (${tip}); that commit's own CI deploys it."
+          echo "CI passed on main's tip ${CI_SHA}; deploying it."
+          { echo "deploy=true"; echo "ref=${CI_SHA}"; } >> "$GITHUB_OUTPUT"
+
   ship:
     name: Gates, deploy, sync
+    needs: decide
+    if: needs.decide.outputs.deploy == 'true'
     runs-on: ubuntu-latest
     # Ship polls to stability for 5 probes 10s apart and waits out an Ask
     # convergence window of up to 2 minutes, on top of a build and the full gate
@@ -128,7 +186,8 @@ jobs:
       # on 2026-08-25.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
-          ref: ${{ inputs.ref }}
+          # The dispatched ref, or on an automatic run the exact sha CI passed.
+          ref: ${{ needs.decide.outputs.ref }}
           # Full history, because ship's first step is `git pull --ff-only`
           # against origin/main, and a fast-forward check needs the ancestry.
           fetch-depth: 0
@@ -141,7 +200,7 @@ jobs:
       # rather than silently fast-forwarded past the commit that was asked for.
       - name: Put the requested commit on main, and refuse unless it is main's tip
         env:
-          REQUESTED: ${{ inputs.ref }}
+          REQUESTED: ${{ needs.decide.outputs.ref }}
         run: |
           set -euo pipefail
           want="$(git rev-parse HEAD)"
