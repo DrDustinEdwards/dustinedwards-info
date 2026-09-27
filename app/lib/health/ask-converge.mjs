@@ -63,12 +63,12 @@ export async function awaitAskConvergence({
  * is ok, and one that does not keeps its latest counts and the time waited, for the miss.
  *
  * @param {object} options
- * @param {import("./readiness.mjs").HealthCheckRow | undefined} options.row the ask-index-drift row
+ * @param {import("../../../scripts/lib/readiness.mjs").HealthCheckRow | undefined} options.row the ask-index-drift row
  * @param {() => Promise<{ ok: boolean, expected?: number, present?: number } | null>} options.reading
  * @param {(ms: number) => Promise<unknown>} options.sleep
  * @param {() => number} [options.now]
  * @param {(event: { poll: number, reading: any, error: string | null }) => void} [options.onPoll]
- * @returns {Promise<import("./readiness.mjs").HealthCheckRow | undefined>}
+ * @returns {Promise<import("../../../scripts/lib/readiness.mjs").HealthCheckRow | undefined>}
  */
 export async function settleAskDrift({ row, reading, sleep, now = Date.now, onPoll }) {
   if (!row || row.ok === true) return row;
