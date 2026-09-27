@@ -90,10 +90,19 @@
     {
       "id": "header-nav",
       "module": "app/enhance/header.ts",
-      "enhancement": "Adds what <details> does not give the menu: Escape closes it, choosing a link or clicking outside closes it, and focus returns to the button. On narrow widths it also makes the header partially persistent, hiding it on scroll down and returning it after a few pixels of scroll up, by writing one attribute the stylesheet reads.",
-      "fallback": "The menu is a <details> with a <summary> labeled Menu, so the browser opens and closes it with no script at all and every destination inside is an ordinary link. The header simply STAYS STATIC: with no script the hide attribute is never written, nothing moves, and no destination is unreachable. The footer carries the full link list as well.",
+      "enhancement": "Adds what the popover does not give the phone Menu: choosing a link or tabbing out closes it, and the button carries aria-expanded. On narrow widths it also makes the header partially persistent, hiding it on scroll down and returning it after a few pixels of scroll up, by writing one attribute the stylesheet reads.",
+      "fallback": "The nav is a popover and the button labeled Menu is its invoker, so the browser opens it, closes it on Escape or an outside click and returns focus to the button with no script at all, and every destination inside is an ordinary link. The header simply STAYS STATIC: with no script the hide attribute is never written, nothing moves, and no destination is unreachable. The footer carries the full link list as well.",
       "fallbackKind": "selector",
-      "fallbackAt": ".site-header-menu-panel",
+      "fallbackAt": ".site-header-menu-button",
+      "why": null
+    },
+    {
+      "id": "header-mega-menus",
+      "module": "app/enhance/header.ts",
+      "enhancement": "The Research and Teaching panels open after a half-second hover and stay open while the pointer crosses to them, a chevron click pins one open, Escape closes it and returns focus to the chevron, and each chevron carries aria-expanded. On a phone the chevron expands its section in place inside the Menu instead.",
+      "fallback": "Each panel is a popover its chevron opens and closes with no script, closed again by Escape or an outside click, and every link in it is an ordinary link in the server HTML. The word beside the chevron is a link to the section's hub page, which lists the same pages.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".site-nav-panel",
       "why": null
     },
     {

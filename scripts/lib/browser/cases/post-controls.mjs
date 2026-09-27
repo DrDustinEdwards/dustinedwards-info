@@ -222,7 +222,7 @@ export async function run({ page, browser }, { codePost, probedPost }) {
     }
 
     // With no script the narrow header menu is the navigation. Asserted by opening it and following a
-    // link: a details element that opens but whose links do not navigate would pass a check on `open`.
+    // link: a popover that opens but whose links do not navigate would pass a check on `open`.
     {
       const noScript = await browser.newPage();
       try {
@@ -231,12 +231,13 @@ export async function run({ page, browser }, { codePost, probedPost }) {
         await noScript.goto(BASE, { waitUntil: "networkidle0" });
 
         const menu = await noScript.evaluate(() => {
-          const details = document.querySelector("[data-header-menu]");
-          if (!details) return null;
+          const button = document.querySelector("[data-header-menu]");
+          const nav = document.getElementById(button?.getAttribute("popovertarget") ?? "");
+          if (!button || !nav) return null;
           return {
-            displayed: getComputedStyle(details).display !== "none",
-            open: /** @type {HTMLDetailsElement} */ (details).open,
-            links: details.querySelectorAll("a").length,
+            displayed: getComputedStyle(button).display !== "none",
+            open: nav.matches(":popover-open"),
+            links: nav.querySelectorAll("a").length,
           };
         });
 
@@ -252,23 +253,22 @@ export async function run({ page, browser }, { codePost, probedPost }) {
           ".site-header-menu-button",
           "the scriptless header menu button is present to click",
         );
-        const isOpen = await noScript.evaluate(() => {
-          const d = document.querySelector("[data-header-menu]");
-          return d instanceof HTMLDetailsElement && d.open;
-        });
+        const isOpen = await noScript.evaluate(() =>
+          Boolean(document.querySelector("[data-site-nav]")?.matches(":popover-open")),
+        );
         ok(
-          "the header menu OPENS with no script, because it is a details element",
+          "the header menu OPENS with no script, because the nav is the button's popover",
           opened && isOpen,
-          "clicking the summary did not open it. A menu that needs script to open is not rule " +
+          "clicking the button did not open it. A menu that needs script to open is not rule " +
             "9's fallback, it is the enhancement pretending to be one.",
         );
 
-        const link = await noScript.$(".site-header-menu-panel a");
+        const link = await noScript.$("[data-site-nav] .site-nav-word");
         const target = link ? await link.evaluate((a) => a.getAttribute("href")) : null;
         ok(
           "the open header menu offers a link to follow",
           link !== null && Boolean(target),
-          "no link inside .site-header-menu-panel, so there is nothing for the reader to follow",
+          "no destination inside the open nav, so there is nothing for the reader to follow",
         );
         if (link && target) {
           await Promise.all([

@@ -1,29 +1,296 @@
+/*
+ * The nav is a popover (site-header.tsx). The UA sheet gives every [popover] a fixed, centered, bordered
+ * box even while closed, and hides it until opened; author rules beat the UA sheet whatever their
+ * specificity, so the inline layout below simply restates those properties.
+ */
 .site-header-nav {
+  position: static;
+  inset: auto;
   display: flex;
   align-items: center;
-  column-gap: 1.375rem;
+  inline-size: auto;
+  block-size: auto;
+  margin: 0;
   margin-inline-start: auto;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font-family: var(--t-nav-family);
   font-size: var(--t-nav-size);
   font-weight: var(--t-nav-weight);
   font-variation-settings: var(--t-nav-vars);
 }
 
-/* (0,2,1) against a:visited at (0,1,1), so this wins rather than ties. */
-.site-header-nav a,
-.site-header-nav a:visited {
+.site-nav-list {
+  display: flex;
+  align-items: center;
+  column-gap: 1.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav-item {
+  display: flex;
+  align-items: center;
+}
+
+/* (0,2,0) against a:visited at (0,1,1), so this wins rather than ties. */
+.site-nav-word,
+.site-nav-word:visited {
   color: var(--text);
   text-decoration: none;
 }
 
-.site-header-nav a:hover {
+.site-nav-word:hover,
+.site-nav-item:has(> .site-nav-panel:popover-open) > .site-nav-word,
+.site-nav-item[data-expanded] > .site-nav-word {
   color: var(--brand);
 }
 
-.site-header-nav a[aria-current="page"] {
+.site-nav-word:active {
+  color: var(--brand-pressed);
+}
+
+/* The current section, from the menu design's state sheet: the word bold and underlined in ink. */
+.site-nav-word[data-section] {
+  font-variation-settings: "opsz" 16, "wght" var(--t-nav-strong);
+  text-decoration: underline;
+  text-decoration-thickness: var(--line-w-thick);
+  text-underline-offset: 0.35em;
+}
+
+/* Purple at rest like search and theme, so the word and the chevron read as different controls. */
+.site-nav-chevron {
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+}
+
+.site-nav-chevron:hover {
+  color: var(--brand-hover);
+}
+
+.site-nav-chevron:active {
+  color: var(--brand-pressed);
+}
+
+/* No transition: the design gives the panel no motion, so the chevron turns without any either. */
+.site-nav-item:has(> .site-nav-panel:popover-open) .site-nav-chevron svg,
+.site-nav-item[data-expanded] .site-nav-chevron svg {
+  transform: rotate(180deg);
+}
+
+/*
+ * The panel hangs from the header across the full width: paper, one dust rule at its foot, no shadow.
+ * In the top layer when open, so nothing clips it and it sits above the pinned bar with no z-index.
+ * --header-h places it where anchor positioning is missing; where it exists the header's own bottom
+ * edge does.
+ */
+.site-nav-panel {
+  position: fixed;
+  inset: var(--header-h) 0 auto;
+  box-sizing: border-box;
+  inline-size: auto;
+  block-size: auto;
+  max-block-size: calc(100dvh - var(--header-h));
+  margin: 0;
+  padding: 1.75rem var(--site-inset) 2.25rem;
+  overflow: auto;
+  border: 0;
+  border-block-end: var(--line-w) solid var(--dust);
+  background: var(--paper);
   color: var(--text);
-  border-block-end: var(--line-w) solid var(--text);
-  padding-block-end: 0.125rem;
+  font-family: var(--font-sans);
+  font-size: var(--t-nav-size);
+  font-variation-settings: var(--t-nav-vars);
+}
+
+@supports (anchor-name: --site-header) {
+  .site-header {
+    anchor-name: --site-header;
+  }
+
+  .site-nav-panel {
+    position-anchor: --site-header;
+    top: anchor(bottom);
+  }
+}
+
+.site-nav-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem 1.25rem;
+  padding-block-end: 1.75rem;
+}
+
+.site-nav-panel-title,
+.site-nav-panel-title:visited {
+  color: var(--brand);
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  font-variation-settings: normal;
+  line-height: 1.2;
+  text-decoration: none;
+}
+
+.site-nav-panel-title:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.site-nav-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 0.9fr);
+  gap: 2rem;
+}
+
+.site-nav-column[data-wide] {
+  grid-column: span 2;
+}
+
+.site-nav-column-label,
+.site-nav-section-label {
+  margin: 0 0 0.125rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.site-nav-column-label {
+  color: var(--text-secondary);
+  font-variation-settings: "opsz" 16, "wght" 600;
+}
+
+.site-nav-section-label {
+  margin-block-start: 0.5rem;
+  color: var(--text);
+  font-variation-settings: "opsz" 16, "wght" 500;
+}
+
+.site-nav-section + .site-nav-section .site-nav-section-label {
+  margin-block-start: 0.75rem;
+}
+
+.site-nav-links {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav-column[data-wide] .site-nav-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 2rem;
+}
+
+.site-nav-link,
+.site-nav-link:visited {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 1.75rem;
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.site-nav-link:hover {
+  color: var(--brand-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+/* An icon row: the icon is ink at rest and purple with the label on hover and focus. */
+.site-nav-link[data-icon],
+.site-nav-link[data-icon]:visited {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  column-gap: 0.625rem;
+  align-items: start;
+  min-block-size: 2.25rem;
+  padding-block: 0.375rem;
+  color: var(--text);
+}
+
+/* Labels alone, so the icon centers on the one line. */
+.site-nav-column[data-wide] .site-nav-link[data-icon] {
+  align-items: center;
+}
+
+.site-nav-link[data-icon]:hover,
+.site-nav-link[data-icon]:focus-visible {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.site-nav-link[data-icon] .site-nav-label {
+  color: var(--brand);
+  line-height: 1.35;
+}
+
+.site-nav-icon {
+  display: block;
+}
+
+.site-nav-link-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.site-nav-desc {
+  display: block;
+  margin-block: -0.25rem 0.375rem;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.site-nav-panel-head .site-nav-desc,
+.site-nav-link-text .site-nav-desc {
+  margin: 0;
+}
+
+.site-nav-panel-head .site-nav-desc {
+  font-size: 0.875rem;
+}
+
+.site-nav-aside {
+  margin-inline-start: 0.625rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+/* Both spellings for the marker went with the <details> this replaced; a button has none. */
+.site-header-menu-button {
+  display: flex;
+  align-items: center;
+  min-block-size: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--t-nav-family);
+  font-size: var(--t-nav-size);
+  font-weight: var(--t-nav-weight);
+  font-variation-settings: var(--t-nav-vars);
+}
+
+.site-header-menu-button:hover,
+.site-header:has(.site-header-nav:popover-open) .site-header-menu-button {
+  color: var(--brand);
 }
 
 .theme-option {
@@ -75,88 +342,17 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   display: none;
 }
 
-/* Both spellings for the marker: list-style for the standards path, the WebKit pseudo-element for
- * Safari. */
-.site-header-menu-button {
-  display: flex;
-  align-items: center;
-  min-block-size: 1.5rem;
-  color: var(--text);
-  cursor: pointer;
-  font-family: var(--t-nav-family);
-  font-size: var(--t-nav-size);
-  font-weight: var(--t-nav-weight);
-  font-variation-settings: var(--t-nav-vars);
-  list-style: none;
-}
-
-.site-header-menu-button::-webkit-details-marker {
-  display: none;
-}
-
-.site-header-menu-button:hover {
-  color: var(--brand);
-}
-
-.site-header-menu[open] > .site-header-menu-button {
-  color: var(--brand);
-}
-
-/* Anchored to the header, the containing block because it is sticky, so the panel spans the full
- * width. */
-.site-header-menu-panel {
-  position: absolute;
-  inset-inline: 0;
-  /* --z-overlay, never --z-dropdown, which sits under the bar the menu hangs from. */
-  z-index: var(--z-overlay);
-  top: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--paper);
-  border-block-end: var(--line-w) solid var(--dust);
-  font-family: var(--t-nav-family);
-  font-size: var(--t-nav-size);
-  font-weight: var(--t-nav-weight);
-  font-variation-settings: var(--t-nav-vars);
-}
-
-.site-header-menu-panel a,
-.site-header-menu-panel a:visited {
-  padding: 0.875rem var(--site-inset);
-  border-block-start: var(--line-w) solid var(--dust);
-  color: var(--text);
-  text-decoration: none;
-}
-
-.site-header-menu-panel a:hover {
-  color: var(--brand);
-}
-
-.site-header-menu-panel a[aria-current="page"] {
-  color: var(--text);
-  text-decoration: underline;
-  text-underline-offset: 0.25rem;
-}
-
-/* MEASURED: below this the labels, wordmark and controls stop fitting one line; re-measure when a
- * destination is added. Default is the narrow state, so a browser that fails the query still gets the
- * menu. */
-.site-header-nav {
-  display: none;
-}
-
 @media (min-width: 44rem) {
-  .site-header-nav {
-    display: flex;
-  }
-
-  .site-header-menu {
+  .site-header-menu-button {
     display: none;
   }
 }
 
-/* MEASURED: at 320 the header wanted 357px and scrolled sideways. The mark is not shrunk here, so
- * --header-h stays one height everywhere. */
+/*
+ * MEASURED: below this the labels, chevrons, wordmark and controls stop fitting one line (851px wanted
+ * on 2026-09-27, with Research bold as the current section); re-measure when a destination is added. Below it the same nav is the Menu's popover, hanging from the header,
+ * with each menu a section that expands in place (header.ts) and rows 44px tall.
+ */
 @media (max-width: 43.99rem) {
   .site-header {
     column-gap: 0.75rem;
@@ -164,11 +360,152 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
 
   .site-header-tools {
     gap: 0.75rem;
+    margin-inline-start: auto;
   }
 
   .site-header-brand {
     gap: 0.5rem;
     font-size: 1.0625rem;
+  }
+
+  .site-header-nav {
+    display: none;
+  }
+
+  .site-header-nav:popover-open {
+    position: fixed;
+    inset: var(--header-h) 0 auto;
+    display: block;
+    box-sizing: border-box;
+    max-block-size: calc(100dvh - var(--header-h));
+    padding: 0.25rem var(--site-inset) 1.25rem;
+    overflow: auto;
+    border-block-end: var(--line-w) solid var(--dust);
+    background: var(--paper);
+    color: var(--text);
+  }
+
+  .site-nav-list {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .site-nav-item {
+    flex-wrap: wrap;
+    border-block-end: var(--line-w) solid var(--dust);
+  }
+
+  .site-nav-item:last-child {
+    border-block-end: 0;
+  }
+
+  .site-nav-word {
+    display: flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    font-size: 1.0625rem;
+  }
+
+  /* The rest of the row, so the whole width past the word expands the section. */
+  .site-nav-chevron {
+    display: flex;
+    flex: 1;
+    justify-content: flex-end;
+    min-block-size: 2.75rem;
+  }
+
+  .site-nav-chevron svg {
+    inline-size: 1rem;
+    block-size: 1rem;
+  }
+
+  /* In the flow of the Menu, not the top layer: header.ts opens a section with data-expanded. */
+  .site-nav-panel {
+    position: static;
+    flex-basis: 100%;
+    max-block-size: none;
+    padding: 0.25rem 0 1.25rem;
+    overflow: visible;
+    border: 0;
+  }
+
+  .site-nav-item[data-expanded] > .site-nav-panel {
+    display: block;
+  }
+
+  /* With no script the chevron opens the panel as a popover, over the Menu it came from. */
+  .site-nav-panel:popover-open {
+    position: fixed;
+    inset: var(--header-h) 0 auto;
+    max-block-size: calc(100dvh - var(--header-h));
+    padding-inline: var(--site-inset);
+    overflow: auto;
+    border-block-end: var(--line-w) solid var(--dust);
+  }
+
+  .site-nav-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    padding-block-end: 1.125rem;
+  }
+
+  .site-nav-panel-title {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 2.75rem;
+    font-size: 1.25rem;
+  }
+
+  .site-nav-panel-head .site-nav-desc {
+    margin-block-start: -0.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .site-nav-columns {
+    display: flex;
+    flex-direction: column;
+    gap: 1.125rem;
+  }
+
+  .site-nav-link,
+  .site-nav-link:visited {
+    display: flex;
+    min-block-size: 2.75rem;
+    font-size: 1rem;
+  }
+
+  .site-nav-panel-head .site-nav-link {
+    display: inline-flex;
+  }
+
+  .site-nav-link[data-icon],
+  .site-nav-link[data-icon]:visited {
+    column-gap: 0.75rem;
+    align-items: center;
+    min-block-size: 2.75rem;
+    padding-block: 0.25rem;
+  }
+
+  .site-nav-link-text {
+    gap: 0;
+  }
+
+  .site-nav-column[data-wide] .site-nav-links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
+
+  /* The COI primer names sit on the link's line, as on the wide panel. */
+  .site-nav-links li:has(> .site-nav-aside) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: 0.625rem;
+  }
+
+  .site-nav-aside {
+    margin: 0;
   }
 }
 
