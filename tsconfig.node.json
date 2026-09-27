@@ -294,6 +294,8 @@
     // the Worker, and the disagreement would look like a 404 to a reader
     // following a published URL. Its one import is the redirect status rule below.
     "app/lib/slug-redirect.mjs",
+    // The moved-sections rule, which the moved-paths browser case reads rather than restating.
+    "app/lib/path-moves.mjs",
     // Imported by modules listed above, so this project must reach them too:
     // the status rule (slug-redirect), the thrown-value reader (pipeline,
     // upload-contract), the byte and hash encodings (classify, hashes, diagram,
