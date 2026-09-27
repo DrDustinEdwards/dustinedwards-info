@@ -119,14 +119,14 @@ The cycling is the same as for pol 2500-3075, as in the Stewart et al. 2019 supp
 
 ## PCR LPDV p31/CA
 
-Amplifies the p31/CA region of LPDV. The protocol is from Cox et al. 2022 and its supplement, which took the primers from Allison et al. 2014. Use the reaction mix above.
+Amplifies part of the LPDV gag polyprotein (partial p31/capsid). The primers are from [Allison et al. 2014, Virology 450-451:2-12](https://doi.org/10.1016/j.virol.2013.11.037), designed on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)). The cycling is from Cox et al. 2022 and its supplement. Use the reaction mix above.
 
-This page gives no product size for this set yet. The reverse primer is printed two ways: `TGATGGCGTCAGGGCTTTTG` in the Cox et al. 2022 supplement (the sequence below) and `TGATGGCGTCAGGGCTATTTG` in Allison et al. 2014, which designed the primers on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)). Which one the lab ordered decides the product, so the size waits until that is confirmed.
+| Primer | Sequence (5′ to 3′) | Length |
+| --- | --- | --- |
+| Forward | `ATGAGGACTTGTTAGATTGGTTAC` | 24 nt |
+| Reverse | `TGATGGCGTCAGGGCTATTTG` | 21 nt |
 
-| Primer | Sequence (5′ to 3′) |
-| --- | --- |
-| Forward | `ATGAGGACTTGTTAGATTGGTTAC` |
-| Reverse | `TGATGGCGTCAGGGCTTTTG` |
+Product: 458 bp on U09568, positions 1041-1498, computed by placing both primers on the sequence (each matches exactly). The 413 nt between the primers is the partial p31/partial CA fragment Allison et al. 2014 analyzed.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |

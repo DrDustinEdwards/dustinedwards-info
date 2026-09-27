@@ -110,3 +110,22 @@ test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch", () =
   const product = amplicon(REV, "CGAGAAGTAGCTATACGTCCTTTG", "ACATCGTGCCCGGAGC", { maxMismatches: 1 });
   assert.deepEqual([product.start, product.end, product.length, product.reverseMismatches], [4766, 5566, 801, 1]);
 });
+
+/*
+ * LPDV on GenBank U09568 (the Israeli prototype strain, 7,143 nt), the sequence Allison et al. 2014
+ * (Virology 450-451:2-12) designed their primers on. The 413 nt between the primers is the partial p31/partial
+ * CA fragment they analyzed.
+ */
+const LPDV = reference("U09568");
+const LPDV_FORWARD = "ATGAGGACTTGTTAGATTGGTTAC";
+
+test("the U09568 fixture is the whole 7,143 nt sequence", () => {
+  assert.equal(LPDV.length, 7143);
+});
+
+test("LPDV, published pair: 458 bp at 1041-1498 with both primers exact, 413 bp between them", () => {
+  const product = amplicon(LPDV, LPDV_FORWARD, "TGATGGCGTCAGGGCTATTTG");
+  assert.deepEqual([product.start, product.end, product.length, product.forwardMismatches, product.reverseMismatches], [1041, 1498, 458, 0, 0]);
+  assert.equal(product.length - LPDV_FORWARD.length - "TGATGGCGTCAGGGCTATTTG".length, 413);
+});
+
