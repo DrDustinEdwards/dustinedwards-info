@@ -2,18 +2,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { THEME_SELECTORS, resolveTokens, tokenBlock } from "./tokens.mjs";
-
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const HEIGHT = 64;
-
-// Light theme: a card is rendered once and served into feeds with no idea of the reader's theme.
-const { mark: MARK } = resolveTokens(
-  { mark: "--mark-on-chrome" },
-  tokenBlock("mark", THEME_SELECTORS.light),
-  "mark",
-);
 
 /**
  * @typedef {{ fill: string, d: string }} MarkPath
@@ -21,7 +12,8 @@ const { mark: MARK } = resolveTokens(
  */
 
 /**
- * Brand paths are derived, not listed: the light and dark fixtures differ only in the brand fills.
+ * The header logo in its own light-theme colors: a card is paper, drawn once and shown in feeds with
+ * no idea of the reader's theme, so it carries the logo exactly as the light header does.
  *
  * @returns {Mark}
  */
@@ -48,27 +40,7 @@ function readMark() {
 
   // The header crop: the square master would sit in its own whitespace.
   const light = parse("dustin-edwards-logo-header.svg");
-  const dark = parse("dustin-edwards-logo-header-dark.svg");
-  if (light.viewBox !== dark.viewBox) {
-    throw new Error(`mark: ${light.file} and ${dark.file} disagree on the viewBox`);
-  }
-  if (light.paths.length !== dark.paths.length) {
-    throw new Error(
-      `mark: ${light.file} has ${light.paths.length} paths, ` +
-        `${dark.file} has ${dark.paths.length}`,
-    );
-  }
-
-  const paths = light.paths.map((p, i) => {
-    if (p.d !== dark.paths[i].d) {
-      throw new Error(`mark: path ${i} differs in geometry between the two fixtures`);
-    }
-    return { fill: p.fill === dark.paths[i].fill ? p.fill : MARK, d: p.d };
-  });
-  const branded = paths.filter((p) => p.fill === MARK).length;
-  if (branded === 0) {
-    throw new Error("mark: no path changes fill between the fixtures, so none is the brand");
-  }
+  const paths = light.paths;
 
   // satori lays out at integer pixels but writes the svg at the exact aspect, so resvg letterboxes
   // the mark off center. Pad the viewBox symmetrically until its aspect matches the integer box.
