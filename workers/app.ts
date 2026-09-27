@@ -25,6 +25,7 @@ import {
   isAdminPath,
 } from "./csp.mjs";
 import { isUnpolicedType } from "./feed-types.mjs";
+import { applyHeaderSet } from "../packages/security-headers/headers.mjs";
 import { handleMediaEvents } from "./media-events";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { isWorkerPreview } from "~/lib/worker-preview";
@@ -88,10 +89,9 @@ const SECURITY_HEADERS: Record<string, string> = {
 };
 
 
+// The shared package's apply, authoritative: this site's set wins over anything a route set.
 function applySecurityHeaders(headers: Headers) {
-  for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
-    headers.set(name, value);
-  }
+  applyHeaderSet(headers, SECURITY_HEADERS);
 }
 
 // No client identifier: no cookie, IP, user agent or anything derived from them. Wrapped, because

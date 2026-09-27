@@ -1,0 +1,18 @@
+{
+  "name": "@dustinedwards/security-headers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The portfolio's standard security header set, CSP helpers, and the check a site runs in CI to prove its responses carry them.",
+  "type": "module",
+  "exports": {
+    ".": "./index.mjs",
+    "./headers": "./headers.mjs",
+    "./csp": "./csp.mjs",
+    "./check": "./check.mjs"
+  },
+  "bin": {
+    "check-security-headers": "./bin/check-security-headers.mjs"
+  },
+  "files": ["index.mjs", "headers.mjs", "csp.mjs", "check.mjs", "bin", "README.md"],
+  "license": "UNLICENSED"
+}
