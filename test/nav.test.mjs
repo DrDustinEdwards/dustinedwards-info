@@ -79,12 +79,8 @@ test("the Research panel carries the Retroviruses correction and the searched la
   for (const label of ["Phage isolation and purification", "Phage DNA extraction", "Publications"]) {
     assert.ok(byLabel.has(label), label);
   }
-  // Six words at most, per the brief, except the one Dustin worded himself on 2026-09-27.
-  const WORDED_BY_DUSTIN = new Set(["Finding a new phage, step by step"]);
-  const long = links.filter(
-    (link) =>
-      !WORDED_BY_DUSTIN.has(link.description ?? "") && (link.description ?? "").split(/\s+/).length > 6,
-  );
+  // Six words at most, per the brief.
+  const long = links.filter((link) => (link.description ?? "").split(/\s+/).length > 6);
   assert.deepEqual(long, []);
-  assert.equal(byLabel.get("Phage discovery guide")?.description, "Finding a new phage, step by step");
+  assert.equal(byLabel.get("Phage discovery guide")?.description, "Finding a new phage, step-by-step");
 });
