@@ -157,6 +157,8 @@
     // route renders from it.
     "app/lib/media/usage.mjs",
     "app/lib/search/records.mjs",
+    // The Research and Teaching page list, which scripts/build-content.mjs validates against.
+    "app/lib/content-pages.mjs",
     // The Ask item key mapping. check:machine-readable round-trips every paper's
     // page URL through it, because the key is the citation: AI Search carries
     // nothing else about where a chunk came from, so a key that does not map

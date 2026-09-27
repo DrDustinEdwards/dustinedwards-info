@@ -49,7 +49,7 @@ function plainText(markdown) {
  * @param {Array<{ depth: number, id: string, text: string }>} toc
  * @returns {{ intro: string, sections: Array<{ anchor: string, title: string, depth: number, body: string }> }}
  */
-function splitSections(markdown, toc) {
+export function splitSections(markdown, toc) {
   const lines = markdown.split(/\r?\n/);
   /*
    * @type {Array<{ line: number, depth: number }>}

@@ -503,6 +503,9 @@ const ROUTE_CEILINGS = {
    * HTML is the variable part: a long author list is content, not a payload regression.
    */
   "/research/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
+  /* The markdown pages (app/lib/content-pages.mjs) share /about's prose template, and its ceilings: 6979/8299 measured 2026-09-27. */
+  "/research/:page": { id: "routes/content-page", css: 7400, total: 8400 },
+  "/teaching": { id: "routes/teaching", css: 7400, total: 8400 },
 };
 
 const MATH_CEILING = { css: 12600, total: 16400 };
@@ -870,6 +873,18 @@ function gradeMathVariant(manifest, rootAssets, rootSource, clientDir, assetFile
   );
 }
 
+/**
+ * A markdown page's loader data, from the build's own output: `build:content` has run before this gate,
+ * and a missing page is a build that did not, which the throw says rather than grading an empty page.
+ *
+ * @param {string} path
+ */
+function contentPageData(path) {
+  const { pages } = JSON.parse(readFileSync(join(root, "content", "generated", "pages.json"), "utf8"));
+  const page = pages.find((/** @type {{ path: string }} */ p) => p.path === path);
+  if (!page) throw new Error(`content/generated/pages.json has no ${path}; run npm run build:content first.`);
+  return page;
+}
 
 /**
  * Brotli ceilings on the markup the route's own components render, not the served document. The
@@ -893,6 +908,10 @@ const HTML_CEILINGS = {
   "/phage-discovery": { brotli: 4300, measured: 3659 },
   "/privacy": { brotli: 4100, measured: 3529 },
   "/about": { brotli: 3100, measured: 2624 },
+  /* The LONGEST markdown page, /research/protocols/phage-isolation. */
+  "/research/:page": { brotli: 17800, measured: 15396 },
+  /* The LONGEST teaching page, /teaching/phage-discovery. */
+  "/teaching": { brotli: 12300, measured: 10609 },
 };
 
 /** The most a ceiling may sit above the measurement it records. */
@@ -1022,6 +1041,22 @@ async function gradeRenderedHtml() {
     ["/phage-discovery", "app/routes/phage-discovery.tsx", "/phage-discovery", {}, {}],
     ["/privacy", "app/routes/privacy.tsx", "/privacy", {}, {}],
     ["/about", "app/routes/about.tsx", "/about", {}, {}],
+    // The LONGEST markdown page stands for the research/* splat, as the longest post does for /writing/:slug.
+    [
+      "/research/:page",
+      "app/routes/content-page.tsx",
+      "/research/protocols/phage-isolation",
+      { page: contentPageData("/research/protocols/phage-isolation") },
+      {},
+    ],
+    // Likewise the longest teaching page stands for the teaching/* splat.
+    [
+      "/teaching",
+      "app/routes/teaching.tsx",
+      "/teaching/phage-discovery",
+      { page: contentPageData("/teaching/phage-discovery") },
+      {},
+    ],
   ];
 
   const bundled = await bundleRoutes(cases.map((c) => c[1]));

@@ -97,6 +97,9 @@ export function run(code) {
       "publications.tsx",
       "publications.$slug.tsx",
       "privacy.tsx",
+      // The Research and Teaching pages, rendered from markdown at build time (app/lib/content-pages.mjs).
+      "content-page.tsx",
+      "teaching.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",
       // /writing is here rather than with the negotiating routes: no twin representation, and with the

@@ -31,6 +31,20 @@ export async function declaredRouteModules() {
     }
   };
   walk(config, "");
+
+  /* The markdown pages sit behind the research/* and teaching/* splats, which answer 404 for any path
+   * that is not a listed page, so each splat declares exactly the pages it serves and nothing more. */
+  const { CONTENT_PAGE_PATHS } = await import(
+    pathToFileURL(join(root, "app", "lib", "content-pages.mjs")).href
+  );
+  // Iterated live: an entry added here is a page path, never another splat, so it is skipped.
+  for (const [path, file] of out) {
+    if (!path.endsWith("/*")) continue;
+    const prefix = path.slice(0, -2);
+    for (const page of CONTENT_PAGE_PATHS) {
+      if (page === prefix || page.startsWith(`${prefix}/`)) out.set(page, file);
+    }
+  }
   return out;
 }
 
