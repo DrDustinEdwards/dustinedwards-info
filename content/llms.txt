@@ -121,6 +121,38 @@ the index does not show:
 /research/publications.json carries the bibliographic record for all of them in CSL JSON,
 if one fetch is better than one per paper.
 
+## Research and teaching pages
+
+The research programme, the lab protocols and the courses are ordinary pages,
+written in markdown and rendered to HTML when the site is built. They have no
+markdown twin: the HTML is served complete, with its headings, links and
+breadcrumb JSON-LD, and needs no script to read. Every one of them:
+
+  /research
+  /research/retroviruses
+  /research/retroviruses/human
+  /research/retroviruses/avian
+  /research/bacteriophages
+  /research/science-education
+  /research/phages
+  /research/protocols
+  /research/protocols/phage-isolation
+  /research/protocols/phage-dna-extraction
+  /research/protocols/coi-primers
+  /research/protocols/rev-lpdv-primers
+  /research/protocols/pan-avian-gapdh
+  /teaching
+  /teaching/phage-discovery
+  /teaching/virus-isolation
+  /teaching/virus-isolation/faq
+  /teaching/phage-bioinformatics
+  /teaching/central-dogma
+  /teaching/study-skills
+
+The other pages are /, /about, /writing, /projects, /phage-discovery,
+/colophon, /contact and /privacy. /sitemap.xml lists every HTML page on the
+site and nothing else.
+
 ## Search
 
 /search?q=<query> searches the whole site and returns a normal HTML page.

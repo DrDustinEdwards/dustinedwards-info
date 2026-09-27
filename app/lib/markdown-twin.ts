@@ -5,8 +5,14 @@ export function linkToMarkdown(slug: string) {
   return `<${SITE_ORIGIN}/writing/${slug}.md>; rel="alternate"; type="text/markdown"`;
 }
 
-function linkToHtml(slug: string) {
-  return `<${SITE_ORIGIN}/writing/${slug}>; rel="alternate"; type="text/html"`;
+/**
+ * The `Link` header a machine-only document carries to name the HTML page it stands for: a post's
+ * twin names the post, llms.txt and llms-full.txt name the home page. Canonical, not alternate, so a
+ * crawler that reaches the twin first credits the page instead. The paper twins are assets and set the
+ * same header from public/_headers, where code cannot reach.
+ */
+export function canonicalLink(path: string) {
+  return `<${SITE_ORIGIN}${path}>; rel="canonical"`;
 }
 
 export function prefersMarkdown(request: Request) {
@@ -23,7 +29,7 @@ export function markdownResponse(slug: string, body: string, cacheControl: strin
     headers: {
       "content-type": "text/markdown; charset=utf-8",
       "cache-control": cacheControl,
-      link: linkToHtml(slug),
+      link: canonicalLink(`/writing/${slug}`),
       // Only the never-stored response is the negotiated one, so only it varies on Accept.
       ...(cacheControl === NO_STORE_CACHE_CONTROL ? { vary: "Accept" } : {}),
     },

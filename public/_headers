@@ -45,6 +45,14 @@
 # holding the same title and abstract is the duplicate that costs a paper its
 # ranking on the page that was built for it. The twin is for agents, and
 # llms.txt is where they are told about it. Same treatment as llms.txt itself.
+#
+# LINK: REL="CANONICAL" names the paper page the twin stands for, as every
+# markdown twin and llms file on this site does (app/lib/markdown-twin.ts,
+# canonicalLink). `:splat` is the slug the `*` matched, and the page takes the
+# trailing slash. Relative, which RFC 8288 resolves against the request URL, so
+# the rule holds on workers.dev now and on the apex after the cutover without
+# naming either.
 /research/publications/*.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
+  Link: </research/publications/:splat/>; rel="canonical"

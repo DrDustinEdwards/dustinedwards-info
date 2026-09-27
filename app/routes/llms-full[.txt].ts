@@ -1,5 +1,6 @@
 import { listBlogPostsFullText, nextScheduledPublishAt } from "~/db";
 import { getEnv } from "~/lib/context";
+import { canonicalLink } from "~/lib/markdown-twin";
 import { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL, scheduledEdgeCacheControl } from "~/lib/seo";
 import type { Route } from "./+types/llms-full[.txt]";
 
@@ -47,6 +48,7 @@ export async function loader({ context }: Route.LoaderArgs) {
     headers: {
       "content-type": "text/plain; charset=utf-8",
       "x-robots-tag": "noindex",
+      link: canonicalLink("/"),
       "cache-control": SHARED_CACHE_CONTROL,
       [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },

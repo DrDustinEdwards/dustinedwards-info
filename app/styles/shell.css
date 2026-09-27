@@ -89,11 +89,13 @@
 
 /*
  * Dustin, 2026-09-27: the brand block (logo and social links, nothing else) on the left, and the link
- * columns beside it, three across and two rows deep.
+ * columns beside it, three across and two deep. The brand column is only as wide as its content, so the
+ * two read as one footer rather than a block and a distant grid.
  */
 @media (min-width: 48rem) {
   .footer-grid {
-    grid-template-columns: minmax(10rem, 1fr) minmax(0, 3fr);
+    grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: var(--s-7);
   }
 
   .footer-columns {
@@ -122,40 +124,72 @@
   letter-spacing: -0.01em;
 }
 
+/*
+ * The social marks share the footer's ink (Dustin, 2026-09-27). Each link's name is its text, read by
+ * screen readers always and shown as a small label on hover and keyboard focus.
+ */
 .footer-social {
   display: flex;
   gap: var(--s-3);
-  margin-block-start: var(--s-4);
+  margin: var(--s-4) 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .footer-social-link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-inline-size: var(--control-min-dense);
   min-block-size: var(--control-min-dense);
+  color: var(--text);
   text-decoration: none;
+}
+
+.footer-social-link:hover,
+.footer-social-link:focus-visible {
+  color: var(--brand);
+}
+
+/* Visually hidden until hover or focus, never display:none, so it stays the accessible name. */
+.footer-social-label {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-start: 50%;
+  translate: -50% var(--s-1);
+  padding: 2px var(--s-2);
+  border: var(--line-w) solid var(--dust);
+  border-radius: 4px;
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  pointer-events: none;
+  clip-path: inset(50%);
+  opacity: 0;
+}
+
+.footer-social-link:hover .footer-social-label,
+.footer-social-link:focus-visible .footer-social-label {
+  clip-path: none;
+  opacity: 1;
+}
+
+.footer-social-glyph {
+  display: inline-flex;
 }
 
 .footer-social-mark {
   display: block;
   inline-size: auto;
-  block-size: 1.75rem;
+  block-size: 1.5rem;
 }
 
-/* X's two permitted colors, and nothing else: black on the light theme, white on the dark. */
-.footer-x {
-  color: black;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .footer-x {
-    color: white;
-  }
-}
-
-[data-theme="dark"] .footer-x {
-  color: white;
+/* The G inside the inlined Germomics hexagon, knocked out to the footer's own ground. */
+.footer-mark-knockout {
+  fill: var(--paper);
 }
 
 .footer-heading {
@@ -209,12 +243,6 @@
 }
 
 /* The private tools: set apart from the public links by a dust hairline, the site's line color. */
-.footer-private {
-  margin-block-start: var(--s-3);
-  padding-block-start: var(--s-3);
-  border-block-start: var(--line-w) solid var(--dust);
-}
-
 .footer-private-link {
   gap: var(--s-2);
 }

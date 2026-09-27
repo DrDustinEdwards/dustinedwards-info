@@ -17,11 +17,19 @@ test("every internal footer link is a route app/routes.ts declares", async () =>
 });
 
 // Which columns, labels, icons and lines the footer carries is a design default, so nothing here pins
-// them. What stays is link integrity (search standing) and rel=me honesty.
+// them. What stays is link integrity (search standing), rel=me honesty, and AI access staying invisible.
 
 test("the footer never links the retired /phage-discovery address", () => {
   const hrefs = footerHrefs().map((link) => link.to);
   assert.ok(!hrefs.includes("/phage-discovery"));
+});
+
+test("nothing in the footer is for machines only (job_5670dd43eef2): agents find these through the head and robots.txt", () => {
+  const hrefs = footerHrefs().map((link) => link.to);
+  for (const machineOnly of ["/llms.txt", "/llms-full.txt"]) {
+    assert.ok(!hrefs.includes(machineOnly), machineOnly);
+  }
+  assert.ok(!hrefs.some((to) => to.endsWith(".md")), "a markdown twin linked from the footer");
 });
 
 test("rel=me marks exactly the owner's profiles, and never a social link", () => {
@@ -42,4 +50,3 @@ test("the copyright year is computed at render, never hard-coded", () => {
   assert.ok(note.includes("{new Date().getFullYear()}"), note);
   assert.deepEqual(note.match(/\b20\d\d\b/g), ["2006"]);
 });
-

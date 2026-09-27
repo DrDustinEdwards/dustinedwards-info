@@ -14,6 +14,7 @@ import { updateNoticeText } from "~/lib/publications/update-notice.mjs";
 import {
   doiSlug,
   paperAskUrl,
+  paperMarkdownPath,
   paperPath,
   paperPdfPath,
   PUBLICATIONS_PATH,
@@ -72,7 +73,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: `Publication, ${SITE.name}` }];
 
-  const { paper, pagePath, pdfPath } = loaderData;
+  const { paper, slug, pagePath, pdfPath } = loaderData;
   const title = decodeEntities(paper.title);
   const abstractUrl = `${SITE_ORIGIN}${pagePath}`;
   const pdfUrl = pdfPath ? `${SITE_ORIGIN}${pdfPath}` : null;
@@ -89,6 +90,13 @@ export function meta({ loaderData }: Route.MetaArgs) {
       ogType: "article",
     }),
     ...buildCitationTags(paper, { abstractUrl, pdfUrl }),
+    /* Every paper has a twin (build:publication-twins writes one per record); the head is how an agent finds it. */
+    {
+      tagName: "link",
+      rel: "alternate",
+      type: "text/markdown",
+      href: `${SITE_ORIGIN}${paperMarkdownPath(slug)}`,
+    },
   ];
 }
 
