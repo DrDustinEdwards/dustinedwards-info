@@ -3,8 +3,7 @@
  * currentColor so the link's ink-to-purple hover (ruling 122) reaches them. Decorative: the link
  * text carries the name, so each is aria-hidden.
  *
- * The chosen set is the lamp, the padlock and the capsid. The alternatives (nib, gear, hexagon) are
- * kept beside them until Dustin picks, so the shots compare like with like.
+ * The set Dustin chose from #202's shots: the lamp, the padlock and the capsid.
  */
 
 type IconProps = { className?: string };
@@ -58,37 +57,6 @@ export function CapsidIcon(props: IconProps) {
     <Mark {...props}>
       <path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z" />
       <path d="M12 2.5L7.5 9.5h9zM7.5 9.5L3.8 16.75M16.5 9.5l3.7 7.25M7.5 9.5L12 16.5l4.5-7M12 16.5v5M12 16.5l-8.2.25M12 16.5l8.2.25" />
-    </Mark>
-  );
-}
-
-/** Alternative for Carrel: a pen nib. */
-export function NibIcon(props: IconProps) {
-  return (
-    <Mark {...props}>
-      <path d="M12 21l-6-8 3-9h6l3 9z" />
-      <path d="M12 21v-8" />
-      <circle cx="12" cy="11" r="1.5" />
-    </Mark>
-  );
-}
-
-/** Alternative for Admin: a gear. */
-export function GearIcon(props: IconProps) {
-  return (
-    <Mark {...props}>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" />
-      <circle cx="12" cy="12" r="6.5" />
-    </Mark>
-  );
-}
-
-/** Alternative for Console: a plain hexagon. */
-export function HexagonIcon(props: IconProps) {
-  return (
-    <Mark {...props}>
-      <path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z" />
     </Mark>
   );
 }

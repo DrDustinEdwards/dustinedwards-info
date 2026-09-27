@@ -67,11 +67,12 @@ test("an anchor is live only when its heading is listed, never on its page alone
   assert.equal(isLive("/research/publications#2024"), false);
 });
 
-test("About launches its panel with the first interest, and keeps CV while Contact waits for its page", () => {
+test("About launches its panel with the first interest, with CV and Contact beside its head", () => {
   const withRecipes = liveMenu(MENUS.about, (to) => isLive(to) || to === "/interests/recipes");
   assert.ok(withRecipes);
   assert.deepEqual(hrefs(withRecipes).slice(1), [
     "https://docs.google.com/document/d/123n-n-ViE-OyUUqIjEY4byMVVUvfK8BjdNCNt-Gm7GQ/export?format=pdf",
+    "/contact",
     "/interests/recipes",
   ]);
 });

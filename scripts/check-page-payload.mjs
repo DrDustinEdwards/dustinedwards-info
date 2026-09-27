@@ -503,6 +503,8 @@ const ROUTE_CEILINGS = {
   "/playground/ui": { id: "routes/playground.ui", css: 11400, total: 13400 },
   "/phage-discovery": { id: "routes/phage-discovery", css: 8200, total: 10000 },
   "/privacy": { id: "routes/privacy", css: 8200, total: 10000 },
+  /* The same sheets as /privacy (prose), so the same bar. */
+  "/contact": { id: "routes/contact", css: 8200, total: 10000 },
   "/about": { id: "routes/about", css: 8200, total: 10000 },
   "/research/publications": { id: "routes/publications", css: 8700, total: 10700 },
   /*
@@ -919,6 +921,7 @@ const HTML_CEILINGS = {
   "/playground/ui": { brotli: 15700, measured: 13592 },
   "/phage-discovery": { brotli: 5500, measured: 4718 },
   "/privacy": { brotli: 5500, measured: 4716 },
+  "/contact": { brotli: 4100, measured: 3513 },
   "/about": { brotli: 4300, measured: 3737 },
   /* The LONGEST markdown page, /research/protocols/phage-isolation. */
   "/research/:page": { brotli: 17800, measured: 15396 },
@@ -1052,6 +1055,7 @@ async function gradeRenderedHtml() {
     ["/playground/ui", "app/routes/playground.ui.tsx", "/playground/ui", {}, {}],
     ["/phage-discovery", "app/routes/phage-discovery.tsx", "/phage-discovery", {}, {}],
     ["/privacy", "app/routes/privacy.tsx", "/privacy", {}, {}],
+    ["/contact", "app/routes/contact.tsx", "/contact", {}, {}],
     ["/about", "app/routes/about.tsx", "/about", {}, {}],
     // The LONGEST markdown page stands for the research/* splat, as the longest post does for /writing/:slug.
     [

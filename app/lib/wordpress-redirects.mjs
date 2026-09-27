@@ -28,7 +28,7 @@ const CV_PDF = "/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019
 /**
  * Targets whose pages do not exist yet. Every 301 into one of these answers 404 until its page job
  * lands, so the switch checklist reads this list: it must be empty, or each entry accepted, before
- * DNS moves. A kept page that is not built yet (`/contact`) is here for the same reason.
+ * DNS moves.
  */
 export const PENDING_TARGETS = [
   "/research",
@@ -49,7 +49,6 @@ export const PENDING_TARGETS = [
   "/teaching/central-dogma",
   "/teaching/study-skills",
   "/research/retroviruses/avian",
-  "/contact",
 ];
 
 /**

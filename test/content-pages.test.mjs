@@ -23,9 +23,8 @@ test("a page's file is its path with slashes as hyphens", () => {
 });
 
 test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
-  // /contact is a kept address whose page is not one of these.
   const notHere = PENDING_TARGETS.filter((p) => !CONTENT_PAGE_PATHS.includes(p));
-  assert.deepEqual(notHere, ["/contact"]);
+  assert.deepEqual(notHere, []);
 });
 
 test("every old phage address Google knows lands on a heading of /research/phages", () => {

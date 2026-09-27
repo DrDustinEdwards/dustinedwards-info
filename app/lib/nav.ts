@@ -235,7 +235,7 @@ const ABOUT: Menu = {
  * The pages outside the markdown set that a menu links to. test/nav.test.mjs holds each against
  * app/routes.ts, so a route removed there cannot leave a menu link behind.
  */
-export const ROUTED_PATHS: readonly string[] = ["/research/publications", "/about"];
+export const ROUTED_PATHS: readonly string[] = ["/research/publications", "/about", "/contact"];
 
 /**
  * Whether a menu link has a page to land on: a listed markdown page (for an anchor, a listed heading
