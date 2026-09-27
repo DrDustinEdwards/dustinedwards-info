@@ -47,6 +47,8 @@ export const PENDING_TARGETS = [
   "/teaching/virus-isolation",
   "/teaching/phage-bioinformatics",
   "/teaching/central-dogma",
+  "/teaching/study-skills",
+  "/research/retroviruses/avian",
   "/contact",
 ];
 
@@ -72,6 +74,8 @@ const PATTERNS = [
     ["/phylogenetics-lysm", "/arlo-gene-67", "/arlo-gene-67-cloning", "/raspberry-pi-plaque-counter"].includes(p)
       ? moved("/research/phages")
       : null,
+  // The lab's own directory answered "how do I join", so it goes to Join the lab, ahead of the rule below.
+  (p) => (p === "/directory-research-group" ? moved("/teaching#join-the-lab") : null),
   (p) => (/^\/directory-[^/]+$/.test(p) ? moved("/teaching/phage-discovery") : null),
   // Dustin's own author page ranks for his name, so it goes to the About page, ahead of the rule below.
   (p) => (p === "/author/dustin" ? moved("/about") : null),
@@ -114,10 +118,10 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/courses": "/teaching",
   "/related-courses": "/teaching",
   "/research-lab-courses": "/teaching",
-  "/study-skills-guide": "/teaching",
-  "/prospective-students": "/teaching",
+  "/study-skills-guide": "/teaching/study-skills",
+  "/prospective-students": "/teaching#join-the-lab",
   "/biomedical-sciences-academic-advising": "/teaching",
-  "/teaching-philosophy": "/teaching",
+  "/teaching-philosophy": "/teaching#teaching-philosophy",
   "/tarleton-biological-sciences-biomedical-sciences-and-biology": "/teaching",
   "/phages": "/research/phages",
   "/phage-archives": "/research/phages",
@@ -130,8 +134,8 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/knowledge-base/metric-prefix": "/playground",
   "/central-dogma-tutorials": "/teaching/central-dogma",
   "/retroviruses": "/research/retroviruses",
-  "/rev-lpdv-surveys": "/research/retroviruses",
-  "/rev-lpdv-genetic-studies": "/research/retroviruses",
+  "/rev-lpdv-surveys": "/research/retroviruses/avian",
+  "/rev-lpdv-genetic-studies": "/research/retroviruses/avian",
   "/knowledge-base": "/research/protocols",
   "/virus-isolation-reagent-request": "/teaching/virus-isolation",
 });

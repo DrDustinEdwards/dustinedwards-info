@@ -64,8 +64,9 @@ test("the profile paths the fixture counts are all answered by the one 410 rule"
 });
 
 test("every explicit row's target is a page or pending, and never chains", () => {
-  for (const [from, to] of Object.entries(EXPLICIT_ROWS)) {
-    assert.ok(ANSWERED_NOW.has(to) || PENDING_TARGETS.includes(to), `${from} -> ${to}`);
+  for (const [from, location] of Object.entries(EXPLICIT_ROWS)) {
+    const to = targetPath(location);
+    assert.ok(ANSWERED_NOW.has(to) || PENDING_TARGETS.includes(to), `${from} -> ${location}`);
     assert.equal(wordpressDisposition(to), null, `${to} redirects again`);
   }
 });
@@ -86,9 +87,20 @@ test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia p
   // Dustin's own author page ranks for his name; every other author page is a profile and answers 410.
   assert.equal(to("/author/dustin/"), "/about");
   assert.deepEqual(wordpressDisposition("/author/someone/"), { status: 410 });
-  for (const path of ["/retroviruses/", "/rev-lpdv-surveys/", "/rev-lpdv-genetic-studies/"]) {
-    assert.equal(to(path), "/research/retroviruses", path);
+  assert.equal(to("/retroviruses/"), "/research/retroviruses");
+  for (const path of ["/rev-lpdv-surveys/", "/rev-lpdv-genetic-studies/"]) {
+    assert.equal(to(path), "/research/retroviruses/avian", path);
   }
+});
+
+test("the pages written after the map: study skills, Join the lab and Teaching philosophy", () => {
+  const to = (path) => wordpressDisposition(path)?.location;
+  assert.equal(to("/study-skills-guide/"), "/teaching/study-skills");
+  assert.equal(to("/teaching-philosophy/"), "/teaching#teaching-philosophy");
+  assert.equal(to("/prospective-students/"), "/teaching#join-the-lab");
+  // Ahead of the /directory-*/ rule, which still sends the phage cohort directories to the program.
+  assert.equal(to("/directory-research-group/"), "/teaching#join-the-lab");
+  assert.equal(to("/directory-2019-phage-researchers/"), "/teaching/phage-discovery");
 });
 
 test("slashed and bare forms match; a row rebuilt in place never loops", () => {

@@ -1,6 +1,18 @@
 // The theme attribute on the wire, and the public and admin stylesheets kept apart.
 
-import { check, get, htmlTag, SLUG } from "./client.mjs";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+import { check, get, htmlTag, root, SLUG } from "./client.mjs";
+
+/* Read, not restated: generated from app.css, so ruling 128's collapse cannot leave a stale hex here. */
+const tokens = JSON.parse(readFileSync(join(root, "content", "tokens.json"), "utf8")).tokens;
+/** @param {string} name @param {"light" | "dark"} mode */
+const token = (name, mode) => {
+  const value = tokens.find((/** @type {{ name: string }} */ t) => t.name === name)?.[mode];
+  if (!value) throw new Error(`content/tokens.json has no ${mode} value for ${name}`);
+  return value;
+};
 
 export async function run() {
   for (const [label, cookie, expected] of [
@@ -70,9 +82,9 @@ export async function run() {
 
       for (const [label, needle] of [
         ["dark sage locked to #93B29B", "93b29b"],
-        ["dark body text #E3DBD0", "e3dbd0"],
+        [`dark body text ${token("--text", "dark")}`, token("--text", "dark").slice(1)],
         ["dark heading #EDE6DC", "ede6dc"],
-        ["light bg caliche #FAF7F2", "faf7f2"],
+        [`light paper ${token("--paper", "light")}`, token("--paper", "light").slice(1)],
         ["dark bg prairie night #1A1614", "1a1614"],
         ["prefers-contrast tier present", "prefers-contrast"],
         ["forced-colors policy present", "forced-colors"],

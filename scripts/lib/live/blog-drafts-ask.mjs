@@ -1,6 +1,7 @@
 // The blog listing and its pages, every draft's absence from every surface, and the Ask probes.
 
 import { POSTS_PER_PAGE, pageCount, pageForPosition } from "../../../app/lib/blog-listing.mjs";
+import { ownsAskKey } from "../../../app/lib/search/ask-keys.mjs";
 import { readArtifact } from "../artifact.mjs";
 import { ASK_TIMEOUT_MS, check, get, ORIGIN, UA } from "./client.mjs";
 
@@ -186,7 +187,7 @@ export async function run() {
     }
 
     /**
-     * A citation is `item.key` (`blog/<slug>[__<anchor>].md`), not a URL.
+     * A citation is `item.key` (`writing/<slug>[__<anchor>].md`), not a URL.
      * @param {string} label @param {string} q
      * @returns {Promise<{keys: string[], status: number} | null>}
      */
@@ -209,7 +210,7 @@ export async function run() {
       for (const key of positive.keys) {
         check(
           `ask: retrieved key ${key} belongs to a published post`,
-          live.some((/** @type {any} */ p) => key.startsWith(`blog/${p.slug}`)),
+          live.some((/** @type {any} */ p) => ownsAskKey(p.slug)(key)),
         );
       }
     }
@@ -268,7 +269,8 @@ export async function run() {
     for (const p of probes) {
       const got = await askKeys(`draft ${p.slug}`, p.title);
       if (!got) continue;
-      const leaked = got.keys.filter((k) => k.startsWith(`blog/${p.slug}`));
+      // The app's own matcher: the old `blog/` prefix outlived the /writing move and matched nothing.
+      const leaked = got.keys.filter(ownsAskKey(p.slug));
       check(`draft ${p.slug}: Ask cites nothing from it`, leaked.length === 0, leaked.join(", "));
     }
     console.log(

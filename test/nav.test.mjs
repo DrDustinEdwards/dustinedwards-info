@@ -40,22 +40,30 @@ test("Research and Teaching open as menus and About is a plain link until an int
   assert.equal(byLabel.get("About")?.menu, undefined);
 });
 
-test("a page not yet written stays out, and its link appears once the page exists", () => {
+test("the pages and sections written since the menus shipped are in them", () => {
   const teaching = liveMenu(MENUS.teaching);
-  assert.ok(teaching);
-  for (const missing of ["/teaching/study-skills", "/teaching#join-the-lab", "/teaching#teaching-philosophy"]) {
-    assert.ok(!hrefs(teaching).includes(missing), `${missing} is in the menu before its page`);
-    assert.equal(isLive(missing), false);
+  const research = liveMenu(MENUS.research);
+  assert.ok(teaching && research);
+  for (const written of ["/teaching/study-skills", "/teaching#join-the-lab", "/teaching#teaching-philosophy"]) {
+    assert.ok(hrefs(teaching).includes(written), `${written} is missing from the Teaching menu`);
   }
+  for (const written of ["/research/retroviruses/human", "/research/retroviruses/avian"]) {
+    assert.ok(hrefs(research).includes(written), `${written} is missing from the Research menu`);
+  }
+});
 
-  const written = new Set(["/teaching#join-the-lab"]);
-  const later = liveMenu(MENUS.teaching, (to) => isLive(to) || written.has(to));
-  assert.ok(later && hrefs(later).includes("/teaching#join-the-lab"));
+test("a page not yet written stays out, and its link appears once the page exists", () => {
+  const unwritten = new Set(["/teaching/study-skills"]);
+  const before = liveMenu(MENUS.teaching, (to) => isLive(to) && !unwritten.has(to));
+  assert.ok(before && !hrefs(before).includes("/teaching/study-skills"));
+  const after = liveMenu(MENUS.teaching);
+  assert.ok(after && hrefs(after).includes("/teaching/study-skills"));
 });
 
 test("an anchor is live only when its heading is listed, never on its page alone", () => {
   assert.equal(isLive("/teaching"), true);
-  assert.equal(isLive("/teaching#join-the-lab"), false);
+  assert.equal(isLive("/teaching#join-the-lab"), true);
+  assert.equal(isLive("/teaching#courses"), false);
   assert.equal(isLive("/research/publications#2024"), false);
 });
 

@@ -4,8 +4,11 @@ import { check, get } from "./client.mjs";
 
 export async function run() {
   const { text } = await get("/");
-  const anchorsToSearch = (text.match(/href="\/search"/g) ?? []).length;
-  check("header: exactly one anchor to /search", anchorsToSearch === 1, `found ${anchorsToSearch}`);
+  // Per landmark: the footer's Writing column carries its own Search link.
+  const within = (/** @type {string} */ tag) => text.slice(text.indexOf(`<${tag}`), text.indexOf(`</${tag}>`));
+  const anchorsIn = (/** @type {string} */ tag) => (within(tag).match(/href="\/search"/g) ?? []).length;
+  check("header: exactly one anchor to /search", anchorsIn("header") === 1, `found ${anchorsIn("header")}`);
+  check("footer: exactly one anchor to /search", anchorsIn("footer") === 1, `found ${anchorsIn("footer")}`);
 
   const start = text.indexOf('<a class="search-trigger"');
   const end = text.indexOf("</a>", start);

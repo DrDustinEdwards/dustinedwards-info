@@ -72,6 +72,8 @@ Godfather, Fizzles, Loca and IndyLu came from samples collected in Erath County,
 
 Ryadel is a cluster O mycobacteriophage with an unusual prolate (elongated) capsid. Its genome announcement reports that the genome carries 31 copies of a 17-bp sequence with dyad symmetry, a feature conserved among cluster O phages ([Ryadel genome](/research/publications/10-1128-mra-01594-18/)).
 
+Two manuscripts from this structure work are submitted and not yet published: one on the cryo-electron microscopy (cryo-EM) structure of Ryadel, and one on the phage [Rira](/research/phages#rira).
+
 Student projects also compare the predicted structure of single gene products. In this lab, a LysM-like endolysin was modeled in Phyre2 alongside a reference LysM peptidoglycan-binding domain structure and a bacterial homolog found by BLASTp, with the shared domain identified in InterPro.
 
 ## Methods
