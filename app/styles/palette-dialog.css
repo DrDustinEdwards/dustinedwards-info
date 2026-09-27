@@ -25,16 +25,25 @@
   opacity: 0.45;
 }
 
+/* In and out, 120ms each way. `overlay` and `display` keep the closing dialog in the top layer until the
+   fade ends; palette.ts clears what is drawn only after EXIT_MS, which matches. Without motion the
+   dialog appears and goes at once. */
 @media (prefers-reduced-motion: no-preference) {
-  .palette[open] {
-    animation: palette-in 120ms ease-out;
+  .palette,
+  .palette::backdrop {
+    transition: all 120ms allow-discrete;
   }
-}
 
-@keyframes palette-in {
-  from {
+  .palette:not([open]),
+  .palette:not([open])::backdrop {
     opacity: 0;
-    transform: translateY(-0.25rem);
+  }
+
+  @starting-style {
+    .palette[open],
+    .palette[open]::backdrop {
+      opacity: 0;
+    }
   }
 }
 
