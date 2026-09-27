@@ -73,7 +73,7 @@ The finished annotation is submitted to PhagesDB at [phagesdb.org/annotation](ht
 
 After the May 1 deadline, the SEA-PHAGES program reviews each submitted annotation for quality control, and the guide says this review is completed by September 1. The annotation then goes through Review to Improve (R2I), done in PHEONA, before it goes to GenBank, and it is the program, not the class, that submits the genome to GenBank (chapter 13).
 
-A class can then write the genome up as a short genome announcement. The site has a classroom guide to [writing Microbiology Resource Announcements](/research/publications/10-25334-b5bs-f125/), and the lab's own notes on annotation problems that come up in class genomes are on the [Phage Discovery Program](/teaching/phage-discovery) page.
+A class can then write the genome up as a short genome announcement. The site has a classroom guide to [writing Microbiology Resource Announcements](/research/publications/10-25334-b5bs-f125/).
 
 ## After the course
 

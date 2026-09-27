@@ -5,7 +5,7 @@ seo_title: "Tarleton SEA-PHAGES phages: 80 bacteriophages, 2017 to 2025"
 description: "Every bacteriophage isolated in the Tarleton State University SEA-PHAGES lab since 2017, with host, year, Texas county, PhagesDB record and genome papers."
 ---
 
-This is the list of bacteriophages isolated from soil and water by undergraduates in the Tarleton State University SEA-PHAGES course in Stephenville, Texas. It has 80 phages found from 2017 to 2025. The 19 phages from 2017 were isolated on *Mycobacterium smegmatis* mc2 155; from 2018 on, the lab has used *Microbacterium foliorum*, the host for 59 of them. Two phages have no host on record. Each phage has its own entry below with its host, the year it was found, the Texas county it came from, its PhagesDB record, and its genome announcement where one has been published. For how these phages were found, purified and prepared for sequencing, see [phage discovery](/teaching/phage-discovery). The genome papers are also listed under [publications](/research/publications).
+This is the list of bacteriophages isolated from soil and water by undergraduates in the Tarleton State University SEA-PHAGES course in Stephenville, Texas. It has 80 phages found from 2017 to 2025. The 19 phages from 2017 were isolated on *Mycobacterium smegmatis* mc²155 (ATCC 700084); from 2018 on, the lab has used *Microbacterium foliorum* NRRL B-24224, the host for 59 of them. Two phages have no host on record. Each phage has its own entry below with its host, the year it was found, the Texas county it came from, its PhagesDB record, and its genome announcement where one has been published. For how these phages were found, purified and prepared for sequencing, see [phage discovery](/teaching/phage-discovery). The genome papers are also listed under [publications](/research/publications).
 
 ## All phages
 
@@ -13,25 +13,25 @@ Sorted by year, then by name.
 
 | Phage | Year | Host | County | PhagesDB | Paper |
 |---|---|---|---|---|---|
-| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc2 155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Acorn15/) |  |
-| [Allene](#allene) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Allene/) |  |
-| [Arlo](#arlo) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Arlo/) | [Paper](/research/publications/10-1128-mra-01242-18/) |
-| [Ferdie](#ferdie) | 2017 | *M. smegmatis* mc2 155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Ferdie/) |  |
-| [Gibbonz](#gibbonz) | 2017 | *M. smegmatis* mc2 155 | Guadalupe County | [PhagesDB](https://phagesdb.org/phages/Gibbonz/) |  |
-| [JayKay](#jaykay) | 2017 | *M. smegmatis* mc2 155 | Erath County |  |  |
-| [Leia](#leia) | 2017 | *M. smegmatis* mc2 155 |  |  |  |
-| [Lucinda](#lucinda) | 2017 | *M. smegmatis* mc2 155 | Texas | [PhagesDB](https://phagesdb.org/phages/Lucinda/) |  |
-| [Malware](#malware) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Malware/) |  |
-| [MuskMan](#muskman) | 2017 | *M. smegmatis* mc2 155 | Erath County |  |  |
-| [Noonan](#noonan) | 2017 | *M. smegmatis* mc2 155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Noonan/) |  |
-| [Nuggs](#nuggs) | 2017 | *M. smegmatis* mc2 155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Nuggs/) |  |
-| [Ryadel](#ryadel) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Ryadel/) | [Paper](/research/publications/10-1128-mra-01594-18/) |
-| [Sniffles](#sniffles) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Sniffles/) |  |
-| [Strudel](#strudel) | 2017 | *M. smegmatis* mc2 155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Strudel/) |  |
-| [Texx](#texx) | 2017 | *M. smegmatis* mc2 155 | Guadalupe County | [PhagesDB](https://phagesdb.org/phages/Texx/) |  |
-| [TidBit](#tidbit) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/TidBit/) |  |
-| [Trelle](#trelle) | 2017 | *M. smegmatis* mc2 155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Trelle/) |  |
-| [Vero](#vero) | 2017 | *M. smegmatis* mc2 155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Vero/) |  |
+| [Acorn15](#acorn15) | 2017 | *M. smegmatis* mc²155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Acorn15/) |  |
+| [Allene](#allene) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Allene/) |  |
+| [Arlo](#arlo) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Arlo/) | [Paper](/research/publications/10-1128-mra-01242-18/) |
+| [Ferdie](#ferdie) | 2017 | *M. smegmatis* mc²155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Ferdie/) |  |
+| [Gibbonz](#gibbonz) | 2017 | *M. smegmatis* mc²155 | Guadalupe County | [PhagesDB](https://phagesdb.org/phages/Gibbonz/) |  |
+| [JayKay](#jaykay) | 2017 | *M. smegmatis* mc²155 | Erath County |  |  |
+| [Leia](#leia) | 2017 | *M. smegmatis* mc²155 |  |  |  |
+| [Lucinda](#lucinda) | 2017 | *M. smegmatis* mc²155 | Texas | [PhagesDB](https://phagesdb.org/phages/Lucinda/) |  |
+| [Malware](#malware) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Malware/) |  |
+| [MuskMan](#muskman) | 2017 | *M. smegmatis* mc²155 | Erath County |  |  |
+| [Noonan](#noonan) | 2017 | *M. smegmatis* mc²155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Noonan/) |  |
+| [Nuggs](#nuggs) | 2017 | *M. smegmatis* mc²155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Nuggs/) |  |
+| [Ryadel](#ryadel) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Ryadel/) | [Paper](/research/publications/10-1128-mra-01594-18/) |
+| [Sniffles](#sniffles) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Sniffles/) |  |
+| [Strudel](#strudel) | 2017 | *M. smegmatis* mc²155 | Tarrant County | [PhagesDB](https://phagesdb.org/phages/Strudel/) |  |
+| [Texx](#texx) | 2017 | *M. smegmatis* mc²155 | Guadalupe County | [PhagesDB](https://phagesdb.org/phages/Texx/) |  |
+| [TidBit](#tidbit) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/TidBit/) |  |
+| [Trelle](#trelle) | 2017 | *M. smegmatis* mc²155 | Erath County | [PhagesDB](https://phagesdb.org/phages/Trelle/) |  |
+| [Vero](#vero) | 2017 | *M. smegmatis* mc²155 | Hood County | [PhagesDB](https://phagesdb.org/phages/Vero/) |  |
 | [Aislinn](#aislinn) | 2018 | *M. foliorum* | Erath County | [PhagesDB](https://phagesdb.org/phages/Aislinn/) |  |
 | [Astrid](#astrid) | 2018 |  |  |  |  |
 | [Finny](#finny) | 2018 | *M. foliorum* | Comal County | [PhagesDB](https://phagesdb.org/phages/Finny/) | [Paper](/research/publications/10-1128-mra-01039-19/) |
@@ -98,109 +98,109 @@ Sorted by year, then by name.
 
 ### Acorn15
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Hood County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Hood County, Texas.
 
 [Acorn15 on PhagesDB](https://phagesdb.org/phages/Acorn15/).
 
 ### Allene
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [Allene on PhagesDB](https://phagesdb.org/phages/Allene/).
 
 ### Arlo
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [Arlo on PhagesDB](https://phagesdb.org/phages/Arlo/). [Genome announcement](/research/publications/10-1128-mra-01242-18/).
 
 ### Ferdie
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Tarrant County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Tarrant County, Texas.
 
 [Ferdie on PhagesDB](https://phagesdb.org/phages/Ferdie/).
 
 ### Gibbonz
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Guadalupe County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Guadalupe County, Texas.
 
 [Gibbonz on PhagesDB](https://phagesdb.org/phages/Gibbonz/).
 
 ### JayKay
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 ### Leia
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017.
 
 ### Lucinda
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Texas.
 
 [Lucinda on PhagesDB](https://phagesdb.org/phages/Lucinda/).
 
 ### Malware
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [Malware on PhagesDB](https://phagesdb.org/phages/Malware/).
 
 ### MuskMan
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 ### Noonan
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Tarrant County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Tarrant County, Texas.
 
 [Noonan on PhagesDB](https://phagesdb.org/phages/Noonan/).
 
 ### Nuggs
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Hood County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Hood County, Texas.
 
 [Nuggs on PhagesDB](https://phagesdb.org/phages/Nuggs/).
 
 ### Ryadel
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [Ryadel on PhagesDB](https://phagesdb.org/phages/Ryadel/). [Genome announcement](/research/publications/10-1128-mra-01594-18/). A manuscript on its cryo-EM structure is submitted.
 
 ### Sniffles
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [Sniffles on PhagesDB](https://phagesdb.org/phages/Sniffles/).
 
 ### Strudel
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Tarrant County, Texas. Formerly named Jentrie.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Tarrant County, Texas. Formerly named Jentrie.
 
 [Strudel on PhagesDB](https://phagesdb.org/phages/Strudel/).
 
 ### Texx
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Guadalupe County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Guadalupe County, Texas.
 
 [Texx on PhagesDB](https://phagesdb.org/phages/Texx/).
 
 ### TidBit
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [TidBit on PhagesDB](https://phagesdb.org/phages/TidBit/).
 
 ### Trelle
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Erath County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.
 
 [Trelle on PhagesDB](https://phagesdb.org/phages/Trelle/).
 
 ### Vero
 
-Host: *Mycobacterium smegmatis* mc2 155. Found in 2017, Hood County, Texas.
+Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Hood County, Texas.
 
 [Vero on PhagesDB](https://phagesdb.org/phages/Vero/).
 

@@ -2,85 +2,69 @@
 path: /research/protocols/phage-isolation
 title: "Phage Isolation and Purification Protocol"
 seo_title: "Phage Isolation and Purification Protocol, Spot Titer"
-description: "Bacteriophage isolation from soil in the Tarleton SEA-PHAGES lab: direct vs enriched isolation, purification, spot titer, webbed plates, high titer lysate."
+description: "Tarleton SEA-PHAGES lab variants of the Phage Discovery Guide: direct vs enriched isolation, purification, spot titer, webbed plates, high titer lysate."
 ---
 
-This is the phage isolation and purification protocol as it is run in the Tarleton State University SEA-PHAGES lab, where undergraduates isolate bacteriophages from soil and water in the first semester of the [Phage Discovery program](/teaching/phage-discovery), in the [Virus Isolation Course](/teaching/virus-isolation). It follows the SEA-PHAGES Phage Discovery Guide, which remains the reference for every step, and adds what the guide does not say: the settings this lab actually uses, worked numbers, and the troubleshooting recorded in several years of student lab notebooks. It covers the isolation and purification of viruses from an environmental sample from start to finish: direct vs enriched isolation, plaque purification, turbid plaques, the spot titer, the full plate titer and webbed plates, and making a high titer phage lysate. The arithmetic (pfu/ml, web volumes, dilutions) is worked through question by question in [Lab Calculations and Common Questions](/teaching/virus-isolation/faq).
+The protocol for phage isolation and purification is the SEA-PHAGES [Phage Discovery Guide](https://discoveryguide.seaphages.org/), current edition July 2025 ([PDF](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf)). This page does not reproduce it. It records where the Tarleton State University SEA-PHAGES lab runs a step differently from that edition, and what the lab has found in student lab notebooks from 2017 to 2025, in the first semester of the [Phage Discovery program](/teaching/phage-discovery) and the [Virus Isolation Course](/teaching/virus-isolation): the settings used, worked numbers, and troubleshooting for direct vs enriched isolation, plaque purification, turbid plaques, the spot titer, the full plate titer, webbed plates and the high titer lysate. A year is given where the notebooks give one. The arithmetic (pfu/ml, web volumes, dilutions) is worked through question by question in [Lab Calculations and Common Questions](/teaching/virus-isolation/faq).
 
-## Phage isolation and purification: overview
+## Phage isolation and purification: the Guide protocols
 
-The work runs in three stages, which the course follows in order:
-
-1. **Phage isolation.** Collect an environmental sample, extract it into liquid media, filter it, and plate the filtrate with host bacteria, either directly (direct isolation) or after growing any phage present with the host for several days (enriched isolation). A clear spot or plaque in the bacterial lawn is a candidate phage.
-2. **Phage purification and amplification.** Pick a single plaque, dilute it, and replate it, round after round, until every plaque on the plate looks the same. Then titer the phage and grow it on webbed plates to make a phage lysate, first a low-volume lysate and then a high-volume, high-titer lysate.
-3. **Phage DNA and morphology.** Extract DNA from the high-titer lysate, run restriction digests, prepare samples for electron microscopy, and archive the sample. DNA extraction is on the [phage DNA extraction](/research/protocols/phage-dna-extraction) page; the rest is in the guide.
-
-The guide protocols this page follows, by the guide's own numbering:
+Follow these protocols in the Guide for the steps themselves. The links below go to the Guide's earlier web edition, which still resolves and keeps the same protocol numbers as the July 2025 edition; the current edition is at [discoveryguide.seaphages.org](https://discoveryguide.seaphages.org/).
 
 | Step | Phage Discovery Guide protocol |
 | --- | --- |
 | Aseptic technique | [Protocol 2.1](https://seaphagesphagediscoveryguide.helpdocsonline.com/2-1-protocol) |
 | Collecting environmental samples | [Protocol 5.1](https://seaphagesphagediscoveryguide.helpdocsonline.com/5-1-protocol) |
-| Direct isolation | Protocol 5.2 |
+| Direct isolation | [Protocol 5.2](https://seaphagesphagediscoveryguide.helpdocsonline.com/5-2-protocol) |
 | Plaque assay | [Protocol 5.3](https://seaphagesphagediscoveryguide.helpdocsonline.com/5-3-protocol) |
-| Picking a plaque | Protocol 5.4 |
+| Picking a plaque | [Protocol 5.4](https://seaphagesphagediscoveryguide.helpdocsonline.com/5-4-protocol) |
 | Enriched isolation | [Protocol 5.5](https://seaphagesphagediscoveryguide.helpdocsonline.com/5-5-protocol) |
 | Spot test | [Protocol 5.6](https://seaphagesphagediscoveryguide.helpdocsonline.com/5-6-protocol) |
 | Plaque assay for purification | [Protocol 6.1](https://seaphagesphagediscoveryguide.helpdocsonline.com/6-1-protocol) |
 | Serial dilutions | [Protocol 6.2](https://seaphagesphagediscoveryguide.helpdocsonline.com/6-2-protocol) |
 | Collecting plate lysates | [Protocol 6.3](https://seaphagesphagediscoveryguide.helpdocsonline.com/6-3-protocol) |
-| Spot titer | Protocol 6.4 |
+| Spot titer | [Protocol 6.4](https://seaphagesphagediscoveryguide.helpdocsonline.com/6-4-protocol) |
 | Full plate titer | [Protocol 6.5](https://seaphagesphagediscoveryguide.helpdocsonline.com/6-5-protocol) |
 | Making webbed plates | [Protocol 7.1](https://seaphagesphagediscoveryguide.helpdocsonline.com/7-1-protocol) |
 | Actinobacteriophage database | [Protocol 7.2](https://seaphagesphagediscoveryguide.helpdocsonline.com/7-2-protocol) |
 | Archiving samples | [Protocol 7.3](https://seaphagesphagediscoveryguide.helpdocsonline.com/7-3-protocol) |
 
-## Hosts and safety
+DNA extraction is on the [phage DNA extraction](/research/protocols/phage-dna-extraction) page.
 
-The lab runs at Biosafety Level 2 (BSL-2), both the teaching lab and the research lab, even though the bacterial hosts are Risk Group 1 organisms: *Mycobacterium smegmatis* mc2 155 and *Microbacterium foliorum*. The guide has a host page for each ([*M. smegmatis*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-msmegmatis), [*M. foliorum*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum)).
+## Host strains
+
+- *Mycobacterium smegmatis* mc²155 (ATCC 700084). Guide host page: [*M. smegmatis*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-msmegmatis).
+- *Microbacterium foliorum* NRRL B-24224. Guide host page: [*M. foliorum*](https://seaphagesphagediscoveryguide.helpdocsonline.com/4-1-mfoliorum).
 
 Which host, by year, as the notebooks record it:
 
 | Years | Host | Media | Plate incubation |
 | --- | --- | --- | --- |
-| 2017 | *Mycobacterium smegmatis* | Enrichment Broth | 37 °C (one notebook 38 °C); 48 h for plaque assays and titers, 24 h for webbed plates |
-| 2018 to 2019 | *Microbacterium foliorum* | PYCa | 23 to 30 °C, 24 to 48 h |
-| 2021 to 2025 | *Microbacterium foliorum* | PYCa liquid media, PYCa plates and PYCa top agar | 29 °C (range logged 28.5 to 29.8 °C), 24 to 48 h |
+| 2017 | *Mycobacterium smegmatis* mc²155 | Enrichment Broth | 37 °C (one notebook 38 °C); 48 h for plaque assays and titers, 24 h for webbed plates |
+| 2018 to 2019 | *Microbacterium foliorum* NRRL B-24224 | PYCa | 23 to 30 °C, 24 to 48 h |
+| 2021 to 2025 | *Microbacterium foliorum* NRRL B-24224 | PYCa liquid media, PYCa plates and PYCa top agar | 29 °C (range logged 28.5 to 29.8 °C), 24 to 48 h |
 
-One 2022 notebook used *Mycobacterium fortuitum*, a host the guide has no page for. Everything below that gives a temperature or time is for *M. foliorum* in PYCa unless it says *M. smegmatis*.
+One 2022 notebook used *Mycobacterium fortuitum*, a host the Guide has no page for; the notebook does not give a strain. Everything below that gives a temperature or time is for *M. foliorum* in PYCa unless it says *M. smegmatis*.
 
-Basic rules in this lab: culture plates and tubes go in secondary containment bins; no biological material leaves the lab; glass culture tubes go in the red sharps container and nothing else does; all other disposables that touched a culture (plates, tubes, syringes, filters, pipettes and tips) go in autoclave bags. Contaminated PPE goes in the autoclave bags too.
+## What the lab uses
 
-**Bench prep every session.** Spray CiDecon (made at 1:128) and wipe dry, then 70% ethanol and wipe dry, then light a Bunsen or butane burner and work under the flame.
+Most supplies are the Guide's. These are the lab's own choices:
 
-## Materials
-
-The lists below are what the lab uses. Recipes and amounts per plate are in the guide.
-
-- Host culture: *M. foliorum* (or *M. smegmatis*), 250 µl per plate.
-- PYCa liquid media, PYCa agar plates, PYCa top agar held molten in a 55 °C bath.
-- Phage buffer.
-- 15 ml and 50 ml conical tubes; microcentrifuge tubes.
-- 0.22 µm syringe filters and syringes; 0.22 µm tube-top vacuum filter units for pooling several plates.
-- Shaking incubator (220 to 250 rpm) and a plate incubator (29 °C for *M. foliorum*).
-- Centrifuge for 15 ml and 50 ml tubes, and a microcentrifuge.
-- Micropipettors, including a 1 to 10 µl pipettor for spot titers.
-- Parafilm, a marker, and a light box for counting plaques.
-
-**Batch marking.** The lab marks host culture batches and plate batches with colored stripes (black, red, blue), so that when plates fail, the bad batch can be found.
+- Host culture: 250 µl per plate; top agar held molten in a 55 °C bath; a plate incubator at 29 °C for *M. foliorum* and a shaking incubator at 220 to 250 rpm.
+- 0.22 µm tube-top vacuum filter units for pooling several webbed plates into a 50 ml conical.
+- A 1 to 10 µl pipettor for spot titers, and a light box for counting plaques.
+- **Batch marking.** The lab marks host culture batches and plate batches with colored stripes (black, red, blue), so that when plates fail, the bad batch can be found.
 
 ## Plating with top agar (the plaque assay)
 
-Every step that follows ends with the same plating step, so its settings come first.
+Plating is the Guide's plaque assay (Protocol 5.3). The lab's settings:
 
-1. Take bottom agar plates out of the 4 °C refrigerator early and let them reach room temperature on the bench. They can be pre-warmed in the 29 °C incubator while the dilutions are made (about 7 to 10 minutes).
-2. Break up any clumps in the host culture before adding phage (see the tips below).
-3. Add phage (filtrate, pick dilution or lysate dilution) to 250 µl host. For direct isolation, 500 µl of filtrate is delivered as 5 x 100 µl with a p200, or with a 5 ml pipette.
-4. Let phage and host adsorb. The lab uses 8 minutes for a plaque assay, and 20 minutes with the tube swirled in a figure 8 for webbed plates on *M. foliorum*.
-5. Take the top agar out of the 55 °C bath only at the moment of pouring, swirl the bottle, add it to the tube, and pour onto the plate. Tilt the plate at once to spread it.
-6. Leave the plate flat and undisturbed until the top agar sets: at least 15 to 20 minutes, and 30 to 40 minutes is safer. Only then invert it.
-7. Incubate inverted: 29 °C for 24 to 48 hours for *M. foliorum*, 37 °C for *M. smegmatis*.
-8. Read the plate, then parafilm it and refrigerate it.
+- Bottom agar plates come out of the 4 °C refrigerator early to reach room temperature, or are pre-warmed in the 29 °C incubator while the dilutions are made (about 7 to 10 minutes).
+- For direct isolation, 500 µl of filtrate is delivered as 5 x 100 µl with a p200, or with a 5 ml pipette.
+- Phage and host adsorb for 8 minutes for a plaque assay. For webbed plates on *M. foliorum* the lab uses 20 minutes with the tube swirled in a figure 8, longer than the Guide's 5 to 10 minutes.
+- Top agar comes out of the 55 °C bath only at the moment of pouring, swirled first.
+- Plates sit flat until the top agar sets: at least 15 to 20 minutes, and 30 to 40 minutes is safer. Only then are they inverted.
+- Incubation: 29 °C for 24 to 48 hours for *M. foliorum*, 37 °C for *M. smegmatis*. Read plates are parafilmed and refrigerated.
 
 ### Tips from the lab
 
@@ -99,24 +83,20 @@ Every step that follows ends with the same plating step, so its settings come fi
 
 ## Direct vs enriched isolation
 
-Direct isolation plates the extract the same day and needs phage to be plentiful in the sample. Enriched isolation grows the extract with host for several days first, so it takes longer but can detect a phage present in small numbers. In this lab, many direct platings come up negative (see below), so enrichment is the second route for a sample.
+Both routes are the Guide's (Protocols 5.2 and 5.5). In this lab many direct platings come up negative (see below), so enrichment is the second route for a sample.
 
 ## Direct phage isolation
 
-Direct isolation plates the filtered soil extract with host straight away, without letting phages multiply first. It finds phages that are already abundant in the sample. Guide Protocol 5.2.
+Tarleton's variant of Guide Protocol 5.2. What differs from the July 2025 edition:
 
-As run in this lab:
-
-1. Put the soil in a 15 ml conical tube and cover it with PYCa liquid media. The volumes logged were soil under 2 to 3 ml of media, 7 ml soil plus 3 to 4 ml broth, or 5 ml soil with media to 7 ml above the soil.
-2. Shake 1 to 2 hours at 220 to 250 rpm (29 °C).
-3. Let the soil settle 5 to 20 minutes, or spin the tube at 2,000 x g for 10 minutes.
-4. Draw off the liquid and push it through a 0.22 µm syringe filter.
-5. Plate 500 µl of filtrate with 250 µl host (see plating, above).
-6. Incubate and check the plate for days, not hours (see the tips).
+- **Media volume.** The Guide covers the soil with 2 to 3 ml of media. The lab logged soil under 2 to 3 ml of media, 7 ml soil plus 3 to 4 ml broth, or 5 ml soil with media to 7 ml above the soil, and found that 2 to 3 ml often leaves too little to filter (below).
+- **Shaking time.** The Guide shakes 1 to 2 hours at 250 rpm; the lab shakes at 220 to 250 rpm and 29 °C, and one run needed 4 hours (below).
+- **Filtrate storage.** The Guide says filtrate cannot be stored longer than 24 hours at 4 °C. The lab has plated older filtrate successfully (below), though fresh filtrate is still preferred.
+- **Checking the plate.** The lab keeps negative plates for 5 to 6 days (below).
 
 ### Tips and troubleshooting
 
-- **Shake long enough.** One run shaken about 250 rpm for only 1 hour gave no plaques on all three samples. The repeat, shaken 4 hours, gave the positive plate. The guide suggests 2 to 3 hours.
+- **Shake long enough.** One run shaken about 250 rpm for only 1 hour gave no plaques on all three samples. The repeat, shaken 4 hours, gave the positive plate.
 - **Enough media.** Dry soil soaks up 2 to 3 ml of media during the shake and leaves nothing to draw off. About 7 ml of soil with 2 ml of broth left no recoverable liquid after a spin; 3 to 4 ml of broth over 7 to 8.5 ml of soil was needed. The fix for a dry tube is to add more media (about 3 ml more) and shake again (25 minutes more worked), or, in a 50 ml conical, add 8 ml more broth before filtering.
 - **Enough filtrate.** Soil covered by only 2 to 3 ml of media gave as little as about 200 µl of filtrate. Seven such 200 µl platings were all negative before a sample giving 0.5 to 1 ml of filtrate was positive. When a sample gave only 0.3 ml, the 15 ml tube was spun again at 2,000 rpm, a second filter used, and 300 µl plated.
 - **Muddy, clay or viscous extracts.** Thick, grainy or clay soils clog the 0.22 µm filter. What worked:
@@ -126,23 +106,24 @@ As run in this lab:
   - Pre-wet a fresh filter with phage buffer before pushing the rest through, and swap filters when one clogs.
   - Do not force a clogged filter. One burst and the sample was lost.
   - A silty lake-bed sample that would not settle after three 10-minute spins was cleared by adding more broth, spinning again, and microcentrifuging about 0.5 ml aliquots for 5 minutes. That supernatant was plated without filtering.
-- **Holding filtrate.** The guide says filtrate keeps no longer than 24 hours. In this lab, filtrate held at 4 °C for 2 to 7 days still gave a plaque (a sample held 5 days, plated after a 2-hour host and phage pre-adsorption instead of 10 minutes). Plate fresh filtrate when you can.
+- **Holding filtrate.** In this lab, filtrate held at 4 °C for 2 to 7 days still gave a plaque (a sample held 5 days, plated after a 2-hour host and phage pre-adsorption instead of 10 minutes). Plate fresh filtrate when you can.
 - **Slow plaques.** Direct-isolation plaques on *M. foliorum* can be slow. Plates showed nothing at 15 to 18 hours and a small plaque only after several days. One plate had nothing at 17 hours and a single small, cloudy plaque at about 6 days, and that plaque went on to become a phage. Keep negative plates and recheck them daily for up to 5 or 6 days before discarding.
 - **Expect negatives.** Notebooks record 7 of 8 samples negative before one positive, 8 of 9 negative, and about 10 direct platings negative in a row. To tell a bad sample from bad technique, run a positive-control plaque assay with 10 µl of a known lysate. In one group that plate cleared in 24 hours, which showed the technique was sound, and the group went out for new samples.
 
 ## Enriched phage isolation
 
-Enriched isolation grows the sample extract together with host bacteria for several days first, so that a phage present in small numbers can multiply to a detectable level. Guide Protocol 5.5.
+Tarleton's variant of Guide Protocol 5.5, for *M. foliorum*. What differs from the July 2025 edition:
 
-As run in this lab for *M. foliorum*:
+| Step | Guide | This lab |
+| --- | --- | --- |
+| Soil | to the 15 ml mark of a 50 ml conical | 10 ml |
+| Media | to the 35 ml mark, vortex | 25 ml PYCa to the 35 ml mark, vortex 1 minute |
+| Extraction shake | about 250 rpm, 1 to 2 hours | 250 rpm at 29 °C, 2 hours |
+| Spin | 2,000 x g, 10 minutes | 3,110 rpm, 10 minutes |
+| Host added to the filtrate | 0.5 ml | 250 µl |
+| Enrichment | 220 rpm, 2 to 5 days | 220 to 250 rpm at 27 to 29.5 °C, 2 to 7 days |
 
-1. Put 10 ml of soil in a conical tube and add 25 ml PYCa to the 35 ml mark.
-2. Vortex 1 minute, then shake at 250 rpm and 29 °C for 2 hours.
-3. Spin at 3,110 rpm for 10 minutes and pass the supernatant through a 0.22 µm filter.
-4. Add 250 µl host (not 0.5 ml) to the filtrate.
-5. Cap the tube a quarter turn, tape it, and keep it upright.
-6. Shake at 220 to 250 rpm and 27 to 29.5 °C. Notebooks record 2 to 7 days; the guide's range is 2 to 5 days.
-7. Pull an aliquot, microcentrifuge it, filter the supernatant through 0.22 µm, and spot test it (below). One notebook pulled an aliquot at day 2 for a spot test and left the rest going to day 5.5 as a backup.
+The tube is capped a quarter turn and taped upright, as in the Guide. An aliquot is microcentrifuged, filtered through 0.22 µm, and spot tested. One notebook pulled an aliquot at day 2 for a spot test and left the rest going to day 5.5 as a backup.
 
 ### Water samples
 
@@ -157,35 +138,22 @@ A river-water enrichment gave the lab a positive spot: 45 ml water plus 5 ml 10X
 
 ## Spot test
 
-A spot test checks a sample for phage by dropping small volumes onto a lawn instead of mixing them into it. Guide Protocol 5.6.
-
-1. Pour a lawn of 250 µl host in top agar and let it set completely.
-2. Mark sections on the bottom of the plate.
-3. Spot 5 to 10 µl of each sample into its own section, with a phage-buffer spot as the negative control.
-4. Let the spots soak in before moving the plate, then incubate inverted and read at 24 hours.
-
-A single picked plaque from direct isolation can be confirmed the same way before starting dilutions: split the plate in two, spot 10 µl of the pick (in 100 µl buffer) on one half and 10 µl phage buffer on the other, absorb 20 minutes, and read at 24 hours.
+The spot test is Guide Protocol 5.6. The lab adds one use of it: a single picked plaque from direct isolation is confirmed before starting dilutions by splitting a plate in two, spotting 10 µl of the pick (in 100 µl buffer) on one half and 10 µl phage buffer on the other, absorbing 20 minutes, and reading at 24 hours.
 
 ### Tips and troubleshooting
 
-The guide does not cover spots that run, which was the main spot-test failure in this lab.
+Spots that ran were the main spot-test failure in this lab.
 
-- **Let the lawn set.** Let the lawn set 30 minutes before spotting.
+- **Let the lawn set.** The lab lets the lawn set 30 minutes before spotting (the Guide says 20 minutes or until solid).
 - **Let the spots soak in.** 10 µl spots left only 30 minutes before incubation did not soak in and ran together. Absorbing 4 to 5 hours before moving the plate kept them separate and gave readable plaques. Other notebooks fixed smeared spots with 30 to 45 minutes instead of 20.
-- **Smaller spots.** Spotting 5 µl instead of 10 µl helped, though spots still ran in one notebook even at 5 µl.
+- **Smaller spots.** Spotting 5 µl instead of the Guide's 10 µl helped, though spots still ran in one notebook even at 5 µl.
 - **Do not bump the plate.** Spots ran or dripped into neighboring sections when the plate was moved or bumped too soon. Check that the incubator shelf is level.
 - **Fresh top agar** was one of the fixes tried when spots kept running.
 - **Hold negatives.** A negative spot test was held 2 extra days before discarding, for slow phages.
 
 ## Phage purification: picking and replating plaques
 
-A single plaque is picked, diluted and replated, and this is repeated until the plate shows only one plaque morphology. Guide Protocols 5.4, 6.1 and 6.2.
-
-1. Pick a single, well-isolated plaque with a pipette tip into phage buffer (the lab picks into 90 µl or 100 µl). This is the 10^0 tube.
-2. Make a 10-fold dilution series: 10 µl into 90 µl phage buffer at each step, vortexing between tubes.
-3. Plate 10 µl of each dilution with 250 µl host.
-4. Incubate, then pick a single plaque from a plate with well-separated plaques and repeat.
-5. When all plaques look the same across rounds, the phage is purified. The last purification plate is the starting point for the lysate.
+Purification is Guide Protocols 5.4, 6.1 and 6.2: pick a single plaque, dilute it, replate it, and repeat until every plaque looks the same. The lab picks into 90 µl or 100 µl of phage buffer and plates 10 µl of each dilution with 250 µl host. The findings below are the lab's.
 
 ### Tips and troubleshooting
 
@@ -199,11 +167,11 @@ A single plaque is picked, diluted and replated, and this is repeated until the 
 
 ### Turbid plaques and mixed morphologies
 
-A turbid (cloudy) plaque still has bacteria growing inside it, where a clear plaque has none. A turbid plaque is still a phage: one direct-isolation plate showed a single small, cloudy plaque at about 6 days, and it went on to become a phage. Purify it like any other plaque. What matters during purification is that every plaque on the plate looks the same. A second plaque morphology on dilution plates was, in one class, cross-contamination from another student's phage. Pick each morphology separately, and re-flood an earlier clean webbed plate for new lysate.
+A turbid plaque is still a phage: one direct-isolation plate showed a single small, cloudy plaque at about 6 days, and it went on to become a phage. The lab purifies it like any other plaque; what matters is that every plaque on the plate looks the same. A second plaque morphology on dilution plates was, in one class, cross-contamination from another student's phage. Pick each morphology separately, and re-flood an earlier clean webbed plate for new lysate.
 
 ## Titering a phage lysate: spot titer and full plate titer
 
-The titer is the number of plaque-forming units (pfu) per ml of lysate. It is needed to decide how much lysate to put on a webbed plate. A spot titer gives a quick estimate from one plate; a full plate titer is more accurate. Guide Protocols 6.4 and 6.5.
+The spot titer and full plate titer are Guide Protocols 6.4 and 6.5, and the titer formula is the Guide's. What follows are the lab's worked numbers and the errors found in its notebooks.
 
 ### Titer arithmetic
 
@@ -226,7 +194,7 @@ Worked examples from the notebooks:
 | 376 | 10 µl | undiluted | 3.76 x 10^4 pfu/ml |
 | 6 | 3 µl (spot) | 10^-3 | 2 x 10^6 pfu/ml |
 
-Errors that recur in the notebooks, and that the guide does not warn about:
+Errors that recur in the notebooks:
 
 - **Exponent sign flipped.** 40 plaques in 10 µl of 10^-4 was written 4 x 10^-7 pfu/ml; it is 4 x 10^7. 42 plaques in 10 µl of 10^-6 was written 4.2 x 10^-8; it is 4.2 x 10^9. 169 plaques at 10^-2 was written 1.69 x 10^-5. A negative exponent on a titer is always wrong, and it carries into a wrong webbed-plate volume.
 - **Wrong volume.** 376 plaques from 10 µl undiluted was reported as 3.76 x 10^5 pfu/ml; it is 3.76 x 10^4. For spot titers, divide by the spot volume (3 µl) every time. Report per ml, not per µl.
@@ -236,23 +204,16 @@ Errors that recur in the notebooks, and that the guide does not warn about:
 
 ### Spot titer
 
-1. Make a 10-fold dilution series of the lysate in phage buffer.
-2. Pour a lawn and let it set completely.
-3. Spot a small, fixed volume (the lab uses 3 µl) of each dilution into its own marked section.
-4. Let the spots soak in, incubate, and count the plaques in the most dilute spot that has countable, separate plaques.
-
-Tips and troubleshooting (the guide does not cover the pipetting fix):
+The lab runs the Guide's spot titer (Protocol 6.4, 3 µl spots) with these findings:
 
 - **Pipettor.** 3 µl spots from a p20 or p200 spread into each other and ran past their sections. Switching to a 1 to 10 µl pipettor, vortexing and checking each tube for bubbles, and spreading the dilution series across 3 lawns gave countable spots (8 plaques at 10^-9).
 - **Carrying the plate.** Three spot titers failed because the spots ran together when the plate was carried to the incubator. Lengthening absorption from 30 minutes to 1 hour did not rescue it; switching to a full plate titer did.
-- **Incubation time.** Spot titer plates left about 48 hours dried and cracked with no readable spots, and at 26 hours spots had merged. About 23 hours (or checking every 6 hours) gave readable 10-fold drops. Check at 12 to 24 hours, and do not leave a spot titer in the incubator over a weekend.
+- **Incubation time.** The Guide incubates 24 to 48 hours. In this lab, spot titer plates left about 48 hours dried and cracked with no readable spots, and at 26 hours spots had merged. About 23 hours (or checking every 6 hours) gave readable 10-fold drops. Check at 12 to 24 hours, and do not leave a spot titer in the incubator over a weekend.
 - **White particles.** White particulate at the bottom of every dilution tube meant a contaminated lysate. Re-filtering the lysate through a fresh 0.22 µm filter into a new sterile 15 ml conical fixed it. A filter that probably "popped" during the harvest was handled the same way.
 
 ### Full plate titer
 
-1. Make a 10-fold dilution series of the lysate: 10 µl into 90 µl phage buffer, from 10^-1 out to 10^-7 or further.
-2. Plate 10 µl of each dilution with 250 µl host.
-3. Incubate and count a plate with a countable number of separate plaques. Note which dilution gave a webbed plate (see below): that is the shortcut to the high-titer lysate.
+The lab runs the Guide's full plate titer (Protocol 6.5), plating 10 µl of each dilution with 250 µl host, and notes which dilution gave a webbed plate: that is the shortcut to the high-titer lysate (see [the bracketing shortcut](#the-bracketing-shortcut)).
 
 Tips and troubleshooting:
 
@@ -264,9 +225,9 @@ Tips and troubleshooting:
 
 ## Webbed plates and the high titer lysate
 
-A webbed plate has so many plaques that they almost touch, leaving a thin web of bacteria between them. Flooding webbed plates with phage buffer gives a phage lysate. The lab first makes a low-volume lysate (LVL) from the last purification plate, then a high-volume, high-titer lysate (HVL, or HTL) from several webbed plates. Guide Protocols 6.3 and 7.1.
+Webbed plates and plate lysates are Guide Protocols 7.1 and 6.3. Tarleton's variant differs from the July 2025 edition in scale and in how the web dilution is found. The Guide estimates the plaques needed from plate and plaque area and makes 2 to 3 webbed plates for 8 to 10 ml of lysate. The lab first makes a low-volume lysate (LVL) from the last purification plate, then a high-volume, high-titer lysate (HVL, or HTL) from more plates, and finds the web dilution by bracketing.
 
-The workflow in 2025:
+The workflow as run in 2025:
 
 1. Flood the webbed plate from the last purification round to make a low-volume lysate (about 5 ml).
 2. Run a dilution series from the LVL and plate it to find the dilution that webs.
@@ -281,7 +242,7 @@ The calculation is:
 
     µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml
 
-A worked example that succeeded: 111 plaques on the 10^-6 plate (10 µl) is a titer of 1.1 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1.1 x 10^-3 µl of lysate per plate. That was made as 1 µl lysate in 999 µl buffer, then 7 µl of that into 63 µl buffer, plating 10 µl per plate. Six of seven plates webbed in 24 hours, and the pooled HVL titered 2.2 x 10^11 pfu/ml.
+A worked example from the notebooks: 111 plaques on the 10^-6 plate (10 µl) is a titer of 1.1 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1.1 x 10^-3 µl of lysate per plate. That was made as 1 µl lysate in 999 µl buffer, then 7 µl of that into 63 µl buffer, plating 10 µl per plate. Six of seven plates webbed in 24 hours, and the pooled HVL titered 2.2 x 10^11 pfu/ml.
 
 The pfu a plate needs to web depends on plaque size, and notebooks show the guessed numbers were often too low:
 
@@ -316,11 +277,11 @@ The full plate titer does the first two steps already: the dilution that webbed 
 
 **Re-bracket every new lysate.** The dilution that webs shifts between lysate batches: 10^-2 on one lysate, 10^-4 on the next. A low-volume lysate that cleared 10^-1 to 10^-3 webbed at 10^-4. Re-titer and re-bracket each lysate before plating a web batch.
 
-**Volume limit.** Do not add more lysate than 10% of the cell volume, that is no more than 25 µl onto 250 µl host, or the cells lyse. When a calculation called for 30 µl, 25 µl was plated instead.
+**Volume limit.** The lab adds no more lysate than 10% of the cell volume, that is no more than 25 µl onto 250 µl host, or the cells lyse. When a calculation called for 30 µl, 25 µl was plated instead.
 
 ### Incubation of webbed plates
 
-The guide does not warn how fast a webbed plate goes past the web.
+The Guide allows a webbed plate an additional 24 hours after the web is first seen. In this lab, webbed plates often went past the web within that time:
 
 - **Pull at 24 hours or a little under.** Plates left a little over 24 hours, or about 30 hours, cleared completely and were useless. About 22 hours worked; watch the plates over the last 3 hours. Webbed plates at 29 °C over-cleared after 2 days; repeating with 1 day gave 6 of 6 webbed plates. Plates left 5 days were completely lysed and contaminated. An *M. smegmatis* plate left about 45 hours instead of 24 webbed on only one side.
 - **But slow phages need longer.** A slow *M. foliorum* phage failed to web three times at 48 hours with 2 µl undiluted lysate; 10 µl undiluted webbed only after about 72 hours, and 20 µl webbed in 48 hours. Webbed plates on *M. foliorum* can take significantly longer than expected (5 days in one notebook). A slow web was helped by a day at room temperature before going back into the incubator, and plates left on the bench overnight kept webbing more slowly.
@@ -331,14 +292,11 @@ The guide does not warn how fast a webbed plate goes past the web.
 
 ## Collecting the phage lysate: flooding webbed plates
 
-1. Flood each webbed plate with 8 ml phage buffer.
-2. Let it soak: 2 to 6 hours at room temperature, or parafilmed at 4 °C overnight to 2 days.
-3. Draw the lysate off each plate and pass it through a 0.22 µm filter. For several plates, a tube-top vacuum filter straight into a 50 ml conical is fastest.
-4. Pool, label, and titer the lysate.
+Flooding is Guide Protocol 6.3, with 8 ml phage buffer per plate as in the Guide. The lab's variant: the soak runs 2 to 6 hours at room temperature, or parafilmed at 4 °C overnight to 2 days (the Guide gives 2 to 4 hours, or 12 to 14 hours at 4 °C), and several plates are pooled through a tube-top vacuum filter straight into a 50 ml conical.
 
 ### Yields
 
-The guide gives about 4 ml per plate. Flooding each plate with 8 ml, this lab recovers more, typically 5 to 7 ml per plate:
+The Guide gives about 4 ml per plate. Flooding each plate with 8 ml, this lab recovers more, typically 5 to 7 ml per plate:
 
 | Plates | Lysate recovered |
 | --- | --- |
@@ -349,7 +307,7 @@ The guide gives about 4 ml per plate. Flooding each plate with 8 ml, this lab re
 | 7 | 40 ml (1.5 x 10^10 pfu/ml, 3 h flood) |
 | 8 | 40 to over 50 ml (6.0 x 10^9 pfu/ml, 2 h flood) |
 
-Four plates gave about 27 ml after 5 hours on the bench and about 30 ml after 19 hours at 4 °C (2.04 x 10^10 pfu/ml). The lab makes the high-volume lysate from 4 to 8 webbed plates, not 2 to 3. Plan about 6 webbed plates to cover 10 ml for archiving plus 10 ml for [DNA extraction](/research/protocols/phage-dna-extraction).
+Four plates gave about 27 ml after 5 hours on the bench and about 30 ml after 19 hours at 4 °C (2.04 x 10^10 pfu/ml). The lab makes the high-volume lysate from 4 to 8 webbed plates, not the Guide's 2 to 3. Plan about 6 webbed plates to cover 10 ml for archiving plus 10 ml for [DNA extraction](/research/protocols/phage-dna-extraction).
 
 ### Tips and troubleshooting
 
@@ -362,7 +320,7 @@ Four plates gave about 27 ml after 5 hours on the bench and about 30 ml after 19
 
 ### Serial flooding to raise the titer
 
-The guide does not describe this. Several notebooks tried concentrating a lysate by using the liquid from one flooded webbed plate to flood a second, unflooded webbed plate. Results were mixed:
+This is not a Guide protocol. Several notebooks tried concentrating a lysate by using the liquid from one flooded webbed plate to flood a second, unflooded webbed plate. Results were mixed:
 
 - One plate's filtered lysate (5 ml) topped up with 3 ml phage buffer, used to flood a second plate for 2 hours, then a third, took an LVL of 9.4 x 10^9 to an HVL of 8.4 x 10^10 pfu/ml.
 - 6 ml buffer on 4 webbed plates for 2 hours at room temperature, moved onto 4 more webbed plates for 2 hours, gave about 10 ml at 2.6 x 10^9 pfu/ml. Repeated 3 onto 3, it gave 9.5 ml at 4.2 x 10^10.
@@ -375,11 +333,12 @@ In these notebooks, serial flooding gave anything from about a 10-fold gain in t
 
 ## Storage
 
-- In the notebooks, lysates, filtrates and plates waiting to be read or flooded are held at 4 °C. Archiving is the guide's Protocol 7.3.
-- The [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) defines a high-titer lysate as at least 5 x 10^9 pfu/ml (Protocols 6.4 and 6.5), and that is the titer to reach before extracting DNA or archiving. One lysate in the notebooks was archived at about 10^7 pfu/ml, far below it, so titer the high titer lysate before archiving.
+Archiving is Guide Protocol 7.3, and entering a phage in [PhagesDB](https://phagesdb.org/) is Protocol 7.2. The Guide's high-titer lysate is at least 5 x 10^9 pfu/ml. From the notebooks:
+
+- Lysates, filtrates and plates waiting to be read or flooded are held at 4 °C.
+- One lysate was archived at about 10^7 pfu/ml, far below the Guide's high titer, so titer the high titer lysate before archiving.
 - A high-volume lysate is split: about 10 ml for archiving and about 10 ml for [phage DNA extraction](/research/protocols/phage-dna-extraction).
-- Read plates are parafilmed and refrigerated. Keep plates away from the back of the refrigerator, where one froze.
-- Each new phage is entered in the Actinobacteriophage Database, [PhagesDB](https://phagesdb.org/) (guide Protocol 7.2).
+- Keep plates away from the back of the refrigerator, where one froze.
 
 ## Troubleshooting: failures that hit the whole class
 
