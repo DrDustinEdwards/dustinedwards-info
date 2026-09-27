@@ -2,6 +2,8 @@ name: seat session
 
 # A Claude Code session the seat starts to work one queued Capsid job
 # (Capsid docs/seat-start.md; capsid/research/design-seat-start.md, approved 2026-09-26).
+# Hardened as capsid's seat-session.yml is (capsid/research/design-seat-session-hardening.md,
+# PR 6): the same steps in the same order, the same sandbox and the same egress list.
 #
 # The ONLY trigger is the repository_dispatch Capsid sends through its GitHub App
 # (jobs action "start"). There is no comment, issue or pull request trigger, so a
@@ -21,6 +23,9 @@ permissions:
   contents: write
   pull-requests: read
   issues: read
+  # For the Capsid key exchange below, and nothing else: the Action is given
+  # github_token, so it never exchanges an OIDC token of its own.
+  id-token: write
 
 jobs:
   session:
@@ -29,7 +34,67 @@ jobs:
     # The secrets live on this environment, whose deployment-branch rule allows only
     # the default branch.
     environment: seat
+    # The scrub strips credentials from the environment of Bash and its children;
+    # without it the Action hands its whole environment down. Git reads no global or
+    # system config, so the only config it reads is the repo's, which the session may
+    # not edit. Puppeteer downloads no browser and Wrangler sends no usage data or
+    # error reports, so neither needs a host beyond the egress list below: the
+    # session has no use for a browser, and Chromium's download host is a public
+    # storage bucket host that no egress list should name.
+    env:
+      CLAUDE_CODE_SUBPROCESS_ENV_SCRUB: "1"
+      GIT_CONFIG_GLOBAL: /dev/null
+      GIT_CONFIG_NOSYSTEM: "1"
+      PUPPETEER_SKIP_DOWNLOAD: "true"
+      WRANGLER_SEND_METRICS: "false"
+      WRANGLER_SEND_ERROR_REPORTS: "false"
     steps:
+      # Runner-wide egress control, covering every process on the runner including the
+      # ones the Claude sandbox does not (MCP, hooks, WebFetch). No disable-sudo option,
+      # because its pre hook runs before every step and would remove sudo before the
+      # sandbox setup below; the lockdown step does that instead.
+      #
+      # Block, with the list capsid's audit-mode canary recorded (capsid actions run
+      # 36296347138) and its block-mode canary passed on (capsid actions run
+      # 36297801984). This workflow runs the same steps, so it reaches the same hosts:
+      #   capsid.dustin-edwards.workers.dev   node (the key exchange), claude (MCP)
+      #   github.com                          git-remote-http (checkout), node (setup-node,
+      #                                       the Action's setup), claude (the sandbox proxy:
+      #                                       git push)
+      #   api.github.com                      node (setup-node), bun and gh (the Action)
+      #   release-assets.githubusercontent.com  node (setup-node, the Action's setup)
+      #   registry.npmjs.org                  node (npm ci), bun (the Action's install)
+      #   claude.ai, downloads.claude.ai      curl (the Action's Claude Code installer),
+      #                                       claude (its update check)
+      #   api.anthropic.com                   claude (the installer and the session)
+      #   azure.archive.ubuntu.com:80, packages.microsoft.com, esm.ubuntu.com,
+      #   motd.ubuntu.com                     apt's http method (the sandbox setup's apt-get)
+      # GitHub's own Actions hosts (*.actions.githubusercontent.com for the OIDC token
+      # and the cache, productionresultssa*.blob.core.windows.net) are allowed by the
+      # agent itself (step-security/agent agent.go, addImplicitEndpoints). github.com
+      # and api.github.com are named as well, because the agent's other GitHub hosts
+      # come from a meta API fetch that is empty when the fetch fails.
+      # Left out on purpose: Claude Code's metrics host, which
+      # CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC on the Action step turns off.
+      # The agent splits this list on spaces only (agent config.go, parseEndpoints), so
+      # it is a folded scalar: a literal block would leave newlines inside the entries.
+      - uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: block
+          allowed-endpoints: >-
+            capsid.dustin-edwards.workers.dev:443
+            github.com:443
+            api.github.com:443
+            release-assets.githubusercontent.com:443
+            registry.npmjs.org:443
+            claude.ai:443
+            downloads.claude.ai:443
+            api.anthropic.com:443
+            azure.archive.ubuntu.com:80
+            packages.microsoft.com:443
+            esm.ubuntu.com:443
+            motd.ubuntu.com:443
+
       # The job id is read from the payload through an environment variable, never
       # pasted into a script, and must be a job id before anything uses it. The prompt
       # is built from this step's output only.
@@ -44,6 +109,84 @@ jobs:
           fi
           echo "id=$JOB_ID" >> "$GITHUB_OUTPUT"
 
+      # Claude Code's sandbox runs every Bash command in bubblewrap. ubuntu-24.04 ships
+      # neither bubblewrap nor socat, and its AppArmor policy stops bwrap creating user
+      # namespaces. The profile below is Anthropic's, verbatim from
+      # code.claude.com/docs/en/sandboxing ("Ubuntu 24.04 and later"), read 2026-09-27;
+      # it applies to bwrap itself, not to what runs inside. The last line proves
+      # namespaces work, so a broken sandbox stops the job here rather than in the session.
+      - name: Install the sandbox's prerequisites
+        run: |
+          set -euo pipefail
+          sudo timeout 300 apt-get update -qq
+          sudo timeout 300 apt-get install -y --no-install-recommends bubblewrap socat
+          sudo tee /etc/apparmor.d/bwrap > /dev/null <<'EOF'
+          abi <abi/4.0>,
+          include <tunables/global>
+
+          profile bwrap /usr/bin/bwrap flags=(unconfined) {
+            userns,
+            include if exists <local/bwrap>
+          }
+          EOF
+          sudo systemctl reload apparmor
+          bwrap --ro-bind / / --dev /dev --unshare-all true
+
+      # Our own disable-sudo-and-containers, run after the setup that needs sudo and
+      # before any repo code, the key exchange or the session. It mirrors
+      # step-security/agent sudo.go, disableSudoAndContainers (commit 533aa6a,
+      # 2026-08-26): the docker and containerd sockets, the docker-ce, docker-ce-cli
+      # and containerd.io purge, the directories and apt source it removes, and sudo.
+      # Two differences, both stricter: the services are stopped and disabled rather
+      # than left to the purge, and every file under /etc/sudoers.d is emptied rather
+      # than the runner's alone. Sudo goes last because the teardown needs it. Removing
+      # the runner from the docker group would not be enough: the running runner keeps
+      # the groups it started with, so the daemon itself goes. Then both are checked,
+      # and a lockdown that did not take stops the job.
+      - name: Remove sudo and containers for the rest of the job
+        run: |
+          set -euo pipefail
+          sudo systemctl disable --now docker.socket docker.service containerd.service
+          sudo rm -f /var/run/docker.sock /run/containerd/containerd.sock
+          sudo apt-get purge -y docker-ce docker-ce-cli containerd.io
+          sudo rm -rf /var/lib/docker /var/lib/containerd
+          sudo rm -f /etc/apt/sources.list.d/docker.list /etc/apt/keyrings/docker.asc
+          sudo sh -c 'for f in /etc/sudoers.d/*; do : > "$f"; done'
+          if sudo -n true 2>/dev/null; then echo "::error::sudo still works after the lockdown"; exit 1; fi
+          if [ -e /var/run/docker.sock ] || [ -e /run/containerd/containerd.sock ]; then echo "::error::a container socket survived the lockdown"; exit 1; fi
+
+      # This run's GitHub OIDC token, traded at Capsid for a key bound to this one job
+      # (capsid/research/design-seat-session-hardening.md, section 2). No long-lived
+      # runner key exists. It runs before checkout and npm ci on purpose: every step can
+      # request an OIDC token, and Capsid issues one key per start, so the exchange is
+      # spent before any dependency's install script runs. The runner's own node, since
+      # setup-node has not run yet. The key is masked and written only to the file the
+      # session's MCP client reads.
+      - name: Exchange this run's OIDC token for a key bound to the job
+        env:
+          JOB_ID: ${{ steps.job.outputs.id }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            (async () => {
+              const url = process.env.ACTIONS_ID_TOKEN_REQUEST_URL, bearer = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+              if (!url || !bearer) { console.error("no OIDC request URL: the job needs id-token: write"); process.exit(1); }
+              const oidc = await fetch(url + "&audience=capsid", { headers: { Authorization: "bearer " + bearer } });
+              if (!oidc.ok) { console.error("GitHub refused the OIDC token request: " + oidc.status); process.exit(1); }
+              const token = (await oidc.json()).value;
+              const res = await fetch("https://capsid.dustin-edwards.workers.dev/ops/runner-key", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify({ job_id: process.env.JOB_ID }),
+              });
+              if (!res.ok) { console.error("Capsid refused the exchange (" + res.status + "): " + (await res.text()).slice(0, 300)); process.exit(1); }
+              const { key } = await res.json();
+              console.log("::add-mask::" + key);
+              const config = { mcpServers: { capsid: { type: "http", url: "https://capsid.dustin-edwards.workers.dev/ops/mcp", headers: { Authorization: "Bearer " + key } } } };
+              fs.writeFileSync(process.env.RUNNER_TEMP + "/capsid-mcp.json", JSON.stringify(config), { mode: 0o600 });
+            })().catch((err) => { console.error("the exchange failed: " + err.message); process.exit(1); });
+          '
+
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
@@ -54,46 +197,103 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # The Capsid connection for the runner key, written to a file the session reads.
-      # The key is never printed.
-      - name: Write the Capsid MCP config
-        env:
-          CAPSID_RUNNER_KEY: ${{ secrets.CAPSID_RUNNER_KEY }}
+      # Git runs no hook and no fsmonitor from this checkout, whatever the session writes.
+      - name: Pin the repo's git config
         run: |
-          node -e '
-            const fs = require("fs");
-            const key = process.env.CAPSID_RUNNER_KEY || "";
-            if (!/^\S{20,}$/.test(key)) { console.error("CAPSID_RUNNER_KEY is missing or malformed"); process.exit(1); }
-            fs.writeFileSync(process.env.RUNNER_TEMP + "/capsid-mcp.json", JSON.stringify({ mcpServers: { capsid: { type: "http", url: "https://capsid.dustin-edwards.workers.dev/ops/mcp", headers: { Authorization: "Bearer " + key } } } }));
-          '
+          git config core.hooksPath /dev/null
+          git config core.fsmonitor false
 
       # The subscription token and nothing else: an ANTHROPIC_API_KEY in the
       # environment would outrank it and bill the API.
       - uses: anthropics/claude-code-action@756cc22e19660d20e8cc9496b4f242475a7f7790 # v1.0.235
+        id: session
+        # MCP tools load at startup. "Unset, Claude Code defers all MCP tools by
+        # default ... `false` loads all tools upfront" (code.claude.com/docs/en/env-vars,
+        # ENABLE_TOOL_SEARCH, read 2026-09-27). Deferred, the Capsid tools sit behind
+        # ToolSearch, which the allowed tools do not name: capsid's first canary run
+        # (actions run 36286555290) logged in to Capsid and never claimed its job.
+        # No nonessential traffic: "auto-updates, telemetry, error reporting, the
+        # /feedback command ..." (code.claude.com/docs/en/env-vars,
+        # CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC, read 2026-09-27). The docs send
+        # metrics "to Anthropic and to third-party logging infrastructure" without naming
+        # it; capsid's audit canary saw claude reach http-intake.logs.us5.datadoghq.com,
+        # and its block-mode canary, with this set, reached it no longer.
+        env:
+          ENABLE_TOOL_SEARCH: "false"
+          CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: "1"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The job's own token. Without it the Action exchanges an OIDC token for a
+          # GitHub App token, which this job has no permission to request.
+          github_token: ${{ github.token }}
           # Capsid's App sends the dispatch, so its bot login is the actor. That one
           # login, never "*".
           allowed_bots: "capsid-repo-access"
           # Actions logs on a public repo are public.
           show_full_output: false
+          # User scope, where strictAllowlist and the sandbox credential keys are
+          # honoured. The Read and Edit denies bind the file tools, which run outside any
+          # sandbox. The sandbox binds Bash and every process it starts: required
+          # (failIfUnavailable), with no unsandboxed retry, network to github.com only
+          # for git push, and no writes to the repo's git config or hooks. The sandbox
+          # already protects those two by default; they are named here so the rule is
+          # stated rather than inherited. No reads of the runner temp folder, where the
+          # key exchange wrote the Capsid key: sandbox reads default to everywhere, and
+          # the Read deny above binds the file tools only. Absolute paths, because in
+          # user settings a relative sandbox path resolves against ~/.claude.
+          settings: |
+            {
+              "permissions": {
+                "deny": [
+                  "Read(//proc/**)",
+                  "Read(/${{ runner.temp }}/**)",
+                  "Edit(**/.git/**)",
+                  "Edit(~/.gitconfig)",
+                  "Edit(~/.config/git/**)"
+                ]
+              },
+              "sandbox": {
+                "enabled": true,
+                "failIfUnavailable": true,
+                "allowUnsandboxedCommands": false,
+                "network": {
+                  "allowedDomains": ["github.com"],
+                  "strictAllowlist": true
+                },
+                "filesystem": {
+                  "denyWrite": ["${{ github.workspace }}/.git/config", "${{ github.workspace }}/.git/hooks"],
+                  "denyRead": ["${{ runner.temp }}"]
+                },
+                "credentials": {
+                  "envVars": [
+                    { "name": "CLAUDE_CODE_OAUTH_TOKEN", "mode": "deny" },
+                    { "name": "GITHUB_TOKEN", "mode": "deny" },
+                    { "name": "GH_TOKEN", "mode": "deny" },
+                    { "name": "DEFAULT_WORKFLOW_TOKEN", "mode": "deny" }
+                  ]
+                }
+              }
+            }
           claude_args: >-
             --mcp-config ${{ runner.temp }}/capsid-mcp.json
             --max-turns 200
-            --allowedTools "mcp__capsid__jobs,mcp__capsid__read,mcp__capsid__list,mcp__capsid__search,mcp__capsid__brief,mcp__capsid__open_pr,mcp__capsid__improve_status,Read,Edit,Write,Glob,Grep,Bash(git:*),Bash(npm ci),Bash(npm test:*),Bash(npm run check:*),Bash(npm run lint:*),Bash(npx vitest:*)"
-            --disallowedTools "Bash(npm run deploy:*),Bash(npm run ship:*),Bash(npx wrangler:*),Bash(wrangler:*),Bash(gh:*),Bash(curl:*)"
+            --allowedTools "mcp__capsid__jobs,mcp__capsid__read,mcp__capsid__list,mcp__capsid__search,mcp__capsid__brief,mcp__capsid__open_pr,mcp__capsid__improve_status,Read,Edit,Write,Glob,Grep,Bash(git status),Bash(git diff:*),Bash(git log:*),Bash(git add:*),Bash(git commit -m:*),Bash(git switch -c:*),Bash(git push origin:*),Bash(git rev-parse:*),Bash(npm ci),Bash(npm test:*),Bash(npm run check:*),Bash(npm run lint:*),Bash(npx vitest:*)"
+            --disallowedTools "Bash(npm run deploy:*),Bash(npm run ship:*),Bash(npx wrangler:*),Bash(wrangler:*),Bash(gh:*),Bash(curl:*),Bash(git -c:*),Bash(git config:*),Bash(git -C:*),Bash(git push * --force*),Bash(git push * -f*),Bash(git push * +*),Bash(git push * --delete*)"
           prompt: |
             You are a Capsid driver session the seat started on GitHub's runners, for the
             dustinedwards namespace, working job ${{ steps.job.outputs.id }} and nothing else.
 
+            0. If the capsid `jobs` tool (mcp__capsid__jobs) is not available, stop at once
+               and do nothing else: the job cannot be claimed without it.
             1. Call the capsid MCP tool `jobs` with action "claim", namespace "dustinedwards" and
                id "${{ steps.job.outputs.id }}". If the claim is refused, stop.
             2. Read CLAUDE.md and follow it. Read the job body the claim returned, and any
                offered_skills whose trigger fits the work.
             3. Heartbeat the job (`jobs` action "heartbeat") every 15 minutes.
             4. Do the work on a new branch named for the job. Run the repo's checks. Push
-               that branch with git. Never push the default branch, never force-push,
-               never deploy, never touch a secret, never print a key or token.
+               that branch with `git push origin <branch>` (not -u: the repo's git config
+               is read-only in this session). Never push the default branch, never
+               force-push, never deploy, never touch a secret, never print a key or token.
             5. Open the pull request with the capsid `open_pr` tool, which opens it
                through Capsid's App so CI runs on it.
             6. Block the job (`jobs` action "block") with a summary of what landed, and
@@ -101,3 +301,40 @@ jobs:
                only ids from offered_skills.
             7. If the work cannot be done, `fail` the job with the reason.
             Everything you print appears in this public repo's Actions log.
+
+      # What the session could reach, in names and booleans only, because the Action's
+      # own log hides the transcript (show_full_output: false) and this log is public.
+      # It reads the Action's execution file, a JSON array of Agent SDK messages: from
+      # the init message, each MCP server's name and status and whether the Capsid jobs
+      # tool loaded; from the result, the names of denied tools (SDKPermissionDenial's
+      # tool_name, never its tool_input). Shapes from @anthropic-ai/claude-agent-sdk
+      # 0.3.283 sdk.d.ts, the version the pinned Action uses. Always runs, so a failed
+      # session is still explained.
+      - name: Report the session's MCP servers and denied tools, names only
+        if: always()
+        env:
+          EXECUTION_FILE: ${{ steps.session.outputs.execution_file }}
+        run: |
+          node -e '
+            const fs = require("fs");
+            const name = (v) => String(v).slice(0, 64);
+            const out = { init_seen: false, result_seen: false, capsid_jobs_loaded: false, mcp_servers: [], denied_tools: [], read_error: false };
+            let messages = [];
+            try {
+              messages = JSON.parse(fs.readFileSync(process.env.EXECUTION_FILE, "utf8"));
+            } catch {
+              out.read_error = true;
+            }
+            for (const m of Array.isArray(messages) ? messages : []) {
+              if (m && m.type === "system" && m.subtype === "init") {
+                out.init_seen = true;
+                out.capsid_jobs_loaded = Array.isArray(m.tools) && m.tools.includes("mcp__capsid__jobs");
+                out.mcp_servers = (Array.isArray(m.mcp_servers) ? m.mcp_servers : []).map((s) => ({ name: name(s.name), status: name(s.status) }));
+              }
+              if (m && m.type === "result") {
+                out.result_seen = true;
+                out.denied_tools = (Array.isArray(m.permission_denials) ? m.permission_denials : []).map((d) => name(d.tool_name));
+              }
+            }
+            console.log("SESSION_DIAG " + JSON.stringify(out));
+          '
