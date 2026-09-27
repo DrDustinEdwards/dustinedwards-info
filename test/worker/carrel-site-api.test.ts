@@ -388,6 +388,34 @@ describe("media: a delete is decided by the site's reference check", () => {
     expect(await mediaRowOf(id)).toBeTruthy();
   });
 
+  it("REFUSES the detail when the reference scan cannot complete", async () => {
+    const id = await uploadThroughApi("carrel-detail-scan-fails");
+    /* Same planted posts failure as the delete case: the row lookup works, the scan does not. */
+    const brokenDb = new Proxy(testEnv.DB, {
+      get(target, property) {
+        if (property === "prepare") {
+          return (query: string) => {
+            if (/from "posts"/i.test(query)) throw new Error("planted posts read failure");
+            return target.prepare(query);
+          };
+        }
+        const value = Reflect.get(target, property);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+
+    const response = await mediaCall("GET", `${PREFIX}/media/${id}`, {}, { DB: brokenDb });
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      error: "refused",
+      message: expect.stringMatching(
+        /^The detail is refused: the reference scan failed \(posts\), so this file's uses are unknown\.$/,
+      ),
+    });
+    expect(await testEnv.MEDIA.get(id)).toBeTruthy();
+    expect(await mediaRowOf(id)).toBeTruthy();
+  });
+
   it("answers 404 for an id the site never held", async () => {
     const response = await mediaCall(
       "DELETE",

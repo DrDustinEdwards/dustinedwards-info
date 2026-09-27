@@ -103,7 +103,10 @@ export function carrelMediaAdapter(env: Env): MediaAdapter {
       if (!row || row.storage === "static") return null;
       const usage = await mediaUsage(env, id);
       if (!usage.complete) {
-        throw new Error(`the reference scan failed (${usage.failed.join(", ")}), so this file's uses are unknown`);
+        throw new RefusedError(
+          `The detail is refused: the reference scan failed (${usage.failed.join(", ")}), ` +
+            `so this file's uses are unknown.`,
+        );
       }
       return { ...itemOf(mediaObjectOf(row)), usedBy: usesOf(usage.citations, usage.refs) };
     },
