@@ -4,6 +4,7 @@ import features from "../../content/features.json";
 import {
   COLOPHON_DESCRIPTION,
   COLOPHON_INTRO,
+  COLOPHON_VERSIONS,
   COLOPHON_SECTIONS,
   AI_DISCLOSURE,
   CAPSID_REPO_URL,
@@ -124,6 +125,7 @@ export default function Colophon() {
       <h1 className="page-title">{COLOPHON_TITLE}</h1>
 
       <div className="prose">
+        <p>{COLOPHON_VERSIONS}</p>
         <p>{COLOPHON_INTRO}</p>
 
         <SectionHead id="runtime" />
