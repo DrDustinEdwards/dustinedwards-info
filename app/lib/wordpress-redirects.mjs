@@ -37,13 +37,16 @@ export const PENDING_TARGETS = [
   "/research/science-education",
   "/research/phages",
   "/research/protocols",
-  "/research/protocols/phage-discovery-guide",
   "/research/protocols/phage-isolation",
   "/research/protocols/phage-dna-extraction",
   "/research/protocols/coi-primers",
   "/research/protocols/rev-lpdv-primers",
   "/research/protocols/pan-avian-gapdh",
   "/teaching",
+  "/teaching/phage-discovery",
+  "/teaching/virus-isolation",
+  "/teaching/phage-bioinformatics",
+  "/teaching/central-dogma",
   "/contact",
 ];
 
@@ -69,7 +72,9 @@ const PATTERNS = [
     ["/phylogenetics-lysm", "/arlo-gene-67", "/arlo-gene-67-cloning", "/raspberry-pi-plaque-counter"].includes(p)
       ? moved("/research/phages")
       : null,
-  (p) => (/^\/directory-[^/]+$/.test(p) ? moved("/research/science-education") : null),
+  (p) => (/^\/directory-[^/]+$/.test(p) ? moved("/teaching/phage-discovery") : null),
+  // Dustin's own author page ranks for his name, so it goes to the About page, ahead of the rule below.
+  (p) => (p === "/author/dustin" ? moved("/about") : null),
   // Student and author profiles: removed, and never redirected to anything that names them.
   (p) => (/^\/(?:user|author)(?:\/.*)?$/.test(p) ? GONE : null),
   (p) => (["/register", "/members", "/logout", "/account", "/password-reset"].includes(p) ? GONE : null),
@@ -87,8 +92,9 @@ const PATTERNS = [
 /** Explicit rows, keyed by the old path without its trailing slash. */
 const ROWS = /** @type {Record<string, string>} */ ({
   "/knowledge-base/pcr-coi-lco1490-hco2198": "/research/protocols/coi-primers",
-  "/virus-isolation": "/research/protocols/phage-isolation",
-  "/phage-discovery": "/research/protocols/phage-discovery-guide",
+  // The old pages were a course and a program, so each goes to the course or program, not a protocol.
+  "/virus-isolation": "/teaching/virus-isolation",
+  "/phage-discovery": "/teaching/phage-discovery",
   // No Wolbachia page: it is not Dustin's research any more, so its methods land on the protocols.
   "/wolbachia-project-genetic-techniques": "/research/protocols",
   "/knowledge-base/pcr-wolbachia-16s-rrna": "/research/protocols",
@@ -117,17 +123,17 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/phage-archives": "/research/phages",
   "/microbiomes": "/research",
   "/laboratory": "/research",
-  "/phage-bioinformatics": "/research/bacteriophages",
+  "/phage-bioinformatics": "/teaching/phage-bioinformatics",
   "/phage-genetic-studies": "/research/bacteriophages",
-  "/phage-discovery-application": "/research/science-education",
+  "/phage-discovery-application": "/teaching/phage-discovery",
   "/molarity-calculator": "/playground",
   "/knowledge-base/metric-prefix": "/playground",
-  "/central-dogma-tutorials": "/playground",
+  "/central-dogma-tutorials": "/teaching/central-dogma",
   "/retroviruses": "/research/retroviruses",
   "/rev-lpdv-surveys": "/research/retroviruses",
   "/rev-lpdv-genetic-studies": "/research/retroviruses",
   "/knowledge-base": "/research/protocols",
-  "/virus-isolation-reagent-request": "/research/protocols/phage-isolation",
+  "/virus-isolation-reagent-request": "/teaching/virus-isolation",
 });
 
 /** Kept at their own address: the home page, and the two pages the new site answers itself. */

@@ -1,7 +1,7 @@
 {
-  "comment": "The page URLs Search Console showed for the old WordPress site (last 16 months to 2026-09-26; cutover-gsc-urls.md in Capsid). Every one must answer 200, one 301 then 200, or 410 on the apex host, never 404. The student and author profile paths (/user/<name>/, /author/<name>/) are counted, not listed: their names do not belong in this repository, and the one pattern rule that answers them 410 is tested with placeholders.",
+  "comment": "The page URLs Search Console showed for the old WordPress site (last 16 months to 2026-09-26; cutover-gsc-urls.md in Capsid). Every one must answer 200, one 301 then 200, or 410 on the apex host, never 404. The student and author profile paths (/user/<name>/, /author/<name>/) are counted, not listed, except Dustin's own /author/dustin/, which 301s to /about: their names do not belong in this repository, and the one pattern rule that answers them 410 is tested with placeholders.",
   "total": 271,
-  "profilePaths": 147,
+  "profilePaths": 146,
   "paths": [
     "/",
     "/knowledge-base/pcr-coi-lco1490-hco2198/",
@@ -126,6 +126,7 @@
     "/category/uncategorized/",
     "/wp-content/uploads/2019/03/wolbachia-bacteria.jpg",
     "/phage-genetic-studies/",
-    "/rev-lpdv-surveys/"
+    "/rev-lpdv-surveys/",
+    "/author/dustin/"
   ]
 }
