@@ -9,6 +9,7 @@ import {
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { PUBLICATIONS } from "~/data/publications";
+import { CONTENT_PAGE_PATHS } from "~/lib/content-pages.mjs";
 import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/sitemap";
 
@@ -27,6 +28,7 @@ const STATIC_PATHS = [
   "/playground",
   "/playground/ui",
   "/privacy",
+  ...CONTENT_PAGE_PATHS,
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {

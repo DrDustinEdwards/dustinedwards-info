@@ -30,6 +30,9 @@ export async function run({ page, browser }) {
     { path: "/research/publications", module: "publications.tsx" },
     /* The trailing slash is canonical; the slashless form redirects. */
     { path: "/research/publications/10-1128-mra-00888-24/", module: "publications.$slug.tsx" },
+    /* The markdown pages: one research page for the research/* splat, and the teaching hub. */
+    { path: "/research/phages", module: "content-page.tsx" },
+    { path: "/teaching", module: "teaching.tsx" },
   ];
 
   /* Shared-cached HTML with no corpus URL; a 404 would compare two error pages. */
