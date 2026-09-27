@@ -5,10 +5,17 @@ import {
   listingHref,
   redirectPastLastPage,
 } from "~/components/taxonomy-listing";
-import { getBlogSeries, listSeriesPosts } from "~/db";
+import { getBlogSeries, listSeriesPosts, nextScheduledPublishAt } from "~/db";
 import { POSTS_PER_PAGE, readPage } from "~/lib/blog-listing.mjs";
 import { getEnv } from "~/lib/context";
-import { SITE, pageMeta, cacheTags, publicHtmlHeaders } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  SITE,
+  pageMeta,
+  cacheTags,
+  publicHtmlHeaders,
+  scheduledEdgeCacheControl,
+} from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import type { Route } from "./+types/blog.series.$series";
 
@@ -28,15 +35,23 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const series = await getBlogSeries(env, params.series);
   if (!series) throw data("Not found", { status: 404 });
 
-  const listing = await listSeriesPosts(env, series.name, { page, perPage: POSTS_PER_PAGE });
+  const [listing, nextPublishAt] = await Promise.all([
+    listSeriesPosts(env, series.name, { page, perPage: POSTS_PER_PAGE }),
+    nextScheduledPublishAt(env),
+  ]);
 
   redirectPastLastPage(page, listing.pageCount, seriesPath(series.name));
 
-  return data({ ...listing, series });
+  return data(
+    { ...listing, series },
+    { headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) } },
+  );
 }
 
-export function headers() {
-  return new Headers(publicHtmlHeaders(cacheTags()));
+export function headers({ loaderHeaders }: Route.HeadersArgs) {
+  return new Headers(
+    publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
+  );
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {

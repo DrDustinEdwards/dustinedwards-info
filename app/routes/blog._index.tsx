@@ -5,7 +5,7 @@ import { FilterLink } from "~/components/filter-link";
 import { PostRow, Pager } from "~/components/post-row";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { listBlogPosts, listBlogTags, listBlogYears } from "~/db";
+import { listBlogPosts, listBlogTags, listBlogYears, nextScheduledPublishAt } from "~/db";
 import { POSTS_PER_PAGE, listingFacts, readPage, splitFeatured } from "~/lib/blog-listing.mjs";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
@@ -13,7 +13,9 @@ import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
 import {
   cacheTags,
+  EDGE_CACHE_HEADER,
   publicHtmlHeaders,
+  scheduledEdgeCacheControl,
   SITE,
   SITE_ORIGIN,
   breadcrumbJsonLd,
@@ -35,11 +37,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const page = readPage(url.searchParams.get("page"));
 
   return timedLoader(context, async (timings) => {
-    const [listing, tagList, yearList] = await timed(timings, "queries_all", () =>
+    const [listing, tagList, yearList, nextPublishAt] = await timed(timings, "queries_all", () =>
       Promise.all([
         listBlogPosts(env, { tag, year, page, perPage: POSTS_PER_PAGE, timings }),
         timed(timings, "d1_tag_list", () => listBlogTags(env)),
         timed(timings, "d1_year_list", () => listBlogYears(env)),
+        timed(timings, "d1_next_scheduled", () => nextScheduledPublishAt(env)),
       ]),
     );
 
@@ -77,13 +80,17 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     };
 
     /* The transport writes the header from this array after the handler returns, when it is complete. */
-    return data(payload);
+    return data(payload, {
+      headers: { [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt) },
+    });
   });
 }
 
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   // Tagged `posts`: a publish must be able to move this page.
-  const headers = new Headers(publicHtmlHeaders(cacheTags()));
+  const headers = new Headers(
+    publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined),
+  );
   // `headers` does not inherit loader headers, so one not forwarded here never reaches the client.
   const timing = loaderHeaders.get("Server-Timing");
   if (timing) headers.set("Server-Timing", timing);
