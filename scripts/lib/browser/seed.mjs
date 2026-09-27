@@ -27,6 +27,38 @@ const MATH_SLUG = "math-typesetting-fixture";
 export const MATH_PREVIEW_TOKEN = "gate0000000000000000000000000000000000math0";
 export const MATHLESS_POST_PATH = "/writing/ten-years-on-cloudflare";
 
+/*
+ * Objects put straight into the local MEDIA bucket, the way a legacy upload or a hand-put object
+ * would arrive, so the media-svg case can open them. The script sets a marker and requests a
+ * sentinel path; the case asserts neither happens under the /media policy, and that both do with
+ * the policy stripped, so the detector itself is proven.
+ */
+export const MEDIA_SCRIPT_MARKER = "data-gate-script-ran";
+export const MEDIA_SCRIPT_SENTINEL = "/__svg-script-ran";
+const MEDIA_SCRIPT = `document.documentElement.setAttribute("${MEDIA_SCRIPT_MARKER}","1");fetch("${MEDIA_SCRIPT_SENTINEL}");`;
+export const MEDIA_SEEDS = {
+  svg: {
+    key: "gate-script-svg-00000000000000e1.svg",
+    type: "image/svg+xml",
+    body: `<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><script>${MEDIA_SCRIPT}</script><rect width="10" height="10"/></svg>`,
+  },
+  /* Markup under a type no attachment rule names: the case the sandbox exists for. */
+  html: {
+    key: "gate-script-html-00000000000000e2.html",
+    type: "text/html",
+    body: `<!doctype html><title>gate</title><p>stored markup</p><script>${MEDIA_SCRIPT}</script>`,
+  },
+  /* A real 1x1 PNG, so the image viewer and an embedded <img> are proven to survive the policy. */
+  png: {
+    key: "gate-raster-00000000000000e3-1x1.png",
+    type: "image/png",
+    body: Buffer.from(
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+      "base64",
+    ),
+  },
+};
+
 /**
  * Writes every seed a preview run needs, and refuses the run when one does not apply. Returns whether
  * the math preview was seeded, which only the preview-driving mode does.
@@ -89,6 +121,22 @@ export function seedPreview() {
       "case below would compare two renders of a page with no Mentions section.",
     ]);
     console.log(`  seeded ${MENTION_SEED_ROWS} approved mention(s) on ${MENTION_POST_PATH}`);
+  }
+
+  if (DRIVES_PREVIEW) {
+    for (const [name, seed] of Object.entries(MEDIA_SEEDS)) {
+      const file = join(SEED_DIR, `media-${name}`);
+      writeFileSync(file, seed.body);
+      const put = runWrangler(
+        `r2 object put "dustinedwards-media/${seed.key}" --local --file "${file}" --content-type "${seed.type}"`,
+        { cwd: root },
+      );
+      refuseUnlessRan(put, put.output, [
+        `check:browser failed. the ${name} media seed did not reach the local MEDIA bucket, so`,
+        "the media-svg case below would open a 404 and prove nothing about the /media policy.",
+      ]);
+    }
+    console.log(`  seeded ${Object.keys(MEDIA_SEEDS).length} object(s) into the local MEDIA bucket`);
   }
 
   let mathPreviewSeeded = false;

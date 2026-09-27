@@ -128,8 +128,8 @@
     // The server-side gate on irreversible actions. view.mjs re-exports
     // `confirmationSatisfied` from it, so this project has to reach it to
     // resolve that export at all.
-    // The upload allowlist. check:headers derives the attachment rule from it,
-    // so the origin invariant has one source rather than two agreeing lists.
+    // The upload allowlist. check:headers asserts it holds no script-capable
+    // type, so the origin invariant has one source rather than two agreeing lists.
     "app/lib/media/upload-contract.mjs",
     // Listed because upload-contract.mjs IMPORTS it, not because a script here
     // calls it: `validateUpload` composes the too-large sentence and the one

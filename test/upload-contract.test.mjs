@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  ACCEPT_ATTRIBUTE,
   ALLOWED,
   MAX_BYTES,
   UPLOAD_FORM_INTENT,
@@ -98,9 +99,36 @@ test("VALIDATION REFUSES markup declared as a raster, which is the origin rule",
   assert.equal(refusal.code, "content-mismatch");
   assert.equal(refusal.status, 415);
   assert.match(refusal.message, /image\/png/);
+  assert.doesNotMatch(refusal.message, /Upload an SVG/, "the repair must not point at a refused type");
+});
 
-  // SVG is allowlisted deliberately; this check must not become a ban on it.
-  assert.equal(validateUpload({ type: "image/svg+xml", bytes: svg.buffer }), null);
+test("VALIDATION REFUSES SVG by name, with a sentence that says why and what to do", () => {
+  const svg = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+  );
+  const refusal = validateUpload({ type: "image/svg+xml", bytes: svg.buffer });
+
+  assert.ok(refusal, "an SVG upload was accepted");
+  assert.equal(refusal.code, "svg-refused");
+  assert.equal(refusal.status, 415);
+  assert.match(refusal.message, /SVG is not accepted/);
+  assert.match(refusal.message, /script/);
+  assert.match(refusal.message, /PNG or WebP/);
+  assert.equal(uploadErrorSentence("svg-refused"), refusal.message);
+
+  // Case and parameters do not slip it past as an unknown type with a vaguer message.
+  assert.equal(validateUpload({ type: "Image/SVG+XML", bytes: svg.buffer }).code, "svg-refused");
+  assert.equal(
+    validateUpload({ type: "image/svg+xml; charset=utf-8", bytes: svg.buffer }).code,
+    "svg-refused",
+  );
+});
+
+test("SVG is in neither the allowlist nor the picker's accept attribute", () => {
+  assert.equal(ALLOWED.has("image/svg+xml"), false);
+  assert.ok(![...ALLOWED.values()].includes("svg"));
+  assert.doesNotMatch(ACCEPT_ATTRIBUTE, /svg/);
+  assert.doesNotMatch(uploadErrorSentence("unsupported-type"), /svg/);
 });
 
 test("beginsAsMarkup sees past a BOM and whitespace, and stops there", () => {
@@ -127,6 +155,7 @@ test("EVERY REFUSAL validateUpload can return is a code the form can render", ()
     validateUpload({ type: "application/zip", bytes: buffer(0x50, 0x4b) }),
     validateUpload({ type: "image/png", bytes: new ArrayBuffer(MAX_BYTES + 1) }),
     validateUpload({ type: "image/png", bytes: svg }),
+    validateUpload({ type: "image/svg+xml", bytes: svg }),
   ];
 
   for (const refusal of refusals) {
@@ -140,7 +169,7 @@ test("EVERY REFUSAL validateUpload can return is a code the form can render", ()
 });
 
 test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
-  for (const code of ["no-file", "unsupported-type", "too-large", "content-mismatch"]) {
+  for (const code of ["no-file", "unsupported-type", "svg-refused", "too-large", "content-mismatch"]) {
     const sentence = uploadErrorSentence(code);
     assert.equal(typeof sentence, "string");
     assert.ok(sentence.length > 0, `${code} must say something`);
@@ -154,7 +183,7 @@ test("EVERY EMITTED CODE HAS A SENTENCE, and an unknown code has none", () => {
 });
 
 // Uploads land on the site's own origin, so this allowlist is a security boundary.
-// SVG can carry script and is safe only because `media.$.ts` serves it as an attachment.
+// SVG can carry script and is refused at upload; a stored one is still attached and sandboxed.
 
 const EXECUTABLE_TYPES = [
   "application/javascript",

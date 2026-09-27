@@ -1,17 +1,62 @@
-// Uploaded script-capable media served as an attachment, and the freshness rules in public/_headers.
+// Script-capable media: never uploadable, served as an attachment if stored anyway, and every /media
+// response sandboxed by its own policy. Then the freshness rules in public/_headers.
 
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { ALLOWED } from "../../../app/lib/media/upload-contract.mjs";
+import { ALLOWED, SVG_TYPE, validateUpload } from "../../../app/lib/media/upload-contract.mjs";
+import { MEDIA_CSP, contentSecurityPolicy } from "../../../workers/csp.mjs";
 import { blockFrom } from "../source-body.mjs";
 import { stripComments } from "../strip-comments.mjs";
 import { ok, root } from "./gate.mjs";
 
-export function run() {
+export async function run() {
   /*
-   * Uploaded SVG is served as an attachment: it can carry script and /media/* is the site's own
-   * origin. Kept even though the CSP blocks it, so it does not depend on the policy.
+   * Script-capable types are never uploadable: from /media, the site's own origin, one would run as
+   * the site. Asserted on the allowlist and on the validator, which refuses SVG by name.
+   */
+  const CAPABLE = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
+  {
+    const uploadableCapable = [...ALLOWED.keys()].filter((t) => CAPABLE.includes(t));
+    ok("media: no script-capable type is in the upload allowlist",
+      uploadableCapable.length === 0,
+      `ALLOWED holds ${uploadableCapable.join(", ")}, which can carry script and would be served ` +
+        `from this site's own origin`);
+    const svgRefusal = validateUpload({ type: SVG_TYPE, bytes: new TextEncoder().encode("<svg/>").buffer });
+    ok("media: validateUpload refuses SVG by name",
+      svgRefusal?.code === "svg-refused" && svgRefusal.status === 415,
+      `an SVG upload returned ${JSON.stringify(svgRefusal)}, not the svg-refused 415`);
+  }
+
+  /*
+   * Every /media response carries the sandboxed media policy, chosen by path inside
+   * contentSecurityPolicy(), since the Renderer sets that header last and would overwrite a route's.
+   * Called, not parsed, like the document policy in csp.mjs.
+   */
+  {
+    const directives = MEDIA_CSP.split("; ");
+    ok("media: the media policy is default-src 'none'", directives.includes("default-src 'none'"),
+      `MEDIA_CSP is "${MEDIA_CSP}"`);
+    ok("media: the media policy sandboxes", directives.includes("sandbox"),
+      `MEDIA_CSP is "${MEDIA_CSP}"; without sandbox an opened SVG or HTML body runs as the site`);
+    ok("media: the media policy allows no script", !directives.some((d) => d.startsWith("script-src")),
+      `MEDIA_CSP is "${MEDIA_CSP}"`);
+    for (const path of ["/media/x.png", "/media/a/b.svg", "/media"]) {
+      const policy = await contentSecurityPolicy(path, undefined);
+      ok(`media: ${path} gets the media policy`, policy === MEDIA_CSP,
+        `contentSecurityPolicy("${path}") returned "${policy}"`);
+    }
+    for (const path of ["/", "/mediakit", "/blog/media/x"]) {
+      const policy = await contentSecurityPolicy(path, undefined);
+      ok(`media: ${path} keeps the document policy`, policy !== MEDIA_CSP && !policy.includes("sandbox"),
+        `contentSecurityPolicy("${path}") returned the media policy, so a page is sandboxed`);
+    }
+  }
+
+  /*
+   * A stored SVG is served as an attachment: upload refuses it, but a legacy or hand-put object can
+   * still be in the bucket. Kept even though the media CSP blocks it, so it does not depend on the
+   * policy.
    */
   {
     /* Stripped like every other source here: a comment naming a type, the disposition or
@@ -24,21 +69,11 @@ export function run() {
 
     // Scoped to the helper's own body: asserting the file mentions attachment would pass on a comment.
     const helperBody = helperAt === -1 ? "" : blockFrom(mediaRoute, helperAt);
-    /* DERIVED FROM THE UPLOAD ALLOWLIST, never restated, or a NEW capable type joins with no rule. */
-    const CAPABLE = ["image/svg+xml", "text/html", "application/xhtml+xml", "text/xml", "application/xml"];
-    const uploadableCapable = [...ALLOWED.keys()].filter((t) => CAPABLE.includes(t));
-
-    ok("media: some uploadable type can carry script, so this block has scope",
-      uploadableCapable.length > 0,
-      "no script-capable type is uploadable; if that is now true, delete this block " +
-        "deliberately rather than leaving it asserting nothing");
-
-    for (const type of uploadableCapable) {
-      ok(`media: the helper refuses ${type} inline`,
-        helperBody.includes(type),
-        `${type} is uploadable and this route does not attach it, so it is served ` +
-          `inline from our own origin`);
-    }
+    /* Always SVG: it is not uploadable, but an object stored before the refusal or put by hand is. */
+    ok(`media: the helper refuses ${SVG_TYPE} inline`,
+      helperBody.includes(SVG_TYPE),
+      `a stored ${SVG_TYPE} object is not attached by this route, so it is served ` +
+        `inline from our own origin`);
     ok("media: it sets content-disposition attachment",
       /content-disposition"?,\s*"attachment/.test(helperBody),
       "the helper exists but does not set the disposition");
