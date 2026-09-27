@@ -151,21 +151,6 @@
   block-size: 1.75rem;
 }
 
-/* X's two permitted colors, and nothing else: black on the light theme, white on the dark. */
-.footer-x {
-  color: black;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .footer-x {
-    color: white;
-  }
-}
-
-[data-theme="dark"] .footer-x {
-  color: white;
-}
-
 .footer-heading {
   margin: 0 0 var(--s-2);
   color: var(--text-secondary);
@@ -216,16 +201,28 @@
   font-size: 0.875rem;
 }
 
-/* ORCID's display convention: the iD icon, then the full https address. */
-.footer-orcid {
-  gap: var(--s-2);
-  overflow-wrap: anywhere;
+/* The private tools: set apart from the public links by a dust hairline, the site's line color. */
+.footer-private {
+  margin-block-start: var(--s-3);
+  padding-block-start: var(--s-3);
+  border-block-start: var(--line-w) solid var(--dust);
 }
 
-.footer-orcid-icon {
+.footer-private-link {
+  gap: var(--s-2);
+}
+
+/* Ink at rest, purple on hover and focus, like every clickable thing (ruling 122). */
+.footer-private-icon {
   flex: none;
   inline-size: 1rem;
   block-size: 1rem;
+  color: var(--text);
+}
+
+.footer-private-link:hover .footer-private-icon,
+.footer-private-link:focus-visible .footer-private-icon {
+  color: var(--brand);
 }
 
 .site-shell-footer-note {

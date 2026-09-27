@@ -28,6 +28,7 @@ const STATIC_PATHS = [
   "/playground",
   "/playground/ui",
   "/privacy",
+  "/contact",
   ...CONTENT_PAGE_PATHS,
 ];
 

@@ -1,21 +1,31 @@
 import { Link } from "react-router";
 
+import { CapsidIcon, LampIcon, PadlockIcon } from "~/components/private-tool-icons";
 import { SiteLogoHeader } from "~/components/site-logo";
-import {
-  GERMOMICS_URL,
-  GERMOMICS_X_URL,
-  OWNER_FACULTY_PAGE,
-  OWNER_ORCID,
-  OWNER_PUBMED,
-  OWNER_SCHOLAR,
-  SITE,
-} from "~/lib/seo";
+import { FOOTER_COLUMNS, type FooterLink, PRIVATE_TOOLS, type PrivateTool, isPair } from "~/lib/footer";
+import { GERMOMICS_URL, SITE } from "~/lib/seo";
+
+const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
+  lamp: LampIcon,
+  padlock: PadlockIcon,
+  capsid: CapsidIcon,
+};
+
+/** A route through Link; a file, feed or other site as a plain anchor, which Link would try to route. */
+function FooterAnchor({ link }: { link: FooterLink }) {
+  const routed = !link.external && !/\.[a-z]+$/.test(link.to);
+  if (routed) return <Link to={link.to}>{link.label}</Link>;
+  return (
+    <a href={link.to} rel={link.me ? "me" : undefined}>
+      {link.label}
+    </a>
+  );
+}
 
 /**
- * `/llms.txt` and the feeds stay in every footer: they are how an agent reads this site. The
- * profile links carry rel="me", and `check:machine-readable` asserts that set equals
- * `OWNER_PROFILES`. The X mark is X's own logo path, unaltered; only the fill changes, between
- * the two colors X allows.
+ * The links live in app/lib/footer.ts, where test/footer.test.mjs checks each one. `/llms.txt` and the
+ * feeds stay in every footer: they are how an agent reads this site. The profile links carry rel="me",
+ * and `check:machine-readable` asserts that set equals `OWNER_PROFILES`.
  */
 export function ShellFooter() {
   return (
@@ -37,135 +47,58 @@ export function ShellFooter() {
                   className="footer-social-mark"
                 />
               </a>
-              <a href={GERMOMICS_X_URL} className="footer-social-link" aria-label="Germomics on X">
-                <svg
-                  className="footer-social-mark footer-x"
-                  viewBox="0 0 1200 1227"
-                  width="27"
-                  height="28"
-                  aria-hidden="true"
-                  focusable="false"
-                >
-                  <path
-                    fill="currentColor"
-                    d="M714.163 519.284L1160.89 0H1055.03L667.137 450.887L357.328 0H0L468.492 681.821L0 1226.37H105.866L515.491 750.218L842.672 1226.37H1200L714.137 519.284H714.163ZM569.165 687.828L521.697 619.934L144.011 79.6944H306.615L611.412 515.685L658.88 583.579L1055.08 1150.3H892.476L569.165 687.854V687.828Z"
-                  />
-                </svg>
-              </a>
             </div>
           </div>
 
-          <nav className="footer-col" aria-labelledby="footer-research">
-            <h2 className="footer-heading" id="footer-research">
-              Research
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <Link to="/research/publications">Publications</Link>
-              </li>
-              <li>
-                <Link to="/projects">Projects</Link>
-              </li>
-              <li>
-                <Link to="/playground">Playground</Link>
-              </li>
-              <li className="footer-pair">
-                <span>Citations</span>
-                <a href="/research/publications.bib">BibTeX</a>
-                <a href="/research/publications.ris">RIS</a>
-              </li>
-            </ul>
-          </nav>
-
-          <nav className="footer-col" aria-labelledby="footer-writing">
-            <h2 className="footer-heading" id="footer-writing">
-              Writing
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <Link to="/writing">Writing</Link>
-              </li>
-              <li>
-                <Link to="/search">Search</Link>
-              </li>
-              <li className="footer-pair">
-                <span>Feeds</span>
-                <a href="/writing/rss.xml">RSS</a>
-                <a href="/writing/atom.xml">Atom</a>
-                <a href="/writing/feed.json">JSON</a>
-              </li>
-              <li className="footer-pair">
-                <span>For machines</span>
-                <a href="/llms.txt">llms.txt</a>
-                <a href="/llms-full.txt">llms-full.txt</a>
-              </li>
-            </ul>
-          </nav>
-
-          <nav className="footer-col" aria-labelledby="footer-students">
-            <h2 className="footer-heading" id="footer-students">
-              Students
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <Link to="/phage-discovery">Phage discovery</Link>
-              </li>
-            </ul>
-          </nav>
-
-          <nav className="footer-col footer-col-profiles" aria-labelledby="footer-profiles">
-            <h2 className="footer-heading" id="footer-profiles">
-              Profiles
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <a href={OWNER_SCHOLAR} rel="me">
-                  Google Scholar
-                </a>
-              </li>
-              <li>
-                {/* ORCID's display convention: the iD icon beside the full https address. */}
-                <a href={OWNER_ORCID} rel="me" className="footer-orcid">
-                  <img
-                    src="/dustin-edwards-orcid-id.svg"
-                    alt="ORCID iD"
-                    width="16"
-                    height="16"
-                    className="footer-orcid-icon"
-                  />
-                  <span>{OWNER_ORCID}</span>
-                </a>
-              </li>
-              <li>
-                <a href={OWNER_PUBMED} rel="me">
-                  PubMed
-                </a>
-              </li>
-            </ul>
-          </nav>
-
-          <nav className="footer-col" aria-labelledby="footer-site">
-            <h2 className="footer-heading" id="footer-site">
-              Site
-            </h2>
-            <ul className="footer-links">
-              <li>
-                <Link to="/about">About</Link>
-              </li>
-              <li>
-                <a href={OWNER_FACULTY_PAGE}>Contact</a>
-              </li>
-              <li>
-                <Link to="/colophon">Colophon</Link>
-              </li>
-              <li>
-                <Link to="/privacy">Privacy</Link>
-              </li>
-              <li>
-                <Link to="/login">Log in</Link>
-              </li>
-            </ul>
-          </nav>
+          {FOOTER_COLUMNS.map((column) => (
+            <nav key={column.id} className="footer-col" aria-labelledby={`footer-${column.id}`}>
+              <h2 className="footer-heading" id={`footer-${column.id}`}>
+                {column.heading}
+              </h2>
+              <ul className="footer-links">
+                {column.items.map((item) =>
+                  isPair(item) ? (
+                    <li key={item.label} className="footer-pair">
+                      <span>{item.label}</span>
+                      {item.links.map((link) => (
+                        <FooterAnchor key={link.to} link={link} />
+                      ))}
+                    </li>
+                  ) : (
+                    <li key={item.to}>
+                      <FooterAnchor link={item} />
+                    </li>
+                  ),
+                )}
+              </ul>
+              {column.id === "site" ? (
+                <ul className="footer-links footer-private" aria-label="Private tools">
+                  {PRIVATE_TOOLS.map((tool) => {
+                    const Icon = PRIVATE_ICONS[tool.icon];
+                    const content = (
+                      <>
+                        <Icon className="footer-private-icon" />
+                        {tool.label}
+                      </>
+                    );
+                    return (
+                      <li key={tool.to}>
+                        {tool.external ? (
+                          <a href={tool.to} className="footer-private-link" aria-label={tool.name}>
+                            {content}
+                          </a>
+                        ) : (
+                          <Link to={tool.to} className="footer-private-link" aria-label={tool.name}>
+                            {content}
+                          </Link>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              ) : null}
+            </nav>
+          ))}
         </div>
         <p className="site-shell-footer-note">
           {/* A dated string, not `new Date()`: a computed year could disagree with the cached copy. */}

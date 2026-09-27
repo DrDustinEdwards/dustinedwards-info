@@ -50,6 +50,7 @@ export default [
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),
   route("privacy", "routes/privacy.tsx"),
+  route("contact", "routes/contact.tsx"),
   // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
   route("gone", "routes/gone.tsx"),
   route("projects", "routes/projects.tsx"),

@@ -17,7 +17,7 @@ const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-u
 const targetPath = (location) => location.split("#")[0];
 
 /** Paths the new site answers itself, now: the gateway passes these through and a route renders them. */
-const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/playground", "/research/publications"]);
+const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/playground", "/research/publications"]);
 
 test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("dustinedwards.info"), true);
