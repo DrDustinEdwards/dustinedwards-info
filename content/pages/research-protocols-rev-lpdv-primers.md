@@ -119,22 +119,14 @@ The cycling is the same as for pol 2500-3075, as in the Stewart et al. 2019 supp
 
 ## PCR LPDV p31/CA
 
-Amplifies part of the LPDV gag polyprotein (partial p31/capsid). The primers are Allison et al. 2014's, designed on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)), and the cycling is from Cox et al. 2022 and its supplement. Use the reaction mix above.
+Amplifies part of the LPDV gag polyprotein (partial p31/capsid). The primers are from [Allison et al. 2014, Virology 450-451:2-12](https://doi.org/10.1016/j.virol.2013.11.037), designed on the Israeli prototype strain of LPDV (GenBank [U09568](https://www.ncbi.nlm.nih.gov/nuccore/U09568)). The cycling is from Cox et al. 2022 and its supplement. Use the reaction mix above.
 
 | Primer | Sequence (5′ to 3′) | Length |
 | --- | --- | --- |
-| Forward (Allison et al. 2014) | `ATGAGGACTTGTTAGATTGGTTAC` | 24 nt |
-| Reverse (Allison et al. 2014) | `TGATGGCGTCAGGGCTATTTG` | 21 nt |
-| Reverse, as the lab ordered it | `TGATGGCGTCAGGGCTTTTG` | 20 nt |
+| Forward | `ATGAGGACTTGTTAGATTGGTTAC` | 24 nt |
+| Reverse | `TGATGGCGTCAGGGCTATTTG` | 21 nt |
 
-The published reverse primer is Allison et al. 2014's, and the [2024 Iowa study in PLOS One](https://doi.org/10.1371/journal.pone.0296856) prints the same pair. The lab's order, which the Cox et al. 2022 supplement also prints, lacks one A (at position 17 of the published primer). Placed on U09568 by the site's tested primer code, both primers of the published pair match exactly, and the lab's reverse matches with that one base missing:
-
-| Pair | Product on U09568 (computed) | Position on U09568 |
-| --- | --- | --- |
-| Published forward and reverse | 458 bp, including both primers; 413 bp between them | 1041-1498 |
-| Published forward, lab's reverse | 457 bp | 1041-1498 |
-
-The PLOS One study scored a 413 bp band as LPDV-positive, which is the stretch between the published primers on U09568. The pair does not place on the North American prototype strain (GenBank [KC802224](https://www.ncbi.nlm.nih.gov/nuccore/KC802224)) within three mismatches per primer, so field strains can differ from these numbers.
+Product: 458 bp on U09568, positions 1041-1498, computed by placing both primers on the sequence (each matches exactly). The 413 nt between the primers is the partial p31/partial CA fragment Allison et al. 2014 analyzed.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |

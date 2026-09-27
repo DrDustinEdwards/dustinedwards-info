@@ -112,9 +112,9 @@ test("REV pol 4777-5575: 801 bp at 4766-5566, one reverse-primer mismatch", () =
 });
 
 /*
- * LPDV on GenBank U09568 (the Israeli prototype strain, 7,143 nt), the sequence Allison et al. 2014 designed
- * the primers on. The published pair, also printed by the 2024 PLOS One study, and the lab's order, which
- * lacks the A at position 17 of the published reverse primer.
+ * LPDV on GenBank U09568 (the Israeli prototype strain, 7,143 nt), the sequence Allison et al. 2014
+ * (Virology 450-451:2-12) designed their primers on. The 413 nt between the primers is the partial p31/partial
+ * CA fragment they analyzed.
  */
 const LPDV = reference("U09568");
 const LPDV_FORWARD = "ATGAGGACTTGTTAGATTGGTTAC";
@@ -129,9 +129,3 @@ test("LPDV, published pair: 458 bp at 1041-1498 with both primers exact, 413 bp 
   assert.equal(product.length - LPDV_FORWARD.length - "TGATGGCGTCAGGGCTATTTG".length, 413);
 });
 
-test("LPDV, the lab's reverse lacks one A: 457 bp, the missing base reported, never silently absorbed", () => {
-  assert.throws(() => amplicon(LPDV, LPDV_FORWARD, "TGATGGCGTCAGGGCTTTTG", { maxMismatches: 1 }));
-  const product = amplicon(LPDV, LPDV_FORWARD, "TGATGGCGTCAGGGCTTTTG", { maxIndels: 1 });
-  assert.deepEqual([product.start, product.end, product.length, product.templateLength], [1041, 1498, 457, 458]);
-  assert.equal(product.reverse.indel?.type, "missing-primer-base");
-});
