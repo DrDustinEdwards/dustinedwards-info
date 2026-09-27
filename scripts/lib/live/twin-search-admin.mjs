@@ -52,14 +52,17 @@ export async function run() {
   }
 
   {
-    const pdfs = readdirSync(join(root, "public", "research", "publications")).filter((f) => f.endsWith(".pdf"));
+    // Each paper's PDF sits in its own folder (#199), so the listing recurses; a flat read found none.
+    const pdfs = readdirSync(join(root, "public", "research", "publications"), { recursive: true })
+      .map((f) => String(f).replaceAll("\\", "/"))
+      .filter((f) => f.endsWith(".pdf"));
     // Images only: a desktop.ini or Thumbs.db is not served and is not an asset.
     const photos = readdirSync(join(root, "public", "phage-hunters")).filter((f) =>
       /\.(?:jpe?g|png|webp|avif|gif|svg)$/i.test(f),
     );
     let ok = 0;
     for (const f of pdfs) {
-      const r = await fetch(`${ORIGIN}/research/publications/${encodeURIComponent(f)}`, {
+      const r = await fetch(`${ORIGIN}/research/publications/${f.split("/").map(encodeURIComponent).join("/")}`, {
         method: "HEAD",
         headers: { "user-agent": UA },
         signal: AbortSignal.timeout(TIMEOUT_MS),

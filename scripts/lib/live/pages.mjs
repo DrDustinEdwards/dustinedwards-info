@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { COLOPHON_SECTIONS } from "../../../app/lib/colophon-sections.mjs";
+import { CONTENT_PAGE_PATHS } from "../../../app/lib/content-pages.mjs";
 import { colophonFacts } from "../colophon-facts.mjs";
 import { check, get, ORIGIN, root, SLUG, strip, unescape } from "./client.mjs";
 
@@ -17,10 +18,16 @@ const features = JSON.parse(
 
 export async function run() {
   {
-    // Never a prefix rule: /research/publications/* and /phage-hunters/* are kept files.
-    for (const path of ["/research", "/research/publications", "/teaching", "/phage-hunters"]) {
+    // Never a prefix rule: /phage-hunters/* are kept files.
+    const { status } = await get("/phage-hunters");
+    check("retired: /phage-hunters is a bare 404", status === 404, `got ${status}`);
+  }
+
+  {
+    // Once retired, now real: the Research and Teaching pages, read off their one list.
+    for (const path of [...CONTENT_PAGE_PATHS, "/research/publications"]) {
       const { status } = await get(path);
-      check(`retired: ${path} is a bare 404`, status === 404, `got ${status}`);
+      check(`page: ${path} returns 200`, status === 200, `got ${status}`);
     }
   }
 
