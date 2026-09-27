@@ -21,7 +21,7 @@ import {
 import { WEBMENTION_URL, linkToWebmention } from "~/lib/webmention/advertise";
 import { blogPostView } from "~/lib/blog-view";
 import { jsonLd } from "~/lib/json-ld.mjs";
-import { getEnv } from "~/lib/context";
+import { getEnv, postPreviewContext } from "~/lib/context";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { coverDimensions, coverResponsive } from "~/lib/cover-image.mjs";
 import { linkToMarkdown, markdownResponse, prefersMarkdown } from "~/lib/markdown-twin";
@@ -60,7 +60,10 @@ export const middleware: Route.MiddlewareFunction[] = [
 ];
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  const post = await getBlogPost(getEnv(context), params.slug);
+  // A Carrel preview renders its own row through this same loader, so it matches the published page.
+  const preview = context.get(postPreviewContext);
+  const post =
+    preview?.slug === params.slug ? preview : await getBlogPost(getEnv(context), params.slug);
   if (!post) {
     throw data("Not found", { status: 404 });
   }

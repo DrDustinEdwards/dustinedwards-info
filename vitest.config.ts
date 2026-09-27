@@ -83,6 +83,9 @@ const APP_DIR = fileURLToPath(new URL("./app/", import.meta.url));
  */
 const TEST_OPERATOR_TOKEN = "test-operator-token-0123456789abcdef";
 
+/** The Carrel site key, over the package's 32-character minimum for the same reason. Grants nothing. */
+const TEST_CARREL_SITE_KEY = "test-carrel-site-key-0123456789abcdef";
+
 /**
  * The migrations, read on the NODE side because the worker cannot read a
  * directory.
@@ -164,6 +167,7 @@ export default defineConfig({
         },
         bindings: {
           OPERATOR_TOKEN: TEST_OPERATOR_TOKEN,
+          CARREL_SITE_KEY: TEST_CARREL_SITE_KEY,
           GITHUB_TOKEN: "test-github-token",
           /* `createAuth` refuses to run without both, as production would. */
           BETTER_AUTH_SECRET: "test-better-auth-secret-at-least-32-characters",

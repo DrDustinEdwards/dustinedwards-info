@@ -3,7 +3,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
 import { analyticsPath } from "~/lib/analytics-path.mjs";
-import { cloudflareContext, nonceContext } from "~/lib/context";
+import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
@@ -165,6 +165,8 @@ export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
 
     const context = new RouterContextProvider();
     context.set(cloudflareContext, { env, ctx });
+    // For the Carrel preview, which renders a page through the same routes without a second fetch.
+    context.set(documentHandlerContext, requestHandler);
 
     // Admin only: a public page is edge-cached with its header, so a nonce there would be shared
     // by every reader; its one inline script is allowed by hash instead (workers/csp.mjs). A static
