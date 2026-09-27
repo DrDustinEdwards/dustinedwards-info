@@ -200,6 +200,18 @@ async function backlinksFor(env: PublishEnv, record: any) {
 }
 
 /**
+ * The row renderAndWrite writes, without writing it: the render plus the corpus-wide related and
+ * backlinks lists. The Carrel preview renders this, so a preview is the page the save would publish.
+ */
+export async function renderRecord(env: PublishEnv, slug: string, raw: string) {
+  // any: related and backlinks are attached below and the pipeline's inferred type lacks them.
+  const record: any = await validateAndRender(env, slug, raw);
+  record.related = await relatedFor(env, record);
+  record.backlinks = await backlinksFor(env, record);
+  return record;
+}
+
+/**
  * The only writer of a rendered row. blobSha proves the rendered bytes are the committed bytes, so a
  * truncated fetch fails here by name.
  */
@@ -209,8 +221,7 @@ export async function renderAndWrite(
   raw: string,
   blobSha?: string | null,
 ) {
-  // any: related and backlinks are attached below and the pipeline's inferred type lacks them.
-  const record: any = await validateAndRender(env, slug, raw);
+  const record = await renderRecord(env, slug, raw);
 
   if (blobSha && record.sourceBlobSha !== blobSha) {
     throw new EditorError(
@@ -221,8 +232,6 @@ export async function renderAndWrite(
     );
   }
 
-  record.related = await relatedFor(env, record);
-  record.backlinks = await backlinksFor(env, record);
   await syncPostToD1(env, record);
 
   // Purges on a draft save too: an unpublish writes a draft row while changing every public listing.
@@ -346,7 +355,10 @@ export async function savePost(
 
 function commitMessage(actor: Actor, verb: string, title: string) {
   const base = `${verb} post: ${title}`;
-  return actor.kind === "operator" ? `${base} [operator:${actor.id}]` : base;
+  if (actor.kind === "operator") return `${base} [operator:${actor.id}]`;
+  // The change id joins this commit to Carrel's authorship record, and records who published.
+  if (actor.kind === "carrel") return `${base} [carrel:${actor.changeId}]`;
+  return base;
 }
 
 async function syncAskForPost(env: PublishEnv, record: { slug: string }) {
@@ -427,11 +439,46 @@ const rebuildSearchIndexes = (db: D1Database) => [
   db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
 ];
 
+/**
+ * A synced row's columns by name, as bound. syncPostToD1 writes these, and the Carrel preview decodes
+ * the same values through the schema, so a preview and the published page read one row shape.
+ */
+export function postColumnValues(record: any) {
+  return {
+    slug: record.slug as string,
+    title: record.title,
+    body: record.markdown,
+    html: record.html,
+    description: record.description,
+    status: statusForDraft(record.draft),
+    publish_at: Math.floor(Date.parse(record.publishAt) / 1000),
+    cover_image: record.cover ? record.cover.src : null,
+    cover_alt: record.cover ? record.cover.alt : null,
+    reading_time_minutes: record.readingTimeMinutes,
+    source_path: record.sourcePath,
+    toc: JSON.stringify(record.toc),
+    featured: record.featured ? 1 : 0,
+    series: record.series,
+    part: record.part,
+    further_reading: JSON.stringify(record.furtherReading),
+    og_title: record.ogTitle,
+    og_description: record.ogDescription,
+    related: JSON.stringify(record.related ?? []),
+    source_blob_sha: record.sourceBlobSha ?? null,
+    render_hash: record.renderHash ?? null,
+    // NULL, not an empty string, when absent: an empty value would read as the author saying something.
+    writing_status: record.writingStatus ?? null,
+    assumed_audience: record.assumedAudience ?? null,
+    key_takeaways: record.keyTakeaways ? JSON.stringify(record.keyTakeaways) : null,
+    changelog: record.changelog ? JSON.stringify(record.changelog) : null,
+    backlinks: record.backlinks ? JSON.stringify(record.backlinks) : null,
+  };
+}
+
 /** One batch, so the row, its tags and the index move together. FTS is rebuilt, as the bulk sync does. */
 export async function syncPostToD1(env: PublishEnv, record: any) {
   const db = env.DB;
-  const publishAt = Math.floor(Date.parse(record.publishAt) / 1000);
-  const status = statusForDraft(record.draft);
+  const v = postColumnValues(record);
 
   const statements = [
     db
@@ -460,33 +507,32 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
            updated_at = unixepoch()`,
       )
       .bind(
-        record.slug,
-        record.title,
-        record.markdown,
-        record.html,
-        record.description,
-        status,
-        publishAt,
-        record.cover ? record.cover.src : null,
-        record.cover ? record.cover.alt : null,
-        record.readingTimeMinutes,
-        record.sourcePath,
-        JSON.stringify(record.toc),
-        record.featured ? 1 : 0,
-        record.series,
-        record.part,
-        JSON.stringify(record.furtherReading),
-        record.ogTitle,
-        record.ogDescription,
-        JSON.stringify(record.related ?? []),
-        record.sourceBlobSha ?? null,
-        record.renderHash ?? null,
-        // NULL, not an empty string, when absent: an empty value would read as the author saying something.
-        record.writingStatus ?? null,
-        record.assumedAudience ?? null,
-        record.keyTakeaways ? JSON.stringify(record.keyTakeaways) : null,
-        record.changelog ? JSON.stringify(record.changelog) : null,
-        record.backlinks ? JSON.stringify(record.backlinks) : null,
+        v.slug,
+        v.title,
+        v.body,
+        v.html,
+        v.description,
+        v.status,
+        v.publish_at,
+        v.cover_image,
+        v.cover_alt,
+        v.reading_time_minutes,
+        v.source_path,
+        v.toc,
+        v.featured,
+        v.series,
+        v.part,
+        v.further_reading,
+        v.og_title,
+        v.og_description,
+        v.related,
+        v.source_blob_sha,
+        v.render_hash,
+        v.writing_status,
+        v.assumed_audience,
+        v.key_takeaways,
+        v.changelog,
+        v.backlinks,
       ),
     ...record.tags.map((tag: string) =>
       db

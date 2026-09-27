@@ -9,6 +9,7 @@ import {
   inArray,
   isNotNull,
   lt,
+  ne,
   or,
   sql,
   type SQL,
@@ -348,9 +349,23 @@ export async function getBlogPost(env: Env, slug: string) {
   if (!post) return null;
 
   const tagMap = await tagsForPosts(db, [post.id]);
+  return withNeighbours(db, post, tagMap.get(post.id) ?? []);
+}
 
+export type PostRow = typeof posts.$inferSelect;
+
+/**
+ * The Carrel preview's twin of getBlogPost, for a row built in memory rather than read from D1: the
+ * same tags shape and the same neighbours, so the page renders exactly as it would once published.
+ */
+export async function previewBlogPost(env: Env, post: PostRow, tagSlugs: string[]) {
+  return withNeighbours(getDb(env), post, [...tagSlugs].sort());
+}
+
+async function withNeighbours(db: DB, post: PostRow, tagSlugs: string[]) {
   // Neighbors use the same visibility gate, so prev/next cannot reach a draft. Ordered as the listing
-  // is (publish_at, then id), so two posts sharing a publish_at are neighbors rather than skipped.
+  // is (publish_at, then id), so two posts sharing a publish_at are neighbors rather than skipped. The
+  // slug is excluded so a previewed post, whose row may differ from the stored one, is not its own neighbour.
   const at = post.publishAt ?? new Date();
   const [[previous], [next]] = await Promise.all([
     db
@@ -359,6 +374,7 @@ export async function getBlogPost(env: Env, slug: string) {
       .where(
         and(
           isBlogPost(),
+          ne(posts.slug, post.slug),
           or(lt(posts.publishAt, at), and(eq(posts.publishAt, at), lt(posts.id, post.id))),
         ),
       )
@@ -370,6 +386,7 @@ export async function getBlogPost(env: Env, slug: string) {
       .where(
         and(
           isBlogPost(),
+          ne(posts.slug, post.slug),
           or(gt(posts.publishAt, at), and(eq(posts.publishAt, at), gt(posts.id, post.id))),
         ),
       )
@@ -379,7 +396,7 @@ export async function getBlogPost(env: Env, slug: string) {
 
   return {
     ...post,
-    tags: tagMap.get(post.id) ?? [],
+    tags: tagSlugs,
     previous: previous ?? null,
     next: next ?? null,
   };

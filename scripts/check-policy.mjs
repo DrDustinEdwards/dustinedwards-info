@@ -227,11 +227,14 @@ refuses(
   eq("admin may still publish for the first time", WRITE_CAPABILITIES.admin.firstPublish, true);
   eq("admin may still delete", WRITE_CAPABILITIES.admin.destroy, true);
   eq("operator may still write", WRITE_CAPABILITIES.operator.write, true);
+  eq("carrel may write", WRITE_CAPABILITIES.carrel.write, true);
+  eq("carrel may publish for the first time", WRITE_CAPABILITIES.carrel.firstPublish, true);
+  eq("carrel may not delete", WRITE_CAPABILITIES.carrel.destroy, false);
 
   eq(
-    "the capability table names the three actor kinds",
+    "the capability table names the four actor kinds",
     Object.keys(WRITE_CAPABILITIES).sort().join(","),
-    "admin,operator,smoke",
+    "admin,carrel,operator,smoke",
   );
 }
 

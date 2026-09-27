@@ -13,6 +13,11 @@ declare global {
     GITHUB_TOKEN: string;
     /** Optional by contract: `POST /api/operator` returns 503 when it is absent or too short. */
     OPERATOR_TOKEN?: string;
+    /**
+     * Carrel's key, reaching only /api/carrel/v1. Optional by contract: absent or under 32 characters,
+     * the site-api package refuses every request. Two holders, this Worker and Carrel: rotate both.
+     */
+    CARREL_SITE_KEY?: string;
     /** Optional by contract: absent, the origin-requests loader returns its error state. */
     ANALYTICS_READ_TOKEN?: string;
     /** Optional by contract: absent or too short, the middleware refuses a presented token with 503. */
