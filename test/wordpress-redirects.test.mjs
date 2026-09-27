@@ -70,6 +70,21 @@ test("every explicit row's target is a page or pending, and never chains", () =>
   }
 });
 
+test("the 2026-09-27 map: no Wolbachia page, the areas and the discovery guide", () => {
+  const to = (path) => wordpressDisposition(path)?.location;
+  for (const path of ["/wolbachia-project-genetic-techniques/", "/knowledge-base/pcr-wolbachia-16s-rrna/", "/gentech-2018a/"]) {
+    assert.equal(to(path), "/research/protocols", path);
+  }
+  assert.equal(to("/phage-discovery/"), "/research/protocols/phage-discovery-guide");
+  assert.equal(to("/phage-bioinformatics/"), "/research/bacteriophages");
+  assert.equal(to("/phage-genetic-studies/"), "/research/bacteriophages");
+  assert.equal(to("/phage-discovery-application/"), "/research/science-education");
+  assert.equal(to("/directory-2019-phage-researchers/"), "/research/science-education");
+  for (const path of ["/retroviruses/", "/rev-lpdv-surveys/", "/rev-lpdv-genetic-studies/"]) {
+    assert.equal(to(path), "/research/retroviruses", path);
+  }
+});
+
 test("slashed and bare forms match; a row rebuilt in place never loops", () => {
   assert.deepEqual(wordpressDisposition("/virus-isolation/"), { status: 301, location: "/research/protocols/phage-isolation" });
   assert.deepEqual(wordpressDisposition("/virus-isolation"), { status: 301, location: "/research/protocols/phage-isolation" });
