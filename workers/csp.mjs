@@ -21,6 +21,34 @@ export function isAdminPath(pathname) {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+/**
+ * The media route is exact-or-slash for the same reason as the admin plane: a future `/mediakit`
+ * page must keep the document policy.
+ *
+ * @param {string} pathname
+ * @returns {boolean}
+ */
+export function isMediaPath(pathname) {
+  return pathname === "/media" || pathname.startsWith("/media/");
+}
+
+/**
+ * Every /media response, whatever its type: stored bytes are never a page of this site, so they get
+ * no script, no connection and a sandbox, which gives an opened file an opaque origin. That is what
+ * stops an SVG or an HTML body (a hand-put object, a legacy upload, a wrong content type) from
+ * running as the site. `img-src 'self' data:` and `style-src 'unsafe-inline'` are what the browser's
+ * own image viewer needs when a reader opens an image directly.
+ *
+ * TRAP: `sandbox` breaks Chrome's built-in PDF viewer, which refuses to load in a sandboxed
+ * document. No PDF is served from /media today; one must be served elsewhere, never through here.
+ */
+export const MEDIA_CSP = buildPolicy([
+  "default-src 'none'",
+  "img-src 'self' data:",
+  "style-src 'unsafe-inline'",
+  "sandbox",
+]);
+
 /** @type {Promise<string> | undefined} */
 let loaderHash;
 
@@ -55,12 +83,15 @@ export function speculationRulesHash(pathname) {
  * instead, and the bundles it inserts by 'strict-dynamic'. The admin plane is `private, no-store`,
  * so its per-request nonce is sound, and it keeps it for <Scripts>, the sidebar script and
  * CodeMirror's inline <style>. The hash is on both, because the loader renders on every page.
+ * A /media path gets MEDIA_CSP instead, chosen here so the Renderer keeps one place that sets the
+ * header.
  *
  * @param {string} pathname the request URL's pathname, for the speculation rules' hash
  * @param {string | undefined} adminNonce this render's nonce on an admin path, else undefined
  * @returns {Promise<string>}
  */
 export async function contentSecurityPolicy(pathname, adminNonce) {
+  if (isMediaPath(pathname)) return MEDIA_CSP;
   const loader = await enhanceLoaderHash();
   const rules = await speculationRulesHash(pathname);
   const nonce = adminNonce ? ` 'nonce-${adminNonce}'` : "";

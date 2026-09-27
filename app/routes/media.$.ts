@@ -11,8 +11,10 @@ import type { Route } from "./+types/media.$";
  */
 /**
  * SVG is served as an attachment, never inline: from the site's own origin a stored SVG is script
- * running as the site. Kept although the CSP blocks it today. Keyed on the stored content type, so a
- * file renamed to `.png` is caught.
+ * running as the site. Upload refuses SVG now, but a legacy or hand-put object can still be in the
+ * bucket. Kept although the sandboxed /media CSP (MEDIA_CSP in workers/csp.mjs, applied by the
+ * Renderer, not here) blocks it too, so neither wall depends on the other. Keyed on the stored
+ * content type, so a file renamed to `.png` is caught.
  */
 function attachIfActive(headers: Headers) {
   const type = (headers.get("content-type") ?? "").toLowerCase();

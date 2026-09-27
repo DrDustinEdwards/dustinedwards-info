@@ -11,8 +11,16 @@ export const ALLOWED = new Map([
   ["image/jpeg", "jpg"],
   ["image/avif", "avif"],
   ["image/gif", "gif"],
-  ["image/svg+xml", "svg"],
 ]);
+
+// NOT IN THE ALLOWLIST, and refused by name rather than as an unknown type: an SVG can carry script,
+// and /media is this site's own origin. The /media CSP (workers/csp.mjs) is the second wall, for
+// anything that reaches the bucket some other way.
+export const SVG_TYPE = "image/svg+xml";
+
+const SVG_REFUSED =
+  "SVG is not accepted: it can carry script, and /media is this site's own origin. " +
+  "Export it as PNG or WebP.";
 
 // A hint, not a control: drag-drop or a scripted post ignores `accept`. The control is the server check.
 export const ACCEPT_ATTRIBUTE = [...ALLOWED.keys()].join(",");
@@ -79,9 +87,10 @@ const UPLOAD_ERRORS = {
     `That file type is not one this endpoint accepts. Uploads here are images: ` +
     `${[...ALLOWED.keys()].map((mime) => mime.split("/")[1]).join(", ")}.`,
   "too-large": `That image is over the ${MAX_BYTES / (1024 * 1024)} MB limit.`,
+  "svg-refused": SVG_REFUSED,
   "content-mismatch":
     "That file begins as markup, so it is not the image type it was uploaded " +
-    "as. Upload an SVG as image/svg+xml.",
+    "as. Markup is not accepted: export the image as PNG or WebP.",
   "images-unavailable":
     "The image could not be measured, because Cloudflare Images did not answer. " +
     "Nothing was stored; try again.",
@@ -92,10 +101,15 @@ const UPLOAD_ERRORS = {
  * claim: SVG bytes declared `image/png` would escape the SVG-as-attachment rule and be served inline.
  *
  * @param {{ type: string, bytes: ArrayBuffer }} file what arrived, before any store
- * @returns {{ code: "unsupported-type" | "too-large" | "content-mismatch", message: string, status: number } | null}
+ * @returns {{ code: "unsupported-type" | "svg-refused" | "too-large" | "content-mismatch", message: string, status: number } | null}
  */
 export function validateUpload({ type, bytes }) {
   const size = bytes.byteLength;
+
+  // Before the generic check, so the refusal says why instead of reading as an oversight.
+  if (type.toLowerCase().split(";")[0]?.trim() === SVG_TYPE) {
+    return { code: "svg-refused", message: SVG_REFUSED, status: 415 };
+  }
 
   if (!ALLOWED.has(type)) {
     return {
@@ -114,12 +128,12 @@ export function validateUpload({ type, bytes }) {
   }
 
   // Last: the only check that reads the payload.
-  if (type !== "image/svg+xml" && beginsAsMarkup(bytes)) {
+  if (beginsAsMarkup(bytes)) {
     return {
       code: "content-mismatch",
       message:
         `Those bytes begin as markup and the declared type is "${type}". ` +
-        `Upload an SVG as image/svg+xml.`,
+        `Markup, SVG included, is not accepted: export the image as PNG or WebP.`,
       status: 415,
     };
   }
