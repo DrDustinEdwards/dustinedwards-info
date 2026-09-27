@@ -77,8 +77,10 @@ function preloadEntries(rootSource) {
 const ENHANCE_BROTLI_CEILINGS = {
   "ask.js": 2000,
   "blog.js": 2500,
-  /* Measured 431 brotli on its first build. Site-wide, so every public document pays for it. */
-  "header.js": 700,
+  /* Measured 431 brotli on its first build. Site-wide, so every public document pays for it. Raised
+   * 2026-09-27 from 700 for the mega menus (hover intent, pinning, Escape, the phone sections): 476
+   * before them, 1230 with them, and the same margin kept. */
+  "header.js": 2000,
   /* Measured 209 brotli on its first build; /login only, the busy label that replaced hydration. */
   "login.js": 400,
   "palette.js": 6000,
@@ -479,36 +481,41 @@ const REDESIGN_UPLIFT = new Map([
  * Brotli bytes, resolved offline by reachability, which over-approximates: the safe direction for a
  * ceiling. A raise keeps the slack the field already had, rounded up to the next hundred, rather than
  * adding any. Fonts are asserted separately.
+ *
+ * 2026-09-27, every route and the math variant: the header mega menus add about 750 brotli of root
+ * stylesheet (chrome-nav.css) and 754 of header.js to every public page, measured against the build
+ * before them; each ceiling rose by its own measured growth with its old slack kept. They come down
+ * if the panel rules ever move out of the root sheet.
  */
 const ROUTE_CEILINGS = {
-  "/": { id: "routes/home", css: 8100, total: 10600 },
-  "/writing": { id: "routes/blog._index", css: 7400, total: 8800 },
+  "/": { id: "routes/home", css: 8900, total: 12200 },
+  "/writing": { id: "routes/blog._index", css: 8200, total: 10400 },
   /* 2026-09-25 raises (Dustin): CI's measured size plus about 1%, rounded up to the next hundred. */
-  "/writing/:slug": { id: "routes/blog.$slug", css: 9700, total: 13500 },
+  "/writing/:slug": { id: "routes/blog.$slug", css: 10500, total: 15100 },
   /* `/writing`'s ceilings: the same listing from the same sheets, graded against one bar. */
-  "/writing/tags/:tag": { id: "routes/blog.tags.$tag", css: 7500, total: 8700 },
-  "/writing/series/:series": { id: "routes/blog.series.$series", css: 7500, total: 8700 },
-  "/search": { id: "routes/search", css: 7600, total: 11400 },
-  "/projects": { id: "routes/projects", css: 7100, total: 7900 },
-  "/colophon": { id: "routes/colophon", css: 7400, total: 8400 },
-  "/playground": { id: "routes/playground", css: 8200, total: 9200 },
+  "/writing/tags/:tag": { id: "routes/blog.tags.$tag", css: 8300, total: 10300 },
+  "/writing/series/:series": { id: "routes/blog.series.$series", css: 8300, total: 10300 },
+  "/search": { id: "routes/search", css: 8400, total: 13000 },
+  "/projects": { id: "routes/projects", css: 7900, total: 9500 },
+  "/colophon": { id: "routes/colophon", css: 8200, total: 10000 },
+  "/playground": { id: "routes/playground", css: 9000, total: 10800 },
   /* The inventory carries the whole kit, so it is the heaviest public sheet on the site by design. */
-  "/playground/ui": { id: "routes/playground.ui", css: 10600, total: 11800 },
-  "/phage-discovery": { id: "routes/phage-discovery", css: 7400, total: 8400 },
-  "/privacy": { id: "routes/privacy", css: 7400, total: 8400 },
-  "/about": { id: "routes/about", css: 7400, total: 8400 },
-  "/research/publications": { id: "routes/publications", css: 7900, total: 9100 },
+  "/playground/ui": { id: "routes/playground.ui", css: 11400, total: 13400 },
+  "/phage-discovery": { id: "routes/phage-discovery", css: 8200, total: 10000 },
+  "/privacy": { id: "routes/privacy", css: 8200, total: 10000 },
+  "/about": { id: "routes/about", css: 8200, total: 10000 },
+  "/research/publications": { id: "routes/publications", css: 8700, total: 10700 },
   /*
    * The index's ceiling measures the SHARED cold load a browser caches once, so this page's own
    * HTML is the variable part: a long author list is content, not a payload regression.
    */
-  "/research/publications/:slug": { id: "routes/publications.$slug", css: 7300, total: 8100 },
-  /* The markdown pages (app/lib/content-pages.mjs) share /about's prose template, and its ceilings: 6979/8299 measured 2026-09-27. */
-  "/research/:page": { id: "routes/content-page", css: 7400, total: 8400 },
-  "/teaching": { id: "routes/teaching", css: 7400, total: 8400 },
+  "/research/publications/:slug": { id: "routes/publications.$slug", css: 8100, total: 9700 },
+  /* The markdown pages (app/lib/content-pages.mjs) share /about's prose template, and its ceilings: 6979/8299 measured 2026-09-27, 7729/9803 with the menus. */
+  "/research/:page": { id: "routes/content-page", css: 8200, total: 10000 },
+  "/teaching": { id: "routes/teaching", css: 8200, total: 10000 },
 };
 
-const MATH_CEILING = { css: 12600, total: 16400 };
+const MATH_CEILING = { css: 13400, total: 18000 };
 
 /** A floor rather than an equality, so an upstream face ADDED later does not fail. */
 const MINIMUM_MATH_FACES = 20;
@@ -896,18 +903,23 @@ function contentPageData(path) {
  */
 const HTML_CEILINGS = {
   "/": { brotli: 12000, measured: 10428 },
-  "/writing": { brotli: 5200, measured: 4495 },
+  /*
+   * 2026-09-27: the header mega menus put every Research and Teaching link, their descriptions and
+   * three line icons in every page's server HTML, about 1100 brotli. The routes that crossed their
+   * ceiling, and /playground/ui, left 8 bytes under it, are re-measured here with the usual 15%.
+   */
+  "/writing": { brotli: 6700, measured: 5750 },
   /* The LONGEST post in the corpus, which is what this route's worst case means. */
-  "/writing/:slug": { brotli: 12300, measured: 10660 },
-  "/writing/tags/:tag": { brotli: 4900, measured: 4200 },
-  "/writing/series/:series": { brotli: 4900, measured: 4215 },
-  "/projects": { brotli: 6400, measured: 5559 },
+  "/writing/:slug": { brotli: 14700, measured: 12703 },
+  "/writing/tags/:tag": { brotli: 6200, measured: 5311 },
+  "/writing/series/:series": { brotli: 6200, measured: 5330 },
+  "/projects": { brotli: 8600, measured: 7393 },
   "/colophon": { brotli: 13900, measured: 12043 },
-  "/playground": { brotli: 6300, measured: 5435 },
-  "/playground/ui": { brotli: 13600, measured: 11789 },
-  "/phage-discovery": { brotli: 4300, measured: 3659 },
-  "/privacy": { brotli: 4100, measured: 3529 },
-  "/about": { brotli: 3100, measured: 2624 },
+  "/playground": { brotli: 8500, measured: 7325 },
+  "/playground/ui": { brotli: 15700, measured: 13592 },
+  "/phage-discovery": { brotli: 5500, measured: 4718 },
+  "/privacy": { brotli: 5500, measured: 4716 },
+  "/about": { brotli: 4300, measured: 3737 },
   /* The LONGEST markdown page, /research/protocols/phage-isolation. */
   "/research/:page": { brotli: 17800, measured: 15396 },
   /* The LONGEST teaching page, /teaching/phage-discovery. */
