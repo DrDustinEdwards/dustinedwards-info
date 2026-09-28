@@ -129,6 +129,13 @@ const LAB_RESOURCES = [
     description: "Titers in pfu/ml, spot titer dilutions, webbed plate volumes and lysate yields",
   },
   {
+    rail: "Calculators",
+    to: "/research/tools",
+    label: "Phage lab calculators",
+    description:
+      "Titer from plaque counts and spot titers, serial dilution plans and webbed plate volumes, with the arithmetic shown",
+  },
+  {
     rail: "Protocol",
     to: "/research/protocols/coi-primers",
     label: "COI primers: LCO1490 and HCO2198",
