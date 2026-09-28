@@ -20,7 +20,6 @@ export async function run({ page, browser }) {
     { path: "/software", module: "projects.tsx" },
     { path: "/playground", module: "playground.tsx" },
     { path: "/playground/ui", module: "playground.ui.tsx" },
-    { path: "/phage-discovery", module: "phage-discovery.tsx" },
     { path: "/colophon", module: "colophon.tsx" },
     { path: "/search?q=cloudflare", module: "search.tsx" },
     { path: "/privacy", module: "privacy.tsx" },

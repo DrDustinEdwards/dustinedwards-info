@@ -36,8 +36,6 @@ export type MenuColumn = {
   sections: MenuSection[];
   /** Two tracks wide, its links in a three-column grid: About's interests. */
   wide?: boolean;
-  /** The menu opens only once this column has a live link; until then the word is a plain link. */
-  launches?: boolean;
 };
 
 export type Menu = {
@@ -85,127 +83,48 @@ const RESEARCH: Menu = {
             },
           ],
         },
-        {
-          label: "Retroviruses",
-          links: [
-            { to: "/research/retroviruses/human", label: "Human retroviruses", description: "HTLV-1" },
-            { to: "/research/retroviruses/avian", label: "Avian retroviruses", description: "REV and LPDV in wild turkeys" },
-          ],
-        },
       ],
     },
     {
-      sections: [
-        { links: [{ to: "/research/phages", label: "Phages", description: "Every phage, linked to PhagesDB" }] },
-      ],
-    },
-    {
-      label: "Protocols",
+      label: "Collections",
       sections: [
         {
-          label: "Phage methods",
           links: [
-            {
-              to: "/teaching/phage-discovery",
-              label: "Phage discovery guide",
-              description: "Finding a new phage, step-by-step",
-            },
-            {
-              to: "/research/protocols/phage-isolation",
-              label: "Phage isolation and purification",
-              description: "Webbed plates, spot titers, lysates",
-            },
-            {
-              to: "/research/protocols/phage-dna-extraction",
-              label: "Phage DNA extraction",
-              description: "Our zinc chloride method",
-            },
-          ],
-        },
-        {
-          label: "PCR and primers",
-          links: [
-            { to: "/research/protocols/coi-primers", label: "COI primers", aside: "LCO1490 · HCO2198" },
-            {
-              to: "/research/protocols/rev-lpdv-primers",
-              label: "REV and LPDV",
-              description: "Avian retrovirus PCR primers",
-            },
-            {
-              to: "/research/protocols/pan-avian-gapdh",
-              label: "Pan-avian GAPDH",
-              description: "Bird DNA quality control",
-            },
+            { to: "/research/publications", label: "Publications" },
+            { to: "/research/phages", label: "Phages" },
+            { to: "/research/protocols", label: "Protocols" },
           ],
         },
       ],
     },
-    { sections: [{ links: [{ to: "/research/publications", label: "Publications" }] }] },
   ],
 };
 
-// The Research panel's component and layout, with no drawing of its own (Dustin, 2026-09-27).
+// Same panel as Research, with one short column. No new open/close behavior.
 const TEACHING: Menu = {
   id: "teaching",
-  head: { to: "/teaching", label: "All teaching", description: "Courses, tutorials and undergraduate research" },
+  head: { to: "/teaching", label: "All teaching" },
   columns: [
     {
-      label: "Courses",
       sections: [
         {
           links: [
-            {
-              to: "/teaching/phage-discovery",
-              label: "Phage Discovery Program",
-              description: "Two-semester HHMI SEA-PHAGES program",
-            },
-            {
-              to: "/teaching/virus-isolation",
-              label: "Virus Isolation course",
-              description: "First semester: phages from soil",
-            },
-            {
-              to: "/teaching/virus-isolation/faq",
-              label: "Lab calculations and common questions",
-              description: "Titers, dilutions and lysate volumes",
-            },
-            {
-              to: "/teaching/phage-bioinformatics",
-              label: "Phage Bioinformatics course",
-              description: "Second semester: genome annotation",
-            },
+            { to: "/teaching/phage-discovery", label: "Phage Discovery Program" },
+            { to: "/teaching/virus-isolation", label: "Virus Isolation" },
+            { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics" },
+            { to: "/teaching/central-dogma", label: "Tutorials" },
+            { to: "/teaching#join-the-lab", label: "Join the lab" },
           ],
         },
       ],
     },
-    {
-      label: "Tutorials",
-      sections: [
-        {
-          links: [
-            {
-              to: "/teaching/central-dogma",
-              label: "Central Dogma Tutorials",
-              description: "Replication, transcription and translation",
-            },
-            { to: "/teaching/study-skills", label: "Study Skills Guide" },
-          ],
-        },
-      ],
-    },
-    {
-      sections: [
-        { links: [{ to: "/teaching#join-the-lab", label: "Join the lab", description: "Research for undergraduates" }] },
-      ],
-    },
-    { sections: [{ links: [{ to: "/teaching#teaching-philosophy", label: "Teaching philosophy" }] }] },
   ],
 };
 
-// Launches as a plain link: the panel opens once the first interest page exists (cutover.md).
+// Interests stay in the data and out of the menu until a page exists. CV and Contact show now.
 const ABOUT: Menu = {
   id: "about",
-  head: { to: "/about", label: "About Dustin" },
+  head: { to: "/about", label: "About" },
   beside: [
     { to: CV_PDF, label: "CV" },
     { to: "/contact", label: "Contact" },
@@ -214,7 +133,6 @@ const ABOUT: Menu = {
     {
       label: "Interests",
       wide: true,
-      launches: true,
       sections: [
         {
           links: [
@@ -254,9 +172,11 @@ export function isLive(to: string): boolean {
 
 /**
  * The menu with every link that has no page taken out, and the sections and columns that empties.
- * Undefined when nothing is left, or a launching column is empty: the word is then a plain link.
+ * An empty column is omitted. It does not hide the head or the links beside it, so About can show
+ * CV and Contact before any interest page exists. Undefined when the head itself has no page.
  */
 export function liveMenu(menu: Menu, live: (to: string) => boolean = isLive): Menu | undefined {
+  if (!live(menu.head.to)) return undefined;
   const columns = menu.columns
     .map((column) => ({
       ...column,
@@ -265,9 +185,9 @@ export function liveMenu(menu: Menu, live: (to: string) => boolean = isLive): Me
         .filter((section) => section.links.length > 0),
     }))
     .filter((column) => column.sections.length > 0);
-  const launched = menu.columns.every((column) => !column.launches || columns.some((c) => c.label === column.label));
-  if (columns.length === 0 || !launched) return undefined;
-  return { ...menu, beside: menu.beside?.filter((link) => live(link.to)), columns };
+  const beside = menu.beside?.filter((link) => live(link.to));
+  if (columns.length === 0 && (!beside || beside.length === 0)) return undefined;
+  return { ...menu, beside, columns };
 }
 
 /** The menus as written, before any link is taken out, for tests that bring a page into being. */
@@ -276,8 +196,7 @@ export const MENUS = { research: RESEARCH, teaching: TEACHING, about: ABOUT } as
 export const NAV: readonly NavItem[] = [
   { to: "/research", label: "Research", menu: liveMenu(RESEARCH) },
   { to: "/teaching", label: "Teaching", menu: liveMenu(TEACHING) },
-  { to: "/writing", label: "Writing" },
   { to: "/software", label: "Software" },
-  { to: "/playground", label: "Playground" },
+  { to: "/writing", label: "Writing" },
   { to: "/about", label: "About", menu: liveMenu(ABOUT) },
 ];

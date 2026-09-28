@@ -1,7 +1,9 @@
-import { data } from "react-router";
+import { data, Link } from "react-router";
 
+import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
-import { contentPageMarkdownPath, contentPageTrail } from "~/lib/content-pages.mjs";
+import { PhageRoster } from "~/components/phage-roster";
+import { contentPageMarkdownPath, contentPageTrail, protocolNeighbors } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
@@ -51,21 +53,36 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const { page } = loaderData;
+  const titleOf = (path: string) => PAGES.get(path)?.title;
+  const trail = contentPageTrail(page, titleOf);
+  const neighbors = protocolNeighbors(page.path);
   return (
     <PageShell
       trail={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(
-              breadcrumbJsonLd(SITE_ORIGIN, contentPageTrail(page, (path) => PAGES.get(path)?.title)),
-            ),
+            __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)),
           }}
         />
       }
     >
+      <Breadcrumb trail={trail} />
       <h1 className="page-title">{page.title}</h1>
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
+      {neighbors ? (
+        <nav className="protocol-neighbors" aria-label="Protocols">
+          {neighbors.previous ? (
+            <Link to={neighbors.previous}>Previous: {titleOf(neighbors.previous)}</Link>
+          ) : null}
+          {neighbors.next ? <Link to={neighbors.next}>Next: {titleOf(neighbors.next)}</Link> : null}
+        </nav>
+      ) : null}
+      {page.path === "/teaching/phage-discovery" ? (
+        <div className="prose">
+          <PhageRoster />
+        </div>
+      ) : null}
     </PageShell>
   );
 }

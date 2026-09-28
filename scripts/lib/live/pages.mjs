@@ -32,16 +32,15 @@ export async function run() {
   }
 
   {
-    const { status, text } = await get("/phage-discovery");
-    check("roster: /phage-discovery returns 200", status === 200, `got ${status}`);
+    const { status, text } = await get("/teaching/phage-discovery");
+    check("roster: /teaching/phage-discovery returns 200", status === 200, `got ${status}`);
 
     const page = strip(text);
 
-    /* Delimited: the nav renders `Roster` on every page. */
     check(
-      "roster: the page's own heading says Roster",
-      />Roster<\/h1>/.test(page),
-      "the <h1> is missing or renamed; the nav link alone must not satisfy this",
+      "roster: the roster heading is on the program page",
+      /id="roster"/.test(page),
+      "the roster anchor is missing",
     );
 
     const years = Array.from({ length: 9 }, (_, i) => 2017 + i);
@@ -61,8 +60,8 @@ export async function run() {
 
     const home = await get("/");
     check(
-      "roster: the homepage links to /phage-discovery",
-      strip(home.text).includes('href="/phage-discovery"'),
+      "roster: the homepage links to the roster anchor",
+      strip(home.text).includes('href="/teaching/phage-discovery#roster"'),
       `home ${home.status}`,
     );
   }

@@ -4,8 +4,8 @@
  * cutover.md's "Redirect map" (Capsid, dustinedwards), decided 2026-09-27; this file is that record in
  * code, pattern rules first, then explicit rows.
  *
- * Host-scoped, because the workers.dev host serves the new site's own paths and must never see these:
- * `/phage-discovery` is still a page there. On the apex it 301s to the program page's roster anchor.
+ * Host-scoped, because the workers.dev host serves the new site's own paths and must never see these.
+ * `/phage-discovery` 301s on every host from path-moves.mjs, hash included. This row is the apex copy.
  *
  * Paths match with and without the trailing slash. The query is ignored: a 301 never carries it, since
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.

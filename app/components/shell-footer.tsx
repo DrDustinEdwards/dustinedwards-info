@@ -3,7 +3,15 @@ import { Link } from "react-router";
 import { GermomicsMark } from "~/components/germomics-mark";
 import { CapsidIcon, LampIcon, PadlockIcon } from "~/components/private-tool-icons";
 import { SiteLogoHeader } from "~/components/site-logo";
-import { FOOTER_COLUMNS, type FooterLink, PRIVATE_TOOLS, type PrivateTool, SOCIAL_LINKS, TOOLS_HEADING } from "~/lib/footer";
+import {
+  BRAND_PROFILES,
+  FOOTER_COLUMNS,
+  type FooterLink,
+  PRIVATE_TOOLS,
+  type PrivateTool,
+  SOCIAL_LINKS,
+  TOOLS_HEADING,
+} from "~/lib/footer";
 import { SITE } from "~/lib/seo";
 
 const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
@@ -44,7 +52,7 @@ export function ShellFooter() {
     <footer className="site-shell-footer">
       <div className="tracks">
         <div className="footer-grid">
-          {/* The brand block: the logo and the social links, nothing else (Dustin, 2026-09-27). */}
+          {/* The brand block: logo, name, social marks, then the profile links. */}
           <div className="footer-identity">
             <Link to="/" className="footer-home">
               <SiteLogoHeader className="footer-logo" />
@@ -65,6 +73,13 @@ export function ShellFooter() {
                     )}
                     <span className="footer-social-label">{link.label}</span>
                   </a>
+                </li>
+              ))}
+            </ul>
+            <ul className="footer-links footer-profiles">
+              {BRAND_PROFILES.map((link) => (
+                <li key={link.to}>
+                  <FooterAnchor link={link} />
                 </li>
               ))}
             </ul>

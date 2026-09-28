@@ -49,6 +49,15 @@
   margin-block-start: var(--s-7);
 }
 
+.home-areas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 1.25rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
 .home-section-heading {
   margin: 0 0 0.75rem;
   color: var(--text-secondary);

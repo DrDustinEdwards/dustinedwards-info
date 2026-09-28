@@ -1,6 +1,6 @@
 # dustinedwards.info
 
-Dustin Edwards, virologist and Department Head, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; also builds software on Cloudflare.
+Dustin Edwards, professor and virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; also builds software on Cloudflare.
 
 ## Research
 
@@ -12,7 +12,7 @@ A protocol is /research/protocols/<slug>, for example /research/protocols/phage-
 
 ## Teaching
 
-The hub is /teaching. Courses and guides: /teaching/phage-discovery, /teaching/virus-isolation, /teaching/virus-isolation/faq, /teaching/phage-bioinformatics, /teaching/central-dogma, /teaching/study-skills. The roster of phage-discovery students will sit at /teaching/phage-discovery#roster.
+The hub is /teaching. Courses and guides: /teaching/phage-discovery, /teaching/virus-isolation, /teaching/virus-isolation/faq, /teaching/phage-bioinformatics, /teaching/central-dogma, /teaching/study-skills. The student roster is /teaching/phage-discovery#roster. /phage-discovery 301s there.
 
 ## Software
 
@@ -177,7 +177,7 @@ of them:
   /teaching/central-dogma
   /teaching/study-skills
 
-The other pages are /, /about, /writing, /software, /phage-discovery,
+The other pages are /, /about, /writing, /software,
 /colophon, /contact and /privacy. /sitemap.xml lists every HTML page on the
 site and nothing else. /playground is a fixture for the browser gate, noindex,
 and it is not listed in the sitemap.
