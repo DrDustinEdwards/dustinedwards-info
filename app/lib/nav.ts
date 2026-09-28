@@ -100,6 +100,20 @@ const RESEARCH: Menu = {
   ],
 };
 
+// The three products only. Germomics, TXASM, Capsid and this site stay off the header.
+export const SOFTWARE_PRODUCTS: MenuLink[] = [
+  { to: "/software/foxhound", label: "Foxhound", description: "Failed Stripe payment recovery" },
+  { to: "/software/foxing", label: "Foxing", description: "Public-domain reading" },
+  { to: "/software/foxing-edu", label: "Foxing Edu", description: "Foxing, sold to schools" },
+];
+
+// Same panel as Research, with one short column. No new open/close behavior.
+const SOFTWARE: Menu = {
+  id: "software",
+  head: { to: "/software", label: "All software" },
+  columns: [{ sections: [{ links: SOFTWARE_PRODUCTS }] }],
+};
+
 // Same panel as Research, with one short column. No new open/close behavior.
 const TEACHING: Menu = {
   id: "teaching",
@@ -191,12 +205,12 @@ export function liveMenu(menu: Menu, live: (to: string) => boolean = isLive): Me
 }
 
 /** The menus as written, before any link is taken out, for tests that bring a page into being. */
-export const MENUS = { research: RESEARCH, teaching: TEACHING, about: ABOUT } as const;
+export const MENUS = { research: RESEARCH, teaching: TEACHING, software: SOFTWARE, about: ABOUT } as const;
 
 export const NAV: readonly NavItem[] = [
   { to: "/research", label: "Research", menu: liveMenu(RESEARCH) },
   { to: "/teaching", label: "Teaching", menu: liveMenu(TEACHING) },
-  { to: "/software", label: "Software" },
+  { to: "/software", label: "Software", menu: liveMenu(SOFTWARE) },
   { to: "/writing", label: "Writing" },
   { to: "/about", label: "About", menu: liveMenu(ABOUT) },
 ];

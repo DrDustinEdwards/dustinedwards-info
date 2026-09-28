@@ -32,7 +32,7 @@ export async function declaredRouteModules() {
   };
   walk(config, "");
 
-  /* The markdown pages sit behind the research/* and teaching/* splats, which answer 404 for any path
+  /* The markdown pages sit behind the research/*, teaching/* and software/* splats, which answer 404 for any path
    * that is not a listed page, so each splat declares exactly the pages it serves and nothing more. */
   const { CONTENT_PAGE_PATHS } = await import(
     pathToFileURL(join(root, "app", "lib", "content-pages.mjs")).href

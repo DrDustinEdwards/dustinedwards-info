@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { declaredRouteModules } from "../scripts/lib/features/anchors.mjs";
 import { readFileSync } from "node:fs";
 
-import { PRIVATE_TOOLS, SOCIAL_LINKS, footerHrefs } from "../app/lib/footer.ts";
+import { FOOTER_COLUMNS, PRIVATE_TOOLS, SOCIAL_LINKS, footerHrefs } from "../app/lib/footer.ts";
 import { OWNER_PROFILES } from "../app/lib/seo.ts";
 
 test("every internal footer link is a route app/routes.ts declares", async () => {
@@ -36,6 +36,22 @@ test("rel=me marks exactly the owner's profiles, and never a social link", () =>
   assert.ok(SOCIAL_LINKS.every((link) => !link.me));
   const me = footerHrefs().filter((link) => link.me).map((link) => link.to);
   assert.deepEqual([...me].sort(), [...OWNER_PROFILES].sort());
+});
+
+test("the Software column lists the three products and not Germomics", () => {
+  const column = FOOTER_COLUMNS.find((item) => item.id === "software");
+  assert.ok(column);
+  assert.deepEqual(
+    column.items.map((item) => item.to),
+    ["/software/foxhound", "/software/foxing", "/software/foxing-edu"],
+  );
+  assert.ok(!column.items.some((item) => /germomics/i.test(item.label + item.to)));
+});
+
+test("the footer does not link Carrel or the Capsid console", () => {
+  const hrefs = footerHrefs().map((link) => link.to);
+  assert.ok(!hrefs.some((to) => /carrel/i.test(to)));
+  assert.ok(!hrefs.some((to) => to.includes("/console")));
 });
 
 test("Admin, when the footer lists it, goes to this site's sign-in", () => {
