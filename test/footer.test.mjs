@@ -48,10 +48,11 @@ test("the Software column lists the three products and not Germomics", () => {
   assert.ok(!column.items.some((item) => /germomics/i.test(item.label + item.to)));
 });
 
-test("the footer does not link Carrel or the Capsid console", () => {
-  const hrefs = footerHrefs().map((link) => link.to);
-  assert.ok(!hrefs.some((to) => /carrel/i.test(to)));
-  assert.ok(!hrefs.some((to) => to.includes("/console")));
+test("the Workspace group lists Carrel, Admin and Console, each with its icon", () => {
+  assert.deepEqual(
+    PRIVATE_TOOLS.map((tool) => [tool.label, tool.icon]),
+    [["Carrel", "lamp"], ["Admin", "padlock"], ["Console", "capsid"]],
+  );
 });
 
 test("Admin, when the footer lists it, goes to this site's sign-in", () => {

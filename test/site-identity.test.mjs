@@ -7,9 +7,9 @@ const ORIGIN = "https://example.test";
 
 test("home identity is professor and virologist, under one name", () => {
   assert.equal(SITE.name, "Dustin Edwards");
-  assert.equal(SITE.role, "Professor and virologist");
-  assert.equal(SITE.eyebrow, "Professor and virologist");
-  assert.match(SITE.description, /^Professor and virologist, /);
+  assert.equal(SITE.role, "Professor and Virologist");
+  assert.equal(SITE.eyebrow, "Professor and Virologist");
+  assert.match(SITE.description, /^Professor and Virologist, /);
   assert.match(SITE.description, /Department of Biological Sciences/);
   assert.match(SITE.description, /Tarleton State University/);
   assert.match(SITE.description, /retroviruses/);

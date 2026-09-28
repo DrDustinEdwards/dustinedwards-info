@@ -90,12 +90,22 @@ export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
 export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string };
 
 /**
- * This site's sign-in, the Workspace group in the grid's sixth slot. Carrel is named on the colophon and
- * is not linked. The Capsid console is not linked. The accessible name begins with the visible word.
+ * The three logins, the Workspace group in the grid's sixth slot. The accessible names say what each one is
+ * for, and begin with the visible word so speech input still works. Admin is this site's sign-in page.
  */
 export const TOOLS_HEADING = "Workspace";
 export const PRIVATE_TOOLS: PrivateTool[] = [
+  // Behind Cloudflare Access since 2026-09-26.
+  { to: "https://carrel.dustinedwards.info", label: "Carrel", name: "Carrel, writing", icon: "lamp", external: true },
   { to: "/login", label: "Admin", name: "Admin, this site", icon: "padlock" },
+  // Capsid's admin page, per its docs/console.md; GitHub login, one admin.
+  {
+    to: "https://capsid.dustin-edwards.workers.dev/console",
+    label: "Console",
+    name: "Console, Capsid",
+    icon: "capsid",
+    external: true,
+  },
 ];
 
 /** Every href the footer renders, social links and tools included. */
