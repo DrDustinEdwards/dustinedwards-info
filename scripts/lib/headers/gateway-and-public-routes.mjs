@@ -86,7 +86,6 @@ export function run(code) {
       "home.tsx",
       "about.tsx",
       "colophon.tsx",
-      "phage-discovery.tsx",
       "playground.tsx",
       "playground.ui.tsx",
       "projects.tsx",

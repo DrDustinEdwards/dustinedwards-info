@@ -21,15 +21,24 @@ export type FooterLink = {
 
 export type FooterColumn = { id: string; heading: string; items: FooterLink[] };
 
+/** Plain text beside the brand mark: Scholar, PubMed, ORCID. No logo and no raw address. */
+export const BRAND_PROFILES: FooterLink[] = [
+  { to: OWNER_SCHOLAR, label: "Google Scholar", external: true, me: true },
+  { to: OWNER_PUBMED, label: "PubMed", external: true, me: true },
+  { to: OWNER_ORCID, label: "ORCID", external: true, me: true },
+];
+
 export const FOOTER_COLUMNS: FooterColumn[] = [
   {
     id: "research",
     heading: "Research",
     items: [
-      { to: "/research", label: "Research areas" },
-      { to: "/research/phages", label: "Phages" },
-      { to: "/research/protocols", label: "Protocols" },
+      { to: "/research", label: "Research focus" },
       { to: "/research/publications", label: "Publications" },
+      { to: "/research/protocols", label: "Protocols" },
+      { to: "/research/phages", label: "Phages" },
+      { to: "/research/retroviruses/avian", label: "Avian retroviruses" },
+      { to: "/teaching#join-the-lab", label: "Prospective students" },
     ],
   },
   {
@@ -37,10 +46,15 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     heading: "Teaching",
     items: [
       { to: "/teaching/phage-discovery", label: "Phage Discovery Program" },
-      { to: "/teaching/virus-isolation", label: "Virus Isolation course" },
-      { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics course" },
+      { to: "/teaching/virus-isolation", label: "Virus Isolation" },
+      { to: "/teaching/phage-bioinformatics", label: "Phage Bioinformatics" },
       { to: "/teaching/central-dogma", label: "Tutorials" },
     ],
+  },
+  {
+    id: "software",
+    heading: "Software",
+    items: [{ to: "/software", label: "Software" }],
   },
   {
     id: "writing",
@@ -51,22 +65,10 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     ],
   },
   {
-    id: "profiles",
-    heading: "Profiles",
-    // Plain text: no ORCID logo or iD, no raw address.
-    items: [
-      { to: OWNER_SCHOLAR, label: "Google Scholar", external: true, me: true },
-      { to: OWNER_ORCID, label: "ORCID", external: true, me: true },
-      { to: OWNER_PUBMED, label: "PubMed", external: true, me: true },
-    ],
-  },
-  {
     id: "site",
     heading: "Site",
     items: [
       { to: "/about", label: "About" },
-      { to: "/software", label: "Software" },
-      { to: "/playground", label: "Playground" },
       { to: "/contact", label: "Contact" },
       { to: "/colophon", label: "Colophon" },
       { to: "/privacy", label: "Privacy" },
@@ -107,5 +109,10 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
 
 /** Every href the footer renders, social links and tools included. */
 export function footerHrefs(): FooterLink[] {
-  return [...FOOTER_COLUMNS.flatMap((column) => column.items), ...SOCIAL_LINKS, ...PRIVATE_TOOLS];
+  return [
+    ...BRAND_PROFILES,
+    ...FOOTER_COLUMNS.flatMap((column) => column.items),
+    ...SOCIAL_LINKS,
+    ...PRIVATE_TOOLS,
+  ];
 }

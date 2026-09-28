@@ -30,8 +30,6 @@ export default [
   // Top level, never under the post route: that route sends public cache headers, Workers Cache
   // does not key on cookies and a preview link is cookieless, so sharing it would cache a draft.
   route("preview/:token", "routes/preview.$token.tsx"),
-  // The legacy WordPress URL, which is indexed, so the Worker takes it over rather than redirecting.
-  route("phage-discovery", "routes/phage-discovery.tsx"),
   // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
   route("research/publications", "routes/publications.tsx"),
   // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages

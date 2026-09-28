@@ -286,6 +286,12 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
 
   const target = renamed ?? movedPdf ?? slashed ?? moved;
   if (target !== null) {
+    // A hash in the target is the path, not something to glue the query onto.
+    if (target.includes("#")) {
+      const dest = new URL(target, url);
+      dest.search = url.search;
+      return redirectTo(request, dest.toString());
+    }
     return redirectTo(request, new URL(`${target}${url.search}`, url).toString());
   }
 

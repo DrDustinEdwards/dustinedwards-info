@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { Breadcrumb } from "~/components/breadcrumb";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { TOPICS } from "~/data/publications";
@@ -136,9 +137,13 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
       <SiteHeader />
       <main id="main" className="tracks paper-tracks" tabIndex={-1}>
         <header className="paper-head">
-          <p className="paper-breadcrumb">
-            <Link to={PUBLICATIONS_PATH}>Publications</Link>
-          </p>
+          <Breadcrumb
+            trail={[
+              ["Research", "/research"],
+              ["Publications", PUBLICATIONS_PATH],
+              [decodeEntities(paper.title), pagePath],
+            ]}
+          />
 
           {/* The H1 is the title: Scholar reads the first heading as the paper title. */}
           <h1 className="paper-title">{italicizeOrganisms(decodeEntities(paper.title))}</h1>

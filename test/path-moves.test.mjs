@@ -45,6 +45,12 @@ test("/projects moves to /software, and only as a whole path", () => {
   assert.equal(movedPathTarget("/software"), null);
 });
 
+test("/phage-discovery moves to the roster anchor on every host", () => {
+  assert.equal(movedPathTarget("/phage-discovery"), "/teaching/phage-discovery#roster");
+  assert.equal(movedPathTarget("/phage-discovery/"), "/teaching/phage-discovery#roster");
+  assert.equal(movedPathTarget("/teaching/phage-discovery"), null);
+});
+
 test("a path that only starts with the same letters is not a moved section", () => {
   for (const path of ["/blogs", "/blogroll", "/publicationsx", "/writing", "/research/publications", "/", "/about"]) {
     assert.equal(movedPathTarget(path), null, path);

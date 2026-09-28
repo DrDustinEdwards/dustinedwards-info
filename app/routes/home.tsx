@@ -1,5 +1,6 @@
 import { Link, data } from "react-router";
 
+import projectsData from "../../content/projects.json";
 import stack from "../../content/generated/stack.json";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -31,6 +32,7 @@ import { PUBLICATIONS } from "~/data/publications";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { doiSlug } from "~/lib/publications/paths.mjs";
+import { projectAnchor } from "~/lib/projects-page.mjs";
 import type { Route } from "./+types/home";
 
 import "~/styles/evidence-row.css";
@@ -159,45 +161,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             Research
           </h2>
           <p className="home-research-line">I study viral genomics.</p>
+          <ul className="home-areas">
+            <li>
+              <Link to="/research/retroviruses">Retroviruses</Link>
+            </li>
+            <li>
+              <Link to="/research/bacteriophages">Bacteriophages</Link>
+            </li>
+            <li>
+              <Link to="/research/science-education">Science education</Link>
+            </li>
+          </ul>
         </section>
-
-        {featured ? (
-          <section className="home-featured" aria-labelledby="featured-heading">
-            <h2 id="featured-heading" className="home-section-heading">
-              Writing
-            </h2>
-            {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
-            <ol className="home-rows">
-              {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
-                <li key={post.slug} className="home-row h-entry">
-                  <span className="home-row-date">
-                    {post.publishAt ? (
-                      <time
-                        className="dt-published"
-                        dateTime={new Date(post.publishAt).toISOString()}
-                      >
-                        {longDateUTC(post.publishAt)}
-                      </time>
-                    ) : null}
-                  </span>
-                  <span className="home-row-body">
-                    <span className="home-row-title p-name">
-                      <Link className="u-url" to={`/writing/${post.slug}`}>
-                        {post.title}
-                      </Link>
-                    </span>
-                    {post.description ? (
-                      <span className="home-row-summary p-summary">{post.description}</span>
-                    ) : null}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <p className="home-more">
-              <Link to="/writing">All {posts} posts</Link>
-            </p>
-          </section>
-        ) : null}
 
         {/* Titles and journals go through `decodeEntities`: the deposited records carry HTML entities React would print literally. */}
         <section className="home-section" aria-labelledby="publications-heading">
@@ -239,6 +214,60 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </figure>
         </section>
 
+        <section className="home-section" aria-labelledby="software-heading">
+          <h2 id="software-heading" className="home-section-heading">
+            Software
+          </h2>
+          <ul className="home-areas">
+            {(projectsData.projects as { slug: string; name: string }[]).map((project) => (
+              <li key={project.slug}>
+                <Link to={`/software#${projectAnchor(project.slug)}`}>{project.name}</Link>
+              </li>
+            ))}
+          </ul>
+          <p className="home-more">
+            <Link to="/software">All software</Link>
+          </p>
+        </section>
+
+        {featured ? (
+          <section className="home-featured" aria-labelledby="featured-heading">
+            <h2 id="featured-heading" className="home-section-heading">
+              Writing
+            </h2>
+            {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
+            <ol className="home-rows">
+              {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
+                <li key={post.slug} className="home-row h-entry">
+                  <span className="home-row-date">
+                    {post.publishAt ? (
+                      <time
+                        className="dt-published"
+                        dateTime={new Date(post.publishAt).toISOString()}
+                      >
+                        {longDateUTC(post.publishAt)}
+                      </time>
+                    ) : null}
+                  </span>
+                  <span className="home-row-body">
+                    <span className="home-row-title p-name">
+                      <Link className="u-url" to={`/writing/${post.slug}`}>
+                        {post.title}
+                      </Link>
+                    </span>
+                    {post.description ? (
+                      <span className="home-row-summary p-summary">{post.description}</span>
+                    ) : null}
+                  </span>
+                </li>
+              ))}
+            </ol>
+            <p className="home-more">
+              <Link to="/writing">All {posts} posts</Link>
+            </p>
+          </section>
+        ) : null}
+
         <section className="home-section" aria-labelledby="discovery-heading">
           <h2 id="discovery-heading" className="home-section-heading">
             Phage discovery
@@ -258,7 +287,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </figcaption>
           </figure>
           <p className="home-more">
-            <Link to="/phage-discovery">The roster, {firstCohort} to {lastCohort}</Link>
+            <Link to="/teaching/phage-discovery#roster">The roster, {firstCohort} to {lastCohort}</Link>
           </p>
         </section>
 

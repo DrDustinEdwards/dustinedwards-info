@@ -20,7 +20,7 @@ export async function run() {
     "/writing",
     `/writing/${SLUG}`,
     "/search?q=d1",
-    "/phage-discovery",
+    "/teaching/phage-discovery",
     "/colophon",
   ];
 
