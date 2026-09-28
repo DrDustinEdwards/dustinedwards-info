@@ -19,7 +19,13 @@ test("home identity is professor and virologist, under one name", () => {
 
   for (const person of [personJsonLd(ORIGIN), personNode(ORIGIN)]) {
     assert.equal(person.name, "Dustin Edwards");
-    assert.equal(person.jobTitle, SITE.role);
+    assert.equal(person.jobTitle, "Virologist, Professor, and Department Head");
+    assert.equal(person.jobTitle, SITE.jobTitle);
+    assert.equal(person.honorificSuffix, "Ph.D.");
+    // The photo is on this site, square first, never hotlinked from another server.
+    assert.equal(person.image.length, 2);
+    assert.equal(person.image[0].width, person.image[0].height);
+    for (const image of person.image) assert.ok(image.url.startsWith(`${ORIGIN}/media/dustin-edwards-headshot`), image.url);
     assert.equal(person.description, SITE.description);
     assert.equal("alternateName" in person, false);
     assert.equal(person.worksFor.department.name, SITE.department);

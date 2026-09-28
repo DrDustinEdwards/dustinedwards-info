@@ -39,7 +39,7 @@ export function headers({ loaderHeaders }: Route.HeadersArgs) {
 }
 
 export function meta() {
-  return pageMeta({ title: SITE.name, description: SITE.description, path: "/" });
+  return pageMeta({ title: `${SITE.name}, Virologist at ${SITE.affiliation}`, description: SITE.description, path: "/" });
 }
 
 /** How many papers the Publications section shows. */
