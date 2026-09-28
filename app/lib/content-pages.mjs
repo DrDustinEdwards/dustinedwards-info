@@ -71,6 +71,30 @@ export function contentPageMarkdownBody(page) {
   return `# ${page.title}\n\n${body}`;
 }
 
+/**
+ * Purification is a section of the isolation page, not its own URL, so the sequence is two pages.
+ * @type {readonly string[]}
+ */
+export const PROTOCOL_SEQUENCE = [
+  "/research/protocols/phage-isolation",
+  "/research/protocols/phage-dna-extraction",
+];
+
+/**
+ * @param {string} path
+ * @returns {{ previous: string | null, next: string | null } | null}
+ */
+export function protocolNeighbors(path) {
+  const index = PROTOCOL_SEQUENCE.indexOf(path);
+  if (index < 0) return null;
+  const previous = index > 0 ? PROTOCOL_SEQUENCE[index - 1] : null;
+  const next = index < PROTOCOL_SEQUENCE.length - 1 ? PROTOCOL_SEQUENCE[index + 1] : null;
+  return {
+    previous: previous ?? null,
+    next: next ?? null,
+  };
+}
+
 /** Google clips near these; the build refuses longer ones rather than ship a clipped result. */
 export const SEO_TITLE_MAX = 60;
 export const DESCRIPTION_MAX = 155;

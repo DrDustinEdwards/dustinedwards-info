@@ -17,6 +17,8 @@ const MOVES = /** @type {const} */ ([
 const EXACT_MOVES = new Map([
   ["/projects", "/software"],
   ["/projects/", "/software"],
+  ["/phage-discovery", "/teaching/phage-discovery#roster"],
+  ["/phage-discovery/", "/teaching/phage-discovery#roster"],
 ]);
 
 /** The feed files a reader subscribes to, under /blog, /blog/tags/<tag> or /blog/series/<series>. */

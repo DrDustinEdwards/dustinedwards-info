@@ -22,7 +22,6 @@ const STATIC_PATHS = [
   "/",
   "/about",
   "/writing",
-  "/phage-discovery",
   "/research/publications",
   "/colophon",
   "/software",

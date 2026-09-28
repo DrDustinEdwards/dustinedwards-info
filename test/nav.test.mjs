@@ -37,11 +37,21 @@ test("every link the menus render has a page: listed markdown, a declared route,
 // design default, so nothing here pins them. What stays is that every link resolves and the live logic.
 
 test("a page not yet written stays out, and its link appears once the page exists", () => {
-  const unwritten = new Set(["/teaching/study-skills"]);
+  const unwritten = new Set(["/teaching/virus-isolation"]);
   const before = liveMenu(MENUS.teaching, (to) => isLive(to) && !unwritten.has(to));
-  assert.ok(before && !hrefs(before).includes("/teaching/study-skills"));
+  assert.ok(before && !hrefs(before).includes("/teaching/virus-isolation"));
   const after = liveMenu(MENUS.teaching);
-  assert.ok(after && hrefs(after).includes("/teaching/study-skills"));
+  assert.ok(after && hrefs(after).includes("/teaching/virus-isolation"));
+});
+
+test("About shows CV and Contact before any interest page exists", () => {
+  const about = liveMenu(MENUS.about);
+  assert.ok(about);
+  const links = hrefs(about);
+  assert.ok(links.includes("/about"));
+  assert.ok(links.includes("/contact"));
+  assert.ok(links.some((to) => to.startsWith("https://docs.google.com/")));
+  assert.ok(!links.some((to) => to.startsWith("/interests/")));
 });
 
 test("an anchor is live only when its heading is listed, never on its page alone", () => {
