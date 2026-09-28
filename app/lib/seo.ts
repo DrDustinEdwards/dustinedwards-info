@@ -16,14 +16,14 @@ const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 // the role and the university come first so a clip keeps them.
 export const SITE = {
   name: "Dustin Edwards",
-  role: "Professor and virologist",
+  role: "Professor and Virologist",
   affiliation: "Tarleton State University",
   department: "Department of Biological Sciences",
-  eyebrow: "Professor and virologist",
+  eyebrow: "Professor and Virologist",
   tagline:
-    "Professor and virologist, Department of Biological Sciences, Tarleton State University.",
+    "Professor and Virologist, Department of Biological Sciences, Tarleton State University.",
   description:
-    "Professor and virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; builds software on Cloudflare.",
+    "Professor and Virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; builds software on Cloudflare.",
 } as const;
 
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
