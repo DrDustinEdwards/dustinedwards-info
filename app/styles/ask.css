@@ -18,6 +18,11 @@
   border-color: var(--brand);
 }
 
+.ask-trigger:active {
+  border-color: var(--brand-pressed);
+  color: var(--brand-pressed);
+}
+
 .ask-panel {
   margin: 0.75rem 0 0;
   padding: 0.875rem 1rem;
