@@ -57,7 +57,7 @@ Protocol: [spot titer](/research/protocols/phage-isolation#spot-titer).
 
 ## How much phage lysate do I put on a plate to get a webbed plate?
 
-Divide the pfu you want on the plate by the lysate's titer in pfu/ml and multiply by 1,000 µl/ml; in the course's notebooks, plates that received roughly 8,000 to 20,000 pfu webbed.
+Divide the pfu you want on the plate by the lysate's titer in pfu/ml and multiply by 1,000 µl/ml; on *M. smegmatis*, plates that received 8,000 to 12,000 pfu webbed.
 
     µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml
 
