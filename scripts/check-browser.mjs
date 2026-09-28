@@ -149,7 +149,11 @@ if (subjectReachable) {
    * sheet checks (7 wide, 2 phone). Plus 3 more: the one hover check became four (opens at once,
    * switches at once, survives the trip into the card, closes after the grace).
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 225 : 200;
+  /*
+   * Plus 2 on both on 2026-09-28: header-menus' safe triangle, the diagonal across Teaching that keeps
+   * Research open and the rest on the crossed word that switches to it.
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 227 : 202;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
