@@ -3,18 +3,11 @@ const MOBILE = "(max-width: 43.99rem)";
 // A pointer that hovers, so a touch screen's synthesized hover never opens a panel under a tap.
 const HOVER = "(hover: hover) and (pointer: fine)";
 
-const REDUCE = "(prefers-reduced-motion: reduce)";
-
-// A pass across the bar opens nothing. Once a panel is open, moving along the bar switches in the
-// same frame. The only delay is the safe path: while the pointer is aimed at the panel already on
-// screen, another word does not take it. Reduced motion opens and closes with no wait and no morph;
-// a few frames remain only while the pointer is traveling into the panel, or that path could not be crossed.
-const OPEN_INTENT = 100;
-const SKIP_FOR = 350;
-const AIM_REST = 280;
-const CLOSE_AWAY = 80;
-const CLOSE_TOWARD = 140;
-const MORPH_MS = 200;
+// Hover opens at once and moving to another word switches at once; nothing waits on intent and nothing
+// animates the card in. The one wait is the close grace: leaving the word or its card starts it, and
+// entering the word, its card, or another word ends it, so the pointer can cross the header's foot
+// between the word and the card. Grace is not motion, so reduced motion keeps it.
+const CLOSE_GRACE = 150;
 
 const RETURN_AFTER = 8;
 
@@ -43,13 +36,6 @@ function syncPage() {
   for (const region of document.querySelectorAll<HTMLElement>("#main, .site-shell-footer")) {
     region.toggleAttribute("inert", open);
   }
-}
-
-/** Whether `p` lies inside the triangle `a b c`: the same side of all three edges. */
-function inTriangle(p: DOMPointReadOnly, a: DOMPointReadOnly, b: DOMPointReadOnly, c: DOMPointReadOnly) {
-  const side = (u: DOMPointReadOnly, v: DOMPointReadOnly) => (v.x - u.x) * (p.y - u.y) - (v.y - u.y) * (p.x - u.x);
-  const [ab, bc, ca] = [side(a, b), side(b, c), side(c, a)];
-  return (ab >= 0 && bc >= 0 && ca >= 0) || (ab <= 0 && bc <= 0 && ca <= 0);
 }
 
 /*
@@ -92,16 +78,12 @@ function enhanceMenu(element: HTMLElement) {
  * that pins the panel, Escape back to the chevron, and aria-expanded; on a phone, where the panels sit
  * inside the Menu, the chevron expands its section in place instead.
  *
- * Each panel is a card hung from its own word (chrome-nav.css). The first open grows the card down
- * from the header; switching to another word swaps cards at once, since the next card hangs from a
- * different place and a morph between them would travel. The height is inline and cleared when the
- * grow ends, so a card the script never opened still has no height of its own.
+ * Each panel is a card hung from its own word (chrome-nav.css). It shows whole on the frame it opens,
+ * with no grow or fade, and switching to another word swaps cards in that same frame.
  */
 function enhanceMenus() {
   const mobile = window.matchMedia(MOBILE);
   const hover = window.matchMedia(HOVER);
-  const motion = window.matchMedia(REDUCE);
-  const reduced = () => motion.matches;
 
   const menus: Menu[] = Array.from(document.querySelectorAll<HTMLElement>("[data-nav-menu]"), (item) => {
     const chevron = item.querySelector<HTMLButtonElement>("[data-nav-chevron]");
@@ -111,77 +93,18 @@ function enhanceMenus() {
   });
 
   let pinned: Menu | null = null;
-  let pending: Menu | null = null;
-  let openTimer = 0;
   let closeTimer = 0;
-  let morphGen = 0;
-  // When the last panel closed. A return inside SKIP_FOR opens with no intent wait.
-  let warmed = -SKIP_FOR;
-  // Where the pointer left the open word: the apex of the triangle it may cross to reach the panel.
-  let exit: DOMPointReadOnly | null = null;
   let lastX = 0;
   let lastY = 0;
-  let prevX = 0;
-  let prevY = 0;
 
   const isOpen = (menu: Menu) =>
     mobile.matches ? menu.item.hasAttribute("data-expanded") : isShowing(menu.panel);
   const sync = (menu: Menu) => menu.chevron.setAttribute("aria-expanded", String(isOpen(menu)));
   const showing = () => menus.find((menu) => isShowing(menu.panel));
 
-  const clearTimers = () => {
-    window.clearTimeout(openTimer);
+  const cancelClose = () => {
     window.clearTimeout(closeTimer);
-    openTimer = 0;
     closeTimer = 0;
-    pending = null;
-  };
-
-  const resetMorph = (panel: HTMLElement) => {
-    panel.style.height = "";
-    panel.style.overflow = "";
-    panel.style.transition = "";
-    panel.style.opacity = "";
-    for (const child of panel.children) {
-      if (!(child instanceof HTMLElement)) continue;
-      child.style.transition = "";
-      child.style.opacity = "";
-    }
-  };
-
-  /* The first open grows the card from the header. Reduced motion keeps the popover's own instant show. */
-  const grow = (panel: HTMLElement) => {
-    if (reduced()) return;
-    const gen = ++morphGen;
-    const content = [...panel.children].filter((el): el is HTMLElement => el instanceof HTMLElement);
-    panel.style.transition = "none";
-    panel.style.overflow = "hidden";
-    panel.style.height = "auto";
-    const target = panel.offsetHeight;
-    if (target === 0) {
-      resetMorph(panel);
-      return;
-    }
-    panel.style.height = "0px";
-    panel.style.opacity = "0";
-    for (const el of content) {
-      el.style.transition = "none";
-      el.style.opacity = "1";
-    }
-    void panel.offsetHeight;
-    requestAnimationFrame(() => {
-      if (gen !== morphGen || !isShowing(panel)) return;
-      panel.style.transition = `height ${MORPH_MS}ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease`;
-      for (const el of content) el.style.transition = "opacity 140ms ease";
-      void panel.offsetHeight;
-      panel.style.height = `${target}px`;
-      panel.style.opacity = "1";
-      for (const el of content) el.style.opacity = "1";
-    });
-    window.setTimeout(() => {
-      if (gen !== morphGen) return;
-      resetMorph(panel);
-    }, MORPH_MS + 80);
   };
 
   /*
@@ -202,40 +125,13 @@ function enhanceMenus() {
   const rectHas = (rect: DOMRect, x: number, y: number) =>
     x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
 
-  const overOwn = (menu: Menu, x: number, y: number) =>
-    rectHas(menu.item.getBoundingClientRect(), x, y) || rectHas(menu.panel.getBoundingClientRect(), x, y);
-
-  // The gap under the word, plus the triangle from `exit` to the panel's top edge.
-  const inSafe = (menu: Menu, x: number, y: number) => {
+  // The word, its card, and the strip of header between them, where a pointer resting on its way down
+  // is still on its way.
+  const overOwn = (menu: Menu, x: number, y: number) => {
     const item = menu.item.getBoundingClientRect();
     const box = menu.panel.getBoundingClientRect();
-    const top = Math.min(item.bottom, box.top);
-    const bottom = Math.max(item.bottom, box.top);
-    if (x >= item.left && x <= item.right && y >= top - 2 && y <= bottom + 2) return true;
-    if (!exit || box.bottom <= box.top) return false;
-    return inTriangle(
-      new DOMPointReadOnly(x, y),
-      exit,
-      new DOMPointReadOnly(box.left, box.top),
-      new DOMPointReadOnly(box.right, box.top),
-    );
-  };
-
-  // A jump's leave event is reported at the destination. The apex has to be the last point on the word,
-  // or that destination is "inside" the triangle and the close cancels itself.
-  const onPath = (menu: Menu, x: number, y: number) => {
-    if (!exit) return false;
-    return Math.hypot(x - exit.x, y - exit.y) > 6 && inSafe(menu, x, y);
-  };
-
-  // The leave point is the triangle's apex, so it is always "inside". Project one step of travel.
-  const headingIn = (menu: Menu) => {
-    const dx = lastX - prevX;
-    const dy = lastY - prevY;
-    const len = Math.hypot(dx, dy);
-    if (len < 0.5) return false;
-    const step = 28;
-    return inSafe(menu, lastX + (dx / len) * step, lastY + (dy / len) * step);
+    if (rectHas(item, x, y) || rectHas(box, x, y)) return true;
+    return x >= item.left && x <= item.right && y >= item.bottom - 2 && y <= box.top + 2;
   };
 
   /*
@@ -243,17 +139,10 @@ function enhanceMenus() {
    * sync at once: the toggle event that also syncs arrives a task later, after a reader could look.
    */
   const show = (menu: Menu, pin: boolean) => {
-    const switching = showing() !== undefined;
-    clearTimers();
-    exit = null;
+    cancelClose();
     if (!isShowing(menu.panel)) {
-      if (switching) {
-        morphGen += 1;
-        menus.forEach((other) => resetMorph(other.panel));
-      }
       menu.panel.showPopover();
       place(menu);
-      if (!switching) grow(menu.panel);
     }
     pinned = pin ? menu : null;
     menus.forEach(sync);
@@ -261,37 +150,20 @@ function enhanceMenus() {
   };
 
   const hide = (menu: Menu) => {
-    clearTimers();
-    morphGen += 1;
-    resetMorph(menu.panel);
+    cancelClose();
     if (isShowing(menu.panel)) menu.panel.hidePopover();
     sync(menu);
     syncPage();
   };
 
   const scheduleClose = (menu: Menu) => {
-    window.clearTimeout(closeTimer);
-    const toward = headingIn(menu);
-    const delay = reduced() ? (toward ? 48 : 0) : toward ? CLOSE_TOWARD : CLOSE_AWAY;
+    cancelClose();
     closeTimer = window.setTimeout(() => {
       closeTimer = 0;
-      if (pinned === menu || pending || !isShowing(menu.panel)) return;
+      if (pinned === menu || !isShowing(menu.panel)) return;
       if (overOwn(menu, lastX, lastY)) return;
-      if (onPath(menu, lastX, lastY)) return;
       hide(menu);
-    }, delay);
-  };
-
-  const openDelay = () => {
-    if (reduced() || performance.now() - warmed < SKIP_FOR) return 0;
-    return OPEN_INTENT;
-  };
-
-  const notePointer = (x: number, y: number) => {
-    prevX = lastX;
-    prevY = lastY;
-    lastX = x;
-    lastY = y;
+    }, CLOSE_GRACE);
   };
 
   for (const menu of menus) {
@@ -299,11 +171,7 @@ function enhanceMenus() {
 
     // Every way a panel closes, the browser's own light dismiss and Escape included, passes through here.
     menu.panel.addEventListener("toggle", () => {
-      if (!isShowing(menu.panel)) {
-        if (pinned === menu) pinned = null;
-        resetMorph(menu.panel);
-        warmed = performance.now();
-      }
+      if (!isShowing(menu.panel) && pinned === menu) pinned = null;
       sync(menu);
       syncPage();
     });
@@ -325,57 +193,22 @@ function enhanceMenus() {
       else show(menu, true);
     });
 
+    // The card is inside its item, so this fires on the word and on the card alike: open or keep it.
     menu.item.addEventListener("pointerenter", (event) => {
       if (event.pointerType !== "mouse" || !hover.matches || mobile.matches) return;
-      notePointer(event.clientX, event.clientY);
-      const open = showing();
-      // Back on the word or on its panel, which is inside this item, so it is not closing after all.
-      if (open === menu) {
-        window.clearTimeout(closeTimer);
-        closeTimer = 0;
-        window.clearTimeout(openTimer);
-        openTimer = 0;
-        pending = null;
-        return;
-      }
-      window.clearTimeout(openTimer);
-      openTimer = 0;
-      if (!open) {
-        const delay = openDelay();
-        if (delay === 0) show(menu, false);
-        else openTimer = window.setTimeout(() => show(menu, false), delay);
-        return;
-      }
-      // Aimed at the open panel: crossing this word is not a choice. Resting here is.
-      if (inSafe(open, event.clientX, event.clientY)) {
-        window.clearTimeout(closeTimer);
-        closeTimer = 0;
-        pending = menu;
-        openTimer = window.setTimeout(() => {
-          pending = null;
-          show(menu, false);
-        }, reduced() ? 0 : AIM_REST);
-        return;
-      }
-      show(menu, false);
+      lastX = event.clientX;
+      lastY = event.clientY;
+      if (showing() === menu) cancelClose();
+      else show(menu, false);
     });
 
     menu.item.addEventListener("pointerleave", (event) => {
       if (event.pointerType !== "mouse" || mobile.matches) return;
-      window.clearTimeout(openTimer);
-      openTimer = 0;
-      if (pending === menu) pending = null;
+      lastX = event.clientX;
+      lastY = event.clientY;
       if (!isShowing(menu.panel) || pinned === menu) return;
       const next = event.relatedTarget;
       if (next instanceof Node && menu.item.contains(next)) return;
-      const itemBox = menu.item.getBoundingClientRect();
-      const apex = rectHas(itemBox, lastX, lastY)
-        ? { x: lastX, y: lastY }
-        : rectHas(itemBox, prevX, prevY)
-          ? { x: prevX, y: prevY }
-          : { x: itemBox.left + itemBox.width / 2, y: itemBox.top + itemBox.height / 2 };
-      exit = new DOMPointReadOnly(apex.x, apex.y);
-      if (event.clientX !== lastX || event.clientY !== lastY) notePointer(event.clientX, event.clientY);
       scheduleClose(menu);
     });
 
@@ -387,32 +220,11 @@ function enhanceMenus() {
     });
   }
 
-  // Keeps the safe path honest between the events above: a move along the bar leaves the triangle
-  // and switches at once, and a move into the panel cancels the close.
+  // Where the pointer is when the grace runs out: on its way down the strip under the word, the card stays.
   document.addEventListener("pointermove", (event) => {
-    if (event.pointerType !== "mouse" || mobile.matches || !hover.matches) return;
-    notePointer(event.clientX, event.clientY);
-    const open = showing();
-    if (!open) return;
-    if (overOwn(open, lastX, lastY)) {
-      window.clearTimeout(closeTimer);
-      closeTimer = 0;
-      window.clearTimeout(openTimer);
-      openTimer = 0;
-      pending = null;
-      return;
-    }
-    if (onPath(open, lastX, lastY) || (inSafe(open, lastX, lastY) && headingIn(open))) {
-      window.clearTimeout(closeTimer);
-      closeTimer = 0;
-      return;
-    }
-    if (pending && pending !== open) {
-      show(pending, false);
-      return;
-    }
-    if (pinned === open) return;
-    if (closeTimer === 0) scheduleClose(open);
+    if (event.pointerType !== "mouse") return;
+    lastX = event.clientX;
+    lastY = event.clientY;
   });
 
   // The pointer left the page. A move onto the panel also leaves elements under it, and the panel is

@@ -252,7 +252,6 @@ export async function run({ browser }) {
         const p = /** @type {HTMLElement | null} */ (document.getElementById(`site-nav-${id}`));
         if (!chevron || !p) continue;
         chevron.click();
-        await new Promise((r) => setTimeout(r, 350));
         out[id] = { width: p.getBoundingClientRect().width, clipped: p.scrollWidth > p.clientWidth + 1 };
         chevron.click();
       }
@@ -272,8 +271,6 @@ export async function run({ browser }) {
        viewport and scrolls inside itself rather than running off the bottom. */
     await page.setViewport({ width: 720, height: 405 });
     await page.click(CHEVRON);
-    // Past the first open's grow, which clips the card while it runs.
-    await sleep(400);
     const zoomed = await page.evaluate((panel) => {
       const p = /** @type {HTMLElement} */ (document.querySelector(panel));
       const box = p.getBoundingClientRect();
@@ -297,11 +294,17 @@ export async function run({ browser }) {
     );
     await page.setViewport({ width: 1280, height: 900 });
 
-    /* Hover content stays hoverable (WCAG 1.4.13): open on the way to and inside the panel. The
-       opening delay is a design default and is not asserted. */
-    const word = await page.evaluate(() => {
-      const box = document.querySelector('.site-nav-word[href="/research"]')?.getBoundingClientRect();
-      return box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null;
+    /* Hover (app/enhance/header.ts): a word opens its card the moment the pointer arrives, whole on
+       that frame; another word takes over at once; the card survives the trip from its word down into
+       it; and leaving closes it once the close grace (150ms) runs out. Every "at once" read below is
+       taken with no wait after the move, so an intent timer or a grow would fail it. */
+    const words = await page.evaluate(() => {
+      /** @param {string} href */
+      const at = (href) => {
+        const box = document.querySelector(`.site-nav-word[href="${href}"]`)?.getBoundingClientRect();
+        return box ? { x: box.left + box.width / 2, y: box.top + box.height / 2 } : null;
+      };
+      return { research: at("/research"), teaching: at("/teaching") };
     });
     /* The header opens on hover only for a fine, hovering pointer (app/enhance/header.ts), and a
        headless Linux runner reports neither, which failed this check on every deploy from
@@ -316,28 +319,63 @@ export async function run({ browser }) {
     });
     await page.reload({ waitUntil: "networkidle0" });
     const canHover = await page.evaluate(() => window.matchMedia("(hover: hover) and (pointer: fine)").matches);
+    /** @param {string} id */
+    const cardState = (id) =>
+      page.evaluate((id) => {
+        const p = /** @type {HTMLElement | null} */ (document.getElementById(`site-nav-${id}`));
+        if (!p) return null;
+        const box = p.getBoundingClientRect();
+        return {
+          open: p.matches(":popover-open"),
+          // Whole: its full height and full opacity already, nothing inline mid-animation.
+          whole: box.height > 40 && box.height >= p.clientHeight && getComputedStyle(p).opacity === "1" && !p.style.height,
+          box: [box.left, box.top, box.right, box.bottom].map(Math.round),
+        };
+      }, id);
     if (!canHover) {
-      skip("hover opens the panel", "this browser reports no fine, hovering pointer even under emulation");
-    } else if (word) {
+      skip("hover opens, switches and closes the cards", "this browser reports no fine, hovering pointer even under emulation");
+    } else if (words.research && words.teaching) {
       // From off the header, or the pointer left on the chevron by the clicks above is already inside.
       await page.mouse.move(640, 880);
-      await page.mouse.move(word.x, word.y, { steps: 4 });
-      const late = await pollUntil(() => state(page), (s) => s.open, { tries: 10, everyMs: 150 });
-      await page.mouse.move(word.x + 120, word.y + 90, { steps: 6 });
-      await sleep(200);
-      await page.mouse.move(word.x + 160, word.y + 220, { steps: 6 });
-      await sleep(700);
-      const inside = await state(page);
-      await page.mouse.move(640, 880, { steps: 4 });
-      const gone = await pollUntil(() => state(page), (s) => !s.open, { tries: 10, everyMs: 150 });
+      await page.mouse.move(words.research.x, words.research.y, { steps: 4 });
+      const opened = await cardState("research");
       ok(
-        "hover opens the panel, keeps it open on the way down into it, and closes it after leaving",
-        late.open && inside.open && !gone.open,
-        `later ${JSON.stringify(late)}, inside ${JSON.stringify(inside)}, ` +
-          `after leaving ${JSON.stringify(gone)}`,
+        "hover opens the card at once, whole on the first read, with no intent wait and no grow",
+        opened !== null && opened.open && opened.whole,
+        JSON.stringify(opened),
+      );
+
+      await page.mouse.move(words.teaching.x, words.teaching.y, { steps: 4 });
+      const [from, to] = [await cardState("research"), await cardState("teaching")];
+      ok(
+        "moving to another word switches cards at once: the new one open and whole, the old one shut",
+        from !== null && to !== null && !from.open && to.open && to.whole,
+        `research ${JSON.stringify(from)}, teaching ${JSON.stringify(to)}`,
+      );
+
+      /* Straight down off the word, across the header's foot, and into the card: leaving the word
+         starts the grace, and arriving in the card ends it. Waiting well past the grace proves it did. */
+      const into = to ? { x: words.teaching.x, y: to.box[1] + 40 } : { x: words.teaching.x, y: words.teaching.y + 120 };
+      await page.mouse.move(into.x, into.y, { steps: 8 });
+      await sleep(450);
+      const inside = await cardState("teaching");
+      ok(
+        "the card stays open through the move from its word down into it, and after resting there past the grace",
+        inside !== null && inside.open,
+        `pointer at (${Math.round(into.x)}, ${Math.round(into.y)}), card ${JSON.stringify(inside)}`,
+      );
+
+      await page.mouse.move(640, 880, { steps: 4 });
+      const started = performance.now();
+      const gone = await pollUntil(() => cardState("teaching"), (c) => c !== null && !c.open, { tries: 12, everyMs: 50 });
+      const took = Math.round(performance.now() - started);
+      ok(
+        "leaving the card closes it once the short close grace runs out",
+        gone !== null && !gone.open,
+        `still ${JSON.stringify(gone)} ${took}ms after leaving; the grace is 150ms`,
       );
     } else {
-      ok("the Research word is laid out for the hover check", false, "no .site-nav-word for /research");
+      ok("the Research and Teaching words are laid out for the hover checks", false, JSON.stringify(words));
     }
 
     // Back to the browser's own profile, so the phone checks below see a touch screen's media.

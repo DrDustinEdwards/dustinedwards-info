@@ -146,9 +146,10 @@ if (subjectReachable) {
    */
   /*
    * Plus 9 on both on 2026-09-28: header-menus' card, veil, inert, shared-width, 200% zoom and phone
-   * sheet checks (7 wide, 2 phone).
+   * sheet checks (7 wide, 2 phone). Plus 3 more: the one hover check became four (opens at once,
+   * switches at once, survives the trip into the card, closes after the grace).
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 222 : 197;
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 225 : 200;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +
