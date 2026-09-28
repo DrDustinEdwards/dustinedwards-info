@@ -128,9 +128,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             {SITE.name}
           </h1>
           <p className="intro-affil">
-            <span>Professor and virologist</span>
+            <span>{SITE.eyebrow}</span>
+            <span>{SITE.department}</span>
             <span>{SITE.affiliation}</span>
-            <span className="intro-affil-system">Texas A&amp;M University System</span>
           </p>
           <a className="u-url" href="/" hidden>
             {SITE.name}

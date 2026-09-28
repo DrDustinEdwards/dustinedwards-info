@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readdir, readFile, mkdir, writeFile } from "node:fs/promises";
+import { readdir, readFile, mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -13,6 +13,8 @@ import {
   DESCRIPTION_MAX,
   SEO_TITLE_MAX,
   contentPageFile,
+  contentPageMarkdownBody,
+  contentPageMarkdownPath,
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
 import { playgroundPages } from "../app/lib/playground-page.mjs";
@@ -273,7 +275,9 @@ async function main() {
   await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
   // Only what the route renders: the markdown and outline are build inputs for search, not page weight.
-  const contentPages = (await renderContentPages()).map(({ path: p, title, seoTitle, description, html }) => ({
+  // The twin is a static asset beside the HTML URL, the same trade the paper twins make.
+  const renderedPages = await renderContentPages();
+  const contentPages = renderedPages.map(({ path: p, title, seoTitle, description, html }) => ({
     path: p,
     title,
     seoTitle,
@@ -281,10 +285,58 @@ async function main() {
     html,
   }));
   await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: contentPages }, null, 2)}\n`, "utf8");
+  await writeContentPageTwins(renderedPages);
 
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH} and ${PAGES_ARTIFACT_PATH}`,
   );
+}
+
+/**
+ * One markdown file per research and teaching page, at `public<path>.md`. Paper twins live under
+ * public/research/publications/ and are not touched here.
+ *
+ * @param {Awaited<ReturnType<typeof renderContentPages>>} pages
+ */
+async function writeContentPageTwins(pages) {
+  const expected = new Set(pages.map((page) => contentPageMarkdownPath(page.path)));
+  for (const page of pages) {
+    const rel = contentPageMarkdownPath(page.path).slice(1);
+    const dest = fromRoot(path.join("public", rel));
+    await mkdir(path.dirname(dest), { recursive: true });
+    await writeFile(dest, contentPageMarkdownBody(page), "utf8");
+  }
+  for (const rootName of ["research", "teaching"]) {
+    await pruneContentTwins(fromRoot(path.join("public", rootName)), `/${rootName}`, expected);
+  }
+  for (const hub of ["/research.md", "/teaching.md"]) {
+    if (!expected.has(hub)) await unlink(fromRoot(path.join("public", hub.slice(1)))).catch(() => {});
+  }
+}
+
+/**
+ * @param {string} dir
+ * @param {string} urlDir
+ * @param {Set<string>} expected
+ */
+async function pruneContentTwins(dir, urlDir, expected) {
+  let names;
+  try {
+    names = await readdir(dir, { withFileTypes: true });
+  } catch (error) {
+    if (/** @type {NodeJS.ErrnoException} */ (error).code === "ENOENT") return;
+    throw error;
+  }
+  for (const entry of names) {
+    const urlPath = `${urlDir}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (urlPath === "/research/publications") continue;
+      await pruneContentTwins(path.join(dir, entry.name), urlPath, expected);
+      continue;
+    }
+    if (!entry.name.endsWith(".md") || expected.has(urlPath)) continue;
+    await unlink(path.join(dir, entry.name));
+  }
 }
 
 if (isMain(import.meta.url)) {

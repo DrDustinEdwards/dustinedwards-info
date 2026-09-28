@@ -76,7 +76,7 @@ test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia p
   for (const path of ["/wolbachia-project-genetic-techniques/", "/knowledge-base/pcr-wolbachia-16s-rrna/", "/gentech-2018a/"]) {
     assert.equal(to(path), "/research/protocols", path);
   }
-  assert.equal(to("/phage-discovery/"), "/teaching/phage-discovery");
+  assert.equal(to("/phage-discovery/"), "/teaching/phage-discovery#roster");
   assert.equal(to("/virus-isolation/"), "/teaching/virus-isolation");
   assert.equal(to("/virus-isolation-reagent-request/"), "/teaching/virus-isolation");
   assert.equal(to("/phage-bioinformatics/"), "/teaching/phage-bioinformatics");

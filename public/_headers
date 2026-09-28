@@ -56,3 +56,87 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </research/publications/:splat/>; rel="canonical"
+
+# Research and teaching twins, one file per page, written by build:content next to the HTML URL.
+# Explicit paths, not a splat: a greedy /research/*.md would also match the paper twins above.
+# noindex so the HTML page is the one that ranks. The link is relative, like the paper rule.
+/research.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research>; rel="canonical"
+/research/retroviruses.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/retroviruses>; rel="canonical"
+/research/retroviruses/human.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/retroviruses/human>; rel="canonical"
+/research/retroviruses/avian.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/retroviruses/avian>; rel="canonical"
+/research/bacteriophages.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/bacteriophages>; rel="canonical"
+/research/science-education.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/science-education>; rel="canonical"
+/research/phages.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/phages>; rel="canonical"
+/research/protocols.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/protocols>; rel="canonical"
+/research/protocols/phage-isolation.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/protocols/phage-isolation>; rel="canonical"
+/research/protocols/phage-dna-extraction.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/protocols/phage-dna-extraction>; rel="canonical"
+/research/protocols/coi-primers.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/protocols/coi-primers>; rel="canonical"
+/research/protocols/rev-lpdv-primers.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/protocols/rev-lpdv-primers>; rel="canonical"
+/research/protocols/pan-avian-gapdh.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/protocols/pan-avian-gapdh>; rel="canonical"
+/teaching.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching>; rel="canonical"
+/teaching/phage-discovery.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching/phage-discovery>; rel="canonical"
+/teaching/virus-isolation.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching/virus-isolation>; rel="canonical"
+/teaching/virus-isolation/faq.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching/virus-isolation/faq>; rel="canonical"
+/teaching/phage-bioinformatics.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching/phage-bioinformatics>; rel="canonical"
+/teaching/central-dogma.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching/central-dogma>; rel="canonical"
+/teaching/study-skills.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </teaching/study-skills>; rel="canonical"

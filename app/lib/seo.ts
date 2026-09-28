@@ -12,14 +12,18 @@ export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
 // `role` and `affiliation` are structured data (jobTitle, worksFor), so they stay short and literal.
+// The description names the department in full. It is a few characters over the 155 SERP estimate;
+// the role and the university come first so a clip keeps them.
 export const SITE = {
   name: "Dustin Edwards",
-  role: "Professor",
+  role: "Virologist and Department Head",
   affiliation: "Tarleton State University",
-  eyebrow: "Full-stack engineer",
-  tagline: "Professor by training. I build on Cloudflare and publish the numbers.",
+  department: "Department of Biological Sciences",
+  eyebrow: "Virologist and Department Head",
+  tagline:
+    "Virologist and Department Head, Department of Biological Sciences, Tarleton State University.",
   description:
-    "Dustin Edwards, professor and full-stack engineer. Building on Cloudflare Workers, D1, R2 and KV, with the measurements.",
+    "Virologist and Department Head, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; builds software on Cloudflare.",
 } as const;
 
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
@@ -89,16 +93,12 @@ export function truncateForSerp(text: string, limit: number) {
   return `${(lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
 }
 
-/** The About page's Person: the shared facts, with the site description after the role. */
+/** The About page's Person: the same facts as `personNode`, including the site description. */
 export function personJsonLd(origin: string) {
-  const { name, jobTitle, ...rest } = personFacts(origin);
   return {
     "@context": "https://schema.org",
     "@type": "Person",
-    name,
-    jobTitle,
-    description: SITE.description,
-    ...rest,
+    ...personFacts(origin),
   };
 }
 
@@ -305,15 +305,20 @@ export function personNode(origin: string) {
   };
 }
 
-/** What both Person nodes say about the owner, in their key order. */
+/** What both Person nodes say about the owner, in their key order. No alternate names. */
 function personFacts(origin: string) {
   return {
     name: SITE.name,
     jobTitle: SITE.role,
+    description: SITE.description,
     url: origin,
     worksFor: {
       "@type": "CollegeOrUniversity",
       name: SITE.affiliation,
+      department: {
+        "@type": "Organization",
+        name: SITE.department,
+      },
     },
     sameAs: OWNER_SAME_AS,
   };

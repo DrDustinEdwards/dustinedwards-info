@@ -4,12 +4,13 @@
 // and checks it names that paper's own page.
 
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { PUBLICATIONS } from "../app/data/publications.ts";
+import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
 import { doiSlug, paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -58,6 +59,18 @@ test("every paper twin names its own paper page with Link rel=canonical", () => 
     const headers = headersFor(paperMarkdownPath(slug));
     assert.equal(headers.get("link"), `<${paperPath(slug)}>; rel="canonical"`, slug);
     assert.equal(headers.get("x-robots-tag"), "noindex", slug);
+  }
+});
+
+test("every research and teaching page twin names its HTML page", () => {
+  assert.ok(CONTENT_PAGE_PATHS.length > 0);
+  for (const pagePath of CONTENT_PAGE_PATHS) {
+    const headers = headersFor(contentPageMarkdownPath(pagePath));
+    assert.equal(headers.get("link"), `<${pagePath}>; rel="canonical"`, pagePath);
+    assert.equal(headers.get("x-robots-tag"), "noindex", pagePath);
+    const file = join(root, "public", contentPageMarkdownPath(pagePath).slice(1));
+    assert.equal(existsSync(file), true, `${file} is missing. Run build:content.`);
+    assert.ok(readFileSync(file, "utf8").startsWith("# "), pagePath);
   }
 });
 

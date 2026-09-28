@@ -13,6 +13,12 @@ const MOVES = /** @type {const} */ ([
   ["/publications", "/research/publications"],
 ]);
 
+/** Whole paths, not prefixes. `/projects/foo` is not a page and must not move. */
+const EXACT_MOVES = new Map([
+  ["/projects", "/software"],
+  ["/projects/", "/software"],
+]);
+
 /** The feed files a reader subscribes to, under /blog, /blog/tags/<tag> or /blog/series/<series>. */
 const FEED_FILES = new Set(["rss.xml", "feed.json", "atom.xml"]);
 
@@ -37,6 +43,7 @@ function isLegacyFeed(rest) {
  */
 export function movedPathTarget(pathname) {
   if (typeof pathname !== "string") return null;
+  if (EXACT_MOVES.has(pathname)) return EXACT_MOVES.get(pathname) ?? null;
   for (const [from, to] of MOVES) {
     if (pathname === from) return to;
     // `/publications.bib` and friends sit beside the section rather than under it.

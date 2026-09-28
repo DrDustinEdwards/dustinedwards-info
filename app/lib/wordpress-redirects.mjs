@@ -5,7 +5,7 @@
  * code, pattern rules first, then explicit rows.
  *
  * Host-scoped, because the workers.dev host serves the new site's own paths and must never see these:
- * `/phage-discovery` is a page there and a 301 here.
+ * `/phage-discovery` is still a page there. On the apex it 301s to the program page's roster anchor.
  *
  * Paths match with and without the trailing slash. The query is ignored: a 301 never carries it, since
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.
@@ -97,7 +97,7 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/knowledge-base/pcr-coi-lco1490-hco2198": "/research/protocols/coi-primers",
   // The old pages were a course and a program, so each goes to the course or program, not a protocol.
   "/virus-isolation": "/teaching/virus-isolation",
-  "/phage-discovery": "/teaching/phage-discovery",
+  "/phage-discovery": "/teaching/phage-discovery#roster",
   // No Wolbachia page: it is not Dustin's research any more, so its methods land on the protocols.
   "/wolbachia-project-genetic-techniques": "/research/protocols",
   "/knowledge-base/pcr-wolbachia-16s-rrna": "/research/protocols",
@@ -129,8 +129,8 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/phage-bioinformatics": "/teaching/phage-bioinformatics",
   "/phage-genetic-studies": "/research/bacteriophages",
   "/phage-discovery-application": "/teaching/phage-discovery",
-  "/molarity-calculator": "/playground",
-  "/knowledge-base/metric-prefix": "/playground",
+  "/molarity-calculator": "/research/protocols",
+  "/knowledge-base/metric-prefix": "/research/protocols",
   "/central-dogma-tutorials": "/teaching/central-dogma",
   "/retroviruses": "/research/retroviruses",
   "/rev-lpdv-surveys": "/research/retroviruses/avian",

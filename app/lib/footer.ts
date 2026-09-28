@@ -65,7 +65,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     heading: "Site",
     items: [
       { to: "/about", label: "About" },
-      { to: "/projects", label: "Projects" },
+      { to: "/software", label: "Software" },
       { to: "/playground", label: "Playground" },
       { to: "/contact", label: "Contact" },
       { to: "/colophon", label: "Colophon" },
