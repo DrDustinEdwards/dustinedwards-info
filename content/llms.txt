@@ -1,6 +1,6 @@
 # dustinedwards.info
 
-Dustin Edwards, professor and virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; also builds software on Cloudflare.
+Dustin Edwards, Professor and Virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; also builds software on Cloudflare.
 
 ## Research
 
