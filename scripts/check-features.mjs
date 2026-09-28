@@ -13,7 +13,6 @@ import {
 } from "./lib/features/anchors.mjs";
 import { checkColophon } from "./lib/features/colophon.mjs";
 import { checkEnhancements } from "./lib/features/enhancements.mjs";
-import { checkPlayground } from "./lib/features/playground/index.mjs";
 import { checkProjects } from "./lib/features/projects.mjs";
 import { checkFeatureProse } from "./lib/features/prose-numbers.mjs";
 import { root } from "./lib/features/shared.mjs";
@@ -61,11 +60,15 @@ checkColophon(ctx);
 await checkEnhancements(ctx);
 reportAnchors(ctx, anchors);
 checkProjects(ctx);
-await checkPlayground(ctx);
 
 /* Whole-gate floor: section floors cannot see another section stopping. */
 /* Re-measure by running the gate. */
-const MINIMUM_CHECKS = 930;
+/*
+ * 848 on 2026-09-28, when the playground section went with /playground: measured 1219 before and 893
+ * after (the section's 319 plus 7 elsewhere), and the floor sits max(3, ceil(893 * 0.05)) = 45 under
+ * the measured run, as check:browser's floors do.
+ */
+const MINIMUM_CHECKS = 848;
 tally.floor("check:features", "checks", MINIMUM_CHECKS, "A SECTION was skipped rather than failing.");
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);

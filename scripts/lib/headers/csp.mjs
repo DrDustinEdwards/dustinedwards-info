@@ -191,7 +191,7 @@ export async function run(code) {
     "/writing/some-post",
     "/colophon",
     "/projects",
-    "/playground",
+    "/teaching",
     "/search",
     "/login",
     "/media/thing.png",

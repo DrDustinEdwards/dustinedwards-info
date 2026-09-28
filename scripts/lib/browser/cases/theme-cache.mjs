@@ -18,8 +18,6 @@ export async function run({ page, browser }) {
     { path: "/writing", module: "blog._index.tsx" },
     { path: "/writing/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
     { path: "/software", module: "projects.tsx" },
-    { path: "/playground", module: "playground.tsx" },
-    { path: "/playground/ui", module: "playground.ui.tsx" },
     { path: "/colophon", module: "colophon.tsx" },
     { path: "/search?q=cloudflare", module: "search.tsx" },
     { path: "/privacy", module: "privacy.tsx" },

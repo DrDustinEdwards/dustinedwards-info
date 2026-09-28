@@ -38,7 +38,6 @@ const ROUTES = [
   ["colophon", "/colophon", "public"],
   ["privacy", "/privacy", "public"],
   ["projects", "/projects", "public"],
-  ["playground", "/playground", "public"],
   ["search", "/search", "public"],
   ["login", "/login", "public"],
   ["not-found", "/this-route-does-not-exist", "public"],
