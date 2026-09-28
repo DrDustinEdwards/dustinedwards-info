@@ -25,6 +25,12 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/research/protocols/coi-primers",
   "/research/protocols/rev-lpdv-primers",
   "/research/protocols/pan-avian-gapdh",
+  // The phage lab calculators (job_c2b88d76b3c1). Their addresses are fixed: the citable version
+  // (Zenodo DOI, JMBE) replaces them in place, so none of these may move.
+  "/research/tools",
+  "/research/tools/titer",
+  "/research/tools/dilution",
+  "/research/tools/webbed-plate",
   "/teaching",
   "/teaching/phage-discovery",
   "/teaching/virus-isolation",

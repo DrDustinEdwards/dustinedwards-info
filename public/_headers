@@ -112,6 +112,22 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </research/protocols/pan-avian-gapdh>; rel="canonical"
+/research/tools.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools>; rel="canonical"
+/research/tools/titer.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools/titer>; rel="canonical"
+/research/tools/dilution.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools/dilution>; rel="canonical"
+/research/tools/webbed-plate.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools/webbed-plate>; rel="canonical"
 /teaching.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex

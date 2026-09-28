@@ -93,6 +93,7 @@ const RESEARCH: Menu = {
             { to: "/research/publications", label: "Publications" },
             { to: "/research/phages", label: "Phages" },
             { to: "/research/protocols", label: "Protocols" },
+            { to: "/research/tools", label: "Tools" },
           ],
         },
       ],

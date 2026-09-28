@@ -167,6 +167,15 @@
       "fallbackKind": "selector",
       "fallbackAt": "form[data-sign-in]",
       "why": null
+    },
+    {
+      "id": "phage-tools-live",
+      "module": "app/enhance/tools.ts",
+      "enhancement": "The phage lab calculators on /research/tools recompute on every keystroke, announce the answer through a status region, and write the values to the query string so a copied URL shows the same calculation.",
+      "fallback": "Each calculator is a server-rendered GET form whose result, with every step, is computed on the server from the query string by the same module; with script off, Calculate reloads the page with the new answer.",
+      "fallbackKind": "selector",
+      "fallbackAt": "form[data-tool]",
+      "why": null
     }
   ]
 }

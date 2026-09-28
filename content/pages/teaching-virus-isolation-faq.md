@@ -7,6 +7,8 @@ description: "Worked phage lab calculations from the Tarleton Virus Isolation Co
 
 These are the calculations and questions that come up most in the [Virus Isolation Course](/teaching/virus-isolation), the first semester of the Tarleton SEA-PHAGES program. The bench protocols are in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/); this page is the lab's own arithmetic and findings. Each answer gives the formula, a worked example with real numbers from the course's lab notebooks, and a link to the lab's notes in [Phage Isolation and Purification](/research/protocols/phage-isolation). Unless a question says otherwise, the host is *Microbacterium foliorum* in PYCa, plated with 250 µl of host culture.
 
+To run these calculations on your own numbers, with every step shown, use the [phage lab calculators](/research/tools): [titer](/research/tools/titer), [serial dilution](/research/tools/dilution) and [webbed plate](/research/tools/webbed-plate).
+
 ## How do I calculate phage titer in pfu/ml?
 
 Divide the plaques counted by the µl of that dilution plated, multiply by 1,000 µl/ml, then multiply by the dilution factor: 111 plaques from 10 µl of the 10^-6 dilution is 1.11 x 10^10 pfu/ml.
@@ -63,7 +65,7 @@ Divide the pfu you want on the plate by the lysate's titer in pfu/ml and multipl
 
 Worked example: a lysate at 1.1 x 10^10 pfu/ml, aiming for about 11,100 pfu per plate.
 
-11,100 / 1.1 x 10^10 x 1,000 = 1.1 x 10^-3 µl of lysate per plate.
+11,100 / 1.1 x 10^10 x 1,000 = 1.01 x 10^-3 µl of lysate per plate.
 
 That volume is too small to pipette, so it is made by dilution: 1 µl lysate in 999 µl buffer, then 7 µl of that into 63 µl buffer, and 10 µl of the second tube per plate. Six of seven plates webbed in 24 hours, and the pooled lysate titered 2.2 x 10^11 pfu/ml.
 

@@ -4,7 +4,7 @@ Dustin Edwards, Professor and Virologist, Department of Biological Sciences, Tar
 
 ## Research
 
-The hub is /research. Areas: /research/retroviruses (HTLV-1, REV and LPDV), /research/retroviruses/human, /research/retroviruses/avian, /research/bacteriophages, /research/science-education. Collections: /research/publications, /research/phages, /research/protocols.
+The hub is /research. Areas: /research/retroviruses (HTLV-1, REV and LPDV), /research/retroviruses/human, /research/retroviruses/avian, /research/bacteriophages, /research/science-education. Collections: /research/publications, /research/phages, /research/protocols. Lab calculators: /research/tools (titer, serial dilution and webbed plate, each stating its formula and a worked example).
 
 A paper is /research/publications/<doi-slug>/, where the slug folds every run of punctuation in the DOI to a hyphen. 10.1128/mra.00888-24 is /research/publications/10-1128-mra-00888-24/. Its markdown twin is /research/publications/<doi-slug>.md.
 
@@ -178,6 +178,10 @@ of them:
   /research/protocols/coi-primers
   /research/protocols/rev-lpdv-primers
   /research/protocols/pan-avian-gapdh
+  /research/tools
+  /research/tools/titer
+  /research/tools/dilution
+  /research/tools/webbed-plate
   /teaching
   /teaching/phage-discovery
   /teaching/virus-isolation
