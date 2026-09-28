@@ -16,7 +16,8 @@ declare module "virtual:enhance" {
     | "plate"
     | "podcast"
     | "search"
-    | "theme";
+    | "theme"
+    | "tools";
   /** The served URL of each bundle, under Vite's base. */
   export const ENHANCE_URLS: Readonly<Record<EnhanceModuleName, string>>;
   /** Gzip level 9 over each bundle, measured by the build because the Worker has no filesystem. */

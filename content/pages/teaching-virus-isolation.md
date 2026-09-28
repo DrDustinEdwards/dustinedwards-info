@@ -16,7 +16,7 @@ The Virus Isolation Course is a phage isolation course and the first semester of
 5. Image the phage by transmission electron microscopy and analyze the images to determine its morphology and type.
 6. Extract the viral DNA and run a genetic analysis.
 
-The bench protocols are the ones in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/), which students follow at the bench. The lab's own notes on isolation and DNA extraction are the [phage isolation](/research/protocols/phage-isolation) and [phage DNA extraction](/research/protocols/phage-dna-extraction) pages, and the dilutions, titers and other lab math, with the lab's own numbers, are worked through in [Lab Calculations and Common Questions](/teaching/virus-isolation/faq).
+The bench protocols are the ones in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/), which students follow at the bench. The lab's own notes on isolation and DNA extraction are the [phage isolation](/research/protocols/phage-isolation) and [phage DNA extraction](/research/protocols/phage-dna-extraction) pages, and the dilutions, titers and other lab math, with the lab's own numbers, are worked through in [Lab Calculations and Common Questions](/teaching/virus-isolation/faq). The [phage lab calculators](/research/tools) do the titer, dilution and webbed plate arithmetic on your own numbers and show each step.
 
 ## What students finish with
 
