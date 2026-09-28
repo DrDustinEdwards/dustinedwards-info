@@ -89,7 +89,7 @@ export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
   { to: GERMOMICS_X_URL, label: "X", external: true, mark: "x" },
 ];
 
-export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string };
+export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string; hover?: string };
 
 /**
  * The three logins, the Workspace group in the grid's sixth slot. The accessible names say what each one is
@@ -103,8 +103,10 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
   // Capsid's admin page, per its docs/console.md; GitHub login, one admin.
   {
     to: "https://capsid.dustin-edwards.workers.dev/console",
-    label: "Console",
-    name: "Console, Capsid",
+    label: "Portal",
+    // Dustin, 2026-09-28: the accessible name and the hover label both read "Capsid Portal".
+    name: "Capsid Portal",
+    hover: "Capsid Portal",
     icon: "capsid",
     external: true,
   },
