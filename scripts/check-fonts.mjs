@@ -388,7 +388,9 @@ if (update) {
 }
 
 // Measured on a plain run: `--update` skips the per-binary baseline comparisons.
-const MINIMUM_CHECKS = 520;
+// 512 after the playground stylesheets were retired with /playground (2026-09-28): their 8 checks
+// went with them, no block was skipped.
+const MINIMUM_CHECKS = 505;
 tally.floor("check:fonts", "checks", MINIMUM_CHECKS);
 
 console.log(
