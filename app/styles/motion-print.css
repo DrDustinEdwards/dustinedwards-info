@@ -78,8 +78,124 @@
   }
 }
 
-/* Off: Chrome's default crossfade showed both pages stacked on every header click. Never skip the fade
-   only under reduced motion; check:browser asserts a null viewTransition. */
+/* The duration kill at the top of this file does not reach ::view-transition-* pseudos, so reduced
+   motion opts out here rather than shortening a fade. Chrome's default root crossfade uses
+   plus-lighter and stacks both pages; type `site` keeps the outgoing page solid and fades the
+   incoming one over it. The image viewer is a same-document transition with no type, so these
+   rules do not restyle it. Where the at-rule is unsupported, the navigation is an ordinary load. */
 @view-transition {
   navigation: none;
+}
+
+.search-form[data-pending],
+.search-trigger[aria-busy="true"] {
+  cursor: progress;
+}
+
+.code-copy[data-copied="true"],
+.selection-link[data-copied="true"],
+[data-copy-markdown][data-copied="true"] {
+  font-weight: 650;
+}
+
+@keyframes motion-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-wait {
+  from {
+    background-size: 0 1px;
+  }
+  to {
+    background-size: 100% 1px;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+    types: site;
+  }
+
+  html:active-view-transition-type(site)::view-transition-group(root) {
+    animation-duration: var(--motion-page);
+  }
+
+  html:active-view-transition-type(site)::view-transition-old(root) {
+    animation: none;
+    mix-blend-mode: normal;
+    opacity: 1;
+  }
+
+  html:active-view-transition-type(site)::view-transition-new(root) {
+    mix-blend-mode: normal;
+    animation: motion-in var(--motion-page) var(--ease-out) both;
+  }
+
+  :where(a, button, input, select, textarea, summary) {
+    transition-property: color, background-color, border-color, text-decoration-color, outline-offset, opacity;
+    transition-duration: var(--motion-instant);
+    transition-timing-function: var(--ease-state);
+  }
+
+  /* Transform is not on the rule above: the nav chevron's turn is instant on purpose. */
+  :where(main, .gate, dialog) :where(button, [type="submit"]) {
+    transition-property: color, background-color, border-color, text-decoration-color, outline-offset, opacity, transform;
+    transition-duration: var(--motion-instant);
+    transition-timing-function: var(--ease-state);
+  }
+
+  :where(main, .gate, dialog) :where(button, [type="submit"]):active {
+    transform: translateY(1px);
+  }
+
+  .search-form[data-pending],
+  .ask-body[aria-busy="true"],
+  .search-trigger[aria-busy="true"],
+  .btn-brand[aria-disabled="true"] {
+    background-image: linear-gradient(var(--brand), var(--brand));
+    background-repeat: no-repeat;
+    background-position: 0 100%;
+    background-size: 0 1px;
+    animation: motion-wait var(--motion-wait) var(--ease-out) infinite;
+  }
+
+  .btn-brand[aria-disabled="true"] {
+    background-image: linear-gradient(var(--focus-ring-on-brand), var(--focus-ring-on-brand));
+  }
+
+  .heading-anchor[data-copied="true"]::after {
+    animation: motion-in var(--motion-instant) var(--ease-out) both;
+  }
+
+  /* Opacity only, and only while the figure is entering. Already on screen, the range is over
+     and the figure is fully painted. `entry`, not `cover`: a small figure never covers a fixed
+     slice of the viewport, and a cover range would leave it at the from opacity. */
+  @supports (animation-timeline: view()) {
+    .home-plate,
+    .home-figure,
+    .post-cover,
+    .prose figure,
+    .chart-figure {
+      animation-name: motion-in;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+}
+
+@media print {
+  .home-plate,
+  .home-figure,
+  .post-cover,
+  .prose figure,
+  .chart-figure {
+    animation: none;
+    opacity: 1;
+  }
 }

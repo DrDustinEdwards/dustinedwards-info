@@ -58,6 +58,7 @@ function openPalette() {
 
   if (!requested) {
     requested = true;
+    trigger?.setAttribute("aria-busy", "true");
 
     /*
      * Stylesheets are awaited because the bundle calls `showModal` as soon as it runs. A failed
@@ -87,8 +88,14 @@ function openPalette() {
     document.head.appendChild(script);
 
     void Promise.all(pending).then(
-      () => document.dispatchEvent(new Event(PALETTE_OPEN)),
-      toSearch,
+      () => {
+        trigger?.removeAttribute("aria-busy");
+        document.dispatchEvent(new Event(PALETTE_OPEN));
+      },
+      (reason) => {
+        trigger?.removeAttribute("aria-busy");
+        toSearch(reason);
+      },
     );
     return;
   }

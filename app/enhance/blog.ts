@@ -122,6 +122,7 @@ function decorateCodeBlock(pre: HTMLElement) {
     try {
       await copyText(code);
       button.textContent = "Copied";
+      button.setAttribute("data-copied", "true");
       announce("Code copied");
     } catch {
       button.textContent = "Press Ctrl C";
@@ -129,6 +130,7 @@ function decorateCodeBlock(pre: HTMLElement) {
     }
     setTimeout(() => {
       button.textContent = "Copy";
+      button.removeAttribute("data-copied");
     }, 2000);
   });
   pre.appendChild(button);
@@ -289,10 +291,10 @@ function footnotePreviews() {
 const GROW_NAME = "lightbox-figure";
 
 /**
- * The figure grows into the viewer and shrinks back, as a same-document View Transition. Cross-document
- * transitions stay off (motion-print.css); this one runs inside the page. Skipped under reduced motion,
- * which the stylesheet's rule cannot reach from script, and where the API is missing: then the change
- * simply happens, as it did before.
+ * The figure grows into the viewer and shrinks back, as a same-document View Transition. It carries
+ * no type, so the cross-document page fade (motion-print.css, type site) does not restyle it.
+ * Skipped under reduced motion, which the stylesheet's rule cannot reach from script, and where the
+ * API is missing: then the change simply happens, as it did before.
  */
 function grow(from: HTMLElement | undefined, to: HTMLElement, change: () => void) {
   const start = (document as Document & {
@@ -422,6 +424,7 @@ function copyMarkdown() {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       await copyText(await response.text());
       trigger.textContent = "Copied";
+      trigger.setAttribute("data-copied", "true");
       announce("Markdown copied");
     } catch {
       location.href = trigger.getAttribute("href") ?? "";
@@ -429,6 +432,7 @@ function copyMarkdown() {
     }
     setTimeout(() => {
       trigger.textContent = original;
+      trigger.removeAttribute("data-copied");
     }, 2000);
   });
 }
@@ -485,9 +489,11 @@ function selectionLink() {
   button.addEventListener("click", () => {
     const shown = (label: string) => {
       button.textContent = label;
+      button.setAttribute("data-copied", "true");
       announce(label);
       setTimeout(() => {
         button.textContent = SELECTION_LABEL;
+        button.removeAttribute("data-copied");
       }, 2000);
     };
     copyText(url).then(

@@ -93,9 +93,18 @@ export function enhanceSearch(): void {
     return created;
   }
 
+  /* Not aria-busy: this runs on every pause in typing, and a live region that says "busy"
+     on each one talks over the count, which already announces the result. */
+  const setBusy = (on: boolean) => {
+    if (!form) return;
+    if (on) form.setAttribute("data-pending", "");
+    else form.removeAttribute("data-pending");
+  };
+
   async function run(query: string) {
     const mine = ++sequence;
     const url = currentUrl(form!, query);
+    setBusy(true);
     let data: JsonResponse;
     try {
       const response = await fetch(url, { headers: { Accept: "application/json" } });
@@ -104,11 +113,13 @@ export function enhanceSearch(): void {
     } catch {
       // Said, not silent: the old results must not stand under a new query as if they answered it.
       if (mine !== sequence) return;
+      setBusy(false);
       if (results?.isConnected) results.textContent = "";
       if (count) count.textContent = "Live results are unavailable. Press Enter to search.";
       return;
     }
     if (mine !== sequence) return;
+    setBusy(false);
 
     const target = ensureList();
     if (!target) return;

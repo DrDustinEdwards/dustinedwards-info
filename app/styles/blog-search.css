@@ -10,3 +10,13 @@
   cursor: pointer;
   min-height: 2.75rem;
 }
+
+.search-submit:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+.search-submit:active {
+  background: var(--brand-pressed);
+  border-color: var(--brand-pressed);
+}
