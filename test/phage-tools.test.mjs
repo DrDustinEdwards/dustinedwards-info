@@ -167,10 +167,12 @@ test("dilution: refuses a target at or above the start", () => {
 /* ------------------------------------------------------------ webbed plate, by hand */
 
 test("webbed plate: the FAQ's example, 11,100 pfu from a 1.1 x 10^10 lysate", () => {
-  // 11,100 / 1.1 x 10^10 x 1,000 = 1.009 x 10^-3 µl. The FAQ and protocol print 1.1 x 10^-3, which
-  // is 11,100 / 1.0 x 10^10 x 1,000; the notebook's dilution (1/10^4, 10 µl per plate) delivered
-  // 10 x 10^-4 = 1 x 10^-3 µl of lysate per plate, which is the value this arithmetic gives.
+  // 11,100 / 1.1 x 10^10 x 1,000 = 1.009 x 10^-3 µl, which the FAQ and protocol print as 1.01 x 10^-3.
+  // The notebook's dilution (1/10^4, 10 µl per plate) delivered 10 x 10^-4 = 1 x 10^-3 µl of lysate
+  // per plate, which is that volume at the precision a pipette can hold.
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.1e10, pfuPerPlate: 11100 }), "1.01", -3);
+  assert.ok(page("teaching-virus-isolation-faq").includes("11,100 / 1.1 x 10^10 x 1,000 = 1.01 x 10^-3 µl of lysate per plate."));
+  assert.ok(page("research-protocols-phage-isolation").includes("A target of about 11,100 pfu needs 1.01 x 10^-3 µl of lysate per plate."));
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.11e10, pfuPerPlate: 11100 }), "1.00", -3);
   assert.equal(10 * (1 / 1000) * (7 / 70), 1e-3);
 });
