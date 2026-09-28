@@ -53,9 +53,6 @@ export default [
   // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
   route("gone", "routes/gone.tsx"),
   route("software", "routes/projects.tsx"),
-  route("playground", "routes/playground.tsx"),
-  // A real public route, not a local page, because the browser and contrast gates photograph it.
-  route("playground/ui", "routes/playground.ui.tsx"),
   // Before /search, and a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),
   route("search", "routes/search.tsx"),

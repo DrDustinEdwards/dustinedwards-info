@@ -15,8 +15,7 @@ import type { Route } from "./+types/sitemap";
 
 /**
  * Kept in step with `routes.ts` by hand: every public page route is listed here or exempted by name
- * with a reason. `/playground` and `/playground/ui` stay as routes because check:browser photographs
- * them, and they are noindex and absent here so they are not public destinations.
+ * with a reason.
  */
 const STATIC_PATHS = [
   "/",

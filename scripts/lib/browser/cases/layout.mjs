@@ -103,7 +103,7 @@ export async function run({ page, browser }) {
     );
   }
 
-  /* `/playground` boxes scroll by design; the page must not. */
+  /* Code and table boxes scroll by design; the page must not. */
   await page.setViewport({ width: 320, height: 800 });
   for (const path of [
     "/",
@@ -111,7 +111,6 @@ export async function run({ page, browser }) {
     "/search?q=workers",
     "/colophon",
     "/software",
-    "/playground?key=dustin-edwards-4f2d7f1a9c3b5e07-1600x900.webp&cookie=theme%3Ddark&md=links&q=fusion",
   ]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     const o = await page.evaluate(overflowScan);

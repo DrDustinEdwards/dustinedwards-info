@@ -17,7 +17,7 @@ const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-u
 const targetPath = (location) => location.split("#")[0];
 
 /** Paths the new site answers itself, now: the gateway passes these through and a route renders them. */
-const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/playground", "/research/publications"]);
+const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/research/publications"]);
 
 test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("dustinedwards.info"), true);
@@ -68,6 +68,23 @@ test("every explicit row's target is a page or pending, and never chains", () =>
     const to = targetPath(location);
     assert.ok(ANSWERED_NOW.has(to) || PENDING_TARGETS.includes(to), `${from} -> ${location}`);
     assert.equal(wordpressDisposition(to), null, `${to} redirects again`);
+  }
+});
+
+test("every explicit row lands in one hop: no target is a moved or retired new-site path", () => {
+  for (const [from, location] of Object.entries(EXPLICIT_ROWS)) {
+    const to = targetPath(location);
+    assert.equal(movedPathTarget(to), null, `${from} -> ${to} is redirected again by path-moves`);
+  }
+});
+
+test("the calculator rows that once pointed at /playground land on a page in one hop", () => {
+  for (const path of ["/molarity-calculator/", "/knowledge-base/metric-prefix/"]) {
+    const d = wordpressDisposition(new URL(path, "https://dustinedwards.info").pathname);
+    assert.equal(d?.status, 301, path);
+    const to = targetPath(d.location);
+    assert.equal(movedPathTarget(to), null, `${path} -> ${to} chains through path-moves`);
+    assert.equal(wordpressDisposition(to), null, `${path} -> ${to} chains`);
   }
 });
 
