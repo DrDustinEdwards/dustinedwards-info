@@ -55,6 +55,7 @@
 /public/research.md
 /public/teaching.md
 /public/software.md
+/public/cv.md
 /public/research/**/*.md
 /public/teaching/**/*.md
 /public/software/**/*.md

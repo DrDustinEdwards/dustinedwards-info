@@ -103,7 +103,7 @@ test("every header link is site-absolute or a full https address, so it resolves
   const hrefs = anchorHrefs(renderHeader("/writing/ten-years-on-cloudflare"));
   assert.ok(hrefs.length >= 5, `the header rendered ${hrefs.length} links`);
   for (const href of hrefs) {
-    // Another site (the About menu's CV is the Google Doc's PDF export) is a full https address; everything
+    // Another site is a full https address; everything
     // on this site is a path from the root, never relative.
     if (href.startsWith("https://")) continue;
     assert.match(href, /^\/(?!\/)/, `${href} is neither a site-absolute path nor a full https address`);

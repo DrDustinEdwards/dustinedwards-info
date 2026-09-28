@@ -323,7 +323,7 @@ async function writeContentPageTwins(pages) {
   for (const rootName of ["research", "teaching", "software"]) {
     await pruneContentTwins(fromRoot(path.join("public", rootName)), `/${rootName}`, expected);
   }
-  for (const hub of ["/research.md", "/teaching.md", "/software.md"]) {
+  for (const hub of ["/research.md", "/teaching.md", "/software.md", "/cv.md"]) {
     if (!expected.has(hub)) await unlink(fromRoot(path.join("public", hub.slice(1)))).catch(() => {});
   }
 }

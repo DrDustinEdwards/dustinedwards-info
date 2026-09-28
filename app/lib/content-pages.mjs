@@ -44,6 +44,8 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/foxing-edu",
   "/software/germomics",
   "/software/capsid",
+  // The plain CV, from Dustin's current CV; the interactive CV replaces it later at the same address.
+  "/cv",
 ]);
 
 /**
