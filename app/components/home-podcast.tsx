@@ -8,9 +8,9 @@ import { GERMOMICS_X_URL } from "~/lib/seo";
 // reader without script gets the native audio controls and never a button that does nothing.
 export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
   return (
-    <section className="home-section home-scicomm" aria-labelledby="scicomm-heading">
-      <h2 id="scicomm-heading" className="home-section-heading">
-        Science communication
+    <section className="home-section home-scicomm" aria-labelledby="germomics-heading">
+      <h2 id="germomics-heading" className="home-section-heading">
+        Germomics
       </h2>
       {episode ? (
         <article className="podcast" data-podcast>
@@ -20,7 +20,6 @@ export function HomePodcast({ episode }: { episode: PodcastEpisode | null }) {
           {/* Real separators, not a CSS gap, so reader mode and agents do not get one run-on word. */}
           <p className="podcast-meta">
             {[
-              <span key="show">Germomics</span>,
               episode.season && episode.episode ? (
                 <span key="number">
                   Season {episode.season}, episode {episode.episode}

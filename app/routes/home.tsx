@@ -1,12 +1,11 @@
+import type { ReactNode } from "react";
 import { Link, data } from "react-router";
 
-import stack from "../../content/generated/stack.json";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { listHomeStartHere, nextScheduledPublishAt } from "~/db";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { getEnv } from "~/lib/context";
-import { readHealthTile } from "~/lib/health/snapshot.server";
 import { longDateUTC } from "~/lib/long-date.mjs";
 import { timed, timingsContext } from "~/lib/timing";
 import {
@@ -21,23 +20,20 @@ import {
   webSiteJsonLd,
   pageMeta,
 } from "~/lib/seo";
-import { EvidenceRow } from "~/components/evidence-row";
-import { PlateI, PlateKeyRow } from "~/components/plate-i";
+import { PlateI } from "~/components/plate-i";
 import { Enhance } from "~/components/enhance";
-import { FigurePapersPerYear, FigureRoster } from "~/components/home-figures";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { PUBLICATIONS } from "~/data/publications";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { doiSlug } from "~/lib/publications/paths.mjs";
-import { SOFTWARE_PRODUCTS } from "~/lib/nav";
+import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
-import "~/styles/evidence-row.css";
 import "~/styles/home.css";
 
-/** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the health tile. */
+/** Publicly cacheable; the theme is a cache-key dimension, not a Vary. The short edge policy is for the Germomics episode. */
 export function headers({ loaderHeaders }: Route.HeadersArgs) {
   return publicHtmlHeaders(cacheTags(), loaderHeaders.get(EDGE_CACHE_HEADER) ?? undefined);
 }
@@ -46,29 +42,56 @@ export function meta() {
   return pageMeta({ title: SITE.name, description: SITE.description, path: "/" });
 }
 
+/** How many papers the Publications section shows. */
+const HOME_PAPERS = 3;
+
 /**
- * The cached page must not lie: only a `fresh` verdict shows a ratio, with its age in
- * `data-health-age`. Nothing here starts a health run: a Worker fetching its own public URL is an
- * edge round trip naming an origin that changes at cutover.
+ * The papers marked `selected` in app/data/publications.ts, newest first; with none marked, the newest.
+ * Chosen in the loader and not the component, so the publication records (abstracts, author lists)
+ * stay out of the page's script.
  */
+function homePapers() {
+  const newest = [...PUBLICATIONS].sort(
+    (a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""),
+  );
+  const selected = newest.filter((p) => p.selected);
+  /* Titles and journals go through `decodeEntities`: the deposited records carry HTML entities React would print literally. */
+  return (selected.length > 0 ? selected : newest).slice(0, HOME_PAPERS).map((p) => ({
+    id: p.id,
+    year: p.year,
+    title: decodeEntities(p.title),
+    journal: p.journal ? decodeEntities(p.journal) : null,
+    href: `/research/publications/${doiSlug(p.doi)}/`,
+  }));
+}
+
+/** Counted, never typed: a typed number drifts when a cohort lands. The names stay out of the payload. */
+function discoveryFacts() {
+  return {
+    researchers: PHAGE_YEARS.reduce((n, c) => n + c.researchers.length, 0),
+    cohorts: PHAGE_YEARS.length,
+    since: Math.min(...PHAGE_YEARS.map((c) => c.year)),
+  };
+}
+
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
-  const [start, tile, podcast, nextPublishAt] = await Promise.all([
+  const [start, podcast, nextPublishAt] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
-    timed(timings, "home_health", () => readHealthTile(env)),
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
     timed(timings, "home_next_scheduled", () => nextScheduledPublishAt(env)),
   ]);
 
   return data(
     {
-      gates: stack.gates.length,
       posts: start.total,
       featured: start.featured,
       recent: start.recent,
-      health: tile,
+      papers: homePapers(),
+      paperCount: PUBLICATIONS.length,
+      discovery: discoveryFacts(),
       podcast,
     },
     {
@@ -83,40 +106,87 @@ export async function loader({ context }: Route.LoaderArgs) {
   );
 }
 
+/** The current retrovirus work, named beside the three areas. Title as the page titles itself. */
+const AVIAN = {
+  to: "/research/retroviruses/avian",
+  label: "REV and LPDV in wild turkeys in Texas",
+  description: "Two bird retroviruses, and why they matter for wild turkeys and prairie chickens",
+};
+
+/** The lab's own pages. Each line is cut from that page's description. */
+const LAB_RESOURCES = [
+  {
+    rail: "Protocol",
+    to: "/research/protocols/phage-isolation",
+    label: "Phage isolation and purification",
+    description:
+      "Where the Tarleton SEA-PHAGES lab runs a step differently from the Phage Discovery Guide",
+  },
+  {
+    rail: "Calculations",
+    to: "/teaching/virus-isolation/faq",
+    label: "Lab calculations and common questions",
+    description: "Titers in pfu/ml, spot titer dilutions, webbed plate volumes and lysate yields",
+  },
+  {
+    rail: "Protocol",
+    to: "/research/protocols/coi-primers",
+    label: "COI primers: LCO1490 and HCO2198",
+    description: "Primer sequences and PCR conditions for COI barcoding of invertebrates",
+  },
+];
+
+/** One section of the home page: a heading, a short list, and the link to the rest. */
+function Section({
+  id,
+  title,
+  more,
+  children,
+}: {
+  id: string;
+  title: string;
+  more: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="home-section" aria-labelledby={`${id}-heading`}>
+      <h2 id={`${id}-heading`} className="home-section-heading">
+        {title}
+      </h2>
+      {children}
+      <p className="home-more">{more}</p>
+    </section>
+  );
+}
+
+/** A short mono label in the rail, a title that links, and one line under it. */
+function Row({
+  rail,
+  to,
+  title,
+  summary,
+}: {
+  rail: ReactNode;
+  to: string;
+  title: ReactNode;
+  summary?: ReactNode;
+}) {
+  return (
+    <li className="home-row">
+      <span className="home-row-date">{rail}</span>
+      <span className="home-row-body">
+        <span className="home-row-title">
+          <Link to={to}>{title}</Link>
+        </span>
+        {summary ? <span className="home-row-summary">{summary}</span> : null}
+      </span>
+    </li>
+  );
+}
+
 export default function Home({ loaderData }: Route.ComponentProps) {
   const jsonLd = [personJsonLd(SITE_ORIGIN), webSiteJsonLd(SITE_ORIGIN)];
-  const { gates, posts, featured, recent, health, podcast } = loaderData;
-
-  /*
-   * `missing` and `stale` show no ratio: a number beside "health checks passing" is read as the
-   * current answer whatever sentence sits under it.
-   */
-  const healthValue =
-    health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
-  const healthAge = "ageSeconds" in health ? String(health.ageSeconds) : undefined;
-
-  /* Every figure in sections 2 and 3 is counted here, never typed: a typed number drifts when a paper lands. */
-  const years = PUBLICATIONS.map((p) => p.year).filter((y) => Number.isFinite(y));
-  const earliestYear = Math.min(...years);
-  const latestYear = Math.max(...years);
-  const perYear = new Map<number, number>();
-  for (const y of years) perYear.set(y, (perYear.get(y) ?? 0) + 1);
-  const peak = [...perYear.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0]).at(0) ?? [
-    latestYear,
-    0,
-  ];
-  const [peakYear, peakCount] = peak;
-  const recentPapers = [...PUBLICATIONS]
-    .sort((a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""))
-    .slice(0, 3);
-
-  const cohortSizes = PHAGE_YEARS.map((c) => c.researchers.length);
-  const researcherCount = cohortSizes.reduce((n, c) => n + c, 0);
-  const cohortYears = PHAGE_YEARS.map((c) => c.year);
-  const firstCohort = Math.min(...cohortYears);
-  const lastCohort = Math.max(...cohortYears);
-  const smallestCohort = Math.min(...cohortSizes);
-  const largestCohort = Math.max(...cohortSizes);
+  const { posts, featured, recent, papers, paperCount, discovery, podcast } = loaderData;
 
   return (
     <>
@@ -124,120 +194,98 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <main className="tracks home-tracks" id="main" tabIndex={-1}>
         {/* `rel="me"` links live in the footer; only `u-url` needed a home here. No `u-photo`: the site publishes none. */}
         <div className="home-hero u-wide">
-        <section className="home-intro h-card" aria-labelledby="intro-h">
-          <h1 className="intro-name p-name" id="intro-h">
-            {SITE.name}
-          </h1>
-          <p className="intro-affil">
-            <span>{SITE.eyebrow}</span>
-            <span>{SITE.department}</span>
-            <span>{SITE.affiliation}</span>
-          </p>
-          <a className="u-url" href="/" hidden>
-            {SITE.name}
-          </a>
-        </section>
+          <section className="home-intro h-card" aria-labelledby="intro-h">
+            <h1 className="intro-name p-name" id="intro-h">
+              {SITE.name}
+            </h1>
+            <p className="intro-affil">
+              <span className="p-job-title">{SITE.role}</span>
+              <span className="p-org">{SITE.affiliation}</span>
+            </p>
+            <a className="u-url" href="/" hidden>
+              {SITE.name}
+            </a>
+          </section>
 
-        {/*
-         * No abstract: that text is Dustin's to write, and a session's words about him must not ship on
-         * his home page.
-         */}
-
-        <figure className="home-plate">
-          <PlateI />
-          <figcaption className="home-plate-caption">
-            <span className="home-plate-num">Plate I</span>
-            <span className="home-plate-cap">Plaque morphology, drawn.</span>
-          </figcaption>
-        </figure>
-        </div>
-
-        <PlateKeyRow />
-        <Enhance module="plate" />
-
-        <section className="home-research" aria-labelledby="research-heading">
-          <h2 id="research-heading" className="home-section-heading">
-            Research
-          </h2>
-          <p className="home-research-line">I study viral genomics.</p>
-          <ul className="home-areas">
-            <li>
-              <Link to="/research/retroviruses">Retroviruses</Link>
-            </li>
-            <li>
-              <Link to="/research/bacteriophages">Bacteriophages</Link>
-            </li>
-            <li>
-              <Link to="/research/science-education">Science education</Link>
-            </li>
-          </ul>
-        </section>
-
-        {/* Titles and journals go through `decodeEntities`: the deposited records carry HTML entities React would print literally. */}
-        <section className="home-section" aria-labelledby="publications-heading">
-          <h2 id="publications-heading" className="home-section-heading">
-            Publications
-          </h2>
-          <p className="home-section-lede">
-            Peer-reviewed work on retroviruses, bacteriophage genomics and science education,{" "}
-            {earliestYear} to {latestYear}. The corpus is uneven on purpose: {peakCount} papers
-            landed in {peakYear}, which is what a sequencing year looks like beside a teaching one.
-          </p>
-          <ol className="home-rows">
-            {recentPapers.map((paper) => (
-              <li key={paper.id} className="home-row">
-                <span className="home-row-date">{paper.year}</span>
-                <span className="home-row-body">
-                  <span className="home-row-title">
-                    <Link to={`/research/publications/${doiSlug(paper.doi)}/`}>
-                      {decodeEntities(paper.title)}
-                    </Link>
-                  </span>
-                  {paper.journal ? (
-                    <span className="home-row-summary">{decodeEntities(paper.journal)}</span>
-                  ) : null}
-                </span>
-              </li>
-            ))}
-          </ol>
-          <p className="home-more">
-            <Link to="/research/publications">All {PUBLICATIONS.length} papers</Link>
-          </p>
-          <figure className="home-figure">
-            <FigurePapersPerYear />
-            <figcaption className="home-figure-caption">
-              <span className="home-figure-num">Figure 1</span> Papers per year, {earliestYear} to{" "}
-              {latestYear}. Rule height is the count; the dashed line is six. Years with nothing
-              keep their place on the axis.
+          <figure className="home-plate">
+            <PlateI />
+            <figcaption className="home-plate-caption">
+              <span className="home-plate-num">Plate I</span>
+              <span className="home-plate-cap">Plaque morphology, drawn.</span>
             </figcaption>
           </figure>
-        </section>
+        </div>
+        <Enhance module="plate" />
 
-        <section className="home-section" aria-labelledby="software-heading">
-          <h2 id="software-heading" className="home-section-heading">
-            Software
-          </h2>
-          <ul className="home-areas">
-            {[
-              ...SOFTWARE_PRODUCTS,
-              { to: "/software/germomics", label: "Germomics" },
-              { to: "/software/capsid", label: "Capsid" },
-            ].map((item) => (
-              <li key={item.to}>
-                <Link to={item.to}>{item.label}</Link>
-              </li>
+        <Section id="research" title="Research" more={<Link to="/research">All research</Link>}>
+          <p className="home-research-line">I study viral genomics.</p>
+          <ul className="home-rows">
+            {RESEARCH_AREAS.map((area) => (
+              <Row
+                key={area.to}
+                rail="Area"
+                to={area.to}
+                title={area.label}
+                summary={area.description}
+              />
+            ))}
+            <Row rail="Current" to={AVIAN.to} title={AVIAN.label} summary={AVIAN.description} />
+          </ul>
+        </Section>
+
+        <Section
+          id="publications"
+          title="Publications"
+          more={<Link to="/research/publications">All {paperCount} papers</Link>}
+        >
+          <ol className="home-rows">
+            {papers.map((paper) => (
+              <Row
+                key={paper.id}
+                rail={paper.year}
+                to={paper.href}
+                title={paper.title}
+                summary={paper.journal}
+              />
+            ))}
+          </ol>
+        </Section>
+
+        <Section
+          id="lab"
+          title="Lab resources"
+          more={<Link to="/research/protocols">All protocols</Link>}
+        >
+          <ul className="home-rows">
+            {LAB_RESOURCES.map((item) => (
+              <Row
+                key={item.to}
+                rail={item.rail}
+                to={item.to}
+                title={item.label}
+                summary={item.description}
+              />
             ))}
           </ul>
-          <p className="home-more">
-            <Link to="/software">All software</Link>
-          </p>
-        </section>
+        </Section>
+
+        <Section id="teaching" title="Teaching" more={<Link to="/teaching">All teaching</Link>}>
+          <ul className="home-rows">
+            <Row
+              rail="SEA-PHAGES"
+              to="/teaching/phage-discovery"
+              title="Phage Discovery Program"
+              summary={
+                `The two-semester undergraduate research program in HHMI SEA-PHAGES: ` +
+                `${discovery.researchers} student researchers in ${discovery.cohorts} cohorts ` +
+                `since ${discovery.since}.`
+              }
+            />
+          </ul>
+        </Section>
 
         {featured ? (
-          <section className="home-featured" aria-labelledby="featured-heading">
-            <h2 id="featured-heading" className="home-section-heading">
-              Writing
-            </h2>
+          <Section id="writing" title="Writing" more={<Link to="/writing">All {posts} posts</Link>}>
             {/* The same four properties as `PostCard`; `check:machine-readable` reads both. No h-feed: a hand-picked three is not the feed. */}
             <ol className="home-rows">
               {[featured, ...recent.filter((post) => post.slug !== featured.slug)].map((post) => (
@@ -259,61 +307,32 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                       </Link>
                     </span>
                     {post.description ? (
-                      <span className="home-row-summary p-summary">{post.description}</span>
+                      <span className="home-row-summary home-row-clamp p-summary">
+                        {post.description}
+                      </span>
                     ) : null}
                   </span>
                 </li>
               ))}
             </ol>
-            <p className="home-more">
-              <Link to="/writing">All {posts} posts</Link>
-            </p>
-          </section>
+          </Section>
         ) : null}
 
-        <section className="home-section" aria-labelledby="discovery-heading">
-          <h2 id="discovery-heading" className="home-section-heading">
-            Phage discovery
-          </h2>
-          <p className="home-section-lede">
-            {researcherCount} undergraduate researchers have isolated and annotated bacteriophage
-            at Tarleton State since {firstCohort}, in {PHAGE_YEARS.length} cohorts of{" "}
-            {smallestCohort} to {largestCohort}. The roster carries their names and nothing else
-            beside them.
-          </p>
-          <figure className="home-figure">
-            <FigureRoster />
-            <figcaption className="home-figure-caption">
-              <span className="home-figure-num">Figure 2</span> One cell per researcher, one row
-              per cohort, newest first. Hexagonal packing is the arrangement, not an ornament: it
-              is how cells sit on a plate.
-            </figcaption>
-          </figure>
-          <p className="home-more">
-            <Link to="/teaching/phage-discovery#roster">The roster, {firstCohort} to {lastCohort}</Link>
-          </p>
-        </section>
+        <Section id="software" title="Software" more={<Link to="/software">All software</Link>}>
+          <ul className="home-rows">
+            {SOFTWARE_PRODUCTS.map((product) => (
+              <Row
+                key={product.to}
+                rail="Product"
+                to={product.to}
+                title={product.label}
+                summary={product.description}
+              />
+            ))}
+          </ul>
+        </Section>
 
         <HomePodcast episode={podcast} />
-
-        {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
-        <EvidenceRow
-          facts={[
-            <span>{SITE.affiliation}</span>,
-            <Link to="/colophon#gates">
-              {gates} {gates === 1 ? "check" : "checks"}
-            </Link>,
-            <span className="evidence-health" data-health-age={healthAge}>
-              <Link to="/api/health">
-                {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
-                {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
-              </Link>
-            </span>,
-            <Link to="/writing">
-              {posts} {posts === 1 ? "post" : "posts"}
-            </Link>,
-          ]}
-        />
 
         {jsonLd.map((data, i) => (
           <script

@@ -40,7 +40,7 @@
 	},
 	// EVERY FIFTEEN MINUTES, and this cron is now the ONE owner of the poll
 	// interval. `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs
-	// decides when the home page calls its health verdict stale, and
+	// decides when the colophon calls its health verdict stale, and
 	// the two must mean the same number of seconds: change them together.
 	"triggers": {
 		"crons": ["*/15 * * * *"]

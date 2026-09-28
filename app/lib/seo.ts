@@ -117,7 +117,7 @@ export const SHARED_CACHE_CONTROL = "public, max-age=0";
 const EDGE_FRESH_SECONDS = 86_400;
 const EDGE_STALE_SECONDS = 604_800;
 
-// Short because the home page's site-health tile age is the watchdog's liveness.
+// Short because the home page carries the latest Germomics episode, which no write purges.
 export const HOME_EDGE_FRESH_SECONDS = 600;
 
 /**
@@ -134,6 +134,9 @@ const edgeCacheControl = (fresh: number) =>
  * Cloudflare refuses to serve stale and every read past the lifetime blocks on a render.
  */
 export const EDGE_CACHE_CONTROL = edgeCacheControl(EDGE_FRESH_SECONDS);
+
+/** Short because the colophon's site-health tile age is the watchdog's liveness. */
+export const HEALTH_EDGE_CACHE_CONTROL = edgeCacheControl(600);
 
 /**
  * The edge policy for a page that lists posts. A scheduled post goes live with no write to purge on,

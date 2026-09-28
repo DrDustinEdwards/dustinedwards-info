@@ -1,6 +1,37 @@
 export const POSTS_PER_PAGE = 10;
 
-export const HOME_CARDS = 5;
+/** The home page's Writing section is a taste, not a feed: the featured post and two more. */
+export const HOME_CARDS = 3;
+
+/**
+ * The essays that follow the featured post on the home page, in this order. `featured` marks one post
+ * (it leads /writing), so the rest of the home page's best-of is a hand-picked list. A pick that is
+ * not published drops out and the newest post fills its place; test/blog-listing.test.mjs holds each
+ * pick against a published file in content/posts.
+ */
+export const HOME_PICKS = ["policy-in-the-api-not-the-mcp", "observable-plot-inside-a-worker"];
+
+/**
+ * The home page's picks first, in `picks` order, then everything else in the order given. Stable, so
+ * the rest stay newest first. Duplicates by slug are dropped, because the caller merges two queries.
+ *
+ * @template {{ slug: string }} T
+ * @param {T[]} rows none of them featured
+ * @param {readonly string[]} [picks]
+ * @returns {T[]}
+ */
+export function picksFirst(rows, picks = HOME_PICKS) {
+  const seen = new Set();
+  const unique = rows.filter((row) => !seen.has(row.slug) && seen.add(row.slug));
+  const rank = (/** @type {string} */ slug) => {
+    const i = picks.indexOf(slug);
+    return i === -1 ? picks.length : i;
+  };
+  return unique
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) => rank(a.row.slug) - rank(b.row.slug) || a.i - b.i)
+    .map(({ row }) => row);
+}
 
 /**
  * A `?page=` a listing can use: a positive whole number, else 1. `-3`, `1.5` and `abc` all read as 1.
@@ -54,7 +85,7 @@ export function splitFeatured(posts, eligible) {
  *
  * @template {{ slug: string }} T
  * @param {T[]} featuredRows at most one, the featured post
- * @param {T[]} others newest first, none of them featured
+ * @param {T[]} others in the order they follow the lead, none of them featured: `picksFirst` for the home page
  * @param {number} [cards] how many the section shows in total, lead included
  * @returns {{ featured: T | null, recent: T[] }}
  */

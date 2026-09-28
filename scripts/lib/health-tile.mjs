@@ -10,4 +10,4 @@ export function freshHealthRatio(text) {
   return total > 0 && passed <= total ? { passed, total } : null;
 }
 
-export const HEALTH_FACT_SELECTOR = "#main > .evidence [data-health-age]";
+export const HEALTH_FACT_SELECTOR = "#main .evidence [data-health-age]";
