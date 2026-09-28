@@ -48,11 +48,14 @@ test("the Software column lists the three products and not Germomics", () => {
   assert.ok(!column.items.some((item) => /germomics/i.test(item.label + item.to)));
 });
 
-test("the Workspace group lists Carrel, Admin and Console, each with its icon", () => {
+test("the Workspace group lists Carrel, Admin and Portal, each with its icon", () => {
   assert.deepEqual(
     PRIVATE_TOOLS.map((tool) => [tool.label, tool.icon]),
-    [["Carrel", "lamp"], ["Admin", "padlock"], ["Console", "capsid"]],
+    [["Carrel", "lamp"], ["Admin", "padlock"], ["Portal", "capsid"]],
   );
+  const portal = PRIVATE_TOOLS.find((tool) => tool.label === "Portal");
+  assert.equal(portal?.name, "Capsid Portal");
+  assert.equal(portal?.hover, "Capsid Portal");
 });
 
 test("Admin, when the footer lists it, goes to this site's sign-in", () => {
