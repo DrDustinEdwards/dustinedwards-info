@@ -25,6 +25,7 @@ export async function run({ page, browser }) {
     /* The most-carried tag, so one post being retagged cannot remove the case. */
     { path: "/writing/tags/cloudflare", module: "blog.tags.$tag.tsx" },
     { path: "/about", module: "about.tsx" },
+    { path: "/cv", module: "cv.tsx" },
     { path: "/research/publications", module: "publications.tsx" },
     /* The trailing slash is canonical; the slashless form redirects. */
     { path: "/research/publications/10-1128-mra-00888-24/", module: "publications.$slug.tsx" },
