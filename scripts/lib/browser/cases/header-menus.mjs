@@ -6,8 +6,10 @@ import { BASE, FETCH_TIMEOUT_MS, menuUnrolled, ok, pollUntil, skip } from "../ha
 /*
  * The header's mega menus (app/components/site-header.tsx, app/enhance/header.ts): a disclosure
  * button per menu, never role=menu; the chevron toggles aria-expanded by click, Enter and Space;
- * Escape closes and hands focus back to the chevron; hover content stays hoverable; a phone gets 44px
- * rows; and every link the menus render answers 200. On pages of its own, so
+ * Escape closes and hands focus back to the chevron; hover content stays hoverable; an open card meets
+ * the header, stays in the viewport (at 200% zoom too), veils and inerts the page, and a click on the
+ * veil closes it without reaching the page; Teaching, Software and About share one width; a phone gets
+ * a full-bleed sheet with 44px rows; and every link the menus render answers 200. On pages of its own, so
  * no navigation here voids a later case on the shared page.
  */
 
@@ -146,6 +148,153 @@ export async function run({ browser }) {
       `after Space ${JSON.stringify(spaced)}, Tab ${JSON.stringify(tabbed)}, Escape ${JSON.stringify(escapedInside)}`,
     );
 
+    /* The open card: hung from the header's foot with no gap (the hover path crosses that edge),
+       inside the viewport, and the page under it inert and veiled while the header stays live. */
+    await page.click(CHEVRON);
+    const card = await page.evaluate((panel) => {
+      const p = /** @type {HTMLElement} */ (document.querySelector(panel));
+      const box = p.getBoundingClientRect();
+      const header = document.querySelector("[data-site-header]")?.getBoundingClientRect();
+      const style = getComputedStyle(p);
+      return {
+        top: box.top,
+        headerBottom: header?.bottom ?? -1,
+        left: box.left,
+        right: box.right,
+        width: box.width,
+        viewport: document.documentElement.clientWidth,
+        edges: [style.borderTopWidth, style.borderRightWidth, style.borderBottomWidth, style.borderLeftWidth],
+        radius: style.borderTopLeftRadius,
+        inert: [...document.querySelectorAll("#main, .site-shell-footer")].map((el) => el.hasAttribute("inert")),
+        headerInert: Boolean(document.querySelector("[data-site-header]")?.closest("[inert]")),
+      };
+    }, PANEL);
+    ok(
+      "an open card meets the header's foot with no gap, has an edge on all four sides, and stays inside the viewport",
+      card.top <= card.headerBottom &&
+        card.top >= card.headerBottom - 2 &&
+        card.edges.every((w) => parseFloat(w) >= 1) &&
+        parseFloat(card.radius) > 0 &&
+        card.left >= 0 &&
+        card.right <= card.viewport,
+      JSON.stringify(card),
+    );
+    ok(
+      "while a card is open, main and the footer are inert and the header is not",
+      card.inert.length >= 1 && card.inert.every(Boolean) && !card.headerInert,
+      `inert per region ${JSON.stringify(card.inert)}, header inside an inert region: ${card.headerInert}`,
+    );
+
+    /* A point on the page, off the card, where a real link sits: the veil must take the click. */
+    const target = await page.evaluate((panel) => {
+      const p = /** @type {HTMLElement} */ (document.querySelector(panel)).getBoundingClientRect();
+      const floor = document.querySelector("[data-site-header]")?.getBoundingClientRect().bottom ?? 0;
+      for (const a of document.querySelectorAll("#main a[href]")) {
+        const box = a.getBoundingClientRect();
+        const x = box.left + box.width / 2;
+        const y = box.top + box.height / 2;
+        const onCard = x >= p.left && x <= p.right && y >= p.top && y <= p.bottom;
+        if (box.width > 0 && y > floor + 4 && y < window.innerHeight - 4 && !onCard) {
+          const hit = document.elementFromPoint(x, y);
+          return { x, y, href: a.getAttribute("href"), veiled: Boolean(hit?.closest("[data-nav-veil]")) };
+        }
+      }
+      return null;
+    }, PANEL);
+    if (target) {
+      const before = page.url();
+      await page.mouse.click(target.x, target.y);
+      await sleep(400);
+      const after = await state(page);
+      const inertAfter = await page.evaluate(() =>
+        [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
+      );
+      ok(
+        "a click on the veil closes the card and does not reach the link beneath it",
+        target.veiled && !after.open && after.expanded === "false" && page.url() === before,
+        `link ${target.href} at (${Math.round(target.x)}, ${Math.round(target.y)}), veil on top: ${target.veiled}, ` +
+          `after the click ${JSON.stringify(after)}, url ${page.url()} (was ${before})`,
+      );
+      ok(
+        "once the card closes, main and the footer are no longer inert",
+        !inertAfter,
+        "inert left behind after the veil closed the card would freeze the page",
+      );
+    } else {
+      ok("a link sits on the page beside the open card for the veil check", false, "none found in #main");
+    }
+
+    /* Every other way it closes clears inert too: the chevron again, and Escape. */
+    await page.click(CHEVRON);
+    await page.click(CHEVRON);
+    const afterToggle = await page.evaluate(() =>
+      [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
+    );
+    await page.click(CHEVRON);
+    await page.keyboard.press("Escape");
+    await sleep(100);
+    const afterEscape = await page.evaluate(() =>
+      [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
+    );
+    ok(
+      "closing by the chevron or by Escape leaves nothing inert",
+      !afterToggle && !afterEscape,
+      `inert after the chevron ${afterToggle}, after Escape ${afterEscape}`,
+    );
+
+    /* Teaching, Software and About share one width, so moving among them never resizes the card;
+       Research is wider. No card cuts its content off sideways. */
+    const widths = await page.evaluate(async () => {
+      /** @type {Record<string, { width: number, clipped: boolean }>} */
+      const out = {};
+      for (const id of ["research", "teaching", "software", "about"]) {
+        const chevron = /** @type {HTMLElement | null} */ (document.querySelector(`[aria-controls="site-nav-${id}"]`));
+        const p = /** @type {HTMLElement | null} */ (document.getElementById(`site-nav-${id}`));
+        if (!chevron || !p) continue;
+        chevron.click();
+        await new Promise((r) => setTimeout(r, 350));
+        out[id] = { width: p.getBoundingClientRect().width, clipped: p.scrollWidth > p.clientWidth + 1 };
+        chevron.click();
+      }
+      return out;
+    });
+    const narrow = ["teaching", "software", "about"].map((id) => widths[id]?.width);
+    ok(
+      "Teaching, Software and About open at one shared width, narrower than Research, and none clips its content",
+      narrow.every((w) => typeof w === "number" && Math.abs(w - narrow[0]) < 0.5) &&
+        typeof widths.research?.width === "number" &&
+        widths.research.width > narrow[0] &&
+        Object.values(widths).every((w) => !w.clipped),
+      JSON.stringify(widths),
+    );
+
+    /* 200% zoom on a 1440 screen: a 720x405 viewport, still the wide layout. The card stays inside the
+       viewport and scrolls inside itself rather than running off the bottom. */
+    await page.setViewport({ width: 720, height: 405 });
+    await page.click(CHEVRON);
+    const zoomed = await page.evaluate((panel) => {
+      const p = /** @type {HTMLElement} */ (document.querySelector(panel));
+      const box = p.getBoundingClientRect();
+      return {
+        open: p.matches(":popover-open"),
+        box: [box.left, box.top, box.right, box.bottom].map(Math.round),
+        viewport: [document.documentElement.clientWidth, window.innerHeight],
+        overflow: getComputedStyle(p).overflowY,
+        scrolls: p.scrollHeight > p.clientHeight,
+      };
+    }, PANEL);
+    await page.keyboard.press("Escape");
+    ok(
+      "at 200% zoom (720x405) the open card stays inside the viewport and scrolls inside itself",
+      zoomed.open &&
+        zoomed.box[0] >= 0 &&
+        zoomed.box[2] <= zoomed.viewport[0] &&
+        zoomed.box[3] <= zoomed.viewport[1] &&
+        zoomed.overflow === "auto",
+      JSON.stringify(zoomed),
+    );
+    await page.setViewport({ width: 1280, height: 900 });
+
     /* Hover content stays hoverable (WCAG 1.4.13): open on the way to and inside the panel. The
        opening delay is a design default and is not asserted. */
     const word = await page.evaluate(() => {
@@ -220,6 +369,66 @@ export async function run({ browser }) {
       "on a phone the Menu opens, a chevron shows its section with rows at least 44px, and collapses it again",
       unrolled && phone.menuOpen && phone.menuExpanded === "true" && phone.expanded === "true" && phone.shown && phone.shortest >= 44 && collapsed === "false",
       `${JSON.stringify({ unrolled, ...phone })}, then aria-expanded ${collapsed}`,
+    );
+
+    /* The open Menu is a sheet: full bleed from the header's foot to the bottom, opaque, square, the
+       Menu button still on screen above it, and the page under it inert. */
+    const sheet = () =>
+      page.evaluate(() => {
+        const nav = /** @type {HTMLElement} */ (document.querySelector("[data-site-nav]"));
+        const box = nav.getBoundingClientRect();
+        const header = document.querySelector("[data-site-header]")?.getBoundingClientRect();
+        const button = document.querySelector("[data-header-menu]")?.getBoundingClientRect();
+        const style = getComputedStyle(nav);
+        const alpha = style.backgroundColor.match(/rgba?\([^)]*?,\s*([\d.]+)\)$/)?.[1];
+        return {
+          box: [box.left, box.top, box.right, box.bottom].map(Math.round),
+          viewport: [document.documentElement.clientWidth, window.innerHeight],
+          headerBottom: Math.round(header?.bottom ?? -1),
+          buttonShown: Boolean(button && button.top >= 0 && button.bottom <= (header?.bottom ?? 0) && button.width > 0),
+          opaque: style.backgroundColor !== "transparent" && (alpha === undefined || Number(alpha) === 1),
+          radius: style.borderTopLeftRadius,
+          overflow: style.overflowY,
+          scrolls: nav.scrollHeight > nav.clientHeight,
+          inert: [...document.querySelectorAll("#main, .site-shell-footer")].map((el) => el.hasAttribute("inert")),
+        };
+      });
+    const phoneSheet = await sheet();
+    ok(
+      "on a phone the open Menu is a full-bleed, opaque, square sheet under the header, the Menu button visible and the page inert",
+      phoneSheet.box[0] === 0 &&
+        phoneSheet.box[2] === phoneSheet.viewport[0] &&
+        Math.abs(phoneSheet.box[1] - phoneSheet.headerBottom) <= 1 &&
+        phoneSheet.box[3] === phoneSheet.viewport[1] &&
+        phoneSheet.opaque &&
+        parseFloat(phoneSheet.radius) === 0 &&
+        phoneSheet.buttonShown &&
+        phoneSheet.inert.length >= 1 &&
+        phoneSheet.inert.every(Boolean),
+      JSON.stringify(phoneSheet),
+    );
+
+    /* 200% zoom on a 1280 screen is 640x360: the Menu layout, and its sheet scrolls inside. */
+    await page.setViewport({ width: 640, height: 360 });
+    await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
+    await page.click("[data-header-menu]");
+    await menuUnrolled(page);
+    await page.click(CHEVRON);
+    const small = await sheet();
+    await page.click("[data-header-menu]");
+    await sleep(300);
+    const closedInert = await page.evaluate(() =>
+      [...document.querySelectorAll("#main, .site-shell-footer")].some((el) => el.hasAttribute("inert")),
+    );
+    ok(
+      "at 200% zoom (640x360) the open Menu stays inside the viewport and scrolls inside, and closing it clears inert",
+      small.box[0] >= 0 &&
+        small.box[2] <= small.viewport[0] &&
+        small.box[3] <= small.viewport[1] &&
+        small.overflow === "auto" &&
+        small.scrolls &&
+        !closedInert,
+      `${JSON.stringify(small)}, inert after closing ${closedInert}`,
     );
   } finally {
     await page.close();

@@ -105,6 +105,10 @@ export function SiteHeader() {
           Menu
         </button>
       </div>
+      {/* The veil under an open card (chrome-nav.css). A pointer target only, so hidden from the
+          accessibility tree: a keyboard closes the card with Escape. A click on it lands here, never
+          on the page beneath, and closes the card. */}
+      <div className="site-nav-veil" aria-hidden="true" data-nav-veil="" />
       {/* Here rather than in root's Layout, so it never reaches the admin plane. */}
       <SiteSpeculation />
       {/* Absent, the Menu and every panel still open and close, and the header stays static; see

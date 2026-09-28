@@ -144,7 +144,11 @@ if (subjectReachable) {
    * (content/playground.json drove them), theme-cache's 7 per path for /playground and /playground/ui
    * (14), and layout's one 320px overflow check on /playground (1).
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 213 : 188;
+  /*
+   * Plus 9 on both on 2026-09-28: header-menus' card, veil, inert, shared-width, 200% zoom and phone
+   * sheet checks (7 wide, 2 phone).
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 222 : 197;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

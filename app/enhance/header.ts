@@ -30,6 +30,21 @@ function isShowing(element: HTMLElement) {
   return element.matches(":popover-open");
 }
 
+/*
+ * While a card or the phone Menu is open, the page under it is inert: nothing there takes a click,
+ * focus or a screen reader's cursor, and the header stays live. Every way anything opens or closes
+ * ends here, and it reads what is open rather than being told, so it cannot be left stuck.
+ */
+function syncPage() {
+  const element = nav();
+  const open =
+    (element !== null && isShowing(element)) ||
+    Array.from(document.querySelectorAll<HTMLElement>("[data-nav-panel]")).some(isShowing);
+  for (const region of document.querySelectorAll<HTMLElement>("#main, .site-shell-footer")) {
+    region.toggleAttribute("inert", open);
+  }
+}
+
 /** Whether `p` lies inside the triangle `a b c`: the same side of all three edges. */
 function inTriangle(p: DOMPointReadOnly, a: DOMPointReadOnly, b: DOMPointReadOnly, c: DOMPointReadOnly) {
   const side = (u: DOMPointReadOnly, v: DOMPointReadOnly) => (v.x - u.x) * (p.y - u.y) - (v.y - u.y) * (p.x - u.x);
@@ -51,6 +66,7 @@ function enhanceMenu(element: HTMLElement) {
 
   element.addEventListener("toggle", () => {
     sync();
+    syncPage();
     if (isShowing(element)) document.documentElement.removeAttribute("data-header-hidden");
   });
 
@@ -76,9 +92,10 @@ function enhanceMenu(element: HTMLElement) {
  * that pins the panel, Escape back to the chevron, and aria-expanded; on a phone, where the panels sit
  * inside the Menu, the chevron expands its section in place instead.
  *
- * The three panels share one rectangle under the header. Switching measures the open one and starts
- * the next at that height, so the paper morphs instead of cutting. The height is inline and cleared
- * when the morph ends, so a panel the script never opened still has no height of its own.
+ * Each panel is a card hung from its own word (chrome-nav.css). The first open grows the card down
+ * from the header; switching to another word swaps cards at once, since the next card hangs from a
+ * different place and a morph between them would travel. The height is inline and cleared when the
+ * grow ends, so a card the script never opened still has no height of its own.
  */
 function enhanceMenus() {
   const mobile = window.matchMedia(MOBILE);
@@ -132,11 +149,8 @@ function enhanceMenus() {
     }
   };
 
-  /*
-   * One rectangle, two heights. `from` is the panel being replaced; null grows the first open up
-   * from the header. Reduced motion leaves the popover's own show, which is already instant.
-   */
-  const morph = (panel: HTMLElement, from: number | null) => {
+  /* The first open grows the card from the header. Reduced motion keeps the popover's own instant show. */
+  const grow = (panel: HTMLElement) => {
     if (reduced()) return;
     const gen = ++morphGen;
     const content = [...panel.children].filter((el): el is HTMLElement => el instanceof HTMLElement);
@@ -148,12 +162,11 @@ function enhanceMenus() {
       resetMorph(panel);
       return;
     }
-    const start = from === null ? 0 : Math.abs(from - target) < 2 ? target : from;
-    panel.style.height = `${start}px`;
-    panel.style.opacity = from === null ? "0" : "1";
+    panel.style.height = "0px";
+    panel.style.opacity = "0";
     for (const el of content) {
       el.style.transition = "none";
-      el.style.opacity = from === null ? "1" : "0";
+      el.style.opacity = "1";
     }
     void panel.offsetHeight;
     requestAnimationFrame(() => {
@@ -169,6 +182,21 @@ function enhanceMenus() {
       if (gen !== morphGen) return;
       resetMorph(panel);
     }, MORPH_MS + 80);
+  };
+
+  /*
+   * Where anchor positioning is missing, the card's x from the word's box, held inside the header's
+   * inset as the stylesheet's clamp does. Where it exists the stylesheet owns x and this writes nothing.
+   */
+  const anchored = CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a");
+  const place = (menu: Menu) => {
+    if (anchored || mobile.matches) return;
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
+    const inset = header ? parseFloat(getComputedStyle(header).paddingInlineStart) : 0;
+    const pad = parseFloat(getComputedStyle(menu.panel).paddingInlineStart);
+    const right = document.documentElement.clientWidth - menu.panel.offsetWidth - inset;
+    const x = Math.max(inset, Math.min(menu.item.getBoundingClientRect().left - pad, right));
+    menu.panel.style.setProperty("--nav-card-x", `${x}px`);
   };
 
   const rectHas = (rect: DOMRect, x: number, y: number) =>
@@ -215,16 +243,21 @@ function enhanceMenus() {
    * sync at once: the toggle event that also syncs arrives a task later, after a reader could look.
    */
   const show = (menu: Menu, pin: boolean) => {
-    const open = showing();
-    const from = open && open !== menu ? open.panel.getBoundingClientRect().height : null;
+    const switching = showing() !== undefined;
     clearTimers();
     exit = null;
     if (!isShowing(menu.panel)) {
+      if (switching) {
+        morphGen += 1;
+        menus.forEach((other) => resetMorph(other.panel));
+      }
       menu.panel.showPopover();
-      morph(menu.panel, from);
+      place(menu);
+      if (!switching) grow(menu.panel);
     }
     pinned = pin ? menu : null;
     menus.forEach(sync);
+    syncPage();
   };
 
   const hide = (menu: Menu) => {
@@ -233,6 +266,7 @@ function enhanceMenus() {
     resetMorph(menu.panel);
     if (isShowing(menu.panel)) menu.panel.hidePopover();
     sync(menu);
+    syncPage();
   };
 
   const scheduleClose = (menu: Menu) => {
@@ -271,6 +305,12 @@ function enhanceMenus() {
         warmed = performance.now();
       }
       sync(menu);
+      syncPage();
+    });
+
+    // A chosen link leaves the page, and a page restored from the back/forward cache would still show the card.
+    menu.panel.addEventListener("click", (event) => {
+      if ((event.target as Element | null)?.closest("a") && isShowing(menu.panel)) hide(menu);
     });
 
     // Cancelled, so the popover's own toggle never runs: a click on a panel hover opened pins it open.
@@ -403,6 +443,25 @@ function enhanceMenus() {
     open.chevron.focus();
   });
 
+  /*
+   * The veil takes the click. The popover's light dismiss already closes the card on it; this closes
+   * it where that does not run, and keeps the click from going anywhere else.
+   */
+  const veil = document.querySelector<HTMLElement>("[data-nav-veil]");
+  if (!veil) throw new Error("header: the nav menus are here but their veil is not");
+  veil.addEventListener("pointerdown", (event) => event.preventDefault());
+  veil.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const open = showing();
+    if (open) hide(open);
+  });
+
+  window.addEventListener("resize", () => {
+    const open = showing();
+    if (open) place(open);
+  });
+
   // Crossing the breakpoint changes what open means, so start the new layout with everything closed.
   mobile.addEventListener("change", () => {
     const element = nav();
@@ -412,6 +471,7 @@ function enhanceMenus() {
       menu.item.removeAttribute("data-expanded");
       sync(menu);
     }
+    syncPage();
   });
 }
 
@@ -466,6 +526,8 @@ const element = nav();
 if (element) {
   enhanceMenu(element);
   enhanceMenus();
+  // A page restored from the back/forward cache comes back as it was left; read it again.
+  window.addEventListener("pageshow", syncPage);
 }
 
 // Reduced motion gets no hiding at all, not a slower one: a jump without a transition is worse.

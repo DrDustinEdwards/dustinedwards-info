@@ -646,11 +646,13 @@
   [data-theme="light"] {
     --text-secondary: #4a423a;
     --border: #6e6459;
+    --border-strong: #4a423a;
   }
 
   [data-theme="dark"] {
     --text-secondary: #c6bdaf;
     --border: #8a8075;
+    --border-strong: #c6bdaf;
   }
 }
 
@@ -658,6 +660,7 @@
   :root:not([data-theme]) {
     --text-secondary: #c6bdaf;
     --border: #8a8075;
+    --border-strong: #c6bdaf;
   }
 }
 
