@@ -1,12 +1,12 @@
 ---
 path: /cv
 title: "Curriculum Vitae"
-seo_title: "Dustin Edwards CV: professor and virologist, Tarleton"
-description: "Dustin Edwards's CV: professor and virologist at Tarleton State University. Appointments, education, publications, grants, teaching and service."
+seo_title: "Dustin Edwards CV: Professor and Virologist, Tarleton"
+description: "Dustin Edwards's CV: Professor and Virologist at Tarleton State University. Appointments, education, publications, grants, teaching and service."
 schema_type: WebPage
 ---
 
-Dustin Cole Edwards, Ph.D. Professor and virologist, Department of Biological Sciences, Tarleton State University, Texas A&M University System.
+Dustin Cole Edwards, Ph.D. Professor and Virologist, Department of Biological Sciences, Tarleton State University, Texas A&M University System.
 
 This page follows the Fall 2026 CV. [Download the current CV as a PDF](https://docs.google.com/document/d/123n-n-ViE-OyUUqIjEY4byMVVUvfK8BjdNCNt-Gm7GQ/export?format=pdf), always the latest version. Each paper also has its own page under [Publications](/research/publications).
 
