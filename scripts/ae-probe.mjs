@@ -9,7 +9,7 @@ import { SITE_ORIGIN } from "../app/lib/seo.ts";
 const ORIGIN = SITE_ORIGIN;
 const ACCOUNT = process.env.CLOUDFLARE_ACCOUNT_ID;
 const DATASET = "dustinedwards_traffic";
-const PATH = "/playground";
+const PATH = "/colophon";
 const UA = "dustinedwards-ae-probe";
 
 const POLL_SECONDS = 10;

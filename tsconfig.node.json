@@ -177,12 +177,10 @@
     // app/routes/projects.tsx renders the card anchors from the same
     // `projectAnchor`, so a record cannot cite a fragment the page omits.
     "app/lib/projects-page.mjs",
-    // The theme resolver. THREE readers now: workers/app.ts builds its cache
-    // key with it, root.tsx writes data-theme from it, and check:features runs
-    // it over the playground's cookie presets. The playground demo's whole
-    // claim is that it calls the function the Worker calls, so the gate has to
-    // reach the same module rather than restate its rules. No DOM: it takes a
-    // Request, which the Node lib provides.
+    // The theme resolver. workers/app.ts builds its cache key with it and
+    // root.tsx writes data-theme from it, and test/theme.test.mjs reaches the
+    // same module rather than restating its rules. No DOM: it takes a Request,
+    // which the Node lib provides.
     "app/lib/theme.ts",
     // The roster data, for the SAME reason app/lib/seo.ts is listed: a script
     // imports it by its real filename rather than restating what it contains.
@@ -191,15 +189,9 @@
     // researchers its own way and agreeing with the page only by luck. No DOM
     // and no Worker types: it is data and one type alias.
     "app/data/phage-hunters.ts",
-    // The playground's page descriptor, on the same footing as the two above:
-    // build-content.mjs emits /playground's search records from it and
-    // app/routes/playground.tsx renders the demo anchors from the same
-    // `demoAnchor`, so a record cannot cite a fragment the page omits.
-    "app/lib/playground-page.mjs",
     "app/lib/search/query.mjs",
-    // The color maths. check:contrast computes with it and the playground's
-    // contrast lab renders with it, on the same principle as query.mjs: the gate
-    // must not check a ratio the page derived by some other rule.
+    // The color maths. check:contrast computes with it, on the same principle as
+    // query.mjs: there is one rule for a ratio, not one per reader.
     "app/lib/contrast.mjs",
     // What an asset IS. The Worker imports it and build:assets imports it, on
     // the same principle as query.mjs: there must never be a second answer to

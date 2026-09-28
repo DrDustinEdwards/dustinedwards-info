@@ -17,7 +17,6 @@ import * as math from "./lib/browser/cases/math.mjs";
 import * as mediaSvg from "./lib/browser/cases/media-svg.mjs";
 import * as movedPaths from "./lib/browser/cases/moved-paths.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
-import * as playground from "./lib/browser/cases/playground.mjs";
 import * as postControls from "./lib/browser/cases/post-controls.mjs";
 import * as scriptSet from "./lib/browser/cases/script-set.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
@@ -120,7 +119,6 @@ try {
   await movedPaths.run(ctx);
   await layout.run(ctx);
   await math.run(ctx, mathPreviewSeeded);
-  await playground.run(ctx);
   const { publicConsoleErrors, enhanceStems, codePost, probedPost } = await enhancements.run(ctx);
   const postForShape = await postControls.run(ctx, { codePost, probedPost });
   await lightbox.run(ctx);
@@ -141,7 +139,12 @@ if (subjectReachable) {
   /* Each floor sits `max(3, ceil(count * 0.05))` under a measured run; re-measure when touching this file. */
   /* Less 3 on 2026-09-27: the per-path script-set "no framework chunk, no modulepreload" check went. */
   /* Plus 7 on the preview on 2026-09-27: the media-svg case (it skips against a deployed origin). */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 252 : 227;
+  /*
+   * Less 39 on both on 2026-09-28, when /playground became a 301 to /: the playground case's 24
+   * (content/playground.json drove them), theme-cache's 7 per path for /playground and /playground/ui
+   * (14), and layout's one 320px overflow check on /playground (1).
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 213 : 188;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

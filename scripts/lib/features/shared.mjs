@@ -1,5 +1,5 @@
 // What every check:features section reads: the repo root, comment stripping, and the two page
-// helpers the projects and playground sections both run. The entry script builds the context.
+// helpers the projects section runs. The entry script builds the context.
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";

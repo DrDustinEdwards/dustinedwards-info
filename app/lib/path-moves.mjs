@@ -1,7 +1,8 @@
 /**
  * The 2026-09-27 site structure moved two sections: /blog to /writing, and /publications to
  * /research/publications. Nothing linked to the new site's old addresses yet, but they were public,
- * so each keeps answering with a 301 to the same page at its new address. Runs in the gateway, before
+ * so each keeps answering with a 301 to the same page at its new address. /playground was removed
+ * on 2026-09-28, so it and everything under it answers one 301 to /. Runs in the gateway, before
  * the renamed-post and PDF maps, so an old post slug or an old PDF name still resolves in one hop.
  *
  * The old feed addresses are not moved: they are routes of their own (app/routes.ts) and keep
@@ -20,6 +21,12 @@ const EXACT_MOVES = new Map([
   ["/phage-discovery", "/teaching/phage-discovery#roster"],
   ["/phage-discovery/", "/teaching/phage-discovery#roster"],
 ]);
+
+/**
+ * Sections removed outright, with no page of their own to move to: the section and everything under
+ * or beside it answers one 301 to the home page.
+ */
+const RETIRED_TO_HOME = /** @type {const} */ (["/playground"]);
 
 /** The feed files a reader subscribes to, under /blog, /blog/tags/<tag> or /blog/series/<series>. */
 const FEED_FILES = new Set(["rss.xml", "feed.json", "atom.xml"]);
@@ -46,6 +53,10 @@ function isLegacyFeed(rest) {
 export function movedPathTarget(pathname) {
   if (typeof pathname !== "string") return null;
   if (EXACT_MOVES.has(pathname)) return EXACT_MOVES.get(pathname) ?? null;
+  for (const from of RETIRED_TO_HOME) {
+    const next = pathname.charAt(from.length);
+    if (pathname === from || (pathname.startsWith(from) && (next === "/" || next === "."))) return "/";
+  }
   for (const [from, to] of MOVES) {
     if (pathname === from) return to;
     // `/publications.bib` and friends sit beside the section rather than under it.

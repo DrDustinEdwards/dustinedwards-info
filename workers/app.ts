@@ -273,8 +273,9 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
     return redirectTo(request, new URL(wordpress.location, url).toString());
   }
 
-  // A moved section (/blog, /publications) first, and the rules below read the moved path, so an old
-  // post slug or an old PDF name under an old section still resolves in one hop.
+  // A moved section (/blog, /publications) or a retired one (/playground, to /) first, and the rules
+  // below read the moved path, so an old post slug or an old PDF name under an old section still
+  // resolves in one hop.
   const moved = movedPathTarget(url.pathname);
   const path = moved ?? url.pathname;
 
@@ -292,7 +293,10 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
       dest.search = url.search;
       return redirectTo(request, dest.toString());
     }
-    return redirectTo(request, new URL(`${target}${url.search}`, url).toString());
+    // Only a retired section lands on "/", and its old query string (the demos' inputs) means
+    // nothing there, so it is dropped rather than carried onto the home page's address.
+    const search = target === "/" ? "" : url.search;
+    return redirectTo(request, new URL(`${target}${search}`, url).toString());
   }
 
   // A removed WordPress address renders the Gone page in its place: the address bar keeps the old URL

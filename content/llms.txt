@@ -179,8 +179,7 @@ of them:
 
 The other pages are /, /about, /writing, /software,
 /colophon, /contact and /privacy. /sitemap.xml lists every HTML page on the
-site and nothing else. /playground is a fixture for the browser gate, noindex,
-and it is not listed in the sitemap.
+site and nothing else.
 
 ## Search
 

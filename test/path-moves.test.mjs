@@ -51,8 +51,33 @@ test("/phage-discovery moves to the roster anchor on every host", () => {
   assert.equal(movedPathTarget("/teaching/phage-discovery"), null);
 });
 
+test("/playground and everything under it is retired to the home page", () => {
+  for (const path of [
+    "/playground",
+    "/playground/",
+    "/playground/ui",
+    "/playground/ui/",
+    "/playground/anything/deeper",
+    "/playground.md",
+  ]) {
+    assert.equal(movedPathTarget(path), "/", path);
+  }
+  // One hop: the home page is not itself moved.
+  assert.equal(movedPathTarget("/"), null);
+});
+
 test("a path that only starts with the same letters is not a moved section", () => {
-  for (const path of ["/blogs", "/blogroll", "/publicationsx", "/writing", "/research/publications", "/", "/about"]) {
+  for (const path of [
+    "/blogs",
+    "/blogroll",
+    "/publicationsx",
+    "/playgrounds",
+    "/playground-ui",
+    "/writing",
+    "/research/publications",
+    "/",
+    "/about",
+  ]) {
     assert.equal(movedPathTarget(path), null, path);
   }
   // A post whose slug happens to be named like a feed file is still a post and still moves.

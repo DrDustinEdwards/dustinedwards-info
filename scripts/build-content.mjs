@@ -17,7 +17,6 @@ import {
   contentPageMarkdownPath,
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
-import { playgroundPages } from "../app/lib/playground-page.mjs";
 import { projectsPages } from "../app/lib/projects-page.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
@@ -167,17 +166,12 @@ export async function buildArtifact() {
     await readFile(fromRoot(path.join("content", "projects.json")), "utf8"),
   );
 
-  const playground = JSON.parse(
-    await readFile(fromRoot(path.join("content", "playground.json")), "utf8"),
-  );
-
   return serializeArtifact(
     // Both need the complete corpus: relatedness and being linked to are properties of the set.
     withBacklinks(withRelated(posts)),
     [
       ...colophonPages(stack, features),
       ...projectsPages(projects),
-      ...playgroundPages(playground),
       ...contentPageSearchInputs(await renderContentPages()),
     ],
     paperSearchInputs(PUBLICATIONS),

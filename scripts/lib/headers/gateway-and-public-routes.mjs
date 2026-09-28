@@ -86,8 +86,6 @@ export function run(code) {
       "home.tsx",
       "about.tsx",
       "colophon.tsx",
-      "playground.tsx",
-      "playground.ui.tsx",
       "projects.tsx",
       /*
        * The publication index: its QUERY STRING is part of the key rather than a reason to refuse,
