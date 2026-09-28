@@ -18,7 +18,8 @@ const readCv = (page) =>
     ],
     papers: document.querySelector('[data-cv-count="papers"]')?.textContent ?? "",
     grants: document.querySelector('[data-cv-count="grants"]')?.textContent ?? "",
-    bars: document.querySelectorAll("[data-cv-timeline] a[data-cv-year]").length,
+    bars: document.querySelectorAll("[data-cv-timeline] [data-abscissa-key]").length,
+    barLinks: document.querySelectorAll("[data-cv-timeline] a[href][data-abscissa-key]").length,
     enhanced: document.querySelector("[data-cv]")?.hasAttribute("data-cv-enhanced") ?? false,
   }));
 
@@ -36,9 +37,9 @@ export async function run({ browser }) {
       `${full.shown} of ${full.all} entries shown, ${full.papers} publications counted`,
     );
     ok(
-      "cv, script off: the timeline is server-rendered, one link per year with output",
-      full.bars > 10,
-      `${full.bars} year links in the timeline`,
+      "cv, script off: the timeline is server-rendered, each bar a link to its year",
+      full.bars > 10 && full.barLinks === full.bars,
+      `${full.barLinks} of ${full.bars} bars are links`,
     );
     await off.goto(`${BASE}/cv?type=grant&from=2020`, { waitUntil: "load" });
     const filtered = await readCv(off);
@@ -77,16 +78,19 @@ export async function run({ browser }) {
         `publications ${pubs.papers} (was ${start.papers}), grants ${pubs.grants}`,
       );
 
-      const year = await page.evaluate(() => document.querySelector("[data-cv-timeline] a[data-cv-year]")?.getAttribute("data-cv-year") ?? "");
-      if (await clickOrFail(page, `[data-cv-timeline] a[data-cv-year="${year}"]`, "cv: the timeline has a year to select")) {
+      /* A bar, once Abscissa's layer has made it a control: clicking it selects its year. */
+      const year = await page.evaluate(
+        () => document.querySelector("[data-cv-timeline] [data-abscissa-key]")?.getAttribute("data-abscissa-x") ?? "",
+      );
+      if (await clickOrFail(page, `[data-cv-timeline] [data-abscissa-x="${year}"]`, "cv: the timeline has a year to select")) {
         const oneYear = await pollUntil(() => readCv(page), (v) => v.search.includes(`from=${year}`));
         ok(
           "cv: a year's bar filters to that year and keeps the other filters",
           oneYear.search === `?type=publication&from=${year}&to=${year}` && oneYear.shown > 0 && oneYear.shown < pubs.shown,
           JSON.stringify(oneYear),
         );
-        const focused = await page.evaluate(() => document.activeElement?.getAttribute("data-cv-year") ?? "");
-        ok("cv: focus stays on the selected year's bar after the redraw", focused === year, `focus on year "${focused}"`);
+        const faded = await page.evaluate(() => document.querySelectorAll("[data-cv-timeline] [data-abscissa-dimmed]").length);
+        ok("cv: the chart shows the year it filters to, dimming the others", faded > 0, `${faded} dimmed bars`);
       }
 
       /* The URL it wrote is the one a reader shares: loaded fresh, it renders the same view. */

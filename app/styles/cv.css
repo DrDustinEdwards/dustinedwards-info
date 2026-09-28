@@ -125,13 +125,6 @@
   color: var(--text-secondary);
 }
 
-.cv-spark svg {
-  display: block;
-  width: 100%;
-  height: auto;
-  overflow: visible;
-}
-
 .cv-stat-sub {
   grid-column: 1 / -1;
   margin-block-start: var(--s-1);
@@ -144,72 +137,28 @@
   margin: 0;
 }
 
-.cv-timeline-caption {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--s-2) var(--s-4);
-  margin-block-end: var(--s-2);
-}
-
 .cv-timeline-title {
+  margin: 0 0 var(--s-2);
   font-weight: 620;
 }
 
-.cv-key {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-1) var(--s-3);
-  color: var(--text-secondary);
-  font-size: var(--t-small-size);
-}
-
-.cv-key-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-}
-
-.cv-swatch {
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: 0.125rem;
-  forced-color-adjust: none;
-}
-
 .cv-timeline-plot {
-  min-height: 11.875rem;
-  color: var(--text-secondary);
+  min-height: 13.75rem;
 }
 
-.cv-timeline-plot svg {
+/* Bars outside the selected year range, marked by app/lib/cv/charts.ts. */
+.cv-timeline-plot [data-cv-out] {
+  opacity: 0.28;
+}
+
+.cv-spark svg {
   display: block;
   width: 100%;
   height: auto;
-  overflow: visible;
-  font-family: var(--font-sans);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
 }
 
-.cv-timeline-plot [data-plot-mark="y-grid"] {
-  stroke: var(--dust);
-  stroke-opacity: 1;
-}
-
-.cv-chart-hits a {
-  cursor: pointer;
-  outline: none;
-}
-
-.cv-chart-hits a:hover rect {
-  fill: var(--tint-brand);
-  fill-opacity: 0.45;
-}
-
-.cv-chart-hits a:focus-visible rect {
-  stroke: var(--brand);
-  stroke-width: 2;
+.cv-timeline-hint[hidden] {
+  display: none;
 }
 
 .cv-timeline-hint {

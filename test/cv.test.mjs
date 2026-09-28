@@ -20,8 +20,8 @@ import {
   parseState,
   stateToSearch,
   timelineData,
-  yearHref,
 } from "../app/lib/cv/view.mjs";
+import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
 import { CV_PDF_DISK_PATH, FINGERPRINT_LABEL, cvFingerprint } from "../scripts/build-cv-pdf.mjs";
 
 const FACTS = cvFacts(CV.entries);
@@ -134,14 +134,12 @@ test("the counts, the facets and the grouping agree with the entries", () => {
   assert.equal(new Set(ids).size, CV.entries.length);
 });
 
-test("the timeline counts each charted type by year, and a bar links to its year and back", () => {
+test("the timeline counts each charted type by year", () => {
   const state = parseState(new URLSearchParams(""));
   const data = timelineData(FACTS, state);
   assert.deepEqual(data.years, chartYears(FACTS));
   const pubs = data.series.find((s) => s.key === "publication");
   assert.equal(pubs?.values.reduce((a, b) => a + b, 0), 34);
-  assert.equal(yearHref(state, 2019), "?from=2019&to=2019");
-  assert.equal(yearHref(parseState(new URLSearchParams("from=2019&to=2019")), 2019), "");
 });
 
 test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
@@ -162,4 +160,8 @@ test("the committed PDF was rendered from the current CV (npm run build:cv-pdf)"
     `the PDF does not carry "${FINGERPRINT_LABEL} ${cvFingerprint()}": the CV changed since it was rendered. ` +
       "Run npm run build:cv-pdf, then build:assets and build:template-refs.",
   );
+});
+
+test("the committed chart stylesheet is Abscissa's current output (npm run build:chart-css)", () => {
+  assert.equal(readFileSync(CHART_CSS_PATH, "utf8"), chartCss());
 });

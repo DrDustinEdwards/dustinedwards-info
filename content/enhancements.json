@@ -189,10 +189,10 @@
     {
       "id": "cv-timeline-select",
       "module": "app/enhance/cv.ts",
-      "enhancement": "Selecting a year's bar in the CV timeline filters to that year in place and keeps focus on the bar; selecting it again shows every year.",
+      "enhancement": "The CV timeline, drawn by Abscissa, becomes keyboard filter buttons through abscissa/enhance: selecting a year's bar filters to that year in place (again, or Escape: every year), and selecting an entry in its key filters to that type.",
       "fallback": "Each bar is a server-rendered link to /cv with that year as the range, so it filters by page load with script off.",
       "fallbackKind": "selector",
-      "fallbackAt": "a[data-cv-year]",
+      "fallbackAt": "#cv-timeline",
       "why": null
     },
     {

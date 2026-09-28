@@ -1,4 +1,3 @@
-import { parseHTML } from "linkedom";
 import { Fragment, type ReactNode } from "react";
 
 import { Enhance } from "~/components/enhance";
@@ -8,7 +7,6 @@ import { CV, CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type CvEntry } from "
 import { renderCvCharts } from "~/lib/cv/render-charts";
 import {
   AREAS,
-  CHART_SERIES,
   ROLES,
   SORTS,
   TYPES,
@@ -38,6 +36,7 @@ import {
 
 import type { Route } from "./+types/cv";
 
+import "~/styles/abscissa.css";
 import "~/styles/cv.css";
 
 /*
@@ -62,14 +61,13 @@ export function loader({ request }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const state = parseState(url.searchParams);
   const shown = FACTS.filter((f) => matches(f, state));
-  const { document } = parseHTML("<!DOCTYPE html><html><body></body></html>");
   return {
     state,
     shownIds: shown.map((f) => f.id),
     groups: groupEntries(FACTS, state.sort),
     counts: headline(shown),
     facets: facetCounts(FACTS, state),
-    charts: renderCvCharts(document as unknown as Document, FACTS, state, PATH),
+    charts: renderCvCharts(FACTS, state),
   };
 }
 
@@ -384,25 +382,13 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
               name="students"
             />
           </dl>
-          <figure className="cv-timeline">
-            <figcaption className="cv-timeline-caption">
-              <span className="cv-timeline-title">Output by year</span>
-              <span className="cv-key" aria-hidden="true">
-                {CHART_SERIES.map(([key, label, token]) => (
-                  <span key={key} className="cv-key-item">
-                    <span className="cv-swatch" style={{ background: token }} />
-                    {label}
-                  </span>
-                ))}
-              </span>
-            </figcaption>
-            <div
-              className="cv-timeline-plot"
-              data-cv-timeline=""
-              dangerouslySetInnerHTML={{ __html: charts.timeline }}
-            />
-            <p className="cv-timeline-hint">Select a year&rsquo;s bar to show only that year; select it again for every year.</p>
-          </figure>
+          <div className="cv-timeline">
+            <p className="cv-timeline-title">Output by year</p>
+            <div className="cv-timeline-plot" data-cv-timeline="" dangerouslySetInnerHTML={{ __html: charts.timeline }} />
+            <p className="cv-timeline-hint" data-cv-hint="" hidden>
+              Select a year&rsquo;s bar to show only that year, and select it again for every year. The key filters by type.
+            </p>
+          </div>
         </section>
 
         <form className="cv-filters" method="get" action={PATH} aria-label="Filter the CV" data-cv-form="">

@@ -157,7 +157,7 @@ if (subjectReachable) {
    */
   /*
    * Plus 9 on both on 2026-09-28: the cv case. Script off, the whole CV, its timeline and a filtered
-   * URL (3); live, the enhancement running, a type filter and its counts, a year's bar and the focus
+   * URL (3); live, the enhancement running, a type filter and its counts, a year's bar and the fading
    * it keeps, and the written URL loading the same view with script off (6).
    */
   const MINIMUM_CHECKS = DRIVES_PREVIEW ? 236 : 211;

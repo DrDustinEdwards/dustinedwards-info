@@ -84,6 +84,9 @@ export const SORTS = /** @type {const} */ ([
   ["oldest", "Oldest first"],
 ]);
 
+/** The timeline figure's id, which Abscissa's `abscissa:select` events carry as `chartId`. */
+export const TIMELINE_ID = "cv-timeline";
+
 /** The types the timeline stacks, in stacking order, each with its chart token. */
 export const CHART_SERIES = /** @type {const} */ ([
   ["publication", "Publications", "var(--chart-purple)"],
@@ -423,7 +426,7 @@ export function sparkData(all, state) {
 }
 
 /**
- * The year a bar links to: that year alone, or back to every year when it is already the range.
+ * The query a year's bar links to with script off: that year alone, or every year when it already is.
  *
  * @param {CvState} state
  * @param {number} year
@@ -494,7 +497,7 @@ export function timelineLabel(data) {
   const what = `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]} per year, ${first} to ${last}`;
   if (peak === 0) return `${what[0]?.toUpperCase()}${what.slice(1)}: none match the filters.`;
   const peakYears = data.years.filter((_, i) => totals[i] === peak);
-  return `${what[0]?.toUpperCase()}${what.slice(1)}. Most in ${peakYears.join(" and ")}, with ${peak}. Each year's bar is a link that shows that year only.`;
+  return `${what[0]?.toUpperCase()}${what.slice(1)}. Most in ${peakYears.join(" and ")}, with ${peak}. Each year's bar shows that year only.`;
 }
 
 /**

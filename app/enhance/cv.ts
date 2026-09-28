@@ -1,6 +1,9 @@
+import { enhance, type EnhancedChart, type SelectDetail } from "abscissa/enhance";
+
 import { copyText } from "~/lib/clipboard";
-import { renderCvCharts } from "~/lib/cv/render-charts";
 import {
+  CHART_SERIES,
+  TIMELINE_ID,
   activeCount,
   facetCounts,
   foldText,
@@ -127,14 +130,60 @@ function setText(selector: string, text: string) {
   for (const node of root.querySelectorAll(selector)) node.textContent = text;
 }
 
-function drawCharts(state: CvState) {
-  const width = timelineHost.clientWidth;
-  const charts = renderCvCharts(document, facts, state, PATH, { width: width > 0 ? width : undefined });
-  timelineHost.innerHTML = charts.timeline;
-  for (const name of ["papers", "grants", "students"] as const) {
-    const host = root.querySelector(`[data-cv-spark="${name}"]`);
-    if (host) host.innerHTML = charts[name];
+/* Abscissa's layer: bar links become keyboard filter buttons with details on hover and focus. */
+const timeline: EnhancedChart | undefined = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
+if (!timeline) throw new Error("cv: the timeline is not an Abscissa figure.");
+
+const TYPE_BY_LABEL = new Map(CHART_SERIES.map(([id, label]) => [label as string, id as string]));
+const LABEL_BY_TYPE = new Map(CHART_SERIES.map(([id, label]) => [id as string, label as string]));
+timeline.setFilter(chartFilter(readState()));
+
+/**
+ * The filter the chart itself shows for a state: one year as Abscissa's year filter, else one charted
+ * type as its key's pressed entry. A range, or several types, shows as the faded bars alone.
+ */
+function chartFilter(state: CvState): { field: string; value: string } | null {
+  if (state.from !== null && state.from === state.to) return { field: "year", value: String(state.from) };
+  if (state.types.length === 1) {
+    const label = LABEL_BY_TYPE.get(state.types[0] ?? "");
+    if (label) return { field: "type", value: label };
   }
+  return null;
+}
+
+/** The request in flight; a newer filter aborts it, so an old answer never lands over a new one. */
+let pending: AbortController | null = null;
+
+/*
+ * The charts come from /cv/charts.json, drawn on the server by the same function as the page's, so
+ * this bundle carries no renderer. A failed fetch leaves the last charts up and throws, so it is seen.
+ */
+function drawCharts(state: CvState) {
+  pending?.abort();
+  const controller = new AbortController();
+  pending = controller;
+  const width = timelineHost.clientWidth;
+  const params = new URLSearchParams(stateToSearch(state).slice(1));
+  if (width > 0) params.set("w", String(width));
+  fetch(`${PATH}/charts.json?${params}`, { signal: controller.signal })
+    .then((response) => {
+      if (!response.ok) throw new Error(`cv: ${PATH}/charts.json answered ${response.status}.`);
+      return response.json() as Promise<Record<"timeline" | "papers" | "grants" | "students", string>>;
+    })
+    .then((charts) => {
+      if (controller.signal.aborted) return;
+      // Neither fires abscissa:select, only a reader's own choice does, and update() keeps focus.
+      timeline?.update(charts.timeline);
+      timeline?.setFilter(chartFilter(state));
+      for (const name of ["papers", "grants", "students"] as const) {
+        const host = root.querySelector(`[data-cv-spark="${name}"]`);
+        if (host) host.innerHTML = charts[name];
+      }
+    })
+    .catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      throw error;
+    });
 }
 
 let announceTimer = 0;
@@ -232,18 +281,29 @@ function setYears(from: number | null, to: number | null) {
   toSelect.value = to === null ? "" : String(to);
 }
 
-/* A bar is a link to that year's URL; here it filters in place and keeps focus on the same bar. */
-timelineHost.addEventListener("click", (event) => {
-  const link = (event.target as Element | null)?.closest("a[data-cv-year]");
-  if (!link) return;
-  event.preventDefault();
-  const year = Number(link.getAttribute("data-cv-year"));
-  const state = readState();
-  const only = state.from === year && state.to === year;
-  setYears(only ? null : year, only ? null : year);
+/*
+ * Abscissa reports a reader's selection as `abscissa:select`. A bar filters by its year (field
+ * "year"); an entry in the key by its type (field "type"). Selecting the same one again, or Escape,
+ * reports a null value, which clears that filter.
+ */
+timelineHost.addEventListener("abscissa:select", (event: CustomEvent<SelectDetail>) => {
+  if (event.detail.chartId !== TIMELINE_ID) return;
+  const { field, value } = event.detail;
+  if (field === "year") {
+    const year = value === null ? null : Number(value);
+    setYears(year, year);
+  } else if (field === "type") {
+    const type = value === null ? null : (TYPE_BY_LABEL.get(value) ?? null);
+    for (const input of form.querySelectorAll<HTMLInputElement>('input[name="type"]')) {
+      input.checked = type !== null && input.value === type;
+    }
+  } else {
+    throw new Error(`cv: the timeline reported a filter on "${field}", which the CV does not have.`);
+  }
   apply(readState(), { announceNow: true });
-  timelineHost.querySelector<SVGAElement>(`a[data-cv-year="${year}"]`)?.focus();
 });
+
+for (const hint of root.querySelectorAll<HTMLElement>("[data-cv-hint]")) hint.hidden = false;
 
 /* Copying a citation: the plain one is on the page, BibTeX and RIS come from the paper's export route. */
 async function citationText(button: HTMLElement): Promise<string> {
