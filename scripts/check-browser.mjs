@@ -8,6 +8,7 @@
 import puppeteer from "puppeteer";
 
 import * as admin from "./lib/browser/cases/admin.mjs";
+import * as cv from "./lib/browser/cases/cv.mjs";
 import * as enhancements from "./lib/browser/cases/enhancements.mjs";
 import * as headerMenus from "./lib/browser/cases/header-menus.mjs";
 import * as healthTile from "./lib/browser/cases/health-tile.mjs";
@@ -123,6 +124,7 @@ try {
   const postForShape = await postControls.run(ctx, { codePost, probedPost });
   await lightbox.run(ctx);
   await mediaSvg.run(ctx);
+  await cv.run(ctx);
   await scriptSet.run(ctx, { postForShape, enhanceStems, publicConsoleErrors });
   adminCasesRan = await admin.run(ctx);
 
@@ -153,7 +155,12 @@ if (subjectReachable) {
    * Plus 2 on both on 2026-09-28: header-menus' safe triangle, the diagonal across Teaching that keeps
    * Research open and the rest on the crossed word that switches to it.
    */
-  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 227 : 202;
+  /*
+   * Plus 9 on both on 2026-09-28: the cv case. Script off, the whole CV, its timeline and a filtered
+   * URL (3); live, the enhancement running, a type filter and its counts, a year's bar and the focus
+   * it keeps, and the written URL loading the same view with script off (6).
+   */
+  const MINIMUM_CHECKS = DRIVES_PREVIEW ? 236 : 211;
   console.log(
     `\n${tally.checks} checks, ${tally.failures} failures` +
       (skipped.length ? `, ${skipped.length} skipped` : "") +

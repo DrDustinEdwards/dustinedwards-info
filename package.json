@@ -36,6 +36,7 @@
     "build:og": "node scripts/build-og.mjs",
     "build:icons": "node scripts/build-icons.mjs",
     "build:diagrams": "node scripts/build-diagrams.mjs",
+    "build:cv-pdf": "node scripts/build-cv-pdf.mjs",
     "build:katex": "node scripts/build-katex.mjs",
     "build:assets": "node scripts/build-assets.mjs",
     "build:template-refs": "node scripts/build-template-refs.mjs",
