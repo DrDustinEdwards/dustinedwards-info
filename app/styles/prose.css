@@ -35,6 +35,15 @@
   padding-left: 1.25rem;
 }
 
+/* reset.css strips every list marker, and a protocol step read as "repeat steps 1 to 4" needs its
+   number. Scoped to .prose, which holds only rendered markdown: the bare <ol>s that are UI
+   (breadcrumb, table of contents, series nav) all sit outside it. The wider inset keeps a two-digit
+   marker inside the column instead of hanging into the gutter. */
+.prose ol {
+  padding-left: 1.75rem;
+  list-style: decimal;
+}
+
 .prose li {
   margin-bottom: 0.375rem;
 }
