@@ -272,6 +272,8 @@ export async function run({ browser }) {
        viewport and scrolls inside itself rather than running off the bottom. */
     await page.setViewport({ width: 720, height: 405 });
     await page.click(CHEVRON);
+    // Past the first open's grow, which clips the card while it runs.
+    await sleep(400);
     const zoomed = await page.evaluate((panel) => {
       const p = /** @type {HTMLElement} */ (document.querySelector(panel));
       const box = p.getBoundingClientRect();
@@ -380,13 +382,14 @@ export async function run({ browser }) {
         const header = document.querySelector("[data-site-header]")?.getBoundingClientRect();
         const button = document.querySelector("[data-header-menu]")?.getBoundingClientRect();
         const style = getComputedStyle(nav);
-        const alpha = style.backgroundColor.match(/rgba?\([^)]*?,\s*([\d.]+)\)$/)?.[1];
+        const channels = style.backgroundColor.match(/[\d.]+/g) ?? [];
         return {
           box: [box.left, box.top, box.right, box.bottom].map(Math.round),
           viewport: [document.documentElement.clientWidth, window.innerHeight],
           headerBottom: Math.round(header?.bottom ?? -1),
           buttonShown: Boolean(button && button.top >= 0 && button.bottom <= (header?.bottom ?? 0) && button.width > 0),
-          opaque: style.backgroundColor !== "transparent" && (alpha === undefined || Number(alpha) === 1),
+          // rgb() has three channels; a fourth is alpha.
+          opaque: channels.length === 3 || (channels.length === 4 && Number(channels[3]) === 1),
           radius: style.borderTopLeftRadius,
           overflow: style.overflowY,
           scrolls: nav.scrollHeight > nav.clientHeight,
