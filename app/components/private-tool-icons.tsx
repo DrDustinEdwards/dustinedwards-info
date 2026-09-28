@@ -3,12 +3,13 @@
  * currentColor so the link's ink-to-purple hover (ruling 122) reaches them. Decorative: the link
  * text carries the name, so each is aria-hidden.
  *
- * The set Dustin chose from #202's shots: the lamp, the padlock and the capsid.
+ * Identity marks (Dustin, 2026-09-28): the lamp for Carrel, a gear for Admin, the capsid for Portal.
+ * The lock after each label says the link needs a sign-in.
  */
 
-type IconProps = { className?: string };
+type IconProps = { className?: string; strokeWidth?: number };
 
-function Mark({ className, children }: IconProps & { children: React.ReactNode }) {
+function Mark({ className, strokeWidth = 1.5, children }: IconProps & { children: React.ReactNode }) {
   return (
     <svg
       className={className}
@@ -17,7 +18,7 @@ function Mark({ className, children }: IconProps & { children: React.ReactNode }
       height="16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.5"
+      strokeWidth={strokeWidth}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
@@ -40,8 +41,21 @@ export function LampIcon(props: IconProps) {
   );
 }
 
-/** Admin: a padlock. */
-export function PadlockIcon(props: IconProps) {
+/** Admin: a gear, eight teeth on the same grid. */
+export function GearIcon(props: IconProps) {
+  return (
+    <Mark {...props}>
+      <path d="M18.85 9.78L21.28 9.96L21.28 14.04L18.85 14.22L18.42 15.27L20 17.12L17.12 20L15.27 18.42L14.22 18.85L14.04 21.28L9.96 21.28L9.78 18.85L8.73 18.42L6.88 20L4 17.12L5.58 15.27L5.15 14.22L2.72 14.04L2.72 9.96L5.15 9.78L5.58 8.73L4 6.88L6.88 4L8.73 5.58L9.78 5.15L9.96 2.72L14.04 2.72L14.22 5.15L15.27 5.58L17.12 4L20 6.88L18.42 8.73z" />
+      <circle cx="12" cy="12" r="3" />
+    </Mark>
+  );
+}
+
+/**
+ * The sign-in lock after each label. Drawn smaller, so its stroke is 2 on the grid: at 12px that is the
+ * same 1px line the 16px marks draw at 1.5.
+ */
+export function LockIcon(props: IconProps) {
   return (
     <Mark {...props}>
       <rect x="5" y="11" width="14" height="10" rx="1.5" />
@@ -51,7 +65,7 @@ export function PadlockIcon(props: IconProps) {
   );
 }
 
-/** Console: an icosahedron in outline, the shape of a phage capsid. */
+/** Portal: an icosahedron in outline, the shape of a phage capsid. */
 export function CapsidIcon(props: IconProps) {
   return (
     <Mark {...props}>

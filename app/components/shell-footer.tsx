@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
 import { GermomicsMark } from "~/components/germomics-mark";
-import { CapsidIcon, LampIcon, PadlockIcon } from "~/components/private-tool-icons";
+import { CapsidIcon, GearIcon, LampIcon, LockIcon } from "~/components/private-tool-icons";
 import { SiteLogoHeader } from "~/components/site-logo";
 import {
   BRAND_PROFILES,
@@ -16,7 +16,7 @@ import { SITE } from "~/lib/seo";
 
 const PRIVATE_ICONS: Record<PrivateTool["icon"], typeof LampIcon> = {
   lamp: LampIcon,
-  padlock: PadlockIcon,
+  gear: GearIcon,
   capsid: CapsidIcon,
 };
 
@@ -112,6 +112,7 @@ export function ShellFooter() {
                     <>
                       <Icon className="footer-private-icon" />
                       {tool.label}
+                      <LockIcon className="footer-private-lock" strokeWidth={2} />
                     </>
                   );
                   return (

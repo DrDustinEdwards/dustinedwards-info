@@ -51,10 +51,11 @@ test("the Software column lists the three products and not Germomics", () => {
 test("the Workspace group lists Carrel, Admin and Portal, each with its icon", () => {
   assert.deepEqual(
     PRIVATE_TOOLS.map((tool) => [tool.label, tool.icon]),
-    [["Carrel", "lamp"], ["Admin", "padlock"], ["Portal", "capsid"]],
+    [["Carrel", "lamp"], ["Admin", "gear"], ["Portal", "capsid"]],
   );
   const portal = PRIVATE_TOOLS.find((tool) => tool.label === "Portal");
-  assert.equal(portal?.name, "Capsid Portal");
+  assert.equal(portal?.name, "Capsid Portal (requires sign-in)");
+  for (const tool of PRIVATE_TOOLS) assert.ok(tool.name.endsWith("(requires sign-in)"), tool.name);
   assert.equal(portal?.hover, "Capsid Portal");
 });
 
