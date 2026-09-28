@@ -13,6 +13,7 @@ import {
   middleware as postMiddleware,
 } from "~/routes/blog.$slug";
 import { loader as twinLoader } from "~/routes/blog.$slug[.md]";
+import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
 import { loader as paperLoader, meta as paperMeta } from "~/routes/publications.$slug";
 import { loader as robotsLoader } from "~/routes/robots";
@@ -32,8 +33,8 @@ import { routeContext, throughMiddleware } from "./route-helpers";
  * <link rel="alternate" type="text/markdown">; every twin and both llms files answer with a
  * Link: rel="canonical" naming the HTML page; and the sitemap lists HTML pages only.
  *
- * Page types with NO twin (the home page, the Research and Teaching pages) are reached through llms.txt,
- * which names them, and llms-full.txt; those cases assert that path instead.
+ * The home page has no twin and is reached through llms.txt and llms-full.txt. Research and teaching
+ * pages have twins at the page path plus `.md`.
  *
  * The paper twins are static assets the Worker never sees, so their canonical header lives in
  * public/_headers and test/agent-discovery.test.mjs asserts it; here the paper's head and its llms.txt
@@ -170,15 +171,20 @@ describe("an article: head, twin, canonical, full text", () => {
   });
 });
 
-describe("a research page and a protocol: no twin, so llms.txt names them", () => {
-  it.each([RESEARCH_PAGE, PROTOCOL_PAGE])("%s renders its text, declares no twin, and llms.txt lists it", async (path) => {
-    const { page } = (await get(contentPageLoader as Loader, path)) as { page: { path: string; html: string } };
+describe("a research page and a protocol: head, twin, and llms.txt", () => {
+  it.each([RESEARCH_PAGE, PROTOCOL_PAGE])("%s renders its text, links its twin, and llms.txt lists the page", async (path) => {
+    const { page } = (await get(contentPageLoader as Loader, path)) as {
+      page: { path: string; html: string; title: string };
+    };
     expect(page.path).toBe(path);
     expect(page.html.length).toBeGreaterThan(200);
-    expect(markdownAlternates(contentPageMeta({ loaderData: { page } } as never))).toEqual([]);
+    expect(markdownAlternates(contentPageMeta({ loaderData: { page } } as never)).map((d) => d.href)).toEqual([
+      `${SITE_ORIGIN}${contentPageMarkdownPath(path)}`,
+    ]);
 
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
     expect(llms.split("\n")).toContain(`  ${path}`);
+    expect(llms).toContain("/software/{name}");
   });
 });
 

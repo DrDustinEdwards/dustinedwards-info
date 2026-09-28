@@ -57,7 +57,7 @@ test("the Research panel's facts are right and the guide is at its canonical add
   const links = research.columns.flatMap((column) => column.sections.flatMap((section) => section.links));
   const byLabel = new Map(links.map((link) => [link.label, link]));
   // Facts, not layout: each is checked only when the panel still carries the item.
-  if (byLabel.has("Retroviruses")) assert.equal(byLabel.get("Retroviruses")?.description, "HIV, HTLV, REV and LPDV");
+  if (byLabel.has("Retroviruses")) assert.equal(byLabel.get("Retroviruses")?.description, "HTLV-1, REV and LPDV");
   if (byLabel.has("Phage discovery guide")) assert.equal(byLabel.get("Phage discovery guide")?.to, "/teaching/phage-discovery");
   if (byLabel.has("COI primers")) assert.equal(byLabel.get("COI primers")?.aside, "LCO1490 · HCO2198");
 });

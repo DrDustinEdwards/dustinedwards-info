@@ -1,11 +1,11 @@
 ---
 path: /research/retroviruses/human
-title: "Human retrovirus research: HTLV-1 and HIV"
+title: "Human retrovirus research: HTLV-1"
 seo_title: "HTLV-1 research: Tax, p12, p8 and p30 | Dustin Edwards"
 description: "Plain-language summaries of Dustin Edwards's HTLV-1 papers: the Tax oncoprotein, the accessory proteins p12, p8, p13 and p30, STLV-3 and a database."
 ---
 
-This page covers Dustin Edwards's earlier research on human retroviruses, most of it on human T-cell leukemia virus type 1 (HTLV-1). Each published paper, chapter and conference abstract has a short plain-language summary of what it found, a link to its page on this site and a link to its DOI. The papers are grouped by theme, then listed by year. It is written for students and for anyone curious about the work; the papers themselves have the full detail. His current retrovirus work, on viruses of wild birds, is on the [avian retroviruses](/research/retroviruses/avian) page.
+This page covers Dustin Edwards's earlier research on human retroviruses, on human T-cell leukemia virus type 1 (HTLV-1). Each published paper, chapter and conference abstract has a short plain-language summary of what it found, a link to its page on this site and a link to its DOI. The papers are grouped by theme, then listed by year. It is written for students and for anyone curious about the work; the papers themselves have the full detail. His current retrovirus work, on viruses of wild birds, is on the [avian retroviruses](/research/retroviruses/avian) page.
 
 ## HTLV-1 in brief
 
@@ -51,9 +51,9 @@ Simian T-cell lymphotropic virus type 3 (STLV-3) is a virus of monkeys that is n
 - **2007.** A chapter on RNA tumor viruses, using HTLV-1 as the model: its Tax protein acts on the controls of cell division and DNA repair, and that is how the virus transforms cells. [RNA Tumour Viruses](/research/publications/10-1002-9780470025079-chap06-pub2/), *The Cancer Handbook*. DOI: [10.1002/9780470025079.chap06.pub2](https://doi.org/10.1002/9780470025079.chap06.pub2)
 - **2011.** A review of what was then known about the orf-I products p12 and p8 and the orf-II products p13 and p30: how they are made from spliced messenger RNAs, and their reported effects on gene expression, cell death, host cell activation, infectivity, transmission and immune responses. The review makes the central point that these proteins are not required for the virus to replicate in cell culture but do matter for infection in a living host. [Orf-I and Orf-II-Encoded Proteins in HTLV-1 Infection and Persistence](/research/publications/10-3390-v3060861/), *Viruses*. DOI: [10.3390/v3060861](https://doi.org/10.3390/v3060861)
 
-### HIV-1 and HTLV-1 coinfection
+### HTLV-1 coinfection poster
 
-One conference poster concerned the regulatory proteins of HIV-1 and HTLV-1 in coinfection. No abstract was published with it, so it is listed here by title only, with no summary of findings.
+One conference poster, listed under Publications by its published title, concerned regulatory proteins in coinfection. No abstract was published with it, so it is listed here by title only, with no summary of findings.
 
 - **2014.** [Role of regulatory proteins in HIV-1/HTLV-1 coinfection](/research/publications/10-1186-1742-4690-11-s1-p122/), *Retrovirology* (conference supplement). DOI: [10.1186/1742-4690-11-s1-p122](https://doi.org/10.1186/1742-4690-11-s1-p122)
 

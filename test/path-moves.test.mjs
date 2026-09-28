@@ -38,6 +38,13 @@ test("the old feed addresses do not move: they keep answering with the feed", ()
   }
 });
 
+test("/projects moves to /software, and only as a whole path", () => {
+  assert.equal(movedPathTarget("/projects"), "/software");
+  assert.equal(movedPathTarget("/projects/"), "/software");
+  assert.equal(movedPathTarget("/projects/foxhound"), null);
+  assert.equal(movedPathTarget("/software"), null);
+});
+
 test("a path that only starts with the same letters is not a moved section", () => {
   for (const path of ["/blogs", "/blogroll", "/publicationsx", "/writing", "/research/publications", "/", "/about"]) {
     assert.equal(movedPathTarget(path), null, path);

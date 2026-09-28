@@ -9,7 +9,7 @@ Dustin Edwards's current research follows two retroviruses of birds, reticuloend
 
 ## What are REV and LPDV?
 
-Both are retroviruses, the same broad family of viruses as HIV in people, but these two infect birds. A retrovirus copies its RNA genome into DNA and inserts that DNA, called the provirus, into the chromosomes of the cells it infects. An infected bird carries the provirus for life. That lifelong integration is part of why some retroviruses can cause cancer, and it is also what makes them detectable: a small blood sample holds enough infected cells to find the viral DNA.
+Both are retroviruses of birds. A retrovirus copies its RNA genome into DNA and inserts that DNA, called the provirus, into the chromosomes of the cells it infects. An infected bird carries the provirus for life. That lifelong integration is part of why some retroviruses can cause cancer, and it is also what makes them detectable: a small blood sample holds enough infected cells to find the viral DNA.
 
 **Reticuloendotheliosis virus (REV)** infects a wide range of birds, including chickens, turkeys, ducks and prairie chickens. It can weaken the immune system and sometimes causes tumors. REV can also insert itself into the genome of fowlpox virus, a common poxvirus of birds, so a fowlpox infection can carry REV along with it.
 

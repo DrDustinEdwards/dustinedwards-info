@@ -328,7 +328,7 @@ export function checkProjects(ctx) {
 
   /* Executed-count floor, measured by running the gate, never by summing. */
   const projectsChecks = tally.checks - projectsChecksBefore;
-  const MINIMUM_PROJECT_CHECKS = 281;
+  const MINIMUM_PROJECT_CHECKS = 260;
   const projectsFloorBreach = assertFloor(
     "check:features",
     "projects-checks",

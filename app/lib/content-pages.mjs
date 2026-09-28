@@ -52,6 +52,25 @@ export function contentPageFile(path) {
   return `${path.slice(1).replaceAll("/", "-")}.md`;
 }
 
+/**
+ * The markdown twin's URL: the page path plus `.md`. Not `contentPageFile`, which is the repo filename.
+ *
+ * @param {string} path
+ */
+export function contentPageMarkdownPath(path) {
+  return `${path}.md`;
+}
+
+/**
+ * The twin a machine reads. The HTML page's h1 is not in the source body, so the title is the first line.
+ *
+ * @param {{ title: string, markdown: string }} page
+ */
+export function contentPageMarkdownBody(page) {
+  const body = String(page.markdown ?? "").replace(/^\n+/, "");
+  return `# ${page.title}\n\n${body}`;
+}
+
 /** Google clips near these; the build refuses longer ones rather than ship a clipped result. */
 export const SEO_TITLE_MAX = 60;
 export const DESCRIPTION_MAX = 155;
