@@ -99,11 +99,14 @@ function renderedRules(html) {
   return JSON.parse(m[1])[DOCUMENT_ACTION];
 }
 
-test("every header link is site-absolute, so it resolves the same on every page", () => {
+test("every header link is site-absolute or a full https address, so it resolves the same on every page", () => {
   const hrefs = anchorHrefs(renderHeader("/writing/ten-years-on-cloudflare"));
   assert.ok(hrefs.length >= 5, `the header rendered ${hrefs.length} links`);
   for (const href of hrefs) {
-    assert.match(href, /^\/(?!\/)/, `${href} is not a site-absolute path`);
+    // Another site (the About menu's CV is the Google Doc's PDF export) is a full https address; everything
+    // on this site is a path from the root, never relative.
+    if (href.startsWith("https://")) continue;
+    assert.match(href, /^\/(?!\/)/, `${href} is neither a site-absolute path nor a full https address`);
   }
 });
 
