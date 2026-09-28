@@ -272,7 +272,7 @@ describe("/api/health", () => {
   });
 });
 
-describe("the home health tile", () => {
+describe("the colophon health tile", () => {
   it("reads a FAILED KV read as unreadable, not as a missing snapshot", async () => {
     const brokenKv = {
       get: async () => {

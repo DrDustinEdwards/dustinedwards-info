@@ -7,13 +7,13 @@ import { BASE, FETCH_TIMEOUT_MS, ok, skip } from "../harness.mjs";
 
 /*
  * `/api/health` is hit first to exercise the snapshot write; the read is
- * cache-busted because the home page is shared-cached.
+ * cache-busted because the colophon is shared-cached.
  */
 /** @param {import("../harness.mjs").CaseContext} ctx */
 export async function run({ page }) {
   /** @param {string} tag */
   const readTile = async (tag) => {
-    await page.goto(`${BASE}/?browsercase=health-${tag}-${Date.now()}`, {
+    await page.goto(`${BASE}/colophon?browsercase=health-${tag}-${Date.now()}`, {
       waitUntil: "networkidle0",
     });
     const read = await page.evaluate((factSelector) => {
@@ -71,9 +71,9 @@ export async function run({ page }) {
   }
 
   ok(
-    "the home page carries a health verdict rather than a placeholder",
+    "the colophon carries a health verdict rather than a placeholder",
     after.present,
-    `no element on / carries data-health-age. The tile is in its "missing" ` +
+    `no element on /colophon carries data-health-age. The tile is in its "missing" ` +
       `state, which means the snapshot was not written by the request above ` +
       `or was not read by the loader. Check the APP_KV binding and ` +
       `app/lib/health/snapshot.server.ts.`,
@@ -87,7 +87,7 @@ export async function run({ page }) {
   );
 
   ok(
-    "the home page's health verdict is inside one poll interval",
+    "the colophon's health verdict is inside one poll interval",
     Number.isInteger(after.age) && Number(after.age) < HEALTH_POLL_INTERVAL_SECONDS,
     `the tile reports a verdict ${after.age} second(s) old, which is not under ` +
       `the ${HEALTH_POLL_INTERVAL_SECONDS}s poll interval.`,
@@ -96,7 +96,7 @@ export async function run({ page }) {
   /* Skipped with no first reading: an absent number would pass vacuously. */
   if (before.present && Number.isInteger(before.age)) {
     ok(
-      "calling /api/health made the home page's verdict NEWER",
+      "calling /api/health made the colophon's verdict NEWER",
       isNewer(after),
       `the tile reported a snapshot written at ` +
         `${new Date(writtenAtMs(before)).toISOString()} before the call and ` +
@@ -112,7 +112,7 @@ export async function run({ page }) {
     );
   } else {
     skip(
-      "calling /api/health made the home page's verdict NEWER",
+      "calling /api/health made the colophon's verdict NEWER",
       `the first read found no verdict (a genuinely empty KV), so there is no ` +
         `earlier age to compare against. The absolute assertions above still ` +
         `prove a snapshot was written and read; only the differential is ` +

@@ -354,7 +354,7 @@ line means anything. Until then this row is a plan, not a destination.
 the home page and `/api/health`. If UptimeRobot says up and you say down, the
 problem is between you and the site rather than in it.
 
-**The health snapshot** is what the home page tile reads, and its AGE is the
+**The health snapshot** is what the colophon tile reads, and its AGE is the
 watchdog's liveness. A tile saying "stale" means the poller stopped, which is a
 different problem from a check failing.
 

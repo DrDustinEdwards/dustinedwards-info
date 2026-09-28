@@ -1,5 +1,10 @@
 import { Link } from "react-router";
 
+import { EvidenceRow } from "~/components/evidence-row";
+import { getEnv } from "~/lib/context";
+import { readHealthTile } from "~/lib/health/snapshot.server";
+import type { Route } from "./+types/colophon";
+
 import features from "../../content/features.json";
 import {
   COLOPHON_DESCRIPTION,
@@ -16,15 +21,28 @@ import {
 } from "~/lib/colophon-sections.mjs";
 import stack from "../../content/generated/stack.json";
 import { PageShell } from "~/components/page-shell";
-import { publicHtmlHeaders, SITE,
+import { HEALTH_EDGE_CACHE_CONTROL, publicHtmlHeaders, SITE,
   pageMeta,
 } from "~/lib/seo";
 
+import "~/styles/evidence-row.css";
 import "~/styles/prose.css";
 
-/** Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. */
+/**
+ * Publicly cacheable for cookieless readers only; workers/app.ts downgrades the rest. The short edge
+ * policy is for the health tile.
+ */
 export function headers() {
-  return publicHtmlHeaders();
+  return publicHtmlHeaders(undefined, HEALTH_EDGE_CACHE_CONTROL);
+}
+
+/**
+ * The cached page must not lie: only a `fresh` verdict shows a ratio, with its age in
+ * `data-health-age`. Nothing here starts a health run: a Worker fetching its own public URL is an
+ * edge round trip naming an origin that changes at cutover.
+ */
+export async function loader({ context }: Route.LoaderArgs) {
+  return { health: await readHealthTile(getEnv(context)) };
 }
 
 /**
@@ -119,10 +137,38 @@ function AnchorItem({ anchor }: { anchor: Anchor }) {
   );
 }
 
-export default function Colophon() {
+export default function Colophon({ loaderData }: Route.ComponentProps) {
+  const { health } = loaderData;
+  const gates = stack.gates.length;
+  /*
+   * `missing` and `stale` show no ratio: a number beside "health checks passing" is read as the
+   * current answer whatever sentence sits under it.
+   */
+  const healthValue =
+    health.state === "fresh" ? `${health.total - health.failed}/${health.total}` : "--";
+  const healthAge = "ageSeconds" in health ? String(health.ageSeconds) : undefined;
+
   return (
     <PageShell>
       <h1 className="page-title">{COLOPHON_TITLE}</h1>
+
+      {/* `data-health-age` is in seconds: `check:browser` and `verify-live` read the attribute, not the sentence. */}
+      <div className="colophon-evidence">
+        <EvidenceRow
+          facts={[
+            <a href="#bindings">{stack.bindings.length} resources</a>,
+            <a href="#gates">
+              {gates} {gates === 1 ? "check" : "checks"}
+            </a>,
+            <span className="evidence-health" data-health-age={healthAge}>
+              <Link to="/api/health">
+                {/* A failed read says so; "--" is kept for a snapshot that was never written or is too old. */}
+                {health.state === "unreadable" ? "health status unreadable" : `${healthValue} passing`}
+              </Link>
+            </span>,
+          ]}
+        />
+      </div>
 
       <div className="prose">
         <p>{COLOPHON_VERSIONS}</p>

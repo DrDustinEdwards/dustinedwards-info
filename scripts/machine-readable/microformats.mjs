@@ -8,6 +8,7 @@ import { postLoaderData } from "../lib/route-fixtures.mjs";
 import {
   POSTS_PER_PAGE,
   pageCount,
+  picksFirst,
   splitFeatured,
   startHere,
 } from "../../app/lib/blog-listing.mjs";
@@ -418,7 +419,7 @@ assert(
 );
 
 const homeFeaturedRows = ordered.filter((/** @type {any} */ p) => p.featured);
-const homeOtherRows = ordered.filter((/** @type {any} */ p) => !p.featured);
+const homeOtherRows = picksFirst(ordered.filter((/** @type {any} */ p) => !p.featured));
 const { featured: homeFeatured, recent: homeRecent } = startHere(
   homeFeaturedRows,
   homeOtherRows,
@@ -436,11 +437,13 @@ const homeHtml = await renderRoute(homeModule, {
   path: "/",
   url: "/",
   loaderData: {
-    gates: 0,
     posts: ordered.length,
     featured: homeFeatured,
     recent: homeRecent,
-    health: { state: "missing", total: 0, failed: 0, ageSeconds: 0, readAt: "" },
+    papers: [],
+    paperCount: 0,
+    discovery: { researchers: 0, cohorts: 0, since: 0 },
+    podcast: null,
   },
 });
 const home = mf2(homeHtml, { baseUrl: `${SITE_ORIGIN}/` });

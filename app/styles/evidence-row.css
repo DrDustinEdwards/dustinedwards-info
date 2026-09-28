@@ -30,3 +30,12 @@
   font-size: 0.8125rem;
   line-height: 1.5;
 }
+
+.evidence-health {
+  white-space: nowrap;
+}
+
+/* The colophon's row carries the site-health tile, under the page title. */
+.colophon-evidence {
+  margin-block: 1.5rem 2rem;
+}

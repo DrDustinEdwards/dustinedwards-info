@@ -54,6 +54,28 @@ export type NavItem = { to: string; label: string; menu?: Menu };
 const CV_PDF =
   "https://docs.google.com/document/d/123n-n-ViE-OyUUqIjEY4byMVVUvfK8BjdNCNt-Gm7GQ/export?format=pdf";
 
+/** The three research areas, in the Research menu and on the home page. */
+export const RESEARCH_AREAS: MenuLink[] = [
+  {
+    to: "/research/retroviruses",
+    label: "Retroviruses",
+    description: "HTLV-1, REV and LPDV",
+    icon: "retroviruses",
+  },
+  {
+    to: "/research/bacteriophages",
+    label: "Bacteriophages",
+    description: "Genomics, structure and host biology",
+    icon: "bacteriophages",
+  },
+  {
+    to: "/research/science-education",
+    label: "Science education",
+    description: "SEA-PHAGES and course-based research",
+    icon: "science-education",
+  },
+];
+
 const RESEARCH: Menu = {
   id: "research",
   head: { to: "/research", label: "All research", description: "Areas, phages, protocols and publications" },
@@ -62,26 +84,7 @@ const RESEARCH: Menu = {
       label: "Research areas",
       sections: [
         {
-          links: [
-            {
-              to: "/research/retroviruses",
-              label: "Retroviruses",
-              description: "HTLV-1, REV and LPDV",
-              icon: "retroviruses",
-            },
-            {
-              to: "/research/bacteriophages",
-              label: "Bacteriophages",
-              description: "Genomics, structure and host biology",
-              icon: "bacteriophages",
-            },
-            {
-              to: "/research/science-education",
-              label: "Science education",
-              description: "SEA-PHAGES and course-based research",
-              icon: "science-education",
-            },
-          ],
+          links: RESEARCH_AREAS,
         },
       ],
     },

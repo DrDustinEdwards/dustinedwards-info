@@ -14,7 +14,14 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm";
-import { HOME_CARDS, POSTS_PER_PAGE, pageCount, startHere } from "../lib/blog-listing.mjs";
+import {
+  HOME_CARDS,
+  HOME_PICKS,
+  POSTS_PER_PAGE,
+  pageCount,
+  picksFirst,
+  startHere,
+} from "../lib/blog-listing.mjs";
 import { PUBLISHED_STATUS } from "../lib/search/visibility.mjs";
 import { seriesSlug } from "../lib/series-path.mjs";
 import { timed, type Timings } from "../lib/timing";
@@ -241,7 +248,7 @@ export async function listBlogPosts(
   };
 }
 
-/** The featured post leads, then the newest others; with nothing featured the newest leads. */
+/** The featured post leads, then the hand-picked others, then the newest; with nothing featured the first of those leads. */
 export async function listHomeStartHere(
   env: Env,
   options: { cards?: number; timings?: Timings } = {},
@@ -251,7 +258,7 @@ export async function listHomeStartHere(
   const cards = Math.max(1, options.cards ?? HOME_CARDS);
 
   /* `cards` others, not `cards - 1`: the extra row leads when nothing is featured. */
-  const [featuredRows, otherRows, countRows] = await timed(options.timings, "d1_batch", () =>
+  const [featuredRows, pickedRows, newestRows, countRows] = await timed(options.timings, "d1_batch", () =>
     db.batch([
       db
         .select(postCard)
@@ -259,6 +266,10 @@ export async function listHomeStartHere(
         .where(and(isBlogPost(), eq(posts.featured, true)))
         .orderBy(desc(posts.publishAt), desc(posts.id))
         .limit(1),
+      db
+        .select(postCard)
+        .from(posts)
+        .where(and(isBlogPost(), eq(posts.featured, false), inArray(posts.slug, HOME_PICKS))),
       db
         .select(postCard)
         .from(posts)
@@ -270,6 +281,7 @@ export async function listHomeStartHere(
   );
 
   /* Which list leads is `startHere`'s rule, shared with `check:machine-readable`. */
+  const otherRows = picksFirst([...pickedRows, ...newestRows]);
   const { featured, recent } = startHere(featuredRows, otherRows, cards);
 
   return { featured, recent, total: countRows[0]?.total ?? 0 };
