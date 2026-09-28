@@ -16,4 +16,7 @@ itself is checked against its own source before it can deploy.
 The two halves are the same habit. A result nobody can reproduce is a story,
 and a site that cannot check its own claims is a brochure.
 
+My [CV](/cv) lists my appointments, education, publications, grants, teaching
+and service.
+
 You can reach me at [email@dustinedwards.info](mailto:email@dustinedwards.info).

@@ -49,6 +49,8 @@ export default [
   // route's, which check:headers reads per file. /projects 301s here (app/lib/path-moves.mjs).
   route("software/*", "routes/software.tsx"),
   route("about", "routes/about.tsx"),
+  // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
+  route("cv", "routes/cv.tsx"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),
   route("privacy", "routes/privacy.tsx"),

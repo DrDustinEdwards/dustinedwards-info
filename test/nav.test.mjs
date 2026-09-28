@@ -50,7 +50,7 @@ test("About shows CV and Contact before any interest page exists", () => {
   const links = hrefs(about);
   assert.ok(links.includes("/about"));
   assert.ok(links.includes("/contact"));
-  assert.ok(links.some((to) => to.startsWith("https://docs.google.com/")));
+  assert.ok(links.includes("/cv"));
   assert.ok(!links.some((to) => to.startsWith("/interests/")));
 });
 
