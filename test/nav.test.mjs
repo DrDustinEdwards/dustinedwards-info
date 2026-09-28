@@ -79,4 +79,9 @@ test("the Research panel's facts are right and the guide is at its canonical add
   if (byLabel.has("Retroviruses")) assert.equal(byLabel.get("Retroviruses")?.description, "HTLV-1, REV and LPDV");
   if (byLabel.has("Phage discovery guide")) assert.equal(byLabel.get("Phage discovery guide")?.to, "/teaching/phage-discovery");
   if (byLabel.has("COI primers")) assert.equal(byLabel.get("COI primers")?.aside, "LCO1490 · HCO2198");
+  const protocols = links.filter((link) => link.to.startsWith("/research/protocols"));
+  assert.deepEqual(
+    protocols.map((link) => ({ to: link.to, label: link.label })),
+    [{ to: "/research/protocols", label: "Protocols: Lab methods and primer library" }],
+  );
 });

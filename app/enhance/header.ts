@@ -3,9 +3,11 @@ const MOBILE = "(max-width: 43.99rem)";
 // A pointer that hovers, so a touch screen's synthesized hover never opens a panel under a tap.
 const HOVER = "(hover: hover) and (pointer: fine)";
 
-// The menu design's timings: a pass over a word opens nothing, and a short slip off it closes nothing.
-const OPEN_AFTER = 500;
-const CLOSE_AFTER = 500;
+// Hover opens at once and moving to another word switches at once; nothing waits on intent and nothing
+// animates the card in. The one wait is the close grace: leaving the word or its card starts it, and
+// entering the word, its card, or another word ends it, so the pointer can cross the header's foot
+// between the word and the card. Grace is not motion, so reduced motion keeps it.
+const CLOSE_GRACE = 150;
 
 const RETURN_AFTER = 8;
 
@@ -21,11 +23,19 @@ function isShowing(element: HTMLElement) {
   return element.matches(":popover-open");
 }
 
-/** Whether `p` lies inside the triangle `a b c`: the same side of all three edges. */
-function inTriangle(p: DOMPointReadOnly, a: DOMPointReadOnly, b: DOMPointReadOnly, c: DOMPointReadOnly) {
-  const side = (u: DOMPointReadOnly, v: DOMPointReadOnly) => (v.x - u.x) * (p.y - u.y) - (v.y - u.y) * (p.x - u.x);
-  const [ab, bc, ca] = [side(a, b), side(b, c), side(c, a)];
-  return (ab >= 0 && bc >= 0 && ca >= 0) || (ab <= 0 && bc <= 0 && ca <= 0);
+/*
+ * While a card or the phone Menu is open, the page under it is inert: nothing there takes a click,
+ * focus or a screen reader's cursor, and the header stays live. Every way anything opens or closes
+ * ends here, and it reads what is open rather than being told, so it cannot be left stuck.
+ */
+function syncPage() {
+  const element = nav();
+  const open =
+    (element !== null && isShowing(element)) ||
+    Array.from(document.querySelectorAll<HTMLElement>("[data-nav-panel]")).some(isShowing);
+  for (const region of document.querySelectorAll<HTMLElement>("#main, .site-shell-footer")) {
+    region.toggleAttribute("inert", open);
+  }
 }
 
 /*
@@ -42,6 +52,7 @@ function enhanceMenu(element: HTMLElement) {
 
   element.addEventListener("toggle", () => {
     sync();
+    syncPage();
     if (isShowing(element)) document.documentElement.removeAttribute("data-header-hidden");
   });
 
@@ -66,6 +77,9 @@ function enhanceMenu(element: HTMLElement) {
  * Each chevron's panel is a popover it opens with no script. On a wide screen this adds hover, a click
  * that pins the panel, Escape back to the chevron, and aria-expanded; on a phone, where the panels sit
  * inside the Menu, the chevron expands its section in place instead.
+ *
+ * Each panel is a card hung from its own word (chrome-nav.css). It shows whole on the frame it opens,
+ * with no grow or fade, and switching to another word swaps cards in that same frame.
  */
 function enhanceMenus() {
   const mobile = window.matchMedia(MOBILE);
@@ -79,19 +93,45 @@ function enhanceMenus() {
   });
 
   let pinned: Menu | null = null;
-  let openTimer = 0;
   let closeTimer = 0;
-  // Where the pointer left the word of the open panel: one corner of the triangle it may cross.
-  let exit: DOMPointReadOnly | null = null;
+  let lastX = 0;
+  let lastY = 0;
 
   const isOpen = (menu: Menu) =>
     mobile.matches ? menu.item.hasAttribute("data-expanded") : isShowing(menu.panel);
   const sync = (menu: Menu) => menu.chevron.setAttribute("aria-expanded", String(isOpen(menu)));
   const showing = () => menus.find((menu) => isShowing(menu.panel));
 
-  const clearTimers = () => {
-    window.clearTimeout(openTimer);
+  const cancelClose = () => {
     window.clearTimeout(closeTimer);
+    closeTimer = 0;
+  };
+
+  /*
+   * Where anchor positioning is missing, the card's x from the word's box, held inside the header's
+   * inset as the stylesheet's clamp does. Where it exists the stylesheet owns x and this writes nothing.
+   */
+  const anchored = CSS.supports("anchor-name: --a") && CSS.supports("anchor-scope: --a");
+  const place = (menu: Menu) => {
+    if (anchored || mobile.matches) return;
+    const header = document.querySelector<HTMLElement>("[data-site-header]");
+    const inset = header ? parseFloat(getComputedStyle(header).paddingInlineStart) : 0;
+    const pad = parseFloat(getComputedStyle(menu.panel).paddingInlineStart);
+    const right = document.documentElement.clientWidth - menu.panel.offsetWidth - inset;
+    const x = Math.max(inset, Math.min(menu.item.getBoundingClientRect().left - pad, right));
+    menu.panel.style.setProperty("--nav-card-x", `${x}px`);
+  };
+
+  const rectHas = (rect: DOMRect, x: number, y: number) =>
+    x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+  // The word, its card, and the strip of header between them, where a pointer resting on its way down
+  // is still on its way.
+  const overOwn = (menu: Menu, x: number, y: number) => {
+    const item = menu.item.getBoundingClientRect();
+    const box = menu.panel.getBoundingClientRect();
+    if (rectHas(item, x, y) || rectHas(box, x, y)) return true;
+    return x >= item.left && x <= item.right && y >= item.bottom - 2 && y <= box.top + 2;
   };
 
   /*
@@ -99,16 +139,31 @@ function enhanceMenus() {
    * sync at once: the toggle event that also syncs arrives a task later, after a reader could look.
    */
   const show = (menu: Menu, pin: boolean) => {
-    clearTimers();
-    if (!isShowing(menu.panel)) menu.panel.showPopover();
+    cancelClose();
+    if (!isShowing(menu.panel)) {
+      menu.panel.showPopover();
+      place(menu);
+    }
     pinned = pin ? menu : null;
     menus.forEach(sync);
+    syncPage();
   };
 
   const hide = (menu: Menu) => {
-    clearTimers();
+    cancelClose();
     if (isShowing(menu.panel)) menu.panel.hidePopover();
     sync(menu);
+    syncPage();
+  };
+
+  const scheduleClose = (menu: Menu) => {
+    cancelClose();
+    closeTimer = window.setTimeout(() => {
+      closeTimer = 0;
+      if (pinned === menu || !isShowing(menu.panel)) return;
+      if (overOwn(menu, lastX, lastY)) return;
+      hide(menu);
+    }, CLOSE_GRACE);
   };
 
   for (const menu of menus) {
@@ -118,6 +173,12 @@ function enhanceMenus() {
     menu.panel.addEventListener("toggle", () => {
       if (!isShowing(menu.panel) && pinned === menu) pinned = null;
       sync(menu);
+      syncPage();
+    });
+
+    // A chosen link leaves the page, and a page restored from the back/forward cache would still show the card.
+    menu.panel.addEventListener("click", (event) => {
+      if ((event.target as Element | null)?.closest("a") && isShowing(menu.panel)) hide(menu);
     });
 
     // Cancelled, so the popover's own toggle never runs: a click on a panel hover opened pins it open.
@@ -132,39 +193,23 @@ function enhanceMenus() {
       else show(menu, true);
     });
 
+    // The card is inside its item, so this fires on the word and on the card alike: open or keep it.
     menu.item.addEventListener("pointerenter", (event) => {
       if (event.pointerType !== "mouse" || !hover.matches || mobile.matches) return;
-      const open = showing();
-      // Back on the word or on its panel, which is inside this item, so it is not closing after all.
-      if (open === menu) {
-        window.clearTimeout(closeTimer);
-        return;
-      }
-      if (pinned) return;
-      window.clearTimeout(openTimer);
-      if (!open) {
-        openTimer = window.setTimeout(() => show(menu, false), OPEN_AFTER);
-        return;
-      }
-      /*
-       * Another panel is open. Along the row, move straight to this one; on the way down to the open
-       * panel, crossing this word is not a choice, so switch only if the pointer rests here.
-       */
-      const box = open.panel.getBoundingClientRect();
-      const here = new DOMPointReadOnly(event.clientX, event.clientY);
-      const heading =
-        exit !== null &&
-        inTriangle(here, exit, new DOMPointReadOnly(box.left, box.top), new DOMPointReadOnly(box.right, box.top));
-      if (heading) openTimer = window.setTimeout(() => show(menu, false), OPEN_AFTER);
+      lastX = event.clientX;
+      lastY = event.clientY;
+      if (showing() === menu) cancelClose();
       else show(menu, false);
     });
 
     menu.item.addEventListener("pointerleave", (event) => {
       if (event.pointerType !== "mouse" || mobile.matches) return;
-      window.clearTimeout(openTimer);
+      lastX = event.clientX;
+      lastY = event.clientY;
       if (!isShowing(menu.panel) || pinned === menu) return;
-      exit = new DOMPointReadOnly(event.clientX, event.clientY);
-      closeTimer = window.setTimeout(() => hide(menu), CLOSE_AFTER);
+      const next = event.relatedTarget;
+      if (next instanceof Node && menu.item.contains(next)) return;
+      scheduleClose(menu);
     });
 
     // Tabbing out of the word, chevron and panel closes it, as the Menu does (WCAG 2.4.11).
@@ -174,6 +219,31 @@ function enhanceMenus() {
       hide(menu);
     });
   }
+
+  // Where the pointer is when the grace runs out: on its way down the strip under the word, the card stays.
+  document.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse") return;
+    lastX = event.clientX;
+    lastY = event.clientY;
+  });
+
+  // The pointer left the page. A move onto the panel also leaves elements under it, and the panel is
+  // in the top layer, so only a point outside the viewport counts as leaving.
+  document.documentElement.addEventListener("pointerleave", (event) => {
+    if (event.pointerType !== "mouse" || mobile.matches) return;
+    if (event.relatedTarget instanceof Node) return;
+    if (
+      event.clientX >= 0 &&
+      event.clientY >= 0 &&
+      event.clientX <= window.innerWidth &&
+      event.clientY <= window.innerHeight
+    ) {
+      return;
+    }
+    const open = showing();
+    if (!open || pinned === open) return;
+    hide(open);
+  });
 
   // On the document, because a panel hover opened may have no focus inside it at all.
   document.addEventListener("keydown", (event) => {
@@ -185,6 +255,25 @@ function enhanceMenus() {
     open.chevron.focus();
   });
 
+  /*
+   * The veil takes the click. The popover's light dismiss already closes the card on it; this closes
+   * it where that does not run, and keeps the click from going anywhere else.
+   */
+  const veil = document.querySelector<HTMLElement>("[data-nav-veil]");
+  if (!veil) throw new Error("header: the nav menus are here but their veil is not");
+  veil.addEventListener("pointerdown", (event) => event.preventDefault());
+  veil.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const open = showing();
+    if (open) hide(open);
+  });
+
+  window.addEventListener("resize", () => {
+    const open = showing();
+    if (open) place(open);
+  });
+
   // Crossing the breakpoint changes what open means, so start the new layout with everything closed.
   mobile.addEventListener("change", () => {
     const element = nav();
@@ -194,6 +283,7 @@ function enhanceMenus() {
       menu.item.removeAttribute("data-expanded");
       sync(menu);
     }
+    syncPage();
   });
 }
 
@@ -248,6 +338,8 @@ const element = nav();
 if (element) {
   enhanceMenu(element);
   enhanceMenus();
+  // A page restored from the back/forward cache comes back as it was left; read it again.
+  window.addEventListener("pageshow", syncPage);
 }
 
 // Reduced motion gets no hiding at all, not a slower one: a jump without a transition is worse.

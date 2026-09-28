@@ -95,7 +95,7 @@ const RESEARCH: Menu = {
           links: [
             { to: "/research/publications", label: "Publications" },
             { to: "/research/phages", label: "Phages" },
-            { to: "/research/protocols", label: "Protocols" },
+            { to: "/research/protocols", label: "Protocols: Lab methods and primer library" },
             { to: "/research/tools", label: "Tools" },
           ],
         },

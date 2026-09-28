@@ -401,6 +401,20 @@ function contrastTierBlock(label, query, selector) {
         ` -> ${contrast(tier["--border"], base["--paper"]).toFixed(2)})`,
       contrast(tier["--border"], base["--paper"]) > contrast(base["--border"], base["--paper"]),
     );
+    // The strong edge rides the popover step (the header menu cards), so it is measured there.
+    assertPair(
+      `${mode} prefers-contrast: strong border on --surface-popover`,
+      tier["--border-strong"],
+      base["--surface-popover"],
+      UI,
+    );
+    assert(
+      `${mode} prefers-contrast raises the strong border` +
+        ` (${contrast(base["--border-strong"], base["--surface-popover"]).toFixed(2)}` +
+        ` -> ${contrast(tier["--border-strong"], base["--surface-popover"]).toFixed(2)})`,
+      contrast(tier["--border-strong"], base["--surface-popover"]) >
+        contrast(base["--border-strong"], base["--surface-popover"]),
+    );
     // Which value the tier's border takes is a design default; that it clears 3:1 and rises is asserted above.
   }
 }
