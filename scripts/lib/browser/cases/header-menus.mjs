@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, FETCH_TIMEOUT_MS, ok, pollUntil, skip } from "../harness.mjs";
+import { BASE, FETCH_TIMEOUT_MS, menuUnrolled, ok, pollUntil, skip } from "../harness.mjs";
 
 /*
  * The header's mega menus (app/components/site-header.tsx, app/enhance/header.ts): a disclosure
@@ -195,6 +195,7 @@ export async function run({ browser }) {
     await page.setViewport({ width: 390, height: 844 });
     await page.goto(`${BASE}/`, { waitUntil: "networkidle0" });
     await page.click("[data-header-menu]");
+    const unrolled = await menuUnrolled(page);
     await page.click(CHEVRON);
     const phone = await page.evaluate((panel, chevron) => {
       const p = /** @type {HTMLElement} */ (document.querySelector(panel));
@@ -211,8 +212,8 @@ export async function run({ browser }) {
     const collapsed = await page.evaluate((chevron) => document.querySelector(chevron)?.getAttribute("aria-expanded"), CHEVRON);
     ok(
       "on a phone the Menu opens, a chevron shows its section with rows at least 44px, and collapses it again",
-      phone.menuOpen && phone.menuExpanded === "true" && phone.expanded === "true" && phone.shown && phone.shortest >= 44 && collapsed === "false",
-      `${JSON.stringify(phone)}, then aria-expanded ${collapsed}`,
+      unrolled && phone.menuOpen && phone.menuExpanded === "true" && phone.expanded === "true" && phone.shown && phone.shortest >= 44 && collapsed === "false",
+      `${JSON.stringify({ unrolled, ...phone })}, then aria-expanded ${collapsed}`,
     );
   } finally {
     await page.close();

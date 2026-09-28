@@ -1,7 +1,7 @@
 /// <reference lib="dom" />
 /// <reference lib="dom.iterable" />
 
-import { BASE, bundleFetches, clickOrFail, ok, pollUntil, report, skip } from "../harness.mjs";
+import { BASE, bundleFetches, clickOrFail, menuUnrolled, ok, pollUntil, report, skip } from "../harness.mjs";
 
 /**
  * A post page's controls: the theme toggle with and without script, the scriptless header menu, the
@@ -253,9 +253,8 @@ export async function run({ page, browser }, { codePost, probedPost }) {
           ".site-header-menu-button",
           "the scriptless header menu button is present to click",
         );
-        const isOpen = await noScript.evaluate(() =>
-          Boolean(document.querySelector("[data-site-nav]")?.matches(":popover-open")),
-        );
+        // Open and done unrolling, or the link click below lands outside it and dismisses it.
+        const isOpen = await menuUnrolled(noScript);
         ok(
           "the header menu OPENS with no script, because the nav is the button's popover",
           opened && isOpen,

@@ -90,6 +90,25 @@ export async function pollUntil(read, done, { tries = 25, everyMs = 200, sleepFi
 }
 
 /**
+ * Waits for the phone Menu to finish unrolling (chrome-nav.css), and says whether it did. Until its
+ * clip finishes, a point inside the nav is outside what it paints, so a click there is an outside
+ * click that light-dismisses the Menu. A reader taps what they can see, so a case waits for it too.
+ *
+ * @param {import("puppeteer").Page} target
+ * @returns {Promise<boolean>} whether the Menu is open with its transitions finished
+ */
+export const menuUnrolled = (target) =>
+  pollUntil(
+    () =>
+      target.evaluate(() => {
+        const nav = document.querySelector("[data-site-nav]");
+        return Boolean(nav?.matches(":popover-open") && nav.getAnimations().every((a) => a.playState === "finished"));
+      }),
+    Boolean,
+    { everyMs: 50, sleepFirst: false },
+  );
+
+/**
  * Visits each path until one carries `selector`, and leaves the page there.
  *
  * @param {import("puppeteer").Page} target
