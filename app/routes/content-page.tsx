@@ -5,7 +5,7 @@ import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { contentPageMarkdownPath, contentPageTrail, protocolNeighbors } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
-import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 import generated from "../../content/generated/pages.json";
 
@@ -21,7 +21,33 @@ import "~/styles/prose.css";
  * The markdown twin is a static asset at the page path plus `.md` (build:content), not a second copy in
  * this bundle: pages.json keeps only what the route renders.
  */
-type ContentPage = { path: string; title: string; seoTitle: string; description: string; html: string };
+type ContentPage = {
+  path: string;
+  title: string;
+  seoTitle: string;
+  description: string;
+  html: string;
+  /** Set on the Software pages. Research and Teaching pages omit it. */
+  schemaType?: string;
+  productUrl?: string;
+  codeRepository?: string;
+  applicationCategory?: string;
+};
+
+/** The type comes from the page, so a WebSite is not emitted as an application. */
+function pageJsonLd(page: ContentPage) {
+  if (!page.schemaType) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": page.schemaType,
+    name: page.title,
+    description: page.description,
+    url: page.productUrl ?? `${SITE_ORIGIN}${page.path}`,
+    author: { "@type": "Person", name: SITE.name },
+    ...(page.codeRepository ? { codeRepository: page.codeRepository } : {}),
+    ...(page.applicationCategory ? { applicationCategory: page.applicationCategory } : {}),
+  };
+}
 
 const PAGES = new Map((generated.pages as ContentPage[]).map((page) => [page.path, page]));
 
@@ -56,15 +82,24 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const titleOf = (path: string) => PAGES.get(path)?.title;
   const trail = contentPageTrail(page, titleOf);
   const neighbors = protocolNeighbors(page.path);
+  const schema = pageJsonLd(page);
   return (
     <PageShell
       trail={
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)),
-          }}
-        />
+        <>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)),
+            }}
+          />
+          {schema ? (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
+            />
+          ) : null}
+        </>
       }
     >
       <Breadcrumb trail={trail} />

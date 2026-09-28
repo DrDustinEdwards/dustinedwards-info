@@ -48,22 +48,22 @@ ok(
 );
 ok("content/llms.txt ends with a newline", fileText.endsWith("\n"));
 
-// The Research and Teaching pages have no twin, so llms.txt naming them is how an agent is told they
-// exist without a link on the page. Derived from the list the routes and the sitemap read, both ways.
+// Derived from the list the routes and the sitemap read, both ways. A page missing here is a page
+// an agent is not told about, twin or not.
 {
   const listed = new Set(
-    [...fileText.matchAll(/^\s{2}(\/(?:research|teaching)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
+    [...fileText.matchAll(/^\s{2}(\/(?:research|teaching|software)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
   );
   const unlisted = CONTENT_PAGE_PATHS.filter((path) => !listed.has(path));
   ok(
-    `llms.txt lists every Research and Teaching page (${CONTENT_PAGE_PATHS.length})`,
+    `llms.txt lists every Research, Teaching and Software page (${CONTENT_PAGE_PATHS.length})`,
     unlisted.length === 0,
     `absent from ${LLMS_PATH}: ${unlisted.join(", ")}`,
   );
   const known = new Set(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS));
   const stray = [...listed].filter((path) => !known.has(path));
   ok(
-    "llms.txt lists no Research or Teaching page CONTENT_PAGE_PATHS does not have",
+    "llms.txt lists no Research, Teaching or Software page CONTENT_PAGE_PATHS does not have",
     stray.length === 0,
     `listed but not a page: ${stray.join(", ")}`,
   );

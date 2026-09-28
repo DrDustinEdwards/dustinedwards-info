@@ -16,7 +16,16 @@ The hub is /teaching. Courses and guides: /teaching/phage-discovery, /teaching/v
 
 ## Software
 
-The index is /software. Product pages will be /software/{name} once those pages exist. They do not exist yet. /projects 301s to /software.
+The hub is /software. A page is /software/{name}. /projects 301s to /software.
+
+  /software
+  /software/foxhound
+  /software/foxing
+  /software/foxing-edu
+  /software/germomics
+  /software/capsid
+
+Products are Foxhound (https://foxhoundapp.com, replaces Recova), Foxing (https://foxing.app), and Foxing Edu, a separate product built on Foxing and sold to schools. No public address for Foxing Edu is recorded here. Sites are Germomics (https://germomics.com) and TXASM (https://txasm.org), which has no page on this site. Infrastructure is Capsid, and this site at /colophon. Lab tools are /research/tools. Carrel is a private writing hub and is not linked.
 
 ## Writing
 

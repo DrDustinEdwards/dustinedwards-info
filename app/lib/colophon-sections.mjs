@@ -161,7 +161,7 @@ export const SITE_OPERATION = Object.freeze([
     "site through a small keyed API.",
 ]);
 
-/** Carrel is deliberately not linked here: it sits behind a login, and the footer carries its link. */
+/** Carrel is named and not linked. No page, and no footer login. */
 export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
 
 export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);

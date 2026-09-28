@@ -1,5 +1,5 @@
 /**
- * The Research and Teaching pages: markdown in content/pages/, rendered at build time into
+ * The Research, Teaching and Software pages: markdown in content/pages/, rendered at build time into
  * content/generated/pages.json like the About page, and served by one route module. This list is the
  * one place their paths are named: app/routes.ts registers a route per entry, the sitemap lists each,
  * and the build refuses a markdown file whose path is not here or an entry with no file.
@@ -32,6 +32,12 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/teaching/phage-bioinformatics",
   "/teaching/central-dogma",
   "/teaching/study-skills",
+  "/software",
+  "/software/foxhound",
+  "/software/foxing",
+  "/software/foxing-edu",
+  "/software/germomics",
+  "/software/capsid",
 ]);
 
 /**
@@ -99,10 +105,11 @@ export function protocolNeighbors(path) {
 export const SEO_TITLE_MAX = 60;
 export const DESCRIPTION_MAX = 155;
 
-/** The two hubs, and the trail label each gives the pages under it. */
+/** The hubs, and the trail label each gives the pages under it. */
 const HUBS = /** @type {const} */ ([
   ["/research", "Research"],
   ["/teaching", "Teaching"],
+  ["/software", "Software"],
 ]);
 
 /**

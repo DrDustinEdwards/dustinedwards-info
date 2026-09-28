@@ -86,7 +86,7 @@ export function run(code) {
       "home.tsx",
       "about.tsx",
       "colophon.tsx",
-      "projects.tsx",
+      "software.tsx",
       /*
        * The publication index: its QUERY STRING is part of the key rather than a reason to refuse,
        * since the chips and the sort are GET parameters and nothing on it is reader-specific.

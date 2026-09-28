@@ -1,22 +1,21 @@
-// The projects roster: every card's shape, its metric, its citations, and the page that renders it.
+// The projects roster: every entry's shape, its metric and its citations. The public pages are content/pages.
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { isAllowedUrl } from "../../../app/lib/content/pipeline.mjs";
 import { PHAGE_YEARS } from "../../../app/data/phage-hunters.ts";
+import { CONTENT_PAGE_PATHS } from "../../../app/lib/content-pages.mjs";
 import {
   METRIC_DERIVATIONS,
   PROJECTS_URL,
   metricValue,
-  projectAnchor,
 } from "../../../app/lib/projects-page.mjs";
 import { assertFloor } from "../floor.mjs";
 import { checkRosterProse } from "./prose-numbers.mjs";
-import { codeOf, pageReadsItsList, pageRecordParity, root } from "./shared.mjs";
+import { codeOf, pageRecordParity, root } from "./shared.mjs";
 
 const PROJECTS_PATH = join(root, "content", "projects.json");
-const PROJECTS_ROUTE_PATH = join(root, "app", "routes", "projects.tsx");
 
 const REQUIRED = [
   "slug",
@@ -180,8 +179,8 @@ export function checkProjects(ctx) {
     ok(
       `${id} schemaType is one of ${SCHEMA_TYPES.join(", ")}`,
       SCHEMA_TYPES.includes(project.schemaType),
-      `got ${JSON.stringify(project.schemaType)}; the route emits this as the item's ` +
-        `@type and branches on it, so an unknown value is structured data nobody designed`,
+      `got ${JSON.stringify(project.schemaType)}; the roster only allows ` +
+        `${SCHEMA_TYPES.join(" or ")}, and a new type is a decision in this file`,
     );
 
     const metric = project.metric ?? {};
@@ -269,61 +268,74 @@ export function checkProjects(ctx) {
 
   checkRosterProse(ok, projects);
 
-  const projectsSource = codeOf(PROJECTS_ROUTE_PATH);
-  pageReadsItsList(ok, projectsSource, {
-    route: "projects.tsx",
-    list: "roster",
-    json: "projects.json",
-    reads: /import\s+projectsData\s+from\s+["'][^"']*content\/projects\.json["']/,
-    noun: "card",
-    anchorFn: "projectAnchor",
-    anchorModule: /from\s+["']~\/lib\/projects-page\.mjs["']/,
-  });
+  // The public pages are markdown. The roster above still has to be well-formed; it is not the page.
+  const SOFTWARE_PAGES = [
+    "/software",
+    "/software/foxhound",
+    "/software/foxing",
+    "/software/foxing-edu",
+    "/software/germomics",
+    "/software/capsid",
+  ];
+  for (const softwarePath of SOFTWARE_PAGES) {
+    ok(
+      `software page is listed: ${softwarePath}`,
+      CONTENT_PAGE_PATHS.includes(softwarePath),
+      "missing from CONTENT_PAGE_PATHS",
+    );
+    ok(`routes declare ${softwarePath}`, routes.has(softwarePath), "the splat did not expand this path");
+  }
 
-  /* Asserted on code: a field nothing renders passes every shape check. */
+  const readPage = (name) => readFileSync(join(root, "content", "pages", name), "utf8");
+  const hub = readPage("software.md");
   ok(
-    "the page computes derived metrics through metricValue",
-    /metricValue\(/.test(projectsSource),
-    "app/routes/projects.tsx must call the shared derivation, or a derived metric " +
-      "renders as undefined and the gate above is checking a value nobody sees",
+    "the hub names Products, Sites and Infrastructure",
+    hub.includes("## Products") && hub.includes("## Sites") && hub.includes("## Infrastructure"),
   );
+  ok("the hub links lab tools", hub.includes("](/research/tools)"));
   ok(
-    "the page does not implement a derivation itself",
-    !/METRIC_DERIVATIONS/.test(projectsSource),
-    "the route names METRIC_DERIVATIONS, so it holds a second way to compute a value " +
-      "the shared function already owns",
+    "the hub links TXASM outward and not to a local page",
+    hub.includes("https://txasm.org") && !hub.includes("](/software/txasm)"),
   );
+  ok("the hub sends this site to the colophon", hub.includes("](/colophon)"));
+  ok("the hub does not link the Capsid console", !hub.includes("/console"));
+  ok("the hub does not link a Recova URL", !/recova\.[a-z]/i.test(hub));
+  ok("the hub says Foxhound replaces Recova", hub.includes("replaces Recova"));
+
+  const foxhound = readPage("software-foxhound.md");
+  ok("Foxhound names its live URL", foxhound.includes("https://foxhoundapp.com"));
+  ok("Foxhound does not link a Recova URL", !/recova\.[a-z]/i.test(foxhound));
+
+  ok("Foxing names its live URL", readPage("software-foxing.md").includes("https://foxing.app"));
   ok(
-    "the page renders the notable list",
-    /project\.notable/.test(projectsSource),
-    "the manifest carries notable sentences the page never reads",
+    "Foxing Edu does not invent a domain",
+    !/https?:\/\//.test(readPage("software-foxing-edu.md")),
   );
+  ok("Germomics names its live URL", readPage("software-germomics.md").includes("https://germomics.com"));
+  const capsidPage = readPage("software-capsid.md");
   ok(
-    "the page renders the evidence list",
-    /project\.evidence/.test(projectsSource),
-    "the manifest carries citations the page never reads",
+    "Capsid names the roster repository",
+    capsidPage.includes("https://github.com/DrDustinEdwards/capsid-mcp"),
   );
+  ok("Capsid does not link the console", !capsidPage.includes("/console"));
+
+  const contentPageSource = codeOf(join(root, "app", "routes", "content-page.tsx"));
   ok(
-    "the page emits the declared schema type rather than a literal",
-    /"@type":\s*project\.schemaType/.test(projectsSource) &&
-      !/"@type":\s*"SoftwareApplication"/.test(projectsSource),
-    "the item's @type must come from the entry, or the roster page is emitted as an " +
-      "application again and the field is decoration",
-  );
-  /* Unbranched, a derived metric renders an empty `<time>`. */
-  ok(
-    "the page renders a provenance line for both metric forms",
-    /metric\.derived\s*!==\s*undefined/.test(projectsSource) &&
-      /dateTime=\{metric\.asOf\}/.test(projectsSource),
-    "both branches must be present: a derived metric says it was derived, a dated " +
-      "one renders its <time>",
+    "software pages emit @type from the page",
+    /"@type":\s*page\.schemaType/.test(contentPageSource) &&
+      !/"@type":\s*"SoftwareApplication"/.test(contentPageSource),
+    "the type has to come from the markdown, or every software page is emitted as an application",
   );
 
   const projectRecords = pageRecordParity(
     ctx,
-    "page:projects",
-    { kind: "project", page: "projects", item: "project", list: "roster" },
-    projects.map((/** @type {any} */ p) => ({ slug: p.slug, anchor: projectAnchor(p.slug) })),
+    "page:software",
+    { kind: "software", page: "software", item: "section", list: "hub" },
+    [
+      { slug: "products", anchor: "products" },
+      { slug: "sites", anchor: "sites" },
+      { slug: "infrastructure", anchor: "infrastructure" },
+    ],
   );
 
   /* Executed-count floor, measured by running the gate, never by summing. */

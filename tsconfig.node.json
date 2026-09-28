@@ -172,10 +172,8 @@
     // page's search records, and app/routes/colophon.tsx renders from the same
     // list, which is what stops an anchor existing in two places.
     "app/lib/colophon-sections.mjs",
-    // The projects roster's page descriptor, on exactly the same footing:
-    // build-content.mjs emits /projects' search records from it and
-    // app/routes/projects.tsx renders the card anchors from the same
-    // `projectAnchor`, so a record cannot cite a fragment the page omits.
+    // The roster's metric derivations. check:features computes them through
+    // metricValue, and the public Software pages are markdown, not this module.
     "app/lib/projects-page.mjs",
     // The theme resolver. workers/app.ts builds its cache key with it and
     // root.tsx writes data-theme from it, and test/theme.test.mjs reaches the

@@ -54,8 +54,10 @@
 # paper twins: derived, so a checkout builds them and git does not store a second copy of the prose.
 /public/research.md
 /public/teaching.md
+/public/software.md
 /public/research/**/*.md
 /public/teaching/**/*.md
+/public/software/**/*.md
 
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json
