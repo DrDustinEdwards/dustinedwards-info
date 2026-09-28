@@ -298,6 +298,14 @@
   color: var(--brand);
 }
 
+/* The sign-in lock: small and muted after the label, so the name still leads. */
+.footer-private-lock {
+  flex: none;
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
 .site-shell-footer-note {
   margin-block-start: var(--s-6);
   color: var(--text-secondary);

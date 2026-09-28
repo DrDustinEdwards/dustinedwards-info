@@ -89,23 +89,25 @@ export const SOCIAL_LINKS: (FooterLink & { mark: "germomics" | "x" })[] = [
   { to: GERMOMICS_X_URL, label: "X", external: true, mark: "x" },
 ];
 
-export type PrivateTool = FooterLink & { icon: "lamp" | "padlock" | "capsid"; name: string; hover?: string };
+export type PrivateTool = FooterLink & { icon: "lamp" | "gear" | "capsid"; name: string; hover?: string };
 
 /**
  * The three logins, the Workspace group in the grid's sixth slot. The accessible names say what each one is
- * for, and begin with the visible word so speech input still works. Admin is this site's sign-in page.
+ * for, begin with the visible word so speech input still works, and end with SIGN_IN_NOTE so a link read
+ * out of context still says it needs a sign-in (Dustin, 2026-09-28). Admin is this site's sign-in page.
  */
 export const TOOLS_HEADING = "Workspace";
+export const SIGN_IN_NOTE = "(requires sign-in)";
 export const PRIVATE_TOOLS: PrivateTool[] = [
   // Behind Cloudflare Access since 2026-09-26.
-  { to: "https://carrel.dustinedwards.info", label: "Carrel", name: "Carrel, writing", icon: "lamp", external: true },
-  { to: "/login", label: "Admin", name: "Admin, this site", icon: "padlock" },
+  { to: "https://carrel.dustinedwards.info", label: "Carrel", name: `Carrel, writing ${SIGN_IN_NOTE}`, icon: "lamp", external: true },
+  { to: "/login", label: "Admin", name: `Admin, this site ${SIGN_IN_NOTE}`, icon: "gear" },
   // Capsid's admin page, per its docs/console.md; GitHub login, one admin.
   {
     to: "https://capsid.dustin-edwards.workers.dev/console",
     label: "Portal",
-    // Dustin, 2026-09-28: the accessible name and the hover label both read "Capsid Portal".
-    name: "Capsid Portal",
+    // Dustin, 2026-09-28: the hover label reads "Capsid Portal"; the accessible name adds the sign-in note.
+    name: `Capsid Portal ${SIGN_IN_NOTE}`,
     hover: "Capsid Portal",
     icon: "capsid",
     external: true,
