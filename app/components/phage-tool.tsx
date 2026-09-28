@@ -1,7 +1,7 @@
 import { Fragment, type ReactNode } from "react";
 
 import { Enhance } from "~/components/enhance";
-import { TOOLS, resultView, runTool, toolValues, toolsOnPage, type ViewNode } from "~/lib/phage-tools.mjs";
+import { TOOLS, resultView, runTool, textParts, toolValues, toolsOnPage, type ViewNode } from "~/lib/phage-tools.mjs";
 
 import "~/styles/phage-tools.css";
 
@@ -62,7 +62,11 @@ export function PhageTools({ path, search }: { path: string; search: string }) {
                       />
                       {described ? (
                         <p id={hintId} className="phage-tool-hint">
-                          {field.hint}
+                          {field.hint
+                            ? textParts(field.hint).map((part, i) =>
+                                part.sup ? <sup key={i}>{part.text}</sup> : <Fragment key={i}>{part.text}</Fragment>,
+                              )
+                            : null}
                           {field.hint && field.source ? " " : null}
                           {field.source ? (
                             <>
