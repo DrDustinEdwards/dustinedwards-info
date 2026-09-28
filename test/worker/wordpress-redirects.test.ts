@@ -101,8 +101,8 @@ describe("pattern rules, on the apex host", () => {
     );
   });
 
-  it("the 2019 CV PDF goes to /about", async () => {
-    await expectMoved("/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/about");
+  it("the 2019 CV PDF goes to /cv", async () => {
+    await expectMoved("/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/cv");
   });
 
   it("every other upload answers 410", async () => {

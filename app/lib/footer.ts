@@ -71,6 +71,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     heading: "Site",
     items: [
       { to: "/about", label: "About" },
+      { to: "/cv", label: "CV" },
       { to: "/contact", label: "Contact" },
       { to: "/colophon", label: "Colophon" },
       { to: "/privacy", label: "Privacy" },

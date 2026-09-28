@@ -93,7 +93,7 @@ const PATTERNS = [
   (p) => (/^\/knowledge-base\/category(?:\/.*)?$/.test(p) ? moved("/research/protocols") : null),
   (p) => (/^\/(?:category|tag)(?:\/.*)?$/.test(p) ? GONE : null),
   (p) => (p === BAYLOR_PDF ? moved("/research/protocols/phage-dna-extraction") : null),
-  (p) => (p === CV_PDF ? moved("/about") : null),
+  (p) => (p === CV_PDF ? moved("/cv") : null),
   (p) => (p.startsWith("/wp-content/uploads/") ? GONE : null),
   // Nothing on the new site does these calculations (Dustin, 2026-09-27).
   (p) => (["/molarity-calculator", "/knowledge-base/metric-prefix"].includes(p) ? GONE : null),

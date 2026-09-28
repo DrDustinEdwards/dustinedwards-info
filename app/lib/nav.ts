@@ -50,10 +50,6 @@ export type Menu = {
 
 export type NavItem = { to: string; label: string; menu?: Menu };
 
-/** The CV until /cv exists: the Google Doc's always-current PDF export (cutover.md). */
-const CV_PDF =
-  "https://docs.google.com/document/d/123n-n-ViE-OyUUqIjEY4byMVVUvfK8BjdNCNt-Gm7GQ/export?format=pdf";
-
 /** The three research areas, in the Research menu and on the home page. */
 export const RESEARCH_AREAS: MenuLink[] = [
   {
@@ -144,7 +140,7 @@ const ABOUT: Menu = {
   id: "about",
   head: { to: "/about", label: "About" },
   beside: [
-    { to: CV_PDF, label: "CV" },
+    { to: "/cv", label: "CV" },
     { to: "/contact", label: "Contact" },
   ],
   columns: [

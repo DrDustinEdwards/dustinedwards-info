@@ -52,7 +52,7 @@ ok("content/llms.txt ends with a newline", fileText.endsWith("\n"));
 // an agent is not told about, twin or not.
 {
   const listed = new Set(
-    [...fileText.matchAll(/^\s{2}(\/(?:research|teaching|software)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
+    [...fileText.matchAll(/^\s{2}(\/(?:research|teaching|software|cv)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
   );
   const unlisted = CONTENT_PAGE_PATHS.filter((path) => !listed.has(path));
   ok(

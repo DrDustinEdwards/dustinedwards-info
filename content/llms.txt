@@ -33,7 +33,9 @@ An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesti
 
 ## About
 
-/about, /contact, /colophon and /privacy. The CV is the current Google Doc PDF export linked from the About menu until /cv exists.
+/about, /contact, /colophon and /privacy. The CV is /cv, with its markdown twin at /cv.md; the page links the current CV as a PDF.
+
+  /cv
 
 ## Markdown twins
 
