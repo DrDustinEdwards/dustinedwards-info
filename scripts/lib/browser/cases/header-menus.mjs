@@ -42,7 +42,7 @@ export async function run({ browser }) {
   const hrefs = [...new Set([...navHtml.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]))];
   ok(
     "the header nav is in the server HTML with its menu links as anchors",
-    hrefs.includes("/research") && hrefs.includes("/research/protocols/coi-primers") && hrefs.includes("/teaching/virus-isolation"),
+    hrefs.includes("/research") && hrefs.includes("/research/protocols") && hrefs.includes("/teaching/virus-isolation"),
     `found ${hrefs.length} href(s) in the served nav: ${hrefs.join(", ") || "none"}. A menu link that ` +
       `only script renders is one no crawler and no reader without script can follow.`,
   );
@@ -62,7 +62,8 @@ export async function run({ browser }) {
   }
   ok(
     `every one of the ${hrefs.length} header link(s) answers 200 on this build`,
-    hrefs.length > 20 && broken.length === 0,
+    // The header since #229 serves 18 links; fewer than 15 means a menu went missing, not a thin nav.
+    hrefs.length >= 15 && broken.length === 0,
     broken.length > 0
       ? `${broken.join(", ")}. A menu item stays out until its page exists (app/lib/nav.ts isLive).`
       : `only ${hrefs.length} link(s) found, so the sweep examined too little to mean anything`,
