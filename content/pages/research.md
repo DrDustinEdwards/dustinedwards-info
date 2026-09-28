@@ -13,7 +13,7 @@ This is the hub for Dustin Edwards's research. Dustin Edwards, Ph.D., is a virol
 - [Bacteriophages](/research/bacteriophages): discovery, genomics and structure of *Microbacterium* and *Mycobacterium* phages isolated from Texas soil by undergraduates, including the cluster O mycobacteriophage Ryadel and its elongated capsid.
 - [Science education](/research/science-education): the SEA-PHAGES course-based research experience at Tarleton, the genome announcements students co-author, and research with the SEA-PHAGES faculty community on how research courses are taught and assessed.
 
-Work on AI lives under [projects](/projects) until there is published AI research.
+Work on AI lives under [software](/software) until there is published AI research.
 
 ## Phages
 
@@ -41,7 +41,7 @@ Every paper is listed below by area, with one sentence on what it reports. Each 
 - [Co-dependence of HTLV-1 p12 and p8 Functions in Virus Persistence](/research/publications/10-1371-journal-ppat-1004454/) (2014). HTLV-1 established infection efficiently in macaques only when it made both p12 and p8.
 - [Human T-Cell Leukemia/Lymphoma Virus Type 1 p30, but Not p12/p8, Counteracts Toll-Like Receptor 3 (TLR3) and TLR4 Signaling in Human Monocytes and Dendritic Cells](/research/publications/10-1128-jvi-01788-13/) (2014). The HTLV-1 p30 protein suppresses TLR3 and TLR4 signaling and the interferon response in monocytes and dendritic cells, and p12 and p8 do not.
 - [Palmitoylation and p8-Mediated Human T-Cell Leukemia Virus Type 1 Transmission](/research/publications/10-1128-jvi-03444-13/) (2014). Mutating cysteine 39 blocks dimerization and palmitoylation of p8 and p12, but p8 still reaches the cell surface and supports virus transmission.
-- [Role of regulatory proteins in HIV-1/HTLV-1 coinfection](/research/publications/10-1186-1742-4690-11-s1-p122/) (2014). A conference poster on HIV-1 and HTLV-1 regulatory proteins in coinfection.
+- [Role of regulatory proteins in HIV-1/HTLV-1 coinfection](/research/publications/10-1186-1742-4690-11-s1-p122/) (2014). A conference poster, listed under its published title, on regulatory proteins in coinfection.
 - [A Public HTLV-1 Molecular Epidemiology Database for Sequence Management and Data Mining](/research/publications/10-1371-journal-pone-0042123/) (2012). A public online database that collects and annotates published HTLV-1 sequences.
 - [Inhibition of Geranylgeranyl Transferase-I Decreases Cell Viability of HTLV-1-Transformed Cells](/research/publications/10-3390-v3101815/) (2011). The inhibitor GGTI-298 lowered the viability of HTLV-1-transformed cells and reduced Tax protein levels.
 - [Orf-I and Orf-II-Encoded Proteins in HTLV-1 Infection and Persistence](/research/publications/10-3390-v3060861/) (2011). A review of the HTLV-1 orf-I and orf-II proteins p12, p8, p13 and p30.

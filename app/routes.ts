@@ -44,6 +44,7 @@ export default [
   route("research/publications/:slug", "routes/publications.$slug.tsx"),
   // The Research pages (app/lib/content-pages.mjs), rendered from markdown at build time. A splat, so the
   // more specific research/publications routes above still win; a path with no page answers 404.
+  // Their markdown twins are static assets (build:content), not routes, so they stay out of the Worker.
   route("research/*", "routes/content-page.tsx"),
   route("teaching/*", "routes/teaching.tsx"),
   route("about", "routes/about.tsx"),
@@ -53,7 +54,7 @@ export default [
   route("contact", "routes/contact.tsx"),
   // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
   route("gone", "routes/gone.tsx"),
-  route("projects", "routes/projects.tsx"),
+  route("software", "routes/projects.tsx"),
   route("playground", "routes/playground.tsx"),
   // A real public route, not a local page, because the browser and contrast gates photograph it.
   route("playground/ui", "routes/playground.ui.tsx"),

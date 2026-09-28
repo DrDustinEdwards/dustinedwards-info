@@ -1,10 +1,38 @@
 # dustinedwards.info
 
-Personal site of Dustin Edwards.
+Dustin Edwards, virologist and Department Head, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; also builds software on Cloudflare.
+
+## Research
+
+The hub is /research. Areas: /research/retroviruses (HTLV-1, REV and LPDV), /research/retroviruses/human, /research/retroviruses/avian, /research/bacteriophages, /research/science-education. Collections: /research/publications, /research/phages, /research/protocols.
+
+A paper is /research/publications/<doi-slug>/, where the slug folds every run of punctuation in the DOI to a hyphen. 10.1128/mra.00888-24 is /research/publications/10-1128-mra-00888-24/. Its markdown twin is /research/publications/<doi-slug>.md.
+
+A protocol is /research/protocols/<slug>, for example /research/protocols/phage-isolation. Its markdown twin is the same path plus .md.
+
+## Teaching
+
+The hub is /teaching. Courses and guides: /teaching/phage-discovery, /teaching/virus-isolation, /teaching/virus-isolation/faq, /teaching/phage-bioinformatics, /teaching/central-dogma, /teaching/study-skills. The roster of phage-discovery students will sit at /teaching/phage-discovery#roster.
+
+## Software
+
+The index is /software. Product pages will be /software/{name} once those pages exist. They do not exist yet. /projects 301s to /software.
+
+## Writing
+
+An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesting the article URL with Accept: text/markdown returns the same markdown. The feed is /writing/rss.xml and /writing/feed.json. Every published post in one file is /llms-full.txt.
 
 ## About
 
-Writing, projects, and notes.
+/about, /contact, /colophon and /privacy. The CV is the current Google Doc PDF export linked from the About menu until /cv exists.
+
+## Markdown twins
+
+A research or teaching page has a markdown twin at its path plus .md, for example /research.md and /teaching/phage-discovery.md. The HTML head links it with rel="alternate" type="text/markdown". The twin's Link header names the HTML page as canonical. Article URLs also answer Accept: text/markdown. Paper twins and article twins use the patterns above. Twins are not in the sitemap.
+
+## About the site
+
+The sections above are the map. The rest of this file is how search, papers and feeds work.
 
 ## Colophon
 
@@ -36,7 +64,7 @@ adds only what a person would want, such as zooming a figure or filtering
 without a reload, and a filter writes the query string, so a URL you are handed
 shows you what it showed whoever sent it.
 
-## Blog
+## Writing, in detail
 
 Posts are listed at /writing and can be filtered by tag at /writing?tag=<tag>.
 Every post has a plain markdown twin at /writing/<slug>.md, which is the source
@@ -124,9 +152,9 @@ if one fetch is better than one per paper.
 ## Research and teaching pages
 
 The research programme, the lab protocols and the courses are ordinary pages,
-written in markdown and rendered to HTML when the site is built. They have no
-markdown twin: the HTML is served complete, with its headings, links and
-breadcrumb JSON-LD, and needs no script to read. Every one of them:
+written in markdown and rendered to HTML when the site is built. Each has a
+markdown twin at the same path plus .md, linked from the page head. Every one
+of them:
 
   /research
   /research/retroviruses
@@ -149,9 +177,10 @@ breadcrumb JSON-LD, and needs no script to read. Every one of them:
   /teaching/central-dogma
   /teaching/study-skills
 
-The other pages are /, /about, /writing, /projects, /phage-discovery,
+The other pages are /, /about, /writing, /software, /phage-discovery,
 /colophon, /contact and /privacy. /sitemap.xml lists every HTML page on the
-site and nothing else.
+site and nothing else. /playground is a fixture for the browser gate, noindex,
+and it is not listed in the sitemap.
 
 ## Search
 

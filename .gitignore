@@ -50,6 +50,13 @@
 # this line is not a directory.
 /public/research/publications/*.md
 
+# Research and teaching page twins, written by build:content from content/pages/. Same class as the
+# paper twins: derived, so a checkout builds them and git does not store a second copy of the prose.
+/public/research.md
+/public/teaching.md
+/public/research/**/*.md
+/public/teaching/**/*.md
+
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json
 
