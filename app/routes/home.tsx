@@ -1,6 +1,5 @@
 import { Link, data } from "react-router";
 
-import projectsData from "../../content/projects.json";
 import stack from "../../content/generated/stack.json";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
@@ -32,7 +31,7 @@ import { PUBLICATIONS } from "~/data/publications";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { doiSlug } from "~/lib/publications/paths.mjs";
-import { projectAnchor } from "~/lib/projects-page.mjs";
+import { SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
 import "~/styles/evidence-row.css";
@@ -219,9 +218,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             Software
           </h2>
           <ul className="home-areas">
-            {(projectsData.projects as { slug: string; name: string }[]).map((project) => (
-              <li key={project.slug}>
-                <Link to={`/software#${projectAnchor(project.slug)}`}>{project.name}</Link>
+            {[
+              ...SOFTWARE_PRODUCTS,
+              { to: "/software/germomics", label: "Germomics" },
+              { to: "/software/capsid", label: "Capsid" },
+            ].map((item) => (
+              <li key={item.to}>
+                <Link to={item.to}>{item.label}</Link>
               </li>
             ))}
           </ul>

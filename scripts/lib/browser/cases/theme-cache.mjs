@@ -17,7 +17,7 @@ export async function run({ page, browser }) {
     { path: "/", module: "home.tsx" },
     { path: "/writing", module: "blog._index.tsx" },
     { path: "/writing/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
-    { path: "/software", module: "projects.tsx" },
+    { path: "/software", module: "software.tsx" },
     { path: "/colophon", module: "colophon.tsx" },
     { path: "/search?q=cloudflare", module: "search.tsx" },
     { path: "/privacy", module: "privacy.tsx" },

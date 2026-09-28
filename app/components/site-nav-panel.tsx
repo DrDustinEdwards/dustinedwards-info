@@ -3,7 +3,7 @@ import { Link } from "react-router";
 import type { Menu, MenuLink, NavIcon } from "~/lib/nav";
 
 /*
- * The one mega menu panel: Research, Teaching and About are its three contents (app/lib/nav.ts). It
+ * The one mega menu panel. Research, Teaching, Software and About are its contents (app/lib/nav.ts). It
  * is a native popover, so its chevron opens it with no script, it sits in the top layer above the
  * pinned bar, and Escape and an outside click close it. app/enhance/header.ts adds hover, pinning and
  * focus return, and on phones expands it in place inside the Menu instead.

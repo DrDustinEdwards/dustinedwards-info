@@ -175,7 +175,7 @@ export async function run() {
         new RegExp(`^Link:\\s*<${twinPath.slice(0, -3)}>;\\s*rel="canonical"$`, "i").test(d),
       );
     });
-    ok("every research and teaching twin names its HTML page",
+    ok("every content-page twin names its HTML page",
       missingTwins.length === 0,
       `missing or wrong canonical Link: ${missingTwins.join(", ")}`);
 

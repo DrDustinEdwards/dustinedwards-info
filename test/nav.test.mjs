@@ -61,6 +61,15 @@ test("an anchor is live only when its heading is listed, never on its page alone
   assert.equal(isLive("/research/publications#2024"), false);
 });
 
+test("the Software panel lists the three products and not Germomics", () => {
+  const software = liveMenu(MENUS.software);
+  assert.ok(software);
+  const labels = software.columns.flatMap((column) =>
+    column.sections.flatMap((section) => section.links.map((link) => link.label)),
+  );
+  assert.deepEqual(labels, ["Foxhound", "Foxing", "Foxing Edu"]);
+});
+
 test("the Research panel's facts are right and the guide is at its canonical address", () => {
   const research = liveMenu(MENUS.research);
   assert.ok(research);

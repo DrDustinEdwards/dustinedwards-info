@@ -23,7 +23,6 @@ const STATIC_PATHS = [
   "/writing",
   "/research/publications",
   "/colophon",
-  "/software",
   "/privacy",
   "/contact",
   ...CONTENT_PAGE_PATHS,

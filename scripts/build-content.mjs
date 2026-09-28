@@ -17,7 +17,6 @@ import {
   contentPageMarkdownPath,
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
-import { projectsPages } from "../app/lib/projects-page.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
@@ -53,7 +52,7 @@ export async function renderContentPages() {
   const names = (await readdir(fromRoot(PAGES_DIR))).filter((name) => name.endsWith(".md")).sort();
   const expected = new Map(CONTENT_PAGE_PATHS.map((p) => [contentPageFile(p), p]));
 
-  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> }>} */
+  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }>, schemaType?: string, productUrl?: string, codeRepository?: string, applicationCategory?: string }>} */
   const pages = [];
   for (const name of names) {
     const file = path.join(PAGES_DIR, name);
@@ -65,6 +64,17 @@ export async function renderContentPages() {
       seoTitle: String(fm.seo_title ?? ""),
       description: String(fm.description ?? ""),
     };
+    const SCHEMA_TYPES = new Set(["SoftwareApplication", "WebSite", "WebPage"]);
+    const schemaType = fm.schema_type == null || fm.schema_type === "" ? "" : String(fm.schema_type);
+    if (schemaType && !SCHEMA_TYPES.has(schemaType)) {
+      throw new ContentError(
+        file,
+        `schema_type "${schemaType}" is not SoftwareApplication, WebSite, or WebPage.`,
+      );
+    }
+    const productUrl = fm.product_url ? String(fm.product_url) : "";
+    const codeRepository = fm.code_repository ? String(fm.code_repository) : "";
+    const applicationCategory = fm.application_category ? String(fm.application_category) : "";
     if (expected.get(name) !== page.path) {
       throw new ContentError(
         file,
@@ -96,7 +106,16 @@ export async function renderContentPages() {
         `carries link(s) the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
       );
     }
-    pages.push({ ...page, html: rendered.html, markdown: parsed.content, toc: rendered.toc });
+    pages.push({
+      ...page,
+      html: rendered.html,
+      markdown: parsed.content,
+      toc: rendered.toc,
+      ...(schemaType ? { schemaType } : {}),
+      ...(productUrl ? { productUrl } : {}),
+      ...(codeRepository ? { codeRepository } : {}),
+      ...(applicationCategory ? { applicationCategory } : {}),
+    });
   }
 
   const missing = CONTENT_PAGE_PATHS.filter((p) => !pages.some((page) => page.path === p));
@@ -162,16 +181,11 @@ export async function buildArtifact() {
     await readFile(fromRoot(path.join("content", "features.json")), "utf8"),
   );
 
-  const projects = JSON.parse(
-    await readFile(fromRoot(path.join("content", "projects.json")), "utf8"),
-  );
-
   return serializeArtifact(
     // Both need the complete corpus: relatedness and being linked to are properties of the set.
     withBacklinks(withRelated(posts)),
     [
       ...colophonPages(stack, features),
-      ...projectsPages(projects),
       ...contentPageSearchInputs(await renderContentPages()),
     ],
     paperSearchInputs(PUBLICATIONS),
@@ -271,13 +285,19 @@ async function main() {
   // Only what the route renders: the markdown and outline are build inputs for search, not page weight.
   // The twin is a static asset beside the HTML URL, the same trade the paper twins make.
   const renderedPages = await renderContentPages();
-  const contentPages = renderedPages.map(({ path: p, title, seoTitle, description, html }) => ({
-    path: p,
-    title,
-    seoTitle,
-    description,
-    html,
-  }));
+  const contentPages = renderedPages.map(
+    ({ path: p, title, seoTitle, description, html, schemaType, productUrl, codeRepository, applicationCategory }) => ({
+      path: p,
+      title,
+      seoTitle,
+      description,
+      html,
+      ...(schemaType ? { schemaType } : {}),
+      ...(productUrl ? { productUrl } : {}),
+      ...(codeRepository ? { codeRepository } : {}),
+      ...(applicationCategory ? { applicationCategory } : {}),
+    }),
+  );
   await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: contentPages }, null, 2)}\n`, "utf8");
   await writeContentPageTwins(renderedPages);
 
@@ -300,10 +320,10 @@ async function writeContentPageTwins(pages) {
     await mkdir(path.dirname(dest), { recursive: true });
     await writeFile(dest, contentPageMarkdownBody(page), "utf8");
   }
-  for (const rootName of ["research", "teaching"]) {
+  for (const rootName of ["research", "teaching", "software"]) {
     await pruneContentTwins(fromRoot(path.join("public", rootName)), `/${rootName}`, expected);
   }
-  for (const hub of ["/research.md", "/teaching.md"]) {
+  for (const hub of ["/research.md", "/teaching.md", "/software.md"]) {
     if (!expected.has(hub)) await unlink(fromRoot(path.join("public", hub.slice(1)))).catch(() => {});
   }
 }

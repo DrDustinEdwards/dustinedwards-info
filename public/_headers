@@ -57,7 +57,7 @@
   X-Robots-Tag: noindex
   Link: </research/publications/:splat/>; rel="canonical"
 
-# Research and teaching twins, one file per page, written by build:content next to the HTML URL.
+# Research, teaching and software twins, one file per page, written by build:content next to the HTML URL.
 # Explicit paths, not a splat: a greedy /research/*.md would also match the paper twins above.
 # noindex so the HTML page is the one that ranks. The link is relative, like the paper rule.
 /research.md
@@ -140,3 +140,27 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </teaching/study-skills>; rel="canonical"
+/software.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software>; rel="canonical"
+/software/foxhound.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/foxhound>; rel="canonical"
+/software/foxing.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/foxing>; rel="canonical"
+/software/foxing-edu.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/foxing-edu>; rel="canonical"
+/software/germomics.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/germomics>; rel="canonical"
+/software/capsid.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/capsid>; rel="canonical"

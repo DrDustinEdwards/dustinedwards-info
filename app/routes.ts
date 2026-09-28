@@ -45,6 +45,9 @@ export default [
   // Their markdown twins are static assets (build:content), not routes, so they stay out of the Worker.
   route("research/*", "routes/content-page.tsx"),
   route("teaching/*", "routes/teaching.tsx"),
+  // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
+  // route's, which check:headers reads per file. /projects 301s here (app/lib/path-moves.mjs).
+  route("software/*", "routes/software.tsx"),
   route("about", "routes/about.tsx"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),
@@ -52,7 +55,6 @@ export default [
   route("contact", "routes/contact.tsx"),
   // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
   route("gone", "routes/gone.tsx"),
-  route("software", "routes/projects.tsx"),
   // Before /search, and a resource route so it can stream a raw Response.
   route("search/ask", "routes/search.ask.ts"),
   route("search", "routes/search.tsx"),
