@@ -35,6 +35,9 @@ let hits: Hit[] = [];
 let active = -1;
 let sequence = 0;
 let debounce: ReturnType<typeof setTimeout> | undefined;
+/** The exit fade's length in palette-dialog.css. What is drawn is cleared after it. */
+const EXIT_MS = 120;
+let pendingReset: ReturnType<typeof setTimeout> | undefined;
 
 function readRecent(): string[] {
   try {
@@ -127,9 +130,9 @@ function build() {
     if (event.target === dialog) close();
   });
 
-  // A backstop only: `close()` also resets synchronously, because the `close` event proved unreliable
-  // for a programmatic close.
-  dialog.addEventListener("close", reset);
+  // A backstop, and the path for Escape: `close()` also schedules the reset itself, because the
+  // `close` event proved unreliable for a programmatic close.
+  dialog.addEventListener("close", scheduleReset);
 
   input?.addEventListener("input", onInput);
   input?.addEventListener("keydown", onKeydown);
@@ -407,6 +410,12 @@ function onKeydown(event: KeyboardEvent) {
 function openPalette() {
   if (!dialog) build();
   if (!dialog || dialog.open) return;
+  // Reopened inside the exit fade: clear the last session now, not after it is shown again.
+  if (pendingReset !== undefined) {
+    clearTimeout(pendingReset);
+    pendingReset = undefined;
+    reset();
+  }
   dialog.showModal();
   if (input) {
     input.value = "";
@@ -437,9 +446,29 @@ function reset() {
   }
 }
 
+/**
+ * Stops what is in flight at once (the sequence bump, the debounce, the Ask stream), and clears what
+ * is drawn after the exit fade, so the fade shows what the reader was looking at, not an empty box.
+ * Under reduced motion there is no fade, and the clear is immediate.
+ */
+function scheduleReset() {
+  sequence += 1;
+  clearTimeout(debounce);
+  askHandle?.cancel();
+  askHandle = null;
+  clearTimeout(pendingReset);
+  pendingReset = setTimeout(
+    () => {
+      pendingReset = undefined;
+      if (!dialog?.open) reset();
+    },
+    reduceMotion.matches ? 0 : EXIT_MS,
+  );
+}
+
 function close() {
-  reset();
   dialog?.close();
+  scheduleReset();
 }
 
 /**

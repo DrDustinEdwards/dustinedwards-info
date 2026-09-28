@@ -509,8 +509,28 @@ html[data-theme="dark"] .theme-option[data-when="light"] {
   }
 }
 
-/* The module never writes the attribute under reduced motion; this is doubly conditioned on purpose. */
+/* The module never writes the attribute under reduced motion; this is doubly conditioned on purpose.
+   The phone menu unrolls down from under the header rule. It is a popover, so display and overlay
+   stay discrete until the clip finishes; without motion it opens and closes at once. */
 @media (max-width: 43.99rem) and (prefers-reduced-motion: no-preference) {
+  .site-header-nav {
+    clip-path: inset(0 0 100% 0);
+    transition:
+      clip-path var(--motion-state) var(--ease-state),
+      overlay var(--motion-state) allow-discrete,
+      display var(--motion-state) allow-discrete;
+  }
+
+  .site-header-nav:popover-open {
+    clip-path: inset(0);
+  }
+
+  @starting-style {
+    .site-header-nav:popover-open {
+      clip-path: inset(0 0 100% 0);
+    }
+  }
+
   .site-header {
     transition: transform 350ms ease;
   }
