@@ -55,6 +55,9 @@ export const PENDING_TARGETS = [
  * @typedef {{ status: 301, location: string } | { status: 410 }} Disposition
  */
 
+/** Where every student and author profile goes, except Dustin's own. */
+export const PROFILE_TARGET = "/teaching/phage-discovery#roster";
+
 /** @type {(location: string) => Disposition} */
 const moved = (location) => ({ status: 301, location });
 /** @type {Disposition} */
@@ -78,9 +81,11 @@ const PATTERNS = [
   (p) => (/^\/directory-[^/]+$/.test(p) ? moved("/teaching/phage-discovery") : null),
   // Dustin's own author page ranks for his name, so it goes to the About page, ahead of the rule below.
   (p) => (p === "/author/dustin" ? moved("/about") : null),
-  // Student and author profiles: removed, and never redirected to anything that names them.
-  (p) => (/^\/(?:user|author)(?:\/.*)?$/.test(p) ? GONE : null),
-  (p) => (["/register", "/members", "/logout", "/account", "/password-reset"].includes(p) ? GONE : null),
+  // The bare /user/ was the membership directory, so it is gone with the membership pages.
+  (p) => (["/user", "/register", "/members", "/logout", "/account", "/password-reset"].includes(p) ? GONE : null),
+  // Every other student and author profile (146 in Search Console, 147 with Dustin's own) goes to the
+  // roster at the bottom of the Phage Discovery Program page, as on the old site (Dustin, 2026-09-27).
+  (p) => (/^\/(?:user|author)(?:\/.*)?$/.test(p) ? moved(PROFILE_TARGET) : null),
   (p) =>
     /^\/(?:category\/phage-isolation-notes|microbiomes\/page|phages\/page)(?:\/.*)?$/.test(p)
       ? moved("/research/phages")
@@ -90,6 +95,8 @@ const PATTERNS = [
   (p) => (p === BAYLOR_PDF ? moved("/research/protocols/phage-dna-extraction") : null),
   (p) => (p === CV_PDF ? moved("/about") : null),
   (p) => (p.startsWith("/wp-content/uploads/") ? GONE : null),
+  // Nothing on the new site does these calculations (Dustin, 2026-09-27).
+  (p) => (["/molarity-calculator", "/knowledge-base/metric-prefix"].includes(p) ? GONE : null),
 ];
 
 /** Explicit rows, keyed by the old path without its trailing slash. */
@@ -129,8 +136,6 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/phage-bioinformatics": "/teaching/phage-bioinformatics",
   "/phage-genetic-studies": "/research/bacteriophages",
   "/phage-discovery-application": "/teaching/phage-discovery",
-  "/molarity-calculator": "/research/protocols",
-  "/knowledge-base/metric-prefix": "/research/protocols",
   "/central-dogma-tutorials": "/teaching/central-dogma",
   "/retroviruses": "/research/retroviruses",
   "/rev-lpdv-surveys": "/research/retroviruses/avian",

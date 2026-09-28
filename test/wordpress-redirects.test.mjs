@@ -7,6 +7,7 @@ import {
   BAYLOR_PDF,
   EXPLICIT_ROWS,
   PENDING_TARGETS,
+  PROFILE_TARGET,
   isApexHost,
   wordpressDisposition,
 } from "../app/lib/wordpress-redirects.mjs";
@@ -56,11 +57,19 @@ test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapp
   assert.deepEqual(problems, []);
 });
 
-test("the profile paths the fixture counts are all answered by the one 410 rule", () => {
+test("the profile paths the fixture counts all 301 to the roster in one hop", () => {
+  // 146 counted here plus Dustin's own /author/dustin/, listed in the fixture: the 147 profile URLs.
   assert.equal(gsc.profilePaths, 146);
-  for (const path of ["/user/a-student/", "/user/a-student/?profiletab=posts", "/author/someone/"]) {
-    assert.deepEqual(wordpressDisposition(new URL(path, "https://x").pathname), { status: 410 });
+  assert.ok(gsc.paths.includes("/author/dustin/"));
+  assert.equal(PROFILE_TARGET, "/teaching/phage-discovery#roster");
+  for (const path of ["/user/a-student/", "/user/a-student/?profiletab=posts", "/author/someone/", "/author/someone"]) {
+    assert.deepEqual(wordpressDisposition(new URL(path, "https://x").pathname), { status: 301, location: PROFILE_TARGET }, path);
   }
+  const to = targetPath(PROFILE_TARGET);
+  assert.equal(wordpressDisposition(to), null, "the roster page is not redirected again");
+  assert.equal(movedPathTarget(to), null, "the roster page is not an old new-site path");
+  // The bare /user/ was the membership directory, not a profile, and is gone with the membership pages.
+  assert.deepEqual(wordpressDisposition("/user/"), { status: 410 });
 });
 
 test("every explicit row's target is a page or pending, and never chains", () => {
@@ -78,14 +87,12 @@ test("every explicit row lands in one hop: no target is a moved or retired new-s
   }
 });
 
-test("the calculator rows that once pointed at /playground land on a page in one hop", () => {
-  for (const path of ["/molarity-calculator/", "/knowledge-base/metric-prefix/"]) {
-    const d = wordpressDisposition(new URL(path, "https://dustinedwards.info").pathname);
-    assert.equal(d?.status, 301, path);
-    const to = targetPath(d.location);
-    assert.equal(movedPathTarget(to), null, `${path} -> ${to} chains through path-moves`);
-    assert.equal(wordpressDisposition(to), null, `${path} -> ${to} chains`);
+test("the molarity and metric prefix calculators answer 410: nothing on the new site replaces them", () => {
+  for (const path of ["/molarity-calculator/", "/molarity-calculator", "/knowledge-base/metric-prefix/"]) {
+    assert.deepEqual(wordpressDisposition(path), { status: 410 }, path);
   }
+  assert.equal(Object.hasOwn(EXPLICIT_ROWS, "/molarity-calculator"), false);
+  assert.equal(Object.hasOwn(EXPLICIT_ROWS, "/knowledge-base/metric-prefix"), false);
 });
 
 test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia page", () => {
@@ -101,9 +108,9 @@ test("the 2026-09-27 map: courses and the program under Teaching, no Wolbachia p
   assert.equal(to("/phage-genetic-studies/"), "/research/bacteriophages");
   assert.equal(to("/phage-discovery-application/"), "/teaching/phage-discovery");
   assert.equal(to("/directory-2019-phage-researchers/"), "/teaching/phage-discovery");
-  // Dustin's own author page ranks for his name; every other author page is a profile and answers 410.
+  // Dustin's own author page ranks for his name; every other author page is a profile and goes to the roster.
   assert.equal(to("/author/dustin/"), "/about");
-  assert.deepEqual(wordpressDisposition("/author/someone/"), { status: 410 });
+  assert.equal(to("/author/someone/"), "/teaching/phage-discovery#roster");
   assert.equal(to("/retroviruses/"), "/research/retroviruses");
   for (const path of ["/rev-lpdv-surveys/", "/rev-lpdv-genetic-studies/"]) {
     assert.equal(to(path), "/research/retroviruses/avian", path);
