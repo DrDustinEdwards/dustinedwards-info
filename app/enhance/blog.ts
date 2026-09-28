@@ -285,7 +285,42 @@ function footnotePreviews() {
  * `src` is passed in rather than read from `currentSrc`, which is whichever `srcset` rung the browser
  * downloaded: a resized copy shown as full size.
  */
-function openOverlay(src: string, alt: string, restoreFocus: () => void, label?: string) {
+/** One name, moved from the figure to the full image and back, so the browser morphs one into the other. */
+const GROW_NAME = "lightbox-figure";
+
+/**
+ * The figure grows into the viewer and shrinks back, as a same-document View Transition. Cross-document
+ * transitions stay off (motion-print.css); this one runs inside the page. Skipped under reduced motion,
+ * which the stylesheet's rule cannot reach from script, and where the API is missing: then the change
+ * simply happens, as it did before.
+ */
+function grow(from: HTMLElement | undefined, to: HTMLElement, change: () => void) {
+  const start = (document as Document & {
+    startViewTransition?: (update: () => void) => { finished: Promise<void> };
+  }).startViewTransition;
+  if (!from || !start || reduceMotion.matches) {
+    change();
+    return;
+  }
+  from.style.viewTransitionName = GROW_NAME;
+  const transition = start.call(document, () => {
+    from.style.viewTransitionName = "";
+    to.style.viewTransitionName = GROW_NAME;
+    change();
+  });
+  // The name is cleared once the morph ends, so no later transition picks up a stale pair.
+  void transition.finished.finally(() => {
+    to.style.viewTransitionName = "";
+  });
+}
+
+function openOverlay(
+  src: string,
+  alt: string,
+  restoreFocus: () => void,
+  label?: string,
+  source?: HTMLElement,
+) {
   // `restoreFocus` is kept because the opener is not always the element focus should land on.
   const dialog = document.createElement("dialog");
   dialog.className = "lightbox";
@@ -307,7 +342,8 @@ function openOverlay(src: string, alt: string, restoreFocus: () => void, label?:
   close.textContent = "Close";
   dialog.appendChild(close);
 
-  const dismiss = () => dialog.close();
+  // The full image shrinks back into the figure it came from. Escape closes natively, without it.
+  const dismiss = () => grow(full, source ?? full, () => dialog.close());
   close.addEventListener("click", dismiss);
 
   // On a `<dialog>` the element itself is the click target for its backdrop.
@@ -320,8 +356,10 @@ function openOverlay(src: string, alt: string, restoreFocus: () => void, label?:
     restoreFocus();
   });
 
-  document.body.appendChild(dialog);
-  dialog.showModal();
+  grow(source, full, () => {
+    document.body.appendChild(dialog);
+    dialog.showModal();
+  });
 }
 
 function lightbox() {
@@ -334,7 +372,13 @@ function lightbox() {
       if (!href) return;
       event.preventDefault();
       const image = link.querySelector("img");
-      openOverlay(href, image?.alt ?? "", () => link.focus({ preventScroll: true }));
+      openOverlay(
+        href,
+        image?.alt ?? "",
+        () => link.focus({ preventScroll: true }),
+        undefined,
+        image ?? undefined,
+      );
     });
   }
 
@@ -354,6 +398,7 @@ function lightbox() {
         image.alt,
         () => image.focus({ preventScroll: true }),
         "Diagram, full size",
+        image,
       );
     image.addEventListener("click", open);
     image.addEventListener("keydown", (event) => {

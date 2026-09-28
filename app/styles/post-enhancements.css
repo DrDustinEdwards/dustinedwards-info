@@ -198,6 +198,13 @@
   to { opacity: 1; }
 }
 
+/* The figure growing into the viewer and back (blog.ts). The script never starts it under reduced
+ * motion; the timing is here so the morph reads as one deliberate move. */
+::view-transition-group(lightbox-figure) {
+  animation-duration: 240ms;
+  animation-timing-function: var(--ease-state);
+}
+
 .further-reading,
 .post-backlinks,
 .post-mentions {
