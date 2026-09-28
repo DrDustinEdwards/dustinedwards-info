@@ -38,6 +38,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { to: "/research/publications", label: "Publications" },
       { to: "/research/protocols", label: "Protocols" },
       { to: "/research/phages", label: "Phages" },
+      { to: "/research/tools", label: "Tools" },
       { to: "/research/retroviruses/avian", label: "Avian retroviruses" },
       { to: "/teaching#join-the-lab", label: "Prospective students" },
     ],

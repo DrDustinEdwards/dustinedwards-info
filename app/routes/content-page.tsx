@@ -3,8 +3,10 @@ import { data, Link } from "react-router";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
+import { PhageTools } from "~/components/phage-tool";
 import { contentPageMarkdownPath, contentPageTrail, protocolNeighbors } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { toolsOnPage } from "~/lib/phage-tools.mjs";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
 
 import generated from "../../content/generated/pages.json";
@@ -56,11 +58,13 @@ export function headers() {
 }
 
 export function loader({ request }: Route.LoaderArgs) {
-  const pathname = new URL(request.url).pathname.replace(/\/+$/, "") || "/";
+  const url = new URL(request.url);
+  const pathname = url.pathname.replace(/\/+$/, "") || "/";
   const page = PAGES.get(pathname);
   // Registered only for listed paths, and the build refuses a missing file, so this is a broken build.
   if (!page) throw data(null, { status: 404 });
-  return { page };
+  // A calculator page computes from its query string, so Calculate works as a plain GET with script off.
+  return { page, search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
 export function meta({ loaderData }: Route.MetaArgs) {
@@ -78,7 +82,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
-  const { page } = loaderData;
+  const { page, search } = loaderData;
   const titleOf = (path: string) => PAGES.get(path)?.title;
   const trail = contentPageTrail(page, titleOf);
   const neighbors = protocolNeighbors(page.path);
@@ -104,6 +108,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{page.title}</h1>
+      <PhageTools path={page.path} search={search} />
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
       {neighbors ? (
         <nav className="protocol-neighbors" aria-label="Protocols">
