@@ -17,7 +17,7 @@ export async function run({ page, browser }) {
     { path: "/", module: "home.tsx" },
     { path: "/writing", module: "blog._index.tsx" },
     { path: "/writing/ten-years-on-cloudflare", module: "blog.$slug.tsx" },
-    { path: "/projects", module: "projects.tsx" },
+    { path: "/software", module: "projects.tsx" },
     { path: "/playground", module: "playground.tsx" },
     { path: "/playground/ui", module: "playground.ui.tsx" },
     { path: "/phage-discovery", module: "phage-discovery.tsx" },

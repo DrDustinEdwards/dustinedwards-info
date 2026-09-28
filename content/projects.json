@@ -63,8 +63,7 @@
           "ref": "ten-years-on-cloudflare",
           "label": "Every Cloudflare product, and which ones this site runs on"
         },
-        { "kind": "page", "ref": "/colophon", "label": "Colophon: the stack, reconciled against the repository" },
-        { "kind": "page", "ref": "/playground", "label": "Playground: the machinery, running" }
+        { "kind": "page", "ref": "/colophon", "label": "Colophon: the stack, reconciled against the repository" }
       ]
     },
     {
@@ -123,27 +122,6 @@
           "ref": "https://github.com/DrDustinEdwards/dustinedwards-mcp",
           "label": "The server, public and checkable"
         }
-      ]
-    },
-    {
-      "slug": "phage-discovery-roster",
-      "name": "Phage discovery roster",
-      "oneLiner": "The public roster of the phage discovery program's cohorts, served by this site.",
-      "description": "A year-by-year roster page carrying each cohort's group photograph and the names of its researchers. It is the one page on this site whose content is neither a post nor derived from one, and it exists on the site's own terms rather than a content management system's: the roster is structured data in the repository, edited by commit and rendered by a route.",
-      "notable": [
-        "The roster is structured data in the repository rather than a post body, because a single markdown column would flatten the year-and-names shape the page renders and make every cohort a heading somebody had to keep in order by hand.",
-        "Each photograph's real pixel dimensions are recorded per year and rendered as width and height attributes, so the browser reserves the right box before any image arrives and the page does not shift as they load.",
-        "It carries names and photographs and no other copy, deliberately. The absence is the page's design rather than an unfinished state, and the alt text was narrowed to match it."
-      ],
-      "schemaType": "WebPage",
-      "role": "Sole author",
-      "status": "live",
-      "url": null,
-      "repo": null,
-      "stack": ["Cloudflare Workers", "React Router", "TypeScript"],
-      "metric": { "label": "researchers listed, across nine cohorts", "derived": "phage-researchers" },
-      "evidence": [
-        { "kind": "page", "ref": "/phage-discovery", "label": "The roster" }
       ]
     },
     {

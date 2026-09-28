@@ -2,7 +2,12 @@ import { prefersType } from "./negotiate.mjs";
 import { NO_STORE_CACHE_CONTROL, SITE_ORIGIN } from "./seo";
 
 export function linkToMarkdown(slug: string) {
-  return `<${SITE_ORIGIN}/writing/${slug}.md>; rel="alternate"; type="text/markdown"`;
+  return alternateMarkdownLink(`/writing/${slug}.md`);
+}
+
+/** `path` includes the `.md`. Absolute, so it matches the blog twin and `canonicalLink`. */
+export function alternateMarkdownLink(path: string) {
+  return `<${SITE_ORIGIN}${path}>; rel="alternate"; type="text/markdown"`;
 }
 
 /**

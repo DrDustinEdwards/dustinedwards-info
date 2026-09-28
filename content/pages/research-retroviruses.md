@@ -5,7 +5,7 @@ seo_title: "HTLV-1, human T-cell leukemia virus, REV and LPDV research"
 description: "Dustin Edwards's retrovirus research, from HTLV-1 accessory proteins in people to the avian retroviruses REV and LPDV in wild turkeys in Texas."
 ---
 
-Dustin Edwards's retrovirus research runs along one line from the start of his career to now: how a retrovirus establishes and keeps a lifelong infection in its host, and what that costs the host. The earlier work was on human retroviruses, chiefly human T-cell leukemia virus type 1 (HTLV-1), with a poster on coinfection with HIV-1. The current work is on two retroviruses of wild birds, reticuloendotheliosis virus (REV) and lymphoproliferative disease virus (LPDV), in wild turkeys in Texas. This page is the short overview; each part has its own page with the papers and what they found, and every paper is on the [publications page](/research/publications).
+Dustin Edwards's retrovirus research runs along one line from the start of his career to now: how a retrovirus establishes and keeps a lifelong infection in its host, and what that costs the host. The earlier work was on human retroviruses, chiefly human T-cell leukemia virus type 1 (HTLV-1). The current work is on two retroviruses of wild birds, reticuloendotheliosis virus (REV) and lymphoproliferative disease virus (LPDV), in wild turkeys in Texas. This page is the short overview; each part has its own page with the papers and what they found, and every paper is on the [publications page](/research/publications).
 
 ## Retroviruses in brief
 

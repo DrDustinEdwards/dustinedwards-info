@@ -36,15 +36,21 @@ import "~/styles/playground.css";
  */
 
 export function meta() {
-  return pageMeta({
-    title: `${PLAYGROUND_TITLE} | Dustin Edwards`,
-    description: PLAYGROUND_DESCRIPTION,
-    path: PLAYGROUND_URL,
-  });
+  return [
+    ...pageMeta({
+      title: `${PLAYGROUND_TITLE} | Dustin Edwards`,
+      description: PLAYGROUND_DESCRIPTION,
+      path: PLAYGROUND_URL,
+    }),
+    // check:browser still photographs this route, so it answers 200. It is not a public destination.
+    { name: "robots", content: "noindex" },
+  ];
 }
 
 export function headers() {
-  return publicHtmlHeaders();
+  const headers = new Headers(publicHtmlHeaders());
+  headers.set("X-Robots-Tag", "noindex");
+  return headers;
 }
 
 export async function loader({ context, request }: Route.LoaderArgs) {

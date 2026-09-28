@@ -3,9 +3,9 @@
  * pointing at a fragment the page does not render still returns a hit and scrolls nowhere, SILENTLY.
  */
 
-export const PROJECTS_URL = "/projects";
+export const PROJECTS_URL = "/software";
 
-export const PROJECTS_TITLE = "Projects";
+export const PROJECTS_TITLE = "Software";
 
 export const PROJECTS_DESCRIPTION =
   "Things I have built on Cloudflare, each with a number that is either dated " +
@@ -35,14 +35,6 @@ export function projectAnchor(slug) {
  */
 export const METRIC_DERIVATIONS = {
   "gate-count": (inputs) => String(inputs.stack.gates.length),
-  "phage-researchers": (inputs) =>
-    String(
-      inputs.phageYears.reduce(
-        (/** @type {number} */ total, /** @type {any} */ year) =>
-          total + year.researchers.length,
-        0,
-      ),
-    ),
 };
 
 /**
@@ -105,7 +97,7 @@ export function projectsPages(projectsJson) {
   const projects = projectsJson.projects ?? [];
   if (projects.length === 0) {
     throw new Error(
-      "content/projects.json declares no projects, so /projects would index " +
+      "content/projects.json declares no projects, so /software would index " +
         "with no sections and every deep link would be lost.",
     );
   }

@@ -68,7 +68,7 @@ const RESEARCH: Menu = {
             {
               to: "/research/retroviruses",
               label: "Retroviruses",
-              description: "HIV, HTLV, REV and LPDV",
+              description: "HTLV-1, REV and LPDV",
               icon: "retroviruses",
             },
             {
@@ -88,7 +88,7 @@ const RESEARCH: Menu = {
         {
           label: "Retroviruses",
           links: [
-            { to: "/research/retroviruses/human", label: "Human retroviruses", description: "HTLV-1 and HIV" },
+            { to: "/research/retroviruses/human", label: "Human retroviruses", description: "HTLV-1" },
             { to: "/research/retroviruses/avian", label: "Avian retroviruses", description: "REV and LPDV in wild turkeys" },
           ],
         },
@@ -277,7 +277,7 @@ export const NAV: readonly NavItem[] = [
   { to: "/research", label: "Research", menu: liveMenu(RESEARCH) },
   { to: "/teaching", label: "Teaching", menu: liveMenu(TEACHING) },
   { to: "/writing", label: "Writing" },
-  { to: "/projects", label: "Projects" },
+  { to: "/software", label: "Software" },
   { to: "/playground", label: "Playground" },
   { to: "/about", label: "About", menu: liveMenu(ABOUT) },
 ];

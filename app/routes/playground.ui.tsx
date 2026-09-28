@@ -18,17 +18,23 @@ import "~/styles/playground-ui.css";
  * must not carry the Admin kit's real POSTs.
  */
 export function headers() {
-  return new Headers(publicHtmlHeaders());
+  const headers = new Headers(publicHtmlHeaders());
+  headers.set("X-Robots-Tag", "noindex");
+  return headers;
 }
 
 export function meta() {
-  return pageMeta({
-    title: `UI inventory | ${SITE.name}`,
-    description:
-      "Every component of the foundation, the Paper kit and the Admin kit, in both themes and " +
-      "every state, with one swatch per palette token.",
-    path: "/playground/ui",
-  });
+  return [
+    ...pageMeta({
+      title: `UI inventory | ${SITE.name}`,
+      description:
+        "Every component of the foundation, the Paper kit and the Admin kit, in both themes and " +
+        "every state, with one swatch per palette token.",
+      path: "/playground/ui",
+    }),
+    // The contrast and browser gates photograph this fixture. It stays out of the sitemap.
+    { name: "robots", content: "noindex" },
+  ];
 }
 
 export default function PlaygroundUi() {

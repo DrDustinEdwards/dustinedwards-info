@@ -110,7 +110,7 @@ export async function run({ page, browser }) {
     "/writing",
     "/search?q=workers",
     "/colophon",
-    "/projects",
+    "/software",
     "/playground?key=dustin-edwards-4f2d7f1a9c3b5e07-1600x900.webp&cookie=theme%3Ddark&md=links&q=fusion",
   ]) {
     await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
