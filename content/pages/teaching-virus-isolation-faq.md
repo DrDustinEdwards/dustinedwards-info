@@ -7,7 +7,9 @@ description: "Worked phage lab calculations from the Tarleton Virus Isolation Co
 
 These are the calculations and questions that come up most in the [Virus Isolation Course](/teaching/virus-isolation), the first semester of the Tarleton SEA-PHAGES program. The bench protocols are in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/); this page is the lab's own arithmetic and findings. Each answer gives the formula, a worked example with real numbers from the course's lab notebooks, and a link to the lab's notes in [Phage Isolation and Purification](/research/protocols/phage-isolation). Unless a question says otherwise, the host is *Microbacterium foliorum* in PYCa, plated with 250 µl of host culture.
 
-## How do you calculate the titer of a phage lysate in pfu/ml?
+## How do I calculate phage titer in pfu/ml?
+
+Divide the plaques counted by the µl of that dilution plated, multiply by 1,000 µl/ml, then multiply by the dilution factor: 111 plaques from 10 µl of the 10^-6 dilution is 1.11 x 10^10 pfu/ml.
 
     titer (pfu/ml) = plaques counted / µl plated x 1,000 µl/ml x dilution factor
 
@@ -35,7 +37,9 @@ Mistakes that recur in the notebooks: flipping the exponent sign (40 plaques at 
 
 Protocol: [titer arithmetic](/research/protocols/phage-isolation#titer-arithmetic).
 
-## How do you calculate a spot titer, and how many dilutions do you need?
+## How do I calculate phage titer from a spot titer, and how many dilutions do I spot?
+
+Divide the plaques in one spot by the µl spotted, multiply by 1,000 µl/ml and by the dilution factor, and spot a tenfold series far enough that the last spots show separate plaques you can count, usually 10^-1 to 10^-8 for a lysate.
 
     titer (pfu/ml) = plaques in the spot / µl spotted x 1,000 µl/ml x dilution factor
 
@@ -45,13 +49,15 @@ Worked example: 6 plaques in a 3 µl spot of the 10^-3 dilution.
 
 6 / 3 µl = 2 pfu/µl; x 1,000 = 2,000; x 10^3 = 2 x 10^6 pfu/ml.
 
-How far to dilute: far enough that the last spots show separate plaques you can count. For lysates the notebooks ran series from 10^-1 to 10^-8. When every plate to 10^-6 was still uncountable on a full plate titer, extending the series to 10^-12 gave counts of about 300 at 10^-7 and about 35 at 10^-9. Divide by the spot volume every time; spot titers computed without dividing by 3 µl were a recurring error.
+How far to dilute: for lysates the notebooks ran series from 10^-1 to 10^-8. When every plate to 10^-6 was still uncountable on a full plate titer, extending the series to 10^-12 gave counts of about 300 at 10^-7 and about 35 at 10^-9. Divide by the spot volume every time; spot titers computed without dividing by 3 µl were a recurring error.
 
 Spots that run into each other are the usual failure. A 1 to 10 µl pipettor, bubble-free tubes, and letting spots soak in before moving the plate fixed it. Read at about 23 hours: spots had merged by 26 hours and dried out by 48.
 
 Protocol: [spot titer](/research/protocols/phage-isolation#spot-titer).
 
-## How much lysate do you put on a plate to get a webbed plate?
+## How much phage lysate do I put on a plate to get a webbed plate?
+
+Divide the pfu you want on the plate by the lysate's titer in pfu/ml and multiply by 1,000 µl/ml; on *M. smegmatis*, plates that received 8,000 to 12,000 pfu webbed.
 
     µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml
 
@@ -67,9 +73,9 @@ Two errors to avoid: leaving out the x 1,000 µl/ml (the volume comes out 1,000-
 
 Protocol: [how much lysate per webbed plate](/research/protocols/phage-isolation#how-much-lysate-per-webbed-plate).
 
-## How many dilutions do you make to pour more webbed plates?
+## If you wanted to make more webbed plates with the lysate, what dilutions would you make?
 
-Use the dilution that already webbed. If the 10^-n plate of your full plate titer webbed, make n tenfold steps and plate that same dilution and volume on 6 to 8 plates. Make enough of the last tube: plates x µl per plate.
+Make the same dilution of the lysate that gave a webbed plate in your full plate titer, and plate that dilution and volume on 6 to 8 more plates. If the 10^-n plate webbed, that is n tenfold steps. Make enough of the last tube: plates x µl per plate.
 
 Worked example: the 10^-3 plate webbed. Dilute 10 µl of lysate to 10^-3 (three steps of 10 µl into 90 µl), then plate 10 µl of the 10^-3 tube on each of 6 plates. That uses 60 µl of the 100 µl tube. All 6 plates webbed at about 24 hours.
 
@@ -79,7 +85,9 @@ When nothing has webbed yet, bracket: plate a 10-fold series across whole decade
 
 Protocol: [the bracketing shortcut](/research/protocols/phage-isolation#the-bracketing-shortcut).
 
-## How do you make a 10-fold serial dilution?
+## How do I make a 10-fold serial dilution of a phage lysate?
+
+Add 10 µl of phage lysate to 90 µl of phage buffer, mix, and carry 10 µl of that tube into the next 90 µl; each tube is one tenth of the one before.
 
     10 µl phage + 90 µl phage buffer = 1/10
 
@@ -89,9 +97,9 @@ Errors from the notebooks: 10 µl phage into 100 µl buffer is 1/11, not 1/10. A
 
 Protocol: [phage purification](/research/protocols/phage-isolation#phage-purification-picking-and-replating-plaques).
 
-## How much lysate do you get from a flooded webbed plate?
+## If you flood a webbed plate with 8 ml of phage buffer, how much lysate will you get?
 
-About 5 to 7 ml per plate when each plate is flooded with 8 ml of phage buffer. The agar keeps the rest. That is more than the Guide's estimate of about 4 ml per plate.
+You collect about 5 to 7 ml of lysate from each webbed plate flooded with 8 ml of phage buffer; the agar keeps the rest. That is more than the Guide's estimate of about 4 ml per plate.
 
     plates needed = ml of lysate wanted / 5 to 7 ml per plate
 
@@ -101,27 +109,27 @@ The course needs about 10 ml for archiving plus 10 ml for DNA extraction. At 5 m
 
 Protocol: [yields](/research/protocols/phage-isolation#yields).
 
-## What counts as a high titer lysate?
+## What titer counts as a high titer phage lysate?
 
-The lab works to the high-titer threshold in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/), 5 x 10^9 pfu/ml. One lysate in the notebooks was archived at about 10^7, far below it. High titer lysates in the notebooks mostly titered between 10^9 and 10^11 pfu/ml: 5.3 x 10^9, 6.0 x 10^9, 1.5 x 10^10, 2.04 x 10^10, 2.2 x 10^11 and 3.8 x 10^11. One *M. foliorum* phage stayed at 2.5 to 2.7 x 10^8 however its plates were flooded, which the notebook recorded as below the threshold.
+A high titer lysate is at least 5 x 10^9 pfu/ml, the threshold in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/) that the lab works to. One lysate in the notebooks was archived at about 10^7, far below it. High titer lysates in the notebooks mostly titered between 10^9 and 10^11 pfu/ml: 5.3 x 10^9, 6.0 x 10^9, 1.5 x 10^10, 2.04 x 10^10, 2.2 x 10^11 and 3.8 x 10^11. One *M. foliorum* phage stayed at 2.5 to 2.7 x 10^8 however its plates were flooded, which the notebook recorded as below the threshold.
 
 To reach it, improve the web first. Flooding with 16 ml instead of 8 ml did not work (6.0 x 10^8 pfu/ml at best). Serial flooding, using one plate's lysate to flood a second webbed plate, took one lysate from 9.4 x 10^9 to 8.4 x 10^10 pfu/ml but did nothing for others.
 
 Protocol: [webbed plates and the high titer lysate](/research/protocols/phage-isolation#webbed-plates-and-the-high-titer-lysate).
 
-## How long do you incubate webbed plates?
+## How long do I incubate webbed plates before flooding them?
 
-About 24 hours, and pull them a little early rather than late. Plates left a little over 24 hours, or about 30 hours, cleared completely; about 22 hours worked. At 29 °C, 2 days blew the webs out and 1 day gave 6 of 6 webbed plates. Slow phages are the exception: one needed 48 to 72 hours to web. Watch the plates over the last few hours.
+Incubate webbed plates about 24 hours, and pull them a little early rather than late. Plates left a little over 24 hours, or about 30 hours, cleared completely; about 22 hours worked. At 29 °C, 2 days blew the webs out and 1 day gave 6 of 6 webbed plates. Slow phages are the exception: one needed 48 to 72 hours to web. Watch the plates over the last few hours.
 
 Protocol: [incubation of webbed plates](/research/protocols/phage-isolation#incubation-of-webbed-plates).
 
-## What do turbid plaques mean?
+## What do turbid phage plaques mean?
 
 A turbid (cloudy) plaque has bacteria still growing inside it; a clear plaque does not. A turbid plaque is still a phage and is purified like any other: in this lab, a single small, cloudy plaque that appeared on a direct-isolation plate after about 6 days went on to become a phage. What matters during purification is that all plaques on a plate look alike. A second plaque type appearing on dilution plates was, in one class, cross-contamination from another student's phage; pick each type separately.
 
 Protocol: [turbid plaques and mixed morphologies](/research/protocols/phage-isolation#turbid-plaques-and-mixed-morphologies).
 
-## What is the difference between direct and enriched isolation?
+## What is the difference between direct and enriched phage isolation?
 
 Direct isolation plates the filtered soil extract with host the same day, so it only finds phages that are already plentiful in the sample. Enriched isolation grows the filtered extract with host for several days first (the lab adds 250 µl host and shakes for 2 to 7 days), so a phage present in small numbers can multiply until it shows.
 
@@ -129,14 +137,14 @@ Expect many negatives with direct isolation. The notebooks record 7 of 8 samples
 
 Protocol: [direct vs enriched isolation](/research/protocols/phage-isolation#direct-vs-enriched-isolation).
 
-## Why did my picked plaque give no plaques on the dilution plates?
+## Why did my picked phage plaque give no plaques on the dilution plates?
 
 Usually the pick missed the phage, or the pick tube was old. In the notebooks, three series in a row gave nothing when the tip went into the plaque at an angle; a pick straight down into the center of the plaque worked. Re-diluting a days-old pick tube failed where a fresh pick from the same plate worked. A single-plaque pick holds few phage, so plate 10^0 to 10^-4, not out to 10^-8.
 
 Protocol: [phage purification](/research/protocols/phage-isolation#phage-purification-picking-and-replating-plaques).
 
-## Why did the whole class's plates fail at once?
+## Why did the whole class's phage plates fail at once?
 
-Suspect a shared stock before technique. In this lab, class-wide thin, speckled lawns with no plaques came from a dying host culture, and a buffer-only control plate with 20 plaques came from phage-contaminated phage buffer. Test the host with a host-only lawn (250 µl host plus 3 ml top agar, no phage), and run a buffer-only control plate with every dilution series.
+When every student's plates fail together, suspect a shared stock, such as the host culture or the phage buffer, before technique. In this lab, class-wide thin, speckled lawns with no plaques came from a dying host culture, and a buffer-only control plate with 20 plaques came from phage-contaminated phage buffer. Test the host with a host-only lawn (250 µl host plus 3 ml top agar, no phage), and run a buffer-only control plate with every dilution series.
 
 Protocol: [troubleshooting](/research/protocols/phage-isolation#troubleshooting-failures-that-hit-the-whole-class).

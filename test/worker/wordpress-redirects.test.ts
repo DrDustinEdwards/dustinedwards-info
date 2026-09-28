@@ -64,16 +64,15 @@ describe("pattern rules, on the apex host", () => {
     await expectMoved("/author/dustin/", "/about");
   });
 
-  it("student and author profiles answer 410, query and all", async () => {
+  it("student and author profiles go to the roster, query dropped", async () => {
     // Placeholders: real profile names are not kept in this repository.
-    await expectGone("/user/example-student/");
-    await expectGone("/user/example-student/?profiletab=main");
-    await expectGone("/author/example/");
-    await expectGone("/user/");
+    await expectMoved("/user/example-student/", "/teaching/phage-discovery#roster");
+    await expectMoved("/user/example-student/?profiletab=main", "/teaching/phage-discovery#roster");
+    await expectMoved("/author/example/", "/teaching/phage-discovery#roster");
   });
 
-  it("the membership pages answer 410", async () => {
-    for (const path of ["/register/", "/members/", "/logout/", "/account/", "/password-reset/"]) {
+  it("the membership pages, the bare /user/ directory among them, answer 410", async () => {
+    for (const path of ["/user/", "/register/", "/members/", "/logout/", "/account/", "/password-reset/"]) {
       await expectGone(path);
     }
   });
@@ -109,6 +108,11 @@ describe("pattern rules, on the apex host", () => {
   it("every other upload answers 410", async () => {
     await expectGone("/wp-content/uploads/2023/11/Electrophoresis.pdf");
     await expectGone("/wp-content/uploads/2017/09/Spot-Titer.png");
+  });
+
+  it("the molarity and metric prefix calculators answer 410", async () => {
+    await expectGone("/molarity-calculator/");
+    await expectGone("/knowledge-base/metric-prefix/");
   });
 
   it("the old /publications/ goes to /research/publications in one hop", async () => {
