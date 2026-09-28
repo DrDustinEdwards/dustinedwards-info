@@ -2,7 +2,6 @@
 // `--fig-cell` are local aliases, not tokens, because each needs a different ramp step per theme.
 
 import { PUBLICATIONS } from "~/data/publications";
-import { PHAGE_YEARS } from "~/data/phage-hunters";
 
 const FIRST_YEAR = 2007;
 const LAST_YEAR = 2026;
@@ -71,71 +70,6 @@ export function FigurePapersPerYear() {
           </text>
         ) : null,
       )}
-    </svg>
-  );
-}
-
-// The 0.88 inset gap is load-bearing: packed edge to edge the cells merge and cannot be counted.
-function hex(cx: number, cy: number, w: number): string {
-  const rx = (w / 2) * 0.88;
-  const ry = rx * 1.1;
-  const q = ry / 2;
-  return (
-    `M${cx.toFixed(1)} ${(cy - ry).toFixed(1)}` +
-    `L${(cx + rx).toFixed(1)} ${(cy - q).toFixed(1)}` +
-    `L${(cx + rx).toFixed(1)} ${(cy + q).toFixed(1)}` +
-    `L${cx.toFixed(1)} ${(cy + ry).toFixed(1)}` +
-    `L${(cx - rx).toFixed(1)} ${(cy + q).toFixed(1)}` +
-    `L${(cx - rx).toFixed(1)} ${(cy - q).toFixed(1)}Z`
-  );
-}
-
-export function FigureRoster() {
-  const cohorts = [...PHAGE_YEARS].sort((a, b) => b.year - a.year);
-  const total = cohorts.reduce((n, c) => n + c.researchers.length, 0);
-  const widest = Math.max(...cohorts.map((c) => c.researchers.length));
-
-  // Cell width falls out of the widest cohort, so a bigger intake shrinks the cells rather than
-  // running off the frame. The half-cell offset on alternate rows needs the extra half.
-  const W = 460;
-  const LEFT = 44;
-  const cell = (W - LEFT - 4) / (widest + 0.5);
-  const ROW = cell * 1.0;
-  const TOP = cell * 0.8;
-  const H = TOP + ROW * (cohorts.length - 1) + cell * 1.1 + 6;
-
-  return (
-    <svg
-      className="fig"
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-labelledby="fig2-title fig2-desc"
-    >
-      <title id="fig2-title">Figure 2. The roster, one cell per researcher.</title>
-      <desc id="fig2-desc">
-        {`${total} undergraduate researchers in ${cohorts.length} cohorts, ` +
-          `${cohorts.at(-1)?.year ?? ""} to ${cohorts.at(0)?.year ?? ""}. ` +
-          `The largest cohort is ${widest} and the smallest is ${Math.min(...cohorts.map((c) => c.researchers.length))}.`}
-      </desc>
-
-      {cohorts.map((cohort, row) => {
-        const cy = TOP + row * ROW;
-        const shift = row % 2 === 1 ? cell / 2 : 0;
-        return (
-          <g key={cohort.year}>
-            <text className="fig-label" x={LEFT - 8} y={cy + 3.5} textAnchor="end">
-              {cohort.year}
-            </text>
-            {cohort.researchers.map((_, i) => (
-              <path
-                key={i}
-                d={hex(LEFT + shift + cell / 2 + i * cell, cy, cell)}
-                fill="var(--fig-cell)"
-              />
-            ))}
-          </g>
-        );
-      })}
     </svg>
   );
 }

@@ -108,18 +108,20 @@ export function indexLoaderData(ordered, perPage) {
 }
 
 /**
- * `health` is `missing`, the one state carrying no numbers: a fabricated ratio would be a
- * fabricated string length on a measured page.
+ * The sections other than Writing are empty: a fabricated paper or count would be a fabricated
+ * string length on a measured page.
  *
  * @param {any[]} ordered
  * @param {number} cards
  */
 export function homeLoaderData(ordered, cards) {
   return {
-    gates: 0,
     posts: ordered.length,
     featured: ordered[0] ? listingCard(ordered[0]) : null,
     recent: ordered.slice(1, cards).map(listingCard),
-    health: { state: "missing", total: 0, failed: 0, ageSeconds: 0, readAt: "" },
+    papers: [],
+    paperCount: 0,
+    discovery: { researchers: 0, cohorts: 0, since: 0 },
+    podcast: null,
   };
 }

@@ -1,4 +1,4 @@
-// The watchdog's freshness, read off the home page's health tile.
+// The watchdog's freshness, read off the colophon's health tile.
 
 import { HEALTH_POLL_INTERVAL_SECONDS } from "../../../app/lib/health/snapshot.mjs";
 import { check, get, strip } from "./client.mjs";
@@ -6,14 +6,14 @@ import { check, get, strip } from "./client.mjs";
 /* Ship's poll also refreshes the snapshot, so this proves less just after a ship. */
 export async function run() {
   const bust = `vl-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-  const { text, status } = await get(`/?watchdog=${bust}`);
-  check("watchdog: the home page rendered for the freshness read", status === 200);
+  const { text, status } = await get(`/colophon?watchdog=${bust}`);
+  check("watchdog: the colophon rendered for the freshness read", status === 200);
 
   const attr = /data-health-age="(\d+)"/.exec(strip(text))?.[1];
   check(
-    "watchdog: the home page carries a health verdict rather than a placeholder",
+    "watchdog: the colophon carries a health verdict rather than a placeholder",
     attr !== undefined,
-    "no element on / carries data-health-age. The tile is in its `missing` state, " +
+    "no element on /colophon carries data-health-age. The tile is in its `missing` state, " +
       "which means NOTHING has written the snapshot: not the watchdog, not ship, " +
       "Check the watchdog's cron and the APP_KV binding.",
   );

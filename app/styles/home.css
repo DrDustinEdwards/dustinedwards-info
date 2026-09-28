@@ -40,15 +40,6 @@
   font-size: 0.9375rem;
 }
 
-/* SITE.tagline verbatim: the meta description and the Person record derive from the same string. */
-.evidence-health {
-  white-space: nowrap;
-}
-
-.home-tracks > .evidence {
-  margin-block-start: var(--s-7);
-}
-
 .home-areas {
   display: flex;
   flex-wrap: wrap;
@@ -124,6 +115,15 @@
   font-family: var(--font-sans);
   font-size: 0.875rem;
   line-height: 1.55;
+}
+
+/* A post's description is written for search results; two lines is the taste of it. */
+.home-row-clamp {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .home-more {
@@ -382,9 +382,7 @@
 }
 
 .home-research-line {
-  margin: 0;
-  border-block-start: var(--line-w) solid var(--dust);
-  padding-block-start: 1rem;
+  margin: 0 0 1rem;
   color: var(--text);
   font-family: var(--font-serif);
   font-size: 1.25rem;

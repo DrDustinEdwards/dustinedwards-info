@@ -1,7 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-import { readPage, splitFeatured, startHere } from "../app/lib/blog-listing.mjs";
+import {
+  HOME_CARDS,
+  HOME_PICKS,
+  picksFirst,
+  readPage,
+  splitFeatured,
+  startHere,
+} from "../app/lib/blog-listing.mjs";
 
 const page = [
   { slug: "a", featured: false },
@@ -83,8 +91,8 @@ test("the featured post leads and the others fill in behind it", () => {
   assert.equal(featured.slug, "flagship");
   assert.deepEqual(
     recent.map((p) => p.slug),
-    ["n1", "n2", "n3", "n4"],
-    "five rows in total (02-home.html §4), so four follow the lead",
+    ["n1", "n2"],
+    "three rows in total (the home page's best-of, 2026-09-27), so two follow the lead",
   );
 });
 
@@ -97,14 +105,52 @@ test("the featured post is never also one of the others", () => {
   );
 });
 
-test("with nothing featured the newest leads and the section still shows five", () => {
+test("with nothing featured the first of the others leads and the section still shows three", () => {
   const { featured, recent } = startHere([], others);
   assert.equal(featured.slug, "n1", "ruling 57: the newest leads");
   assert.deepEqual(
     recent.map((p) => p.slug),
-    ["n2", "n3", "n4", "n5"],
-    "five rows, not four: the section must not shrink because nothing is featured",
+    ["n2", "n3"],
+    "three rows, not two: the section must not shrink because nothing is featured",
   );
+  assert.equal(HOME_CARDS, 3);
+});
+
+test("the home page's picks come first, in pick order, then the rest newest first", () => {
+  const rows = [{ slug: "n1" }, { slug: "p2" }, { slug: "n2" }, { slug: "p1" }];
+  assert.deepEqual(
+    picksFirst(rows, ["p1", "p2"]).map((p) => p.slug),
+    ["p1", "p2", "n1", "n2"],
+  );
+});
+
+test("a pick that is not published drops out and the newest fill its place", () => {
+  assert.deepEqual(
+    picksFirst([{ slug: "n1" }, { slug: "p2" }, { slug: "n2" }], ["gone", "p2"]).map((p) => p.slug),
+    ["p2", "n1", "n2"],
+  );
+});
+
+test("a post in both queries appears once", () => {
+  assert.deepEqual(
+    picksFirst([{ slug: "p1" }, { slug: "n1" }, { slug: "p1" }], ["p1"]).map((p) => p.slug),
+    ["p1", "n1"],
+    "listHomeStartHere merges the picks query with the newest query, which can overlap",
+  );
+});
+
+test("every home pick is a published, unfeatured post in content/posts", () => {
+  for (const slug of HOME_PICKS) {
+    const source = readFileSync(new URL(`../content/posts/${slug}.md`, import.meta.url), "utf8");
+    const front = source.split(/^---$/m)[1] ?? "";
+    assert.match(front, /^draft: false$/m, `${slug} is a draft, so the home page would skip it`);
+    assert.doesNotMatch(
+      front,
+      /^featured: true$/m,
+      `${slug} is featured, so it already leads and the pick is spent`,
+    );
+  }
+  assert.ok(HOME_PICKS.length >= HOME_CARDS - 1, "the picks fill the rows behind the lead");
 });
 
 test("an empty corpus yields a null lead, which renders the section dark", () => {
