@@ -1,0 +1,16 @@
+/* The headshot beside the prose on a wide screen, above it on a phone. */
+.about-photo {
+  display: block;
+  width: 11rem;
+  height: auto;
+  margin: 0 0 1.5rem;
+  border-radius: 0.25rem;
+}
+
+@media (min-width: 46rem) {
+  .about-photo {
+    float: right;
+    width: 14rem;
+    margin: 0.25rem 0 1.5rem 2rem;
+  }
+}

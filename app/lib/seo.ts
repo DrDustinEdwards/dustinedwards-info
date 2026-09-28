@@ -11,12 +11,14 @@ export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
 // Not the apex: until DNS moves, the apex is the legacy WordPress site.
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
-// `role` and `affiliation` are structured data (jobTitle, worksFor), so they stay short and literal.
+// `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
+// (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal.
 // The description names the department in full. It is a few characters over the 155 SERP estimate;
 // the role and the university come first so a clip keeps them.
 export const SITE = {
   name: "Dustin Edwards",
   role: "Professor and Virologist",
+  jobTitle: "Virologist, Professor, and Department Head",
   affiliation: "Tarleton State University",
   department: "Department of Biological Sciences",
   eyebrow: "Professor and Virologist",
@@ -93,12 +95,25 @@ export function truncateForSerp(text: string, limit: number) {
   return `${(lastSpace > limit * 0.6 ? cut.slice(0, lastSpace) : cut).trimEnd()}...`;
 }
 
-/** The About page's Person: the same facts as `personNode`, including the site description. */
+/** The home page's Person: the same node as `personNode`, joined to it by the shared `@id`. */
 export function personJsonLd(origin: string) {
+  return personNode(origin);
+}
+
+/**
+ * The About page is a ProfilePage about the same Person the home page describes: the shared `@id` is
+ * what makes the two one entity rather than two people with one name.
+ */
+export function profilePageJsonLd(origin: string, page: { path: string; description: string }) {
+  const { "@context": context, ...person } = personNode(origin);
   return {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    ...personFacts(origin),
+    "@context": context,
+    "@type": "ProfilePage",
+    "@id": `${origin}${page.path}`,
+    url: `${origin}${page.path}`,
+    name: `About ${SITE.name}`,
+    description: page.description,
+    mainEntity: person,
   };
 }
 
@@ -278,6 +293,31 @@ export const OWNER_PUBMED =
   "https://pubmed.ncbi.nlm.nih.gov/?term=Edwards+Dustin%5BAuthor%5D&sort=date";
 export const OWNER_FACULTY_PAGE = "https://faculty.tarleton.edu/dcedwards/";
 
+// Confirmed by Dustin, 2026-09-28 (#200); each ties to Tarleton.
+export const OWNER_SEA_PHAGES = "https://seaphages.org/faculty/318/";
+export const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=57204587587";
+export const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
+export const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
+export const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
+
+// The headshot (Dustin, 2026-09-28), uploaded to MEDIA from Tarleton's file so nothing here links to
+// another server. The square crop leads: search engines prefer it for a Person.
+export const OWNER_PHOTO = {
+  key: "dustin-edwards-headshot-a4b25f04061613b9-1365x2048.jpg",
+  width: 1365,
+  height: 2048,
+} as const;
+export const OWNER_PHOTO_SQUARE = {
+  key: "dustin-edwards-headshot-square-090e58f805bc9e9f-1365x1365.jpg",
+  width: 1365,
+  height: 1365,
+} as const;
+
+function photoObject(origin: string, photo: { key: string; width: number; height: number }) {
+  const url = `${origin}/media/${photo.key}`;
+  return { "@type": "ImageObject", url, contentUrl: url, width: photo.width, height: photo.height };
+}
+
 export const GERMOMICS_URL = "https://germomics.com/";
 export const GERMOMICS_X_URL = "https://x.com/Germomics";
 
@@ -287,8 +327,23 @@ export const OWNER_PROFILES = [OWNER_SCHOLAR, OWNER_ORCID, OWNER_PUBMED] as cons
 const OWNER_SAME_AS = [
   ...OWNER_PROFILES,
   OWNER_FACULTY_PAGE,
+  OWNER_SEA_PHAGES,
+  OWNER_SCOPUS,
+  OWNER_LOOP,
+  OWNER_GITHUB,
+  OWNER_LINKEDIN,
   GERMOMICS_URL,
   GERMOMICS_X_URL,
+];
+
+// What he is known for, so a reader of the markup can tell him from the other Dustin Edwardses.
+const OWNER_KNOWS_ABOUT = [
+  "Virology",
+  "Bacteriophages",
+  "Phage genomics",
+  "Avian retroviruses",
+  "Retroviruses",
+  "Science education",
 ];
 
 export function personId(origin: string) {
@@ -312,17 +367,21 @@ export function personNode(origin: string) {
 function personFacts(origin: string) {
   return {
     name: SITE.name,
-    jobTitle: SITE.role,
+    honorificSuffix: "Ph.D.",
+    jobTitle: SITE.jobTitle,
+    image: [photoObject(origin, OWNER_PHOTO_SQUARE), photoObject(origin, OWNER_PHOTO)],
     description: SITE.description,
     url: origin,
     worksFor: {
       "@type": "CollegeOrUniversity",
       name: SITE.affiliation,
+      url: "https://www.tarleton.edu/",
       department: {
         "@type": "Organization",
         name: SITE.department,
       },
     },
+    knowsAbout: OWNER_KNOWS_ABOUT,
     sameAs: OWNER_SAME_AS,
   };
 }
