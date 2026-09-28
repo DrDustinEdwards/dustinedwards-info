@@ -303,11 +303,19 @@
 }
 
 :root {
-  /* Not 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device. */
+  /* Not 0: a short ramp hides the one-frame repaint stutter an instant swap shows on a slow device.
+     Palette exit (120ms), the image-viewer morph (240ms) and the phone header hide (350ms) stay
+     literals: those are the overlay timings, and folding them in here would retune them. */
   --motion-instant: 90ms;
   --motion-state: 160ms;
+  /* Incoming page only. Long enough to see which page arrived, short enough that it is not a wait. */
+  --motion-page: 180ms;
+  /* One cycle of a loading line, drawn only while something is actually in flight. */
+  --motion-wait: 900ms;
 
   --ease-state: cubic-bezier(0.2, 0, 0.38, 1);
+  /* Entrances: leave the start quickly and settle. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Hexes copied from design-tokens.md, never derived. The light and dark blocks do not cascade into
@@ -758,6 +766,10 @@ a:hover {
   text-decoration-color: var(--brand);
 }
 
+a:active {
+  color: var(--brand-pressed);
+}
+
 .hero {
   min-height: calc(100dvh - 8rem);
   display: grid;
@@ -809,6 +821,16 @@ a:hover {
   background: var(--brand);
   color: var(--on-brand);
   border: 1px solid var(--brand);
+}
+
+.btn-brand:hover {
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
+}
+
+.btn-brand:active {
+  background: var(--brand-pressed);
+  border-color: var(--brand-pressed);
 }
 
 .btn-ghost {

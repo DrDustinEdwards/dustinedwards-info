@@ -42,6 +42,10 @@
   color: var(--brand-hover);
 }
 
+.post-details > summary:active {
+  color: var(--brand-pressed);
+}
+
 .post-details > *:not(summary) {
   padding-block-end: 1rem;
 }
