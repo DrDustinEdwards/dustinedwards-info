@@ -1,13 +1,29 @@
+import { aimsAt } from "~/lib/menu-aim.mjs";
+
 const MOBILE = "(max-width: 43.99rem)";
 
 // A pointer that hovers, so a touch screen's synthesized hover never opens a panel under a tap.
 const HOVER = "(hover: hover) and (pointer: fine)";
 
-// Hover opens at once and moving to another word switches at once; nothing waits on intent and nothing
-// animates the card in. The one wait is the close grace: leaving the word or its card starts it, and
-// entering the word, its card, or another word ends it, so the pointer can cross the header's foot
-// between the word and the card. Grace is not motion, so reduced motion keeps it.
+// Hover opens at once and moving to another word switches at once, unless the pointer is only crossing
+// that word on its way down to the open card (the safe triangle below); nothing else waits on intent
+// and nothing animates the card in. The one wait is the close grace: leaving the word or its card
+// starts it, and entering the word, its card, or another word ends it, so the pointer can cross the
+// header's foot between the word and the card. Grace is not motion, so reduced motion keeps it.
 const CLOSE_GRACE = 150;
+
+/*
+ * The safe triangle (app/lib/menu-aim.mjs). A pointer that enters another word while heading down for
+ * the open card, inside the triangle from where it was to the card's top corners, does not take the
+ * card over. It is looked at again every AIM_RECHECK ms: one that has come to rest (moved under AIM_REST
+ * px since the last look) or has turned out of the triangle takes the card at once. A move along the
+ * header, level or upward, is outside the triangle and switches on the same frame as ever.
+ */
+const AIM_RECHECK = 80;
+const AIM_REST = 2;
+
+// How many recent pointer points to keep; the oldest is the triangle's apex on entering a word.
+const TRAIL = 4;
 
 const RETURN_AFTER = 8;
 
@@ -96,6 +112,9 @@ function enhanceMenus() {
   let closeTimer = 0;
   let lastX = 0;
   let lastY = 0;
+  // The pointer's last few points, oldest first, and the word it crossed without taking the card.
+  const trail: { x: number; y: number }[] = [];
+  let aim: { menu: Menu; from: { x: number; y: number }; timer: number } | null = null;
 
   const isOpen = (menu: Menu) =>
     mobile.matches ? menu.item.hasAttribute("data-expanded") : isShowing(menu.panel);
@@ -105,6 +124,11 @@ function enhanceMenus() {
   const cancelClose = () => {
     window.clearTimeout(closeTimer);
     closeTimer = 0;
+  };
+
+  const cancelAim = () => {
+    if (aim) window.clearTimeout(aim.timer);
+    aim = null;
   };
 
   /*
@@ -140,6 +164,7 @@ function enhanceMenus() {
    */
   const show = (menu: Menu, pin: boolean) => {
     cancelClose();
+    cancelAim();
     if (!isShowing(menu.panel)) {
       menu.panel.showPopover();
       place(menu);
@@ -151,6 +176,7 @@ function enhanceMenus() {
 
   const hide = (menu: Menu) => {
     cancelClose();
+    cancelAim();
     if (isShowing(menu.panel)) menu.panel.hidePopover();
     sync(menu);
     syncPage();
@@ -164,6 +190,22 @@ function enhanceMenus() {
       if (overOwn(menu, lastX, lastY)) return;
       hide(menu);
     }, CLOSE_GRACE);
+  };
+
+  // Whether a pointer that went from `from` to (x, y) is still heading for the open card.
+  const heading = (open: Menu, from: { x: number; y: number }, x: number, y: number) =>
+    aimsAt(from, { x, y }, open.panel.getBoundingClientRect());
+
+  // The look every AIM_RECHECK ms: still moving toward the card waits again, anything else switches.
+  const recheck = () => {
+    if (!aim) return;
+    const open = showing();
+    const { menu, from } = aim;
+    if (open === menu) return cancelAim();
+    const moved = Math.hypot(lastX - from.x, lastY - from.y) >= AIM_REST;
+    if (!open || !moved || !heading(open, from, lastX, lastY)) return show(menu, false);
+    aim.from = { x: lastX, y: lastY };
+    aim.timer = window.setTimeout(recheck, AIM_RECHECK);
   };
 
   for (const menu of menus) {
@@ -198,14 +240,34 @@ function enhanceMenus() {
       if (event.pointerType !== "mouse" || !hover.matches || mobile.matches) return;
       lastX = event.clientX;
       lastY = event.clientY;
-      if (showing() === menu) cancelClose();
-      else show(menu, false);
+      const open = showing();
+      if (open === menu) {
+        cancelClose();
+        cancelAim();
+        return;
+      }
+      // Crossing this word on the way down to another word's card: hold the card and look again.
+      const from = trail.find((point) => point.x !== lastX || point.y !== lastY);
+      if (open && from && heading(open, from, lastX, lastY)) {
+        cancelClose();
+        cancelAim();
+        aim = { menu, from: { x: lastX, y: lastY }, timer: window.setTimeout(recheck, AIM_RECHECK) };
+        return;
+      }
+      show(menu, false);
     });
 
     menu.item.addEventListener("pointerleave", (event) => {
       if (event.pointerType !== "mouse" || mobile.matches) return;
       lastX = event.clientX;
       lastY = event.clientY;
+      // Off the word it was crossing without taking over: the open card's close grace starts again.
+      if (aim?.menu === menu) {
+        cancelAim();
+        const open = showing();
+        const into = event.relatedTarget;
+        if (open && pinned !== open && !(into instanceof Node && open.item.contains(into))) scheduleClose(open);
+      }
       if (!isShowing(menu.panel) || pinned === menu) return;
       const next = event.relatedTarget;
       if (next instanceof Node && menu.item.contains(next)) return;
@@ -220,11 +282,21 @@ function enhanceMenus() {
     });
   }
 
-  // Where the pointer is when the grace runs out: on its way down the strip under the word, the card stays.
+  /*
+   * Where the pointer is when the grace runs out: on its way down the strip under the word, the card
+   * stays. The trail is the safe triangle's apex, and a move that turns out of the triangle while a
+   * word is being crossed takes the card at once rather than at the next look.
+   */
   document.addEventListener("pointermove", (event) => {
     if (event.pointerType !== "mouse") return;
     lastX = event.clientX;
     lastY = event.clientY;
+    trail.push({ x: lastX, y: lastY });
+    if (trail.length > TRAIL) trail.shift();
+    if (!aim || (lastX === aim.from.x && lastY === aim.from.y)) return;
+    const open = showing();
+    if (open === aim.menu) return cancelAim();
+    if (!open || !heading(open, aim.from, lastX, lastY)) show(aim.menu, false);
   });
 
   // The pointer left the page. A move onto the panel also leaves elements under it, and the panel is

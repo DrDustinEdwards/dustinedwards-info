@@ -295,9 +295,11 @@ export async function run({ browser }) {
     await page.setViewport({ width: 1280, height: 900 });
 
     /* Hover (app/enhance/header.ts): a word opens its card the moment the pointer arrives, whole on
-       that frame; another word takes over at once; the card survives the trip from its word down into
-       it; and leaving closes it once the close grace (150ms) runs out. Every "at once" read below is
-       taken with no wait after the move, so an intent timer or a grow would fail it. */
+       that frame; a pointer crossing another word on its way down to the open card keeps that card (the
+       safe triangle), and takes the crossed word's card once it comes to rest there; a level move to
+       another word takes over at once; the card survives the trip from its word down into it; and
+       leaving closes it once the close grace (150ms) runs out. Every "at once" read below is taken with
+       no wait after the move, so an intent timer or a grow would fail it. */
     const words = await page.evaluate(() => {
       /** @param {string} href */
       const at = (href) => {
@@ -345,12 +347,75 @@ export async function run({ browser }) {
         JSON.stringify(opened),
       );
 
+      /* The diagonal: from the top of the Research word, down and right across the foot of the Teaching
+         word, into the right part of Research's card. The line is solved backward from its end in the
+         card through a point low in Teaching's item, so the path really crosses Teaching. Every card
+         that opens on the way is counted, so a Teaching card open for one frame fails it. */
+      const path = await page.evaluate(() => {
+        const research = document.querySelector('.site-nav-word[href="/research"]')?.getBoundingClientRect();
+        const teaching = document.querySelector('.site-nav-word[href="/teaching"]')?.closest("[data-nav-menu]")?.getBoundingClientRect();
+        const card = document.getElementById("site-nav-research")?.getBoundingClientRect();
+        if (!research || !teaching || !card) return null;
+        const sx = research.left + research.width / 2;
+        for (let ex = card.right - 40; ex > teaching.right + 40; ex -= 20) {
+          const end = { x: ex, y: card.top + 40 };
+          const via = { x: teaching.left + teaching.width * 0.3, y: teaching.bottom - 3 };
+          const slope = (end.y - via.y) / (end.x - via.x);
+          const start = { x: sx, y: via.y + (sx - via.x) * slope };
+          if (start.y >= research.top + 1 && start.y <= research.bottom - 1) return { start, via, end, card: card.top };
+        }
+        return null;
+      });
+      if (path) {
+        await page.evaluate(() => {
+          /** @type {string[]} */
+          const opened = [];
+          Object.assign(window, { __navOpened: opened });
+          for (const p of document.querySelectorAll("[data-nav-panel]")) {
+            p.addEventListener("toggle", (event) => {
+              if (/** @type {ToggleEvent} */ (event).newState === "open") opened.push(p.id);
+            });
+          }
+        });
+        await page.mouse.move(path.start.x, path.start.y, { steps: 2 });
+        await page.mouse.move(path.end.x, path.end.y, { steps: 40 });
+        await sleep(300);
+        const [kept, crossed] = [await cardState("research"), await cardState("teaching")];
+        const opens = await page.evaluate(() => /** @type {string[]} */ (Reflect.get(window, "__navOpened")));
+        ok(
+          "a diagonal move from Research across the Teaching word into Research's card keeps Research open and never opens Teaching",
+          kept !== null && crossed !== null && kept.open && !crossed.open && opens.length === 0 &&
+            path.end.x >= kept.box[0] && path.end.x <= kept.box[2] && path.end.y >= kept.box[1] && path.end.y <= kept.box[3],
+          `path ${JSON.stringify(path)}, research ${JSON.stringify(kept)}, teaching ${JSON.stringify(crossed)}, ` +
+            `cards opened on the way ${JSON.stringify(opens)}`,
+        );
+
+        /* The same line, stopped on the Teaching word: at rest, the crossed word takes the card within
+           one look (80ms). Back to the Research word first, inside its card and up the word's strip. */
+        await page.mouse.move(path.start.x, path.card + 30, { steps: 4 });
+        await page.mouse.move(path.start.x, path.start.y, { steps: 4 });
+        await page.mouse.move(path.via.x, path.via.y, { steps: 20 });
+        await sleep(300);
+        const [left, rested] = [await cardState("research"), await cardState("teaching")];
+        ok(
+          "a pointer that comes to rest on the word it was crossing opens that word's card",
+          left !== null && rested !== null && !left.open && rested.open,
+          `pointer at (${Math.round(path.via.x)}, ${Math.round(path.via.y)}), research ${JSON.stringify(left)}, teaching ${JSON.stringify(rested)}`,
+        );
+      } else {
+        ok("the header lays out a diagonal from Research across Teaching into Research's card", false, JSON.stringify(words));
+      }
+
+      /* Level along the header from Research to Teaching: outside the triangle, so it switches on the
+         move itself, with no look and no wait. */
+      await page.mouse.move(words.research.x, words.research.y, { steps: 4 });
+      const back = await cardState("research");
       await page.mouse.move(words.teaching.x, words.teaching.y, { steps: 4 });
       const [from, to] = [await cardState("research"), await cardState("teaching")];
       ok(
-        "moving to another word switches cards at once: the new one open and whole, the old one shut",
-        from !== null && to !== null && !from.open && to.open && to.whole,
-        `research ${JSON.stringify(from)}, teaching ${JSON.stringify(to)}`,
+        "moving level to another word switches cards at once: the new one open and whole, the old one shut",
+        back !== null && back.open && from !== null && to !== null && !from.open && to.open && to.whole,
+        `research before ${JSON.stringify(back)}, research after ${JSON.stringify(from)}, teaching ${JSON.stringify(to)}`,
       );
 
       /* Straight down off the word, across the header's foot, and into the card: leaving the word

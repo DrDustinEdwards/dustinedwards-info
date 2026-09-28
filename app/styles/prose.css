@@ -44,6 +44,15 @@
   list-style: decimal;
 }
 
+/* The same reset strips the bullets. A classed list inside prose is UI and stays unmarked. */
+.prose ul:not([class]) {
+  list-style: disc;
+}
+
+.prose ul:not([class]) ul:not([class]) {
+  list-style: circle;
+}
+
 .prose li {
   margin-bottom: 0.375rem;
 }
