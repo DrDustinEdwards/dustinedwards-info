@@ -280,13 +280,13 @@ export function checkProjects(ctx) {
   for (const softwarePath of SOFTWARE_PAGES) {
     ok(
       `software page is listed: ${softwarePath}`,
-      CONTENT_PAGE_PATHS.includes(softwarePath),
+      /** @type {readonly string[]} */ (CONTENT_PAGE_PATHS).includes(softwarePath),
       "missing from CONTENT_PAGE_PATHS",
     );
     ok(`routes declare ${softwarePath}`, routes.has(softwarePath), "the splat did not expand this path");
   }
 
-  const readPage = (name) => readFileSync(join(root, "content", "pages", name), "utf8");
+  const readPage = (/** @type {string} */ name) => readFileSync(join(root, "content", "pages", name), "utf8");
   const hub = readPage("software.md");
   ok(
     "the hub names Products, Sites and Infrastructure",

@@ -52,7 +52,7 @@ export async function renderContentPages() {
   const names = (await readdir(fromRoot(PAGES_DIR))).filter((name) => name.endsWith(".md")).sort();
   const expected = new Map(CONTENT_PAGE_PATHS.map((p) => [contentPageFile(p), p]));
 
-  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> }>} */
+  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }>, schemaType?: string, productUrl?: string, codeRepository?: string, applicationCategory?: string }>} */
   const pages = [];
   for (const name of names) {
     const file = path.join(PAGES_DIR, name);
