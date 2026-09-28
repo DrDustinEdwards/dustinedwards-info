@@ -44,6 +44,12 @@
   text-decoration: none;
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .site-nav-word {
+    transition: color 120ms ease;
+  }
+}
+
 .site-nav-word:hover,
 .site-nav-item:has(> .site-nav-panel:popover-open) > .site-nav-word,
 .site-nav-item[data-expanded] > .site-nav-word {
@@ -84,10 +90,16 @@
   color: var(--brand-pressed);
 }
 
-/* No transition: the design gives the panel no motion, so the chevron turns without any either. */
+/* The chevron turns with the panel. header.ts morphs the panel's height; this is only the mark. */
 .site-nav-item:has(> .site-nav-panel:popover-open) .site-nav-chevron svg,
 .site-nav-item[data-expanded] .site-nav-chevron svg {
   transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .site-nav-chevron svg {
+    transition: transform 160ms ease;
+  }
 }
 
 /*
@@ -198,9 +210,19 @@
 .site-nav-link:visited {
   display: inline-flex;
   align-items: center;
+  max-inline-size: 100%;
   min-block-size: 1.75rem;
   color: var(--brand);
   text-decoration: none;
+}
+
+.site-nav-links > li {
+  max-inline-size: 100%;
+}
+
+.site-nav-label {
+  min-inline-size: 0;
+  text-wrap: balance;
 }
 
 .site-nav-link:hover {

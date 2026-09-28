@@ -42,9 +42,14 @@ export async function run({ browser }) {
   const hrefs = [...new Set([...navHtml.matchAll(/<a [^>]*href="([^"]+)"/g)].map((m) => m[1]))];
   ok(
     "the header nav is in the server HTML with its menu links as anchors",
-    hrefs.includes("/research") && hrefs.includes("/research/protocols") && hrefs.includes("/teaching/virus-isolation"),
+    hrefs.includes("/research") &&
+      hrefs.includes("/research/protocols") &&
+      !hrefs.some((href) => href.startsWith("/research/protocols/")) &&
+      hrefs.includes("/teaching/virus-isolation") &&
+      navHtml.includes("Protocols: Lab methods and primer library"),
     `found ${hrefs.length} href(s) in the served nav: ${hrefs.join(", ") || "none"}. A menu link that ` +
-      `only script renders is one no crawler and no reader without script can follow.`,
+      `only script renders is one no crawler and no reader without script can follow. Protocols is one ` +
+      `Research entry, the hub, not a primer page.`,
   );
   ok(
     "the served header carries no role=menu, menubar or menuitem",

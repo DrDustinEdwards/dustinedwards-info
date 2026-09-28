@@ -3,9 +3,18 @@ const MOBILE = "(max-width: 43.99rem)";
 // A pointer that hovers, so a touch screen's synthesized hover never opens a panel under a tap.
 const HOVER = "(hover: hover) and (pointer: fine)";
 
-// The menu design's timings: a pass over a word opens nothing, and a short slip off it closes nothing.
-const OPEN_AFTER = 500;
-const CLOSE_AFTER = 500;
+const REDUCE = "(prefers-reduced-motion: reduce)";
+
+// A pass across the bar opens nothing. Once a panel is open, moving along the bar switches in the
+// same frame. The only delay is the safe path: while the pointer is aimed at the panel already on
+// screen, another word does not take it. Reduced motion opens and closes with no wait and no morph;
+// a few frames remain only while the pointer is traveling into the panel, or that path could not be crossed.
+const OPEN_INTENT = 100;
+const SKIP_FOR = 350;
+const AIM_REST = 280;
+const CLOSE_AWAY = 80;
+const CLOSE_TOWARD = 140;
+const MORPH_MS = 200;
 
 const RETURN_AFTER = 8;
 
@@ -66,10 +75,16 @@ function enhanceMenu(element: HTMLElement) {
  * Each chevron's panel is a popover it opens with no script. On a wide screen this adds hover, a click
  * that pins the panel, Escape back to the chevron, and aria-expanded; on a phone, where the panels sit
  * inside the Menu, the chevron expands its section in place instead.
+ *
+ * The three panels share one rectangle under the header. Switching measures the open one and starts
+ * the next at that height, so the paper morphs instead of cutting. The height is inline and cleared
+ * when the morph ends, so a panel the script never opened still has no height of its own.
  */
 function enhanceMenus() {
   const mobile = window.matchMedia(MOBILE);
   const hover = window.matchMedia(HOVER);
+  const motion = window.matchMedia(REDUCE);
+  const reduced = () => motion.matches;
 
   const menus: Menu[] = Array.from(document.querySelectorAll<HTMLElement>("[data-nav-menu]"), (item) => {
     const chevron = item.querySelector<HTMLButtonElement>("[data-nav-chevron]");
@@ -79,10 +94,18 @@ function enhanceMenus() {
   });
 
   let pinned: Menu | null = null;
+  let pending: Menu | null = null;
   let openTimer = 0;
   let closeTimer = 0;
-  // Where the pointer left the word of the open panel: one corner of the triangle it may cross.
+  let morphGen = 0;
+  // When the last panel closed. A return inside SKIP_FOR opens with no intent wait.
+  let warmed = -SKIP_FOR;
+  // Where the pointer left the open word: the apex of the triangle it may cross to reach the panel.
   let exit: DOMPointReadOnly | null = null;
+  let lastX = 0;
+  let lastY = 0;
+  let prevX = 0;
+  let prevY = 0;
 
   const isOpen = (menu: Menu) =>
     mobile.matches ? menu.item.hasAttribute("data-expanded") : isShowing(menu.panel);
@@ -92,6 +115,99 @@ function enhanceMenus() {
   const clearTimers = () => {
     window.clearTimeout(openTimer);
     window.clearTimeout(closeTimer);
+    openTimer = 0;
+    closeTimer = 0;
+    pending = null;
+  };
+
+  const resetMorph = (panel: HTMLElement) => {
+    panel.style.height = "";
+    panel.style.overflow = "";
+    panel.style.transition = "";
+    panel.style.opacity = "";
+    for (const child of panel.children) {
+      if (!(child instanceof HTMLElement)) continue;
+      child.style.transition = "";
+      child.style.opacity = "";
+    }
+  };
+
+  /*
+   * One rectangle, two heights. `from` is the panel being replaced; null grows the first open up
+   * from the header. Reduced motion leaves the popover's own show, which is already instant.
+   */
+  const morph = (panel: HTMLElement, from: number | null) => {
+    if (reduced()) return;
+    const gen = ++morphGen;
+    const content = [...panel.children].filter((el): el is HTMLElement => el instanceof HTMLElement);
+    panel.style.transition = "none";
+    panel.style.overflow = "hidden";
+    panel.style.height = "auto";
+    const target = panel.offsetHeight;
+    if (target === 0) {
+      resetMorph(panel);
+      return;
+    }
+    const start = from === null ? 0 : Math.abs(from - target) < 2 ? target : from;
+    panel.style.height = `${start}px`;
+    panel.style.opacity = from === null ? "0" : "1";
+    for (const el of content) {
+      el.style.transition = "none";
+      el.style.opacity = from === null ? "1" : "0";
+    }
+    void panel.offsetHeight;
+    requestAnimationFrame(() => {
+      if (gen !== morphGen || !isShowing(panel)) return;
+      panel.style.transition = `height ${MORPH_MS}ms cubic-bezier(0.16, 1, 0.3, 1), opacity 160ms ease`;
+      for (const el of content) el.style.transition = "opacity 140ms ease";
+      void panel.offsetHeight;
+      panel.style.height = `${target}px`;
+      panel.style.opacity = "1";
+      for (const el of content) el.style.opacity = "1";
+    });
+    window.setTimeout(() => {
+      if (gen !== morphGen) return;
+      resetMorph(panel);
+    }, MORPH_MS + 80);
+  };
+
+  const rectHas = (rect: DOMRect, x: number, y: number) =>
+    x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
+  const overOwn = (menu: Menu, x: number, y: number) =>
+    rectHas(menu.item.getBoundingClientRect(), x, y) || rectHas(menu.panel.getBoundingClientRect(), x, y);
+
+  // The gap under the word, plus the triangle from `exit` to the panel's top edge.
+  const inSafe = (menu: Menu, x: number, y: number) => {
+    const item = menu.item.getBoundingClientRect();
+    const box = menu.panel.getBoundingClientRect();
+    const top = Math.min(item.bottom, box.top);
+    const bottom = Math.max(item.bottom, box.top);
+    if (x >= item.left && x <= item.right && y >= top - 2 && y <= bottom + 2) return true;
+    if (!exit || box.bottom <= box.top) return false;
+    return inTriangle(
+      new DOMPointReadOnly(x, y),
+      exit,
+      new DOMPointReadOnly(box.left, box.top),
+      new DOMPointReadOnly(box.right, box.top),
+    );
+  };
+
+  // A jump's leave event is reported at the destination. The apex has to be the last point on the word,
+  // or that destination is "inside" the triangle and the close cancels itself.
+  const onPath = (menu: Menu, x: number, y: number) => {
+    if (!exit) return false;
+    return Math.hypot(x - exit.x, y - exit.y) > 6 && inSafe(menu, x, y);
+  };
+
+  // The leave point is the triangle's apex, so it is always "inside". Project one step of travel.
+  const headingIn = (menu: Menu) => {
+    const dx = lastX - prevX;
+    const dy = lastY - prevY;
+    const len = Math.hypot(dx, dy);
+    if (len < 0.5) return false;
+    const step = 28;
+    return inSafe(menu, lastX + (dx / len) * step, lastY + (dy / len) * step);
   };
 
   /*
@@ -99,16 +215,49 @@ function enhanceMenus() {
    * sync at once: the toggle event that also syncs arrives a task later, after a reader could look.
    */
   const show = (menu: Menu, pin: boolean) => {
+    const open = showing();
+    const from = open && open !== menu ? open.panel.getBoundingClientRect().height : null;
     clearTimers();
-    if (!isShowing(menu.panel)) menu.panel.showPopover();
+    exit = null;
+    if (!isShowing(menu.panel)) {
+      menu.panel.showPopover();
+      morph(menu.panel, from);
+    }
     pinned = pin ? menu : null;
     menus.forEach(sync);
   };
 
   const hide = (menu: Menu) => {
     clearTimers();
+    morphGen += 1;
+    resetMorph(menu.panel);
     if (isShowing(menu.panel)) menu.panel.hidePopover();
     sync(menu);
+  };
+
+  const scheduleClose = (menu: Menu) => {
+    window.clearTimeout(closeTimer);
+    const toward = headingIn(menu);
+    const delay = reduced() ? (toward ? 48 : 0) : toward ? CLOSE_TOWARD : CLOSE_AWAY;
+    closeTimer = window.setTimeout(() => {
+      closeTimer = 0;
+      if (pinned === menu || pending || !isShowing(menu.panel)) return;
+      if (overOwn(menu, lastX, lastY)) return;
+      if (onPath(menu, lastX, lastY)) return;
+      hide(menu);
+    }, delay);
+  };
+
+  const openDelay = () => {
+    if (reduced() || performance.now() - warmed < SKIP_FOR) return 0;
+    return OPEN_INTENT;
+  };
+
+  const notePointer = (x: number, y: number) => {
+    prevX = lastX;
+    prevY = lastY;
+    lastX = x;
+    lastY = y;
   };
 
   for (const menu of menus) {
@@ -116,7 +265,11 @@ function enhanceMenus() {
 
     // Every way a panel closes, the browser's own light dismiss and Escape included, passes through here.
     menu.panel.addEventListener("toggle", () => {
-      if (!isShowing(menu.panel) && pinned === menu) pinned = null;
+      if (!isShowing(menu.panel)) {
+        if (pinned === menu) pinned = null;
+        resetMorph(menu.panel);
+        warmed = performance.now();
+      }
       sync(menu);
     });
 
@@ -134,37 +287,56 @@ function enhanceMenus() {
 
     menu.item.addEventListener("pointerenter", (event) => {
       if (event.pointerType !== "mouse" || !hover.matches || mobile.matches) return;
+      notePointer(event.clientX, event.clientY);
       const open = showing();
       // Back on the word or on its panel, which is inside this item, so it is not closing after all.
       if (open === menu) {
         window.clearTimeout(closeTimer);
+        closeTimer = 0;
+        window.clearTimeout(openTimer);
+        openTimer = 0;
+        pending = null;
         return;
       }
-      if (pinned) return;
       window.clearTimeout(openTimer);
+      openTimer = 0;
       if (!open) {
-        openTimer = window.setTimeout(() => show(menu, false), OPEN_AFTER);
+        const delay = openDelay();
+        if (delay === 0) show(menu, false);
+        else openTimer = window.setTimeout(() => show(menu, false), delay);
         return;
       }
-      /*
-       * Another panel is open. Along the row, move straight to this one; on the way down to the open
-       * panel, crossing this word is not a choice, so switch only if the pointer rests here.
-       */
-      const box = open.panel.getBoundingClientRect();
-      const here = new DOMPointReadOnly(event.clientX, event.clientY);
-      const heading =
-        exit !== null &&
-        inTriangle(here, exit, new DOMPointReadOnly(box.left, box.top), new DOMPointReadOnly(box.right, box.top));
-      if (heading) openTimer = window.setTimeout(() => show(menu, false), OPEN_AFTER);
-      else show(menu, false);
+      // Aimed at the open panel: crossing this word is not a choice. Resting here is.
+      if (inSafe(open, event.clientX, event.clientY)) {
+        window.clearTimeout(closeTimer);
+        closeTimer = 0;
+        pending = menu;
+        openTimer = window.setTimeout(() => {
+          pending = null;
+          show(menu, false);
+        }, reduced() ? 0 : AIM_REST);
+        return;
+      }
+      show(menu, false);
     });
 
     menu.item.addEventListener("pointerleave", (event) => {
       if (event.pointerType !== "mouse" || mobile.matches) return;
       window.clearTimeout(openTimer);
+      openTimer = 0;
+      if (pending === menu) pending = null;
       if (!isShowing(menu.panel) || pinned === menu) return;
-      exit = new DOMPointReadOnly(event.clientX, event.clientY);
-      closeTimer = window.setTimeout(() => hide(menu), CLOSE_AFTER);
+      const next = event.relatedTarget;
+      if (next instanceof Node && menu.item.contains(next)) return;
+      const itemBox = menu.item.getBoundingClientRect();
+      const apex = rectHas(itemBox, lastX, lastY)
+        ? { x: lastX, y: lastY }
+        : rectHas(itemBox, prevX, prevY)
+          ? { x: prevX, y: prevY }
+          : { x: itemBox.left + itemBox.width / 2, y: itemBox.top + itemBox.height / 2 };
+      exit = new DOMPointReadOnly(apex.x, apex.y);
+      if (event.clientX !== lastX || event.clientY !== lastY) notePointer(event.clientX, event.clientY);
+      scheduleClose(menu);
     });
 
     // Tabbing out of the word, chevron and panel closes it, as the Menu does (WCAG 2.4.11).
@@ -174,6 +346,52 @@ function enhanceMenus() {
       hide(menu);
     });
   }
+
+  // Keeps the safe path honest between the events above: a move along the bar leaves the triangle
+  // and switches at once, and a move into the panel cancels the close.
+  document.addEventListener("pointermove", (event) => {
+    if (event.pointerType !== "mouse" || mobile.matches || !hover.matches) return;
+    notePointer(event.clientX, event.clientY);
+    const open = showing();
+    if (!open) return;
+    if (overOwn(open, lastX, lastY)) {
+      window.clearTimeout(closeTimer);
+      closeTimer = 0;
+      window.clearTimeout(openTimer);
+      openTimer = 0;
+      pending = null;
+      return;
+    }
+    if (onPath(open, lastX, lastY) || (inSafe(open, lastX, lastY) && headingIn(open))) {
+      window.clearTimeout(closeTimer);
+      closeTimer = 0;
+      return;
+    }
+    if (pending && pending !== open) {
+      show(pending, false);
+      return;
+    }
+    if (pinned === open) return;
+    if (closeTimer === 0) scheduleClose(open);
+  });
+
+  // The pointer left the page. A move onto the panel also leaves elements under it, and the panel is
+  // in the top layer, so only a point outside the viewport counts as leaving.
+  document.documentElement.addEventListener("pointerleave", (event) => {
+    if (event.pointerType !== "mouse" || mobile.matches) return;
+    if (event.relatedTarget instanceof Node) return;
+    if (
+      event.clientX >= 0 &&
+      event.clientY >= 0 &&
+      event.clientX <= window.innerWidth &&
+      event.clientY <= window.innerHeight
+    ) {
+      return;
+    }
+    const open = showing();
+    if (!open || pinned === open) return;
+    hide(open);
+  });
 
   // On the document, because a panel hover opened may have no focus inside it at all.
   document.addEventListener("keydown", (event) => {
