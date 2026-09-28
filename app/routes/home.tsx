@@ -20,7 +20,7 @@ import {
   webSiteJsonLd,
   pageMeta,
 } from "~/lib/seo";
-import { PlateI } from "~/components/plate-i";
+import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { Enhance } from "~/components/enhance";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
@@ -207,6 +207,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </h1>
             <p className="intro-affil">
               <span className="p-job-title">{SITE.role}</span>
+              <span>{SITE.department}</span>
               <span className="p-org">{SITE.affiliation}</span>
             </p>
             <a className="u-url" href="/" hidden>
@@ -222,6 +223,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </figcaption>
           </figure>
         </div>
+
+        <PlateKeyRow />
         <Enhance module="plate" />
 
         <Section id="research" title="Research" more={<Link to="/research">All research</Link>}>
