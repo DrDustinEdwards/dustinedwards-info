@@ -108,3 +108,14 @@ test("sense 2 of each entry is Dustin's wording, labelled software. (2026-09-28)
     assert.equal(definedTermJsonLd(entry, "https://example.test").description, want[entry.term]);
   }
 });
+
+test("each named software page explains its name near the end (Dustin, 2026-09-29)", () => {
+  for (const name of ["capsid", "abscissa", "carrel"]) {
+    const page = readFileSync(new URL(`../content/pages/software-${name}.md`, import.meta.url), "utf8");
+    const headings = [...page.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
+    assert.ok(headings.includes("Why the name"), `${name} has no Why the name section`);
+    assert.notEqual(headings[0], "Why the name", `${name}: the section belongs after what the software does`);
+  }
+  const capsid = readFileSync(new URL("../content/pages/software-capsid.md", import.meta.url), "utf8");
+  assert.ok(capsid.includes("Its dashboard, the Capsid Portal, is named for the portal protein"));
+});
