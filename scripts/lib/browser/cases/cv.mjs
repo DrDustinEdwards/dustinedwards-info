@@ -78,9 +78,16 @@ export async function run({ browser }) {
         `publications ${pubs.papers} (was ${start.papers}), grants ${pubs.grants}`,
       );
 
-      /* A bar, once Abscissa's layer has made it a control: clicking it selects its year. */
+      /*
+       * A bar, once Abscissa's layer has made it a control: clicking it selects its year. A
+       * Publications bar, so the year has an entry the type filter keeps; the first bar in the
+       * markup is not one, since Abscissa (0.1.0-alpha.6) writes bars in reading order, year first.
+       */
       const year = await page.evaluate(
-        () => document.querySelector("[data-cv-timeline] [data-abscissa-key]")?.getAttribute("data-abscissa-x") ?? "",
+        () =>
+          document
+            .querySelector('[data-cv-timeline] [data-abscissa-key][data-abscissa-series="Publications"]')
+            ?.getAttribute("data-abscissa-x") ?? "",
       );
       if (await clickOrFail(page, `[data-cv-timeline] [data-abscissa-x="${year}"]`, "cv: the timeline has a year to select")) {
         const oneYear = await pollUntil(() => readCv(page), (v) => v.search.includes(`from=${year}`));
