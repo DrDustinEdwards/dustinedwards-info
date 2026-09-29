@@ -30,7 +30,7 @@ export const MAP = [
   {
     what: "a route, component or other app source",
     test: /^app\/.+\.(ts|tsx|mjs)$/,
-    gates: ["check:features", "check:machine-readable", "check:urls", RELATED],
+    gates: ["check:features", "check:machine-readable", "check:urls", "check:links", RELATED],
   },
   {
     /* check-policy, check-ask-guards and check-headers read route files by name and scan app/routes. */
@@ -76,17 +76,23 @@ export const MAP = [
   {
     what: "a post or other content",
     test: /^content\/.+/,
-    gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features"],
+    gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features", "check:links"],
+  },
+  {
+    /* check-protocols reads each protocol page's record and the list of gaps waiting on a value. */
+    what: "a protocol page, its known-missing list or the record rules",
+    test: /^(content\/(pages\/research-protocols-.+\.md|protocols-known-missing\.json)|scripts\/lib\/protocols\.mjs)$/,
+    gates: ["check:protocols", RELATED],
   },
   {
     what: "publication data",
     test: /^data\/.+/,
-    gates: ["check:machine-readable", "check:content"],
+    gates: ["check:machine-readable", "check:content", "check:links"],
   },
   {
     what: "a served asset",
     test: /^public\/.+/,
-    gates: ["check:urls", "check:fonts"],
+    gates: ["check:urls", "check:fonts", "check:links"],
   },
   {
     /* check-headers asserts which entrypoint wrangler.jsonc.example lets the platform cache. */

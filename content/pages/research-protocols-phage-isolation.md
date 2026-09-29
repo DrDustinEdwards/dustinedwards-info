@@ -3,9 +3,61 @@ path: /research/protocols/phage-isolation
 title: "Phage Isolation and Purification Protocol"
 seo_title: "Phage Isolation and Purification Protocol, Spot Titer"
 description: "Tarleton SEA-PHAGES lab variants of the Phage Discovery Guide: direct vs enriched isolation, purification, spot titer, webbed plates, high titer lysate."
+protocol:
+  steps:
+    - "#phage-isolation-and-purification-the-guide-protocols"
+    - "#plating-with-top-agar-the-plaque-assay"
+    - "#direct-phage-isolation"
+    - "#enriched-phage-isolation"
+    - "#spot-test"
+    - "#phage-purification-picking-and-replating-plaques"
+    - "#titering-a-phage-lysate-spot-titer-and-full-plate-titer"
+    - "#webbed-plates-and-the-high-titer-lysate"
+    - "#collecting-the-phage-lysate-flooding-webbed-plates"
+  reagents:
+    - { name: host culture, amount: 250 µl, per: plate }
+    - { name: filtrate, step: direct isolation, amount: 500 µl }
+    - { name: soil, step: enriched isolation, amount: 10 ml }
+    - { name: PYCa, step: enriched isolation, amount: 25 ml }
+    - { name: host added to the filtrate, step: enriched isolation, amount: 250 µl }
+    - { name: phage buffer for a plaque pick, amount: 90 µl or 100 µl }
+    - { name: phage buffer for flooding, amount: 8 ml, per: plate }
+  timings:
+    - { step: phage and host adsorption for a plaque assay, time: 8 minutes }
+    - { step: phage and host adsorption for webbed plates on M. foliorum, time: 20 minutes }
+    - { step: top agar setting before plates are inverted, time: "at least 15 to 20 minutes, and 30 to 40 minutes is safer" }
+    - { step: plate incubation for M. foliorum, temperature_c: 29, time: 24 to 48 hours }
+    - { step: plate incubation for M. smegmatis, temperature_c: 37, time: "48 h for plaque assays and titers, 24 h for webbed plates" }
+    - { step: enriched isolation extraction shake, shake: 250 rpm, temperature_c: 29, time: 2 hours }
+    - { step: enriched isolation spin, spin: "3,110 rpm", time: 10 minutes }
+    - { step: enrichment, shake: 220 to 250 rpm, temperature_c: "27 to 29.5", time: 2 to 7 days }
+    - { step: lawn set before spotting, time: 30 minutes }
+    - { step: webbed plate incubation, time: 24 hours or a little under }
+    - { step: flooding soak, time: "2 to 6 hours at room temperature, or parafilmed at 4 °C overnight to 2 days" }
+  primers: not applicable
+  equipment:
+    - 55 °C water bath for molten top agar
+    - plate incubator at 29 °C for M. foliorum
+    - shaking incubator at 220 to 250 rpm
+    - 0.22 µm tube-top vacuum filter units
+    - 1 to 10 µl pipettor for spot titers
+    - light box for counting plaques
+  host_strain:
+    - Mycobacterium smegmatis mc²155 (ATCC 700084)
+    - Microbacterium foliorum NRRL B-24224
+  source:
+    - citation: "SEA-PHAGES Phage Discovery Guide, July 2025 edition"
+      url: https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf
+      for: the protocols themselves, which this page does not reproduce
+    - citation: "student lab notebooks of the Tarleton SEA-PHAGES lab, 2017 to 2025"
+      for: the lab's variants, settings and troubleshooting
+  biosafety: MISSING
+  status: MISSING
+  version: MISSING
+  last_run: MISSING
 ---
 
-The protocol for phage isolation and purification is the SEA-PHAGES [Phage Discovery Guide](https://discoveryguide.seaphages.org/), current edition July 2025 ([PDF](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf)). This page does not reproduce it. It records where the Tarleton State University SEA-PHAGES lab runs a step differently from that edition, and what the lab has found in student lab notebooks from 2017 to 2025, in the first semester of the [Phage Discovery program](/teaching/phage-discovery) and the [Virus Isolation Course](/teaching/virus-isolation): the settings used, worked numbers, and troubleshooting for direct vs enriched isolation, plaque purification, turbid plaques, the spot titer, the full plate titer, webbed plates and the high titer lysate. A year is given where the notebooks give one. The arithmetic (pfu/ml, web volumes, dilutions) is worked through question by question in [Lab Calculations and Common Questions](/teaching/virus-isolation/faq), and the [phage lab calculators](/research/tools) do it on your own numbers: [titer](/research/tools/titer), [serial dilution](/research/tools/dilution) and [webbed plate](/research/tools/webbed-plate).
+The protocol for phage isolation and purification is the SEA-PHAGES [Phage Discovery Guide](https://discoveryguide.seaphages.org/), current edition July 2025 ([PDF](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf)). This page does not reproduce it. It records where the Tarleton State University SEA-PHAGES lab runs a step differently from that edition, and what the lab has found in student lab notebooks from 2017 to 2025, in the first semester of the [Phage Discovery program](/teaching/phage-discovery) and the [Virus Isolation Course](/teaching/virus-isolation): the settings used, worked numbers, and troubleshooting for direct vs enriched isolation, plaque purification, turbid plaques, the spot titer, the full plate titer, webbed plates and the high titer lysate. A year is given where the notebooks give one. The arithmetic (pfu/ml, web volumes, dilutions) is worked through question by question in [Lab Calculations and Common Questions](/teaching/virus-isolation/faq), and the [phage lab calculators](/research/tools) do it on your own numbers: [titer](/research/tools/titer), [serial dilution](/research/tools/dilution), [webbed plate](/research/tools/webbed-plate), [lysate volume](/research/tools/lysate-volume), [MOI](/research/tools/moi) and [efficiency of plating](/research/tools/eop).
 
 ## Phage isolation and purification: the Guide protocols
 

@@ -7,7 +7,7 @@ description: "Worked phage lab calculations from the Tarleton Virus Isolation Co
 
 These are the calculations and questions that come up most in the [Virus Isolation Course](/teaching/virus-isolation), the first semester of the Tarleton SEA-PHAGES program. The bench protocols are in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/); this page is the lab's own arithmetic and findings. Each answer gives the formula, a worked example with real numbers from the course's lab notebooks, and a link to the lab's notes in [Phage Isolation and Purification](/research/protocols/phage-isolation). Unless a question says otherwise, the host is *Microbacterium foliorum* in PYCa, plated with 250 µl of host culture.
 
-To run these calculations on your own numbers, with every step shown, use the [phage lab calculators](/research/tools): [titer](/research/tools/titer), [serial dilution](/research/tools/dilution) and [webbed plate](/research/tools/webbed-plate).
+To run these calculations on your own numbers, with every step shown, use the [phage lab calculators](/research/tools): [titer](/research/tools/titer), [serial dilution](/research/tools/dilution), [webbed plate](/research/tools/webbed-plate), [MOI](/research/tools/moi), [efficiency of plating](/research/tools/eop) and [lysate volume](/research/tools/lysate-volume).
 
 ## How do I calculate phage titer in pfu/ml?
 

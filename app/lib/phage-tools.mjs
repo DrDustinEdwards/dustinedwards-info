@@ -1,5 +1,6 @@
 /**
- * The phage lab calculators at /research/tools: titer, serial dilution and webbed plate. One pure module,
+ * The phage lab calculators at /research/tools: titer, serial dilution, webbed plate, MOI, efficiency of
+ * plating and lysate volume. One pure module,
  * imported by the server-rendered calculator (app/components/phage-tool.tsx), which renders the worked
  * example with script off, and by the browser module that recomputes on input (app/enhance/tools.ts).
  * test/phage-tools.test.mjs holds it against hand arithmetic and the numbers on the FAQ and the
@@ -182,22 +183,37 @@ export function titer({ plaques, volumeUl, dilutionExponent }) {
   return { perUl, perMlDiluted, pfuPerMl };
 }
 
-/** @param {Record<string, string | undefined>} values @returns {ToolResult} */
-function runTiter(values) {
-  const plaques = parseNumber(values.plaques);
-  const volumeUl = parseNumber(values.volume);
-  const rawN = parseNumber(values.dilution);
+/**
+ * A plaque count, the volume plated and the dilution's exponent, read and checked. Shared by the titer
+ * calculator and the EOP-from-counts calculator, so both refuse the same inputs in the same words.
+ * `where` names the plate in the message ("" for one plate, " on the test host" for EOP).
+ *
+ * @param {unknown} rawPlaques @param {unknown} rawVolume @param {unknown} rawDilution @param {string} [where]
+ * @returns {{ ok: true, plaques: number, volumeUl: number, n: number } | { ok: false, error: string }}
+ */
+function readCount(rawPlaques, rawVolume, rawDilution, where = "") {
+  const plaques = parseNumber(rawPlaques);
+  const volumeUl = parseNumber(rawVolume);
+  const rawN = parseNumber(rawDilution);
   if (!Number.isFinite(plaques) || plaques < 0 || !Number.isInteger(plaques)) {
-    return { ok: false, error: "Enter the plaques counted as a whole number, 0 or more." };
+    return { ok: false, error: `Enter the plaques counted${where} as a whole number, 0 or more.` };
   }
   if (!Number.isFinite(volumeUl) || volumeUl <= 0) {
-    return { ok: false, error: "Enter the volume plated or spotted, in µl, greater than 0." };
+    return { ok: false, error: `Enter the volume plated or spotted${where}, in µl, greater than 0.` };
   }
   // A dilution is never more than 1, so 6 and -6 both mean 10^-6.
   const n = Math.abs(rawN);
   if (!Number.isFinite(rawN) || !Number.isInteger(n) || n > 20) {
-    return { ok: false, error: "Enter the dilution's exponent as a whole number from 0 to 20: 6 for 10^-6, 0 if undiluted." };
+    return { ok: false, error: `Enter the dilution's exponent${where} as a whole number from 0 to 20: 6 for 10^-6, 0 if undiluted.` };
   }
+  return { ok: true, plaques, volumeUl, n };
+}
+
+/** @param {Record<string, string | undefined>} values @returns {ToolResult} */
+function runTiter(values) {
+  const read = readCount(values.plaques, values.volume, values.dilution);
+  if (!read.ok) return read;
+  const { plaques, volumeUl, n } = read;
   const { perUl, perMlDiluted, pfuPerMl } = titer({ plaques, volumeUl, dilutionExponent: n });
   const of = n === 0 ? "in the undiluted lysate" : `in the ${formatDilution(n)} dilution`;
   const steps = [
@@ -460,6 +476,185 @@ function runFlood(values) {
   };
 }
 
+/* ---------------------------------------------------------------- MOI */
+
+/**
+ * MOI = pfu added / cells, with pfu = titer (pfu/ml) x µl added / 1,000 µl/ml and cells = cells/ml x µl
+ * of culture / 1,000 µl/ml. `infected` is the share of cells that receive at least one phage when phages
+ * land at random (Poisson): 1 - exp(-MOI). The site gives no OD-to-cells conversion, so cells are counted.
+ *
+ * @param {{ titerPfuPerMl: number, phageUl: number, cellsPerMl: number, hostUl: number }} input
+ */
+export function moi({ titerPfuPerMl, phageUl, cellsPerMl, hostUl }) {
+  const pfu = (titerPfuPerMl * phageUl) / 1000;
+  const cells = (cellsPerMl * hostUl) / 1000;
+  const ratio = pfu / cells;
+  return { pfu, cells, moi: ratio, infected: -Math.expm1(-ratio) };
+}
+
+/** @param {Record<string, string | undefined>} values @returns {ToolResult} */
+function runMoi(values) {
+  const titerValue = parseNumber(values.titer);
+  const phageUl = parseNumber(values.phage);
+  const cellsPerMl = parseNumber(values.cells);
+  const hostUl = parseNumber(values.host);
+  if (!Number.isFinite(titerValue) || titerValue <= 0) return { ok: false, error: "Enter the phage titer in pfu/ml, greater than 0." };
+  if (!Number.isFinite(phageUl) || phageUl <= 0) return { ok: false, error: "Enter the volume of phage added, in µl, greater than 0." };
+  if (!Number.isFinite(cellsPerMl) || cellsPerMl <= 0) return { ok: false, error: "Enter the host cells per ml, greater than 0." };
+  if (!Number.isFinite(hostUl) || hostUl <= 0) return { ok: false, error: "Enter the volume of host culture, in µl, greater than 0." };
+  const result = moi({ titerPfuPerMl: titerValue, phageUl, cellsPerMl, hostUl });
+  return {
+    ok: true,
+    sections: [
+      {
+        heading: "MOI",
+        steps: [
+          `pfu added: ${formatScientific(titerValue)} pfu/ml x ${formatNumber(phageUl)} µl / 1,000 µl/ml = ${formatNumber(result.pfu)} pfu.`,
+          `Cells: ${formatScientific(cellsPerMl)} cells/ml x ${formatNumber(hostUl)} µl / 1,000 µl/ml = ${formatNumber(result.cells)} cells.`,
+          `MOI: ${formatNumber(result.pfu)} pfu / ${formatNumber(result.cells)} cells = ${formatNumber(result.moi)}.`,
+          `Cells that get at least one phage: 1 - exp(-${formatNumber(result.moi)}) = ${formatNumber(result.infected)}, about ${formatNumber(result.infected * 100)}%.`,
+        ],
+        result: `${formatNumber(result.moi)} pfu per cell`,
+        notes: [
+          "The last step assumes phages meet cells at random and every pfu adsorbs. Slow or incomplete adsorption infects fewer cells than it says.",
+        ],
+      },
+    ],
+  };
+}
+
+/* ---------------------------------------------------------------- EOP */
+
+/**
+ * EOP = titer on the test host / titer on the reference host.
+ *
+ * @param {{ testPfuPerMl: number, referencePfuPerMl: number }} input
+ */
+export function eop({ testPfuPerMl, referencePfuPerMl }) {
+  return testPfuPerMl / referencePfuPerMl;
+}
+
+/**
+ * The EOP steps shared by both EOP calculators. `boundPfuPerMl`, when the test host had no plaques, is
+ * the titer one plaque on that plate would have meant, so the note can say how low the EOP is.
+ *
+ * @param {number} test @param {number} reference @param {number} [boundPfuPerMl]
+ */
+function eopSection(test, reference, boundPfuPerMl) {
+  const ratio = eop({ testPfuPerMl: test, referencePfuPerMl: reference });
+  /** @type {string[]} */
+  const notes = [];
+  if (test === 0) {
+    const bound = boundPfuPerMl === undefined ? "" : ` It is below ${formatNumber(eop({ testPfuPerMl: boundPfuPerMl, referencePfuPerMl: reference }))}, what one plaque on that plate would give.`;
+    notes.push(`No plaques on the test host: the phage did not plate at this dilution, which is not the same as an EOP of exactly 0.${bound} Plate a less dilute sample to measure it.`);
+  }
+  return {
+    heading: "Efficiency of plating",
+    steps: [
+      `EOP: ${formatScientific(test)} pfu/ml on the test host / ${formatScientific(reference)} pfu/ml on the reference host = ${formatNumber(ratio)}.`,
+      `As a percentage of the reference titer: ${formatNumber(ratio)} x 100 = ${formatNumber(ratio * 100)}%.`,
+    ],
+    result: `${formatNumber(ratio)} (${formatNumber(ratio * 100)}% of the reference titer)`,
+    notes,
+  };
+}
+
+/** @param {Record<string, string | undefined>} values @returns {ToolResult} */
+function runEop(values) {
+  const test = parseNumber(values.test);
+  const reference = parseNumber(values.reference);
+  if (!Number.isFinite(test) || test < 0) return { ok: false, error: "Enter the titer on the test host in pfu/ml, 0 or more." };
+  if (!Number.isFinite(reference) || reference <= 0) return { ok: false, error: "Enter the titer on the reference host in pfu/ml, greater than 0." };
+  return { ok: true, sections: [eopSection(test, reference)] };
+}
+
+/** One host's titer line for the EOP-from-counts steps. @param {string} host @param {{ plaques: number, volumeUl: number, n: number }} count @param {number} pfuPerMl */
+function countLine(host, { plaques, volumeUl, n }, pfuPerMl) {
+  const undo = n === 0 ? "" : ` x 10^${n}`;
+  return `Titer on the ${host}: ${formatNumber(plaques)} / ${formatNumber(volumeUl)} µl x 1,000${undo} = ${formatScientific(pfuPerMl)} pfu/ml.`;
+}
+
+/** @param {Record<string, string | undefined>} values @returns {ToolResult} */
+function runEopCounts(values) {
+  const test = readCount(values.testPlaques, values.testVolume, values.testDilution, " on the test host");
+  if (!test.ok) return test;
+  const reference = readCount(values.refPlaques, values.refVolume, values.refDilution, " on the reference host");
+  if (!reference.ok) return reference;
+  if (reference.plaques === 0) {
+    return { ok: false, error: "No plaques on the reference host, so there is no titer to divide by. Count a less dilute plate." };
+  }
+  const testTiter = titer({ plaques: test.plaques, volumeUl: test.volumeUl, dilutionExponent: test.n }).pfuPerMl;
+  const refTiter = titer({ plaques: reference.plaques, volumeUl: reference.volumeUl, dilutionExponent: reference.n }).pfuPerMl;
+  const bound = titer({ plaques: 1, volumeUl: test.volumeUl, dilutionExponent: test.n }).pfuPerMl;
+  const section = eopSection(testTiter, refTiter, bound);
+  return {
+    ok: true,
+    sections: [
+      {
+        ...section,
+        steps: [countLine("test host", test, testTiter), countLine("reference host", reference, refTiter), ...section.steps],
+      },
+    ],
+  };
+}
+
+/* ---------------------------------------------------------------- lysate volume */
+
+/**
+ * Lysate for a run of plates: (pfu per plate x plates) / titer (pfu/ml) x 1,000 µl/ml, the webbed
+ * plate formula for all the plates at once.
+ *
+ * @param {{ titerPfuPerMl: number, pfuPerPlate: number, plates: number }} input
+ */
+export function lysateForPlates({ titerPfuPerMl, pfuPerPlate, plates }) {
+  const totalPfu = pfuPerPlate * plates;
+  const totalUl = lysatePerPlate({ titerPfuPerMl, pfuPerPlate: totalPfu });
+  return { totalPfu, totalUl, perPlateUl: totalUl / plates };
+}
+
+/** @param {Record<string, string | undefined>} values @returns {ToolResult} */
+function runLysateVolume(values) {
+  const titerValue = parseNumber(values.titer);
+  const pfu = parseNumber(values.pfu);
+  const plates = parseNumber(values.plates);
+  const volume = parseNumber(values.volume);
+  if (!Number.isFinite(titerValue) || titerValue <= 0) return { ok: false, error: "Enter the lysate's titer in pfu/ml, greater than 0." };
+  if (!Number.isFinite(pfu) || pfu <= 0) return { ok: false, error: "Enter the pfu wanted on each plate, greater than 0." };
+  if (!Number.isFinite(plates) || plates < 1 || !Number.isInteger(plates) || plates > 100) {
+    return { ok: false, error: "Enter the number of plates as a whole number from 1 to 100." };
+  }
+  if (!Number.isFinite(volume) || volume <= 0) return { ok: false, error: "Enter the volume plated on each plate, in µl, greater than 0." };
+  const { totalPfu, totalUl, perPlateUl } = lysateForPlates({ titerPfuPerMl: titerValue, pfuPerPlate: pfu, plates });
+  const steps = [
+    `pfu for all plates: ${formatNumber(pfu)} x ${plates} = ${formatNumber(totalPfu)} pfu.`,
+    `Lysate for all plates: ${formatNumber(totalPfu)} / ${formatScientific(titerValue)} pfu/ml x 1,000 µl/ml = ${formatNumber(totalUl)} µl.`,
+    `Per plate: ${formatNumber(totalUl)} µl / ${plates} = ${formatNumber(perPlateUl)} µl.`,
+  ];
+  /** @type {string[]} */
+  const notes = [];
+  let result;
+  if (perPlateUl >= volume * (1 - 1e-9)) {
+    steps.push(`That is at least the ${formatNumber(volume)} µl plated per plate, so plate the lysate undiluted: ${formatNumber(perPlateUl)} µl on each plate.`);
+    result = `${formatNumber(totalUl)} µl of undiluted lysate, ${formatNumber(perPlateUl)} µl on each of ${plates} plates`;
+    if (perPlateUl > LAB.maxLysateUl) {
+      notes.push(`${formatNumber(perPlateUl)} µl is over the lab's limit of ${LAB.maxLysateUl} µl on 250 µl of host (10% of the cell volume), which lyses the cells. Use a lysate with a higher titer.`);
+    }
+  } else {
+    const mixUl = plates * volume;
+    if (totalUl >= 1) {
+      steps.push(
+        `To plate ${formatNumber(volume)} µl on each: ${plates} plates x ${formatNumber(volume)} µl = ${formatNumber(mixUl)} µl, so mix ${formatNumber(totalUl)} µl lysate + ${formatNumber(mixUl - totalUl)} µl phage buffer.`,
+      );
+      result = `${formatNumber(totalUl)} µl of lysate in ${formatNumber(mixUl)} µl, ${formatNumber(volume)} µl on each of ${plates} plates`;
+    } else {
+      steps.push(`${formatNumber(totalUl)} µl is under 1 µl, too little to pipette, so dilute the lysate first and plate ${formatNumber(volume)} µl of the last tube on each plate.`);
+      result = `${formatNumber(totalUl)} µl of lysate for ${plates} plates, made by dilution`;
+      notes.push("The webbed plate calculator plans the dilution tubes for these numbers.");
+    }
+  }
+  return { ok: true, sections: [{ heading: "Lysate needed", steps, result, notes }] };
+}
+
 /* ---------------------------------------------------------------- registry */
 
 /**
@@ -523,6 +718,56 @@ export const TOOLS = {
     title: "Plates for a lysate volume",
     fields: [{ name: "ml", label: "Lysate wanted", unit: "ml", value: "20", hint: "10 ml to archive plus 10 ml for DNA extraction is 20 ml." }],
     run: runFlood,
+  },
+  moi: {
+    path: "/research/tools/moi",
+    title: "MOI calculator",
+    fields: [
+      { name: "titer", label: "Phage titer", unit: "pfu/ml", value: "1e9", hint: "1e9 or 1 x 10^9." },
+      { name: "phage", label: "Phage volume added", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
+      {
+        name: "cells",
+        label: "Host cells",
+        unit: "cells/ml",
+        value: "1e8",
+        hint: "Counted, not read off an OD: the site gives no OD-to-cells factor for the lab's hosts. 1e8 is only the worked example's number.",
+      },
+      { name: "host", label: "Host culture volume", unit: "µl", value: "250", source: SOURCES.fullPlate },
+    ],
+    run: runMoi,
+  },
+  eop: {
+    path: "/research/tools/eop",
+    title: "EOP from titers",
+    fields: [
+      { name: "test", label: "Titer on the test host", unit: "pfu/ml", value: "2e8", hint: "2e8 or 2 x 10^8." },
+      { name: "reference", label: "Titer on the reference host", unit: "pfu/ml", value: "1e10", hint: "Usually the host the phage was isolated on." },
+    ],
+    run: runEop,
+  },
+  "eop-counts": {
+    path: "/research/tools/eop",
+    title: "EOP from plaque counts",
+    fields: [
+      { name: "testPlaques", label: "Plaques on the test host", value: "20" },
+      { name: "testVolume", label: "Volume plated on the test host", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
+      { name: "testDilution", label: "Test host dilution, 10 to the minus", value: "5", hint: "5 for the 10^-5 tube, 0 if undiluted." },
+      { name: "refPlaques", label: "Plaques on the reference host", value: "100" },
+      { name: "refVolume", label: "Volume plated on the reference host", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
+      { name: "refDilution", label: "Reference host dilution, 10 to the minus", value: "6", hint: "6 for the 10^-6 tube, 0 if undiluted." },
+    ],
+    run: runEopCounts,
+  },
+  "lysate-volume": {
+    path: "/research/tools/lysate-volume",
+    title: "Lysate volume planner",
+    fields: [
+      { name: "titer", label: "Lysate titer", unit: "pfu/ml", value: "1e7", hint: "1e7 or 1 x 10^7." },
+      { name: "pfu", label: "pfu wanted per plate", value: "10000", hint: "What webs depends on plaque size and host; see the notes below." },
+      { name: "plates", label: "Plates to pour", value: String(LAB.plates), source: SOURCES.yields },
+      { name: "volume", label: "Volume plated per plate", unit: "µl", value: String(LAB.ulPlated), source: SOURCES.fullPlate },
+    ],
+    run: runLysateVolume,
   },
 };
 

@@ -1,5 +1,4 @@
 import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./build-content.mjs";
-import { internalLinkSlug } from "../app/lib/content/pipeline.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
 
@@ -83,7 +82,7 @@ async function main() {
 
   await checkAbout();
 
-  checkInternalFurtherReading(posts);
+  // Where further_reading links land is check:links, with every other internal link on the site.
 
   // Each output check returns its failures, so one failing check never hides the next.
   const failures = [...checkMath(posts, postRecords), ...checkSwatches(posts, postRecords)];
@@ -371,54 +370,6 @@ function swatchProblems(post) {
     }
   }
   return problems;
-}
-
-/**
- * The schema decides a url's shape, not its target. content/posts/swatches-in-prose-fixture.md carries
- * one internal link so this examines something: with none, "every link resolves" is true of nothing.
- *
- * @param {Array<{ slug: string, furtherReading?: Array<{ title: string, url: string }> }>} posts
- */
-function checkInternalFurtherReading(posts) {
-  const known = new Set(posts.map((post) => post.slug));
-  /** @type {string[]} */
-  const dead = [];
-  let examined = 0;
-
-  for (const post of posts) {
-    for (const item of post.furtherReading ?? []) {
-      const target = internalLinkSlug(item.url);
-      // External links are out of scope: a check that fails on somebody else's outage is not a gate.
-      if (target === null) continue;
-      examined += 1;
-      if (!known.has(target)) dead.push(`${post.slug} -> ${item.url}`);
-    }
-  }
-
-  if (examined === 0) {
-    console.error(
-      `check:content failed. 0 internal further_reading link(s) were examined, so the ` +
-        `resolution check below passes over nothing. The fixture ` +
-        `content/posts/swatches-in-prose-fixture.md exists to carry one.`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-
-  if (dead.length > 0) {
-    console.error(
-      `check:content failed. ${dead.length} further_reading link(s) point at a post ` +
-        `that does not exist:`,
-    );
-    console.error(nameThem(dead));
-    process.exitCode = 1;
-    return;
-  }
-
-  console.log(
-    `check:content ok. ${examined} internal further_reading link(s) resolve to a post ` +
-      `(${known.size} slug(s) in the corpus).`,
-  );
 }
 
 main().catch((/** @type {unknown} */ error) => {

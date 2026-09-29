@@ -11,7 +11,7 @@ import {
   listenLabel,
 } from "../app/lib/dictionary-entries.mjs";
 
-const PATHS = ["/software/capsid", "/software/abscissa", "/software/carrel"];
+const PATHS = ["/software/capsid", "/software/enarratio", "/software/carrel"];
 
 /** Built from its code point so this file carries no dash of its own. */
 const EM_DASH = String.fromCharCode(0x2014);
@@ -54,14 +54,12 @@ test("each clip is a small MP3 served from the site's own origin", () => {
 });
 
 test("the markdown twin carries the same entry under its title", () => {
-  const twin = contentPageMarkdownBody({ path: "/software/abscissa", title: "Abscissa", markdown: "Body.\n" });
-  assert.ok(
-    twin.startsWith("# Abscissa\n\n**ab·scis·sa** /æbˈsɪs.ə/ (ab-SIS-uh), *noun*; plural *abscissas* or *abscissae*."),
-    twin,
-  );
-  assert.ok(twin.includes("[Pronunciation audio](/audio/abscissa.mp3)"));
-  assert.ok(twin.includes("1. The horizontal coordinate"));
-  assert.ok(twin.includes("2. *software.* An open-source library"));
+  const twin = contentPageMarkdownBody({ path: "/software/enarratio", title: "Enarratio", markdown: "Body.\n" });
+  assert.ok(twin.startsWith("# Enarratio\n\n**e·nar·ra·ti·o** /ˌɛn.ɑˈrɑ.ti.oʊ/ (en-ar-RAH-tee-oh), *noun*."), twin);
+  assert.ok(twin.includes("[Pronunciation audio](/audio/enarratio.mp3)"));
+  assert.ok(twin.includes("1. In ancient grammar, a teacher’s detailed explanation"));
+  assert.ok(twin.includes("2. *software.* An open-source toolkit"));
+  assert.ok(twin.includes("Etymology: Latin, from *enarrare*, “to explain in detail”"));
   assert.ok(twin.endsWith("Body.\n"));
   const plain = contentPageMarkdownBody({ path: "/software/foxing", title: "Foxing", markdown: "Body.\n" });
   assert.equal(plain, "# Foxing\n\nBody.\n");
@@ -96,8 +94,8 @@ test("the Carrel page names the app nowhere by address, and the colophon links t
 test("sense 2 of each entry is Dustin's wording, labelled software. (2026-09-28)", () => {
   const want = {
     Capsid: "A system that stores the instructions and decisions of AI agents and coordinates their work within and across projects.",
-    Abscissa:
-      "An open-source library that plots charts and scientific figures for the web, readable by people, screen readers, and AI agents.",
+    Enarratio:
+      "An open-source toolkit that renders scientific figures on the server and makes each readable by people, screen readers, and AI agents.",
     Carrel: "A private workspace for writing, in which drafts are composed, revised, and published.",
   };
   for (const entry of DICTIONARY_ENTRIES) {
@@ -110,7 +108,7 @@ test("sense 2 of each entry is Dustin's wording, labelled software. (2026-09-28)
 });
 
 test("each named software page explains its name near the end (Dustin, 2026-09-29)", () => {
-  for (const name of ["capsid", "abscissa", "carrel"]) {
+  for (const name of ["capsid", "enarratio", "carrel"]) {
     const page = readFileSync(new URL(`../content/pages/software-${name}.md`, import.meta.url), "utf8");
     const headings = [...page.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
     assert.ok(headings.includes("Why the name"), `${name} has no Why the name section`);

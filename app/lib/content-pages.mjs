@@ -8,6 +8,7 @@
  * notebooks (cutover.md, "Pages to build before the switch").
  */
 
+import { ogImageKey } from "./content/og-card-text.mjs";
 import { dictionaryEntryFor, dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
 import { splitSections } from "./search/records.mjs";
 
@@ -32,6 +33,9 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/research/tools/titer",
   "/research/tools/dilution",
   "/research/tools/webbed-plate",
+  "/research/tools/moi",
+  "/research/tools/eop",
+  "/research/tools/lysate-volume",
   "/teaching",
   "/teaching/phage-discovery",
   "/teaching/virus-isolation",
@@ -45,7 +49,7 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/foxing-edu",
   "/software/germomics",
   "/software/capsid",
-  "/software/abscissa",
+  "/software/enarratio",
   "/software/carrel",
   // The CV. Its markdown is written from app/data/cv.ts, not kept in content/pages/ (see below).
   "/cv",
@@ -99,6 +103,81 @@ export function contentPageMarkdownBody(page) {
   const entry = page.path ? dictionaryEntryFor(page.path) : undefined;
   const lead = entry ? `${dictionaryEntryMarkdown(entry)}\n` : "";
   return `# ${page.title}\n\n${lead}${body}`;
+}
+
+/**
+ * The pages build:og draws a social card of their own, by the root they sit under: the root and every
+ * page below it, so a calculator added under /research/tools is carded with no edit here. Every other
+ * page keeps the site card. Adding a root cards its pages on the next build:og.
+ *
+ * @type {readonly string[]}
+ */
+export const CARDED_PAGE_ROOTS = ["/software", "/research/tools", "/cv"];
+
+/** @param {string} path */
+export function hasPageCard(path) {
+  return CARDED_PAGE_ROOTS.some((root) => path === root || path.startsWith(`${root}/`));
+}
+
+/**
+ * What build:og draws for a page, in the shape ogImageKey hashes: the page's og:title (its SERP title)
+ * and its description, with no date line, since these pages are not dated. The `page-` prefix keeps a
+ * page's key apart from a post's, and build:og refuses two cards with one key.
+ *
+ * @param {{ path: string, seoTitle: string, description: string }} page
+ */
+export function contentPageCardInput(page) {
+  return {
+    slug: `page-${page.path.slice(1).replaceAll("/", "-")}`,
+    title: page.seoTitle,
+    description: page.description,
+    publishAt: null,
+  };
+}
+
+/**
+ * The /media path of a page's card, which its og:image names, or null for a page on the site card. The
+ * key hashes what the card draws, so a retitled page names a new card, which build:og then draws.
+ *
+ * @param {{ path: string, seoTitle: string, description: string }} page
+ * @returns {string | null}
+ */
+export function contentPageCardPath(page) {
+  return hasPageCard(page.path) ? `/media/${ogImageKey(contentPageCardInput(page))}` : null;
+}
+
+/**
+ * What a Dataset node says about a page's first markdown table, read from the markdown the page renders:
+ * its column headings, as the variables, and the span of its Year column, as an ISO 8601 interval. Null
+ * when the page has no table.
+ *
+ * @param {string} markdown
+ * @returns {{ variableMeasured: string[], temporalCoverage: string | null, rows: number } | null}
+ */
+export function markdownTableFacts(markdown) {
+  const lines = String(markdown ?? "").split("\n");
+  const rule = /^\|(\s*:?-+:?\s*\|)+\s*$/;
+  const at = lines.findIndex((line, i) => /^\|.*\|\s*$/.test(line) && rule.test(lines[i + 1] ?? ""));
+  if (at < 0) return null;
+  const cells = (/** @type {string} */ line) =>
+    line
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((cell) => cell.trim());
+  const headings = cells(lines[at] ?? "");
+  /** @type {string[][]} */
+  const rows = [];
+  for (let i = at + 2; i < lines.length && (lines[i] ?? "").startsWith("|"); i += 1) rows.push(cells(lines[i] ?? ""));
+  const yearColumn = headings.findIndex((heading) => /^year$/i.test(heading));
+  const years =
+    yearColumn < 0
+      ? []
+      : rows.map((row) => Number(row[yearColumn])).filter((year) => Number.isInteger(year) && year > 0);
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  const temporalCoverage = years.length === 0 ? null : first === last ? String(first) : `${first}/${last}`;
+  return { variableMeasured: headings, temporalCoverage, rows: rows.length };
 }
 
 /**

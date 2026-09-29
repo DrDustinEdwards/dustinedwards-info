@@ -42,6 +42,7 @@ export const TIERS = {
   "check:content": "offline",
   "check:machine-readable": "offline",
   "check:features": "offline",
+  "check:protocols": "offline",
   "check:fonts": "offline",
   "check:diagrams": "offline",
   "check:contrast": "offline",
@@ -52,6 +53,8 @@ export const TIERS = {
   "check:enhance-a11y": "offline",
   "check:headers": "offline",
   "check:urls": "offline",
+  // Offline: the address book is built from the sources, never from D1, R2 or the network.
+  "check:links": "offline",
   "check:destructive": "offline",
   "check:backup": "offline",
   // Network: the preview server's AI_SEARCH binding reaches a real instance.

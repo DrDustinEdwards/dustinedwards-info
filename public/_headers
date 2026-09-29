@@ -128,6 +128,18 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </research/tools/webbed-plate>; rel="canonical"
+/research/tools/moi.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools/moi>; rel="canonical"
+/research/tools/eop.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools/eop>; rel="canonical"
+/research/tools/lysate-volume.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </research/tools/lysate-volume>; rel="canonical"
 /teaching.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
@@ -180,10 +192,10 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </software/capsid>; rel="canonical"
-/software/abscissa.md
+/software/enarratio.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
-  Link: </software/abscissa>; rel="canonical"
+  Link: </software/enarratio>; rel="canonical"
 /software/carrel.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
