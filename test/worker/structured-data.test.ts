@@ -275,7 +275,7 @@ describe("the types each page states", () => {
     const [dataset] = ofType("/research/phages", "Dataset");
     expect(dataset?.temporalCoverage).toBe("2017/2025");
     expect(dataset?.variableMeasured).toEqual(["Phage", "Year", "Host", "County", "PhagesDB", "Paper"]);
-    expect((dataset?.distribution as Node).contentUrl).toBe(`${SITE_ORIGIN}/research/phages.md`);
+    expect((dataset?.distribution as Node | undefined)?.contentUrl).toBe(`${SITE_ORIGIN}/research/phages.md`);
     // Google reads a Dataset description of 50 to 5000 characters.
     const length = String(dataset?.description).length;
     expect(length).toBeGreaterThanOrEqual(50);
@@ -288,7 +288,7 @@ describe("the types each page states", () => {
     expect(ofType("/software/capsid", "SoftwareApplication")[0]?.codeRepository).toBeUndefined();
     const [source] = ofType("/software/capsid", "SoftwareSourceCode");
     expect(source?.codeRepository).toBe("https://github.com/DrDustinEdwards/capsid-mcp");
-    expect((source?.targetProduct as Node)["@id"]).toBe(ofType("/software/capsid", "SoftwareApplication")[0]?.["@id"]);
+    expect((source?.targetProduct as Node | undefined)?.["@id"]).toBe(ofType("/software/capsid", "SoftwareApplication")[0]?.["@id"]);
   });
 
   it("CARREL CARRIES NO CODE REPOSITORY AND NO LINK TO ITS CODE (#255)", () => {

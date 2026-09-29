@@ -165,7 +165,7 @@ export function markdownTableFacts(markdown) {
   const headings = cells(lines[at] ?? "");
   /** @type {string[][]} */
   const rows = [];
-  for (let i = at + 2; i < lines.length && /^\|/.test(lines[i] ?? ""); i += 1) rows.push(cells(lines[i] ?? ""));
+  for (let i = at + 2; i < lines.length && (lines[i] ?? "").startsWith("|"); i += 1) rows.push(cells(lines[i] ?? ""));
   const yearColumn = headings.findIndex((heading) => /^year$/i.test(heading));
   const years =
     yearColumn < 0
