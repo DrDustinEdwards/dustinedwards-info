@@ -157,9 +157,10 @@
   line-height: 1.7;
 }
 
+/* Inside the "Subscribe:" line, so the global link underline from app.css stays: color alone fails
+   axe link-in-text-block against the secondary text around it. */
 .list-feeds a {
   color: var(--brand);
-  text-decoration: none;
 }
 
 
