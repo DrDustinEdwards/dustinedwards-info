@@ -178,7 +178,7 @@ export function toCslJson(cslRecords) {
 function header(comment, count) {
   return [
     `${comment} ${count} works by Dustin Edwards.`,
-    `${comment} Generated from https://dustinedwards.info/publications`,
+    `${comment} Generated from https://dustinedwards.info/research/publications`,
     `${comment} Bibliographic data from Crossref and DataCite. No generation date:`,
     `${comment} this file is a function of the corpus, so it changes only when the`,
     `${comment} corpus does.`,
