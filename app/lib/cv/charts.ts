@@ -40,7 +40,8 @@ const TIMELINE = { width: 640, height: 220 };
 
 /**
  * One row per counted entry, which is the shape Abscissa counts. The bars outside the selected range
- * are marked with an attribute for the stylesheet to fade: Abscissa keys every bar `year|series`.
+ * are marked with an attribute for the stylesheet to fade, found by the year Abscissa writes on each
+ * bar as `data-abscissa-x`. Its `data-abscissa-key` is opaque, and JSON since 0.1.0-alpha.6.
  */
 export function timelineSvg(input: TimelineInput): string {
   const { years, series, selected } = input;
@@ -75,7 +76,7 @@ export function timelineSvg(input: TimelineInput): string {
  */
 function fadeOutside(markup: string, selected: [number, number] | null) {
   if (!selected || selected[0] === selected[1]) return markup;
-  return markup.replace(/data-abscissa-key="(\d{4})\|/g, (match, year: string) =>
+  return markup.replace(/data-abscissa-x="(\d{4})"/g, (match, year: string) =>
     Number(year) < selected[0] || Number(year) > selected[1] ? `data-cv-out="" ${match}` : match,
   );
 }

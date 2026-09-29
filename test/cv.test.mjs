@@ -6,6 +6,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 import { CV_ENTRIES } from "../app/data/cv.ts";
 import { PUBLICATIONS } from "../app/data/publications.ts";
+import { timelineSvg } from "../app/lib/cv/charts.ts";
 import { CV, cvFacts } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import {
@@ -140,6 +141,22 @@ test("the timeline counts each charted type by year", () => {
   assert.deepEqual(data.years, chartYears(FACTS));
   const pubs = data.series.find((s) => s.key === "publication");
   assert.equal(pubs?.values.reduce((a, b) => a + b, 0), 34);
+});
+
+test("a range filter fades exactly the timeline's bars outside it", () => {
+  const years = [2019, 2020, 2021, 2022, 2023];
+  const markup = timelineSvg({
+    years,
+    series: [{ key: "publication", label: "Publications", token: "var(--brand)", values: [1, 1, 1, 1, 1] }],
+    selected: [2020, 2021],
+    label: "Output per year",
+    hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
+  });
+  const bars = [...markup.matchAll(/<a [^>]*data-abscissa-key=[^>]*>/g)].map((m) => m[0]);
+  assert.equal(bars.length, years.length, "one bar per year");
+  const faded = bars.filter((bar) => bar.includes('data-cv-out=""'));
+  const fadedYears = faded.map((bar) => bar.match(/data-abscissa-x="(\d{4})"/)?.[1]).sort();
+  assert.deepEqual(fadedYears, ["2019", "2022", "2023"]);
 });
 
 test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
