@@ -3,6 +3,103 @@ path: /research/protocols/rev-lpdv-primers
 title: "REV and LPDV PCR primers"
 seo_title: "REV and LPDV PCR primers: LTR, pol and p31/CA"
 description: "PCR primers for reticuloendotheliosis virus (REV) LTR and pol and for LPDV p31/CA: sequences, reaction mix, cycling tables and product sizes."
+protocol:
+  steps:
+    - "#reaction-mix"
+    - "#pcr-rev-3-ltr-8000-8297"
+    - "#pcr-rev-pol-2500-3075-protease-and-reverse-transcriptase"
+    - "#pcr-rev-pol-4777-5575-reverse-transcriptase-and-integrase"
+    - "#pcr-lpdv-p31ca"
+  reagents:
+    - { name: Nuclease-free water, amount: 5.5 µL, per: 25 µL }
+    - { name: OneTaq Hot Start 2X Master Mix (New England Biolabs), amount: 12.5 µL, per: 25 µL }
+    - { name: Forward primer, amount: 1 µL, stock: 10 µM, per: 25 µL }
+    - { name: Reverse primer, amount: 1 µL, stock: 10 µM, per: 25 µL }
+    - { name: Eluted DNA, amount: 5 µL, per: 25 µL }
+  timings:
+    - set: PCR REV 3′ LTR 8000-8297
+      program:
+        - { stage: initial denaturation, temperature_c: 95, time: 5 min. }
+        - stage: 35 cycles
+          cycles: 35
+          steps:
+            - { temperature_c: 95, time: 30 sec. }
+            - { temperature_c: 47, time: 45 sec. }
+            - { temperature_c: 68, time: 60 sec. + 1 sec. per cycle }
+        - { stage: extension, temperature_c: 68, time: 10 min. }
+        - { stage: hold, temperature_c: 10, time: "∞" }
+    - set: PCR REV pol 2500-3075
+      program:
+        - { stage: initial denaturation, temperature_c: 95, time: 10 min. }
+        - stage: 15 cycles
+          cycles: 15
+          steps:
+            - { temperature_c: 95, time: 30 sec. }
+            - { temperature_c: "60 to 50", touchdown_step_c: MISSING, time: 45 sec. }
+            - { temperature_c: 68, time: 120 sec. }
+        - stage: 20 cycles
+          cycles: 20
+          steps:
+            - { temperature_c: 95, time: 30 sec. }
+            - { temperature_c: 50, time: 60 sec. }
+            - { temperature_c: 68, time: 120 sec. }
+        - { stage: extension, temperature_c: 68, time: 9 min. }
+        - { stage: hold, temperature_c: 10, time: "∞" }
+    - set: PCR REV pol 4777-5575
+      program:
+        - { stage: initial denaturation, temperature_c: 95, time: 10 min. }
+        - stage: 15 cycles
+          cycles: 15
+          steps:
+            - { temperature_c: 95, time: 30 sec. }
+            - { temperature_c: "60 to 50", touchdown_step_c: MISSING, time: 45 sec. }
+            - { temperature_c: 68, time: 120 sec. }
+        - stage: 20 cycles
+          cycles: 20
+          steps:
+            - { temperature_c: 95, time: 30 sec. }
+            - { temperature_c: 50, time: 60 sec. }
+            - { temperature_c: 68, time: 120 sec. }
+        - { stage: extension, temperature_c: 68, time: 9 min. }
+        - { stage: hold, temperature_c: 10, time: "∞" }
+    - set: PCR LPDV p31/CA
+      program:
+        - { stage: initial denaturation, temperature_c: 95, time: 3 min. }
+        - stage: 34 cycles
+          cycles: 34
+          steps:
+            - { temperature_c: 95, time: 30 sec. }
+            - { temperature_c: 54, time: 30 sec. }
+            - { temperature_c: 68, time: 60 sec. }
+        - { stage: extension, temperature_c: 68, time: 10 min. }
+        - { stage: hold, temperature_c: 10, time: "∞" }
+  primers:
+    - { set: PCR REV 3′ LTR 8000-8297, direction: forward, sequence: CATACTGGAGCCAATGGTT }
+    - { set: PCR REV 3′ LTR 8000-8297, direction: reverse, sequence: AATGTTGTACCGAAGTACT }
+    - { set: PCR REV pol 2500-3075, direction: forward, sequence: CAAATAATAGATTTTCTAGTAGATACGGGA }
+    - { set: PCR REV pol 2500-3075, direction: reverse, sequence: AGTGGACGGGTCTCAGGA }
+    - { set: PCR REV pol 4777-5575, direction: forward, sequence: CGAGAAGTAGCTATACGTCCTTTG }
+    - { set: PCR REV pol 4777-5575, direction: reverse, sequence: ACATCGTGCCCGGAGC }
+    - { set: PCR LPDV p31/CA, direction: forward, sequence: ATGAGGACTTGTTAGATTGGTTAC }
+    - { set: PCR LPDV p31/CA, direction: reverse, sequence: TGATGGCGTCAGGGCTATTTG }
+  equipment:
+    - NEB 100 bp ladder
+    - 2% agarose gel in TBE
+  host_strain: not applicable
+  source:
+    - citation: "Stewart et al. 2019, J Wildl Dis 55(3)"
+      doi: 10.7589/2018-08-187
+      for: REV primer sets, reaction mix and REV cycling (cycling in the supplement)
+    - citation: "Cox et al. 2022, J Wildl Dis 58(4)"
+      doi: 10.7589/JWD-D-22-00023
+      for: REV 3′ LTR cycling (same as Stewart et al. 2019) and LPDV cycling (in the supplement)
+    - citation: "Allison et al. 2014, Virology 450-451:2-12"
+      doi: 10.1016/j.virol.2013.11.037
+      for: LPDV primer sequences
+  biosafety: MISSING
+  status: MISSING
+  version: MISSING
+  last_run: MISSING
 ---
 
 These are the PCR protocols my lab used to detect reticuloendotheliosis virus (REV) and lymphoproliferative disease virus (LPDV) in avian DNA, part of the [REV and LPDV research](/research/retroviruses/avian) on avian retroviruses. There are three REV primer sets, one in the 3′ LTR (long terminal repeat) and two in the *pol* gene, and one LPDV primer set in the p31/CA region. For a control that confirms a sample holds amplifiable bird DNA, see the [pan-avian GAPDH PCR](/research/protocols/pan-avian-gapdh).

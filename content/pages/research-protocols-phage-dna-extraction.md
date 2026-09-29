@@ -3,6 +3,89 @@ path: /research/protocols/phage-dna-extraction
 title: "Phage DNA Extraction Protocol"
 seo_title: "Phage DNA Extraction Protocol: PEG, resin and ZnCl2 methods"
 description: "Phage DNA extraction and purification from a high-titer lysate: a PEG and resin column protocol, a column-free ZnCl2/TES method, and checking DNA quality."
+protocol:
+  steps:
+    - "#before-you-start-the-lysate"
+    - "#method-1-peg-precipitation-and-resin-column"
+    - "#method-2-column-free-zncl2--tes-extraction"
+    - "#day-1"
+    - "#day-2"
+    - "#checking-dna-quantity-and-quality"
+    - "#rescuing-salty-or-dilute-dna"
+  reagents:
+    - { method: Method 1, name: filter-sterilized phage lysate, amount: 10 mL }
+    - { method: Method 1, name: Nuclease Mix, amount: 40 µL }
+    - { method: Method 1, name: phage precipitant solution (PEG8000/NaCl), amount: 4 mL }
+    - { method: Method 1, name: sterile water, amount: 0.5 mL }
+    - { method: Method 1, name: DNA Clean Up Resin at 37 °C, amount: 2 mL }
+    - { method: Method 1, name: freshly made isopropanol wash, amount: 1 mL, stock: 80% }
+    - { method: Method 1, name: Elution Buffer at 80 °C, amount: 100 µL }
+    - { method: Method 2, name: high-titer lysate, amount: 5 ml }
+    - { method: Method 2, name: nuclease mix (DNase I plus RNase A), amount: 20 µl, per: 5 ml }
+    - { method: Method 2, name: zinc chloride, amount: 20 µl, stock: 2 M, per: tube }
+    - method: Method 2
+      name: TES buffer
+      amount: 500 µl
+      recipe: "0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS"
+    - { method: Method 2, name: proteinase K, amount: 1 µl, stock: MISSING }
+    - { method: Method 2, name: potassium acetate (pH 5.2), amount: 60 µl, stock: 3 M }
+    - { method: Method 2, name: isopropanol, amount: 500 µl, stock: 100% or 80% }
+    - { method: Method 2, name: ethanol wash, amount: 250 µl, stock: 70% }
+    - { method: Method 2, name: nuclease-free water, amount: 50 µl }
+    - { method: Rescue, name: sodium acetate, amount: 0.1 volume, stock: 3 M }
+    - { method: Rescue, name: ice-cold ethanol, amount: 3 volumes, stock: 100% }
+    - { method: Rescue, name: ice-cold ethanol wash, amount: 0.5 ml, stock: 75% }
+    - { method: Rescue, name: glycogen carrier (optional), amount: 1 µl, stock: 20 mg/ml }
+    - { method: Rescue, name: nuclease-free water, amount: 50 µl }
+  timings:
+    - { method: Method 1, step: precipitation at 37 °C, temperature_c: 37, time: 30 minutes }
+    - { method: Method 1, step: precipitation at room temperature, time: 45 minutes to 1 hour }
+    - { method: Method 1, step: swinging bucket spin, spin: "10,000 x g", time: 20 minutes }
+    - { method: Method 1, step: clumpy pellet at room temperature, time: "5-10 minutes, no more than 10" }
+    - { method: Method 1, step: resin spin, spin: 12-13k x g, time: 3 minutes }
+    - { method: Method 1, step: isopropanol wash spin, spin: 12-13k x g, time: 3 minutes }
+    - { method: Method 1, step: column drying spin, spin: "12,000 x g", time: 5 minutes }
+    - { method: Method 1, step: Elution Buffer on the column, temperature_c: 80, time: 1 minute }
+    - { method: Method 1, step: elution spin, spin: "12,000 x g", time: 1 minute }
+    - { method: Method 2, step: nuclease mix, temperature_c: 37, time: 10 minutes }
+    - { method: Method 2, step: zinc chloride, temperature_c: 37, time: 5 minutes }
+    - { method: Method 2, step: zinc chloride spin, spin: "10,000 rpm", time: 1 minute }
+    - { method: Method 2, step: TES, temperature_c: 60, time: 15 minutes }
+    - { method: Method 2, step: proteinase K, temperature_c: 37, time: 10 minutes }
+    - { method: Method 2, step: potassium acetate on ice, time: 15 minutes }
+    - { method: Method 2, step: potassium acetate spin, spin: "12,000 rpm", temperature_c: 4, time: 1 minute }
+    - { method: Method 2, step: isopropanol on ice, time: overnight }
+    - { method: Method 2, step: DNA spin, spin: top speed, g: MISSING, time: 10 minutes }
+    - { method: Method 2, step: ethanol wash spin, spin: MISSING, time: 1 minute }
+    - { method: Rescue, step: hold, time: "-80 °C for 1 hour to overnight, or -20 °C overnight" }
+    - { method: Rescue, step: DNA spin, spin: full speed, g: MISSING, temperature_c: 4, time: 30 minutes }
+    - { method: Rescue, step: wash spins, spin: MISSING, temperature_c: 4, time: 10 minutes }
+    - { method: Rescue, step: drying, time: "30 °C, or 37 °C for 10 minutes" }
+  primers: not applicable
+  equipment:
+    - { method: Method 1, name: 50 mL conical vial }
+    - { method: Method 1, name: swinging bucket centrifuge }
+    - { method: Method 1, name: microfuge tubes }
+    - { method: Method 1, name: vacuum manifold with column-syringe set up }
+    - { method: Method 1, name: dry heat bath }
+    - { method: Method 2, name: microcentrifuge tubes }
+    - { method: Method 2, name: microcentrifuge }
+    - { name: NanoDrop }
+    - { name: Qubit 3.0 }
+  host_strain: MISSING
+  source:
+    - citation: "Phage DNA Extraction Procedure, the two-page PDF posted on the old site (the lab's Baylor protocol)"
+      for: Method 1
+    - citation: "Alternative DNA Isolation Protocol 3.5, the lab's course materials"
+      for: Method 2
+    - citation: "Santos (1991), Nucleic Acids Research 19:5442"
+      for: Method 2, as the lab's genome announcements cite it
+    - citation: "the lab's notebooks"
+      for: notes, troubleshooting and the ZnCl2 reagent strengths
+  biosafety: MISSING
+  status: MISSING
+  version: MISSING
+  last_run: MISSING
 ---
 
 This page gives two protocols for phage DNA extraction (also called phage DNA isolation, purification or preparation) from a high-titer bacteriophage lysate, as used in the Tarleton SEA-PHAGES lab. The first is a PEG precipitation and resin column procedure that replaces the old PDF on this site. The second is the column-free zinc chloride (ZnCl2) and TES method the lab has used as its standard since 2019. After both come the checks for DNA quantity and quality before sequencing, and a rescue for salty or dilute DNA. It is written for students and instructors running phage DNA preparation in a teaching lab.
