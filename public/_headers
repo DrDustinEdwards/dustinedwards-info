@@ -180,6 +180,14 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </software/capsid>; rel="canonical"
+/software/abscissa.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/abscissa>; rel="canonical"
+/software/carrel.md
+  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
+  X-Robots-Tag: noindex
+  Link: </software/carrel>; rel="canonical"
 /cv.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex

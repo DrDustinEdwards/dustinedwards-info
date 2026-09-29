@@ -276,6 +276,8 @@ export function checkProjects(ctx) {
     "/software/foxing-edu",
     "/software/germomics",
     "/software/capsid",
+    "/software/abscissa",
+    "/software/carrel",
   ];
   for (const softwarePath of SOFTWARE_PAGES) {
     ok(
@@ -318,6 +320,23 @@ export function checkProjects(ctx) {
     capsidPage.includes("https://github.com/DrDustinEdwards/capsid-mcp"),
   );
   ok("Capsid does not link the console", !capsidPage.includes("/console"));
+
+  const abscissaPage = readPage("software-abscissa.md");
+  for (const url of [
+    "https://github.com/DrDustinEdwards/abscissa",
+    "https://www.npmjs.com/package/abscissa",
+    "https://abscissa.dustinedwards.info",
+  ]) {
+    ok(`Abscissa links ${url}`, abscissaPage.includes(`](${url})`));
+  }
+  ok("Abscissa says it is in alpha", /early alpha/.test(abscissaPage) && /active development/.test(abscissaPage));
+
+  // Carrel has a page (Dustin, 2026-09-28) but the app is private: neither the page nor the hub links it.
+  const carrelPage = readPage("software-carrel.md");
+  ok("the Carrel page does not link the app", !carrelPage.includes("carrel.dustinedwards.info"));
+  ok("the hub does not link the Carrel app", !hub.includes("carrel.dustinedwards.info"));
+  ok("the hub links the Carrel page", hub.includes("](/software/carrel)"));
+  ok("the hub links the Abscissa page", hub.includes("](/software/abscissa)"));
 
   const contentPageSource = codeOf(join(root, "app", "routes", "content-page.tsx"));
   ok(

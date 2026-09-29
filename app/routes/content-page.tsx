@@ -1,10 +1,12 @@
 import { data, Link } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
+import { DictionaryEntry } from "~/components/dictionary-entry";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
 import { contentPageMarkdownPath, contentPageTrail, protocolNeighbors } from "~/lib/content-pages.mjs";
+import { definedTermJsonLd, dictionaryEntryFor } from "~/lib/dictionary-entries.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -87,6 +89,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const trail = contentPageTrail(page, titleOf);
   const neighbors = protocolNeighbors(page.path);
   const schema = pageJsonLd(page);
+  const entry = dictionaryEntryFor(page.path);
   return (
     <PageShell
       trail={
@@ -103,11 +106,18 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
               dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
             />
           ) : null}
+          {entry ? (
+            <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: serializeJsonLd(definedTermJsonLd(entry, SITE_ORIGIN)) }}
+            />
+          ) : null}
         </>
       }
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{page.title}</h1>
+      {entry ? <DictionaryEntry entry={entry} /> : null}
       <PhageTools path={page.path} search={search} />
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
       {neighbors ? (
