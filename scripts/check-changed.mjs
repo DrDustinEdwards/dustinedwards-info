@@ -79,6 +79,12 @@ export const MAP = [
     gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features"],
   },
   {
+    /* check-protocols reads each protocol page's record and the list of gaps waiting on a value. */
+    what: "a protocol page, its known-missing list or the record rules",
+    test: /^(content\/(pages\/research-protocols-.+\.md|protocols-known-missing\.json)|scripts\/lib\/protocols\.mjs)$/,
+    gates: ["check:protocols", RELATED],
+  },
+  {
     what: "publication data",
     test: /^data\/.+/,
     gates: ["check:machine-readable", "check:content"],
