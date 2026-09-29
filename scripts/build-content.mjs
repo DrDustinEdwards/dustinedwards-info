@@ -10,6 +10,7 @@ import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import {
   CONTENT_PAGE_PATHS,
   CONTENT_PAGE_SECTIONS,
+  CONTENT_PAGES_FROM_DATA,
   DESCRIPTION_MAX,
   SEO_TITLE_MAX,
   contentPageFile,
@@ -18,6 +19,7 @@ import {
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
+import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
@@ -52,11 +54,31 @@ export async function renderContentPages() {
   const names = (await readdir(fromRoot(PAGES_DIR))).filter((name) => name.endsWith(".md")).sort();
   const expected = new Map(CONTENT_PAGE_PATHS.map((p) => [contentPageFile(p), p]));
 
+  /*
+   * A page generated from data has no file here, and a file for one would be a second source that
+   * silently loses to the data, so it is refused.
+   */
+  /** @type {Array<{ name: string, file: string, raw: string }>} */
+  const sources = [];
+  for (const name of names) {
+    if (CONTENT_PAGES_FROM_DATA.some((p) => contentPageFile(p) === name)) {
+      throw new ContentError(
+        path.join(PAGES_DIR, name),
+        "is generated from structured data (CONTENT_PAGES_FROM_DATA); edit the data, not a markdown copy.",
+      );
+    }
+    const file = path.join(PAGES_DIR, name);
+    sources.push({ name, file, raw: await readFile(fromRoot(file), "utf8") });
+  }
+  for (const pagePath of CONTENT_PAGES_FROM_DATA) {
+    if (pagePath !== "/cv") throw new Error(`build:content has no generator for ${pagePath}.`);
+    sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument() });
+  }
+
   /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }>, schemaType?: string, productUrl?: string, codeRepository?: string, applicationCategory?: string }>} */
   const pages = [];
-  for (const name of names) {
-    const file = path.join(PAGES_DIR, name);
-    const parsed = matter(await readFile(fromRoot(file), "utf8"));
+  for (const { name, file, raw } of sources) {
+    const parsed = matter(raw);
     const fm = parsed.data;
     const page = {
       path: String(fm.path ?? ""),
@@ -285,7 +307,7 @@ async function main() {
   // Only what the route renders: the markdown and outline are build inputs for search, not page weight.
   // The twin is a static asset beside the HTML URL, the same trade the paper twins make.
   const renderedPages = await renderContentPages();
-  const contentPages = renderedPages.map(
+  const contentPages = renderedPages.filter((page) => !CONTENT_PAGES_FROM_DATA.includes(page.path)).map(
     ({ path: p, title, seoTitle, description, html, schemaType, productUrl, codeRepository, applicationCategory }) => ({
       path: p,
       title,

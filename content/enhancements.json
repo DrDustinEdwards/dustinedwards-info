@@ -176,6 +176,33 @@
       "fallbackKind": "selector",
       "fallbackAt": "form[data-tool]",
       "why": null
+    },
+    {
+      "id": "cv-filters-live",
+      "module": "app/enhance/cv.ts",
+      "enhancement": "The CV at /cv filters, searches and sorts on every input with no reload: the entries, the group counts, the headline counts, the facet counts and both charts redraw together, a status region announces how many entries show, and the state is written to the query string so a copied URL opens the same view.",
+      "fallback": "The whole CV is server-rendered, and the filter form is a GET form: with script off, Apply filters reloads /cv with the query string, and the server renders the same entries, counts and charts from it through the same module (app/lib/cv/view.mjs).",
+      "fallbackKind": "selector",
+      "fallbackAt": "form[data-cv-form]",
+      "why": null
+    },
+    {
+      "id": "cv-timeline-select",
+      "module": "app/enhance/cv.ts",
+      "enhancement": "The CV timeline, drawn by Abscissa, becomes keyboard filter buttons through abscissa/enhance: selecting a year's bar filters to that year in place (again, or Escape: every year), and selecting an entry in its key filters to that type.",
+      "fallback": "Each bar is a server-rendered link to /cv with that year as the range, so it filters by page load with script off.",
+      "fallbackKind": "selector",
+      "fallbackAt": "#cv-timeline",
+      "why": null
+    },
+    {
+      "id": "cv-citation-copy",
+      "module": "app/enhance/cv.ts",
+      "enhancement": "Copy buttons for each paper's plain citation, BibTeX and RIS, with the result announced through a status region; a Print button for the page.",
+      "fallback": "The plain citation is on the page to select, and the BibTeX and RIS files are server-rendered download links beside where the buttons appear; the browser's own Print prints the page.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".cv-cite",
+      "why": null
     }
   ]
 }

@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 import {
   CONTENT_PAGE_PATHS,
+  CONTENT_PAGES_FROM_DATA,
   contentPageFile,
   contentPageTrail,
 } from "../app/lib/content-pages.mjs";
@@ -11,8 +12,12 @@ import { PENDING_TARGETS } from "../app/lib/wordpress-redirects.mjs";
 
 const pagesDir = new URL("../content/pages/", import.meta.url);
 
-test("every listed page has its markdown file", () => {
+test("every listed page has its markdown file, unless its markdown is generated from data", () => {
   for (const path of CONTENT_PAGE_PATHS) {
+    if (CONTENT_PAGES_FROM_DATA.includes(path)) {
+      assert.ok(!existsSync(new URL(contentPageFile(path), pagesDir)), `${path}: a stale ${contentPageFile(path)}`);
+      continue;
+    }
     assert.ok(existsSync(new URL(contentPageFile(path), pagesDir)), `${path}: ${contentPageFile(path)}`);
   }
 });

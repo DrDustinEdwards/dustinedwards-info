@@ -1,0 +1,167 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+
+import { extractText, getDocumentProxy } from "unpdf";
+
+import { CV_ENTRIES } from "../app/data/cv.ts";
+import { PUBLICATIONS } from "../app/data/publications.ts";
+import { CV, cvFacts } from "../app/lib/cv/entries.mjs";
+import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
+import {
+  AREAS,
+  ROLES,
+  TYPES,
+  chartYears,
+  facetCounts,
+  groupEntries,
+  headline,
+  matches,
+  parseState,
+  stateToSearch,
+  timelineData,
+} from "../app/lib/cv/view.mjs";
+import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
+import { CV_PDF_DISK_PATH, FINGERPRINT_LABEL, cvFingerprint } from "../scripts/build-cv-pdf.mjs";
+
+const FACTS = cvFacts(CV.entries);
+
+/** Built from its code point, so this file holds no dash of its own. */
+const EM_DASH = new RegExp(String.fromCharCode(0x2014));
+
+test("every entry resolves, with a known type, known areas, a known role and a unique id", () => {
+  const types = new Set(TYPES.map(([id]) => id));
+  const areas = new Set(AREAS.map(([id]) => id));
+  const roles = new Set(ROLES.map(([id]) => id));
+  assert.equal(CV.entries.length, CV_ENTRIES.length);
+  for (const e of CV.entries) {
+    assert.ok(types.has(e.type), `${e.id}: type ${e.type}`);
+    for (const a of e.areas) assert.ok(areas.has(a), `${e.id}: area ${a}`);
+    if (e.role) assert.ok(roles.has(e.role), `${e.id}: role ${e.role}`);
+  }
+  assert.equal(new Set(CV.entries.map((e) => e.id)).size, CV.entries.length);
+});
+
+test("a paper named by DOI takes its facts from the site's Crossref-backed record, and its role from the author list", () => {
+  const byDoi = new Map(PUBLICATIONS.map((p) => [p.doi.toLowerCase(), p]));
+  const refs = CV_ENTRIES.filter((e) => e.type === "publication" && "doi" in e);
+  assert.ok(refs.length >= 30, `${refs.length} papers by DOI`);
+  for (const ref of refs) {
+    const record = byDoi.get(ref.doi.toLowerCase());
+    assert.ok(record, ref.doi);
+    const entry = CV.entries.find((e) => e.paper?.doi === record.doi);
+    assert.ok(entry, record.doi);
+    assert.equal(entry.year, record.year);
+    assert.equal(entry.paper.authors.length, record.authors.length);
+  }
+  const godfather = CV.entries.find((e) => e.paper?.doi === "10.1128/mra.00888-24");
+  assert.equal(godfather?.role, "senior-author");
+  const tax = CV.entries.find((e) => e.paper?.doi === "10.1128/jvi.00356-08");
+  assert.equal(tax?.role, "first-author");
+});
+
+test("privacy: mentoring is counts, and no line in the CV data carries an email, a phone or a room", () => {
+  const MENTORING_KEYS = new Set([
+    "type", "section", "year", "endYear", "count", "unit", "level", "program", "org", "detail", "cohort", "areas", "role", "links",
+  ]);
+  for (const e of CV_ENTRIES.filter((x) => x.type === "mentoring")) {
+    for (const key of Object.keys(e)) assert.ok(MENTORING_KEYS.has(key), `mentoring entry carries "${key}"`);
+    assert.equal(typeof e.count, "number");
+  }
+  // The values, not the file: its header comment names what it leaves out.
+  const data = JSON.stringify(CV_ENTRIES);
+  assert.doesNotMatch(data, /@[a-z0-9-]+\.[a-z]{2,}/i, "an email address");
+  assert.doesNotMatch(data, /\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/, "a phone number");
+  assert.doesNotMatch(data, /\bRoom\b|\bSuite\b|\bOffice \d/i, "a room");
+  assert.doesNotMatch(data, /Mountains Lake/i, "a private community group");
+  const source = readFileSync(new URL("../app/data/cv.ts", import.meta.url), "utf8");
+  assert.doesNotMatch(source, EM_DASH, "an em dash");
+});
+
+test("the URL state round-trips, drops what it does not know and orders a reversed range", () => {
+  const state = parseState(
+    new URLSearchParams("type=grant&type=publication&area=bacteriophages&from=2015&to=2020&role=senior-author&q=phage&sort=newest"),
+  );
+  assert.deepEqual(state.types, ["grant", "publication"]);
+  const search = stateToSearch(state);
+  assert.equal(search, "?type=publication&type=grant&area=bacteriophages&from=2015&to=2020&role=senior-author&q=phage&sort=newest");
+  assert.equal(stateToSearch(parseState(new URLSearchParams(search.slice(1)))), search);
+  assert.deepEqual(parseState(new URLSearchParams("type=publication,talk")).types, ["publication", "talk"]);
+  const junk = parseState(new URLSearchParams("type=nope&area=x&role=boss&sort=up&from=19"));
+  assert.equal(stateToSearch(junk), "");
+  const reversed = parseState(new URLSearchParams("from=2020&to=2010"));
+  assert.equal(reversed.from, 2010);
+  assert.equal(reversed.to, 2020);
+});
+
+test("filters combine: type and area and years and role and search", () => {
+  const count = (/** @type {string} */ query) =>
+    FACTS.filter((f) => matches(f, parseState(new URLSearchParams(query)))).length;
+  assert.equal(count(""), CV.entries.length);
+  assert.equal(count("type=publication"), 34);
+  assert.equal(count("type=grant"), 43);
+  assert.ok(count("type=publication&area=bacteriophages") > 0);
+  assert.equal(count("type=publication&from=2019&to=2019"), 3);
+  const seniorPhage = count("type=publication&area=bacteriophages&role=senior-author");
+  assert.ok(seniorPhage > 0 && seniorPhage < count("type=publication&area=bacteriophages"));
+  // An ongoing appointment matches a range after it began; an undated membership matches no range.
+  const professor = FACTS.find((f) => f.type === "appointment" && f.endYear === "present");
+  assert.ok(professor && matches(professor, parseState(new URLSearchParams("from=2030"))));
+  const membership = FACTS.find((f) => f.year === null);
+  assert.ok(membership && !matches(membership, parseState(new URLSearchParams("to=2030"))));
+  // Search folds case and accents, and every word must match.
+  assert.ok(count("q=GALVAO") > 0);
+  assert.equal(count("q=phage+zzzz"), 0);
+});
+
+test("the counts, the facets and the grouping agree with the entries", () => {
+  const all = headline(FACTS);
+  assert.equal(all.papers, 34);
+  assert.equal(all.grants, 43);
+  assert.equal(
+    all.students,
+    CV_ENTRIES.reduce((n, e) => n + (e.type === "mentoring" && e.unit === "students" ? e.count : 0), 0),
+  );
+  const facets = facetCounts(FACTS, parseState(new URLSearchParams("type=publication")));
+  assert.equal(facets.types.grant, 43, "a type's count ignores the type filter");
+  assert.deepEqual(
+    groupEntries(FACTS, "type").map((g) => g.key),
+    TYPES.map(([id]) => `type-${id}`),
+  );
+  const byYear = groupEntries(FACTS, "newest");
+  assert.equal(byYear[byYear.length - 1]?.heading, "Undated");
+  const ids = byYear.flatMap((g) => g.parts.flatMap((p) => p.ids));
+  assert.equal(new Set(ids).size, CV.entries.length);
+});
+
+test("the timeline counts each charted type by year", () => {
+  const state = parseState(new URLSearchParams(""));
+  const data = timelineData(FACTS, state);
+  assert.deepEqual(data.years, chartYears(FACTS));
+  const pubs = data.series.find((s) => s.key === "publication");
+  assert.equal(pubs?.values.reduce((a, b) => a + b, 0), 34);
+});
+
+test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
+  const doc = cvMarkdownDocument();
+  for (const e of CV.entries) {
+    if (e.paper?.doi) assert.ok(doc.includes(`https://doi.org/${e.paper.doi}`), e.paper.doi);
+  }
+  assert.match(doc, /^---\npath: \/cv\n/);
+  assert.match(doc, /Shown as counts; the CV names each student\./);
+});
+
+test("the committed PDF was rendered from the current CV (npm run build:cv-pdf)", async () => {
+  const pdf = await getDocumentProxy(new Uint8Array(readFileSync(CV_PDF_DISK_PATH)));
+  const { text } = await extractText(pdf, { mergePages: true });
+  const flat = String(text).replace(/\s+/g, " ");
+  assert.ok(
+    flat.includes(`${FINGERPRINT_LABEL} ${cvFingerprint()}`),
+    `the PDF does not carry "${FINGERPRINT_LABEL} ${cvFingerprint()}": the CV changed since it was rendered. ` +
+      "Run npm run build:cv-pdf, then build:assets and build:template-refs.",
+  );
+});
+
+test("the committed chart stylesheet is Abscissa's current output (npm run build:chart-css)", () => {
+  assert.equal(readFileSync(CHART_CSS_PATH, "utf8"), chartCss());
+});
