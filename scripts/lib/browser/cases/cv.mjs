@@ -18,8 +18,8 @@ const readCv = (page) =>
     ],
     papers: document.querySelector('[data-cv-count="papers"]')?.textContent ?? "",
     grants: document.querySelector('[data-cv-count="grants"]')?.textContent ?? "",
-    bars: document.querySelectorAll("[data-cv-timeline] [data-abscissa-key]").length,
-    barLinks: document.querySelectorAll("[data-cv-timeline] a[href][data-abscissa-key]").length,
+    bars: document.querySelectorAll("[data-cv-timeline] [data-enarratio-key]").length,
+    barLinks: document.querySelectorAll("[data-cv-timeline] a[href][data-enarratio-key]").length,
     enhanced: document.querySelector("[data-cv]")?.hasAttribute("data-cv-enhanced") ?? false,
   }));
 
@@ -79,24 +79,24 @@ export async function run({ browser }) {
       );
 
       /*
-       * A bar, once Abscissa's layer has made it a control: clicking it selects its year. A
+       * A bar, once Enarratio's layer has made it a control: clicking it selects its year. A
        * Publications bar, so the year has an entry the type filter keeps; the first bar in the
-       * markup is not one, since Abscissa (0.1.0-alpha.6) writes bars in reading order, year first.
+       * markup is not one, since Enarratio (0.1.0-alpha.8) writes bars in reading order, year first.
        */
       const year = await page.evaluate(
         () =>
           document
-            .querySelector('[data-cv-timeline] [data-abscissa-key][data-abscissa-series="Publications"]')
-            ?.getAttribute("data-abscissa-x") ?? "",
+            .querySelector('[data-cv-timeline] [data-enarratio-key][data-enarratio-series="Publications"]')
+            ?.getAttribute("data-enarratio-x") ?? "",
       );
-      if (await clickOrFail(page, `[data-cv-timeline] [data-abscissa-x="${year}"]`, "cv: the timeline has a year to select")) {
+      if (await clickOrFail(page, `[data-cv-timeline] [data-enarratio-x="${year}"]`, "cv: the timeline has a year to select")) {
         const oneYear = await pollUntil(() => readCv(page), (v) => v.search.includes(`from=${year}`));
         ok(
           "cv: a year's bar filters to that year and keeps the other filters",
           oneYear.search === `?type=publication&from=${year}&to=${year}` && oneYear.shown > 0 && oneYear.shown < pubs.shown,
           JSON.stringify(oneYear),
         );
-        const faded = await page.evaluate(() => document.querySelectorAll("[data-cv-timeline] [data-abscissa-dimmed]").length);
+        const faded = await page.evaluate(() => document.querySelectorAll("[data-cv-timeline] [data-enarratio-dimmed]").length);
         ok("cv: the chart shows the year it filters to, dimming the others", faded > 0, `${faded} dimmed bars`);
       }
 

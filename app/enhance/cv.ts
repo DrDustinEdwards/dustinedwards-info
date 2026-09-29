@@ -1,4 +1,4 @@
-import { enhance, type EnhancedChart, type SelectDetail } from "abscissa/enhance";
+import { enhance, type EnhancedChart, type SelectDetail } from "enarratio/enhance";
 
 import { copyText } from "~/lib/clipboard";
 import {
@@ -130,16 +130,16 @@ function setText(selector: string, text: string) {
   for (const node of root.querySelectorAll(selector)) node.textContent = text;
 }
 
-/* Abscissa's layer: bar links become keyboard filter buttons with details on hover and focus. */
+/* Enarratio's layer: bar links become keyboard filter buttons with details on hover and focus. */
 const timeline: EnhancedChart | undefined = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
-if (!timeline) throw new Error("cv: the timeline is not an Abscissa figure.");
+if (!timeline) throw new Error("cv: the timeline is not an Enarratio figure.");
 
 const TYPE_BY_LABEL = new Map(CHART_SERIES.map(([id, label]) => [label as string, id as string]));
 const LABEL_BY_TYPE = new Map(CHART_SERIES.map(([id, label]) => [id as string, label as string]));
 timeline.setFilter(chartFilter(readState()));
 
 /**
- * The filter the chart itself shows for a state: one year as Abscissa's year filter, else one charted
+ * The filter the chart itself shows for a state: one year as Enarratio's year filter, else one charted
  * type as its key's pressed entry. A range, or several types, shows as the faded bars alone.
  */
 function chartFilter(state: CvState): { field: string; value: string } | null {
@@ -172,7 +172,7 @@ function drawCharts(state: CvState) {
     })
     .then((charts) => {
       if (controller.signal.aborted) return;
-      // Neither fires abscissa:select, only a reader's own choice does, and update() keeps focus.
+      // Neither fires enarratio:select, only a reader's own choice does, and update() keeps focus.
       timeline?.update(charts.timeline);
       timeline?.setFilter(chartFilter(state));
       for (const name of ["papers", "grants", "students"] as const) {
@@ -282,11 +282,11 @@ function setYears(from: number | null, to: number | null) {
 }
 
 /*
- * Abscissa reports a reader's selection as `abscissa:select`. A bar filters by its year (field
+ * Enarratio reports a reader's selection as `enarratio:select`. A bar filters by its year (field
  * "year"); an entry in the key by its type (field "type"). Selecting the same one again, or Escape,
  * reports a null value, which clears that filter.
  */
-timelineHost.addEventListener("abscissa:select", (event: CustomEvent<SelectDetail>) => {
+timelineHost.addEventListener("enarratio:select", (event: CustomEvent<SelectDetail>) => {
   if (event.detail.chartId !== TIMELINE_ID) return;
   const { field, value } = event.detail;
   if (field === "year") {

@@ -152,10 +152,10 @@ test("a range filter fades exactly the timeline's bars outside it", () => {
     label: "Output per year",
     hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
   });
-  const bars = [...markup.matchAll(/<a [^>]*data-abscissa-key=[^>]*>/g)].map((m) => m[0]);
+  const bars = [...markup.matchAll(/<a [^>]*data-enarratio-key=[^>]*>/g)].map((m) => m[0]);
   assert.equal(bars.length, years.length, "one bar per year");
   const faded = bars.filter((bar) => bar.includes('data-cv-out=""'));
-  const fadedYears = faded.map((bar) => bar.match(/data-abscissa-x="(\d{4})"/)?.[1]).sort();
+  const fadedYears = faded.map((bar) => bar.match(/data-enarratio-x="(\d{4})"/)?.[1]).sort();
   assert.deepEqual(fadedYears, ["2019", "2022", "2023"]);
 });
 
@@ -179,6 +179,6 @@ test("the committed PDF was rendered from the current CV (npm run build:cv-pdf)"
   );
 });
 
-test("the committed chart stylesheet is Abscissa's current output (npm run build:chart-css)", () => {
+test("the committed chart stylesheet is Enarratio's current output (npm run build:chart-css)", () => {
   assert.equal(readFileSync(CHART_CSS_PATH, "utf8"), chartCss());
 });

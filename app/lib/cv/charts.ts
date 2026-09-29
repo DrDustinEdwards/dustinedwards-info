@@ -1,16 +1,16 @@
 /**
  * THE CV'S CHARTS, behind one small interface: the stacked timeline of output per year and the three
- * headline sparklines, drawn by Abscissa (the site's charts package, built on Observable Plot). The
+ * headline sparklines, drawn by Enarratio (the site's charts package, built on Observable Plot). The
  * route renders them into the page, so they are in the HTML with script off, and /cv/charts.json
  * renders them again for app/enhance/cv.ts when a filter changes. Both get markup back.
  *
- * Abscissa's stylesheet is app/styles/abscissa.css (scripts/build-chart-css.mjs), because the public
+ * Enarratio's stylesheet is app/styles/enarratio.css (scripts/build-chart-css.mjs), because the public
  * policy allows no inline <style>. With script off each bar is a link to its year's filtered page;
- * its enhancement layer (abscissa/enhance) turns the bars into keyboard filter buttons and reports a
- * selection as an `abscissa:select` event, which app/enhance/cv.ts turns into a year range.
+ * its enhancement layer (enarratio/enhance) turns the bars into keyboard filter buttons and reports a
+ * selection as an `enarratio:select` event, which app/enhance/cv.ts turns into a year range.
  */
 
-import { barChart, sparkline } from "abscissa";
+import { barChart, sparkline } from "enarratio";
 
 import { TIMELINE_ID } from "./view.mjs";
 
@@ -39,9 +39,9 @@ export type SparklineInput = {
 const TIMELINE = { width: 640, height: 220 };
 
 /**
- * One row per counted entry, which is the shape Abscissa counts. The bars outside the selected range
- * are marked with an attribute for the stylesheet to fade, found by the year Abscissa writes on each
- * bar as `data-abscissa-x`. Its `data-abscissa-key` is opaque, and JSON since 0.1.0-alpha.6.
+ * One row per counted entry, which is the shape Enarratio counts. The bars outside the selected range
+ * are marked with an attribute for the stylesheet to fade, found by the year Enarratio writes on each
+ * bar as `data-enarratio-x`. Its `data-enarratio-key` is opaque JSON.
  */
 export function timelineSvg(input: TimelineInput): string {
   const { years, series, selected } = input;
@@ -71,12 +71,12 @@ export function timelineSvg(input: TimelineInput): string {
 }
 
 /**
- * A range wider than one year fades the bars outside it. One year is Abscissa's own filter, shown by
+ * A range wider than one year fades the bars outside it. One year is Enarratio's own filter, shown by
  * the enhancement with setFilter, so the two dimmings never stack.
  */
 function fadeOutside(markup: string, selected: [number, number] | null) {
   if (!selected || selected[0] === selected[1]) return markup;
-  return markup.replace(/data-abscissa-x="(\d{4})"/g, (match, year: string) =>
+  return markup.replace(/data-enarratio-x="(\d{4})"/g, (match, year: string) =>
     Number(year) < selected[0] || Number(year) > selected[1] ? `data-cv-out="" ${match}` : match,
   );
 }
