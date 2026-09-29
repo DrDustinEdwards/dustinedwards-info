@@ -26,7 +26,6 @@ import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   SITE_ORIGIN,
-  breadcrumbJsonLd,
   isSiteOwner,
   pageMeta,
   personId,
@@ -84,11 +83,13 @@ export function meta() {
   ];
 }
 
-/** The page about the Person, and a ScholarlyArticle per paper the site holds, joined by the Person's @id. */
+/**
+ * The page about the Person, and a ScholarlyArticle per paper the site holds, joined by the Person's @id.
+ * No BreadcrumbList: the page shows no trail, and a one-step list is one Google reads as invalid.
+ */
 function cvJsonLd() {
   const records = ENTRIES.flatMap((e) => (e.paper?.record ? [e.paper.record] : []));
   return [
-    breadcrumbJsonLd(SITE_ORIGIN, [[CV_PAGE.title, PATH]]),
     {
       "@context": "https://schema.org",
       "@type": "WebPage",

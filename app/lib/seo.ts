@@ -1,6 +1,8 @@
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
 import { canonicalAuthor } from "./publications/authors.mjs";
+import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
+import { doiSlug, paperPath } from "./publications/paths.mjs";
 
 /**
  * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
@@ -393,6 +395,8 @@ export function isSiteOwner(name: string) {
 }
 
 // Only the owner's entry becomes an `@id` reference; replacing the whole array would drop co-authors.
+// Every record has its own page (app/lib/publications/by-slug.ts), so each article takes that page as
+// its `@id` and `url`, the same node the paper page describes in full; a hosted PDF is its encoding.
 export function publicationsJsonLd(
   origin: string,
   items: {
@@ -402,6 +406,8 @@ export function publicationsJsonLd(
     journal: string | null;
     doi: string;
     pdfPath: string | null;
+    /** The curated type, so a chapter here is the same Chapter its own page describes. */
+    type?: string;
   }[],
 ) {
   const id = personId(origin);
@@ -409,9 +415,11 @@ export function publicationsJsonLd(
     personNode(origin),
     ...items.map((p) => ({
       "@context": "https://schema.org",
-      "@type": "ScholarlyArticle",
+      "@type": p.type ? schemaTypeFor(p.type) : "ScholarlyArticle",
+      "@id": origin + paperPath(doiSlug(p.doi)),
       // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
       headline: decodeEntities(p.title),
+      name: decodeEntities(p.title),
       author: p.authors.map((name) =>
         isSiteOwner(name) ? { "@id": id } : { "@type": "Person", name: canonicalAuthor(name) },
       ),
@@ -419,8 +427,18 @@ export function publicationsJsonLd(
       ...(p.journal
         ? { isPartOf: { "@type": "Periodical", name: decodeEntities(p.journal) } }
         : {}),
+      identifier: { "@type": "PropertyValue", propertyID: "DOI", value: p.doi },
       sameAs: `https://doi.org/${p.doi}`,
-      ...(p.pdfPath ? { url: origin + p.pdfPath } : {}),
+      url: origin + paperPath(doiSlug(p.doi)),
+      ...(p.pdfPath
+        ? {
+            encoding: {
+              "@type": "MediaObject",
+              encodingFormat: "application/pdf",
+              contentUrl: origin + p.pdfPath,
+            },
+          }
+        : {}),
     })),
   ];
 }

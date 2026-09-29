@@ -102,6 +102,40 @@ export function contentPageMarkdownBody(page) {
 }
 
 /**
+ * What a Dataset node says about a page's first markdown table, read from the markdown the page renders:
+ * its column headings, as the variables, and the span of its Year column, as an ISO 8601 interval. Null
+ * when the page has no table.
+ *
+ * @param {string} markdown
+ * @returns {{ variableMeasured: string[], temporalCoverage: string | null, rows: number } | null}
+ */
+export function markdownTableFacts(markdown) {
+  const lines = String(markdown ?? "").split("\n");
+  const rule = /^\|(\s*:?-+:?\s*\|)+\s*$/;
+  const at = lines.findIndex((line, i) => /^\|.*\|\s*$/.test(line) && rule.test(lines[i + 1] ?? ""));
+  if (at < 0) return null;
+  const cells = (/** @type {string} */ line) =>
+    line
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((cell) => cell.trim());
+  const headings = cells(lines[at] ?? "");
+  /** @type {string[][]} */
+  const rows = [];
+  for (let i = at + 2; i < lines.length && /^\|/.test(lines[i] ?? ""); i += 1) rows.push(cells(lines[i] ?? ""));
+  const yearColumn = headings.findIndex((heading) => /^year$/i.test(heading));
+  const years =
+    yearColumn < 0
+      ? []
+      : rows.map((row) => Number(row[yearColumn])).filter((year) => Number.isInteger(year) && year > 0);
+  const first = Math.min(...years);
+  const last = Math.max(...years);
+  const temporalCoverage = years.length === 0 ? null : first === last ? String(first) : `${first}/${last}`;
+  return { variableMeasured: headings, temporalCoverage, rows: rows.length };
+}
+
+/**
  * Purification is a section of the isolation page, not its own URL, so the sequence is two pages.
  * @type {readonly string[]}
  */
