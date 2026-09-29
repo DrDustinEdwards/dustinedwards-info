@@ -33,3 +33,16 @@ describe.each(DICTIONARY_ENTRIES.map((entry) => [entry.term, entry] as const))("
     expect(html).toMatch(/<template data-enhance="\/assets\/pronounce-[A-Za-z0-9_-]{8}\.js"><\/template>/);
   });
 });
+
+describe("the Enarratio entry", () => {
+  const entry = DICTIONARY_ENTRIES.find((e) => e.term === "Enarratio");
+
+  it("replaces Abscissa's, and marks its Latin sources as Latin", () => {
+    expect(entry?.path).toBe("/software/enarratio");
+    expect(DICTIONARY_ENTRIES.some((e) => e.path === "/software/abscissa")).toBe(false);
+    if (!entry) return;
+    const html = renderToStaticMarkup(h(DictionaryEntry, { entry }));
+    expect(html).toContain('<i lang="la">enarrare</i>');
+    expect(html).toContain('<i lang="la">narrare</i>');
+  });
+});
