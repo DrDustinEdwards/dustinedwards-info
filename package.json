@@ -54,6 +54,7 @@
     "check:enhance-a11y": "node scripts/check-enhance-a11y.mjs",
     "check:fonts": "node scripts/check-fonts.mjs",
     "check:urls": "node scripts/check-urls.mjs",
+    "check:links": "node scripts/check-links.mjs",
     "check:destructive": "node scripts/check-destructive.mjs",
     "check:features": "node scripts/check-features.mjs",
     "check:headers": "node scripts/check-headers.mjs",
