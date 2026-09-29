@@ -4,8 +4,8 @@ import { OWNER_FACULTY_PAGE, SITE, pageMeta, publicHtmlHeaders } from "~/lib/seo
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
 
-/** The address is the one the About page already publishes; this page adds nothing a reader could not find there. */
-const EMAIL = "email@dustinedwards.info";
+/** The site's general address (Dustin, 2026-09-28); the About page publishes the same one. */
+const EMAIL = "contact@dustinedwards.info";
 
 export function headers() {
   // The shared builder: a hand-written pair drops the Vary line and serves one reader's theme to another.

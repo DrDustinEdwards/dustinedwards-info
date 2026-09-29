@@ -128,6 +128,12 @@ export default function Privacy() {
           <a href="/colophon">the colophon</a> describes how the site is built. If this page
           and the code ever disagree, the code is right and this page is a bug.
         </p>
+
+        <h2 id="questions">Questions about privacy</h2>
+        <p>
+          Email <a href="mailto:privacy@dustinedwards.info">privacy@dustinedwards.info</a> about
+          anything on this page, or to ask what the site holds that concerns you.
+        </p>
       </div>
     </PageShell>
   );
