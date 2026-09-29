@@ -10,13 +10,36 @@
 
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 import {
+  CONTENT_PAGE_PATHS,
+  contentPageMarkdownBody,
   markdownTableFacts,
 } from "../app/lib/content-pages.mjs";
 import { renderContentPages } from "../scripts/build-content.mjs";
 
 const pages = await renderContentPages();
+/** The pages this week added, and any page added under their roots later. */
+const ROOTS = ["/software", "/research/tools", "/cv"];
+const added = pages.filter((page) => ROOTS.some((root) => page.path === root || page.path.startsWith(`${root}/`)));
+
+test("the pages under test are the software pages, the calculators and the CV", () => {
+  // Scope, so an empty list cannot pass every case below: the eight software pages, four tool pages, the CV.
+  assert.ok(added.length >= 13, `only ${added.length} pages`);
+  for (const root of ROOTS) assert.ok(added.some((page) => page.path === root), `${root} has no page`);
+  assert.ok(added.every((page) => CONTENT_PAGE_PATHS.includes(/** @type {any} */ (page.path))));
+});
+
+test("each page has its markdown twin, led by its title, and is listed in llms.txt", () => {
+  const llms = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
+  for (const page of added) {
+    const twin = contentPageMarkdownBody(page);
+    assert.ok(twin.startsWith(`# ${page.title}\n\n`), page.path);
+    assert.ok(twin.length > page.title.length + 200, `${page.path}: a twin of ${twin.length} characters`);
+    assert.match(llms, new RegExp(`^ {2}${page.path.replaceAll("/", "\\/")}$`, "m"), `${page.path} is not in llms.txt`);
+  }
+});
 
 test("the phage table's Dataset facts come from the table itself", () => {
   const phages = pages.find((page) => page.path === "/research/phages");
