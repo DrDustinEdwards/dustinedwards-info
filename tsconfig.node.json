@@ -306,7 +306,14 @@
     "app/lib/https-redirect.mjs",
     "app/lib/error-message.mjs",
     "app/lib/bytes.mjs",
-    "app/lib/content/hast.mjs"
+    "app/lib/content/hast.mjs",
+    // check:links resolves every internal link through the gateway's own redirect rules and the
+    // site's own path builders, and reads the header menus as they render.
+    "app/lib/wordpress-redirects.mjs",
+    "app/lib/publications/pdf-redirect.mjs",
+    "app/lib/tag-path.mjs",
+    "app/lib/series-path.mjs",
+    "app/lib/nav.ts"
   ],
   "compilerOptions": {
     "composite": true,

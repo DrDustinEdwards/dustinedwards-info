@@ -28,6 +28,7 @@ import { fileURLToPath } from "node:url";
 
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
+import { NAV } from "../app/lib/nav.ts";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import { paperSlashTarget, pdfRedirectTarget } from "../app/lib/publications/pdf-redirect.mjs";
 import { doiSlug, paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
@@ -163,6 +164,20 @@ function moduleIds(file) {
   const text = readFileSync(file, "utf8");
   for (const m of text.matchAll(/from\s+["']~\/components\/([\w-]+)["']/g)) {
     files.push(join(root, "app", "components", `${m[1]}.tsx`));
+  }
+  // A route that re-exports another (teaching.tsx from content-page.tsx) renders that one's ids.
+  for (const m of text.matchAll(/from\s+["']\.\/([\w.$-]+)["']/g)) {
+    const next = join(dirname(file), `${m[1]}.tsx`);
+    if (next === file) continue;
+    try {
+      readFileSync(next);
+    } catch (error) {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
+      continue;
+    }
+    const inner = moduleIds(next);
+    for (const id of inner.ids) out.ids.add(id);
+    out.prefixes.push(...inner.prefixes);
   }
   for (const each of files) {
     let source;
@@ -334,6 +349,9 @@ function literalText(n) {
 let sitemapPaths = 0;
 for (const file of appFiles) {
   const where = rel(file);
+  // The menus hold links to pages not yet written, which liveMenu keeps out of the header; the
+  // header's own links are read from NAV below, as they render.
+  if (where === "app/lib/nav.ts") continue;
   const sf = parseSource(file, readFileSync(file, "utf8"));
   const visit = (/** @type {ts.Node} */ n) => {
     // <Link to="/x">, <a href="/x">, and { to: "/x" } in the menus, footer and data.
@@ -397,6 +415,24 @@ for (const file of appFiles) {
   visit(sf);
 }
 
+// The header: each item and every link its live menu renders.
+for (const item of NAV) {
+  const menu = item.menu;
+  const hrefs = [
+    item.to,
+    ...(menu
+      ? [
+          menu.head.to,
+          ...(menu.beside ?? []).map((link) => link.to),
+          ...menu.columns.flatMap((column) =>
+            column.sections.flatMap((section) => section.links.map((link) => link.to)),
+          ),
+        ]
+      : []),
+  ];
+  for (const href of hrefs) add("header menus", { where: `app/lib/nav.ts ${item.label}`, href, page: null, isPublic: true });
+}
+
 // llms.txt names paths in prose. A path written just before "301s" is documenting the redirect.
 {
   const text = readFileSync(join(root, "content", "llms.txt"), "utf8");
@@ -413,7 +449,9 @@ for (const file of appFiles) {
 
 // The paper twins, generated in memory as build:publication-twins would write them.
 for (const [name, body] of await generateTwins()) {
-  for (const href of markdownLinks(body)) {
+  // The page and the PDF are frontmatter fields (`url:`, `pdf:`), the rest are markdown links.
+  const fields = [...body.matchAll(/^(?:url|pdf):\s*"?(\/[^"\s]*)"?\s*$/gm)].map((m) => m[1]);
+  for (const href of [...fields, ...markdownLinks(body)]) {
     add("paper twins", { where: `public/research/publications/${name} (twin)`, href, page: null, isPublic: true });
   }
 }
@@ -531,6 +569,7 @@ const SCOPES = [
   "page twins",
   "about",
   "app",
+  "header menus",
   "sitemap",
   "llms.txt",
   "paper twins",
