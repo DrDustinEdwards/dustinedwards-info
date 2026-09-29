@@ -161,6 +161,8 @@
     "app/lib/search/records.mjs",
     // The Research and Teaching page list, which scripts/build-content.mjs validates against.
     "app/lib/content-pages.mjs",
+    // The dictionary entries on the named software pages, which content-pages.mjs reads for the twin.
+    "app/lib/dictionary-entries.mjs",
     // The CV: its data, the resolved entries and the markdown. build:content writes the /cv.md twin
     // and build:cv-pdf the PDF from the SAME modules the route renders, which is what stops the three
     // saying different things. No DOM and no Worker types.

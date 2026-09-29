@@ -24,8 +24,10 @@ The hub is /software. A page is /software/{name}. /projects 301s to /software.
   /software/foxing-edu
   /software/germomics
   /software/capsid
+  /software/abscissa
+  /software/carrel
 
-Products are Foxhound (https://foxhoundapp.com, replaces Recova), Foxing (https://foxing.app), and Foxing Edu, a separate product built on Foxing and sold to schools. No public address for Foxing Edu is recorded here. Sites are Germomics (https://germomics.com) and TXASM (https://txasm.org), which has no page on this site. Infrastructure is Capsid, and this site at /colophon. Lab tools are /research/tools. Carrel is a private writing hub and is not linked.
+Products are Foxhound (https://foxhoundapp.com, replaces Recova), Foxing (https://foxing.app), and Foxing Edu, a separate product built on Foxing and sold to schools. No public address for Foxing Edu is recorded here. Sites are Germomics (https://germomics.com) and TXASM (https://txasm.org), which has no page on this site. Infrastructure is Capsid; Abscissa, an open-source chart library in early alpha (https://github.com/DrDustinEdwards/abscissa, gallery https://abscissa.dustinedwards.info); Carrel, the private writing hub this site's articles are written in, which has a page but no public app address; and this site at /colophon. Lab tools are /research/tools. Each of the Capsid, Abscissa and Carrel pages opens with a dictionary entry for its name.
 
 ## Writing
 

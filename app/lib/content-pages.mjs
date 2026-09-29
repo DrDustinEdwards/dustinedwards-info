@@ -8,6 +8,7 @@
  * notebooks (cutover.md, "Pages to build before the switch").
  */
 
+import { dictionaryEntryFor, dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
 import { splitSections } from "./search/records.mjs";
 
 export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
@@ -44,6 +45,8 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/foxing-edu",
   "/software/germomics",
   "/software/capsid",
+  "/software/abscissa",
+  "/software/carrel",
   // The CV. Its markdown is written from app/data/cv.ts, not kept in content/pages/ (see below).
   "/cv",
 ]);
@@ -86,13 +89,16 @@ export function contentPageMarkdownPath(path) {
 }
 
 /**
- * The twin a machine reads. The HTML page's h1 is not in the source body, so the title is the first line.
+ * The twin a machine reads. The HTML page's h1 is not in the source body, so the title is the first line,
+ * followed by the page's dictionary entry where it has one, where the page shows it.
  *
- * @param {{ title: string, markdown: string }} page
+ * @param {{ path?: string, title: string, markdown: string }} page
  */
 export function contentPageMarkdownBody(page) {
   const body = String(page.markdown ?? "").replace(/^\n+/, "");
-  return `# ${page.title}\n\n${body}`;
+  const entry = page.path ? dictionaryEntryFor(page.path) : undefined;
+  const lead = entry ? `${dictionaryEntryMarkdown(entry)}\n` : "";
+  return `# ${page.title}\n\n${lead}${body}`;
 }
 
 /**
@@ -158,12 +164,13 @@ export function contentPageTrail(page, titleOf = () => undefined) {
 export function contentPageSearchInputs(pages) {
   return pages.map((page) => {
     const { intro, sections } = splitSections(page.markdown, page.toc);
+    const entry = dictionaryEntryFor(page.path);
     return {
       url: page.path,
       uid: `page:${page.path.slice(1).replaceAll("/", ":")}`,
       title: page.title,
       description: page.description,
-      intro,
+      intro: entry ? `${dictionaryEntryText(entry)} ${intro}` : intro,
       sections: sections.map(({ anchor, title, body }) => ({ anchor, title, body })),
     };
   });

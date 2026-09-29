@@ -1,6 +1,15 @@
 // Authored independently of the record body: expected values derived from the thing checked cannot fail.
 
-import { AI_DISCLOSURE, CAPSID_REPO_URL, SECURITY_TRADEOFF, SITE_OPERATION, statusLabel } from "../../app/lib/colophon-sections.mjs";
+import {
+  AI_DISCLOSURE,
+  CAPSID_REPO_URL,
+  CARREL_NAME,
+  CARREL_PAGE_PATH,
+  CARREL_SENTENCE_REST,
+  SECURITY_TRADEOFF,
+  SITE_OPERATION,
+  statusLabel,
+} from "../../app/lib/colophon-sections.mjs";
 
 /**
  * Element-delimited: one dependency name is a substring of two others, so a bare `includes`
@@ -47,7 +56,12 @@ export function colophonFacts(stack, features, id) {
   if (id === "ai")
     return AI_DISCLOSURE.map(el);
   if (id === "run")
-    return [...SITE_OPERATION.map(el), `href="${CAPSID_REPO_URL}"`];
+    return [
+      ...SITE_OPERATION.map(el),
+      `href="${CARREL_PAGE_PATH}">${CARREL_NAME}</a>`,
+      el(CARREL_SENTENCE_REST),
+      `href="${CAPSID_REPO_URL}"`,
+    ];
   if (id === "not-adopted")
     return stack.notAdopted.flatMap((/** @type {any} */ n) => [
       `${n.name} <`,
