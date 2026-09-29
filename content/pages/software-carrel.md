@@ -16,6 +16,10 @@ Carrel is a private writing hub for articles across sites, books and manuscripts
 - For books: book, chapter and scene views over a private manuscript repository, checks on save for continuity and timeline, and export to ePub and Word.
 - For AI assistance: an AI's draft is saved beside the author's and never replaces it, and checks and reviewers flag problems rather than decide them. Publishing through an AI tool is refused while a flag is open.
 
+## Why the name
+
+A carrel is a small library desk, often partitioned or enclosed, where one person can study without interruption. Carrel is a private place for writing in the same sense: drafts are written and revised there, seen only by the people it admits, until they are published.
+
 ## On this site
 
 The [colophon](/colophon) describes how this site uses Carrel.
