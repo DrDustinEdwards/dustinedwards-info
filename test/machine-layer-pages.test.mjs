@@ -1,7 +1,7 @@
-/* The machine layer for the pages under the carded roots (the software pages, the lab calculators and the
- * CV): each is in the search index, has its markdown twin and its llms.txt line, and names its own social
- * card. Every case derives its page list from CONTENT_PAGE_PATHS and CARDED_PAGE_ROOTS, so a calculator
- * added under /research/tools is held to all four with no edit here.
+/* The machine layer for the pages added the week of 2026-09-22 (the software pages, the lab calculators
+ * and the CV): each is in the search index, has its markdown twin and its llms.txt line, and names its own
+ * social card. The page list is every rendered page under their roots, so a calculator added under
+ * /research/tools is held to all four with no edit here.
  *
  * The index is D1's search_docs, which sync:content rebuilds outright from every record the content
  * artifact carries (buildSearchSql), and build:content puts these records in that artifact through
@@ -13,11 +13,16 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 import {
+  CARDED_PAGE_ROOTS,
   CONTENT_PAGE_PATHS,
+  contentPageCardInput,
+  contentPageCardPath,
   contentPageMarkdownBody,
   contentPageSearchInputs,
+  hasPageCard,
   markdownTableFacts,
 } from "../app/lib/content-pages.mjs";
+import { ogImageKey } from "../app/lib/content/og-card-text.mjs";
 import { recordsForPages } from "../app/lib/search/records.mjs";
 import { renderContentPages } from "../scripts/build-content.mjs";
 
@@ -64,6 +69,26 @@ test("each page has its markdown twin, led by its title, and is listed in llms.t
     assert.ok(twin.length > page.title.length + 200, `${page.path}: a twin of ${twin.length} characters`);
     assert.match(llms, new RegExp(`^ {2}${page.path.replaceAll("/", "\\/")}$`, "m"), `${page.path} is not in llms.txt`);
   }
+});
+
+test("the carded roots are exactly these pages' roots", () => {
+  assert.deepEqual([...CARDED_PAGE_ROOTS], ROOTS);
+  assert.ok(added.every((page) => hasPageCard(page.path)));
+  assert.equal(hasPageCard("/research/phages"), false);
+  assert.equal(hasPageCard("/softwarex"), false);
+});
+
+test("each page names its own card, keyed on what the card draws, and a retitle names a new one", () => {
+  const keys = new Set();
+  for (const page of added) {
+    const card = contentPageCardPath(page);
+    assert.equal(card, `/media/${ogImageKey(contentPageCardInput(page))}`, page.path);
+    assert.match(card ?? "", /^\/media\/og\/dustin-edwards-page-[a-z0-9-]+-[0-9a-f]{8}\.png$/, page.path);
+    keys.add(card);
+    assert.notEqual(contentPageCardPath({ ...page, seoTitle: `${page.seoTitle} (revised)` }), card, page.path);
+  }
+  assert.equal(keys.size, added.length, "two pages share a card");
+  assert.equal(contentPageCardPath({ path: "/research/phages", seoTitle: "t", description: "d" }), null);
 });
 
 test("the phage table's Dataset facts come from the table itself", () => {

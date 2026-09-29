@@ -6,6 +6,7 @@ import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
 import {
+  contentPageCardPath,
   contentPageMarkdownPath,
   contentPageTrail,
   protocolNeighbors,
@@ -134,11 +135,17 @@ export function loader({ request }: Route.LoaderArgs) {
   return { page, search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
+/** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
+function cardUrl(page: ContentPage) {
+  const path = contentPageCardPath(page);
+  return path ? `${SITE_ORIGIN}${path}` : undefined;
+}
+
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { page } = loaderData;
   return [
-    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path }),
+    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, image: cardUrl(page) }),
     {
       tagName: "link",
       rel: "alternate",

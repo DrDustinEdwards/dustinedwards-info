@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { PUBLICATIONS } from "~/data/publications";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "~/lib/content-pages.mjs";
+import {
+  CONTENT_PAGE_PATHS,
+  CONTENT_PAGES_FROM_DATA,
+  contentPageCardPath,
+  hasPageCard,
+} from "~/lib/content-pages.mjs";
+import { CV_PAGE } from "~/lib/cv/entries.mjs";
 import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
-import ContentPage, { loader as contentPageLoader } from "~/routes/content-page";
-import Cv, { loader as cvLoader } from "~/routes/cv";
+import ContentPage, { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
+import Cv, { loader as cvLoader, meta as cvMeta } from "~/routes/cv";
 import Publications, { loader as publicationsLoader } from "~/routes/publications";
 import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
 
@@ -314,5 +320,40 @@ describe("the types each page states", () => {
       expect(own?.["@type"], path).toBe(article["@type"]);
       expect(own?.headline, path).toBe(article.headline);
     }
+  });
+});
+
+describe("each carded page's og:image is its own card", () => {
+  const image = (descriptors: unknown[], property: string) =>
+    (descriptors as Array<Record<string, unknown>>).find((d) => d.property === property || d.name === property)?.content;
+
+  it.each(CONTENT_PAGE_PATHS.filter((path) => hasPageCard(path)).map((path) => [path]))("%s", (path) => {
+    let descriptors: unknown[];
+    let card: string | null;
+    if (path === "/cv") {
+      descriptors = cvMeta() as unknown[];
+      card = contentPageCardPath(CV_PAGE);
+    } else {
+      const loaderData = contentPageLoader({
+        request: new Request(`${SITE_ORIGIN}${path}`),
+        params: {},
+        context: context(),
+      } as never);
+      descriptors = contentPageMeta({ loaderData } as never) as unknown[];
+      card = contentPageCardPath(loaderData.page);
+    }
+    expect(card, path).toMatch(/^\/media\/og\//);
+    expect(image(descriptors, "og:image")).toBe(`${SITE_ORIGIN}${card}`);
+    expect(image(descriptors, "twitter:image")).toBe(`${SITE_ORIGIN}${card}`);
+  });
+
+  it("a page outside the carded roots keeps the site card", () => {
+    const loaderData = contentPageLoader({
+      request: new Request(`${SITE_ORIGIN}/research/phages`),
+      params: {},
+      context: context(),
+    } as never);
+    const descriptors = contentPageMeta({ loaderData } as never) as unknown[];
+    expect(image(descriptors, "og:image")).toBe(`${SITE_ORIGIN}/dustin-edwards-og-image.png`);
   });
 });

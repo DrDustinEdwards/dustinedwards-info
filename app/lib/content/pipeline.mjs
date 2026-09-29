@@ -3,8 +3,6 @@
 // language list because the full bundle took the Worker output to 14 MB.
 
 import rehypeShikiFromHighlighter from "@shikijs/rehype/core";
-import { longDateUTC } from "../long-date.mjs";
-import { fnv1a32 } from "../bytes.mjs";
 import { transformerMetaHighlight } from "@shikijs/transformers";
 import matter from "gray-matter";
 import { toString as hastToString } from "hast-util-to-string";
@@ -24,8 +22,7 @@ import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import { z } from "zod";
 
-import { ASSET_PREFIX, classify } from "../media/classify.mjs";
-import { cardDescription, cardTitle } from "./og-card-text.mjs";
+import { classify } from "../media/classify.mjs";
 import { gitBlobSha, renderHash } from "./hashes.mjs";
 import { CONTENT_SIZES, contentSrcSet } from "../media/widths.mjs";
 import { KATEX_OPTIONS } from "./math.mjs";
@@ -227,30 +224,8 @@ export function setWasmLoader(loader) {
   highlighterPromise = null;
 }
 
-// Bump on any card template change: the key hashes only the card's inputs, and an immutable cache
-// ignores a restyled PNG under an unchanged key forever.
-const OG_TEMPLATE_VERSION = 5;
-
-/**
- * Hashes exactly what the card draws, AS DRAWN (through cardTitle, cardDescription, longDateUTC), so
- * the key changes when the picture would and never otherwise. FNV-1a: identical in Node and a Worker,
- * and this is a cache-busting key, not a security boundary.
- *
- * @param {{
- *   slug: string,
- *   title: string,
- *   description?: string | null,
- *   publishAt?: string | null,
- * }} post
- */
-
-export function ogImageKey(post) {
-  const drawnDate = longDateUTC(post.publishAt);
-  const input =
-    `${OG_TEMPLATE_VERSION}\n${post.slug}\n${cardTitle(post.title)}\n` +
-    `${cardDescription(post.description)}\n${drawnDate === null ? "" : drawnDate}`;
-  return `og/${ASSET_PREFIX}${post.slug}-${fnv1a32(input)}.png`;
-}
+// The card key lives beside the card text it hashes, so a route can name a card without this renderer.
+export { ogImageKey } from "./og-card-text.mjs";
 
 // A rejection is not cached: one failed wasm load would otherwise fail every render in the isolate.
 // The caller still sees this render's failure; the next render tries again.

@@ -78,7 +78,8 @@ content/posts/*.md                    the source of truth
         |                              rendered HTML, search records,
         |                              diagram keys, media refs
         |
-        +- build:og       -----------> R2 dustinedwards-og    1200x630 social cards
+        +- build:og       -----------> R2 dustinedwards-og    1200x630 social cards, for posts
+        |                              and for the pages under CARDED_PAGE_ROOTS
         +- build:diagrams -----------> public/diagrams/       light + dark SVG pairs
         +- build:assets   -----------> content/generated/assets.json  (public/ manifest)
         |

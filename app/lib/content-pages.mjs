@@ -8,6 +8,7 @@
  * notebooks (cutover.md, "Pages to build before the switch").
  */
 
+import { ogImageKey } from "./content/og-card-text.mjs";
 import { dictionaryEntryFor, dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
 import { splitSections } from "./search/records.mjs";
 
@@ -99,6 +100,47 @@ export function contentPageMarkdownBody(page) {
   const entry = page.path ? dictionaryEntryFor(page.path) : undefined;
   const lead = entry ? `${dictionaryEntryMarkdown(entry)}\n` : "";
   return `# ${page.title}\n\n${lead}${body}`;
+}
+
+/**
+ * The pages build:og draws a social card of their own, by the root they sit under: the root and every
+ * page below it, so a calculator added under /research/tools is carded with no edit here. Every other
+ * page keeps the site card. Adding a root cards its pages on the next build:og.
+ *
+ * @type {readonly string[]}
+ */
+export const CARDED_PAGE_ROOTS = ["/software", "/research/tools", "/cv"];
+
+/** @param {string} path */
+export function hasPageCard(path) {
+  return CARDED_PAGE_ROOTS.some((root) => path === root || path.startsWith(`${root}/`));
+}
+
+/**
+ * What build:og draws for a page, in the shape ogImageKey hashes: the page's og:title (its SERP title)
+ * and its description, with no date line, since these pages are not dated. The `page-` prefix keeps a
+ * page's key apart from a post's, and build:og refuses two cards with one key.
+ *
+ * @param {{ path: string, seoTitle: string, description: string }} page
+ */
+export function contentPageCardInput(page) {
+  return {
+    slug: `page-${page.path.slice(1).replaceAll("/", "-")}`,
+    title: page.seoTitle,
+    description: page.description,
+    publishAt: null,
+  };
+}
+
+/**
+ * The /media path of a page's card, which its og:image names, or null for a page on the site card. The
+ * key hashes what the card draws, so a retitled page names a new card, which build:og then draws.
+ *
+ * @param {{ path: string, seoTitle: string, description: string }} page
+ * @returns {string | null}
+ */
+export function contentPageCardPath(page) {
+  return hasPageCard(page.path) ? `/media/${ogImageKey(contentPageCardInput(page))}` : null;
 }
 
 /**

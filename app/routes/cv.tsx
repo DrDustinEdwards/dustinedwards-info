@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from "react";
 
 import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
-import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
+import { contentPageCardPath, contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { CV, CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type CvEntry } from "~/lib/cv/entries.mjs";
 import { renderCvCharts } from "~/lib/cv/render-charts";
 import {
@@ -50,6 +50,9 @@ const FACTS = cvFacts(ENTRIES);
 const BY_ID = new Map(ENTRIES.map((e) => [e.id, e]));
 const YEARS = yearOptions(FACTS);
 const PATH = CV_PAGE.path;
+/** The CV's own social card (CARDED_PAGE_ROOTS), which build:og draws from the same title and description. */
+const CARD_PATH = contentPageCardPath(CV_PAGE);
+const CARD = CARD_PATH ? `${SITE_ORIGIN}${CARD_PATH}` : undefined;
 
 // headers() is written out here because check:headers reads each public route's own source.
 export function headers() {
@@ -72,7 +75,7 @@ export function loader({ request }: Route.LoaderArgs) {
 
 export function meta() {
   return [
-    ...pageMeta({ title: CV_PAGE.seoTitle, description: CV_PAGE.description, path: PATH }),
+    ...pageMeta({ title: CV_PAGE.seoTitle, description: CV_PAGE.description, path: PATH, image: CARD }),
     {
       tagName: "link",
       rel: "alternate",
