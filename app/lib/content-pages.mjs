@@ -49,7 +49,7 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/foxing-edu",
   "/software/germomics",
   "/software/capsid",
-  "/software/abscissa",
+  "/software/enarratio",
   "/software/carrel",
   // The CV. Its markdown is written from app/data/cv.ts, not kept in content/pages/ (see below).
   "/cv",

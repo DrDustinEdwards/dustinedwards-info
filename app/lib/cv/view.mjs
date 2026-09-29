@@ -84,7 +84,7 @@ export const SORTS = /** @type {const} */ ([
   ["oldest", "Oldest first"],
 ]);
 
-/** The timeline figure's id, which Abscissa's `abscissa:select` events carry as `chartId`. */
+/** The timeline figure's id, which Enarratio's `enarratio:select` events carry as `chartId`. */
 export const TIMELINE_ID = "cv-timeline";
 
 /** The types the timeline stacks, in stacking order, each with its chart token. */

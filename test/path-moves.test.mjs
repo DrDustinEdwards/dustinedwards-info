@@ -24,6 +24,14 @@ test("/publications and everything beside or under it moves to /research/publica
   );
 });
 
+test("/software/abscissa, renamed Enarratio, moves to /software/enarratio with its twin", () => {
+  assert.equal(movedPathTarget("/software/abscissa"), "/software/enarratio");
+  assert.equal(movedPathTarget("/software/abscissa/"), "/software/enarratio/");
+  assert.equal(movedPathTarget("/software/abscissa.md"), "/software/enarratio.md");
+  assert.equal(movedPathTarget("/software/abscissas"), null);
+  assert.equal(movedPathTarget("/software/enarratio"), null);
+});
+
 test("the old feed addresses do not move: they keep answering with the feed", () => {
   for (const path of [
     "/blog/rss.xml",

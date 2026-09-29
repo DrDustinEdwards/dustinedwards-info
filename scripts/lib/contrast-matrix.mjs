@@ -148,9 +148,9 @@ export const DECLARED_ELSEWHERE = new Map([
       "chose, and no ratio can be asserted about it",
   ],
   [
-    "--abscissa-length",
-    "written inline by abscissa/enhance on each line path, its measured length, for the chart's " +
-      "draw-in animation; app/styles/abscissa.css (generated from the package) reads it back. " +
+    "--enarratio-length",
+    "written inline by enarratio/enhance on each line path, its measured length, for the chart's " +
+      "draw-in animation; app/styles/enarratio.css (generated from the package) reads it back. " +
       "Per path and not a color, so there is no theme block it could live in",
   ],
 ]);
@@ -218,11 +218,11 @@ export const OPACITY_EXEMPT = [
   },
   {
     /* Anchored at the end, per the vacuity rule. */
-    test: /\[data-abscissa-dimmed\]$|\[data-cv-out\]$/,
+    test: /\[data-enarratio-dimmed\]$|\[data-cv-out\]$/,
     why:
       "a chart bar outside the active filter, faded on purpose to show what the filter left out. " +
       "A graphic, not text: its value is in the chart's hover details and data table, and the bars " +
-      "in the filter stay at full strength (app/styles/abscissa.css, app/styles/cv.css)",
+      "in the filter stay at full strength (app/styles/enarratio.css, app/styles/cv.css)",
   },
   {
     test: /^\.search-why-sep$/,

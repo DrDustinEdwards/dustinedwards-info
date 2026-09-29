@@ -57,7 +57,7 @@ test("a term only a page says finds it: the CV, a calculator and a software page
   const find = (/** @type {string} */ term) =>
     new Set(records.filter((record) => record.body.toLowerCase().includes(term)).map((record) => record.docUrl));
   assert.ok(find("pfu/ml").has("/research/tools/titer"));
-  assert.ok(find("observable plot").has("/software/abscissa"));
+  assert.ok(find("observable plot").has("/software/enarratio"));
   assert.ok(find("tarleton").has("/cv"));
 });
 
