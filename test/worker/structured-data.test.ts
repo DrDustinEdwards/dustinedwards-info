@@ -202,11 +202,17 @@ const rendered = await pages();
 describe("every JSON-LD block on the pages", () => {
   it("covers every content page, the CV, the publications list and every paper", () => {
     expect(rendered.length).toBe(CONTENT_PAGE_PATHS.length + 1 + PUBLICATIONS.length);
+    // Scope, so a pattern that matched no script element cannot pass every case below: only the two
+    // hubs emit nothing.
+    expect(rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path)).toEqual([
+      "/research",
+      "/teaching",
+    ]);
   });
 
   it.each(rendered.map((page) => [page.path, page] as const))("%s: every block parses and every node has its required properties", (_path, page) => {
+    // A hub with no trail and no declared type (/research, /teaching) emits none, and that passes.
     const found = blocks(page.html).flatMap((block) => nodes(block));
-    expect(found.length).toBeGreaterThan(0);
     for (const node of found) {
       const type = String(node["@type"]);
       const rule = RULES[type];
