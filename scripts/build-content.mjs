@@ -17,6 +17,7 @@ import {
   contentPageMarkdownBody,
   contentPageMarkdownPath,
   contentPageSearchInputs,
+  markdownTableFacts,
 } from "../app/lib/content-pages.mjs";
 import { PUBLICATIONS } from "../app/data/publications.ts";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
@@ -44,6 +45,63 @@ export const ABOUT_ARTIFACT_PATH = path.join("content", "generated", "about.json
 
 const PAGES_DIR = path.join("content", "pages");
 export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json");
+
+/**
+ * @typedef {{
+ *   schemaType?: string,
+ *   productUrl?: string,
+ *   codeRepository?: string,
+ *   applicationCategory?: string,
+ *   license?: string,
+ *   programmingLanguage?: string,
+ *   runtimePlatform?: string,
+ *   spatialCoverage?: string,
+ *   dataset?: { variableMeasured: string[], temporalCoverage: string | null, rows: number },
+ * }} PageSchema
+ */
+
+/** The schema.org types a page may declare; app/routes/content-page.tsx shapes a node for each. */
+const SCHEMA_TYPES = ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "WebPage", "Dataset"];
+
+/**
+ * The structured-data facts a page's frontmatter states, each only when it is written there: the JSON-LD
+ * says what the page holds and never fills a gap. A Dataset also carries what its first table says.
+ *
+ * @param {string} file
+ * @param {Record<string, unknown>} fm
+ * @param {string} markdown
+ * @returns {PageSchema}
+ */
+function pageSchema(file, fm, markdown) {
+  const text = (/** @type {unknown} */ value) => (value == null || value === "" ? "" : String(value));
+  const schemaType = text(fm.schema_type);
+  if (schemaType && !SCHEMA_TYPES.includes(schemaType)) {
+    throw new ContentError(file, `schema_type "${schemaType}" is not one of ${SCHEMA_TYPES.join(", ")}.`);
+  }
+  const codeRepository = text(fm.code_repository);
+  if (codeRepository && !["SoftwareApplication", "SoftwareSourceCode"].includes(schemaType)) {
+    throw new ContentError(file, "code_repository is only stated for software (schema_type SoftwareApplication or SoftwareSourceCode).");
+  }
+  const dataset = schemaType === "Dataset" ? markdownTableFacts(markdown) : null;
+  if (schemaType === "Dataset" && !dataset) {
+    throw new ContentError(file, "declares schema_type Dataset but has no markdown table for it to describe.");
+  }
+  /** @type {Array<[Exclude<keyof PageSchema, "dataset">, string]>} */
+  const fields = [
+    ["schemaType", schemaType],
+    ["productUrl", text(fm.product_url)],
+    ["codeRepository", codeRepository],
+    ["applicationCategory", text(fm.application_category)],
+    ["license", text(fm.license)],
+    ["programmingLanguage", text(fm.programming_language)],
+    ["runtimePlatform", text(fm.runtime_platform)],
+    ["spatialCoverage", text(fm.spatial_coverage)],
+  ];
+  /** @type {PageSchema} */
+  const schema = dataset ? { dataset } : {};
+  for (const [key, value] of fields) if (value !== "") schema[key] = value;
+  return schema;
+}
 
 /**
  * The Research and Teaching pages, rendered like the About page: no image pipeline, and a refused link
@@ -75,7 +133,7 @@ export async function renderContentPages() {
     sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument() });
   }
 
-  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }>, schemaType?: string, productUrl?: string, codeRepository?: string, applicationCategory?: string }>} */
+  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> } & PageSchema>} */
   const pages = [];
   for (const { name, file, raw } of sources) {
     const parsed = matter(raw);
@@ -86,17 +144,7 @@ export async function renderContentPages() {
       seoTitle: String(fm.seo_title ?? ""),
       description: String(fm.description ?? ""),
     };
-    const SCHEMA_TYPES = new Set(["SoftwareApplication", "WebSite", "WebPage"]);
-    const schemaType = fm.schema_type == null || fm.schema_type === "" ? "" : String(fm.schema_type);
-    if (schemaType && !SCHEMA_TYPES.has(schemaType)) {
-      throw new ContentError(
-        file,
-        `schema_type "${schemaType}" is not SoftwareApplication, WebSite, or WebPage.`,
-      );
-    }
-    const productUrl = fm.product_url ? String(fm.product_url) : "";
-    const codeRepository = fm.code_repository ? String(fm.code_repository) : "";
-    const applicationCategory = fm.application_category ? String(fm.application_category) : "";
+    const schema = pageSchema(file, fm, parsed.content);
     if (expected.get(name) !== page.path) {
       throw new ContentError(
         file,
@@ -133,10 +181,7 @@ export async function renderContentPages() {
       html: rendered.html,
       markdown: parsed.content,
       toc: rendered.toc,
-      ...(schemaType ? { schemaType } : {}),
-      ...(productUrl ? { productUrl } : {}),
-      ...(codeRepository ? { codeRepository } : {}),
-      ...(applicationCategory ? { applicationCategory } : {}),
+      ...schema,
     });
   }
 
@@ -307,19 +352,9 @@ async function main() {
   // Only what the route renders: the markdown and outline are build inputs for search, not page weight.
   // The twin is a static asset beside the HTML URL, the same trade the paper twins make.
   const renderedPages = await renderContentPages();
-  const contentPages = renderedPages.filter((page) => !CONTENT_PAGES_FROM_DATA.includes(page.path)).map(
-    ({ path: p, title, seoTitle, description, html, schemaType, productUrl, codeRepository, applicationCategory }) => ({
-      path: p,
-      title,
-      seoTitle,
-      description,
-      html,
-      ...(schemaType ? { schemaType } : {}),
-      ...(productUrl ? { productUrl } : {}),
-      ...(codeRepository ? { codeRepository } : {}),
-      ...(applicationCategory ? { applicationCategory } : {}),
-    }),
-  );
+  const contentPages = renderedPages
+    .filter((page) => !CONTENT_PAGES_FROM_DATA.includes(page.path))
+    .map((page) => Object.fromEntries(Object.entries(page).filter(([key]) => key !== "markdown" && key !== "toc")));
   await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: contentPages }, null, 2)}\n`, "utf8");
   await writeContentPageTwins(renderedPages);
 
