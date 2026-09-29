@@ -2,8 +2,10 @@
  * The 2026-09-27 site structure moved two sections: /blog to /writing, and /publications to
  * /research/publications. Nothing linked to the new site's old addresses yet, but they were public,
  * so each keeps answering with a 301 to the same page at its new address. /playground was removed
- * on 2026-09-28, so it and everything under it answers one 301 to /. Runs in the gateway, before
- * the renamed-post and PDF maps, so an old post slug or an old PDF name still resolves in one hop.
+ * on 2026-09-28, so it and everything under it answers one 301 to /. Abscissa was renamed Enarratio
+ * on 2026-09-29, so /software/abscissa and its markdown twin answer a 301 to /software/enarratio.
+ * Runs in the gateway, before the renamed-post and PDF maps, so an old post slug or an old PDF name
+ * still resolves in one hop.
  *
  * The old feed addresses are not moved: they are routes of their own (app/routes.ts) and keep
  * answering with the feed, because a feed reader may never follow a redirect.
@@ -12,6 +14,7 @@
 const MOVES = /** @type {const} */ ([
   ["/blog", "/writing"],
   ["/publications", "/research/publications"],
+  ["/software/abscissa", "/software/enarratio"],
 ]);
 
 /** Whole paths, not prefixes. `/projects/foo` is not a page and must not move. */

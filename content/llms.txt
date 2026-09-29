@@ -24,10 +24,10 @@ The hub is /software. A page is /software/{name}. /projects 301s to /software.
   /software/foxing-edu
   /software/germomics
   /software/capsid
-  /software/abscissa
+  /software/enarratio
   /software/carrel
 
-Products are Foxhound (https://foxhoundapp.com, replaces Recova), Foxing (https://foxing.app), and Foxing Edu, a separate product built on Foxing and sold to schools. No public address for Foxing Edu is recorded here. Sites are Germomics (https://germomics.com) and TXASM (https://txasm.org), which has no page on this site. Infrastructure is Capsid; Abscissa, an open-source chart library in early alpha (https://github.com/DrDustinEdwards/abscissa, gallery https://abscissa.dustinedwards.info); Carrel, the private writing hub this site's articles are written in, which has a page but no public app address; and this site at /colophon. Lab tools are /research/tools. Each of the Capsid, Abscissa and Carrel pages opens with a dictionary entry for its name.
+Products are Foxhound (https://foxhoundapp.com, replaces Recova), Foxing (https://foxing.app), and Foxing Edu, a separate product built on Foxing and sold to schools. No public address for Foxing Edu is recorded here. Sites are Germomics (https://germomics.com) and TXASM (https://txasm.org), which has no page on this site. Infrastructure is Capsid; Enarratio, an open-source chart library in early alpha (https://github.com/DrDustinEdwards/enarratio, gallery https://enarratio.dustinedwards.info); Carrel, the private writing hub this site's articles are written in, which has a page but no public app address; and this site at /colophon. Lab tools are /research/tools. Each of the Capsid, Enarratio and Carrel pages opens with a dictionary entry for its name.
 
 ## Writing
 
@@ -41,7 +41,7 @@ An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesti
 
 ## Markdown twins
 
-Every research, teaching and software page, each lab calculator and the CV has a markdown twin at its path plus .md, for example /research.md, /research/tools/titer.md, /software/abscissa.md and /cv.md. The HTML head links it with rel="alternate" type="text/markdown". The twin's Link header names the HTML page as canonical. Article URLs also answer Accept: text/markdown. Paper twins and article twins use the patterns above. Twins are not in the sitemap.
+Every research, teaching and software page, each lab calculator and the CV has a markdown twin at its path plus .md, for example /research.md, /research/tools/titer.md, /software/enarratio.md and /cv.md. The HTML head links it with rel="alternate" type="text/markdown". The twin's Link header names the HTML page as canonical. Article URLs also answer Accept: text/markdown. Paper twins and article twins use the patterns above. Twins are not in the sitemap.
 
 ## About the site
 

@@ -35,7 +35,7 @@ import {
 
 import type { Route } from "./+types/cv";
 
-import "~/styles/abscissa.css";
+import "~/styles/enarratio.css";
 import "~/styles/cv.css";
 
 /*

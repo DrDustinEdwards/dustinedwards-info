@@ -162,7 +162,7 @@
     {
       "id": "pronunciation-button",
       "module": "app/enhance/pronounce.ts",
-      "enhancement": "On the Capsid, Abscissa and Carrel pages, swaps the dictionary entry's link to the pronunciation clip for a button that plays it in place on click, Enter or Space, pressed while it plays and stopped by a second press. Nothing plays until asked.",
+      "enhancement": "On the Capsid, Enarratio and Carrel pages, swaps the dictionary entry's link to the pronunciation clip for a button that plays it in place on click, Enter or Space, pressed while it plays and stopped by a second press. Nothing plays until asked.",
       "fallback": "The speaker is a server-rendered link to the clip, which the browser plays on its own page.",
       "fallbackKind": "selector",
       "fallbackAt": "[data-term-audio-link]",
@@ -198,7 +198,7 @@
     {
       "id": "cv-timeline-select",
       "module": "app/enhance/cv.ts",
-      "enhancement": "The CV timeline, drawn by Abscissa, becomes keyboard filter buttons through abscissa/enhance: selecting a year's bar filters to that year in place (again, or Escape: every year), and selecting an entry in its key filters to that type.",
+      "enhancement": "The CV timeline, drawn by Enarratio, becomes keyboard filter buttons through enarratio/enhance: selecting a year's bar filters to that year in place (again, or Escape: every year), and selecting an entry in its key filters to that type.",
       "fallback": "Each bar is a server-rendered link to /cv with that year as the range, so it filters by page load with script off.",
       "fallbackKind": "selector",
       "fallbackAt": "#cv-timeline",

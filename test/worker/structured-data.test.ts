@@ -288,9 +288,9 @@ describe("the types each page states", () => {
     expect(length).toBeLessThanOrEqual(5000);
   });
 
-  it("Abscissa is source code with its repository; Capsid is an application whose source is its own node", () => {
-    const [abscissa] = ofType("/software/abscissa", "SoftwareSourceCode");
-    expect(abscissa?.codeRepository).toBe("https://github.com/DrDustinEdwards/abscissa");
+  it("Enarratio is source code with its repository; Capsid is an application whose source is its own node", () => {
+    const [enarratio] = ofType("/software/enarratio", "SoftwareSourceCode");
+    expect(enarratio?.codeRepository).toBe("https://github.com/DrDustinEdwards/enarratio");
     expect(ofType("/software/capsid", "SoftwareApplication")[0]?.codeRepository).toBeUndefined();
     const [source] = ofType("/software/capsid", "SoftwareSourceCode");
     expect(source?.codeRepository).toBe("https://github.com/DrDustinEdwards/capsid-mcp");
