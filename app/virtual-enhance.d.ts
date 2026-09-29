@@ -14,6 +14,7 @@ declare module "virtual:enhance" {
     | "header"
     | "login"
     | "palette"
+    | "phages"
     | "plate"
     | "podcast"
     | "pronounce"

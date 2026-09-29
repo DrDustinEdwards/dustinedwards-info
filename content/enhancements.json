@@ -187,6 +187,15 @@
       "why": null
     },
     {
+      "id": "phage-table-sort-filter",
+      "module": "app/enhance/phages.ts",
+      "enhancement": "The phage table on /research/phages sorts by phage, year, host or county from buttons in its column headers, which carry aria-sort, and filters by a labelled search box and host and county selects, with a status region announcing how many phages show. Nothing animates.",
+      "fallback": "The whole table is server-rendered from the page's markdown, every phage with its year, host, county, PhagesDB link and paper, in year-then-name order. Only the reordering and filtering are lost.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".prose .table-scroll",
+      "why": null
+    },
+    {
       "id": "cv-filters-live",
       "module": "app/enhance/cv.ts",
       "enhancement": "The CV at /cv filters, searches and sorts on every input with no reload: the entries, the group counts, the headline counts, the facet counts and both charts redraw together, a status region announces how many entries show, and the state is written to the query string so a copied URL opens the same view.",
