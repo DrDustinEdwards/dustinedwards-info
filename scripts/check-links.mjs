@@ -595,9 +595,10 @@ if (flags.length > 0) {
   for (const flag of flags) console.log(`  FLAG  ${flag}`);
 }
 
-// Measured by running it; a floor well under the count, so a source that stops contributing is caught
-// by its scope line above rather than hidden in the slack.
-tally.floor("check:links", "checks", 100000);
+// Measured by running it in CI on 2026-09-29: 1477 checks. The slack is smaller than any source but the
+// few that each carry their own scope line above, so a source that stops contributing is caught. The
+// count moves with the content: lower it to a count a run printed, never by arithmetic.
+tally.floor("check:links", "checks", 1450);
 
 if (tally.failures > 0) {
   console.log(`\n  ${tally.failures} broken:`);
