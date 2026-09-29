@@ -21,17 +21,17 @@
   --abscissa-series-4: #55684a;
   --abscissa-series-text-4: #f4efe6;
   --abscissa-series-5: #9a7a0e;
-  --abscissa-series-text-5: #241f1b;
+  --abscissa-series-text-5: #000000;
   --abscissa-series-6: #8a4a1b;
   --abscissa-series-text-6: #f4efe6;
   --abscissa-series-7: #7d7263;
-  --abscissa-series-text-7: #f4efe6;
+  --abscissa-series-text-7: #ffffff;
   --abscissa-series-8: #6b4a9b;
   --abscissa-series-text-8: #f4efe6;
   --abscissa-sequential-1: #e3dcf0;
   --abscissa-sequential-text-1: #241f1b;
   --abscissa-sequential-2: #9279b9;
-  --abscissa-sequential-text-2: #241f1b;
+  --abscissa-sequential-text-2: #000000;
   --abscissa-sequential-3: #6b4a9b;
   --abscissa-sequential-text-3: #f4efe6;
   --abscissa-sequential-4: #4f2d7f;
@@ -59,17 +59,17 @@
     --abscissa-series-4: light-dark(#55684a, #93b29b);
     --abscissa-series-text-4: light-dark(#f4efe6, #1c1916);
     --abscissa-series-5: light-dark(#9a7a0e, #efd99c);
-    --abscissa-series-text-5: light-dark(#241f1b, #1c1916);
+    --abscissa-series-text-5: light-dark(#000000, #1c1916);
     --abscissa-series-6: light-dark(#8a4a1b, #ce7f44);
     --abscissa-series-text-6: light-dark(#f4efe6, #1c1916);
     --abscissa-series-7: light-dark(#7d7263, #ab9f8f);
-    --abscissa-series-text-7: light-dark(#f4efe6, #1c1916);
+    --abscissa-series-text-7: light-dark(#ffffff, #1c1916);
     --abscissa-series-8: light-dark(#6b4a9b, #a48fd0);
     --abscissa-series-text-8: light-dark(#f4efe6, #1c1916);
     --abscissa-sequential-1: light-dark(#e3dcf0, #5a4479);
     --abscissa-sequential-text-1: light-dark(#241f1b, #e9e1d6);
     --abscissa-sequential-2: light-dark(#9279b9, #7f66a8);
-    --abscissa-sequential-text-2: light-dark(#241f1b, #e9e1d6);
+    --abscissa-sequential-text-2: light-dark(#000000, #ffffff);
     --abscissa-sequential-3: light-dark(#6b4a9b, #a48fd0);
     --abscissa-sequential-text-3: light-dark(#f4efe6, #1c1916);
     --abscissa-sequential-4: light-dark(#4f2d7f, #c0aee6);
@@ -86,6 +86,8 @@
   font-family: var(--abscissa-font);
   font-size: 1rem;
 }
+.abscissa-frame { overflow-x: auto; }
+.abscissa-frame-wide > svg { min-width: 30rem; }
 .abscissa svg {
   display: block;
   max-width: 100%;
@@ -180,19 +182,19 @@ svg.abscissa { display: inline-block; vertical-align: middle; }
   font-size: 0.8125rem;
   line-height: 1.35;
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
-  pointer-events: none;
 }
 .abscissa-tooltip[hidden] { display: none; }
 .abscissa [data-abscissa-key] { transition: opacity 150ms ease-out; }
 .abscissa[data-abscissa-interactive] [data-abscissa-field] { cursor: pointer; }
 .abscissa [data-abscissa-dimmed] { opacity: 0.25; }
 .abscissa [data-abscissa-key]:focus { outline: none; }
-.abscissa [data-abscissa-key]:focus-visible,
-.abscissa [data-abscissa-key][data-abscissa-active] {
-  stroke: var(--abscissa-focus);
-  stroke-width: 3px;
-  paint-order: stroke;
-}
+/* The focus ring: a background-colored ring inside a focus-colored one, so one of the two always
+   contrasts with whatever mark or background is next to it. */
+.abscissa-focus-ring { pointer-events: none; fill: none; }
+.abscissa-focus-ring-inner { stroke: var(--abscissa-background); stroke-width: 5px; }
+.abscissa-focus-ring-outer { stroke: var(--abscissa-focus); stroke-width: 2.5px; }
+/* Invisible targets that make small marks at least 24 CSS pixels to point at. */
+.abscissa-hit { fill: transparent; stroke: none; }
 .abscissa svg:focus-visible, .abscissa-legend button:focus-visible {
   outline: 3px solid var(--abscissa-focus);
   outline-offset: 2px;
