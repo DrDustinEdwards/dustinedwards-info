@@ -57,6 +57,7 @@
     "check:links": "node scripts/check-links.mjs",
     "check:destructive": "node scripts/check-destructive.mjs",
     "check:features": "node scripts/check-features.mjs",
+    "check:protocols": "node scripts/check-protocols.mjs",
     "check:headers": "node scripts/check-headers.mjs",
     "check:secrets": "node scripts/check-secrets.mjs",
     "check:restore": "node scripts/restore-drill.mjs",

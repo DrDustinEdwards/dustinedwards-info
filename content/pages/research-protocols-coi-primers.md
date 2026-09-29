@@ -3,6 +3,48 @@ path: /research/protocols/coi-primers
 title: "COI primers: LCO1490 and HCO2198"
 seo_title: "COI primers LCO1490/HCO2198: sequences and PCR conditions"
 description: "LCO1490 and HCO2198 (Folmer) primer sequences for COI barcoding PCR of invertebrate mitochondrial DNA, with the cycling table, materials and product size."
+protocol:
+  steps: ["#primer-sequences", "#pcr-conditions"]
+  reagents: MISSING
+  timings:
+    - stage: initial denaturation
+      temperature_c: 94
+      time: 30 sec.
+    - stage: 20 cycles
+      cycles: 20
+      steps:
+        - { temperature_c: 94, time: 30 sec. }
+        - { temperature_c: "56 to 46", touchdown_step_c: MISSING, time: 30 sec. }
+        - { temperature_c: 72, time: 1 min. }
+    - stage: second block of 20 cycles
+      cycles: 20
+      steps:
+        - { temperature_c: 94, time: 30 sec. }
+        - { temperature_c: 46, time: 30 sec. }
+        - { temperature_c: 72, time: 1 min. }
+    - stage: extension
+      temperature_c: 72
+      time: 10 min.
+    - stage: hold
+      temperature_c: 10
+      time: "∞"
+  primers:
+    - { name: LCO1490, direction: forward, sequence: GGTCAACAAATCATAAAGATATTGG }
+    - { name: HCO2198, direction: reverse, sequence: TAAACTTCAGGGTGACCAAAAAATCA }
+  equipment:
+    - NEB 100 bp ladder
+    - 1% agarose gel in TBE
+  host_strain: not applicable
+  source:
+    - citation: "Folmer, O., Black, M., Hoeh, W., Lutz, R. and Vrijenhoek, R. (1994). DNA primers for amplification of mitochondrial cytochrome c oxidase subunit I from diverse metazoan invertebrates. Molecular Marine Biology and Biotechnology 3: 294-299."
+      url: https://www.mbari.org/wp-content/uploads/2016/01/Folmer_94MMBB.pdf
+      for: primer sequences
+    - citation: "the lab's written protocol"
+      for: cycling program
+  biosafety: MISSING
+  status: MISSING
+  version: MISSING
+  last_run: MISSING
 ---
 
 This is the PCR protocol my lab uses to amplify the mitochondrial cytochrome c oxidase subunit I (COI) gene from metazoan invertebrates with the LCO1490 and HCO2198 primers, often called the Folmer primers. It gives the primer sequences, the PCR conditions and the materials for COI barcoding PCR.
