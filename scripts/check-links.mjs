@@ -597,7 +597,7 @@ if (flags.length > 0) {
 
 // Measured by running it; a floor well under the count, so a source that stops contributing is caught
 // by its scope line above rather than hidden in the slack.
-tally.floor("check:links", "checks", 400);
+tally.floor("check:links", "checks", 100000);
 
 if (tally.failures > 0) {
   console.log(`\n  ${tally.failures} broken:`);
