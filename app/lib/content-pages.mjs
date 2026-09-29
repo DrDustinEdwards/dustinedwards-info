@@ -44,9 +44,19 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/foxing-edu",
   "/software/germomics",
   "/software/capsid",
-  // The plain CV, from Dustin's current CV; the interactive CV replaces it later at the same address.
+  // The CV. Its markdown is written from app/data/cv.ts, not kept in content/pages/ (see below).
   "/cv",
 ]);
+
+/**
+ * The listed pages whose markdown is GENERATED from structured data rather than read from
+ * content/pages/: build:content renders it from app/lib/cv/markdown.mjs, so the twin, sitemap, search
+ * records and llms.txt treat /cv like every other page. Their HTML comes from their own route
+ * (app/routes/cv.tsx), so pages.json leaves them out.
+ *
+ * @type {readonly string[]}
+ */
+export const CONTENT_PAGES_FROM_DATA = ["/cv"];
 
 /**
  * The headings on these pages that the header menus link to by anchor, as `path#id`. A menu shows a

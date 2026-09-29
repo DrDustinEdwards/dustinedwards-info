@@ -1,5 +1,5 @@
 {
-  "generated": 48,
+  "generated": 49,
   "refs": {
     "/dustin-edwards-android-chrome-192x192.png": [
       "public/site.webmanifest"
@@ -9,6 +9,9 @@
     ],
     "/dustin-edwards-apple-touch-icon.png": [
       "app/root.tsx"
+    ],
+    "/dustin-edwards-cv.pdf": [
+      "app/lib/cv/entries.mjs"
     ],
     "/dustin-edwards-favicon.svg": [
       "app/root.tsx"
@@ -146,6 +149,6 @@
       "app/root.tsx"
     ]
   },
-  "filesRead": 382,
-  "assetsConsidered": 61
+  "filesRead": 397,
+  "assetsConsidered": 62
 }

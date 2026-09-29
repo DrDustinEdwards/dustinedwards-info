@@ -51,6 +51,8 @@ export default [
   route("about", "routes/about.tsx"),
   // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
   route("cv", "routes/cv.tsx"),
+  // The CV's charts for a filter state, which app/enhance/cv.ts swaps in so the page ships no renderer.
+  route("cv/charts.json", "routes/cv.charts[.json].ts"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),
   route("privacy", "routes/privacy.tsx"),

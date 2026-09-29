@@ -1,0 +1,788 @@
+/* The CV (app/routes/cv.tsx). Complete with script off: the server renders every entry, the counts,
+   the charts and the form, and nothing here waits on a class a script adds. The idiom is the
+   publications list's: a mono date rail, serif titles, dust hairlines, purple only for what acts. */
+
+.page-inner:has(> .cv) {
+  max-width: 62rem;
+}
+
+.cv {
+  --cv-rail: 7.5rem;
+  --cv-gap: 1.25rem;
+}
+
+/* Head */
+
+.cv-head {
+  padding-block-end: var(--s-5);
+}
+
+.cv-eyebrow {
+  margin: 0 0 var(--s-2);
+  color: var(--text-secondary);
+  font-size: var(--t-label-size);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cv-name {
+  margin: 0;
+  color: var(--brand);
+  font-family: var(--font-serif);
+  font-size: var(--t-h1-size);
+  font-weight: var(--t-h1-weight);
+  line-height: var(--t-h1-leading);
+  letter-spacing: var(--t-h1-tracking);
+}
+
+.cv-lede {
+  margin: var(--s-3) 0 0;
+  max-width: 44rem;
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.5;
+}
+
+.cv-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  margin: var(--s-4) 0 0;
+}
+
+.cv-action {
+  min-height: var(--control-min-dense);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 560;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.25em;
+  cursor: pointer;
+}
+
+.cv-action:hover {
+  color: var(--brand-hover);
+  text-decoration-color: var(--brand);
+}
+
+.cv-action[hidden] {
+  display: none;
+}
+
+/* At a glance: three counts with their sparklines, then the timeline */
+
+.cv-overview {
+  border-block: var(--line-w) solid var(--dust);
+  padding-block: var(--s-5);
+}
+
+.cv-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-4);
+  margin: 0 0 var(--s-5);
+}
+
+.cv-stat {
+  min-width: 0;
+}
+
+.cv-stat dt {
+  color: var(--text-secondary);
+  font-size: var(--t-label-size);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cv-stat dd {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  column-gap: var(--s-3);
+  margin: var(--s-1) 0 0;
+}
+
+.cv-stat-value {
+  color: var(--text-heading);
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 1.5rem + 1.6vw, 2.75rem);
+  font-weight: 620;
+  font-variant-numeric: tabular-nums lining-nums;
+  line-height: 1;
+}
+
+.cv-spark {
+  display: block;
+  max-width: 7.5rem;
+  color: var(--text-secondary);
+}
+
+.cv-stat-sub {
+  grid-column: 1 / -1;
+  margin-block-start: var(--s-1);
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-timeline {
+  margin: 0;
+}
+
+.cv-timeline-title {
+  margin: 0 0 var(--s-2);
+  font-weight: 620;
+}
+
+.cv-timeline-plot {
+  min-height: 13.75rem;
+}
+
+/* Bars outside the selected year range, marked by app/lib/cv/charts.ts. */
+.cv-timeline-plot [data-cv-out] {
+  opacity: 0.28;
+}
+
+.cv-spark svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cv-timeline-hint[hidden] {
+  display: none;
+}
+
+.cv-timeline-hint {
+  margin: var(--s-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+}
+
+/* Filters */
+
+.cv-filters {
+  display: grid;
+  gap: var(--s-4);
+  margin-block: var(--s-5) var(--s-3);
+}
+
+.cv-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--s-4) var(--s-5);
+}
+
+.cv-label {
+  display: block;
+  margin: 0 0 var(--s-2);
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: var(--t-label-size);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cv-field {
+  display: block;
+}
+
+.cv-search {
+  flex: 1 1 18rem;
+}
+
+.cv-filters input[type="search"],
+.cv-filters select {
+  box-sizing: border-box;
+  min-height: var(--control-min);
+  padding: 0.5rem 0.75rem;
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.cv-filters input[type="search"] {
+  width: 100%;
+}
+
+.cv-filters input::placeholder {
+  color: var(--placeholder);
+}
+
+.cv-filters input[type="search"]:focus-visible,
+.cv-filters select:focus-visible,
+.cv-apply:focus-visible,
+.cv-copy:focus-visible,
+.cv-action:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.cv-facet {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+
+.cv-chip {
+  position: relative;
+  display: inline-flex;
+}
+
+/* The checkbox stays in the page, clipped, so it keeps its keyboard and screen reader behavior. */
+.cv-chip input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.cv-chip-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.75rem;
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text);
+  font-size: 0.875rem;
+  line-height: 1.2;
+  transition:
+    background-color var(--motion-state) var(--ease-state),
+    border-color var(--motion-state) var(--ease-state);
+}
+
+.cv-chip:hover .cv-chip-text {
+  border-color: var(--brand);
+}
+
+.cv-chip:has(input:checked) .cv-chip-text {
+  border-color: var(--brand);
+  background: var(--tint-brand);
+  color: var(--brand);
+  font-weight: 560;
+}
+
+.cv-chip:has(input:checked) .cv-chip-text::before {
+  content: "✓";
+  font-weight: 700;
+}
+
+.cv-chip:has(input:focus-visible) .cv-chip-text {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.cv-chip-count {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-years-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  color: var(--text-secondary);
+}
+
+.cv-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+}
+
+.cv-filter-actions:not(:has(> :not([hidden]))) {
+  display: none;
+}
+
+.cv-apply {
+  min-height: var(--control-min);
+  padding: 0.5rem 1.25rem;
+  border: var(--line-w) solid var(--brand);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--brand);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cv-apply:hover {
+  background: var(--tint-brand);
+}
+
+.cv-apply[hidden],
+.cv-clear[hidden] {
+  display: none;
+}
+
+.cv-clear {
+  font-size: 0.9375rem;
+}
+
+.cv-summary {
+  margin: 0;
+  padding-block: var(--s-3);
+  border-block-end: var(--line-w) solid var(--dust);
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Results */
+
+.cv-group {
+  margin-block-start: var(--s-6);
+}
+
+.cv-group[hidden],
+.cv-part[hidden],
+.cv-entry[hidden] {
+  display: none;
+}
+
+.cv-group-title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-3);
+  margin: 0;
+  padding-block-end: var(--s-2);
+  border-block-end: var(--line-w) solid var(--border);
+  font-family: var(--font-serif);
+  font-size: clamp(1.5rem, 1.3rem + 0.7vw, 1.875rem);
+  font-weight: 620;
+  line-height: 1.2;
+}
+
+.cv-group-count {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-group-note {
+  max-width: 48rem;
+  margin: var(--s-3) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+  line-height: 1.55;
+}
+
+.cv-part-title {
+  margin: var(--s-5) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--t-label-size);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cv-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cv-entry {
+  display: grid;
+  grid-template-columns: var(--cv-rail) minmax(0, 1fr);
+  column-gap: var(--cv-gap);
+  padding-block: 0.875rem;
+  border-block-end: var(--line-w) solid var(--dust);
+  scroll-margin-top: calc(var(--header-h) + 1rem);
+}
+
+.cv-when {
+  padding-block-start: 0.2rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.cv-body {
+  min-width: 0;
+}
+
+.cv-body > p {
+  margin: 0;
+}
+
+.cv-title {
+  max-width: 62ch;
+  color: var(--text);
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.cv-title a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.cv-title a:hover {
+  color: var(--brand);
+  text-decoration: underline;
+  text-decoration-color: var(--brand);
+}
+
+.cv-amount {
+  margin-inline-end: 0.5rem;
+  color: var(--brand);
+  font-family: var(--font-mono);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv-authors,
+.cv-meta {
+  max-width: 70ch;
+  margin-block-start: 0.25rem;
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+  line-height: 1.5;
+}
+
+.cv-authors {
+  color: var(--text);
+}
+
+.cv-me {
+  font-weight: 650;
+}
+
+.cv-venue {
+  font-style: italic;
+}
+
+.cv-tags {
+  margin-block-start: 0.375rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 560;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.cv-paper-more,
+.cv-duties {
+  margin-block-start: 0.5rem;
+  font-size: var(--t-small-size);
+}
+
+.cv-paper-more summary,
+.cv-duties summary {
+  width: fit-content;
+  min-height: var(--control-min-dense);
+  color: var(--brand);
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.cv-paper-more summary:focus-visible,
+.cv-duties summary:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.cv-paper-panel,
+.cv-duty {
+  margin-block-start: var(--s-3);
+  padding-inline-start: var(--s-4);
+  border-inline-start: var(--line-w-thick) solid var(--tint-brand);
+}
+
+.cv-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cv-panel-label {
+  margin: var(--s-3) 0 var(--s-1);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.cv-cite,
+.cv-authors-full {
+  margin: 0;
+  max-width: 72ch;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.cv-cite {
+  padding: var(--s-2) var(--s-3);
+  border: var(--line-w) solid var(--dust);
+  border-radius: var(--radius-control);
+  font-family: var(--font-serif);
+  user-select: all;
+}
+
+.cv-cite-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  margin: var(--s-2) 0 0;
+}
+
+.cv-copy {
+  min-height: var(--control-min-dense);
+  padding: 0.25rem 0.625rem;
+  border: var(--line-w) solid var(--line-strong);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.cv-copy:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.cv-copy[data-copied] {
+  border-color: var(--brand);
+  background: var(--tint-brand);
+  color: var(--brand);
+}
+
+.cv-copy[hidden] {
+  display: none;
+}
+
+.cv-duty ul {
+  margin: 0;
+  padding-inline-start: 1.125rem;
+  line-height: 1.55;
+}
+
+.cv-foot {
+  margin: var(--s-6) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--t-small-size);
+}
+
+/* Phone */
+
+@media (max-width: 40rem) {
+  .cv-stats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--s-3);
+  }
+
+  .cv-stat {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .cv-stat dd {
+    margin: 0;
+  }
+
+  .cv-stat-sub {
+    grid-column: 1 / -1;
+    text-align: right;
+  }
+
+  .cv-stat-value {
+    font-size: 1.75rem;
+  }
+
+  .cv-spark {
+    width: 6rem;
+  }
+
+  .cv-entry {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0.125rem;
+  }
+
+  .cv-when {
+    padding: 0;
+    text-align: left;
+  }
+
+  .cv-filter-row {
+    gap: var(--s-4);
+  }
+
+  .cv-filter-row > .cv-field,
+  .cv-years {
+    flex: 1 1 100%;
+  }
+
+  .cv-filters select {
+    width: 100%;
+  }
+
+  .cv-years-row select {
+    flex: 1 1 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-chip-text {
+    transition: none;
+  }
+}
+
+/* Print: the CV itself, as a committee reads it. The PDF (public/dustin-edwards-cv.pdf) is the
+   traditional version; this keeps whatever the reader filtered. */
+
+@media print {
+  .page-inner:has(> .cv) {
+    max-width: none;
+  }
+
+  .cv-actions,
+  .cv-filters,
+  .cv-timeline,
+  .cv-spark,
+  .cv-summary,
+  .cv-paper-more,
+  .cv-duties,
+  .cv-tags {
+    display: none !important;
+  }
+
+  .cv-overview {
+    padding-block: 0.5rem;
+  }
+
+  .cv-stats {
+    margin: 0;
+  }
+
+  .cv-group {
+    margin-block-start: 1rem;
+    break-inside: auto;
+  }
+
+  .cv-group-title {
+    font-size: 14pt;
+    break-after: avoid;
+  }
+
+  .cv-entry {
+    padding-block: 0.25rem;
+    border: 0;
+    break-inside: avoid;
+    font-size: 10pt;
+  }
+
+  .cv-title a {
+    color: inherit;
+  }
+}
+
+/* The filter panel's disclosure: only a phone shows its summary (app/enhance/cv.ts folds it there). */
+
+.cv-more-summary {
+  display: none;
+}
+
+.cv-more-body {
+  display: grid;
+  gap: var(--s-4);
+}
+
+@media (max-width: 40rem) {
+  .cv-more-summary {
+    display: flex;
+    align-items: center;
+    gap: var(--s-2);
+    min-height: var(--control-min);
+    color: var(--brand);
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .cv-more-summary:focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+
+  .cv-more[open] > .cv-more-summary {
+    margin-block-end: var(--s-3);
+  }
+}
+
+/* Compact entries: the long lists (grants, awards, courses, service, development) read as a list. */
+
+.cv-entry.cv-compact {
+  padding-block: 0.5625rem;
+}
+
+.cv-compact .cv-when {
+  padding-block-start: 0.125rem;
+}
+
+.cv-compact .cv-body > p {
+  display: inline;
+}
+
+.cv-compact .cv-title {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 580;
+  line-height: 1.5;
+}
+
+.cv-compact .cv-meta {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+
+.cv-compact .cv-meta::before {
+  content: ", ";
+}
+
+.cv-compact .cv-tags {
+  margin-inline-start: 0.625rem;
+  white-space: nowrap;
+}
