@@ -64,6 +64,7 @@ export default [
   route("search", "routes/search.tsx"),
   route("sitemap.xml", "routes/sitemap.ts"),
   route("robots.txt", "routes/robots.ts"),
+  route(".well-known/security.txt", "routes/security-txt.ts"),
   route("llms.txt", "routes/llms.ts"),
   route("llms-full.txt", "routes/llms-full[.txt].ts"),
   route("media/*", "routes/media.$.ts"),
