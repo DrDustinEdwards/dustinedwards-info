@@ -1,0 +1,162 @@
+/* The dictionary entry at the top of a named software page (app/components/dictionary-entry.tsx):
+   headword, pronunciation with its speaker, part of speech, numbered senses, and the origin in a
+   quieter voice. Set between two rules so it reads as an entry lifted from a dictionary page. */
+
+.term-entry {
+  max-width: var(--measure);
+  margin: 0.5rem 0 2rem;
+  padding: 1rem 0 1.125rem;
+  border-top: var(--line-w-thick) solid var(--text-heading);
+  border-bottom: var(--line-w) solid var(--border);
+}
+
+.term-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.875rem;
+  margin: 0;
+}
+
+.term-word {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-heading);
+}
+
+.term-pron {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  font-size: var(--t-small-size);
+  color: var(--text-secondary);
+}
+
+.term-ipa {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  color: var(--text);
+}
+
+.term-respell {
+  font-family: var(--font-sans);
+  letter-spacing: 0.02em;
+}
+
+/* The speaker: a link without script, the button with it. The same box either way, so the swap
+   does not move anything. */
+.term-listen {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--control-min);
+  block-size: var(--control-min);
+  padding: 0;
+  border: var(--line-w) solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--brand);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-state) var(--ease-state),
+    border-color var(--motion-state) var(--ease-state);
+}
+
+.term-listen[hidden] {
+  display: none;
+}
+
+.term-listen:hover {
+  border-color: var(--brand);
+  background: var(--tint-brand);
+}
+
+.term-listen:focus-visible {
+  outline: var(--line-w-thick) solid var(--brand);
+  outline-offset: 0.125rem;
+}
+
+/* Playing: filled, and the waves pulse outward. Reduced motion keeps the fill and drops the pulse. */
+.term-listen[aria-pressed="true"] {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: var(--on-brand);
+}
+
+.term-listen[aria-pressed="true"] .term-wave {
+  animation: term-wave 900ms var(--ease-state) infinite;
+}
+
+.term-listen[aria-pressed="true"] .term-wave-2 {
+  animation-delay: 180ms;
+}
+
+@keyframes term-wave {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .term-listen {
+    transition: none;
+  }
+
+  .term-listen[aria-pressed="true"] .term-wave {
+    animation: none;
+  }
+}
+
+.term-pos {
+  margin: 0.25rem 0 0.75rem;
+  font-family: var(--font-serif);
+  color: var(--text-secondary);
+}
+
+.term-senses {
+  margin: 0 0 0.875rem;
+  padding-left: 1.75rem;
+  list-style: decimal;
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.term-senses li {
+  margin-bottom: 0.375rem;
+  padding-left: 0.25rem;
+}
+
+/* The subject label before a specialised sense, italic and quieter, as a dictionary sets it. */
+.term-label {
+  color: var(--text-secondary);
+}
+
+.term-senses li::marker {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.term-ety {
+  margin: 0;
+  font-size: var(--t-small-size);
+  line-height: var(--t-small-leading);
+  color: var(--text-secondary);
+}
+
+.term-ety-label {
+  font-size: var(--t-label-size);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}

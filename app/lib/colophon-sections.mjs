@@ -156,12 +156,22 @@ export const SITE_OPERATION = Object.freeze([
   "Capsid is the site's memory and job queue. It stores the project's " +
     "decisions and current state, and it hands work from a conversation to a " +
     "working session as a signed job that ends in a pull request.",
-  "Carrel is my private writing hub, behind a login, where articles are " +
-    "written before they are published here. A finished article reaches this " +
-    "site through a small keyed API.",
 ]);
 
-/** Carrel is named and not linked. No page, and no footer login. */
+/**
+ * Carrel's one sentence. Its name links to its page on this site (Dustin, 2026-09-28), never to the
+ * app, which is private; the footer's Workspace link is the separate sign-in.
+ */
+export const CARREL_PAGE_PATH = "/software/carrel";
+export const CARREL_NAME = "Carrel";
+export const CARREL_SENTENCE =
+  "Carrel is my private writing hub, behind a login, where articles are " +
+  "written before they are published here. A finished article reaches this " +
+  "site through a small keyed API.";
+
+/** The sentence after its linked name, which is how the page renders it. */
+export const CARREL_SENTENCE_REST = CARREL_SENTENCE.slice(CARREL_NAME.length);
+
 export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
 
 export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
@@ -244,7 +254,7 @@ function colophonPageInput(stack, features) {
       return AI_DISCLOSURE.join(" ");
     }
     if (id === "run") {
-      return `${SITE_OPERATION.join(" ")} Capsid's source is public at ${CAPSID_REPO_URL}.`;
+      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}.`;
     }
     if (id === "not-adopted") {
       // The label, never `n.status`: the page shows the label, so the index must.

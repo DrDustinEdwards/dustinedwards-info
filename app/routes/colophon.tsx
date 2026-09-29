@@ -13,6 +13,9 @@ import {
   COLOPHON_SECTIONS,
   AI_DISCLOSURE,
   CAPSID_REPO_URL,
+  CARREL_NAME,
+  CARREL_PAGE_PATH,
+  CARREL_SENTENCE_REST,
   SECURITY_TRADEOFF,
   SITE_OPERATION,
   COLOPHON_TITLE,
@@ -271,6 +274,10 @@ export default function Colophon({ loaderData }: Route.ComponentProps) {
         {SITE_OPERATION.map((sentence) => (
           <p key={sentence.slice(0, 32)}>{sentence}</p>
         ))}
+        <p>
+          <Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>
+          {CARREL_SENTENCE_REST}
+        </p>
         <p>
           Capsid's source is public <a href={CAPSID_REPO_URL}>on GitHub</a>.
         </p>

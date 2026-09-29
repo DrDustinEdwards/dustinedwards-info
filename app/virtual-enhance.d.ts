@@ -16,6 +16,7 @@ declare module "virtual:enhance" {
     | "palette"
     | "plate"
     | "podcast"
+    | "pronounce"
     | "search"
     | "theme"
     | "tools";
