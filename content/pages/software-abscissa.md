@@ -13,6 +13,10 @@ Abscissa draws charts on the server, into the HTML, so they appear without JavaS
 
 Every chart is a figure whose SVG carries the text alternative its author writes, followed by an equivalent data table. Colors come from the theme's stylesheet through CSS custom properties, so the same markup follows light and dark mode without a re-render, and a theme's contrast and color-vision-deficiency differences can be measured before it ships. The charts on the [CV](/cv) are drawn with it.
 
+## Why the name
+
+An abscissa is a point's horizontal coordinate, its distance along the x-axis. In most charts that axis carries what is being varied, such as time, dose or dilution, and each measurement is read against it. The library takes its name from that axis.
+
 ## Status
 
 Abscissa is in active development. It is an early alpha, published on npm under the `next` tag, and its API will change before 0.1.0, so it is not yet for production use. It is MIT licensed.
