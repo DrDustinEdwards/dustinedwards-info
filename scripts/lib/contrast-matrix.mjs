@@ -147,6 +147,12 @@ export const DECLARED_ELSEWHERE = new Map([
       "and its exemption map empty: the color being SHOWN is not a color this system " +
       "chose, and no ratio can be asserted about it",
   ],
+  [
+    "--abscissa-length",
+    "written inline by abscissa/enhance on each line path, its measured length, for the chart's " +
+      "draw-in animation; app/styles/abscissa.css (generated from the package) reads it back. " +
+      "Per path and not a color, so there is no theme block it could live in",
+  ],
 ]);
 
 /** @type {Map<string, string>} token -> why no ratio of its own can be asserted */
@@ -209,6 +215,14 @@ export const OPACITY_EXEMPT = [
       "what is behind it, so there is no foreground to price a ratio against. " +
       "Same class as -scrim above, reached by a different selector shape since " +
       "the dialogs became native <dialog> and their scrims became ::backdrop",
+  },
+  {
+    /* Anchored at the end, per the vacuity rule. */
+    test: /\[data-abscissa-dimmed\]$|\[data-cv-out\]$/,
+    why:
+      "a chart bar outside the active filter, faded on purpose to show what the filter left out. " +
+      "A graphic, not text: its value is in the chart's hover details and data table, and the bars " +
+      "in the filter stay at full strength (app/styles/abscissa.css, app/styles/cv.css)",
   },
   {
     test: /^\.search-why-sep$/,
