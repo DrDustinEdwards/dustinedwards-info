@@ -1,7 +1,8 @@
-import { Form, Link, data } from "react-router";
+import { Link, data } from "react-router";
 
 import { AskMount } from "~/components/ask-panel";
 import { Enhance } from "~/components/enhance";
+import { SearchForm } from "~/components/search-form";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { nextScheduledPublishAt } from "~/db";
@@ -373,24 +374,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
       <main className="search-page" id="main" tabIndex={-1}>
         <h1 className="search-heading">Search</h1>
 
-        <Form method="get" action="/search" role="search" className="search-form">
-          <label className="search-label" htmlFor="q">
-            Search this site
-          </label>
-          <div className="search-input-row">
-            <input
-              type="search"
-              id="q"
-              name="q"
-              defaultValue={params.q}
-              placeholder="Try: d1, tag:cloudflare, 2026, or a quoted phrase"
-              autoComplete="off"
-              className="search-input"
-            />
-            <button type="submit" className="search-submit">
-              Search
-            </button>
-          </div>
+        <SearchForm defaultValue={params.q}>
           {params.type ? <input type="hidden" name="type" value={params.type} /> : null}
           {params.tag ? <input type="hidden" name="tag" value={params.tag} /> : null}
           {params.year ? <input type="hidden" name="year" value={params.year} /> : null}
@@ -399,7 +383,7 @@ export default function SearchPage({ loaderData }: Route.ComponentProps) {
             Operators: <code>tag:</code>, <code>type:</code>, a bare year, and
             &quot;quoted phrases&quot;.
           </p>
-        </Form>
+        </SearchForm>
 
         {/* Rendered even empty: a live region must exist before its text changes, or the live
             search's count is never announced. */}

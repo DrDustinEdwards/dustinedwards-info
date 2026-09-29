@@ -9,6 +9,7 @@ import {
   useRouteLoaderData,
 } from "react-router";
 
+import { NotFoundHelp } from "~/components/not-found-help";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
 import { getNonce } from "~/lib/context";
@@ -165,13 +166,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Something broke.";
   let details = "The page failed to render.";
   let stack: string | undefined;
+  const notFound = isRouteErrorResponse(error) && error.status === 404;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
-    details =
-      error.status === 404
-        ? "This page is not here."
-        : error.statusText || details;
+    message = notFound ? "404" : "Error";
+    details = notFound ? "This page is not here." : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;
     stack = error.stack;
@@ -185,6 +184,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
         <div className="page-inner">
           <h1>{message}</h1>
           <p className="muted">{details}</p>
+          {notFound ? <NotFoundHelp /> : null}
           {stack && (
             <pre className="error-stack">
               <code>{stack}</code>

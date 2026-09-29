@@ -3,6 +3,7 @@ import { createElement as h } from "react";
 import { expect, it, vi } from "vitest";
 
 import { ENHANCE_LOADER } from "~/lib/enhance-loader.mjs";
+import { NAV } from "~/lib/nav";
 import { buildSpeculationRules } from "~/lib/speculation.mjs";
 
 import worker from "../../workers/app";
@@ -21,6 +22,9 @@ vi.mock("virtual:react-router/server-build", async () => {
   const { SiteHeader } = await import("~/components/site-header");
   const { Enhance } = await import("~/components/enhance");
   const { stubServerBuild } = await import("./server-build");
+  /* The route-module transform in the real build hands ErrorBoundary its `error` prop through this
+   * wrapper. Without it the boundary gets no props here and renders its generic branch for a 404. */
+  const { UNSAFE_withErrorBoundaryProps } = await import("react-router");
 
   const Page = () =>
     h(
@@ -50,7 +54,11 @@ vi.mock("virtual:react-router/server-build", async () => {
   const build = stubServerBuild({
     entry: { module: entryServer },
     routes: {
-      root: { id: "root", path: "", module: rootModule },
+      root: {
+        id: "root",
+        path: "",
+        module: { ...rootModule, ErrorBoundary: UNSAFE_withErrorBoundaryProps(rootModule.ErrorBoundary) },
+      },
       home: { id: "home", parentId: "root", index: true, module: { default: Page } },
     },
     assetRoutes: {
@@ -122,6 +130,39 @@ it.each(["/", "/Blog/", "/no-such-page", "/a%20b/%C3%A9"])(
     expect(policy).toContain(`'sha256-${btoa(String.fromCharCode(...new Uint8Array(digest)))}'`);
   },
 );
+
+/*
+ * The 404 page's way on, for a reader arriving on an old link, as the markup a reader without script
+ * gets: a plain GET form to /search with the query in `q`, started with the words of the missing
+ * address, and a link to each of the header's sections, read off NAV so a section added there is
+ * expected here too. Scoped to the page's own nav, because the header carries the same links.
+ */
+it("gives a 404 a search form and the header's sections", async () => {
+  const { response, html, policy } = await render("/2019/05/phage-isolation-protocol");
+  expect(response.status).toBe(404);
+  expect(html).toContain(">This page is not here.<");
+
+  const main = html.slice(html.indexOf("<main"), html.indexOf("</main>"));
+  const form = /<form\b([^>]*)>([\s\S]*?)<\/form>/.exec(main);
+  expect(form, "a search form in main").not.toBeNull();
+  const formAttrs = form?.[1] ?? "";
+  expect(formAttrs).toMatch(/\smethod="get"/);
+  expect(formAttrs).toMatch(/\saction="\/search"/);
+  const input = /<input\b[^>]*\sname="q"[^>]*>/.exec(form?.[2] ?? "")?.[0] ?? "";
+  expect(input, "a q field in the form").not.toBe("");
+  expect(input).toMatch(/\stype="search"/);
+  /* The year and month are dropped: a bare year would narrow the search to that year. */
+  expect(input).toMatch(/\svalue="phage isolation protocol"/);
+
+  const start = main.indexOf('aria-labelledby="not-found-sections"');
+  expect(start, "the sections nav").toBeGreaterThan(-1);
+  const sections = main.slice(start, main.indexOf("</nav>", start));
+  const hrefs = [...sections.matchAll(/<a\b[^>]*\shref="([^"]*)"/g)].map((m) => m[1]);
+  expect(hrefs).toEqual(NAV.map((item) => item.to));
+
+  /* The form submits to this origin, which the policy's form-action allows. */
+  expect(policy).toContain("form-action 'self'");
+});
 
 /* The shared package's check (packages/security-headers), on this site's real response: the reusable
  * gate foxing and txasm run on theirs. The public arm here; the admin arm is in ssr-nonce.test.ts's
