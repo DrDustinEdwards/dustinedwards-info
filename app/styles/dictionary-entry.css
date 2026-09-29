@@ -30,8 +30,8 @@
 .term-pron {
   display: inline-flex;
   flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0.625rem;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
   font-size: var(--t-small-size);
   color: var(--text-secondary);
 }

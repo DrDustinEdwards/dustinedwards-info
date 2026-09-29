@@ -31,20 +31,21 @@ export function DictionaryEntry({ entry }: { entry: Entry }) {
         <span className="term-pron">
           <span className="term-ipa">{entry.ipa}</span>
           <span className="term-respell">{entry.respelling}</span>
+          {/* Inside the pronunciation, so on a narrow screen the speaker wraps with it, never alone. */}
+          <a className="term-listen term-listen-link" href={entry.audio} data-term-audio-link aria-label={label}>
+            <SpeakerIcon />
+          </a>
+          <button
+            type="button"
+            className="term-listen"
+            data-term-listen={entry.audio}
+            aria-label={label}
+            aria-pressed="false"
+            hidden
+          >
+            <SpeakerIcon />
+          </button>
         </span>
-        <a className="term-listen term-listen-link" href={entry.audio} data-term-audio-link aria-label={label}>
-          <SpeakerIcon />
-        </a>
-        <button
-          type="button"
-          className="term-listen"
-          data-term-listen={entry.audio}
-          aria-label={label}
-          aria-pressed="false"
-          hidden
-        >
-          <SpeakerIcon />
-        </button>
       </p>
       <p className="term-pos">
         <i>{entry.partOfSpeech}</i>
