@@ -8,8 +8,8 @@ import type { Route } from "./+types/cv.charts[.json]";
 /*
  * The CV's charts for one filter state, as the markup /cv renders them, for app/enhance/cv.ts to swap
  * in when a filter changes. Drawn here rather than in the browser so the page does not download a
- * chart renderer: Abscissa draws with Observable Plot and linkedom, about 480 KB of script, and its
- * browser layer (abscissa/enhance) needs only the markup. A function of the query string alone, so it
+ * chart renderer: Enarratio draws with Observable Plot and linkedom, about 480 KB of script, and its
+ * browser layer (enarratio/enhance) needs only the markup. A function of the query string alone, so it
  * is shared-cached like the page.
  */
 
