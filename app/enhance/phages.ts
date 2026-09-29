@@ -53,20 +53,18 @@ function el(tag: string, attrs: Record<string, string> = {}, text = ""): HTMLEle
 
 /* The controls: a search box and two selects, each with a visible label, and the status region. */
 const controls = el("div", { class: "phage-table-controls" });
-function control<T extends HTMLElement>(node: T, attrs: Record<string, string>): T {
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  return node;
+/* No helper generic over HTMLElement here: under the Worker-typed DOM a select does not satisfy that
+ * bound, so each control keeps the type createElement gives it. */
+const search = document.createElement("input");
+for (const [name, value] of Object.entries({ type: "search", id: "phage-table-q", autocomplete: "off", spellcheck: "false" })) {
+  search.setAttribute(name, value);
 }
-const search = control(document.createElement("input"), {
-  type: "search",
-  id: "phage-table-q",
-  autocomplete: "off",
-  spellcheck: "false",
-});
-const hostSelect = control(document.createElement("select"), { id: "phage-table-host" });
-const countySelect = control(document.createElement("select"), { id: "phage-table-county" });
+const hostSelect = document.createElement("select");
+hostSelect.setAttribute("id", "phage-table-host");
+const countySelect = document.createElement("select");
+countySelect.setAttribute("id", "phage-table-county");
 
-function field(id: string, label: string, input: HTMLElement) {
+function field(id: string, label: string, input: Node) {
   const wrap = el("div", { class: "phage-tool-field" });
   wrap.appendChild(el("label", { for: id }, label));
   wrap.appendChild(input);
