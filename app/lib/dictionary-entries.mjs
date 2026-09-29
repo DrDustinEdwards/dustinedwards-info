@@ -50,7 +50,7 @@ export const DICTIONARY_ENTRIES = Object.freeze([
     etymology: ["From French ", ["fr", "capside"], ", from Latin ", ["la", "capsa"], ", “box, case”."],
     senses: [
       "The protein shell of a virus particle, which surrounds its nucleic acid.",
-      "A system that coordinates AI agents and keeps a record of their tasks, rules, and decisions.",
+      "A system that stores the instructions and decisions of AI agents and coordinates their work within and across projects.",
     ],
     senseLabels: [null, SOFTWARE_LABEL],
     audio: "/audio/capsid.mp3",
@@ -74,7 +74,7 @@ export const DICTIONARY_ENTRIES = Object.freeze([
     ],
     senses: [
       "The horizontal coordinate of a point in a plane Cartesian coordinate system, measured parallel to the x-axis; the x-coordinate.",
-      "An open-source library that renders charts and scientific figures for the web in a form readable by people, screen readers, and AI agents.",
+      "An open-source library that plots charts and scientific figures for the web, readable by people, screen readers, and AI agents.",
     ],
     senseLabels: [null, SOFTWARE_LABEL],
     audio: "/audio/abscissa.mp3",
@@ -96,7 +96,7 @@ export const DICTIONARY_ENTRIES = Object.freeze([
     ],
     senses: [
       "A table, often partitioned or enclosed, for individual study, especially in a library.",
-      "A private application for drafting, revising, and publishing writing.",
+      "A private workspace for writing, in which drafts are composed, revised, and published.",
     ],
     senseLabels: [null, SOFTWARE_LABEL],
     audio: "/audio/carrel.mp3",
