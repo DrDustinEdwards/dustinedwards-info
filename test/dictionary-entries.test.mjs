@@ -95,10 +95,10 @@ test("the Carrel page names the app nowhere by address, and the colophon links t
 
 test("sense 2 of each entry is Dustin's wording, labelled software. (2026-09-28)", () => {
   const want = {
-    Capsid: "A system that coordinates AI agents and keeps a record of their tasks, rules, and decisions.",
+    Capsid: "A system that stores the instructions and decisions of AI agents and coordinates their work within and across projects.",
     Abscissa:
-      "An open-source library that renders charts and scientific figures for the web in a form readable by people, screen readers, and AI agents.",
-    Carrel: "A private application for drafting, revising, and publishing writing.",
+      "An open-source library that plots charts and scientific figures for the web, readable by people, screen readers, and AI agents.",
+    Carrel: "A private workspace for writing, in which drafts are composed, revised, and published.",
   };
   for (const entry of DICTIONARY_ENTRIES) {
     assert.equal(entry.senses[1], want[entry.term], entry.term);
