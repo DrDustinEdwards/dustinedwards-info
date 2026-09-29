@@ -19,4 +19,4 @@ and a site that cannot check its own claims is a brochure.
 My [CV](/cv) lists my appointments, education, publications, grants, teaching
 and service.
 
-You can reach me at [email@dustinedwards.info](mailto:email@dustinedwards.info).
+You can reach me at [contact@dustinedwards.info](mailto:contact@dustinedwards.info).
