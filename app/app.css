@@ -64,9 +64,9 @@
   unicode-range: U+2100-2121, U+2123-2190, U+2192, U+2194-2211, U+2213-2214, U+2216-22FF;
 }
 
-/* 109% matches Inter's average advance. The filter rows no longer rely on it (FilterLink sizes them
-   from Inter's own widths); running text still does. Ascent and descent are Inter's (0.969, 0.241)
-   divided by the size-adjust. */
+/* 109% matches Inter's average advance at the UI sizes, 13 to 16px. The filter rows no longer rely on
+   it (FilterLink sizes them from Inter's own widths); UI text still does. Prose has its own fallback,
+   below. Ascent and descent are Inter's (0.969, 0.241) divided by the size-adjust. */
 @font-face {
   font-family: "Inter Fallback";
   font-style: normal;
@@ -88,6 +88,32 @@
   size-adjust: 100.5%;
   ascent-override: 96.39%;
   descent-override: 24.00%;
+  line-gap-override: 0%;
+}
+
+/* Sans .prose (the Research and Teaching pages, about, colophon) sets at 17px, where opsz makes Inter
+   narrower: 105.0% of Arial there against 106.7% at 14px, measured over content/pages/. On the 109% face
+   every prose line ran about 4% wide, so the swap re-wrapped paragraphs (/teaching/phage-discovery CLS
+   0.177). Bold is Inter 700 at 17px, 101.2% of Arial Bold. */
+@font-face {
+  font-family: "Inter Prose Fallback";
+  font-style: normal;
+  font-weight: 100 549;
+  src: local("Arial");
+  size-adjust: 105%;
+  ascent-override: 92.29%;
+  descent-override: 22.95%;
+  line-gap-override: 0%;
+}
+
+@font-face {
+  font-family: "Inter Prose Fallback";
+  font-style: normal;
+  font-weight: 550 900;
+  src: local("Arial Bold"), local("Arial-BoldMT");
+  size-adjust: 101%;
+  ascent-override: 95.94%;
+  descent-override: 23.86%;
   line-gap-override: 0%;
 }
 
@@ -198,6 +224,8 @@
 
 :root {
   --font-sans: "Inter", "Inter Fallback", ui-sans-serif, system-ui, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-prose: "Inter", "Inter Prose Fallback", ui-sans-serif, system-ui, sans-serif,
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --font-serif: "Source Serif 4 Web", "Source Serif 4 Web Fallback", Georgia,
