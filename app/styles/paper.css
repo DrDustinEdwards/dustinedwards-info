@@ -1,10 +1,15 @@
 .paper-links a,
 .paper-breadcrumb a,
-.paper-machine b a,
+.paper-machine b a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+/* These sit in a line of text, so they keep the global link underline from app.css: brand and body
+   text are under 3:1 apart, and color alone fails axe link-in-text-block. */
 .paper-cited a,
 .paper-citedby-list a {
   color: var(--brand);
-  text-decoration: none;
 }
 
 .paper-links a:hover,
