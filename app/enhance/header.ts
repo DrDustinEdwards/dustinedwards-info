@@ -1,4 +1,4 @@
-const MOBILE = "(max-width: 43.99rem)";
+const MOBILE = "(max-width: 53.99rem)";
 
 const RETURN_AFTER = 8;
 
