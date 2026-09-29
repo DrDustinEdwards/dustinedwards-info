@@ -44,7 +44,7 @@ const rows: PhageRow[] = [...tbody.rows].map((tr, order) => {
 
 let sort: { key: SortKey; direction: SortDirection } = { ...DEFAULT_SORT };
 
-function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string, string> = {}, text = "") {
+function el(tag: string, attrs: Record<string, string> = {}, text = ""): HTMLElement {
   const node = document.createElement(tag);
   for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
   if (text) node.textContent = text;
@@ -53,39 +53,48 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Record<string,
 
 /* The controls: a search box and two selects, each with a visible label, and the status region. */
 const controls = el("div", { class: "phage-table-controls" });
-const search = el("input", { type: "search", id: "phage-table-q", autocomplete: "off", spellcheck: "false" });
-const hostSelect = el("select", { id: "phage-table-host" });
-const countySelect = el("select", { id: "phage-table-county" });
+function control<T extends HTMLElement>(node: T, attrs: Record<string, string>): T {
+  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+  return node;
+}
+const search = control(document.createElement("input"), {
+  type: "search",
+  id: "phage-table-q",
+  autocomplete: "off",
+  spellcheck: "false",
+});
+const hostSelect = control(document.createElement("select"), { id: "phage-table-host" });
+const countySelect = control(document.createElement("select"), { id: "phage-table-county" });
 
-function field(id: string, label: string, control: HTMLElement) {
+function field(id: string, label: string, input: HTMLElement) {
   const wrap = el("div", { class: "phage-tool-field" });
-  wrap.append(el("label", { for: id }, label), control);
+  wrap.appendChild(el("label", { for: id }, label));
+  wrap.appendChild(input);
   return wrap;
 }
 
 function fillSelect(select: HTMLSelectElement, anyLabel: string, values: string[]) {
-  select.append(el("option", { value: "" }, anyLabel));
-  for (const value of values) select.append(el("option", { value }, value));
+  select.appendChild(el("option", { value: "" }, anyLabel));
+  for (const value of values) select.appendChild(el("option", { value }, value));
 }
 
 fillSelect(hostSelect, "Any host", columnValues(rows, "host"));
 fillSelect(countySelect, "Any county", columnValues(rows, "county"));
 
 const status = el("p", { class: "phage-table-status", role: "status" });
-controls.append(
-  field("phage-table-q", "Find a phage", search),
-  field("phage-table-host", "Host", hostSelect),
-  field("phage-table-county", "County", countySelect),
-);
+controls.appendChild(field("phage-table-q", "Find a phage", search));
+controls.appendChild(field("phage-table-host", "Host", hostSelect));
+controls.appendChild(field("phage-table-county", "County", countySelect));
 
 /* The sortable headers become buttons; aria-sort sits on the header cell, where it is announced. */
 const headerCells = [...table.querySelectorAll<HTMLTableCellElement>("thead th")];
-const buttons = new Map<SortKey, HTMLButtonElement>();
+const buttons = new Map<SortKey, HTMLElement>();
 SORT_COLUMNS.forEach(([key, label], index) => {
   const th = headerCells[index];
   if (!th) throw new Error(`phages: the table has no header for ${label}.`);
   const button = el("button", { type: "button", class: "phage-table-sort" });
-  button.append(document.createTextNode(label), el("span", { class: "phage-table-sort-mark", "aria-hidden": "true" }));
+  button.appendChild(document.createTextNode(label));
+  button.appendChild(el("span", { class: "phage-table-sort-mark", "aria-hidden": "true" }));
   button.addEventListener("click", () => {
     const direction: SortDirection =
       sort.key === key && sort.direction === "ascending" ? "descending" : "ascending";
@@ -137,4 +146,5 @@ countySelect.addEventListener("change", () => render());
 
 // The first count is in place before the region joins the page, so it is not announced on load.
 render();
-wrapper.before(controls, status);
+wrapper.parentNode?.insertBefore(controls, wrapper);
+wrapper.parentNode?.insertBefore(status, wrapper);
