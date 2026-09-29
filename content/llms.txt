@@ -41,7 +41,7 @@ An article is /writing/<slug>. Its markdown twin is /writing/<slug>.md. Requesti
 
 ## Markdown twins
 
-A research or teaching page has a markdown twin at its path plus .md, for example /research.md and /teaching/phage-discovery.md. The HTML head links it with rel="alternate" type="text/markdown". The twin's Link header names the HTML page as canonical. Article URLs also answer Accept: text/markdown. Paper twins and article twins use the patterns above. Twins are not in the sitemap.
+Every research, teaching and software page, each lab calculator and the CV has a markdown twin at its path plus .md, for example /research.md, /research/tools/titer.md, /software/abscissa.md and /cv.md. The HTML head links it with rel="alternate" type="text/markdown". The twin's Link header names the HTML page as canonical. Article URLs also answer Accept: text/markdown. Paper twins and article twins use the patterns above. Twins are not in the sitemap.
 
 ## About the site
 

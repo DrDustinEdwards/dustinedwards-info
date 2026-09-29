@@ -3,8 +3,11 @@ path: /software/abscissa
 title: "Abscissa"
 seo_title: "Abscissa: accessible, server-rendered charts"
 description: "Abscissa is an open-source library for accessible charts and scientific figures, drawn on the server into the HTML. It is an early alpha, MIT licensed."
-schema_type: SoftwareApplication
+schema_type: SoftwareSourceCode
 code_repository: https://github.com/DrDustinEdwards/abscissa
+license: https://spdx.org/licenses/MIT.html
+programming_language: JavaScript
+runtime_platform: "Node.js, Cloudflare Workers, Deno and Bun"
 ---
 
 ## Charts that arrive with the page

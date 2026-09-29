@@ -28,6 +28,9 @@
     // Also imported by `app/lib/seo.ts`: `isSiteOwner` matches authors through
     // the exact alias table here, so this project must reach it too.
     "app/lib/publications/authors.mjs",
+    // Also imported by `app/lib/seo.ts`: the list page types each paper with the same `schemaTypeFor` its
+    // own page uses, so one `@id` is never two types. Imports only entities.mjs.
+    "app/lib/publications/article-json-ld.mjs",
     // Every publication URL and file path, stated once. `check:machine-readable`
     // asserts that each hosted `pdfPath` is the path `paperPdfPath` derives, so
     // the gate has to reach the one function that owns the rule rather than

@@ -5,11 +5,16 @@ import { DictionaryEntry } from "~/components/dictionary-entry";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
-import { contentPageMarkdownPath, contentPageTrail, protocolNeighbors } from "~/lib/content-pages.mjs";
+import {
+  contentPageCardPath,
+  contentPageMarkdownPath,
+  contentPageTrail,
+  protocolNeighbors,
+} from "~/lib/content-pages.mjs";
 import { definedTermJsonLd, dictionaryEntryFor } from "~/lib/dictionary-entries.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
-import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
+import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
 import generated from "../../content/generated/pages.json";
 
@@ -31,26 +36,87 @@ type ContentPage = {
   seoTitle: string;
   description: string;
   html: string;
-  /** Set on the Software pages. Research and Teaching pages omit it. */
+  /** Set where the frontmatter declares it (build:content); a page without one emits no typed node. */
   schemaType?: string;
   productUrl?: string;
   codeRepository?: string;
   applicationCategory?: string;
+  license?: string;
+  programmingLanguage?: string;
+  runtimePlatform?: string;
+  spatialCoverage?: string;
+  /** What the page's first table says, for a Dataset. */
+  dataset?: { variableMeasured: string[]; temporalCoverage: string | null; rows: number };
 };
 
-/** The type comes from the page, so a WebSite is not emitted as an application. */
-function pageJsonLd(page: ContentPage) {
-  if (!page.schemaType) return null;
-  return {
+/**
+ * The page's own node, typed from the page, so a WebSite is not emitted as an application. Each property
+ * is one the page's frontmatter or its markdown states; a fact the repo does not hold is left out, never
+ * filled in. A code repository belongs to SoftwareSourceCode in schema.org, so an application that has
+ * one gets a second node for its source, joined to it by targetProduct.
+ */
+function pageJsonLd(page: ContentPage): object[] {
+  if (!page.schemaType) return [];
+  const pageUrl = `${SITE_ORIGIN}${page.path}`;
+  const person = { "@type": "Person", "@id": personId(SITE_ORIGIN), name: SITE.name, url: SITE_ORIGIN };
+  const isDataset = page.schemaType === "Dataset";
+  const node = {
     "@context": "https://schema.org",
     "@type": page.schemaType,
-    name: page.title,
+    "@id": `${pageUrl}#${page.schemaType.toLowerCase()}`,
+    // A dataset is named by what it holds; the page's short title ("Our phages") names the page.
+    name: isDataset ? page.seoTitle : page.title,
     description: page.description,
-    url: page.productUrl ?? `${SITE_ORIGIN}${page.path}`,
-    author: { "@type": "Person", name: SITE.name },
-    ...(page.codeRepository ? { codeRepository: page.codeRepository } : {}),
+    url: page.productUrl ?? pageUrl,
+    ...(page.productUrl ? { mainEntityOfPage: pageUrl } : {}),
+    ...(isDataset ? { creator: person } : { author: person }),
+    ...(page.schemaType === "SoftwareSourceCode" && page.codeRepository
+      ? { codeRepository: page.codeRepository }
+      : {}),
     ...(page.applicationCategory ? { applicationCategory: page.applicationCategory } : {}),
+    ...(page.programmingLanguage ? { programmingLanguage: page.programmingLanguage } : {}),
+    ...(page.runtimePlatform ? { runtimePlatform: page.runtimePlatform } : {}),
+    ...(page.license ? { license: page.license } : {}),
+    ...(page.dataset
+      ? {
+          // Public on this page with no sign-in, which is all the property claims.
+          isAccessibleForFree: true,
+          variableMeasured: page.dataset.variableMeasured,
+          ...(page.dataset.temporalCoverage ? { temporalCoverage: page.dataset.temporalCoverage } : {}),
+          ...(page.spatialCoverage ? { spatialCoverage: { "@type": "Place", name: page.spatialCoverage } } : {}),
+          // The markdown twin carries the same table, so it is the download.
+          distribution: {
+            "@type": "DataDownload",
+            encodingFormat: "text/markdown",
+            contentUrl: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
+          },
+        }
+      : {}),
   };
+  if (page.schemaType !== "SoftwareApplication" || !page.codeRepository) return [node];
+  return [
+    node,
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareSourceCode",
+      "@id": `${pageUrl}#softwaresourcecode`,
+      name: page.title,
+      codeRepository: page.codeRepository,
+      author: person,
+      targetProduct: { "@id": node["@id"] },
+    },
+  ];
+}
+
+/** The page's structured data: the trail it shows, its own node or nodes, and its dictionary entry. */
+function contentPageJsonLd(page: ContentPage, trail: Array<[string, string]>) {
+  const entry = dictionaryEntryFor(page.path);
+  return [
+    // Only a trail the page shows: the visible one renders from two steps, and Google reads no fewer.
+    ...(trail.length >= 2 ? [breadcrumbJsonLd(SITE_ORIGIN, trail)] : []),
+    ...pageJsonLd(page),
+    ...(entry ? [definedTermJsonLd(entry, SITE_ORIGIN)] : []),
+  ];
 }
 
 const PAGES = new Map((generated.pages as ContentPage[]).map((page) => [page.path, page]));
@@ -69,11 +135,17 @@ export function loader({ request }: Route.LoaderArgs) {
   return { page, search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
+/** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
+function cardUrl(page: ContentPage) {
+  const path = contentPageCardPath(page);
+  return path ? `${SITE_ORIGIN}${path}` : undefined;
+}
+
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
   const { page } = loaderData;
   return [
-    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path }),
+    ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, image: cardUrl(page) }),
     {
       tagName: "link",
       rel: "alternate",
@@ -88,30 +160,18 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const titleOf = (path: string) => PAGES.get(path)?.title;
   const trail = contentPageTrail(page, titleOf);
   const neighbors = protocolNeighbors(page.path);
-  const schema = pageJsonLd(page);
   const entry = dictionaryEntryFor(page.path);
   return (
     <PageShell
       trail={
         <>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{
-              __html: serializeJsonLd(breadcrumbJsonLd(SITE_ORIGIN, trail)),
-            }}
-          />
-          {schema ? (
+          {contentPageJsonLd(page, trail).map((block, i) => (
             <script
+              key={i}
               type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
+              dangerouslySetInnerHTML={{ __html: serializeJsonLd(block) }}
             />
-          ) : null}
-          {entry ? (
-            <script
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: serializeJsonLd(definedTermJsonLd(entry, SITE_ORIGIN)) }}
-            />
-          ) : null}
+          ))}
         </>
       }
     >

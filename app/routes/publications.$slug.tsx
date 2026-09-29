@@ -24,6 +24,7 @@ import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
 import citedByArtifact from "../../data/publications.cited-by.json";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
+  breadcrumbJsonLd,
   isSiteOwner,
   pageMeta,
   personId,
@@ -131,19 +132,19 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
   const { paper, slug, hosted, pagePath, pdfPath, cited, citedBy, citedByFetchedAt, topics } =
     loaderData;
   const pageUrl = `${SITE_ORIGIN}${pagePath}`;
+  // One trail for the visible breadcrumb and its BreadcrumbList, so the two cannot disagree.
+  const trail: Array<[string, string]> = [
+    ["Research", "/research"],
+    ["Publications", PUBLICATIONS_PATH],
+    [decodeEntities(paper.title), pagePath],
+  ];
 
   return (
     <>
       <SiteHeader />
       <main id="main" className="tracks paper-tracks" tabIndex={-1}>
         <header className="paper-head">
-          <Breadcrumb
-            trail={[
-              ["Research", "/research"],
-              ["Publications", PUBLICATIONS_PATH],
-              [decodeEntities(paper.title), pagePath],
-            ]}
-          />
+          <Breadcrumb trail={trail} />
 
           {/* The H1 is the title: Scholar reads the first heading as the paper title. */}
           <h1 className="paper-title">{italicizeOrganisms(decodeEntities(paper.title))}</h1>
@@ -288,8 +289,8 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: jsonLd(
-              paperJsonLd(paper, {
+            __html: jsonLd([
+              ...paperJsonLd(paper, {
                 origin: SITE_ORIGIN,
                 pageUrl,
                 pdfUrl: pdfPath ? `${SITE_ORIGIN}${pdfPath}` : null,
@@ -298,7 +299,8 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                 personNode: personNode(SITE_ORIGIN),
                 topics,
               }),
-            ),
+              breadcrumbJsonLd(SITE_ORIGIN, trail),
+            ]),
           }}
         />
       </main>

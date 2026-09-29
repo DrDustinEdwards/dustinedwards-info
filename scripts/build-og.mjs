@@ -14,13 +14,14 @@ import satori from "satori";
 import {
   cardDescription,
   cardTitle,
+  ogImageKey,
   titleFontSize,
 } from "../app/lib/content/og-card-text.mjs";
-import { ogImageKey } from "../app/lib/content/pipeline.mjs";
+import { contentPageCardInput, hasPageCard } from "../app/lib/content-pages.mjs";
 import { longDateUTC } from "../app/lib/long-date.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { stripComments } from "./lib/strip-comments.mjs";
-import { ARTIFACT_PATH } from "./build-content.mjs";
+import { ARTIFACT_PATH, renderContentPages } from "./build-content.mjs";
 import { deleteFloor, requirePosts } from "./lib/delete-floor.mjs";
 import { markElement } from "./lib/mark.mjs";
 import { listForPrune } from "./lib/r2.mjs";
@@ -213,11 +214,13 @@ async function liveCardKeys() {
 }
 
 /**
- * ONE derivation of which posts get a card: two loops applying the cover rule is how a prune deletes
- * the card the writer just uploaded.
+ * ONE derivation of which posts and pages get a card: two loops applying the cover rule is how a prune
+ * deletes the card the writer just uploaded. A page is carded by its root (CARDED_PAGE_ROOTS in
+ * app/lib/content-pages.mjs), and its route names the same key through contentPageCardPath.
  * @param {any[]} posts
+ * @param {Array<{ path: string, seoTitle: string, description: string }>} pages
  */
-function selectCards(posts) {
+function selectCards(posts, pages) {
   /** @type {Array<{ post: any, key: string }>} */
   const cards = [];
   let skipped = 0;
@@ -236,6 +239,18 @@ function selectCards(posts) {
       continue;
     }
     cards.push({ post, key: ogImageKey(post) });
+  }
+  for (const page of pages) {
+    if (!hasPageCard(page.path)) continue;
+    const post = contentPageCardInput(page);
+    cards.push({ post, key: ogImageKey(post) });
+  }
+  // A post slug of the `page-` form could name a page's card; drawing both under one key would leave
+  // whichever rendered last serving for the other.
+  const seen = new Set();
+  for (const { key } of cards) {
+    if (seen.has(key)) throw new Error(`build:og: two cards share the key ${key}. Nothing was rendered.`);
+    seen.add(key);
   }
   return { cards, skipped };
 }
@@ -418,7 +433,7 @@ async function main() {
     },
   ];
 
-  const { cards, skipped } = selectCards(posts);
+  const { cards, skipped } = selectCards(posts, await renderContentPages());
 
   const written = await render(cards, { dryRun, outDir, target, fonts });
 
