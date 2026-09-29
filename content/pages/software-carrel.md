@@ -4,7 +4,6 @@ title: "Carrel"
 seo_title: "Carrel: a private writing hub"
 description: "Carrel is a private writing hub for articles across sites, books and manuscripts, behind a login. Articles on this site are written in it."
 schema_type: SoftwareApplication
-code_repository: https://github.com/DrDustinEdwards/carrel
 ---
 
 ## A private hub for writing
@@ -17,6 +16,6 @@ Carrel is a private writing hub for articles across sites, books and manuscripts
 - For books: book, chapter and scene views over a private manuscript repository, checks on save for continuity and timeline, and export to ePub and Word.
 - For AI assistance: an AI's draft is saved beside the author's and never replaces it, and checks and reviewers flag problems rather than decide them. Publishing through an AI tool is refused while a flag is open.
 
-## Source
+## On this site
 
-The application's code is public at [DrDustinEdwards/carrel](https://github.com/DrDustinEdwards/carrel), with no writing stored in it. The [colophon](/colophon) describes how this site uses it.
+The [colophon](/colophon) describes how this site uses Carrel.

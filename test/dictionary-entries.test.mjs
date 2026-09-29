@@ -87,6 +87,8 @@ test("the DefinedTerm describes the software (sense 2) and sits in the Software 
 test("the Carrel page names the app nowhere by address, and the colophon links the page", () => {
   const page = readFileSync(new URL("../content/pages/software-carrel.md", import.meta.url), "utf8");
   assert.ok(!page.includes("carrel.dustinedwards.info"));
+  // Nor its code (Dustin, 2026-09-28): the repository is public only for now, so a link would rot.
+  assert.ok(!/github\.com\/DrDustinEdwards\/carrel/i.test(page), "the Carrel page links its code repository");
   const colophon = readFileSync(new URL("../app/routes/colophon.tsx", import.meta.url), "utf8");
   assert.ok(colophon.includes("<Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>"));
 });
