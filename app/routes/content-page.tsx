@@ -2,6 +2,7 @@ import { data, Link } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { DictionaryEntry } from "~/components/dictionary-entry";
+import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
@@ -180,6 +181,8 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       {entry ? <DictionaryEntry entry={entry} /> : null}
       <PhageTools path={page.path} search={search} />
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
+      {/* The phage table is complete as served; this adds its sort and filter (app/enhance/phages.ts). */}
+      {page.path === "/research/phages" ? <Enhance module="phages" /> : null}
       {neighbors ? (
         <nav className="protocol-neighbors" aria-label="Protocols">
           {neighbors.previous ? (

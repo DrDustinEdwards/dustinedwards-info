@@ -164,3 +164,90 @@
     display: none;
   }
 }
+
+/* The phage table's controls on /research/phages (app/enhance/phages.ts). Script builds them, so with
+   script off none of this is on the page and the table reads as served. The fields reuse the
+   calculators' .phage-tool-field look. */
+
+.phage-table-controls {
+  display: grid;
+  gap: 0.75rem 1rem;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 1.5rem 0 0.5rem;
+}
+
+@media (min-width: 40rem) {
+  .phage-table-controls {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+    align-items: end;
+  }
+}
+
+.phage-table-controls .phage-tool-field input {
+  font-family: inherit;
+}
+
+.phage-tool-field select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--control-min);
+  padding: 0.5rem 0.75rem;
+  border: var(--line-w) solid var(--border);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.phage-tool-field select:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.phage-table-status {
+  margin: 0 0 0.5rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+/* The header button fills its cell, so the whole header is the target, and reads as the header. */
+.phage-table-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--control-min-dense);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.phage-table-sort:hover {
+  color: var(--brand);
+}
+
+.phage-table-sort:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+.phage-table-sort-mark {
+  color: var(--text-secondary);
+  font-size: 0.8125em;
+}
+
+th[aria-sort] .phage-table-sort-mark {
+  color: var(--brand);
+}
+
+@media print {
+  .phage-table-controls,
+  .phage-table-status {
+    display: none;
+  }
+}
