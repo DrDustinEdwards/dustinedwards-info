@@ -5,7 +5,9 @@
  * code, pattern rules first, then explicit rows.
  *
  * Host-scoped, because the workers.dev host serves the new site's own paths and must never see these.
- * `/phage-discovery` 301s on every host from path-moves.mjs, hash included. This row is the apex copy.
+ * `/phage-discovery` differs by host: this map runs first on the apex and sends the old WordPress page to
+ * the program page, as cutover.md's row says; elsewhere path-moves.mjs sends the new site's own old
+ * roster address to the roster anchor.
  *
  * Paths match with and without the trailing slash. The query is ignored: a 301 never carries it, since
  * WordPress's `?et_blog` and `?profiletab=` mean nothing on the new site.
@@ -104,7 +106,7 @@ const ROWS = /** @type {Record<string, string>} */ ({
   "/knowledge-base/pcr-coi-lco1490-hco2198": "/research/protocols/coi-primers",
   // The old pages were a course and a program, so each goes to the course or program, not a protocol.
   "/virus-isolation": "/teaching/virus-isolation",
-  "/phage-discovery": "/teaching/phage-discovery#roster",
+  "/phage-discovery": "/teaching/phage-discovery",
   // No Wolbachia page: it is not Dustin's research any more, so its methods land on the protocols.
   "/wolbachia-project-genetic-techniques": "/research/protocols",
   "/knowledge-base/pcr-wolbachia-16s-rrna": "/research/protocols",
