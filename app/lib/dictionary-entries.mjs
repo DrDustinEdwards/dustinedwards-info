@@ -1,7 +1,8 @@
 /**
  * The dictionary entries that open the named software pages (Dustin, 2026-09-28): each name is a
  * real English word most readers rarely meet, so the page first says what the word means, then what
- * the software is. Sense 1 follows the dictionaries; sense 2 is the software, plain and factual.
+ * the software is. Sense 1 follows the dictionaries; sense 2 is the software, plain and factual, and
+ * carries the subject label "software." in italics, as a dictionary marks a specialised sense.
  *
  * Verified 2026-09-28 against Merriam-Webster and Wiktionary (the OED is not freely readable; where
  * Wiktionary cites it, that citation is the OED evidence). Pronunciations are American, matching
@@ -28,9 +29,13 @@
  *   plural: string[] | null,
  *   etymology: EtymologyPart[],
  *   senses: [string, string],
+ *   senseLabels: [string | null, string | null],
  *   audio: string,
  * }} DictionaryEntry
  */
+
+/** The subject label on each software sense (Dustin, 2026-09-28), set in italics before it. */
+export const SOFTWARE_LABEL = "software";
 
 /** @type {readonly DictionaryEntry[]} */
 export const DICTIONARY_ENTRIES = Object.freeze([
@@ -45,8 +50,9 @@ export const DICTIONARY_ENTRIES = Object.freeze([
     etymology: ["From French ", ["fr", "capside"], ", from Latin ", ["la", "capsa"], ", “box, case”."],
     senses: [
       "The protein shell of a virus particle, which surrounds its nucleic acid.",
-      "A control system for AI agents that holds their work, rules and decisions, and delivers them where they’re needed.",
+      "A system that coordinates AI agents and keeps a record of their tasks, rules, and decisions.",
     ],
+    senseLabels: [null, SOFTWARE_LABEL],
     audio: "/audio/capsid.mp3",
   },
   {
@@ -68,8 +74,9 @@ export const DICTIONARY_ENTRIES = Object.freeze([
     ],
     senses: [
       "The horizontal coordinate of a point in a plane Cartesian coordinate system, measured parallel to the x-axis; the x-coordinate.",
-      "An open-source library for accessible, server-rendered charts and scientific figures, readable by people, screen readers and AI agents.",
+      "An open-source library that renders charts and scientific figures for the web in a form readable by people, screen readers, and AI agents.",
     ],
+    senseLabels: [null, SOFTWARE_LABEL],
     audio: "/audio/abscissa.mp3",
   },
   {
@@ -89,8 +96,9 @@ export const DICTIONARY_ENTRIES = Object.freeze([
     ],
     senses: [
       "A table, often partitioned or enclosed, for individual study, especially in a library.",
-      "A private writing hub where writing is drafted, revised and published.",
+      "A private application for drafting, revising, and publishing writing.",
     ],
+    senseLabels: [null, SOFTWARE_LABEL],
     audio: "/audio/carrel.mp3",
   },
 ]);
@@ -101,6 +109,11 @@ export const DICTIONARY_ENTRIES = Object.freeze([
  */
 export function dictionaryEntryFor(path) {
   return DICTIONARY_ENTRIES.find((entry) => entry.path === path);
+}
+
+/** @param {string | null | undefined} label */
+function labelPrefix(label) {
+  return label ? `${label}. ` : "";
 }
 
 /** @param {string} term */
@@ -122,7 +135,7 @@ export function dictionaryEntryText(entry) {
   const plural = entry.plural ? `; plural ${entry.plural.join(" or ")}` : "";
   return [
     `${entry.term} (${entry.syllables}), ${entry.ipa}, ${entry.respelling}, ${entry.partOfSpeech}${plural}.`,
-    ...entry.senses.map((sense, i) => `${i + 1}. ${sense}`),
+    ...entry.senses.map((sense, i) => `${i + 1}. ${labelPrefix(entry.senseLabels[i])}${sense}`),
     `Etymology: ${etymologyText(entry)}`,
   ].join(" ");
 }
@@ -139,7 +152,10 @@ export function dictionaryEntryMarkdown(entry, origin = "") {
   return [
     `**${entry.syllables}** ${entry.ipa} (${entry.respelling}), *${entry.partOfSpeech}*${plural}. [Pronunciation audio](${origin}${entry.audio})`,
     "",
-    ...entry.senses.map((sense, i) => `${i + 1}. ${sense}`),
+    ...entry.senses.map((sense, i) => {
+      const label = entry.senseLabels[i];
+      return `${i + 1}. ${label ? `*${label}.* ` : ""}${sense}`;
+    }),
     "",
     `Etymology: ${etymology}`,
     "",

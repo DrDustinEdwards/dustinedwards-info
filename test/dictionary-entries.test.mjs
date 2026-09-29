@@ -7,6 +7,7 @@ import {
   DICTIONARY_ENTRIES,
   definedTermJsonLd,
   dictionaryEntryFor,
+  dictionaryEntryMarkdown,
   listenLabel,
 } from "../app/lib/dictionary-entries.mjs";
 
@@ -60,7 +61,7 @@ test("the markdown twin carries the same entry under its title", () => {
   );
   assert.ok(twin.includes("[Pronunciation audio](/audio/abscissa.mp3)"));
   assert.ok(twin.includes("1. The horizontal coordinate"));
-  assert.ok(twin.includes("2. An open-source library"));
+  assert.ok(twin.includes("2. *software.* An open-source library"));
   assert.ok(twin.endsWith("Body.\n"));
   const plain = contentPageMarkdownBody({ path: "/software/foxing", title: "Foxing", markdown: "Body.\n" });
   assert.equal(plain, "# Foxing\n\nBody.\n");
@@ -88,4 +89,20 @@ test("the Carrel page names the app nowhere by address, and the colophon links t
   assert.ok(!page.includes("carrel.dustinedwards.info"));
   const colophon = readFileSync(new URL("../app/routes/colophon.tsx", import.meta.url), "utf8");
   assert.ok(colophon.includes("<Link to={CARREL_PAGE_PATH}>{CARREL_NAME}</Link>"));
+});
+
+test("sense 2 of each entry is Dustin's wording, labelled software. (2026-09-28)", () => {
+  const want = {
+    Capsid: "A system that coordinates AI agents and keeps a record of their tasks, rules, and decisions.",
+    Abscissa:
+      "An open-source library that renders charts and scientific figures for the web in a form readable by people, screen readers, and AI agents.",
+    Carrel: "A private application for drafting, revising, and publishing writing.",
+  };
+  for (const entry of DICTIONARY_ENTRIES) {
+    assert.equal(entry.senses[1], want[entry.term], entry.term);
+    assert.deepEqual(entry.senseLabels, [null, "software"], entry.term);
+    const lines = dictionaryEntryMarkdown(entry).split("\n");
+    assert.ok(lines.includes(`2. *software.* ${want[entry.term]}`), `${entry.term}: the twin's sense 2 line`);
+    assert.equal(definedTermJsonLd(entry, "https://example.test").description, want[entry.term]);
+  }
 });

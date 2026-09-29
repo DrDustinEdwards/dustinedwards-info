@@ -136,6 +136,11 @@
   padding-left: 0.25rem;
 }
 
+/* The subject label before a specialised sense, italic and quieter, as a dictionary sets it. */
+.term-label {
+  color: var(--text-secondary);
+}
+
 .term-senses li::marker {
   font-family: var(--font-sans);
   font-weight: 600;

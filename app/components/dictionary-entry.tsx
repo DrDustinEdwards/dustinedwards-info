@@ -62,9 +62,19 @@ export function DictionaryEntry({ entry }: { entry: Entry }) {
         ) : null}
       </p>
       <ol className="term-senses">
-        {entry.senses.map((sense) => (
-          <li key={sense.slice(0, 24)}>{sense}</li>
-        ))}
+        {entry.senses.map((sense, i) => {
+          const label = entry.senseLabels[i];
+          return (
+            <li key={sense.slice(0, 24)}>
+              {label ? (
+                <>
+                  <i className="term-label">{label}.</i>{" "}
+                </>
+              ) : null}
+              {sense}
+            </li>
+          );
+        })}
       </ol>
       <p className="term-ety">
         <span className="term-ety-label">Etymology</span>{" "}
