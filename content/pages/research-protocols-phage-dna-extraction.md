@@ -20,7 +20,7 @@ protocol:
       amount: 500 µl
       per: tube
       recipe: "0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS"
-    - { name: proteinase K, amount: 2.5 µl to 5 µl, stock: MISSING, per: tube }
+    - { name: proteinase K, amount: 1.25 µl to 5 µl, stock: 10 mg/ml or 20 mg/ml, per: tube }
     - { name: potassium acetate (pH 5.2), amount: 60 µl, stock: 3 M, per: tube }
     - { name: isopropanol at room temperature, amount: 500 µl, stock: 100% or 80%, per: tube }
     - { name: ethanol wash at room temperature, amount: 250 µl, stock: 70%, per: wash }
@@ -39,7 +39,7 @@ protocol:
     - { step: potassium acetate spins, spin: "12,000 rpm", g: MISSING, temperature_c: 4, time: "1 minute, then 3 minutes" }
     - { step: isopropanol at room temperature, time: 10 to 30 minutes }
     - { step: DNA spin, spin: top speed, g: MISSING, time: 15 to 30 minutes }
-    - { step: ethanol wash spins, spin: MISSING, time: 5 to 15 minutes each }
+    - { step: ethanol wash spins, spin: top speed in a microcentrifuge, g: "10,000 to 15,000 x g", time: 5 to 15 minutes each }
     - { step: air-drying, time: 5 to 20 minutes }
     - { method: Rescue, step: hold, time: "-80 °C for 1 hour to overnight, or -20 °C overnight" }
     - { method: Rescue, step: DNA spin, spin: full speed, g: MISSING, temperature_c: 4, time: 30 minutes }
@@ -55,12 +55,10 @@ protocol:
   source:
     - citation: "Santos MA (1991), Nucleic Acids Research 19:5442, doi:10.1093/nar/19.19.5442"
       for: the zinc chloride method
-    - citation: "Alternative DNA Isolation Protocol 3.5, the lab's course materials"
-      for: the lab's version of the method
     - citation: "SEA-PHAGES Phage Discovery Guide, July 2025 edition, Protocol 9.2b"
       for: the final dissolve, and the nuclease mix recipe
     - citation: "QIAGEN bench guide, Isopropanol precipitation of DNA"
-      for: room-temperature isopropanol, the wash spins and drying
+      for: room-temperature isopropanol, the two ethanol washes and their spin, and drying
     - citation: "Promega, Proteinase K product information"
       for: the proteinase K working concentration
     - citation: "Brauer et al. (2024), Environmental Microbiology 26:e16671, doi:10.1111/1462-2920.16671"
@@ -68,16 +66,16 @@ protocol:
     - citation: "Thermo Scientific NanoDrop technical bulletin T042"
       for: A260/230 and EDTA
     - citation: "the lab's notebooks"
-      for: troubleshooting, yields and the Qubit and NanoDrop readings
+      for: "the lab's protocol as copied into them from 2018, troubleshooting, yields and the Qubit and NanoDrop readings"
   biosafety: MISSING
   status: MISSING
   version: MISSING
   last_run: MISSING
 ---
 
-This is the lab's phage DNA extraction (also called phage DNA isolation, purification or preparation) from a high-titer bacteriophage lysate, as run in the Tarleton SEA-PHAGES lab. It is a column-free method: zinc chloride collects the phage, SDS and proteinase K open the capsids, potassium acetate takes out the protein and SDS, and isopropanol brings down the DNA. It needs no kit or column, and it has been the lab's standard since about 2018, in place of the resin column in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/). After the method come the checks for DNA quantity and quality before sequencing, and a rescue for salty or dilute DNA. It is written for students and instructors running phage DNA preparation in a teaching lab.
+This is the lab's phage DNA extraction (also called phage DNA isolation, purification or preparation) from a high-titer bacteriophage lysate, as run in the Tarleton SEA-PHAGES lab. It is a column-free method: zinc chloride collects the phage, SDS and proteinase K open the capsids, potassium acetate takes out the protein and SDS, and isopropanol brings down the DNA. It needs no kit or column, and the lab has used it since 2018, in place of the resin column in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/). After the method come the checks for DNA quantity and quality before sequencing, and a rescue for salty or dilute DNA. It is written for students and instructors running phage DNA preparation in a teaching lab.
 
-The method is Santos's zinc chloride precipitation ([Santos 1991](#references)). The lab's course materials call its version "Alternate 3.5", or "Alternative DNA Isolation Protocol 3.5", and the lab's published genome announcements describe it as "a modified zinc chloride precipitation method," citing Santos and the Phage Discovery Guide. Examples are the announcements for [Finny](/research/publications/10-1128-mra-01039-19/), [IndyLu](/research/publications/10-1128-mra-01079-21/), [Fizzles](/research/publications/10-1128-mra-01077-21/), [Loca](/research/publications/10-1128-mra-00783-22/) and [Godfather](/research/publications/10-1128-mra-00888-24/).
+The method is Santos's zinc chloride precipitation ([Santos 1991](#references)). The lab first ran it in the fall of 2018: the earliest lab notebooks that record it are from that course, with entries dated from late October 2018. The lab's published genome announcements describe it as "a modified zinc chloride precipitation method," citing Santos and the Phage Discovery Guide. Examples are the announcements for [Finny](/research/publications/10-1128-mra-01039-19/), [IndyLu](/research/publications/10-1128-mra-01079-21/), [Fizzles](/research/publications/10-1128-mra-01077-21/), [Loca](/research/publications/10-1128-mra-00783-22/) and [Godfather](/research/publications/10-1128-mra-00888-24/).
 
 ## Coming from the old Baylor PDF
 
@@ -99,14 +97,14 @@ The method starts from a filter-sterilized, high-titer phage lysate. How to make
 | Reagent | Amount and source |
 | --- | --- |
 | Nuclease mix | 20 µl per 5 ml of lysate. The lab's protocol names it only as DNase I plus RNase A. The Phage Discovery Guide gives a recipe in its [reagent recipes](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=231). |
-| Zinc chloride | 2 M ZnCl2, 20 µl per 1 ml of lysate |
-| TES buffer | 0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS (the lab's protocol as copied into its notebooks, 2018 and 2019) |
-| Proteinase K | 50 to 100 µg/ml final. The lab's protocol lists a 10 mg/ml stock; the [Finny genome announcement](/research/publications/10-1128-mra-01039-19/) and the Phage Discovery Guide give 20 mg/ml. Check the label on your tube before you add it. |
+| Zinc chloride | 2 M ZnCl2, 20 µl per 1 ml of lysate. That is 40 mM final, the concentration Santos (1991) gives. |
+| TES buffer | 0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS (the lab's protocol as copied into its notebooks from 2018 on) |
+| Proteinase K | 50 to 100 µg/ml final. The lab has used two stocks. Its protocol, as copied into notebooks in 2018, 2019 and 2021, lists 10 mg/ml. The [Finny genome announcement](/research/publications/10-1128-mra-01039-19/) (2019) reports 20 mg/ml, which is also the stock the Phage Discovery Guide lists, as a 2023 notebook copied it. Check the label on your tube, and use the volume for that stock in step 6. |
 | Potassium acetate | 3 M, pH 5.2 |
 | Isopropanol | 500 µl per tube, at room temperature. The lab has used both 100% and 80% isopropanol. |
 | Ethanol | 70%, at room temperature, 250 µl per wash, two washes |
 
-Centrifuge speeds below are in rpm, as used in the lab's microcentrifuge. The notebooks do not name the rotor, so no g-force is given.
+The first spins below are in rpm, as the lab's protocol gives them for its microcentrifuge. The notebooks do not name the rotor, so no g-force is given for those.
 
 ## Part A: collect the phage and open the capsids
 
@@ -115,11 +113,11 @@ Centrifuge speeds below are in rpm, as used in the lab's microcentrifuge. The no
 3. Add 20 µl of 2 M ZnCl2 to each tube. Incubate at 37 °C for 5 minutes.
 4. Spin at 10,000 rpm for 1 minute. Remove the supernatant quickly and keep the pellet.
 5. Resuspend each pellet in 500 µl of TES. Incubate at 60 °C for 15 minutes.
-6. Add proteinase K to 50 to 100 µg/ml: 2.5 to 5 µl of a 10 mg/ml stock per tube, or 1.25 to 2.5 µl of a 20 mg/ml stock. Incubate at 55 to 60 °C for 30 to 60 minutes. In this lab, the prep has been paused overnight at 4 °C after this step.
+6. Add proteinase K to 50 to 100 µg/ml. Check the tube's label for the stock: 2.5 to 5 µl per tube of a 10 mg/ml stock, or 1.25 to 2.5 µl of a 20 mg/ml stock. Incubate at 55 to 60 °C for 30 to 60 minutes. In this lab, the prep has been paused overnight at 4 °C after this step.
 
 **Why zinc chloride and not PEG?** Both collect phage particles out of a large volume of lysate so the DNA can be extracted from a small pellet. Zinc chloride does it in minutes at 37 °C, and the phage pellet comes down in a 1 minute microcentrifuge spin. PEG needs a longer precipitation and a 10,000 x g spin for 20 minutes, which this lab's centrifuge cannot reach (see [coming from the old Baylor PDF](#coming-from-the-old-baylor-pdf)).
 
-**Why this much proteinase K, this warm, for this long?** Proteinase K digests the capsid proteins and the nucleases added in step 1, and the SDS in the TES buffer stimulates it (the Phage Discovery Guide says the same of its own proteinase K step). A typical working concentration is 50 to 100 µg/ml ([Promega](#references)), and a published zinc chloride phage DNA method digests for 1 hour at 60 °C ([Brauer et al. 2024](#references)). The lab's earlier step, about 20 µg/ml at 37 °C for 10 minutes, was well below both.
+**Why this much proteinase K, this warm, for this long?** Proteinase K digests the capsid proteins and the nucleases added in step 1, and the SDS in the TES buffer stimulates it (the Phage Discovery Guide says the same of its own proteinase K step). A typical working concentration is 50 to 100 µg/ml ([Promega](#references)), and a published zinc chloride phage DNA method digests for 1 hour at 60 °C ([Brauer et al. 2024](#references)). The lab's earlier step, 1 µl per tube at 37 °C for 10 minutes (about 20 to 40 µg/ml, depending on the stock), was below both.
 
 ## Part B: remove the protein
 
@@ -132,10 +130,10 @@ Centrifuge speeds below are in rpm, as used in the lab's microcentrifuge. The no
 
 9. Add 500 µl of room-temperature isopropanol to the supernatant and mix. Leave it at room temperature for about 10 to 30 minutes. Do not put it on ice or leave it overnight.
 10. Spin at top speed for 15 to 30 minutes. Discard the supernatant and keep the pellet.
-11. Wash the pellet with 250 µl of room-temperature 70% ethanol and spin for 5 to 15 minutes. Discard the ethanol.
+11. Wash the pellet with 250 µl of room-temperature 70% ethanol and spin at top speed in a microcentrifuge for 5 to 15 minutes. Discard the ethanol.
 12. Wash a second time the same way.
 
-**Why isopropanol, and why at room temperature?** DNA precipitates in less isopropanol than ethanol, so one volume fits in the tube with the sample, where ethanol would need 2 to 2.5 volumes. The cost is that salt also precipitates in isopropanol ([Bitesize Bio](#references)). Using it at room temperature keeps salt co-precipitation down ([QIAGEN](#references)); salt carried into the DNA was this method's most common failure in the lab's notebooks. The two ethanol washes carry off salt that did come down: in one lab a second 250 µl wash raised A260/230 from 0.87 to 1.37.
+**Why isopropanol, and why at room temperature?** DNA precipitates in less isopropanol than ethanol, so one volume fits in the tube with the sample, where ethanol would need 2 to 2.5 volumes. The cost is that salt also precipitates in isopropanol ([Bitesize Bio](#references)). Salt carried into the DNA was this method's most common failure in the lab's notebooks. For too much salt in the pellet, QIAGEN's bench guide says to use the isopropanol at room temperature and to wash the pellet twice with room-temperature 70% ethanol, spun at 10,000 to 15,000 x g, which is top speed in a microcentrifuge ([QIAGEN](#references)). In one lab a second 250 µl wash raised A260/230 from 0.87 to 1.37. The short hold at room temperature before the spin is this lab's own step.
 
 ## Part D: dry, dissolve and measure
 

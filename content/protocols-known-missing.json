@@ -28,11 +28,6 @@
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "reagents[proteinase K].stock",
-      "reason": "Waiting on Dustin: proteinase K (core.md). The lab's protocol says 10 mg/ml; the Finny genome announcement and the Phage Discovery Guide say 20 mg/ml; the page gives the volume for each and says to check the tube."
-    },
-    {
-      "protocol": "/research/protocols/phage-dna-extraction",
       "field": "timings[zinc chloride spin].g",
       "reason": "Waiting on Dustin: the ZnCl2 rotor (core.md). The page gives rpm, and the notebooks do not name the rotor, so no g-force is given."
     },
@@ -45,11 +40,6 @@
       "protocol": "/research/protocols/phage-dna-extraction",
       "field": "timings[DNA spin].g",
       "reason": "The page says top speed and names no rotor (core.md: the ZnCl2 rotor, waiting on Dustin)."
-    },
-    {
-      "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "timings[ethanol wash spins].spin",
-      "reason": "The page gives the two 70% ethanol wash spins as 5 to 15 minutes each with no speed; the ruling that set them (job_4ed318c90991) names none."
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",

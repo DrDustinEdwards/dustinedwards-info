@@ -11,7 +11,7 @@ These are the lab protocols used in Dustin Edwards's lab at Tarleton State Unive
 
 - [Phage discovery guide](/teaching/phage-discovery): the Phage Discovery Program at Tarleton, with a link to the official SEA-PHAGES Phage Discovery Guide, which covers each stage from soil sample to annotated genome, and the places where the lab's practice differs from it.
 - [Phage isolation protocol](/research/protocols/phage-isolation): isolating bacteriophages from soil and water by direct and enriched isolation, then plaque purification, spot and full plate titers, webbed plates and a high-titer phage lysate. It includes worked titer arithmetic and troubleshooting from several years of lab notebooks.
-- [Phage DNA extraction protocol](/research/protocols/phage-dna-extraction): the column-free ZnCl2/TES method the lab has used as its standard since about 2018 to extract phage DNA from a high-titer lysate, with a note at each step on why that reagent is used. It ends with checks of DNA quantity and quality before sequencing and a rescue for salty or dilute DNA.
+- [Phage DNA extraction protocol](/research/protocols/phage-dna-extraction): the column-free ZnCl2/TES method the lab has used since 2018 to extract phage DNA from a high-titer lysate, with a note at each step on why that reagent is used. It ends with checks of DNA quantity and quality before sequencing and a rescue for salty or dilute DNA.
 
 ## PCR and primers
 
