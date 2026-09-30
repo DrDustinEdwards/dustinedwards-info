@@ -25,7 +25,7 @@ The full procedure for every stage is the program's own document:
 
 **[SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/)** (July 2025 edition). Genome annotation follows the separate SEA-PHAGES [Phage Genomics Guide](https://genomicsguide.seaphages.org/).
 
-The lab's own bench methods are on the [phage isolation protocol](/research/protocols/phage-isolation) and [phage DNA extraction protocol](/research/protocols/phage-dna-extraction) pages.
+The lab's own bench methods are on the [phage isolation protocol](/research/protocols/phage-isolation) and [phage DNA extraction protocol](/research/protocols/phage-dna-extraction) pages. For DNA, the lab uses a column-free ZnCl2/TES extraction in place of the Guide's resin column.
 
 ## Host strains
 
