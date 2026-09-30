@@ -32,7 +32,7 @@ const REAL_BUILD = [
   "fonts/fonts.css",
   "fonts/inter-latin-normal.woff2",
   "guidelines/index.md",
-  "guidelines/capsid/TASK-redesign-brief-2026-09.md",
+  "guidelines/canvas-constraints.md",
   "_vendor/react.js",
   "_preview/SiteLogo.js",
   "_preview/SiteLogoHeader.js",

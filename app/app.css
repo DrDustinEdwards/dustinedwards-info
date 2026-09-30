@@ -346,7 +346,7 @@
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Hexes copied from design-tokens.md, never derived. The light and dark blocks do not cascade into
+/* Hexes are fixed values, never derived. The light and dark blocks do not cascade into
    each other, so both declare every name; check:contrast recomputes and asserts both. */
 
 :root,

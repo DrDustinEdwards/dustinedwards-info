@@ -43,8 +43,8 @@ that as the scope, not as a shortfall.
 
 ## The build
 
-**RUN `npm run design:resync`. It is the whole command.** It rebuilds the two
-guideline folders (`build-capsid-guidelines.mjs`, then `build-guidelines.mjs`),
+**RUN `npm run design:resync`. It is the whole command.** It rebuilds the
+guideline folder (`build-guidelines.mjs`),
 regenerates the derived inputs and then runs the staged driver, in that order,
 stopping at the first step that fails. Flags pass through, so `npm run design:resync -- --remote
 <sidecar.json>` is the anchored run.
@@ -213,15 +213,10 @@ puppeteer, not playwright, so there is nothing to reuse from its devDeps.
   resolves to nothing. **Two names fail that check ON PURPOSE and are not
   drift**: `--bar-fill`, which canvas-constraints.md names as the invented
   token that broke the header, and `aria-hidden`, which is an attribute.
-- **The Capsid exports carry design law the repo does not.** Rulings 122, 123
-  and 124 (the closed color system, Paper and Plate, light touches only glass)
-  reach the canvas ONLY through
-  `guidelines/capsid/TASK-redesign-brief-2026-09.md`, because no
-  `decisions-vol-*.md` is an exported document and conventions.md does not
-  restate them. Two consequences: `build-capsid-guidelines.mjs` must run before
-  a sync or the export directory is missing (the wrapper runs it first), and a ruling added to the volume after a sync is invisible to the canvas until
-  someone patches the brief. That is how a job built a figure haze in PR #57
-  that ruling 124 forbids.
+- **Nothing is exported from Capsid.** Design law lives in the visual system in
+  Claude Design (`templates/visual-system/`). The Capsid export that used to
+  carry rulings 122 to 124 to the canvas was removed when those documents were
+  retired; the next resync deletes the old `guidelines/capsid/` folder.
 - The `.d.ts` contracts come from source `.tsx`, not from shipped types, because
   there are none. A prop rename in `app/components/` is picked up on rebuild;
   nothing warns that it changed.
@@ -299,7 +294,7 @@ glob selects WHICH files go, not where they arrive.
 **DONE on 2026-09-21, and here is the shape so the next sync keeps it.** The
 flatten is a post-build step on the bundle, not a config change: after the
 driver run, move `ds-bundle/guidelines/.design-sync/guidelines/*` up to
-`ds-bundle/guidelines/` (capsid subdir included), remove the emptied
+`ds-bundle/guidelines/`, remove the emptied
 directories, and REWRITE `guidelines/index.md`, which the emitter generated with
 the nested hrefs and which otherwise points the design agent at paths that no
 longer exist. The upload then preserves the flat paths verbatim. The eight old

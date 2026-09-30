@@ -2,7 +2,7 @@
 
 Dustin Edwards's personal site and Cloudflare showcase. React Router 8 on Workers, Drizzle on D1, Better Auth, R2. Also a Capsid CMS consumer.
 
-**This file is the STANDING LAW and nothing else.** Procedure is `.claude/skills/`; the design is the visual system in Claude Design (the dustinedwards.info design system, `templates/visual-system/`); everything retired is in `dustinedwards/retired-2026-09.md` with its reason and the id it merged into, so nothing is lost, only stopped being read.
+**This file is the STANDING LAW and nothing else.** Procedure is `.claude/skills/`; the design follows the Capsid Portal's design, with paper elements returning only by Dustin's decision and the home page hero kept (ruling 152 in Capsid's `dustinedwards/decisions.md`); the history of what was built and retired, and why, is Capsid's `dustinedwards/build-history.md`, with git and the pull requests behind it.
 
 ## Principles
 
@@ -39,7 +39,7 @@ Mainline only until the DNS cutover. Everything lands on `main`, committed and p
 
 **TWO FILES HERE ARE CAPSID'S AND NOT THIS REPO'S TO RESTYLE:** `scripts/improve-report.mjs` and the block below the BYTE-IDENTICAL marker in `.github/workflows/improve-score.yml`. They are byte-identical across five roster repos, written here by capsid's `sync-scorer` copier, and a comment pass that touches either one makes this repo the odd one out. Leave them out of any repo-wide recut; a change goes to capsid and arrives by the copier.
 
-**READING IS BY CITATION (ruling 129).** A job names the rulings it depends on, by number and volume. A session reads `core.md`, this file, the job body and those rulings, and nothing else is required reading. Not the whole decisions volume. `FAILURES.md` is worth the minute anyway, because it is the failure shapes that repeat, but it is a pointer rather than a gate on starting.
+**READING IS BY CITATION (ruling 129).** A job names the rulings it depends on, by number. A session reads `core.md`, this file, the job body and those rulings, and nothing else is required reading. `FAILURES.md` is worth the minute anyway, because it is the failure shapes that repeat, but it is a pointer rather than a gate on starting.
 
 **CHECKS SCALE WITH THE CHANGE (ruling 129).** Run the checks that cover what you touched, push, and let CI run the full suite, which `ship` already trusts under hard rule 16. `npm run check:changed` picks them from the diff and falls back to the offline tier when it cannot tell. Screenshots only when something a reader can see changed. A full local `check:ci` before a push is never a ritual on this host: it re-derives what CI is about to derive anyway.
 
@@ -59,4 +59,4 @@ Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Ne
 
 ## Where everything else lives
 
-In this repo, because a gate can reach it: `FAILURES.md` (failure shapes, read at session start), `RECOVERY.md`, `docs/RUNBOOK.md`, `CUTOVER.md`, `README.md`, and the skills at `.claude/skills/<name>/SKILL.md`. Everything else is Capsid, namespace `dustinedwards`. Read `core.md` for current state, and read a RULING BY NUMBER when the job cites one: `decisions-vol-20.md` is the active volume, `decisions-vol-19.md` and below are frozen history. Reading a volume end to end is not the way in (ruling 129). Sessions READ Capsid and never write it.
+In this repo, because a gate can reach it: `FAILURES.md` (failure shapes, read at session start), `RECOVERY.md`, `docs/RUNBOOK.md`, `CUTOVER.md`, `README.md`, and the skills at `.claude/skills/<name>/SKILL.md`. Everything else is Capsid, namespace `dustinedwards`. Read `core.md` for current state, and read a RULING BY NUMBER when the job cites one: `decisions.md` holds every ruling still in force, and `build-history.md` holds the history. Sessions READ Capsid and never write it.
