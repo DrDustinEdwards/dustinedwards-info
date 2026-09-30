@@ -25,7 +25,7 @@ The [protocols index](/research/protocols) groups the lab's methods. Each protoc
 
 - [Phage discovery guide](/teaching/phage-discovery): the Phage Discovery Program at Tarleton, the path from soil sample to annotated genome, and where the lab's practice differs from the official SEA-PHAGES Phage Discovery Guide.
 - [Phage isolation protocol](/research/protocols/phage-isolation): direct and enriched isolation, plaque purification, spot and full plate titers, webbed plates and high-titer lysates.
-- [Phage DNA extraction protocol](/research/protocols/phage-dna-extraction): a PEG and resin column method and a column-free ZnCl2/TES method, with checks of DNA quantity and quality before sequencing.
+- [Phage DNA extraction protocol](/research/protocols/phage-dna-extraction): the lab's column-free ZnCl2/TES method, with checks of DNA quantity and quality before sequencing.
 - [COI primers](/research/protocols/coi-primers): the LCO1490 and HCO2198 (Folmer) primers and PCR conditions for COI barcoding of invertebrate mitochondrial DNA.
 - [REV PCR primers](/research/protocols/rev-lpdv-primers): three primer sets for reticuloendotheliosis virus, one in the 3′ LTR and two in the *pol* gene, with cycling tables and product sizes.
 - [Pan-avian GAPDH PCR](/research/protocols/pan-avian-gapdh): a control PCR showing that a bird DNA extraction holds DNA that will amplify.
