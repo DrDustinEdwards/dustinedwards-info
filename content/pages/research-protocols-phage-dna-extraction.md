@@ -24,11 +24,13 @@ protocol:
     - { name: potassium acetate (pH 5.2), amount: 60 µl, stock: 3 M, per: tube }
     - { name: isopropanol at room temperature, amount: 500 µl, stock: 100% or 80%, per: tube }
     - { name: ethanol wash at room temperature, amount: 250 µl, stock: 70%, per: wash }
+    - { name: nuclease-free water, amount: 50 µl }
     - { method: Rescue, name: sodium acetate, amount: 0.1 volume, stock: 3 M }
     - { method: Rescue, name: sodium chloride (in place of sodium acetate if SDS may remain), amount: 0.2 M }
     - { method: Rescue, name: ice-cold ethanol, amount: 2.5 volumes to 3 volumes, stock: 100% }
     - { method: Rescue, name: ice-cold ethanol wash, amount: 0.5 ml, stock: 75% }
     - { method: Rescue, name: glycogen carrier (optional), amount: 1 µl, stock: 20 mg/ml }
+    - { method: Rescue, name: nuclease-free water, amount: 50 µl }
   timings:
     - { step: nuclease mix, temperature_c: 37, time: 10 minutes }
     - { step: zinc chloride, temperature_c: 37, time: 5 minutes }
@@ -55,16 +57,20 @@ protocol:
   source:
     - citation: "Santos MA (1991), Nucleic Acids Research 19:5442, doi:10.1093/nar/19.19.5442"
       for: the zinc chloride method
-    - citation: "SEA-PHAGES Phage Discovery Guide, July 2025 edition, Protocol 9.2b"
-      for: the final dissolve, and the nuclease mix recipe
+    - citation: "SEA-PHAGES Phage Discovery Guide, July 2025 edition"
+      for: nuclease-free water for DNA sent for sequencing, the nuclease mix recipe, and the PEG protocol (9.2a)
     - citation: "QIAGEN bench guide, Isopropanol precipitation of DNA"
       for: room-temperature isopropanol, the two ethanol washes and their spin, and drying
     - citation: "Promega, Proteinase K product information"
       for: the proteinase K working concentration
     - citation: "Brauer et al. (2024), Environmental Microbiology 26:e16671, doi:10.1111/1462-2920.16671"
       for: the 60 °C proteinase K digestion in a zinc chloride phage DNA method
-    - citation: "Thermo Scientific NanoDrop technical bulletin T042"
-      for: A260/230 and EDTA
+    - citation: "Thermo Scientific, Assessment of nucleic acid purity, Technical Note 52646"
+      for: the expected A260/230 and what lowers it
+    - citation: "Green MR, Sambrook J (2020), Cold Spring Harbor Protocols, doi:10.1101/pdb.prot101717"
+      for: the insolubility of potassium dodecyl sulfate
+    - citation: "QIAGEN bench guide, Lysis of bacterial cells for plasmid purification"
+      for: potassium dodecyl sulfate precipitating with denatured protein
     - citation: "the lab's notebooks"
       for: "the lab's protocol as copied into them from 2018, troubleshooting, yields and the Qubit and NanoDrop readings"
   biosafety: MISSING
@@ -124,7 +130,7 @@ The first spins below are in rpm, as the lab's protocol gives them for its micro
 7. Add 60 µl of 3 M potassium acetate (pH 5.2). Mix hard, until the precipitate is fluffy and very white, then put the tube on ice for 15 minutes.
 8. Spin at 12,000 rpm for 1 minute at 4 °C. Move the supernatant to a fresh tube; the pellet is protein. Spin the supernatant again for 3 minutes and move it again, so no precipitate is carried into the isopropanol.
 
-**Why potassium acetate after SDS?** Potassium dodecyl sulfate is insoluble, so potassium swaps onto the SDS and it falls out of solution, taking the denatured capsid proteins with it ([alkaline lysis](#references) uses the same step). Sodium would not do this: SDS is itself the sodium salt, and it stays dissolved.
+**Why potassium acetate after SDS?** The potassium salt of dodecyl sulfate is extremely insoluble ([Green and Sambrook 2020](#references)), so potassium swaps onto the SDS and it falls out of solution, taking the denatured capsid proteins with it. Alkaline lysis of bacteria for plasmid preps uses the same step: potassium dodecyl sulfate precipitates, and the denatured proteins come down with it ([QIAGEN, lysis of bacterial cells](#references)). Sodium would not do this: SDS is itself the sodium salt, and it stays dissolved.
 
 ## Part C: precipitate and wash the DNA
 
@@ -138,7 +144,7 @@ The first spins below are in rpm, as the lab's protocol gives them for its micro
 ## Part D: dry, dissolve and measure
 
 13. After the last wash, pulse-spin and take off the last drops with a pipette. Air-dry for about 5 to 20 minutes, until the pellet turns clear. Do not dry for hours: overdried DNA redissolves poorly ([QIAGEN](#references)).
-14. Dissolve the DNA as the Phage Discovery Guide's Protocol 9.2b directs for its final step ([step 6, eluting the phage DNA](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=147)), because this DNA goes to sequencing. Dissolve the first pellet, then carry that same liquid to the second pellet, and so on through all 5, so the DNA from the five tubes ends up in one tube. Do not substitute Tris or TE.
+14. Dissolve the pellet in nuclease-free water, as the Phage Discovery Guide specifies for DNA sent for sequencing. Dissolve the first pellet in 50 µl, then carry that same 50 µl to the second pellet, and so on through all 5, so the DNA from the five tubes ends up in one tube. Do not substitute Tris or TE.
 15. Measure the DNA. See [checking DNA quantity and quality](#checking-dna-quantity-and-quality).
 
 ## What goes wrong and what fixes it
@@ -149,7 +155,7 @@ Salt carried into the final DNA is the most common failure of this method. It sh
 - **Spin the potassium acetate step twice**, as in step 8, so no precipitate is carried into the isopropanol.
 - **Room-temperature isopropanol and two ethanol washes**, as in steps 9 to 12. One group failed five times running without the ethanol wash (5.7 to 21.5 ng/µl, A260/230 0.03 to 0.07, pellets too salty to dissolve).
 - **Use TES, not phage buffer.** Resuspending the ZnCl2 pellet in phage buffer failed, and the notebook marks it as never to be done.
-- **A white, viscous "pellet" that soaks up the liquid is salt, not DNA.** One read 100 ng/µl on the NanoDrop and failed PCR prep.
+- **A white, viscous "pellet" that soaks up the 50 µl of water is salt, not DNA.** One read 100 ng/µl on the NanoDrop and failed PCR prep.
 
 When it worked, the method gave 616 to 1,803 ng/µl with A260/280 of 1.88 to 2.10 and A260/230 of 1.07 to 1.71, and it recovered usable DNA from a 7.1 x 10^6 pfu/ml lysate that had given too little by the Guide's resin column.
 
@@ -158,7 +164,7 @@ If the DNA is still salty or too dilute, the [rescue](#rescuing-salty-or-dilute-
 ## Scaling up for low yield
 
 - The method is written for 5 ml in 5 tubes. A single 10 ml batch in 10 tubes with 40 µl of nuclease mix gelled at the potassium acetate step into a final "salt block." Run parallel 5 ml preps instead: one group ran three in parallel (15 tubes) and pooled them.
-- To top up a low-yield prep, run a second 5 ml prep and dissolve its pellets in the first prep's DNA.
+- To top up a low-yield prep, run a second 5 ml prep and dissolve its pellets in the first prep's 50 µl.
 - Where the lysate was only about 10^7 pfu/ml, more tubes did not fix the yield; a higher-titer lysate did.
 
 ## Checking DNA quantity and quality
@@ -180,12 +186,12 @@ Vortex, let the tubes stand 2 minutes at room temperature, and read the standard
 
 ### NanoDrop
 
-Select dsDNA, blank with 1 µl of the same liquid the DNA is dissolved in, then read 1 µl of sample. Record A260/280 and A260/230. Good preps from this lab read A260/280 of about 1.8 to 2.1. A260/230 is usually expected around 2.0 to 2.2, and a low value means something that absorbs near 230 nm is in the sample ([NanoDrop T042](#references)). EDTA is one such contaminant, and the TES buffer carries 0.1 M of it; salt carried over from the potassium acetate is the other one this lab sees. See the fixes above and the rescue below. A scan too poor to be worth a Qubit reading was taken as the sign to redo the extraction.
+Select dsDNA, blank with 1 µl of nuclease-free water, then read 1 µl of sample. Record A260/280 and A260/230. Good preps from this lab read A260/280 of about 1.8 to 2.1. A260/230 is commonly expected in the range of 2.0 to 2.2, and a low value means a contaminant that absorbs at 230 nm or below is in the sample ([Thermo Scientific](#references)). Thermo's example is a sample in TE, the Tris and EDTA buffer, read against a water blank: it gives a low A260/230. The TES buffer here carries 0.1 M EDTA, and in this lab's notebooks the low ratios tracked salt carried over from the potassium acetate step. See the fixes above and the rescue below. A scan too poor to be worth a Qubit reading was taken as the sign to redo the extraction.
 
 ### Targets
 
 - The lab's threshold for restriction digests was 100 ng/µl by Qubit.
-- To send DNA for sequencing at a set concentration, dilute it in the same liquid it is dissolved in. For example, for 100 ng/µl in 50 µl from a 780 ng/µl prep, 6.4 µl of DNA plus 43.6 µl.
+- To send DNA for sequencing at a set concentration, dilute it in nuclease-free water. For example, for 100 ng/µl in 50 µl from a 780 ng/µl prep, 6.4 µl of DNA plus 43.6 µl of water.
 - Once it is quantified, analyze the DNA by restriction digest and gel.
 
 ## Rescuing salty or dilute DNA
@@ -198,7 +204,7 @@ Ethanol reprecipitation cleans salty DNA, concentrates dilute DNA and pools two 
 4. Spin at full speed at 4 °C for 30 minutes.
 5. Wash twice with 0.5 ml of ice-cold 75% ethanol, with 10 minute spins at 4 °C.
 6. Air-dry until the pellet turns clear, as in step 13.
-7. Dissolve the DNA as in step 14.
+7. Dissolve the DNA in 50 µl of nuclease-free water, as in step 14.
 
 **Why sodium acetate, sodium chloride or ammonium acetate?** Sodium acetate at 0.3 M final is the routine salt for DNA. Sodium chloride at 0.2 M final keeps SDS dissolved in the ethanol, so it does not come down with the DNA. Ammonium acetate leaves free nucleotides (dNTPs) in the supernatant, but ammonium ions inhibit T4 polynucleotide kinase, so it is not used for DNA headed for a kinase reaction ([Bitesize Bio](#references)).
 
@@ -215,5 +221,6 @@ For how these genomes go on to be sequenced and annotated, see [phage discovery]
 - Oswald N. [Ethanol precipitation of DNA and RNA: how it works](https://bitesizebio.com/253/the-basics-how-ethanol-precipitation-of-dna-and-rna-works/). Bitesize Bio.
 - Promega. [Proteinase K product information](https://www.promega.com/resources/protocols/product-information-sheets/n/proteinase-k-protocol/).
 - Brauer A, Rosendahl S, Kängsep A, Lewańczyk AC, Rikberg R, Hõrak R, Tamman H (2024). Isolation and characterization of a phage collection against *Pseudomonas putida*. *Environmental Microbiology* 26(6), e16671. [doi:10.1111/1462-2920.16671](https://doi.org/10.1111/1462-2920.16671)
-- Thermo Scientific. [T042 technical bulletin: NanoDrop spectrophotometers, nucleic acid purity ratios](https://dna.uga.edu/wp-content/uploads/sites/51/2019/02/Note-on-the-260_280-and-260_230-Ratios.pdf).
-- [Alkaline lysis](https://en.wikipedia.org/wiki/Alkaline_lysis), Wikipedia, on potassium acetate precipitating SDS as potassium dodecyl sulfate.
+- Thermo Scientific. [Assessment of nucleic acid purity](https://documents.thermofisher.com/TFS-Assets/CAD/Product-Bulletins/TN52646-E-0215M-NucleicAcid.pdf), Technical Note 52646.
+- Green MR, Sambrook J (2020). Precipitation of RNA with ethanol. *Cold Spring Harbor Protocols* 2020(3). [doi:10.1101/pdb.prot101717](https://doi.org/10.1101/pdb.prot101717)
+- QIAGEN. [Lysis of bacterial cells for plasmid purification](https://www.qiagen.com/us/knowledge-and-support/knowledge-hub/bench-guide/plasmid/working-with-plasmids/lysis-of-bacterial-cells-for-plasmid-purification), plasmid bench guide.
