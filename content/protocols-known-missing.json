@@ -28,28 +28,18 @@
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "reagents[Method 2 / proteinase K].stock",
-      "reason": "Waiting on Dustin: proteinase K (core.md). The lab's protocol says 10 mg/ml; the Finny genome announcement and the Phage Discovery Guide say 20 mg/ml; the page says the sources do not settle it."
-    },
-    {
-      "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "timings[Method 2 / zinc chloride spin].g",
+      "field": "timings[zinc chloride spin].g",
       "reason": "Waiting on Dustin: the ZnCl2 rotor (core.md). The page gives rpm, and the notebooks do not name the rotor, so no g-force is given."
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "timings[Method 2 / potassium acetate spin].g",
+      "field": "timings[potassium acetate spins].g",
       "reason": "Waiting on Dustin: the ZnCl2 rotor (core.md). The page gives rpm, and the notebooks do not name the rotor, so no g-force is given."
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "timings[Method 2 / DNA spin].g",
+      "field": "timings[DNA spin].g",
       "reason": "The page says top speed and names no rotor (core.md: the ZnCl2 rotor, waiting on Dustin)."
-    },
-    {
-      "protocol": "/research/protocols/phage-dna-extraction",
-      "field": "timings[Method 2 / ethanol wash spin].spin",
-      "reason": "The page gives the 70% ethanol wash spin as 1 minute with no speed."
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",
@@ -64,7 +54,7 @@
     {
       "protocol": "/research/protocols/phage-dna-extraction",
       "field": "host_strain",
-      "reason": "The page says Method 2 was used mostly for Microbacterium foliorum phages and names no strain."
+      "reason": "The page names no host strain; the notebooks show the method used mostly for Microbacterium foliorum phages."
     },
     {
       "protocol": "/research/protocols/phage-dna-extraction",
