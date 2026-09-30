@@ -102,9 +102,9 @@ export const PRIVATE_TOOLS: PrivateTool[] = [
   // Behind Cloudflare Access since 2026-09-26.
   { to: "https://carrel.dustinedwards.info", label: "Carrel", name: `Carrel, writing ${SIGN_IN_NOTE}`, icon: "lamp", external: true },
   { to: "/login", label: "Admin", name: `Admin, this site ${SIGN_IN_NOTE}`, icon: "gear" },
-  // Capsid's admin page, per its docs/console.md; GitHub login, one admin.
+  // Capsid's admin page, behind Cloudflare Access. It moved from /console on 2026-09-29 (capsid #200), with no redirect.
   {
-    to: "https://capsid.dustin-edwards.workers.dev/console",
+    to: "https://capsid.dustin-edwards.workers.dev/portal/",
     label: "Portal",
     // Dustin, 2026-09-28: the hover label reads "Capsid Portal"; the accessible name adds the sign-in note.
     name: `Capsid Portal ${SIGN_IN_NOTE}`,
