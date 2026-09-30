@@ -1,5 +1,5 @@
 {
-  "note": "Cases for check:urls. Ruling: dustinedwards/url-protocol-allowlist.md. 'blocked' means the pipeline must emit NO href or src for that case and must render the markdown as visible text instead. 'allowed' means the href or src must survive exactly. The javascript entries are permanent negatives: they are the finding this allowlist exists for and they must never pass again.",
+  "note": "Cases for check:urls. 'blocked' means the pipeline must emit NO href or src for that case and must render the markdown as visible text instead. 'allowed' means the href or src must survive exactly. The javascript entries are permanent negatives: they are the finding this allowlist exists for and they must never pass again.",
   "cases": [
     {
       "label": "plain https link",

@@ -23,8 +23,8 @@ writers produce (the local build product and the Worker's saves alike), it is
 covered by `check:content`'s determinism pass exactly like prose, and it works
 with scripting off. You never write SVG and you never pick a colour.
 
-Ruling and measurements: Capsid `dustinedwards/chart-stack.md`. Editorial rules:
-`dustinedwards/blog-content.md`. Mechanics: the repo CLAUDE.md. Renderer:
+Ruling and measurements: Capsid `dustinedwards/chart-stack.md`. Mechanics: the
+repo CLAUDE.md. Renderer:
 `app/lib/content/chart.mjs`. Gate: `npm run check:content`.
 
 ## Syntax
@@ -75,8 +75,8 @@ order they are written in, so the chart reads in the order the markdown does.
    7 every time" is the standard.
 2. **Every series must be labelled, and labels must be unique**, on any chart
    with more than one `y` column. Multi-series charts label series DIRECTLY on
-   the chart and never emit a legend, because hue is never the sole channel
-   (design-tokens.md rule 3). Verified under forced colors: when every fill
+   the chart and never emit a legend, because hue is never the sole channel.
+   Verified under forced colors: when every fill
    collapses to one system colour the chart still reads.
 3. **Colours are the palette's chart ladder, as tokens, assigned automatically:**
    `--chart-cadet`, `--chart-purple`, `--chart-claret`, `--chart-sage`,

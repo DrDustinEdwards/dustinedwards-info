@@ -272,9 +272,10 @@ function main() {
   }
 
   // Rebuild the directory so a removed comment cannot survive as a stale file. Entries written by
-  // other steps must not be swept away with it: capsid/ by build-capsid-guidelines.mjs, and the two
-  // long notes by .design-sync/build-inputs.mjs (its LONG_NOTES), which may run before this.
-  const OTHER_OWNERS = new Set(["capsid", "canvas-constraints.md", "conventions.md"]);
+  // other steps must not be swept away with it: the two long notes by .design-sync/build-inputs.mjs
+  // (its LONG_NOTES), which may run before this. The old capsid/ export folder is not exempt, so the
+  // next rebuild removes it.
+  const OTHER_OWNERS = new Set(["canvas-constraints.md", "conventions.md"]);
   if (existsSync(OUT_DIR)) {
     for (const entry of readdirSync(OUT_DIR)) {
       if (OTHER_OWNERS.has(entry)) continue;

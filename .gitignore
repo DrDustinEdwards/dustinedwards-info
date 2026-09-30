@@ -213,8 +213,7 @@ wrangler.watchdog.jsonc
 # preview cards' digest, which is what makes a changed card re-upload.
 /.design-sync/readme-header.md
 # Derived by scripts/build-guidelines.mjs from the comment blocks in the sheets
-# SHEETS names, and by scripts/build-capsid-guidelines.mjs from the ruling log.
-# Those two stay the only owners of that prose; a committed copy would be a
+# SHEETS names. The sheets stay the only owners of that prose; a committed copy would be a
 # second owner that drifts the moment a comment is edited, which is why ruling
 # 109 says GENERATED rather than written. build-inputs.mjs also copies
 # canvas-constraints.md and conventions.md in; those stay committed beside it.

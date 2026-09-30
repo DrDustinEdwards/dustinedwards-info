@@ -87,7 +87,7 @@
 	"cache": { "enabled": true },
 	// THE TWO ENTRYPOINTS, and which of them the platform may cache.
 	//
-	// Ruled 2026-09-05 (decisions vol 14, ruling 15). `workers/app.ts` exports a
+	// Ruled 2026-09-05. `workers/app.ts` exports a
 	// GATEWAY as `default` and a `Renderer` class. The gateway runs on every
 	// request and does only what must not be skipped: the HTTPS redirect, the
 	// theme cookie read, and the Analytics Engine write. It then calls
@@ -183,7 +183,7 @@
 		// object-create event, and by the watchdog cron when a message was lost.
 		// NO SITE CODE PATH EVER DELETES FROM IT: pruning the backup is a human
 		// act, by hand. `check:destructive` fails if a delete against this
-		// binding appears. Ruling: decisions-vol-13.md, 2026-09-01.
+		// binding appears. Ruled 2026-09-01.
 		{
 			"binding": "MEDIA_BACKUP",
 			"bucket_name": "dustinedwards-media-backup"

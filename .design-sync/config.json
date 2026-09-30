@@ -8,7 +8,6 @@
   "cssEntry": ".design-sync/ds-styles.css",
   "guidelinesGlob": [
     ".design-sync/guidelines/*.md",
-    ".design-sync/guidelines/capsid/*.md",
     "docs/ADMIN-DESIGN.md"
   ],
   "componentSrcMap": {
