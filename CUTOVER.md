@@ -82,11 +82,11 @@ directions by `check:machine-readable`, so that gate goes RED between 3.1 and th
 proxy, not a required step.
 
 **3.8 HTML caching is a DECISION, not a default.** Cache Rules become reachable
-on a proxied zone, which is the only way origin `Vary` is honored here. See
-`dustinedwards/workers-cache-vary.md` for what the Workers cache key does and
-does not include.
+on a proxied zone, which is the only way origin `Vary` is honored here. The
+Workers cache key is entrypoint, path and query, Worker version and `ctx.props`;
+`Vary` is not part of it (VERIFICATION.md).
 
-**3.9 `workflow-mainline.md` SUNSETS.** Mainline-only was ratified for this repo
+**3.9 The mainline workflow SUNSETS.** Mainline-only was ratified for this repo
 until the DNS cutover and no longer. The PR workflow resumes, and `CLAUDE.md`'s
 workflow section becomes wrong on that day.
 

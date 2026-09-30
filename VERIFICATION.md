@@ -12,14 +12,13 @@ them down.
 
 ## Why this file is in the repo
 
-*Moved from Capsid `dustinedwards/verification-method.md` on 2026-08-20, with the
-hard rules, for one reason.*
+*Moved from Capsid on 2026-08-20, with the hard rules, for one reason.*
 
 **Capsid cannot be gated, because every gate verifies disk.** A method document
 the gates cannot reach is a method document nothing can check, and the measured
 consequence was a month of numbers that were confidently wrong: gate counts,
 suite timings, and a hard-rule list that existed in NO current document for a
-period. The Capsid copy is now the historical one. This is the live one.
+period. This is the only copy.
 
 That does NOT make the numbers here self-checking. **Every duration and count
 below is a dated observation, not a maintained value**, on the same rule as a
@@ -593,7 +592,6 @@ session.
 The underlying constraint that neither of these fixes: the Workers Cache key is
 entrypoint plus path and query plus Worker version plus `ctx.props`, and **`Vary`
 is not part of it**. An ABSENT `Cookie` header is not its own variant either.
-See `dustinedwards/workers-cache-vary.md`.
 
 ### Line endings are part of what a gate measures
 

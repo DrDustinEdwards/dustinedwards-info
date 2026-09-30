@@ -4,7 +4,7 @@ How to rebuild this site's Cloudflare resources from nothing, given only this
 repository and a fresh Cloudflare account.
 
 This document exists because there is no infrastructure-as-code here.
-**Terraform was considered and rejected** (`dustinedwards/decisions.md`,
+**Terraform was considered and rejected** (ruled
 2026-08-02): it would mean restating `compatibility_date` and every binding in a
 second file, which recreates exactly the drift class the example config exists
 to avoid, and its real value (multi-person orgs, DNS, account access management)
@@ -193,8 +193,7 @@ announces that. Whoever lands the first upload owns re-deciding this section."*
 Something did announce it, the `media-unbacked` health check, and it fired on
 the first object ever put there. The full previous text and its four checked
 alternatives (R2 versioning, lifecycle rules, bucket lock, per-class second
-copies) are in git history for this file and the ruling is
-`dustinedwards/decisions-vol-13.md`.
+copies) are in git history for this file; the ruling was made on 2026-09-01.
 
 **The decision now is a MIRROR, plus a local pull.** What follows is the current
 posture.

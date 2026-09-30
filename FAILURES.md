@@ -18,7 +18,7 @@ which is what repeats across people and sessions.
   instance; three sibling delete paths kept failing open for weeks. `0ad6c86`
 - **A correct rule applied to a category nobody verified is uniform destroys what
   was hiding inside it.** "Cut current state" was right; bindings had been filed
-  inside status paragraphs. Extract, then cut. `capsid:dustinedwards/decisions-vol-7.md`
+  inside status paragraphs. Extract, then cut.
 
 ## Believing a claim
 
