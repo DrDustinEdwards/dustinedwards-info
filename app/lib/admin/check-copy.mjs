@@ -44,6 +44,13 @@ const CHECK_COPY = {
     passing: "Every publication on the site matches the one in the repository.",
     repair: null,
   },
+  "llms-drift": {
+    name: "The llms.txt file on the site",
+    failing: () =>
+      "The llms.txt the site serves is older than the one in the repository. The site's watcher rewrites it on its next check.",
+    passing: "The llms.txt the site serves matches the one in the repository.",
+    repair: null,
+  },
   "ask-index-drift": {
     name: "Search answers",
     failing: (counts) =>

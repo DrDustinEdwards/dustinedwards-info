@@ -25,6 +25,7 @@ import {
   backupMedia,
   syncAsk,
   syncMedia,
+  syncLlms,
   syncPages,
   syncPosts,
   syncProcedures,
@@ -42,6 +43,7 @@ import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures
 import { procedurePath } from "~/lib/procedures/parse.mjs";
 import { listPageRows } from "~/db/pages";
 import { PageInvalid, readPage } from "~/lib/pages/save.server";
+import { readLlms } from "~/lib/llms/save.server";
 
 // Re-exported so the routes keep one import path for the operator surface.
 export { TOOL_DESCRIPTORS, isToolName, toolNames } from "./descriptors";
@@ -191,6 +193,9 @@ export async function runTool(
       case "sync_publications":
         return await syncPublications(env);
 
+      case "sync_llms":
+        return await syncLlms(env);
+
       case "backup_media":
         return await backupMedia(env);
 
@@ -240,6 +245,9 @@ export async function runTool(
 
       case "get_page":
         return await getPageTool(env, args);
+
+      case "get_llms":
+        return await getLlmsTool(env);
     }
   } catch (error) {
     return translate(error);
@@ -476,6 +484,12 @@ async function getPageTool(env: OperatorEnv, args: Record<string, unknown>): Pro
   const page = await readPage(env, path);
   if (!page) return { ok: false, status: 404, error: `No file exists for the page "${path}".` };
   return { ok: true, data: { ...page, headSha: await currentHead(env) } };
+}
+
+async function getLlmsTool(env: OperatorEnv): Promise<ToolResult> {
+  const llms = await readLlms(env);
+  if (!llms) return { ok: false, status: 404, error: "No content/llms.txt exists in the repository." };
+  return { ok: true, data: { ...llms, headSha: await currentHead(env) } };
 }
 
 async function deletePostTool(

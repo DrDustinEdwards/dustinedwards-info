@@ -119,7 +119,9 @@ the `sync_procedures` tool (same call, `"tool":"sync_procedures"`). A page file
 that moved without its row shows as `pages-drift` and a publication file as
 `publications-drift`, repaired by `sync_pages` and `sync_publications` the same
 way. Neither deletes everything on an empty listing, and `sync_publications`
-never overwrites a citation count that exists.
+never overwrites a citation count that exists. A `content/llms.txt` that moved
+without its settings row shows as `llms-drift`, repaired by `sync_llms`
+(docs/LLMS.md).
 
 **To force it now**, through the operator door, which is the only door:
 

@@ -8,12 +8,13 @@ import { fileURLToPath } from "node:url";
 import { assertFloor } from "../lib/floor.mjs";
 import { createTally } from "../lib/tally.mjs";
 import { CONTENT_PAGE_PATHS } from "../../app/lib/content-pages.mjs";
+import { findWideDashes } from "../../app/lib/content/pipeline.mjs";
+import { LLMS_PATH, LLMS_SETTING_KEY, llmsChecks } from "../../app/lib/llms/validate.mjs";
 import { publishedProcedurePaths } from "../lib/procedure-paths.mjs";
 
 // Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const fromRoot = (/** @type {string} */ repoPath) => join(ROOT, repoPath);
-const LLMS_PATH = "content/llms.txt";
 const ROUTE_PATH = "app/routes/llms.ts";
 
 const DB_NAME = "dustinedwards";
@@ -35,41 +36,21 @@ if (!existsSync(fromRoot(LLMS_PATH))) {
 const fileBytes = readFileSync(fromRoot(LLMS_PATH));
 const fileText = fileBytes.toString("utf8");
 
-ok("content/llms.txt is not empty", fileBytes.length > 0);
+// The rules a save also holds the file to (app/lib/llms/validate.mjs), judged against the same lists the
+// routes and the sitemap read: the pages, the procedures (pages too, drawn from D1) and, below, SITE_ORIGIN.
+const seoSource = readFileSync(fromRoot("app/lib/seo.ts"), "utf8");
+const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
 ok(
-  "content/llms.txt is long enough to be the real document",
-  fileBytes.length > 200,
-  `Only ${fileBytes.length} bytes. The retired virology seed was 247 bytes; the ` +
-    `real document is far longer, so a short file here is the stale copy.`,
+  "SITE_ORIGIN was read out of seo.ts",
+  origin.startsWith("https://"),
+  `parsed ${JSON.stringify(origin)}; without it the comparison below is vacuous`,
 );
-ok(
-  "content/llms.txt is LF-only",
-  !fileText.includes("\r"),
-  "It is pinned to LF in .gitattributes. CR here would sync CRLF into D1.",
-);
-ok("content/llms.txt ends with a newline", fileText.endsWith("\n"));
-
-// Derived from the list the routes and the sitemap read, both ways. A page missing here is a page
-// an agent is not told about, twin or not.
-{
-  const listed = new Set(
-    [...fileText.matchAll(/^\s{2}(\/(?:research|teaching|software|cv)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
-  );
-  // The protocols are procedures (docs/PROCEDURES.md), pages too, drawn from D1.
-  const pagePaths = [...CONTENT_PAGE_PATHS, ...publishedProcedurePaths()];
-  const unlisted = pagePaths.filter((path) => !listed.has(path));
-  ok(
-    `llms.txt lists every Research, Teaching and Software page (${pagePaths.length})`,
-    unlisted.length === 0,
-    `absent from ${LLMS_PATH}: ${unlisted.join(", ")}`,
-  );
-  const known = new Set(pagePaths);
-  const stray = [...listed].filter((path) => !known.has(path));
-  ok(
-    "llms.txt lists no Research, Teaching or Software page that is neither in CONTENT_PAGE_PATHS nor a procedure",
-    stray.length === 0,
-    `listed but not a page: ${stray.join(", ")}`,
-  );
+for (const check of llmsChecks(fileText, {
+  pagePaths: [...CONTENT_PAGE_PATHS, ...publishedProcedurePaths()],
+  origin,
+  findWideDashes,
+})) {
+  ok(check.name, check.ok, check.detail);
 }
 
 const route = readFileSync(fromRoot(ROUTE_PATH), "utf8");
@@ -101,7 +82,7 @@ if (target) {
       // Bounded on the spawn: retryRead's timer cannot fire while spawnSync blocks the event loop.
       const r = runWrangler(
         `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
-          `"SELECT value FROM settings WHERE key = 'llms.txt'"`,
+          `"SELECT value FROM settings WHERE key = '${LLMS_SETTING_KEY}'"`,
         { timeoutMs: 90_000 },
       );
       if (r.status !== 0) throw new Error(wranglerTail(r.output));
@@ -148,39 +129,13 @@ console.log(
   `  ${LLMS_PATH}: ${fileBytes.length} bytes, sha ${sha(fileBytes)}`,
 );
 
-// A tracked text file cannot import SITE_ORIGIN, so this binds its contact line to it. At DNS
-// cutover it goes red until llms.txt follows, which is the point.
-{
-  const seoSource = readFileSync(fromRoot("app/lib/seo.ts"), "utf8");
-  const origin = (seoSource.match(/export const SITE_ORIGIN = "([^"]+)"/) ?? [])[1] ?? "";
-
-  ok(
-    "SITE_ORIGIN was read out of seo.ts",
-    origin.startsWith("https://"),
-    `parsed ${JSON.stringify(origin)}; without it the comparison below is vacuous`,
-  );
-
-  const contact = (fileText.match(/## Contact\s*\n\s*\n(\S+)/) ?? [])[1] ?? "";
-  ok(
-    "llms.txt has a contact URL to compare",
-    contact.startsWith("https://"),
-    `parsed ${JSON.stringify(contact)} from the Contact section`,
-  );
-  ok(
-    "the llms.txt contact URL is SITE_ORIGIN",
-    contact === origin,
-    `llms.txt says ${contact} and SITE_ORIGIN is ${origin}. The file crawlers read ` +
-      `points somewhere this site is not served from.`,
-  );
-}
-
-/* Measured 9 on the pure tier by running this part on 2026-09-24, floor a little under. --local and
+/* Measured 15 on the pure tier by running this part on 2026-10-01, floor a little under. --local and
    --remote add the D1 comparison on top, so the pure count bounds every mode. */
 const floorBreach = assertFloor(
   "check:machine-readable/llms",
   "checks",
   tally.checks,
-  8,
+  13,
   "The runner fails a part only on zero checks, so without this a refactor could drop " +
     "most of its sweeps and still pass.",
 );
