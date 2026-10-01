@@ -87,3 +87,8 @@ export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
 export async function purgePublications(why: string): Promise<PurgeOutcome> {
   return purgeTags([PUBLICATIONS_CACHE_TAG, cacheTags()], why);
 }
+
+/** Every content page and its twin carries this one tag (app/lib/pages/route.ts). */
+export async function purgePages(why: string): Promise<PurgeOutcome> {
+  return purgeTags(["content-pages"], why);
+}

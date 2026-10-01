@@ -6,6 +6,9 @@ import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
+import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
+import { getAdminSession } from "~/lib/auth.server";
+import { getEnv } from "~/lib/context";
 import {
   contentPageCardPath,
   contentPageMarkdownPath,
@@ -13,10 +16,10 @@ import {
 } from "~/lib/content-pages.mjs";
 import { definedTermJsonLd, dictionaryEntryFor } from "~/lib/dictionary-entries.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
+import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
-
-import generated from "../../content/generated/pages.json";
 
 import type { Route } from "./+types/content-page";
 
@@ -24,30 +27,15 @@ import type { Route } from "./+types/content-page";
 import "~/styles/prose.css";
 
 /**
- * Every Research and Teaching page (app/lib/content-pages.mjs): the research/* splat, and /teaching through
- * routes/teaching.tsx. The HTML is rendered at build time from repo markdown with the URL allowlist
- * already applied, so the Worker carries no markdown renderer and nothing third-party reaches the page.
- * The markdown twin is a static asset at the page path plus `.md` (build:content), not a second copy in
- * this bundle: pages.json keeps only what the route renders.
+ * Every Research, Teaching and Software page (app/lib/content-pages.mjs): the research/* splat, and
+ * /teaching and /software through their own modules. Drawn from the page's D1 row at request time
+ * (docs/PAGES.md), so an edit saved through the operator API is live without a deploy; the HTML in the
+ * row was rendered by the site's pipeline with the URL allowlist already applied, so the Worker carries
+ * no markdown renderer and nothing third-party reaches the page. A draft is served only to the signed-in
+ * admin; that request carries a cookie, and the Worker never stores a cookie-bearing response.
+ * The markdown twin is the sibling route in content-page[.md].ts.
  */
-type ContentPage = {
-  path: string;
-  title: string;
-  seoTitle: string;
-  description: string;
-  html: string;
-  /** Set where the frontmatter declares it (build:content); a page without one emits no typed node. */
-  schemaType?: string;
-  productUrl?: string;
-  codeRepository?: string;
-  applicationCategory?: string;
-  license?: string;
-  programmingLanguage?: string;
-  runtimePlatform?: string;
-  spatialCoverage?: string;
-  /** What the page's first table says, for a Dataset. */
-  dataset?: { variableMeasured: string[]; temporalCoverage: string | null; rows: number };
-};
+type ContentPage = PageRecord;
 
 /**
  * The page's own node, typed from the page, so a WebSite is not emitted as an application. Each property
@@ -119,20 +107,25 @@ function contentPageJsonLd(page: ContentPage, trail: Array<[string, string]>) {
   ];
 }
 
-const PAGES = new Map((generated.pages as ContentPage[]).map((page) => [page.path, page]));
-
 export function headers() {
-  return new Headers(publicHtmlHeaders());
+  return new Headers(publicHtmlHeaders(CONTENT_PAGE_HTML_TAGS));
 }
 
-export function loader({ request }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const env = getEnv(context);
   const url = new URL(request.url);
   const pathname = url.pathname.replace(/\/+$/, "") || "/";
-  const page = PAGES.get(pathname);
-  // Registered only for listed paths, and the build refuses a missing file, so this is a broken build.
-  if (!page) throw data(null, { status: 404 });
+  const row = await getPageByPath(env, pathname);
+  // A path with no row: not a page, or a page the content sync has not written yet.
+  if (!row) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await getAdminSession(env, request))) throw data(null, { status: 404 });
+  const page = row.record;
+  // The page it sits under, by title, for the trail above it (the course above its FAQ).
+  const parent = page.path.slice(0, page.path.lastIndexOf("/"));
+  const titles = await getPublishedPageTitles(env, parent ? [parent] : []);
+  const trail = contentPageTrail(page, (path) => titles.get(path));
   // A calculator page computes from its query string, so Calculate works as a plain GET with script off.
-  return { page, search: toolsOnPage(page.path).length > 0 ? url.search : "" };
+  return { page, trail, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
 /** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
@@ -143,7 +136,7 @@ function cardUrl(page: ContentPage) {
 
 export function meta({ loaderData }: Route.MetaArgs) {
   if (!loaderData) return [];
-  const { page } = loaderData;
+  const { page, draft } = loaderData;
   return [
     ...pageMeta({ title: page.seoTitle, description: page.description, path: page.path, image: cardUrl(page) }),
     {
@@ -152,13 +145,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
       type: "text/markdown",
       href: `${SITE_ORIGIN}${contentPageMarkdownPath(page.path)}`,
     },
+    ...(draft ? [{ name: "robots", content: "noindex" }] : []),
   ];
 }
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
-  const { page, search } = loaderData;
-  const titleOf = (path: string) => PAGES.get(path)?.title;
-  const trail = contentPageTrail(page, titleOf);
+  const { page, trail, draft, search } = loaderData;
   const entry = dictionaryEntryFor(page.path);
   return (
     <PageShell
@@ -176,6 +168,7 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
     >
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{page.title}</h1>
+      {draft ? <p>Draft: only you can see this page.</p> : null}
       {entry ? <DictionaryEntry entry={entry} /> : null}
       <PhageTools path={page.path} search={search} />
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />

@@ -2,7 +2,8 @@ import { env } from "cloudflare:test";
 import { describe, expect, it, vi } from "vitest";
 
 import { blogFeed, feedResponse, seriesFeed, tagFeed, type FeedFormat } from "~/lib/feed-response";
-import { purgePosts, purgeProcedures } from "~/lib/cache-purge.server";
+import { purgePages, purgePosts, purgeProcedures } from "~/lib/cache-purge.server";
+import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
 import { cacheTags, SITE_ORIGIN } from "~/lib/seo";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
@@ -47,14 +48,16 @@ async function purgedBy(run: () => Promise<unknown>): Promise<string[]> {
 }
 
 describe("the cache tags of the machine documents", () => {
-  it("the sitemap carries posts and procedures, and each purge reaches it", async () => {
+  it("the sitemap carries posts, procedures and pages, and each purge reaches it", async () => {
     const tags = tagsOf(await sitemap());
-    expect(tags).toEqual([cacheTags(), PROCEDURES_CACHE_TAG]);
+    expect(tags).toEqual([cacheTags(), PROCEDURES_CACHE_TAG, CONTENT_PAGES_CACHE_TAG]);
 
     const postsPurge = await purgedBy(() => purgePosts("test"));
     const proceduresPurge = await purgedBy(() => purgeProcedures("test"));
     expect(tags.some((tag) => postsPurge.includes(tag))).toBe(true);
     expect(tags.some((tag) => proceduresPurge.includes(tag))).toBe(true);
+    const pagesPurge = await purgedBy(() => purgePages("test"));
+    expect(tags.some((tag) => pagesPurge.includes(tag))).toBe(true);
   });
 
   it("llms-full carries posts, and a posts purge reaches it", async () => {

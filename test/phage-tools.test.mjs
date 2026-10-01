@@ -23,7 +23,6 @@ import {
   toolsOnPage,
 } from "../app/lib/phage-tools.mjs";
 
-const page = (name) => readFileSync(new URL(`../content/pages/${name}.md`, import.meta.url), "utf8");
 /** @param {string} slug */
 const procedure = (slug) => readFileSync(new URL(`../content/procedures/${slug}.md`, import.meta.url), "utf8");
 
@@ -176,7 +175,6 @@ test("webbed plate: the FAQ's example, 11,100 pfu from a 1.1 x 10^10 lysate", ()
   // The notebook's dilution (1/10^4, 10 µl per plate) delivered 10 x 10^-4 = 1 x 10^-3 µl of lysate
   // per plate, which is that volume at the precision a pipette can hold.
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.1e10, pfuPerPlate: 11100 }), "1.01", -3);
-  assert.ok(page("teaching-virus-isolation-faq").includes("11,100 / 1.1 x 10^10 x 1,000 = 1.01 x 10^-3 µl of lysate per plate."));
   assert.ok(procedure("phage-isolation").includes("A target of about 11,100 pfu needs 1.01 x 10^-3 µl of lysate per plate."));
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.11e10, pfuPerPlate: 11100 }), "1.00", -3);
   assert.equal(10 * (1 / 1000) * (7 / 70), 1e-3);
@@ -403,76 +401,12 @@ test("lysate volume: refuses zero, empty, fractional and non-numeric inputs", ()
 
 /* ------------------------------------------------------------ the pages say what the module says */
 
-/** Every step of a result, numbered as the page numbers it, must appear in the page's markdown. */
-function assertWorkedOnPage(md, sections) {
-  for (const section of sections) {
-    section.steps.forEach((step, i) => {
-      assert.ok(md.includes(`${i + 1}. ${step}\n`), `the page lacks step ${i + 1}: ${step}`);
-    });
-  }
-}
-
-test("the titer page's worked examples are what the calculator prints", () => {
-  const md = page("research-tools-titer");
-  for (const values of [
-    { plaques: "111", volume: "10", dilution: "6" },
-    { plaques: "6", volume: "3", dilution: "3" },
-  ]) {
-    const result = runTool("titer", values);
-    assert.ok(result.ok);
-    assertWorkedOnPage(md, result.sections);
-    assert.ok(md.includes(`The titer is ${result.sections[0].result}.`));
-  }
-});
-
-test("the dilution page's worked examples are what the calculator prints", () => {
-  const md = page("research-tools-dilution");
-  for (const values of [
-    { start: "1.11e10", target: "1.11e6", transfer: "10", needed: "" },
-    { start: "3.0e9", target: "6e5", transfer: "10", needed: "" },
-  ]) {
-    const result = runTool("dilution", values);
-    assert.ok(result.ok);
-    assertWorkedOnPage(md, result.sections);
-  }
-});
-
-test("the webbed plate page's worked examples are what the calculator prints", () => {
-  const md = page("research-tools-webbed-plate");
-  const web = runTool("webbed-plate", toolValues("webbed-plate"));
-  assert.ok(web.ok);
-  assertWorkedOnPage(md, web.sections);
-  const flood = runTool("flood", toolValues("flood"));
-  assert.ok(flood.ok);
-  assertWorkedOnPage(md, flood.sections);
-});
-
-test("the MOI, EOP and lysate volume pages' worked examples are what the calculators print", () => {
-  const cases = [
-    ["research-tools-moi", "moi", "The MOI is 0.4 pfu per cell."],
-    ["research-tools-eop", "eop-counts", "The EOP is 0.02, or 2% of the reference titer."],
-    ["research-tools-lysate-volume", "lysate-volume", "The plan is 6 µl of lysate in 60 µl, 10 µl on each of 6 plates."],
-  ];
-  for (const [name, id, answer] of cases) {
-    const md = page(name);
-    const result = runTool(id, toolValues(id));
-    assert.ok(result.ok, id);
-    assertWorkedOnPage(md, result.sections);
-    assert.ok(md.includes(answer), `${name} lacks: ${answer}`);
-  }
-  // The titers-only EOP calculator opens on the same example's two titers.
-  const fromTiters = runTool("eop", toolValues("eop"));
-  assert.ok(fromTiters.ok);
-  assert.equal(fromTiters.sections[0].result, runTool("eop-counts", toolValues("eop-counts")).sections[0].result);
-});
-
-test("the tools index, the FAQ and llms.txt link every calculator page", () => {
-  const index = page("research-tools");
-  const faq = page("teaching-virus-isolation-faq");
+// What each calculator page must state (its worked example, the links to every calculator, the lysate sum)
+// is checked on the page itself by app/lib/pages/invariants.mjs, which build:content and the page save both
+// run; test/pages.test.mjs shows each rule firing. llms.txt is not a page, so its links are checked here.
+test("llms.txt links every calculator page", () => {
   const llms = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
   for (const path of new Set(Object.values(TOOLS).map((tool) => tool.path))) {
-    assert.ok(index.includes(`](${path})`), `the index lacks ${path}`);
-    assert.ok(faq.includes(`](${path})`), `the FAQ lacks ${path}`);
     assert.ok(llms.includes(`  ${path}
 `), `llms.txt lacks ${path}`);
   }
