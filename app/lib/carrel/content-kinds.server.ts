@@ -1,5 +1,5 @@
 // The kind registry behind Carrel's /content group. site-api's contract has one id space and a free-form
-// `kind` string on a summary, so each content kind (post, publication, page) is a handler that works in
+// `kind` string on a summary, so each content kind (post, publication, page, cv) is a handler that works in
 // its own slugs, and this module is the only place that turns a slug into a contract id and back.
 
 import { RefusedError } from "@dustinedwards/site-api";

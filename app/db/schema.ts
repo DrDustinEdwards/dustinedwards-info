@@ -419,3 +419,27 @@ export const pages = sqliteTable(
     index("pages_status_idx").on(t.status),
   ],
 );
+
+/** The CV: one row per file in content/cv/ (migration 0022, docs/CV.md). */
+export const cv = sqliteTable(
+  "cv",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull().unique(),
+    type: text("type", {
+      enum: ["profile", "appointment", "education", "publication", "grant", "award", "talk", "course", "mentoring", "service", "development"],
+    }).notNull(),
+    record: text("record").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check(
+      "cv_type_check",
+      sql`${t.type} in ('profile', 'appointment', 'education', 'publication', 'grant', 'award', 'talk', 'course', 'mentoring', 'service', 'development')`,
+    ),
+  ],
+);

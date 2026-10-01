@@ -1,5 +1,6 @@
 import { env } from "cloudflare:test";
 
+import cvArtifact from "../../content/generated/cv.json";
 import pagesArtifact from "../../content/generated/pages.json";
 import proceduresArtifact from "../../content/generated/procedures.json";
 
@@ -164,6 +165,25 @@ export async function seedProcedures() {
          ON CONFLICT(slug) DO UPDATE SET path = excluded.path, status = excluded.status, record = excluded.record,
            markdown = excluded.markdown, source_blob_sha = excluded.source_blob_sha`,
       ).bind(r.slug, r.path, r.profile, r.title, r.description, r.status, r.version, r.updated, r.record, r.markdown, r.sourcePath, r.sourceBlobSha),
+    ),
+  );
+}
+
+/**
+ * The cv table, from the rows build:content compiles (content/generated/cv.json), which is what sync:content
+ * writes at ship: the same compile the CV save runs, so a case that reads the CV reads the CV the site serves.
+ * Seed the publications first: the CV is joined to them at read time. No search records.
+ */
+export async function seedCv() {
+  const rows = cvArtifact.cv;
+  if (rows.length === 0) throw new Error("seedCv found no CV rows. Run npm run build:content first.");
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB.prepare(
+        `INSERT INTO cv (slug, type, record, source_path, source_blob_sha) VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(slug) DO UPDATE SET type = excluded.type, record = excluded.record,
+           source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha`,
+      ).bind(r.slug, r.type, r.record, r.sourcePath, r.sourceBlobSha),
     ),
   );
 }

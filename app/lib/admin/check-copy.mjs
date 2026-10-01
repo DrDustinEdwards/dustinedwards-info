@@ -51,6 +51,15 @@ const CHECK_COPY = {
     passing: "The llms.txt the site serves matches the one in the repository.",
     repair: null,
   },
+  "cv-drift": {
+    name: "The CV on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} CV files are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some CV files are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "The CV on the site matches the CV in the repository.",
+    repair: null,
+  },
   "ask-index-drift": {
     name: "Search answers",
     failing: (counts) =>

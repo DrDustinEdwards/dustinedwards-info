@@ -4,7 +4,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, contentPageMarkdownPath } from "../../../app/lib/content-pages.mjs";
 import { ALLOWED, SVG_TYPE, validateUpload } from "../../../app/lib/media/upload-contract.mjs";
 import { MEDIA_CSP, contentSecurityPolicy } from "../../../workers/csp.mjs";
 import { blockFrom } from "../source-body.mjs";
@@ -165,22 +164,22 @@ export async function run() {
         `expires: ${overFresh.join("; ")}`,
     );
 
-    // Only the pages generated from data keep a static twin; every other page twin is a route (docs/PAGES.md).
-    const contentTwins = new Set(
-      CONTENT_PAGE_PATHS.filter((pagePath) => CONTENT_PAGES_FROM_DATA.includes(pagePath)).map((pagePath) => contentPageMarkdownPath(pagePath)),
-    );
+    // No page twin is a static file now: every page's twin, and the CV's, is a route whose headers are code
+    // (docs/PAGES.md, docs/CV.md), so the only rule left here is the hashed assets'.
     ok("the paths declared here are the ones this site means to declare",
-      paths.every((p) => p === "/assets/*" || contentTwins.has(p)),
+      paths.every((p) => p === "/assets/*"),
       `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
-    const missingTwins = [...contentTwins].filter((twinPath) => {
-      const block = blocks.find((b) => b.path === twinPath);
-      return !block?.directives.some((d) =>
-        new RegExp(`^Link:\\s*<${twinPath.slice(0, -3)}>;\\s*rel="canonical"$`, "i").test(d),
-      );
-    });
-    ok("every static content-page twin names its HTML page",
-      missingTwins.length === 0,
-      `missing or wrong canonical Link: ${missingTwins.join(", ")}`);
+
+    /*
+     * The CV's twin is a Worker route too, so its canonical Link, its noindex and the tag a CV save purges are
+     * code, and a rule here would be a stale copy.
+     */
+    const cvTwinRoute = stripComments(readFileSync(join(root, "app", "routes", "cv[.md].ts"), "utf8"));
+    ok("the CV twin names its page with Link rel=canonical, from the route that serves it",
+      /canonicalLink\(CV_PAGE\.path\)/.test(cvTwinRoute) && /"x-robots-tag":\s*"noindex"/.test(cvTwinRoute) &&
+        /"cache-tag":\s*CV_CACHE_TAG/.test(cvTwinRoute),
+      "every other markdown twin carries canonicalLink (app/lib/markdown-twin.ts); " +
+        "without it the CV twin is the one machine document that does not say which page it stands for");
 
     /*
      * The paper twins are a Worker route since publications moved to D1, so their headers are code. A rule

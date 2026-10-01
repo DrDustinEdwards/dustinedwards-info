@@ -6,7 +6,6 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { buildCv } from "../../app/lib/cv/entries.mjs";
 import { compilePublication } from "../../app/lib/publications/compile.mjs";
 import { citationSeedsFrom } from "../../app/lib/publications/cited-by.mjs";
 import { PUBLICATIONS_DIR, parsePublication } from "../../app/lib/publications/parse.mjs";
@@ -16,8 +15,6 @@ const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..")
 const PUBLICATIONS_SOURCE_DIR = PUBLICATIONS_DIR;
 /** The D1 rows sync:content writes: the twin and the raw record ride in them, so the Worker never imports it. */
 export const PUBLICATIONS_ARTIFACT_PATH = path.join("content", "generated", "publications.json");
-/** The published records alone, small enough for the CV page to import into the Worker bundle. */
-export const PUBLICATION_RECORDS_PATH = path.join("content", "generated", "publication-records.json");
 const CITED_BY_PATH = path.join("data", "publications.cited-by.json");
 
 /** The repository's PDFs, read from public/ as a clone has them. */
@@ -116,15 +113,6 @@ export async function buildPublications() {
   const records = sortPublications(published.map((c) => c.record));
   const searchInputs = published.map((c) => c.searchInput);
   return { rows, records, searchInputs };
-}
-
-/** @type {Promise<import("../../app/lib/cv/entries.mjs").Cv> | undefined} */
-let cv;
-
-/** The CV resolved against the published records, the way the page resolves it (app/lib/cv/current.ts). */
-export function loadCv() {
-  cv ??= buildPublications().then(({ records }) => buildCv(records));
-  return cv;
 }
 
 /**

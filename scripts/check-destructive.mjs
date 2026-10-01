@@ -226,6 +226,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ["list_pages", "a read"],
     ["get_page", "a read"],
     ["get_llms", "a read"],
+    ["list_cv", "a read"],
+    ["get_cv", "a read"],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [
@@ -247,6 +249,11 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       "sync_llms",
       "the llms.txt settings row, on sync_procedures's terms: derived from the repository file, idempotent, read back, " +
         "and it refuses a repository with no llms.txt rather than deleting the row",
+    ],
+    [
+      "sync_cv",
+      "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set " +
+        "rather than deleting every row, and it rewrites the CV's search records from the rows it converged",
     ],
     [
       "backup_media",

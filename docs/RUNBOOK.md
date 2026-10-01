@@ -121,7 +121,8 @@ that moved without its row shows as `pages-drift` and a publication file as
 way. Neither deletes everything on an empty listing, and `sync_publications`
 never overwrites a citation count that exists. A `content/llms.txt` that moved
 without its settings row shows as `llms-drift`, repaired by `sync_llms`
-(docs/LLMS.md).
+(docs/LLMS.md). A CV file (`content/cv/`) that moved without its row shows as `cv-drift`, repaired by
+`sync_cv`, which also rewrites the CV's search records.
 
 **To force it now**, through the operator door, which is the only door:
 

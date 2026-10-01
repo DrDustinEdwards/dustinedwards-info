@@ -185,6 +185,17 @@ export function pageDriftVerdict(files, rows) {
 }
 
 /**
+ * The same comparison for the CV files and the cv table.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function cvDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "CV", noun: "CV", tool: "sync_cv" });
+}
+
+/**
  * The same comparison for the publication files and the publications table.
  *
  * @param {Array<{ slug: string, sha: string }>} files

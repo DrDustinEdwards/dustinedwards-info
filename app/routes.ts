@@ -58,7 +58,7 @@ export default [
     route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
   ]),
   // Each page's markdown twin, drawn from D1 like the page. One route per listed path, because a splat
-  // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin is a static file.
+  // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin has its own route, below.
   ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map((path) =>
     route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", { id: `page-twin-${path.slice(1).replaceAll("/", "-")}` }),
   ),
@@ -70,6 +70,8 @@ export default [
   route("about", "routes/about.tsx"),
   // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
   route("cv", "routes/cv.tsx"),
+  // The CV twin, drawn from the same D1 rows as the page (docs/CV.md).
+  route("cv.md", "routes/cv[.md].ts"),
   // The CV's charts for a filter state, which app/enhance/cv.ts swaps in so the page ships no renderer.
   route("cv/charts.json", "routes/cv.charts[.json].ts"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.

@@ -13,8 +13,8 @@ The operator can read: `list_pages` and `get_page`.
 ## The file
 
 `content/pages/<key>.md`: a YAML front-matter header, then markdown. The key is the path with slashes as
-hyphens (`/research/phages` is `research-phages.md`). The CV is generated from `app/data/cv.ts` and has no
-file and no row.
+hyphens (`/research/phages` is `research-phages.md`). The CV has its own files and its own table (`docs/CV.md`)
+and no file or row here.
 
 ```markdown
 ---
@@ -81,14 +81,14 @@ cache purge by tag (`content-pages`).
 | Output | From |
 | --- | --- |
 | The page | `app/routes/content-page.tsx` (and `teaching.tsx`, `software.tsx`), drawn from the D1 row |
-| The markdown twin | `app/routes/content-page[.md].ts`, one route per listed path; the CV's twin stays a static file |
+| The markdown twin | `app/routes/content-page[.md].ts`, one route per listed path; the CV's twin is `app/routes/cv[.md].ts` (docs/CV.md) |
 | The sitemap entry | `app/routes/sitemap.ts`, published rows only, in the registry's order |
 | JSON-LD | `contentPageJsonLd`, from the record |
 | Search | `search_docs`, written by the sync and by the page save, from the same compile |
 | The check | `build:content` compiles every file with the save's own validator; `check:links` judges every link |
 
 A static file at a twin's address would win over the route, so `build:content` deletes any left from an
-earlier build and `.gitignore` lists only `/public/cv.md`.
+earlier build.
 
 ## Known limits
 

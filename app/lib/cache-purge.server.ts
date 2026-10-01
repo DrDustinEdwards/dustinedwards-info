@@ -2,6 +2,7 @@
 import { cache } from "cloudflare:workers";
 
 import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
+import { CV_CACHE_TAG } from "~/lib/cv/route";
 import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
 import { cacheTags } from "~/lib/seo";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -97,4 +98,9 @@ export async function purgePages(why: string): Promise<PurgeOutcome> {
 /** /llms.txt carries this one tag (app/routes/llms.ts). */
 export async function purgeLlms(why: string): Promise<PurgeOutcome> {
   return purgeTags([LLMS_CACHE_TAG], why);
+}
+
+/** The CV page, its charts and its markdown twin carry this one tag (app/lib/cv/route.ts). */
+export async function purgeCv(why: string): Promise<PurgeOutcome> {
+  return purgeTags([CV_CACHE_TAG], why);
 }

@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { doiKey, validateCorpus } from "../../app/lib/publications/validate.mjs";
 import {
   closePart,
@@ -11,14 +8,11 @@ import {
   records,
   refusalsFor,
   refused,
-  root,
 } from "./publications-context.mjs";
-import { buildPublications, PUBLICATION_RECORDS_PATH } from "../lib/publications.mjs";
 
 /*
  * The files against the shared validator, the corpus's own uniqueness, the hosted PDFs and the text read
- * from them, PMC links and abstracts. The rules are validate.mjs's; this part reports them by category and
- * holds the build's artifacts to the files.
+ * from them, PMC links and abstracts. The rules are validate.mjs's; this part reports them by category.
  */
 const { tally, ok } = openPart("corpus");
 
@@ -102,31 +96,6 @@ ok(
   refusalsFor("csl", "csl.DOI").length === 0,
   shown(refusalsFor("csl", "csl.DOI")),
 );
-
-/* The build's artifacts are the files' derivatives, and the CV page imports one into the Worker. */
-{
-  const artifactPath = join(root, PUBLICATION_RECORDS_PATH);
-  /** @type {any} */
-  let onDisk = null;
-  try {
-    onDisk = JSON.parse(readFileSync(artifactPath, "utf8"));
-  } catch {
-    onDisk = null;
-  }
-  ok(
-    `${PUBLICATION_RECORDS_PATH} exists`,
-    onDisk !== null,
-    "run npm run build:content; check-all's preflight does this before any gate",
-  );
-  if (onDisk !== null && refused.length === 0) {
-    const fresh = (await buildPublications()).records;
-    ok(
-      `${PUBLICATION_RECORDS_PATH} matches a fresh compile of the files (${fresh.length} published)`,
-      JSON.stringify(onDisk.records) === JSON.stringify(fresh),
-      "the CV page imports this file, so a stale one is a CV that disagrees with the corpus. Run npm run build:content",
-    );
-  }
-}
 
 /* Measured by running this part on 2026-09-30; the floor sits a little under it. */
 export const outcome = closePart(tally, "corpus", 14);
