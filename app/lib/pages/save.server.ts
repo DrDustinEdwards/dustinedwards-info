@@ -15,7 +15,7 @@ import { listPublishedProcedures } from "~/db/procedures";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "~/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, contentPageSearchUid } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
@@ -55,7 +55,8 @@ function registeredPage(path: string) {
   return { path: clean, slug, file: pageSourcePath(slug) };
 }
 
-async function compile(env: PageEnv, slug: string, raw: string) {
+/** The one compile door: the save and sync_pages both read a file through it (no link check; see judge). */
+export async function compile(env: PageEnv, slug: string, raw: string) {
   const { renderBody, findWideDashes } = await loadPipeline();
   return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes } });
 }
@@ -126,7 +127,7 @@ function decidePage(actor: Actor, incomingDraft: boolean, prior: string | null) 
   }
 }
 
-async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
+export async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
   const db = env.DB;
   const r = compiled.record;
   const uid = compiled.searchInput.uid;
@@ -165,6 +166,16 @@ async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnType<typeo
     ),
     db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
     db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+  ]);
+}
+
+/** The row of a page whose file is gone and its search records: the one removal sync_pages makes. */
+export async function deletePageRow(env: PageEnv, row: { slug: string; path: string }) {
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM pages WHERE slug = ?1`).bind(row.slug),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(contentPageSearchUid(row.path)),
+    env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+    env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
   ]);
 }
 

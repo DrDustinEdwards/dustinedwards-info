@@ -119,6 +119,8 @@
     // reach the module; one statement, per the module's own header.
     "app/lib/content/hashes.mjs",
     "app/lib/content/diagram.mjs",
+    // Shared with the Worker's publication write: sync-content.mjs appends a long twin in these chunks.
+    "app/lib/content/chunks.mjs",
     "app/lib/blog-listing.mjs",
     // The media library's view state. Its tests read PARAM_NAMES rather than
     // restating them, because a hand-written list drifting from the real one is

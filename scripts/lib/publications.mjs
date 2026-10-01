@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { buildCv } from "../../app/lib/cv/entries.mjs";
 import { compilePublication } from "../../app/lib/publications/compile.mjs";
+import { citationSeedsFrom } from "../../app/lib/publications/cited-by.mjs";
 import { PUBLICATIONS_DIR, parsePublication } from "../../app/lib/publications/parse.mjs";
 import { sortPublications } from "../../app/lib/publications/record.mjs";
 
@@ -131,17 +132,5 @@ export function loadCv() {
  * never blank on a database that has none yet. The lower-cased DOI is the key, as the table keys it.
  */
 export async function citationSeeds() {
-  const artifact = /** @type {{ fetchedAt?: unknown, works?: Record<string, { openalexId?: string | null, total?: number }> }} */ (
-    await readCitedBy()
-  );
-  const fetchedAt = typeof artifact.fetchedAt === "string" ? artifact.fetchedAt : "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fetchedAt) || !artifact.works) {
-    throw new Error(`${CITED_BY_PATH} carries no fetchedAt date or no works, so the citation counts cannot be seeded.`);
-  }
-  return Object.entries(artifact.works).map(([doi, work]) => ({
-    doi: doi.trim().toLowerCase(),
-    count: Number(work.total ?? 0),
-    url: work.openalexId ? `https://openalex.org/${work.openalexId}` : null,
-    fetchedAt,
-  }));
+  return citationSeedsFrom(await readCitedBy(), CITED_BY_PATH);
 }

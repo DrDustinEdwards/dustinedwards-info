@@ -21,7 +21,16 @@ import { readFile } from "~/lib/editor/github.server";
 
 import type { OperatorEnv } from "./auth.server";
 import type { ToolName, ToolResult } from "./descriptors";
-import { backupMedia, syncAsk, syncMedia, syncPosts, syncProcedures, syncStatus } from "./sync-tools.server";
+import {
+  backupMedia,
+  syncAsk,
+  syncMedia,
+  syncPages,
+  syncPosts,
+  syncProcedures,
+  syncPublications,
+  syncStatus,
+} from "./sync-tools.server";
 import { uploadMediaTool } from "./upload-media.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
@@ -175,6 +184,12 @@ export async function runTool(
 
       case "sync_procedures":
         return await syncProcedures(env);
+
+      case "sync_pages":
+        return await syncPages(env);
+
+      case "sync_publications":
+        return await syncPublications(env);
 
       case "backup_media":
         return await backupMedia(env);

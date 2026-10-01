@@ -5,6 +5,8 @@ import {
   askDriftVerdict,
   contentDriftVerdict,
   procedureDriftVerdict,
+  pageDriftVerdict,
+  publicationDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaBackupDriftVerdict,
@@ -13,6 +15,8 @@ import {
 import { askIndexStatus } from "~/lib/search/ask.server";
 import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
+import { PAGES_DIR } from "~/lib/pages/compile.mjs";
+import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 import { backupStatus } from "~/lib/media/backup.server";
 
@@ -34,12 +38,35 @@ export async function readContentSides(env: Env & { GITHUB_TOKEN?: string }) {
  * rows with the sha each was compiled from. The check and sync_procedures both read them here.
  */
 export async function readProcedureSides(env: Env & { GITHUB_TOKEN?: string }) {
-  const files = (await listDirectory(env, PROCEDURES_DIR))
-    .filter((e) => e.type === "file" && e.name.endsWith(".md"))
-    .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
+  const files = await listMarkdownFiles(env, PROCEDURES_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, path, source_blob_sha FROM procedures WHERE source_path IS NOT NULL",
   ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/** The markdown files of a directory, each with its blob sha, the slug being the file name without .md. */
+async function listMarkdownFiles(env: Env & { GITHUB_TOKEN?: string }, dir: string) {
+  return (await listDirectory(env, dir))
+    .filter((e) => e.type === "file" && e.name.endsWith(".md"))
+    .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
+}
+
+/** The same two sides for pages: `content/pages/*.md` and the pages table's rows. */
+export async function readPageSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = await listMarkdownFiles(env, PAGES_DIR);
+  const rows = await env.DB.prepare(
+    "SELECT slug, path, source_blob_sha FROM pages",
+  ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/** The same two sides for publications: `content/publications/*.md` and the publications table's rows. */
+export async function readPublicationSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = await listMarkdownFiles(env, PUBLICATIONS_DIR);
+  const rows = await env.DB.prepare(
+    "SELECT slug, doi_key, source_blob_sha FROM publications",
+  ).all<{ slug: string; doi_key: string | null; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -89,6 +116,21 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // A procedure edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readProcedureSides(env);
       return procedureDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("pages-drift", async () => {
+      // A page edited, added or deleted through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readPageSides(env);
+      return pageDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("publications-drift", async () => {
+      const { files, rows } = await readPublicationSides(env);
+      return publicationDriftVerdict(files, rows);
     }),
   );
 

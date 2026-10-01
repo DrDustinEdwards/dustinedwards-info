@@ -6,6 +6,8 @@ import {
   contentDriftCompare,
   contentDriftVerdict,
   procedureDriftVerdict,
+  pageDriftVerdict,
+  publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
   mediaBackupDriftVerdict,
@@ -426,4 +428,34 @@ test("procedure drift: the same comparison, naming procedures and sync_procedure
   );
   assert.equal(quiet.ok, true);
   assert.match(quiet.detail, /1 procedure file/);
+});
+
+test("page and publication drift: the same comparison, each naming its own noun and repair", () => {
+  const files = [
+    { slug: "research-phages", sha: "new" },
+    { slug: "teaching-labs", sha: "same" },
+  ];
+  const rows = [
+    { slug: "research-phages", source_blob_sha: "old" },
+    { slug: "teaching-labs", source_blob_sha: "same" },
+    { slug: "removed-page", source_blob_sha: "orphan" },
+  ];
+  const page = pageDriftVerdict(files, rows);
+  assert.equal(page.ok, false);
+  assert.match(page.detail, /^Page drift 2:/);
+  assert.match(page.detail, /2 page file\(s\)/);
+  assert.match(page.detail, /sync_pages/);
+  assert.deepEqual(page.counts, { expected: 2, present: 1 });
+
+  const paper = publicationDriftVerdict(files, rows);
+  assert.equal(paper.ok, false);
+  assert.match(paper.detail, /^Publication drift 2:/);
+  assert.match(paper.detail, /2 publication file\(s\)/);
+  assert.match(paper.detail, /sync_publications/);
+  assert.doesNotMatch(paper.detail, /sync_pages|sync_posts/);
+
+  const agreeing = [{ slug: "a", sha: "s" }];
+  const matching = [{ slug: "a", source_blob_sha: "s" }];
+  assert.equal(pageDriftVerdict(agreeing, matching).ok, true);
+  assert.equal(publicationDriftVerdict(agreeing, matching).ok, true);
 });

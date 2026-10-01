@@ -7,6 +7,7 @@ import { retryRead } from "./lib/retry.mjs";
 import path from "node:path";
 import os from "node:os";
 
+import { textChunks } from "../app/lib/content/chunks.mjs";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, PAGES_ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
@@ -158,27 +159,6 @@ function buildProceduresSql(rows) {
     );
   }
   return `${out.join("\n")}\n`;
-}
-
-/** Characters per chunk: even at three UTF-8 bytes each, a chunk and its escaping stay well under 100 KB. */
-const CHUNK_CHARS = 25_000;
-
-/**
- * @param {string} text
- * @returns {string[]} the text in order, never split inside a surrogate pair; one empty string for none
- */
-function textChunks(text) {
-  /** @type {string[]} */
-  const out = [];
-  let at = 0;
-  while (at < text.length) {
-    let end = Math.min(at + CHUNK_CHARS, text.length);
-    const last = text.charCodeAt(end - 1);
-    if (end < text.length && last >= 0xd800 && last <= 0xdbff) end -= 1;
-    out.push(text.slice(at, end));
-    at = end;
-  }
-  return out.length > 0 ? out : [""];
 }
 
 /**

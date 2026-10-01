@@ -11,8 +11,26 @@ import { listPostFiles, readFile } from "~/lib/editor/github.server";
 import { askAvailable, askIndexStatus, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { copyMissingTwins } from "~/lib/media/backup.server";
-import { readContentSides, readProcedureSides } from "~/lib/health/checks.server";
-import { purgeProcedures } from "~/lib/cache-purge.server";
+import {
+  readContentSides,
+  readPageSides,
+  readProcedureSides,
+  readPublicationSides,
+} from "~/lib/health/checks.server";
+import { purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
+import { PAGES_DIR } from "~/lib/pages/compile.mjs";
+import {
+  compile as compilePageFile,
+  deletePageRow,
+  writeRow as writePageRow,
+} from "~/lib/pages/save.server";
+import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
+import {
+  compilePublicationFor,
+  deletePublicationRow,
+  seedMissingCitations,
+  writePublicationRow,
+} from "~/lib/publications/save.server";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import {
   compile as compileProcedureFile,
@@ -138,55 +156,80 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
   };
 }
 
+type DriftSides<Row extends { slug: string; source_blob_sha: string | null }> = {
+  files: Array<{ slug: string; sha: string; path: string }>;
+  rows: Row[];
+};
+
 /**
- * Converges the procedures table to content/procedures/*.md through the compile and write doors
- * save_procedure uses, from the same comparison the health check runs. Idempotent. An empty file set
- * is refused, as scripts/sync-content.mjs refuses it: a listing that came back empty is far likelier a
- * fault than a repository with no procedures, and honouring it would delete every row.
- *
- * A file that fails the validator cannot be written: every other drifted procedure is still converged,
- * then the failures are returned as a 422 naming each file and its messages, so the repair never
- * reports success over a file it could not apply.
+ * What differs between the kinds that converge from files to D1 rows (procedures, pages, publications):
+ * the two sides, the compile door and the write and removal doors the kind's own save uses. The loop is one.
  */
-export async function syncProcedures(env: OperatorEnv): Promise<ToolResult> {
-  const before = await readProcedureSides(env);
+type CompileResult = { ok: boolean; errors: string[] };
+type CompiledOk<Result extends CompileResult> = Extract<Result, { ok: true }> & { sourceBlobSha: string };
+
+type KindSync<Row extends { slug: string; source_blob_sha: string | null }, Result extends CompileResult> = {
+  tool: string;
+  dir: string;
+  noun: string;
+  read: () => Promise<DriftSides<Row>>;
+  compile: (slug: string, raw: string) => Promise<Result>;
+  write: (compiled: CompiledOk<Result>) => Promise<void>;
+  remove: (row: Row) => Promise<void>;
+  purge: (why: string) => Promise<boolean | null>;
+};
+
+/**
+ * Converges one kind's table to its files through the compile and write doors its save uses, from the same
+ * comparison its health check runs. Idempotent. An empty file set is refused, as scripts/sync-content.mjs
+ * refuses it: a listing that came back empty is far likelier a fault than a repository with none, and
+ * honouring it would delete every row.
+ *
+ * A file that fails the validator cannot be written: every other drifted file is still converged, then the
+ * failures are returned as a 422 naming each file and its messages, so the repair never reports success
+ * over a file it could not apply.
+ */
+async function convergeKind<
+  Row extends { slug: string; source_blob_sha: string | null },
+  Result extends CompileResult,
+>(env: OperatorEnv, spec: KindSync<Row, Result>): Promise<ToolResult> {
+  const before = await spec.read();
   if (before.files.length === 0) {
     return {
       ok: false,
       status: 422,
       error:
-        `sync_procedures refused: ${PROCEDURES_DIR} lists no procedure files, and converging to ` +
-        `an empty set would delete every procedure row. Check the repository listing.`,
+        `${spec.tool} refused: ${spec.dir} lists no ${spec.noun} files, and converging to an empty set ` +
+        `would delete every ${spec.noun} row. Check the repository listing.`,
     };
   }
   const drift = contentDriftCompare(before.files, before.rows);
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
   let repaired = 0;
-  const failed: Array<{ slug: string; errors: string[] }> = [];
+  const failed: Array<{ slug: string; path: string; errors: string[] }> = [];
   for (const slug of [...drift.changed, ...drift.unrowed]) {
     const entry = fileBySlug.get(slug);
     if (!entry) continue;
     const file = await readFile(env, entry.path);
     if (!file) {
       throw new EditorError(
-        `"${entry.path}" vanished between the listing and the read; main moved ` +
-          `mid-repair. Re-run sync_procedures.`,
+        `"${entry.path}" vanished between the listing and the read; main moved mid-repair. Re-run ${spec.tool}.`,
       );
     }
-    const compiled = await compileProcedureFile(env, slug, file.content);
+    const compiled = await spec.compile(slug, file.content);
     if (!compiled.ok) {
-      failed.push({ slug, errors: compiled.errors });
+      failed.push({ slug, path: entry.path, errors: compiled.errors });
       continue;
     }
+    const done = compiled as CompiledOk<Result>;
     // Compiled from the bytes read, which must be the bytes listed, or the row would claim a sha it is not.
-    if (compiled.sourceBlobSha !== entry.sha) {
+    if (done.sourceBlobSha !== entry.sha) {
       throw new EditorError(
-        `"${entry.path}" changed between the listing and the read; main moved mid-repair. ` +
-          `Re-run sync_procedures.`,
+        `"${entry.path}" changed between the listing and the read; main moved mid-repair. Re-run ${spec.tool}.`,
       );
     }
-    await writeProcedureRow(env, compiled);
+    await spec.write(done);
     repaired += 1;
   }
 
@@ -195,28 +238,28 @@ export async function syncProcedures(env: OperatorEnv): Promise<ToolResult> {
   for (const slug of drift.unfiled) {
     const row = rowBySlug.get(slug);
     if (!row) continue;
-    await deleteProcedureRow(env, row);
+    await spec.remove(row);
     removed += 1;
   }
 
   // A failed purge never fails the repair, but it is counted: those pages stay stale until expiry.
   let unpurged = 0;
-  if (repaired + removed > 0 && (await purgeProcedures("sync_procedures")) === false) unpurged = 1;
+  if (repaired + removed > 0 && (await spec.purge(spec.tool)) === false) unpurged = 1;
 
   if (failed.length > 0) {
     return {
       ok: false,
       status: 422,
       error:
-        `sync_procedures could not apply ${failed.length} file(s): ` +
-        failed.map((f) => `${PROCEDURES_DIR}/${f.slug}.md fails ${f.errors.length} check(s), first: ${f.errors[0]}`).join("; ") +
-        `. The other ${repaired} drifted procedure(s) were converged.`,
+        `${spec.tool} could not apply ${failed.length} file(s): ` +
+        failed.map((f) => `${f.path} fails ${f.errors.length} check(s), first: ${f.errors[0]}`).join("; ") +
+        `. The other ${repaired} drifted ${spec.noun}(s) were converged.`,
       detail: { failed, repaired, removed },
     };
   }
 
   // D1 reads its own writes in-request, so drift reported here is real.
-  const after = await readProcedureSides(env);
+  const after = await spec.read();
   const residual = contentDriftCompare(after.files, after.rows);
   const residualCount =
     residual.changed.length + residual.unrowed.length + residual.unfiled.length;
@@ -232,6 +275,70 @@ export async function syncProcedures(env: OperatorEnv): Promise<ToolResult> {
       converged: residualCount === 0,
     },
   };
+}
+
+/** Procedures: the compile and write doors save_procedure uses. */
+export async function syncProcedures(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_procedures",
+    dir: PROCEDURES_DIR,
+    noun: "procedure",
+    read: () => readProcedureSides(env),
+    compile: (slug, raw) => compileProcedureFile(env, slug, raw),
+    write: (compiled) => writeProcedureRow(env, compiled),
+    remove: (row) => deleteProcedureRow(env, row),
+    purge: purgeProcedures,
+  });
+}
+
+/**
+ * Pages: the compile and write doors a page save uses. A file whose path is not in CONTENT_PAGE_PATHS is
+ * refused by the compile (the 422 names the file) and never makes a row.
+ */
+export async function syncPages(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_pages",
+    dir: PAGES_DIR,
+    noun: "page",
+    read: () => readPageSides(env),
+    compile: (slug, raw) => compilePageFile(env, slug, raw),
+    write: (compiled) => writePageRow(env, compiled),
+    remove: (row) => deletePageRow(env, row),
+    purge: purgePages,
+  });
+}
+
+/**
+ * Publications: the compile and write doors a publication save uses. Each written row is read back for
+ * its twin's bytes, because the twin goes in as chunks and this is what proves they joined. A citation
+ * count that exists is never touched; one that is missing is seeded from the committed snapshot.
+ */
+export async function syncPublications(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_publications",
+    dir: PUBLICATIONS_DIR,
+    noun: "publication",
+    read: () => readPublicationSides(env),
+    compile: (slug, raw) => compilePublicationFor(env, slug, raw),
+    write: async (compiled) => {
+      await writePublicationRow(env, compiled);
+      const stored = await env.DB.prepare(
+        "SELECT source_blob_sha, length(CAST(markdown AS BLOB)) AS twin_bytes FROM publications WHERE slug = ?1",
+      )
+        .bind(compiled.record.slug)
+        .first<{ source_blob_sha: string; twin_bytes: number }>();
+      const twinBytes = new TextEncoder().encode(compiled.twin).length;
+      if (stored?.source_blob_sha !== compiled.sourceBlobSha || stored.twin_bytes !== twinBytes) {
+        throw new Error(
+          `sync_publications wrote "${compiled.record.slug}" but the row read back does not match its file ` +
+            `(twin ${stored?.twin_bytes ?? "missing"} bytes, expected ${twinBytes}). Re-run sync_publications.`,
+        );
+      }
+      await seedMissingCitations(env, [compiled.record.doi]);
+    },
+    remove: (row) => deletePublicationRow(env, row),
+    purge: purgePublications,
+  });
 }
 
 // Stores reported SEPARATELY: they fail independently. Exported because the cockpit renders this rather
