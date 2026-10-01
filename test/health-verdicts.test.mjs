@@ -5,6 +5,7 @@ import {
   askDriftVerdict,
   contentDriftCompare,
   contentDriftVerdict,
+  procedureDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
   mediaBackupDriftVerdict,
@@ -395,4 +396,34 @@ test("content drift: equal totals with one sha changed is still drift", () => {
   );
   assert.equal(v.ok, false);
   assert.deepEqual(v.counts, { expected: 1, present: 0 });
+});
+
+test("procedure drift: the same comparison, naming procedures and sync_procedures", () => {
+  const files = [
+    { slug: "edited", sha: "new" },
+    { slug: "agreeing", sha: "same" },
+    { slug: "added", sha: "fresh" },
+  ];
+  const rows = [
+    { slug: "edited", source_blob_sha: "old" },
+    { slug: "agreeing", source_blob_sha: "same" },
+    { slug: "deleted", source_blob_sha: "orphan" },
+  ];
+  const v = procedureDriftVerdict(files, rows);
+  assert.equal(v.ok, false);
+  assert.match(v.detail, /^Procedure drift 3:/);
+  assert.match(v.detail, /1 sha-changed/);
+  assert.match(v.detail, /1 file\(s\) with no row/);
+  assert.match(v.detail, /1 row\(s\) with no file/);
+  assert.match(v.detail, /3 procedure file\(s\)/);
+  assert.match(v.detail, /sync_procedures/);
+  assert.doesNotMatch(v.detail, /sync_posts/);
+  assert.deepEqual(v.counts, { expected: 3, present: 1 });
+
+  const quiet = procedureDriftVerdict(
+    [{ slug: "a", sha: "s" }],
+    [{ slug: "a", source_blob_sha: "s" }],
+  );
+  assert.equal(quiet.ok, true);
+  assert.match(quiet.detail, /1 procedure file/);
 });

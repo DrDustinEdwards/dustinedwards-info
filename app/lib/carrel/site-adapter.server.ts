@@ -115,9 +115,10 @@ async function previewRow(env: CarrelEnv, record: any): Promise<PostRow> {
     excerpt: stored?.excerpt ?? null,
     og_image: stored?.og_image ?? null,
     created_at: stored?.created_at ?? now,
-    updated_at: stored?.updated_at ?? now,
     ...postColumnValues(record),
   };
+  // postColumnValues' `updated_at` is NULL when the post has no frontmatter `updated`: the stored one stands.
+  raw.updated_at ??= stored?.updated_at ?? now;
 
   const row: Record<string, unknown> = {};
   for (const [key, column] of Object.entries(getTableColumns(posts))) {

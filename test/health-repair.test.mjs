@@ -342,3 +342,19 @@ test("a re-read that never arrived does not replace the last real reading", asyn
   assert.equal(reading?.status, 503);
   assert.match(reasonOf(watchdogOutcome({ misses: [], recheck: reading })[0]), /present 155/);
 });
+
+test("procedure drift repairs through sync_procedures, after posts and before the Ask upload", () => {
+  const alone = repairPlan(["procedures-drift"], WITH);
+  assert.deepEqual(alone.repair, ["sync_procedures"]);
+  assert.equal(alone.alertOnly, false);
+
+  // sync_procedures rewrites search_docs rows that sync_ask uploads, so it lands before it.
+  const all = repairPlan(["ask-index-drift", "procedures-drift", "content-drift"], WITH);
+  assert.deepEqual(all.repair, ["sync_posts", "sync_procedures", "sync_ask"]);
+
+  const actions = watchdogActions(
+    { status: 503, body: bodyFailing(["procedures-drift"]) },
+    WITH,
+  );
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_procedures" }, { type: "recheck" }]);
+});

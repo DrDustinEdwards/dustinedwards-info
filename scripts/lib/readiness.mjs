@@ -160,6 +160,7 @@ export function deferredMisses(checks, deferred, path = "/api/health") {
 /** @type {Record<string, string>} */
 export const DEFERRED_CHECKS = {
   "content-drift": "the D1 sync",
+  "procedures-drift": "the D1 sync",
   "ask-index-drift": "the Ask converge",
   "media-index-drift": "the media converge",
 };

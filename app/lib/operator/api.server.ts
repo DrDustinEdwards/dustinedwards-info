@@ -21,7 +21,7 @@ import { readFile } from "~/lib/editor/github.server";
 
 import type { OperatorEnv } from "./auth.server";
 import type { ToolName, ToolResult } from "./descriptors";
-import { backupMedia, syncAsk, syncMedia, syncPosts, syncStatus } from "./sync-tools.server";
+import { backupMedia, syncAsk, syncMedia, syncPosts, syncProcedures, syncStatus } from "./sync-tools.server";
 import { uploadMediaTool } from "./upload-media.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
@@ -166,6 +166,9 @@ export async function runTool(
 
       case "sync_posts":
         return await syncPosts(env);
+
+      case "sync_procedures":
+        return await syncProcedures(env);
 
       case "backup_media":
         return await backupMedia(env);
@@ -340,6 +343,8 @@ async function savePostTool(
       firstPublished: result.firstPublished,
       // The AI index cannot fail a save, so its outcome is reported rather than raised.
       askSync: result.askSync,
+      // Other posts' related and backlinks lists this save rewrote, or why it could not: reported, never raised.
+      neighbours: result.neighbours,
       purged: result.purged,
     },
   };

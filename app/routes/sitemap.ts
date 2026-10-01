@@ -3,6 +3,7 @@ import { listPublishedProcedures } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
+  POSTS_AND_PROCEDURES_CACHE_TAGS,
   SHARED_CACHE_CONTROL,
   SITE_ORIGIN,
   scheduledEdgeCacheControl,
@@ -91,6 +92,8 @@ ${urls
       "content-type": "application/xml; charset=utf-8",
       /* No `Vary`: this document embeds no reader state. */
       "cache-control": SHARED_CACHE_CONTROL,
+      /* Lists posts, tags, series and procedures, so both purges must reach it. */
+      "cache-tag": POSTS_AND_PROCEDURES_CACHE_TAGS,
       [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });

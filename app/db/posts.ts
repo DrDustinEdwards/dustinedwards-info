@@ -516,6 +516,14 @@ export async function listPostLinkCorpus(env: Env) {
     .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
 }
 
+/** The stored `related` and `backlinks` JSON of every file-sourced post, for the save's neighbour refresh to diff against. */
+export async function listPostDerivedLists(env: Env) {
+  return getDb(env)
+    .select({ slug: posts.slug, related: posts.related, backlinks: posts.backlinks })
+    .from(posts)
+    .where(and(eq(posts.kind, "post"), isNotNull(posts.sourcePath)));
+}
+
 /** Markdown and covers for the citation scan, drafts included: they still block deletion. */
 export async function listPostSourcesForCitations(env: Env) {
   return getDb(env)
