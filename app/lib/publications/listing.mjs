@@ -1,15 +1,15 @@
 /**
- * The publication index's listing, pure over the query string: which papers show, in what order,
+ * The publication index's listing, pure over the query string and the papers it is handed: which papers show, in what order,
  * with which topic chips, and whether the URL is one of the four that self-canonical. The route adds
- * the citation counts (a KV read) and the page copy.
+ * the citation counts (a D1 read) and the page copy.
  */
 
-import { PUBLICATIONS, TOPICS } from "../../data/publications.ts";
 import { decodeEntities } from "./entities.mjs";
+import { TOPICS, TOPIC_IDS } from "./topics.mjs";
 
-/** @typedef {import("../../data/publications.ts").Publication} Publication */
-/** @typedef {import("../../data/publications.ts").PublicationType} PublicationType */
-/** @typedef {import("../../data/publications.ts").TopicId} TopicId */
+/** @typedef {import("./types.ts").Publication} Publication */
+/** @typedef {import("./types.ts").PublicationType} PublicationType */
+/** @typedef {import("./types.ts").TopicId} TopicId */
 
 export const SORTS = /** @type {const} */ ([
   { value: "year-desc", label: "Newest first" },
@@ -18,8 +18,6 @@ export const SORTS = /** @type {const} */ ([
 ]);
 
 /** @typedef {(typeof SORTS)[number]["value"]} SortKey */
-
-const TOPIC_IDS = new Set(TOPICS.map((t) => /** @type {string} */ (t.id)));
 
 /**
  * Conference abstracts stay in the data file, which the CV also reads, and are excluded here.
@@ -32,8 +30,6 @@ export const SHOWCASE_TYPES = new Set([
   "chapter",
   "teaching-resource",
 ]);
-
-const SHOWCASE = PUBLICATIONS.filter((p) => SHOWCASE_TYPES.has(p.type));
 
 /**
  * Comparison-time only: Crossref titles carry em dashes nobody types into a search box.
@@ -75,8 +71,10 @@ function sortItems(items, sort) {
 
 /**
  * @param {URLSearchParams} params
+ * @param {Publication[]} publications every published paper, newest first (app/db/publications.ts)
  */
-export function publicationListing(params) {
+export function publicationListing(params, publications) {
+  const SHOWCASE = publications.filter((p) => SHOWCASE_TYPES.has(p.type));
   const topics = params
     .getAll("topic")
     .filter((t) => TOPIC_IDS.has(t))

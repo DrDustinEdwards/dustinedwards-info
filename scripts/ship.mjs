@@ -396,16 +396,6 @@ if (run("npm", ["run", "build:stack"]).code !== 0) {
 if (run("npm", ["run", "build:content"]).code !== 0) {
   refuse("the content build failed", "Fix build:content. Nothing was deployed.");
 }
-/*
- * Nothing imports the twins, so the build passes without them and `llms.txt` would
- * advertise 404s.
- */
-if (run("npm", ["run", "build:publication-twins"]).code !== 0) {
-  refuse(
-    "the publication twin build failed",
-    "Fix build:publication-twins. Nothing was deployed.",
-  );
-}
 /* This build feeds only the offline tier below (check:contrast reads build/client); `npm run deploy` builds what ships. */
 if (ciGreenEarly) {
   console.log("  skipped: react-router build. Its only local reader is the tier below, which CI ran.");

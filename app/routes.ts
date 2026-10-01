@@ -39,6 +39,7 @@ export default [
   route("research/publications.json", "routes/publications[.json].ts"),
   route("research/publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
   route("research/publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
+  route("research/publications/:slug.md", "routes/publications.$slug[.md].ts"),
   route("research/publications/:slug", "routes/publications.$slug.tsx"),
   // The Research pages (app/lib/content-pages.mjs), rendered from markdown at build time. A splat, so the
   // more specific research/publications routes above still win; a path with no page answers 404.

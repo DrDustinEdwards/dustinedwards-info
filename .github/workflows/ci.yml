@@ -94,17 +94,11 @@ jobs:
       #
       # content/generated/stack.json is derived here rather than committed, so
       # a dependency PR is judged on its dependency.
-      #
-      # build:publication-twins is here for the plainest reason of the three:
-      # check:machine-readable compares the twins on disk against a fresh
-      # generation, and a checkout has no twins at all, so without this step
-      # that comparison reads an empty directory.
-      - name: Migrations, stack and content build, publication twins, local sync
+      - name: Migrations, stack and content build, local sync
         run: |
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:stack
           npm run build:content
-          npm run build:publication-twins
           npm run sync:content -- --local
 
       # ONE COMMAND, derived. The tier is the offline tier minus CI_EXCLUDED,

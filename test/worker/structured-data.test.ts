@@ -1,14 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { PUBLICATIONS } from "~/data/publications";
+import { env, applyD1Migrations } from "cloudflare:test";
 import {
   CONTENT_PAGE_PATHS,
   CONTENT_PAGES_FROM_DATA,
   contentPageCardPath,
   hasPageCard,
 } from "~/lib/content-pages.mjs";
+import { listPublishedPublications } from "~/db/publications";
 import { CV_PAGE } from "~/lib/cv/entries.mjs";
-import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
+import { paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import ContentPage, { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
 import Cv, { loader as cvLoader, meta as cvMeta } from "~/routes/cv";
@@ -16,6 +17,7 @@ import Publications, { loader as publicationsLoader } from "~/routes/publication
 import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
 
 import { renderRoute, routeContext } from "./route-helpers";
+import { seedPublications } from "./seed";
 
 /*
  * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE (2026-09-29). Each page is rendered
@@ -144,8 +146,8 @@ async function pages(): Promise<Page[]> {
     const loaderData = await publicationsLoader({ request, params: {}, context: context() } as never);
     out.push({ path, html: renderRoute(path, Publications, { loaderData }) });
   }
-  for (const paper of PUBLICATIONS) {
-    const slug = doiSlug(paper.doi);
+  for (const paper of await listPublishedPublications(env as never)) {
+    const { slug } = paper;
     const path = paperPath(slug);
     const request = new Request(`${SITE_ORIGIN}${path}`);
     const loaderData = await paperLoader({ request, params: { slug }, context: context() } as never);
@@ -197,11 +199,15 @@ function visibleTrail(html: string): Array<{ name: string; href: string | null }
   );
 }
 
+// The papers are D1 rows now, so the schema and the rows exist before the cases below are collected (setup.ts
+// applies the same migrations again, which is a no-op).
+await applyD1Migrations(env.DB, (env as unknown as { TEST_D1_MIGRATIONS: never }).TEST_D1_MIGRATIONS);
+const PAPER_COUNT = await seedPublications();
 const rendered = await pages();
 
 describe("every JSON-LD block on the pages", () => {
   it("covers every content page, the CV, the publications list and every paper", () => {
-    expect(rendered.length).toBe(CONTENT_PAGE_PATHS.length + 1 + PUBLICATIONS.length);
+    expect(rendered.length).toBe(CONTENT_PAGE_PATHS.length + 1 + PAPER_COUNT);
     // Scope, so a pattern that matched no script element cannot pass every case below: only the two
     // hubs emit nothing.
     expect(rendered.filter((page) => blocks(page.html).length === 0).map((page) => page.path)).toEqual([

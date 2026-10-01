@@ -38,17 +38,15 @@
 # CI, exactly where build:content does.
 /content/generated/stack.json
 
-# The markdown twin of every paper, written by build:publication-twins. Same
-# class as posts.json above and the same argument: derived entirely from
-# tracked sources (app/data/publications.ts, data/publications.text.json,
-# data/publications.cited-by.json), so committing it would make every corpus
-# change a two-file change that only a machine running the build could
-# complete. It is 1.2 MB of it, too, most of that extracted PDF text that is
-# already in git once as data/publications.text.json.
-#
-# The PDFs in the per-paper subdirectories beside these ARE tracked. Only the
-# .md files directly under public/research/publications/ are generated, which is why
-# this line is not a directory.
+# The generated publication artifacts: the rows sync:content writes to D1 (twins and raw Crossref records
+# included) and the published records the CV page imports. Derived from content/publications/ by build:content, so
+# committing them would make every corpus change a three-file change that only a machine could complete.
+/content/generated/publications.json
+/content/generated/publication-records.json
+
+# The paper twins were files here until publications moved to D1 (a Worker route serves them now). A checkout that
+# built them before the move still has them, ignored, and the asset handler would serve them ahead of the route,
+# so check:machine-readable refuses any that remain (publications-twins). Delete them; nothing writes them now.
 /public/research/publications/*.md
 
 # Research and teaching page twins, written by build:content from content/pages/. Same class as the

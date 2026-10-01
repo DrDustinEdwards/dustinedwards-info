@@ -1,7 +1,8 @@
-// The paper twins are static assets: the Worker never runs for them, so their canonical Link comes
-// from public/_headers, and test/worker/agent-discovery.test.ts cannot see it. This resolves the rule
-// the way Workers Assets does (one splat, greedy, `:splat` substituted into the value) for every paper,
-// and checks it names that paper's own page.
+// The research and teaching page twins are static assets: the Worker never runs for them, so their canonical Link
+// comes from public/_headers, and test/worker/agent-discovery.test.ts cannot see it. This resolves the rule the way
+// Workers Assets does (one splat, greedy, `:splat` substituted into the value) for every page twin, and checks it
+// names that page. The paper twins are a Worker route since publications moved to D1 (their headers are code, and
+// test/worker/agent-discovery.test.ts holds them), so this file asserts they have no rule here to shadow it.
 
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -9,9 +10,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { PUBLICATIONS } from "../app/data/publications.ts";
 import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
-import { doiSlug, paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -52,14 +51,14 @@ function headersFor(path) {
   return out;
 }
 
-test("every paper twin names its own paper page with Link rel=canonical", () => {
-  assert.ok(PUBLICATIONS.length > 0, "no papers read, so nothing below asserts anything");
-  for (const paper of PUBLICATIONS) {
-    const slug = doiSlug(paper.doi);
-    const headers = headersFor(paperMarkdownPath(slug));
-    assert.equal(headers.get("link"), `<${paperPath(slug)}>; rel="canonical"`, slug);
-    assert.equal(headers.get("x-robots-tag"), "noindex", slug);
-  }
+test("no header rule names the paper twins, which are a route now and set their own headers", () => {
+  const rules = headerRules().filter((rule) => rule.path.startsWith("/research/publications"));
+  assert.deepEqual(
+    rules.map((rule) => rule.path),
+    [],
+    "a rule for /research/publications/*.md is a stale copy of what app/routes/publications.$slug[.md].ts sets",
+  );
+  assert.equal(headersFor("/research/publications/10-1128-mra-00888-24.md").size, 0);
 });
 
 test("every research and teaching page twin names its HTML page", () => {
@@ -74,7 +73,7 @@ test("every research and teaching page twin names its HTML page", () => {
   }
 });
 
-test("the canonical rule reaches no path outside the paper twins", () => {
+test("the canonical rule reaches no path it was not written for", () => {
   for (const path of ["/research/publications/", "/research/publications.json", "/writing/a-post.md", "/llms.txt"]) {
     assert.equal(headersFor(path).get("link"), undefined, path);
   }

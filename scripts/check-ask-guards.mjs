@@ -313,8 +313,8 @@ const { eq } = tally;
     true,
   );
   eq(
-    "askIndexStatus adds the papers from the corpus module, not from a query",
-    /const expected = new Set\([\s\S]{0,200}paperItemKeys\(\)/.test(statusBody) &&
+    "askIndexStatus adds the published papers from the publications table through paperItemKeys, not from search_docs",
+    /const expected = new Set\([\s\S]{0,200}paperItemKeys\(env\)/.test(statusBody) &&
       !/DB\.prepare|search_docs/.test(statusBody),
     true,
   );

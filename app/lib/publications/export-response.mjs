@@ -1,4 +1,5 @@
 import { ASSET_PREFIX } from "../media/classify.mjs";
+import { PUBLICATIONS_CACHE_TAG } from "./paths.mjs";
 
 /**
  * A second copy of the index page's set (app/lib/publications/listing.mjs) on purpose.
@@ -15,7 +16,8 @@ export const SHOWCASE_TYPES = new Set([
 
 /**
  * noindex: these are alternative representations of indexable pages. charset stated because names
- * carry diacritics. The dustin-edwards- prefix is added here so no route can forget it.
+ * carry diacritics. The dustin-edwards- prefix and the cache tag a save purges are added here so no route can
+ * forget them.
  *
  * @param {string} type the media type, without parameters
  * @param {string} cacheControl
@@ -28,6 +30,7 @@ export function exportHeaders(type, cacheControl, filename) {
   return {
     "content-type": `${type}; charset=utf-8`,
     "cache-control": cacheControl,
+    "cache-tag": PUBLICATIONS_CACHE_TAG,
     "content-disposition": `inline; filename="${ASSET_PREFIX}${filename}"`,
     "x-robots-tag": "noindex",
   };

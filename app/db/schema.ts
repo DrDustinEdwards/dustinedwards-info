@@ -341,3 +341,53 @@ export const procedures = sqliteTable(
     index("procedures_status_idx").on(t.status, t.profile),
   ],
 );
+
+/**
+ * Publications (drizzle/0020_publications.sql, docs/PUBLICATIONS.md): derived from content/publications/*.md
+ * by app/lib/publications/compile.mjs. `record` is the compiled publication as JSON, `csl` the raw
+ * Crossref record and `markdown` the twin.
+ */
+export const publications = sqliteTable(
+  "publications",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull().unique(),
+    doiKey: text("doi_key"),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    stage: text("stage", { enum: ["published", "submitted"] }).notNull(),
+    type: text("type", { enum: ["article", "review", "chapter", "abstract", "teaching-resource"] }).notNull(),
+    title: text("title").notNull(),
+    year: integer("year").notNull(),
+    selected: integer("selected").notNull().default(0),
+    record: text("record").notNull(),
+    csl: text("csl"),
+    markdown: text("markdown").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check("publications_status_check", sql`${t.status} in ('draft', 'published')`),
+    check("publications_stage_check", sql`${t.stage} in ('published', 'submitted')`),
+    check(
+      "publications_type_check",
+      sql`${t.type} in ('article', 'review', 'chapter', 'abstract', 'teaching-resource')`,
+    ),
+    index("publications_status_idx").on(t.status, t.year),
+    uniqueIndex("publications_doi_key_idx").on(t.doiKey),
+  ],
+);
+
+/** The citation count a page shows, with no expiry (drizzle/0020_publications.sql). Keyed by the lower-cased DOI. */
+export const publicationCitations = sqliteTable(
+  "publication_citations",
+  {
+    doi: text("doi").primaryKey(),
+    count: integer("count").notNull(),
+    url: text("url"),
+    fetchedAt: text("fetched_at").notNull(),
+  },
+  (t) => [check("publication_citations_count_check", sql`${t.count} >= 0`)],
+);

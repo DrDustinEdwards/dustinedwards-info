@@ -2,7 +2,7 @@
  * check:links. Every INTERNAL link the site publishes resolves to something the site serves: a page, a
  * post, a paper, a markdown twin or a static file, and, where the target's headings can be read, the
  * #anchor on it. Offline: the address book is built from the sources (app/routes.ts, the content,
- * app/data/publications.ts, public/), never from a database or the network.
+ * content/publications/, public/), never from a database or the network.
  *
  * WHERE THE LINKS COME FROM
  *   content    every post, Research/Teaching/Software page, the CV and About, rendered with the site's
@@ -26,21 +26,20 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { PUBLICATIONS } from "../app/data/publications.ts";
 import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
 import { NAV } from "../app/lib/nav.ts";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import { paperSlashTarget, pdfRedirectTarget } from "../app/lib/publications/pdf-redirect.mjs";
-import { doiSlug, paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
+import { paperMarkdownPath, paperPath } from "../app/lib/publications/paths.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { seriesPath } from "../app/lib/series-path.mjs";
 import { postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
 import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
-import { generateTwins } from "./build-publication-twins.mjs";
 import { ABOUT_SOURCE, buildAbout, renderContentPages } from "./build-content.mjs";
 import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
+import { buildPublications } from "./lib/publications.mjs";
 import { fixedSectionIds } from "../app/lib/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
@@ -94,8 +93,10 @@ for (const row of procedureRows) {
   moduleOf.set(row.path, routes.get(`${row.path.slice(0, row.path.lastIndexOf("/"))}/:slug`) ?? "");
 }
 
-for (const paper of PUBLICATIONS) {
-  const slug = doiSlug(paper.doi);
+// The papers (docs/PUBLICATIONS.md): each page, its twin and its exports, drawn from D1 by routes, compiled
+// here the way sync:content writes them.
+const publicationRows = (await buildPublications()).rows.filter((row) => row.status === "published");
+for (const { slug } of publicationRows) {
   const page = paperPath(slug);
   served.add(page);
   moduleOf.set(page, routes.get("/research/publications/:slug") ?? "");
@@ -488,12 +489,13 @@ for (const item of NAV) {
   });
 }
 
-// The paper twins, generated in memory as build:publication-twins would write them.
-for (const [name, body] of await generateTwins()) {
+// The paper twins, compiled in memory as the route serves them from D1.
+for (const { slug, markdown: body } of publicationRows) {
+  const name = `${slug}.md`;
   // The page and the PDF are frontmatter fields (`url:`, `pdf:`), the rest are markdown links.
   const fields = [...body.matchAll(/^(?:url|pdf):\s*"?(\/[^"\s]*)"?\s*$/gm)].map((m) => m[1]);
   for (const href of [...fields, ...markdownLinks(body)]) {
-    add("paper twins", { where: `public/research/publications/${name} (twin)`, href, page: null, isPublic: true });
+    add("paper twins", { where: `content/publications/${slug}.md (twin ${name})`, href, page: null, isPublic: true });
   }
 }
 

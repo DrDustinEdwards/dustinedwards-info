@@ -35,7 +35,7 @@ function scholarDate(isoish, year) {
  * @param {string | null} [paper.issue]
  * @param {string | null} [paper.firstPage]
  * @param {string | null} [paper.lastPage]
- * @param {string} paper.doi
+ * @param {string | null} [paper.doi]
  * @param {object} urls
  * @param {string} urls.abstractUrl absolute URL of this page
  * @param {string | null} [urls.pdfUrl] absolute URL of the PDF, when hosted here

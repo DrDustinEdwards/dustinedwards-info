@@ -42,6 +42,11 @@
 	// interval. `HEALTH_POLL_INTERVAL_SECONDS` in app/lib/health/snapshot.mjs
 	// decides when the colophon calls its health verdict stale, and
 	// the two must mean the same number of seconds: change them together.
+	//
+	// ONE FIRING A WEEK DOES A SECOND JOB: Sunday 03:00 to 03:14 UTC the same firing calls the
+	// operator API's refresh_citations (isCitationRefreshWindow, workers/watchdog.ts), so the
+	// publication citation counts stay current and the site Worker keeps `crons: []`. The window
+	// is in code, not in a second entry here, which would also fire the health poll twice.
 	"triggers": {
 		"crons": ["*/15 * * * *"]
 	},

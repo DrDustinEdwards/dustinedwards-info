@@ -22,6 +22,9 @@ const TOOLS = [
   "list_procedures",
   "get_procedure",
   "save_procedure",
+  "list_publications",
+  "get_publication",
+  "refresh_citations",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -163,6 +166,26 @@ export const TOOL_DESCRIPTORS: Readonly<
       "An operator may edit, unpublish and republish a procedure. It may NOT publish one for the first " +
       "time (draft true to false, or a new procedure saved as published); that is refused with 403 " +
       "first-publish-requires-admin.",
+  },
+  list_publications: {
+    args: {},
+    returns:
+      "Every publication row in D1, drafts included: slug, doi (null for a manuscript), stage (published or " +
+      "submitted), type, title, year and draft (boolean), with the head sha and the number of publications. " +
+      "A publication is written through Carrel (site-api), never through this surface, so there is no save tool.",
+  },
+  get_publication: {
+    args: { slug: "string, the page slug (the DOI with every run of punctuation a hyphen)" },
+    returns:
+      "The complete publication file (raw), the head sha, draft, the compiled record when the file is valid, " +
+      "and every validation error when it is not. The format is docs/PUBLICATIONS.md.",
+  },
+  refresh_citations: {
+    args: { dois: "array of strings, optional: the DOIs to refresh; every published paper's when omitted" },
+    returns:
+      "refreshed (how many counts were replaced) and failures (doi, stage, detail for each count that could " +
+      "not be read). A DOI that fails keeps the count it had. A partial failure is a 502 with the same " +
+      "detail, so the caller sees it. The watchdog calls this weekly.",
   },
   backup_media: {
     args: {},

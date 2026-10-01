@@ -167,7 +167,7 @@ export async function run() {
 
     const contentTwins = new Set(CONTENT_PAGE_PATHS.map((pagePath) => contentPageMarkdownPath(pagePath)));
     ok("the paths declared here are the ones this site means to declare",
-      paths.every((p) => p === "/assets/*" || p === "/research/publications/*.md" || contentTwins.has(p)),
+      paths.every((p) => p === "/assets/*" || contentTwins.has(p)),
       `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
     const missingTwins = [...contentTwins].filter((twinPath) => {
       const block = blocks.find((b) => b.path === twinPath);
@@ -179,12 +179,18 @@ export async function run() {
       missingTwins.length === 0,
       `missing or wrong canonical Link: ${missingTwins.join(", ")}`);
 
-    /* The paper twins are assets, so this file is the only place their canonical Link can be set. */
-    const twins = blocks.find((b) => b.path === "/research/publications/*.md");
-    ok("the paper twins name their page with Link rel=canonical",
-      twins?.directives.some((d) =>
-        /^Link:\s*<\/research\/publications\/:splat\/>;\s*rel="canonical"$/i.test(d)) ?? false,
+    /*
+     * The paper twins are a Worker route since publications moved to D1, so their headers are code. A rule
+     * here would be a stale copy, and the route has to carry the canonical Link, the noindex and the cache
+     * tag a save purges.
+     */
+    const twinRoute = stripComments(
+      readFileSync(join(root, "app", "routes", "publications.$slug[.md].ts"), "utf8"),
+    );
+    ok("the paper twins name their page with Link rel=canonical, from the route that serves them",
+      /canonicalLink\(paperPath\(/.test(twinRoute) && /"x-robots-tag":\s*"noindex"/.test(twinRoute) &&
+        /"cache-tag":\s*PUBLICATIONS_CACHE_TAG/.test(twinRoute),
       "every other markdown twin and llms file carries canonicalLink (app/lib/markdown-twin.ts); " +
-        "without this line a paper twin is the one machine document that does not say which page it stands for");
+        "without it a paper twin is the one machine document that does not say which page it stands for");
   }
 }

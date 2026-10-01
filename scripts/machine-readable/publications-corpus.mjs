@@ -1,239 +1,132 @@
-import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { doiKey, generate } from "../build-publications.mjs";
+import { doiKey, validateCorpus } from "../../app/lib/publications/validate.mjs";
 import {
   closePart,
-  csl,
-  extractedKeys,
-  extractedPapers,
+  compiled,
+  files,
   hosted,
   openPart,
-  OUT_PATH,
+  records,
+  refusalsFor,
+  refused,
   root,
-  siteEntries,
-  TEXT_PATH,
 } from "./publications-context.mjs";
+import { buildPublications, PUBLICATION_RECORDS_PATH } from "../lib/publications.mjs";
 
-/* Generation parity, the site and CSL join, the hosted PDFs, their extracted text, PMC links and abstracts. */
+/*
+ * The files against the shared validator, the corpus's own uniqueness, the hosted PDFs and the text read
+ * from them, PMC links and abstracts. The rules are validate.mjs's; this part reports them by category and
+ * holds the build's artifacts to the files.
+ */
 const { tally, ok } = openPart("corpus");
 
-/* An empty scope throws from the context before this line runs, failing all five parts, so a
-   "both source files carry records" check here could never fail and is not counted. */
+/** @param {string[]} messages */
+const shown = (messages) => messages.slice(0, 8).join("; ") + (messages.length > 8 ? `; and ${messages.length - 8} more` : "");
+
+ok(
+  `every publication file passes the validation module the save uses (${files.length} files)`,
+  refused.length === 0,
+  shown(refused.flatMap((r) => r.errors.map((e) => `${r.file}: ${e}`))),
+);
 
 {
-  const committed = readFileSync(OUT_PATH, "utf8").replace(/\r\n/g, "\n");
-  const emitted = generate();
-  let detail = "";
-  if (committed !== emitted) {
-    const a = committed.split("\n");
-    const b = emitted.split("\n");
-    for (let i = 0; i < Math.max(a.length, b.length); i += 1) {
-      if (a[i] !== b[i]) {
-        detail =
-          `first difference at line ${i + 1}\n` +
-          `          committed: ${JSON.stringify(a[i]?.slice(0, 110))}\n` +
-          `          generated: ${JSON.stringify(b[i]?.slice(0, 110))}\n` +
-          `        It is generated: edit data/publications.*.json and run ` +
-          `\`npm run build:publications\`, never app/data/publications.ts.`;
-        break;
-      }
-    }
-  }
+  const duplicates = validateCorpus(
+    compiled.map((c) => ({ file: c.file, slug: c.slug, id: c.record.id, doi: c.record.doi })),
+  );
+  const only = (/** @type {string} */ label) => duplicates.filter((d) => d.includes(label));
+  ok(`every record id is unique (${new Set(records.map((r) => r.id)).size} of ${records.length})`, only("id \"").length === 0, shown(only("id \"")));
   ok(
-    `app/data/publications.ts matches a fresh generation (${emitted.length} bytes)`,
-    committed === emitted,
-    detail,
+    "every DOI is distinct after casefolding",
+    only("DOI (case-folded)").length === 0,
+    `${shown(only("DOI (case-folded)"))}. DOI names are case-insensitive per spec, so two casings of one DOI are one work`,
+  );
+  ok(
+    "every DOI produces a distinct page slug",
+    only("page slug").length === 0,
+    `${shown(only("page slug"))}. doiSlug collapses punctuation, so two DOIs differing only in punctuation collide`,
+  );
+  ok("the corpus is not empty", !duplicates.some((d) => d.includes("corpus is empty")), shown(duplicates));
+  ok(
+    `the DOI set is as large as the file set, or the rest are manuscripts (${records.filter((r) => r.doi).length} with a DOI)`,
+    new Set(records.flatMap((r) => (r.doi ? [doiKey(r.doi)] : []))).size === records.filter((r) => r.doi).length,
   );
 }
 
-const cslByDoi = new Map();
-let duplicateCsl = "";
-for (const record of csl) {
-  const key = doiKey(record.DOI ?? record.id);
-  if (cslByDoi.has(key)) duplicateCsl = record.DOI ?? record.id;
-  cslByDoi.set(key, record);
-}
 ok(
-  `every CSL DOI is distinct after casefolding (${cslByDoi.size} of ${csl.length})`,
-  duplicateCsl === "",
-  duplicateCsl ? `two records share ${duplicateCsl} once casefolded` : "",
-);
-
-const siteKeys = siteEntries.map(([doi]) => doiKey(doi));
-ok(
-  `every site DOI is distinct after casefolding (${new Set(siteKeys).size} of ${siteKeys.length})`,
-  new Set(siteKeys).size === siteKeys.length,
-  "DOI names are case-insensitive per spec, so two casings of one DOI are one work",
-);
-
-ok(
-  `the two files describe the same number of works (${siteEntries.length})`,
-  siteEntries.length === csl.length,
-  `site ${siteEntries.length}, csl ${csl.length}`,
-);
-
-const unjoined = siteKeys.filter((key) => !cslByDoi.has(key));
-ok(
-  "every site record joins a CSL record",
-  unjoined.length === 0,
-  unjoined.length ? `no CSL record for: ${unjoined.join(", ")}` : "",
-);
-
-const ids = siteEntries.map(([, f]) => f.id);
-ok(
-  `every record id is unique (${new Set(ids).size} of ${ids.length})`,
-  new Set(ids).size === ids.length,
-);
-
-const missingPdfs = hosted
-  .filter(([, f]) => !existsSync(join(root, "public", f.pdfPath.replace(/^\//, ""))))
-  .map(([, f]) => f.pdfPath);
-ok(
-  `every pdfPath resolves to a file on disk (${hosted.length} hosted)`,
-  missingPdfs.length === 0,
-  missingPdfs.length ? `missing: ${missingPdfs.join(", ")}` : "",
-);
-ok(
-  "the hosted set is non-empty, so the assertion above read something",
+  "the hosted set is non-empty, so the PDF assertions below read something",
   hosted.length > 0,
-  "a zero here would make the missing-PDF sweep vacuous",
+  "a zero here would make the missing-PDF, hash and text sweeps vacuous",
 );
-
-const emptyPdfs = hosted
-  .filter(([, f]) => {
-    const p = join(root, "public", f.pdfPath.replace(/^\//, ""));
-    return existsSync(p) && statSync(p).size === 0;
-  })
-  .map(([, f]) => f.pdfPath);
+ok(`every pdfPath resolves to a file in the repository (${hosted.length} hosted)`, refusalsFor("pdfPath").length === 0, shown(refusalsFor("pdfPath")));
 ok(
-  "no hosted PDF is a zero-byte file",
-  emptyPdfs.length === 0,
-  emptyPdfs.length ? `empty: ${emptyPdfs.join(", ")}` : "",
-);
-
-ok(
-  "data/publications.text.json exists",
-  existsSync(TEXT_PATH),
-  "run node scripts/extract-publication-text.mjs; every assertion below reads it",
-);
-
-ok(
-  `the extracted-text artifact is non-empty (${Object.keys(extractedPapers).length} PDFs)`,
-  Object.keys(extractedPapers).length > 0,
-  "an empty artifact would make every sweep below vacuous",
-);
-
-const untexted = hosted.filter(([doi]) => !extractedKeys.has(doiKey(doi))).map(([doi]) => doi);
-ok(
-  `every hosted PDF has extracted text (${hosted.length} hosted)`,
-  untexted.length === 0,
-  untexted.length ? `no text for: ${untexted.join(", ")}` : "",
-);
-
-const hostedKeys = new Set(hosted.map(([doi]) => doiKey(doi)));
-const orphanText = [...extractedKeys].filter((key) => !hostedKeys.has(key));
-ok(
-  "the extracted-text artifact carries no entry this site does not host",
-  orphanText.length === 0,
-  orphanText.length ? `orphaned: ${orphanText.join(", ")}` : "",
-);
-
-/* Hashed, never size or mtime: a re-exported PDF of the same length is the likely case. */
-const staleText = [];
-for (const [doi, fields] of hosted) {
-  const entry = extractedPapers[doi] ?? extractedPapers[doiKey(doi)];
-  if (!entry) continue;
-  const diskPath = join(root, "public", fields.pdfPath.replace(/^\//, ""));
-  if (!existsSync(diskPath)) continue;
-  const sha = createHash("sha256").update(readFileSync(diskPath)).digest("hex");
-  if (sha !== entry.sha256) staleText.push(`${doi} (pdf ${sha.slice(0, 12)}, text says ${String(entry.sha256).slice(0, 12)})`);
-}
-ok(
-  "every extracted text matches the sha256 of the PDF on disk",
-  staleText.length === 0,
-  staleText.length
-    ? `re-run scripts/extract-publication-text.mjs. Stale: ${staleText.join("; ")}`
-    : "",
-);
-
-const inconsistentText = Object.entries(extractedPapers)
-  .filter(([, entry]) => {
-    const pages = Array.isArray(entry.text) ? entry.text : [];
-    const chars = pages.reduce((/** @type {number} */ sum, /** @type {unknown} */ page) => sum + String(page).length, 0);
-    return pages.length !== entry.pages || chars !== entry.chars;
-  })
-  .map(([doi]) => doi);
-ok(
-  "every extracted entry's page and character counts match its own text",
-  inconsistentText.length === 0,
-  inconsistentText.length ? `inconsistent: ${inconsistentText.join(", ")}` : "",
-);
-
-/* A scanned PDF extracts to nothing and everything above still passes. */
-const emptyText = Object.entries(extractedPapers)
-  .filter(([, entry]) => (entry.chars ?? 0) < 500)
-  .map(([doi, entry]) => `${doi} (${entry.chars})`);
-ok(
-  "no extracted text is empty or near-empty",
-  emptyText.length === 0,
-  emptyText.length
-    ? `extraction produced almost nothing for: ${emptyText.join(", ")}. ` +
-        "A scanned PDF with no text layer looks exactly like this."
-    : "",
-);
-
-const accessMismatch = siteEntries.filter(
-  ([, f]) =>
-    (f.access === "self-hosted" && !f.pdfPath) ||
-    (f.access === "external" && f.pdfPath),
+  "every file records the sha256 of the PDF its text was extracted from, and it matches the PDF",
+  refusalsFor("pdfSha256").length === 0,
+  `${shown(refusalsFor("pdfSha256"))}. Re-run scripts/extract-publication-text.mjs`,
 );
 ok(
-  "access agrees with pdfPath on every record",
-  accessMismatch.length === 0,
-  accessMismatch.length
-    ? accessMismatch.map(([, f]) => `${f.id} is ${f.access} with pdfPath ${f.pdfPath}`).join("; ")
-    : "",
+  "every hosted paper carries its extracted text, and none is empty or near-empty",
+  refusalsFor("Full text").length === 0,
+  `${shown(refusalsFor("Full text"))}. A scanned PDF with no text layer looks exactly like this`,
+);
+ok(
+  "access agrees with pdfPath, externalUrl and the text on every record",
+  refusalsFor("access", "externalUrl").length === 0,
+  shown(refusalsFor("access", "externalUrl")),
 );
 
 /* Landing-page form answers for every PMCID, including those the API refuses. */
-const withPmc = siteEntries.filter(([, f]) => f.pmcUrl);
-const badPmcUrls = withPmc
-  .filter(([, f]) => !/^https:\/\/pmc\.ncbi\.nlm\.nih\.gov\/articles\/PMC\d+\/$/.test(f.pmcUrl))
-  .map(([, f]) => f.pmcUrl);
 ok(
-  `every pmcUrl is in landing-page form (${withPmc.length} carry one)`,
-  badPmcUrls.length === 0,
-  badPmcUrls.length ? `not landing-page form: ${badPmcUrls.join(", ")}` : "",
+  `every pmcUrl is in landing-page form and pmcid and pmcUrl travel together (${records.filter((r) => r.pmcUrl).length} carry one)`,
+  refusalsFor("pmcUrl", "pmcid").length === 0,
+  shown(refusalsFor("pmcUrl", "pmcid")),
 );
-ok(
-  "the pmcUrl set is non-empty, so the form assertion above read something",
-  withPmc.length > 0,
-);
-
-const pmcMismatch = siteEntries.filter(
-  ([, f]) => Boolean(f.pmcid) !== Boolean(f.pmcUrl),
-);
-ok(
-  "pmcid and pmcUrl are present together or absent together",
-  pmcMismatch.length === 0,
-  pmcMismatch.length ? pmcMismatch.map(([, f]) => f.id).join(", ") : "",
-);
+ok("the pmcUrl set is non-empty, so the form assertion above read something", records.some((r) => r.pmcUrl));
 
 /* These land in a `<script type="application/ld+json">` block, where `<` ends the element early. */
-const abstracts = csl.filter((c) => typeof c.abstract === "string" && c.abstract.length > 0);
-const withAngle = abstracts.filter((c) => c.abstract.includes("<")).map((c) => c.DOI);
+const withAbstract = records.filter((r) => typeof r.abstract === "string" && r.abstract.length > 0);
 ok(
-  `no stored abstract contains a left angle bracket (${abstracts.length} read)`,
-  withAngle.length === 0,
-  withAngle.length ? `contains "<": ${withAngle.join(", ")}` : "",
+  `no stored abstract contains a left angle bracket (${withAbstract.length} read)`,
+  refusalsFor("abstract", "csl.abstract").length === 0,
+  shown(refusalsFor("abstract", "csl.abstract")),
 );
 ok(
   "the abstract set is non-empty, so the bracket sweep above read something",
-  abstracts.length > 0,
+  withAbstract.length > 0,
   "this is the companion the July build added after an assertion passed by reading zero",
 );
 
-/* Measured 22 by running this part on 2026-09-25; the floor sits a little under it. */
-export const outcome = closePart(tally, "corpus", 20);
+ok(
+  "every Crossref record names the paper's own DOI",
+  refusalsFor("csl", "csl.DOI").length === 0,
+  shown(refusalsFor("csl", "csl.DOI")),
+);
+
+/* The build's artifacts are the files' derivatives, and the CV page imports one into the Worker. */
+{
+  const artifactPath = join(root, PUBLICATION_RECORDS_PATH);
+  /** @type {any} */
+  let onDisk = null;
+  try {
+    onDisk = JSON.parse(readFileSync(artifactPath, "utf8"));
+  } catch {
+    onDisk = null;
+  }
+  ok(
+    `${PUBLICATION_RECORDS_PATH} exists`,
+    onDisk !== null,
+    "run npm run build:content; check-all's preflight does this before any gate",
+  );
+  if (onDisk !== null && refused.length === 0) {
+    const fresh = (await buildPublications()).records;
+    ok(
+      `${PUBLICATION_RECORDS_PATH} matches a fresh compile of the files (${fresh.length} published)`,
+      JSON.stringify(onDisk.records) === JSON.stringify(fresh),
+      "the CV page imports this file, so a stale one is a CV that disagrees with the corpus. Run npm run build:content",
+    );
+  }
+}
+
+/* Measured by running this part on 2026-09-30; the floor sits a little under it. */
+export const outcome = closePart(tally, "corpus", 14);
