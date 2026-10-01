@@ -3,7 +3,8 @@ import { Fragment, type ReactNode } from "react";
 import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { contentPageCardPath, contentPageMarkdownPath } from "~/lib/content-pages.mjs";
-import { CV, CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type CvEntry } from "~/lib/cv/entries.mjs";
+import { CV } from "~/lib/cv/current";
+import { CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type CvEntry } from "~/lib/cv/entries.mjs";
 import { renderCvCharts } from "~/lib/cv/render-charts";
 import {
   AREAS,

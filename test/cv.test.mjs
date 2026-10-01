@@ -5,9 +5,9 @@ import { readFileSync } from "node:fs";
 import { extractText, getDocumentProxy } from "unpdf";
 
 import { CV_ENTRIES } from "../app/data/cv.ts";
-import { PUBLICATIONS } from "../app/data/publications.ts";
+import { buildPublications, loadCv } from "../scripts/lib/publications.mjs";
 import { timelineSvg } from "../app/lib/cv/charts.ts";
-import { CV, cvFacts } from "../app/lib/cv/entries.mjs";
+import { cvFacts } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import {
   AREAS,
@@ -25,6 +25,9 @@ import {
 import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
 import { CV_PDF_DISK_PATH, FINGERPRINT_LABEL, cvFingerprint } from "../scripts/build-cv-pdf.mjs";
 
+// The CV as the build resolves it: the files in content/publications/ are the records it joins.
+const CV = await loadCv();
+const PUBLICATIONS = (await buildPublications()).records;
 const FACTS = cvFacts(CV.entries);
 
 /** Built from its code point, so this file holds no dash of its own. */
@@ -44,7 +47,7 @@ test("every entry resolves, with a known type, known areas, a known role and a u
 });
 
 test("a paper named by DOI takes its facts from the site's Crossref-backed record, and its role from the author list", () => {
-  const byDoi = new Map(PUBLICATIONS.map((p) => [p.doi.toLowerCase(), p]));
+  const byDoi = new Map(PUBLICATIONS.flatMap((p) => (p.doi ? [[p.doi.toLowerCase(), p]] : [])));
   const refs = CV_ENTRIES.filter((e) => e.type === "publication" && "doi" in e);
   assert.ok(refs.length >= 30, `${refs.length} papers by DOI`);
   for (const ref of refs) {
@@ -160,7 +163,7 @@ test("a range filter fades exactly the timeline's bars outside it", () => {
 });
 
 test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
-  const doc = cvMarkdownDocument();
+  const doc = cvMarkdownDocument(CV);
   for (const e of CV.entries) {
     if (e.paper?.doi) assert.ok(doc.includes(`https://doi.org/${e.paper.doi}`), e.paper.doi);
   }
@@ -173,8 +176,8 @@ test("the committed PDF was rendered from the current CV (npm run build:cv-pdf)"
   const { text } = await extractText(pdf, { mergePages: true });
   const flat = String(text).replace(/\s+/g, " ");
   assert.ok(
-    flat.includes(`${FINGERPRINT_LABEL} ${cvFingerprint()}`),
-    `the PDF does not carry "${FINGERPRINT_LABEL} ${cvFingerprint()}": the CV changed since it was rendered. ` +
+    flat.includes(`${FINGERPRINT_LABEL} ${cvFingerprint(CV)}`),
+    `the PDF does not carry "${FINGERPRINT_LABEL} ${cvFingerprint(CV)}": the CV changed since it was rendered. ` +
       "Run npm run build:cv-pdf, then build:assets and build:template-refs.",
   );
 });

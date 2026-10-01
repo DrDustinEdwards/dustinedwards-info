@@ -3,21 +3,22 @@ import { Link } from "react-router";
 import { Breadcrumb } from "~/components/breadcrumb";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import { TOPICS } from "~/data/publications";
 import { getCitationCounts } from "~/lib/citations.server";
+import { getEnv } from "~/lib/context";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { paperJsonLd } from "~/lib/publications/article-json-ld.mjs";
 import { buildCitationTags } from "~/lib/publications/citation-tags.mjs";
 import { accessionLabel, accessionUrl } from "~/lib/publications/accessions.mjs";
 import { publicationBySlug } from "~/lib/publications/by-slug";
+import { TOPICS } from "~/lib/publications/topics.mjs";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { updateNoticeText } from "~/lib/publications/update-notice.mjs";
 import {
-  doiSlug,
   paperAskUrl,
   paperMarkdownPath,
   paperPath,
   paperPdfPath,
+  PUBLICATIONS_CACHE_TAG,
   PUBLICATIONS_PATH,
 } from "~/lib/publications/paths.mjs";
 import { citedByFetchedAt, citedByFor } from "~/lib/publications/cited-by.mjs";
@@ -45,17 +46,17 @@ import "~/styles/paper.css";
 const TOPIC_LABEL = new Map(TOPICS.map((t) => [t.id, t.label]));
 
 export function headers() {
-  return publicHtmlHeaders();
+  return publicHtmlHeaders(PUBLICATIONS_CACHE_TAG);
 }
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  const paper = publicationBySlug(params.slug);
+  const paper = await publicationBySlug(getEnv(context), params.slug);
 
-  const slug = doiSlug(paper.doi);
+  const { slug } = paper;
   const hosted = paper.access === "self-hosted" && paper.pdfPath !== null;
 
-  // Cold means no count rendered, never a zero.
-  const citations = await getCitationCounts(context, [paper.doi]);
+  // The last count shows while a stale one refreshes; a paper that never had one shows none, never a zero.
+  const citations = paper.doi ? await getCitationCounts(context, [paper.doi]) : {};
 
   return {
     paper,
@@ -63,9 +64,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     hosted,
     pagePath: paperPath(slug),
     pdfPath: hosted ? paperPdfPath(slug) : null,
-    cited: citations[paper.doi] ?? null,
+    cited: (paper.doi ? citations[paper.doi] : null) ?? null,
     /* `total` and the list length are both carried: one paper exceeds the cap. */
-    citedBy: citedByFor(citedByArtifact, paper.doi),
+    citedBy: paper.doi ? citedByFor(citedByArtifact, paper.doi) : null,
     citedByFetchedAt: citedByFetchedAt(citedByArtifact),
     topics: paper.topics.map((id) => ({ id, label: TOPIC_LABEL.get(id) ?? id })),
   };
@@ -91,8 +92,9 @@ export function meta({ loaderData }: Route.MetaArgs) {
       path: pagePath,
       ogType: "article",
     }),
-    ...buildCitationTags(paper, { abstractUrl, pdfUrl }),
-    /* Every paper has a twin (build:publication-twins writes one per record); the head is how an agent finds it. */
+    // A manuscript with no DOI has no registry record to cite, so it carries no Scholar tags.
+    ...(paper.doi ? buildCitationTags(paper, { abstractUrl, pdfUrl }) : []),
+    /* Every paper has a twin (the markdown route reads it from D1); the head is how an agent finds it. */
     {
       tagName: "link",
       rel: "alternate",
@@ -155,7 +157,7 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
         <div className="paper-rail u-rail">
           <p className="paper-machine">
             <b>{paper.year}</b>
-            published
+            {paper.stage === "submitted" ? "submitted" : "published"}
             {paper.journal ? (
               <>
                 <b className="paper-machine-venue">{decodeEntities(paper.journal)}</b>
@@ -168,10 +170,14 @@ export default function Paper({ loaderData }: Route.ComponentProps) {
                   .join(", ")}
               </>
             ) : null}
-            <b>
-              <a href={`https://doi.org/${paper.doi}`}>{paper.doi}</a>
-            </b>
-            doi
+            {paper.doi ? (
+              <>
+                <b>
+                  <a href={`https://doi.org/${paper.doi}`}>{paper.doi}</a>
+                </b>
+                doi
+              </>
+            ) : null}
             {paper.type !== "article" ? (
               <>
                 <b>{paper.type}</b>

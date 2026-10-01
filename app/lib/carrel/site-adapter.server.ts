@@ -12,12 +12,13 @@ import { posts } from "~/db/schema";
 import { postPath } from "~/lib/content/slug.mjs";
 import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
 import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { publicationHandler } from "~/lib/carrel/publication-handler.server";
+import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
-  EditorError,
   GitHubError,
-  PolicyError,
   currentHead,
   postColumnValues,
   renderRecord,
@@ -25,6 +26,8 @@ import {
 } from "~/lib/editor/publish.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
+
+export { withPublication };
 
 type CarrelEnv = Env & { GITHUB_TOKEN?: string };
 
@@ -46,49 +49,10 @@ function statusOf(raw: string, now = Date.now()): ContentStatus {
   return at && Date.parse(at) > now ? "scheduled" : "published";
 }
 
-/**
- * Sets `draft` and `publish_at` by line, leaving every other key byte for byte: serializePost writes
- * only the fields the editor knows, and a status change must not drop the others. The values are
- * written as serializePost writes them.
- */
-export function withPublication(raw: string, change: { draft: boolean; publishAt?: string | null }) {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
-  if (!match) throw new RefusedError("The source has no frontmatter block, so its status cannot be set.");
-  let lines = match[1]!.split(/\r?\n/);
-
-  const set = (key: string, value: string | null) => {
-    const at = lines.findIndex((line) => line.startsWith(`${key}:`));
-    if (value === null) {
-      if (at !== -1) lines = lines.filter((_, i) => i !== at);
-    } else if (at !== -1) {
-      lines[at] = `${key}: ${value}`;
-    } else {
-      lines.push(`${key}: ${value}`);
-    }
-  };
-
-  set("draft", change.draft ? "true" : "false");
-  if (change.publishAt !== undefined) {
-    set("publish_at", change.publishAt === null ? null : JSON.stringify(change.publishAt));
-  }
-  return `---\n${lines.join("\n")}\n---${raw.slice(match[0].length)}`;
-}
-
 /** The effective publication time, as the pipeline computes it: publish_at, else the date. */
 function effectivePublishAt(raw: string): number {
   const fields = parsePost(raw);
   return Date.parse(fields.publishAt.trim() || `${fields.date}T00:00:00.000Z`);
-}
-
-/** The site's refusals, in the package's terms. Anything else is a failure and stays one. */
-async function asSiteApiError(env: CarrelEnv, error: unknown): Promise<never> {
-  if (error instanceof GitHubError && error.conflict) {
-    throw new VersionConflictError(await currentHead(env));
-  }
-  if (error instanceof EditorError || error instanceof PolicyError) {
-    throw new RefusedError(error.message);
-  }
-  throw error;
 }
 
 /**
@@ -323,7 +287,7 @@ export function carrelSiteAdapter(options: {
     },
   };
 
-  const registry = contentRegistry([postHandler]);
+  const registry = contentRegistry([postHandler, publicationHandler(env)]);
 
   return {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },

@@ -106,7 +106,6 @@ step(
 // The same build steps, in the same order, as ship's Build step.
 step("stack artifact", "npm run build:stack");
 step("content build", "npm run build:content");
-step("publication twins", "npm run build:publication-twins");
 step("app build", "npm run build");
 // Ship runs check:content before its sync for the same reason: the sync runs no gate of its own.
 step("content check", "npm run check:content");

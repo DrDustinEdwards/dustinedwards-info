@@ -140,10 +140,6 @@ jobs:
       # artifact that becomes a build product needs the build step added in
       # every place that reads it, and the places that do not run on push are
       # the ones that will be missed.
-      #
-      # `build:publication-twins` is deliberately NOT here. It is the same class
-      # of artifact, but this job drives the DEPLOYED site and reads nothing
-      # from public/; the twins it would care about are the ones that shipped.
       - name: Stack and content
         run: |
           npm run build:stack

@@ -252,13 +252,6 @@ const PREREQS = [
       "build:content failed, so the tier's subject does not exist on disk. " +
       "Nothing below ran; fix the build first.",
   },
-  {
-    name: "build:publication-twins",
-    what: "the twins check:machine-readable compares",
-    missing:
-      "build:publication-twins failed, so the markdown twins do not exist on " +
-      "disk. Nothing below ran; fix the twin build first.",
-  },
 ];
 
 function buildPrereqs() {

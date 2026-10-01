@@ -1,9 +1,8 @@
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { PUBLICATIONS } from "~/data/publications";
 import { renderAndWrite } from "~/lib/editor/publish.server";
-import { doiSlug, paperMarkdownPath, paperPath } from "~/lib/publications/paths.mjs";
+import { paperMarkdownPath, paperPath } from "~/lib/publications/paths.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { links as rootLinks } from "~/root";
 import { meta as homeMeta } from "~/routes/home";
@@ -16,6 +15,7 @@ import { loader as twinLoader } from "~/routes/blog.$slug[.md]";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { loader as contentPageLoader, meta as contentPageMeta } from "~/routes/content-page";
 import { loader as paperLoader, meta as paperMeta } from "~/routes/publications.$slug";
+import { loader as paperTwinLoader } from "~/routes/publications.$slug[.md]";
 import { loader as robotsLoader } from "~/routes/robots";
 import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
@@ -29,6 +29,7 @@ import llmsTxt from "../../content/llms.txt?raw";
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { post } from "./fixtures";
+import { seedPublications } from "./seed";
 import { routeContext, throughMiddleware } from "./route-helpers";
 import { stubGitHub } from "./github-stub";
 
@@ -42,9 +43,8 @@ import { stubGitHub } from "./github-stub";
  * The home page has no twin and is reached through llms.txt and llms-full.txt. Research and teaching
  * pages have twins at the page path plus `.md`.
  *
- * The paper twins are static assets the Worker never sees, so their canonical header lives in
- * public/_headers and test/agent-discovery.test.mjs asserts it; here the paper's head and its llms.txt
- * listing are asserted.
+ * The paper twins are a route since publications moved to D1: their canonical Link, noindex and cache tag
+ * are asserted here with the paper's head and its llms.txt listing.
  */
 
 type Loader = (args: never) => unknown;
@@ -52,7 +52,7 @@ type Loader = (args: never) => unknown;
 const ARTICLE = { slug: "agent-path-kestrel", term: "kestrelagentterm" };
 const RESEARCH_PAGE = "/research";
 const PROTOCOL_PAGE = "/research/protocols/phage-isolation";
-const PAPER_SLUG = doiSlug(PUBLICATIONS[0]?.doi ?? "no-paper-read");
+const PAPER_SLUG = "10-1128-mra-00888-24";
 
 const publishEnv = () => env as unknown as Parameters<typeof renderAndWrite>[0];
 
@@ -86,6 +86,8 @@ async function sitemapPaths() {
 }
 
 beforeAll(async () => {
+  /* The paper rows sync:content writes, from the files in content/publications/. */
+  await seedPublications();
   /* The row sync:content writes from content/llms.txt; the migrations leave an older seed in its place. */
   await env.DB.prepare(
     "INSERT INTO settings (key, value) VALUES ('llms.txt', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
@@ -233,6 +235,21 @@ describe("a paper: head declares the twin, llms.txt lists it", () => {
 
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
     expect(llms.split("\n")).toContain(`  ${paperMarkdownPath(PAPER_SLUG)}`);
+  });
+
+  it("the twin is markdown from D1 and names the paper page as canonical, noindex, tagged for the purge", async () => {
+    const twin = await response(paperTwinLoader as Loader, paperMarkdownPath(PAPER_SLUG), { slug: PAPER_SLUG });
+    expect(twin.status).toBe(200);
+    expect(twin.headers.get("content-type")).toContain("text/markdown");
+    expect(twin.headers.get("link")).toBe(canonical(paperPath(PAPER_SLUG)));
+    expect(twin.headers.get("x-robots-tag")).toBe("noindex");
+    expect(twin.headers.get("cache-tag")).toBe("publications");
+    expect(await twin.text()).toMatch(/^---\nid: "edwards-2025-godfather"\n/);
+  });
+
+  it("a slug that is no paper's answers 404", async () => {
+    const res = await response(paperTwinLoader as Loader, "/research/publications/not-a-paper.md", { slug: "not-a-paper" });
+    expect(res.status).toBe(404);
   });
 });
 

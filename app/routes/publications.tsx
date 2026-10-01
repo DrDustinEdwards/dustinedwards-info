@@ -5,14 +5,16 @@ import { EvidenceRow } from "~/components/evidence-row";
 import { FilterLink } from "~/components/filter-link";
 import { ShellFooter } from "~/components/shell-footer";
 import { SiteHeader } from "~/components/site-header";
-import type { Publication, TopicId } from "~/data/publications";
+import { listPublishedPublications } from "~/db/publications";
 import { getCitationCounts, type CitationEntry } from "~/lib/citations.server";
+import { getEnv } from "~/lib/context";
 import { jsonLd } from "~/lib/json-ld.mjs";
 import { coinsTitle } from "~/lib/publications/coins.mjs";
 import { interWidthEm } from "~/lib/inter-width";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
 import { SORTS, publicationListing } from "~/lib/publications/listing.mjs";
-import { PUBLICATIONS_PATH, doiSlug, paperPath } from "~/lib/publications/paths.mjs";
+import { PUBLICATIONS_CACHE_TAG, PUBLICATIONS_PATH, paperPath } from "~/lib/publications/paths.mjs";
+import type { Publication, TopicId } from "~/lib/publications/types";
 import { italicizeOrganisms } from "~/lib/scientific-names";
 import {
   isSiteOwner,
@@ -79,14 +81,15 @@ export function meta({ loaderData }: Route.MetaArgs) {
 
 /** Without headers the gateway stamps `private, no-store`, making the most static page uncacheable. */
 export function headers() {
-  return publicHtmlHeaders();
+  return publicHtmlHeaders(PUBLICATIONS_CACHE_TAG);
 }
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const url = new URL(request.url);
   const params = url.searchParams;
 
-  const { soleTopic, ...listing } = publicationListing(params);
+  const publications = await listPublishedPublications(getEnv(context));
+  const { soleTopic, ...listing } = publicationListing(params, publications);
   const { items } = listing;
 
   /* A path, not an absolute URL: deriving it from `url.origin` is how a preview host becomes canonical. */
@@ -101,8 +104,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     : PUBLICATIONS_DESCRIPTION;
   const noindex = items.length === 0;
 
-  // KV read only: a stale entry refreshes after the response, so the page never waits on OpenAlex.
-  const citations = await getCitationCounts(context, items.map((p) => p.doi));
+  // D1 only: a stale count shows and refreshes after the response, so the page never waits on OpenAlex.
+  const citations = await getCitationCounts(context, items.flatMap((p) => (p.doi ? [p.doi] : [])));
 
   return {
     /* The canonical origin, never the request's: this page is shared-cached, so a preview host's JSON-LD would be served to everyone. */
@@ -175,7 +178,7 @@ function citation(p: Publication) {
 }
 
 function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
-  const slug = doiSlug(p.doi);
+  const { slug } = p;
   return (
     <article className="paper-row">
       <p className="paper-marks">
@@ -191,7 +194,7 @@ function Entry({ p, cited }: { p: Publication; cited?: CitationEntry }) {
         <p className="paper-venue">{citation(p)}</p>
         <p className="paper-row-links">
           {p.access === "self-hosted" && p.pdfPath ? <a href={p.pdfPath}>PDF</a> : null}
-          <a href={`https://doi.org/${p.doi}`}>DOI</a>
+          {p.doi ? <a href={`https://doi.org/${p.doi}`}>DOI</a> : null}
           {p.pmcUrl ? <a href={p.pmcUrl}>PMC</a> : null}
           {p.externalUrl && (p.type === "teaching-resource" || p.type === "abstract") ? (
             <a href={p.externalUrl}>Resource</a>
@@ -370,7 +373,7 @@ export default function Publications({ loaderData }: Route.ComponentProps) {
                   </h2>
                 ) : null}
                 {group.items.map((p) => (
-                  <Entry key={p.id} p={p} cited={citations[p.doi]} />
+                  <Entry key={p.id} p={p} cited={p.doi ? citations[p.doi] : undefined} />
                 ))}
               </section>
             ))}

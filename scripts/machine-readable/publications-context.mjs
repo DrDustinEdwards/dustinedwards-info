@@ -1,15 +1,22 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { doiKey } from "../build-publications.mjs";
 import { assertFloor } from "../lib/floor.mjs";
+import { compileAllPublications, readCitedBy } from "../lib/publications.mjs";
 import { createTally } from "../lib/tally.mjs";
 import { stripTsxComments } from "../lib/strip-comments.mjs";
 
 /*
  * What every publications part reads, loaded once: a module is evaluated once however many parts
  * import it. It asserts nothing itself; each part counts its own checks against its own floor.
+ *
+ * The files in content/publications/ are the source. Each is compiled by the same door the Carrel adapter's
+ * save uses (app/lib/publications/compile.mjs), against the repository's own PDFs, so what these parts read
+ * is what a save would accept. The per-file rules (required fields, DOI and slug, access and pdfPath, the
+ * PDF on disk and its hash, the text, the summary, the notice, the accessions, the citation tags, the
+ * exports, the twin) live in validate.mjs and compile.mjs, not here; this gate reports them by category and
+ * adds the checks that need the whole corpus or the rest of the repository.
  */
 
 export const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -22,45 +29,42 @@ export const SLUG_ROUTE = stripTsxComments(
   readFileSync(join(root, "app", "routes", "publications.$slug.tsx"), "utf8"),
 );
 
-export const SITE_PATH = join(root, "data", "publications.site.json");
-export const CSL_PATH = join(root, "data", "publications.csl.json");
-export const OUT_PATH = join(root, "app", "data", "publications.ts");
+/** Every file, compiled or refused. */
+export const files = await compileAllPublications();
 
-for (const [label, path] of [
-  ["the site file", SITE_PATH],
-  ["the CSL file", CSL_PATH],
-  ["the generated module", OUT_PATH],
-]) {
-  if (!existsSync(path)) {
-    console.log(`  FAIL  publications: ${label} is missing: ${path}`);
-    throw new Error(`publications: ${label} is missing`);
-  }
-}
-
-export const site = JSON.parse(readFileSync(SITE_PATH, "utf8"));
-const cslParsed = JSON.parse(readFileSync(CSL_PATH, "utf8"));
-export const siteEntries = Object.entries(site);
-
-if (siteEntries.length === 0 || !Array.isArray(cslParsed) || cslParsed.length === 0) {
-  console.log(
-    `  FAIL  publications: both source files carry records (site ${siteEntries.length}, ` +
-      `csl ${Array.isArray(cslParsed) ? cslParsed.length : "not an array"})`,
-  );
+if (files.length === 0) {
+  console.log("  FAIL  publications: content/publications/ carries no files");
   throw new Error("publications: the scope is empty; nothing below would mean anything");
 }
 
-/** @type {any[]} Narrowed by the guard above. */
-export const csl = cslParsed;
+/** The files that compiled, with what they compiled to. */
+export const compiled = files.flatMap((f) => (f.compiled.ok ? [{ file: f.file, slug: f.slug, raw: f.raw, ...f.compiled }] : []));
 
-export const hosted = siteEntries.filter(([, f]) => f.pdfPath);
+/** @type {Array<{ file: string, slug: string, errors: string[] }>} */
+export const refused = files.flatMap((f) => (f.compiled.ok ? [] : [{ file: f.file, slug: f.slug, errors: f.compiled.errors }]));
 
-export const TEXT_PATH = join(root, "data", "publications.text.json");
+/** Every record that compiled, drafts included: a draft is a file the corpus rules still hold to. */
+export const records = compiled.map((c) => c.record);
 
-export const extracted = existsSync(TEXT_PATH)
-  ? JSON.parse(readFileSync(TEXT_PATH, "utf8"))
-  : { papers: {} };
-export const extractedPapers = extracted.papers ?? {};
-export const extractedKeys = new Set(Object.keys(extractedPapers).map((d) => doiKey(d)));
+/** The files that host their PDF here. */
+export const hosted = compiled.filter((c) => c.record.access === "self-hosted");
+
+export const citedBy = /** @type {any} */ (await readCitedBy());
+
+/**
+ * The refusals whose message starts with one of the fields, so a part can report a rule by name while the
+ * rule itself stays in the validator.
+ *
+ * @param {...string} fields
+ * @returns {string[]}
+ */
+export function refusalsFor(...fields) {
+  return refused.flatMap((r) =>
+    r.errors
+      .filter((e) => fields.some((f) => e === f || e.startsWith(`${f}:`) || e.startsWith(`${f}[`) || e.startsWith(`${f}.`)))
+      .map((e) => `${r.slug}: ${e}`),
+  );
+}
 
 /**
  * The tally a part counts on, after its heading.

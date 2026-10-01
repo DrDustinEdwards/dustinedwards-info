@@ -10,7 +10,7 @@ import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { makeResolveImage } from "~/lib/editor/publish.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
-import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
+import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 
 import { compileProcedure } from "./compile.mjs";
@@ -54,18 +54,13 @@ export async function readProcedure(env: ProcedureEnv, slug: string) {
  * the same rule as posts (ruling 37), read from the prior FILE, the only authority.
  */
 function decideProcedure(actor: Actor, incomingDraft: boolean, prior: string | null) {
-  const may = WRITE_CAPABILITIES[actor.kind];
-  if (!may.write) {
-    throw new PolicyError("Refused: this credential is READ ONLY and may not save a procedure.", "smoke-is-read-only");
-  }
-  const everPublished = prior !== null && parseProcedure({ file: "", raw: prior }).data.draft !== true;
-  if (!may.firstPublish && !incomingDraft && !everPublished) {
-    throw new PolicyError(
-      "Refused: publishing a procedure for the first time is reserved to the human admin. Save it with " +
-        "draft: true, and ask Dustin to publish it.",
-      "first-publish-requires-admin",
-    );
-  }
+  decideFileWrite({
+    actor,
+    noun: "procedure",
+    incomingDraft,
+    priorRaw: prior,
+    isDraft: (raw) => parseProcedure({ file: "", raw }).data.draft === true,
+  });
 }
 
 async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {

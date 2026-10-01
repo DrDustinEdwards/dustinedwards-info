@@ -85,8 +85,10 @@ export const MAP = [
     gates: ["check:protocols", RELATED],
   },
   {
-    what: "publication data",
-    test: /^data\/.+/,
+    /* content/publications/ is also a content path above; the cited-by snapshot and the publication
+       build and gate modules are not, and each changes what the publication gates read. */
+    what: "the cited-by snapshot or the publication build and gate modules",
+    test: /^(data\/.+|scripts\/lib\/publications\.mjs|scripts\/machine-readable\/publications-.+)$/,
     gates: ["check:machine-readable", "check:content", "check:links"],
   },
   {

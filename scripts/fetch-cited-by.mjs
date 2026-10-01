@@ -1,14 +1,14 @@
 // Not a gate, and never run by one: a gate that fetches a third party is red on their bad day.
 
-import { readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readDevVar } from "./lib/dev-vars.mjs";
+import { buildPublications } from "./lib/publications.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_PATH = join(root, "data", "publications.cited-by.json");
-const SITE_PATH = join(root, "data", "publications.site.json");
 
 const MAX_CITING = 50;
 
@@ -28,7 +28,9 @@ async function main() {
     process.exit(1);
   }
 
-  const site = JSON.parse(readFileSync(SITE_PATH, "utf8"));
+  // Every published paper that has a DOI: a manuscript with none has no OpenAlex record to read.
+  const { records } = await buildPublications();
+  const site = Object.fromEntries(records.flatMap((r) => (r.doi ? [[r.doi, { id: r.id }]] : [])));
   const dois = Object.keys(site);
   const fetchedAt = new Date().toISOString().slice(0, 10);
 

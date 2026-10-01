@@ -14,11 +14,12 @@ import { fileURLToPath } from "node:url";
 
 import puppeteer from "puppeteer";
 
-import { CV, CV_PDF_PATH } from "../app/lib/cv/entries.mjs";
+import { CV_PDF_PATH } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownBody, cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 import { OWNER_ORCID, SITE_ORIGIN } from "../app/lib/seo.ts";
 import { isMain } from "./lib/is-main.mjs";
+import { loadCv } from "./lib/publications.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const CV_PDF_DISK_PATH = path.join(ROOT, "public", ...CV_PDF_PATH.slice(1).split("/"));
@@ -27,8 +28,9 @@ export const CV_PDF_DISK_PATH = path.join(ROOT, "public", ...CV_PDF_PATH.slice(1
  * Eight hex characters of the twin's source. The PDF prints it, and test/cv.test.mjs reads it back out
  * of the committed PDF, so a CV change nobody re-rendered the PDF for fails a test.
  */
-export function cvFingerprint() {
-  return createHash("sha256").update(cvMarkdownDocument()).digest("hex").slice(0, 8);
+/** @param {import("../app/lib/cv/entries.mjs").Cv} CV */
+export function cvFingerprint(CV) {
+  return createHash("sha256").update(cvMarkdownDocument(CV)).digest("hex").slice(0, 8);
 }
 
 /** The words test/cv.test.mjs looks for; the fingerprint follows them. */
@@ -72,9 +74,10 @@ em { font-style: italic; }
 `;
 
 export async function renderHtml() {
+  const CV = await loadCv();
   const rendered = await renderBody({
     file: "app/data/cv.ts",
-    body: cvMarkdownBody({ pdf: true }),
+    body: cvMarkdownBody(CV, { pdf: true }),
     resolveImage: async (src) => {
       throw new Error(`the CV references an image (${src}) and its PDF has no image pipeline.`);
     },
@@ -100,11 +103,12 @@ export async function renderHtml() {
 <p><a href="${SITE_ORIGIN}/cv">${escapeHtml(`${host}/cv`)}</a> · <a href="${OWNER_ORCID}">ORCID ${OWNER_ORCID.split("/").pop()}</a></p>
 </header>
 ${rendered.html}
-<p class="fingerprint">Generated from the same data as ${escapeHtml(`${host}/cv`)}, where every entry can be searched and filtered. ${FINGERPRINT_LABEL} ${cvFingerprint()}.</p>
+<p class="fingerprint">Generated from the same data as ${escapeHtml(`${host}/cv`)}, where every entry can be searched and filtered. ${FINGERPRINT_LABEL} ${cvFingerprint(CV)}.</p>
 </body></html>`;
 }
 
 async function main() {
+  const CV = await loadCv();
   const html = await renderHtml();
   const browser = await puppeteer.launch({ headless: true });
   try {
@@ -122,7 +126,7 @@ async function main() {
       outline: true,
     });
     await writeFile(CV_PDF_DISK_PATH, pdf);
-    console.log(`build:cv-pdf wrote ${path.relative(ROOT, CV_PDF_DISK_PATH)} (${pdf.length} bytes, ${FINGERPRINT_LABEL} ${cvFingerprint()})`);
+    console.log(`build:cv-pdf wrote ${path.relative(ROOT, CV_PDF_DISK_PATH)} (${pdf.length} bytes, ${FINGERPRINT_LABEL} ${cvFingerprint(CV)})`);
   } finally {
     await browser.close();
   }

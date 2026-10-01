@@ -299,7 +299,7 @@ Where each one lives, and what breaks if you rotate it and stop there:
 | `OPERATOR_TOKEN` | **three holders, see below** | Silent partial failure. Read the box. |
 | `ANALYTICS_READ_TOKEN` | Cloudflare API token | The cockpit's origin-requests panel fails closed and says so. Nothing public degrades. |
 | `SMOKE_TOKEN` | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades. |
-| `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars`, read by the build | Citation counts on `/publications` stop aging forward. Whatever APP_KV holds keeps serving, so the page looks normal and the dates quietly stop moving. The loudest symptom is the secrets audit. |
+| `OPENALEX_API_KEY` | `OPENALEX_API_KEY` in the gitignored `.dev.vars` (the fetch script) and as a secret on the site Worker (the refresh) | Citation counts on `/research/publications` stop aging forward. D1 keeps serving the last count, so the page looks normal and the dates quietly stop moving. The weekly `refresh_citations` the watchdog calls fails with a 502 naming each DOI, and the watchdog invocation is recorded as failed. The loudest symptom is the secrets audit. |
 
 Where a new value comes from is RECOVERY.md section 7, which has a column for
 exactly that.

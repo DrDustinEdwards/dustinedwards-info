@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "react-router build",
-    "dev": "npm run build:stack && npm run build:content && npm run build:publication-twins && react-router dev",
+    "dev": "npm run build:stack && npm run build:content && react-router dev",
     "typecheck": "wrangler types && react-router typegen && tsc -b",
     "predeploy": "node scripts/require-clean-tree.mjs",
     "deploy": "npm run build && wrangler deploy",
@@ -21,8 +21,6 @@
     "cf-typegen": "wrangler types",
     "build:content": "node scripts/build-content.mjs",
     "build:tokens": "node scripts/build-tokens.mjs",
-    "build:publications": "node scripts/build-publications.mjs",
-    "build:publication-twins": "node scripts/build-publication-twins.mjs",
     "build:inter-advances": "node scripts/build-inter-advances.mjs",
     "check": "node scripts/check-all.mjs",
     "check:all": "node scripts/check-all.mjs --all",

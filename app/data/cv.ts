@@ -5,7 +5,7 @@
  * resolves it into the entries every surface renders.
  *
  * PAPERS ARE NOT COPIED HERE. A paper with a DOI is named by its DOI alone, and its title, authors,
- * venue, year, abstract and identifiers come from app/data/publications.ts, which follows each
+ * venue, year, abstract and identifiers come from the publication files (content/publications/), which follow each
  * paper's Crossref record. Only a paper the site has no record for carries its own citation.
  *
  * PRIVACY (PROTECTED in Capsid core.md): no student is named anywhere in this file. Mentoring is a
@@ -60,7 +60,7 @@ type Dated = { year: number | null; endYear?: number | "present" };
 
 type Tagged = { areas: CvArea[]; role: CvRole | null; links?: CvLink[] };
 
-/** A paper the site has a record for: everything but the DOI comes from app/data/publications.ts. */
+/** A paper the site has a record for: everything but the DOI comes from its file in content/publications/. */
 export type CvPaperRef = { type: "publication"; doi: string };
 
 /** A paper with no site record, cited as the CV cites it. */

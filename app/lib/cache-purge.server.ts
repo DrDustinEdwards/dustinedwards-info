@@ -1,6 +1,7 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { cache } from "cloudflare:workers";
 
+import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
 import { cacheTags } from "~/lib/seo";
 import { errorMessage } from "~/lib/error-message.mjs";
 
@@ -76,4 +77,13 @@ export async function purgePosts(why: string): Promise<PurgeOutcome> {
 /** Every procedure page, sheet and twin carries this one tag (app/lib/procedures/route.ts). */
 export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
   return purgeTags(["procedures"], why);
+}
+
+/**
+ * The publication pages, exports and twins carry their own tag. The home page, the search page and the
+ * blog listings carry `posts` and show papers too (the three newest, the count, a search record), so a
+ * save purges both.
+ */
+export async function purgePublications(why: string): Promise<PurgeOutcome> {
+  return purgeTags([PUBLICATIONS_CACHE_TAG, cacheTags()], why);
 }

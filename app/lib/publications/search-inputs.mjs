@@ -2,15 +2,15 @@
 // heads and show mangled lines, and Ask reads the twins instead. Includes papers the index hides.
 
 import { decodeEntities } from "./entities.mjs";
-import { doiSlug, paperPath } from "./paths.mjs";
+import { paperPath } from "./paths.mjs";
 
 /**
- * @param {Array<Record<string, any>>} publications the corpus, PUBLICATIONS
+ * @param {Array<Record<string, any>>} publications the corpus, each with its `slug`
  * @returns {Array<{ uid: string, url: string, title: string, body: string }>}
  */
 export function paperSearchInputs(publications) {
   return publications.map((paper) => {
-    const slug = doiSlug(paper.doi);
+    const { slug } = paper;
     return {
       // The paper: namespace keeps these uids separable from hand-authored pages when search_docs is pruned.
       uid: `paper:${slug}`,

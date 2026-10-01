@@ -21,6 +21,9 @@ export function doiSlug(doi) {
 
 export const PUBLICATIONS_PATH = "/research/publications";
 
+/** Every publication response carries it (the index, the pages, the exports, the twins); a save purges it. */
+export const PUBLICATIONS_CACHE_TAG = "publications";
+
 /**
  * @param {string} slug from `doiSlug`
  */

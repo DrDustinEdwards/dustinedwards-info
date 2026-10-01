@@ -11,6 +11,7 @@ import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
+import { citationSeeds, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
@@ -154,6 +155,42 @@ function buildProceduresSql(rows) {
         `version = excluded.version, updated = excluded.updated, record = excluded.record, ` +
         `markdown = excluded.markdown, source_path = excluded.source_path, ` +
         `source_blob_sha = excluded.source_blob_sha, synced_at = excluded.synced_at;`,
+    );
+  }
+  return `${out.join("\n")}\n`;
+}
+
+/**
+ * The publications table converged to the repository's files (hard rule 18): every row whose file is gone
+ * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and never
+ * an unscoped delete. The citation counts are upserted from the committed snapshot and only ever forward:
+ * a row a refresh has read since is never overwritten by the older snapshot, and none is ever deleted.
+ *
+ * @param {any[]} rows content/generated/publications.json's rows
+ * @param {Array<{ doi: string, count: number, url: string | null, fetchedAt: string }>} seeds
+ */
+function buildPublicationsSql(rows, seeds) {
+  if (rows.length === 0) throw new Error("buildPublicationsSql refuses to delete every publication");
+  const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
+  const out = [`DELETE FROM publications WHERE source_path NOT IN (${keep});`];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO publications (slug, doi_key, status, stage, type, title, year, selected, record, csl, markdown, ` +
+        `source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ${sql(r.doiKey)}, ${sql(r.status)}, ` +
+        `${sql(r.stage)}, ${sql(r.type)}, ${sql(r.title)}, ${num(r.year)}, ${num(r.selected)}, ${sql(r.record)}, ` +
+        `${sql(r.csl)}, ${sql(r.markdown)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
+        `ON CONFLICT(slug) DO UPDATE SET doi_key = excluded.doi_key, status = excluded.status, stage = excluded.stage, ` +
+        `type = excluded.type, title = excluded.title, year = excluded.year, selected = excluded.selected, ` +
+        `record = excluded.record, csl = excluded.csl, markdown = excluded.markdown, ` +
+        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `synced_at = excluded.synced_at;`,
+    );
+  }
+  for (const s of seeds) {
+    out.push(
+      `INSERT INTO publication_citations (doi, count, url, fetched_at) VALUES (${sql(s.doi)}, ${num(s.count)}, ` +
+        `${sql(s.url)}, ${sql(s.fetchedAt)}) ON CONFLICT(doi) DO UPDATE SET count = excluded.count, ` +
+        `url = excluded.url, fetched_at = excluded.fetched_at WHERE excluded.fetched_at > publication_citations.fetched_at;`,
     );
   }
   return `${out.join("\n")}\n`;
@@ -455,6 +492,20 @@ async function main() {
     buildProceduresSql(procedureRows),
     `sync:content procedures import (${target})`,
     "the procedures import failed",
+  );
+
+  // Publications before the search index too: the index then carries the paper records the table matches.
+  const publicationRows = JSON.parse(await readFile(PUBLICATIONS_ARTIFACT_PATH, "utf8")).publications;
+  if (!Array.isArray(publicationRows) || publicationRows.length === 0) {
+    throw new Error(`${PUBLICATIONS_ARTIFACT_PATH} carries no publications. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${publicationRows.length} publications`);
+  await applySql(
+    target,
+    path.join(dir, "sync-publications.sql"),
+    buildPublicationsSql(publicationRows, await citationSeeds()),
+    `sync:content publications import (${target})`,
+    "the publications import failed",
   );
 
   // A separate statement file, so a failure here names the search index rather than the content.

@@ -347,7 +347,7 @@ jobs:
       # `--local` on both, so neither touches the deployed database. This is the
       # same derivation the laptop's local database was built by, which is why
       # the gate has always passed there and never here.
-      # build:stack and build:publication-twins match ci.yml's step. stack.json
+      # build:stack matches ci.yml's step. stack.json
       # became a build product on 2026-09-08 and build:content reads it, so this
       # step refused with ENOENT on the first dispatch after (run 36218330627).
       - name: Create the local D1 the gate tier reads
@@ -356,7 +356,6 @@ jobs:
           npx wrangler d1 migrations apply dustinedwards --local
           npm run build:stack
           npm run build:content
-          npm run build:publication-twins
           npm run sync:content -- --local
 
       # THE OPERATOR TOKEN BECOMES A FILE, because that is ship's contract and

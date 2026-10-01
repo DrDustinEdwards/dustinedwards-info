@@ -24,10 +24,10 @@ import { PlateI, PlateKeyRow } from "~/components/plate-i";
 import { Enhance } from "~/components/enhance";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
-import { PUBLICATIONS } from "~/data/publications";
+import { listPublishedPublications } from "~/db/publications";
 import { PHAGE_YEARS } from "~/data/phage-hunters";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
-import { doiSlug } from "~/lib/publications/paths.mjs";
+import type { Publication } from "~/lib/publications/types";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
 
@@ -46,12 +46,12 @@ export function meta() {
 const HOME_PAPERS = 3;
 
 /**
- * The papers marked `selected` in app/data/publications.ts, newest first; with none marked, the newest.
+ * The papers marked `selected` in their files (content/publications/), newest first; with none marked, the newest.
  * Chosen in the loader and not the component, so the publication records (abstracts, author lists)
  * stay out of the page's script.
  */
-function homePapers() {
-  const newest = [...PUBLICATIONS].sort(
+function homePapers(papers: Publication[]) {
+  const newest = [...papers].sort(
     (a, b) => b.year - a.year || (b.publishedDate ?? "").localeCompare(a.publishedDate ?? ""),
   );
   const selected = newest.filter((p) => p.selected);
@@ -61,7 +61,7 @@ function homePapers() {
     year: p.year,
     title: decodeEntities(p.title),
     journal: p.journal ? decodeEntities(p.journal) : null,
-    href: `/research/publications/${doiSlug(p.doi)}/`,
+    href: `/research/publications/${p.slug}/`,
   }));
 }
 
@@ -78,10 +78,11 @@ export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
-  const [start, podcast, nextPublishAt] = await Promise.all([
+  const [start, podcast, nextPublishAt, papers] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
     timed(timings, "home_next_scheduled", () => nextScheduledPublishAt(env)),
+    timed(timings, "home_papers", () => listPublishedPublications(env)),
   ]);
 
   return data(
@@ -89,8 +90,8 @@ export async function loader({ context }: Route.LoaderArgs) {
       posts: start.total,
       featured: start.featured,
       recent: start.recent,
-      papers: homePapers(),
-      paperCount: PUBLICATIONS.length,
+      papers: homePapers(papers),
+      paperCount: papers.length,
       discovery: discoveryFacts(),
       podcast,
     },

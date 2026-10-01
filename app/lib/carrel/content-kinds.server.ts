@@ -17,34 +17,7 @@ import type {
   WriteResult,
 } from "@dustinedwards/site-api";
 
-/** The contract's ContentId allows at most 200 characters (site-api contract.ts). */
-export const CONTENT_ID_MAX = 200;
-
-/** The kind that keeps a bare slug for its id, so every id posts already had is unchanged. */
-export const DEFAULT_KIND = "post";
-
-/** The separator between a kind and a slug. A bare id has none; a slug may itself contain it. */
-const SEPARATOR = ".";
-
-/** The contract id for a kind's slug: posts keep the bare slug, every other kind is `<kind>.<slug>`. */
-export function encodeContentId(kind: string, slug: string): string {
-  return kind === DEFAULT_KIND ? slug : `${kind}${SEPARATOR}${slug}`;
-}
-
-/**
- * The kind and slug of a contract id. A post slug never contains the separator (SLUG_PATTERN), so an id
- * with none is a post; otherwise the kind is everything before the FIRST separator and the slug is the rest.
- */
-export function decodeContentId(id: string): { kind: string; slug: string } {
-  const at = id.indexOf(SEPARATOR);
-  if (at === -1) return { kind: DEFAULT_KIND, slug: id };
-  return { kind: id.slice(0, at), slug: id.slice(at + 1) };
-}
-
-/** Whether `<kind>.<slug>` fits the contract's id length, for a validator to refuse a slug that cannot. */
-export function contentIdFits(kind: string, slug: string): boolean {
-  return encodeContentId(kind, slug).length <= CONTENT_ID_MAX;
-}
+import { DEFAULT_KIND, decodeContentId, encodeContentId } from "./content-id.mjs";
 
 /**
  * One kind's side of the content group. Every id a handler takes or returns is its own slug; the

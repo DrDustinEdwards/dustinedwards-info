@@ -1,5 +1,6 @@
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
 import { listPublishedProcedures } from "~/db/procedures";
+import { listPublishedPublications } from "~/db/publications";
 import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
@@ -9,9 +10,8 @@ import {
 } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
-import { PUBLICATIONS } from "~/data/publications";
 import { CONTENT_PAGE_PATHS } from "~/lib/content-pages.mjs";
-import { doiSlug, paperPath } from "~/lib/publications/paths.mjs";
+import { paperPath } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/sitemap";
 
 /**
@@ -35,13 +35,15 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   /* No `lastmod`: a tag has no modification date of its own. */
-  const [blog, tagList, seriesList, nextPublishAt, procedureRows] = await Promise.all([
+  const [blog, tagList, seriesList, nextPublishAt, procedureRows, papers] = await Promise.all([
     listBlogPosts(env, { perPage: 1000 }),
     listBlogTags(env),
     listBlogSeries(env),
     nextScheduledPublishAt(env),
     // Procedures live in D1, so one saved through the operator API is listed without a deploy.
     listPublishedProcedures(env),
+    // Papers live in D1 too, so one saved through Carrel is listed without a deploy.
+    listPublishedPublications(env),
   ]);
 
   const urls = [
@@ -50,8 +52,8 @@ export async function loader({ context }: Route.LoaderArgs) {
      * No `lastmod`: one commit date would mark every paper changed together, which teaches crawlers to
      * ignore the field. No showcase filter: a crawler has no double-counting problem.
      */
-    ...PUBLICATIONS.map((p) => ({
-      loc: `${origin}${paperPath(doiSlug(p.doi))}`,
+    ...papers.map((p) => ({
+      loc: `${origin}${paperPath(p.slug)}`,
       lastmod: null as Date | null,
     })),
     ...procedureRows.map((p) => ({

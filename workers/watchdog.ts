@@ -147,6 +147,50 @@ async function repair(
   return { miss: "", unrepairable: false };
 }
 
+/**
+ * The one firing a week that refreshes the citation counts: Sunday, 03:00 to 03:14 UTC. The cron fires every
+ * fifteen minutes, so exactly one firing falls in that quarter hour, and the main Worker needs no cron of its
+ * own (wrangler.jsonc.example keeps `crons: []` on purpose). Exported only so the worker test can drive it.
+ */
+export function isCitationRefreshWindow(scheduledTime: number): boolean {
+  const at = new Date(scheduledTime);
+  return at.getUTCDay() === 0 && at.getUTCHours() === 3 && at.getUTCMinutes() < 15;
+}
+
+/**
+ * Calls the operator API's refresh_citations, which replaces each paper's count in D1 and keeps the old one
+ * where OpenAlex fails. Returns the problem, or null when nothing was wrong or it was not this firing's turn;
+ * the caller throws it after the health mail, so the invocation is recorded as failed and the cause is named.
+ * Exported only so the worker test can drive it.
+ */
+export async function refreshCitationsWeekly(
+  env: WatchdogEnv,
+  token: string,
+  scheduledTime: number,
+): Promise<string | null> {
+  if (!isCitationRefreshWindow(scheduledTime)) return null;
+  if (!token) return "the weekly citation refresh did not run: OPERATOR_TOKEN is not set on this Worker";
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await env.SITE.fetch(`${SITE_ORIGIN}/api/operator`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "watchdog" },
+      body: JSON.stringify({ tool: "refresh_citations", args: {} }),
+    });
+    payload = await response.json().catch(() => null);
+  } catch (error) {
+    return `the weekly citation refresh did not complete: ${errorMessage(error)}`;
+  }
+  if (!response.ok) {
+    const body = payload as { error?: string; detail?: { failures?: Array<{ doi: string; stage: string }> } } | null;
+    const failed = (body?.detail?.failures ?? []).map((f) => `${f.doi} (${f.stage})`).join(", ");
+    return `the weekly citation refresh answered ${response.status}: ${body?.error ?? "(no error was given)"}${failed ? ` Not refreshed: ${failed}.` : ""}`;
+  }
+  console.log(JSON.stringify({ watchdog: "citations-refreshed", data: (payload as { data?: unknown } | null)?.data ?? null }));
+  return null;
+}
+
 async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
   try {
     await env.EMAIL.send({
@@ -400,7 +444,7 @@ async function mailTransition(
 
 export default {
   // Re-raised: a throwing Cron Trigger is recorded as a failed invocation, the last signal left.
-  async scheduled(_controller: ScheduledController, env: WatchdogEnv): Promise<void> {
+  async scheduled(controller: ScheduledController, env: WatchdogEnv): Promise<void> {
     try {
       const token = env.OPERATOR_TOKEN ?? "";
       const reading = await readHealth(env);
@@ -441,6 +485,10 @@ export default {
       const errorRateNote = errorRate.configured ? [] : ["", errorRate.detail];
 
       await mailTransition(env, draft, reading, errorRateNote);
+
+      // Its own failure is raised after the health mail, so a bad week of counts never hides a bad site.
+      const refreshProblem = await refreshCitationsWeekly(env, token, controller.scheduledTime);
+      if (refreshProblem) throw new Error(refreshProblem);
     } catch (error) {
       const message = errorMessage(error);
       console.error(JSON.stringify({ watchdog: "threw", error: message }));
