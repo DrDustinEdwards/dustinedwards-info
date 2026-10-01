@@ -1,4 +1,5 @@
-import { CV, cvFacts } from "~/lib/cv/entries.mjs";
+import { CV } from "~/lib/cv/current";
+import { cvFacts } from "~/lib/cv/entries.mjs";
 import { renderCvCharts } from "~/lib/cv/render-charts";
 import { parseState } from "~/lib/cv/view.mjs";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";

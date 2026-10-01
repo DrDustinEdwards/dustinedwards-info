@@ -25,6 +25,10 @@ import { backupMedia, syncAsk, syncMedia, syncPosts, syncProcedures, syncStatus 
 import { uploadMediaTool } from "./upload-media.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
+import { listPublicationIdentities, listPublishedPublications } from "~/db/publications";
+import { refreshCitations } from "~/lib/citations.server";
+import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.server";
+import { publicationPath } from "~/lib/publications/parse.mjs";
 import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
 
@@ -192,6 +196,26 @@ export async function runTool(
 
       case "save_procedure":
         return await saveProcedureTool(env, actor, args);
+
+      case "list_publications": {
+        const rows = await listPublicationIdentities(env);
+        const publications = rows.map((row) => ({
+          slug: row.slug,
+          doi: (JSON.parse(row.record) as { doi: string | null }).doi,
+          stage: row.stage,
+          type: row.type,
+          title: row.title,
+          year: row.year,
+          draft: row.status === "draft",
+        }));
+        return { ok: true, data: { headSha: await currentHead(env), count: publications.length, publications } };
+      }
+
+      case "get_publication":
+        return await getPublicationTool(env, args);
+
+      case "refresh_citations":
+        return await refreshCitationsTool(env, args);
     }
   } catch (error) {
     return translate(error);
@@ -356,6 +380,52 @@ async function getProcedureTool(env: OperatorEnv, args: Record<string, unknown>)
   const procedure = await readProcedure(env, parsed.slug);
   if (!procedure) return { ok: false, status: 404, error: `No procedure exists with slug "${parsed.slug}".` };
   return { ok: true, data: { ...procedure, headSha: await currentHead(env) } };
+}
+
+async function getPublicationTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const slug = String(args.slug ?? "").trim();
+  if (!slug || !SLUG_PATTERN.test(slug)) {
+    return { ok: false, status: 400, error: "get_publication requires a lowercase kebab-case slug." };
+  }
+  const file = await readFile(env, publicationPath(slug));
+  if (!file) return { ok: false, status: 404, error: `No publication exists with slug "${slug}".` };
+  const compiled = await compilePublicationFor(env, slug, file.content);
+  return {
+    ok: true,
+    data: {
+      slug,
+      raw: file.content,
+      headSha: await currentHead(env),
+      draft: compiled.ok ? compiled.draft : fileIsDraft(file.content),
+      record: compiled.ok ? compiled.record : null,
+      errors: compiled.ok ? [] : compiled.errors,
+    },
+  };
+}
+
+/**
+ * The weekly refresh the watchdog calls. Every failure is returned, never swallowed: a partial refresh is a
+ * 502 whose detail names each DOI that kept its old count, and the counts that did refresh are stored.
+ */
+async function refreshCitationsTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  let dois: string[];
+  if (args.dois === undefined) {
+    dois = (await listPublishedPublications(env)).flatMap((p) => (p.doi ? [p.doi] : []));
+  } else if (Array.isArray(args.dois) && args.dois.every((d) => typeof d === "string" && d.trim() !== "")) {
+    dois = args.dois as string[];
+  } else {
+    return { ok: false, status: 400, error: "refresh_citations takes dois as a list of DOI strings, or none." };
+  }
+  const result = await refreshCitations(env, dois);
+  if (result.failures.length > 0) {
+    return {
+      ok: false,
+      status: 502,
+      error: `${result.failures.length} of ${dois.length} citation counts did not refresh; each kept the count it had.`,
+      detail: result,
+    };
+  }
+  return { ok: true, data: result };
 }
 
 async function saveProcedureTool(

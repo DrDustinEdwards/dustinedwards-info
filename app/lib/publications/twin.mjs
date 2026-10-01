@@ -1,5 +1,6 @@
-// A committed file, not a route like the blog twin: a route would put 1.13 MB of extracted text in the
-// Worker bundle. The asset wins over the publications.$slug route for a .md path (measured).
+// Builds a paper's markdown twin. compile.mjs calls it, and the twin is stored in D1 and served by
+// app/routes/publications.$slug[.md].ts, so a paper edited through Carrel changes its twin with no build.
+// It was a static asset until publications moved to files (an asset wins over a route for a .md path, measured).
 
 import { decodeEntities } from "./entities.mjs";
 
@@ -54,7 +55,7 @@ function stripControls(value) {
  * @property {string | null} [pmcUrl]
  * @property {string | null} [preprintDoi]
  * @property {string | null} [externalUrl]
- * @property {string} doi
+ * @property {string | null} [doi]
  * @property {boolean} [isOpenAccess]
  * @property {string | null} [license]
  * @property {{ kind: string, id: string }[]} [accessions]
@@ -63,7 +64,7 @@ function stripControls(value) {
 /**
  * Pure: check:machine-readable regenerates every twin and compares bytes.
  *
- * @param {TwinFacts} paper a record from app/data/publications.ts
+ * @param {TwinFacts} paper a compiled publication record (compile.mjs)
  * @param {object} options
  * @param {string[] | null} options.pages extracted PDF text, one string per
  *   page, or null when this site does not host the PDF

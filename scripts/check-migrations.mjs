@@ -18,7 +18,7 @@ const args = process.argv.slice(2);
 const WRITE = args.includes("--write");
 const FORCE = args.includes("--force");
 
-const MINIMUM_MIGRATIONS = 19;
+const MINIMUM_MIGRATIONS = 20;
 
 const tally = createTally();
 const { ok, eq } = tally;

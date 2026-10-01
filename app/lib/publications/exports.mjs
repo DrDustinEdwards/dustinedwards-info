@@ -103,8 +103,11 @@ export function toBibtex(paper) {
   // Verbatim, not rebuilt from first and last: article-number records have no first page.
   if (paper.pages) lines.push(field("pages", escapeBibtex(String(paper.pages))));
   // As deposited: lowercasing would make the export disagree with the registry.
-  lines.push(field("doi", paper.doi));
-  lines.push(field("url", `https://doi.org/${paper.doi}`));
+  // A manuscript with no DOI yet has neither line, rather than a registry address that does not exist.
+  if (paper.doi) {
+    lines.push(field("doi", paper.doi));
+    lines.push(field("url", `https://doi.org/${paper.doi}`));
+  }
   lines.push("}");
   return lines.join("\n");
 }
@@ -136,17 +139,19 @@ export function toRis(paper) {
   if (paper.firstPage) rows.push(["SP", paper.firstPage]);
   if (paper.lastPage) rows.push(["EP", paper.lastPage]);
   if (paper.abstract) rows.push(["AB", decodeEntities(paper.abstract)]);
-  rows.push(["DO", paper.doi]);
-  rows.push(["UR", `https://doi.org/${paper.doi}`]);
+  if (paper.doi) {
+    rows.push(["DO", paper.doi]);
+    rows.push(["UR", `https://doi.org/${paper.doi}`]);
+  }
   rows.push(["ER", ""]);
   return rows.map(([tag, value]) => `${tag}  - ${value}`).join("\n");
 }
 
 /**
- * A pass-through of data/publications.csl.json that only decodes character references (stored escaped
+ * A pass-through of the raw Crossref records the publication files carry (`csl`) that only decodes character references (stored escaped
  * for this site's JSON-LD, not for a reference manager). Nothing is added.
  *
- * @param {any[]} cslRecords the parsed contents of data/publications.csl.json
+ * @param {any[]} cslRecords the `csl` record of each published paper that has one, in the index's order
  */
 export function toCslJson(cslRecords) {
   /**

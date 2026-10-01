@@ -24,38 +24,9 @@
 /assets/*
   Cache-Control: public, max-age=31536000, immutable
 
-# The markdown twin of every paper, written into public/research/publications/ by
-# `build:publication-twins`. An ASSET rather than a route, so it is the one
-# machine-readable surface on this site whose headers cannot be set in code:
-# the Worker is never invoked for it. The grounds for that trade, and the
-# measurement that proved an asset wins over the route matching the same path,
-# are on app/lib/publications/twin.mjs.
-#
-# The two headers below are what a route would have set.
-#
-# CACHE-CONTROL matches SHARED_CACHE_CONTROL, the value every other public
-# document on this site carries. The default for an asset is
-# `public, max-age=0, must-revalidate`, which is a round trip per fetch for a
-# file that changes only on deploy.
-#
-# X-ROBOTS-TAG: NOINDEX, which the blog twin does NOT carry, and the difference
-# is deliberate. A post's twin is the same prose as its page and there is no
-# competition to lose. A paper page is a Scholar submission: it carries the
-# citation_* tags, the JSON-LD and the canonical, and a second indexable URL
-# holding the same title and abstract is the duplicate that costs a paper its
-# ranking on the page that was built for it. The twin is for agents, and
-# llms.txt is where they are told about it. Same treatment as llms.txt itself.
-#
-# LINK: REL="CANONICAL" names the paper page the twin stands for, as every
-# markdown twin and llms file on this site does (app/lib/markdown-twin.ts,
-# canonicalLink). `:splat` is the slug the `*` matched, and the page takes the
-# trailing slash. Relative, which RFC 8288 resolves against the request URL, so
-# the rule holds on workers.dev now and on the apex after the cutover without
-# naming either.
-/research/publications/*.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </research/publications/:splat/>; rel="canonical"
+# The markdown twin of every paper is NOT here: since publications moved to D1 it is a Worker route
+# (app/routes/publications.$slug[.md].ts), which sets its own cache, tag, noindex and canonical headers in code,
+# so a save through Carrel reaches it with no deploy. A rule here would be a stale copy of them.
 
 # Research, teaching and software twins, one file per page, written by build:content next to the HTML URL.
 # Explicit paths, not a splat: a greedy /research/*.md would also match the paper twins above.

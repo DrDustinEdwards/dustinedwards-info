@@ -216,6 +216,13 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "file and its git history stand, its D1 row and search records are derived, and " +
         "there is no delete branch",
     ],
+    ["list_publications", "a read"],
+    ["get_publication", "a read"],
+    [
+      "refresh_citations",
+      "replaces rows of a DERIVED table (the citation counts, read from OpenAlex) and has no delete branch: a " +
+        "DOI that fails keeps its count. Idempotent, and the failures come back in the response",
+    ],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [

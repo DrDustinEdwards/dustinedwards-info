@@ -19,13 +19,13 @@ import {
   contentPageSearchInputs,
   markdownTableFacts,
 } from "../app/lib/content-pages.mjs";
-import { PUBLICATIONS } from "../app/data/publications.ts";
+import { buildCv } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
-import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
+import { buildPublications, PUBLICATIONS_ARTIFACT_PATH, PUBLICATION_RECORDS_PATH } from "./lib/publications.mjs";
 
 /**
  * The paths below stay repo-relative because they name files in messages and in the render; every
@@ -131,7 +131,7 @@ export async function renderContentPages() {
   }
   for (const pagePath of CONTENT_PAGES_FROM_DATA) {
     if (pagePath !== "/cv") throw new Error(`build:content has no generator for ${pagePath}.`);
-    sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument() });
+    sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument(buildCv((await publications()).records)) });
   }
 
   /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> } & PageSchema>} */
@@ -203,6 +203,15 @@ export async function renderContentPages() {
   return pages.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+/** @type {ReturnType<typeof buildPublications> | undefined} */
+let compiledPublications;
+
+/** Compiled once per run: the CV, the search records and the rows all come from the same compile. */
+function publications() {
+  compiledPublications ??= buildPublications();
+  return compiledPublications;
+}
+
 /** @type {ReturnType<typeof buildProcedures> | undefined} */
 let compiledProcedures;
 
@@ -266,7 +275,7 @@ export async function buildArtifact() {
       ...contentPageSearchInputs(await renderContentPages()),
       ...(await procedures()).searchInputs,
     ],
-    paperSearchInputs(PUBLICATIONS),
+    (await publications()).searchInputs,
   );
 }
 
@@ -374,15 +383,23 @@ async function main() {
   await writeFile(fromRoot(PROCEDURES_ARTIFACT_PATH), `${JSON.stringify({ procedures: rows }, null, 2)}
 `, "utf8");
 
+  // The papers' rows, which sync:content writes to D1, and the published records alone, which the CV page
+  // imports. Both come from the compile the search records and the CV markdown above came from.
+  const compiled = await publications();
+  await writeFile(fromRoot(PUBLICATIONS_ARTIFACT_PATH), `${JSON.stringify({ publications: compiled.rows }, null, 2)}
+`, "utf8");
+  await writeFile(fromRoot(PUBLICATION_RECORDS_PATH), `${JSON.stringify({ records: compiled.records }, null, 2)}
+`, "utf8");
+
   console.log(
-    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} ` +
-      `and ${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures)`,
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH}, ` +
+      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures) and ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications)`,
   );
 }
 
 /**
- * One markdown file per research and teaching page, at `public<path>.md`. Paper twins live under
- * public/research/publications/ and are not touched here.
+ * One markdown file per research and teaching page, at `public<path>.md`. The paper twins
+ * are served from D1 (app/routes/publications.$slug[.md].ts), not written here.
  *
  * @param {Awaited<ReturnType<typeof renderContentPages>>} pages
  */

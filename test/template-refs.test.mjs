@@ -119,6 +119,9 @@ test("the scan reads source, and refuses the artifact that lists every asset", (
   // Posts belong to the OTHER tracker. An asset a post cites is `used`, and
   // letting this scan see post markdown would make it claim both states.
   assert.equal(isSourceFile("content/posts/a-post.md"), false);
+  // A paper's file names its PDF by path, so without this every hosted PDF would read as unreferenced.
+  assert.ok(isSourceFile("content/publications/10-1128-mra-00888-24.md"));
+  assert.equal(isSourceFile("content/publications/notes.txt"), false);
   assert.equal(isSourceFile("public/dustin-edwards-logo.svg"), false);
   assert.equal(isSourceFile("README.md"), false);
 });

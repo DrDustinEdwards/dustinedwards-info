@@ -6,7 +6,7 @@
  */
 
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
-import { CV, CV_PAGE, CV_PDF_PATH, formatDollars } from "./entries.mjs";
+import { CV_PAGE, CV_PDF_PATH, formatDollars } from "./entries.mjs";
 import { TYPES } from "./view.mjs";
 
 /**
@@ -61,10 +61,11 @@ function lineItem(e) {
 }
 
 /**
+ * @param {import("./entries.mjs").Cv} CV the resolved CV (buildCv)
  * @param {{ pdf?: boolean }} [options] the PDF leaves out the opening lines, which it sets as a letterhead
  * @returns {string} markdown body, no frontmatter
  */
-export function cvMarkdownBody(options = {}) {
+export function cvMarkdownBody(CV, options = {}) {
   const { person, entries, presentations } = CV;
   const out = [];
   // The PDF sets its own letterhead (scripts/build-cv-pdf.mjs), so it starts at the first section.
@@ -130,7 +131,8 @@ export function cvMarkdownBody(options = {}) {
 }
 
 /** The whole source file build:content reads for /cv, frontmatter included. */
-export function cvMarkdownDocument() {
+/** @param {import("./entries.mjs").Cv} CV the resolved CV (buildCv) */
+export function cvMarkdownDocument(CV) {
   const fm = [
     "---",
     `path: ${CV_PAGE.path}`,
@@ -141,5 +143,5 @@ export function cvMarkdownDocument() {
     "---",
     "",
   ].join("\n");
-  return `${fm}${cvMarkdownBody()}`;
+  return `${fm}${cvMarkdownBody(CV)}`;
 }

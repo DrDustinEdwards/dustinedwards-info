@@ -7,6 +7,10 @@ export const SOURCE_ROOTS = ["app", "workers"];
 
 export const SOURCE_FILES = ["public/site.webmanifest", "content/features.json"];
 
+// Each paper's file names its PDF by path (`pdfPath`), so these markdown files are sources: without them every
+// hosted PDF would read as unreferenced. Passed through unstripped, like JSON: the extracted text has apostrophes.
+export const SOURCE_DIRECTORIES = ["content/publications"];
+
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js", ".css", ".json", ".webmanifest"];
 
 // Checked first because `SOURCE_FILES` bypass the root rule. `assets.json` lists every asset path.
@@ -19,6 +23,7 @@ const SELF_REFERENTIAL = ["content/generated/assets.json"];
 export function isSourceFile(file) {
   if (SELF_REFERENTIAL.includes(file)) return false;
   if (SOURCE_FILES.includes(file)) return true;
+  if (SOURCE_DIRECTORIES.some((dir) => file.startsWith(`${dir}/`) && file.endsWith(".md"))) return true;
   const root = file.split("/")[0] ?? "";
   if (!SOURCE_ROOTS.includes(root)) return false;
   return SOURCE_EXTENSIONS.some((ext) => file.endsWith(ext));

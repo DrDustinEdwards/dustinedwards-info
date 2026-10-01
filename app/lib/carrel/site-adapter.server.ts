@@ -11,12 +11,14 @@ import { listAllPostsForAdmin, previewBlogPost, type PostRow } from "~/db";
 import { posts } from "~/db/schema";
 import { postPath } from "~/lib/content/slug.mjs";
 import { cloudflareContext, nonceContext, postPreviewContext } from "~/lib/context";
+import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-kinds.server";
+import { publicationHandler } from "~/lib/carrel/publication-handler.server";
+import { asSiteApiError } from "~/lib/carrel/errors.server";
+import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
-  EditorError,
   GitHubError,
-  PolicyError,
   currentHead,
   postColumnValues,
   renderRecord,
@@ -24,6 +26,8 @@ import {
 } from "~/lib/editor/publish.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
+
+export { withPublication };
 
 type CarrelEnv = Env & { GITHUB_TOKEN?: string };
 
@@ -45,49 +49,10 @@ function statusOf(raw: string, now = Date.now()): ContentStatus {
   return at && Date.parse(at) > now ? "scheduled" : "published";
 }
 
-/**
- * Sets `draft` and `publish_at` by line, leaving every other key byte for byte: serializePost writes
- * only the fields the editor knows, and a status change must not drop the others. The values are
- * written as serializePost writes them.
- */
-export function withPublication(raw: string, change: { draft: boolean; publishAt?: string | null }) {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---/.exec(raw);
-  if (!match) throw new RefusedError("The source has no frontmatter block, so its status cannot be set.");
-  let lines = match[1]!.split(/\r?\n/);
-
-  const set = (key: string, value: string | null) => {
-    const at = lines.findIndex((line) => line.startsWith(`${key}:`));
-    if (value === null) {
-      if (at !== -1) lines = lines.filter((_, i) => i !== at);
-    } else if (at !== -1) {
-      lines[at] = `${key}: ${value}`;
-    } else {
-      lines.push(`${key}: ${value}`);
-    }
-  };
-
-  set("draft", change.draft ? "true" : "false");
-  if (change.publishAt !== undefined) {
-    set("publish_at", change.publishAt === null ? null : JSON.stringify(change.publishAt));
-  }
-  return `---\n${lines.join("\n")}\n---${raw.slice(match[0].length)}`;
-}
-
 /** The effective publication time, as the pipeline computes it: publish_at, else the date. */
 function effectivePublishAt(raw: string): number {
   const fields = parsePost(raw);
   return Date.parse(fields.publishAt.trim() || `${fields.date}T00:00:00.000Z`);
-}
-
-/** The site's refusals, in the package's terms. Anything else is a failure and stays one. */
-async function asSiteApiError(env: CarrelEnv, error: unknown): Promise<never> {
-  if (error instanceof GitHubError && error.conflict) {
-    throw new VersionConflictError(await currentHead(env));
-  }
-  if (error instanceof EditorError || error instanceof PolicyError) {
-    throw new RefusedError(error.message);
-  }
-  throw error;
 }
 
 /**
@@ -173,163 +138,161 @@ export function carrelSiteAdapter(options: {
     return file.content;
   }
 
+  const postHandler: ContentKindHandler = {
+    kind: "post",
+
+    async list(query) {
+      const now = Date.now();
+      const needle = query.q?.toLowerCase();
+      const summaries: ContentSummary[] = (await listAllPostsForAdmin(env)).map((row) => {
+        const at = row.publishAt ? row.publishAt.getTime() : null;
+        const status: ContentStatus =
+          row.status === "draft" ? "draft" : at !== null && at > now ? "scheduled" : "published";
+        return {
+          id: row.slug,
+          kind: "post",
+          title: row.title,
+          status,
+          // D1 cannot tell a withdrawn post from one never published, so a draft has no public path.
+          path: status === "draft" ? null : `/writing/${row.slug}`,
+          publishAt: status === "scheduled" && at !== null ? new Date(at).toISOString() : null,
+          publishedAt: status === "published" && at !== null ? new Date(at).toISOString() : null,
+          updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
+        };
+      });
+      return summaries
+        .filter((s) => !query.status || s.status === query.status)
+        .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
+    },
+
+    async get(id) {
+      const file = await readFile(env, postPath(id));
+      if (!file) return null;
+      const [version, updated] = await Promise.all([
+        currentHead(env),
+        env.DB.prepare(`SELECT updated_at FROM posts WHERE slug = ?1`)
+          .bind(id)
+          .first<{ updated_at: number }>(),
+      ]);
+      const fields = parsePost(file.content);
+      const { firstPublished } = readState(file.content);
+      const status = statusOf(file.content);
+      return {
+        id,
+        kind: "post",
+        title: fields.title || id,
+        status,
+        path: firstPublished ? `/writing/${id}` : null,
+        publishAt: status === "scheduled" ? new Date(Date.parse(fields.publishAt)).toISOString() : null,
+        publishedAt: firstPublished ? `${firstPublished}T00:00:00.000Z` : null,
+        updatedAt: updated ? new Date(updated.updated_at * 1000).toISOString() : null,
+        format: "markdown",
+        source: file.content,
+        version,
+      };
+    },
+
+    // Keeps the stored status, as the contract's reference adapter does: a save to a live post
+    // edits it live, and a new post starts as a draft.
+    async saveDraft(id, input) {
+      const file = await readFile(env, postPath(id));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
+      const raw = file
+        ? withPublication(input.source, {
+            draft: readState(file.content).draft,
+            publishAt: parsePost(file.content).publishAt.trim() || null,
+          })
+        : withPublication(input.source, { draft: true });
+      return write(id, input.changeId, raw, input.expectedVersion);
+    },
+
+    async publish(id, input) {
+      // Read even when source is sent: a version for an id that does not exist is a conflict.
+      const stored = await existing(id);
+      const source = input.source ?? stored;
+      // A post whose time is still ahead would publish invisible, so publishing now means now.
+      const due = effectivePublishAt(source) > Date.now() ? new Date().toISOString() : undefined;
+      return write(id, input.changeId, withPublication(source, { draft: false, publishAt: due }), input.expectedVersion);
+    },
+
+    async schedule(id, input) {
+      const at = Date.parse(input.publishAt);
+      if (!(at > Date.now())) {
+        throw new RefusedError("publishAt is not in the future; publish it now instead.");
+      }
+      const stored = await existing(id);
+      const source = input.source ?? stored;
+      return write(
+        id,
+        input.changeId,
+        withPublication(source, { draft: false, publishAt: new Date(at).toISOString() }),
+        input.expectedVersion,
+      );
+    },
+
+    async unpublish(id, input) {
+      const source = await existing(id);
+      return write(id, input.changeId, withPublication(source, { draft: true }), input.expectedVersion);
+    },
+
+    async revisions(id) {
+      if (!(await readFile(env, postPath(id)))) return null;
+      const commits = await listCommitsForPath(env, postPath(id), 50);
+      return commits.map((c) => ({
+        version: c.sha,
+        at: new Date(c.date).toISOString(),
+        author: c.author.slice(0, 200),
+        message: c.message.slice(0, 2000),
+      }));
+    },
+
+    async revisionSource(id, version) {
+      if (!COMMIT_SHA.test(version)) return null;
+      try {
+        return (await readFile(env, postPath(id), version))?.content ?? null;
+      } catch (error) {
+        // An unknown ref is a missing version, not a failure of the site.
+        if (error instanceof GitHubError && error.status === 422) return null;
+        throw error;
+      }
+    },
+
+    // The page the save would publish: the same record renderAndWrite builds, rendered through the
+    // blog route and the root layout in-process, so nothing is written and nothing is cached.
+    async preview(previewSlug, input) {
+      if (!renderDocument) throw new Error("the document handler is not on this request's context");
+      const slug = previewSlug ?? UNSAVED_PREVIEW_SLUG;
+      let record: any;
+      try {
+        record = await renderRecord(env, slug, input.source);
+      } catch (error) {
+        return asSiteApiError(env, error);
+      }
+      const post = await previewPost(env, record);
+
+      // Every context the Renderer sets for a public path: the nonce is undefined there, as a
+      // public page carries none (workers/csp.mjs).
+      const context = new RouterContextProvider();
+      context.set(cloudflareContext, { env, ctx });
+      context.set(nonceContext, undefined);
+      context.set(postPreviewContext, post);
+      const response = await renderDocument(
+        new Request(`${origin}/writing/${slug}`, { headers: { accept: "text/html" } }),
+        context,
+      );
+      if (!response.ok) {
+        throw new RefusedError(`The page did not render: the blog route answered ${response.status}.`);
+      }
+      return response.text();
+    },
+  };
+
+  const registry = contentRegistry([postHandler, publicationHandler(env)]);
+
   return {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },
-
-    content: {
-      async list(query) {
-        const now = Date.now();
-        const needle = query.q?.toLowerCase();
-        const summaries: ContentSummary[] = (await listAllPostsForAdmin(env)).map((row) => {
-          const at = row.publishAt ? row.publishAt.getTime() : null;
-          const status: ContentStatus =
-            row.status === "draft" ? "draft" : at !== null && at > now ? "scheduled" : "published";
-          return {
-            id: row.slug,
-            kind: "post",
-            title: row.title,
-            status,
-            // D1 cannot tell a withdrawn post from one never published, so a draft has no public path.
-            path: status === "draft" ? null : `/writing/${row.slug}`,
-            publishAt: status === "scheduled" && at !== null ? new Date(at).toISOString() : null,
-            publishedAt: status === "published" && at !== null ? new Date(at).toISOString() : null,
-            updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
-          };
-        });
-        const matching = summaries
-          .filter((s) => !query.status || s.status === query.status)
-          .filter((s) => !needle || s.title.toLowerCase().includes(needle) || s.id.includes(needle));
-        const start = query.cursor && /^\d+$/.test(query.cursor) ? Number(query.cursor) : 0;
-        const end = start + query.limit;
-        return {
-          items: matching.slice(start, end),
-          nextCursor: end < matching.length ? String(end) : null,
-        };
-      },
-
-      async get(id) {
-        const file = await readFile(env, postPath(id));
-        if (!file) return null;
-        const [version, updated] = await Promise.all([
-          currentHead(env),
-          env.DB.prepare(`SELECT updated_at FROM posts WHERE slug = ?1`)
-            .bind(id)
-            .first<{ updated_at: number }>(),
-        ]);
-        const fields = parsePost(file.content);
-        const { firstPublished } = readState(file.content);
-        const status = statusOf(file.content);
-        return {
-          id,
-          kind: "post",
-          title: fields.title || id,
-          status,
-          path: firstPublished ? `/writing/${id}` : null,
-          publishAt: status === "scheduled" ? new Date(Date.parse(fields.publishAt)).toISOString() : null,
-          publishedAt: firstPublished ? `${firstPublished}T00:00:00.000Z` : null,
-          updatedAt: updated ? new Date(updated.updated_at * 1000).toISOString() : null,
-          format: "markdown",
-          source: file.content,
-          version,
-        };
-      },
-
-      // Keeps the stored status, as the contract's reference adapter does: a save to a live post
-      // edits it live, and a new post starts as a draft.
-      async saveDraft(id, input) {
-        const file = await readFile(env, postPath(id));
-        if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
-        if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
-        const raw = file
-          ? withPublication(input.source, {
-              draft: readState(file.content).draft,
-              publishAt: parsePost(file.content).publishAt.trim() || null,
-            })
-          : withPublication(input.source, { draft: true });
-        return write(id, input.changeId, raw, input.expectedVersion);
-      },
-
-      async publish(id, input) {
-        // Read even when source is sent: a version for an id that does not exist is a conflict.
-        const stored = await existing(id);
-        const source = input.source ?? stored;
-        // A post whose time is still ahead would publish invisible, so publishing now means now.
-        const due = effectivePublishAt(source) > Date.now() ? new Date().toISOString() : undefined;
-        return write(id, input.changeId, withPublication(source, { draft: false, publishAt: due }), input.expectedVersion);
-      },
-
-      async schedule(id, input) {
-        const at = Date.parse(input.publishAt);
-        if (!(at > Date.now())) {
-          throw new RefusedError("publishAt is not in the future; publish it now instead.");
-        }
-        const stored = await existing(id);
-        const source = input.source ?? stored;
-        return write(
-          id,
-          input.changeId,
-          withPublication(source, { draft: false, publishAt: new Date(at).toISOString() }),
-          input.expectedVersion,
-        );
-      },
-
-      async unpublish(id, input) {
-        const source = await existing(id);
-        return write(id, input.changeId, withPublication(source, { draft: true }), input.expectedVersion);
-      },
-
-      async revisions(id) {
-        if (!(await readFile(env, postPath(id)))) return null;
-        const commits = await listCommitsForPath(env, postPath(id), 50);
-        return commits.map((c) => ({
-          version: c.sha,
-          at: new Date(c.date).toISOString(),
-          author: c.author.slice(0, 200),
-          message: c.message.slice(0, 2000),
-        }));
-      },
-
-      async revisionSource(id, version) {
-        if (!COMMIT_SHA.test(version)) return null;
-        try {
-          return (await readFile(env, postPath(id), version))?.content ?? null;
-        } catch (error) {
-          // An unknown ref is a missing version, not a failure of the site.
-          if (error instanceof GitHubError && error.status === 422) return null;
-          throw error;
-        }
-      },
-    },
-
-    preview: {
-      // The page the save would publish: the same record renderAndWrite builds, rendered through the
-      // blog route and the root layout in-process, so nothing is written and nothing is cached.
-      async render(input) {
-        if (!renderDocument) throw new Error("the document handler is not on this request's context");
-        const slug = input.id ?? UNSAVED_PREVIEW_SLUG;
-        let record: any;
-        try {
-          record = await renderRecord(env, slug, input.source);
-        } catch (error) {
-          return asSiteApiError(env, error);
-        }
-        const post = await previewPost(env, record);
-
-        // Every context the Renderer sets for a public path: the nonce is undefined there, as a
-        // public page carries none (workers/csp.mjs).
-        const context = new RouterContextProvider();
-        context.set(cloudflareContext, { env, ctx });
-        context.set(nonceContext, undefined);
-        context.set(postPreviewContext, post);
-        const response = await renderDocument(
-          new Request(`${origin}/writing/${slug}`, { headers: { accept: "text/html" } }),
-          context,
-        );
-        if (!response.ok) {
-          throw new RefusedError(`The page did not render: the blog route answered ${response.status}.`);
-        }
-        return response.text();
-      },
-    },
+    content: registry.adapter,
+    preview: { render: registry.render },
   };
 }

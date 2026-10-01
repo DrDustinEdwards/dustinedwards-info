@@ -34,7 +34,7 @@ export function schemaTypeFor(type) {
  * @property {string | null} [firstPage]
  * @property {string | null} [lastPage]
  * @property {string | null} [abstract]
- * @property {string} doi
+ * @property {string | null} [doi]
  * @property {string} type
  * @property {boolean} [isOpenAccess]
  * @property {string | null} [license]

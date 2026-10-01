@@ -68,3 +68,45 @@ export async function seedMention(
     .first<{ id: number }>();
   return row?.id ?? -1;
 }
+
+/**
+ * Every publication file in the repository, compiled by the door the Carrel adapter's save uses and written
+ * to D1 as sync:content writes it, so a case that reads the papers reads the whole corpus. The PDFs are not
+ * in this isolate, so the host says every one is there; check:machine-readable holds the real ones.
+ */
+const PUBLICATION_FILES = import.meta.glob("../../content/publications/*.md", {
+  query: "?raw",
+  import: "default",
+  eager: true,
+}) as Record<string, string>;
+
+export async function seedPublications() {
+  const { compilePublication } = await import("~/lib/publications/compile.mjs");
+  const { writePublicationRow } = await import("~/lib/publications/save.server");
+  const { default: citedByArtifact } = await import("../../data/publications.cited-by.json");
+  for (const [file, raw] of Object.entries(PUBLICATION_FILES)) {
+    const slug = file.split("/").pop()!.replace(/\.md$/, "");
+    const compiled = await compilePublication({
+      slug,
+      raw,
+      host: { pdf: async () => ({ size: 1 }) },
+      citedByArtifact,
+    });
+    if (!compiled.ok) throw new Error(`${file} does not compile:\n  ${compiled.errors.join("\n  ")}`);
+    await writePublicationRow(env as never, compiled);
+  }
+  return Object.keys(PUBLICATION_FILES).length;
+}
+
+/** The citation counts the committed snapshot holds, in the table the pages read. */
+export async function seedCitations() {
+  const { default: artifact } = await import("../../data/publications.cited-by.json");
+  const works = (artifact as unknown as { works: Record<string, { openalexId: string; total: number }> }).works;
+  for (const [doi, work] of Object.entries(works)) {
+    await env.DB.prepare(
+      `INSERT OR REPLACE INTO publication_citations (doi, count, url, fetched_at) VALUES (?1, ?2, ?3, '2026-09-12')`,
+    )
+      .bind(doi.toLowerCase(), work.total, `https://openalex.org/${work.openalexId}`)
+      .run();
+  }
+}

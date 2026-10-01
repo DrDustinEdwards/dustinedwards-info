@@ -2,7 +2,7 @@
 import { canonicalAuthor } from "./publications/authors.mjs";
 import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
-import { doiSlug, paperPath } from "./publications/paths.mjs";
+import { paperPath } from "./publications/paths.mjs";
 
 /**
  * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
@@ -411,7 +411,9 @@ export function publicationsJsonLd(
     authors: string[];
     year: number;
     journal: string | null;
-    doi: string;
+    slug: string;
+    /** Null for a submitted manuscript, which has no DOI yet. */
+    doi: string | null;
     pdfPath: string | null;
     /** The curated type, so a chapter here is the same Chapter its own page describes. */
     type?: string;
@@ -423,7 +425,7 @@ export function publicationsJsonLd(
     ...items.map((p) => ({
       "@context": "https://schema.org",
       "@type": p.type ? schemaTypeFor(p.type) : "ScholarlyArticle",
-      "@id": origin + paperPath(doiSlug(p.doi)),
+      "@id": origin + paperPath(p.slug),
       // Decoding is safe here: `jsonLd()` escapes `<` and `>` on the way into the script element.
       headline: decodeEntities(p.title),
       name: decodeEntities(p.title),
@@ -434,9 +436,13 @@ export function publicationsJsonLd(
       ...(p.journal
         ? { isPartOf: { "@type": "Periodical", name: decodeEntities(p.journal) } }
         : {}),
-      identifier: { "@type": "PropertyValue", propertyID: "DOI", value: p.doi },
-      sameAs: `https://doi.org/${p.doi}`,
-      url: origin + paperPath(doiSlug(p.doi)),
+      ...(p.doi
+        ? {
+            identifier: { "@type": "PropertyValue", propertyID: "DOI", value: p.doi },
+            sameAs: `https://doi.org/${p.doi}`,
+          }
+        : {}),
+      url: origin + paperPath(p.slug),
       ...(p.pdfPath
         ? {
             encoding: {

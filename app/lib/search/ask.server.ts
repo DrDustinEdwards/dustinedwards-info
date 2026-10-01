@@ -14,12 +14,8 @@ import { answerDelta, takeSseFrames } from "./sse.mjs";
 import { setDrift } from "~/lib/health/verdicts.mjs";
 import { isPubliclyVisible, statusForDraft } from "./visibility.mjs";
 import { askCorpusRecords, askExpectedUrls } from "./search.server";
-import { PUBLICATIONS } from "~/data/publications";
-import {
-  doiSlug,
-  paperMarkdownPath,
-  paperPath,
-} from "~/lib/publications/paths.mjs";
+import { listPublishedPublicationTwins } from "~/db/publications";
+import { paperPath } from "~/lib/publications/paths.mjs";
 import { timed, type Timings } from "~/lib/timing";
 import { recordsForPosts } from "./records.mjs";
 import {
@@ -212,22 +208,21 @@ export async function syncAskCorpus(env: Env): Promise<CorpusSyncResult> {
   };
 }
 
-/** From the module, not D1: papers have no visibility state to ask about. */
-function paperItemKeys(): string[] {
-  return PUBLICATIONS.map((paper) => keyForUrl(paperPath(doiSlug(paper.doi))));
+/** The published papers' Ask keys, from D1: a draft paper is not public, so it is not asked about. */
+async function paperItemKeys(env: Env): Promise<string[]> {
+  return (await listPublishedPublicationTwins(env)).map(({ slug }) => keyForUrl(paperPath(slug)));
 }
 
-/** Fetched through ASSETS: the twins are gitignored and not imported, so this indexes what the site serves. */
+/** Each published twin from D1, the row the twin route serves, so this indexes exactly what the site says. */
 async function uploadPaperTwins(env: Env) {
-  const twins = PUBLICATIONS.map((paper) => {
-    const slug = doiSlug(paper.doi);
-    return { key: keyForUrl(paperPath(slug)), path: paperMarkdownPath(slug) };
-  });
+  const rows = await listPublishedPublicationTwins(env);
+  const bySlug = new Map(rows.map((row) => [row.slug, row.markdown]));
+  const twins = rows.map(({ slug }) => ({ key: keyForUrl(paperPath(slug)), path: slug }));
   return uploadTwins(twins, {
-    fetchText: async (path: string) => {
-      const response = await env.ASSETS.fetch(new Request(new URL(path, "https://assets.invalid")));
-      if (!response.ok) throw new Error(`twin ${path} answered ${response.status}`);
-      return response.text();
+    fetchText: async (slug: string) => {
+      const markdown = bySlug.get(slug);
+      if (markdown === undefined) throw new Error(`twin ${slug} has no published row`);
+      return markdown;
     },
     upload: (key: string, body: string) => env.AI_SEARCH.items.upload(key, body),
   });
@@ -280,7 +275,7 @@ export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIn
     listAllAskItems(env, timings),
   ]);
   // Without the papers, the badge would report them stale and the repair button would delete them.
-  const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperItemKeys()]);
+  const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...(await paperItemKeys(env))]);
   const present = new Set(listed.map((item) => item.key));
 
   const { extra, ...drift } = setDrift(expected, present);
@@ -370,4 +365,27 @@ export async function pruneAskCorpus(env: Env, liveKeys: string[]): Promise<stri
   // Only on an actual removal; dropping the key otherwise would cost the next reader a listing.
   if (removed.length > 0) await dropCachedDrift(env);
   return removed;
+}
+
+/**
+ * One paper's twin in or out of the Ask index: uploaded when `markdown` is given, removed when it is null
+ * (a draft, or a paper that is gone). Scoped to this paper's key, as syncAskPost is to a post's.
+ */
+export async function syncAskPaper(
+  env: Env,
+  slug: string,
+  markdown: string | null,
+): Promise<{ uploaded: number; removed: number }> {
+  const key = keyForUrl(paperPath(slug));
+  let uploaded = 0;
+  let removed = 0;
+  if (markdown !== null) {
+    await withRetry(() => env.AI_SEARCH.items.upload(key, markdown), { attempts: 2 });
+    uploaded = 1;
+  } else {
+    removed = (await deleteAskItemsWhere(env, (itemKey) => itemKey === key)).length;
+  }
+  await invalidateAnswerCache(env);
+  await dropCachedDrift(env);
+  return { uploaded, removed };
 }
