@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { listedPaperTwins, overAdvertisedTwins } from "../../app/lib/llms/validate.mjs";
 import { paperAskUrl, paperMarkdownPath, paperPath } from "../../app/lib/publications/paths.mjs";
 import { decodeEntities } from "../../app/lib/publications/entities.mjs";
 import { paperSearchInputs } from "../../app/lib/publications/search-inputs.mjs";
@@ -49,12 +50,12 @@ ok(
 
 /* Matched on the URL, because a count passes on a list naming the wrong papers. */
 const llms = readFileSync(join(root, "content", "llms.txt"), "utf8");
-const advertised = new Set([...llms.matchAll(/^\s{2}(\/research\/publications\/[a-z0-9-]+\.md)$/gm)].map((m) => m[1]));
+const advertised = listedPaperTwins(llms);
 ok(`llms.txt lists markdown twins (${advertised.size} found)`, advertised.size > 0, "an empty set here would make both directions below vacuous");
 
 /* A paper added through Carrel is not in llms.txt until it is written there: the list is what is not derived. */
 const expectedTwinUrls = new Set([...twins.keys()].map((name) => `/research/publications/${name}`));
-const overAdvertised = [...advertised].filter((url) => !expectedTwinUrls.has(url));
+const overAdvertised = overAdvertisedTwins(llms, expectedTwinUrls);
 ok(
   "llms.txt lists no twin this corpus does not produce",
   overAdvertised.length === 0,

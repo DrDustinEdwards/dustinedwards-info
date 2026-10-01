@@ -386,8 +386,8 @@
         {
           "kind": "assertion",
           "gate": "check:machine-readable",
-          "text": "content/llms.txt is LF-only",
-          "file": "scripts/machine-readable/llms.mjs"
+          "text": "llms.txt is LF-only",
+          "file": "app/lib/llms/validate.mjs"
         },
         {
           "kind": "gate",

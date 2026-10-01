@@ -7,6 +7,7 @@ import {
   procedureDriftVerdict,
   pageDriftVerdict,
   publicationDriftVerdict,
+  llmsDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaBackupDriftVerdict,
@@ -15,6 +16,8 @@ import {
 import { askIndexStatus } from "~/lib/search/ask.server";
 import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
+import { gitBlobSha } from "~/lib/content/hashes.mjs";
+import { LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
@@ -68,6 +71,23 @@ export async function readPublicationSides(env: Env & { GITHUB_TOKEN?: string })
     "SELECT slug, doi_key, source_blob_sha FROM publications",
   ).all<{ slug: string; doi_key: string | null; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
+}
+
+/**
+ * The same two sides for llms.txt: the one file with its blob sha, and the settings row /llms.txt is served
+ * from, given the blob sha of the bytes it holds (the row has no column for one). The slug is a name for the
+ * pair, so the shared comparison applies.
+ */
+export async function readLlmsSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const dir = LLMS_PATH.slice(0, LLMS_PATH.lastIndexOf("/"));
+  const file = (await listDirectory(env, dir)).find((e) => e.type === "file" && e.path === LLMS_PATH);
+  const row = await env.DB.prepare("SELECT value FROM settings WHERE key = ?1")
+    .bind(LLMS_SETTING_KEY)
+    .first<{ value: string }>();
+  return {
+    files: file ? [{ slug: "llms", sha: file.sha, path: file.path }] : [],
+    rows: row ? [{ slug: "llms", source_blob_sha: await gitBlobSha(row.value) }] : [],
+  };
 }
 
 export interface HealthCheck {
@@ -131,6 +151,14 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
     await guard("publications-drift", async () => {
       const { files, rows } = await readPublicationSides(env);
       return publicationDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("llms-drift", async () => {
+      // A file edited through git, or a save whose D1 write failed, shows here; the served row is derived.
+      const { files, rows } = await readLlmsSides(env);
+      return llmsDriftVerdict(files, rows);
     }),
   );
 

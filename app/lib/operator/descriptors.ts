@@ -17,6 +17,7 @@ const TOOLS = [
   "sync_procedures",
   "sync_pages",
   "sync_publications",
+  "sync_llms",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -29,6 +30,7 @@ const TOOLS = [
   "refresh_citations",
   "list_pages",
   "get_page",
+  "get_llms",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -142,6 +144,14 @@ export const TOOL_DESCRIPTORS: Readonly<
       "Idempotent. A read-back reconciliation: expected, present, and a converged " +
       "verdict.",
   },
+  sync_llms: {
+    args: {},
+    returns:
+      "Converges the settings row /llms.txt is served from to the repository's content/llms.txt, through " +
+      "the same validator and write door an llms.txt save uses, and purges /llms.txt. Refuses a repository " +
+      "with no llms.txt rather than deleting the row, and answers 422 naming the checks a file fails. " +
+      "Idempotent. A read-back reconciliation: expected, present, and a converged verdict.",
+  },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
     returns:
@@ -228,6 +238,13 @@ export const TOOL_DESCRIPTORS: Readonly<
       "The complete page file (raw), the head sha, the page as structured data (front matter and body), " +
       "and any validation errors the file has now. The format is docs/PAGES.md. Read only: a page is " +
       "saved through Carrel.",
+  },
+  get_llms: {
+    args: {},
+    returns:
+      "The complete content/llms.txt (raw) and its size, the head sha, any validation errors the file has " +
+      "now, and whether the row /llms.txt is served from holds exactly this file. The format is " +
+      "docs/LLMS.md. Read only: it is saved through Carrel, as the document llms.",
   },
   backup_media: {
     args: {},

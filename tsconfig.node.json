@@ -339,6 +339,8 @@
     "app/lib/pages/compile.mjs",
     "app/lib/pages/invariants.mjs",
     "app/lib/pages/links.mjs",
+    // The llms.txt rules, shared by check:machine-readable and the llms.txt save (docs/LLMS.md).
+    "app/lib/llms/validate.mjs",
     "app/lib/phage-table.mjs",
     "app/lib/phage-tools.mjs"
   ],
