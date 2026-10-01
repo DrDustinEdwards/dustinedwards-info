@@ -1,5 +1,6 @@
 import { getPublishedPageMarkdown } from "~/db/pages";
 import { getEnv } from "~/lib/context";
+import { canonicalLink } from "~/lib/markdown-twin";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { SHARED_CACHE_CONTROL } from "~/lib/seo";
 
@@ -24,8 +25,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       "cache-tag": CONTENT_PAGES_CACHE_TAG,
       // As every other page twin: the HTML page is the one to index.
       "x-robots-tag": "noindex",
-      // Relative, as the static rule it replaced was: RFC 8288 resolves it against the request URL.
-      link: `<${path}>; rel="canonical"`,
+      link: canonicalLink(path),
     },
   });
 }

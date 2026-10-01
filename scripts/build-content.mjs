@@ -119,13 +119,13 @@ export async function renderContentPages() {
 }
 
 /**
- * The rows sync:content writes into D1's pages table: every file-sourced page, the CV excluded, as the
+ * The rows sync:content writes into D1's pages table: every file-sourced page, the CV excluded, as
  * the page save would write it.
  */
 export async function buildPages() {
   return (await pageSources())
     .filter(({ page }) => !CONTENT_PAGES_FROM_DATA.includes(page.path))
-    .map(({ name, compiled }) => ({
+    .map(({ compiled }) => ({
       slug: pageSlug(compiled.page.path),
       path: compiled.page.path,
       title: compiled.page.title,

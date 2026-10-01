@@ -70,10 +70,10 @@ export async function listPublishedPageHtml(env: Env) {
   return new Map(rows.map((row) => [row.path, (JSON.parse(row.record) as PageRecord).html]));
 }
 
-/** For the operator's list_pages: every row, drafts included. */
-export async function listPagesForOperator(env: Env) {
+/** For list_pages and Carrel's list: every row, drafts included, with when D1 last wrote it. */
+export async function listPageRows(env: Env) {
   const rows = await getDb(env)
-    .select({ slug: pages.slug, path: pages.path, title: pages.title, status: pages.status })
+    .select({ slug: pages.slug, path: pages.path, title: pages.title, status: pages.status, syncedAt: pages.syncedAt })
     .from(pages)
     .orderBy(asc(pages.path));
   return rows.map(({ status, ...row }) => ({ ...row, draft: status === "draft" }));

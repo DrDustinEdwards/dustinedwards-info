@@ -9,7 +9,7 @@ import { TOOLS, runTool, toolValues } from "../phage-tools.mjs";
 /** @typedef {{ path: string, markdown: string, html: string }} InvariantPage */
 
 /** Every calculator page's address, once. */
-export const CALCULATOR_PATHS = [...new Set(Object.values(TOOLS).map((tool) => tool.path))];
+const CALCULATOR_PATHS = [...new Set(Object.values(TOOLS).map((tool) => tool.path))];
 
 /**
  * Every step of a calculator result, numbered as the page numbers it, must be on the page, so a page

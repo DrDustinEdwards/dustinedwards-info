@@ -12,6 +12,7 @@ import matter from "gray-matter";
 import { listBlogPosts } from "~/db";
 import { listPublishedPageHtml } from "~/db/pages";
 import { listPublishedProcedures } from "~/db/procedures";
+import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "~/lib/content-pages.mjs";
@@ -27,12 +28,10 @@ import { idsIn, pageLinkErrors, type AddressBook } from "./links.mjs";
 type PageEnv = Env & { GITHUB_TOKEN?: string };
 
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
-export class PageInvalid extends Error {
-  errors: string[];
+export class PageInvalid extends ContentInvalid {
   constructor(path: string, errors: string[]) {
-    super(`The page "${path}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`);
+    super(`The page "${path}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
     this.name = "PageInvalid";
-    this.errors = errors;
   }
 }
 
@@ -40,7 +39,7 @@ export class PageInvalid extends Error {
  * The page a path names. A path outside CONTENT_PAGE_PATHS is refused here, before any read or write: a
  * save cannot create a path, and the error says so. /cv is generated from data and has no file.
  */
-export function registeredPage(path: string) {
+function registeredPage(path: string) {
   const clean = path.trim();
   if (!(CONTENT_PAGE_PATHS as readonly string[]).includes(clean)) {
     throw new PageInvalid(clean, [

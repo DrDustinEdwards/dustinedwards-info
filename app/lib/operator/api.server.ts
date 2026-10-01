@@ -31,7 +31,7 @@ import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.serv
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
-import { listPagesForOperator } from "~/db/pages";
+import { listPageRows } from "~/db/pages";
 import { PageInvalid, readPage } from "~/lib/pages/save.server";
 
 // Re-exported so the routes keep one import path for the operator surface.
@@ -219,7 +219,7 @@ export async function runTool(
       case "refresh_citations":
         return await refreshCitationsTool(env, args);
       case "list_pages": {
-        const pageRows = await listPagesForOperator(env);
+        const pageRows = await listPageRows(env);
         return { ok: true, data: { headSha: await currentHead(env), count: pageRows.length, pages: pageRows } };
       }
 
