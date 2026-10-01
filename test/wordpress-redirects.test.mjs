@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS, contentPageFile } from "../app/lib/content-pages.mjs";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
+import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 import {
   BAYLOR_PDF,
   EXPLICIT_ROWS,
@@ -256,6 +257,8 @@ const STATIC_ROUTES = new Set([
   "/",
   ...[...routesSource.matchAll(/\broute\("([^"*:]+)"/g)].map((m) => `/${m[1]}`),
   ...CONTENT_PAGE_PATHS,
+  // The protocols, which are procedures drawn from D1 (docs/PROCEDURES.md).
+  ...publishedProcedurePaths(),
 ]);
 
 /** Anchors a target may carry: the headings the build proves exist, and the roster the program page renders. */

@@ -1,4 +1,4 @@
-import { data, Link } from "react-router";
+import { data } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { DictionaryEntry } from "~/components/dictionary-entry";
@@ -10,7 +10,6 @@ import {
   contentPageCardPath,
   contentPageMarkdownPath,
   contentPageTrail,
-  protocolNeighbors,
 } from "~/lib/content-pages.mjs";
 import { definedTermJsonLd, dictionaryEntryFor } from "~/lib/dictionary-entries.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
@@ -160,7 +159,6 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
   const { page, search } = loaderData;
   const titleOf = (path: string) => PAGES.get(path)?.title;
   const trail = contentPageTrail(page, titleOf);
-  const neighbors = protocolNeighbors(page.path);
   const entry = dictionaryEntryFor(page.path);
   return (
     <PageShell
@@ -183,14 +181,6 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
       {/* The phage table is complete as served; this adds its sort and filter (app/enhance/phages.ts). */}
       {page.path === "/research/phages" ? <Enhance module="phages" /> : null}
-      {neighbors ? (
-        <nav className="protocol-neighbors" aria-label="Protocols">
-          {neighbors.previous ? (
-            <Link to={neighbors.previous}>Previous: {titleOf(neighbors.previous)}</Link>
-          ) : null}
-          {neighbors.next ? <Link to={neighbors.next}>Next: {titleOf(neighbors.next)}</Link> : null}
-        </nav>
-      ) : null}
       {page.path === "/teaching/phage-discovery" ? (
         <div className="prose">
           <PhageRoster />
