@@ -72,3 +72,8 @@ export async function purgePost(slug: string, why: string): Promise<PurgeOutcome
 export async function purgePosts(why: string): Promise<PurgeOutcome> {
   return purgeTags([cacheTags()], why);
 }
+
+/** Every procedure page, sheet and twin carries this one tag (app/lib/procedures/route.ts). */
+export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
+  return purgeTags(["procedures"], why);
+}

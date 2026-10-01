@@ -18,6 +18,9 @@ const TOOLS = [
   "upload_media",
   "list_mentions",
   "decide_mention",
+  "list_procedures",
+  "get_procedure",
+  "save_procedure",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -115,6 +118,35 @@ export const TOOL_DESCRIPTORS: Readonly<
       "with 403 mention-delete-requires-admin: it removes the only copy of " +
       "what a stranger sent, and there is no repository behind this table. " +
       "Reject instead.",
+  },
+  list_procedures: {
+    args: {},
+    returns:
+      "Every procedure row in D1 (protocols, recipes, computational procedures), drafts included: " +
+      "slug, path, profile, title, draft, version, updated and the count of recorded gaps, with the head sha.",
+  },
+  get_procedure: {
+    args: { slug: "string" },
+    returns:
+      "The complete procedure file (raw), the head sha, the procedure as structured data (front matter, " +
+      "sections, steps with their marks and flags), its recorded gaps, and any validation errors. The " +
+      "format is docs/PROCEDURES.md.",
+  },
+  save_procedure: {
+    args: {
+      slug: "string",
+      raw: "string, the complete procedure file including front matter",
+      expectedHeadSha: "string, optional, the headSha get_procedure returned",
+      isNew: "boolean, optional, inferred from whether the file exists",
+    },
+    returns:
+      "commitSha, path, draft and gaps. The file is validated against its profile by the same code CI " +
+      "runs, committed, and written to D1, so the page changes without a deploy. A file that fails is " +
+      "refused with 422 and detail.errors, every message the validator gave.",
+    policy:
+      "An operator may edit, unpublish and republish a procedure. It may NOT publish one for the first " +
+      "time (draft true to false, or a new procedure saved as published); that is refused with 403 " +
+      "first-publish-requires-admin.",
   },
   backup_media: {
     args: {},

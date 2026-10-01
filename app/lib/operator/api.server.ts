@@ -23,6 +23,9 @@ import type { ToolName, ToolResult } from "./descriptors";
 import { backupMedia, syncAsk, syncMedia, syncPosts, syncStatus } from "./sync-tools.server";
 import { uploadMediaTool } from "./upload-media.server";
 import { errorMessage } from "~/lib/error-message.mjs";
+import { listProceduresForOperator } from "~/db/procedures";
+import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
+import { procedurePath } from "~/lib/procedures/parse.mjs";
 
 // Re-exported so the routes keep one import path for the operator surface.
 export { TOOL_DESCRIPTORS, isToolName, toolNames } from "./descriptors";
@@ -174,6 +177,18 @@ export async function runTool(
 
       case "decide_mention":
         return await decideMentionTool(env, actor, args);
+
+      case "list_procedures":
+        return {
+          ok: true,
+          data: { headSha: await currentHead(env), procedures: await listProceduresForOperator(env) },
+        };
+
+      case "get_procedure":
+        return await getProcedureTool(env, args);
+
+      case "save_procedure":
+        return await saveProcedureTool(env, actor, args);
     }
   } catch (error) {
     return translate(error);
@@ -181,6 +196,11 @@ export async function runTool(
 }
 
 function translate(error: unknown): ToolResult {
+  // Every message the validator gave, so an agent can fix its own edit; nothing was committed.
+  if (error instanceof ProcedureInvalid) {
+    return { ok: false, status: 422, error: error.message, detail: { errors: error.errors } };
+  }
+
   // Names the policy so a caller can branch on it rather than string-match the prose.
   if (error instanceof PolicyError) {
     return {
@@ -321,6 +341,32 @@ async function savePostTool(
       purged: result.purged,
     },
   };
+}
+
+async function getProcedureTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const parsed = readSlug(args, "get_procedure");
+  if (parsed.error) return { ok: false, status: 400, error: parsed.error };
+  const procedure = await readProcedure(env, parsed.slug);
+  if (!procedure) return { ok: false, status: 404, error: `No procedure exists with slug "${parsed.slug}".` };
+  return { ok: true, data: { ...procedure, headSha: await currentHead(env) } };
+}
+
+async function saveProcedureTool(
+  env: OperatorEnv,
+  actor: Actor,
+  args: Record<string, unknown>,
+): Promise<ToolResult> {
+  const parsed = readSlug(args, "save_procedure");
+  if (parsed.error) return { ok: false, status: 400, error: parsed.error };
+  const raw = typeof args.raw === "string" ? args.raw : "";
+  if (!raw.trim()) {
+    return { ok: false, status: 400, error: "save_procedure requires `raw`: the complete procedure file." };
+  }
+  const expectedHeadSha =
+    typeof args.expectedHeadSha === "string" && args.expectedHeadSha ? args.expectedHeadSha : null;
+  const isNew =
+    args.isNew === undefined ? (await readFile(env, procedurePath(parsed.slug))) === null : args.isNew === true;
+  return { ok: true, data: await saveProcedure(env, { slug: parsed.slug, raw, expectedHeadSha, isNew, actor }) };
 }
 
 async function deletePostTool(
