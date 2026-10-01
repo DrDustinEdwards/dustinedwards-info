@@ -4,13 +4,15 @@ import {
   CHECK_TIMEOUT_MS,
   askDriftVerdict,
   contentDriftVerdict,
+  procedureDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaBackupDriftVerdict,
   withTimeout,
 } from "~/lib/health/verdicts.mjs";
 import { askIndexStatus } from "~/lib/search/ask.server";
-import { listPostFiles } from "~/lib/editor/github.server";
+import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
+import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 import { backupStatus } from "~/lib/media/backup.server";
 
@@ -24,6 +26,20 @@ export async function readContentSides(env: Env & { GITHUB_TOKEN?: string }) {
   const rows = await env.DB.prepare(
     "SELECT slug, source_blob_sha FROM posts WHERE source_path IS NOT NULL",
   ).all<{ slug: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/**
+ * The same two sides for procedures: `content/procedures/*.md` with their blob shas, and the table's
+ * rows with the sha each was compiled from. The check and sync_procedures both read them here.
+ */
+export async function readProcedureSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = (await listDirectory(env, PROCEDURES_DIR))
+    .filter((e) => e.type === "file" && e.name.endsWith(".md"))
+    .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
+  const rows = await env.DB.prepare(
+    "SELECT slug, path, source_blob_sha FROM procedures WHERE source_path IS NOT NULL",
+  ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -65,6 +81,14 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // An unreadable repository fails this check, which the repair plan refuses to act on alone.
       const { files, rows } = await readContentSides(env);
       return contentDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("procedures-drift", async () => {
+      // A procedure edited, added or deleted through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readProcedureSides(env);
+      return procedureDriftVerdict(files, rows);
     }),
   );
 

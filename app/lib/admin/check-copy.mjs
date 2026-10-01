@@ -17,6 +17,15 @@ const CHECK_COPY = {
     passing: "Every post on the site matches the one in the repository.",
     repair: { action: "/admin/posts", intent: "regenerate", label: "Re-render every post" },
   },
+  "procedures-drift": {
+    name: "Procedures on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} procedures are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some procedures are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "Every procedure on the site matches the one in the repository.",
+    repair: null,
+  },
   "ask-index-drift": {
     name: "Search answers",
     failing: (counts) =>

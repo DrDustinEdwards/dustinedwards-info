@@ -15,6 +15,7 @@ import { recordsForPages } from "~/lib/search/records.mjs";
 
 import { compileProcedure } from "./compile.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
+import { procedureSearchUid } from "./render.mjs";
 
 type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
@@ -27,7 +28,8 @@ export class ProcedureInvalid extends Error {
   }
 }
 
-async function compile(env: ProcedureEnv, slug: string, raw: string) {
+/** The one compile door: save_procedure and sync_procedures both read a file through it. */
+export async function compile(env: ProcedureEnv, slug: string, raw: string) {
   const { renderBody, findWideDashes } = await loadPipeline();
   return compileProcedure({ slug, raw, pipeline: { renderBody, findWideDashes }, resolveImage: makeResolveImage(env) });
 }
@@ -68,7 +70,8 @@ function decideProcedure(actor: Actor, incomingDraft: boolean, prior: string | n
   }
 }
 
-async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
+/** The one write door for a procedure's row and search records: a save and the sync both end here. */
+export async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<typeof compile>>, { ok: true }>) {
   const db = env.DB;
   const r = compiled.record;
   const uid = compiled.searchInput.uid;
@@ -111,6 +114,19 @@ async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<
     ),
     db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
     db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+  ]);
+}
+
+/**
+ * Removes a row whose file is gone, with its search records. The search uid is derived from the row's
+ * own path by the function the search input uses, so the two cannot disagree.
+ */
+export async function deleteProcedureRow(env: ProcedureEnv, row: { slug: string; path: string }) {
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM procedures WHERE slug = ?1`).bind(row.slug),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(procedureSearchUid(row.path)),
+    env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+    env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
   ]);
 }
 

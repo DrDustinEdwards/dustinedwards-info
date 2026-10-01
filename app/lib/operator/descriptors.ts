@@ -14,6 +14,7 @@ const TOOLS = [
   "sync_ask",
   "sync_media",
   "sync_posts",
+  "sync_procedures",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -97,6 +98,17 @@ export const TOOL_DESCRIPTORS: Readonly<
       "rows whose file is gone, all through the same render door a save " +
       "uses. Idempotent. A read-back reconciliation: expected, present, and " +
       "a converged verdict.",
+  },
+  sync_procedures: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/procedures files: re-compiles " +
+      "every procedure whose file's blob sha differs from its row (or has no " +
+      "row), removes rows whose file is gone, all through the same compile " +
+      "and write doors save_procedure uses. Refuses an empty file set, and " +
+      "answers 422 naming any file the validator refuses after converging the " +
+      "rest. Idempotent. A read-back reconciliation: expected, present, and a " +
+      "converged verdict.",
   },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },

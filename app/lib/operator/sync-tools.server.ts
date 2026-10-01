@@ -11,7 +11,14 @@ import { listPostFiles, readFile } from "~/lib/editor/github.server";
 import { askAvailable, askIndexStatus, pruneAskCorpus, syncAskCorpus } from "~/lib/search/ask.server";
 import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server";
 import { copyMissingTwins } from "~/lib/media/backup.server";
-import { readContentSides } from "~/lib/health/checks.server";
+import { readContentSides, readProcedureSides } from "~/lib/health/checks.server";
+import { purgeProcedures } from "~/lib/cache-purge.server";
+import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
+import {
+  compile as compileProcedureFile,
+  deleteProcedureRow,
+  writeRow as writeProcedureRow,
+} from "~/lib/procedures/save.server";
 import { contentDriftCompare } from "~/lib/health/verdicts.mjs";
 
 import type { OperatorEnv } from "./auth.server";
@@ -114,6 +121,102 @@ export async function syncPosts(env: OperatorEnv): Promise<ToolResult> {
 
   // D1 reads its own writes in-request, so drift reported here is real.
   const after = await readContentSides(env);
+  const residual = contentDriftCompare(after.files, after.rows);
+  const residualCount =
+    residual.changed.length + residual.unrowed.length + residual.unfiled.length;
+
+  return {
+    ok: true,
+    data: {
+      repaired,
+      removed,
+      unpurged,
+      expected: after.files.length,
+      present: after.files.length - residual.changed.length - residual.unrowed.length,
+      converged: residualCount === 0,
+    },
+  };
+}
+
+/**
+ * Converges the procedures table to content/procedures/*.md through the compile and write doors
+ * save_procedure uses, from the same comparison the health check runs. Idempotent. An empty file set
+ * is refused, as scripts/sync-content.mjs refuses it: a listing that came back empty is far likelier a
+ * fault than a repository with no procedures, and honouring it would delete every row.
+ *
+ * A file that fails the validator cannot be written: every other drifted procedure is still converged,
+ * then the failures are returned as a 422 naming each file and its messages, so the repair never
+ * reports success over a file it could not apply.
+ */
+export async function syncProcedures(env: OperatorEnv): Promise<ToolResult> {
+  const before = await readProcedureSides(env);
+  if (before.files.length === 0) {
+    return {
+      ok: false,
+      status: 422,
+      error:
+        `sync_procedures refused: ${PROCEDURES_DIR} lists no procedure files, and converging to ` +
+        `an empty set would delete every procedure row. Check the repository listing.`,
+    };
+  }
+  const drift = contentDriftCompare(before.files, before.rows);
+
+  const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
+  let repaired = 0;
+  const failed: Array<{ slug: string; errors: string[] }> = [];
+  for (const slug of [...drift.changed, ...drift.unrowed]) {
+    const entry = fileBySlug.get(slug);
+    if (!entry) continue;
+    const file = await readFile(env, entry.path);
+    if (!file) {
+      throw new EditorError(
+        `"${entry.path}" vanished between the listing and the read; main moved ` +
+          `mid-repair. Re-run sync_procedures.`,
+      );
+    }
+    const compiled = await compileProcedureFile(env, slug, file.content);
+    if (!compiled.ok) {
+      failed.push({ slug, errors: compiled.errors });
+      continue;
+    }
+    // Compiled from the bytes read, which must be the bytes listed, or the row would claim a sha it is not.
+    if (compiled.sourceBlobSha !== entry.sha) {
+      throw new EditorError(
+        `"${entry.path}" changed between the listing and the read; main moved mid-repair. ` +
+          `Re-run sync_procedures.`,
+      );
+    }
+    await writeProcedureRow(env, compiled);
+    repaired += 1;
+  }
+
+  const rowBySlug = new Map(before.rows.map((r) => [r.slug, r]));
+  let removed = 0;
+  for (const slug of drift.unfiled) {
+    const row = rowBySlug.get(slug);
+    if (!row) continue;
+    await deleteProcedureRow(env, row);
+    removed += 1;
+  }
+
+  // A failed purge never fails the repair, but it is counted: those pages stay stale until expiry.
+  let unpurged = 0;
+  if (repaired + removed > 0 && (await purgeProcedures("sync_procedures")) === false) unpurged = 1;
+
+  if (failed.length > 0) {
+    return {
+      ok: false,
+      status: 422,
+      error:
+        `sync_procedures could not apply ${failed.length} file(s): ` +
+        failed.map((f) => `${PROCEDURES_DIR}/${f.slug}.md fails ${f.errors.length} check(s), first: ${f.errors[0]}`).join("; ") +
+        `. The other ${repaired} drifted procedure(s) were converged.`,
+      detail: { failed, repaired, removed },
+    };
+  }
+
+  // D1 reads its own writes in-request, so drift reported here is real.
+  const after = await readProcedureSides(env);
   const residual = contentDriftCompare(after.files, after.rows);
   const residualCount =
     residual.changed.length + residual.unrowed.length + residual.unfiled.length;
