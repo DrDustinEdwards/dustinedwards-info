@@ -1,83 +1,56 @@
-// Every /research/protocols/ page carries the protocol record protocols.md defines (Capsid,
-// dustinedwards), and every field it lacks is either on record as waiting on someone or fails.
+// Every procedure (content/procedures/, docs/PROCEDURES.md) and every procedure fixture compiles with no
+// error, through the same code the operator API's save_procedure runs (app/lib/procedures/compile.mjs):
+// a file this gate passes is a file the save tool accepts, and one it fails, the save tool refuses with
+// the same words.
 //
-// A gap listed in content/protocols-known-missing.json is printed and passes: those values are
-// Dustin's to supply, and a gate that failed on them would be red until he did. A gap NOT listed
-// fails, so a new protocol or a deleted value cannot slip in. A listed gap that has been filled
-// fails too, so the list only ever names real gaps. Values are never filled to make this pass.
+// A value nobody has yet is written in place as "MISSING: <why>". It passes and is printed below, so the
+// list of what is waiting on Dustin is read off the files. A bare MISSING, or a required field left out,
+// fails. Values are never filled to make this pass.
 
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-import matter from "gray-matter";
-
-import { CONTENT_PAGE_PATHS, contentPageFile } from "../app/lib/content-pages.mjs";
-import { renderBody } from "../app/lib/content/pipeline.mjs";
-import { compareKnownMissing, inspectProtocol } from "./lib/protocols.mjs";
+import { compileDirectory, PROCEDURE_FIXTURES_DIR, PROCEDURES_SOURCE_DIR } from "./lib/procedures.mjs";
 import { createTally } from "./lib/tally.mjs";
-
-const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const KNOWN_MISSING_PATH = "content/protocols-known-missing.json";
-const PREFIX = "/research/protocols/";
 
 const tally = createTally({ separator: ": " });
 const { ok } = tally;
 
 console.log("\ncheck:protocols\n");
 
-const protocols = CONTENT_PAGE_PATHS.filter((p) => p.startsWith(PREFIX));
-ok("CONTENT_PAGE_PATHS lists protocol pages", protocols.length > 0, `no path starts with ${PREFIX}`);
+const sources = await compileDirectory(PROCEDURES_SOURCE_DIR);
+// Fixtures name photos that are not in the repository; their sizes are not measured.
+const fixtures = await compileDirectory(PROCEDURE_FIXTURES_DIR, { measureImages: false });
+ok(`${PROCEDURES_SOURCE_DIR} holds procedures`, sources.length > 0, "no procedure files");
+ok(`${PROCEDURE_FIXTURES_DIR} holds the recipe and computational fixtures`, fixtures.length >= 2, "fixtures missing");
 
-/** @type {Map<string, string[]>} */
-const found = new Map();
-for (const pagePath of protocols) {
-  const file = join("content", "pages", contentPageFile(pagePath));
-  const parsed = matter(readFileSync(join(root, file), "utf8"));
-  const { toc } = await renderBody({
-    file,
-    body: parsed.content,
-    resolveImage: async (src) => {
-      throw new Error(`${file} references an image ("${src}") and these pages have no image pipeline.`);
-    },
-  });
-  const anchors = new Set(toc.map((h) => h.id));
-  const { missing, errors } = inspectProtocol(parsed.data.protocol, { anchors });
-  ok(`${pagePath} carries a protocol record`, parsed.data.protocol != null, `${file} has no protocol: block`);
-  for (const error of errors) ok(`${pagePath}`, false, error);
-  found.set(pagePath, missing);
+const paths = new Map();
+for (const { file, compiled } of [...sources, ...fixtures]) {
+  ok(`${file} compiles`, compiled.ok, compiled.errors.join("\n      "));
+  if (compiled.ok) {
+    const other = paths.get(compiled.record.path);
+    ok(`${file} has its own path`, !other, `${compiled.record.path} is also ${other}`);
+    paths.set(compiled.record.path, file);
+  }
 }
-
-const knownRaw = JSON.parse(readFileSync(join(root, KNOWN_MISSING_PATH), "utf8"));
-const known = Array.isArray(knownRaw.entries) ? knownRaw.entries : [];
-ok(`${KNOWN_MISSING_PATH} has an entries list`, Array.isArray(knownRaw.entries));
-
-const { unrecorded, stale, recorded, malformed } = compareKnownMissing(found, known);
-for (const m of malformed) ok(KNOWN_MISSING_PATH, false, m);
-for (const gap of unrecorded) {
-  ok(
-    `missing field, not on record as waiting: ${gap}`,
-    false,
-    `supply the value from the protocol's source, or add it to ${KNOWN_MISSING_PATH} with the reason it is missing`,
-  );
+for (const { file, compiled } of fixtures) {
+  if (compiled.ok) ok(`${file} is a draft`, compiled.record.draft, "a fixture is never published: set draft: true");
 }
-for (const gap of stale) {
-  ok(`listed as missing but present: ${gap}`, false, `remove the entry from ${KNOWN_MISSING_PATH}`);
-}
-ok("every protocol's gaps are recorded", unrecorded.length === 0);
-ok("the known-missing list names only real gaps", stale.length === 0);
+const profiles = new Set(fixtures.map((f) => (f.compiled.ok ? f.compiled.record.profile : null)));
+ok("the fixtures cover the recipe and computational profiles", profiles.has("recipe") && profiles.has("computational"));
 
-console.log(`\n  ${protocols.length} protocol(s); ${recorded.length} field(s) known missing, waiting on a value:`);
-for (const protocol of protocols) {
-  const rows = recorded.filter((e) => e.protocol === protocol);
-  if (rows.length === 0) continue;
-  console.log(`\n  ${protocol}`);
-  for (const e of rows) console.log(`    MISSING  ${e.field}  (${e.reason})`);
+let recorded = 0;
+for (const { file, compiled } of sources) {
+  if (compiled.gaps.length === 0) continue;
+  console.log(`\n  ${file}`);
+  for (const gap of compiled.gaps) {
+    recorded += 1;
+    console.log(`    MISSING  ${gap.field}  (${gap.reason})`);
+  }
 }
+console.log(`\n  ${sources.length} procedure(s), ${fixtures.length} fixture(s); ${recorded} value(s) recorded as missing.`);
 
-/* 9 on 2026-09-29, measured by running the gate: one check per protocol page (five) and four on the list. */
-const MINIMUM_CHECKS = 9;
-tally.floor("check:protocols", "checks", MINIMUM_CHECKS, "A protocol page or the list was skipped rather than failing.");
+/* 19 on 2026-09-30, measured by running the gate: two per procedure (five) and per fixture (two), two
+   fixture drafts, two on the directories and one on the profiles. */
+const MINIMUM_CHECKS = 19;
+tally.floor("check:protocols", "checks", MINIMUM_CHECKS, "A procedure or fixture was skipped rather than failing.");
 
 console.log(`\n${tally.checks} checks, ${tally.failures} failures\n`);
 process.exit(tally.failures > 0 ? 1 : 0);

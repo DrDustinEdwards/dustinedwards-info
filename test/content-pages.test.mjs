@@ -9,6 +9,7 @@ import {
   contentPageTrail,
 } from "../app/lib/content-pages.mjs";
 import { PENDING_TARGETS } from "../app/lib/wordpress-redirects.mjs";
+import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 
 const pagesDir = new URL("../content/pages/", import.meta.url);
 
@@ -28,7 +29,9 @@ test("a page's file is its path with slashes as hyphens", () => {
 });
 
 test("every page an old WordPress address redirects to is one of these pages, or is named here", () => {
-  const notHere = PENDING_TARGETS.filter((p) => !CONTENT_PAGE_PATHS.includes(p));
+  // The protocols are procedures, drawn from D1 (docs/PROCEDURES.md), so their files say they exist.
+  const procedures = publishedProcedurePaths();
+  const notHere = PENDING_TARGETS.filter((p) => !CONTENT_PAGE_PATHS.includes(p) && !procedures.includes(p));
   assert.deepEqual(notHere, []);
 });
 

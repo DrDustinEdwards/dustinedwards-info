@@ -208,6 +208,14 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "hard rule 18 calls repair rather than destruction. Idempotent, and it " +
         "reports a read-back reconciliation rather than its own counters",
     ],
+    ["list_procedures", "a read"],
+    ["get_procedure", "a read"],
+    [
+      "save_procedure",
+      "creates or edits a procedure file through compile.mjs, the validator CI runs; the " +
+        "file and its git history stand, its D1 row and search records are derived, and " +
+        "there is no delete branch",
+    ],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [

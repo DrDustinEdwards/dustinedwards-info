@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import { COLOPHON_ANCHORS, STATUS_LABEL } from "../../../app/lib/colophon-sections.mjs";
 import { stripComments, stripTsxComments } from "../strip-comments.mjs";
+import { publishedProcedurePaths } from "../procedure-paths.mjs";
 import { normalizeEol, root } from "./shared.mjs";
 
 /** @param {import("./shared.mjs").FeaturesContext} ctx */
@@ -59,12 +60,15 @@ export function checkColophon({ ok, artifactRecords, routes, stack }) {
         .join(", "),
   );
 
+  /* A procedure (docs/PROCEDURES.md) is served by its profile root's parameterized route. */
+  const procedures = new Set(publishedProcedurePaths());
   for (const record of otherPageRecords) {
     const path = String(record.url).split("#")[0];
+    const route = procedures.has(path) ? `${path.slice(0, path.lastIndexOf("/"))}/:slug` : path;
     ok(
-      `page record ${record.uid} resolves to a declared route: ${path}`,
-      routes.has(path),
-      `routes.ts declares no ${path}`,
+      `page record ${record.uid} resolves to a declared route: ${route}`,
+      routes.has(route),
+      `routes.ts declares no ${route}`,
     );
   }
 

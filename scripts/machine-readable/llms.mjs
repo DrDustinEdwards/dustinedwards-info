@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import { assertFloor } from "../lib/floor.mjs";
 import { createTally } from "../lib/tally.mjs";
 import { CONTENT_PAGE_PATHS } from "../../app/lib/content-pages.mjs";
+import { publishedProcedurePaths } from "../lib/procedure-paths.mjs";
 
 // Repo-relative names for messages; reads go through `fromRoot`, so the cwd does not matter.
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -54,16 +55,18 @@ ok("content/llms.txt ends with a newline", fileText.endsWith("\n"));
   const listed = new Set(
     [...fileText.matchAll(/^\s{2}(\/(?:research|teaching|software|cv)(?:\/[a-z0-9-]+)*)$/gm)].map((m) => m[1]),
   );
-  const unlisted = CONTENT_PAGE_PATHS.filter((path) => !listed.has(path));
+  // The protocols are procedures (docs/PROCEDURES.md), pages too, drawn from D1.
+  const pagePaths = [...CONTENT_PAGE_PATHS, ...publishedProcedurePaths()];
+  const unlisted = pagePaths.filter((path) => !listed.has(path));
   ok(
-    `llms.txt lists every Research, Teaching and Software page (${CONTENT_PAGE_PATHS.length})`,
+    `llms.txt lists every Research, Teaching and Software page (${pagePaths.length})`,
     unlisted.length === 0,
     `absent from ${LLMS_PATH}: ${unlisted.join(", ")}`,
   );
-  const known = new Set(/** @type {readonly string[]} */ (CONTENT_PAGE_PATHS));
+  const known = new Set(pagePaths);
   const stray = [...listed].filter((path) => !known.has(path));
   ok(
-    "llms.txt lists no Research, Teaching or Software page CONTENT_PAGE_PATHS does not have",
+    "llms.txt lists no Research, Teaching or Software page that is neither in CONTENT_PAGE_PATHS nor a procedure",
     stray.length === 0,
     `listed but not a page: ${stray.join(", ")}`,
   );

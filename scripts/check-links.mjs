@@ -40,6 +40,8 @@ import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/
 import { generateTwins } from "./build-publication-twins.mjs";
 import { ABOUT_SOURCE, buildAbout, renderContentPages } from "./build-content.mjs";
 import { renderPost } from "./lib/content.mjs";
+import { buildProcedures } from "./lib/procedures.mjs";
+import { fixedSectionIds } from "../app/lib/procedures/render.mjs";
 import { declaredRouteModules } from "./lib/features/anchors.mjs";
 import { parseSource, ts } from "./lib/syntax.mjs";
 import { createTally } from "./lib/tally.mjs";
@@ -81,6 +83,16 @@ for (const path of publicFiles) served.add(path);
 
 // The page twins are written by build:content and gitignored, so they are named from the page list.
 for (const path of CONTENT_PAGE_PATHS) served.add(contentPageMarkdownPath(path));
+
+// The procedures (docs/PROCEDURES.md): each page, its sheet and its twin, drawn from D1 by one
+// parameterized route per profile root, compiled here the way sync:content writes them.
+const procedureRows = (await buildProcedures()).rows.filter((row) => row.status === "published");
+for (const row of procedureRows) {
+  served.add(row.path);
+  served.add(`${row.path}.md`);
+  served.add(`${row.path}/sheet`);
+  moduleOf.set(row.path, routes.get(`${row.path.slice(0, row.path.lastIndexOf("/"))}/:slug`) ?? "");
+}
 
 for (const paper of PUBLICATIONS) {
   const slug = doiSlug(paper.doi);
@@ -141,6 +153,28 @@ for (const { post } of posts) renderedIds.set(`/writing/${post.slug}`, idsIn(pos
 
 const pages = await renderContentPages();
 for (const page of pages) renderedIds.set(page.path, idsIn(page.html));
+
+/** Every string in a procedure record: its HTML fragments are where its ids and links are. */
+const stringsIn = (/** @type {unknown} */ value) => {
+  /** @type {string[]} */
+  const out = [];
+  const walk = (/** @type {unknown} */ v) => {
+    if (typeof v === "string") out.push(v);
+    else if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === "object") Object.values(v).forEach(walk);
+  };
+  walk(value);
+  return out.join(" ");
+};
+for (const row of procedureRows) {
+  const record = JSON.parse(row.record);
+  const ids = idsIn(stringsIn(record.sections));
+  for (const entry of record.toc) ids.add(entry.id);
+  for (const id of fixedSectionIds(record.profile)) ids.add(id);
+  for (const t of record.troubleshooting) ids.add(`trouble-${t.id}`);
+  for (const s of record.solutions) ids.add(`solution-${s.id}`);
+  renderedIds.set(row.path, ids);
+}
 
 const about = JSON.parse(await buildAbout());
 renderedIds.set("/about", idsIn(about.html));
@@ -327,6 +361,13 @@ for (const page of pages) {
   for (const href of hrefsIn(page.html)) add("pages", { where, href, page: page.path, isPublic: true });
   for (const href of markdownLinks(contentPageMarkdownBody(page))) {
     add("page twins", { where: `${contentPageMarkdownPath(page.path)} (twin)`, href, page: page.path, isPublic: true });
+  }
+}
+for (const row of procedureRows) {
+  const where = row.sourcePath;
+  for (const href of hrefsIn(stringsIn(JSON.parse(row.record)))) add("procedures", { where, href, page: row.path, isPublic: true });
+  for (const href of markdownLinks(row.markdown)) {
+    add("procedure twins", { where: `${row.path}.md (twin)`, href, page: row.path, isPublic: true });
   }
 }
 for (const href of hrefsIn(about.html)) {

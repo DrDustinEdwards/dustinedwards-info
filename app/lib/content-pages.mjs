@@ -22,11 +22,7 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/research/phages",
   // Not in cutover.md's page list, but its redirect rows land old knowledge-base addresses here.
   "/research/protocols",
-  "/research/protocols/phage-isolation",
-  "/research/protocols/phage-dna-extraction",
-  "/research/protocols/coi-primers",
-  "/research/protocols/rev-lpdv-primers",
-  "/research/protocols/pan-avian-gapdh",
+  // The protocols themselves are procedures (content/procedures/, docs/PROCEDURES.md), drawn from D1.
   // The phage lab calculators (job_c2b88d76b3c1). Their addresses are fixed: the citable version
   // (Zenodo DOI, JMBE) replaces them in place, so none of these may move.
   "/research/tools",

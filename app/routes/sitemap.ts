@@ -1,4 +1,5 @@
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
+import { listPublishedProcedures } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import {
   EDGE_CACHE_HEADER,
@@ -34,11 +35,13 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   /* No `lastmod`: a tag has no modification date of its own. */
-  const [blog, tagList, seriesList, nextPublishAt] = await Promise.all([
+  const [blog, tagList, seriesList, nextPublishAt, procedureRows] = await Promise.all([
     listBlogPosts(env, { perPage: 1000 }),
     listBlogTags(env),
     listBlogSeries(env),
     nextScheduledPublishAt(env),
+    // Procedures live in D1, so one saved through the operator API is listed without a deploy.
+    listPublishedProcedures(env),
   ]);
 
   const urls = [
@@ -50,6 +53,10 @@ export async function loader({ context }: Route.LoaderArgs) {
     ...PUBLICATIONS.map((p) => ({
       loc: `${origin}${paperPath(doiSlug(p.doi))}`,
       lastmod: null as Date | null,
+    })),
+    ...procedureRows.map((p) => ({
+      loc: `${origin}${p.path}`,
+      lastmod: p.updated ? new Date(`${p.updated}T00:00:00.000Z`) : null,
     })),
     ...blog.posts.map((p) => ({
       loc: `${origin}/writing/${p.slug}`,

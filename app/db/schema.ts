@@ -310,3 +310,34 @@ export const zeroResultQueries = sqliteTable(
 
 export type MediaRef = typeof mediaRefs.$inferSelect;
 export type Webmention = typeof webmentions.$inferSelect;
+
+/**
+ * Procedures (drizzle/0019_procedures.sql, docs/PROCEDURES.md): derived from content/procedures/*.md by
+ * app/lib/procedures/compile.mjs. `record` is the rendered procedure as JSON and `markdown` its twin.
+ */
+export const procedures = sqliteTable(
+  "procedures",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull().unique(),
+    path: text("path").notNull().unique(),
+    profile: text("profile", { enum: ["protocol", "recipe", "computational"] }).notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    version: text("version"),
+    updated: text("updated"),
+    record: text("record").notNull(),
+    markdown: text("markdown").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check("procedures_profile_check", sql`${t.profile} in ('protocol', 'recipe', 'computational')`),
+    check("procedures_status_check", sql`${t.status} in ('draft', 'published')`),
+    index("procedures_status_idx").on(t.status, t.profile),
+  ],
+);

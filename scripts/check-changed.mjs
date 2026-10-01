@@ -79,9 +79,9 @@ export const MAP = [
     gates: ["check:content", "check:diagrams", "check:machine-readable", "check:features", "check:links"],
   },
   {
-    /* check-protocols reads each protocol page's record and the list of gaps waiting on a value. */
-    what: "a protocol page, its known-missing list or the record rules",
-    test: /^(content\/(pages\/research-protocols-.+\.md|protocols-known-missing\.json)|scripts\/lib\/protocols\.mjs)$/,
+    /* check-protocols compiles every procedure and fixture with the save tool's own validator. */
+    what: "a procedure, a procedure fixture or the procedure system",
+    test: /^(content\/procedures\/.+\.md|test\/fixtures\/procedures\/.+\.md|app\/lib\/procedures\/.+|scripts\/lib\/procedures\.mjs)$/,
     gates: ["check:protocols", RELATED],
   },
   {

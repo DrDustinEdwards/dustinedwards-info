@@ -10,6 +10,7 @@ import os from "node:os";
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
+import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
@@ -128,6 +129,33 @@ function buildSql(posts) {
   // Full rebuild rather than trusting per-row triggers across a bulk write.
   out.push(`INSERT INTO posts_fts (posts_fts) VALUES ('rebuild');`);
 
+  return `${out.join("\n")}\n`;
+}
+
+/**
+ * The procedures table converged to the repository's files (hard rule 18): every row whose file is gone
+ * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and
+ * never an unscoped delete.
+ *
+ * @param {any[]} rows content/generated/procedures.json's rows
+ */
+function buildProceduresSql(rows) {
+  if (rows.length === 0) throw new Error("buildProceduresSql refuses to delete every procedure");
+  const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
+  const out = [`DELETE FROM procedures WHERE source_path NOT IN (${keep});`];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO procedures (slug, path, profile, title, description, status, version, updated, record, ` +
+        `markdown, source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ${sql(r.path)}, ` +
+        `${sql(r.profile)}, ${sql(r.title)}, ${sql(r.description)}, ${sql(r.status)}, ${sql(r.version)}, ` +
+        `${sql(r.updated)}, ${sql(r.record)}, ${sql(r.markdown)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, ` +
+        `unixepoch()) ON CONFLICT(slug) DO UPDATE SET path = excluded.path, profile = excluded.profile, ` +
+        `title = excluded.title, description = excluded.description, status = excluded.status, ` +
+        `version = excluded.version, updated = excluded.updated, record = excluded.record, ` +
+        `markdown = excluded.markdown, source_path = excluded.source_path, ` +
+        `source_blob_sha = excluded.source_blob_sha, synced_at = excluded.synced_at;`,
+    );
+  }
   return `${out.join("\n")}\n`;
 }
 
@@ -412,6 +440,21 @@ async function main() {
     settingsSql,
     `sync:content llms.txt import (${target})`,
     "wrangler d1 execute failed for the llms.txt settings row",
+  );
+
+  // Procedures before the search index: a failure names the procedures, and the index then carries
+  // the procedure records the table now matches.
+  const procedureRows = JSON.parse(await readFile(PROCEDURES_ARTIFACT_PATH, "utf8")).procedures;
+  if (!Array.isArray(procedureRows) || procedureRows.length === 0) {
+    throw new Error(`${PROCEDURES_ARTIFACT_PATH} carries no procedures. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${procedureRows.length} procedures`);
+  await applySql(
+    target,
+    path.join(dir, "sync-procedures.sql"),
+    buildProceduresSql(procedureRows),
+    `sync:content procedures import (${target})`,
+    "the procedures import failed",
   );
 
   // A separate statement file, so a failure here names the search index rather than the content.
