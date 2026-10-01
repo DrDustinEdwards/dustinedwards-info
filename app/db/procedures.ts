@@ -64,8 +64,9 @@ export async function listProceduresForOperator(env: Env) {
     })
     .from(procedures)
     .orderBy(asc(procedures.slug));
-  return rows.map(({ record, ...row }) => ({
+  return rows.map(({ record, status, ...row }) => ({
     ...row,
+    draft: status === "draft",
     gaps: (JSON.parse(record) as ProcedureRecord).gaps.length,
   }));
 }
