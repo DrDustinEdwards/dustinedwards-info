@@ -43,3 +43,25 @@ export function citedByFetchedAt(artifact) {
   const value = /** @type {{ fetchedAt?: unknown }} */ (artifact)?.fetchedAt;
   return typeof value === "string" && value.length > 0 ? value : null;
 }
+
+/**
+ * The citation counts an OpenAlex snapshot holds, as publication_citations rows, so a count is never blank on
+ * a database that has none yet. The lower-cased DOI is the key, as the table keys it. sync:content and the
+ * Worker's sync_publications both seed from here.
+ *
+ * @param {unknown} artifact the parsed publications.cited-by.json
+ * @param {string} source what to call the artifact in the error
+ * @returns {Array<{ doi: string, count: number, url: string | null, fetchedAt: string }>}
+ */
+export function citationSeedsFrom(artifact, source) {
+  const { fetchedAt, works } = /** @type {{ fetchedAt?: unknown, works?: Record<string, { openalexId?: string | null, total?: number }> }} */ (artifact);
+  if (typeof fetchedAt !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(fetchedAt) || !works) {
+    throw new Error(`${source} carries no fetchedAt date or no works, so the citation counts cannot be seeded.`);
+  }
+  return Object.entries(works).map(([doi, work]) => ({
+    doi: doi.trim().toLowerCase(),
+    count: Number(work.total ?? 0),
+    url: work.openalexId ? `https://openalex.org/${work.openalexId}` : null,
+    fetchedAt,
+  }));
+}

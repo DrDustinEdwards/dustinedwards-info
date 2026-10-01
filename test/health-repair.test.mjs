@@ -358,3 +358,19 @@ test("procedure drift repairs through sync_procedures, after posts and before th
   );
   assert.deepEqual(actions, [{ type: "repair", tool: "sync_procedures" }, { type: "recheck" }]);
 });
+
+test("page and publication drift repair after procedures and before the Ask upload", () => {
+  assert.deepEqual(repairPlan(["pages-drift"], WITH).repair, ["sync_pages"]);
+  assert.deepEqual(repairPlan(["publications-drift"], WITH).repair, ["sync_publications"]);
+
+  // All of them rewrite search_docs rows that sync_ask uploads, so each lands before it.
+  const all = repairPlan(
+    ["ask-index-drift", "publications-drift", "pages-drift", "procedures-drift", "content-drift"],
+    WITH,
+  );
+  assert.deepEqual(all.repair, ["sync_posts", "sync_procedures", "sync_pages", "sync_publications", "sync_ask"]);
+  assert.equal(all.alertOnly, false);
+
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["pages-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_pages" }, { type: "recheck" }]);
+});

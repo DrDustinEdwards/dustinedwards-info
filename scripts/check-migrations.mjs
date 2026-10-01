@@ -445,8 +445,15 @@ if (existsSync(SHIP)) {
   /* BOTH HALVES: deferring without the late assertion drops the check, and the reverse deadlocks. */
   const deferredAt = readinessSource.indexOf("DEFERRED_CHECKS = {");
   eq("ruling 56: the deferred checks are named in one place", deferredAt !== -1, true);
-  /* ALL FOUR, ENUMERATED: a regex for content-drift alone passes once the others are gone. */
-  for (const name of ["content-drift", "procedures-drift", "ask-index-drift", "media-index-drift"]) {
+  /* ALL SIX, ENUMERATED: a regex for content-drift alone passes once the others are gone. */
+  for (const name of [
+    "content-drift",
+    "procedures-drift",
+    "pages-drift",
+    "publications-drift",
+    "ask-index-drift",
+    "media-index-drift",
+  ]) {
     eq(
       `ruling 56: ${name} is deferred`,
       new RegExp(`"${name}":\\s*"the [A-Za-z0-9 ]+"`).test(readinessSource),

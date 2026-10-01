@@ -15,6 +15,8 @@ const TOOLS = [
   "sync_media",
   "sync_posts",
   "sync_procedures",
+  "sync_pages",
+  "sync_publications",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -114,6 +116,31 @@ export const TOOL_DESCRIPTORS: Readonly<
       "answers 422 naming any file the validator refuses after converging the " +
       "rest. Idempotent. A read-back reconciliation: expected, present, and a " +
       "converged verdict.",
+  },
+  sync_pages: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/pages files: re-compiles every " +
+      "page whose file's blob sha differs from its row (or has no row), removes " +
+      "rows whose file is gone with their search records, through the same " +
+      "compile and write doors a page save uses. A file whose path is not in " +
+      "CONTENT_PAGE_PATHS never makes a row. Refuses an empty file set, and " +
+      "answers 422 naming any file the validator refuses after converging the " +
+      "rest. Idempotent. A read-back reconciliation: expected, present, and a " +
+      "converged verdict.",
+  },
+  sync_publications: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/publications files: re-compiles " +
+      "every paper whose file's blob sha differs from its row (or has no row), " +
+      "removes rows whose file is gone with their search record and citation row, " +
+      "through the same compile and write doors a publication save uses. A " +
+      "citation count that exists is never touched; a missing one is seeded from " +
+      "the committed OpenAlex snapshot. Refuses an empty file set, and answers 422 " +
+      "naming any file the validator refuses after converging the rest. " +
+      "Idempotent. A read-back reconciliation: expected, present, and a converged " +
+      "verdict.",
   },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },

@@ -7,6 +7,7 @@
 import citedByArtifact from "../../../data/publications.cited-by.json";
 
 import { listPublicationIdentities } from "~/db/publications";
+import { textChunks } from "~/lib/content/chunks.mjs";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
@@ -17,8 +18,10 @@ import { errorMessage } from "~/lib/error-message.mjs";
 import { recordsForPapers } from "~/lib/search/records.mjs";
 import { askAvailable, syncAskPaper } from "~/lib/search/ask.server";
 
+import { citationSeedsFrom } from "./cited-by.mjs";
 import { compilePublication } from "./compile.mjs";
 import { parsePublication, publicationPath } from "./parse.mjs";
+import { paperSearchUid } from "./search-inputs.mjs";
 import type { OtherPublication, PublicationHost } from "./validate.mjs";
 
 type PublicationEnv = Env & { GITHUB_TOKEN?: string };
@@ -77,12 +80,19 @@ export async function compilePublicationFor(env: PublicationEnv, slug: string, r
   return compile(env, slug, raw);
 }
 
-/** The D1 row, its search record and the FTS rebuild, in one batch so they move together. */
+/**
+ * The D1 row, its search record and the FTS rebuild, in one batch so they move together. D1 refuses a
+ * statement over 100 KB and a twin with the PDF's full text passes it, so the twin goes in as chunks (the
+ * way sync:content writes it): the row is inserted with the first chunk and a blank blob sha, the rest are
+ * appended, and the real sha lands last, so nothing reads a truncated twin as current. The batch is one
+ * transaction, so a failure leaves the previous row.
+ */
 export async function writePublicationRow(env: PublicationEnv, compiled: Compiled) {
   const db = env.DB;
   const r = compiled.record;
   const uid = compiled.searchInput.uid;
   const records = compiled.draft ? [] : recordsForPapers([compiled.searchInput]);
+  const [firstChunk = "", ...laterChunks] = textChunks(compiled.twin);
   await db.batch([
     db
       .prepare(
@@ -106,10 +116,14 @@ export async function writePublicationRow(env: PublicationEnv, compiled: Compile
         r.selected ? 1 : 0,
         JSON.stringify(r),
         compiled.csl ? JSON.stringify(compiled.csl) : null,
-        compiled.twin,
+        firstChunk,
         compiled.sourcePath,
-        compiled.sourceBlobSha,
+        "",
       ),
+    ...laterChunks.map((chunk) =>
+      db.prepare(`UPDATE publications SET markdown = markdown || ?1 WHERE slug = ?2`).bind(chunk, r.slug),
+    ),
+    db.prepare(`UPDATE publications SET source_blob_sha = ?1 WHERE slug = ?2`).bind(compiled.sourceBlobSha, r.slug),
     db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(uid),
     ...records.map((s) =>
       db
@@ -123,6 +137,42 @@ export async function writePublicationRow(env: PublicationEnv, compiled: Compile
     db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
     db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
   ]);
+}
+
+/**
+ * The row of a paper whose file is gone, its search record, and its citation row when no remaining paper
+ * carries that DOI. A paper that still has a file is never passed here.
+ */
+export async function deletePublicationRow(env: PublicationEnv, row: { slug: string; doi_key: string | null }) {
+  await env.DB.batch([
+    env.DB.prepare(`DELETE FROM publications WHERE slug = ?1`).bind(row.slug),
+    env.DB.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(paperSearchUid(row.slug)),
+    env.DB.prepare(
+      `DELETE FROM publication_citations WHERE doi = ?1 AND NOT EXISTS (SELECT 1 FROM publications WHERE doi_key = ?1)`,
+    ).bind(row.doi_key),
+    env.DB.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
+    env.DB.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+  ]);
+}
+
+/**
+ * Seeds the committed OpenAlex snapshot's citation row for each DOI that has none. A row that exists is
+ * never touched: its count came from a refresh, which is newer than any snapshot.
+ */
+export async function seedMissingCitations(env: PublicationEnv, dois: Array<string | null>) {
+  const wanted = new Set(dois.filter((d): d is string => !!d).map((d) => d.trim().toLowerCase()));
+  const seeds = citationSeedsFrom(citedByArtifact, "data/publications.cited-by.json").filter((s) => wanted.has(s.doi));
+  if (seeds.length === 0) return;
+  await env.DB.batch(
+    seeds.map((s) =>
+      env.DB
+        .prepare(
+          `INSERT INTO publication_citations (doi, count, url, fetched_at) VALUES (?1, ?2, ?3, ?4)
+           ON CONFLICT(doi) DO NOTHING`,
+        )
+        .bind(s.doi, s.count, s.url, s.fetchedAt),
+    ),
+  );
 }
 
 /** True when D1's row for the paper was compiled from exactly this file (the git blob sha matches). */

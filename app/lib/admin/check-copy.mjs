@@ -26,6 +26,24 @@ const CHECK_COPY = {
     passing: "Every procedure on the site matches the one in the repository.",
     repair: null,
   },
+  "pages-drift": {
+    name: "Pages on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} pages are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some pages are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "Every page on the site matches the one in the repository.",
+    repair: null,
+  },
+  "publications-drift": {
+    name: "Publications on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} publications are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some publications are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "Every publication on the site matches the one in the repository.",
+    repair: null,
+  },
   "ask-index-drift": {
     name: "Search answers",
     failing: (counts) =>

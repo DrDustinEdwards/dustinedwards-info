@@ -293,7 +293,12 @@ describe("the operator reads publications and has no tool to write one", () => {
   it("has no save_publication or save_page: a publication is written through Carrel, never through this surface", () => {
     expect(isToolName("save_publication")).toBe(false);
     expect(isToolName("save_page")).toBe(false);
-    expect(toolNames().filter((name) => /publication/.test(name))).toEqual(["list_publications", "get_publication"]);
+    // sync_publications writes nothing the repository does not already hold: it converges D1 to the files.
+    expect(toolNames().filter((name) => /publication/.test(name))).toEqual([
+      "sync_publications",
+      "list_publications",
+      "get_publication",
+    ]);
   });
 });
 
