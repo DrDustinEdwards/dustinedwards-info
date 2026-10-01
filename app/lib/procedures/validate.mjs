@@ -73,7 +73,7 @@ function collectGaps(value, path, gaps, errors) {
       collectGaps(item, `${path}[${item && typeof item === "object" ? label(item, i) : i}]`, gaps, errors),
     );
   } else if (value && typeof value === "object") {
-    for (const [k, v] of Object.entries(value)) collectGaps(v, `${path}.${k}`, gaps, errors);
+    for (const [k, v] of Object.entries(value)) collectGaps(v, path ? `${path}.${k}` : k, gaps, errors);
   }
 }
 
@@ -138,7 +138,6 @@ export function validateProcedure(parsed, expect) {
   };
 
   collectGaps(d, "", gaps, errors);
-  for (const gap of gaps) gap.field = gap.field.replace(/^\./, "");
 
   // Identity.
   const root = PROFILE_ROOTS[profile];
