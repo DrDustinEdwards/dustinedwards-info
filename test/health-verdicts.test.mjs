@@ -7,6 +7,7 @@ import {
   contentDriftVerdict,
   procedureDriftVerdict,
   cvDriftVerdict,
+  dictionaryDriftVerdict,
   pageDriftVerdict,
   llmsDriftVerdict,
   publicationDriftVerdict,
@@ -430,6 +431,19 @@ test("procedure drift: the same comparison, naming procedures and sync_procedure
   );
   assert.equal(quiet.ok, true);
   assert.match(quiet.detail, /1 procedure file/);
+});
+
+test("dictionary drift: the same comparison, naming dictionary entries and sync_dictionary", () => {
+  const drifted = dictionaryDriftVerdict(
+    [{ slug: "capsid", sha: "new" }],
+    [{ slug: "capsid", source_blob_sha: "old" }],
+  );
+  assert.equal(drifted.ok, false);
+  assert.match(drifted.detail, /^Dictionary drift 1:/);
+  assert.match(drifted.detail, /1 dictionary entry file\(s\)/);
+  assert.match(drifted.detail, /sync_dictionary/);
+  assert.deepEqual(drifted.counts, { expected: 1, present: 0 });
+  assert.equal(dictionaryDriftVerdict([{ slug: "a", sha: "s" }], [{ slug: "a", source_blob_sha: "s" }]).ok, true);
 });
 
 test("page and publication drift: the same comparison, each naming its own noun and repair", () => {

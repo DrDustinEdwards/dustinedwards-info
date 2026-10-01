@@ -11,7 +11,7 @@ const TYPES = new Map([
   ["ico", { kind: "image", mime: "image/x-icon" }],
   ["pdf", { kind: "document", mime: "application/pdf" }],
   ["webmanifest", { kind: "other", mime: "application/manifest+json" }],
-  // The pronunciation clips under /audio/ (app/lib/dictionary-entries.mjs), generated once, never per visit.
+  // The pronunciation clips under /audio/ (content/dictionary/*.md), generated once, never per visit.
   ["mp3", { kind: "other", mime: "audio/mpeg" }],
   // The SIL OFL requires the font licence to be served with the fonts.
   ["txt", { kind: "document", mime: "text/plain; charset=utf-8" }],

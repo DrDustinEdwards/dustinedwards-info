@@ -1,6 +1,7 @@
 import { env } from "cloudflare:test";
 
 import cvArtifact from "../../content/generated/cv.json";
+import dictionaryArtifact from "../../content/generated/dictionary.json";
 import pagesArtifact from "../../content/generated/pages.json";
 import proceduresArtifact from "../../content/generated/procedures.json";
 
@@ -184,6 +185,26 @@ export async function seedCv() {
          ON CONFLICT(slug) DO UPDATE SET type = excluded.type, record = excluded.record,
            source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha`,
       ).bind(r.slug, r.type, r.record, r.sourcePath, r.sourceBlobSha),
+    ),
+  );
+}
+
+/**
+ * The dictionary_entries table, from the rows build:content compiles (content/generated/dictionary.json), which
+ * is what sync:content writes at ship, so a case that reads a named Software page reads the page the site
+ * serves, lead included. Seed it with the pages: the pages' twins already carry the entries.
+ */
+export async function seedDictionary(only?: readonly string[]) {
+  const rows = dictionaryArtifact.dictionary.filter((row) => !only || only.includes(row.path));
+  if (rows.length === 0) throw new Error("seedDictionary found no entry rows. Run npm run build:content first.");
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB.prepare(
+        `INSERT INTO dictionary_entries (key, path, term, status, record, source_path, source_blob_sha)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+         ON CONFLICT(key) DO UPDATE SET term = excluded.term, status = excluded.status, record = excluded.record,
+           source_blob_sha = excluded.source_blob_sha`,
+      ).bind(r.key, r.path, r.term, r.status, r.record, r.sourcePath, r.sourceBlobSha),
     ),
   );
 }

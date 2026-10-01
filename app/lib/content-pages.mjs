@@ -9,7 +9,7 @@
  */
 
 import { ogImageKey } from "./content/og-card-text.mjs";
-import { dictionaryEntryFor, dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
+import { dictionaryEntryMarkdown, dictionaryEntryText } from "./dictionary-entries.mjs";
 import { splitSections } from "./search/records.mjs";
 
 export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
@@ -91,13 +91,14 @@ export function contentPageMarkdownPath(path) {
 
 /**
  * The twin a machine reads. The HTML page's h1 is not in the source body, so the title is the first line,
- * followed by the page's dictionary entry where it has one, where the page shows it.
+ * followed by the page's dictionary entry where it has one, where the page shows it. The entry is the
+ * caller's to give: the build reads it from content/dictionary, the Worker from D1 (docs/DICTIONARY.md).
  *
  * @param {{ path?: string, title: string, markdown: string }} page
+ * @param {import("./dictionary-entries.mjs").DictionaryEntry} [entry] the page's published entry, if any
  */
-export function contentPageMarkdownBody(page) {
+export function contentPageMarkdownBody(page, entry) {
   const body = String(page.markdown ?? "").replace(/^\n+/, "");
-  const entry = page.path ? dictionaryEntryFor(page.path) : undefined;
   const lead = entry ? `${dictionaryEntryMarkdown(entry)}\n` : "";
   return `# ${page.title}\n\n${lead}${body}`;
 }
@@ -241,11 +242,13 @@ export function contentPageSearchUid(/** @type {string} */ path) {
  * deep-linking to the heading's own anchor.
  *
  * @param {Array<{ path: string, title: string, description: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> }>} pages
+ * @param {(path: string) => import("./dictionary-entries.mjs").DictionaryEntry | undefined} [entryFor] the
+ *   published dictionary entry of a page path, which leads that page's record
  */
-export function contentPageSearchInputs(pages) {
+export function contentPageSearchInputs(pages, entryFor = () => undefined) {
   return pages.map((page) => {
     const { intro, sections } = splitSections(page.markdown, page.toc);
-    const entry = dictionaryEntryFor(page.path);
+    const entry = entryFor(page.path);
     return {
       url: page.path,
       uid: contentPageSearchUid(page.path),

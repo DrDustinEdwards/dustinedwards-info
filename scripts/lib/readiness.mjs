@@ -161,6 +161,7 @@ export function deferredMisses(checks, deferred, path = "/api/health") {
 export const DEFERRED_CHECKS = {
   "content-drift": "the D1 sync",
   "procedures-drift": "the D1 sync",
+  "dictionary-drift": "the D1 sync",
   "pages-drift": "the D1 sync",
   "publications-drift": "the D1 sync",
   "llms-drift": "the D1 sync",

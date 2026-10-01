@@ -10,6 +10,7 @@
 import matter from "gray-matter";
 
 import { listBlogPosts } from "~/db";
+import { getPublishedEntryByPath } from "~/db/dictionary";
 import { listPublishedPageHtml } from "~/db/pages";
 import { listPublishedProcedures } from "~/db/procedures";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
@@ -20,10 +21,11 @@ import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
+import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
 
-import { compilePage, pageSlug, pageSourcePath } from "./compile.mjs";
+import { compilePage, pagePathForSlug, pageSlug, pageSourcePath } from "./compile.mjs";
 import { idsIn, pageLinkErrors, type AddressBook } from "./links.mjs";
 
 type PageEnv = Env & { GITHUB_TOKEN?: string };
@@ -56,10 +58,17 @@ function registeredPage(path: string) {
   return { path: clean, slug, file: pageSourcePath(slug) };
 }
 
-/** The one compile door: the save and sync_pages both read a file through it (no link check; see judge). */
-export async function compile(env: PageEnv, slug: string, raw: string) {
+/**
+ * The one compile door: the save and sync_pages both read a file through it (no link check; see judge). A page
+ * that opens with a dictionary entry carries it in its twin and its search record, so the compile reads the
+ * published entry from D1 (docs/DICTIONARY.md); a dictionary save passes the entry it is about to write
+ * instead (null for none), because D1 does not hold it yet.
+ */
+export async function compile(env: PageEnv, slug: string, raw: string, entry?: DictionaryEntry | null) {
   const { renderBody, findWideDashes } = await loadPipeline();
-  return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes } });
+  const path = pagePathForSlug(slug);
+  const lead = entry !== undefined ? entry : path ? await getPublishedEntryByPath(env, path) : null;
+  return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes }, entry: lead ?? undefined });
 }
 
 /** The address book the links are judged against: what D1 holds now, with this page's own HTML in place. */

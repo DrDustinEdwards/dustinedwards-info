@@ -359,6 +359,15 @@ test("procedure drift repairs through sync_procedures, after posts and before th
   assert.deepEqual(actions, [{ type: "repair", tool: "sync_procedures" }, { type: "recheck" }]);
 });
 
+test("dictionary drift repairs through sync_dictionary, before the pages it refreshes and the Ask upload", () => {
+  assert.deepEqual(repairPlan(["dictionary-drift"], WITH).repair, ["sync_dictionary"]);
+  const all = repairPlan(["ask-index-drift", "pages-drift", "dictionary-drift", "procedures-drift", "content-drift"], WITH);
+  assert.deepEqual(all.repair, ["sync_posts", "sync_procedures", "sync_dictionary", "sync_pages", "sync_ask"]);
+  assert.equal(all.alertOnly, false);
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["dictionary-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_dictionary" }, { type: "recheck" }]);
+});
+
 test("page, publication and CV drift repair after procedures and before the Ask upload", () => {
   assert.deepEqual(repairPlan(["pages-drift"], WITH).repair, ["sync_pages"]);
   assert.deepEqual(repairPlan(["publications-drift"], WITH).repair, ["sync_publications"]);

@@ -15,6 +15,7 @@ const TOOLS = [
   "sync_media",
   "sync_posts",
   "sync_procedures",
+  "sync_dictionary",
   "sync_pages",
   "sync_publications",
   "sync_llms",
@@ -34,6 +35,8 @@ const TOOLS = [
   "get_llms",
   "list_cv",
   "get_cv",
+  "list_dictionary",
+  "get_dictionary",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -121,6 +124,17 @@ export const TOOL_DESCRIPTORS: Readonly<
       "answers 422 naming any file the validator refuses after converging the " +
       "rest. Idempotent. A read-back reconciliation: expected, present, and a " +
       "converged verdict.",
+  },
+  sync_dictionary: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/dictionary files: re-compiles every entry whose file's blob sha " +
+      "differs from its row (or has no row), removes rows whose file is gone, through the same compile and write " +
+      "doors a dictionary save uses. Each write also re-derives the page the entry opens (its markdown twin and " +
+      "search records) and purges the pages tag, because that page embeds the entry. A file whose path is not a " +
+      "registered Software page, or whose clip is not in the repository, never makes a row. Refuses an empty file " +
+      "set, and answers 422 naming any file the validator refuses after converging the rest. Idempotent. A " +
+      "read-back reconciliation: expected, present, and a converged verdict.",
   },
   sync_pages: {
     args: {},
@@ -270,6 +284,19 @@ export const TOOL_DESCRIPTORS: Readonly<
     returns:
       "The complete CV file (raw), the head sha, the file as structured data and any validation errors the " +
       "file has now. The format is docs/CV.md. Read only: a CV file is saved through Carrel.",
+  },
+  list_dictionary: {
+    args: {},
+    returns:
+      "Every dictionary entry row in D1, drafts included: key, path (the Software page it opens), term and draft, " +
+      "with the count and the head sha. Entries are edited through Carrel, not here.",
+  },
+  get_dictionary: {
+    args: { key: "string, the entry's file name without .md, such as capsid" },
+    returns:
+      "The complete entry file (raw), the head sha, draft, the entry as the page reads it when the file is valid, " +
+      "and every validation error when it is not. The format is docs/DICTIONARY.md. Read only: an entry is saved " +
+      "through Carrel.",
   },
   backup_media: {
     args: {},

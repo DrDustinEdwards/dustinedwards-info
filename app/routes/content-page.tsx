@@ -6,6 +6,7 @@ import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
 import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
+import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
@@ -14,7 +15,7 @@ import {
   contentPageMarkdownPath,
   contentPageTrail,
 } from "~/lib/content-pages.mjs";
-import { definedTermJsonLd, dictionaryEntryFor } from "~/lib/dictionary-entries.mjs";
+import { definedTermJsonLd, type DictionaryEntry as Entry } from "~/lib/dictionary-entries.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
@@ -97,8 +98,7 @@ function pageJsonLd(page: ContentPage): object[] {
 }
 
 /** The page's structured data: the trail it shows, its own node or nodes, and its dictionary entry. */
-function contentPageJsonLd(page: ContentPage, trail: Array<[string, string]>) {
-  const entry = dictionaryEntryFor(page.path);
+function contentPageJsonLd(page: ContentPage, trail: Array<[string, string]>, entry: Entry | null) {
   return [
     // Only a trail the page shows: the visible one renders from two steps, and Google reads no fewer.
     ...(trail.length >= 2 ? [breadcrumbJsonLd(SITE_ORIGIN, trail)] : []),
@@ -123,9 +123,12 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // The page it sits under, by title, for the trail above it (the course above its FAQ).
   const parent = page.path.slice(0, page.path.lastIndexOf("/"));
   const titles = await getPublishedPageTitles(env, parent ? [parent] : []);
+  // The lead a named Software page opens with, drawn from D1 beside the page (docs/DICTIONARY.md): an entry
+  // edit is live at the next request, and a page with no published entry has none.
+  const entry = await getPublishedEntryByPath(env, page.path);
   const trail = contentPageTrail(page, (path) => titles.get(path));
   // A calculator page computes from its query string, so Calculate works as a plain GET with script off.
-  return { page, trail, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
+  return { page, trail, entry, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
 /** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
@@ -150,13 +153,12 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
-  const { page, trail, draft, search } = loaderData;
-  const entry = dictionaryEntryFor(page.path);
+  const { page, trail, entry, draft, search } = loaderData;
   return (
     <PageShell
       trail={
         <>
-          {contentPageJsonLd(page, trail).map((block, i) => (
+          {contentPageJsonLd(page, trail, entry).map((block, i) => (
             <script
               key={i}
               type="application/ld+json"

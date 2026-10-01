@@ -116,7 +116,7 @@ curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
 Look for `content-drift` in the `checks` array. A procedure file that moved
 without its row shows as `procedures-drift` instead, repaired the same way by
 the `sync_procedures` tool (same call, `"tool":"sync_procedures"`). A page file
-that moved without its row shows as `pages-drift` and a publication file as
+that moved without its row shows as `pages-drift`, a dictionary entry file as `dictionary-drift` (`sync_dictionary`, which also re-derives the page the entry opens) and a publication file as
 `publications-drift`, repaired by `sync_pages` and `sync_publications` the same
 way. Neither deletes everything on an empty listing, and `sync_publications`
 never overwrites a citation count that exists. A `content/llms.txt` that moved

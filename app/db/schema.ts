@@ -443,3 +443,29 @@ export const cv = sqliteTable(
     ),
   ],
 );
+
+/**
+ * Dictionary entries (drizzle/0023_dictionary.sql, docs/DICTIONARY.md): the entry that opens a named Software
+ * page, derived from content/dictionary/<key>.md by app/lib/dictionary/compile.mjs. `record` is the entry as
+ * JSON.
+ */
+export const dictionaryEntries = sqliteTable(
+  "dictionary_entries",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    key: text("key").notNull().unique(),
+    path: text("path").notNull().unique(),
+    term: text("term").notNull(),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    record: text("record").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check("dictionary_entries_status_check", sql`${t.status} in ('draft', 'published')`),
+    index("dictionary_entries_status_idx").on(t.status),
+  ],
+);

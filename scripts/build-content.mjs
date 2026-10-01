@@ -15,10 +15,11 @@ import {
 } from "../app/lib/content-pages.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import { CV_DIR } from "../app/lib/cv/parse.mjs";
-import { compilePage, pageSlug } from "../app/lib/pages/compile.mjs";
+import { compilePage, pagePathForSlug, pageSlug } from "../app/lib/pages/compile.mjs";
 import { findWideDashes, renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 import { buildCvFrom, CV_ARTIFACT_PATH } from "./lib/cv.mjs";
+import { buildDictionary, DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
@@ -53,6 +54,15 @@ export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json
  * @typedef {import("../app/lib/pages/compile.mjs").CompiledPage & { draft: boolean }} BuiltPage
  * @typedef {{ page: BuiltPage, compiled: Extract<Awaited<ReturnType<typeof compilePage>>, { ok: true }>, name: string }} BuiltSource
  */
+
+/** @type {ReturnType<typeof buildDictionary> | undefined} */
+let compiledDictionary;
+
+/** Compiled once per run: the pages' twins and search records, and the rows, come from the same compile. */
+function dictionary() {
+  compiledDictionary ??= buildDictionary();
+  return compiledDictionary;
+}
 
 /** @type {Promise<BuiltSource[]> | undefined} */
 let builtSources;
@@ -96,6 +106,8 @@ async function compilePages() {
       raw,
       pipeline: { renderBody, findWideDashes },
       sourcePath: file.split(path.sep).join("/"),
+      // The entry that leads the page (docs/DICTIONARY.md), compiled from content/dictionary like the Worker reads it from D1.
+      entry: (await dictionary()).entryFor(pagePathForSlug(name.slice(0, -3)) ?? ""),
       // A page written from data states other authors' titles, dashes included; the house style is for prose.
       generated,
     });
@@ -222,7 +234,7 @@ export async function buildArtifact() {
     [
       ...colophonPages(stack, features),
       // A draft page is never in the index.
-      ...contentPageSearchInputs((await renderContentPages()).filter((page) => !page.draft)),
+      ...contentPageSearchInputs((await renderContentPages()).filter((page) => !page.draft), (await dictionary()).entryFor),
       ...(await procedures()).searchInputs,
     ],
     (await publications()).searchInputs,
@@ -325,6 +337,12 @@ async function main() {
   await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: pageRows }, null, 2)}\n`, "utf8");
   await pruneStaleContentTwins();
 
+  // The dictionary entries' rows, which sync:content writes to D1; the page lead and the DefinedTerm are drawn from there
+  // (docs/DICTIONARY.md). They come from the compile the pages' twins and search records above were built with.
+  const dictionaryRows = (await dictionary()).rows;
+  await writeFile(fromRoot(DICTIONARY_ARTIFACT_PATH), `${JSON.stringify({ dictionary: dictionaryRows }, null, 2)}
+`, "utf8");
+
   // The procedures' rows, which sync:content writes to D1; their pages and twins are drawn from there.
   const { rows } = await procedures();
   await writeFile(fromRoot(PROCEDURES_ARTIFACT_PATH), `${JSON.stringify({ procedures: rows }, null, 2)}
@@ -341,7 +359,7 @@ async function main() {
 `, "utf8");
 
   console.log(
-    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ` +
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ${DICTIONARY_ARTIFACT_PATH} (${dictionaryRows.length} entries), ` +
       `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications) and ${CV_ARTIFACT_PATH} (${cvRows.length} files)`,
   );
 }

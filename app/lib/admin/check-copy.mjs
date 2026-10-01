@@ -26,6 +26,15 @@ const CHECK_COPY = {
     passing: "Every procedure on the site matches the one in the repository.",
     repair: null,
   },
+  "dictionary-drift": {
+    name: "Dictionary entries on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} dictionary entries are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some dictionary entries are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "Every dictionary entry on the site matches the one in the repository.",
+    repair: null,
+  },
   "pages-drift": {
     name: "Pages on the site",
     failing: (counts) =>
