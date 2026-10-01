@@ -13,6 +13,7 @@ import {
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "~/lib/content-pages.mjs";
+import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/sitemap";
 
@@ -100,8 +101,8 @@ ${urls
       "content-type": "application/xml; charset=utf-8",
       /* No `Vary`: this document embeds no reader state. */
       "cache-control": SHARED_CACHE_CONTROL,
-      /* Lists posts, tags, series and procedures, so both purges must reach it. */
-      "cache-tag": POSTS_AND_PROCEDURES_CACHE_TAGS,
+      /* Lists posts, tags, series, procedures and the prose pages, so all three purges must reach it. */
+      "cache-tag": `${POSTS_AND_PROCEDURES_CACHE_TAGS},${CONTENT_PAGES_CACHE_TAG}`,
       [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });
