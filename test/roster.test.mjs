@@ -151,7 +151,7 @@ test("the roster's place: one registered page, the anchor the redirects land on,
   assert.equal(PROFILE_TARGET, `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
   assert.equal(movedPathTarget("/phage-discovery"), `${ROSTER_PAGE_PATH}#${ROSTER_ANCHOR}`);
   const component = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
-  assert.match(component, /<h2 id=\{ROSTER_ANCHOR\}>/, "the component's heading carries the anchor");
+  assert.ok(component.includes(`<h2 id="${ROSTER_ANCHOR}">`), "the component's heading carries the anchor");
   const route = readFileSync(new URL("../app/routes/content-page.tsx", import.meta.url), "utf8");
   assert.match(route, /page\.path === ROSTER_PAGE_PATH/, "the route places the roster by the one constant");
   assert.doesNotMatch(route, /"\/teaching\/phage-discovery"/, "no second, typed copy of the path");

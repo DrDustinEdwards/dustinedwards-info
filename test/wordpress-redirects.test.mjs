@@ -272,7 +272,7 @@ const phagesMarkdown = readFileSync(
 function anchorExists(target) {
   const [path, id] = target.split("#");
   if (CONTENT_PAGE_SECTIONS.includes(target)) return true;
-  if (path === ROSTER_PAGE_PATH && id === ROSTER_ANCHOR) return /\bid=\{ROSTER_ANCHOR\}/.test(rosterSource);
+  if (path === ROSTER_PAGE_PATH && id === ROSTER_ANCHOR) return rosterSource.includes(`id="${ROSTER_ANCHOR}"`);
   if (path === "/research/phages") return new RegExp(`^###\\s+${id}\\s*$`, "im").test(phagesMarkdown);
   return false;
 }
