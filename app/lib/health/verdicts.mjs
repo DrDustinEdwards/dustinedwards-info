@@ -174,6 +174,28 @@ export function procedureDriftVerdict(files, rows) {
 }
 
 /**
+ * The same comparison for the page files and the pages table.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function pageDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "Page", noun: "page", tool: "sync_pages" });
+}
+
+/**
+ * The same comparison for the publication files and the publications table.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function publicationDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "Publication", noun: "publication", tool: "sync_publications" });
+}
+
+/**
  * @param {Array<{ slug: string, sha: string }>} files
  * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
  * @param {{ label: string, noun: string, tool: string }} words

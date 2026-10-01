@@ -4,6 +4,11 @@
 import { decodeEntities } from "./entities.mjs";
 import { paperPath } from "./paths.mjs";
 
+/** The paper's search uid: a removal needs it to find the paper's record. */
+export function paperSearchUid(/** @type {string} */ slug) {
+  return `paper:${slug}`;
+}
+
 /**
  * @param {Array<Record<string, any>>} publications the corpus, each with its `slug`
  * @returns {Array<{ uid: string, url: string, title: string, body: string }>}
@@ -13,7 +18,7 @@ export function paperSearchInputs(publications) {
     const { slug } = paper;
     return {
       // The paper: namespace keeps these uids separable from hand-authored pages when search_docs is pruned.
-      uid: `paper:${slug}`,
+      uid: paperSearchUid(slug),
       url: paperPath(slug),
       title: decodeEntities(paper.title),
       // Decoded, or a search for p < 0.05 finds nothing and the snippet shows markup.

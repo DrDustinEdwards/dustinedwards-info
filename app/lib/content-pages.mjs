@@ -230,6 +230,11 @@ export function contentPageTrail(page, titleOf = () => undefined) {
   return trail;
 }
 
+/** The search uid of a page path: a removal needs it to find the page's records. */
+export function contentPageSearchUid(/** @type {string} */ path) {
+  return `page:${path.slice(1).replaceAll("/", ":")}`;
+}
+
 /**
  * Search inputs in the shape `recordsForPages` takes: one record for the page, one per heading, each
  * deep-linking to the heading's own anchor.
@@ -242,7 +247,7 @@ export function contentPageSearchInputs(pages) {
     const entry = dictionaryEntryFor(page.path);
     return {
       url: page.path,
-      uid: `page:${page.path.slice(1).replaceAll("/", ":")}`,
+      uid: contentPageSearchUid(page.path),
       title: page.title,
       description: page.description,
       intro: entry ? `${dictionaryEntryText(entry)} ${intro}` : intro,

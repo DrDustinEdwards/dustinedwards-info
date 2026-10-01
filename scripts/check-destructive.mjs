@@ -233,6 +233,16 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "refuses an empty file set rather than deleting every row",
     ],
     [
+      "sync_pages",
+      "D1 rows, on sync_procedures's terms: derived from the repository, idempotent, and it " +
+        "refuses an empty file set rather than deleting every row",
+    ],
+    [
+      "sync_publications",
+      "D1 rows, on sync_procedures's terms: derived from the repository, idempotent, it refuses an " +
+        "empty file set rather than deleting every row, and it seeds a citation row only where none exists",
+    ],
+    [
       "backup_media",
       "COPIES ONLY. It has no delete branch in either bucket and nothing is ever " +
         "copied backup to media; check:destructive's own MEDIA_BACKUP sweep below " +
