@@ -19,9 +19,8 @@ import {
   readProcedureSides,
   readPublicationSides,
 } from "~/lib/health/checks.server";
-import { purgeLlms, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
+import { purgeCv, purgeLlms, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
-import { purgeCv, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
