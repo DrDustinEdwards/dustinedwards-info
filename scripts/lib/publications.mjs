@@ -20,7 +20,7 @@ export const PUBLICATION_RECORDS_PATH = path.join("content", "generated", "publi
 const CITED_BY_PATH = path.join("data", "publications.cited-by.json");
 
 /** The repository's PDFs, read from public/ as a clone has them. */
-const repoHost = {
+export const repoHost = {
   /** @param {string} sitePath site-absolute, `/research/publications/<slug>/<file>.pdf` */
   async pdf(sitePath) {
     const file = path.join(ROOT, "public", sitePath.replace(/^\//, ""));
@@ -135,7 +135,7 @@ export async function citationSeeds() {
     await readCitedBy()
   );
   const fetchedAt = typeof artifact.fetchedAt === "string" ? artifact.fetchedAt : "";
-  if (!/^d{4}-d{2}-d{2}$/.test(fetchedAt) || !artifact.works) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fetchedAt) || !artifact.works) {
     throw new Error(`${CITED_BY_PATH} carries no fetchedAt date or no works, so the citation counts cannot be seeded.`);
   }
   return Object.entries(artifact.works).map(([doi, work]) => ({

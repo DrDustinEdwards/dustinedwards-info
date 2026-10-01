@@ -16,6 +16,7 @@ const assetManifest = JSON.parse(
   readFileSync(path.join(ROOT, "content", "generated", "assets.json"), "utf8"),
 );
 import {
+  SOURCE_DIRECTORIES,
   SOURCE_FILES,
   SOURCE_ROOTS,
   foldRefs,
@@ -56,6 +57,7 @@ async function scanTemplateRefs() {
   /** @type {string[]} */
   const files = [];
   for (const root of SOURCE_ROOTS) files.push(...(await walk(root)));
+  for (const dir of SOURCE_DIRECTORIES) files.push(...(await walk(dir)));
   files.push(...SOURCE_FILES);
 
   const kept = files.filter(isSourceFile);
@@ -73,7 +75,7 @@ async function scanTemplateRefs() {
     const raw = await readFile(path.join(ROOT, file), "utf8");
     // Comments go first: a doc comment naming an asset is prose, not a placement. JSON is passed through,
     // because a tokenizer would treat a `//` inside a URL string as a comment.
-    const text = file.endsWith(".json") || file.endsWith(".webmanifest")
+    const text = file.endsWith(".json") || file.endsWith(".webmanifest") || file.endsWith(".md")
       ? raw
       : stripComments(raw, file.endsWith(".css"));
     const assets = referencesIn(text, assetPaths);

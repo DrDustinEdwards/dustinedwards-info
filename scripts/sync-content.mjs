@@ -160,6 +160,27 @@ function buildProceduresSql(rows) {
   return `${out.join("\n")}\n`;
 }
 
+/** Characters per chunk: even at three UTF-8 bytes each, a chunk and its escaping stay well under 100 KB. */
+const CHUNK_CHARS = 25_000;
+
+/**
+ * @param {string} text
+ * @returns {string[]} the text in order, never split inside a surrogate pair; one empty string for none
+ */
+function textChunks(text) {
+  /** @type {string[]} */
+  const out = [];
+  let at = 0;
+  while (at < text.length) {
+    let end = Math.min(at + CHUNK_CHARS, text.length);
+    const last = text.charCodeAt(end - 1);
+    if (end < text.length && last >= 0xd800 && last <= 0xdbff) end -= 1;
+    out.push(text.slice(at, end));
+    at = end;
+  }
+  return out.length > 0 ? out : [""];
+}
+
 /**
  * The publications table converged to the repository's files (hard rule 18): every row whose file is gone
  * is deleted, every other row is written from the build's compile. Scoped to file-sourced rows, and never
@@ -174,17 +195,26 @@ function buildPublicationsSql(rows, seeds) {
   const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
   const out = [`DELETE FROM publications WHERE source_path NOT IN (${keep});`];
   for (const r of rows) {
+    // D1 refuses a statement over 100 KB (SQLITE_TOOBIG) and a twin with the PDF's full text passes it, so the
+    // twin is appended in chunks. The row is written with a blank source_blob_sha and given the real one in the
+    // last statement, so a run that stops half way leaves a row the content sync and the save both read as
+    // not current and rebuild, never a truncated twin that claims to match its file.
+    const [first = "", ...rest] = textChunks(r.markdown);
     out.push(
       `INSERT INTO publications (slug, doi_key, status, stage, type, title, year, selected, record, csl, markdown, ` +
         `source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ${sql(r.doiKey)}, ${sql(r.status)}, ` +
         `${sql(r.stage)}, ${sql(r.type)}, ${sql(r.title)}, ${num(r.year)}, ${num(r.selected)}, ${sql(r.record)}, ` +
-        `${sql(r.csl)}, ${sql(r.markdown)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
+        `${sql(r.csl)}, ${sql(first)}, ${sql(r.sourcePath)}, '', unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET doi_key = excluded.doi_key, status = excluded.status, stage = excluded.stage, ` +
         `type = excluded.type, title = excluded.title, year = excluded.year, selected = excluded.selected, ` +
         `record = excluded.record, csl = excluded.csl, markdown = excluded.markdown, ` +
-        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `source_path = excluded.source_path, source_blob_sha = '', ` +
         `synced_at = excluded.synced_at;`,
     );
+    for (const chunk of rest) {
+      out.push(`UPDATE publications SET markdown = markdown || ${sql(chunk)} WHERE slug = ${sql(r.slug)};`);
+    }
+    out.push(`UPDATE publications SET source_blob_sha = ${sql(r.sourceBlobSha)} WHERE slug = ${sql(r.slug)};`);
   }
   for (const s of seeds) {
     out.push(
@@ -194,6 +224,39 @@ function buildPublicationsSql(rows, seeds) {
     );
   }
   return `${out.join("\n")}\n`;
+}
+
+/**
+ * Reads the publications back: every file's row exists with the blob sha it was compiled from and a twin of
+ * exactly the bytes the build made. The twin is appended in chunks, so this is what proves they joined.
+ *
+ * @param {string} target
+ * @param {any[]} rows content/generated/publications.json's rows
+ */
+function verifyPublications(target, rows) {
+  const read = runWrangler(
+    `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --json --command ` +
+      '"SELECT slug, source_blob_sha, length(CAST(markdown AS BLOB)) AS twin_bytes FROM publications;"',
+  );
+  if (read.status !== 0) {
+    console.error(read.output);
+    throw new Error("the publications read-back failed");
+  }
+  const match = read.stdout.match(/\[[\s\S]*\]/);
+  if (!match) throw new Error(`could not parse the publications read-back:\n${read.output}`);
+  /** @type {Array<{ slug: string, source_blob_sha: string, twin_bytes: number }>} */
+  const stored = JSON.parse(match[0])[0].results;
+  const bySlug = new Map(stored.map((r) => [r.slug, r]));
+  const wrong = rows.filter((r) => {
+    const row = bySlug.get(r.slug);
+    return !row || row.source_blob_sha !== r.sourceBlobSha || row.twin_bytes !== Buffer.byteLength(r.markdown);
+  });
+  if (wrong.length > 0) {
+    throw new Error(
+      `the publications table does not match the files after the write: ${wrong.map((r) => r.slug).join(", ")}`,
+    );
+  }
+  console.log(`sync:content publications=${stored.length}, every row carries its file's blob sha and its twin's bytes`);
 }
 
 /**
@@ -507,6 +570,7 @@ async function main() {
     `sync:content publications import (${target})`,
     "the publications import failed",
   );
+  verifyPublications(target, publicationRows);
 
   // A separate statement file, so a failure here names the search index rather than the content.
   console.log(`sync:content applying ${records.length} search records`);

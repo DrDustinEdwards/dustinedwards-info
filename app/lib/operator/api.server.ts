@@ -27,7 +27,7 @@ import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
 import { listPublicationIdentities, listPublishedPublications } from "~/db/publications";
 import { refreshCitations } from "~/lib/citations.server";
-import { compilePublicationFor } from "~/lib/publications/save.server";
+import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.server";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
@@ -391,7 +391,7 @@ async function getPublicationTool(env: OperatorEnv, args: Record<string, unknown
       slug,
       raw: file.content,
       headSha: await currentHead(env),
-      draft: compiled.ok ? compiled.draft : /^draft:s*trues*$/m.test(file.content),
+      draft: compiled.ok ? compiled.draft : fileIsDraft(file.content),
       record: compiled.ok ? compiled.record : null,
       errors: compiled.ok ? [] : compiled.errors,
     },

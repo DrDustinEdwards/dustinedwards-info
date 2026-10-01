@@ -9,7 +9,9 @@ import { isToolName, toolNames } from "~/lib/operator/descriptors";
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { renderPublicationFile } from "~/lib/publications/serialize.mjs";
 import { action, loader } from "~/routes/api.carrel.v1.$";
-import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
+import { loader as bibAllLoader } from "~/routes/publications[.bib]";
+import Publications, { headers as indexHeaders, loader as indexLoader } from "~/routes/publications";
+import Paper, { headers as paperHeaders, loader as paperLoader } from "~/routes/publications.$slug";
 import { loader as twinLoader } from "~/routes/publications.$slug[.md]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
 import { isCitationRefreshWindow, refreshCitationsWeekly } from "../../workers/watchdog";
@@ -200,6 +202,31 @@ describe("a new record", () => {
 
     const sitemap = await ((await sitemapLoader({ request: new Request(`${ORIGIN}/sitemap.xml`), params: {}, context: routeContext() } as never)) as Response).text();
     expect(sitemap).toContain("/research/publications/cryo-em-example-manuscript/");
+  });
+});
+
+describe("everything a save changes carries the tag it purges", () => {
+  it("tags the index, a page, the exports and the twin with one tag, which a save purges with the home and search pages' tag", async () => {
+    expect(new Headers(indexHeaders()).get("Cache-Tag")).toBe("publications");
+    expect(new Headers(paperHeaders()).get("Cache-Tag")).toBe("publications");
+    const bib = (await bibAllLoader({ request: new Request(`${ORIGIN}/research/publications.bib`), params: {}, context: routeContext() } as never)) as Response;
+    expect(bib.headers.get("cache-tag")).toBe("publications");
+    expect((await twin(SLUG)).headers.get("cache-tag")).toBe("publications");
+  });
+
+  it("lists only the published papers on the index and keeps a draft out of it", async () => {
+    await testEnv.DB.prepare("UPDATE publications SET status = 'draft' WHERE slug = ?1").bind(SLUG).run();
+    try {
+      const data = (await indexLoader({ request: new Request(`${ORIGIN}/research/publications`), params: {}, context: routeContext() } as never)) as {
+        items: Array<{ slug: string }>;
+      };
+      expect(data.items.some((p) => p.slug === SLUG)).toBe(false);
+      expect(data.items.length).toBeGreaterThan(30);
+      expect(renderRoute("/research/publications", Publications, { loaderData: data })).not.toContain(SLUG);
+      await expect(pageData(SLUG)).rejects.toMatchObject({ status: 404 });
+    } finally {
+      await testEnv.DB.prepare("UPDATE publications SET status = 'published' WHERE slug = ?1").bind(SLUG).run();
+    }
   });
 });
 
