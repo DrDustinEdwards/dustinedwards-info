@@ -49,15 +49,9 @@
 # so check:machine-readable refuses any that remain (publications-twins). Delete them; nothing writes them now.
 /public/research/publications/*.md
 
-# Research and teaching page twins, written by build:content from content/pages/. Same class as the
-# paper twins: derived, so a checkout builds them and git does not store a second copy of the prose.
-/public/research.md
-/public/teaching.md
-/public/software.md
+# The CV twin, written by build:content from app/data/cv.ts. Every other page twin is served from D1
+# (docs/PAGES.md) and has no file; build:content deletes a stale one, which would win over the route.
 /public/cv.md
-/public/research/**/*.md
-/public/teaching/**/*.md
-/public/software/**/*.md
 
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json

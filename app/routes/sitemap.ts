@@ -1,4 +1,5 @@
 import { listBlogPosts, listBlogSeries, listBlogTags, nextScheduledPublishAt } from "~/db";
+import { listPublishedPagePaths } from "~/db/pages";
 import { listPublishedProcedures } from "~/db/procedures";
 import { listPublishedPublications } from "~/db/publications";
 import { getEnv } from "~/lib/context";
@@ -11,7 +12,7 @@ import {
 } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
-import { CONTENT_PAGE_PATHS } from "~/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "~/lib/content-pages.mjs";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/sitemap";
 
@@ -27,7 +28,6 @@ const STATIC_PATHS = [
   "/colophon",
   "/privacy",
   "/contact",
-  ...CONTENT_PAGE_PATHS,
 ];
 
 export async function loader({ context }: Route.LoaderArgs) {
@@ -36,7 +36,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 
   /* No `kind = 'page'` read: both writers into `posts` write only 'post'. Recheck that before relying on it. */
   /* No `lastmod`: a tag has no modification date of its own. */
-  const [blog, tagList, seriesList, nextPublishAt, procedureRows, papers] = await Promise.all([
+  const [blog, tagList, seriesList, nextPublishAt, procedureRows, papers, pagePaths] = await Promise.all([
     listBlogPosts(env, { perPage: 1000 }),
     listBlogTags(env),
     listBlogSeries(env),
@@ -45,10 +45,16 @@ export async function loader({ context }: Route.LoaderArgs) {
     listPublishedProcedures(env),
     // Papers live in D1 too, so one saved through Carrel is listed without a deploy.
     listPublishedPublications(env),
+    // The prose pages live in D1 too (docs/PAGES.md): a draft is left out, and so is a path whose row is missing.
+    listPublishedPagePaths(env),
   ]);
+  // In the registry's order, which is the order the sitemap has always listed them in. The CV is generated
+  // from data and has no row.
+  const published = new Set(pagePaths);
+  const pageUrls = CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || published.has(path));
 
   const urls = [
-    ...STATIC_PATHS.map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
+    ...[...STATIC_PATHS, ...pageUrls].map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
     /*
      * No `lastmod`: one commit date would mark every paper changed together, which teaches crawlers to
      * ignore the field. No showcase filter: a crawler has no double-counting problem.

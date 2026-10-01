@@ -17,7 +17,7 @@ import Publications, { loader as publicationsLoader } from "~/routes/publication
 import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
 
 import { renderRoute, routeContext } from "./route-helpers";
-import { seedPublications } from "./seed";
+import { seedPages, seedPublications } from "./seed";
 
 /*
  * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE (2026-09-29). Each page is rendered
@@ -126,7 +126,7 @@ const context = () => routeContext();
 
 async function contentPage(path: string): Promise<Page> {
   const request = new Request(`${SITE_ORIGIN}${path}`);
-  const loaderData = contentPageLoader({ request, params: {}, context: context() } as never);
+  const loaderData = await contentPageLoader({ request, params: {}, context: context() } as never);
   return { path, html: renderRoute(path, ContentPage, { loaderData }) };
 }
 
@@ -203,6 +203,7 @@ function visibleTrail(html: string): Array<{ name: string; href: string | null }
 // applies the same migrations again, which is a no-op).
 await applyD1Migrations(env.DB, (env as unknown as { TEST_D1_MIGRATIONS: never }).TEST_D1_MIGRATIONS);
 const PAPER_COUNT = await seedPublications();
+await seedPages();
 const rendered = await pages();
 
 describe("every JSON-LD block on the pages", () => {
@@ -339,14 +340,14 @@ describe("each carded page's og:image is its own card", () => {
   const image = (descriptors: unknown[], property: string) =>
     (descriptors as Array<Record<string, unknown>>).find((d) => d.property === property || d.name === property)?.content;
 
-  it.each(CONTENT_PAGE_PATHS.filter((path) => hasPageCard(path)).map((path) => [path]))("%s", (path) => {
+  it.each(CONTENT_PAGE_PATHS.filter((path) => hasPageCard(path)).map((path) => [path]))("%s", async (path) => {
     let descriptors: unknown[];
     let card: string | null;
     if (path === "/cv") {
       descriptors = cvMeta() as unknown[];
       card = contentPageCardPath(CV_PAGE);
     } else {
-      const loaderData = contentPageLoader({
+      const loaderData = await contentPageLoader({
         request: new Request(`${SITE_ORIGIN}${path}`),
         params: {},
         context: context(),
@@ -359,8 +360,8 @@ describe("each carded page's og:image is its own card", () => {
     expect(image(descriptors, "twitter:image")).toBe(`${SITE_ORIGIN}${card}`);
   });
 
-  it("a page outside the carded roots keeps the site card", () => {
-    const loaderData = contentPageLoader({
+  it("a page outside the carded roots keeps the site card", async () => {
+    const loaderData = await contentPageLoader({
       request: new Request(`${SITE_ORIGIN}/research/phages`),
       params: {},
       context: context(),

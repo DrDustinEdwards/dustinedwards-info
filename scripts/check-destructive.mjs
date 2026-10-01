@@ -223,6 +223,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       "replaces rows of a DERIVED table (the citation counts, read from OpenAlex) and has no delete branch: a " +
         "DOI that fails keeps its count. Idempotent, and the failures come back in the response",
     ],
+    ["list_pages", "a read"],
+    ["get_page", "a read"],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [

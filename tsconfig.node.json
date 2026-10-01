@@ -330,7 +330,15 @@
     "app/lib/publications/hosting.mjs",
     "app/lib/publications/types.ts",
     "app/lib/publications/compile.mjs",
-    "app/lib/carrel/content-id.mjs"
+    "app/lib/carrel/content-id.mjs",
+    // The page system's compile path. build:content and sync:content compile every page with the SAME
+    // modules the page save runs, so a file CI passes is the file the save accepts. invariants.mjs holds
+    // the rules the CI tests used to read the files for, so it reaches the phage record and the calculators.
+    "app/lib/pages/compile.mjs",
+    "app/lib/pages/invariants.mjs",
+    "app/lib/pages/links.mjs",
+    "app/lib/phage-table.mjs",
+    "app/lib/phage-tools.mjs"
   ],
   "compilerOptions": {
     "composite": true,

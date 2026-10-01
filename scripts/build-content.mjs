@@ -9,19 +9,16 @@ import { serializeArtifact } from "./lib/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import {
   CONTENT_PAGE_PATHS,
-  CONTENT_PAGE_SECTIONS,
   CONTENT_PAGES_FROM_DATA,
-  DESCRIPTION_MAX,
-  SEO_TITLE_MAX,
   contentPageFile,
   contentPageMarkdownBody,
   contentPageMarkdownPath,
   contentPageSearchInputs,
-  markdownTableFacts,
 } from "../app/lib/content-pages.mjs";
 import { buildCv } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
-import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
+import { compilePage, pageSlug } from "../app/lib/pages/compile.mjs";
+import { findWideDashes, renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
@@ -48,76 +45,34 @@ const PAGES_DIR = path.join("content", "pages");
 export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json");
 
 /**
- * @typedef {{
- *   schemaType?: string,
- *   productUrl?: string,
- *   codeRepository?: string,
- *   applicationCategory?: string,
- *   license?: string,
- *   programmingLanguage?: string,
- *   runtimePlatform?: string,
- *   spatialCoverage?: string,
- *   dataset?: { variableMeasured: string[], temporalCoverage: string | null, rows: number },
- * }} PageSchema
- */
-
-/** The schema.org types a page may declare; app/routes/content-page.tsx shapes a node for each. */
-const SCHEMA_TYPES = ["SoftwareApplication", "SoftwareSourceCode", "WebSite", "WebPage", "Dataset"];
-
-/**
- * The structured-data facts a page's frontmatter states, each only when it is written there: the JSON-LD
- * says what the page holds and never fills a gap. A Dataset also carries what its first table says.
+ * The Research, Teaching and Software pages, compiled the one way the page save (app/lib/pages/save.server.ts) compiles
+ * them (app/lib/pages/compile.mjs): a refused link, a missing field or a broken invariant fails the build
+ * instead of shipping an empty tag. Every file must be one of CONTENT_PAGE_PATHS and every path must have
+ * its file, so routes, sitemap and pages cannot drift. The CV is generated from data and compiled by the
+ * same door, but has no row in D1.
  *
- * @param {string} file
- * @param {Record<string, unknown>} fm
- * @param {string} markdown
- * @returns {PageSchema}
+ * @typedef {import("../app/lib/pages/compile.mjs").CompiledPage & { draft: boolean }} BuiltPage
+ * @typedef {{ page: BuiltPage, compiled: Extract<Awaited<ReturnType<typeof compilePage>>, { ok: true }>, name: string }} BuiltSource
  */
-function pageSchema(file, fm, markdown) {
-  const text = (/** @type {unknown} */ value) => (value == null || value === "" ? "" : String(value));
-  const schemaType = text(fm.schema_type);
-  if (schemaType && !SCHEMA_TYPES.includes(schemaType)) {
-    throw new ContentError(file, `schema_type "${schemaType}" is not one of ${SCHEMA_TYPES.join(", ")}.`);
-  }
-  const codeRepository = text(fm.code_repository);
-  if (codeRepository && !["SoftwareApplication", "SoftwareSourceCode"].includes(schemaType)) {
-    throw new ContentError(file, "code_repository is only stated for software (schema_type SoftwareApplication or SoftwareSourceCode).");
-  }
-  const dataset = schemaType === "Dataset" ? markdownTableFacts(markdown) : null;
-  if (schemaType === "Dataset" && !dataset) {
-    throw new ContentError(file, "declares schema_type Dataset but has no markdown table for it to describe.");
-  }
-  /** @type {Array<[Exclude<keyof PageSchema, "dataset">, string]>} */
-  const fields = [
-    ["schemaType", schemaType],
-    ["productUrl", text(fm.product_url)],
-    ["codeRepository", codeRepository],
-    ["applicationCategory", text(fm.application_category)],
-    ["license", text(fm.license)],
-    ["programmingLanguage", text(fm.programming_language)],
-    ["runtimePlatform", text(fm.runtime_platform)],
-    ["spatialCoverage", text(fm.spatial_coverage)],
-  ];
-  /** @type {PageSchema} */
-  const schema = dataset ? { dataset } : {};
-  for (const [key, value] of fields) if (value !== "") schema[key] = value;
-  return schema;
+
+/** @type {Promise<BuiltSource[]> | undefined} */
+let builtSources;
+
+/** Compiled once per run: the pages, the rows and the search inputs come from the same compile. */
+function pageSources() {
+  builtSources ??= compilePages();
+  return builtSources;
 }
 
-/**
- * The Research and Teaching pages, rendered like the About page: no image pipeline, and a refused link
- * or a missing field fails the build instead of shipping an empty tag. Every file must be one of
- * CONTENT_PAGE_PATHS and every path must have its file, so routes, sitemap and pages cannot drift.
- */
-export async function renderContentPages() {
+/** @returns {Promise<BuiltSource[]>} */
+async function compilePages() {
   const names = (await readdir(fromRoot(PAGES_DIR))).filter((name) => name.endsWith(".md")).sort();
-  const expected = new Map(CONTENT_PAGE_PATHS.map((p) => [contentPageFile(p), p]));
 
   /*
    * A page generated from data has no file here, and a file for one would be a second source that
    * silently loses to the data, so it is refused.
    */
-  /** @type {Array<{ name: string, file: string, raw: string }>} */
+  /** @type {Array<{ name: string, file: string, raw: string, generated?: boolean }>} */
   const sources = [];
   for (const name of names) {
     if (CONTENT_PAGES_FROM_DATA.some((p) => contentPageFile(p) === name)) {
@@ -131,76 +86,57 @@ export async function renderContentPages() {
   }
   for (const pagePath of CONTENT_PAGES_FROM_DATA) {
     if (pagePath !== "/cv") throw new Error(`build:content has no generator for ${pagePath}.`);
-    sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument(buildCv((await publications()).records)) });
+    sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument(buildCv((await publications()).records)), generated: true });
   }
 
-  /** @type {Array<{ path: string, title: string, seoTitle: string, description: string, html: string, markdown: string, toc: Array<{ depth: number, id: string, text: string }> } & PageSchema>} */
-  const pages = [];
-  for (const { name, file, raw } of sources) {
-    const parsed = matter(raw);
-    const fm = parsed.data;
-    const page = {
-      path: String(fm.path ?? ""),
-      title: String(fm.title ?? ""),
-      seoTitle: String(fm.seo_title ?? ""),
-      description: String(fm.description ?? ""),
-    };
-    const schema = pageSchema(file, fm, parsed.content);
-    if (expected.get(name) !== page.path) {
-      throw new ContentError(
-        file,
-        `declares path "${page.path}", but the file for that path is ${contentPageFile(page.path)} and ` +
-          `every page must be listed in CONTENT_PAGE_PATHS (app/lib/content-pages.mjs).`,
-      );
-    }
-    if (!page.title || !page.seoTitle || !page.description) {
-      throw new ContentError(file, "must carry title, seo_title and description in its frontmatter.");
-    }
-    if (page.seoTitle.length > SEO_TITLE_MAX || page.description.length > DESCRIPTION_MAX) {
-      throw new ContentError(
-        file,
-        `seo_title is ${page.seoTitle.length} characters (at most ${SEO_TITLE_MAX}) and the description ` +
-          `${page.description.length} (at most ${DESCRIPTION_MAX}); Google would clip the longer one.`,
-      );
-    }
-
-    const rendered = await renderBody({
-      file,
-      body: parsed.content,
-      resolveImage: async (src) => {
-        throw new ContentError(file, `references an image ("${src}") and these pages have no image pipeline.`);
-      },
+  /** @type {BuiltSource[]} */
+  const built = [];
+  for (const { name, file, raw, generated } of sources) {
+    const compiled = await compilePage({
+      slug: name.slice(0, -3),
+      raw,
+      pipeline: { renderBody, findWideDashes },
+      sourcePath: file.split(path.sep).join("/"),
+      // A page written from data states other authors' titles, dashes included; the house style is for prose.
+      generated,
     });
-    if (rendered.blockedUrls.length > 0) {
-      throw new ContentError(
-        file,
-        `carries link(s) the URL allowlist refused: ${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
-      );
+    if (!compiled.ok) {
+      throw new ContentError(file.split(path.sep).join("/"), `does not compile:\n  ${compiled.errors.join("\n  ")}`);
     }
-    pages.push({
-      ...page,
-      html: rendered.html,
-      markdown: parsed.content,
-      toc: rendered.toc,
-      ...schema,
-    });
+    built.push({ name, compiled, page: { ...compiled.page, draft: compiled.draft } });
   }
 
-  const missing = CONTENT_PAGE_PATHS.filter((p) => !pages.some((page) => page.path === p));
+  const missing = CONTENT_PAGE_PATHS.filter((p) => !built.some(({ page }) => page.path === p));
   if (missing.length > 0) {
     throw new ContentError(PAGES_DIR, `has no page for ${missing.join(", ")}.`);
   }
-  const headless = CONTENT_PAGE_SECTIONS.filter((section) => {
-    const [pagePath, id] = section.split("#");
-    return !pages.find((page) => page.path === pagePath)?.toc.some((heading) => heading.id === id);
-  });
-  if (headless.length > 0) {
-    throw new ContentError(
-      PAGES_DIR,
-      `has no heading for ${headless.join(", ")}, which CONTENT_PAGE_SECTIONS (app/lib/content-pages.mjs) lists.`,
-    );
-  }
-  return pages.sort((a, b) => a.path.localeCompare(b.path));
+  return built;
+}
+
+/** @returns {Promise<BuiltPage[]>} */
+export async function renderContentPages() {
+  return (await pageSources()).map(({ page }) => page).sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/**
+ * The rows sync:content writes into D1's pages table: every file-sourced page, the CV excluded, as the
+ * the page save would write it.
+ */
+export async function buildPages() {
+  return (await pageSources())
+    .filter(({ page }) => !CONTENT_PAGES_FROM_DATA.includes(page.path))
+    .map(({ name, compiled }) => ({
+      slug: pageSlug(compiled.page.path),
+      path: compiled.page.path,
+      title: compiled.page.title,
+      description: compiled.page.description,
+      status: compiled.draft ? "draft" : "published",
+      record: JSON.stringify(compiled.record),
+      markdown: compiled.markdown,
+      sourcePath: compiled.sourcePath,
+      sourceBlobSha: compiled.sourceBlobSha,
+    }))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 /** @type {ReturnType<typeof buildPublications> | undefined} */
@@ -272,7 +208,8 @@ export async function buildArtifact() {
     withBacklinks(withRelated(posts)),
     [
       ...colophonPages(stack, features),
-      ...contentPageSearchInputs(await renderContentPages()),
+      // A draft page is never in the index.
+      ...contentPageSearchInputs((await renderContentPages()).filter((page) => !page.draft)),
       ...(await procedures()).searchInputs,
     ],
     (await publications()).searchInputs,
@@ -369,14 +306,11 @@ async function main() {
   const about = await buildAbout();
   await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
-  // Only what the route renders: the markdown and outline are build inputs for search, not page weight.
-  // The twin is a static asset beside the HTML URL, the same trade the paper twins make.
-  const renderedPages = await renderContentPages();
-  const contentPages = renderedPages
-    .filter((page) => !CONTENT_PAGES_FROM_DATA.includes(page.path))
-    .map((page) => Object.fromEntries(Object.entries(page).filter(([key]) => key !== "markdown" && key !== "toc")));
-  await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: contentPages }, null, 2)}\n`, "utf8");
-  await writeContentPageTwins(renderedPages);
+  // The pages' rows, which sync:content writes to D1; their pages and twins are drawn from there
+  // (docs/PAGES.md). Only the CV's twin is still a file, because the CV is generated from data.
+  const pageRows = await buildPages();
+  await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: pageRows }, null, 2)}\n`, "utf8");
+  await writeContentPageTwins(await renderContentPages());
 
   // The procedures' rows, which sync:content writes to D1; their pages and twins are drawn from there.
   const { rows } = await procedures();
@@ -392,20 +326,23 @@ async function main() {
 `, "utf8");
 
   console.log(
-    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH}, ` +
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ` +
       `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures) and ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications)`,
   );
 }
 
 /**
- * One markdown file per research and teaching page, at `public<path>.md`. The paper twins
- * are served from D1 (app/routes/publications.$slug[.md].ts), not written here.
+ * The twins of the pages in CONTENT_PAGES_FROM_DATA, at `public<path>.md`. Every other page's twin is
+ * served from D1 (app/routes/content-page[.md].ts), and a static file at its address would win over that
+ * route, so any left from an earlier build is deleted. The paper twins are served from D1
+ * (app/routes/publications.$slug[.md].ts), not written here.
  *
  * @param {Awaited<ReturnType<typeof renderContentPages>>} pages
  */
 async function writeContentPageTwins(pages) {
-  const expected = new Set(pages.map((page) => contentPageMarkdownPath(page.path)));
-  for (const page of pages) {
+  const generated = pages.filter((page) => CONTENT_PAGES_FROM_DATA.includes(page.path));
+  const expected = new Set(generated.map((page) => contentPageMarkdownPath(page.path)));
+  for (const page of generated) {
     const rel = contentPageMarkdownPath(page.path).slice(1);
     const dest = fromRoot(path.join("public", rel));
     await mkdir(path.dirname(dest), { recursive: true });

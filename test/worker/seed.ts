@@ -1,5 +1,19 @@
 import { env } from "cloudflare:test";
 
+import pagesArtifact from "../../content/generated/pages.json";
+
+type PageArtifactRow = {
+  slug: string;
+  path: string;
+  title: string;
+  description: string;
+  status: string;
+  record: string;
+  markdown: string;
+  sourcePath: string;
+  sourceBlobSha: string;
+};
+
 /**
  * Rows written straight into D1, for cases whose subject reads them rather than writes them.
  * The publish path is not involved, so nothing here renders, hashes or reaches GitHub.
@@ -109,4 +123,25 @@ export async function seedCitations() {
       .bind(doi.toLowerCase(), work.total, `https://openalex.org/${work.openalexId}`)
       .run();
   }
+}
+
+/**
+ * The pages table, from the rows build:content compiles (content/generated/pages.json), which is what
+ * sync:content writes at ship: the same compile the page save runs, so a case that reads a page reads
+ * the page the site serves. No search records: nothing here reads them.
+ */
+export async function seedPages(only?: readonly string[]) {
+  const rows = (pagesArtifact.pages as PageArtifactRow[]).filter((row) => !only || only.includes(row.path));
+  if (rows.length === 0) throw new Error("seedPages found no page rows. Run npm run build:content first.");
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB.prepare(
+        `INSERT INTO pages (slug, path, title, description, status, record, markdown, source_path, source_blob_sha)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+         ON CONFLICT(slug) DO UPDATE SET title = excluded.title, description = excluded.description,
+           status = excluded.status, record = excluded.record, markdown = excluded.markdown,
+           source_blob_sha = excluded.source_blob_sha`,
+      ).bind(r.slug, r.path, r.title, r.description, r.status, r.record, r.markdown, r.sourcePath, r.sourceBlobSha),
+    ),
+  );
 }

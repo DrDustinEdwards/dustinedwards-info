@@ -10,7 +10,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
+import { CONTENT_PAGES_FROM_DATA, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -61,9 +61,10 @@ test("no header rule names the paper twins, which are a route now and set their 
   assert.equal(headersFor("/research/publications/10-1128-mra-00888-24.md").size, 0);
 });
 
-test("every research and teaching page twin names its HTML page", () => {
-  assert.ok(CONTENT_PAGE_PATHS.length > 0);
-  for (const pagePath of CONTENT_PAGE_PATHS) {
+// The other page twins are a route, drawn from D1 (docs/PAGES.md); test/worker/pages.test.ts asserts their headers.
+test("every static page twin (the pages generated from data) names its HTML page", () => {
+  assert.ok(CONTENT_PAGES_FROM_DATA.length > 0);
+  for (const pagePath of CONTENT_PAGES_FROM_DATA) {
     const headers = headersFor(contentPageMarkdownPath(pagePath));
     assert.equal(headers.get("link"), `<${pagePath}>; rel="canonical"`, pagePath);
     assert.equal(headers.get("x-robots-tag"), "noindex", pagePath);

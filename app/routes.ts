@@ -1,5 +1,7 @@
 import { type RouteConfig, index, route } from "@react-router/dev/routes";
 
+import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "./lib/content-pages.mjs";
+
 export default [
   index("routes/home.tsx"),
   // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
@@ -41,9 +43,8 @@ export default [
   route("research/publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
   route("research/publications/:slug.md", "routes/publications.$slug[.md].ts"),
   route("research/publications/:slug", "routes/publications.$slug.tsx"),
-  // The Research pages (app/lib/content-pages.mjs), rendered from markdown at build time. A splat, so the
+  // The Research pages (app/lib/content-pages.mjs), drawn from D1 (docs/PAGES.md). A splat, so the
   // more specific research/publications routes above still win; a path with no page answers 404.
-  // Their markdown twins are static assets (build:content), not routes, so they stay out of the Worker.
   // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
   // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
   // page so `.md` is not read as part of a slug.
@@ -56,6 +57,11 @@ export default [
     route(`${root}/:slug/sheet`, "routes/procedure.sheet.tsx", { id: `procedure-${id}-sheet` }),
     route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
   ]),
+  // Each page's markdown twin, drawn from D1 like the page. One route per listed path, because a splat
+  // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin is a static file.
+  ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map((path) =>
+    route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", { id: `page-twin-${path.slice(1).replaceAll("/", "-")}` }),
+  ),
   route("research/*", "routes/content-page.tsx"),
   route("teaching/*", "routes/teaching.tsx"),
   // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
