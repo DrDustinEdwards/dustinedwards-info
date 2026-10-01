@@ -11,9 +11,9 @@ import {
   EditorError,
   GitHubError,
   PolicyError,
-  UNCHANGED_NOTE,
   type Actor,
 } from "~/lib/editor/publish.server";
+import { UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "~/lib/content/slug.mjs";
 import { decideMention } from "~/lib/webmention/decide.server";
 import { readState } from "~/lib/editor/publish-policy.mjs";

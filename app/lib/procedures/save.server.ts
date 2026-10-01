@@ -8,7 +8,8 @@ import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
-import { currentHead, makeResolveImage, UNCHANGED_NOTE } from "~/lib/editor/publish.server";
+import { makeResolveImage } from "~/lib/editor/publish.server";
+import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 
@@ -136,16 +137,25 @@ export async function saveProcedure(
   if (!compiled.ok) throw new ProcedureInvalid(slug, compiled.errors);
   decideProcedure(actor, compiled.record.draft, existing?.content ?? null);
 
-  // Bytes identical to the committed file: never a commit (it would be empty and still start CI and a
-  // deploy). If D1 already holds this file's row, nothing else happens either. If not (a lost or stale
-  // row), the save repairs the row from the file, which hard rule 18 wants. After the gate, so a file
-  // that fails validation is still refused.
-  const unchanged = existing !== null && existing.content === raw;
-  if (unchanged && (await rowIsCurrent(env, slug, compiled.sourceBlobSha))) {
+  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
+  // After the gate, so a file that fails validation is still refused even when it is unchanged.
+  const written = await commitUnlessUnchanged(env, {
+    existing,
+    raw,
+    rowIsCurrent: () => rowIsCurrent(env, slug, compiled.sourceBlobSha),
+    commit: () =>
+      commitFiles(env, {
+        expectedHeadSha: options.expectedHeadSha,
+        message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${tag}`,
+        changes: [{ path, content: raw }],
+      }),
+  });
+  const unchanged = written.action !== "commit";
+  if (written.action === "noop") {
     return {
       slug,
       path: compiled.record.path,
-      commitSha: await currentHead(env),
+      commitSha: written.commitSha,
       unchanged: true,
       note: UNCHANGED_NOTE,
       created: false,
@@ -154,15 +164,7 @@ export async function saveProcedure(
       purged: null as PurgeOutcome,
     };
   }
-
-  const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
-  const { commitSha, blobShas } = unchanged
-    ? { commitSha: await currentHead(env), blobShas: {} as Record<string, string> }
-    : await commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${tag}`,
-        changes: [{ path, content: raw }],
-      });
+  const { commitSha, blobShas } = written;
   if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
     throw new Error(
       `The procedure "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobShas[path]}) are not ` +
