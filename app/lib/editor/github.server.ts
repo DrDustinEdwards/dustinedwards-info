@@ -127,6 +127,24 @@ export async function listDirectory(env: GhEnv, path: string, ref = BRANCH) {
   return entries;
 }
 
+/**
+ * A static asset's directory entry, by its site path, or null when the repository has none: existence and
+ * size, never the bytes, which can pass the Contents API's 1 MB cap. The PDFs and the roster photographs
+ * are checked through it.
+ */
+export async function publicFileEntry(env: GhEnv, sitePath: string) {
+  const at = sitePath.lastIndexOf("/");
+  const dir = `public${sitePath.slice(0, at)}`;
+  const name = sitePath.slice(at + 1);
+  try {
+    const entry = (await listDirectory(env, dir)).find((e) => e.type === "file" && e.name === name);
+    return entry ? { size: entry.size } : null;
+  } catch (error) {
+    if (error instanceof GitHubError && error.status === 404) return null;
+    throw error;
+  }
+}
+
 /** The repository's posts: each `content/posts/*.md` file, with the slug its name carries. */
 export async function listPostFiles(env: GhEnv) {
   const entries = await listDirectory(env, "content/posts");

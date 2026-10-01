@@ -119,6 +119,13 @@ export const MAP = [
     gates: ["check:content", "check:links", RELATED],
   },
   {
+    /* check:content compiles every cohort file with the roster validator (app/lib/roster/compile.mjs);
+       the roster save runs the same compile, so a change here changes what a save accepts. */
+    what: "the roster system",
+    test: /^(content\/roster\/.+|app\/lib\/roster\/.+|app\/db\/roster\.ts|scripts\/lib\/roster\.mjs)$/,
+    gates: ["check:content", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],

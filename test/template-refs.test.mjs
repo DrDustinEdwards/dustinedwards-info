@@ -109,7 +109,9 @@ test("css has block comments and no line comments", () => {
 });
 
 test("the scan reads source, and refuses the artifact that lists every asset", () => {
-  assert.ok(isSourceFile("app/data/phage-hunters.ts"));
+  assert.ok(isSourceFile("app/lib/media/folders.mjs"));
+  // Each cohort's file names its photograph by path, so these markdown files are sources too.
+  assert.ok(isSourceFile("content/roster/2025.md"));
   assert.ok(isSourceFile("workers/app.ts"));
   assert.ok(isSourceFile("public/site.webmanifest"));
   // SELF-REFERENTIAL. `assets.json` IS the asset inventory, so reading it would

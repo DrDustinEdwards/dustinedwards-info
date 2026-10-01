@@ -11,6 +11,9 @@ export const REPAIRABLE = /** @type {const} */ ({
   "procedures-drift": "sync_procedures",
   // Before the pages: an entry write refreshes the page row it opens, and a page compile reads the entry from D1.
   "dictionary-drift": "sync_dictionary",
+  // Beside the dictionary: the roster is drawn into the program page and the home page, which a page compile or a
+  // purge may re-open, so it converges before the pages do. It writes no search record.
+  "roster-drift": "sync_roster",
   "pages-drift": "sync_pages",
   "publications-drift": "sync_publications",
   // Reads nothing the Ask upload reads; listed with the file-derived stores.

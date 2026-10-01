@@ -32,6 +32,7 @@ import {
   syncPosts,
   syncProcedures,
   syncPublications,
+  syncRoster,
   syncStatus,
 } from "./sync-tools.server";
 import { uploadMediaTool } from "./upload-media.server";
@@ -50,6 +51,8 @@ import { listDictionaryRows } from "~/db/dictionary";
 import { readDictionary } from "~/lib/dictionary/save.server";
 import { PageInvalid, readPage } from "~/lib/pages/save.server";
 import { readLlms } from "~/lib/llms/save.server";
+import { listRosterRows } from "~/db/roster";
+import { COHORT_SLUG, readRoster } from "~/lib/roster/save.server";
 
 // Re-exported so the routes keep one import path for the operator surface.
 export { TOOL_DESCRIPTORS, isToolName, toolNames } from "./descriptors";
@@ -208,6 +211,9 @@ export async function runTool(
       case "sync_llms":
         return await syncLlms(env);
 
+      case "sync_roster":
+        return await syncRoster(env);
+
       case "backup_media":
         return await backupMedia(env);
 
@@ -277,6 +283,26 @@ export async function runTool(
 
       case "get_dictionary":
         return await getDictionaryTool(env, args);
+
+      case "list_roster": {
+        const rows = await listRosterRows(env);
+        return {
+          ok: true,
+          data: {
+            headSha: await currentHead(env),
+            count: rows.length,
+            cohorts: rows.map((row) => ({
+              slug: row.slug,
+              year: row.year,
+              photo: row.cohort.photo?.src ?? null,
+              researchers: row.cohort.researchers.length,
+            })),
+          },
+        };
+      }
+
+      case "get_roster":
+        return await getRosterTool(env, args);
     }
   } catch (error) {
     return translate(error);
@@ -537,6 +563,16 @@ async function getLlmsTool(env: OperatorEnv): Promise<ToolResult> {
   const llms = await readLlms(env);
   if (!llms) return { ok: false, status: 404, error: "No content/llms.txt exists in the repository." };
   return { ok: true, data: { ...llms, headSha: await currentHead(env) } };
+}
+
+async function getRosterTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const slug = String(args.slug ?? "").trim();
+  if (!COHORT_SLUG.test(slug)) {
+    return { ok: false, status: 400, error: "get_roster requires a slug that is a cohort's four-digit year, such as 2025." };
+  }
+  const cohort = await readRoster(env, slug);
+  if (!cohort) return { ok: false, status: 404, error: `No file exists for the ${slug} cohort.` };
+  return { ok: true, data: { ...cohort, headSha: await currentHead(env) } };
 }
 
 async function deletePostTool(

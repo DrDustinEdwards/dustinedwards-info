@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS, contentPageFile } from "../app/lib/content-pages.mjs";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
+import { ROSTER_ANCHOR, ROSTER_PAGE_PATH } from "../app/lib/roster/compile.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
 import {
   BAYLOR_PDF,
@@ -271,7 +272,7 @@ const phagesMarkdown = readFileSync(
 function anchorExists(target) {
   const [path, id] = target.split("#");
   if (CONTENT_PAGE_SECTIONS.includes(target)) return true;
-  if (path === "/teaching/phage-discovery" && id === "roster") return /\bid="roster"/.test(rosterSource);
+  if (path === ROSTER_PAGE_PATH && id === ROSTER_ANCHOR) return /\bid=\{ROSTER_ANCHOR\}/.test(rosterSource);
   if (path === "/research/phages") return new RegExp(`^###\\s+${id}\\s*$`, "im").test(phagesMarkdown);
   return false;
 }

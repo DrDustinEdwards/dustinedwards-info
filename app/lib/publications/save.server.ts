@@ -13,7 +13,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { combinePurges, purgeCv, purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, GitHubError, listDirectory, readFile } from "~/lib/editor/github.server";
+import { commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -36,22 +36,9 @@ class PublicationInvalid extends ContentInvalid {
   }
 }
 
-/** The repository's PDFs, asked of GitHub: existence and size, never the bytes, which can pass the API's 1 MB cap. */
+/** The repository's PDFs, asked of GitHub: existence and size, never the bytes. */
 function githubHost(env: PublicationEnv): PublicationHost {
-  return {
-    async pdf(sitePath) {
-      const at = sitePath.lastIndexOf("/");
-      const dir = `public${sitePath.slice(0, at)}`;
-      const name = sitePath.slice(at + 1);
-      try {
-        const entry = (await listDirectory(env, dir)).find((e) => e.type === "file" && e.name === name);
-        return entry ? { size: entry.size } : null;
-      } catch (error) {
-        if (error instanceof GitHubError && error.status === 404) return null;
-        throw error;
-      }
-    },
-  };
+  return { pdf: (sitePath) => publicFileEntry(env, sitePath) };
 }
 
 /** Every other publication's identity, from D1: CI re-checks the whole corpus on the commit this makes. */
