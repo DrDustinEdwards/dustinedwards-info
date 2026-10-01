@@ -9,7 +9,7 @@ import { PUBLISHED_STATUS, statusForDraft } from "./visibility.mjs";
  * @param {string} markdown
  * @returns {string}
  */
-function plainText(markdown) {
+export function plainText(markdown) {
   return (
     markdown
       // Fence markers, keeping the code between them.
