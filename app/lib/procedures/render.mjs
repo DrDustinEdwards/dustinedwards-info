@@ -500,8 +500,18 @@ export function procedureMarkdown(record, parsed) {
 }
 
 /**
- * What the search index takes for this procedure, in the shape recordsForPages reads, with the same uid
- * the page had when it was a content page, so a search link survives the move.
+ * The search uid of the page at `path`: the one the page had when it was a content page, so a search
+ * link survives the move. Also what removing a procedure's search records is keyed by.
+ *
+ * @param {string} path
+ */
+export function procedureSearchUid(path) {
+  return `page:${path.slice(1).replaceAll("/", ":")}`;
+}
+
+/**
+ * What the search index takes for this procedure, in the shape recordsForPages reads, with the uid
+ * `procedureSearchUid` names.
  *
  * @param {ProcedureRecord} record
  * @param {import("./parse.mjs").ParsedProcedure} parsed
@@ -522,7 +532,7 @@ export function procedureSearchInput(record, parsed) {
   });
   return {
     url: record.path,
-    uid: `page:${record.path.slice(1).replaceAll("/", ":")}`,
+    uid: procedureSearchUid(record.path),
     title: record.title,
     description: record.description,
     intro: plainText(parsed.intro),

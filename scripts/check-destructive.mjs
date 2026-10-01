@@ -219,6 +219,11 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [
+      "sync_procedures",
+      "D1 rows, on sync_posts's terms: derived from the repository, idempotent, and it " +
+        "refuses an empty file set rather than deleting every row",
+    ],
+    [
       "backup_media",
       "COPIES ONLY. It has no delete branch in either bucket and nothing is ever " +
         "copied backup to media; check:destructive's own MEDIA_BACKUP sweep below " +

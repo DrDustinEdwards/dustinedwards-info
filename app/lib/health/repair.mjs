@@ -5,8 +5,10 @@ import { awaitAskConvergence } from "./ask-converge.mjs";
 
 /** Only idempotent repairs through the operator API, since this runs unattended. Map order is repair order. */
 export const REPAIRABLE = /** @type {const} */ ({
-  // Content first: sync_ask reads search_docs, which sync_posts rewrites, so the reverse uploads a stale corpus.
+  // Content first: sync_ask reads search_docs, which sync_posts and sync_procedures rewrite, so the reverse
+  // uploads a stale corpus.
   "content-drift": "sync_posts",
+  "procedures-drift": "sync_procedures",
   "ask-index-drift": "sync_ask",
   "media-index-drift": "sync_media",
   // Order-independent. backup_media only copies and has no delete branch, which is why it may fire unattended.

@@ -280,6 +280,155 @@ describe("savePost", () => {
   });
 });
 
+describe("savePost refreshes the other posts' derived lists", () => {
+  const admin = { kind: "admin" } as const;
+  const live = (slug: string, overrides: Parameters<typeof post>[1] = {}) =>
+    post(slug, { draft: false, date: "2026-01-02", ...overrides });
+  const save = (slug: string, raw: string, target: Parameters<typeof savePost>[0] = publishEnv()) =>
+    savePost(target, { slug, raw, isNew: !gh.files.has(postPath(slug)), actor: admin });
+  /* D1 persists across the cases of a file, so earlier posts' lists may also move: assert on the slug that must. */
+  const updatedBy = (result: { neighbours: unknown }) =>
+    (result.neighbours as { updated: string[] }).updated;
+  const lists = async (slug: string) => {
+    const row = await env.DB.prepare(
+      "SELECT related, backlinks, updated_at, source_blob_sha, render_hash FROM posts WHERE slug = ?1",
+    )
+      .bind(slug)
+      .first<{
+        related: string | null;
+        backlinks: string | null;
+        updated_at: number;
+        source_blob_sha: string;
+        render_hash: string;
+      }>();
+    return {
+      related: JSON.parse(row?.related ?? "[]") as Array<{ slug: string }>,
+      backlinks: JSON.parse(row?.backlinks ?? "[]") as Array<{ slug: string }>,
+      row,
+    };
+  };
+
+  it("gives a linked-to post its backlink and a tag-sharing post its related entry, with no sync", async () => {
+    await save("link-target", live("link-target"));
+    const before = await lists("link-target");
+    expect(before.backlinks).toEqual([]);
+    expect(before.related).toEqual([]);
+
+    const linker = live("link-source", {
+      body: "See [the target](/writing/link-target) for the background.\n",
+    });
+    const result = await save("link-source", linker);
+
+    expect(result.neighbours).toMatchObject({ ok: true });
+    expect(updatedBy(result)).toContain("link-target");
+    expect(updatedBy(result)).not.toContain("link-source");
+    const after = await lists("link-target");
+    expect(after.backlinks.map((b) => b.slug)).toEqual(["link-source"]);
+    expect(after.related.map((r) => r.slug)).toEqual(["link-source"]);
+    /* Only the two derived columns moved: the neighbour's source, render and revision are its own. */
+    expect(after.row?.source_blob_sha).toBe(before.row?.source_blob_sha);
+    expect(after.row?.render_hash).toBe(before.row?.render_hash);
+    expect(after.row?.updated_at).toBe(before.row?.updated_at);
+  });
+
+  it("takes the saved post back out of the others' lists when it is unpublished", async () => {
+    await save("kept-target", live("kept-target"));
+    await save(
+      "dropped-source",
+      live("dropped-source", { body: "See [it](/writing/kept-target).\n" }),
+    );
+    const listed = await lists("kept-target");
+    expect(listed.backlinks).toHaveLength(1);
+    expect(listed.related.map((r) => r.slug)).toContain("dropped-source");
+
+    const result = await save(
+      "dropped-source",
+      live("dropped-source", { body: "See [it](/writing/kept-target).\n", draft: true }),
+    );
+
+    expect(result.neighbours).toMatchObject({ ok: true });
+    expect(updatedBy(result)).toContain("kept-target");
+    const after = await lists("kept-target");
+    expect(after.backlinks).toEqual([]);
+    expect(after.related.map((r) => r.slug)).not.toContain("dropped-source");
+  });
+
+  it("rewrites nothing when no other post's lists change", async () => {
+    await save("quiet-one", live("quiet-one", { tags: "[alpha]" }));
+    const raw = live("quiet-two", { tags: "[beta]" });
+    await save("quiet-two", raw);
+    /* An edit that moves no tag and adds no link leaves every list as it was, so no row is written. */
+    const result = await save("quiet-two", `${raw}
+A changed line.
+`);
+    expect(result.neighbours).toMatchObject({ ok: true, updated: [], purged: null });
+  });
+
+  it("REPORTS a failed neighbour write, and the commit and the saved row stand", async () => {
+    await save("report-target", live("report-target"));
+    /* The save's own batch is the first; the neighbour batch is the second. */
+    let batches = 0;
+    const flaky = new Proxy(env.DB, {
+      get(target, property, receiver) {
+        if (property !== "batch") return Reflect.get(target, property, receiver);
+        return async (statements: D1PreparedStatement[]) => {
+          batches += 1;
+          if (batches === 2) throw new Error("planted neighbour batch failure");
+          return target.batch(statements);
+        };
+      },
+    });
+    const raw = live("report-source", { body: "See [it](/writing/report-target).\n" });
+    const result = await save("report-source", raw, {
+      ...env,
+      DB: flaky,
+    } as unknown as Parameters<typeof savePost>[0]);
+
+    expect(result.neighbours).toMatchObject({ ok: false });
+    expect((result.neighbours as { message: string }).message).toContain("planted neighbour batch failure");
+    expect(gh.files.get(postPath("report-source"))).toContain("See [it](/writing/report-target).");
+    expect(await countRows("posts", "WHERE slug = ?1", "report-source")).toBe(1);
+    expect((await lists("report-target")).backlinks).toEqual([]);
+
+    /* Self-healing: the next save of any post re-derives every stale list. */
+    const next = await save("report-source", `${raw}\nOne more line.\n`);
+    expect(next.neighbours).toMatchObject({ ok: true });
+    expect(updatedBy(next)).toContain("report-target");
+  });
+});
+
+describe("savePost and the frontmatter `updated` date", () => {
+  const updatedAt = async (slug: string) =>
+    (
+      await env.DB.prepare("SELECT updated_at FROM posts WHERE slug = ?1")
+        .bind(slug)
+        .first<{ updated_at: number }>()
+    )?.updated_at ?? 0;
+
+  it("writes the frontmatter date at UTC midnight, as the bulk sync does", async () => {
+    const raw = post("dated").replace("draft: true", "draft: true\nupdated: 2026-03-05");
+    await savePost(publishEnv(), { slug: "dated", raw, isNew: true, actor: { kind: "admin" } });
+    expect(await updatedAt("dated")).toBe(Date.UTC(2026, 2, 5) / 1000);
+
+    /* A later edit moving the date moves the column with it. */
+    const moved = `${raw.replace("2026-03-05", "2026-04-06")}\nA changed line.\n`;
+    await savePost(publishEnv(), { slug: "dated", raw: moved, isNew: false, actor: { kind: "admin" } });
+    expect(await updatedAt("dated")).toBe(Date.UTC(2026, 3, 6) / 1000);
+  });
+
+  it("stamps the save's own time when the post carries no date, as before", async () => {
+    const before = Math.floor(Date.now() / 1000);
+    await savePost(publishEnv(), {
+      slug: "undated",
+      raw: post("undated"),
+      isNew: true,
+      actor: { kind: "admin" },
+    });
+    expect(await updatedAt("undated")).toBeGreaterThanOrEqual(before - 1);
+    expect(await updatedAt("undated")).toBeLessThanOrEqual(Math.floor(Date.now() / 1000) + 1);
+  });
+});
+
 describe("renderAndWrite", () => {
   it("REFUSES to write a row when the rendered bytes are not the committed blob", async () => {
     await expect(

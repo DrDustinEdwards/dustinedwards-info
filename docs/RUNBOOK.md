@@ -113,7 +113,9 @@ fifteen minutes, so if content drift is the problem it may already be repairing:
 curl.exe -s https://dustinedwards.dustin-edwards.workers.dev/api/health
 ```
 
-Look for `content-drift` in the `checks` array.
+Look for `content-drift` in the `checks` array. A procedure file that moved
+without its row shows as `procedures-drift` instead, repaired the same way by
+the `sync_procedures` tool (same call, `"tool":"sync_procedures"`).
 
 **To force it now**, through the operator door, which is the only door:
 

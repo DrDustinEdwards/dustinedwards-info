@@ -2,7 +2,10 @@ import { env } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { runTool } from "~/lib/operator/api.server";
+import { gitBlobSha } from "~/lib/content/hashes.mjs";
+import { runHealthChecks } from "~/lib/health/checks.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { procedureSearchUid } from "~/lib/procedures/render.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 
@@ -154,5 +157,94 @@ describe("save_procedure", () => {
       expect(data.errors).toEqual([]);
       expect(data.gaps.some((g) => g.field === "version")).toBe(true);
     }
+  });
+});
+
+describe("sync_procedures and the procedures-drift check", () => {
+  const OTHER = "other-protocol";
+  const otherRaw = () =>
+    zncl2.replace(
+      "path: /research/protocols/phage-dna-extraction",
+      `path: /research/protocols/${OTHER}`,
+    );
+  const rowFor = (slug: string) =>
+    env.DB.prepare("SELECT slug, source_blob_sha FROM procedures WHERE slug = ?1")
+      .bind(slug)
+      .first<{ slug: string; source_blob_sha: string }>();
+  const driftCheck = async () =>
+    (await runHealthChecks(env as never)).checks.find((c) => c.name === "procedures-drift");
+  const sync = () => runTool(operatorEnv(), operator, "sync_procedures", {});
+
+  /* D1 persists across the cases of a file, and each starts from a repository ahead of an empty table. */
+  beforeEach(async () => {
+    await env.DB.prepare("DELETE FROM procedures").run();
+  });
+
+  it("converges an unrowed file, reports it as drift first, and is idempotent", { timeout: 120_000 }, async () => {
+    // A file in the repository with no row: committed from a clone, or a save whose D1 write failed.
+    expect((await driftCheck())?.ok).toBe(false);
+
+    const first = await sync();
+    expect(first.ok).toBe(true);
+    if (first.ok) expect(first.data).toMatchObject({ repaired: 1, removed: 0, expected: 1, present: 1, converged: true });
+    expect((await rowFor(SLUG))?.source_blob_sha).toBe(await gitBlobSha(zncl2));
+    expect((await stepTexts()).length).toBeGreaterThan(0);
+    expect((await driftCheck())?.ok).toBe(true);
+
+    const again = await sync();
+    expect(again.ok).toBe(true);
+    if (again.ok) expect(again.data).toMatchObject({ repaired: 0, removed: 0, converged: true });
+  });
+
+  it("re-compiles a file edited through git, and removes the row of a file that is gone", { timeout: 180_000 }, async () => {
+    gh.files.set(procedurePath(OTHER), otherRaw());
+    expect((await sync()).ok).toBe(true);
+    expect(await rowFor(OTHER)).not.toBeNull();
+
+    // An edit committed outside the save tool, and a deletion.
+    gh.files.set(procedurePath(SLUG), zncl2.replace(OLD_STEP, NEW_STEP));
+    gh.files.delete(procedurePath(OTHER));
+    const drifted = await driftCheck();
+    expect(drifted?.ok).toBe(false);
+    expect(drifted?.detail).toContain("1 sha-changed");
+    expect(drifted?.detail).toContain("1 row(s) with no file");
+
+    const result = await sync();
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data).toMatchObject({ repaired: 1, removed: 1, converged: true });
+    expect(await rowFor(OTHER)).toBeNull();
+    expect((await stepTexts()).some((t) => t.includes("Incubate at 60 °C for 45 minutes."))).toBe(true);
+    const searchRows = await env.DB.prepare("SELECT COUNT(*) AS n FROM search_docs WHERE doc_uid = ?1")
+      .bind(procedureSearchUid(`/research/protocols/${OTHER}`))
+      .first<{ n: number }>();
+    expect(searchRows?.n).toBe(0);
+  });
+
+  it("REFUSES an empty file set instead of deleting every row", { timeout: 120_000 }, async () => {
+    expect((await sync()).ok).toBe(true);
+    // The directory lists, but holds no procedure: a fault, not a repository with none.
+    gh.files.delete(procedurePath(SLUG));
+    gh.files.set("content/procedures/README.txt", "not a procedure");
+    const result = await sync();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(422);
+      expect(result.error).toContain("empty set");
+    }
+    expect(await rowFor(SLUG)).not.toBeNull();
+  });
+
+  it("converges the rest and then FAILS NAMING a file the validator refuses", { timeout: 180_000 }, async () => {
+    gh.files.set(procedurePath(OTHER), otherRaw().replace("Spin at 10,000 rpm", "Spin at 10,000 rpm in the @mystery reagent"));
+    const result = await sync();
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.status).toBe(422);
+      expect(result.error).toContain(`${procedurePath(OTHER)} fails`);
+      expect(JSON.stringify(result.detail)).toContain("@mystery is not in materials");
+    }
+    // The valid file was still converged, and the refused one has no row.
+    expect(await rowFor(SLUG)).not.toBeNull();
+    expect(await rowFor(OTHER)).toBeNull();
   });
 });

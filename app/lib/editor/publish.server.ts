@@ -24,7 +24,7 @@ import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
 import { commitUnlessUnchanged } from "./write-path.server";
-import { listPostCorpusForRelated, listPostLinkCorpus } from "~/db";
+import { listPostCorpusForRelated, listPostDerivedLists, listPostLinkCorpus } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { statusForDraft } from "~/lib/search/visibility.mjs";
@@ -176,7 +176,7 @@ function computeForSaved<C extends { slug: string; status: string; publishAt: Da
   return computed[computed.length - 1];
 }
 
-/** Only this post's list is written: relatedness is corpus-wide, so other rows wait for the bulk sync. */
+/** Only this post's list is computed here: relatedness is corpus-wide, and the other rows follow in refreshNeighbours. */
 async function relatedFor(env: PublishEnv, record: any) {
   const { withRelated } = await loadPipeline();
   return computeForSaved(
@@ -188,7 +188,7 @@ async function relatedFor(env: PublishEnv, record: any) {
   ).related;
 }
 
-/** Only this post's list is written, as in relatedFor. */
+/** Only this post's list is computed here, as in relatedFor. */
 async function backlinksFor(env: PublishEnv, record: any) {
   const { withBacklinks } = await loadPipeline();
   return computeForSaved(
@@ -241,6 +241,89 @@ export async function renderAndWrite(
   const purged = await purgePosts(`renderAndWrite ${slug}`);
 
   return { record, purged };
+}
+
+/**
+ * After a save, the OTHER posts whose related or backlinks lists the save changed: a post the saved one
+ * now links to or shares a tag with, and one that had it in a list and no longer does. The lists are
+ * derived over the whole corpus by the pipeline's own withRelated and withBacklinks, the pass the bulk
+ * sync runs, since relatedness is a property of the set; that is in memory, over rows a save already
+ * reads. Only rows whose stored lists differ are written, in one batch, and only those two columns:
+ * another post's save must not move its `updated_at`, blob sha or render hash.
+ *
+ * Returns the slugs it rewrote. Throws on a failed read or write: the caller reports it.
+ */
+export async function refreshNeighbours(env: PublishEnv, savedSlug: string) {
+  const { withRelated, withBacklinks } = await loadPipeline();
+  const [related, links, stored] = await Promise.all([
+    listPostCorpusForRelated(env),
+    listPostLinkCorpus(env),
+    listPostDerivedLists(env),
+  ]);
+  const htmlBySlug = new Map(links.map((p) => [p.slug, p.html ?? ""]));
+  const derived = withBacklinks(
+    withRelated(
+      related.map((p) => ({
+        slug: p.slug,
+        title: p.title,
+        description: p.description,
+        tags: p.tags,
+        html: htmlBySlug.get(p.slug) ?? "",
+        draft: p.status === "draft",
+        publishAt: p.publishAt ? p.publishAt.toISOString() : "",
+      })),
+    ),
+  ) as Array<{ slug: string; related: unknown[]; backlinks: unknown[] }>;
+
+  const storedBySlug = new Map(stored.map((p) => [p.slug, p]));
+  const changed = derived.flatMap((post) => {
+    // The saved row was written from the same derivation a moment ago.
+    const row = storedBySlug.get(post.slug);
+    if (post.slug === savedSlug || !row) return [];
+    const relatedJson = JSON.stringify(post.related);
+    const backlinksJson = JSON.stringify(post.backlinks);
+    // The bulk sync stores an empty backlinks list as NULL and a save as "[]": the same answer.
+    if (relatedJson === (row.related ?? "[]") && backlinksJson === (row.backlinks ?? "[]")) return [];
+    return [{ slug: post.slug, relatedJson, backlinksJson }];
+  });
+  if (changed.length === 0) return [];
+
+  await env.DB.batch(
+    changed.map((c) =>
+      env.DB.prepare(`UPDATE posts SET related = ?1, backlinks = ?2 WHERE slug = ?3`).bind(
+        c.relatedJson,
+        c.backlinksJson,
+        c.slug,
+      ),
+    ),
+  );
+  return changed.map((c) => c.slug);
+}
+
+/**
+ * The save's neighbour refresh, reported rather than raised: the commit and the saved row have landed, and
+ * undoing either would destroy the source to repair derived lists. A failure is returned for the caller
+ * to show and logged as an alert; the next save of any post re-derives and rewrites every stale list,
+ * as does the ship's sync.
+ */
+async function refreshNeighboursAfterSave(env: PublishEnv, slug: string) {
+  try {
+    const updated = await refreshNeighbours(env, slug);
+    // The save's own purge ran before these rows changed, so a page re-stored in between would keep the old lists.
+    const purged = updated.length > 0 ? await purgePosts(`refreshNeighbours ${slug}`) : null;
+    return { ok: true as const, updated, purged };
+  } catch (error) {
+    console.error(
+      JSON.stringify({ alert: "neighbour-refresh-failed", slug, detail: errorMessage(error) }),
+    );
+    return {
+      ok: false as const,
+      message:
+        `The post saved, but the related and backlinks lists of the other posts could not be ` +
+        `refreshed: ${errorMessage(error)}. Their lists stay as they were until the next save ` +
+        `of any post or the next content sync.`,
+    };
+  }
 }
 
 export async function currentHead(env: PublishEnv) {
@@ -318,6 +401,7 @@ export async function savePost(
       commitSha: written.commitSha,
       record: gated,
       askSync: null,
+      neighbours: null,
       purged: null as PurgeOutcome,
       d1Retried: false,
       previewLinksRevoked: null as number | null,
@@ -354,6 +438,8 @@ export async function savePost(
     console.error("failed to clear a divergence record after a successful save", error);
   }
 
+  const neighbours = await refreshNeighboursAfterSave(env, record.slug);
+
   // Revoked AFTER the D1 sync: the read path checks status = 'draft', so revoking first opens a window.
   // A surviving token is inert, so a failure does not throw.
   let previewLinksRevoked: number | null = null;
@@ -374,6 +460,8 @@ export async function savePost(
     commitSha,
     record,
     askSync,
+    /** Other posts' related and backlinks lists rewritten by this save, or why they could not be. */
+    neighbours,
     /** False when the cache purge failed or was never reached, null when the runtime cannot purge. */
     purged,
     d1Retried: converged.retried,
@@ -505,6 +593,11 @@ export function postColumnValues(record: any) {
     key_takeaways: record.keyTakeaways ? JSON.stringify(record.keyTakeaways) : null,
     changelog: record.changelog ? JSON.stringify(record.changelog) : null,
     backlinks: record.backlinks ? JSON.stringify(record.backlinks) : null,
+    // The frontmatter `updated` at UTC midnight, the value the bulk sync's revisedDate writes, so a save and
+    // the next sync agree. NULL when the author wrote none: the statement then stamps the save's own time.
+    updated_at: record.updated
+      ? Math.floor(Date.parse(`${record.updated}T00:00:00.000Z`) / 1000)
+      : null,
   };
 }
 
@@ -522,7 +615,8 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
            writing_status, assumed_audience, key_takeaways, changelog, backlinks,
            updated_at)
          VALUES (?1, 'post', ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12,
-           ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26, unixepoch())
+           ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23, ?24, ?25, ?26,
+           COALESCE(?27, unixepoch()))
          ON CONFLICT(slug) DO UPDATE SET
            kind = excluded.kind, title = excluded.title, body = excluded.body,
            html = excluded.html, description = excluded.description, status = excluded.status,
@@ -537,7 +631,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
            assumed_audience = excluded.assumed_audience,
            key_takeaways = excluded.key_takeaways, changelog = excluded.changelog,
            backlinks = excluded.backlinks,
-           updated_at = unixepoch()`,
+           updated_at = excluded.updated_at`,
       )
       .bind(
         v.slug,
@@ -566,6 +660,7 @@ export async function syncPostToD1(env: PublishEnv, record: any) {
         v.key_takeaways,
         v.changelog,
         v.backlinks,
+        v.updated_at,
       ),
     ...record.tags.map((tag: string) =>
       db

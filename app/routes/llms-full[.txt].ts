@@ -1,7 +1,12 @@
 import { listBlogPostsFullText, nextScheduledPublishAt } from "~/db";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
-import { EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL, scheduledEdgeCacheControl } from "~/lib/seo";
+import {
+  EDGE_CACHE_HEADER,
+  SHARED_CACHE_CONTROL,
+  cacheTags,
+  scheduledEdgeCacheControl,
+} from "~/lib/seo";
 import type { Route } from "./+types/llms-full[.txt]";
 
 /**
@@ -50,6 +55,8 @@ export async function loader({ context }: Route.LoaderArgs) {
       "x-robots-tag": "noindex",
       link: canonicalLink("/"),
       "cache-control": SHARED_CACHE_CONTROL,
+      // Lists posts only, so a posts purge (a save, a delete) must reach it.
+      "cache-tag": cacheTags(),
       [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });

@@ -154,20 +154,46 @@ export function contentDriftCompare(files, rows) {
  * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
  */
 export function contentDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "Content", noun: "post", tool: "sync_posts" });
+}
+
+/**
+ * The same comparison for the procedure files and the procedures table, so what counts as drift is one
+ * rule for both.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function procedureDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, {
+    label: "Procedure",
+    noun: "procedure",
+    tool: "sync_procedures",
+  });
+}
+
+/**
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @param {{ label: string, noun: string, tool: string }} words
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+function sourceDriftVerdict(files, rows, { label, noun, tool }) {
   const { changed, unrowed, unfiled } = contentDriftCompare(files, rows);
   const drift = changed.length + unrowed.length + unfiled.length;
   if (drift === 0) {
     return {
       ok: true,
-      detail: `D1 agrees with the repository: ${files.length} post file(s), every blob sha matched by its row.`,
+      detail: `D1 agrees with the repository: ${files.length} ${noun} file(s), every blob sha matched by its row.`,
     };
   }
   return {
     ok: false,
     detail:
-      `Content drift ${drift}: ${changed.length} sha-changed, ${unrowed.length} ` +
+      `${label} drift ${drift}: ${changed.length} sha-changed, ${unrowed.length} ` +
       `file(s) with no row, ${unfiled.length} row(s) with no file, against ` +
-      `${files.length} post file(s). Repair with sync_posts on the operator API.`,
+      `${files.length} ${noun} file(s). Repair with ${tool} on the operator API.`,
     counts: { expected: files.length, present: files.length - changed.length - unrowed.length },
   };
 }

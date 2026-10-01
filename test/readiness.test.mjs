@@ -6,7 +6,7 @@ import {
   deferredMisses,
   readinessVerdict,
 } from "../scripts/lib/readiness.mjs";
-import { bodyDrifted, HEALTHY as HEALTHY_BODY } from "./lib/health-bodies.mjs";
+import { bodyDrifted, CHECK_NAMES, HEALTHY as HEALTHY_BODY } from "./lib/health-bodies.mjs";
 
 const HEALTHY = JSON.stringify(HEALTHY_BODY);
 
@@ -15,7 +15,7 @@ const UNHEALTHY = JSON.stringify(bodyDrifted({ "ask-index-drift": { expected: 99
 test("a healthy report passes and carries its checks", () => {
   const verdict = readinessVerdict(200, HEALTHY);
   assert.equal(verdict.ok, true);
-  assert.equal(verdict.checks.length, 5);
+  assert.equal(verdict.checks.length, CHECK_NAMES.length);
 });
 
 test("THE PLANT: a 200 whose body does not say ok refuses, naming the check", () => {
@@ -92,7 +92,7 @@ test("THE PLANT: a corpus missing a post from D1 ships, and does not refuse", ()
     ["content-drift"],
     "and it is reported as failing, never silently forgiven",
   );
-  assert.equal(deferred.checks.length, 5, "every check is still carried for the table");
+  assert.equal(deferred.checks.length, CHECK_NAMES.length, "every check is still carried for the table");
 });
 
 test("deferring content-drift does not defer anything else", () => {
@@ -153,8 +153,8 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
   assert.match(misses[0], /expected 121, present 120/, "the counts the wire carries are the triage");
   assert.deepEqual(
     converged.sort(),
-    ["content-drift", "media-index-drift"],
-    "the two that did converge are reported converged, not silent",
+    ["content-drift", "media-index-drift", "procedures-drift"],
+    "the three that did converge are reported converged, not silent",
   );
 });
 

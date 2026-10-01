@@ -7,6 +7,7 @@ import {
   SHARED_CACHE_CONTROL,
   SITE,
   SITE_ORIGIN,
+  cacheTags,
   scheduledEdgeCacheControl,
 } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
@@ -111,6 +112,8 @@ export async function feedResponse(env: Env, format: FeedFormat, scope: FeedScop
     headers: {
       "content-type": FEED_CONTENT_TYPES[format],
       "cache-control": SHARED_CACHE_CONTROL,
+      // Every scope lists posts only, so a posts purge (a save, a delete) must reach it.
+      "cache-tag": cacheTags(),
       [EDGE_CACHE_HEADER]: scheduledEdgeCacheControl(new Date(), nextPublishAt),
     },
   });
