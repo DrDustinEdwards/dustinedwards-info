@@ -43,6 +43,18 @@ export default [
   // The Research pages (app/lib/content-pages.mjs), rendered from markdown at build time. A splat, so the
   // more specific research/publications routes above still win; a path with no page answers 404.
   // Their markdown twins are static assets (build:content), not routes, so they stay out of the Worker.
+  // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
+  // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
+  // page so `.md` is not read as part of a slug.
+  ...[
+    ["research/protocols", "protocol"],
+    ["research/methods", "computational"],
+    ["recipes", "recipe"],
+  ].flatMap(([root, id]) => [
+    route(`${root}/:slug.md`, "routes/procedure[.md].ts", { id: `procedure-${id}-md` }),
+    route(`${root}/:slug/sheet`, "routes/procedure.sheet.tsx", { id: `procedure-${id}-sheet` }),
+    route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
+  ]),
   route("research/*", "routes/content-page.tsx"),
   route("teaching/*", "routes/teaching.tsx"),
   // Same markdown pages as Research and Teaching. The module is its own file so headers() is this

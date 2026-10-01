@@ -98,6 +98,9 @@ export function run(code) {
       // The Research and Teaching pages, rendered from markdown at build time (app/lib/content-pages.mjs).
       "content-page.tsx",
       "teaching.tsx",
+      // The procedure pages and their printable sheets (docs/PROCEDURES.md), drawn from D1.
+      "procedure.tsx",
+      "procedure.sheet.tsx",
       "cv.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",

@@ -25,6 +25,7 @@ import { paperSearchInputs } from "../app/lib/publications/search-inputs.mjs";
 import { renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
 import { isMain } from "./lib/is-main.mjs";
+import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 
 /**
  * The paths below stay repo-relative because they name files in messages and in the render; every
@@ -202,6 +203,15 @@ export async function renderContentPages() {
   return pages.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+/** @type {ReturnType<typeof buildProcedures> | undefined} */
+let compiledProcedures;
+
+/** Compiled once per run: the search inputs and the rows come from the same compile. */
+function procedures() {
+  compiledProcedures ??= buildProcedures();
+  return compiledProcedures;
+}
+
 /** @returns {Promise<string>} */
 export async function buildArtifact() {
   /** @type {string[]} */
@@ -254,6 +264,7 @@ export async function buildArtifact() {
     [
       ...colophonPages(stack, features),
       ...contentPageSearchInputs(await renderContentPages()),
+      ...(await procedures()).searchInputs,
     ],
     paperSearchInputs(PUBLICATIONS),
   );
@@ -358,8 +369,14 @@ async function main() {
   await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: contentPages }, null, 2)}\n`, "utf8");
   await writeContentPageTwins(renderedPages);
 
+  // The procedures' rows, which sync:content writes to D1; their pages and twins are drawn from there.
+  const { rows } = await procedures();
+  await writeFile(fromRoot(PROCEDURES_ARTIFACT_PATH), `${JSON.stringify({ procedures: rows }, null, 2)}
+`, "utf8");
+
   console.log(
-    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH} and ${PAGES_ARTIFACT_PATH}`,
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} ` +
+      `and ${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures)`,
   );
 }
 

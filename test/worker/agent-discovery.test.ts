@@ -20,11 +20,17 @@ import { loader as robotsLoader } from "~/routes/robots";
 import { loader as llmsLoader } from "~/routes/llms";
 import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as sitemapLoader } from "~/routes/sitemap";
+import { runTool } from "~/lib/operator/api.server";
+import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { loader as procedureLoader, meta as procedureMeta } from "~/routes/procedure";
+import { loader as procedureTwinLoader } from "~/routes/procedure[.md]";
 
 import llmsTxt from "../../content/llms.txt?raw";
+import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { post } from "./fixtures";
 import { routeContext, throughMiddleware } from "./route-helpers";
+import { stubGitHub } from "./github-stub";
 
 /*
  * THE AGENT PATH WITH NO VISIBLE LINK (job_5670dd43eef2, 2026-09-27): nothing a person sees points an
@@ -96,7 +102,21 @@ beforeAll(async () => {
       body: `An article about ${ARTICLE.term}.\n\n## Details\n\nMore about ${ARTICLE.term}.\n`,
     }),
   );
-}, 120_000);
+  /* The protocol is a procedure (docs/PROCEDURES.md): its row arrives through save_procedure, the
+   * same compile and write sync:content and the operator API use, from the repository's file. */
+  const gh = stubGitHub({ [procedurePath("phage-isolation")]: isolation });
+  try {
+    const saved = await runTool(
+      env as unknown as Parameters<typeof runTool>[0],
+      { kind: "admin" },
+      "save_procedure",
+      { slug: "phage-isolation", raw: isolation, isNew: false },
+    );
+    expect(saved.ok, JSON.stringify(saved)).toBe(true);
+  } finally {
+    gh.restore();
+  }
+}, 240_000);
 
 describe("discovery an agent starts from", () => {
   it("robots.txt names both the sitemap and llms.txt", async () => {
@@ -172,7 +192,24 @@ describe("an article: head, twin, canonical, full text", () => {
 });
 
 describe("a research page and a protocol: head, twin, and llms.txt", () => {
-  it.each([RESEARCH_PAGE, PROTOCOL_PAGE])("%s renders its text, links its twin, and llms.txt lists the page", async (path) => {
+  it(`${PROTOCOL_PAGE} renders its steps, links its twin, and llms.txt lists the page`, async () => {
+    const loaderData = (await get(procedureLoader as Loader, PROTOCOL_PAGE, { slug: "phage-isolation" })) as {
+      record: { path: string; sections: unknown[] };
+    };
+    expect(loaderData.record.path).toBe(PROTOCOL_PAGE);
+    expect(loaderData.record.sections.length).toBeGreaterThan(3);
+    expect(markdownAlternates(procedureMeta({ loaderData } as never)).map((d) => d.href)).toEqual([
+      `${SITE_ORIGIN}${PROTOCOL_PAGE}.md`,
+    ]);
+    const twin = await response(procedureTwinLoader as Loader, `${PROTOCOL_PAGE}.md`, { slug: "phage-isolation" });
+    expect(twin.headers.get("link")).toBe(canonical(PROTOCOL_PAGE));
+    expect(await twin.text()).toContain("# ");
+
+    const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
+    expect(llms.split("\n")).toContain(`  ${PROTOCOL_PAGE}`);
+  });
+
+  it.each([RESEARCH_PAGE])("%s renders its text, links its twin, and llms.txt lists the page", async (path) => {
     const { page } = (await get(contentPageLoader as Loader, path)) as {
       page: { path: string; html: string; title: string };
     };

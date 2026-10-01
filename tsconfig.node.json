@@ -316,7 +316,15 @@
     "app/lib/publications/pdf-redirect.mjs",
     "app/lib/tag-path.mjs",
     "app/lib/series-path.mjs",
-    "app/lib/nav.ts"
+    "app/lib/nav.ts",
+    // The procedure system's compile path. check:protocols, build:content and sync:content compile every
+    // procedure with the SAME modules the operator API's save_procedure runs, so a file CI passes is the
+    // file the save tool accepts. No Env and no DOM.
+    "app/lib/procedures/marks.mjs",
+    "app/lib/procedures/parse.mjs",
+    "app/lib/procedures/validate.mjs",
+    "app/lib/procedures/render.mjs",
+    "app/lib/procedures/compile.mjs"
   ],
   "compilerOptions": {
     "composite": true,

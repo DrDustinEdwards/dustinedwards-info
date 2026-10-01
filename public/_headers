@@ -92,26 +92,6 @@
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex
   Link: </research/protocols>; rel="canonical"
-/research/protocols/phage-isolation.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </research/protocols/phage-isolation>; rel="canonical"
-/research/protocols/phage-dna-extraction.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </research/protocols/phage-dna-extraction>; rel="canonical"
-/research/protocols/coi-primers.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </research/protocols/coi-primers>; rel="canonical"
-/research/protocols/rev-lpdv-primers.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </research/protocols/rev-lpdv-primers>; rel="canonical"
-/research/protocols/pan-avian-gapdh.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </research/protocols/pan-avian-gapdh>; rel="canonical"
 /research/tools.md
   Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
   X-Robots-Tag: noindex

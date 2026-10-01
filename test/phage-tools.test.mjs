@@ -24,6 +24,8 @@ import {
 } from "../app/lib/phage-tools.mjs";
 
 const page = (name) => readFileSync(new URL(`../content/pages/${name}.md`, import.meta.url), "utf8");
+/** @param {string} slug */
+const procedure = (slug) => readFileSync(new URL(`../content/procedures/${slug}.md`, import.meta.url), "utf8");
 
 /** Equal at the precision the page states: 1.1 x 10^10 is two significant figures. */
 function sameAsStated(actual, mantissa, exponent) {
@@ -50,7 +52,7 @@ test("titer: a spot titer divides by the spot volume, 6 plaques in 3 µl of 10^-
 });
 
 test("titer: every row of the protocol's worked-numbers table", () => {
-  const md = page("research-protocols-phage-isolation");
+  const md = procedure("phage-isolation");
   const rows = [...md.matchAll(/^\| (\d+) \| (\d+) µl(?: \(spot\))? \| (10\^-(\d+)|undiluted) \| ([\d.]+) x 10\^(\d+) pfu\/ml \|$/gm)];
   // The table has ten rows; a count this low means the table moved and nothing was checked.
   assert.ok(rows.length >= 10, `read ${rows.length} rows from the protocol's titer table`);
@@ -175,7 +177,7 @@ test("webbed plate: the FAQ's example, 11,100 pfu from a 1.1 x 10^10 lysate", ()
   // per plate, which is that volume at the precision a pipette can hold.
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.1e10, pfuPerPlate: 11100 }), "1.01", -3);
   assert.ok(page("teaching-virus-isolation-faq").includes("11,100 / 1.1 x 10^10 x 1,000 = 1.01 x 10^-3 µl of lysate per plate."));
-  assert.ok(page("research-protocols-phage-isolation").includes("A target of about 11,100 pfu needs 1.01 x 10^-3 µl of lysate per plate."));
+  assert.ok(procedure("phage-isolation").includes("A target of about 11,100 pfu needs 1.01 x 10^-3 µl of lysate per plate."));
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.11e10, pfuPerPlate: 11100 }), "1.00", -3);
   assert.equal(10 * (1 / 1000) * (7 / 70), 1e-3);
 });
@@ -491,7 +493,7 @@ test("every lab default names a source page, and the value matches the lab's num
   assert.equal(LAB.floodMl, 8);
   assert.deepEqual([LAB.yieldLowMl, LAB.yieldHighMl], [5, 7]);
   // The numbers are the protocol's own words, so a change there has to be made here too.
-  const protocol = page("research-protocols-phage-isolation");
+  const protocol = procedure("phage-isolation");
   assert.ok(protocol.includes("(Protocol 6.4, 3 µl spots)"));
   assert.ok(protocol.includes("plating 10 µl of each dilution with 250 µl host"));
   assert.ok(protocol.includes("typically 5 to 7 ml per plate"));
