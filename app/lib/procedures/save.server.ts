@@ -8,7 +8,7 @@ import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
-import { makeResolveImage } from "~/lib/editor/publish.server";
+import { currentHead, makeResolveImage, UNCHANGED_NOTE } from "~/lib/editor/publish.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 
@@ -16,7 +16,6 @@ import { compileProcedure } from "./compile.mjs";
 import { parseProcedure, procedurePath } from "./parse.mjs";
 
 type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
-
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
 export class ProcedureInvalid extends Error {
   errors: string[];
@@ -114,6 +113,14 @@ async function writeRow(env: ProcedureEnv, compiled: Extract<Awaited<ReturnType<
   ]);
 }
 
+/** True when D1's row for the procedure was compiled from exactly this file (the git blob sha matches). */
+async function rowIsCurrent(env: ProcedureEnv, slug: string, blobSha: string) {
+  const row = await env.DB.prepare("SELECT source_blob_sha FROM procedures WHERE slug = ?1")
+    .bind(slug)
+    .first<{ source_blob_sha: string | null }>();
+  return row?.source_blob_sha === blobSha;
+}
+
 /** save_procedure. */
 export async function saveProcedure(
   env: ProcedureEnv,
@@ -129,12 +136,33 @@ export async function saveProcedure(
   if (!compiled.ok) throw new ProcedureInvalid(slug, compiled.errors);
   decideProcedure(actor, compiled.record.draft, existing?.content ?? null);
 
+  // Bytes identical to the committed file: never a commit (it would be empty and still start CI and a
+  // deploy). If D1 already holds this file's row, nothing else happens either. If not (a lost or stale
+  // row), the save repairs the row from the file, which hard rule 18 wants. After the gate, so a file
+  // that fails validation is still refused.
+  const unchanged = existing !== null && existing.content === raw;
+  if (unchanged && (await rowIsCurrent(env, slug, compiled.sourceBlobSha))) {
+    return {
+      slug,
+      path: compiled.record.path,
+      commitSha: await currentHead(env),
+      unchanged: true,
+      note: UNCHANGED_NOTE,
+      created: false,
+      draft: compiled.record.draft,
+      gaps: compiled.gaps,
+      purged: null as PurgeOutcome,
+    };
+  }
+
   const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
-  const { commitSha, blobShas } = await commitFiles(env, {
-    expectedHeadSha: options.expectedHeadSha,
-    message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${tag}`,
-    changes: [{ path, content: raw }],
-  });
+  const { commitSha, blobShas } = unchanged
+    ? { commitSha: await currentHead(env), blobShas: {} as Record<string, string> }
+    : await commitFiles(env, {
+        expectedHeadSha: options.expectedHeadSha,
+        message: `${options.isNew ? "Add" : "Update"} procedure: ${compiled.record.title}${tag}`,
+        changes: [{ path, content: raw }],
+      });
   if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
     throw new Error(
       `The procedure "${slug}" WAS committed as ${commitSha}, but the committed bytes (${blobShas[path]}) are not ` +
@@ -160,6 +188,7 @@ export async function saveProcedure(
     slug,
     path: compiled.record.path,
     commitSha,
+    unchanged,
     created: options.isNew,
     draft: compiled.record.draft,
     gaps: compiled.gaps,

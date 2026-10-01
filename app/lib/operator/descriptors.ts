@@ -54,7 +54,9 @@ export const TOOL_DESCRIPTORS: Readonly<
       expectedHeadSha: "string, optional, for editor-style conflict detection",
       isNew: "boolean, optional, inferred from whether the file exists",
     },
-    returns: "commitSha, and the gate's own message with field and line on rejection.",
+    returns:
+      "commitSha, and the gate's own message with field and line on rejection. A file identical to the " +
+      "committed one commits nothing: unchanged is true and commitSha is the current head.",
     policy:
       "An operator may create, edit, unpublish and republish. It may NOT " +
       "perform a post's first transition to draft:false; that is reserved " +
@@ -123,7 +125,8 @@ export const TOOL_DESCRIPTORS: Readonly<
     args: {},
     returns:
       "Every procedure row in D1 (protocols, recipes, computational procedures), drafts included: " +
-      "slug, path, profile, title, draft, version, updated and the count of recorded gaps, with the head sha.",
+      "slug, path, profile, title, draft (boolean), version, updated and the count of recorded gaps, with " +
+      "the head sha and the number of procedures.",
   },
   get_procedure: {
     args: { slug: "string" },
@@ -140,7 +143,8 @@ export const TOOL_DESCRIPTORS: Readonly<
       isNew: "boolean, optional, inferred from whether the file exists",
     },
     returns:
-      "commitSha, path, draft and gaps. The file is validated against its profile by the same code CI " +
+      "commitSha, path, draft, gaps and unchanged (true when the file is identical to the committed one: " +
+      "nothing is committed or rewritten and commitSha is the current head). The file is validated against its profile by the same code CI " +
       "runs, committed, and written to D1, so the page changes without a deploy. A file that fails is " +
       "refused with 422 and detail.errors, every message the validator gave.",
     policy:

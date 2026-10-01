@@ -11,6 +11,7 @@ import {
   EditorError,
   GitHubError,
   PolicyError,
+  UNCHANGED_NOTE,
   type Actor,
 } from "~/lib/editor/publish.server";
 import { SLUG_MAX_LENGTH, SLUG_PATTERN, postPath } from "~/lib/content/slug.mjs";
@@ -178,11 +179,10 @@ export async function runTool(
       case "decide_mention":
         return await decideMentionTool(env, actor, args);
 
-      case "list_procedures":
-        return {
-          ok: true,
-          data: { headSha: await currentHead(env), procedures: await listProceduresForOperator(env) },
-        };
+      case "list_procedures": {
+        const procedures = await listProceduresForOperator(env);
+        return { ok: true, data: { headSha: await currentHead(env), count: procedures.length, procedures } };
+      }
 
       case "get_procedure":
         return await getProcedureTool(env, args);
@@ -332,6 +332,8 @@ async function savePostTool(
     data: {
       slug,
       commitSha: result.commitSha,
+      unchanged: result.unchanged,
+      ...(result.unchanged ? { note: UNCHANGED_NOTE } : {}),
       created: isNew,
       draft: result.record.draft,
       published: result.published,

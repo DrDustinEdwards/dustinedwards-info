@@ -308,7 +308,7 @@ test("the small protocol the negative tests mutate is itself valid", () => {
 
 test("a bare MISSING is an error", () => {
   const { errors } = check("mini", PROTOCOL.replace('version: "1"', "version: MISSING"));
-  assertError(errors, /version is "MISSING": write MISSING: and the reason/);
+  assertError(errors, /^version is "MISSING": write MISSING: and the reason/);
 });
 
 test('"MISSING: reason" is a recorded gap, not an error', () => {
