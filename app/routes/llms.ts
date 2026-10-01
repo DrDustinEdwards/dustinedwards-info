@@ -1,6 +1,7 @@
 import { getSetting } from "~/db";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
+import { LLMS_CACHE_TAG, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
 import llmsTxt from "../../content/llms.txt?raw";
 import type { Route } from "./+types/llms";
 
@@ -11,7 +12,7 @@ import type { Route } from "./+types/llms";
 const FALLBACK = llmsTxt;
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const value = await getSetting(getEnv(context), "llms.txt");
+  const value = await getSetting(getEnv(context), LLMS_SETTING_KEY);
 
   return new Response(value ?? FALLBACK, {
     headers: {
@@ -20,6 +21,8 @@ export async function loader({ context }: Route.LoaderArgs) {
       // The site it describes: a crawler that lands here is pointed at the page people read.
       link: canonicalLink("/"),
       "cache-control": "public, max-age=3600",
+      // A save through Carrel purges this tag, so the edge serves the edit without waiting out the hour.
+      "cache-tag": LLMS_CACHE_TAG,
     },
   });
 }

@@ -1,6 +1,7 @@
 // aislop-ignore-next-line ai-slop/hallucinated-import -- a Workers built-in, not an npm package
 import { cache } from "cloudflare:workers";
 
+import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
 import { cacheTags } from "~/lib/seo";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -91,4 +92,9 @@ export async function purgePublications(why: string): Promise<PurgeOutcome> {
 /** Every content page and its twin carries this one tag (app/lib/pages/route.ts). */
 export async function purgePages(why: string): Promise<PurgeOutcome> {
   return purgeTags(["content-pages"], why);
+}
+
+/** /llms.txt carries this one tag (app/routes/llms.ts). */
+export async function purgeLlms(why: string): Promise<PurgeOutcome> {
+  return purgeTags([LLMS_CACHE_TAG], why);
 }

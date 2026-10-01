@@ -374,3 +374,14 @@ test("page and publication drift repair after procedures and before the Ask uplo
   const actions = watchdogActions({ status: 503, body: bodyFailing(["pages-drift"]) }, WITH);
   assert.deepEqual(actions, [{ type: "repair", tool: "sync_pages" }, { type: "recheck" }]);
 });
+
+test("llms drift repairs through sync_llms, with the other file-derived stores", () => {
+  assert.deepEqual(repairPlan(["llms-drift"], WITH).repair, ["sync_llms"]);
+
+  const all = repairPlan(["ask-index-drift", "llms-drift", "publications-drift", "content-drift"], WITH);
+  assert.deepEqual(all.repair, ["sync_posts", "sync_publications", "sync_llms", "sync_ask"]);
+  assert.equal(all.alertOnly, false);
+
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["llms-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_llms" }, { type: "recheck" }]);
+});

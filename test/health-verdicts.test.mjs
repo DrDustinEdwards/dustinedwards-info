@@ -7,6 +7,7 @@ import {
   contentDriftVerdict,
   procedureDriftVerdict,
   pageDriftVerdict,
+  llmsDriftVerdict,
   publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
@@ -458,4 +459,17 @@ test("page and publication drift: the same comparison, each naming its own noun 
   const matching = [{ slug: "a", source_blob_sha: "s" }];
   assert.equal(pageDriftVerdict(agreeing, matching).ok, true);
   assert.equal(publicationDriftVerdict(agreeing, matching).ok, true);
+});
+
+test("llms.txt drift: one file against one row, naming its own repair", () => {
+  const stale = llmsDriftVerdict([{ slug: "llms", sha: "new" }], [{ slug: "llms", source_blob_sha: "old" }]);
+  assert.equal(stale.ok, false);
+  assert.match(stale.detail, /^llms.txt drift 1: 1 sha-changed/);
+  assert.match(stale.detail, /sync_llms/);
+  assert.deepEqual(stale.counts, { expected: 1, present: 0 });
+
+  const unrowed = llmsDriftVerdict([{ slug: "llms", sha: "s" }], []);
+  assert.equal(unrowed.ok, false, "no row means /llms.txt serves the bundled copy, which may be older");
+
+  assert.equal(llmsDriftVerdict([{ slug: "llms", sha: "s" }], [{ slug: "llms", source_blob_sha: "s" }]).ok, true);
 });

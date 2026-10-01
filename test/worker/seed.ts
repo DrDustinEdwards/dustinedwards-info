@@ -1,6 +1,7 @@
 import { env } from "cloudflare:test";
 
 import pagesArtifact from "../../content/generated/pages.json";
+import proceduresArtifact from "../../content/generated/procedures.json";
 
 type PageArtifactRow = {
   slug: string;
@@ -142,6 +143,27 @@ export async function seedPages(only?: readonly string[]) {
            status = excluded.status, record = excluded.record, markdown = excluded.markdown,
            source_blob_sha = excluded.source_blob_sha`,
       ).bind(r.slug, r.path, r.title, r.description, r.status, r.record, r.markdown, r.sourcePath, r.sourceBlobSha),
+    ),
+  );
+}
+
+/**
+ * The procedures table, from the rows build:content compiles (content/generated/procedures.json), which
+ * is what sync:content writes at ship. For a case whose subject reads the procedures' paths, such as the
+ * llms.txt rules, which hold the file to the pages the site has. No search records.
+ */
+export async function seedProcedures() {
+  const rows = proceduresArtifact.procedures;
+  if (rows.length === 0) throw new Error("seedProcedures found no procedure rows. Run npm run build:content first.");
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB.prepare(
+        `INSERT INTO procedures (slug, path, profile, title, description, status, version, updated, record,
+           markdown, source_path, source_blob_sha)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+         ON CONFLICT(slug) DO UPDATE SET path = excluded.path, status = excluded.status, record = excluded.record,
+           markdown = excluded.markdown, source_blob_sha = excluded.source_blob_sha`,
+      ).bind(r.slug, r.path, r.profile, r.title, r.description, r.status, r.version, r.updated, r.record, r.markdown, r.sourcePath, r.sourceBlobSha),
     ),
   );
 }

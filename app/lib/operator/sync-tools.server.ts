@@ -13,11 +13,13 @@ import { mediaIndexStatus, rebuildMediaIndex } from "~/lib/media/rebuild.server"
 import { copyMissingTwins } from "~/lib/media/backup.server";
 import {
   readContentSides,
+  readLlmsSides,
   readPageSides,
   readProcedureSides,
   readPublicationSides,
 } from "~/lib/health/checks.server";
-import { purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
+import { purgeLlms, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
+import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import {
   compile as compilePageFile,
@@ -338,6 +340,26 @@ export async function syncPublications(env: OperatorEnv): Promise<ToolResult> {
     },
     remove: (row) => deletePublicationRow(env, row),
     purge: purgePublications,
+  });
+}
+
+/**
+ * llms.txt: the compile and write doors an llms.txt save uses, through the same loop as the kinds above,
+ * with one file and one settings row. The write reads the row back. A repository with no llms.txt is
+ * refused as an empty set; the row is never deleted.
+ */
+export async function syncLlms(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_llms",
+    dir: "content",
+    noun: "llms.txt",
+    read: () => readLlmsSides(env),
+    compile: (_slug, raw) => compileLlms(env, raw),
+    write: (compiled) => writeLlmsRow(env, compiled.raw),
+    remove: async () => {
+      throw new Error("sync_llms never removes the llms.txt row: a repository without the file is refused first.");
+    },
+    purge: purgeLlms,
   });
 }
 

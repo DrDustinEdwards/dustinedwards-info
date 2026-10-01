@@ -99,6 +99,12 @@ export const MAP = [
     gates: ["check:content", "check:links", RELATED],
   },
   {
+    /* The file CI judges and the save judges: check:machine-readable runs the shared rules on it. */
+    what: "the llms.txt rules",
+    test: /^(app\/lib\/llms\/.+|scripts\/machine-readable\/llms\.mjs)$/,
+    gates: ["check:machine-readable", "check:links", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],
