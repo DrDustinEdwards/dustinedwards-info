@@ -23,6 +23,7 @@ import {
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
 import { decide, decideDelete, PolicyError, type Actor } from "./publish-policy.mjs";
+import { commitUnlessUnchanged } from "./write-path.server";
 import { listPostCorpusForRelated, listPostLinkCorpus } from "~/db";
 import { revokeAllPreviewLinks } from "~/lib/preview-links.server";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -52,10 +53,6 @@ export class FirstPublishConfirmationRequired extends Error {
 }
 
 type PublishEnv = Env & { GITHUB_TOKEN?: string };
-
-/** What a save answers when its file is byte-identical to the committed one (posts and procedures alike). */
-export const UNCHANGED_NOTE =
-  "The file is identical to the committed one, so nothing was committed or rewritten. commitSha is the current head.";
 
 type AssetManifest = { placeholders?: Record<string, { sha: string; lqip: string }> };
 
@@ -304,13 +301,21 @@ export async function savePost(
   // The gate: rendered from the STAMPED markdown before the commit, and its result is discarded.
   const gated = await validateAndRender(env, options.slug, raw);
 
-  // Bytes identical to the committed file: never a commit (it would be empty and still start CI and a
-  // deploy). If D1 already holds this file's render, nothing else happens either. If it does not (a row
-  // that was lost or is stale), the save repairs the row from the file, which hard rule 18 wants.
-  const unchanged = existing !== null && existing.content === raw;
-  if (unchanged && (await postRowIsCurrent(env, options.slug, gated.sourceBlobSha))) {
+  const written = await commitUnlessUnchanged(env, {
+    existing,
+    raw,
+    rowIsCurrent: () => postRowIsCurrent(env, options.slug, gated.sourceBlobSha),
+    commit: () =>
+      commitFiles(env, {
+        expectedHeadSha: options.expectedHeadSha,
+        message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
+        changes: [{ path: postPath(options.slug), content: raw }],
+      }),
+  });
+  const unchanged = written.action !== "commit";
+  if (written.action === "noop") {
     return {
-      commitSha: await currentHead(env),
+      commitSha: written.commitSha,
       record: gated,
       askSync: null,
       purged: null as PurgeOutcome,
@@ -322,14 +327,7 @@ export async function savePost(
       unchanged: true,
     };
   }
-
-  const { commitSha, blobShas } = unchanged
-    ? { commitSha: await currentHead(env), blobShas: { [postPath(options.slug)]: gated.sourceBlobSha } as Record<string, string> }
-    : await commitFiles(env, {
-        expectedHeadSha: options.expectedHeadSha,
-        message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
-        changes: [{ path: postPath(options.slug), content: raw }],
-      });
+  const { commitSha, blobShas } = written;
 
   // No compensating revert, ever: undoing the commit would destroy the source to repair a derived index.
   let record = gated;
