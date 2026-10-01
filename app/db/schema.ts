@@ -391,3 +391,31 @@ export const publicationCitations = sqliteTable(
   },
   (t) => [check("publication_citations_count_check", sql`${t.count} >= 0`)],
 );
+
+/**
+ * Pages (drizzle/0021_pages.sql, docs/PAGES.md): the Research, Teaching and Software prose pages, derived
+ * from content/pages/*.md by app/lib/pages/compile.mjs. `record` is the rendered page as JSON and
+ * `markdown` its twin.
+ */
+export const pages = sqliteTable(
+  "pages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull().unique(),
+    path: text("path").notNull().unique(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    status: text("status", { enum: ["draft", "published"] }).notNull(),
+    record: text("record").notNull(),
+    markdown: text("markdown").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [
+    check("pages_status_check", sql`${t.status} in ('draft', 'published')`),
+    index("pages_status_idx").on(t.status),
+  ],
+);

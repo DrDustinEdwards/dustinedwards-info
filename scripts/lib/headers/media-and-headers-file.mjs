@@ -4,7 +4,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { CONTENT_PAGE_PATHS, contentPageMarkdownPath } from "../../../app/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, contentPageMarkdownPath } from "../../../app/lib/content-pages.mjs";
 import { ALLOWED, SVG_TYPE, validateUpload } from "../../../app/lib/media/upload-contract.mjs";
 import { MEDIA_CSP, contentSecurityPolicy } from "../../../workers/csp.mjs";
 import { blockFrom } from "../source-body.mjs";
@@ -165,7 +165,10 @@ export async function run() {
         `expires: ${overFresh.join("; ")}`,
     );
 
-    const contentTwins = new Set(CONTENT_PAGE_PATHS.map((pagePath) => contentPageMarkdownPath(pagePath)));
+    // Only the pages generated from data keep a static twin; every other page twin is a route (docs/PAGES.md).
+    const contentTwins = new Set(
+      CONTENT_PAGE_PATHS.filter((pagePath) => CONTENT_PAGES_FROM_DATA.includes(pagePath)).map((pagePath) => contentPageMarkdownPath(pagePath)),
+    );
     ok("the paths declared here are the ones this site means to declare",
       paths.every((p) => p === "/assets/*" || contentTwins.has(p)),
       `an unrecognised rule path is a decision nobody argued. Found: ${paths.join(", ")}`);
@@ -175,7 +178,7 @@ export async function run() {
         new RegExp(`^Link:\\s*<${twinPath.slice(0, -3)}>;\\s*rel="canonical"$`, "i").test(d),
       );
     });
-    ok("every content-page twin names its HTML page",
+    ok("every static content-page twin names its HTML page",
       missingTwins.length === 0,
       `missing or wrong canonical Link: ${missingTwins.join(", ")}`);
 

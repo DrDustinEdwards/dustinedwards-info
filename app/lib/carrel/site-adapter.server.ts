@@ -15,6 +15,7 @@ import { contentRegistry, type ContentKindHandler } from "~/lib/carrel/content-k
 import { publicationHandler } from "~/lib/carrel/publication-handler.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
+import { pageHandler } from "~/lib/carrel/page-handler.server";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
@@ -288,7 +289,7 @@ export function carrelSiteAdapter(options: {
     },
   };
 
-  const registry = contentRegistry([postHandler, publicationHandler(env)]);
+  const registry = contentRegistry([postHandler, publicationHandler(env), pageHandler(env)]);
 
   return {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },

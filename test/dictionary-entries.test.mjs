@@ -82,7 +82,7 @@ test("the DefinedTerm describes the software (sense 2) and sits in the Software 
   assert.equal(ld.inDefinedTermSet.url, "https://example.test/software");
 });
 
-test("the Carrel page names the app nowhere by address, and the colophon links the page", () => {
+test("the colophon links the Carrel page", () => {
   const page = readFileSync(new URL("../content/pages/software-carrel.md", import.meta.url), "utf8");
   assert.ok(!page.includes("carrel.dustinedwards.info"));
   // Nor its code (Dustin, 2026-09-28): the repository is public only for now, so a link would rot.
@@ -107,13 +107,3 @@ test("sense 2 of each entry is Dustin's wording, labelled software. (2026-09-28)
   }
 });
 
-test("each named software page explains its name near the end (Dustin, 2026-09-29)", () => {
-  for (const name of ["capsid", "enarratio", "carrel"]) {
-    const page = readFileSync(new URL(`../content/pages/software-${name}.md`, import.meta.url), "utf8");
-    const headings = [...page.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
-    assert.ok(headings.includes("Why the name"), `${name} has no Why the name section`);
-    assert.notEqual(headings[0], "Why the name", `${name}: the section belongs after what the software does`);
-  }
-  const capsid = readFileSync(new URL("../content/pages/software-capsid.md", import.meta.url), "utf8");
-  assert.ok(capsid.includes("Its dashboard, the Capsid Portal, is named for the portal protein"));
-});

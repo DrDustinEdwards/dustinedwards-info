@@ -92,6 +92,13 @@ export const MAP = [
     gates: ["check:machine-readable", "check:content", "check:links"],
   },
   {
+    /* build:content compiles every page with these modules and check:links reads the result; the page
+       save runs the same compile, so a change here changes what a save accepts. */
+    what: "the page system",
+    test: /^(app\/lib\/pages\/.+|app\/db\/pages\.ts|app\/lib\/(phage-table|phage-tools)\.mjs)$/,
+    gates: ["check:content", "check:links", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],

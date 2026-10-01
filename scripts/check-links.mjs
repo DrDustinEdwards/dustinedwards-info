@@ -27,6 +27,8 @@ import { basename, dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { CONTENT_PAGE_PATHS, contentPageMarkdownBody, contentPageMarkdownPath } from "../app/lib/content-pages.mjs";
+// The one reader of the ids a rendered page carries: the page save judges anchors with it too.
+import { idsIn } from "../app/lib/pages/links.mjs";
 import { NAV } from "../app/lib/nav.ts";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import { paperSlashTarget, pdfRedirectTarget } from "../app/lib/publications/pdf-redirect.mjs";
@@ -147,8 +149,6 @@ for (const { post } of posts) {
 
 /** @type {Map<string, Set<string>>} */
 const renderedIds = new Map();
-/** @param {string} html */
-const idsIn = (html) => new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((m) => decodeEntities(m[1])));
 
 for (const { post } of posts) renderedIds.set(`/writing/${post.slug}`, idsIn(post.html));
 

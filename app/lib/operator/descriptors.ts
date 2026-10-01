@@ -25,6 +25,8 @@ const TOOLS = [
   "list_publications",
   "get_publication",
   "refresh_citations",
+  "list_pages",
+  "get_page",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -186,6 +188,19 @@ export const TOOL_DESCRIPTORS: Readonly<
       "refreshed (how many counts were replaced) and failures (doi, stage, detail for each count that could " +
       "not be read). A DOI that fails keeps the count it had. A partial failure is a 502 with the same " +
       "detail, so the caller sees it. The watchdog calls this weekly.",
+  },
+  list_pages: {
+    args: {},
+    returns:
+      "Every Research, Teaching and Software prose page row in D1, drafts included: path, slug, title and " +
+      "draft, with the count and the head sha. Pages are edited through Carrel, not here.",
+  },
+  get_page: {
+    args: { path: "string, a registered page path such as /research/phages" },
+    returns:
+      "The complete page file (raw), the head sha, the page as structured data (front matter and body), " +
+      "and any validation errors the file has now. The format is docs/PAGES.md. Read only: a page is " +
+      "saved through Carrel.",
   },
   backup_media: {
     args: {},

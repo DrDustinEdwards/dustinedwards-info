@@ -9,7 +9,7 @@ import os from "node:os";
 
 import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
-import { ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
+import { ARTIFACT_PATH, PAGES_ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { citationSeeds, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 
@@ -257,6 +257,32 @@ function verifyPublications(target, rows) {
     );
   }
   console.log(`sync:content publications=${stored.length}, every row carries its file's blob sha and its twin's bytes`);
+}
+
+/**
+ * The pages table converged to the repository's files (hard rule 18), on the procedures' terms: every row
+ * whose file is gone is deleted, every other row is written from the build's compile, which is the compile
+ * the page save runs. Scoped to file-sourced rows, and never an unscoped delete.
+ *
+ * @param {any[]} rows content/generated/pages.json's rows
+ */
+function buildPagesSql(rows) {
+  if (rows.length === 0) throw new Error("buildPagesSql refuses to delete every page");
+  const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
+  const out = [`DELETE FROM pages WHERE source_path NOT IN (${keep});`];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO pages (slug, path, title, description, status, record, markdown, source_path, ` +
+        `source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ${sql(r.path)}, ${sql(r.title)}, ` +
+        `${sql(r.description)}, ${sql(r.status)}, ${sql(r.record)}, ${sql(r.markdown)}, ` +
+        `${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ON CONFLICT(slug) DO UPDATE SET ` +
+        `path = excluded.path, title = excluded.title, description = excluded.description, ` +
+        `status = excluded.status, record = excluded.record, markdown = excluded.markdown, ` +
+        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `synced_at = excluded.synced_at;`,
+    );
+  }
+  return `${out.join("\n")}\n`;
 }
 
 /**
@@ -571,6 +597,21 @@ async function main() {
     "the publications import failed",
   );
   verifyPublications(target, publicationRows);
+
+  // Pages likewise: the table first, so a failure names the pages, and the index then carries the page
+  // records the table now matches.
+  const pageRows = JSON.parse(await readFile(PAGES_ARTIFACT_PATH, "utf8")).pages;
+  if (!Array.isArray(pageRows) || pageRows.length === 0) {
+    throw new Error(`${PAGES_ARTIFACT_PATH} carries no pages. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${pageRows.length} pages`);
+  await applySql(
+    target,
+    path.join(dir, "sync-pages.sql"),
+    buildPagesSql(pageRows),
+    `sync:content pages import (${target})`,
+    "the pages import failed",
+  );
 
   // A separate statement file, so a failure here names the search index rather than the content.
   console.log(`sync:content applying ${records.length} search records`);

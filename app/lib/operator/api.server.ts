@@ -31,6 +31,8 @@ import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.serv
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { listPageRows } from "~/db/pages";
+import { PageInvalid, readPage } from "~/lib/pages/save.server";
 
 // Re-exported so the routes keep one import path for the operator surface.
 export { TOOL_DESCRIPTORS, isToolName, toolNames } from "./descriptors";
@@ -216,6 +218,13 @@ export async function runTool(
 
       case "refresh_citations":
         return await refreshCitationsTool(env, args);
+      case "list_pages": {
+        const pageRows = await listPageRows(env);
+        return { ok: true, data: { headSha: await currentHead(env), count: pageRows.length, pages: pageRows } };
+      }
+
+      case "get_page":
+        return await getPageTool(env, args);
     }
   } catch (error) {
     return translate(error);
@@ -224,7 +233,7 @@ export async function runTool(
 
 function translate(error: unknown): ToolResult {
   // Every message the validator gave, so an agent can fix its own edit; nothing was committed.
-  if (error instanceof ProcedureInvalid) {
+  if (error instanceof ProcedureInvalid || error instanceof PageInvalid) {
     return { ok: false, status: 422, error: error.message, detail: { errors: error.errors } };
   }
 
@@ -444,6 +453,14 @@ async function saveProcedureTool(
   const isNew =
     args.isNew === undefined ? (await readFile(env, procedurePath(parsed.slug))) === null : args.isNew === true;
   return { ok: true, data: await saveProcedure(env, { slug: parsed.slug, raw, expectedHeadSha, isNew, actor }) };
+}
+
+async function getPageTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const path = String(args.path ?? "").trim();
+  if (!path) return { ok: false, status: 400, error: "get_page requires a path, such as /research/phages." };
+  const page = await readPage(env, path);
+  if (!page) return { ok: false, status: 404, error: `No file exists for the page "${path}".` };
+  return { ok: true, data: { ...page, headSha: await currentHead(env) } };
 }
 
 async function deletePostTool(
