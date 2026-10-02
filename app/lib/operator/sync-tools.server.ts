@@ -326,7 +326,7 @@ export async function syncDictionary(env: OperatorEnv): Promise<ToolResult> {
 }
 
 /**
- * Pages: the compile and write doors a page save uses. A file whose path is not in CONTENT_PAGE_PATHS is
+ * Pages: the compile and write doors a page save uses. A file whose path is not in CONTENT_PAGE_PATHS (or About's, CONTENT_PAGES_OWN_ROUTE) is
  * refused by the compile (the 422 names the file) and never makes a row.
  */
 export async function syncPages(env: OperatorEnv): Promise<ToolResult> {

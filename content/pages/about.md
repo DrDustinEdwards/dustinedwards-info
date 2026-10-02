@@ -1,5 +1,7 @@
 ---
+path: /about
 title: "About"
+seo_title: "Dustin Edwards | About the virologist at Tarleton State"
 description: "Dustin Edwards: Department Head of Biological Sciences at Tarleton State University, and the person who builds and runs this site."
 ---
 

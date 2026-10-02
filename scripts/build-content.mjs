@@ -3,13 +3,12 @@ import { readdir, readFile, mkdir, writeFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import matter from "gray-matter";
-
 import { serializeArtifact } from "./lib/artifact.mjs";
 import { colophonPages } from "../app/lib/colophon-sections.mjs";
 import {
-  CONTENT_PAGE_PATHS,
   CONTENT_PAGES_FROM_DATA,
+  CONTENT_PAGES_OWN_ROUTE,
+  PAGE_FILE_PATHS,
   contentPageFile,
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
@@ -39,16 +38,13 @@ export function fromRoot(repoPath) {
 const CONTENT_DIR = path.join("content", "posts");
 export const ARTIFACT_PATH = path.join("content", "generated", "posts.json");
 
-export const ABOUT_SOURCE = path.join("content", "about.md");
-export const ABOUT_ARTIFACT_PATH = path.join("content", "generated", "about.json");
-
 const PAGES_DIR = path.join("content", "pages");
 export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json");
 
 /**
  * The Research, Teaching and Software pages, compiled the one way the page save (app/lib/pages/save.server.ts) compiles
  * them (app/lib/pages/compile.mjs): a refused link, a missing field or a broken invariant fails the build
- * instead of shipping an empty tag. Every file must be one of CONTENT_PAGE_PATHS and every path must have
+ * instead of shipping an empty tag. Every file must be one of PAGE_FILE_PATHS and every path must have
  * its file, so routes, sitemap and pages cannot drift. The CV is generated from content/cv/ (docs/CV.md) and
  * compiled by the same door, but has no row in the pages table: its rows are the cv table's (buildCvRows).
  *
@@ -118,16 +114,33 @@ async function compilePages() {
     built.push({ name, compiled, page: { ...compiled.page, draft: compiled.draft } });
   }
 
-  const missing = CONTENT_PAGE_PATHS.filter((p) => !built.some(({ page }) => page.path === p));
+  const missing = PAGE_FILE_PATHS.filter((p) => !built.some(({ page }) => page.path === p));
   if (missing.length > 0) {
     throw new ContentError(PAGES_DIR, `has no page for ${missing.join(", ")}.`);
   }
   return built;
 }
 
-/** @returns {Promise<BuiltPage[]>} */
+/**
+ * The listed pages (CONTENT_PAGE_PATHS): what the twins, the search records and the social cards are made
+ * from. About has a route of its own and none of those, so it is in renderOwnRoutePages instead.
+ *
+ * @returns {Promise<BuiltPage[]>}
+ */
 export async function renderContentPages() {
-  return (await pageSources()).map(({ page }) => page).sort((a, b) => a.path.localeCompare(b.path));
+  return (await pageSources())
+    .map(({ page }) => page)
+    .filter((page) => !CONTENT_PAGES_OWN_ROUTE.includes(page.path))
+    .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/**
+ * The pages with a route of their own (About), compiled by the same door: check:links reads their links.
+ *
+ * @returns {Promise<BuiltPage[]>}
+ */
+export async function renderOwnRoutePages() {
+  return (await pageSources()).map(({ page }) => page).filter((page) => CONTENT_PAGES_OWN_ROUTE.includes(page.path));
 }
 
 /**
@@ -280,57 +293,11 @@ export function revisedDate(post) {
   return revised ? new Date(`${revised}T00:00:00.000Z`) : null;
 }
 
-/**
- * Rendered at build time so the Worker never ships a second markdown renderer. The image resolver
- * refuses, because an image here would need a build-time measurement and would render unsized.
- *
- * @returns {Promise<string>}
- */
-export async function buildAbout() {
-  const raw = await readFile(fromRoot(ABOUT_SOURCE), "utf8");
-  const parsed = matter(raw);
-  const title = String(parsed.data.title ?? "");
-  const description = String(parsed.data.description ?? "");
-  if (!title || !description) {
-    throw new ContentError(
-      ABOUT_SOURCE,
-      "must carry a title and a description in its frontmatter. They are the " +
-        "page's <title> and its meta description, and a missing one would ship " +
-        "as an empty tag rather than as a build failure.",
-    );
-  }
-
-  const rendered = await renderBody({
-    file: ABOUT_SOURCE,
-    body: parsed.content,
-    resolveImage: async (src) => {
-      throw new ContentError(
-        ABOUT_SOURCE,
-        `references an image ("${src}") and this page has no image pipeline. Put ` +
-          `the picture in a post, or give this build a real resolver.`,
-      );
-    },
-  });
-
-  if (rendered.blockedUrls.length > 0) {
-    throw new ContentError(
-      ABOUT_SOURCE,
-      `carries ${rendered.blockedUrls.length} link(s) the URL allowlist refused: ` +
-        `${rendered.blockedUrls.map((b) => b.url).join(", ")}`,
-    );
-  }
-
-  return `${JSON.stringify({ title, description, html: rendered.html }, null, 2)}\n`;
-}
-
 async function main() {
   const artifact = await buildArtifact();
   await mkdir(path.dirname(fromRoot(ARTIFACT_PATH)), { recursive: true });
   await writeFile(fromRoot(ARTIFACT_PATH), artifact, "utf8");
   const { posts } = JSON.parse(artifact);
-
-  const about = await buildAbout();
-  await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
   // The pages' rows, which sync:content writes to D1; their pages and twins are drawn from there
   // (docs/PAGES.md). No twin is a file now: the CV's is drawn from the cv table (docs/CV.md).
@@ -364,7 +331,7 @@ async function main() {
   await writeFile(fromRoot(ROSTER_ARTIFACT_PATH), `${JSON.stringify({ roster: roster.rows }, null, 2)}\n`, "utf8");
 
   console.log(
-    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ${DICTIONARY_ARTIFACT_PATH} (${dictionaryRows.length} entries), ` +
+    `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ${DICTIONARY_ARTIFACT_PATH} (${dictionaryRows.length} entries), ` +
       `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications), ${CV_ARTIFACT_PATH} (${cvRows.length} files) and ${ROSTER_ARTIFACT_PATH} (${roster.rows.length} cohorts)`,
   );
 }

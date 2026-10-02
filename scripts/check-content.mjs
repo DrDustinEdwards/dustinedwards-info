@@ -1,4 +1,4 @@
-import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./build-content.mjs";
+import { buildArtifact } from "./build-content.mjs";
 import { buildRoster } from "./lib/roster.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
@@ -81,7 +81,8 @@ async function main() {
   // from a reshaped post that could disagree with them.
   const postRecords = (records ?? []).filter((/** @type {any} */ r) => r.type === "post");
 
-  await checkAbout();
+  // About is a page file now: buildArtifact above compiled it through the page validator (docs/PAGES.md),
+  // which holds it to the render floor check:content used to check here.
 
   // Every cohort file through the roster validator, the code the Carrel save runs (docs/ROSTER.md); it throws
   // on the first file that does not compile, which main's catch reports.
@@ -94,43 +95,6 @@ async function main() {
   const failures = [...checkMath(posts, postRecords), ...checkSwatches(posts, postRecords)];
   for (const failure of failures) console.error(failure);
   if (failures.length > 0) process.exitCode = 1;
-}
-
-/** Rendered twice and byte-compared, because `about.json` is imported statically into the Worker bundle. */
-async function checkAbout() {
-  const first = await buildAbout();
-  const second = await buildAbout();
-
-  if (first !== second) {
-    console.error(
-      `check:content failed. Two back-to-back renders of ${ABOUT_SOURCE} differ, so the ` +
-        `render is NOT deterministic, and its bytes go into the Worker bundle.`,
-    );
-    const diff = firstDifference(first, second);
-    if (diff) {
-      console.error(`  first difference at line ${diff.line}`);
-      console.error(`  run 1: ${diff.committed.trim().slice(0, 200)}`);
-      console.error(`  run 2: ${diff.fresh.trim().slice(0, 200)}`);
-    }
-    process.exitCode = 1;
-  }
-
-  const about = JSON.parse(first);
-  if (about.html.length < 200) {
-    console.error(
-      `check:content failed. ${ABOUT_SOURCE} rendered ${about.html.length} character(s) of ` +
-        `HTML, floor 200. An empty or near-empty render is a valid artifact describing a ` +
-        `blank page, which is the one failure here that looks like success.`,
-    );
-    process.exitCode = 1;
-    return;
-  }
-  if (first !== second) return;
-
-  console.log(
-    `check:content ok. ${ABOUT_ARTIFACT_PATH} renders deterministically ` +
-      `(${about.html.length} bytes of HTML, rendered twice).`,
-  );
 }
 
 /**

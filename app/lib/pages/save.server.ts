@@ -16,7 +16,12 @@ import { listPublishedProcedures } from "~/db/procedures";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, contentPageSearchUid } from "~/lib/content-pages.mjs";
+import {
+  CONTENT_PAGES_FROM_DATA,
+  CONTENT_PAGES_OWN_ROUTE,
+  PAGE_FILE_PATHS,
+  contentPageSearchUid,
+} from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
@@ -44,11 +49,11 @@ export class PageInvalid extends ContentInvalid {
  */
 function registeredPage(path: string) {
   const clean = path.trim();
-  if (!(CONTENT_PAGE_PATHS as readonly string[]).includes(clean)) {
+  if (!PAGE_FILE_PATHS.includes(clean)) {
     throw new PageInvalid(clean, [
       `"${clean}" is not a registered page path. A save cannot create a new path: a page's address is structure, ` +
         "so a new page's path is added to CONTENT_PAGE_PATHS (app/lib/content-pages.mjs) in code first. " +
-        `Registered paths: ${CONTENT_PAGE_PATHS.filter((p) => !CONTENT_PAGES_FROM_DATA.includes(p)).join(", ")}`,
+        `Registered paths: ${PAGE_FILE_PATHS.filter((p) => !CONTENT_PAGES_FROM_DATA.includes(p)).join(", ")}`,
     ]);
   }
   if (CONTENT_PAGES_FROM_DATA.includes(clean)) {
@@ -141,7 +146,8 @@ export async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnTyp
   const db = env.DB;
   const r = compiled.record;
   const uid = compiled.searchInput.uid;
-  const records = compiled.draft ? [] : recordsForPages([compiled.searchInput]);
+  // A page with a route of its own (About) has never been in the search index, so it gets no record.
+  const records = compiled.draft || CONTENT_PAGES_OWN_ROUTE.includes(r.path) ? [] : recordsForPages([compiled.searchInput]);
   await db.batch([
     db
       .prepare(
