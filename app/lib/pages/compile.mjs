@@ -15,6 +15,7 @@ import {
   contentPageSearchInputs,
   markdownTableFacts,
 } from "../content-pages.mjs";
+import { expandPhagePage } from "../phages/compile.mjs";
 import { pageInvariantErrors } from "./invariants.mjs";
 
 export const PAGES_DIR = "content/pages";
@@ -115,6 +116,7 @@ function pageSchema(fm, markdown, errors) {
  *   sourcePath?: string,
  *   generated?: boolean,
  *   entry?: import("../dictionary-entries.mjs").DictionaryEntry,
+ *   phages?: import("../phages/compile.mjs").Phage[],
  * }} input
  * @returns {Promise<
  *   | { ok: false, errors: string[] }
@@ -122,7 +124,7 @@ function pageSchema(fm, markdown, errors) {
  *       searchInput: ReturnType<typeof contentPageSearchInputs>[number], sourcePath: string, sourceBlobSha: string }
  * >}
  */
-export async function compilePage({ slug, raw, pipeline, sourcePath, generated = false, entry }) {
+export async function compilePage({ slug, raw, pipeline, sourcePath, generated = false, entry, phages }) {
   const expectedPath = pagePathForSlug(slug);
   if (!expectedPath) {
     return {
@@ -168,14 +170,20 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   if (fm.draft !== undefined && typeof fm.draft !== "boolean") {
     errors.push(`draft is ${JSON.stringify(fm.draft)}; it is true or false`);
   }
-  const schema = pageSchema(fm, parsed.content, errors);
+  // The phage page's table and sections are drawn from the phage rows where the file's markers say
+  // (docs/PHAGES.md), before anything reads the body, so its HTML, twin, dataset facts and search record all come
+  // from one text. Every other page passes through unchanged.
+  const drawn = expandPhagePage(page.path, parsed.content, phages);
+  if (!drawn.ok) errors.push(...drawn.errors);
+  const body = drawn.ok ? drawn.markdown : parsed.content;
+  const schema = pageSchema(fm, body, errors);
   if (errors.length > 0) return { ok: false, errors };
 
   let rendered;
   try {
     rendered = await pipeline.renderBody({
       file,
-      body: parsed.content,
+      body,
       resolveImage: async (src) => {
         throw new Error(`the page references an image ("${src}") and these pages have no image pipeline`);
       },
@@ -194,8 +202,8 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   }
 
   /** @type {CompiledPage} */
-  const compiled = { ...page, html: rendered.html, markdown: parsed.content, toc: rendered.toc, ...schema };
-  errors.push(...pageInvariantErrors(compiled));
+  const compiled = { ...page, html: rendered.html, markdown: body, toc: rendered.toc, ...schema };
+  errors.push(...pageInvariantErrors(compiled, { phages }));
   if (errors.length > 0) return { ok: false, errors };
 
   const draft = fm.draft === true;

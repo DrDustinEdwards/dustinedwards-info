@@ -19,9 +19,10 @@ import {
   readPageSides,
   readProcedureSides,
   readPublicationSides,
+  readPhageSides,
   readRosterSides,
 } from "~/lib/health/checks.server";
-import { purgeCv, purgeLlms, purgePages, purgeProcedures, purgePublications, purgeRoster } from "~/lib/cache-purge.server";
+import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePublications, purgeRoster } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
@@ -38,6 +39,9 @@ import {
   writeRow as writePageRow,
 } from "~/lib/pages/save.server";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
+import { listPhages } from "~/db/phages";
+import { PHAGES_DIR, phageSlug, type Phage } from "~/lib/phages/compile.mjs";
+import { compile as compilePhageFile, deletePhageRow, refreshPage as refreshPhagePage, writePhageRow } from "~/lib/phages/save.server";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { compile as compileRosterFile, deleteRosterRow, writeRosterRow } from "~/lib/roster/save.server";
 import {
@@ -192,6 +196,12 @@ type KindSync<Row extends { slug: string; source_blob_sha: string | null }, Resu
   write: (compiled: CompiledOk<Result>) => Promise<void>;
   remove: (row: Row) => Promise<void>;
   purge: (why: string) => Promise<boolean | null>;
+  /**
+   * For a kind whose rows feed another derived store (the phages draw a page): runs once, after the comparison and
+   * before any row moves, so that store settles to the final set first and a failure leaves the rows reading
+   * drifted, to be retried. Throws to stop the repair.
+   */
+  settle?: (plan: { files: DriftSides<Row>["files"]; rows: Row[]; drift: ReturnType<typeof contentDriftCompare> }) => Promise<void>;
 };
 
 /**
@@ -219,6 +229,9 @@ async function convergeKind<
     };
   }
   const drift = contentDriftCompare(before.files, before.rows);
+  if (spec.settle && drift.changed.length + drift.unrowed.length + drift.unfiled.length > 0) {
+    await spec.settle({ files: before.files, rows: before.rows, drift });
+  }
 
   const fileBySlug = new Map(before.files.map((f) => [f.slug, f]));
   let repaired = 0;
@@ -430,6 +443,40 @@ export async function syncRoster(env: OperatorEnv): Promise<ToolResult> {
     write: (compiled) => writeRosterRow(env, compiled),
     remove: (row) => deleteRosterRow(env, row),
     purge: purgeRoster,
+  });
+}
+
+/**
+ * The phage table: the compile and write doors a phage save uses. The page /research/phages is compiled from the
+ * rows, so before any row moves the page row is re-derived ONCE from the final set (this repository's files
+ * where they compile, D1's row where one does not, minus the phages whose file is gone), and each phage row is
+ * written after it. A failure of that refresh stops the repair with every phage still reading drifted, so the
+ * next run retries it. The purge reaches the one page that embeds the table (purgePhages).
+ */
+export async function syncPhages(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_phages",
+    dir: PHAGES_DIR,
+    noun: "phage",
+    read: () => readPhageSides(env),
+    compile: (slug, raw) => compilePhageFile(env, slug, raw),
+    write: (compiled) => writePhageRow(env, compiled),
+    remove: (row) => deletePhageRow(env, row),
+    purge: purgePhages,
+    settle: async ({ files, drift }) => {
+      const bySlug = new Map<string, Phage>((await listPhages(env)).map((phage) => [phageSlug(phage.name), phage]));
+      const pathOf = new Map(files.map((f) => [f.slug, f.path]));
+      for (const slug of [...drift.changed, ...drift.unrowed]) {
+        const path = pathOf.get(slug);
+        const file = path ? await readFile(env, path) : null;
+        if (!file) continue;
+        // A file that does not compile keeps whatever D1 holds for it; convergeKind then reports it as a 422.
+        const compiled = await compilePhageFile(env, slug, file.content);
+        if (compiled.ok) bySlug.set(slug, compiled.phage);
+      }
+      for (const slug of drift.unfiled) bySlug.delete(slug);
+      await refreshPhagePage(env, [...bySlug.values()]);
+    },
   });
 }
 

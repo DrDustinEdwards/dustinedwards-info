@@ -396,6 +396,17 @@ test("llms drift repairs through sync_llms, with the other file-derived stores",
   assert.deepEqual(actions, [{ type: "repair", tool: "sync_llms" }, { type: "recheck" }]);
 });
 
+test("phage drift repairs through sync_phages, beside the roster and before the pages that are drawn from it", () => {
+  assert.deepEqual(repairPlan(["phage-drift"], WITH).repair, ["sync_phages"]);
+
+  const all = repairPlan(["ask-index-drift", "pages-drift", "phage-drift", "roster-drift", "dictionary-drift", "content-drift"], WITH);
+  assert.deepEqual(all.repair, ["sync_posts", "sync_dictionary", "sync_roster", "sync_phages", "sync_pages", "sync_ask"]);
+  assert.equal(all.alertOnly, false);
+
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["phage-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_phages" }, { type: "recheck" }]);
+});
+
 test("roster drift repairs through sync_roster, beside the dictionary and before the pages", () => {
   assert.deepEqual(repairPlan(["roster-drift"], WITH).repair, ["sync_roster"]);
 

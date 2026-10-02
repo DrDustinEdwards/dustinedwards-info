@@ -105,6 +105,14 @@ export async function purgeRoster(why: string): Promise<PurgeOutcome> {
   return purgeTags([CONTENT_PAGES_CACHE_TAG, cacheTags()], why);
 }
 
+/**
+ * The phage table is embedded in one page, /research/phages: its HTML and its markdown twin both carry the
+ * content-pages tag, so a phage save purges that tag (and only it). A phage appears nowhere else.
+ */
+export async function purgePhages(why: string): Promise<PurgeOutcome> {
+  return purgeTags([CONTENT_PAGES_CACHE_TAG], why);
+}
+
 /** /llms.txt carries this one tag (app/routes/llms.ts). */
 export async function purgeLlms(why: string): Promise<PurgeOutcome> {
   return purgeTags([LLMS_CACHE_TAG], why);

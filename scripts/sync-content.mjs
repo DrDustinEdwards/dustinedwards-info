@@ -15,6 +15,7 @@ import { CV_ARTIFACT_PATH } from "./lib/cv.mjs";
 import { DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { citationSeeds, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
+import { PHAGES_ARTIFACT_PATH } from "./lib/phages.mjs";
 import { ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
@@ -331,6 +332,29 @@ function buildRosterSql(rows) {
       `INSERT INTO roster (slug, year, record, source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ` +
         `${num(r.year)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET year = excluded.year, record = excluded.record, ` +
+        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `synced_at = excluded.synced_at;`,
+    );
+  }
+  return `${out.join("\n")}\n`;
+}
+
+/**
+ * The phages table converged to the repository's files (hard rule 18), on the pages' terms: every row whose file
+ * is gone is deleted, every other row is written from the build's compile, which is the compile the phage save
+ * runs. Scoped to the file-sourced rows, and never an unscoped delete.
+ *
+ * @param {any[]} rows content/generated/phages.json's rows
+ */
+function buildPhagesSql(rows) {
+  if (rows.length === 0) throw new Error("buildPhagesSql refuses to delete every phage");
+  const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
+  const out = [`DELETE FROM phages WHERE source_path NOT IN (${keep});`];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO phages (slug, name, year, record, source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ` +
+        `${sql(r.name)}, ${num(r.year)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
+        `ON CONFLICT(slug) DO UPDATE SET name = excluded.name, year = excluded.year, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
         `synced_at = excluded.synced_at;`,
     );
@@ -707,6 +731,21 @@ async function main() {
     buildRosterSql(rosterRows),
     `sync:content roster import (${target})`,
     "the roster import failed",
+  );
+
+  // The phages beside them: the table, so a failure names the phages. The page that draws them was written above
+  // from the same compile; nothing in the search index reads this table.
+  const phageRows = JSON.parse(await readFile(PHAGES_ARTIFACT_PATH, "utf8")).phages;
+  if (!Array.isArray(phageRows) || phageRows.length === 0) {
+    throw new Error(`${PHAGES_ARTIFACT_PATH} carries no phages. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${phageRows.length} phages`);
+  await applySql(
+    target,
+    path.join(dir, "sync-phages.sql"),
+    buildPhagesSql(phageRows),
+    `sync:content phages import (${target})`,
+    "the phages import failed",
   );
 
   // A separate statement file, so a failure here names the search index rather than the content.
