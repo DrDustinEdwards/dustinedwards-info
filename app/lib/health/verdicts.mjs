@@ -207,6 +207,31 @@ export function cvDriftVerdict(files, rows) {
 }
 
 /**
+ * The CV's PDF against the CV D1 holds now: the stored object's fingerprint (custom metadata) against the
+ * fingerprint of the data. `stored` is null when there is no object and "" when there is one that carries no
+ * fingerprint (neither is current). Derived store against its source, as the others, repaired by sync_cv_pdf.
+ *
+ * @param {{ stored: string | null, expected: string }} sides
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function cvPdfDriftVerdict({ stored, expected }) {
+  if (stored === expected) {
+    return { ok: true, detail: `The stored CV PDF was drawn from the CV data D1 holds now (CV data ${expected}).` };
+  }
+  const what =
+    stored === null
+      ? "there is no stored CV PDF"
+      : stored === ""
+        ? "the stored CV PDF carries no fingerprint"
+        : `the stored CV PDF was drawn from CV data ${stored}`;
+  return {
+    ok: false,
+    detail: `CV PDF drift 1: ${what}, and D1's CV is CV data ${expected}. Repair with sync_cv_pdf.`,
+    counts: { expected: 1, present: 0 },
+  };
+}
+
+/**
  * The same comparison for the publication files and the publications table.
  *
  * @param {Array<{ slug: string, sha: string }>} files

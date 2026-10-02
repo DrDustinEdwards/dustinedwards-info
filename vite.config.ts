@@ -46,9 +46,11 @@ export default defineConfig({
       config: PREVIEW_LOCAL
         ? (config) => {
             // The customizer's result is merged, so a key can only be removed from the object itself.
-            const bindings: { ai_search?: unknown; images?: unknown } = config;
+            const bindings: { ai_search?: unknown; images?: unknown; browser?: unknown } = config;
             delete bindings.ai_search;
             delete bindings.images;
+            // The CV PDF's renderer: quickAction has no local emulation, and a save is not part of a preview.
+            delete bindings.browser;
           }
         : undefined,
     }),

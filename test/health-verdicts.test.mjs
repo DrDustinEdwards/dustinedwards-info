@@ -7,6 +7,7 @@ import {
   contentDriftVerdict,
   procedureDriftVerdict,
   cvDriftVerdict,
+  cvPdfDriftVerdict,
   dictionaryDriftVerdict,
   pageDriftVerdict,
   llmsDriftVerdict,
@@ -539,4 +540,23 @@ test("phage drift: the same comparison, naming phages and sync_phages", () => {
   assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
 
   assert.equal(phageDriftVerdict([{ slug: "zeta", sha: "s" }], [{ slug: "zeta", source_blob_sha: "s" }]).ok, true);
+});
+
+test("CV PDF drift: the stored fingerprint against the data's, naming sync_cv_pdf", () => {
+  assert.equal(cvPdfDriftVerdict({ stored: "ab12cd34", expected: "ab12cd34" }).ok, true);
+
+  const stale = cvPdfDriftVerdict({ stored: "00000000", expected: "ab12cd34" });
+  assert.equal(stale.ok, false);
+  assert.match(stale.detail, /^CV PDF drift 1:/);
+  assert.match(stale.detail, /CV data 00000000/);
+  assert.match(stale.detail, /sync_cv_pdf/);
+  assert.deepEqual(stale.counts, { expected: 1, present: 0 });
+
+  const missing = cvPdfDriftVerdict({ stored: null, expected: "ab12cd34" });
+  assert.equal(missing.ok, false, "no object means /dustin-edwards-cv.pdf answers 404");
+  assert.match(missing.detail, /no stored CV PDF/);
+
+  const unstamped = cvPdfDriftVerdict({ stored: "", expected: "ab12cd34" });
+  assert.equal(unstamped.ok, false, "an object with no fingerprint cannot be shown current");
+  assert.match(unstamped.detail, /no fingerprint/);
 });

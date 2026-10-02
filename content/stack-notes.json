@@ -14,7 +14,7 @@
       "whyLoadBearing": "Content addressing was decided on security, not tidiness. The old key was derivable from public information, so a draft's images were reachable by guessing a slug the sitemap publishes plus eight hex characters."
     },
     "r2:OG": {
-      "what": "Social cards, one per post, rebuilt by command.",
+      "what": "Social cards, one per post, rebuilt by command, and the CV's PDF, one object replaced each time the CV is saved.",
       "whyLoadBearing": "A second bucket exists because the two split on LIFECYCLE rather than on what the UI calls them. MEDIA is irreplaceable; OG is regenerable, so it is safe to empty and is deliberately outside the backup path."
     },
     "r2:MEDIA_BACKUP": {
@@ -36,6 +36,10 @@
     "images:IMAGES": {
       "what": "Thumbnail and content-width transforms, computed on request from the original. Nothing is written back.",
       "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 with Cloudflare error 1042 on this hostname, because transformations there require a zone and this site is served from workers.dev."
+    },
+    "browser:BROWSER": {
+      "what": "A headless browser that prints the CV to PDF. The Worker calls it after each CV save and keeps one PDF in the derived bucket.",
+      "whyLoadBearing": "The CV is edited through Carrel and goes live with no deploy, so a PDF committed to the repository went stale on every save and failed CI until someone re-rendered it by hand. The PDF is derived from the CV rows, so it is rendered where the rows live, stamped with a fingerprint of the data it was drawn from, and a health check compares that fingerprint with the CV the site shows. A failed render never undoes a save: the check goes red and the watcher re-renders."
     },
     "assets:ASSETS": {
       "what": "The static files under public/, served without a Worker invocation.",

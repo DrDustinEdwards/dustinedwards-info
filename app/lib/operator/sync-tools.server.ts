@@ -24,7 +24,10 @@ import {
 } from "~/lib/health/checks.server";
 import { purgeCv, purgeLlms, purgePages, purgePhages, purgeProcedures, purgePublications, purgeRoster } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
+import { readCv } from "~/db/cv";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
+import { cvFingerprint } from "~/lib/cv/pdf-html.mjs";
+import { ensureCvPdf, storedCvPdfFingerprint } from "~/lib/cv/pdf.server";
 import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
 import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
 import {
@@ -427,6 +430,31 @@ export async function syncLlms(env: OperatorEnv): Promise<ToolResult> {
     },
     purge: purgeLlms,
   });
+}
+
+/**
+ * The CV's PDF: renders it from the CV D1 holds now and replaces the one stored object, unless the stored object
+ * already carries that CV's fingerprint (then it renders nothing). The same door a CV save's background render
+ * uses (ensureCvPdf), then read back: `converged` is the stored fingerprint equalling the data's, derived here and
+ * never asserted. A failed render is thrown, so the repair reports failure instead of success, and nothing
+ * stored is changed by it.
+ */
+export async function syncCvPdf(env: OperatorEnv): Promise<ToolResult> {
+  const outcome = await ensureCvPdf(env);
+  const [stored, cv] = await Promise.all([storedCvPdfFingerprint(env), readCv(env)]);
+  const present = stored === (await cvFingerprint(cv)) ? 1 : 0;
+  return {
+    ok: true,
+    data: {
+      action: outcome.action,
+      fingerprint: outcome.fingerprint,
+      ...(outcome.action === "stored" ? { bytes: outcome.bytes, purged: outcome.purged } : {}),
+      expected: 1,
+      present,
+      drift: 1 - present,
+      converged: present === 1,
+    },
+  };
 }
 
 /**

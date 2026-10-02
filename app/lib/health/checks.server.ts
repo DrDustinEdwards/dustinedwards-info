@@ -6,6 +6,7 @@ import {
   contentDriftVerdict,
   procedureDriftVerdict,
   cvDriftVerdict,
+  cvPdfDriftVerdict,
   dictionaryDriftVerdict,
   pageDriftVerdict,
   publicationDriftVerdict,
@@ -22,6 +23,9 @@ import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
+import { readCv } from "~/db/cv";
+import { cvFingerprint } from "~/lib/cv/pdf-html.mjs";
+import { storedCvPdfFingerprint } from "~/lib/cv/pdf.server";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
@@ -222,6 +226,15 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // A CV file edited through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readCvSides(env);
       return cvDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("cv-pdf-drift", async () => {
+      // The PDF is drawn from D1's CV, so it is compared with that and not with the repository: a stale CV row
+      // is cv-drift's finding, and sync_cv runs before sync_cv_pdf.
+      const [stored, cv] = await Promise.all([storedCvPdfFingerprint(env), readCv(env)]);
+      return cvPdfDriftVerdict({ stored, expected: await cvFingerprint(cv) });
     }),
   );
 

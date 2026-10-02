@@ -103,7 +103,9 @@ export function isRaster(pathOrKey) {
  */
 export function storageOf(pathOrKey) {
   if (pathOrKey.startsWith("/")) return "static";
-  if (pathOrKey.startsWith("og/")) return "r2-derived";
+  // `derived/` holds objects the Worker renders from its own data (the CV PDF, app/lib/cv/pdf.server.ts). It is its
+  // own prefix, not `og/`, because build:og prunes every `og/` key no post references.
+  if (pathOrKey.startsWith("og/") || pathOrKey.startsWith("derived/")) return "r2-derived";
   return "r2";
 }
 
@@ -129,7 +131,7 @@ export function bucketFor(env, key) {
  * @returns {"content" | "brand" | "generated" | "icon"}
  */
 export function roleOf(pathOrKey) {
-  if (pathOrKey.startsWith("og/")) return "generated";
+  if (pathOrKey.startsWith("og/") || pathOrKey.startsWith("derived/")) return "generated";
   if (pathOrKey.startsWith("/diagrams/")) return "generated";
 
   // The OG image is brand, not icon: `seo.ts` names it as the default social card.

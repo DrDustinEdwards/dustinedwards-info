@@ -14,6 +14,7 @@ import { loader as twinLoader } from "~/routes/cv[.md]";
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
 import { stubGitHub, type GitHubStub } from "./github-stub";
+import { collectingContext, fakeAssets, workingBrowser } from "./cv-pdf-fixtures";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -49,7 +50,12 @@ const headersFor = (key: string) => ({
   "content-type": "application/json",
   "cf-connecting-ip": "203.0.113.9",
 });
-const argsFor = (request: Request) => ({ request, context: routeContext(), params: {} }) as never;
+// A save renders the CV PDF after its response (app/lib/cv/pdf.server.ts). These cases are about the page, so the
+// renderer is an inert mock and each case waits for the render its save started (test/worker/cv-pdf.test.ts is
+// the one that looks at it).
+const background = collectingContext();
+const argsFor = (request: Request) =>
+  ({ request, context: routeContext(background.ctx, { BROWSER: workingBrowser().binding, ASSETS: fakeAssets }), params: {} }) as never;
 const get = (url: string) => loader(argsFor(new Request(url, { headers: headersFor(testEnv.CARREL_SITE_KEY) })));
 function send(method: "PUT" | "POST", url: string, body: unknown): Promise<Response> {
   return action(
@@ -89,7 +95,8 @@ beforeEach(async () => {
   await seedCv();
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await background.settle();
   gh.restore();
 });
 
