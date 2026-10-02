@@ -30,7 +30,7 @@ function titleOf(slug: string) {
   return `${CV_PAGE.title}: ${type === "profile" ? "Profile" : (plural ?? slug)}`;
 }
 
-export function cvHandler(env: CvEnv): ContentKindHandler {
+export function cvHandler(env: CvEnv, ctx: Pick<ExecutionContext, "waitUntil">): ContentKindHandler {
   /** The file of a registered slug, or null: an id no file names owns nothing. */
   function registered(slug: string) {
     return cvFileFor(slug) ? cvSourcePath(slug) : null;
@@ -52,7 +52,14 @@ export function cvHandler(env: CvEnv): ContentKindHandler {
   async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
     target(slug);
     try {
-      const saved = await saveCvFile(env, { slug, raw, expectedHeadSha: expectedVersion, actor: { kind: "carrel", changeId } });
+      const saved = await saveCvFile(env, {
+        slug,
+        raw,
+        expectedHeadSha: expectedVersion,
+        actor: { kind: "carrel", changeId },
+        // The PDF follows the save after the response: Browser Run is seconds, a save should not wait for it.
+        background: (work) => ctx.waitUntil(work),
+      });
       return { id: slug, version: saved.commitSha, status: "published", changeId };
     } catch (error) {
       // A CvInvalid carries every message the validator gave; asSiteApiError passes them on.

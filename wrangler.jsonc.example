@@ -199,6 +199,13 @@
 	// it needs a customer zone. Carries no id, so this line is complete as
 	// written rather than a placeholder.
 	"images": { "binding": "IMAGES" },
+	// The CV PDF, rendered in the Worker after each CV save (app/lib/cv/pdf.server.ts) and kept as ONE
+	// object in OG. Browser Run through `env.BROWSER.quickAction("pdf", ...)`: no API token and no dashboard
+	// opt-in, needs a compatibility date of 2026-03-24 or later (this one qualifies). Free plan: 10 browser
+	// minutes a day and 3 concurrent browsers; one render of a few seconds per save is far inside both.
+	// Carries no id, so this line is complete as written. Not restated under `previews`: a preview has no CV
+	// save, and quickAction has no local emulation.
+	"browser": { "binding": "BROWSER" },
 	// Per-path traffic, written from the response path in workers/app.ts.
 	//
 	// It is here rather than in Web Analytics because the beacon would have to

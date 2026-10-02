@@ -1,7 +1,7 @@
 /**
  * The CV as markdown, from the same resolved entries the page renders (app/lib/cv/entries.mjs).
  * app/routes/cv[.md].ts serves it as the /cv.md twin (cvTwin), build:content compiles it for the search records,
- * and scripts/build-cv-pdf.mjs renders the same markdown into the PDF, so the surfaces say the same thing.
+ * and the PDF (app/lib/cv/pdf-html.mjs) is rendered from the same markdown, so the surfaces say the same thing.
  * Traditional order and no filtering: this is the version a committee reads start to finish.
  */
 
@@ -69,7 +69,7 @@ function lineItem(e) {
 export function cvMarkdownBody(CV, options = {}) {
   const { person, entries, presentations } = CV;
   const out = [];
-  // The PDF sets its own letterhead (scripts/build-cv-pdf.mjs), so it starts at the first section.
+  // The PDF sets its own letterhead (app/lib/cv/pdf-html.mjs), so it starts at the first section.
   if (!options.pdf) {
     out.push(`${person.name}, ${person.degree} ${person.title}, ${person.department}, ${esc(person.org)}.`);
     out.push("");

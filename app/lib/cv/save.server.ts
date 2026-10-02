@@ -18,6 +18,7 @@ import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { contentPageSearchUid } from "~/lib/content-pages.mjs";
 import { compileCv, compileCvFile, compileCvPage } from "~/lib/cv/compile.mjs";
 import { CV_FILES, cvFileFor, cvSourcePath } from "~/lib/cv/parse.mjs";
+import { regenerateCvPdfAfterSave, type CvPdfOutcome } from "~/lib/cv/pdf.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
@@ -130,10 +131,25 @@ function decide(actor: Actor) {
   }
 }
 
+/**
+ * What the save says of the PDF it starts. "scheduled": handed to `background` (ctx.waitUntil), so the save's
+ * answer does not wait for Browser Run and a failure is an alert plus the cv-pdf-drift check, never this answer.
+ * Without a `background` the render is awaited here and the outcome (or the failure) is in the result. Either way
+ * the commit and the D1 row stand (hard rule 18).
+ */
+export type CvPdfReport = "scheduled" | "not-needed" | { rendered: CvPdfOutcome } | { failed: string };
+
 /** The CV save. */
 export async function saveCvFile(
   env: CvEnv,
-  options: { slug: string; raw: string; expectedHeadSha: string | null; actor: Actor },
+  options: {
+    slug: string;
+    raw: string;
+    expectedHeadSha: string | null;
+    actor: Actor;
+    /** ctx.waitUntil, from the caller that has one: the PDF render runs after the response. */
+    background?: (work: Promise<unknown>) => void;
+  },
 ) {
   const { raw, actor } = options;
   const { slug, path } = registeredCvFile(options.slug);
@@ -158,7 +174,14 @@ export async function saveCvFile(
       }),
   });
   if (written.action === "noop") {
-    return { slug, commitSha: written.commitSha, unchanged: true, note: UNCHANGED_NOTE, purged: null as PurgeOutcome };
+    return {
+      slug,
+      commitSha: written.commitSha,
+      unchanged: true,
+      note: UNCHANGED_NOTE,
+      purged: null as PurgeOutcome,
+      pdf: "not-needed" as CvPdfReport,
+    };
   }
   const { commitSha, blobShas } = written;
   if (blobShas[path] && blobShas[path] !== compiled.sourceBlobSha) {
@@ -183,5 +206,19 @@ export async function saveCvFile(
     commitSha,
   });
 
-  return { slug, commitSha, unchanged: written.action !== "commit", purged };
+  // After the row, so the render reads the data the save just wrote. Never inside convergeWithRetry: a render
+  // failure must not retry or fail the D1 write, and the commit is not undone by it.
+  let pdf: CvPdfReport;
+  const render = regenerateCvPdfAfterSave(env, `save CV ${slug}`);
+  if (options.background) {
+    options.background(render);
+    pdf = "scheduled";
+  } else {
+    pdf = await render.then(
+      (rendered): CvPdfReport => ({ rendered }),
+      (error): CvPdfReport => ({ failed: error instanceof Error ? error.message : String(error) }),
+    );
+  }
+
+  return { slug, commitSha, unchanged: written.action !== "commit", purged, pdf };
 }

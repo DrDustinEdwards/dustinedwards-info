@@ -87,6 +87,13 @@ const CHECK_COPY = {
     passing: "The CV on the site matches the CV in the repository.",
     repair: null,
   },
+  "cv-pdf-drift": {
+    name: "The CV PDF",
+    failing: () =>
+      "The CV PDF is older than the CV on the site, or missing. The site's watcher re-renders it on its next check.",
+    passing: "The CV PDF was drawn from the CV the site shows.",
+    repair: null,
+  },
   "ask-index-drift": {
     name: "Search answers",
     failing: (counts) =>

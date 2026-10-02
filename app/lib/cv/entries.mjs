@@ -1,8 +1,8 @@
 /**
  * The CV resolved: the files in content/cv/ (assembled by app/lib/cv/compile.mjs) joined to the publication
  * records, one flat list every surface renders. The page (app/routes/cv.tsx), the markdown twin
- * (app/lib/cv/markdown.mjs, served by app/routes/cv[.md].ts) and the PDF (scripts/build-cv-pdf.mjs, from the
- * twin) all resolve it with `buildCv`, so they cannot say different things. Pure and clock-free, so the twin and
+ * (app/lib/cv/markdown.mjs, served by app/routes/cv[.md].ts) and the PDF (rendered from the twin by
+ * app/lib/cv/pdf.server.ts, and offline by scripts/build-cv-pdf.mjs) all resolve it with `buildCv`, so they cannot say different things. Pure and clock-free, so the twin and
  * the PDF fingerprint are reproducible.
  */
 
@@ -62,7 +62,7 @@ export { formatDollars };
  * @property {string} search folded text the search box matches
  */
 
-/** The PDF's public path, served from public/ like the paper PDFs. */
+/** The PDF's public path: a Worker route over one R2 object the Worker renders after each CV save (app/routes/cv-pdf.ts). */
 export const CV_PDF_PATH = "/dustin-edwards-cv.pdf";
 
 export const CV_PAGE = {

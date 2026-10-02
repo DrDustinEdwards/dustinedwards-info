@@ -1,5 +1,5 @@
 {
-  "generated": 52,
+  "generated": 51,
   "refs": {
     "/audio/capsid.mp3": [
       "content/dictionary/capsid.md"
@@ -18,9 +18,6 @@
     ],
     "/dustin-edwards-apple-touch-icon.png": [
       "app/root.tsx"
-    ],
-    "/dustin-edwards-cv.pdf": [
-      "app/lib/cv/entries.mjs"
     ],
     "/dustin-edwards-favicon.svg": [
       "app/root.tsx"
@@ -158,6 +155,6 @@
       "app/root.tsx"
     ]
   },
-  "filesRead": 518,
-  "assetsConsidered": 65
+  "filesRead": 521,
+  "assetsConsidered": 64
 }

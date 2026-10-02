@@ -2,8 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-import { extractText, getDocumentProxy } from "unpdf";
-
 import { buildCvFrom } from "../scripts/lib/cv.mjs";
 import { buildPublications } from "../scripts/lib/publications.mjs";
 import { timelineSvg } from "../app/lib/cv/charts.ts";
@@ -24,7 +22,7 @@ import {
   timelineEmptyText,
 } from "../app/lib/cv/view.mjs";
 import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
-import { CV_PDF_DISK_PATH, FINGERPRINT_LABEL, cvFingerprint } from "../scripts/build-cv-pdf.mjs";
+import { FINGERPRINT_LABEL, cvFingerprint, cvPdfOptions, renderCvHtml } from "../app/lib/cv/pdf-html.mjs";
 
 // The CV as the build resolves it: the files in content/cv/ joined to the records in content/publications/. The
 // build compiles every file with the validation module the CV save uses (app/lib/cv/validate.mjs), so a file that
@@ -234,15 +232,37 @@ test("the twin cites every paper by DOI and keeps mentoring as counts", () => {
   assert.match(doc, /Shown as counts; the CV names each student\./);
 });
 
-test("the committed PDF was rendered from the current CV (npm run build:cv-pdf)", async () => {
-  const pdf = await getDocumentProxy(new Uint8Array(readFileSync(CV_PDF_DISK_PATH)));
-  const { text } = await extractText(pdf, { mergePages: true });
-  const flat = String(text).replace(/\s+/g, " ");
-  assert.ok(
-    flat.includes(`${FINGERPRINT_LABEL} ${cvFingerprint(CV)}`),
-    `the PDF does not carry "${FINGERPRINT_LABEL} ${cvFingerprint(CV)}": the CV changed since it was rendered. ` +
-      "Run npm run build:cv-pdf, then build:assets and build:template-refs.",
+// The PDF is no longer a committed file this test could read back: the Worker renders it after each CV save and
+// stores it with the fingerprint of the data it was drawn from (app/lib/cv/pdf.server.ts), and the cv-pdf-drift check
+// compares that fingerprint with D1's. What can be pinned offline is the fingerprint itself and the document it stamps.
+test("the PDF's fingerprint is a deterministic function of the CV data, and moves with it", async () => {
+  const fingerprint = await cvFingerprint(CV);
+  assert.match(fingerprint, /^[0-9a-f]{8}$/);
+  assert.equal(await cvFingerprint(CV), fingerprint, "the same data, the same fingerprint");
+  assert.equal(await cvFingerprint(structuredClone(CV)), fingerprint, "a copy of the data, the same fingerprint");
+  assert.notEqual(await cvFingerprint({ ...CV, edition: `${CV.edition} (revised)` }), fingerprint, "an edition change moves it");
+  const [first, ...rest] = CV.entries;
+  assert.ok(first, "the CV has entries");
+  assert.notEqual(await cvFingerprint({ ...CV, entries: rest }), fingerprint, "a dropped entry moves it");
+});
+
+test("the print document carries the fingerprint it is stored under, and one copy of the options serves both renderers", async () => {
+  const html = await renderCvHtml(CV, {
+    renderBody: async () => ({ html: "<p>body</p>", blockedUrls: [] }),
+    fontCss: "/* fonts */",
+  });
+  assert.ok(html.includes(`${FINGERPRINT_LABEL} ${await cvFingerprint(CV)}.`), "the last line names the data's fingerprint");
+  assert.ok(html.includes("/* fonts */") && html.includes("<p>body</p>"));
+  await assert.rejects(
+    renderCvHtml(CV, { renderBody: async () => ({ html: "", blockedUrls: [{ url: "javascript:x" }] }), fontCss: "" }),
+    /allowlist refused/,
   );
+  const options = cvPdfOptions(CV);
+  assert.deepEqual(
+    [options.format, options.tagged, options.outline, options.preferCSSPageSize, options.displayHeaderFooter],
+    ["letter", true, true, true, true],
+  );
+  assert.ok(options.footerTemplate.includes(CV.edition));
 });
 
 test("the committed chart stylesheet is Enarratio's current output (npm run build:chart-css)", () => {

@@ -173,6 +173,8 @@
     "app/lib/cv/entries.mjs",
     "app/lib/cv/view.mjs",
     "app/lib/cv/markdown.mjs",
+    // The print document and the fingerprint, which the Worker and scripts/build-cv-pdf.mjs both draw from.
+    "app/lib/cv/pdf-html.mjs",
     // The no-wide-dash rule, which the pipeline re-exports and the CV validator imports without the renderer.
     "app/lib/content/wide-dash.mjs",
     // The Ask item key mapping. check:machine-readable round-trips every paper's
