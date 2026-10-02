@@ -25,6 +25,8 @@ export type TimelineInput = {
   label: string;
   /** Where a bar links with script off: the page filtered to that year. */
   hrefForYear: (year: number) => string;
+  /** What to say when there is nothing to chart (see timelineEmptyText); the chart is not drawn then. */
+  emptyText?: string | null;
   /** Drawing width in CSS pixels; the browser passes its container's, so type is drawn at size. */
   width?: number;
 };
@@ -38,6 +40,17 @@ export type SparklineInput = {
 
 const TIMELINE = { width: 640, height: 220 };
 
+const NOTHING_TO_CHART = "There is nothing to chart for these filters.";
+
+/**
+ * The timeline's place when nothing is charted: one plain sentence in the page's note style, marked so
+ * app/enhance/cv.ts knows no Enarratio figure is there. The text is ours, never a visitor's, so it is not escaped.
+ */
+const EMPTY_TIMELINE_ATTR = "data-cv-timeline-empty";
+function emptyTimeline(text: string): string {
+  return `<p class="cv-timeline-hint" ${EMPTY_TIMELINE_ATTR}="">${text}</p>`;
+}
+
 /**
  * One row per counted entry, which is the shape Enarratio counts. The bars outside the selected range
  * are marked with an attribute for the stylesheet to fade, found by the year Enarratio writes on each
@@ -48,6 +61,8 @@ export function timelineSvg(input: TimelineInput): string {
   const rows = series.flatMap((s) =>
     years.flatMap((year, i) => Array.from({ length: s.values[i] ?? 0 }, () => ({ year, type: s.label }))),
   );
+  // Enarratio throws "data is empty" for no rows, which would be a 500 for a filter that selects nothing chartable.
+  if (rows.length === 0) return emptyTimeline(input.emptyText ?? NOTHING_TO_CHART);
   const width = Math.max(280, Math.round(input.width ?? TIMELINE.width));
   const markup = barChart({
     id: TIMELINE_ID,
