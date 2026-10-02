@@ -21,6 +21,7 @@ import {
   parseState,
   stateToSearch,
   timelineData,
+  timelineEmptyText,
 } from "../app/lib/cv/view.mjs";
 import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
 import { CV_PDF_DISK_PATH, FINGERPRINT_LABEL, cvFingerprint } from "../scripts/build-cv-pdf.mjs";
@@ -160,6 +161,68 @@ test("a range filter fades exactly the timeline's bars outside it", () => {
   const faded = bars.filter((bar) => bar.includes('data-cv-out=""'));
   const fadedYears = faded.map((bar) => bar.match(/data-enarratio-x="(\d{4})"/)?.[1]).sort();
   assert.deepEqual(fadedYears, ["2019", "2022", "2023"]);
+});
+
+/** The timeline as the route draws it: the empty-data guard in charts.ts is the only thing between a filter and Enarratio. */
+const timelineFor = (query) => {
+  const data = timelineData(FACTS, parseState(new URLSearchParams(query)));
+  const markup = timelineSvg({
+    years: data.years,
+    series: data.series,
+    selected: data.selected,
+    label: "Output per year",
+    emptyText: timelineEmptyText(data),
+    hrefForYear: (year) => `/cv?from=${year}&to=${year}`,
+  });
+  return { data, markup };
+};
+
+test("a filter that selects nothing chartable gets a sentence, never an Enarratio call with empty data", () => {
+  // The case from the report: grants as senior author selects no entry at all.
+  const none = timelineFor("type=grant&role=senior-author");
+  assert.equal(none.data.entries, 0);
+  assert.equal(
+    none.markup,
+    '<p class="cv-timeline-hint" data-cv-timeline-empty="">No entries match these filters, so there is nothing to chart.</p>',
+  );
+  // Entries match, but none is a charted type: courses and service are the CV's largest examples.
+  const uncharted = timelineFor("type=service");
+  assert.ok(uncharted.data.entries > 0);
+  assert.match(uncharted.markup, /data-cv-timeline-empty/);
+  assert.match(uncharted.markup, /publications, grants, invited talks and awards, and none of the entries/);
+  // The innocent cases: anything with a charted entry is still a figure, with no sentence.
+  for (const query of ["", "type=publication", "type=grant&from=2018&to=2022", "role=first-author&sort=newest", "area=bacteriophages&type=talk"]) {
+    const { markup } = timelineFor(query);
+    assert.ok(markup.includes("<svg"), `${query || "no filter"} draws the chart`);
+    assert.ok(!markup.includes("data-cv-timeline-empty"), `${query || "no filter"} has no empty sentence`);
+  }
+});
+
+test("no combination of the CV's filters throws, and the sentence appears exactly when no charted entry is selected", () => {
+  const queries = [""];
+  const ids = (table) => table.map(([id]) => id);
+  for (const t of ids(TYPES)) queries.push(`type=${t}`);
+  for (const r of ids(ROLES)) queries.push(`role=${r}`);
+  for (const a of ids(AREAS)) queries.push(`area=${a}`);
+  for (const t of ids(TYPES)) for (const r of ids(ROLES)) queries.push(`type=${t}&role=${r}`);
+  for (const t of ids(TYPES)) for (const a of ids(AREAS)) queries.push(`type=${t}&area=${a}`);
+  for (const r of ids(ROLES)) for (const a of ids(AREAS)) queries.push(`role=${r}&area=${a}`);
+  queries.push("q=zzzznomatch", "from=2099", "to=1900", "from=2099&type=publication", "type=grant&role=senior-author&q=x");
+  const charted = new Set(["publication", "grant", "talk", "award"]);
+  let empties = 0;
+  for (const query of queries) {
+    const { data, markup } = timelineFor(query); // a throw here is the 500
+    const state = parseState(new URLSearchParams(query));
+    const chartable = FACTS.some((f) => matches(f, state, { ignoreYears: true }) && charted.has(f.type) && f.year !== null);
+    assert.equal(markup.includes("data-cv-timeline-empty"), !chartable, `?${query}`);
+    if (!chartable) empties += 1;
+    assert.equal(data.entries, FACTS.filter((f) => matches(f, state, { ignoreYears: true })).length, `?${query}`);
+  }
+  assert.ok(empties > 20, "the table reaches the empty states");
+});
+
+test("a value outside the vocabulary is dropped, so it never narrows to nothing", () => {
+  assert.deepEqual(parseState(new URLSearchParams("type=bogus&role=bogus&area=bogus")), parseState(new URLSearchParams("")));
 });
 
 test("the twin cites every paper by DOI and keeps mentoring as counts", () => {

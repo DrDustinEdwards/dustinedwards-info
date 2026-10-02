@@ -131,12 +131,17 @@ function setText(selector: string, text: string) {
 }
 
 /* Enarratio's layer: bar links become keyboard filter buttons with details on hover and focus. */
-const timeline: EnhancedChart | undefined = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
-if (!timeline) throw new Error("cv: the timeline is not an Enarratio figure.");
+/*
+ * A filter that leaves nothing to chart is answered with one sentence marked data-cv-timeline-empty in place of
+ * the figure (app/lib/cv/charts.ts), so the chart is absent then and comes back when a filter selects something.
+ */
+const EMPTY = "[data-cv-timeline-empty]";
+let timeline: EnhancedChart | undefined = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
+if (!timeline && !timelineHost.querySelector(EMPTY)) throw new Error("cv: the timeline is not an Enarratio figure.");
 
 const TYPE_BY_LABEL = new Map(CHART_SERIES.map(([id, label]) => [label as string, id as string]));
 const LABEL_BY_TYPE = new Map(CHART_SERIES.map(([id, label]) => [id as string, label as string]));
-timeline.setFilter(chartFilter(readState()));
+timeline?.setFilter(chartFilter(readState()));
 
 /**
  * The filter the chart itself shows for a state: one year as Enarratio's year filter, else one charted
@@ -173,8 +178,7 @@ function drawCharts(state: CvState) {
     .then((charts) => {
       if (controller.signal.aborted) return;
       // Neither fires enarratio:select, only a reader's own choice does, and update() keeps focus.
-      timeline?.update(charts.timeline);
-      timeline?.setFilter(chartFilter(state));
+      drawTimeline(charts.timeline, state);
       for (const name of ["papers", "grants", "students"] as const) {
         const host = root.querySelector(`[data-cv-spark="${name}"]`);
         if (host) host.innerHTML = charts[name];
@@ -184,6 +188,24 @@ function drawCharts(state: CvState) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       throw error;
     });
+}
+
+/** The figure is updated in place when there is one, and made again when the sentence stood in its place. */
+function drawTimeline(markup: string, state: CvState) {
+  if (markup.includes("data-cv-timeline-empty")) {
+    timeline?.destroy();
+    timeline = undefined;
+    timelineHost.innerHTML = markup;
+    return;
+  }
+  if (timeline) {
+    timeline.update(markup);
+  } else {
+    timelineHost.innerHTML = markup;
+    timeline = enhance().find((chart) => chart.figure.id === TIMELINE_ID);
+    if (!timeline) throw new Error("cv: the timeline is not an Enarratio figure.");
+  }
+  timeline.setFilter(chartFilter(state));
 }
 
 let announceTimer = 0;

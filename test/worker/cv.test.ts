@@ -225,6 +225,66 @@ describe("the CV answers as it did before it moved to D1", () => {
   });
 });
 
+/* A filter that selects nothing to chart answers as a page, never as the 500 Enarratio's "data is empty" made of it. */
+describe("a filter that leaves nothing to chart", () => {
+  const chartsFor = async (query: string) => {
+    const res = await chartsLoader({ request: new Request(`${ORIGIN}/cv/charts.json${query}`), context: routeContext(), params: {} } as never);
+    return { res, body: (await res.json()) as { timeline: string; papers: string; grants: string; students: string } };
+  };
+  const EMPTY = "data-cv-timeline-empty";
+  const NONE = "No entries match these filters, so there is nothing to chart.";
+  const UNCHARTED = "none of the entries these filters select is one of those";
+
+  it("renders the reported URL as a page with a sentence where the chart was, and the charts answer 200", { timeout: 120_000 }, async () => {
+    const query = "?type=grant&role=senior-author";
+    const { loaderData, html } = await cvPage(query);
+    expect(loaderData.shownIds).toHaveLength(0);
+    expect(html).toContain(NONE);
+    expect(html).toContain("No entries match.");
+    expect(html).not.toContain('data-enarratio-x="');
+    const { res, body } = await chartsFor(query);
+    expect(res.status).toBe(200);
+    expect(body.timeline).toContain(NONE);
+    // The headline lines still draw: an empty line is an empty line.
+    for (const name of ["papers", "grants", "students"] as const) expect(body[name]).toContain("<svg");
+    // The twin is the whole CV, whatever the filter, and is as available as ever.
+    expect((await twin()).status).toBe(200);
+  });
+
+  it("says why when entries match but none is a charted type", { timeout: 120_000 }, async () => {
+    const { loaderData, html } = await cvPage("?type=service");
+    expect(loaderData.shownIds.length).toBeGreaterThan(0);
+    expect(html).toContain(UNCHARTED);
+    expect((await chartsFor("?type=service")).body.timeline).toContain(UNCHARTED);
+  });
+
+  // Every filter the CV has, alone and in the pairs that select nothing chartable: none may throw.
+  const TABLE = [
+    "?role=senior-author&type=grant",
+    "?type=appointment", "?type=education", "?type=course", "?type=mentoring", "?type=service", "?type=development",
+    "?role=instructor", "?role=mentor", "?role=member", "?role=participant", "?role=volunteer",
+    "?area=ai", "?q=zzzznomatch", "?from=2099", "?to=1900",
+    "?type=mentoring&area=bacteriophages", "?role=judge&area=retroviruses", "?type=course&role=instructor",
+  ];
+  it.each(TABLE)("%s answers 200 on the charts and renders the page", { timeout: 120_000 }, async (query) => {
+    const { res, body } = await chartsFor(query);
+    expect(res.status).toBe(200);
+    expect(typeof body.timeline).toBe("string");
+    await cvPage(query);
+  });
+
+  it("changes nothing for a filter that selects something, and a value outside the vocabulary is dropped", { timeout: 120_000 }, async () => {
+    for (const query of ["", "?type=publication", "?type=grant&from=2018&to=2022", "?q=phage"]) {
+      const { html } = await cvPage(query);
+      expect(html, query).toContain('data-enarratio-x="');
+      expect(html, query).not.toContain(EMPTY);
+    }
+    const bogus = await cvPage("?type=bogus&role=bogus");
+    expect(bogus.html).toBe((await cvPage()).html);
+    expect(bogus.html).not.toContain(EMPTY);
+  });
+});
+
 describe("a lost row is repaired from the file, never the reverse", () => {
   it("rewrites the row on an unchanged save and commits nothing", { timeout: 240_000 }, async () => {
     await testEnv.DB.prepare("DELETE FROM cv WHERE slug = 'honors'").run();
