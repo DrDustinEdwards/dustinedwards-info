@@ -25,12 +25,15 @@ import {
 import { ogImageKey } from "../app/lib/content/og-card-text.mjs";
 import { recordsForPages } from "../app/lib/search/records.mjs";
 import { renderContentPages } from "../scripts/build-content.mjs";
+import { buildDictionary } from "../scripts/lib/dictionary.mjs";
 
 const pages = await renderContentPages();
+/** The entries that lead the named software pages, read from content/dictionary as the build reads them. */
+const { entryFor } = await buildDictionary();
 /** The pages this week added, and any page added under their roots later. */
 const ROOTS = ["/software", "/research/tools", "/cv"];
 const added = pages.filter((page) => ROOTS.some((root) => page.path === root || page.path.startsWith(`${root}/`)));
-const records = recordsForPages(contentPageSearchInputs(pages));
+const records = recordsForPages(contentPageSearchInputs(pages, entryFor));
 
 test("the pages under test are the software pages, the calculators and the CV", () => {
   // Scope, so an empty list cannot pass every case below: the eight software pages, four tool pages, the CV.
@@ -64,7 +67,7 @@ test("a term only a page says finds it: the CV, a calculator and a software page
 test("each page has its markdown twin, led by its title, and is listed in llms.txt", () => {
   const llms = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
   for (const page of added) {
-    const twin = contentPageMarkdownBody(page);
+    const twin = contentPageMarkdownBody(page, entryFor(page.path));
     assert.ok(twin.startsWith(`# ${page.title}\n\n`), page.path);
     assert.ok(twin.length > page.title.length + 200, `${page.path}: a twin of ${twin.length} characters`);
     assert.match(llms, new RegExp(`^ {2}${page.path.replaceAll("/", "\\/")}$`, "m"), `${page.path} is not in llms.txt`);

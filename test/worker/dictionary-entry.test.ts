@@ -3,7 +3,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { DictionaryEntry } from "~/components/dictionary-entry";
-import { DICTIONARY_ENTRIES } from "~/lib/dictionary-entries.mjs";
+import type { DictionaryEntry as Entry } from "~/lib/dictionary-entries.mjs";
+
+import dictionaryArtifact from "../../content/generated/dictionary.json";
+
+/* The entries as D1 holds them: the rows build:content compiles from content/dictionary/*.md, parsed the way
+ * the page route parses a row's record. */
+const DICTIONARY_ENTRIES: Entry[] = dictionaryArtifact.dictionary.map((row) => JSON.parse(row.record) as Entry);
 
 describe.each(DICTIONARY_ENTRIES.map((entry) => [entry.term, entry] as const))("the %s entry", (term, entry) => {
   const html = renderToStaticMarkup(h(DictionaryEntry, { entry }));

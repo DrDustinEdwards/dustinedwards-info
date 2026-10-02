@@ -15,6 +15,7 @@ import {
   readContentSides,
   readLlmsSides,
   readCvSides,
+  readDictionarySides,
   readPageSides,
   readProcedureSides,
   readPublicationSides,
@@ -23,6 +24,12 @@ import { purgeCv, purgeLlms, purgePages, purgeProcedures, purgePublications } fr
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
+import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
+import {
+  compile as compileDictionaryFile,
+  deleteRow as deleteDictionaryRow,
+  writeRow as writeDictionaryRow,
+} from "~/lib/dictionary/save.server";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import {
   compile as compilePageFile,
@@ -293,6 +300,25 @@ export async function syncProcedures(env: OperatorEnv): Promise<ToolResult> {
     write: (compiled) => writeProcedureRow(env, compiled),
     remove: (row) => deleteProcedureRow(env, row),
     purge: purgeProcedures,
+  });
+}
+
+/**
+ * Dictionary entries: the compile and write doors a dictionary save uses, which also re-derive the one page
+ * row each entry opens (its twin and its search records), and purge the pages tag, because the page embeds the
+ * entry. An entry whose path is not a registered Software page, or whose clip is not in the repository, is
+ * refused by the compile (the 422 names the file) and never makes a row.
+ */
+export async function syncDictionary(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_dictionary",
+    dir: DICTIONARY_DIR,
+    noun: "dictionary entry",
+    read: () => readDictionarySides(env),
+    compile: (key, raw) => compileDictionaryFile(env, key, raw),
+    write: (compiled) => writeDictionaryRow(env, compiled),
+    remove: (row) => deleteDictionaryRow(env, { key: row.slug, path: row.path }),
+    purge: purgePages,
   });
 }
 

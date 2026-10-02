@@ -6,6 +6,7 @@ import {
   contentDriftVerdict,
   procedureDriftVerdict,
   cvDriftVerdict,
+  dictionaryDriftVerdict,
   pageDriftVerdict,
   publicationDriftVerdict,
   llmsDriftVerdict,
@@ -20,6 +21,7 @@ import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
+import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
@@ -55,6 +57,16 @@ async function listMarkdownFiles(env: Env & { GITHUB_TOKEN?: string }, dir: stri
   return (await listDirectory(env, dir))
     .filter((e) => e.type === "file" && e.name.endsWith(".md"))
     .map((e) => ({ slug: e.name.slice(0, -".md".length), sha: e.sha, path: e.path }));
+}
+
+/** The same two sides for dictionary entries: `content/dictionary/*.md` and the dictionary_entries table's rows. */
+export async function readDictionarySides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = await listMarkdownFiles(env, DICTIONARY_DIR);
+  // `key` answers as `slug`, the name every kind's drift comparison and convergence loop reads a row by.
+  const rows = await env.DB.prepare(
+    "SELECT key AS slug, path, source_blob_sha FROM dictionary_entries",
+  ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
 }
 
 /** The same two sides for pages: `content/pages/*.md` and the pages table's rows. */
@@ -148,6 +160,14 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // A procedure edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readProcedureSides(env);
       return procedureDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("dictionary-drift", async () => {
+      // An entry edited, added or deleted through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readDictionarySides(env);
+      return dictionaryDriftVerdict(files, rows);
     }),
   );
 

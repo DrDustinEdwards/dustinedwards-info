@@ -24,6 +24,7 @@ import type { ToolName, ToolResult } from "./descriptors";
 import {
   backupMedia,
   syncAsk,
+  syncDictionary,
   syncMedia,
   syncLlms,
   syncCv,
@@ -45,6 +46,8 @@ import { procedurePath } from "~/lib/procedures/parse.mjs";
 import { listCvRows } from "~/db/cv";
 import { listPageRows } from "~/db/pages";
 import { CvInvalid, readCvFile } from "~/lib/cv/save.server";
+import { listDictionaryRows } from "~/db/dictionary";
+import { readDictionary } from "~/lib/dictionary/save.server";
 import { PageInvalid, readPage } from "~/lib/pages/save.server";
 import { readLlms } from "~/lib/llms/save.server";
 
@@ -190,6 +193,9 @@ export async function runTool(
       case "sync_procedures":
         return await syncProcedures(env);
 
+      case "sync_dictionary":
+        return await syncDictionary(env);
+
       case "sync_pages":
         return await syncPages(env);
 
@@ -264,6 +270,13 @@ export async function runTool(
 
       case "get_cv":
         return await getCvTool(env, args);
+      case "list_dictionary": {
+        const entries = await listDictionaryRows(env);
+        return { ok: true, data: { headSha: await currentHead(env), count: entries.length, entries } };
+      }
+
+      case "get_dictionary":
+        return await getDictionaryTool(env, args);
     }
   } catch (error) {
     return translate(error);
@@ -500,6 +513,16 @@ async function getCvTool(env: OperatorEnv, args: Record<string, unknown>): Promi
   const file = await readCvFile(env, slug);
   if (!file) return { ok: false, status: 404, error: `No file exists for the CV file "${slug}".` };
   return { ok: true, data: { ...file, headSha: await currentHead(env) } };
+}
+
+async function getDictionaryTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const key = String(args.key ?? "").trim();
+  if (!key || !SLUG_PATTERN.test(key)) {
+    return { ok: false, status: 400, error: "get_dictionary requires a lowercase kebab-case key, such as capsid." };
+  }
+  const entry = await readDictionary(env, key);
+  if (!entry) return { ok: false, status: 404, error: `No dictionary entry has the key "${key}".` };
+  return { ok: true, data: { ...entry, headSha: await currentHead(env) } };
 }
 
 async function getPageTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {

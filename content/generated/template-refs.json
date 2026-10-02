@@ -2,13 +2,13 @@
   "generated": 52,
   "refs": {
     "/audio/capsid.mp3": [
-      "app/lib/dictionary-entries.mjs"
+      "content/dictionary/capsid.md"
     ],
     "/audio/carrel.mp3": [
-      "app/lib/dictionary-entries.mjs"
+      "content/dictionary/carrel.md"
     ],
     "/audio/enarratio.mp3": [
-      "app/lib/dictionary-entries.mjs"
+      "content/dictionary/enarratio.md"
     ],
     "/dustin-edwards-android-chrome-192x192.png": [
       "public/site.webmanifest"

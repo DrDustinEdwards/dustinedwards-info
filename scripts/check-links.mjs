@@ -39,6 +39,7 @@ import { postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
 import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
 import { ABOUT_SOURCE, buildAbout, renderContentPages } from "./build-content.mjs";
+import { buildDictionary } from "./lib/dictionary.mjs";
 import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
 import { buildPublications } from "./lib/publications.mjs";
@@ -153,6 +154,8 @@ const renderedIds = new Map();
 for (const { post } of posts) renderedIds.set(`/writing/${post.slug}`, idsIn(post.html));
 
 const pages = await renderContentPages();
+// The entry that leads a named software page is in its twin, with the link to its pronunciation clip.
+const { entryFor: dictionaryEntryFor } = await buildDictionary();
 for (const page of pages) renderedIds.set(page.path, idsIn(page.html));
 
 /** Every string in a procedure record: its HTML fragments are where its ids and links are. */
@@ -360,7 +363,7 @@ for (const { file, post } of posts) {
 for (const page of pages) {
   const where = page.path === "/cv" ? "content/cv/ (/cv)" : `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
   for (const href of hrefsIn(page.html)) add("pages", { where, href, page: page.path, isPublic: true });
-  for (const href of markdownLinks(contentPageMarkdownBody(page))) {
+  for (const href of markdownLinks(contentPageMarkdownBody(page, dictionaryEntryFor(page.path)))) {
     add("page twins", { where: `${contentPageMarkdownPath(page.path)} (twin)`, href, page: page.path, isPublic: true });
   }
 }

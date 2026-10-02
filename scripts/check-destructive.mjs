@@ -228,12 +228,19 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ["get_llms", "a read"],
     ["list_cv", "a read"],
     ["get_cv", "a read"],
+    ["list_dictionary", "a read"],
+    ["get_dictionary", "a read"],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [
       "sync_procedures",
       "D1 rows, on sync_posts's terms: derived from the repository, idempotent, and it " +
         "refuses an empty file set rather than deleting every row",
+    ],
+    [
+      "sync_dictionary",
+      "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set " +
+        "rather than deleting every row, and it refreshes the one page row each entry opens through the page compile",
     ],
     [
       "sync_pages",

@@ -104,6 +104,9 @@ function pageSchema(fm, markdown, errors) {
 }
 
 /**
+ * The page's dictionary entry (docs/DICTIONARY.md), when it has a published one, leads its twin and its search
+ * record, so `entry` is the caller's to give: the build reads it from content/dictionary, the Worker from D1.
+ *
  * @param {{
  *   slug: string,
  *   raw: string,
@@ -111,6 +114,7 @@ function pageSchema(fm, markdown, errors) {
  *               findWideDashes: (text: string) => Array<{ line: number, column: number, char: string, excerpt: string }> },
  *   sourcePath?: string,
  *   generated?: boolean,
+ *   entry?: import("../dictionary-entries.mjs").DictionaryEntry,
  * }} input
  * @returns {Promise<
  *   | { ok: false, errors: string[] }
@@ -118,7 +122,7 @@ function pageSchema(fm, markdown, errors) {
  *       searchInput: ReturnType<typeof contentPageSearchInputs>[number], sourcePath: string, sourceBlobSha: string }
  * >}
  */
-export async function compilePage({ slug, raw, pipeline, sourcePath, generated = false }) {
+export async function compilePage({ slug, raw, pipeline, sourcePath, generated = false, entry }) {
   const expectedPath = pagePathForSlug(slug);
   if (!expectedPath) {
     return {
@@ -196,7 +200,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
 
   const draft = fm.draft === true;
   const { markdown: _body, ...rest } = compiled;
-  const [searchInput] = contentPageSearchInputs([compiled]);
+  const [searchInput] = contentPageSearchInputs([compiled], () => entry);
   if (!searchInput) throw new Error(`no search input was made for ${page.path}`);
   return {
     ok: true,
@@ -204,7 +208,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
     page: compiled,
     record: { slug, draft, ...rest },
     draft,
-    markdown: contentPageMarkdownBody(compiled),
+    markdown: contentPageMarkdownBody(compiled, entry),
     searchInput,
     sourcePath: file,
     sourceBlobSha: await gitBlobSha(raw),
