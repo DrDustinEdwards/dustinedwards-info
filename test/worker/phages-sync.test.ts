@@ -66,8 +66,8 @@ describe("sync_phages and the phage-drift check", () => {
 
     const first = await sync();
     expect(first.ok, JSON.stringify(first)).toBe(true);
-    if (first.ok) expect(first.data).toMatchObject({ repaired: 80, removed: 0, expected: 80, present: 80, converged: true });
-    expect(await count()).toBe(80);
+    if (first.ok) expect(first.data).toMatchObject({ repaired: 75, removed: 0, expected: 75, present: 75, converged: true });
+    expect(await count()).toBe(75);
     expect((await rowFor("acorn15"))?.source_blob_sha).toBe(await gitBlobSha(files["content/phages/acorn15.md"] ?? ""));
     expect((await searchRows()).some((r) => r.body.includes("Acorn15"))).toBe(true);
     expect(purge.mock.calls.flatMap(([o]) => o.tags)).toEqual(["content-pages"]);
@@ -95,7 +95,7 @@ describe("sync_phages and the phage-drift check", () => {
     const result = await sync();
     expect(result.ok, JSON.stringify(result)).toBe(true);
     if (result.ok) expect(result.data).toMatchObject({ repaired: 2, removed: 1, converged: true });
-    expect(await count()).toBe(80);
+    expect(await count()).toBe(75);
     expect((await rowFor("acorn15"))?.source_blob_sha).toBe(await gitBlobSha(edited));
     expect(await rowFor("allene")).toBeNull();
     expect((await rowFor("zeta"))?.slug).toBe("zeta");
@@ -119,7 +119,7 @@ describe("sync_phages and the phage-drift check", () => {
       expect(result.status).toBe(422);
       expect(result.error).toContain("empty set");
     }
-    expect(await count()).toBe(80);
+    expect(await count()).toBe(75);
   });
 
   it("makes no row for a file the validator refuses, naming it, and converges the rest", { timeout: 300_000 }, async () => {
@@ -132,7 +132,7 @@ describe("sync_phages and the phage-drift check", () => {
       expect(JSON.stringify(result.detail)).toContain("sample is not a phage field");
     }
     expect(await rowFor("stray")).toBeNull();
-    expect(await count()).toBe(80);
+    expect(await count()).toBe(75);
   });
 
   it("stops before any row moves when the page cannot be drawn, so the next run retries it", { timeout: 300_000 }, async () => {
@@ -146,6 +146,6 @@ describe("sync_phages and the phage-drift check", () => {
     gh.files.set(PAGE_FILE, phagesPage);
     const retried = await sync();
     expect(retried.ok, JSON.stringify(retried)).toBe(true);
-    expect(await count()).toBe(80);
+    expect(await count()).toBe(75);
   });
 });

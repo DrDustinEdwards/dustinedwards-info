@@ -147,7 +147,7 @@ describe("a phage edit through the adapter is live at the next request", () => {
     expect(page).toMatch(/<h3 id="zeta">Zeta/);
     expect(await (await twin()).text()).toContain("| [Zeta](#zeta) | 2026 | *M. foliorum* | Erath County |  |  |");
     expect(page).toContain('"temporalCoverage":"2017/2026"');
-    expect((await pageData()).page.dataset?.rows).toBe(81);
+    expect((await pageData()).page.dataset?.rows).toBe(76);
     expect((await rowFor("zeta"))?.slug).toBe("zeta");
   });
 
@@ -264,7 +264,7 @@ describe("the operator reads phages and cannot save one", () => {
     const list = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "list_phages", {});
     expect(list).toMatchObject({ ok: true });
     const data = (list as { data: { count: number; phages: Array<{ slug: string; name: string; year: number; county: string | null }> } }).data;
-    expect(data.count).toBe(80);
+    expect(data.count).toBe(75);
     expect(data.phages[0]).toMatchObject({ slug: "acorn15", name: "Acorn15", year: 2017, county: "Hood County" });
     // Only the table's own fields: nothing beyond the public shape reaches the operator.
     expect(Object.keys(data.phages[0] ?? {}).sort()).toEqual(["county", "formerly", "host", "name", "note", "paper", "phagesdb", "slug", "year"]);
