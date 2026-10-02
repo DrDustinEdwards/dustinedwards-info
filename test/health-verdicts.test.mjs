@@ -6,6 +6,7 @@ import {
   contentDriftCompare,
   contentDriftVerdict,
   procedureDriftVerdict,
+  cvDriftVerdict,
   pageDriftVerdict,
   llmsDriftVerdict,
   publicationDriftVerdict,
@@ -459,6 +460,14 @@ test("page and publication drift: the same comparison, each naming its own noun 
   const matching = [{ slug: "a", source_blob_sha: "s" }];
   assert.equal(pageDriftVerdict(agreeing, matching).ok, true);
   assert.equal(publicationDriftVerdict(agreeing, matching).ok, true);
+
+  const cv = cvDriftVerdict(files, rows);
+  assert.equal(cv.ok, false);
+  assert.match(cv.detail, /^CV drift 2:/);
+  assert.match(cv.detail, /2 CV file\(s\)/);
+  assert.match(cv.detail, /sync_cv/);
+  assert.doesNotMatch(cv.detail, /sync_pages|sync_posts|sync_publications/);
+  assert.equal(cvDriftVerdict(agreeing, matching).ok, true);
 });
 
 test("llms.txt drift: one file against one row, naming its own repair", () => {

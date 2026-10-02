@@ -6,10 +6,12 @@
 
 import citedByArtifact from "../../../data/publications.cited-by.json";
 
-import { listPublicationIdentities } from "~/db/publications";
+import { listCvCitedDois } from "~/db/cv";
+import { getPublicationRow, listPublicationIdentities } from "~/db/publications";
 import { textChunks } from "~/lib/content/chunks.mjs";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
-import { purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { combinePurges, purgeCv, purgePublications, type PurgeOutcome } from "~/lib/cache-purge.server";
+import { refreshCvSearch } from "~/lib/cv/save.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
 import { commitFiles, GitHubError, listDirectory, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
@@ -200,6 +202,26 @@ async function syncAsk(env: PublicationEnv, compiled: Compiled) {
   }
 }
 
+/**
+ * What the CV (content/cv/publications.md) makes of this save. The CV cites a paper by DOI and is joined to the
+ * publications at read time, so a paper that stops being published, or whose DOI changes, would leave the CV
+ * citing a paper no record answers for: that is refused, naming the repair. A save of a paper the CV cites
+ * changes the CV, so `cited` tells the write to refresh the CV's search records and purge its cache tag.
+ */
+async function cvCitation(env: PublicationEnv, slug: string, compiled: Compiled) {
+  const cited = await listCvCitedDois(env);
+  const stored = cited.size === 0 ? null : await getPublicationRow(env, slug);
+  const storedKey = stored ? ((JSON.parse(stored.record) as { doi: string | null }).doi?.trim().toLowerCase() ?? null) : null;
+  if (!storedKey || !cited.has(storedKey)) return { cited: false, refusal: null };
+  const newKey = compiled.record.doi?.trim().toLowerCase() ?? null;
+  const refusal =
+    compiled.draft || newKey !== storedKey
+      ? `The CV cites this paper by DOI ${storedKey} (content/cv/publications.md), so it must stay published with that DOI. ` +
+        "Remove the reference from the CV first, or keep the paper published."
+      : null;
+  return { cited: true, refusal };
+}
+
 /** Whether a stored file is a draft, read from the file itself, the only authority. */
 export function fileIsDraft(raw: string) {
   return parsePublication({ file: "", raw }).data.draft === true;
@@ -239,6 +261,9 @@ export async function savePublication(
     priorRaw: existing?.content ?? null,
     isDraft: fileIsDraft,
   });
+
+  const cv = await cvCitation(env, slug, compiled);
+  if (cv.refusal) throw new PublicationInvalid(slug, [cv.refusal]);
 
   const tag = actor.kind === "operator" ? ` [operator:${actor.id}]` : actor.kind === "carrel" ? ` [carrel:${actor.changeId}]` : "";
   // After the gate, so a file that fails validation is still refused even when it is unchanged.
@@ -280,6 +305,12 @@ export async function savePublication(
     write: async () => {
       await writePublicationRow(env, compiled);
       purged = await purgePublications(`save_publication ${slug}`);
+      // The CV is joined to this paper at read time, so its page reads the new row already; its search
+      // records and its cache are what a save has to refresh.
+      if (cv.cited) {
+        await refreshCvSearch(env);
+        purged = combinePurges(purged, await purgeCv(`save_publication ${slug}`));
+      }
     },
     // Nothing kept in KV for a publication: the thrown error names the commit and the repair (the content
     // sync), and the next ship's sync converges the row from the repository anyway.

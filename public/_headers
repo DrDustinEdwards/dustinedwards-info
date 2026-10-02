@@ -28,12 +28,7 @@
 # (app/routes/publications.$slug[.md].ts), which sets its own cache, tag, noindex and canonical headers in code,
 # so a save through Carrel reaches it with no deploy. A rule here would be a stale copy of them.
 
-# The Research, Teaching and Software page twins are NOT here: they are served from D1 by
-# app/routes/content-page[.md].ts (docs/PAGES.md), which sets its headers in code, as every routed twin does. A static
-# file at one of those addresses would win over that route, so none is written. The CV is generated from
-# data, has no row, and stays a static asset, so its rule stays.
-# noindex so the HTML page is the one that ranks. The link is relative, like the paper rule.
-/cv.md
-  Cache-Control: public, s-maxage=600, stale-while-revalidate=86400
-  X-Robots-Tag: noindex
-  Link: </cv>; rel="canonical"
+# The Research, Teaching and Software page twins and the CV's twin are NOT here: they are served from D1 by
+# app/routes/content-page[.md].ts and app/routes/cv[.md].ts (docs/PAGES.md, docs/CV.md), which set their headers in
+# code, as every routed twin does. A static file at one of those addresses would win over the route, so none is
+# written.

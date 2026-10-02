@@ -358,7 +358,7 @@ for (const { file, post } of posts) {
   }
 }
 for (const page of pages) {
-  const where = page.path === "/cv" ? "app/data/cv.ts (/cv)" : `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
+  const where = page.path === "/cv" ? "content/cv/ (/cv)" : `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
   for (const href of hrefsIn(page.html)) add("pages", { where, href, page: page.path, isPublic: true });
   for (const href of markdownLinks(contentPageMarkdownBody(page))) {
     add("page twins", { where: `${contentPageMarkdownPath(page.path)} (twin)`, href, page: page.path, isPublic: true });

@@ -1,11 +1,11 @@
 /**
- * The CV resolved: app/data/cv.ts joined to the publication records (content/publications/), one flat list
- * every surface renders. The page (app/routes/cv.tsx), the markdown twin (app/lib/cv/markdown.mjs, written by
- * build:content) and the PDF (scripts/build-cv-pdf.mjs, from the twin) all resolve it with `buildCv`, so they
- * cannot say different things. Pure and clock-free, so the twin and the PDF fingerprint are reproducible.
+ * The CV resolved: the files in content/cv/ (assembled by app/lib/cv/compile.mjs) joined to the publication
+ * records, one flat list every surface renders. The page (app/routes/cv.tsx), the markdown twin
+ * (app/lib/cv/markdown.mjs, served by app/routes/cv[.md].ts) and the PDF (scripts/build-cv-pdf.mjs, from the
+ * twin) all resolve it with `buildCv`, so they cannot say different things. Pure and clock-free, so the twin and
+ * the PDF fingerprint are reproducible.
  */
 
-import { CV_EDITION, CV_ENTRIES, CV_PERSON, CV_PRESENTATIONS } from "../../data/cv.ts";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { decodeEntities } from "../publications/entities.mjs";
 import { paperPath, paperPdfPath } from "../publications/paths.mjs";
@@ -13,11 +13,12 @@ import { areaLabel, foldText, formatDollars, roleLabel, typeLabel } from "./view
 
 export { formatDollars };
 
-/** @typedef {import("../../data/cv.ts").CvType} CvType */
-/** @typedef {import("../../data/cv.ts").CvArea} CvArea */
-/** @typedef {import("../../data/cv.ts").CvRole} CvRole */
-/** @typedef {import("../../data/cv.ts").CvLink} CvLink */
-/** @typedef {import("../../data/cv.ts").CvSourceEntry} CvSourceEntry */
+/** @typedef {import("./types.ts").CvType} CvType */
+/** @typedef {import("./types.ts").CvArea} CvArea */
+/** @typedef {import("./types.ts").CvRole} CvRole */
+/** @typedef {import("./types.ts").CvLink} CvLink */
+/** @typedef {import("./types.ts").CvSourceEntry} CvSourceEntry */
+/** @typedef {import("./types.ts").CvSource} CvSource */
 /** @typedef {import("../publications/types.ts").Publication} Publication */
 /** @typedef {import("../publications/types.ts").TopicId} TopicId */
 
@@ -342,14 +343,15 @@ function resolveOne(source, byDoi) {
 }
 
 /**
+ * @param {CvSourceEntry[]} sources
  * @param {Publication[]} publications
  * @returns {CvEntry[]}
  */
-function resolveAll(publications) {
+function resolveAll(sources, publications) {
   /** @type {Map<string, Publication>} */
   const byDoi = new Map(publications.flatMap((p) => (p.doi ? [[p.doi.toLowerCase(), p]] : [])));
   const seen = new Map();
-  return CV_ENTRIES.map((source) => {
+  return sources.map((source) => {
     const entry = resolveOne(source, byDoi);
     const stem = `${entry.type}-${entry.year ?? "undated"}-${slugify(entry.title)}`;
     const n = (seen.get(stem) ?? 0) + 1;
@@ -370,15 +372,16 @@ function resolveAll(publications) {
 }
 
 /**
- * @param {Publication[]} publications the published records, from the build (scripts/lib/publications.mjs) or
- *   the generated records file the CV page imports (app/lib/cv/current.ts)
+ * @param {CvSource} source what the files state (assembleCvSource)
+ * @param {Publication[]} publications the published records: D1's (app/db/cv.ts) or the build's
+ *   (scripts/lib/publications.mjs)
  */
-export function buildCv(publications) {
+export function buildCv(source, publications) {
   return {
-    edition: CV_EDITION,
-    person: CV_PERSON,
-    presentations: CV_PRESENTATIONS,
-    entries: resolveAll(publications),
+    edition: source.edition,
+    person: source.person,
+    presentations: source.presentations,
+    entries: resolveAll(source.entries, publications),
   };
 }
 

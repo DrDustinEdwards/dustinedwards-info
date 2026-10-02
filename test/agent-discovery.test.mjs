@@ -1,8 +1,6 @@
-// The research and teaching page twins are static assets: the Worker never runs for them, so their canonical Link
-// comes from public/_headers, and test/worker/agent-discovery.test.ts cannot see it. This resolves the rule the way
-// Workers Assets does (one splat, greedy, `:splat` substituted into the value) for every page twin, and checks it
-// names that page. The paper twins are a Worker route since publications moved to D1 (their headers are code, and
-// test/worker/agent-discovery.test.ts holds them), so this file asserts they have no rule here to shadow it.
+// What public/_headers still declares, resolved the way Workers Assets does (one splat, greedy, `:splat`
+// substituted into the value). The page twins and the paper twins are Worker routes since they moved to D1 (their
+// headers are code, and test/worker/*.test.ts hold them), so this file asserts they have no rule here to shadow it.
 
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
@@ -61,16 +59,14 @@ test("no header rule names the paper twins, which are a route now and set their 
   assert.equal(headersFor("/research/publications/10-1128-mra-00888-24.md").size, 0);
 });
 
-// The other page twins are a route, drawn from D1 (docs/PAGES.md); test/worker/pages.test.ts asserts their headers.
-test("every static page twin (the pages generated from data) names its HTML page", () => {
+// Every page twin is a route, drawn from D1 (docs/PAGES.md, docs/CV.md): test/worker/pages.test.ts and
+// test/worker/cv.test.ts assert their headers. The CV's was the last static one, so no page twin has a file or a rule.
+test("no page twin is a static file or a header rule: each is a route that sets its own headers", () => {
   assert.ok(CONTENT_PAGES_FROM_DATA.length > 0);
   for (const pagePath of CONTENT_PAGES_FROM_DATA) {
-    const headers = headersFor(contentPageMarkdownPath(pagePath));
-    assert.equal(headers.get("link"), `<${pagePath}>; rel="canonical"`, pagePath);
-    assert.equal(headers.get("x-robots-tag"), "noindex", pagePath);
-    const file = join(root, "public", contentPageMarkdownPath(pagePath).slice(1));
-    assert.equal(existsSync(file), true, `${file} is missing. Run build:content.`);
-    assert.ok(readFileSync(file, "utf8").startsWith("# "), pagePath);
+    const twin = contentPageMarkdownPath(pagePath);
+    assert.equal(headersFor(twin).size, 0, `a rule for ${twin} is a stale copy of what its route sets`);
+    assert.equal(existsSync(join(root, "public", twin.slice(1))), false, `public${twin} would win over its route`);
   }
 });
 

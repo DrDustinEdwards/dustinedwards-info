@@ -17,7 +17,7 @@ import Publications, { loader as publicationsLoader } from "~/routes/publication
 import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
 
 import { renderRoute, routeContext } from "./route-helpers";
-import { seedPages, seedPublications } from "./seed";
+import { seedCv, seedPages, seedPublications } from "./seed";
 
 /*
  * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE (2026-09-29). Each page is rendered
@@ -137,7 +137,7 @@ async function pages(): Promise<Page[]> {
   }
   {
     const request = new Request(`${SITE_ORIGIN}/cv`);
-    const loaderData = cvLoader({ request, params: {}, context: context() } as never);
+    const loaderData = await cvLoader({ request, params: {}, context: context() } as never);
     out.push({ path: "/cv", html: renderRoute("/cv", Cv, { loaderData }) });
   }
   {
@@ -204,6 +204,7 @@ function visibleTrail(html: string): Array<{ name: string; href: string | null }
 await applyD1Migrations(env.DB, (env as unknown as { TEST_D1_MIGRATIONS: never }).TEST_D1_MIGRATIONS);
 const PAPER_COUNT = await seedPublications();
 await seedPages();
+await seedCv();
 const rendered = await pages();
 
 describe("every JSON-LD block on the pages", () => {

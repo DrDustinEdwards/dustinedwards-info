@@ -1,11 +1,12 @@
 /**
  * The CV as markdown, from the same resolved entries the page renders (app/lib/cv/entries.mjs).
- * build:content turns it into the /cv.md twin through the content-page pipeline, and
- * scripts/build-cv-pdf.mjs renders the same markdown into the PDF, so the three surfaces say the same
- * thing. Traditional order and no filtering: this is the version a committee reads start to finish.
+ * app/routes/cv[.md].ts serves it as the /cv.md twin (cvTwin), build:content compiles it for the search records,
+ * and scripts/build-cv-pdf.mjs renders the same markdown into the PDF, so the surfaces say the same thing.
+ * Traditional order and no filtering: this is the version a committee reads start to finish.
  */
 
 import { ORGANISM_PATTERN } from "../../data/organisms.ts";
+import { contentPageMarkdownBody } from "../content-pages.mjs";
 import { CV_PAGE, CV_PDF_PATH, formatDollars } from "./entries.mjs";
 import { TYPES } from "./view.mjs";
 
@@ -144,4 +145,14 @@ export function cvMarkdownDocument(CV) {
     "",
   ].join("\n");
   return `${fm}${cvMarkdownBody(CV)}`;
+}
+
+/**
+ * The twin a machine reads at /cv.md: the title, then the body, as every page's twin is made
+ * (contentPageMarkdownBody), so the CV answers as the other pages do.
+ *
+ * @param {import("./entries.mjs").Cv} CV the resolved CV (buildCv)
+ */
+export function cvTwin(CV) {
+  return contentPageMarkdownBody({ path: CV_PAGE.path, title: CV_PAGE.title, markdown: cvMarkdownBody(CV) });
 }

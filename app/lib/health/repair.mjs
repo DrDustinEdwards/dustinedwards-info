@@ -13,6 +13,7 @@ export const REPAIRABLE = /** @type {const} */ ({
   "publications-drift": "sync_publications",
   // Reads nothing the Ask upload reads; listed with the file-derived stores.
   "llms-drift": "sync_llms",
+  "cv-drift": "sync_cv",
   "ask-index-drift": "sync_ask",
   "media-index-drift": "sync_media",
   // Order-independent. backup_media only copies and has no delete branch, which is why it may fire unattended.

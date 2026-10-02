@@ -6,9 +6,9 @@
  * carries none of it; each side hands in `Facts`.
  */
 
-/** @typedef {import("../../data/cv.ts").CvType} CvType */
-/** @typedef {import("../../data/cv.ts").CvArea} CvArea */
-/** @typedef {import("../../data/cv.ts").CvRole} CvRole */
+/** @typedef {import("./types.ts").CvType} CvType */
+/** @typedef {import("./types.ts").CvArea} CvArea */
+/** @typedef {import("./types.ts").CvRole} CvRole */
 
 /**
  * @typedef {object} Facts what filtering, grouping and counting read from an entry

@@ -11,18 +11,17 @@ import {
   CONTENT_PAGE_PATHS,
   CONTENT_PAGES_FROM_DATA,
   contentPageFile,
-  contentPageMarkdownBody,
-  contentPageMarkdownPath,
   contentPageSearchInputs,
 } from "../app/lib/content-pages.mjs";
-import { buildCv } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
+import { CV_DIR } from "../app/lib/cv/parse.mjs";
 import { compilePage, pageSlug } from "../app/lib/pages/compile.mjs";
 import { findWideDashes, renderBody, withBacklinks, withRelated } from "../app/lib/content/pipeline.mjs";
 import { ContentError, renderPost } from "./lib/content.mjs";
+import { buildCvFrom, CV_ARTIFACT_PATH } from "./lib/cv.mjs";
 import { isMain } from "./lib/is-main.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
-import { buildPublications, PUBLICATIONS_ARTIFACT_PATH, PUBLICATION_RECORDS_PATH } from "./lib/publications.mjs";
+import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 
 /**
  * The paths below stay repo-relative because they name files in messages and in the render; every
@@ -48,8 +47,8 @@ export const PAGES_ARTIFACT_PATH = path.join("content", "generated", "pages.json
  * The Research, Teaching and Software pages, compiled the one way the page save (app/lib/pages/save.server.ts) compiles
  * them (app/lib/pages/compile.mjs): a refused link, a missing field or a broken invariant fails the build
  * instead of shipping an empty tag. Every file must be one of CONTENT_PAGE_PATHS and every path must have
- * its file, so routes, sitemap and pages cannot drift. The CV is generated from data and compiled by the
- * same door, but has no row in D1.
+ * its file, so routes, sitemap and pages cannot drift. The CV is generated from content/cv/ (docs/CV.md) and
+ * compiled by the same door, but has no row in the pages table: its rows are the cv table's (buildCvRows).
  *
  * @typedef {import("../app/lib/pages/compile.mjs").CompiledPage & { draft: boolean }} BuiltPage
  * @typedef {{ page: BuiltPage, compiled: Extract<Awaited<ReturnType<typeof compilePage>>, { ok: true }>, name: string }} BuiltSource
@@ -86,7 +85,7 @@ async function compilePages() {
   }
   for (const pagePath of CONTENT_PAGES_FROM_DATA) {
     if (pagePath !== "/cv") throw new Error(`build:content has no generator for ${pagePath}.`);
-    sources.push({ name: contentPageFile(pagePath), file: path.join("app", "data", "cv.ts"), raw: cvMarkdownDocument(buildCv((await publications()).records)), generated: true });
+    sources.push({ name: contentPageFile(pagePath), file: CV_DIR, raw: cvMarkdownDocument((await cvBuild()).cv), generated: true });
   }
 
   /** @type {BuiltSource[]} */
@@ -137,6 +136,20 @@ export async function buildPages() {
       sourceBlobSha: compiled.sourceBlobSha,
     }))
     .sort((a, b) => a.path.localeCompare(b.path));
+}
+
+/** @type {ReturnType<typeof buildCvFrom> | undefined} */
+let compiledCv;
+
+/** Compiled once per run, against the same publication records the papers' rows come from. */
+async function cvBuild() {
+  compiledCv ??= publications().then(({ records }) => buildCvFrom(records));
+  return compiledCv;
+}
+
+/** The rows sync:content writes into D1's cv table: one per file in content/cv/, as the CV save would write it. */
+export async function buildCvRows() {
+  return (await cvBuild()).rows;
 }
 
 /** @type {ReturnType<typeof buildPublications> | undefined} */
@@ -307,61 +320,54 @@ async function main() {
   await writeFile(fromRoot(ABOUT_ARTIFACT_PATH), about, "utf8");
 
   // The pages' rows, which sync:content writes to D1; their pages and twins are drawn from there
-  // (docs/PAGES.md). Only the CV's twin is still a file, because the CV is generated from data.
+  // (docs/PAGES.md). No twin is a file now: the CV's is drawn from the cv table (docs/CV.md).
   const pageRows = await buildPages();
   await writeFile(fromRoot(PAGES_ARTIFACT_PATH), `${JSON.stringify({ pages: pageRows }, null, 2)}\n`, "utf8");
-  await writeContentPageTwins(await renderContentPages());
+  await pruneStaleContentTwins();
 
   // The procedures' rows, which sync:content writes to D1; their pages and twins are drawn from there.
   const { rows } = await procedures();
   await writeFile(fromRoot(PROCEDURES_ARTIFACT_PATH), `${JSON.stringify({ procedures: rows }, null, 2)}
 `, "utf8");
 
-  // The papers' rows, which sync:content writes to D1, and the published records alone, which the CV page
-  // imports. Both come from the compile the search records and the CV markdown above came from.
+  // The papers' rows, which sync:content writes to D1, from the compile the search records came from.
   const compiled = await publications();
   await writeFile(fromRoot(PUBLICATIONS_ARTIFACT_PATH), `${JSON.stringify({ publications: compiled.rows }, null, 2)}
 `, "utf8");
-  await writeFile(fromRoot(PUBLICATION_RECORDS_PATH), `${JSON.stringify({ records: compiled.records }, null, 2)}
+
+  // The CV's rows, which sync:content writes to D1; its page, twin and charts are drawn from there (docs/CV.md).
+  const cvRows = await buildCvRows();
+  await writeFile(fromRoot(CV_ARTIFACT_PATH), `${JSON.stringify({ cv: cvRows }, null, 2)}
 `, "utf8");
 
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ` +
-      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures) and ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications)`,
+      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications) and ${CV_ARTIFACT_PATH} (${cvRows.length} files)`,
   );
 }
 
 /**
- * The twins of the pages in CONTENT_PAGES_FROM_DATA, at `public<path>.md`. Every other page's twin is
- * served from D1 (app/routes/content-page[.md].ts), and a static file at its address would win over that
- * route, so any left from an earlier build is deleted. The paper twins are served from D1
- * (app/routes/publications.$slug[.md].ts), not written here.
- *
- * @param {Awaited<ReturnType<typeof renderContentPages>>} pages
+ * Deletes any page twin an earlier build left under public/. Every page's twin is served from D1
+ * (app/routes/content-page[.md].ts, app/routes/cv[.md].ts), and a static file at its address would win over that
+ * route. The paper twins are served from D1 too (app/routes/publications.$slug[.md].ts) and are left to
+ * check:machine-readable (publications-twins).
  */
-async function writeContentPageTwins(pages) {
-  const generated = pages.filter((page) => CONTENT_PAGES_FROM_DATA.includes(page.path));
-  const expected = new Set(generated.map((page) => contentPageMarkdownPath(page.path)));
-  for (const page of generated) {
-    const rel = contentPageMarkdownPath(page.path).slice(1);
-    const dest = fromRoot(path.join("public", rel));
-    await mkdir(path.dirname(dest), { recursive: true });
-    await writeFile(dest, contentPageMarkdownBody(page), "utf8");
-  }
+async function pruneStaleContentTwins() {
   for (const rootName of ["research", "teaching", "software"]) {
-    await pruneContentTwins(fromRoot(path.join("public", rootName)), `/${rootName}`, expected);
+    await pruneContentTwins(fromRoot(path.join("public", rootName)), `/${rootName}`);
   }
   for (const hub of ["/research.md", "/teaching.md", "/software.md", "/cv.md"]) {
-    if (!expected.has(hub)) await unlink(fromRoot(path.join("public", hub.slice(1)))).catch(() => {});
+    await unlink(fromRoot(path.join("public", hub.slice(1)))).catch((error) => {
+      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "ENOENT") throw error;
+    });
   }
 }
 
 /**
  * @param {string} dir
  * @param {string} urlDir
- * @param {Set<string>} expected
  */
-async function pruneContentTwins(dir, urlDir, expected) {
+async function pruneContentTwins(dir, urlDir) {
   let names;
   try {
     names = await readdir(dir, { withFileTypes: true });
@@ -373,11 +379,10 @@ async function pruneContentTwins(dir, urlDir, expected) {
     const urlPath = `${urlDir}/${entry.name}`;
     if (entry.isDirectory()) {
       if (urlPath === "/research/publications") continue;
-      await pruneContentTwins(path.join(dir, entry.name), urlPath, expected);
+      await pruneContentTwins(path.join(dir, entry.name), urlPath);
       continue;
     }
-    if (!entry.name.endsWith(".md") || expected.has(urlPath)) continue;
-    await unlink(path.join(dir, entry.name));
+    if (entry.name.endsWith(".md")) await unlink(path.join(dir, entry.name));
   }
 }
 

@@ -5,6 +5,7 @@ import {
   askDriftVerdict,
   contentDriftVerdict,
   procedureDriftVerdict,
+  cvDriftVerdict,
   pageDriftVerdict,
   publicationDriftVerdict,
   llmsDriftVerdict,
@@ -18,6 +19,7 @@ import { listDirectory, listPostFiles } from "~/lib/editor/github.server";
 import { PROCEDURES_DIR } from "~/lib/procedures/parse.mjs";
 import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { LLMS_PATH, LLMS_SETTING_KEY } from "~/lib/llms/validate.mjs";
+import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
@@ -61,6 +63,16 @@ export async function readPageSides(env: Env & { GITHUB_TOKEN?: string }) {
   const rows = await env.DB.prepare(
     "SELECT slug, path, source_blob_sha FROM pages",
   ).all<{ slug: string; path: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/** The same two sides for the CV: `content/cv/*.md` and the cv table's rows. */
+export async function readCvSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = await listMarkdownFiles(env, CV_DIR);
+  const rows = await env.DB.prepare("SELECT slug, source_blob_sha FROM cv").all<{
+    slug: string;
+    source_blob_sha: string | null;
+  }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -144,6 +156,14 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // A page edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readPageSides(env);
       return pageDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("cv-drift", async () => {
+      // A CV file edited through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readCvSides(env);
+      return cvDriftVerdict(files, rows);
     }),
   );
 
