@@ -102,8 +102,8 @@ export const COLOPHON_SECTIONS = /** @type {const} */ ([
     id: "run",
     title: "How the site is run",
     lead:
-      "Two other systems of mine sit behind this one. Neither is part of this " +
-      "repository.",
+      "Three other systems of mine sit behind or beside this one. None is part " +
+      "of this repository.",
   },
   {
     id: "not-adopted",
@@ -173,6 +173,18 @@ export const CARREL_SENTENCE =
 export const CARREL_SENTENCE_REST = CARREL_SENTENCE.slice(CARREL_NAME.length);
 
 export const CAPSID_REPO_URL = "https://github.com/DrDustinEdwards/capsid";
+
+/**
+ * Capsomer's one sentence. Its name links to its public site, which answers 200 (checked 2026-10-02).
+ * Capsid's public site, capsid.dustinedwards.info, did not answer then, so Capsid keeps its repository
+ * link until it does (job_a8f7cfc629de).
+ */
+export const CAPSOMER_NAME = "Capsomer";
+export const CAPSOMER_URL = "https://capsomer.dustinedwards.info";
+export const CAPSOMER_SENTENCE = "Capsomer is the shared design system this site will adopt.";
+
+/** The sentence after its linked name, which is how the page renders it. */
+export const CAPSOMER_SENTENCE_REST = CAPSOMER_SENTENCE.slice(CAPSOMER_NAME.length);
 
 export const COLOPHON_ANCHORS = COLOPHON_SECTIONS.map((s) => s.id);
 
@@ -254,7 +266,7 @@ function colophonPageInput(stack, features) {
       return AI_DISCLOSURE.join(" ");
     }
     if (id === "run") {
-      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}.`;
+      return `${SITE_OPERATION.join(" ")} ${CARREL_SENTENCE} Capsid's source is public at ${CAPSID_REPO_URL}. ${CAPSOMER_SENTENCE} Its site is ${CAPSOMER_URL}.`;
     }
     if (id === "not-adopted") {
       // The label, never `n.status`: the page shows the label, so the index must.
