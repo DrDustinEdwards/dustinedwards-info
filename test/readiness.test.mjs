@@ -153,8 +153,17 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
   assert.match(misses[0], /expected 121, present 120/, "the counts the wire carries are the triage");
   assert.deepEqual(
     converged.sort(),
-    ["content-drift", "cv-drift", "llms-drift", "media-index-drift", "pages-drift", "procedures-drift", "publications-drift"],
-    "the seven that did converge are reported converged, not silent",
+    [
+      "content-drift",
+      "cv-drift",
+      "dictionary-drift",
+      "llms-drift",
+      "media-index-drift",
+      "pages-drift",
+      "procedures-drift",
+      "publications-drift",
+    ],
+    "the eight that did converge are reported converged, not silent",
   );
 });
 

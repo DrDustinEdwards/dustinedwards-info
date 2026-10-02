@@ -29,7 +29,7 @@ import llmsTxt from "../../content/llms.txt?raw";
 import isolation from "../../content/procedures/phage-isolation.md?raw";
 
 import { post } from "./fixtures";
-import { seedPages, seedPublications } from "./seed";
+import { seedDictionary, seedPages, seedPublications } from "./seed";
 import { routeContext, throughMiddleware } from "./route-helpers";
 import { stubGitHub } from "./github-stub";
 
@@ -90,6 +90,7 @@ beforeAll(async () => {
   await seedPublications();
   // The pages are drawn from D1 (docs/PAGES.md): the rows build:content compiles, as sync:content writes them.
   await seedPages();
+  await seedDictionary();
   /* The row sync:content writes from content/llms.txt; the migrations leave an older seed in its place. */
   await env.DB.prepare(
     "INSERT INTO settings (key, value) VALUES ('llms.txt', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",

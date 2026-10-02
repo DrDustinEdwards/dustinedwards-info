@@ -112,6 +112,13 @@ export const MAP = [
     gates: ["check:content", "check:links", "check:machine-readable", RELATED],
   },
   {
+    /* build:content compiles every entry with these modules and check:links reads the twin it leads; the
+       dictionary save runs the same compile, so a change here changes what a save accepts. */
+    what: "the dictionary system",
+    test: /^(app\/lib\/dictionary\/.+|app\/lib\/dictionary-entries\.mjs|app\/db\/dictionary\.ts|scripts\/lib\/dictionary\.mjs)$/,
+    gates: ["check:content", "check:links", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],

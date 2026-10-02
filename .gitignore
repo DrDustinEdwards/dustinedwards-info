@@ -26,6 +26,7 @@
 # CI's build step, and npm run dev.
 /content/generated/about.json
 /content/generated/pages.json
+/content/generated/dictionary.json
 /content/generated/procedures.json
 
 # The CV's rows, which sync:content writes to D1 (docs/CV.md). Derived from content/cv/ and the publications by

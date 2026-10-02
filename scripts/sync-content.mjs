@@ -12,6 +12,7 @@ import { ogImageKey } from "../app/lib/content/pipeline.mjs";
 import { isPubliclyVisible, statusForDraft } from "../app/lib/search/visibility.mjs";
 import { ARTIFACT_PATH, PAGES_ARTIFACT_PATH, revisedDate } from "./build-content.mjs";
 import { CV_ARTIFACT_PATH } from "./lib/cv.mjs";
+import { DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { citationSeeds, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 
@@ -282,6 +283,30 @@ function buildCvSql(rows) {
       `INSERT INTO cv (slug, type, record, source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ` +
         `${sql(r.type)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET type = excluded.type, record = excluded.record, ` +
+        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `synced_at = excluded.synced_at;`,
+    );
+  }
+  return `${out.join("\n")}\n`;
+}
+
+/**
+ * The dictionary_entries table converged to the repository's files (hard rule 18), on the pages' terms: every
+ * row whose file is gone is deleted, every other row is written from the build's compile, which is the compile
+ * the dictionary save runs. Scoped to file-sourced rows, and never an unscoped delete.
+ *
+ * @param {any[]} rows content/generated/dictionary.json's rows
+ */
+function buildDictionarySql(rows) {
+  if (rows.length === 0) throw new Error("buildDictionarySql refuses to delete every dictionary entry");
+  const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
+  const out = [`DELETE FROM dictionary_entries WHERE source_path NOT IN (${keep});`];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO dictionary_entries (key, path, term, status, record, source_path, source_blob_sha, synced_at) ` +
+        `VALUES (${sql(r.key)}, ${sql(r.path)}, ${sql(r.term)}, ${sql(r.status)}, ${sql(r.record)}, ` +
+        `${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ON CONFLICT(key) DO UPDATE SET ` +
+        `path = excluded.path, term = excluded.term, status = excluded.status, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
         `synced_at = excluded.synced_at;`,
     );
@@ -601,6 +626,21 @@ async function main() {
     "the publications import failed",
   );
   verifyPublications(target, publicationRows);
+
+  // Dictionary entries before the pages: the page lead is drawn from this table, and the pages' twins and search
+  // records below were compiled with these same entries.
+  const dictionaryRows = JSON.parse(await readFile(DICTIONARY_ARTIFACT_PATH, "utf8")).dictionary;
+  if (!Array.isArray(dictionaryRows) || dictionaryRows.length === 0) {
+    throw new Error(`${DICTIONARY_ARTIFACT_PATH} carries no dictionary entries. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${dictionaryRows.length} dictionary entries`);
+  await applySql(
+    target,
+    path.join(dir, "sync-dictionary.sql"),
+    buildDictionarySql(dictionaryRows),
+    `sync:content dictionary import (${target})`,
+    "the dictionary import failed",
+  );
 
   // Pages likewise: the table first, so a failure names the pages, and the index then carries the page
   // records the table now matches.

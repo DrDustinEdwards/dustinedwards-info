@@ -174,6 +174,17 @@ export function procedureDriftVerdict(files, rows) {
 }
 
 /**
+ * The same comparison for the dictionary entry files and the dictionary_entries table.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function dictionaryDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "Dictionary", noun: "dictionary entry", tool: "sync_dictionary" });
+}
+
+/**
  * The same comparison for the page files and the pages table.
  *
  * @param {Array<{ slug: string, sha: string }>} files

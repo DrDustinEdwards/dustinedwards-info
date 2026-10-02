@@ -161,7 +161,7 @@
     "app/lib/search/records.mjs",
     // The Research and Teaching page list, which scripts/build-content.mjs validates against.
     "app/lib/content-pages.mjs",
-    // The dictionary entries on the named software pages, which content-pages.mjs reads for the twin.
+    // How a dictionary entry reads in a twin, a search record and the DefinedTerm, which content-pages.mjs leads with.
     "app/lib/dictionary-entries.mjs",
     // The CV: its source types, the validator, the compile door, the resolved entries and the markdown.
     // build:content, sync:content and build:cv-pdf run the SAME modules the route renders and the save
@@ -346,6 +346,10 @@
     "app/lib/pages/links.mjs",
     // The llms.txt rules, shared by check:machine-readable and the llms.txt save (docs/LLMS.md).
     "app/lib/llms/validate.mjs",
+    // The dictionary entries that open named Software pages: parsed and judged by one door the build, the sync and
+    // the Carrel adapter all call (docs/DICTIONARY.md). The page compile leads a twin with the entry.
+    "app/lib/dictionary/parse.mjs",
+    "app/lib/dictionary/compile.mjs",
     "app/lib/phage-table.mjs",
     "app/lib/phage-tools.mjs"
   ],

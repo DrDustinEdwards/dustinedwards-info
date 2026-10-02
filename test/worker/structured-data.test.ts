@@ -17,7 +17,7 @@ import Publications, { loader as publicationsLoader } from "~/routes/publication
 import Paper, { loader as paperLoader } from "~/routes/publications.$slug";
 
 import { renderRoute, routeContext } from "./route-helpers";
-import { seedCv, seedPages, seedPublications } from "./seed";
+import { seedCv, seedDictionary, seedPages, seedPublications } from "./seed";
 
 /*
  * EVERY JSON-LD BLOCK THE PAGES EMIT, PARSED AND HELD TO ITS TYPE (2026-09-29). Each page is rendered
@@ -205,6 +205,7 @@ await applyD1Migrations(env.DB, (env as unknown as { TEST_D1_MIGRATIONS: never }
 const PAPER_COUNT = await seedPublications();
 await seedPages();
 await seedCv();
+await seedDictionary();
 const rendered = await pages();
 
 describe("every JSON-LD block on the pages", () => {
