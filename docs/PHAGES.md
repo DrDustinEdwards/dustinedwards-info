@@ -49,8 +49,8 @@ file the save accepts and the page draws. It refuses:
 - a name that is not letters and digits, or whose lower-case form is not the file's name;
 - a year outside 2000 to 2099, a host that is not one of the two, a county that is not a Texas county or `Texas`;
 - a PhagesDB record that is not in PhagesDB's name format, or that is not this phage's own (it must equal the name
-  apart from case, so a same-named phage of another lab cannot be linked; `SoftSoap` links `Softsoap`, which is
-  PhagesDB's own spelling);
+  apart from case, so a same-named phage of another lab cannot be linked; `Softsoap` is PhagesDB's own
+  spelling);
 - a paper whose file is not in `content/publications/` (the save asks the repository, as CI does), and a note that
   is not one plain sentence with no link or markdown character;
 - a body, and a wide dash.
@@ -63,9 +63,9 @@ is exactly the order the old table was typed in.
 
 Verified 2026-09-29 against `https://phagesdb.org/api/phages/<name>/` (200 JSON for a record, 404 otherwise), one
 request at a time. The API matches a name case-insensitively, so a 200 is only this phage's record when PhagesDB's
-own spelling, institution and year agree. Three phages carry `phagesdb: null` although the API answered 200,
-because the record is another lab's phage of the same name (`JayKay`, `Astrid`); `Phambo` is null on a 404, and
-PhagesDB has a near match, `Fambo` (this lab, 2022), for Dustin to confirm before the record is set. The site never
+own spelling, institution and year agree. Dustin's ruling (#291, 2026-10-02) fixed the set at the 75 Tarleton State University phages on PhagesDB, spelled
+as PhagesDB spells them, each linked to its record. PhagesDB gives a city and not a county, so a phage whose county
+is not already on record (`Fambo`, `Puckett`, `Squally`) carries `county: null` until Dustin supplies one. The site never
 calls PhagesDB at runtime; re-verify by hand and edit the file.
 
 ## How the page relates to the rows

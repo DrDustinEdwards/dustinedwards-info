@@ -57,7 +57,7 @@ test("every phage file compiles against the repository's papers, and the set is 
   const files = readdirSync(dir).filter((name) => name.endsWith(".md"));
   assert.equal(files.length, rows.length);
   assert.deepEqual(phageSetErrors(phages), []);
-  assert.equal(phages.length, 80);
+  assert.equal(phages.length, 75);
 });
 
 test("the files are in the page's order: year, then name, with the slug the name in lower case", () => {
@@ -80,12 +80,12 @@ test("a row and a section say what the page has always said", () => {
     "### Ryadel\n\nHost: *Mycobacterium smegmatis* mc²155. Found in 2017, Erath County, Texas.\n\n" +
       "[Ryadel on PhagesDB](https://phagesdb.org/phages/Ryadel/). [Genome announcement](/research/publications/10-1128-mra-01594-18/). A manuscript on its cryo-EM structure is submitted.",
   );
-  // Empty cells are empty, a missing host drops its line, and a state-only place reads "Texas".
-  assert.equal(phageTableRow(/** @type {any} */ (by("Astrid"))), "| [Astrid](#astrid) | 2018 |  |  |  |  |");
-  assert.equal(phageSection(/** @type {any} */ (by("Astrid"))), "### Astrid\n\nFound in 2018.");
+  // A county PhagesDB does not give is an empty cell, and a section drops the place.
+  assert.equal(phageTableRow(/** @type {any} */ (by("Fambo"))), "| [Fambo](#fambo) | 2022 | *M. foliorum* |  | [PhagesDB](https://phagesdb.org/phages/Fambo/) |  |");
+  assert.equal(phageSection(/** @type {any} */ (by("Fambo"))).split("\n")[2], "Host: *Microbacterium foliorum*. Found in 2022.");
   assert.equal(phageSection(/** @type {any} */ (by("Lucinda"))).split("\n")[2], "Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Texas.");
-  // SoftSoap's record is spelled Softsoap on PhagesDB: the link text is the phage, the address is the record.
-  assert.match(phageSection(/** @type {any} */ (by("SoftSoap"))), /\[SoftSoap on PhagesDB\]\(https:\/\/phagesdb\.org\/phages\/Softsoap\/\)/);
+  // Softsoap is spelled as PhagesDB spells it: the link text and the address are the record's own.
+  assert.match(phageSection(/** @type {any} */ (by("Softsoap"))), /\[Softsoap on PhagesDB\]\(https:\/\/phagesdb\.org\/phages\/Softsoap\/\)/);
   assert.match(phageSection(/** @type {any} */ (by("Strudel"))), /Found in 2017, Tarrant County, Texas\. Formerly named Jentrie\./);
   assert.ok(phageTableMarkdown(phages).startsWith("| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|\n| [Acorn15](#acorn15)"));
 });
@@ -111,11 +111,12 @@ test("PhagesDB: the record's format, and that it is this phage's own", async () 
   assert.match(await refusal("acorn15", (r) => r.replace(/^phagesdb: .*$/m, "phagesdb: Acorn 15")), /phagesdb is "Acorn 15"/);
   assert.match(await refusal("acorn15", (r) => r.replace(/^phagesdb: .*$/m, "phagesdb: ../etc")), /phagesdb is "\.\.\/etc"/);
   assert.match(await refusal("acorn15", (r) => r.replace(/^phagesdb: .*$/m, "phagesdb: Fambo")), /which is not Acorn15's record/);
-  // SoftSoap's record differs from its name in case alone, which is the same record.
+  // A record equal to the name apart from case is the same record.
   assert.equal((await compile("softsoap", read("softsoap"))).ok, true);
   // A phage with no verified record carries null, and links nothing.
-  assert.equal((await compile("jaykay", read("jaykay"))).ok, true);
-  assert.doesNotMatch(phageTableRow(/** @type {any} */ (phages.find((p) => p.name === "JayKay"))), /phagesdb/);
+  const unlinked = await compile("acorn15", read("acorn15").replace(/^phagesdb: .*$/m, "phagesdb: null"));
+  assert.equal(unlinked.ok, true);
+  assert.doesNotMatch(unlinked.ok ? phageTableRow(unlinked.phage) : "", /phagesdb/);
 });
 
 test("the genome paper is a paper the site holds, and the note is one plain sentence", async () => {
@@ -232,8 +233,7 @@ test("the page states the count and the span its rows give, so an edit that adds
   assert.match(text, new RegExp(`It has ${phages.length} phages found from ${phages[0]?.year} to ${phages[phages.length - 1]?.year}\\.`));
   assert.match(text, new RegExp(`The ${phages.filter((p) => p.year === 2017).length} phages from 2017`));
   assert.match(text, new RegExp(`${phages.filter((p) => p.host === "foliorum").length} of them`));
-  const noHost = phages.filter((p) => p.host === null).length;
-  assert.match(text, noHost === 2 ? /Two phages have no host on record/ : /./);
+  assert.equal(phages.filter((p) => p.host === null).length, 0, "the intro no longer says any phage lacks a host");
 });
 
 test("the hosts the table names are the two the page's prose names", () => {
