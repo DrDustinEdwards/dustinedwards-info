@@ -38,7 +38,7 @@ import { seriesPath } from "../app/lib/series-path.mjs";
 import { postRedirectTarget } from "../app/lib/slug-redirect.mjs";
 import { tagPath } from "../app/lib/tag-path.mjs";
 import { EXPLICIT_ROWS, PROFILE_TARGET, wordpressDisposition } from "../app/lib/wordpress-redirects.mjs";
-import { ABOUT_SOURCE, buildAbout, renderContentPages } from "./build-content.mjs";
+import { renderContentPages, renderOwnRoutePages } from "./build-content.mjs";
 import { buildDictionary } from "./lib/dictionary.mjs";
 import { renderPost } from "./lib/content.mjs";
 import { buildProcedures } from "./lib/procedures.mjs";
@@ -180,8 +180,9 @@ for (const row of procedureRows) {
   renderedIds.set(row.path, ids);
 }
 
-const about = JSON.parse(await buildAbout());
-renderedIds.set("/about", idsIn(about.html));
+// About is a page file with a route of its own (docs/PAGES.md): its ids and its links are read from the same compile.
+const ownRoutePages = await renderOwnRoutePages();
+for (const page of ownRoutePages) renderedIds.set(page.path, idsIn(page.html));
 
 /**
  * Static `id="x"` in a module and the components it imports, and the prefixes of template ids
@@ -374,8 +375,9 @@ for (const row of procedureRows) {
     add("procedure twins", { where: `${row.path}.md (twin)`, href, page: row.path, isPublic: true });
   }
 }
-for (const href of hrefsIn(about.html)) {
-  add("about", { where: ABOUT_SOURCE.split(sep).join("/"), href, page: "/about", isPublic: true });
+for (const page of ownRoutePages) {
+  const where = `content/pages/${page.path.slice(1).replaceAll("/", "-")}.md`;
+  for (const href of hrefsIn(page.html)) add("about", { where, href, page: page.path, isPublic: true });
 }
 
 // The app: route components, menus, footer and data, off the syntax tree.

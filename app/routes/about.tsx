@@ -1,8 +1,14 @@
+import { data } from "react-router";
+
 import { PageShell } from "~/components/page-shell";
+import { getPageByPath } from "~/db/pages";
+import { getAdminSession } from "~/lib/auth.server";
+import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
+import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import { OWNER_PHOTO, SITE, SITE_ORIGIN, pageMeta, profilePageJsonLd, publicHtmlHeaders } from "~/lib/seo";
 
-import about from "../../content/generated/about.json";
+import type { Route } from "./+types/about";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
 import "~/styles/prose.css";
@@ -11,38 +17,52 @@ import "~/styles/about.css";
 const PHOTO_SRC = `/media/${OWNER_PHOTO.key}`;
 
 /**
- * The prose is markdown rendered at build time, so the Worker carries no markdown renderer.
- * The JSON-LD is a ProfilePage whose mainEntity is the home page's Person, by the same `@id`.
+ * The prose is the page's D1 row (docs/PAGES.md): content/pages/about.md, compiled by the one page
+ * compile and rendered by the site's pipeline, so the Worker carries no markdown renderer and an edit
+ * saved through Carrel is live at the next request with no deploy. The layout and the JSON-LD stay here:
+ * only the front matter and the body moved. The JSON-LD is a ProfilePage whose mainEntity is the home
+ * page's Person, by the same `@id`.
  */
 export function headers() {
-  return new Headers(publicHtmlHeaders());
+  // The content pages' tag, so a page save purges it (app/lib/cache-purge.server.ts).
+  return new Headers(publicHtmlHeaders(CONTENT_PAGE_HTML_TAGS));
 }
 
-export function meta() {
-  return pageMeta({
-    title: `${SITE.name} | About the virologist at Tarleton State`,
-    description: about.description,
-    path: "/about",
-  });
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const env = getEnv(context);
+  const row = await getPageByPath(env, "/about");
+  // No row: the content sync has not written it yet. A draft is the signed-in admin's alone, like any page.
+  if (!row) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await getAdminSession(env, request))) throw data(null, { status: 404 });
+  const { title, seoTitle, description, html } = row.record;
+  return { title, seoTitle, description, html, draft: row.status === "draft" };
 }
 
-export default function About() {
+export function meta({ loaderData }: Route.MetaArgs) {
+  if (!loaderData) return [];
+  return [
+    ...pageMeta({ title: loaderData.seoTitle, description: loaderData.description, path: "/about" }),
+    ...(loaderData.draft ? [{ name: "robots", content: "noindex" }] : []),
+  ];
+}
+
+export default function About({ loaderData }: Route.ComponentProps) {
+  const { title, description, html, draft } = loaderData;
   return (
     <PageShell
       trail={
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: serializeJsonLd(
-              profilePageJsonLd(SITE_ORIGIN, { path: "/about", description: about.description }),
-            ),
+            __html: serializeJsonLd(profilePageJsonLd(SITE_ORIGIN, { path: "/about", description })),
           }}
         />
       }
     >
       <header className="page-head">
-        <h1>{about.title}</h1>
+        <h1>{title}</h1>
       </header>
+      {draft ? <p>Draft: only you can see this page.</p> : null}
 
       {/* The same photo the Person record names; the 320 and 640 widths are the thumbnail set /media serves. */}
       <img
@@ -56,8 +76,8 @@ export default function About() {
         fetchPriority="high"
       />
 
-      {/* Build-time HTML from repo markdown, URL allowlist already applied; no third-party input. */}
-      <div className="prose" dangerouslySetInnerHTML={{ __html: about.html }} />
+      {/* The row's HTML: the site's pipeline with the URL allowlist already applied, no third-party input. */}
+      <div className="prose" dangerouslySetInnerHTML={{ __html: html }} />
     </PageShell>
   );
 }

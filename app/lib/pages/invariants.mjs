@@ -195,10 +195,31 @@ function softwareNameErrors({ path, markdown }) {
   return errors;
 }
 
+/** The least HTML About may render: below it the page is a blank one that still looks like a successful build. */
+export const ABOUT_HTML_FLOOR = 200;
+
+/**
+ * About (check:content used to render it twice and hold it to this floor, and check:links held its links):
+ * an empty or near-empty render is a valid row describing a blank page, which is the one failure here that
+ * looks like success.
+ *
+ * @param {InvariantPage} page
+ */
+function aboutErrors({ path, html }) {
+  if (path !== "/about" || html.length >= ABOUT_HTML_FLOOR) return [];
+  return [`the page renders ${html.length} character(s) of HTML, floor ${ABOUT_HTML_FLOOR}; an empty About would ship as a blank page`];
+}
+
 /**
  * @param {InvariantPage} page
  * @returns {string[]}
  */
 export function pageInvariantErrors(page) {
-  return [...calculatorErrors(page), ...calculatorLinkErrors(page), ...phageTableErrors(page), ...softwareNameErrors(page)];
+  return [
+    ...calculatorErrors(page),
+    ...calculatorLinkErrors(page),
+    ...phageTableErrors(page),
+    ...softwareNameErrors(page),
+    ...aboutErrors(page),
+  ];
 }

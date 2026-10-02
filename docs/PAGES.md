@@ -1,4 +1,4 @@
-# Pages: the Research, Teaching and Software prose pages
+# Pages: the Research, Teaching and Software prose pages, and About
 
 The prose pages are files in `content/pages/`, the source with its history (job_dc67fd83c24b). `npm run
 sync:content` and the page save write each into the D1 `pages` table, and the page, its markdown twin, its
@@ -34,6 +34,24 @@ Markdown, rendered by the site's own pipeline with the URL allowlist applied.
 ```
 
 Only what the front matter states reaches the JSON-LD; the page never fills a gap.
+
+## About
+
+About is a page row too (`content/pages/about.md`, path `/about`, slug `about`), not a separate kind: the
+same file format, compile, save, sync, drift check, repair and `page.about` handler carry it, so an About
+edit saved through Carrel is live at the next request with no deploy. What is different is that it has a
+route and a layout of its own (`app/routes/about.tsx`: the photo, the ProfilePage JSON-LD, the page head),
+so its path is in `CONTENT_PAGES_OWN_ROUTE`, not in `CONTENT_PAGE_PATHS`. `PAGE_FILE_PATHS` (both lists) is
+what a file in `content/pages/` may name. That keeps About out of everything the listed pages get: no
+markdown twin, no search record, no social card, no llms.txt rule. Moving it onto D1 changed where its
+prose is kept and nothing a visitor or a machine reads. The only response change is the cache tag, which is
+now `pages,content-pages` so a page save can purge it.
+
+Its front matter is the same as any page's, and `seo_title` is what the page's `<title>` and og:title say
+(it was written in the route before). The shared validator holds it to what check:content and check:links
+held: title, seo_title and description present, the URL allowlist, no wide dash, no image, and at least
+`ABOUT_HTML_FLOOR` characters of rendered HTML (a blank About would otherwise be a successful build). A
+draft About is the signed-in admin's alone and leaves the sitemap; the header menu still links it.
 
 ## What a save cannot do
 
@@ -80,9 +98,9 @@ cache purge by tag (`content-pages`).
 
 | Output | From |
 | --- | --- |
-| The page | `app/routes/content-page.tsx` (and `teaching.tsx`, `software.tsx`), drawn from the D1 row |
+| The page | `app/routes/content-page.tsx` (and `teaching.tsx`, `software.tsx`), drawn from the D1 row; About is `app/routes/about.tsx`, drawn from its row |
 | The markdown twin | `app/routes/content-page[.md].ts`, one route per listed path; the CV's twin is `app/routes/cv[.md].ts` (docs/CV.md) |
-| The sitemap entry | `app/routes/sitemap.ts`, published rows only, in the registry's order |
+| The sitemap entry | `app/routes/sitemap.ts`, published rows only, in the registry's order (About keeps its place among the static paths, listed only while its row is published) |
 | JSON-LD | `contentPageJsonLd`, from the record |
 | Search | `search_docs`, written by the sync and by the page save, from the same compile |
 | The check | `build:content` compiles every file with the save's own validator; `check:links` judges every link |
@@ -98,3 +116,6 @@ earlier build.
 - The first deploy needs the rows in place: apply migration 0021, then `npm run sync:content -- --remote`
   BEFORE the ship, or the prose pages answer 404 between the deploy and the sync. The old Worker ignores the
   table.
+- About moved onto this table later (no migration: the table already existed). Run `npm run sync:content -- --remote`
+  BEFORE the ship that carries it, or `/about` answers 404 between the deploy and the sync. The old Worker serves
+  its own compiled copy, so syncing first is safe.

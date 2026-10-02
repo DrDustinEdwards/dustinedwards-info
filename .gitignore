@@ -17,14 +17,6 @@
 # committed because they are repo facts with no database owner.
 /content/generated/posts.json
 
-# The About page's rendered prose. Ruling 39a's class, and the same argument:
-# it is derived entirely from one tracked source, content/about.md, so
-# committing it would make every comma a two-file change and would put a
-# byte-compare between the writer and the thing he is editing. app/routes/
-# about.tsx imports it statically, so build:content runs before every
-# react-router build that matters: check-all's preflight, ship's build step,
-# CI's build step, and npm run dev.
-/content/generated/about.json
 /content/generated/pages.json
 /content/generated/dictionary.json
 /content/generated/procedures.json

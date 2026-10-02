@@ -63,6 +63,19 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
 export const CONTENT_PAGES_FROM_DATA = ["/cv"];
 
 /**
+ * The pages that have a file in content/pages/, a row in the pages table and the page save, but whose
+ * route, layout and structured data are their own (app/routes/about.tsx, a ProfilePage with its photo). They
+ * are not in CONTENT_PAGE_PATHS, so the research splat, a markdown twin, a search record and the llms.txt
+ * rules never see them: moving About onto D1 changed where its prose is kept and nothing a visitor reads.
+ *
+ * @type {readonly string[]}
+ */
+export const CONTENT_PAGES_OWN_ROUTE = ["/about"];
+
+/** Every path a file in content/pages/ may name: the listed pages and the ones with a route of their own. */
+export const PAGE_FILE_PATHS = /** @type {readonly string[]} */ ([...CONTENT_PAGE_PATHS, ...CONTENT_PAGES_OWN_ROUTE]);
+
+/**
  * The headings on these pages that the header menus link to by anchor, as `path#id`. A menu shows a
  * section link only once it is listed here, and the build refuses an entry whose page has no heading
  * with that id, so no menu link lands on the top of a page for want of its heading.

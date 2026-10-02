@@ -146,7 +146,7 @@ export const TOOL_DESCRIPTORS: Readonly<
       "page whose file's blob sha differs from its row (or has no row), removes " +
       "rows whose file is gone with their search records, through the same " +
       "compile and write doors a page save uses. A file whose path is not in " +
-      "CONTENT_PAGE_PATHS never makes a row. Refuses an empty file set, and " +
+      "CONTENT_PAGE_PATHS (or About's own, CONTENT_PAGES_OWN_ROUTE) never makes a row. Refuses an empty file set, and " +
       "answers 422 naming any file the validator refuses after converging the " +
       "rest. Idempotent. A read-back reconciliation: expected, present, and a " +
       "converged verdict.",
