@@ -105,6 +105,13 @@ export const MAP = [
     gates: ["check:machine-readable", "check:links", RELATED],
   },
   {
+    /* content/cv/ is a content path above; build:content compiles it with these modules, check:links reads
+       the result and check:machine-readable reads the twin, and the CV save runs the same compile. */
+    what: "the CV system",
+    test: /^(app\/lib\/cv\/.+|app\/db\/cv\.ts|scripts\/lib\/cv\.mjs|scripts\/build-cv-pdf\.mjs)$/,
+    gates: ["check:content", "check:links", "check:machine-readable", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],

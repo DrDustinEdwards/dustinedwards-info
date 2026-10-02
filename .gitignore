@@ -28,6 +28,10 @@
 /content/generated/pages.json
 /content/generated/procedures.json
 
+# The CV's rows, which sync:content writes to D1 (docs/CV.md). Derived from content/cv/ and the publications by
+# build:content, on the same footing as pages.json.
+/content/generated/cv.json
+
 # The colophon's stack data. Same class as posts.json, and it became one on
 # 2026-09-08 (ruling 39a): it is derived entirely from tracked sources
 # (package.json, wrangler.jsonc.example, drizzle/, .nvmrc, stack-notes.json),
@@ -39,19 +43,14 @@
 /content/generated/stack.json
 
 # The generated publication artifacts: the rows sync:content writes to D1 (twins and raw Crossref records
-# included) and the published records the CV page imports. Derived from content/publications/ by build:content, so
+# included). Derived from content/publications/ by build:content, so
 # committing them would make every corpus change a three-file change that only a machine could complete.
 /content/generated/publications.json
-/content/generated/publication-records.json
 
 # The paper twins were files here until publications moved to D1 (a Worker route serves them now). A checkout that
 # built them before the move still has them, ignored, and the asset handler would serve them ahead of the route,
 # so check:machine-readable refuses any that remain (publications-twins). Delete them; nothing writes them now.
 /public/research/publications/*.md
-
-# The CV twin, written by build:content from app/data/cv.ts. Every other page twin is served from D1
-# (docs/PAGES.md) and has no file; build:content deletes a stale one, which would win over the route.
-/public/cv.md
 
 # Claude Code. settings.json is committed; the local override never is.
 .claude/settings.local.json

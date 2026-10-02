@@ -1,7 +1,9 @@
 // The CV's PDF, public/dustin-edwards-cv.pdf, rendered from the same markdown as the /cv.md twin
 // (app/lib/cv/markdown.mjs), through the site's markdown pipeline, by the headless Chrome the browser
 // gate already uses. Committed, like the diagram SVGs and the paper PDFs, because a Worker cannot run
-// Chrome: the build that deploys only copies it. It prints the twin's fingerprint on its last page, and
+// Chrome: the build that deploys only copies it. The CV is drawn from D1 now (docs/CV.md), but the PDF is not:
+// a CV save leaves it stale until this is run, which is the dependency docs/CV.md "The PDF" lays out.
+// renderHtml and renderPdf take a resolved CV, so a runtime that holds one can render it without this script. It prints the twin's fingerprint on its last page, and
 // test/cv.test.mjs reads that back out of the committed file, so a CV change nobody re-rendered the PDF
 // for fails CI instead of shipping a stale PDF.
 //
@@ -19,7 +21,7 @@ import { cvMarkdownBody, cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
 import { renderBody } from "../app/lib/content/pipeline.mjs";
 import { OWNER_ORCID, SITE_ORIGIN } from "../app/lib/seo.ts";
 import { isMain } from "./lib/is-main.mjs";
-import { loadCv } from "./lib/publications.mjs";
+import { loadCv } from "./lib/cv.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const CV_PDF_DISK_PATH = path.join(ROOT, "public", ...CV_PDF_PATH.slice(1).split("/"));
@@ -73,10 +75,16 @@ em { font-style: italic; }
 .fingerprint { margin-top: 18pt; font-family: "Inter", Arial, sans-serif; font-size: 7.5pt; color: #6a6159; }
 `;
 
-export async function renderHtml() {
-  const CV = await loadCv();
+/**
+ * The print document for a resolved CV: the letterhead, the twin's markdown through the site's pipeline, the fonts
+ * inlined, and the fingerprint. A function of the CV alone, so whatever holds a CV (this script from the files, or
+ * a runtime from D1) renders the same page.
+ *
+ * @param {import("../app/lib/cv/entries.mjs").Cv} CV
+ */
+export async function renderHtml(CV) {
   const rendered = await renderBody({
-    file: "app/data/cv.ts",
+    file: "content/cv",
     body: cvMarkdownBody(CV, { pdf: true }),
     resolveImage: async (src) => {
       throw new Error(`the CV references an image (${src}) and its PDF has no image pipeline.`);
@@ -107,15 +115,21 @@ ${rendered.html}
 </body></html>`;
 }
 
-async function main() {
-  const CV = await loadCv();
-  const html = await renderHtml();
+/**
+ * The PDF bytes for a resolved CV, through the headless Chrome the browser gate already uses. The only step that
+ * needs a browser, so it is the one a follow-up moves to wherever a browser runs.
+ *
+ * @param {import("../app/lib/cv/entries.mjs").Cv} CV
+ * @returns {Promise<Uint8Array>}
+ */
+export async function renderPdf(CV) {
+  const html = await renderHtml(CV);
   const browser = await puppeteer.launch({ headless: true });
   try {
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: "load" });
     await page.evaluateHandle("document.fonts.ready");
-    const pdf = await page.pdf({
+    return await page.pdf({
       format: "Letter",
       printBackground: true,
       preferCSSPageSize: true,
@@ -125,11 +139,16 @@ async function main() {
       tagged: true,
       outline: true,
     });
-    await writeFile(CV_PDF_DISK_PATH, pdf);
-    console.log(`build:cv-pdf wrote ${path.relative(ROOT, CV_PDF_DISK_PATH)} (${pdf.length} bytes, ${FINGERPRINT_LABEL} ${cvFingerprint(CV)})`);
   } finally {
     await browser.close();
   }
+}
+
+async function main() {
+  const CV = await loadCv();
+  const pdf = await renderPdf(CV);
+  await writeFile(CV_PDF_DISK_PATH, pdf);
+  console.log(`build:cv-pdf wrote ${path.relative(ROOT, CV_PDF_DISK_PATH)} (${pdf.length} bytes, ${FINGERPRINT_LABEL} ${cvFingerprint(CV)})`);
   // A new or changed PDF is a changed public file: the committed manifests follow it.
   console.log("  then: npm run build:assets and npm run build:template-refs, and commit all three.");
 }

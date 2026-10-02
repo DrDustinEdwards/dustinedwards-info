@@ -26,6 +26,7 @@ import {
   syncAsk,
   syncMedia,
   syncLlms,
+  syncCv,
   syncPages,
   syncPosts,
   syncProcedures,
@@ -41,7 +42,9 @@ import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.serv
 import { publicationPath } from "~/lib/publications/parse.mjs";
 import { ProcedureInvalid, readProcedure, saveProcedure } from "~/lib/procedures/save.server";
 import { procedurePath } from "~/lib/procedures/parse.mjs";
+import { listCvRows } from "~/db/cv";
 import { listPageRows } from "~/db/pages";
+import { CvInvalid, readCvFile } from "~/lib/cv/save.server";
 import { PageInvalid, readPage } from "~/lib/pages/save.server";
 import { readLlms } from "~/lib/llms/save.server";
 
@@ -190,6 +193,9 @@ export async function runTool(
       case "sync_pages":
         return await syncPages(env);
 
+      case "sync_cv":
+        return await syncCv(env);
+
       case "sync_publications":
         return await syncPublications(env);
 
@@ -248,6 +254,16 @@ export async function runTool(
 
       case "get_llms":
         return await getLlmsTool(env);
+
+
+      case "list_cv": {
+        const cvRows = await listCvRows(env);
+        const files = cvRows.map(({ record: _record, ...row }) => row);
+        return { ok: true, data: { headSha: await currentHead(env), count: files.length, files } };
+      }
+
+      case "get_cv":
+        return await getCvTool(env, args);
     }
   } catch (error) {
     return translate(error);
@@ -256,7 +272,7 @@ export async function runTool(
 
 function translate(error: unknown): ToolResult {
   // Every message the validator gave, so an agent can fix its own edit; nothing was committed.
-  if (error instanceof ProcedureInvalid || error instanceof PageInvalid) {
+  if (error instanceof ProcedureInvalid || error instanceof PageInvalid || error instanceof CvInvalid) {
     return { ok: false, status: 422, error: error.message, detail: { errors: error.errors } };
   }
 
@@ -476,6 +492,14 @@ async function saveProcedureTool(
   const isNew =
     args.isNew === undefined ? (await readFile(env, procedurePath(parsed.slug))) === null : args.isNew === true;
   return { ok: true, data: await saveProcedure(env, { slug: parsed.slug, raw, expectedHeadSha, isNew, actor }) };
+}
+
+async function getCvTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const slug = String(args.slug ?? "").trim();
+  if (!slug) return { ok: false, status: 400, error: "get_cv requires a slug, such as grants or profile." };
+  const file = await readCvFile(env, slug);
+  if (!file) return { ok: false, status: 404, error: `No file exists for the CV file "${slug}".` };
+  return { ok: true, data: { ...file, headSha: await currentHead(env) } };
 }
 
 async function getPageTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {

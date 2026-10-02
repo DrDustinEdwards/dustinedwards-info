@@ -134,7 +134,7 @@ and the build's artifacts.
 | Search | `search_docs` `paper:<slug>`, written by the save and by `sync:content` |
 | Ask | each published twin, keyed `research/publications/<slug>.md` |
 | The sitemap, the home page | the same rows |
-| The CV page, its PDF and its markdown | `content/generated/publication-records.json`, a snapshot the build writes; the CV page changes with the next deploy, as its PDF does |
+| The CV page, its charts and its markdown | the `publications` table, read per request and joined to the CV by DOI (docs/CV.md), so a corrected paper reaches the CV with no deploy; the CV's search records are rewritten by the save. Its PDF is still rendered at build time |
 
 ## Citation counts
 

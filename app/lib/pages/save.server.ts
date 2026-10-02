@@ -21,6 +21,7 @@ import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
+import { replaceSearchRecords } from "~/lib/search/replace.server";
 
 import { compilePage, pageSlug, pageSourcePath } from "./compile.mjs";
 import { idsIn, pageLinkErrors, type AddressBook } from "./links.mjs";
@@ -154,18 +155,7 @@ export async function writeRow(env: PageEnv, compiled: Extract<Awaited<ReturnTyp
         compiled.sourcePath,
         compiled.sourceBlobSha,
       ),
-    db.prepare(`DELETE FROM search_docs WHERE doc_uid = ?1`).bind(uid),
-    ...records.map((s) =>
-      db
-        .prepare(
-          `INSERT INTO search_docs (uid, url, type, title, body, tags, doc_tags, doc_uid,
-             doc_title, doc_url, anchor, ordinal, status, publish_at)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)`,
-        )
-        .bind(s.uid, s.url, s.type, s.title, s.body, s.tags, s.docTags, s.docUid, s.docTitle, s.docUrl, s.anchor, s.ordinal, s.status, null),
-    ),
-    db.prepare(`INSERT INTO search_identity (search_identity) VALUES ('rebuild')`),
-    db.prepare(`INSERT INTO search_prose (search_prose) VALUES ('rebuild')`),
+    ...replaceSearchRecords(db, uid, records),
   ]);
 }
 

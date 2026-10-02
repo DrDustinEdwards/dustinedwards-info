@@ -4,8 +4,8 @@ import { readFileSync } from "node:fs";
 
 import { extractText, getDocumentProxy } from "unpdf";
 
-import { CV_ENTRIES } from "../app/data/cv.ts";
-import { buildPublications, loadCv } from "../scripts/lib/publications.mjs";
+import { buildCvFrom } from "../scripts/lib/cv.mjs";
+import { buildPublications } from "../scripts/lib/publications.mjs";
 import { timelineSvg } from "../app/lib/cv/charts.ts";
 import { cvFacts } from "../app/lib/cv/entries.mjs";
 import { cvMarkdownDocument } from "../app/lib/cv/markdown.mjs";
@@ -25,19 +25,21 @@ import {
 import { CHART_CSS_PATH, chartCss } from "../scripts/build-chart-css.mjs";
 import { CV_PDF_DISK_PATH, FINGERPRINT_LABEL, cvFingerprint } from "../scripts/build-cv-pdf.mjs";
 
-// The CV as the build resolves it: the files in content/publications/ are the records it joins.
-const CV = await loadCv();
+// The CV as the build resolves it: the files in content/cv/ joined to the records in content/publications/. The
+// build compiles every file with the validation module the CV save uses (app/lib/cv/validate.mjs), so a file that
+// breaks a rule never gets this far; test/cv-validate.test.mjs shows each rule firing.
 const PUBLICATIONS = (await buildPublications()).records;
+const BUILT = await buildCvFrom(PUBLICATIONS);
+const CV = BUILT.cv;
 const FACTS = cvFacts(CV.entries);
-
-/** Built from its code point, so this file holds no dash of its own. */
-const EM_DASH = new RegExp(String.fromCharCode(0x2014));
+/** What the files state, entry by entry, in the CV's order. */
+const SOURCE = BUILT.rows.flatMap((row) => JSON.parse(row.record).entries ?? []);
 
 test("every entry resolves, with a known type, known areas, a known role and a unique id", () => {
   const types = new Set(TYPES.map(([id]) => id));
   const areas = new Set(AREAS.map(([id]) => id));
   const roles = new Set(ROLES.map(([id]) => id));
-  assert.equal(CV.entries.length, CV_ENTRIES.length);
+  assert.equal(CV.entries.length, SOURCE.length);
   for (const e of CV.entries) {
     assert.ok(types.has(e.type), `${e.id}: type ${e.type}`);
     for (const a of e.areas) assert.ok(areas.has(a), `${e.id}: area ${a}`);
@@ -48,7 +50,7 @@ test("every entry resolves, with a known type, known areas, a known role and a u
 
 test("a paper named by DOI takes its facts from the site's Crossref-backed record, and its role from the author list", () => {
   const byDoi = new Map(PUBLICATIONS.flatMap((p) => (p.doi ? [[p.doi.toLowerCase(), p]] : [])));
-  const refs = CV_ENTRIES.filter((e) => e.type === "publication" && "doi" in e);
+  const refs = SOURCE.filter((e) => e.type === "publication" && "doi" in e);
   assert.ok(refs.length >= 30, `${refs.length} papers by DOI`);
   for (const ref of refs) {
     const record = byDoi.get(ref.doi.toLowerCase());
@@ -68,18 +70,16 @@ test("privacy: mentoring is counts, and no line in the CV data carries an email,
   const MENTORING_KEYS = new Set([
     "type", "section", "year", "endYear", "count", "unit", "level", "program", "org", "detail", "cohort", "areas", "role", "links",
   ]);
-  for (const e of CV_ENTRIES.filter((x) => x.type === "mentoring")) {
+  for (const e of SOURCE.filter((x) => x.type === "mentoring")) {
     for (const key of Object.keys(e)) assert.ok(MENTORING_KEYS.has(key), `mentoring entry carries "${key}"`);
     assert.equal(typeof e.count, "number");
   }
   // The values, not the file: its header comment names what it leaves out.
-  const data = JSON.stringify(CV_ENTRIES);
+  const data = JSON.stringify(SOURCE);
   assert.doesNotMatch(data, /@[a-z0-9-]+\.[a-z]{2,}/i, "an email address");
   assert.doesNotMatch(data, /\(\d{3}\)\s*\d{3}-\d{4}|\b\d{3}-\d{3}-\d{4}\b/, "a phone number");
   assert.doesNotMatch(data, /\bRoom\b|\bSuite\b|\bOffice \d/i, "a room");
   assert.doesNotMatch(data, /Mountains Lake/i, "a private community group");
-  const source = readFileSync(new URL("../app/data/cv.ts", import.meta.url), "utf8");
-  assert.doesNotMatch(source, EM_DASH, "an em dash");
 });
 
 test("the URL state round-trips, drops what it does not know and orders a reversed range", () => {
@@ -124,7 +124,7 @@ test("the counts, the facets and the grouping agree with the entries", () => {
   assert.equal(all.grants, 43);
   assert.equal(
     all.students,
-    CV_ENTRIES.reduce((n, e) => n + (e.type === "mentoring" && e.unit === "students" ? e.count : 0), 0),
+    SOURCE.reduce((n, e) => n + (e.type === "mentoring" && e.unit === "students" ? e.count : 0), 0),
   );
   const facets = facetCounts(FACTS, parseState(new URLSearchParams("type=publication")));
   assert.equal(facets.types.grant, 43, "a type's count ignores the type filter");

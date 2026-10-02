@@ -18,6 +18,7 @@ const TOOLS = [
   "sync_pages",
   "sync_publications",
   "sync_llms",
+  "sync_cv",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -31,6 +32,8 @@ const TOOLS = [
   "list_pages",
   "get_page",
   "get_llms",
+  "list_cv",
+  "get_cv",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -152,6 +155,15 @@ export const TOOL_DESCRIPTORS: Readonly<
       "with no llms.txt rather than deleting the row, and answers 422 naming the checks a file fails. " +
       "Idempotent. A read-back reconciliation: expected, present, and a converged verdict.",
   },
+  sync_cv: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/cv files: re-compiles every CV file whose blob sha differs " +
+      "from its row (or has no row), removes rows whose file is gone, then rewrites the CV's search records, " +
+      "through the same compile and write doors a CV save uses. Refuses an empty file set, and answers 422 " +
+      "naming any file the validator refuses after converging the rest. Idempotent. A read-back reconciliation: " +
+      "expected, present, and a converged verdict.",
+  },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
     returns:
@@ -245,6 +257,19 @@ export const TOOL_DESCRIPTORS: Readonly<
       "The complete content/llms.txt (raw) and its size, the head sha, any validation errors the file has " +
       "now, and whether the row /llms.txt is served from holds exactly this file. The format is " +
       "docs/LLMS.md. Read only: it is saved through Carrel, as the document llms.",
+  },
+  list_cv: {
+    args: {},
+    returns:
+      "Every file of the CV in D1 (the profile, appointments, education, publications, grants, honors, talks, " +
+      "courses, mentoring, service, development): slug, type and when D1 last wrote it, with the count and the " +
+      "head sha. The CV is edited through Carrel, not here.",
+  },
+  get_cv: {
+    args: { slug: "string, a CV file such as grants or profile" },
+    returns:
+      "The complete CV file (raw), the head sha, the file as structured data and any validation errors the " +
+      "file has now. The format is docs/CV.md. Read only: a CV file is saved through Carrel.",
   },
   backup_media: {
     args: {},

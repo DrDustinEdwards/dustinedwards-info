@@ -47,7 +47,7 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/capsid",
   "/software/enarratio",
   "/software/carrel",
-  // The CV. Its markdown is written from app/data/cv.ts, not kept in content/pages/ (see below).
+  // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
 ]);
 
@@ -55,7 +55,8 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
  * The listed pages whose markdown is GENERATED from structured data rather than read from
  * content/pages/: build:content renders it from app/lib/cv/markdown.mjs, so the twin, sitemap, search
  * records and llms.txt treat /cv like every other page. Their HTML comes from their own route
- * (app/routes/cv.tsx), so pages.json leaves them out.
+ * (app/routes/cv.tsx) and their twin from another (app/routes/cv[.md].ts), both drawn from the cv table, so
+ * pages.json and the pages table leave them out.
  *
  * @type {readonly string[]}
  */

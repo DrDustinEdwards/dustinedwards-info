@@ -14,12 +14,15 @@ import { copyMissingTwins } from "~/lib/media/backup.server";
 import {
   readContentSides,
   readLlmsSides,
+  readCvSides,
   readPageSides,
   readProcedureSides,
   readPublicationSides,
 } from "~/lib/health/checks.server";
-import { purgeLlms, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
+import { purgeCv, purgeLlms, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
+import { CV_DIR } from "~/lib/cv/parse.mjs";
+import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import {
   compile as compilePageFile,
@@ -307,6 +310,27 @@ export async function syncPages(env: OperatorEnv): Promise<ToolResult> {
     write: (compiled) => writePageRow(env, compiled),
     remove: (row) => deletePageRow(env, row),
     purge: purgePages,
+  });
+}
+
+/**
+ * The CV: the compile and write doors a CV save uses, one row per file. The CV's search records depend on every
+ * file, so they are rewritten once after the rows, in the step that also purges the CV's cache tag. A failure
+ * there is thrown, not counted: a repair that left the search records behind must not report success.
+ */
+export async function syncCv(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_cv",
+    dir: CV_DIR,
+    noun: "CV file",
+    read: () => readCvSides(env),
+    compile: (slug, raw) => compileCvFile(env, slug, raw),
+    write: (compiled) => writeCvRow(env, compiled),
+    remove: (row) => deleteCvRow(env, row),
+    purge: async (why) => {
+      await refreshCvSearch(env);
+      return purgeCv(why);
+    },
   });
 }
 

@@ -2,9 +2,11 @@ import { Fragment, type ReactNode } from "react";
 
 import { Enhance } from "~/components/enhance";
 import { PageShell } from "~/components/page-shell";
+import { readCv } from "~/db/cv";
 import { contentPageCardPath, contentPageMarkdownPath } from "~/lib/content-pages.mjs";
-import { CV } from "~/lib/cv/current";
-import { CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type CvEntry } from "~/lib/cv/entries.mjs";
+import { getEnv } from "~/lib/context";
+import { CV_PAGE, CV_PDF_PATH, cvFacts, formatDollars, type Cv, type CvEntry } from "~/lib/cv/entries.mjs";
+import { CV_HTML_TAGS } from "~/lib/cv/route";
 import { renderCvCharts } from "~/lib/cv/render-charts";
 import {
   AREAS,
@@ -40,16 +42,13 @@ import "~/styles/enarratio.css";
 import "~/styles/cv.css";
 
 /*
- * THE CV (app/data/cv.ts, resolved by app/lib/cv/entries.mjs). The whole CV is in the HTML: the query
+ * THE CV (content/cv/, drawn from D1 at request time and resolved by app/lib/cv/entries.mjs, docs/CV.md). A CV
+ * edit saved through Carrel is live on the next request, with no build or deploy. The whole CV is in the HTML: the query
  * string only decides which entries carry `hidden`, how they are grouped and what the counts and charts
  * say, so a shared filter URL renders the same page with script off, and the form is a plain GET.
  * app/enhance/cv.ts runs the same functions (app/lib/cv/view.mjs) on every input.
  */
 
-const ENTRIES = CV.entries;
-const FACTS = cvFacts(ENTRIES);
-const BY_ID = new Map(ENTRIES.map((e) => [e.id, e]));
-const YEARS = yearOptions(FACTS);
 const PATH = CV_PAGE.path;
 /** The CV's own social card (CARDED_PAGE_ROOTS), which build:og draws from the same title and description. */
 const CARD_PATH = contentPageCardPath(CV_PAGE);
@@ -57,20 +56,30 @@ const CARD = CARD_PATH ? `${SITE_ORIGIN}${CARD_PATH}` : undefined;
 
 // headers() is written out here because check:headers reads each public route's own source.
 export function headers() {
-  return new Headers(publicHtmlHeaders());
+  return new Headers(publicHtmlHeaders(CV_HTML_TAGS));
 }
 
-export function loader({ request }: Route.LoaderArgs) {
+/*
+ * The CV is drawn per request, and the page's script reads it back out of the DOM (data attributes on each
+ * entry), so the server and the browser never hold two copies. The route does not hydrate, so none of this
+ * reaches the browser as data: the loader hands the component the resolved CV to render and nothing more.
+ */
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const cv = await readCv(getEnv(context));
+  const facts = cvFacts(cv.entries);
   const url = new URL(request.url);
   const state = parseState(url.searchParams);
-  const shown = FACTS.filter((f) => matches(f, state));
+  const shown = facts.filter((f) => matches(f, state));
   return {
+    cv,
+    facts,
+    jsonLd: serializeJsonLd(cvJsonLd(cv)),
     state,
     shownIds: shown.map((f) => f.id),
-    groups: groupEntries(FACTS, state.sort),
+    groups: groupEntries(facts, state.sort),
     counts: headline(shown),
-    facets: facetCounts(FACTS, state),
-    charts: renderCvCharts(FACTS, state),
+    facets: facetCounts(facts, state),
+    charts: renderCvCharts(facts, state),
   };
 }
 
@@ -91,23 +100,21 @@ export function meta() {
  * The page about the Person, and a ScholarlyArticle per paper the site holds, joined by the Person's @id.
  * No BreadcrumbList: the page shows no trail, and a one-step list is one Google reads as invalid.
  */
-function cvJsonLd() {
-  const records = ENTRIES.flatMap((e) => (e.paper?.record ? [e.paper.record] : []));
+function cvJsonLd(cv: Cv) {
+  const records = cv.entries.flatMap((e) => (e.paper?.record ? [e.paper.record] : []));
   return [
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
       "@id": `${SITE_ORIGIN}${PATH}`,
       url: `${SITE_ORIGIN}${PATH}`,
-      name: `${CV_PAGE.title}, ${CV.person.name}`,
+      name: `${CV_PAGE.title}, ${cv.person.name}`,
       description: CV_PAGE.description,
       about: { "@id": personId(SITE_ORIGIN) },
     },
     ...publicationsJsonLd(SITE_ORIGIN, records),
   ];
 }
-
-const JSON_LD = serializeJsonLd(cvJsonLd());
 
 const isOwner = (name: string) => isSiteOwner(name) || name === "D. Edwards";
 
@@ -276,18 +283,16 @@ function EntryBody({ entry }: { entry: CvEntry }) {
   );
 }
 
-const ORDER = new Map(ENTRIES.map((e, i) => [e.id, i]));
-
 /** One or two lines each: the long lists read as a list, and the papers keep the room. */
 const COMPACT = new Set(["grant", "award", "course", "service", "development"]);
 
-function Entry({ entry, hidden }: { entry: CvEntry; hidden: boolean }) {
+function Entry({ entry, hidden, order }: { entry: CvEntry; hidden: boolean; order: number }) {
   return (
     <li
       className={`cv-entry cv-entry-${entry.type}${COMPACT.has(entry.type) ? " cv-compact" : ""}`}
       id={entry.id}
       data-cv-entry=""
-      data-order={ORDER.get(entry.id)}
+      data-order={order}
       data-type={entry.type}
       data-section={entry.section ?? undefined}
       data-areas={entry.areas.join(" ")}
@@ -335,10 +340,13 @@ function Stat({
 }
 
 export default function CvRoute({ loaderData }: Route.ComponentProps) {
-  const { state, shownIds, groups, counts, facets, charts } = loaderData;
+  const { cv: CV, facts: FACTS, jsonLd, state, shownIds, groups, counts, facets, charts } = loaderData;
   const shown = new Set(shownIds);
+  const BY_ID = new Map(CV.entries.map((e) => [e.id, e]));
+  const ORDER = new Map(CV.entries.map((e, i) => [e.id, i]));
+  const YEARS = yearOptions(FACTS);
   return (
-    <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />}>
+    <PageShell trail={<script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd }} />}>
       <div className="cv" data-cv="">
         <header className="cv-head">
           <p className="cv-eyebrow">
@@ -543,7 +551,7 @@ export default function CvRoute({ loaderData }: Route.ComponentProps) {
                       {part.ids.map((id) => {
                         const entry = BY_ID.get(id);
                         if (!entry) throw new Error(`cv: grouping named an unknown entry ${id}`);
-                        return <Entry key={id} entry={entry} hidden={!shown.has(id)} />;
+                        return <Entry key={id} entry={entry} hidden={!shown.has(id)} order={ORDER.get(id) ?? 0} />;
                       })}
                     </ol>
                   </div>

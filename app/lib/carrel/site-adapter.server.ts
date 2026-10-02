@@ -17,6 +17,7 @@ import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { documentHandler } from "~/lib/carrel/document-handler.server";
 import { pageHandler } from "~/lib/carrel/page-handler.server";
+import { cvHandler } from "~/lib/carrel/cv-handler.server";
 import { listCommitsForPath, readFile } from "~/lib/editor/github.server";
 import { parsePost } from "~/lib/editor/frontmatter";
 import {
@@ -290,7 +291,7 @@ export function carrelSiteAdapter(options: {
     },
   };
 
-  const registry = contentRegistry([postHandler, publicationHandler(env), pageHandler(env), documentHandler(env)]);
+  const registry = contentRegistry([postHandler, publicationHandler(env), pageHandler(env), documentHandler(env), cvHandler(env)]);
 
   return {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },
