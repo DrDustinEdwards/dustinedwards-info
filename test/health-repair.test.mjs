@@ -417,3 +417,14 @@ test("roster drift repairs through sync_roster, beside the dictionary and before
   const actions = watchdogActions({ status: 503, body: bodyFailing(["roster-drift"]) }, WITH);
   assert.deepEqual(actions, [{ type: "repair", tool: "sync_roster" }, { type: "recheck" }]);
 });
+
+test("CV PDF drift repairs through sync_cv_pdf, after the CV rows it is drawn from and before the Ask upload", () => {
+  assert.deepEqual(repairPlan(["cv-pdf-drift"], WITH).repair, ["sync_cv_pdf"]);
+
+  const all = repairPlan(["ask-index-drift", "cv-pdf-drift", "cv-drift", "content-drift"], WITH);
+  assert.deepEqual(all.repair, ["sync_posts", "sync_cv", "sync_cv_pdf", "sync_ask"]);
+  assert.equal(all.alertOnly, false);
+
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["cv-pdf-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_cv_pdf" }, { type: "recheck" }]);
+});

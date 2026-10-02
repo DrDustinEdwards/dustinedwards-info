@@ -299,7 +299,7 @@ export function carrelSiteAdapter(options: {
     publicationHandler(env),
     pageHandler(env),
     documentHandler(env),
-    cvHandler(env),
+    cvHandler(env, ctx),
     dictionaryHandler(env),
     rosterHandler(env),
     phageHandler(env),

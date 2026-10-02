@@ -28,6 +28,7 @@ import {
   syncMedia,
   syncLlms,
   syncCv,
+  syncCvPdf,
   syncPages,
   syncPosts,
   syncProcedures,
@@ -207,6 +208,9 @@ export async function runTool(
 
       case "sync_cv":
         return await syncCv(env);
+
+      case "sync_cv_pdf":
+        return await syncCvPdf(env);
 
       case "sync_publications":
         return await syncPublications(env);

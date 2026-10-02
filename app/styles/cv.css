@@ -671,7 +671,7 @@
   }
 }
 
-/* Print: the CV itself, as a committee reads it. The PDF (public/dustin-edwards-cv.pdf) is the
+/* Print: the CV itself, as a committee reads it. The PDF (/dustin-edwards-cv.pdf) is the
    traditional version; this keeps whatever the reader filtered. */
 
 @media print {

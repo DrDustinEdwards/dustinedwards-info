@@ -74,6 +74,9 @@ export default [
   route("cv.md", "routes/cv[.md].ts"),
   // The CV's charts for a filter state, which app/enhance/cv.ts swaps in so the page ships no renderer.
   route("cv/charts.json", "routes/cv.charts[.json].ts"),
+  // The CV's PDF: one R2 object the Worker renders after each CV save (docs/CV.md). A static file at this
+  // address would win over the route, so there is none.
+  route("dustin-edwards-cv.pdf", "routes/cv-pdf.ts"),
   // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
   route("colophon", "routes/colophon.tsx"),
   route("privacy", "routes/privacy.tsx"),

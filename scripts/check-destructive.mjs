@@ -267,6 +267,12 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
         "rather than deleting every row, and it rewrites the CV's search records from the rows it converged",
     ],
     [
+      "sync_cv_pdf",
+      "ONE derived object in OG, replaced by a put and never deleted: derived from D1's CV, idempotent (an object " +
+        "carrying the data's fingerprint is left alone), the put is conditional on the object read, and a failed " +
+        "render changes nothing stored",
+    ],
+    [
       "sync_roster",
       "D1 rows, on sync_pages's terms: derived from the repository, idempotent, and it refuses an empty file set " +
         "rather than deleting every row",

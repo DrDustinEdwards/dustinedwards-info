@@ -122,7 +122,8 @@ way. Neither deletes everything on an empty listing, and `sync_publications`
 never overwrites a citation count that exists. A `content/llms.txt` that moved
 without its settings row shows as `llms-drift`, repaired by `sync_llms`
 (docs/LLMS.md). A CV file (`content/cv/`) that moved without its row shows as `cv-drift`, repaired by
-`sync_cv`, which also rewrites the CV's search records. A roster cohort file that moved without its row shows as
+`sync_cv`, which also rewrites the CV's search records. The CV's PDF (one object in OG, rendered after each CV save) that is older than D1's CV, or missing,
+shows as `cv-pdf-drift`, repaired by `sync_cv_pdf` (docs/CV.md, "The PDF"). A roster cohort file that moved without its row shows as
 `roster-drift`, repaired by `sync_roster`. A phage file (`content/phages/`) that moved without its row shows as
 `phage-drift`, repaired by `sync_phages`, which also redraws the phage page's table, twin and search records
 (docs/PHAGES.md).

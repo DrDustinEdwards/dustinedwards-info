@@ -20,6 +20,7 @@ const TOOLS = [
   "sync_publications",
   "sync_llms",
   "sync_cv",
+  "sync_cv_pdf",
   "sync_roster",
   "sync_phages",
   "backup_media",
@@ -183,6 +184,15 @@ export const TOOL_DESCRIPTORS: Readonly<
       "through the same compile and write doors a CV save uses. Refuses an empty file set, and answers 422 " +
       "naming any file the validator refuses after converging the rest. Idempotent. A read-back reconciliation: " +
       "expected, present, and a converged verdict.",
+  },
+  sync_cv_pdf: {
+    args: {},
+    returns:
+      "Makes the stored CV PDF (one object in the OG bucket, served at /dustin-edwards-cv.pdf) the one for the CV D1 " +
+      "holds now: renders it through Browser Run and replaces the object, then purges the cv tag, unless the stored " +
+      "object already carries that CV's fingerprint, in which case it renders nothing. A render that fails is an " +
+      "error and changes nothing stored. Run sync_cv first when cv-drift also fails. Idempotent. A read-back " +
+      "reconciliation: expected, present, and a converged verdict.",
   },
   sync_roster: {
     args: {},

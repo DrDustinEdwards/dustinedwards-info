@@ -56,6 +56,9 @@ const READERS = {
   images: (config, out) => {
     if (config.images?.binding) out.set(`images:${config.images.binding}`, "");
   },
+  browser: (config, out) => {
+    if (config.browser?.binding) out.set(`browser:${config.browser.binding}`, "");
+  },
   // The dataset name is compared, not omitted: it is the table the SQL API reads.
   analytics_engine_datasets: (config, out) => {
     for (const ae of config.analytics_engine_datasets ?? []) {

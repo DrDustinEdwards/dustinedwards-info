@@ -14,6 +14,7 @@ export const CHECK_NAMES = [
   "publications-drift",
   "llms-drift",
   "cv-drift",
+  "cv-pdf-drift",
   "fts-equality",
 ];
 

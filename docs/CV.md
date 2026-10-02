@@ -8,7 +8,7 @@ a build or deploy. Only a change to the components, the registry or this format 
 There is ONE write path: Carrel saves a file through site-api's adapter (`cv.<slug>` in the `/content` group,
 handler `app/lib/carrel/cv-handler.server.ts`). There is no admin editor and no operator save tool. The operator
 can read: `list_cv` and `get_cv`. `sync_cv` and the `cv-drift` health check keep D1 converged to the files, as the
-pages' and publications' do.
+pages' and publications' do. `sync_cv_pdf` and the `cv-pdf-drift` check keep the PDF converged to D1.
 
 ## The files
 
@@ -133,7 +133,7 @@ a save that would make the search records fail is refused before anything is com
 | JSON-LD | `cvJsonLd` in the route: the Person's page and a ScholarlyArticle per paper the CV cites |
 | Search | `search_docs` `page:cv`, written by the sync and by the save, from the same compile |
 | The social card | `build:og`, from `CV_PAGE`'s title and description |
-| The PDF | still `public/dustin-edwards-cv.pdf`, rendered by hand (see below) |
+| The PDF | `/dustin-edwards-cv.pdf`, one R2 object the Worker renders after each CV save (see below) |
 | The check | `build:content` compiles every file with the save's own validator; `check:links` judges every link |
 
 The page, the charts and the twin carry the `cv` cache tag (the HTML keeps its long-standing `pages` tag beside it),
@@ -143,17 +143,42 @@ A static file at `/cv.md` would win over the route, so `build:content` deletes a
 
 ## The PDF
 
-The PDF is NOT drawn from D1. It is `public/dustin-edwards-cv.pdf`, committed, rendered by `npm run build:cv-pdf`
-(headless Chrome through puppeteer, from the same markdown as the twin), with `build:assets` and
-`build:template-refs` following it. `test/cv.test.mjs` reads the CV's fingerprint back out of the committed PDF.
+The PDF follows every CV save on its own. It is DERIVED (hard rule 18): the CV rows in D1 are the source, and the
+PDF is a function of them.
 
-So a CV save, which is a commit to `main`, leaves the PDF stale, and the fingerprint test then fails in CI until
-someone re-renders it. Until the PDF follows a save on its own, a CV edit through Carrel is followed by
-`npm run build:cv-pdf`, `npm run build:assets`, `npm run build:template-refs` and a commit of the three.
+- **Render.** After a save has committed and written D1, the Worker renders ONCE in the background (`ctx.waitUntil`,
+  so the save's answer does not wait for it) through Browser Run, `env.BROWSER.quickAction("pdf", ...)`
+  (`app/lib/cv/pdf.server.ts`). The HTML is `renderCvHtml` in `app/lib/cv/pdf-html.mjs`, the same function
+  `scripts/build-cv-pdf.mjs` calls, so there is one copy of the print document. The pipeline runs in the Worker; the
+  three fonts are read through the `ASSETS` binding and inlined as base64, as Cloudflare documents for
+  `addStyleTag`.
+- **Store.** One object, one key, `derived/dustin-edwards-cv.pdf` in the OG bucket (`OG`), replaced by each render:
+  `Content-Type: application/pdf` and the fingerprint of the data it was drawn from (`cvFingerprint`, eight hex
+  characters of the twin's source) in custom metadata and on the PDF's last line. OG is the derived-and-regenerable
+  bucket; MEDIA is the irreplaceable one, whose every put queues a backup copy. The key is under `derived/` and not
+  `og/` because `build:og` prunes every `og/` key no post references.
+- **Serve.** `app/routes/cv-pdf.ts` answers `/dustin-edwards-cv.pdf` from that object: `application/pdf`, inline, an
+  ETag (304), byte ranges (206), HEAD, `Cache-Tag: cv` (purged on each regenerate with the page, the twin and the
+  charts), and a 404 that says the PDF has not been rendered yet when the object is missing. There is no committed PDF,
+  because a static file at that address would win over the route. `application/pdf` is exempt from the CSP
+  (`workers/feed-types.mjs`): a PDF is shown by the browser's own viewer, and the static file carried no policy.
+- **A later save is never overwritten by an earlier render.** `ensureCvPdf` reads D1's CV, renders, reads D1's CV
+  again and discards the render if its fingerprint moved, then puts with `onlyIf` the object is still the one it
+  read. A render that loses either compare starts over, up to three times.
+- **A failed render never undoes the save.** The commit and the D1 row stand. The failure is logged as
+  `{"alert":"cv-pdf-render-failed"}` and rethrown into the `waitUntil` task, the stored object is left as it was, and
+  the `cv-pdf-drift` health check (the stored fingerprint against D1's CV) goes red. The watchdog repairs it through
+  the operator's `sync_cv_pdf`, which renders only when the stored object is not current, then reads back.
+- **What does not trigger a render.** A cited paper changed through the publication save, or a CV file changed through
+  git and `sync:content`, moves the CV's text without a CV save: `cv-pdf-drift` reports it, and `sync_cv_pdf` (the
+  watchdog, or the operator) renders it.
 
-`renderHtml(CV)` and `renderPdf(CV)` in `scripts/build-cv-pdf.mjs` take a resolved CV, so whatever holds one can
-render it. The follow-up that makes the PDF follow a save is described in the job's report: a render on each save
-into one R2 object, served at the same address.
+Offline, `npm run build:cv-pdf [-- --out <path>]` renders the same document with headless Chrome to
+`build/dustin-edwards-cv.pdf`, to look at a layout or font change without a save. It never writes under `public/`.
+
+Browser Run is a Worker binding (`"browser": {"binding": "BROWSER"}`, `wrangler.jsonc.example`), with no token and no
+dashboard opt-in. `quickAction` has no local emulation, so the Worker tests mock the binding
+(`test/worker/cv-pdf.test.ts`); the real one is exercised only on a deployed Worker.
 
 ## Known limits
 
