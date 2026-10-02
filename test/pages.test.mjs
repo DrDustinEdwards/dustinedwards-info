@@ -6,6 +6,7 @@ import { findWideDashes, renderBody } from "../app/lib/content/pipeline.mjs";
 import { CONTENT_PAGE_SECTIONS, CONTENT_PAGES_FROM_DATA, PAGE_FILE_PATHS } from "../app/lib/content-pages.mjs";
 import { compilePage, pageSlug } from "../app/lib/pages/compile.mjs";
 import { idsIn, pageLinkErrors } from "../app/lib/pages/links.mjs";
+import { buildPhages } from "../scripts/lib/phages.mjs";
 
 /* The validation module every page write runs (app/lib/pages/compile.mjs): build:content, sync:content and
  * the page save. These cases show each rule firing, on the real page files with one line changed, so a rule
@@ -14,7 +15,9 @@ import { idsIn, pageLinkErrors } from "../app/lib/pages/links.mjs";
 const pipeline = { renderBody, findWideDashes };
 const dir = new URL("../content/pages/", import.meta.url);
 const read = (/** @type {string} */ slug) => readFileSync(new URL(`${slug}.md`, dir), "utf8");
-const compile = (/** @type {string} */ slug, /** @type {string} */ raw) => compilePage({ slug, raw, pipeline });
+/** The phage page draws its table from the phage files (docs/PHAGES.md; test/phages.test.mjs holds those rules). */
+const { phages } = await buildPhages();
+const compile = (/** @type {string} */ slug, /** @type {string} */ raw) => compilePage({ slug, raw, pipeline, phages });
 /** Built from its code point, so this file carries no literal wide dash. */
 const WIDE_DASH = String.fromCharCode(0x2014);
 
@@ -93,9 +96,9 @@ test("the calculator pages must still state what the calculator prints", async (
   );
 });
 
-test("the phage table must list every phage and keep a section per phage", async () => {
-  assert.match(await refusal("research-phages", (r) => r.replace(/^\| \[Acorn15\].*\n/m, "")), /the table lists \d+ phage/);
-  assert.match(await refusal("research-phages", (r) => r.replace(/\n### Acorn15\n/, "\n### Acorn 15\n")), /Acorn15 has no ### section/);
+test("the phage page must say where its table and sections are drawn", async () => {
+  assert.match(await refusal("research-phages", (r) => r.replace("<!-- phages:table -->", "")), /exactly once.*it has 0/);
+  assert.match(await refusal("research-phages", (r) => r.replace("<!-- phages:sections -->", "")), /exactly once.*it has 0/);
 });
 
 test("the named software pages keep their name sections and their two exclusions", async () => {

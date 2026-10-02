@@ -32,6 +32,7 @@ import {
   syncPosts,
   syncProcedures,
   syncPublications,
+  syncPhages,
   syncRoster,
   syncStatus,
 } from "./sync-tools.server";
@@ -51,6 +52,8 @@ import { listDictionaryRows } from "~/db/dictionary";
 import { readDictionary } from "~/lib/dictionary/save.server";
 import { PageInvalid, readPage } from "~/lib/pages/save.server";
 import { readLlms } from "~/lib/llms/save.server";
+import { listPhageRows } from "~/db/phages";
+import { PHAGE_SLUG, readPhage } from "~/lib/phages/save.server";
 import { listRosterRows } from "~/db/roster";
 import { COHORT_SLUG, readRoster } from "~/lib/roster/save.server";
 
@@ -214,6 +217,9 @@ export async function runTool(
       case "sync_roster":
         return await syncRoster(env);
 
+      case "sync_phages":
+        return await syncPhages(env);
+
       case "backup_media":
         return await backupMedia(env);
 
@@ -303,6 +309,22 @@ export async function runTool(
 
       case "get_roster":
         return await getRosterTool(env, args);
+
+      case "list_phages": {
+        const rows = await listPhageRows(env);
+        return {
+          ok: true,
+          data: {
+            headSha: await currentHead(env),
+            count: rows.length,
+            // Only what the public table already shows: the name, year, host, county, PhagesDB record, paper and notes.
+            phages: rows.map((row) => ({ slug: row.slug, ...row.phage })),
+          },
+        };
+      }
+
+      case "get_phage":
+        return await getPhageTool(env, args);
     }
   } catch (error) {
     return translate(error);
@@ -563,6 +585,16 @@ async function getLlmsTool(env: OperatorEnv): Promise<ToolResult> {
   const llms = await readLlms(env);
   if (!llms) return { ok: false, status: 404, error: "No content/llms.txt exists in the repository." };
   return { ok: true, data: { ...llms, headSha: await currentHead(env) } };
+}
+
+async function getPhageTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const slug = String(args.slug ?? "").trim();
+  if (!PHAGE_SLUG.test(slug)) {
+    return { ok: false, status: 400, error: "get_phage requires a slug that is a phage's name in lower case, such as acorn15." };
+  }
+  const phage = await readPhage(env, slug);
+  if (!phage) return { ok: false, status: 404, error: `No file exists for the phage ${slug}.` };
+  return { ok: true, data: { ...phage, headSha: await currentHead(env) } };
 }
 
 async function getRosterTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {

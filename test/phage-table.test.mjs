@@ -10,8 +10,8 @@ import {
 } from "../app/lib/phage-table.mjs";
 
 // What the served table must hold (every phage, six columns, PhagesDB links only at verified records) is
-// checked on the page itself by app/lib/pages/invariants.mjs, which build:content and the page save both run;
-// test/pages.test.mjs shows each rule firing.
+// checked on the page itself by app/lib/pages/invariants.mjs, which build:content and the page save both run, and
+// the phage rows by app/lib/phages/compile.mjs; test/phages.test.mjs shows each rule firing.
 
 /** @param {string} name @param {number | null} year @param {string} host @param {string} county @param {number} order */
 const row = (name, year, host, county, order) => ({ name, year, host, county, order });

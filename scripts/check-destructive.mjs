@@ -232,6 +232,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ["get_dictionary", "a read"],
     ["list_roster", "a read"],
     ["get_roster", "a read"],
+    ["list_phages", "a read"],
+    ["get_phage", "a read"],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [
@@ -268,6 +270,12 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       "sync_roster",
       "D1 rows, on sync_pages's terms: derived from the repository, idempotent, and it refuses an empty file set " +
         "rather than deleting every row",
+    ],
+    [
+      "sync_phages",
+      "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set " +
+        "rather than deleting every row, and it re-derives the one page that embeds the table from the final set " +
+        "before any row moves",
     ],
     [
       "backup_media",

@@ -11,6 +11,7 @@ import {
   pageDriftVerdict,
   llmsDriftVerdict,
   rosterDriftVerdict,
+  phageDriftVerdict,
   publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
@@ -517,4 +518,25 @@ test("roster drift: the same comparison, naming cohorts and sync_roster", () => 
   assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
 
   assert.equal(rosterDriftVerdict([{ slug: "2031", sha: "s" }], [{ slug: "2031", source_blob_sha: "s" }]).ok, true);
+});
+
+test("phage drift: the same comparison, naming phages and sync_phages", () => {
+  const files = [
+    { slug: "zeta", sha: "new" },
+    { slug: "acorn15", sha: "same" },
+  ];
+  const rows = [
+    { slug: "zeta", source_blob_sha: "old" },
+    { slug: "acorn15", source_blob_sha: "same" },
+    { slug: "gone", source_blob_sha: "orphan" },
+  ];
+  const verdict = phageDriftVerdict(files, rows);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /^Phage drift 2:/);
+  assert.match(verdict.detail, /2 phage file\(s\)/);
+  assert.match(verdict.detail, /sync_phages/);
+  assert.doesNotMatch(verdict.detail, /sync_pages|sync_posts/);
+  assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
+
+  assert.equal(phageDriftVerdict([{ slug: "zeta", sha: "s" }], [{ slug: "zeta", source_blob_sha: "s" }]).ok, true);
 });

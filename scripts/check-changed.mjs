@@ -126,6 +126,13 @@ export const MAP = [
     gates: ["check:content", RELATED],
   },
   {
+    /* check:content compiles every phage file with the phage validator (app/lib/phages/compile.mjs) and draws the
+       page from them; the phage save runs the same compile, so a change here changes what a save accepts. */
+    what: "the phage table",
+    test: /^(content\/phages\/.+|app\/lib\/phages\/.+|app\/db\/phages\.ts|scripts\/lib\/phages\.mjs)$/,
+    gates: ["check:content", "check:links", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],

@@ -14,7 +14,8 @@ The operator can read: `list_pages` and `get_page`.
 
 `content/pages/<key>.md`: a YAML front-matter header, then markdown. The key is the path with slashes as
 hyphens (`/research/phages` is `research-phages.md`). The CV has its own files and its own table (`docs/CV.md`)
-and no file or row here.
+and no file or row here. `research-phages.md` is the one page whose table and per-phage sections are drawn from
+other files (`content/phages/`, `docs/PHAGES.md`) at the two markers it carries.
 
 ```markdown
 ---

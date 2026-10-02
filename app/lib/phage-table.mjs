@@ -1,113 +1,12 @@
 /**
- * The phage table on /research/phages: which phages have a PhagesDB record, and the sort and filter
- * the table gets in the browser. The table itself is markdown (content/pages/research-phages.md),
- * rendered at build time, so with script off it is complete: every phage, and a PhagesDB link for
- * exactly the phages below that have one. app/enhance/phages.ts runs sortRows and filterRows on the
- * rows it reads back out of that table. test/phage-table.test.mjs holds the markdown to this record.
+ * The sort and filter the phage table on /research/phages gets in the browser, and the address of a PhagesDB
+ * record. The table itself is drawn from the phage rows (content/phages, docs/PHAGES.md) into the page's
+ * markdown and rendered with it, so with script off it is complete: every phage, and a PhagesDB link for exactly
+ * the phages that have a verified record. app/enhance/phages.ts runs sortRows and filterRows on the rows it reads
+ * back out of that table; the phage rows are judged by app/lib/phages/compile.mjs.
  */
 
 import { foldText } from "./cv/view.mjs";
-
-/**
- * Each phage in the table, keyed by the name the site spells it, to its record's name exactly as
- * PhagesDB spells it, or null where PhagesDB has no record for this phage.
- *
- * Verified 2026-09-29 against https://phagesdb.org/api/phages/<name>/ (200 JSON for a record, 404
- * otherwise), one request at a time, and against PhagesDB's Tarleton institution page. The API
- * matches a name case-insensitively, so a 200 is only this phage's record when PhagesDB's own
- * spelling, institution (TARL) and year agree. The site never calls PhagesDB at runtime; re-verify
- * by hand and edit this map and the markdown together.
- *
- * Null although the API answered 200, because the record is another lab's phage of the same name:
- * JayKay (Smith College, 2018) and Astrid (University of Pittsburgh, a Gordonia phage).
- * Null on a 404, with a near match on PhagesDB for Dustin to confirm: Phambo (PhagesDB has Fambo,
- * Tarleton, 2022, Stephenville). SoftSoap's record is spelled Softsoap on PhagesDB; the page linked
- * it by that spelling before this check, and the link is kept.
- *
- * @type {Readonly<Record<string, string | null>>}
- */
-export const PHAGESDB_RECORDS = Object.freeze({
-  Acorn15: "Acorn15",
-  Allene: "Allene",
-  Arlo: "Arlo",
-  Ferdie: "Ferdie",
-  Gibbonz: "Gibbonz",
-  JayKay: null,
-  Leia: null,
-  Lucinda: "Lucinda",
-  Malware: "Malware",
-  MuskMan: null,
-  Noonan: "Noonan",
-  Nuggs: "Nuggs",
-  Ryadel: "Ryadel",
-  Sniffles: "Sniffles",
-  Strudel: "Strudel",
-  Texx: "Texx",
-  TidBit: "TidBit",
-  Trelle: "Trelle",
-  Vero: "Vero",
-  Aislinn: "Aislinn",
-  Astrid: null,
-  Finny: "Finny",
-  Gustopher: "Gustopher",
-  Hamburger: "Hamburger",
-  KelliBelli: "KelliBelli",
-  Puggeroni: "Puggeroni",
-  Rowley: "Rowley",
-  RubberBandz: "RubberBandz",
-  Balloony: "Balloony",
-  Epsy: "Epsy",
-  Fizzles: "Fizzles",
-  Lahey: "Lahey",
-  NeonMoon: "NeonMoon",
-  Rathburn: "Rathburn",
-  Titoz: "Titoz",
-  Virsces: "Virsces",
-  Wednesday: "Wednesday",
-  Agnetha: "Agnetha",
-  Damoria: "Damoria",
-  IndyLu: "IndyLu",
-  Jewell: "Jewell",
-  PurpleGoat: "PurpleGoat",
-  Tank18: "Tank18",
-  BenitoVP: "BenitoVP",
-  BlueJean: "BlueJean",
-  DopeGoat: "DopeGoat",
-  Enchi: "Enchi",
-  EnderDragon: "EnderDragon",
-  Grapple: "Grapple",
-  HandsomeSquid: "HandsomeSquid",
-  Interrobang: "Interrobang",
-  LemonZest: "LemonZest",
-  Loca: "Loca",
-  Obsidian: "Obsidian",
-  Besitos: "Besitos",
-  CutiePie: "CutiePie",
-  DaddyP: "DaddyP",
-  DJDoc: "DJDoc",
-  Milagros: "Milagros",
-  Nephthys: "Nephthys",
-  Padme: "Padme",
-  Phambo: null,
-  Ashaug: "Ashaug",
-  BoneCarver: "BoneCarver",
-  EarlyBird: "EarlyBird",
-  Ganandorf: "Ganandorf",
-  Godfather: "Godfather",
-  Kudou: "Kudou",
-  Tarleton: null,
-  Tiland: "Tiland",
-  BlueMoth: "BlueMoth",
-  Eppendorf: null,
-  HoneyBear: "HoneyBear",
-  JohnMadden: null,
-  SoftSoap: "Softsoap",
-  Blimey: "Blimey",
-  Carino: "Carino",
-  PaleRider: "PaleRider",
-  Rira: "Rira",
-  Triri: "Triri",
-});
 
 /**
  * The human page for a PhagesDB record name.

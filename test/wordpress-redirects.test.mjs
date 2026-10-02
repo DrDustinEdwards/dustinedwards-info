@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
-import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS, contentPageFile } from "../app/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS } from "../app/lib/content-pages.mjs";
 import { movedPathTarget } from "../app/lib/path-moves.mjs";
 import { ROSTER_ANCHOR, ROSTER_PAGE_PATH } from "../app/lib/roster/compile.mjs";
 import { publishedProcedurePaths } from "../scripts/lib/procedure-paths.mjs";
@@ -264,16 +264,14 @@ const STATIC_ROUTES = new Set([
 
 /** Anchors a target may carry: the headings the build proves exist, and the roster the program page renders. */
 const rosterSource = readFileSync(new URL("../app/components/phage-roster.tsx", import.meta.url), "utf8");
-const phagesMarkdown = readFileSync(
-  new URL(`../content/pages/${contentPageFile("/research/phages")}`, import.meta.url),
-  "utf8",
-);
+/** The phage headings are drawn from content/phages, one file per phage, named for the heading (docs/PHAGES.md). */
+const phageFiles = new Set(readdirSync(new URL("../content/phages/", import.meta.url)).map((name) => name.replace(/\.md$/, "")));
 /** @param {string} target */
 function anchorExists(target) {
   const [path, id] = target.split("#");
   if (CONTENT_PAGE_SECTIONS.includes(target)) return true;
   if (path === ROSTER_PAGE_PATH && id === ROSTER_ANCHOR) return rosterSource.includes(`id="${ROSTER_ANCHOR}"`);
-  if (path === "/research/phages") return new RegExp(`^###\\s+${id}\\s*$`, "im").test(phagesMarkdown);
+  if (path === "/research/phages") return phageFiles.has(id);
   return false;
 }
 

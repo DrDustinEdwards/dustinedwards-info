@@ -20,6 +20,7 @@ import { ContentError, renderPost } from "./lib/content.mjs";
 import { buildCvFrom, CV_ARTIFACT_PATH } from "./lib/cv.mjs";
 import { buildDictionary, DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { isMain } from "./lib/is-main.mjs";
+import { buildPhages, PHAGES_ARTIFACT_PATH } from "./lib/phages.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 import { buildRoster, ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
@@ -59,6 +60,15 @@ let compiledDictionary;
 function dictionary() {
   compiledDictionary ??= buildDictionary();
   return compiledDictionary;
+}
+
+/** @type {ReturnType<typeof buildPhages> | undefined} */
+let compiledPhages;
+
+/** Compiled once per run: the page that draws the table and the rows come from the same compile. */
+function phages() {
+  compiledPhages ??= buildPhages();
+  return compiledPhages;
 }
 
 /** @type {Promise<BuiltSource[]> | undefined} */
@@ -105,6 +115,8 @@ async function compilePages() {
       sourcePath: file.split(path.sep).join("/"),
       // The entry that leads the page (docs/DICTIONARY.md), compiled from content/dictionary like the Worker reads it from D1.
       entry: (await dictionary()).entryFor(pagePathForSlug(name.slice(0, -3)) ?? ""),
+      // The rows the phage page draws its table and sections from (docs/PHAGES.md), compiled from content/phages like the Worker reads them from D1.
+      phages: (await phages()).phages,
       // A page written from data states other authors' titles, dashes included; the house style is for prose.
       generated,
     });
@@ -330,9 +342,13 @@ async function main() {
   const roster = await buildRoster();
   await writeFile(fromRoot(ROSTER_ARTIFACT_PATH), `${JSON.stringify({ roster: roster.rows }, null, 2)}\n`, "utf8");
 
+  // The phages' rows, which sync:content writes to D1; the phage table is drawn from them into the page above (docs/PHAGES.md).
+  const phageRows = (await phages()).rows;
+  await writeFile(fromRoot(PHAGES_ARTIFACT_PATH), `${JSON.stringify({ phages: phageRows }, null, 2)}\n`, "utf8");
+
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ${DICTIONARY_ARTIFACT_PATH} (${dictionaryRows.length} entries), ` +
-      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications), ${CV_ARTIFACT_PATH} (${cvRows.length} files) and ${ROSTER_ARTIFACT_PATH} (${roster.rows.length} cohorts)`,
+      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications), ${CV_ARTIFACT_PATH} (${cvRows.length} files), ${ROSTER_ARTIFACT_PATH} (${roster.rows.length} cohorts) and ${PHAGES_ARTIFACT_PATH} (${phageRows.length} phages)`,
   );
 }
 

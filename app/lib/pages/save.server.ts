@@ -12,6 +12,7 @@ import matter from "gray-matter";
 import { listBlogPosts } from "~/db";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { listPublishedPageHtml } from "~/db/pages";
+import { listPhages } from "~/db/phages";
 import { listPublishedProcedures } from "~/db/procedures";
 import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePages, type PurgeOutcome } from "~/lib/cache-purge.server";
@@ -27,6 +28,7 @@ import { commitFiles, readFile } from "~/lib/editor/github.server";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { PolicyError, WRITE_CAPABILITIES, type Actor } from "~/lib/editor/publish-policy.mjs";
 import type { DictionaryEntry } from "~/lib/dictionary-entries.mjs";
+import { PHAGES_PAGE_PATH, type Phage } from "~/lib/phages/compile.mjs";
 import { recordsForPages } from "~/lib/search/records.mjs";
 import { replaceSearchRecords } from "~/lib/search/replace.server";
 
@@ -67,13 +69,16 @@ function registeredPage(path: string) {
  * The one compile door: the save and sync_pages both read a file through it (no link check; see judge). A page
  * that opens with a dictionary entry carries it in its twin and its search record, so the compile reads the
  * published entry from D1 (docs/DICTIONARY.md); a dictionary save passes the entry it is about to write
- * instead (null for none), because D1 does not hold it yet.
+ * instead (null for none), because D1 does not hold it yet. The phage page draws its table and sections from the
+ * phage rows (docs/PHAGES.md), so the compile reads them from D1; a phage save passes the set it is about to
+ * write instead, for the same reason.
  */
-export async function compile(env: PageEnv, slug: string, raw: string, entry?: DictionaryEntry | null) {
+export async function compile(env: PageEnv, slug: string, raw: string, entry?: DictionaryEntry | null, phages?: Phage[]) {
   const { renderBody, findWideDashes } = await loadPipeline();
   const path = pagePathForSlug(slug);
   const lead = entry !== undefined ? entry : path ? await getPublishedEntryByPath(env, path) : null;
-  return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes }, entry: lead ?? undefined });
+  const rows = phages ?? (path === PHAGES_PAGE_PATH ? await listPhages(env) : undefined);
+  return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes }, entry: lead ?? undefined, phages: rows });
 }
 
 /** The address book the links are judged against: what D1 holds now, with this page's own HTML in place. */
