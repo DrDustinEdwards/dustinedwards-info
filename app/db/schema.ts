@@ -469,3 +469,17 @@ export const dictionaryEntries = sqliteTable(
     index("dictionary_entries_status_idx").on(t.status),
   ],
 );
+
+// The Phage Discovery cohorts (docs/ROSTER.md). Derived from content/roster/*.md, one row per cohort, written
+// only by writeRosterRow (app/lib/roster/save.server.ts) and sync:content.
+export const roster = sqliteTable("roster", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  slug: text("slug").notNull().unique(),
+  year: integer("year").notNull().unique(),
+  record: text("record").notNull(),
+  sourcePath: text("source_path").notNull().unique(),
+  sourceBlobSha: text("source_blob_sha").notNull(),
+  syncedAt: integer("synced_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});

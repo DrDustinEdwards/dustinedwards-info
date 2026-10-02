@@ -3,6 +3,7 @@ import { cache } from "cloudflare:workers";
 
 import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { CV_CACHE_TAG } from "~/lib/cv/route";
+import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
 import { cacheTags } from "~/lib/seo";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -92,7 +93,16 @@ export async function purgePublications(why: string): Promise<PurgeOutcome> {
 
 /** Every content page and its twin carries this one tag (app/lib/pages/route.ts). */
 export async function purgePages(why: string): Promise<PurgeOutcome> {
-  return purgeTags(["content-pages"], why);
+  return purgeTags([CONTENT_PAGES_CACHE_TAG], why);
+}
+
+/**
+ * The roster is embedded in two pages: the list on /teaching/phage-discovery, which carries the content
+ * pages' tag, and the counts on the home page, which carries `posts` (app/routes/home.tsx). A cohort save
+ * purges both, because purging only the program page would leave the home page's counts stale.
+ */
+export async function purgeRoster(why: string): Promise<PurgeOutcome> {
+  return purgeTags([CONTENT_PAGES_CACHE_TAG, cacheTags()], why);
 }
 
 /** /llms.txt carries this one tag (app/routes/llms.ts). */

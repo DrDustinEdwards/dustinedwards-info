@@ -53,6 +53,15 @@ const CHECK_COPY = {
     passing: "Every publication on the site matches the one in the repository.",
     repair: null,
   },
+  "roster-drift": {
+    name: "Roster on the site",
+    failing: (counts) =>
+      counts
+        ? `${counts.expected - counts.present} of the ${counts.expected} cohorts are older on the site than in the repository. The site's watcher re-compiles them on its next check.`
+        : "Some cohorts are older on the site than in the repository. The site's watcher re-compiles them on its next check.",
+    passing: "Every cohort on the site matches the one in the repository.",
+    repair: null,
+  },
   "llms-drift": {
     name: "The llms.txt file on the site",
     failing: () =>

@@ -194,13 +194,6 @@
     // same module rather than restating its rules. No DOM: it takes a Request,
     // which the Node lib provides.
     "app/lib/theme.ts",
-    // The roster data, for the SAME reason app/lib/seo.ts is listed: a script
-    // imports it by its real filename rather than restating what it contains.
-    // check:features derives the roster card's metric from PHAGE_YEARS through
-    // the shared `metricValue`, which is what stops the gate counting
-    // researchers its own way and agreeing with the page only by luck. No DOM
-    // and no Worker types: it is data and one type alias.
-    "app/data/phage-hunters.ts",
     "app/lib/search/query.mjs",
     // The color maths. check:contrast computes with it, on the same principle as
     // query.mjs: there is one rule for a ratio, not one per reader.
@@ -351,7 +344,10 @@
     "app/lib/dictionary/parse.mjs",
     "app/lib/dictionary/compile.mjs",
     "app/lib/phage-table.mjs",
-    "app/lib/phage-tools.mjs"
+    "app/lib/phage-tools.mjs",
+    // The roster's compile path: build:content and sync:content compile every cohort file with the SAME module
+    // the Carrel adapter's roster save runs (docs/ROSTER.md). scripts/lib/roster.mjs is included by the scripts project.
+    "app/lib/roster/compile.mjs"
   ],
   "compilerOptions": {
     "composite": true,

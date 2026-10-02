@@ -20,7 +20,7 @@ export const METRIC_DERIVATIONS = {
  * Called by the gate, so the gate never computes the expected value its own way.
  *
  * @param {any} metric
- * @param {{ stack: any, phageYears: any[] }} inputs
+ * @param {{ stack: any }} inputs
  * @returns {string}
  */
 export function metricValue(metric, inputs) {

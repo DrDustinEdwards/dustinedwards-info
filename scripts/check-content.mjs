@@ -1,4 +1,5 @@
 import { ABOUT_ARTIFACT_PATH, ABOUT_SOURCE, buildAbout, buildArtifact } from "./build-content.mjs";
+import { buildRoster } from "./lib/roster.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
 
@@ -81,6 +82,11 @@ async function main() {
   const postRecords = (records ?? []).filter((/** @type {any} */ r) => r.type === "post");
 
   await checkAbout();
+
+  // Every cohort file through the roster validator, the code the Carrel save runs (docs/ROSTER.md); it throws
+  // on the first file that does not compile, which main's catch reports.
+  const roster = await buildRoster();
+  console.log(`check:content ok. ${roster.rows.length} roster cohort(s) compile and their photographs exist.`);
 
   // Where further_reading links land is check:links, with every other internal link on the site.
 

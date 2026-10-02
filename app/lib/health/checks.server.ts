@@ -10,6 +10,7 @@ import {
   pageDriftVerdict,
   publicationDriftVerdict,
   llmsDriftVerdict,
+  rosterDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaBackupDriftVerdict,
@@ -24,6 +25,7 @@ import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
+import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 import { backupStatus } from "~/lib/media/backup.server";
 
@@ -85,6 +87,15 @@ export async function readCvSides(env: Env & { GITHUB_TOKEN?: string }) {
     slug: string;
     source_blob_sha: string | null;
   }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/** The same two sides for the roster: `content/roster/*.md` and the roster table's rows. */
+export async function readRosterSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = await listMarkdownFiles(env, ROSTER_DIR);
+  const rows = await env.DB.prepare(
+    "SELECT slug, source_blob_sha FROM roster",
+  ).all<{ slug: string; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
 }
 
@@ -168,6 +179,14 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // An entry edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readDictionarySides(env);
       return dictionaryDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("roster-drift", async () => {
+      // A cohort edited, added or deleted through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readRosterSides(env);
+      return rosterDriftVerdict(files, rows);
     }),
   );
 

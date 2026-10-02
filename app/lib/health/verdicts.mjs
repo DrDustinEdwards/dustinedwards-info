@@ -218,6 +218,17 @@ export function publicationDriftVerdict(files, rows) {
 }
 
 /**
+ * The same comparison for the roster files and the roster table.
+ *
+ * @param {Array<{ slug: string, sha: string }>} files
+ * @param {Array<{ slug: string, source_blob_sha: string | null }>} rows
+ * @returns {{ ok: boolean, detail: string, counts?: { expected: number, present: number } }}
+ */
+export function rosterDriftVerdict(files, rows) {
+  return sourceDriftVerdict(files, rows, { label: "Roster", noun: "cohort", tool: "sync_roster" });
+}
+
+/**
  * The same comparison for content/llms.txt and the settings row /llms.txt is served from: one file, one row.
  *
  * @param {Array<{ slug: string, sha: string }>} files

@@ -162,8 +162,9 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
       "pages-drift",
       "procedures-drift",
       "publications-drift",
+      "roster-drift",
     ],
-    "the eight that did converge are reported converged, not silent",
+    "the nine that did converge are reported converged, not silent",
   );
 });
 

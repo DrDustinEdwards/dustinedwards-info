@@ -166,6 +166,7 @@ export const DEFERRED_CHECKS = {
   "publications-drift": "the D1 sync",
   "llms-drift": "the D1 sync",
   "cv-drift": "the D1 sync",
+  "roster-drift": "the D1 sync",
   "ask-index-drift": "the Ask converge",
   "media-index-drift": "the media converge",
 };

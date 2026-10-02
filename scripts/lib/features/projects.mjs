@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { isAllowedUrl } from "../../../app/lib/content/pipeline.mjs";
-import { PHAGE_YEARS } from "../../../app/data/phage-hunters.ts";
 import { CONTENT_PAGE_PATHS } from "../../../app/lib/content-pages.mjs";
 import {
   METRIC_DERIVATIONS,
@@ -109,7 +108,7 @@ export function checkProjects(ctx) {
   const vocabulary = projectsDoc.stackVocabulary ?? [];
   const projectsChecksBefore = tally.checks;
 
-  const METRIC_INPUTS = { stack, phageYears: PHAGE_YEARS };
+  const METRIC_INPUTS = { stack };
 
   // Fail closed: an empty roster passes every loop below.
   const MINIMUM_PROJECTS = 5;

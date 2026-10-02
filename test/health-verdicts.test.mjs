@@ -10,6 +10,7 @@ import {
   dictionaryDriftVerdict,
   pageDriftVerdict,
   llmsDriftVerdict,
+  rosterDriftVerdict,
   publicationDriftVerdict,
   mediaDriftVerdict,
   ftsEqualityVerdict,
@@ -495,4 +496,25 @@ test("llms.txt drift: one file against one row, naming its own repair", () => {
   assert.equal(unrowed.ok, false, "no row means /llms.txt serves the bundled copy, which may be older");
 
   assert.equal(llmsDriftVerdict([{ slug: "llms", sha: "s" }], [{ slug: "llms", source_blob_sha: "s" }]).ok, true);
+});
+
+test("roster drift: the same comparison, naming cohorts and sync_roster", () => {
+  const files = [
+    { slug: "2031", sha: "new" },
+    { slug: "2030", sha: "same" },
+  ];
+  const rows = [
+    { slug: "2031", source_blob_sha: "old" },
+    { slug: "2030", source_blob_sha: "same" },
+    { slug: "2029", source_blob_sha: "orphan" },
+  ];
+  const verdict = rosterDriftVerdict(files, rows);
+  assert.equal(verdict.ok, false);
+  assert.match(verdict.detail, /^Roster drift 2:/);
+  assert.match(verdict.detail, /2 cohort file\(s\)/);
+  assert.match(verdict.detail, /sync_roster/);
+  assert.doesNotMatch(verdict.detail, /sync_pages|sync_posts/);
+  assert.deepEqual(verdict.counts, { expected: 2, present: 1 });
+
+  assert.equal(rosterDriftVerdict([{ slug: "2031", sha: "s" }], [{ slug: "2031", source_blob_sha: "s" }]).ok, true);
 });

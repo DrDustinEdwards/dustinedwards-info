@@ -20,6 +20,7 @@ const TOOLS = [
   "sync_publications",
   "sync_llms",
   "sync_cv",
+  "sync_roster",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -37,6 +38,8 @@ const TOOLS = [
   "get_cv",
   "list_dictionary",
   "get_dictionary",
+  "list_roster",
+  "get_roster",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -178,6 +181,15 @@ export const TOOL_DESCRIPTORS: Readonly<
       "naming any file the validator refuses after converging the rest. Idempotent. A read-back reconciliation: " +
       "expected, present, and a converged verdict.",
   },
+  sync_roster: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/roster files: re-compiles every cohort whose file's blob sha " +
+      "differs from its row (or has no row), removes rows whose file is gone, through the same compile and write " +
+      "doors a roster save uses, then purges the pages that embed the roster. Refuses an empty file set, and " +
+      "answers 422 naming any file the validator refuses after converging the rest. Idempotent. A read-back " +
+      "reconciliation: expected, present, and a converged verdict.",
+  },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
     returns:
@@ -297,6 +309,20 @@ export const TOOL_DESCRIPTORS: Readonly<
       "The complete entry file (raw), the head sha, draft, the entry as the page reads it when the file is valid, " +
       "and every validation error when it is not. The format is docs/DICTIONARY.md. Read only: an entry is saved " +
       "through Carrel.",
+  },
+  list_roster: {
+    args: {},
+    returns:
+      "Every Phage Discovery cohort row in D1, newest first: slug (the year), year, the photograph's path and the " +
+      "count of names, with the count of cohorts and the head sha. Only what the public roster page already shows. " +
+      "The roster is edited through Carrel, not here.",
+  },
+  get_roster: {
+    args: { slug: "string, a cohort's file key: its four-digit year, such as 2025" },
+    returns:
+      "The cohort the committed file holds (year, photograph and names, the fields the public page shows), the " +
+      "head sha, and any validation errors the file has now. The format is docs/ROSTER.md. Read only: a cohort " +
+      "is saved through Carrel.",
   },
   backup_media: {
     args: {},

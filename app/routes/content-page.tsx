@@ -8,6 +8,7 @@ import { PhageRoster } from "~/components/phage-roster";
 import { PhageTools } from "~/components/phage-tool";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
+import { listRoster } from "~/db/roster";
 import { getAdminSession } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import {
@@ -20,6 +21,7 @@ import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
 import type { PageRecord } from "~/lib/pages/compile.mjs";
 import { toolsOnPage } from "~/lib/phage-tools.mjs";
+import { ROSTER_PAGE_PATH } from "~/lib/roster/compile.mjs";
 import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHeaders } from "~/lib/seo";
 
 import type { Route } from "./+types/content-page";
@@ -127,8 +129,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   // edit is live at the next request, and a page with no published entry has none.
   const entry = await getPublishedEntryByPath(env, page.path);
   const trail = contentPageTrail(page, (path) => titles.get(path));
+  // The program page carries the roster, drawn from D1 beside the page (docs/ROSTER.md); no other page reads it.
+  const roster = page.path === ROSTER_PAGE_PATH ? await listRoster(env) : null;
   // A calculator page computes from its query string, so Calculate works as a plain GET with script off.
-  return { page, trail, entry, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
+  return { page, trail, entry, roster, draft: row.status === "draft", search: toolsOnPage(page.path).length > 0 ? url.search : "" };
 }
 
 /** The page's own social card where build:og draws one (CARDED_PAGE_ROOTS), else the site card. */
@@ -153,7 +157,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
 }
 
 export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
-  const { page, trail, entry, draft, search } = loaderData;
+  const { page, trail, entry, roster, draft, search } = loaderData;
   return (
     <PageShell
       trail={
@@ -176,9 +180,9 @@ export default function ContentPageRoute({ loaderData }: Route.ComponentProps) {
       <div className="prose" dangerouslySetInnerHTML={{ __html: page.html }} />
       {/* The phage table is complete as served; this adds its sort and filter (app/enhance/phages.ts). */}
       {page.path === "/research/phages" ? <Enhance module="phages" /> : null}
-      {page.path === "/teaching/phage-discovery" ? (
+      {roster ? (
         <div className="prose">
-          <PhageRoster />
+          <PhageRoster cohorts={roster} />
         </div>
       ) : null}
     </PageShell>

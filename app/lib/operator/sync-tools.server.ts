@@ -19,8 +19,9 @@ import {
   readPageSides,
   readProcedureSides,
   readPublicationSides,
+  readRosterSides,
 } from "~/lib/health/checks.server";
-import { purgeCv, purgeLlms, purgePages, purgeProcedures, purgePublications } from "~/lib/cache-purge.server";
+import { purgeCv, purgeLlms, purgePages, purgeProcedures, purgePublications, purgeRoster } from "~/lib/cache-purge.server";
 import { compileLlms, writeLlmsRow } from "~/lib/llms/save.server";
 import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { compile as compileCvFile, deleteCvRow, refreshCvSearch, writeCvRow } from "~/lib/cv/save.server";
@@ -37,6 +38,8 @@ import {
   writeRow as writePageRow,
 } from "~/lib/pages/save.server";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
+import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
+import { compile as compileRosterFile, deleteRosterRow, writeRosterRow } from "~/lib/roster/save.server";
 import {
   compilePublicationFor,
   deletePublicationRow,
@@ -410,6 +413,23 @@ export async function syncLlms(env: OperatorEnv): Promise<ToolResult> {
       throw new Error("sync_llms never removes the llms.txt row: a repository without the file is refused first.");
     },
     purge: purgeLlms,
+  });
+}
+
+/**
+ * The roster: the compile and write doors a roster save uses. A cohort is one row, written whole, and the purge
+ * reaches both pages that embed it (purgeRoster).
+ */
+export async function syncRoster(env: OperatorEnv): Promise<ToolResult> {
+  return convergeKind(env, {
+    tool: "sync_roster",
+    dir: ROSTER_DIR,
+    noun: "cohort",
+    read: () => readRosterSides(env),
+    compile: (slug, raw) => compileRosterFile(env, slug, raw),
+    write: (compiled) => writeRosterRow(env, compiled),
+    remove: (row) => deleteRosterRow(env, row),
+    purge: purgeRoster,
   });
 }
 
