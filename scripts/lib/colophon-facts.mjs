@@ -3,6 +3,9 @@
 import {
   AI_DISCLOSURE,
   CAPSID_REPO_URL,
+  CAPSOMER_NAME,
+  CAPSOMER_SENTENCE_REST,
+  CAPSOMER_URL,
   CARREL_NAME,
   CARREL_PAGE_PATH,
   CARREL_SENTENCE_REST,
@@ -61,6 +64,8 @@ export function colophonFacts(stack, features, id) {
       `href="${CARREL_PAGE_PATH}">${CARREL_NAME}</a>`,
       el(CARREL_SENTENCE_REST),
       `href="${CAPSID_REPO_URL}"`,
+      `href="${CAPSOMER_URL}">${CAPSOMER_NAME}</a>`,
+      el(CAPSOMER_SENTENCE_REST),
     ];
   if (id === "not-adopted")
     return stack.notAdopted.flatMap((/** @type {any} */ n) => [
