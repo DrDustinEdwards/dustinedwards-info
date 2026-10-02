@@ -162,5 +162,4 @@ into one R2 object, served at the same address.
   table.
 - The CV's search records depend on every file and on the papers it cites. The CV save, `sync_cv` and a save of a
   cited paper rewrite them; a paper changed through git alone reaches them at the next sync.
-- A filter that leaves nothing to chart (for example `?type=grant&role=senior-author`) fails in Enarratio's bar
-  chart ("data is empty") and answers 500, as it did when the CV was static.
+- A filter that leaves nothing to chart (no entry matches, or none is a publication, grant, talk or award, as with `?type=service`) shows one sentence in place of the timeline and answers 200. Enarratio's bar chart refuses empty data ("data is empty"), so app/lib/cv/charts.ts draws the sentence and never calls it; the headline lines still draw.

@@ -389,7 +389,23 @@ export function timelineData(all, state) {
     token,
     values: years.map((y) => shown.filter((f) => f.type === key && f.year === y).length),
   }));
-  return { years, series, selected: selectedRange(state, years) };
+  return { years, series, selected: selectedRange(state, years), entries: shown.length };
+}
+
+/**
+ * What the timeline says in place of a chart when the filters leave it nothing to draw: no entry matches at
+ * all, or some do but none is a charted type (publications, grants, talks, awards), as with courses or
+ * service. Null when there is something to draw. Enarratio refuses to chart no data, so the caller draws this
+ * sentence instead and never calls it.
+ *
+ * @param {ReturnType<typeof timelineData>} data
+ * @returns {string | null}
+ */
+export function timelineEmptyText(data) {
+  if (data.series.some((s) => s.values.some((n) => n > 0))) return null;
+  if (data.entries === 0) return "No entries match these filters, so there is nothing to chart.";
+  const names = data.series.map((s) => s.label.toLowerCase());
+  return `The timeline charts ${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}, and none of the entries these filters select is one of those.`;
 }
 
 /**
