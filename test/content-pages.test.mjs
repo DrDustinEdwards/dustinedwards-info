@@ -45,7 +45,11 @@ test("every old phage address Google knows lands on a heading of /research/phage
     .map((p) => /^\/(?:discovery|annotation)-of-([a-z0-9-]+)\/$/.exec(p)?.[1])
     .filter((n) => n !== undefined);
   assert.ok(names.length > 30, `${names.length} phage addresses in the fixture`);
-  assert.deepEqual(names.filter((n) => !ids.has(n)), []);
+  // Dustin's ruling (#291) removed these four from the table. Their old addresses still 301 to the page, which
+  // opens at the top, so they are named here and not silently allowed; a fifth removal is a new decision.
+  const removed = new Set(["tarleton", "astrid", "jaykay", "muskman"]);
+  assert.deepEqual(names.filter((n) => !ids.has(n) && !removed.has(n)), []);
+  assert.deepEqual([...removed].filter((n) => ids.has(n)), [], "a phage back in the table needs no exception");
 });
 
 test("a page trails back to its hub, through the page it sits under; a hub stands alone", () => {
