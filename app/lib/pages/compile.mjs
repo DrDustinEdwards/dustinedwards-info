@@ -6,9 +6,9 @@ import matter from "gray-matter";
 
 import { gitBlobSha } from "../content/hashes.mjs";
 import {
-  CONTENT_PAGE_PATHS,
   CONTENT_PAGE_SECTIONS,
   DESCRIPTION_MAX,
+  PAGE_FILE_PATHS,
   SEO_TITLE_MAX,
   contentPageFile,
   contentPageMarkdownBody,
@@ -29,9 +29,9 @@ export function pageSlug(/** @type {string} */ path) {
   return contentPageFile(path).slice(0, -3);
 }
 
-/** The registered path a file key stands for, or undefined when no listed path has that key. */
+/** The registered path a file key stands for, or undefined when no page file may have that key. */
 export function pagePathForSlug(/** @type {string} */ slug) {
-  return CONTENT_PAGE_PATHS.find((path) => pageSlug(path) === slug);
+  return PAGE_FILE_PATHS.find((path) => pageSlug(path) === slug);
 }
 
 /** The schema.org types a page may declare; app/routes/content-page.tsx shapes a node for each. */

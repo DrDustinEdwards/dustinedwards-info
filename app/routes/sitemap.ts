@@ -12,7 +12,7 @@ import {
 } from "~/lib/seo";
 import { seriesPath } from "~/lib/series-path.mjs";
 import { tagPath } from "~/lib/tag-path.mjs";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "~/lib/content-pages.mjs";
+import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA, CONTENT_PAGES_OWN_ROUTE } from "~/lib/content-pages.mjs";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { paperPath } from "~/lib/publications/paths.mjs";
 import type { Route } from "./+types/sitemap";
@@ -55,7 +55,8 @@ export async function loader({ context }: Route.LoaderArgs) {
   const pageUrls = CONTENT_PAGE_PATHS.filter((path) => CONTENT_PAGES_FROM_DATA.includes(path) || published.has(path));
 
   const urls = [
-    ...[...STATIC_PATHS, ...pageUrls].map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
+    // A page with a route of its own (About) is listed in its place, and only while its row is published.
+    ...[...STATIC_PATHS.filter((path) => !CONTENT_PAGES_OWN_ROUTE.includes(path) || published.has(path)), ...pageUrls].map((path) => ({ loc: origin + path, lastmod: null as Date | null })),
     /*
      * No `lastmod`: one commit date would mark every paper changed together, which teaches crawlers to
      * ignore the field. No showcase filter: a crawler has no double-counting problem.

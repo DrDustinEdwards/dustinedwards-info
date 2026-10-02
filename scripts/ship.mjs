@@ -392,7 +392,7 @@ announce("Build");
 if (run("npm", ["run", "build:stack"]).code !== 0) {
   refuse("the stack artifact build failed", "Fix build:stack. Nothing was deployed.");
 }
-/* Gitignored and imported by `about.tsx`; reads stack.json, so it runs after build:stack. */
+/* Gitignored artifacts the routes and seeds import (posts.json, pages.json); reads stack.json, so it runs after build:stack. */
 if (run("npm", ["run", "build:content"]).code !== 0) {
   refuse("the content build failed", "Fix build:content. Nothing was deployed.");
 }

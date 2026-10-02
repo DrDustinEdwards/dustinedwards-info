@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 
 import { findWideDashes, renderBody } from "../app/lib/content/pipeline.mjs";
-import { CONTENT_PAGE_PATHS, CONTENT_PAGE_SECTIONS, CONTENT_PAGES_FROM_DATA } from "../app/lib/content-pages.mjs";
+import { CONTENT_PAGE_SECTIONS, CONTENT_PAGES_FROM_DATA, PAGE_FILE_PATHS } from "../app/lib/content-pages.mjs";
 import { compilePage, pageSlug } from "../app/lib/pages/compile.mjs";
 import { idsIn, pageLinkErrors } from "../app/lib/pages/links.mjs";
 
@@ -35,12 +35,25 @@ async function refusal(slug, mutate) {
 
 test("every page file compiles, and every registered path has its file", async () => {
   const files = readdirSync(dir).filter((name) => name.endsWith(".md"));
-  const registered = CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map(pageSlug);
+  const registered = PAGE_FILE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map(pageSlug);
   assert.deepEqual(files.map((name) => name.slice(0, -3)).sort(), [...registered].sort());
   for (const slug of registered) {
     const result = await compile(slug, read(slug));
     assert.equal(result.ok, true, `${slug}: ${result.ok ? "" : result.errors.join("; ")}`);
   }
+});
+
+test("About is a page file: it compiles, and its front matter and its render are held to what check:content and check:links held", async () => {
+  const ok = await compile("about", read("about"));
+  assert.equal(ok.ok, true, ok.ok ? "" : ok.errors.join("; "));
+  assert.match(await refusal("about", (r) => r.replace(/^seo_title: .*$/m, "seo_title: ")), /seo_title is required/);
+  assert.match(await refusal("about", (r) => r.replace(/^description: .*$/m, "description: ")), /description is required/);
+  assert.match(await refusal("about", (r) => r.replace("path: /about", "path: /elsewhere")), /path is "\/elsewhere"/);
+  assert.match(await refusal("about", (r) => `${r}\n![a picture](/media/x.jpg)\n`), /image/);
+  assert.match(await refusal("about", (r) => `${r}\n[bad](javascript:alert(1))\n`), /allowlist refused|javascript/i);
+  assert.match(await refusal("about", (r) => `${r}\nA sentence ${WIDE_DASH} with a dash.\n`), /wide dash/);
+  // The floor: an About with a title and a description but no prose is a blank page that looks like a success.
+  assert.match(await refusal("about", (r) => `${r.split("\n---\n")[0]}\n---\n\nToo short.\n`), /floor 200/);
 });
 
 test("a path outside the registry is refused, and the message says a save cannot create one", async () => {
