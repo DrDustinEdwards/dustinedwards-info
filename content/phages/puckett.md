@@ -2,6 +2,6 @@
 name: Puckett
 year: 2024
 host: foliorum
-county: null
+county: Erath County
 phagesdb: Puckett
 ---
