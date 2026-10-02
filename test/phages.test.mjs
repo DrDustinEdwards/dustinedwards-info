@@ -81,8 +81,10 @@ test("a row and a section say what the page has always said", () => {
       "[Ryadel on PhagesDB](https://phagesdb.org/phages/Ryadel/). [Genome announcement](/research/publications/10-1128-mra-01594-18/). A manuscript on its cryo-EM structure is submitted.",
   );
   // A county PhagesDB does not give is an empty cell, and a section drops the place.
-  assert.equal(phageTableRow(/** @type {any} */ (by("Fambo"))), "| [Fambo](#fambo) | 2022 | *M. foliorum* |  | [PhagesDB](https://phagesdb.org/phages/Fambo/) |  |");
-  assert.equal(phageSection(/** @type {any} */ (by("Fambo"))).split("\n")[2], "Host: *Microbacterium foliorum*. Found in 2022.");
+  // Every shipped phage has a county now, so the empty case is Fambo's record with the county removed.
+  const noCounty = /** @type {any} */ ({ ...by("Fambo"), county: null });
+  assert.equal(phageTableRow(noCounty), "| [Fambo](#fambo) | 2022 | *M. foliorum* |  | [PhagesDB](https://phagesdb.org/phages/Fambo/) |  |");
+  assert.equal(phageSection(noCounty).split("\n")[2], "Host: *Microbacterium foliorum*. Found in 2022.");
   assert.equal(phageSection(/** @type {any} */ (by("Lucinda"))).split("\n")[2], "Host: *Mycobacterium smegmatis* mc²155. Found in 2017, Texas.");
   // Softsoap is spelled as PhagesDB spells it: the link text and the address are the record's own.
   assert.match(phageSection(/** @type {any} */ (by("Softsoap"))), /\[Softsoap on PhagesDB\]\(https:\/\/phagesdb\.org\/phages\/Softsoap\/\)/);
