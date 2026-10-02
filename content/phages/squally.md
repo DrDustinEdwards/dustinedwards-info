@@ -2,6 +2,6 @@
 name: Squally
 year: 2024
 host: foliorum
-county: null
+county: Erath County
 phagesdb: Squally
 ---
