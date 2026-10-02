@@ -23,6 +23,7 @@ import { buildDictionary, DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs"
 import { isMain } from "./lib/is-main.mjs";
 import { buildProcedures, PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { buildPublications, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
+import { buildRoster, ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 /**
  * The paths below stay repo-relative because they name files in messages and in the render; every
@@ -358,9 +359,13 @@ async function main() {
   await writeFile(fromRoot(CV_ARTIFACT_PATH), `${JSON.stringify({ cv: cvRows }, null, 2)}
 `, "utf8");
 
+  // The cohorts' rows, which sync:content writes to D1; the roster is drawn from there (docs/ROSTER.md).
+  const roster = await buildRoster();
+  await writeFile(fromRoot(ROSTER_ARTIFACT_PATH), `${JSON.stringify({ roster: roster.rows }, null, 2)}\n`, "utf8");
+
   console.log(
     `build:content wrote ${ARTIFACT_PATH} (${posts.length} posts), ${ABOUT_ARTIFACT_PATH}, ${PAGES_ARTIFACT_PATH} (${pageRows.length} pages), ${DICTIONARY_ARTIFACT_PATH} (${dictionaryRows.length} entries), ` +
-      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications) and ${CV_ARTIFACT_PATH} (${cvRows.length} files)`,
+      `${PROCEDURES_ARTIFACT_PATH} (${rows.length} procedures), ${PUBLICATIONS_ARTIFACT_PATH} (${compiled.rows.length} publications), ${CV_ARTIFACT_PATH} (${cvRows.length} files) and ${ROSTER_ARTIFACT_PATH} (${roster.rows.length} cohorts)`,
   );
 }
 

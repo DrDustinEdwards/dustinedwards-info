@@ -230,6 +230,8 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
     ["get_cv", "a read"],
     ["list_dictionary", "a read"],
     ["get_dictionary", "a read"],
+    ["list_roster", "a read"],
+    ["get_roster", "a read"],
     ["sync_media", "the media index, on sync_ask's terms: derived, idempotent, read back"],
     ["sync_posts", "D1 rows, on sync_ask's terms: derived from the repository, idempotent"],
     [
@@ -261,6 +263,11 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
       "sync_cv",
       "D1 rows, on sync_pages's terms: derived from the repository, idempotent, it refuses an empty file set " +
         "rather than deleting every row, and it rewrites the CV's search records from the rows it converged",
+    ],
+    [
+      "sync_roster",
+      "D1 rows, on sync_pages's terms: derived from the repository, idempotent, and it refuses an empty file set " +
+        "rather than deleting every row",
     ],
     [
       "backup_media",

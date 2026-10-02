@@ -15,6 +15,7 @@ import { CV_ARTIFACT_PATH } from "./lib/cv.mjs";
 import { DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { citationSeeds, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
+import { ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
@@ -307,6 +308,29 @@ function buildDictionarySql(rows) {
         `VALUES (${sql(r.key)}, ${sql(r.path)}, ${sql(r.term)}, ${sql(r.status)}, ${sql(r.record)}, ` +
         `${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ON CONFLICT(key) DO UPDATE SET ` +
         `path = excluded.path, term = excluded.term, status = excluded.status, record = excluded.record, ` +
+        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `synced_at = excluded.synced_at;`,
+    );
+  }
+  return `${out.join("\n")}\n`;
+}
+
+/**
+ * The roster table converged to the repository's files (hard rule 18), on the pages' terms: every row whose
+ * file is gone is deleted, every other row is written from the build's compile, which is the compile the roster
+ * save runs. Scoped to the file-sourced rows, and never an unscoped delete.
+ *
+ * @param {any[]} rows content/generated/roster.json's rows
+ */
+function buildRosterSql(rows) {
+  if (rows.length === 0) throw new Error("buildRosterSql refuses to delete every cohort");
+  const keep = rows.map((r) => sql(r.sourcePath)).join(", ");
+  const out = [`DELETE FROM roster WHERE source_path NOT IN (${keep});`];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO roster (slug, year, record, source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ` +
+        `${num(r.year)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
+        `ON CONFLICT(slug) DO UPDATE SET year = excluded.year, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
         `synced_at = excluded.synced_at;`,
     );
@@ -669,6 +693,20 @@ async function main() {
     buildCvSql(cvRows),
     `sync:content CV import (${target})`,
     "the CV import failed",
+  );
+
+  // The roster beside them: the table, so a failure names the cohorts. Nothing in the search index reads it.
+  const rosterRows = JSON.parse(await readFile(ROSTER_ARTIFACT_PATH, "utf8")).roster;
+  if (!Array.isArray(rosterRows) || rosterRows.length === 0) {
+    throw new Error(`${ROSTER_ARTIFACT_PATH} carries no cohorts. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${rosterRows.length} roster cohorts`);
+  await applySql(
+    target,
+    path.join(dir, "sync-roster.sql"),
+    buildRosterSql(rosterRows),
+    `sync:content roster import (${target})`,
+    "the roster import failed",
   );
 
   // A separate statement file, so a failure here names the search index rather than the content.

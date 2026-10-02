@@ -25,8 +25,9 @@ import { Enhance } from "~/components/enhance";
 import { HomePodcast } from "~/components/home-podcast";
 import { homePodcastEpisode } from "~/lib/podcast/podcast.server";
 import { listPublishedPublications } from "~/db/publications";
-import { PHAGE_YEARS } from "~/data/phage-hunters";
+import { listRoster } from "~/db/roster";
 import { decodeEntities } from "~/lib/publications/entities.mjs";
+import { rosterFacts } from "~/lib/roster/compile.mjs";
 import type { Publication } from "~/lib/publications/types";
 import { RESEARCH_AREAS, SOFTWARE_PRODUCTS } from "~/lib/nav";
 import type { Route } from "./+types/home";
@@ -65,24 +66,16 @@ function homePapers(papers: Publication[]) {
   }));
 }
 
-/** Counted, never typed: a typed number drifts when a cohort lands. The names stay out of the payload. */
-function discoveryFacts() {
-  return {
-    researchers: PHAGE_YEARS.reduce((n, c) => n + c.researchers.length, 0),
-    cohorts: PHAGE_YEARS.length,
-    since: Math.min(...PHAGE_YEARS.map((c) => c.year)),
-  };
-}
-
 export async function loader({ context }: Route.LoaderArgs) {
   const env = getEnv(context);
   const timings = context.get(timingsContext).timings;
 
-  const [start, podcast, nextPublishAt, papers] = await Promise.all([
+  const [start, podcast, nextPublishAt, papers, cohorts] = await Promise.all([
     timed(timings, "home_posts", () => listHomeStartHere(env, { timings })),
     timed(timings, "home_podcast", () => homePodcastEpisode(context)),
     timed(timings, "home_next_scheduled", () => nextScheduledPublishAt(env)),
     timed(timings, "home_papers", () => listPublishedPublications(env)),
+    timed(timings, "home_roster", () => listRoster(env)),
   ]);
 
   return data(
@@ -92,7 +85,8 @@ export async function loader({ context }: Route.LoaderArgs) {
       recent: start.recent,
       papers: homePapers(papers),
       paperCount: papers.length,
-      discovery: discoveryFacts(),
+      // Counted from the roster table, never typed: a typed number drifts when a cohort lands. The names stay out of the payload.
+      discovery: rosterFacts(cohorts),
       podcast,
     },
     {

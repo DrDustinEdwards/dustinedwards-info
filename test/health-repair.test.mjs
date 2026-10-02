@@ -395,3 +395,14 @@ test("llms drift repairs through sync_llms, with the other file-derived stores",
   const actions = watchdogActions({ status: 503, body: bodyFailing(["llms-drift"]) }, WITH);
   assert.deepEqual(actions, [{ type: "repair", tool: "sync_llms" }, { type: "recheck" }]);
 });
+
+test("roster drift repairs through sync_roster, beside the dictionary and before the pages", () => {
+  assert.deepEqual(repairPlan(["roster-drift"], WITH).repair, ["sync_roster"]);
+
+  const all = repairPlan(["ask-index-drift", "pages-drift", "roster-drift", "dictionary-drift", "content-drift"], WITH);
+  assert.deepEqual(all.repair, ["sync_posts", "sync_dictionary", "sync_roster", "sync_pages", "sync_ask"]);
+  assert.equal(all.alertOnly, false);
+
+  const actions = watchdogActions({ status: 503, body: bodyFailing(["roster-drift"]) }, WITH);
+  assert.deepEqual(actions, [{ type: "repair", tool: "sync_roster" }, { type: "recheck" }]);
+});

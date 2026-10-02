@@ -9,8 +9,9 @@ export const SOURCE_FILES = ["public/site.webmanifest", "content/features.json"]
 
 // Each paper's file names its PDF by path (`pdfPath`) and each dictionary entry its pronunciation clip (`audio`), so
 // these markdown files are sources: without them every hosted PDF and clip would read as unreferenced. Passed
-// through unstripped, like JSON: the extracted text has apostrophes.
-export const SOURCE_DIRECTORIES = ["content/publications", "content/dictionary"];
+// through unstripped, like JSON: the extracted text has apostrophes. Each cohort's file under content/roster names its
+// photograph by path, so without it the nine photographs would read as unreferenced.
+export const SOURCE_DIRECTORIES = ["content/publications", "content/dictionary", "content/roster"];
 
 const SOURCE_EXTENSIONS = [".ts", ".tsx", ".mjs", ".js", ".css", ".json", ".webmanifest"];
 

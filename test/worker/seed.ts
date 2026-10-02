@@ -208,3 +208,44 @@ export async function seedDictionary(only?: readonly string[]) {
     ),
   );
 }
+
+/**
+ * Synthetic cohorts: NO real name, ever. The year, photo path and names are placeholders, so a test of the roster
+ * touches nothing a student gave. The photograph path is a real shape (a .webp under /phage-hunters/) because the
+ * validator holds it to one; the stub host below answers that it exists.
+ */
+export const SYNTHETIC_COHORTS = [
+  {
+    year: 2031,
+    photo: { src: "/phage-hunters/synthetic-2031.webp", width: 1080, height: 720, alt: "Group photo of the 2031 Phage Discovery Program cohort" },
+    researchers: ["Example Person One", "Example Person Two", "Example Person Three"],
+  },
+  {
+    year: 2030,
+    photo: null,
+    researchers: ["Example Person Four", "Example Person Five"],
+  },
+] as const;
+
+/** A cohort's file, as the repository holds it: front matter and no body. */
+export async function cohortFile(cohort: { year: number; photo: unknown; researchers: readonly string[] }) {
+  const { default: matter } = await import("gray-matter");
+  return matter.stringify("", { year: cohort.year, photo: cohort.photo, researchers: [...cohort.researchers] }).replace(/\n+$/, "\n");
+}
+
+/** The roster table, from the synthetic cohorts (or the ones given), written through the save's own row writer. */
+export async function seedRoster(cohorts: ReadonlyArray<{ year: number; photo: unknown; researchers: readonly string[] }> = SYNTHETIC_COHORTS) {
+  const { compileCohort } = await import("~/lib/roster/compile.mjs");
+  const { writeRosterRow } = await import("~/lib/roster/save.server");
+  for (const cohort of cohorts) {
+    const compiled = await compileCohort({
+      slug: String(cohort.year),
+      raw: await cohortFile(cohort),
+      host: { photo: async () => true },
+      pipeline: { findWideDashes: () => [] },
+    });
+    if (!compiled.ok) throw new Error(`the ${cohort.year} cohort does not compile:\n  ${compiled.errors.join("\n  ")}`);
+    await writeRosterRow(env as never, compiled);
+  }
+  return cohorts.length;
+}

@@ -25,6 +25,7 @@ import { loader as llmsFullLoader } from "~/routes/llms-full[.txt]";
 import { loader as searchLoader, middleware as searchMiddleware } from "~/routes/search";
 
 import { post } from "./fixtures";
+import { seedRoster } from "./seed";
 import { renderRoute, routeContext, textsOf, throughMiddleware } from "./route-helpers";
 
 /* The published post is the control that proves each surface was actually read. */
@@ -126,6 +127,8 @@ async function write(slug: string, raw: string) {
 }
 
 beforeAll(async () => {
+  // The home page counts the roster from D1 (docs/ROSTER.md).
+  await seedRoster();
   for (const s of SORTED) {
     await write(
       s.slug,

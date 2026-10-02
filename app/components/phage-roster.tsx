@@ -1,11 +1,15 @@
-import { PHAGE_YEARS } from "~/data/phage-hunters";
+import type { Cohort } from "~/lib/roster/compile.mjs";
 
-/** The year-by-year roster. Photos and names only. The heading's id is the /phage-discovery anchor. */
-export function PhageRoster() {
+/**
+ * The year-by-year roster, drawn from the roster table (docs/ROSTER.md). Photos and names only. The heading's id
+ * is the /phage-discovery anchor (ROSTER_ANCHOR in app/lib/roster/compile.mjs, a literal here because
+ * check:links reads the static id).
+ */
+export function PhageRoster({ cohorts }: { cohorts: Cohort[] }) {
   return (
     <section aria-labelledby="roster">
       <h2 id="roster">Roster</h2>
-      {PHAGE_YEARS.map((entry, index) => (
+      {cohorts.map((entry, index) => (
         <section key={entry.year} aria-labelledby={`year-${entry.year}`}>
           <h3 id={`year-${entry.year}`}>{entry.year}</h3>
           {entry.photo ? (
