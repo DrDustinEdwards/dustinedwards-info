@@ -21,6 +21,7 @@ const TOOLS = [
   "sync_llms",
   "sync_cv",
   "sync_roster",
+  "sync_phages",
   "backup_media",
   "upload_media",
   "list_mentions",
@@ -40,6 +41,8 @@ const TOOLS = [
   "get_dictionary",
   "list_roster",
   "get_roster",
+  "list_phages",
+  "get_phage",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -190,6 +193,16 @@ export const TOOL_DESCRIPTORS: Readonly<
       "answers 422 naming any file the validator refuses after converging the rest. Idempotent. A read-back " +
       "reconciliation: expected, present, and a converged verdict.",
   },
+  sync_phages: {
+    args: {},
+    returns:
+      "Converges D1 to the repository's content/phages files: re-compiles every phage whose file's blob sha " +
+      "differs from its row (or has no row), removes rows whose file is gone, through the same compile and write " +
+      "doors a phage save uses, first re-deriving the page /research/phages (its table, twin and search records) from " +
+      "the final set, then purges the pages tag. Refuses an empty file set, and answers 422 naming any file the " +
+      "validator refuses after converging the rest. Idempotent. A read-back reconciliation: expected, present, and a " +
+      "converged verdict.",
+  },
   list_mentions: {
     args: { status: "string, optional: unverified, pending, approved, rejected or failed" },
     returns:
@@ -323,6 +336,19 @@ export const TOOL_DESCRIPTORS: Readonly<
       "The cohort the committed file holds (year, photograph and names, the fields the public page shows), the " +
       "head sha, and any validation errors the file has now. The format is docs/ROSTER.md. Read only: a cohort " +
       "is saved through Carrel.",
+  },
+  list_phages: {
+    args: {},
+    returns:
+      "Every phage row in D1, in the page's order (year, then name): slug, name, year, host, county, PhagesDB record, " +
+      "genome-paper slug, former name and note, with the count and the head sha. Only what the public phage table " +
+      "already shows. The table is edited through Carrel, not here.",
+  },
+  get_phage: {
+    args: { slug: "string, a phage's file key: its name in lower case, such as acorn15" },
+    returns:
+      "The phage the committed file holds (the fields the public table shows), its raw file, the head sha, and any " +
+      "validation errors the file has now. The format is docs/PHAGES.md. Read only: a phage is saved through Carrel.",
   },
   backup_media: {
     args: {},

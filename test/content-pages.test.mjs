@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
 import {
   CONTENT_PAGE_PATHS,
@@ -36,11 +36,10 @@ test("every page an old WordPress address redirects to is one of these pages, or
 });
 
 test("every old phage address Google knows lands on a heading of /research/phages", () => {
-  // /discovery-of-{name}/ 301s to /research/phages#{name}; rehype-slug gives a plain-name heading that id.
-  const markdown = readFileSync(new URL(contentPageFile("/research/phages"), pagesDir), "utf8");
-  const ids = new Set(
-    [...markdown.matchAll(/^###\s+([A-Za-z0-9]+)\s*$/gm)].map((m) => m[1].toLowerCase()),
-  );
+  // /discovery-of-{name}/ 301s to /research/phages#{name}; rehype-slug gives a plain-name heading that id. The
+  // headings are drawn from the phage files (docs/PHAGES.md), one per file, named for it, and the page compile
+  // holds each to its ### section (app/lib/pages/invariants.mjs), so the file names are the ids.
+  const ids = new Set(readdirSync(new URL("../content/phages/", import.meta.url)).filter((n) => n.endsWith(".md")).map((n) => n.slice(0, -3)));
   const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-urls.json", import.meta.url), "utf8"));
   const names = gsc.paths
     .map((p) => /^\/(?:discovery|annotation)-of-([a-z0-9-]+)\/$/.exec(p)?.[1])

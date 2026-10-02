@@ -11,6 +11,7 @@ import {
   publicationDriftVerdict,
   llmsDriftVerdict,
   rosterDriftVerdict,
+  phageDriftVerdict,
   ftsEqualityVerdict,
   mediaDriftVerdict,
   mediaBackupDriftVerdict,
@@ -25,6 +26,7 @@ import { CV_DIR } from "~/lib/cv/parse.mjs";
 import { DICTIONARY_DIR } from "~/lib/dictionary/parse.mjs";
 import { PAGES_DIR } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
+import { PHAGES_DIR } from "~/lib/phages/compile.mjs";
 import { ROSTER_DIR } from "~/lib/roster/compile.mjs";
 import { mediaIndexStatus } from "~/lib/media/rebuild.server";
 import { backupStatus } from "~/lib/media/backup.server";
@@ -95,6 +97,15 @@ export async function readRosterSides(env: Env & { GITHUB_TOKEN?: string }) {
   const files = await listMarkdownFiles(env, ROSTER_DIR);
   const rows = await env.DB.prepare(
     "SELECT slug, source_blob_sha FROM roster",
+  ).all<{ slug: string; source_blob_sha: string | null }>();
+  return { files, rows: rows.results ?? [] };
+}
+
+/** The same two sides for the phages: `content/phages/*.md` and the phages table's rows. */
+export async function readPhageSides(env: Env & { GITHUB_TOKEN?: string }) {
+  const files = await listMarkdownFiles(env, PHAGES_DIR);
+  const rows = await env.DB.prepare(
+    "SELECT slug, source_blob_sha FROM phages",
   ).all<{ slug: string; source_blob_sha: string | null }>();
   return { files, rows: rows.results ?? [] };
 }
@@ -187,6 +198,14 @@ export async function runHealthChecks(env: Env): Promise<HealthRun> {
       // A cohort edited, added or deleted through git, or a save whose D1 write failed, shows here.
       const { files, rows } = await readRosterSides(env);
       return rosterDriftVerdict(files, rows);
+    }),
+  );
+
+  checks.push(
+    await guard("phage-drift", async () => {
+      // A phage edited, added or deleted through git, or a save whose D1 write failed, shows here.
+      const { files, rows } = await readPhageSides(env);
+      return phageDriftVerdict(files, rows);
     }),
   );
 

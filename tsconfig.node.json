@@ -347,7 +347,10 @@
     "app/lib/phage-tools.mjs",
     // The roster's compile path: build:content and sync:content compile every cohort file with the SAME module
     // the Carrel adapter's roster save runs (docs/ROSTER.md). scripts/lib/roster.mjs is included by the scripts project.
-    "app/lib/roster/compile.mjs"
+    "app/lib/roster/compile.mjs",
+    // The phage table's compile path, the same on both sides (docs/PHAGES.md): the page compile draws the table from
+    // it, so build:content and sync:content compile every phage file with the module the phage save runs.
+    "app/lib/phages/compile.mjs"
   ],
   "compilerOptions": {
     "composite": true,

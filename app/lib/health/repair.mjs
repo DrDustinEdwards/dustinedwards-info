@@ -14,6 +14,9 @@ export const REPAIRABLE = /** @type {const} */ ({
   // Beside the dictionary: the roster is drawn into the program page and the home page, which a page compile or a
   // purge may re-open, so it converges before the pages do. It writes no search record.
   "roster-drift": "sync_roster",
+  // Before the pages as well: the phage page is compiled from the phage rows, so a page compile reads them from D1,
+  // and a phage write refreshes the page row it is drawn into.
+  "phage-drift": "sync_phages",
   "pages-drift": "sync_pages",
   "publications-drift": "sync_publications",
   // Reads nothing the Ask upload reads; listed with the file-derived stores.

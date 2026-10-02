@@ -483,3 +483,23 @@ export const roster = sqliteTable("roster", {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+// The phages of the table on /research/phages (docs/PHAGES.md). Derived from content/phages/*.md, one row per
+// phage, written only by writePhageRow (app/lib/phages/save.server.ts) and sync:content. The page is compiled
+// from these rows, so a write re-derives the page's own row too.
+export const phages = sqliteTable(
+  "phages",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    slug: text("slug").notNull().unique(),
+    name: text("name").notNull(),
+    year: integer("year").notNull(),
+    record: text("record").notNull(),
+    sourcePath: text("source_path").notNull().unique(),
+    sourceBlobSha: text("source_blob_sha").notNull(),
+    syncedAt: integer("synced_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [index("phages_year_idx").on(t.year)],
+);

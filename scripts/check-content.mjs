@@ -1,4 +1,5 @@
 import { buildArtifact } from "./build-content.mjs";
+import { buildPhages } from "./lib/phages.mjs";
 import { buildRoster } from "./lib/roster.mjs";
 import { htmlHasMath } from "../app/lib/content/math.mjs";
 import { mathToTex } from "../app/lib/rss-feed.mjs";
@@ -88,6 +89,11 @@ async function main() {
   // on the first file that does not compile, which main's catch reports.
   const roster = await buildRoster();
   console.log(`check:content ok. ${roster.rows.length} roster cohort(s) compile and their photographs exist.`);
+
+  // Every phage file through the phage validator, the code the Carrel save runs (docs/PHAGES.md); it throws on the
+  // first file that does not compile, which main's catch reports. The page that draws them compiles in buildArtifact.
+  const phages = await buildPhages();
+  console.log(`check:content ok. ${phages.rows.length} phage(s) compile and each paper they link exists.`);
 
   // Where further_reading links land is check:links, with every other internal link on the site.
 

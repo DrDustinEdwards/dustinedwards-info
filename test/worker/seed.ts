@@ -3,6 +3,7 @@ import { env } from "cloudflare:test";
 import cvArtifact from "../../content/generated/cv.json";
 import dictionaryArtifact from "../../content/generated/dictionary.json";
 import pagesArtifact from "../../content/generated/pages.json";
+import phagesArtifact from "../../content/generated/phages.json";
 import proceduresArtifact from "../../content/generated/procedures.json";
 
 type PageArtifactRow = {
@@ -248,4 +249,25 @@ export async function seedRoster(cohorts: ReadonlyArray<{ year: number; photo: u
     await writeRosterRow(env as never, compiled);
   }
   return cohorts.length;
+}
+
+/**
+ * The phages table, from the rows build:content compiles (content/generated/phages.json), which is what
+ * sync:content writes at ship, so a case that saves a phage draws its page from the whole table. Seed it with
+ * the pages: the page's row already carries the table as the same compile drew it.
+ */
+export async function seedPhages() {
+  const rows = phagesArtifact.phages;
+  if (rows.length === 0) throw new Error("seedPhages found no phage rows. Run npm run build:content first.");
+  await env.DB.batch(
+    rows.map((r) =>
+      env.DB.prepare(
+        `INSERT INTO phages (slug, name, year, record, source_path, source_blob_sha)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(slug) DO UPDATE SET name = excluded.name, year = excluded.year, record = excluded.record,
+           source_blob_sha = excluded.source_blob_sha`,
+      ).bind(r.slug, r.name, r.year, r.record, r.sourcePath, r.sourceBlobSha),
+    ),
+  );
+  return rows.length;
 }
