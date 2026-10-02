@@ -2,6 +2,6 @@
 name: Fambo
 year: 2022
 host: foliorum
-county: null
+county: Erath County
 phagesdb: Fambo
 ---
