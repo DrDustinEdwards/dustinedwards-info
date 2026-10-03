@@ -252,7 +252,11 @@ export default {
     const response = await gateway(request, env, ctx);
     // Every exit, redirects included, which never pass through applyDocumentHeaders. Static assets
     // are served before the Worker runs, so robots.txt's Disallow is what covers those.
-    return isWorkerPreview(env) ? withHeader(response, "X-Robots-Tag", "noindex") : response;
+    // The workers.dev address keeps answering after the cutover (the watchdog, the browser tests and
+    // the sign-in fallback use it), so it is kept out of the index here rather than redirected away.
+    // robots.txt must not disallow it, or a crawler never reads this header.
+    const unindexed = isWorkerPreview(env) || new URL(request.url).hostname.endsWith(".workers.dev");
+    return unindexed ? withHeader(response, "X-Robots-Tag", "noindex") : response;
   },
 
   async queue(batch, env) {

@@ -6,11 +6,9 @@ import { paperPath } from "./publications/paths.mjs";
 
 /**
  * Never derive absolute URLs from `request.url`: prerendering runs in Node with no request.
- * DNS cutover: change this with BETTER_AUTH_URL and the Google redirect URI.
  */
-export const SITE_ORIGIN = "https://dustinedwards.dustin-edwards.workers.dev";
+export const SITE_ORIGIN = "https://dustinedwards.info";
 
-// Not the apex: until DNS moves, the apex is the legacy WordPress site.
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
 // `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
