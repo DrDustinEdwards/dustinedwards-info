@@ -16,7 +16,7 @@ The lab has isolated phages on two hosts, both soil actinobacteria:
 - *Mycobacterium smegmatis* mc²155 (ATCC 700084), a fast-growing relative of the bacterium that causes tuberculosis. The lab used this host in 2017.
 - *Microbacterium foliorum* (NRRL B-24224), used from 2018 on. Its phages are called microbacteriophages.
 
-The questions are the ones every new phage raises: how its genome is organized, which known phages it is related to (its cluster), what its genes do, and what the particle looks like. The lab has isolated 80 phages from 2017 through 2025: 19 on *Mycobacterium smegmatis* mc²155 (all in 2017) and 59 on *Microbacterium foliorum*, with 2 that have no host on record. Every phage is listed in the [phage table](/research/phages).
+The questions are the ones every new phage raises: how its genome is organized, which known phages it is related to (its cluster), what its genes do, and what the particle looks like. The lab has isolated {{phages.count}} phages from {{phages.firstYear}} through {{phages.lastYear}}: {{phages.host.smegmatis.count}} on *Mycobacterium smegmatis* mc²155 (all in {{phages.host.smegmatis.years}}) and {{phages.host.foliorum.count}} on *Microbacterium foliorum*. Every phage is listed in the [phage table](/research/phages).
 
 Phage research also has a clinical side. A survey of 196 US healthcare providers found that 49 percent knew about phage therapy for resistant bacterial infections and 56 percent would consider using it ([phage therapy survey](/research/publications/10-3390-ijerph22071139/)).
 
@@ -55,18 +55,18 @@ Each finished genome is published in *Microbiology Resource Announcements*, with
 
 | Phage | Host | Genome | Paper |
 | --- | --- | --- | --- |
-| Godfather | *Microbacterium foliorum* | 17,452 bp, 24 genes; over 99% identity with cluster EE phages | [2025](/research/publications/10-1128-mra-00888-24/) |
+| Godfather | *Microbacterium foliorum* | {{phage.godfather.bp}} bp, {{phage.godfather.genes}} genes; over 99% identity with cluster EE phages | [2025](/research/publications/10-1128-mra-00888-24/) |
 | MrAaronian | *Arthrobacter globiformis* | 54,509 bp, 87 genes; cluster AW | [2023](/research/publications/10-1128-mra-00778-23/) |
-| Fizzles | *Microbacterium foliorum* | 62,078 bp, 104 genes; over 83.6% identity with Squash and Nike | [2022](/research/publications/10-1128-mra-01077-21/) |
-| Loca | *Microbacterium foliorum* | 17,475 bp, 25 genes; over 96% identity with Quaker and Livingwater | [2022](/research/publications/10-1128-mra-00783-22/) |
-| IndyLu | *Microbacterium foliorum* | 41,958 bp, 71 genes, 1 tRNA; related to cluster EB | [2021](/research/publications/10-1128-mra-01079-21/) |
+| Fizzles | *Microbacterium foliorum* | {{phage.fizzles.bp}} bp, {{phage.fizzles.genes}} genes; over 83.6% identity with Squash and Nike | [2022](/research/publications/10-1128-mra-01077-21/) |
+| Loca | *Microbacterium foliorum* | {{phage.loca.bp}} bp, {{phage.loca.genes}} genes; over 96% identity with Quaker and Livingwater | [2022](/research/publications/10-1128-mra-00783-22/) |
+| IndyLu | *Microbacterium foliorum* | {{phage.indylu.bp}} bp, {{phage.indylu.genes}} genes, 1 tRNA; related to cluster EB | [2021](/research/publications/10-1128-mra-01079-21/) |
 | Joy99 | *Mycobacterium* | 59,837 bp, 97 genes, 1 tRNA | [2021](/research/publications/10-1128-mra-00556-21/) |
 | Tripl3t and Zeuska | *Mycobacterium smegmatis* | 53,565 bp and 53,598 bp | [2021](/research/publications/10-1128-mra-00558-21/) |
-| Finny | *Microbacterium foliorum* | 40,313 bp, circularly permuted, 63 genes | [2019](/research/publications/10-1128-mra-01039-19/) |
-| Ryadel | *Mycobacterium smegmatis* | 72,658 bp, 132 genes; cluster O | [2019](/research/publications/10-1128-mra-01594-18/) |
-| Arlo | *Mycobacterium smegmatis* | 52,960 bp, 96 genes; cluster A1 | [2018](/research/publications/10-1128-mra-01242-18/) |
+| Finny | *Microbacterium foliorum* | {{phage.finny.bp}} bp, circularly permuted, {{phage.finny.genes}} genes | [2019](/research/publications/10-1128-mra-01039-19/) |
+| Ryadel | *Mycobacterium smegmatis* | {{phage.ryadel.bp}} bp, {{phage.ryadel.genes}} genes; cluster O | [2019](/research/publications/10-1128-mra-01594-18/) |
+| Arlo | *Mycobacterium smegmatis* | {{phage.arlo.bp}} bp, {{phage.arlo.genes}} genes; cluster A1 | [2018](/research/publications/10-1128-mra-01242-18/) |
 
-Godfather, Fizzles, Loca and IndyLu came from samples collected in Erath County, Texas, Finny from Comal County, Texas, and Arlo from Erath County. Joy99, Tripl3t and Zeuska were isolated elsewhere and annotated by students at Bluff Dale High School and Tolar High School in community engagement with Tarleton State University. MrAaronian was isolated in Dutchess County, New York.
+Godfather, Fizzles, Loca and IndyLu came from samples collected in {{phages.commonCounty(godfather,fizzles,loca,indylu)}}, Texas, Finny from {{phage.finny.county}}, Texas, and Arlo from {{phage.arlo.county}}. Joy99, Tripl3t and Zeuska were isolated elsewhere and annotated by students at Bluff Dale High School and Tolar High School in community engagement with Tarleton State University. MrAaronian was isolated in Dutchess County, New York.
 
 ## Phage structure
 

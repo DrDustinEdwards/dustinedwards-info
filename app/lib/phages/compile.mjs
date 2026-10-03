@@ -34,6 +34,13 @@ export const PHAGES_PAGE_PATH = "/research/phages";
 export const TABLE_MARKER = "<!-- phages:table -->";
 export const SECTIONS_MARKER = "<!-- phages:sections -->";
 
+/**
+ * The pages, besides the table's, whose text carries {{phage...}} tokens. A phage write re-derives each of them
+ * (app/lib/phages/save.server.ts), so this list and the pages must agree: test/phages.test.mjs fails when a page
+ * file uses a token and is not here, or is here and uses none.
+ */
+export const PHAGE_FACT_PAGES = /** @type {const} */ (["/research", "/research/bacteriophages", "/research/science-education"]);
+
 /** The two hosts the table names, as the table's cell and a section's line write them. A new host is code. */
 export const HOSTS = Object.freeze({
   smegmatis: { short: "*M. smegmatis* mc²155", long: "*Mycobacterium smegmatis* mc²155" },
@@ -44,7 +51,7 @@ export const HOSTS = Object.freeze({
 export const TABLE_HEADER = "| Phage | Year | Host | County | PhagesDB | Paper |\n|---|---|---|---|---|---|";
 
 const STATE = "Texas";
-const FIELDS = ["name", "year", "host", "county", "phagesdb", "paper", "formerly", "note"];
+const FIELDS = ["name", "year", "host", "county", "phagesdb", "paper", "formerly", "note", "genome_bp", "genes"];
 const REQUIRED = ["name", "year", "host", "county", "phagesdb"];
 
 /** A phage's name: letters and digits, so its lower-case form is the file key, the heading id and the old address. */
@@ -63,6 +70,7 @@ const NOTE_MAX = 160;
  * @typedef {{
  *   name: string, year: number, host: HostKey | null, county: string | null, phagesdb: string | null,
  *   paper: string | null, formerly: string | null, note: string | null,
+ *   genomeBp?: number | null, genes?: number | null,
  * }} Phage
  * @typedef {{ paper: (slug: string) => Promise<boolean> }} PhageHost
  * `findWideDashes` is injected, as the page compile injects the pipeline's: the Worker loads it lazily.
@@ -119,7 +127,7 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
     if (data[key] === undefined) errors.push(`${key} is required${key === "name" || key === "year" ? "" : " (null where there is none)"}`);
   }
 
-  const { name, year, host: hostKey, county, phagesdb, paper, formerly, note } = data;
+  const { name, year, host: hostKey, county, phagesdb, paper, formerly, note, genome_bp: genomeBp, genes } = data;
   if (!matches(name, NAME_PATTERN)) errors.push(`name is ${JSON.stringify(name)}; it is the phage's name: letters and digits, starting with a letter`);
   else if (slug !== phageSlug(name)) errors.push(`name is ${name}, but the file is ${phagePath(slug)}: a phage's file is named for its name in lower case (${phageSlug(name)}.md)`);
   if (!SLUG_PATTERN.test(slug)) errors.push(`"${slug}" is not a phage file key; the file is the name in lower case, such as acorn15.md`);
@@ -151,6 +159,12 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
       errors.push(`note is ${JSON.stringify(note)}; it is one plain sentence of at most ${NOTE_MAX} characters, starting with a capital and ending with a period, with no links or markdown`);
     }
   }
+  // The genome announcement's own numbers, so a page states them from the record instead of typing them.
+  for (const [field, value, low, high] of /** @type {const} */ ([["genome_bp", genomeBp, 1_000, 10_000_000], ["genes", genes, 1, 5_000]])) {
+    if (value !== undefined && value !== null && (typeof value !== "number" || !Number.isInteger(value) || value < low || value > high)) {
+      errors.push(`${field} is ${JSON.stringify(value)}; it is a whole number from ${low} to ${high}, or absent`);
+    }
+  }
   if (errors.length > 0) return { ok: false, errors };
 
   /** @type {Phage} */
@@ -163,6 +177,8 @@ export async function compilePhage({ slug, raw, host, pipeline, sourcePath }) {
     paper: /** @type {string | null} */ (paper ?? null),
     formerly: /** @type {string | null} */ (formerly ?? null),
     note: /** @type {string | null} */ (note ?? null),
+    genomeBp: /** @type {number | null} */ (genomeBp ?? null),
+    genes: /** @type {number | null} */ (genes ?? null),
   };
   return {
     ok: true,
@@ -238,6 +254,105 @@ export function phageTableMarkdown(/** @type {Phage[]} */ phages) {
 /** The sections' text: one per phage, in the page's order, no trailing newline. */
 export function phageSectionsMarkdown(/** @type {Phage[]} */ phages) {
   return sortPhages(phages).map(phageSection).join("\n\n");
+}
+
+const countFormat = new Intl.NumberFormat("en-US");
+
+/** @param {number[]} years the years a set of phages was found in, as prose: "2017" or "2017 to 2018". */
+function yearsText(years) {
+  const low = Math.min(...years);
+  const high = Math.max(...years);
+  return low === high ? String(low) : `${low} to ${high}`;
+}
+
+/**
+ * What the whole set states, computed from the rows so a page never types it: the count, the span of years, and
+ * for each host its count and the years it was used. The page text that used to carry these ("80 phages") drifted
+ * from the records; a token reads them instead.
+ *
+ * @param {Phage[]} phages
+ */
+export function phageFacts(phages) {
+  const years = phages.map((p) => p.year);
+  /** @type {Record<string, { count: number, firstYear: number, lastYear: number, years: string }>} */
+  const host = {};
+  for (const key of Object.keys(HOSTS)) {
+    const mine = phages.filter((p) => p.host === key);
+    if (mine.length > 0) {
+      const own = mine.map((p) => p.year);
+      host[key] = { count: mine.length, firstYear: Math.min(...own), lastYear: Math.max(...own), years: yearsText(own) };
+    }
+  }
+  return {
+    count: phages.length,
+    firstYear: Math.min(...years),
+    lastYear: Math.max(...years),
+    noHost: phages.filter((p) => p.host === null).length,
+    host,
+  };
+}
+
+const TOKEN = /\{\{\s*([^{}]*?)\s*\}\}/g;
+const COMMON_COUNTY = /^phages\.commonCounty\(([a-z0-9,\s]+)\)$/;
+
+/**
+ * Replaces the tokens in a page's text with values read from the phage rows. A token that names nothing is an
+ * error, never an empty string, so a renamed phage or a missing field cannot blank a sentence quietly.
+ *
+ *   {{phages.count}}  {{phages.firstYear}}  {{phages.lastYear}}
+ *   {{phages.host.smegmatis.count}}  .firstYear  .lastYear  .years   (a host key from HOSTS)
+ *   {{phage.loca.bp}}  .genes  .county  .year                          (a phage's file key)
+ *   {{phages.commonCounty(godfather,fizzles)}}                         (the county they share; an error if they differ)
+ *
+ * @param {string} text
+ * @param {Phage[] | undefined} phages
+ * @returns {{ ok: true, text: string } | { ok: false, errors: string[] }}
+ */
+export function expandPhageTokens(text, phages) {
+  if (!text.includes("{{")) return { ok: true, text };
+  if (!phages || phages.length === 0) {
+    return { ok: false, errors: ["the page uses {{phage...}} tokens and the phage rows are not loaded: run the content sync (npm run sync:content -- --remote), or sync_phages"] };
+  }
+  const facts = phageFacts(phages);
+  const bySlug = new Map(phages.map((p) => [phageSlug(p.name), p]));
+  /** @type {string[]} */
+  const errors = [];
+  /** Only a genome's size takes thousands separators; a year or a count is written plain. @param {string} token @returns {string | number | null} */
+  const read = (token) => {
+    const common = COMMON_COUNTY.exec(token);
+    if (common) {
+      const counties = new Set((common[1] ?? "").split(",").map((k) => bySlug.get(k.trim())?.county ?? null));
+      const only = [...counties];
+      return only.length === 1 && only[0] !== null && only[0] !== undefined ? only[0] : null;
+    }
+    const parts = token.split(".");
+    if (parts[0] === "phages" && parts.length === 2) {
+      const value = /** @type {Record<string, unknown>} */ (facts)[parts[1] ?? ""];
+      return typeof value === "number" ? value : null;
+    }
+    if (parts[0] === "phages" && parts[1] === "host" && parts.length === 4) {
+      const entry = facts.host[parts[2] ?? ""];
+      const value = entry ? /** @type {Record<string, unknown>} */ (entry)[parts[3] ?? ""] : undefined;
+      return typeof value === "number" || typeof value === "string" ? value : null;
+    }
+    if (parts[0] === "phage" && parts.length === 3) {
+      const phage = bySlug.get(parts[1] ?? "");
+      if (!phage) return null;
+      const value = /** @type {Record<string, number | string | null>} */ ({ bp: phage.genomeBp ?? null, genes: phage.genes ?? null, county: phage.county, year: phage.year })[parts[2] ?? ""];
+      if (value === null || value === undefined) return null;
+      return parts[2] === "bp" && typeof value === "number" ? countFormat.format(value) : value;
+    }
+    return null;
+  };
+  const out = text.replace(TOKEN, (whole, inner) => {
+    const value = read(String(inner).trim());
+    if (value === null) {
+      errors.push(`${whole} names no phage fact (check the token, the phage's file key, and that its record carries the field)`);
+      return whole;
+    }
+    return String(value);
+  });
+  return errors.length > 0 ? { ok: false, errors } : { ok: true, text: out };
 }
 
 const markerLine = (/** @type {string} */ marker) => new RegExp(`^${marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "gm");

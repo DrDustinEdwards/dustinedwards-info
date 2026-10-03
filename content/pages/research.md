@@ -17,7 +17,7 @@ Work on AI lives under [software](/software) until there is published AI researc
 
 ## Phages
 
-The [phage table](/research/phages) lists all 80 bacteriophages isolated in the Tarleton SEA-PHAGES lab from 2017 to 2025, with each phage's host, year, Texas county, PhagesDB record and genome announcement where one exists.
+The [phage table](/research/phages) lists all {{phages.count}} bacteriophages isolated in the Tarleton SEA-PHAGES lab from {{phages.firstYear}} to {{phages.lastYear}}, with each phage's host, year, Texas county, PhagesDB record and genome announcement where one exists.
 
 ## Protocols
 
@@ -59,17 +59,17 @@ Every paper is listed below by area, with one sentence on what it reports. Each 
 
 ### Bacteriophages
 
-- [Complete genome sequence of bacteriophage Godfather isolated from Microbacterium foliorum](/research/publications/10-1128-mra-00888-24/) (2025). The genome of phage Godfather, from Erath County soil: 17,452 bp, 24 genes, cluster EE.
+- [Complete genome sequence of bacteriophage Godfather isolated from Microbacterium foliorum](/research/publications/10-1128-mra-00888-24/) (2025). The genome of phage Godfather, from {{phage.godfather.county}} soil: {{phage.godfather.bp}} bp, {{phage.godfather.genes}} genes, cluster EE.
 - [Exploration of Providers' Perceptions and Attitudes Toward Phage Therapy and Intentions for Future Adoption as an Alternative to Traditional Antibiotics in the US: A Cross-Sectional Study](/research/publications/10-3390-ijerph22071139/) (2025). In a survey of 196 US healthcare providers, 49 percent knew about phage therapy and 56 percent would consider using it.
 - [Complete genome sequence of bacteriophage MrAaronian isolated from an Arthrobacter globiformis culture](/research/publications/10-1128-mra-00778-23/) (2023). The genome of arthrobacteriophage MrAaronian, from Dutchess County, New York: 54,509 bp, 87 genes, cluster AW.
-- [Complete Genome Sequence of Bacteriophage Fizzles, Isolated from Microbacterium foliorum](/research/publications/10-1128-mra-01077-21/) (2022). The genome of phage Fizzles, from anthill soil in Erath County: 62,078 bp and 104 genes.
-- [Complete Genome Sequence of Bacteriophage Loca, Isolated on a Microbacterium foliorum Culture](/research/publications/10-1128-mra-00783-22/) (2022). The genome of phage Loca, from a shopping-cart handle swab in Erath County: 17,475 bp and 25 genes.
-- [Complete Genome Sequence of Bacteriophage IndyLu, Isolated from a Microbacterium foliorum Culture](/research/publications/10-1128-mra-01079-21/) (2021). The genome of phage IndyLu, from Erath County soil: 41,958 bp, 71 genes and one tRNA, related to cluster EB.
+- [Complete Genome Sequence of Bacteriophage Fizzles, Isolated from Microbacterium foliorum](/research/publications/10-1128-mra-01077-21/) (2022). The genome of phage Fizzles, from anthill soil in {{phage.fizzles.county}}: {{phage.fizzles.bp}} bp and {{phage.fizzles.genes}} genes.
+- [Complete Genome Sequence of Bacteriophage Loca, Isolated on a Microbacterium foliorum Culture](/research/publications/10-1128-mra-00783-22/) (2022). The genome of phage Loca, from a shopping-cart handle swab in {{phage.loca.county}}: {{phage.loca.bp}} bp and {{phage.loca.genes}} genes.
+- [Complete Genome Sequence of Bacteriophage IndyLu, Isolated from a Microbacterium foliorum Culture](/research/publications/10-1128-mra-01079-21/) (2021). The genome of phage IndyLu, from {{phage.indylu.county}} soil: {{phage.indylu.bp}} bp, {{phage.indylu.genes}} genes and one tRNA, related to cluster EB.
 - [Complete Genome Sequence of Mycobacteriophage Joy99](/research/publications/10-1128-mra-00556-21/) (2021). The genome of mycobacteriophage Joy99, annotated by high school students at a partner school: 59,837 bp and 97 genes.
 - [Complete Genome Sequences of Mycobacterium Phages Tripl3t and Zeuska](/research/publications/10-1128-mra-00558-21/) (2021). The genomes of phages Tripl3t and Zeuska, annotated by high school students at partner schools: about 53,600 bp each.
-- [Complete Genome Sequence of Bacteriophage Finny, Isolated from a Microbacterium foliorum Culture](/research/publications/10-1128-mra-01039-19/) (2019). The genome of phage Finny, from Comal County soil: 40,313 bp and 63 genes.
-- [Complete Genome Sequence of Cluster O Mycobacterium smegmatis Bacteriophage Ryadel](/research/publications/10-1128-mra-01594-18/) (2019). The genome of Ryadel, a cluster O phage with an elongated head: 72,658 bp and 132 genes.
-- [Complete Genome Sequence of Cluster A1 Mycobacterium smegmatis Bacteriophage Arlo](/research/publications/10-1128-mra-01242-18/) (2018). The genome of phage Arlo, from Erath County soil: 52,960 bp, 96 genes, cluster A1.
+- [Complete Genome Sequence of Bacteriophage Finny, Isolated from a Microbacterium foliorum Culture](/research/publications/10-1128-mra-01039-19/) (2019). The genome of phage Finny, from {{phage.finny.county}} soil: {{phage.finny.bp}} bp and {{phage.finny.genes}} genes.
+- [Complete Genome Sequence of Cluster O Mycobacterium smegmatis Bacteriophage Ryadel](/research/publications/10-1128-mra-01594-18/) (2019). The genome of Ryadel, a cluster O phage with an elongated head: {{phage.ryadel.bp}} bp and {{phage.ryadel.genes}} genes.
+- [Complete Genome Sequence of Cluster A1 Mycobacterium smegmatis Bacteriophage Arlo](/research/publications/10-1128-mra-01242-18/) (2018). The genome of phage Arlo, from {{phage.arlo.county}} soil: {{phage.arlo.bp}} bp, {{phage.arlo.genes}} genes, cluster A1.
 
 ### Science education
 

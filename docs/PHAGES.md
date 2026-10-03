@@ -29,6 +29,8 @@ phagesdb: Acorn15                     # the PhagesDB record's name as PhagesDB s
 paper: 10-1128-mra-01242-18           # optional: the slug of the genome announcement, a paper this site holds
 formerly: Jentrie                     # optional: an earlier name
 note: A manuscript is submitted.      # optional: one plain sentence, shown after the links
+genome_bp: 52960                      # optional: the genome announcement's genome size, a whole number of bases
+genes: 96                             # optional: the genome announcement's gene count
 ---
 ```
 
@@ -43,7 +45,7 @@ spell it. Sorting, filtering and the count line stay in code (`app/lib/phage-tab
 `test/phages.test.mjs`, the page compile and the Carrel save all call `compilePhage`, so a file CI passes is the
 file the save accepts and the page draws. It refuses:
 
-- any field that is not one of the eight above. This is the privacy rule: the table carries what the public page
+- any field that is not one of the ten above. This is the privacy rule: the table carries what the public page
   showed and no more, so no sample, location beyond the county, or other personal data can enter the repository
   or D1;
 - a name that is not letters and digits, or whose lower-case form is not the file's name;
@@ -97,9 +99,26 @@ table lists every phage in order with the six columns, a PhagesDB link for exact
 `###` heading for each phage exactly once, and no PhagesDB link that no phage owns (a link typed into the prose is
 refused).
 
-The introduction states a count and a span ("It has 80 phages found from 2017 to 2025", the 2017 and *M.
-foliorum* counts, and the SEO title). Those are prose and stay the writer's: an edit that adds a phage should edit
-them in the page file, and `test/phages.test.mjs` fails in CI if they no longer match the files.
+## Facts the pages state: tokens, not typed numbers
+
+A fact the records hold is stated on a page by a token, and the page compile fills it from the rows (the build
+from `content/phages`, a page save and `sync_pages` from D1), in the body and in `title`, `seo_title` and
+`description`. Nothing types a count: the "80 phages" that once sat on two pages while the records held 75 is why.
+
+| Token | Reads |
+| --- | --- |
+| `{{phages.count}}`, `{{phages.firstYear}}`, `{{phages.lastYear}}` | the whole set |
+| `{{phages.host.smegmatis.count}}`, `.firstYear`, `.lastYear`, `.years` | one host (`years` is "2017" or "2018 to 2025") |
+| `{{phage.loca.bp}}`, `.genes`, `.county`, `.year` | one phage, by file key; `bp` takes thousands separators |
+| `{{phages.commonCounty(godfather,fizzles)}}` | the county they share; an error if they differ |
+
+A token that names nothing (a misspelt key, a phage with no `genome_bp`) fails the compile, never prints blank.
+Prose around the facts stays prose, and the facts about phages with no record of their own (the partner schools'
+phages in the genome-paper tables) stay typed until those phages are records.
+
+Every page that uses a token is listed in `PHAGE_FACT_PAGES` (`app/lib/phages/compile.mjs`), because a phage write
+re-derives each of them, as it does the table's page. `test/phages.test.mjs` fails if that list and the pages
+disagree, and fails if any page types a count of phages.
 
 ## The save
 
@@ -121,11 +140,12 @@ The page is compiled from the rows, and its HTML row, twin and search records li
 write re-derives them in an order that keeps the drift check honest:
 
 1. the page's own row, compiled from the page's file with the phage set as it will stand (D1's other rows and
-   this phage) through the pages' compile door;
+   this phage) through the pages' compile door, then the row of each page in `PHAGE_FACT_PAGES` the same way,
+   because each states counts or genome facts drawn from the same rows;
 2. the phage's row, last, because its blob sha is what `phage-drift` reads as current: a failure between the two
    leaves the phage reading stale, and the repair re-runs both;
 3. the purge of the `content-pages` tag (`purgePhages`, `app/lib/cache-purge.server.ts`), which the page's HTML and
-   its twin both carry. A phage appears on no other page, so no other tag is purged.
+   its twin both carry, and which the token pages carry too, so no other tag is purged.
 
 `sync_phages` does the same for the set: it re-derives the page ONCE from the final set (the files that compile,
 D1's row for one that does not, minus the files that are gone) before any row moves, then writes the rows, then

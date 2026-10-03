@@ -15,7 +15,7 @@ import {
   contentPageSearchInputs,
   markdownTableFacts,
 } from "../content-pages.mjs";
-import { expandPhagePage } from "../phages/compile.mjs";
+import { expandPhagePage, expandPhageTokens } from "../phages/compile.mjs";
 import { pageInvariantErrors } from "./invariants.mjs";
 
 export const PAGES_DIR = "content/pages";
@@ -146,11 +146,22 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
     return { ok: false, errors: [...errors, `the front matter is not valid YAML: ${error instanceof Error ? error.message : String(error)}`] };
   }
   const fm = /** @type {Record<string, unknown>} */ (parsed.data);
+  // A phage fact a page states (the count, the span, a genome's size) is read from the phage rows by a token,
+  // never typed, so the title and description fill the same way the body does.
+  /** @param {unknown} value @returns {string} */
+  const filled = (value) => {
+    const result = expandPhageTokens(String(value ?? ""), phages);
+    if (!result.ok) {
+      errors.push(...result.errors);
+      return String(value ?? "");
+    }
+    return result.text;
+  };
   const page = {
     path: String(fm.path ?? ""),
-    title: String(fm.title ?? ""),
-    seoTitle: String(fm.seo_title ?? ""),
-    description: String(fm.description ?? ""),
+    title: filled(fm.title),
+    seoTitle: filled(fm.seo_title),
+    description: filled(fm.description),
   };
   if (page.path !== expectedPath) {
     errors.push(
@@ -175,7 +186,9 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   // from one text. Every other page passes through unchanged.
   const drawn = expandPhagePage(page.path, parsed.content, phages);
   if (!drawn.ok) errors.push(...drawn.errors);
-  const body = drawn.ok ? drawn.markdown : parsed.content;
+  const drawnBody = drawn.ok ? expandPhageTokens(drawn.markdown, phages) : /** @type {const} */ ({ ok: true, text: parsed.content });
+  if (!drawnBody.ok) errors.push(...drawnBody.errors);
+  const body = drawnBody.ok ? drawnBody.text : parsed.content;
   const schema = pageSchema(fm, body, errors);
   if (errors.length > 0) return { ok: false, errors };
 

@@ -77,7 +77,9 @@ export async function compile(env: PageEnv, slug: string, raw: string, entry?: D
   const { renderBody, findWideDashes } = await loadPipeline();
   const path = pagePathForSlug(slug);
   const lead = entry !== undefined ? entry : path ? await getPublishedEntryByPath(env, path) : null;
-  const rows = phages ?? (path === PHAGES_PAGE_PATH ? await listPhages(env) : undefined);
+  // A page that states a phage fact by token ({{phages.count}}) reads the rows too, whichever page it is.
+  const needsPhages = path === PHAGES_PAGE_PATH || raw.includes("{{phage");
+  const rows = phages ?? (needsPhages ? await listPhages(env) : undefined);
   return compilePage({ slug, raw, pipeline: { renderBody, findWideDashes }, entry: lead ?? undefined, phages: rows });
 }
 
