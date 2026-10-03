@@ -1,7 +1,16 @@
 import { Form, Link, data } from "react-router";
 
+import { Alert, Banner } from "capsomer/react/banner";
+import { Button } from "capsomer/react/button";
+import { Empty } from "capsomer/react/empty";
+import { Panel } from "capsomer/react/panel";
+import { Row, RowList } from "capsomer/react/row-list";
+import { Pill, Status } from "capsomer/react/status";
+import { TabsNav } from "capsomer/react/tabs";
+
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
-import { RowMenu } from "~/components/admin/row-menu";
+import { PageHead } from "~/components/admin/page-head";
+import { TabLink } from "~/components/admin/tab-link";
 import { adminActorContext } from "~/lib/admin-actor.server";
 import { getEnv } from "~/lib/context";
 import { PolicyError } from "~/lib/editor/publish-policy.mjs";
@@ -183,6 +192,14 @@ function iso(value: Date): string {
 
 const DECIDABLE: ReadonlyArray<Webmention["status"]> = ["pending", "approved", "rejected"];
 
+const STATUS_TONE: Record<Webmention["status"], "ok" | "warn" | "crit" | "nodata"> = {
+  pending: "warn",
+  approved: "ok",
+  rejected: "nodata",
+  failed: "crit",
+  unverified: "nodata",
+};
+
 function MentionRow({
   mention,
   confirmDelete,
@@ -195,25 +212,68 @@ function MentionRow({
   const decidable = DECIDABLE.includes(mention.status);
   const from = mention.authorName ?? "an unnamed sender";
   return (
-    <li className="tool-row mention-row">
-      <div className="mention-body">
-        {mention.excerpt ? (
-          <blockquote className="mention-quote">{mention.excerpt}</blockquote>
-        ) : null}
-        <p className="mention-who">
-          {mention.authorName ? `${mention.authorName} ` : "An unnamed sender "}
-          {mention.authorUrl ? `(${mention.authorUrl}) ` : ""}
-          mentioned{" "}
-          <Link to={`/admin/posts/${mention.targetSlug}/edit`}>{mention.targetSlug}</Link>
-        </p>
-        {/* Text, not a link: an unauthenticated POST chose this string. */}
-        <p className="mention-source">{mention.sourceUrl}</p>
-        <p className="muted mention-stamps">
-          {`received ${iso(mention.receivedAt)}` +
-            (mention.decidedAt ? `, decided ${iso(mention.decidedAt)}` : "") +
-            (mention.failureReason ? `, reason ${mention.failureReason}` : "")}
-        </p>
-        {confirmDelete === mention.id ? (
+    <>
+      <Row
+        title={
+          <>
+            {mention.authorName ?? "An unnamed sender"}
+            {mention.authorUrl ? ` (${mention.authorUrl})` : ""} mentioned {mention.targetSlug}
+          </>
+        }
+        href={`/admin/posts/${mention.targetSlug}/edit`}
+        renderLink={({ href, children, ...rest }) => (
+          <Link to={href} {...rest}>
+            {children}
+          </Link>
+        )}
+        status={<Status tone={STATUS_TONE[mention.status]}>{mention.status}</Status>}
+        detail={
+          <>
+            {mention.excerpt ? <>{mention.excerpt}. </> : null}
+            {/* Text, not a link: an unauthenticated POST chose this string. */}
+            {mention.sourceUrl}
+          </>
+        }
+        meta={
+          <span>
+            {`received ${iso(mention.receivedAt)}` +
+              (mention.decidedAt ? `, decided ${iso(mention.decidedAt)}` : "") +
+              (mention.failureReason ? `, reason ${mention.failureReason}` : "")}
+          </span>
+        }
+        actions={
+          <>
+            {decidable && mention.status !== "approved" ? (
+              <Form method="post">
+                <input type="hidden" name="intent" value="approve" />
+                <input type="hidden" name="id" value={mention.id} />
+                {/* Context in the name: every row has an Approve, and a list of them is otherwise identical. */}
+                <Button type="submit" variant="primary" size="sm">
+                  Approve<span className="cap-sr-only"> the mention from {from}</span>
+                </Button>
+              </Form>
+            ) : null}
+            {decidable && mention.status !== "rejected" ? (
+              <Form method="post">
+                <input type="hidden" name="intent" value="reject" />
+                <input type="hidden" name="id" value={mention.id} />
+                <Button type="submit" size="sm">
+                  Reject<span className="cap-sr-only"> the mention from {from}</span>
+                </Button>
+              </Form>
+            ) : null}
+            <Form method="post">
+              <input type="hidden" name="intent" value="delete" />
+              <input type="hidden" name="id" value={mention.id} />
+              <Button type="submit" variant="danger" size="sm">
+                Delete<span className="cap-sr-only"> the mention from {from}</span>
+              </Button>
+            </Form>
+          </>
+        }
+      />
+      {confirmDelete === mention.id ? (
+        <li>
           <ConfirmDialog
             title="Delete this mention"
             body={<p>This removes the only copy of it. Nothing else has one.</p>}
@@ -224,41 +284,9 @@ function MentionRow({
             <input type="hidden" name="intent" value="delete" />
             <input type="hidden" name="id" value={mention.id} />
           </ConfirmDialog>
-        ) : null}
-      </div>
-      <div className="mention-actions">
-        {decidable && mention.status !== "approved" ? (
-          <Form method="post" className="mention-approve">
-            <input type="hidden" name="intent" value="approve" />
-            <input type="hidden" name="id" value={mention.id} />
-            {/* Context in the name: every row has an Approve, and a list of them is otherwise identical. */}
-            <button type="submit" className="btn">
-              Approve<span className="sr-only"> the mention from {from}</span>
-            </button>
-          </Form>
-        ) : null}
-        <RowMenu
-          label={`Actions for the mention from ${from}`}
-        >
-          {decidable && mention.status !== "rejected" ? (
-            <Form method="post">
-              <input type="hidden" name="intent" value="reject" />
-              <input type="hidden" name="id" value={mention.id} />
-              <button type="submit" className="row-menu-item" data-menu-item>
-                Reject
-              </button>
-            </Form>
-          ) : null}
-          <Form method="post" className="mention-delete">
-            <input type="hidden" name="intent" value="delete" />
-            <input type="hidden" name="id" value={mention.id} />
-            <button type="submit" className="row-menu-item" data-menu-item>
-              Delete
-            </button>
-          </Form>
-        </RowMenu>
-      </div>
-    </li>
+        </li>
+      ) : null}
+    </>
   );
 }
 
@@ -278,67 +306,56 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
   const cancelHref = `/admin/mentions?status=${status}`;
 
   return (
-    <>
-      <div className="admin-page-head">
-        <h1>Mentions</h1>
-      </div>
+    <div className="app-page">
+      <PageHead
+        title="Mentions"
+        lead={status === "pending" && rows.length > 0 ? "Approving appears on the post within seconds." : undefined}
+      />
 
       {/* The status region is always in the DOM, so a result is announced; a refusal is an alert. */}
       <div role="status">
-        {message && actionData?.ok ? (
-          <p className="editor-notice mention-feedback">{message}</p>
-        ) : null}
+        {message && actionData?.ok ? <Banner tone="ok">{message}</Banner> : null}
       </div>
-      {message && !actionData?.ok ? (
-        <p className="panel-error mention-feedback" role="alert">
-          {message}
-        </p>
-      ) : null}
+      {message && !actionData?.ok ? <Alert tone="crit">{message}</Alert> : null}
 
-      <nav className="mention-filters" aria-label="Filter mentions by status">
+      <TabsNav aria-label="Filter mentions by status" variant="line">
         {FILTERS.map((filter) => (
-          <Link
+          <TabLink
             key={filter.id}
             to={`?status=${filter.id}`}
-            className={`admin-chip${filter.id === status ? " is-active" : ""}`}
-            aria-current={filter.id === status ? "page" : undefined}
+            current={filter.id === status}
+            count={countOf(filter.id)}
           >
-            {filter.label} <span className="admin-chip-count">{countOf(filter.id)}</span>
-          </Link>
+            {filter.label}
+          </TabLink>
         ))}
-        {unverified > 0 ? (
-          <span className="chip mention-unverified">
-            {unverified} unverified
-          </span>
-        ) : null}
-      </nav>
-
-      {status === "pending" && rows.length > 0 ? (
-        <p className="muted mention-hint mention-purge-note">
-          Approving appears on the post within seconds.
-        </p>
-      ) : null}
+        {unverified > 0 ? <Pill variant="outline">{unverified} unverified</Pill> : null}
+      </TabsNav>
 
       {rows.length === 0 ? (
-        <p className="muted mention-empty">{EMPTY_LINE[status]}</p>
+        <Empty kind={status === "all" ? "nothing-yet" : "all-clear"}>{EMPTY_LINE[status]}</Empty>
       ) : (
-        <ul className="tool-list mention-queue">
-          {rows.map((mention) => (
-            <MentionRow
-              key={mention.id}
-              mention={mention}
-              confirmDelete={confirmDelete}
-              cancelHref={cancelHref}
-            />
-          ))}
-        </ul>
+        <Panel title={FILTERS.find((f) => f.id === status)?.label ?? "Mentions"} count={rows.length} flush>
+          <RowList label="Mentions">
+            {rows.map((mention) => (
+              <MentionRow
+                key={mention.id}
+                mention={mention}
+                confirmDelete={confirmDelete}
+                cancelHref={cancelHref}
+              />
+            ))}
+          </RowList>
+        </Panel>
       )}
 
-      <section className="mention-retention" aria-label="Retention">
-        <p className="muted">
-          {`Failed mentions are removed after ${FAILED_RETENTION_DAYS} days, rejected after ` +
-            `${REJECTED_RETENTION_DAYS} days.`}
-        </p>
+      <Panel
+        title="Retention"
+        description={
+          `Failed mentions are removed after ${FAILED_RETENTION_DAYS} days, rejected after ` +
+          `${REJECTED_RETENTION_DAYS} days.`
+        }
+      >
         {confirmSweep ? (
           <ConfirmDialog
             title="Remove the expired mentions"
@@ -358,12 +375,15 @@ export default function AdminMentions({ loaderData, actionData }: Route.Componen
         ) : (
           <Form method="post">
             <input type="hidden" name="intent" value="sweep" />
-            <button type="submit" className="btn-secondary" disabled={expired === 0}>
+            <Button
+              type="submit"
+              disabledReason={expired === 0 ? "Nothing has passed its retention window yet." : undefined}
+            >
               {`Remove ${expired} expired`}
-            </button>
+            </Button>
           </Form>
         )}
-      </section>
-    </>
+      </Panel>
+    </div>
   );
 }

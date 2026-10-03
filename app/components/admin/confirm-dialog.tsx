@@ -3,6 +3,8 @@ import { Form, Link, useNavigate } from "react-router";
 
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 
+// Capsomer's dialog markup and look, on this component's own behaviour: Capsomer's ConfirmDialog is driven
+// from script, and this one is opened by the server's answer, so the second step exists without script too.
 // `data-inline`, not `open`: putting `open` in the JSX makes React and showModal() fight over it.
 // The intent is a hidden field because a disabled submitter contributes no name and no value.
 export function ConfirmDialog({
@@ -30,6 +32,7 @@ export function ConfirmDialog({
   const [typed, setTyped] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const titleId = useId();
+  const formId = useId();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -74,7 +77,10 @@ export function ConfirmDialog({
   return (
     <dialog
       ref={ref}
-      className="confirm-dialog"
+      className="cap-dialog"
+      data-placement="center"
+      data-size="md"
+      role="alertdialog"
       data-inline={hydrated ? undefined : ""}
       aria-labelledby={titleId}
       /* Escape leaves the way Cancel does: a natively closed dialog would leave the page still asking. */
@@ -83,11 +89,20 @@ export function ConfirmDialog({
         cancel();
       }}
     >
-      <Form method="post" className="confirm-dialog-form">
-        <h2 id={titleId}>{title}</h2>
-        <div className="confirm-dialog-body">{body}</div>
+      {/* The form holds the caller's hidden fields; the typed field and the submit button join it by
+          `form`, so the dialog's header, body and footer stay its direct children, as Capsomer lays them out. */}
+      <Form method="post" id={formId}>
+        {children}
+      </Form>
+      <div className="cap-dialog-header">
+        <h2 className="cap-dialog-title" id={titleId}>
+          {title}
+        </h2>
+      </div>
+      <div className="cap-dialog-body">
+        {body}
         {stake && stake.length > 0 ? (
-          <ul className="confirm-dialog-stake">
+          <ul>
             {stake.map((item) => (
               <li key={item}>
                 <code>{item}</code>
@@ -95,44 +110,49 @@ export function ConfirmDialog({
             ))}
           </ul>
         ) : null}
-        {children}
         {requireTyped === undefined ? null : (
-          <label className="confirm-dialog-typed">
-            <span>
-              Type <strong>{requireTyped}</strong> to confirm
-            </span>
+          <div className="cap-confirm-typed">
+            <label htmlFor={`${formId}-typed`}>
+              Type <b>{requireTyped}</b> to confirm
+            </label>
             {/* From the constant the action also reads, so a rename cannot split the wire name. */}
             <input
+              id={`${formId}-typed`}
               ref={fieldRef}
+              className="cap-input"
+              form={formId}
               type="text"
               name={CONFIRM_FIELD}
               value={typed}
               onChange={(event) => setTyped(event.target.value)}
               inputMode="numeric"
               autoComplete="off"
+              spellCheck={false}
               required
             />
-          </label>
+          </div>
         )}
-        <div className="confirm-dialog-actions">
-          {cancelHref === undefined ? (
-            <button type="button" className="btn-secondary" onClick={onCancel}>
-              Cancel
-            </button>
-          ) : (
-            <Link to={cancelHref} preventScrollReset className="btn-secondary">
-              Cancel
-            </Link>
-          )}
-          <button
-            type="submit"
-            className="btn-danger"
-            disabled={hydrated && !satisfied}
-          >
-            {confirmLabel}
+      </div>
+      <div className="cap-dialog-footer" data-align="between">
+        {cancelHref === undefined ? (
+          <button type="button" className="cap-btn" onClick={onCancel}>
+            Cancel
           </button>
-        </div>
-      </Form>
+        ) : (
+          <Link to={cancelHref} preventScrollReset className="cap-btn">
+            Cancel
+          </Link>
+        )}
+        <button
+          type="submit"
+          form={formId}
+          className="cap-btn"
+          data-variant="danger"
+          disabled={hydrated && !satisfied}
+        >
+          {confirmLabel}
+        </button>
+      </div>
     </dialog>
   );
 }

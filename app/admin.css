@@ -94,6 +94,62 @@
   fill: var(--accent);
 }
 
-.cap-table th .cap-status {
+.cap-table th :is(.cap-status, .cap-pill) {
   margin-inline-start: var(--space-3);
+}
+
+/* The server's confirmation step (components/admin/confirm-dialog.tsx), shown in the page until script
+   opens it as a modal, so a reader without script still gets the second step. */
+.cap-dialog[data-inline] {
+  display: flex;
+  position: static;
+  margin: 0 0 var(--space-5);
+}
+
+/* A unified patch (components/admin/revision-list.tsx DiffBlock): Capsomer has a compare of two texts
+   by sentence and word, and no display for a git patch, so this piece stays as it was. */
+.history-diff {
+  margin: var(--space-3) var(--space-4) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  max-height: 26rem;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--sunken);
+  font-family: var(--mono);
+  font-size: var(--fs-detail);
+  line-height: 1.5;
+  white-space: pre;
+}
+
+/* Both tints are load-bearing: a diff must tell two states apart. Each line keeps its literal + or -
+   prefix. */
+.history-diff [data-diff="add"] {
+  background: var(--ok-soft);
+  color: var(--text);
+}
+
+.history-diff [data-diff="del"] {
+  background: var(--crit-soft);
+  color: var(--text);
+}
+
+.history-diff [data-diff="hunk"] {
+  color: var(--muted);
+}
+
+/* A search and its filters on one row, the button last; they wrap on a phone. */
+.app-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+
+  & .cap-field {
+    flex: 0 1 15rem;
+    min-width: 10rem;
+  }
+  & .cap-field:first-child {
+    flex-basis: 20rem;
+  }
 }
