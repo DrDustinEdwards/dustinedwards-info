@@ -4,6 +4,8 @@ path: /research/protocols/coi-primers
 title: "COI primers: LCO1490 and HCO2198"
 seo_title: "COI primers LCO1490/HCO2198: sequences and PCR conditions"
 description: "LCO1490 and HCO2198 (Folmer) primer sequences for COI barcoding PCR of invertebrate mitochondrial DNA, with the cycling table, materials and product size."
+method: [pcr]
+target: ["COI (cytochrome c oxidase subunit I)"]
 version: "MISSING: No version has been assigned (protocols.md: printed sheets carry a version id and date)."
 updated: 2026-09-30
 status: "MISSING: No source in the repo states a status for this protocol."

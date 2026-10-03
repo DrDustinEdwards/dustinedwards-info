@@ -79,7 +79,7 @@
       "role": "Sole author",
       "status": "live",
       "url": null,
-      "repo": "https://github.com/DrDustinEdwards/capsid-mcp",
+      "repo": "https://github.com/DrDustinEdwards/capsid",
       "stack": ["Cloudflare Workers", "D1", "SQLite FTS5", "MCP", "TypeScript"],
       "metric": { "label": "project namespaces in the store", "value": "8", "asOf": "2026-08-30" }
     },

@@ -91,7 +91,7 @@ test("the calculator pages must still state what the calculator prints", async (
     /lacks a link to the calculator at \/research\/tools\/moi/,
   );
   assert.match(
-    await refusal("teaching-virus-isolation-faq", (r) => r.replace("1.01 x 10^-3", "1.02 x 10^-3")),
+    await refusal("teaching-virus-isolation-faq", (r) => r.replace("= 1 x 10^-3 µl", "= 1.02 x 10^-3 µl")),
     /lysate-per-plate sum/,
   );
 });
