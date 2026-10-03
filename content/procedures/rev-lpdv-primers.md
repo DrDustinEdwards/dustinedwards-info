@@ -49,7 +49,7 @@ equipment:
   - NEB 100 bp ladder
   - 2% agarose gel in TBE
 primers:
-  - { set: PCR REV 3′ LTR 8000-8297, direction: forward, sequence: CATACTGGAGCCAATGGTT }
+  - { set: PCR REV 3′ LTR 8000-8297, direction: forward, sequence: CATACTGAGCCAATGGTT }
   - { set: PCR REV 3′ LTR 8000-8297, direction: reverse, sequence: AATGTTGTACCGAAGTACT }
   - { set: PCR REV pol 2500-3075, direction: forward, sequence: CAAATAATAGATTTTCTAGTAGATACGGGA }
   - { set: PCR REV pol 2500-3075, direction: reverse, sequence: AGTGGACGGGTCTCAGGA }
@@ -114,7 +114,7 @@ cycling:
           - { temperature_c: 68, time: 60 sec. }
       - { stage: extension, temperature_c: 68, time: 10 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-expected_results: "PCR REV 3′ LTR 8000-8297: 282 bp. PCR REV pol 2500-3075: 574 bp. PCR REV pol 4777-5575: 801 bp. PCR LPDV p31/CA: 458 bp. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
+expected_results: "PCR REV 3′ LTR 8000-8297: 281 bp. PCR REV pol 2500-3075: 574 bp. PCR REV pol 4777-5575: 801 bp. PCR LPDV p31/CA: 458 bp. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
 limitations: "The touchdown in the two *pol* sets steps down from 60 to 50 °C over the first 15 cycles. Extension temperature is dependent on polymerase: the 68 °C extensions are for the One*Taq* mix."
 references:
   - "Stewart et al. 2019, *J Wildl Dis* 55(3). [doi:10.7589/2018-08-187](https://doi.org/10.7589/2018-08-187). On this site: [Stewart et al. 2019](/research/publications/10-7589-2018-08-187/)."
@@ -133,7 +133,7 @@ The REV provirus has an LTR at each end, the primer binding site near the 5′ L
 
 | Primer set | Region | Product |
 | --- | --- | --- |
-| PCR REV 3′ LTR 8000-8297 | LTR | 282 bp |
+| PCR REV 3′ LTR 8000-8297 | LTR | 281 bp |
 | PCR REV pol 2500-3075 | *pol*: protease and reverse transcriptase | 574 bp |
 | PCR REV pol 4777-5575 | *pol*: reverse transcriptase and integrase | 801 bp |
 
@@ -166,11 +166,11 @@ From Stewart et al. 2019, for each 25 µL reaction:
 
 ## PCR REV 3′ LTR 8000-8297
 
-Amplifies a region of the REV 3′ LTR. Product: 282 bp.
+Amplifies a region of the REV 3′ LTR. Product: 281 bp.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
-| Forward | `CATACTGGAGCCAATGGTT` |
+| Forward | `CATACTGAGCCAATGGTT` |
 | Reverse | `AATGTTGTACCGAAGTACT` |
 
 | Step | Temperature (°C) | Time |
