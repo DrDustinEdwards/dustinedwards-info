@@ -32,6 +32,9 @@ export async function run({ page, browser }) {
     /* The markdown pages: one research page for the research/* splat, and the teaching hub. */
     { path: "/research/phages", module: "content-page.tsx" },
     { path: "/teaching", module: "teaching.tsx" },
+    /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
+    { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
+    { path: "/research/protocols/phage-isolation/sheet", module: "procedure.sheet.tsx" },
   ];
 
   /* Shared-cached HTML with no corpus URL; a 404 would compare two error pages. */
