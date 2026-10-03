@@ -72,11 +72,12 @@ export function cacheDimensions(
 
 /**
  * Looks tightenable and is not: CORP `same-origin` would break off-site og:image previews; COOP is
- * left loose for the auth client's popups; no `includeSubDomains` or `preload`, since the parent
- * domain is not ours. Never deny `clipboard-write`: the copy controls swallow the refusal silently.
+ * left loose so cross-origin popups and redirects keep working; HSTS carries `includeSubDomains` (we
+ * own the apex, and every subdomain serves valid HTTPS, checked 2026-10-03) and never `preload`, a
+ * one-way door (CUTOVER.md 3.10). Never deny `clipboard-write`: the copy controls swallow the refusal silently.
  */
 const SECURITY_HEADERS: Record<string, string> = {
-  "Strict-Transport-Security": "max-age=31536000",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",

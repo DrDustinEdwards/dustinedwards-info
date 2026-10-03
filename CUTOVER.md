@@ -110,7 +110,10 @@ until the DNS cutover and no longer. The PR workflow resumes, and `CLAUDE.md`'s
 workflow section becomes wrong on that day.
 
 **3.10 `Strict-Transport-Security` gains `includeSubDomains`, and DOES NOT gain
-`preload`.** The header has shipped since 2026-08-06 as bare
+`preload`.** **DONE 2026-10-03.** The subdomains are abscissa, capsomer,
+carrel, carrel-mcp, enarratio, mcp, portal and www; each answers valid HTTPS (certificate verified). capsomer,
+carrel-mcp and mcp also answer on plain HTTP without redirecting, which `includeSubDomains` makes moot for any
+browser that has seen the header; Cloudflare's Always Use HTTPS would close it for everyone else. The header has shipped since 2026-08-06 as bare
 `max-age=31536000`; `workers/app.ts` says to revisit it here and this is that
 revisit, written down before the day rather than on it.
 
