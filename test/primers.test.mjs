@@ -77,8 +77,9 @@ test("a reference filed in the other orientation gives the same product", () => 
 
 /*
  * The real sets, on GenBank DQ387450 (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019
- * cite ("published REV proviral sequences from APC (GenBank DQ387450)"). Primers as the page gives them,
- * which match the Stewart and Cox supplements character for character.
+ * cite ("published REV proviral sequences from APC (GenBank DQ387450)"). Primers as the Stewart and Cox
+ * supplements give them, except the 3' LTR forward primer: the published CATACTGGAGCCAATGGTT has a typo
+ * (an extra G), and the corrected CATACTGAGCCAATGGTT is what the reference carries.
  */
 const REV = reference("DQ387450");
 
@@ -86,17 +87,17 @@ test("the fixture is the whole DQ387450 genome", () => {
   assert.equal(REV.length, 8286);
 });
 
-test("REV 3' LTR: 282 bp, in both LTRs, the forward primer one base longer than the reference and the reverse one mismatch", () => {
-  const all = amplicons(REV, "CATACTGGAGCCAATGGTT", "AATGTTGTACCGAAGTACT", { maxMismatches: 1, maxIndels: 1, maxLength: 1000 });
+test("REV 3' LTR: 281 bp, in both LTRs, the corrected forward primer exact with no indel and the reverse one mismatch", () => {
+  const all = amplicons(REV, "CATACTGAGCCAATGGTT", "AATGTTGTACCGAAGTACT", { maxMismatches: 1, maxIndels: 1, maxLength: 1000 });
   assert.deepEqual(
     all.map((p) => [p.start, p.end, p.length]),
     [
-      [258, 538, 282],
-      [8000, 8280, 282],
+      [258, 538, 281],
+      [8000, 8280, 281],
     ],
   );
   const [product] = all;
-  assert.equal(product?.forward.indel?.type, "extra-primer-base");
+  assert.equal(product?.forward.indel, null);
   assert.equal(product?.forwardMismatches, 0);
   assert.equal(product?.reverseMismatches, 1);
 });
