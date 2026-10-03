@@ -1,5 +1,6 @@
 ---
 profile: computational
+method: [annotation]
 path: /research/methods/computational-fixture
 title: "Test Fixture: Count Reads in a FASTA File"
 seo_title: "Test Fixture: Count Reads in a FASTA File"

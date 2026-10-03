@@ -85,8 +85,21 @@ a missing value rather than printing it.
 ## Front matter by profile
 
 Every profile: `profile`, `path`, `title`, `seo_title`, `description`, `version`, `updated`, `based_on`,
-`materials`, `references`, `expected_results`, `limitations`; optional `draft`, `equipment`,
-`troubleshooting`, `time` (`total`, `hands_on`), `first_used`.
+`materials`, `references`, `expected_results`, `limitations`, `method`; optional `draft`, `equipment`,
+`troubleshooting`, `time` (`total`, `hands_on`), `first_used`, `organism`, `target`, `course`.
+
+What the protocol library filters and lists by (`app/lib/procedures/taxonomy.mjs`):
+
+- `method` (required): a list of ids from the closed list: `pcr`, `plating`, `culture`, `extraction`,
+  `sequencing`, `annotation`, `media`, `microscopy`. A procedure that is some of two methods lists both.
+- `organism`: ids from the closed list, which are the phages' host keys (`smegmatis`, `foliorum`) and `avian`.
+- `course`: ids of the courses that teach it (`phage-discovery`, `virus-isolation`, `phage-bioinformatics`).
+- `target`: the genes, regions or samples it works on, in words (free text, since targets are as many as the
+  experiments).
+
+A value outside a closed list is refused with the list in the message. Adding a method, organism or course is a
+change to `taxonomy.mjs`, so the filter's words are never `PCR`, `pcr` and `polymerase chain reaction` on three
+pages. When the lab registry holds host strains, `organism` reads from it.
 
 - **protocol** adds `biosafety` (`organism`, `strain`, `atcc`, or `not applicable`; the agent only, per
   protocols.md), `host_strain`, `status`, `last_run`, `scale` (`count` and `unit`, such as 5 tubes),

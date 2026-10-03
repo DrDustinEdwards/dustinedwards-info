@@ -4,6 +4,9 @@ path: /research/protocols/phage-isolation
 title: "Phage Isolation and Purification Protocol"
 seo_title: "Phage Isolation and Purification Protocol, Spot Titer"
 description: "Tarleton SEA-PHAGES lab variants of the Phage Discovery Guide: direct vs enriched isolation, purification, spot titer, webbed plates, high titer lysate."
+method: [plating, culture]
+organism: [smegmatis, foliorum]
+course: [phage-discovery, virus-isolation]
 version: "MISSING: No version has been assigned (protocols.md: printed sheets carry a version id and date)."
 updated: 2026-09-30
 status: "MISSING: No source in the repo states a status for this protocol."
