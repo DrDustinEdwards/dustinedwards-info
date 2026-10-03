@@ -62,7 +62,7 @@ cycling:
           - { temperature_c: 68, time: 30 sec. }
       - { stage: extension, temperature_c: 68, time: 5 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-expected_results: "A band at 534 bp beside the 100 bp ladder. Olias et al. 2014 give the genomic product as 534 bp. The gel shown on the original version of this page marked the product at 534 bp; the positive lane was DNA from DF-1 cells, and the negative lane had no band."
+expected_results: "A band at 534 bp beside the 100 bp ladder. Olias et al. 2014 give the genomic product as 534 bp. In the lab's gels the product runs at 534 bp, with DNA from DF-1 cells as the positive control and no band in the negative lane."
 limitations: "Extension temperature is dependent on polymerase: the lab runs the extension at 68 °C for the One*Taq* mix, where Olias et al. 2014 used 72 °C."
 references:
   - "Olias et al. 2014. [PMC4057121](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4057121/)"
@@ -83,7 +83,7 @@ The primers are from [Olias et al. 2014](https://www.ncbi.nlm.nih.gov/pmc/articl
 
 ## Product size
 
-Olias et al. 2014 give the genomic product as 534 bp. The gel shown on the original version of this page marked the product at 534 bp, next to a 100 bp ladder. The positive lane was DNA from DF-1 cells; the negative lane had no band.
+Olias et al. 2014 give the genomic product as 534 bp. In the lab's gels the product runs at 534 bp beside a 100 bp ladder, with DNA from DF-1 cells as the positive control and no band in the negative lane.
 
 ## Materials
 
@@ -120,7 +120,7 @@ Extension temperature is dependent on polymerase. The lab runs the extension at 
 
 2. Run the cycling program in the table above.
 3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{} and look for the band at 534 bp.
-   > EXPECT: A band at 534 bp. On the original version of this page, the positive lane (DNA from DF-1 cells) showed the product at 534 bp and the negative lane had no band.
+   > EXPECT: A band at 534 bp in the positive control (DNA from DF-1 cells) and no band in the negative lane.
 
 ## Related pages
 
