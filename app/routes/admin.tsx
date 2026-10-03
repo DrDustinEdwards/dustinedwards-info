@@ -13,6 +13,7 @@ import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
+import { accessIdentity } from "~/lib/access.server";
 import { adminActorContext, adminSessionContext, getAdminSession } from "~/lib/auth.server";
 import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
@@ -43,8 +44,10 @@ export function meta() {
 export const handle = { hydrate: true };
 
 /**
- * Two ways in, only one may write: a Better Auth session, or the read-only smoke bearer, which
- * gets GET and HEAD and is refused every other method before any child runs.
+ * Three ways in, only the first two may write: a person Cloudflare Access admitted (a verified signed
+ * token, never the mere presence of a header), a Better Auth session (the Google fallback, retired
+ * once the Access login is confirmed), or the read-only smoke bearer, which gets GET and HEAD and is
+ * refused every other method before any child runs.
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
@@ -66,7 +69,20 @@ export const middleware: Route.MiddlewareFunction[] = [
 
     /* Read, not created: root's middleware made one first, and a second would discard its marks. */
     const timings = context.get(timingsContext).timings;
-    const session = await getAdminSession(env, request, timings);
+    const access = await timed(timings, "auth_access", () => accessIdentity(env, request));
+    if (access.kind === "refused") {
+      /* A presented token that fails is an answer, like a refused smoke bearer: it is not a login page. */
+      throw new Response(`Refused: the Cloudflare Access token did not verify (${access.reason}).`, {
+        status: 401,
+        headers: {
+          "content-type": "text/plain; charset=utf-8",
+          "cache-control": "private, no-store",
+          "x-robots-tag": "noindex, nofollow",
+        },
+      });
+    }
+    const session =
+      access.kind === "human" ? { user: { email: access.email } } : await getAdminSession(env, request, timings);
     if (session) {
       context.set(adminSessionContext, session);
       context.set(adminActorContext, { kind: "admin", email: session.user.email });
