@@ -16,6 +16,8 @@ export type RecordedCall = {
 export type GitHubStub = {
   calls: RecordedCall[];
   files: Map<string, string>;
+  /** What the commits-for-a-path listing answers (newest first), whatever the path. */
+  history: Array<{ sha: string; message: string; author: string; date: string }>;
   /** Fail the next `times` requests whose path contains `fragment`, with a 500. */
   failNext: (fragment: string, times: number) => void;
   restore: () => void;
@@ -31,6 +33,7 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
   const calls: RecordedCall[] = [];
   const head = { commitSha: STUB_HEAD_SHA, treeSha: "tree-initial" };
   const failures = new Map<string, number>();
+  const history: GitHubStub["history"] = [];
   const blobBodies = new Map<string, string>();
   let pendingTree: Array<{ path: string; content: string | null }> = [];
   let commitCounter = 0;
@@ -60,6 +63,16 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
       handle: () => json({ tree: { sha: head.treeSha } }),
     },
     { method: "GET", path: `${REPO_PREFIX}/contents/`, prefix: true, handle: getContents },
+    {
+      method: "GET",
+      path: `${REPO_PREFIX}/commits?`,
+      prefix: true,
+      // With no history planted the listing fails, as it did before this route was recorded.
+      handle: () =>
+        history.length === 0
+          ? json({ message: "no history planted" }, 500)
+          : json(history.map((c) => ({ sha: c.sha, commit: { message: c.message, author: { name: c.author, date: c.date } } }))),
+    },
     { method: "POST", path: `${REPO_PREFIX}/git/blobs`, handle: postBlob },
     { method: "POST", path: `${REPO_PREFIX}/git/trees`, handle: postTree },
     {
@@ -176,6 +189,7 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
   return {
     calls,
     files,
+    history,
     failNext: (fragment, times) => failures.set(fragment, times),
     restore: () => vi.unstubAllGlobals(),
   };
