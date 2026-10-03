@@ -7,6 +7,7 @@
 // is an error: a forgotten field cannot pass as a recorded gap.
 
 import { allSteps, stepConditions } from "./parse.mjs";
+import { COURSES, METHODS, ORGANISMS } from "./taxonomy.mjs";
 
 export const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
 
@@ -156,6 +157,23 @@ export function validateProcedure(parsed, expect) {
     errors.push(`description is ${d.description.length} characters; Google clips near ${DESCRIPTION_MAX}`);
   }
   if (d.draft !== undefined && typeof d.draft !== "boolean") errors.push("draft must be true or false");
+
+  // What the library filters by. method, organism and course are ids from the closed lists in taxonomy.mjs; target
+  // is the gene, region or sample, in words. Every procedure is some method, so method is required.
+  for (const [field, vocabulary] of /** @type {const} */ ([["method", METHODS], ["organism", ORGANISMS], ["course", COURSES]])) {
+    if (field === "method") required(field);
+    const value = d[field];
+    if (value === undefined || isGap(value)) continue;
+    const allowed = Object.keys(vocabulary);
+    if (!Array.isArray(value)) errors.push(`${field} must be a list of ids from: ${allowed.join(", ")}`);
+    else {
+      for (const id of value) if (!allowed.includes(id)) errors.push(`${field} "${id}" is not one of: ${allowed.join(", ")} (taxonomy.mjs)`);
+      if (new Set(value).size !== value.length) errors.push(`${field} names one id twice`);
+    }
+  }
+  if (d.target !== undefined && !isGap(d.target)) {
+    if (!Array.isArray(d.target) || d.target.some((t) => !nonEmptyString(t))) errors.push("target must be a list of the genes, regions or samples it works on, each in words");
+  }
 
   // The shared core.
   required("version");

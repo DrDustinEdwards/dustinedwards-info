@@ -265,6 +265,7 @@ test("the recipe fixture scales its amounts but not its fixed salt", () => {
 
 const PROTOCOL = `---
 profile: protocol
+method: [pcr]
 path: /research/protocols/mini
 title: Mini protocol
 seo_title: Mini protocol
@@ -322,6 +323,19 @@ test("a required field left out is an error", () => {
   assertError(errors, /^limitations is required/);
 });
 
+test("the library's facets: method is required, and method, organism and course are ids from the closed lists", () => {
+  assertError(check("mini", PROTOCOL.replace("method: [pcr]\n", "")).errors, /^method is required/);
+  assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: [PCR]")).errors, /method "PCR" is not one of: pcr, plating/);
+  assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: pcr")).errors, /method must be a list of ids/);
+  assertError(check("mini", PROTOCOL.replace("method: [pcr]", "method: [pcr, pcr]")).errors, /method names one id twice/);
+  const withOthers = PROTOCOL.replace("method: [pcr]\n", "method: [pcr, plating]\norganism: [smegmatis]\ncourse: [virus-isolation]\ntarget: [GAPDH]\n");
+  assert.deepEqual(check("mini", withOthers), { errors: [], gaps: [] });
+  assertError(check("mini", withOthers.replace("organism: [smegmatis]", "organism: [mouse]")).errors, /organism "mouse" is not one of: smegmatis, foliorum, avian/);
+  assertError(check("mini", withOthers.replace("course: [virus-isolation]", "course: [chemistry]")).errors, /course "chemistry" is not one of/);
+  assertError(check("mini", withOthers.replace("target: [GAPDH]", "target: [GAPDH, '']")).errors, /target must be a list of the genes, regions or samples/);
+  assert.deepEqual(check("mini", withOthers.replace("organism: [smegmatis]", 'organism: "MISSING: not yet recorded"')).errors, [], "a recorded gap is allowed");
+});
+
 test("a protocol step that spins in rpm with no SPIN flag is an error", () => {
   const raw = `${PROTOCOL}2. Spin in the #microcentrifuge at 10,000 rpm for ~{1%minute}.\n`;
   assertError(check("mini", raw).errors, /step 2 spins with no g-force/);
@@ -365,6 +379,7 @@ test("step numbering that skips is an error", () => {
 
 const COMPUTATIONAL = `---
 profile: computational
+method: [annotation]
 path: /research/methods/mini
 title: Mini method
 seo_title: Mini method

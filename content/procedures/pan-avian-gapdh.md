@@ -4,6 +4,9 @@ path: /research/protocols/pan-avian-gapdh
 title: "Pan-avian GAPDH PCR"
 seo_title: "Pan-avian GAPDH primers: avian GAPDH PCR control"
 description: "Pan-avian GAPDH primer sequences and PCR conditions, used as a control that a bird DNA extraction holds amplifiable avian DNA. Product: 534 bp."
+method: [pcr]
+organism: [avian]
+target: [GAPDH]
 version: "MISSING: No version has been assigned (protocols.md: printed sheets carry a version id and date)."
 updated: 2026-09-30
 status: "MISSING: No source in the repo states a status for this protocol."
