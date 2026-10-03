@@ -149,4 +149,4 @@ Protocol: [phage purification](/research/protocols/phage-isolation#phage-purific
 
 When every student's plates fail together, suspect a shared stock, such as the host culture or the phage buffer, before technique. In this lab, class-wide thin, speckled lawns with no plaques came from a dying host culture, and a buffer-only control plate with 20 plaques came from phage-contaminated phage buffer. Test the host with a host-only lawn (250 µl host plus 3 ml top agar, no phage), and run a buffer-only control plate with every dilution series.
 
-Protocol: [troubleshooting](/research/protocols/phage-isolation#troubleshooting-failures-that-hit-the-whole-class).
+Protocol: [troubleshooting](/research/protocols/phage-isolation#troubleshooting-when-every-groups-plates-fail-at-once).
