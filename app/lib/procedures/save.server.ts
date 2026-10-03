@@ -4,6 +4,7 @@
 // the page changes on the next request with no build or deploy. The commit is never reverted when the
 // D1 write fails (hard rule 18); the error says the commit landed and how to repair the row.
 
+import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeProcedures, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
@@ -19,12 +20,10 @@ import { procedureSearchUid } from "./render.mjs";
 
 type ProcedureEnv = Env & { GITHUB_TOKEN?: string };
 /** A file the validator refused: 422, with every message, so the caller can fix its own edit. */
-export class ProcedureInvalid extends Error {
-  errors: string[];
+export class ProcedureInvalid extends ContentInvalid {
   constructor(slug: string, errors: string[]) {
-    super(`The procedure "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`);
+    super(`The procedure "${slug}" was not saved: it fails ${errors.length} check(s). Nothing was committed.`, errors);
     this.name = "ProcedureInvalid";
-    this.errors = errors;
   }
 }
 
