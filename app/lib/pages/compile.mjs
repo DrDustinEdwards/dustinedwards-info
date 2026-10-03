@@ -186,7 +186,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   // from one text. Every other page passes through unchanged.
   const drawn = expandPhagePage(page.path, parsed.content, phages);
   if (!drawn.ok) errors.push(...drawn.errors);
-  const drawnBody = drawn.ok ? expandPhageTokens(drawn.markdown, phages) : { ok: true, text: parsed.content };
+  const drawnBody = drawn.ok ? expandPhageTokens(drawn.markdown, phages) : /** @type {const} */ ({ ok: true, text: parsed.content });
   if (!drawnBody.ok) errors.push(...drawnBody.errors);
   const body = drawnBody.ok ? drawnBody.text : parsed.content;
   const schema = pageSchema(fm, body, errors);
