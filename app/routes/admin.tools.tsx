@@ -1,129 +1,35 @@
-import { Form, data } from "react-router";
+import { data } from "react-router";
 
-import { timed, timedLoader } from "~/lib/timing";
-import { ConfirmDialog } from "~/components/admin/confirm-dialog";
+import { timedLoader } from "~/lib/timing";
 import { Panel } from "~/components/admin/panel";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
-import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";
-import { purgePosts } from "~/lib/cache-purge.server";
-import { chooseEpisode, parsePodcastSlot } from "~/lib/podcast/feed.mjs";
-import { readPodcastFeed, readPodcastSlot, writePodcastSlot } from "~/lib/podcast/podcast.server";
-import { purgeZeroResults, topZeroResults } from "~/lib/search/zero-result.server";
-/* The window comes from the client-safe module: the component below reads it, and importing it
-   from the .server one would pull that module into the client bundle. */
-import { ZERO_RESULT_RETENTION_SECONDS } from "~/lib/search/zero-result.mjs";
+import { topZeroResults } from "~/lib/search/zero-result.server";
 import type { Route } from "./+types/admin.tools";
-
-const RETENTION_DAYS = ZERO_RESULT_RETENTION_SECONDS / 86400;
 
 export function meta() {
   return [{ title: "Tools · Admin" }, { name: "robots", content: "noindex" }];
 }
 
 export async function loader({ context }: Route.LoaderArgs) {
-  return timedLoader(context, async (timings) => {
+  return timedLoader(context, async () => {
     const env = getEnv(context);
     /* Presence only: a name and a boolean per secret, never a value. */
     // Spread rather than asserted: `Env` is an interface, so it has no implicit index signature.
     const secrets = auditSecrets({ ...env });
     const misses = await topZeroResults(env);
-    /* The admin may wait on a cold feed cache so the picker has episodes; the home page never does. */
-    const [feed, slot] = await Promise.all([
-      timed(timings, "tools_podcast_feed", () => readPodcastFeed(context, { wait: true })),
-      timed(timings, "tools_podcast_slot", () => readPodcastSlot(env)),
-    ]);
-    const episodes = (feed?.episodes ?? []).map(({ guid, title, publishedAt }) => ({
-      guid,
-      title,
-      publishedAt,
-    }));
-    const chosen = chooseEpisode(feed?.episodes ?? [], slot);
-    const podcast = {
-      slot,
-      episodes,
-      showing: chosen.episode?.title ?? null,
-      fellBack: chosen.fellBack,
-      fetchedAt: feed?.fetchedAt ?? null,
-      /** Why the last refresh failed; null after one that landed. */
-      lastError: feed?.lastError ?? null,
-    };
-    return data({ secrets, misses, podcast });
+    return data({ secrets, misses });
   });
 }
 
-/**
- * A button, not a cron: this Worker has no cron, and the watchdog, which has one, holds no DB
- * binding and cannot reach this table.
- */
-export async function action({ request, context }: Route.ActionArgs) {
-  const form = await request.formData();
-  if (form.get("intent") === "podcast-slot") {
-    const env = getEnv(context);
-    const guid = String(form.get("guid") ?? "");
-    const slot = parsePodcastSlot(
-      JSON.stringify(form.get("mode") === "featured" ? { mode: "featured", guid } : { mode: "latest" }),
-    );
-    const feed = await readPodcastFeed(context, { wait: true });
-    if (slot.mode === "featured" && !feed?.episodes.some((e) => e.guid === slot.guid)) {
-      return data(
-        {
-          message: "Nothing was saved: that episode is not in the feed. Reload and pick again.",
-          failed: true,
-        },
-        { status: 400 },
-      );
-    }
-    await writePodcastSlot(env, slot);
-    // The home page is tagged with the corpus tag, so this purge reaches it.
-    const purged = await purgePosts("home podcast slot");
-    return data({
-      message:
-        purged === false
-          ? "Home podcast saved, but the cache purge failed, so the home page shows the old choice until its cache expires."
-          : "Home podcast saved.",
-    });
-  }
-  if (form.get("intent") !== "purge-zero-results") {
-    return data(
-      {
-        message: `Nothing was done: ${String(form.get("intent") ?? "(none)")} is not an action this page knows.`,
-        failed: true,
-      },
-      { status: 400 },
-    );
-  }
-  // The rows are gone for good, so the action asks, as the mentions sweep does: a guard in a handler
-  // does not run with scripting off. The count is 1, the operator authorizing the purge.
-  if (!confirmationSatisfied(String(form.get(CONFIRM_FIELD) ?? "").trim(), 1)) {
-    return data({ purged: null, confirmPurge: true });
-  }
-  const purged = await purgeZeroResults(getEnv(context));
-  return data({ message: `Removed ${purged} expired quer${purged === 1 ? "y" : "ies"}.` });
-}
-
-
-export default function AdminTools({ loaderData, actionData }: Route.ComponentProps) {
-  const { secrets, misses, podcast } = loaderData;
+export default function AdminTools({ loaderData }: Route.ComponentProps) {
+  const { secrets, misses } = loaderData;
   const missing = secrets.filter((s) => !s.present);
-  const message = actionData && "message" in actionData ? actionData.message : null;
-  const failed = actionData && "failed" in actionData ? actionData.failed === true : false;
   return (
     <Panel
       title="Tools"
       description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
     >
-      {/* A live announcement: it reports what the submit just did. The status region is always in
-          the DOM so its text is read when it arrives; a refusal is an alert. */}
-      <div role="status">
-        {message !== null && !failed ? <p className="admin-notice">{message}</p> : null}
-      </div>
-      {message !== null && failed ? (
-        <p className="admin-notice" data-tone="error" role="alert">
-          {message}
-        </p>
-      ) : null}
-
       <h2 className="tool-audit-heading">
         Secrets{" "}
         <span className="chip">
@@ -161,100 +67,10 @@ export default function AdminTools({ loaderData, actionData }: Route.ComponentPr
           ))}
         </ul>
       )}
-      {actionData && "confirmPurge" in actionData ? (
-        <ConfirmDialog
-          title="Remove the expired queries"
-          body={<p>{`This permanently removes every query nobody has repeated in ${RETENTION_DAYS} days.`}</p>}
-          requireTyped="1"
-          confirmLabel="Remove them"
-          cancelHref="/admin/tools"
-        >
-          <input type="hidden" name="intent" value="purge-zero-results" />
-        </ConfirmDialog>
-      ) : null}
-      <Form method="post">
-        <input type="hidden" name="intent" value="purge-zero-results" />
-        <p className="muted">
-          {`Queries nobody has repeated in ${RETENTION_DAYS} days are removed by this button. ` +
-            `There is no cron: this Worker has none, and the watchdog that does cannot reach ` +
-            `the database.`}
-        </p>
-        <button type="submit" className="btn-secondary" disabled={misses.length === 0}>
-          Remove expired queries
-        </button>
-      </Form>
-
-      {/* A featured episode that has left the feed is not an error on home, which plays the latest. */}
-      <h2 className="tool-audit-heading" id="home-podcast">
-        Home podcast
-        <span className={podcast.fellBack ? "chip chip-error" : "chip"}>
-          {podcast.fellBack ? "featured episode gone" : podcast.slot.mode}
-        </span>
-      </h2>
-      <p className="muted" data-podcast-showing>
-        {podcast.showing === null
-          ? podcast.lastError
-            ? `The last read failed: ${podcast.lastError}. The home page links to germomics.com instead.`
-            : "The feed has not been read yet, so the home page links to germomics.com instead."
-          : podcast.fellBack
-            ? `The featured episode is no longer in the feed, so the home page is playing the latest: ${podcast.showing}.`
-            : `The home page is playing: ${podcast.showing}.`}
-        {podcast.showing !== null && podcast.lastError
-          ? ` The last read failed: ${podcast.lastError}. This is from the last good read.`
-          : null}
+      <p className="muted">
+        {"Queries nobody has repeated recently are removed on a schedule, by the watchdog's daily " +
+          "purge_zero_results call; there is no button here for it any more."}
       </p>
-      <Form method="post" aria-labelledby="home-podcast">
-        <input type="hidden" name="intent" value="podcast-slot" />
-        {/* A fieldset, so the two radios are announced as one choice with its question. */}
-        <fieldset className="tool-fieldset">
-          <legend className="sr-only">Which episode the home page plays</legend>
-          <ul className="tool-list">
-            <li className="tool-row">
-              <label className="tool-row-label">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="latest"
-                  defaultChecked={podcast.slot.mode === "latest"}
-                />
-                Latest episode
-              </label>
-            </li>
-            <li className="tool-row">
-              <label className="tool-row-label">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="featured"
-                  defaultChecked={podcast.slot.mode === "featured"}
-                  disabled={podcast.episodes.length === 0}
-                />
-                Featured episode
-              </label>
-              {/* Not "Featured episode" again: two controls with one name cannot be told apart. */}
-              <label className="sr-only" htmlFor="podcast-guid">
-                Episode to feature
-              </label>
-              <select
-                id="podcast-guid"
-                name="guid"
-                className="tool-select"
-                defaultValue={podcast.slot.mode === "featured" ? podcast.slot.guid : undefined}
-                disabled={podcast.episodes.length === 0}
-              >
-                {podcast.episodes.map((episode) => (
-                  <option key={episode.guid} value={episode.guid}>
-                    {episode.title} ({episode.publishedAt.slice(0, 10)})
-                  </option>
-                ))}
-              </select>
-            </li>
-          </ul>
-        </fieldset>
-        <button type="submit" className="btn-secondary">
-          Save the home podcast
-        </button>
-      </Form>
     </Panel>
   );
 }

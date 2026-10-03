@@ -193,12 +193,6 @@ const ICONS = {
       <path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />
     </>
   ),
-  traffic: (
-    <>
-      <path d="M4 20h16" />
-      <path d="M7 20v-5M12 20v-9M17 20v-13" />
-    </>
-  ),
   media: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="2" />

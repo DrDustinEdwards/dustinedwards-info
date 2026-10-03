@@ -1,16 +1,7 @@
 import type { RouterContextProvider } from "react-router";
 
-import { getSetting, setSetting } from "~/db";
 import { getEnv, getExecutionContext } from "~/lib/context";
-import {
-  PODCAST_FEED_URL,
-  PODCAST_SLOT_KEY,
-  chooseEpisode,
-  parsePodcastFeed,
-  parsePodcastSlot,
-  type PodcastEpisode,
-  type PodcastSlot,
-} from "~/lib/podcast/feed.mjs";
+import { PODCAST_FEED_URL, parsePodcastFeed, type PodcastEpisode } from "~/lib/podcast/feed.mjs";
 import { errorMessage } from "~/lib/error-message.mjs";
 
 // The page never waits on the podcast host: loaders read KV only and refresh in `waitUntil` (this Worker
@@ -95,34 +86,24 @@ async function refresh(kv: KVNamespace, cached: CachedFeed | null): Promise<Cach
 const isStale = (cached: CachedFeed) =>
   Date.now() - Date.parse(cached.checkedAt) > REFRESH_AFTER_MS;
 
-// `wait` is for the admin's cold cache only; a public render never blocks on the host. With `wait` the
-// answer is never null, because a refresh always answers.
+// A public render never blocks on the podcast host: a stale or cold cache answers with what it has
+// and the refresh runs in `waitUntil`.
 export async function readPodcastFeed(
   context: Readonly<RouterContextProvider>,
-  { wait = false }: { wait?: boolean } = {},
 ): Promise<CachedFeed | null> {
   const env = getEnv(context);
   const ctx = getExecutionContext(context);
   const kv = env.APP_KV;
   const cached = await readCache(kv);
   if (cached && !isStale(cached)) return cached;
-  if (wait) return refresh(kv, cached);
   ctx.waitUntil(refresh(kv, cached));
   return cached;
 }
 
-export async function readPodcastSlot(env: Env): Promise<PodcastSlot> {
-  return parsePodcastSlot(await getSetting(env, PODCAST_SLOT_KEY));
-}
-
-export async function writePodcastSlot(env: Env, slot: PodcastSlot): Promise<void> {
-  await setSetting(env, PODCAST_SLOT_KEY, JSON.stringify(slot));
-}
-
+// Always the latest episode in the feed: there is no stored choice to fall back from.
 export async function homePodcastEpisode(
   context: Readonly<RouterContextProvider>,
 ): Promise<PodcastEpisode | null> {
-  const env = getEnv(context);
-  const [feed, slot] = await Promise.all([readPodcastFeed(context), readPodcastSlot(env)]);
-  return chooseEpisode(feed?.episodes ?? [], slot).episode;
+  const feed = await readPodcastFeed(context);
+  return feed?.episodes[0] ?? null;
 }

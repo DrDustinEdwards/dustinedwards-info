@@ -191,6 +191,52 @@ export async function refreshCitationsWeekly(
   return null;
 }
 
+/**
+ * The one firing a day that purges expired zero-result search queries: 04:00 to 04:14 UTC, a different
+ * quarter hour than the weekly citation refresh above so the two never share a firing. Replaces the admin
+ * Tools page's manual "remove expired queries" button, which this Worker has no cron of its own to drive
+ * (wrangler.jsonc.example keeps `crons: []` on purpose). Exported only so the worker test can drive it.
+ */
+export function isZeroResultPurgeWindow(scheduledTime: number): boolean {
+  const at = new Date(scheduledTime);
+  return at.getUTCHours() === 4 && at.getUTCMinutes() < 15;
+}
+
+/**
+ * Calls the operator API's purge_zero_results, which removes every zero-result query row past its
+ * retention cutoff (the same cutoff the removed button enforced). Returns the problem, or null when
+ * nothing was wrong or it was not this firing's turn; the caller throws it, so the invocation is
+ * recorded as failed and the cause is named. Exported only so the worker test can drive it.
+ */
+export async function purgeZeroResultsDaily(
+  env: WatchdogEnv,
+  token: string,
+  scheduledTime: number,
+): Promise<string | null> {
+  if (!isZeroResultPurgeWindow(scheduledTime)) return null;
+  if (!token) return "the daily zero-result purge did not run: OPERATOR_TOKEN is not set on this Worker";
+  let response: Response;
+  let payload: unknown;
+  try {
+    response = await env.SITE.fetch(`${SITE_ORIGIN}/api/operator`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}`, "content-type": "application/json", "user-agent": "watchdog" },
+      body: JSON.stringify({ tool: "purge_zero_results", args: {} }),
+    });
+    payload = await response.json().catch(() => null);
+  } catch (error) {
+    return `the daily zero-result purge did not complete: ${errorMessage(error)}`;
+  }
+  if (!response.ok) {
+    const body = payload as { error?: string } | null;
+    return `the daily zero-result purge answered ${response.status}: ${body?.error ?? "(no error was given)"}`;
+  }
+  console.log(
+    JSON.stringify({ watchdog: "zero-results-purged", data: (payload as { data?: unknown } | null)?.data ?? null }),
+  );
+  return null;
+}
+
 async function alert(env: WatchdogEnv, subject: string, lines: string[]): Promise<boolean> {
   try {
     await env.EMAIL.send({
@@ -486,9 +532,13 @@ export default {
 
       await mailTransition(env, draft, reading, errorRateNote);
 
-      // Its own failure is raised after the health mail, so a bad week of counts never hides a bad site.
+      // Each runs independently, and both are raised after the health mail, so neither a bad week of
+      // counts nor a missed purge hides a bad site, and one firing's two unrelated jobs cannot mask
+      // each other (they fall in different quarter hours, so this is belt and suspenders).
       const refreshProblem = await refreshCitationsWeekly(env, token, controller.scheduledTime);
-      if (refreshProblem) throw new Error(refreshProblem);
+      const purgeProblem = await purgeZeroResultsDaily(env, token, controller.scheduledTime);
+      const scheduledProblems = [refreshProblem, purgeProblem].filter((p): p is string => p !== null);
+      if (scheduledProblems.length > 0) throw new Error(scheduledProblems.join(" "));
     } catch (error) {
       const message = errorMessage(error);
       console.error(JSON.stringify({ watchdog: "threw", error: message }));
