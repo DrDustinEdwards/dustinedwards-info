@@ -212,6 +212,15 @@
       "fallbackKind": "selector",
       "fallbackAt": ".cv-cite",
       "why": null
+    },
+    {
+      "id": "procedure-run-mode",
+      "module": "app/enhance/run.ts",
+      "enhancement": "On a procedure page, \"Run this procedure\" puts a checklist over the steps: a Done check, a note and a button for each stored timer on every step, the critical and pause flags kept in view, the scale changed in place, and a record that downloads as text or JSON and prints. The run is kept in this browser only.",
+      "fallback": "The page is complete as served: every step with its flags, the materials table, the Scale form (a GET form that reloads the page with the amounts for a new count) and the printable bench sheet; nothing in the page depends on a run being started.",
+      "fallbackKind": "selector",
+      "fallbackAt": ".procedure-scale",
+      "why": null
     }
   ]
 }
