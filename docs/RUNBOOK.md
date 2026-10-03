@@ -100,6 +100,26 @@ Then ship normally when you are awake. Do not ship at 2am.
 
 ---
 
+## 2b. Switch the domain back to the WordPress host
+
+`dustinedwards.info` and `www.dustinedwards.info` are Custom Domains on this Worker, so there is no A or CNAME
+for either name in the zone. The legacy WordPress host (`50.116.84.36`) is still running and was not touched.
+The registrar is Cloudflare, so the zone is the only DNS there is. The email records (MX, SPF, DKIM, DMARC)
+never change in either direction.
+
+1. Remove BOTH Custom Domains: dashboard, Workers & Pages, `dustinedwards`, Domains. **Also delete the `routes`
+   block in `wrangler.jsonc.example`**, or the next deploy puts them back (`wrangler deploy` overrides routes
+   added in the dashboard with the ones in the config, and the reverse holds).
+2. Re-add two records, both **DNS only** (gray cloud): `A` `@` `50.116.84.36`, and `CNAME` `www` to
+   `dustinedwards.info`. A saved zone export holds both.
+3. Wait about a minute (the old A record's TTL was 30 seconds), then `curl -sI https://dustinedwards.info/` and
+   look for `Server: Apache`.
+4. Undo the origin change: set `BETTER_AUTH_URL` back to the workers.dev address (`wrangler secret put`),
+   restore `SITE_ORIGIN` in `app/lib/seo.ts` and the contact URL in `content/llms.txt`, and drop
+   `includeSubDomains` from HSTS (a browser that saw it keeps it for a year). Then deploy.
+
+---
+
 ## 3. Rebuild D1 from git
 
 Use this when the CONTENT is wrong: a post missing, a stale render, search

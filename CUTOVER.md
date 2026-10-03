@@ -27,6 +27,21 @@ arrives the moment those records go orange.
 
 ---
 
+## What was actually done (2026-10-03), which replaces sections 2 and the premise above
+
+The domain moved from GoDaddy to Cloudflare Registrar (expires 2027-12-27). Dustin deleted the apex `A`
+(`50.116.84.36`) and the `www` CNAME and attached `dustinedwards.info` and `www.dustinedwards.info` to this
+Worker as **Custom Domains**, so there was no orange-clouding and no route pattern. The zone holds 18 records: 11
+email (MX, SPF, DKIM, DMARC) and 7 proxied Workers (`abscissa`, `capsomer`, `carrel`, `carrel-mcp`, `enarratio`,
+`mcp`, `portal`), with no other subdomain, so `includeSubDomains` (3.10) has nothing to break. Email forwarding was
+tested after the move and works. The WordPress host keeps running; the way back is `docs/RUNBOOK.md`, "2b".
+
+The domains are in `wrangler.jsonc.example` as `custom_domain` routes, because `wrangler deploy` overrides dashboard
+routes with the config's. Deploying them needs the deploy token to carry Zone > Workers Routes > Write on
+`dustinedwards.info`.
+
+---
+
 ## 1. Before the toggle, in this order
 
 **1.1 Disable or delete the existing Web Analytics site's `auto_install`.**

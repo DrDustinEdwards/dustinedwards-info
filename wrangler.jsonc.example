@@ -20,6 +20,15 @@
 	// `no_nodejs_compat_v2`, which is the pair to reach for if that is ever
 	// wanted; removing a positive flag no longer does it.
 	"keep_vars": true,
+	// THE REAL DOMAIN, as Custom Domains and not route patterns: the zone has no A or CNAME for
+	// either name, because a Custom Domain creates its own proxied record. THIS LIST IS THE SOURCE OF
+	// TRUTH: `wrangler deploy` overrides routes added in the dashboard with the ones named here, so a
+	// domain attached by hand and missing from this list is removed by the next deploy. Deploying this
+	// needs Zone > Workers Routes > Write on dustinedwards.info (docs/RUNBOOK.md, CUTOVER.md).
+	"routes": [
+		{ "pattern": "dustinedwards.info", "custom_domain": true },
+		{ "pattern": "www.dustinedwards.info", "custom_domain": true }
+	],
 	// INVOCATION LOGS ARE OFF, and that is a PRIVACY setting rather than a cost
 	// one. An invocation log is "enriched with information available to
 	// Cloudflare in the context of the invocation", which measurably included
