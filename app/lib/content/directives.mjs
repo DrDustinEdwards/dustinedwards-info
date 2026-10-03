@@ -473,7 +473,7 @@ function remarkModelDirective(kind) {
  * The rehype half: renders each marked figure from its model and drops the marker.
  *
  * @param {string} marker
- * @param {(model: any, caption: any[]) => any[]} render
+ * @param {(model: any, caption: any[], node: any) => any[]} render
  */
 function rehypeModelMarker(marker, render) {
   /** @param {any[]} models */
@@ -484,7 +484,7 @@ function rehypeModelMarker(marker, render) {
         if (at === undefined) return;
         const model = models[Number(at)];
         delete node.properties[marker];
-        node.children = render(model, node.children ?? []);
+        node.children = render(model, node.children ?? [], node);
       });
     };
 }
