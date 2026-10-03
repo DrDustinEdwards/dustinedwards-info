@@ -112,7 +112,9 @@ export function CopyTextButton({
     <>
       <button
         type="button"
-        className="row-action"
+        className="cap-btn"
+        data-size="sm"
+        data-variant="quiet"
         onClick={() => {
           // Emptied first, so a second copy of the same thing is announced again.
           window.clearTimeout(timer.current);
@@ -124,9 +126,9 @@ export function CopyTextButton({
         }}
       >
         {copied === "copied" ? "Copied" : copied === "failed" ? "Copy failed" : label}
-        {name ? <span className="sr-only"> {name}</span> : null}
+        {name ? <span className="cap-sr-only"> {name}</span> : null}
       </button>
-      <div className="sr-only">
+      <div className="cap-sr-only">
         <LiveNotice
           status={copied === "copied" ? `Copied ${subject}.` : null}
           alert={copied === "failed" ? `Could not copy ${subject}. The browser blocked the clipboard.` : null}

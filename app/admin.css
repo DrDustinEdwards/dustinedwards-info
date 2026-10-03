@@ -5,6 +5,7 @@
 @import "capsomer/layers.css";
 @import "capsomer/tokens.css";
 @import "capsomer/base.css";
+@import "capsomer/prose.css";
 
 /* Shared building blocks first, then the components built on them. */
 @import "capsomer/popover.css";
@@ -34,6 +35,7 @@
 @import "capsomer/shell.css";
 @import "capsomer/confirm-dialog.css";
 @import "capsomer/stat-tile.css";
+@import "capsomer/markdown-editor.css";
 
 /* The page inside the shell: a title, one line saying what the page is for, the page's actions at the
    right, then panels. */
@@ -152,4 +154,139 @@
   & .cap-field:first-child {
     flex-basis: 20rem;
   }
+}
+
+/* A form on a page, and fields side by side where there is room. */
+.app-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.app-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5);
+}
+
+/* The post editor: the form's own column, and the writing and preview panes in one or two columns. */
+.app-editor {
+  display: grid;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.app-editor-canvas {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+  min-width: 0;
+}
+
+.app-editor-canvas[data-layout="preview"] .app-editor-write {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .app-editor-canvas[data-layout="split"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.app-editor-frame {
+  display: block;
+  width: 100%;
+  min-height: 60vh;
+  border: 0;
+  background: var(--surface);
+}
+
+.app-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-thumb {
+  width: 96px;
+  height: auto;
+  border-radius: var(--radius-m);
+}
+
+/* How a post appears in search results and in a social card: Capsomer has no such preview. */
+.serp-preview,
+.og-preview {
+  padding: var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--surface);
+}
+
+.serp-preview p,
+.og-preview p {
+  margin: 0;
+}
+
+.serp-url {
+  color: var(--muted);
+  font-size: var(--fs-detail);
+}
+
+.serp-title {
+  color: var(--accent-text);
+  font-size: var(--fs-lead);
+  line-height: 1.3;
+}
+
+.serp-description {
+  font-size: var(--fs-body);
+  line-height: 1.5;
+}
+
+.serp-note,
+.og-preview-note {
+  color: var(--muted);
+  font-size: var(--fs-detail);
+}
+
+.og-preview {
+  padding: 0;
+  overflow: hidden;
+}
+
+/* 1200x630 is the card's real aspect, so the box cannot imply a crop the scrapers will not perform. */
+.og-preview-image {
+  aspect-ratio: 1200 / 630;
+  background: var(--sunken);
+}
+
+.og-preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.og-preview-body,
+.og-preview-note {
+  padding: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.og-preview-host {
+  color: var(--muted);
+  font-size: var(--fs-label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.og-preview-title {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.og-preview-description {
+  color: var(--muted);
+  font-size: var(--fs-detail);
 }

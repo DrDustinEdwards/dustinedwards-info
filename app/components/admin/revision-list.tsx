@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import { Alert } from "capsomer/react/banner";
 
 import type { PostFields } from "~/lib/editor/frontmatter";
 import { errorMessage } from "~/lib/error-message.mjs";
@@ -83,91 +84,86 @@ export function RevisionList({
   };
 
   if (revisions.length === 0) {
-    return <p className="muted">No commits found for this post.</p>;
+    return <p className="cap-muted">No commits found for this post.</p>;
   }
 
   return (
     <>
-      <p className="muted">
+      <p className="cap-muted">
         Restoring LOADS that version into the editor as unsaved changes. Nothing
         is written until you save, and saving lands a new commit on top; history
         is never rewritten.
       </p>
 
-      {error ? (
-        <p className="editor-problem" role="alert">
-          {error}
-        </p>
-      ) : null}
+      {error ? <Alert tone="crit">{error}</Alert> : null}
 
-      <p className="sr-only" role="status">
+      <p className="cap-sr-only" role="status">
         {status}
       </p>
 
-      <ol className="history-list">
+      <ol className="cap-rows" role="list" aria-label="Versions">
         {revisions.map((revision, index) => (
-          <li key={revision.sha} className="history-entry">
-            <RevisionMeta revision={revision} current={index === 0} />
-
-            <div className="history-actions">
-              <button
-                type="button"
-                className="row-action"
-                aria-expanded={openSha === revision.sha}
-                aria-controls={openSha === revision.sha ? `diff-${revision.sha}` : undefined}
-                onClick={() => void toggle(revision.sha)}
-              >
-                {openSha === revision.sha ? "Hide diff" : "View diff"}
-              </button>
-
-              {/* Not for the newest commit: that revision is the editor's current content. */}
-              {index > 0 ? (
+          <Fragment key={revision.sha}>
+            <li className="cap-row">
+              <div className="cap-row-title">{revision.message}</div>
+              <p className="cap-row-detail">
+                <code className="cap-mono">{revision.sha.slice(0, 7)}</code>
+                {" · "}
+                {revision.author}
+                {" · "}
+                {/* UTC, so the server render and hydration agree on which day a commit landed. */}
+                {new Date(revision.date).toLocaleString("en-US", { timeZone: "UTC" })}
+                {index === 0 ? " · current" : ""}
+              </p>
+              <div className="cap-row-actions">
                 <button
                   type="button"
-                  className="row-action"
-                  disabled={restoring[revision.sha] === true}
-                  onClick={() => void restore(revision.sha)}
+                  className="cap-btn"
+                  data-size="sm"
+                  data-variant="quiet"
+                  aria-expanded={openSha === revision.sha}
+                  aria-controls={openSha === revision.sha ? `diff-${revision.sha}` : undefined}
+                  onClick={() => void toggle(revision.sha)}
                 >
-                  {restoring[revision.sha] ? "Loading..." : "Load into editor"}
+                  {openSha === revision.sha ? "Hide diff" : "View diff"}
                 </button>
-              ) : null}
-            </div>
+
+                {/* Not for the newest commit: that revision is the editor's current content. */}
+                {index > 0 ? (
+                  <button
+                    type="button"
+                    className="cap-btn"
+                    data-size="sm"
+                    data-variant="quiet"
+                    aria-disabled={restoring[revision.sha] === true || undefined}
+                    onClick={() => {
+                      if (restoring[revision.sha] !== true) void restore(revision.sha);
+                    }}
+                  >
+                    {restoring[revision.sha] ? "Loading..." : "Load into editor"}
+                  </button>
+                ) : null}
+              </div>
+            </li>
 
             {openSha === revision.sha ? (
-              <div id={`diff-${revision.sha}`}>
+              <li id={`diff-${revision.sha}`}>
                 {!(revision.sha in patches) ? (
-                  <p className="muted">Loading diff...</p>
+                  <p className="cap-muted">Loading diff...</p>
                 ) : patches[revision.sha] ? (
                   <DiffBlock
                     patch={patches[revision.sha] ?? ""}
                     label={`Diff for ${revision.sha.slice(0, 7)}`}
                   />
                 ) : (
-                  <p className="muted">No diff recorded for this commit.</p>
+                  <p className="cap-muted">No diff recorded for this commit.</p>
                 )}
-              </div>
+              </li>
             ) : null}
-          </li>
+          </Fragment>
         ))}
       </ol>
     </>
-  );
-}
-
-/** One commit's line: short sha, message, author, date and whether it is the current one. */
-export function RevisionMeta({ revision, current }: { revision: Revision; current: boolean }) {
-  return (
-    <div className="history-meta">
-      <code>{revision.sha.slice(0, 7)}</code>
-      <span className="history-message">{revision.message}</span>
-      <span className="muted">
-        {revision.author}
-        {" · "}
-        {/* UTC, so the server render and hydration agree on which day a commit landed. */}
-        {new Date(revision.date).toLocaleString("en-US", { timeZone: "UTC" })}
-        {current ? " · current" : ""}
-      </span>
-    </div>
   );
 }
 

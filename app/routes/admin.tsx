@@ -32,6 +32,8 @@ import "@fontsource/schibsted-grotesk/500.css";
 import "@fontsource/schibsted-grotesk/600.css";
 import "@fontsource/schibsted-grotesk/800.css";
 import "@fontsource/martian-mono/400.css";
+import "@fontsource-variable/source-serif-4/index.css";
+import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
 
 export function meta() {
