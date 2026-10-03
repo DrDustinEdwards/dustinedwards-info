@@ -298,7 +298,7 @@ const GROW_NAME = "lightbox-figure";
  */
 function grow(from: HTMLElement | undefined, to: HTMLElement, change: () => void) {
   const start = (document as Document & {
-    startViewTransition?: (update: () => void) => { finished: Promise<void> };
+    startViewTransition?: (update: () => void) => { ready: Promise<void>; finished: Promise<void> };
   }).startViewTransition;
   if (!from || !start || reduceMotion.matches) {
     change();
@@ -309,6 +309,13 @@ function grow(from: HTMLElement | undefined, to: HTMLElement, change: () => void
     from.style.viewTransitionName = "";
     to.style.viewTransitionName = GROW_NAME;
     change();
+  });
+  // A skipped transition rejects `ready` with an InvalidStateError: the tab went hidden, or another
+  // transition started first. The update callback still ran, so the change happened and only the
+  // animation was dropped. Anything else is a real failure and is rethrown to where it can be seen.
+  void transition.ready.catch((error: unknown) => {
+    if (error instanceof DOMException && error.name === "InvalidStateError") return;
+    throw error;
   });
   // The name is cleared once the morph ends, so no later transition picks up a stale pair.
   void transition.finished.finally(() => {
