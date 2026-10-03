@@ -1,4 +1,6 @@
-import { Link } from "react-router";
+import { TabsNav } from "capsomer/react/tabs";
+
+import { TabLink } from "~/components/admin/tab-link";
 
 import type { hrefWith, sortHref } from "~/lib/media/view.mjs";
 
@@ -43,67 +45,53 @@ export function MediaFacets({
 
   return (
     <>
-      <div className="media-facet">
-        <span className="media-facet-label" id="media-facet-lens">
-          Show
-        </span>
-        <nav aria-labelledby="media-facet-lens" className="media-filters">
-          <Link
+      <div className="app-facet">
+        <TabsNav aria-label="Show" variant="line">
+          <TabLink
             to={linkTo({ lens: "", trash: false, page: 1 })}
-            className={`admin-chip${!view.lens && !view.trash ? " is-active" : ""}`}
-            aria-current={!view.lens && !view.trash ? "page" : undefined}
+            current={!view.lens && !view.trash}
+            count={lensCounts.all}
           >
-            All <span className="admin-chip-count">{lensCounts.all}</span>
-          </Link>
+            All
+          </TabLink>
           {LENS_CHIPS.map((lens) => {
             const n = lensCounts[lens.id === "no-alt" ? "noAlt" : lens.id];
             return (
-              <Link
+              <TabLink
                 key={lens.id}
                 to={linkTo({ lens: lens.id, trash: false, page: 1 })}
-                className={`admin-chip${view.lens === lens.id ? " is-active" : ""}`}
-                aria-current={view.lens === lens.id ? "page" : undefined}
+                current={view.lens === lens.id}
+                count={n}
                 title={lens.hint}
               >
-                {n > 0 ? (
-                  <span className="media-lens-dot" data-lens={lens.id} aria-hidden="true" />
-                ) : null}
-                {lens.label} <span className="admin-chip-count">{n}</span>
-              </Link>
+                {lens.label}
+              </TabLink>
             );
           })}
-          <Link
+          <TabLink
             to={linkTo({ trash: !view.trash, lens: "", page: 1, key: "" })}
-            className={`admin-chip${view.trash ? " is-active" : ""}`}
-            aria-current={view.trash ? "page" : undefined}
+            current={view.trash}
+            count={trashedCount}
             title="A library view, not a takedown. A trashed file keeps its address and any page using it is unchanged."
           >
-            Trash <span className="admin-chip-count">{trashedCount}</span>
-          </Link>
-        </nav>
-        <span className="media-facet-hint">
+            Trash
+          </TabLink>
+        </TabsNav>
+        <p className="cap-muted">
           {activeLens ? activeLens.hint : "everything the library knows about"}
-        </span>
+        </p>
       </div>
 
       {tagCounts.length > 0 ? (
-        <div className="media-facet">
-          <span className="media-facet-label" id="media-facet-tag">
-            Tags
-          </span>
-          <nav aria-labelledby="media-facet-tag" className="media-filters">
+        <div className="app-facet">
+          <TabsNav aria-label="Tags" variant="line">
             {tagCounts.map((t) => (
-              <Link
-                key={t.tag}
-                to={tagHref(t.tag)}
-                className={`admin-chip${view.tag === t.tag ? " is-active" : ""}`}
-                aria-current={view.tag === t.tag ? "page" : undefined}
-              >
-                {t.tag} <span className="admin-chip-count">{t.n}</span>
-              </Link>
+              <TabLink key={t.tag} to={tagHref(t.tag)} current={view.tag === t.tag} count={t.n}>
+                {t.tag}
+              </TabLink>
             ))}
-          </nav>
-          <span className="media-facet-hint">yours, in the inspector</span>
+          </TabsNav>
+          <p className="cap-muted">yours, in the inspector</p>
         </div>
       ) : null}
     </>

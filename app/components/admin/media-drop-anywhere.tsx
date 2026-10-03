@@ -73,16 +73,16 @@ export function DropAnywhere({ inputRef }: { inputRef: React.RefObject<HTMLInput
 
   // One region, in the document before anything is dropped or chosen, so each change is announced.
   return (
-    <div className="media-drop-status" role="status">
+    <div role="status">
       {over ? (
-        <p className="media-drop-hint">
+        <p className="cap-muted">
           Drop to load it into the upload form. Nothing uploads until you press
           Upload.
         </p>
       ) : (
         <>
-          {chosen ? <p className="media-upload-chosen">Ready to upload {chosen}.</p> : null}
-          {note ? <p className="media-drop-hint">{note}</p> : null}
+          {chosen ? <p className="cap-muted">Ready to upload {chosen}.</p> : null}
+          {note ? <p className="cap-muted">{note}</p> : null}
         </>
       )}
     </div>

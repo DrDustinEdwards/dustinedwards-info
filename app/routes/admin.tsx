@@ -1,14 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import {
-  Form,
-  Link,
-  NavLink,
-  Outlet,
-  data,
-  useRouteLoaderData,
-} from "react-router";
+import { Form, Link, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
+import { Empty } from "capsomer/react/empty";
+import { MessageProvider } from "capsomer/react/message";
+import { Shell, type LinkProps, type ShellEntry } from "capsomer/react/shell";
+import { ThemeSwitch } from "capsomer/react/theme-switch";
 
-import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { SiteLogoHeader } from "~/components/site-logo";
 import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
@@ -33,6 +28,13 @@ import type { loader as rootLoader } from "~/root";
  * This import keeps admin CSS off the public plane: every /admin/* child nests under this layout.
  * Sign-in is Cloudflare Access, in front of this layout, so no public route needs it.
  */
+import "@fontsource/schibsted-grotesk/400.css";
+import "@fontsource/schibsted-grotesk/500.css";
+import "@fontsource/schibsted-grotesk/600.css";
+import "@fontsource/schibsted-grotesk/800.css";
+import "@fontsource/martian-mono/400.css";
+import "@fontsource-variable/source-serif-4/index.css";
+import "@fontsource-variable/source-serif-4/wght-italic.css";
 import "~/admin.css";
 
 export function meta() {
@@ -162,357 +164,173 @@ export async function loader({ context }: Route.LoaderArgs) {
   }, "layout_total");
 }
 
-/** localStorage, a per-device preference: the server cannot know it, hence the blocking script below. */
-const SIDEBAR_KEY = "admin-sidebar";
-const SIDEBAR_ATTR = "data-admin-sidebar";
-/** The width at which the sidebar becomes a drawer; the same figure as admin-shell.css. */
-const DRAWER_QUERY = "(max-width: 800px)";
-
 /**
- * Sets the attribute before the sidebar paints, so nothing snaps after hydration. In the admin
- * layout, not root, so the public plane never carries it.
+ * Capsomer's own one-liner (theme-switch.md), run before first paint so a remembered theme never
+ * flashes the other one. The admin's nonce is what lets the policy run it.
  */
-const NO_FLASH = `try{if(localStorage.getItem(${JSON.stringify(SIDEBAR_KEY)})==="collapsed"){document.documentElement.setAttribute(${JSON.stringify(SIDEBAR_ATTR)},"collapsed")}}catch(e){}`;
+const THEME_SCRIPT =
+  'try{var t=localStorage.getItem("cap-theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}';
 
-const ICONS = {
-  overview: (
-    <>
-      <rect x="3" y="3" width="7" height="9" rx="1" />
-      <rect x="14" y="3" width="7" height="5" rx="1" />
-      <rect x="14" y="12" width="7" height="9" rx="1" />
-      <rect x="3" y="16" width="7" height="5" rx="1" />
-    </>
-  ),
-  posts: (
-    <>
-      <path d="M4 5h16M4 10h16M4 15h11M4 20h7" />
-    </>
-  ),
-  mentions: (
-    <>
-      <path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H9l-5 4V6a1 1 0 0 1 1-1z" />
-    </>
-  ),
-  media: (
-    <>
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <circle cx="8.5" cy="9.5" r="1.5" />
-      <path d="m4 17 4.5-4.5 3 3 3.5-3.5 5 5" />
-    </>
-  ),
-  tools: (
-    <>
-      <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h10M18 18h2" />
-      <circle cx="16" cy="6" r="2" />
-      <circle cx="8" cy="12" r="2" />
-      <circle cx="16" cy="18" r="2" />
-    </>
-  ),
-} as const;
-
-const NAV = [
-  { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
-  { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true, count: "posts" },
-  { to: "/admin/media", label: "Media", icon: ICONS.media, count: "media" },
-  // No count badge: a pending mention is not worth a third query on every admin page.
-  { to: "/admin/mentions", label: "Mentions", icon: ICONS.mentions },
-  { to: "/admin/tools", label: "Tools", icon: ICONS.tools },
-];
-
-/** Count included as words: a bare numeral announces "Posts 3", which names no unit. */
-function navName(
-  label: string,
-  drift: number | null,
-  count: number | null,
-  maxAgeSeconds: number,
-) {
-  const size = count === null ? "" : `, ${count} item${count === 1 ? "" : "s"}`;
-  if (drift === null) {
-    return `${label}${size}, Ask index drift unknown: the check failed or ran out of time. Open Posts to check it.`;
-  }
-  if (drift <= 0) return `${label}${size}`;
-  const minutes = Math.round(maxAgeSeconds / 60);
-  const age = minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
+function Icon({ d }: { d: string }) {
   return (
-    `${label}${size}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
-    `This count is up to ${age} old; open Posts for the current figure and the repair.`
-  );
-}
-
-function Glyph({
-  children,
-  className,
-  strokeWidth = "1.75",
-}: {
-  children: React.ReactNode;
-  /** Added to `admin-nav-icon`, never in place of it. */
-  className?: string;
-  strokeWidth?: string;
-}) {
-  return (
-    <svg
-      className={className ? `admin-nav-icon ${className}` : "admin-nav-icon"}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      {children}
+    <svg className="cap-shell-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+      <path
+        d={d}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
-function SignOutForm({ menu = false }: { menu?: boolean }) {
+const ICONS = {
+  overview: <Icon d="M2.5 7.5 8 3l5.5 4.5V13h-3.5V9.5H6V13H2.5z" />,
+  posts: <Icon d="M4 2.5h5l3 3v8H4zM9 2.5v3h3M6 8.5h4M6 11h4" />,
+  mentions: <Icon d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" />,
+  media: <Icon d="M2.5 3.5h11v9h-11zM2.5 11l3.5-3.5 2.5 2.5 2-2 3 3M10.5 6.2h.01" />,
+  site: <Icon d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM2 8h12M8 2c2 1.8 2 10.2 0 12M8 2c-2 1.8-2 10.2 0 12" />,
+  tools: <Icon d="M2.5 4.5h6M11.5 4.5h2M2.5 8h2M7.5 8h6M2.5 11.5h6M11.5 11.5h2M10 3v3M5.5 6.5v3M10 10v3" />,
+};
+
+/** Count included as words: a bare numeral announces "Posts 3", which names no unit. */
+function countNote(count: number | null, drift: number | null, maxAgeSeconds: number) {
+  const size = count === null ? "" : count === 1 ? "item" : "items";
+  if (drift === null) {
+    return `${size}, Ask index drift unknown: the check failed or ran out of time. Open Posts to check it.`;
+  }
+  if (drift <= 0) return size;
+  const minutes = Math.round(maxAgeSeconds / 60);
+  const age = minutes >= 1 ? `${minutes} minute${minutes === 1 ? "" : "s"}` : `${maxAgeSeconds} seconds`;
   return (
-    <Form method="post" action="/admin/logout">
-      {/*
-       * An explicit label: the hint is a child of the button, so name-from-content swallowed it.
-       * `aria-describedby` keeps the sentence as a description.
-       */}
-      <button
-        type="submit"
-        {...(menu
-          ? {
-              "data-menu-item": "",
-              className: "overflow-menu-item",
-              "aria-label": "Sign out",
-              "aria-describedby": "admin-signout-hint",
-            }
-          : { className: "admin-signout" })}
-      >
-        {menu ? null : (
-          <svg
-            width="13"
-            height="13"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <path d="M16 17l5-5-5-5" />
-            <path d="M21 12H9" />
-          </svg>
-        )}
-        Sign out
-        {menu ? (
-          <span className="overflow-menu-item-hint" id="admin-signout-hint">
-            Ends this session. You will need to sign in again through Cloudflare Access.
-          </span>
-        ) : null}
-      </button>
-    </Form>
+    `${size}, ${drift} Ask index item${drift === 1 ? "" : "s"} drifted. ` +
+    `This count is up to ${age} old; open Posts for the current figure and the repair.`
+  );
+}
+
+function RouterLink({ href, children, ...rest }: LinkProps) {
+  // A link out of the admin is a document navigation: the public pages bring their own stylesheets, which
+  // would otherwise be loaded beside Capsomer's.
+  return (
+    <Link to={href} reloadDocument={!href.startsWith("/admin")} {...rest}>
+      {children}
+    </Link>
   );
 }
 
 export default function AdminLayout({ loaderData }: Route.ComponentProps) {
   /* Optional: on the error boundary path the root loader never ran, and a made-up nonce is worse than none. */
   const rootData = useRouteLoaderData<typeof rootLoader>("root");
-  /** Initialized `false` to match the server, then corrected in a layout effect before paint. */
-  const [collapsed, setCollapsed] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const mainRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  const at = (prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-  useLayoutEffect(() => {
-    setCollapsed(document.documentElement.getAttribute(SIDEBAR_ATTR) === "collapsed");
-  }, []);
-
-  const toggle = useCallback(() => {
-    setCollapsed((was) => {
-      const next = !was;
-      const root = document.documentElement;
-      if (next) root.setAttribute(SIDEBAR_ATTR, "collapsed");
-      else root.removeAttribute(SIDEBAR_ATTR);
-      try {
-        window.localStorage.setItem(SIDEBAR_KEY, next ? "collapsed" : "expanded");
-      } catch {
-        // Storage disabled. The choice still applies for this page.
-      }
-      return next;
-    });
-  }, []);
-
-  const sidebarRef = useRef<HTMLElement>(null);
-  /*
-   * Where focus goes once the drawer has closed. Moved in an effect, not the handler: while the drawer
-   * is open the topbar and main are inert, and an inert element refuses focus.
-   */
-  const focusAfterClose = useRef<HTMLElement | null>(null);
-
-  const closeDrawer = useCallback(() => {
-    focusAfterClose.current = menuButtonRef.current;
-    setDrawerOpen(false);
-  }, []);
-
-  useEffect(() => {
-    if (!drawerOpen) {
-      focusAfterClose.current?.focus();
-      focusAfterClose.current = null;
-      return;
-    }
-    // Into the drawer on open, as a modal dialog does: the rest of the page is inert behind it.
-    sidebarRef.current?.querySelector<HTMLElement>("a[href]")?.focus();
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeDrawer();
-    };
-    // Widening past the drawer breakpoint turns the drawer back into the sidebar, so nothing may stay inert.
-    const narrow = window.matchMedia(DRAWER_QUERY);
-    const onWiden = () => {
-      if (!narrow.matches) setDrawerOpen(false);
-    };
-    document.addEventListener("keydown", onKey);
-    narrow.addEventListener("change", onWiden);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      narrow.removeEventListener("change", onWiden);
-    };
-  }, [drawerOpen, closeDrawer]);
-
-  /* Picking a section in the mobile drawer closes it and puts focus on the page it opens, not a hidden link. */
-  const pickSection = useCallback(() => {
-    if (!drawerOpen) return;
-    focusAfterClose.current = mainRef.current;
-    setDrawerOpen(false);
-  }, [drawerOpen]);
+  const { counts, askDrift, askDriftMaxAgeSeconds } = loaderData;
+  const nav: ShellEntry[] = [
+    { id: "overview", label: "Overview", href: "/admin", icon: ICONS.overview, current: pathname === "/admin" },
+    {
+      id: "posts",
+      label: "Posts",
+      href: "/admin/posts",
+      icon: ICONS.posts,
+      current: at("/admin/posts"),
+      count: counts.posts,
+      countNote: countNote(counts.posts, askDrift, askDriftMaxAgeSeconds),
+      tone: askDrift === null || askDrift > 0 ? "warn" : undefined,
+    },
+    {
+      id: "media",
+      label: "Media",
+      href: "/admin/media",
+      icon: ICONS.media,
+      current: at("/admin/media"),
+      count: counts.media,
+      countNote: countNote(counts.media, 0, askDriftMaxAgeSeconds),
+    },
+    // No count: a pending mention is not worth a third query on every admin page.
+    { id: "mentions", label: "Mentions", href: "/admin/mentions", icon: ICONS.mentions, current: at("/admin/mentions") },
+    { id: "tools", label: "Tools", href: "/admin/tools", icon: ICONS.tools, current: at("/admin/tools") },
+  ];
+  const theme = rootData?.theme;
 
   return (
-    <div className="admin" data-drawer={drawerOpen ? "open" : undefined}>
-      {/* Before the sidebar, so the attribute is set before it is painted. */}
-      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: NO_FLASH }} />
-
-      {/* Inert behind the open drawer, so Tab and a screen reader stay inside it. */}
-      <header className="admin-topbar" inert={drawerOpen}>
-        <Link to="/admin" className="admin-brand">
-          <SiteLogoHeader className="admin-brand-mark" />
-          {/* Wrapped: a bare text node cannot carry `text-overflow`. */}
-          <span className="admin-brand-name">{SITE.name}</span>
-        </Link>
-        <span className="admin-topbar-scope">Private plane</span>
-
-        <div className="admin-topbar-user">
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className="admin-menu-button"
-            aria-expanded={drawerOpen}
-            aria-controls="admin-sidebar"
-            aria-label="Open admin menu"
-            onClick={() => setDrawerOpen(true)}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
-          </button>
-          <span className="muted admin-topbar-email">{loaderData.email}</span>
-          <SignOutForm />
-          {/*
-           * Both branches are in the document and CSS picks one, so it works without script;
-           * `display: none` also takes the hidden branch out of the accessibility tree.
-           */}
-          <div className="admin-topbar-account">
-            <OverflowMenu label="Account">
-              <p className="admin-account-identity">{loaderData.email}</p>
-              <SignOutForm menu />
-            </OverflowMenu>
-          </div>
-        </div>
-      </header>
-
-      <aside className="admin-sidebar" id="admin-sidebar" ref={sidebarRef}>
-        <nav className="admin-nav" aria-label="Admin sections">
-          {NAV.map((item) => {
-            const drift: number | null = item.drift ? loaderData.askDrift : 0;
-            /* `null` means this section has no count, which must not render as zero. */
-            const count = item.count
-              ? loaderData.counts[item.count as keyof typeof loaderData.counts]
-              : null;
-            const name = navName(item.label, drift, count, loaderData.askDriftMaxAgeSeconds);
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                aria-label={name}
-                title={name}
-                onClick={pickSection}
+    <>
+      <script nonce={rootData?.nonce} dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      <Shell
+        brand={
+          <>
+            <SiteLogoHeader className="admin-brand-mark" />
+            {SITE.name}
+          </>
+        }
+        brandHref="/admin"
+        nav={nav}
+        tabs={nav.slice(0, 4)}
+        more={[
+          ...nav.slice(4),
+          { id: "site", label: "View site", href: "/", icon: ICONS.site },
+        ]}
+        renderLink={RouterLink}
+        status={
+          <span className="cap-muted" data-hide="phone">
+            {loaderData.email}
+          </span>
+        }
+        actions={
+          <>
+            <a className="cap-btn" href="/" title="Leaves the admin" data-hide="phone">
+              View site
+            </a>
+            <ThemeSwitch initial={theme === "light" || theme === "dark" ? theme : undefined} />
+            {/*
+             * An explicit label: the sentence is the description, so the button keeps a short name.
+             */}
+            <Form method="post" action="/admin/logout">
+              <button
+                type="submit"
+                className="cap-btn"
+                aria-label="Sign out"
+                aria-describedby="admin-signout-hint"
               >
-                <Glyph>{item.icon}</Glyph>
-                <span className="admin-nav-label">{item.label}</span>
-                {count !== null ? (
-                  <span className="admin-nav-count" aria-hidden="true">
-                    {count}
-                  </span>
-                ) : null}
-                {drift === null || drift > 0 ? (
-                  <span className="admin-nav-badge" aria-hidden="true">
-                    {drift ?? "?"}
-                  </span>
-                ) : null}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="admin-sidebar-foot">
-          <a
-            className="admin-view-site"
-            href="/"
-            aria-label="View site, leaves the admin"
-            title="View site, leaves the admin"
-          >
-            <Glyph>
-              <path d="M15 3h6v6" />
-              <path d="M10 14 21 3" />
-              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-            </Glyph>
-            <span className="admin-nav-label">View site</span>
-          </a>
-
-          <button
-            type="button"
-            className="admin-sidebar-toggle"
-            /* A fixed name and a pressed state: a name that flips as well would say the change twice. */
-            aria-pressed={collapsed}
-            aria-label="Collapse sidebar"
-            title="Collapse sidebar"
-            onClick={toggle}
-          >
-            <Glyph className="admin-sidebar-chevron" strokeWidth="2">
-              <path d="m15 18-6-6 6-6" />
-            </Glyph>
-            <span className="admin-nav-label">Collapse</span>
-          </button>
-        </div>
-      </aside>
-
-      <div
-        className="admin-drawer-backdrop"
-        onClick={closeDrawer}
-        aria-hidden="true"
-      />
-
-      <div className="admin-main" inert={drawerOpen}>
-        <main className="admin-content" id="main" ref={mainRef} tabIndex={-1}>
+                Sign out
+              </button>
+              <span className="cap-sr-only" id="admin-signout-hint">
+                Ends this session. You will need to sign in again through Cloudflare Access.
+              </span>
+            </Form>
+          </>
+        }
+        prefKey="admin-rail"
+      >
+        <MessageProvider>
           <Outlet />
-        </main>
-      </div>
-    </div>
+        </MessageProvider>
+      </Shell>
+    </>
+  );
+}
+
+/*
+ * The admin's own error page, in Capsomer: root's error page is the public site's and, with the public CSS
+ * no longer loaded here, would show unstyled. It keeps the admin's link back to the Overview.
+ */
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const known = isRouteErrorResponse(error);
+  const title = known ? `${error.status} ${error.statusText}` : "Something went wrong";
+  return (
+    <main className="app-page">
+      <Empty
+        kind="failed"
+        title={title}
+        action={
+          <a className="cap-btn" href="/admin">
+            Go to the Overview
+          </a>
+        }
+      >
+        {known && typeof error.data === "string" ? error.data : "Nothing you wrote is lost."}
+      </Empty>
+    </main>
   );
 }

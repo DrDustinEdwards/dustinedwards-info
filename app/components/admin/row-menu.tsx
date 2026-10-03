@@ -10,20 +10,14 @@ export function RowMenu({
 }) {
   return (
     <DisclosureMenu
-      name="row-menu"
       summaryLabel={label}
+      iconOnly
       summary={
         /* Drawn rather than U+22EE, which renders at the mercy of whatever font has it. */
-        <svg
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="currentColor"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="5" r="1.75" />
-          <circle cx="12" cy="12" r="1.75" />
-          <circle cx="12" cy="19" r="1.75" />
+        <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <circle cx="8" cy="3" r="1.4" fill="currentColor" />
+          <circle cx="8" cy="8" r="1.4" fill="currentColor" />
+          <circle cx="8" cy="13" r="1.4" fill="currentColor" />
         </svg>
       }
     >

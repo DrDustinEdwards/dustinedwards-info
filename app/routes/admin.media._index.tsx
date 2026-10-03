@@ -10,7 +10,10 @@ import {
 } from "react-router";
 
 import { timed, timedLoader } from "~/lib/timing";
-import { AdminAlert } from "~/components/admin/alert";
+import { Banner } from "capsomer/react/banner";
+import { Panel } from "capsomer/react/panel";
+
+import { PageHead } from "~/components/admin/page-head";
 import { MediaConfirmDialogs } from "~/components/admin/media-confirm-dialogs";
 import { MediaDisplayBar } from "~/components/admin/media-display-bar";
 import { MediaEmptyState } from "~/components/admin/media-empty-state";
@@ -21,8 +24,7 @@ import { LiveNotice } from "~/components/admin/live-notice";
 import { MediaSearch } from "~/components/admin/media-search";
 import { MediaToast } from "~/components/admin/toast";
 import { MediaTrashControls } from "~/components/admin/media-trash-controls";
-import { MediaUploadActions } from "~/components/admin/media-upload-actions";
-import { Panel } from "~/components/admin/panel";
+import { MediaMaintenance, MediaUploadForm } from "~/components/admin/media-upload-actions";
 import {
   mediaRecord,
   mediaRefsFor,
@@ -462,11 +464,16 @@ export default function AdminMedia({
   const linkTo = (over: Parameters<typeof hrefWith>[1] = {}) => hrefWith(view, over);
 
   return (
-    <Panel
-      title="Media"
-      description={`${loaderData.lensCounts.all} file${loaderData.lensCounts.all === 1 ? "" : "s"}, ${loaderData.trashedCount} in trash`}
-      actions={<MediaUploadActions />}
-    >
+    <div className="app-page">
+      <PageHead
+        title="Media"
+        lead={`${loaderData.lensCounts.all} file${loaderData.lensCounts.all === 1 ? "" : "s"}, ${loaderData.trashedCount} in trash`}
+        actions={<MediaMaintenance />}
+      />
+
+      <Panel title="Upload">
+        <MediaUploadForm />
+      </Panel>
 
       <MediaSearch q={q} total={lensCounts.all} view={view} linkTo={linkTo} />
 
@@ -490,23 +497,25 @@ export default function AdminMedia({
       />
 
       {!view.trash && lensNoteFor(view.lens) ? (
-        <div className="media-lens-note">
-          <p>{lensNoteFor(view.lens)}</p>
-          <Link to={linkTo({ lens: "", page: 1 })} className="media-lens-clear">
-            Show everything
-          </Link>
-        </div>
+        <Banner
+          tone="info"
+          actions={
+            <Link to={linkTo({ lens: "", page: 1 })} className="cap-btn">
+              Show everything
+            </Link>
+          }
+        >
+          {lensNoteFor(view.lens)}
+        </Banner>
       ) : null}
 
       <MediaTrashControls view={view} trashedCount={trashedCount} linkTo={linkTo} />
 
       {/* Usage is what the renderer emitted, so a route-referenced asset reads as uncited. */}
-
       {scanComplete ? (
-        <p className="media-usage-note">
-          {usageNote}{" "}
-          <strong>Treat not referenced as unknown, not as safe to delete.</strong>
-        </p>
+        <Banner tone="neutral">
+          {usageNote} <strong>Treat not referenced as unknown, not as safe to delete.</strong>
+        </Banner>
       ) : null}
 
       {/* With the inspector open the result is announced inside it: the page behind a modal is inert. */}
@@ -524,12 +533,10 @@ export default function AdminMedia({
       />
 
       {!scanComplete ? (
-        <AdminAlert tone="warning" title="Usage could not be determined" headingId="scan-failed">
-          <p>
-            The reference scan failed ({scanFailed.join(", ")}), so nothing below is
-            labeled unused and every delete will be refused until it succeeds.
-          </p>
-        </AdminAlert>
+        <Banner tone="warn" title="Usage could not be determined">
+          The reference scan failed ({scanFailed.join(", ")}), so nothing below is labeled unused and
+          every delete will be refused until it succeeds.
+        </Banner>
       ) : null}
 
       {detail ? (
@@ -567,20 +574,26 @@ export default function AdminMedia({
       <MediaToast />
 
       {hasMore || page > 1 ? (
-        <p className="posts-toolbar">
-          {page > 1 ? (
-            <Link to={linkTo({ page: page - 1 })} className="btn-ghost">
-              Previous
-            </Link>
-          ) : null}
-          <span className="muted">Page {page}</span>
-          {hasMore ? (
-            <Link to={linkTo({ page: page + 1 })} className="btn-ghost">
-              Next
-            </Link>
-          ) : null}
-        </p>
+        <nav className="cap-pagination" aria-label="Media pages">
+          <ul className="cap-pagination-list">
+            {page > 1 ? (
+              <li>
+                <Link className="cap-page" data-kind="prev" rel="prev" to={linkTo({ page: page - 1 })}>
+                  Previous
+                </Link>
+              </li>
+            ) : null}
+            <li className="cap-pagination-where">Page {page}</li>
+            {hasMore ? (
+              <li>
+                <Link className="cap-page" data-kind="next" rel="next" to={linkTo({ page: page + 1 })}>
+                  Next
+                </Link>
+              </li>
+            ) : null}
+          </ul>
+        </nav>
       ) : null}
-    </Panel>
+    </div>
   );
 }

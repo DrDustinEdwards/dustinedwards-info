@@ -1,7 +1,11 @@
 import { data } from "react-router";
 
 import { timedLoader } from "~/lib/timing";
-import { Panel } from "~/components/admin/panel";
+import { Panel } from "capsomer/react/panel";
+import { Pill, Status } from "capsomer/react/status";
+import { Row, RowList } from "capsomer/react/row-list";
+
+import { PageHead } from "~/components/admin/page-head";
 import { auditSecrets } from "~/lib/admin/secrets.server";
 import { getEnv } from "~/lib/context";
 import { topZeroResults } from "~/lib/search/zero-result.server";
@@ -26,51 +30,62 @@ export default function AdminTools({ loaderData }: Route.ComponentProps) {
   const { secrets, misses } = loaderData;
   const missing = secrets.filter((s) => !s.present);
   return (
-    <Panel
-      title="Tools"
-      description="Which of the ratified secrets this deployment holds. Names and a word, never a value."
-    >
-      <h2 className="tool-audit-heading">
-        Secrets{" "}
-        <span className="chip">
-          {missing.length === 0
-            ? `all ${secrets.length} set`
-            : `${missing.length} of ${secrets.length} missing`}
-        </span>
-      </h2>
-      <ul className="tool-list">
-        {secrets.map((secret) => (
-          <li key={secret.name} className="tool-row">
-            <p className="tool-row-label">{secret.name}</p>
-            <span className={secret.present ? "chip" : "chip chip-error"}>
-              {secret.present ? "set" : "NOT SET"}
-            </span>
-          </li>
-        ))}
-      </ul>
+    <div className="app-page">
+      <PageHead
+        title="Tools"
+        lead="Which of the ratified secrets this deployment holds. Names and a word, never a value."
+      />
 
-      <h2 className="tool-audit-heading">
-        Searches that found nothing
-        <span className="chip">{misses.length === 0 ? "none" : `${misses.length} shown`}</span>
-      </h2>
-      {misses.length === 0 ? (
-        <p className="muted">Nothing recorded yet, which is the good case.</p>
-      ) : (
-        <ul className="tool-list">
-          {misses.map((miss) => (
-            <li key={miss.query} className="tool-row">
-              <p className="tool-row-label">{miss.query}</p>
-              <span className="chip">
-                {miss.count} time{miss.count === 1 ? "" : "s"}
-              </span>
-            </li>
+      <Panel
+        title="Secrets"
+        src={
+          missing.length === 0 ? (
+            <Status tone="ok">{`all ${secrets.length} set`}</Status>
+          ) : (
+            <Status tone="crit">{`${missing.length} of ${secrets.length} missing`}</Status>
+          )
+        }
+        flush
+      >
+        <RowList label="Secrets">
+          {secrets.map((secret) => (
+            <Row
+              key={secret.name}
+              title={secret.name}
+              status={
+                secret.present ? <Status tone="ok">set</Status> : <Status tone="crit">NOT SET</Status>
+              }
+              tone={secret.present ? undefined : "crit"}
+            />
           ))}
-        </ul>
-      )}
-      <p className="muted">
-        {"Queries nobody has repeated recently are removed on a schedule, by the watchdog's daily " +
-          "purge_zero_results call; there is no button here for it any more."}
-      </p>
-    </Panel>
+        </RowList>
+      </Panel>
+
+      <Panel
+        title="Searches that found nothing"
+        src={<Pill variant="outline">{misses.length === 0 ? "none" : `${misses.length} shown`}</Pill>}
+        flush={misses.length > 0}
+        footer={
+          <p className="cap-muted">
+            {"Queries nobody has repeated recently are removed on a schedule, by the watchdog's daily " +
+              "purge_zero_results call; there is no button here for it any more."}
+          </p>
+        }
+      >
+        {misses.length === 0 ? (
+          <p>Nothing recorded yet, which is the good case.</p>
+        ) : (
+          <RowList label="Searches that found nothing">
+            {misses.map((miss) => (
+              <Row
+                key={miss.query}
+                title={miss.query}
+                status={<Pill variant="outline">{`${miss.count} time${miss.count === 1 ? "" : "s"}`}</Pill>}
+              />
+            ))}
+          </RowList>
+        )}
+      </Panel>
+    </div>
   );
 }

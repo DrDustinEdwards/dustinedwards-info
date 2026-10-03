@@ -22,12 +22,11 @@ export function BulkBar({
   tagCounts: Listing["tagCounts"];
 }) {
   return (
-
-    <div className="posts-bulk" role="group" aria-label="Bulk actions">
+    <div className="cap-bulk" role="group" aria-label="Bulk actions">
       {/* Not a live region: it mounts with its number, and the grid's own status region announces it. */}
-      <p className="posts-bulk-count">
-        {chosen.length} selected
-        <span className="posts-bulk-size">
+      <p className="cap-bulk-count">
+        {chosen.length} selected{" "}
+        <span className="cap-bulk-detail">
           {byteSize(
             objects
               .filter((o) => chosen.includes(o.key))
@@ -35,38 +34,35 @@ export function BulkBar({
           )}
         </span>
       </p>
-      {/* `type="button"` so it never submits the form it sits in. One address per line: that pastes usefully. */}
+      <div className="cap-bulk-actions">
+        {/* `type="button"` so it never submits the form it sits in. One address per line: that pastes usefully. */}
+        <button
+          type="button"
+          className="cap-btn"
+          onClick={() => {
+            const addresses = objects
+              .filter((o) => chosen.includes(o.key))
+              .map((o) => o.url)
+              .join("\n");
+            copyText(addresses)
+              .then(() =>
+                toast(`Copied ${chosen.length} address${chosen.length === 1 ? "" : "es"}`),
+              )
+              .catch(() => toast("The clipboard refused. Open a file to copy its address."));
+          }}
+        >
+          Copy addresses
+        </button>
+        <BulkTagControls listId="media-bulk-tags" options={tagCounts.map((t) => t.tag)} />
+        {/* A `type="button"` opens the modal, because submitting from here would skip it. */}
+        <button type="button" className="cap-btn" onClick={() => setConfirmingTrash(true)}>
+          Move to trash
+        </button>
+      </div>
       <button
         type="button"
-        className="btn-ghost"
-        onClick={() => {
-          const addresses = objects
-            .filter((o) => chosen.includes(o.key))
-            .map((o) => o.url)
-            .join("\n");
-          copyText(addresses)
-            .then(() =>
-              toast(
-                `Copied ${chosen.length} address${chosen.length === 1 ? "" : "es"}`,
-              ),
-            )
-            .catch(() => toast("The clipboard refused. Open a file to copy its address."));
-        }}
-      >
-        Copy addresses
-      </button>
-      <BulkTagControls listId="media-bulk-tags" options={tagCounts.map((t) => t.tag)} />
-      {/* A `type="button"` opens the modal, because submitting from here would skip it. */}
-      <button
-        type="button"
-        className="btn"
-        onClick={() => setConfirmingTrash(true)}
-      >
-        Move to trash
-      </button>
-      <button
-        type="button"
-        className="btn-ghost"
+        className="cap-btn cap-bulk-clear"
+        data-variant="quiet"
         onClick={() => setSelected([])}
       >
         Clear

@@ -1,4 +1,5 @@
 import { Form, Link } from "react-router";
+import { Pill, Status } from "capsomer/react/status";
 
 import { CopyButton } from "~/components/admin/copy-button";
 import { byteSize } from "~/lib/media/byte-size.mjs";
@@ -15,43 +16,38 @@ export function InspectorFacts({ detail }: { detail: FoundDetail }) {
   return (
     <>
       {/* The no-script copy path: a readonly input selects and copies with the platform's own keys. */}
-      <label className="media-detail-address" htmlFor="media-detail-url">
-        Address
-      </label>
-      <div className="media-detail-address-row">
-        <input
-          id="media-detail-url"
-          className="posts-filter-input"
-          readOnly
-          value={detail.url}
-        />
-        <CopyButton value={detail.url} label={detail.originalName ?? detail.key} />
+      <div className="cap-field">
+        <label className="cap-field-label" htmlFor="media-detail-url">
+          Address
+        </label>
+        <div className="app-actions">
+          <input id="media-detail-url" className="cap-input" readOnly value={detail.url} />
+          <CopyButton value={detail.url} label={detail.originalName ?? detail.key} />
+        </div>
       </div>
 
       {/* Derived: `rebuildMediaIndex` recomputes all of this, so an edit here would be overwritten. */}
-      <p className="media-facet-hint media-detail-owner">
-        assigned by the system
-      </p>
-      <dl className="media-detail-list">
-        <dt>Key</dt>
-        <dd className="media-key">{detail.key}</dd>
-        <dt>Role</dt>
-        <dd>
-          <span className="chip">{detail.role}</span> {detail.storage} · {detail.kind}
-        </dd>
-        <dt>Type</dt>
-        <dd>{detail.mime ?? "unknown"}</dd>
-        <dt>Size</dt>
-        <dd>{byteSize(detail.bytes)}</dd>
-        <dt>Dimensions</dt>
-        <dd>
-          {detail.width && detail.height
-            ? `${detail.width}×${detail.height}`
-            : "not measured"}
-        </dd>
-        <dt>Uploaded</dt>
-        <dd>{detail.uploadedAt ? detail.uploadedAt.slice(0, 10) : "ships with the repo"}</dd>
-      </dl>
+      <div className="cap-field">
+        <span className="cap-field-label">Assigned by the system</span>
+        <dl className="app-facts">
+          <dt>Key</dt>
+          <dd className="cap-mono">{detail.key}</dd>
+          <dt>Role</dt>
+          <dd>
+            <Pill variant="outline">{detail.role}</Pill> {detail.storage} · {detail.kind}
+          </dd>
+          <dt>Type</dt>
+          <dd>{detail.mime ?? "unknown"}</dd>
+          <dt>Size</dt>
+          <dd>{byteSize(detail.bytes)}</dd>
+          <dt>Dimensions</dt>
+          <dd>
+            {detail.width && detail.height ? `${detail.width}×${detail.height}` : "not measured"}
+          </dd>
+          <dt>Uploaded</dt>
+          <dd>{detail.uploadedAt ? detail.uploadedAt.slice(0, 10) : "ships with the repo"}</dd>
+        </dl>
+      </div>
     </>
   );
 }
@@ -61,40 +57,45 @@ export function InspectorAltForm({ detail }: { detail: FoundDetail }) {
   return (
     <>
       {/* Authored: a rebuild preserves it because nothing can recompute it. */}
-      <p className="media-facet-hint media-detail-owner">yours to edit</p>
       {detail.viewable ? (
-        <Form method="post" className="media-alt-form">
+        <Form method="post" className="cap-field">
           <input type="hidden" name="key" value={detail.key} />
-          <label htmlFor="detail-alt">Alt text</label>
+          <label className="cap-field-label" htmlFor="detail-alt">
+            Alt text <span className="cap-muted">yours to edit</span>
+          </label>
           <input
             id="detail-alt"
+            className="cap-input"
             name="alt"
             defaultValue={detail.alt}
             placeholder="Describe this image"
-            className="media-alt-input"
-            data-missing={detail.alt.trim() ? undefined : "yes"}
+            aria-invalid={detail.alt.trim() ? undefined : true}
           />
-          <button type="submit" name="intent" value="set-alt" className="btn-ghost">
-            Save alt
-          </button>
-          {/* Through the same `set-alt` intent, so the server keeps one writer. Offered only while the
-              field is empty, so it never invites overwriting a written sentence. */}
-          {!detail.alt.trim() && detail.altSuggestion ? (
-            <button
-              type="submit"
-              name="alt"
-              value={detail.altSuggestion}
-              className="media-suggestion"
-              aria-label={`Use suggested alt text: ${detail.altSuggestion}`}
-            >
-              Use suggested: {detail.altSuggestion}
+          <div className="app-actions">
+            <button type="submit" name="intent" value="set-alt" className="cap-btn" data-size="sm">
+              Save alt
             </button>
-          ) : null}
+            {/* Through the same `set-alt` intent, so the server keeps one writer. Offered only while the
+                field is empty, so it never invites overwriting a written sentence. */}
+            {!detail.alt.trim() && detail.altSuggestion ? (
+              <button
+                type="submit"
+                name="alt"
+                value={detail.altSuggestion}
+                className="cap-btn"
+                data-variant="quiet"
+                data-size="sm"
+                aria-label={`Use suggested alt text: ${detail.altSuggestion}`}
+              >
+                Use suggested: {detail.altSuggestion}
+              </button>
+            ) : null}
+          </div>
         </Form>
       ) : (
-        <p className="muted">
-          A document takes no alt text. Its link text is what a
-          reader hears, and that lives in the post.
+        <p className="cap-muted">
+          A document takes no alt text. Its link text is what a reader hears, and that lives in the
+          post.
         </p>
       )}
     </>
@@ -106,25 +107,29 @@ export function InspectorTagForms({ detail }: { detail: FoundDetail }) {
   return (
     <>
       {/* The parsed list joined with commas, never the delimiter-wrapped storage form. */}
-      <Form method="post" className="media-alt-form">
+      <Form method="post" className="cap-field">
         <input type="hidden" name="key" value={detail.key} />
-        <label htmlFor="detail-tags">Tags</label>
+        <label className="cap-field-label" htmlFor="detail-tags">
+          Tags
+        </label>
         <input
           id="detail-tags"
+          className="cap-input"
           name="tags"
           defaultValue={detail.tags.join(", ")}
           placeholder="photo, roster, 2019"
-          className="media-alt-input"
         />
-        <button type="submit" name="intent" value="set-tags" className="btn-ghost">
-          Save tags
-        </button>
+        <div>
+          <button type="submit" name="intent" value="set-tags" className="cap-btn" data-size="sm">
+            Save tags
+          </button>
+        </div>
       </Form>
 
       {/* Each chip submits the whole resulting list on `set-tags`, except the last one, which submits
           `clear`: an empty value is not an instruction to clear. */}
       {detail.tags.length > 0 || detail.tagSuggestions.length > 0 ? (
-        <Form method="post" className="media-tag-chips">
+        <Form method="post" className="app-pills">
           <input type="hidden" name="key" value={detail.key} />
           <input type="hidden" name="intent" value="set-tags" />
           {detail.tags.map((tag) => (
@@ -137,7 +142,8 @@ export function InspectorTagForms({ detail }: { detail: FoundDetail }) {
                     name: "tags",
                     value: detail.tags.filter((t) => t !== tag).join(", "),
                   })}
-              className="media-tag-chip"
+              className="cap-btn"
+              data-size="xs"
               aria-label={`Remove tag ${tag}`}
               title={`Remove tag ${tag}`}
             >
@@ -150,7 +156,9 @@ export function InspectorTagForms({ detail }: { detail: FoundDetail }) {
               type="submit"
               name="clear"
               value="1"
-              className="media-tag-chip media-tag-clear"
+              className="cap-btn"
+              data-size="xs"
+              data-variant="quiet"
               title={`Remove all ${detail.tags.length} tags`}
             >
               Clear all
@@ -162,7 +170,9 @@ export function InspectorTagForms({ detail }: { detail: FoundDetail }) {
               type="submit"
               name="tags"
               value={[...detail.tags, tag].join(", ")}
-              className="media-tag-suggestion"
+              className="cap-btn"
+              data-size="xs"
+              data-variant="quiet"
               aria-label={`Add suggested tag ${tag}`}
             >
               <span aria-hidden="true">+</span> {tag}
@@ -174,31 +184,32 @@ export function InspectorTagForms({ detail }: { detail: FoundDetail }) {
   );
 }
 
+const USAGE_TONE: Record<string, "ok" | "warn" | "nodata"> = {
+  used: "ok",
+  unattached: "warn",
+  unknown: "nodata",
+};
+
 /** Where the file is used: posts, artifact citations and template files, or that the scan failed. */
 export function InspectorUsage({ detail }: { detail: FoundDetail }) {
   return (
-    <div className="media-detail-usage" data-usage={detail.usage}>
-      <h3>Usage</h3>
+    <div className="cap-field">
+      <h3 className="cap-field-label">Usage</h3>
       {!detail.scanComplete ? (
-        <p className="muted">The reference scan failed, so usage is unknown.</p>
+        <p className="cap-muted">The reference scan failed, so usage is unknown.</p>
       ) : (
         <>
-          <p className="media-usage-claim">
-            <span
-              className="media-usage-dot"
-              data-usage={detail.usage}
-              aria-hidden="true"
-            />
-            <strong>{usageDescriptor(detail.usage).title}.</strong>{" "}
+          <p>
+            <Status tone={USAGE_TONE[detail.usage] ?? "nodata"}>{usageDescriptor(detail.usage).title}</Status>{" "}
             {usageDescriptor(detail.usage).note}
           </p>
 
           {detail.refs.length > 0 || detail.citations.length > 0 ? (
-            <ul className="media-detail-refs">
+            <ul className="app-form">
               {detail.refs.map((ref) => (
                 <li key={`ref-${ref.sourceId}-${ref.form}-${ref.detail ?? ""}`}>
                   <Link to={`/admin/posts/${ref.sourceId}/edit`}>{ref.sourceId}</Link>{" "}
-                  <span className="muted">
+                  <span className="cap-muted">
                     {ref.form}
                     {ref.detail ? `, ${ref.detail}` : ""}
                   </span>
@@ -207,7 +218,7 @@ export function InspectorUsage({ detail }: { detail: FoundDetail }) {
               {detail.citations.map((citation) => (
                 <li key={`cite-${citation.id}-${citation.form}-${citation.detail}`}>
                   <Link to={`/admin/posts/${citation.id}/edit`}>{citation.title}</Link>{" "}
-                  <span className="muted">
+                  <span className="cap-muted">
                     {citation.form}, {citation.detail}, from the artifact scan
                   </span>
                 </li>
@@ -217,11 +228,11 @@ export function InspectorUsage({ detail }: { detail: FoundDetail }) {
 
           {/* Not links: the admin has no source browser, and a link to nothing is worse than text. */}
           {detail.templateRefs.length > 0 ? (
-            <ul className="media-detail-refs media-template-refs">
+            <ul className="app-form">
               {detail.templateRefs.map((file) => (
                 <li key={`tpl-${file}`}>
-                  <code>{file}</code>{" "}
-                  <span className="muted">references this address</span>
+                  <code className="cap-mono">{file}</code>{" "}
+                  <span className="cap-muted">references this address</span>
                 </li>
               ))}
             </ul>
@@ -239,21 +250,19 @@ export function InspectorDangerZone({ detail }: { detail: FoundDetail }) {
       {/* No confirm on purpose: trashing is reversible and invisible to readers, and always-harmless
           ceremony teaches people to click through. */}
       {detail.trashedAt ? (
-        <Form method="post" className="media-trash-form">
+        <Form method="post">
           <input type="hidden" name="key" value={detail.key} />
-          <button type="submit" name="intent" value="restore" className="btn-ghost">
+          <button type="submit" name="intent" value="restore" className="cap-btn">
             Restore to the library
           </button>
         </Form>
       ) : (
-        <Form method="post" className="media-trash-form">
+        <Form method="post" className="app-actions">
           <input type="hidden" name="key" value={detail.key} />
-          <button type="submit" name="intent" value="trash" className="media-destructive">
+          <button type="submit" name="intent" value="trash" className="cap-btn" data-variant="danger">
             Move to trash
           </button>
-          <span className="media-facet-hint">
-            Hides it here. The address keeps working.
-          </span>
+          <span className="cap-muted">Hides it here. The address keeps working.</span>
         </Form>
       )}
 
@@ -261,12 +270,12 @@ export function InspectorDangerZone({ detail }: { detail: FoundDetail }) {
         <Form method="post">
           <input type="hidden" name="key" value={detail.key} />
           {/* No confirmation field: the action refuses and opens the typed confirmation, script or not. */}
-          <button type="submit" name="intent" value="delete" className="btn-danger">
+          <button type="submit" name="intent" value="delete" className="cap-btn" data-variant="danger">
             Delete
           </button>
         </Form>
       ) : (
-        <p className="muted">Ships with the repo. Remove it with a commit.</p>
+        <p className="cap-muted">Ships with the repo. Remove it with a commit.</p>
       )}
     </>
   );

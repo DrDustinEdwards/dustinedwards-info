@@ -19,18 +19,6 @@ import { colorSchemeMeta, themeAttribute, themeFromRequest } from "~/lib/theme";
 import { timingsContext, wantsTiming, type Timings } from "~/lib/timing";
 
 import type { Route } from "./+types/root";
-import "./app.css";
-
-// Module imports, not @import in app.css, which CSS drops after any rule.
-// The order is the cascade: do not sort.
-import "./styles/public-chrome.css";
-import "./styles/page-shell.css";
-import "./styles/chrome-nav.css";
-import "./styles/skip-link.css";
-import "./styles/motion-print.css";
-import "./styles/search-trigger.css";
-// Last: shell.css must win where it and page-shell.css touch the same thing.
-import "./styles/shell.css";
 
 import interNormalUrl from "./fonts/inter-latin-normal.woff2?url";
 // `?url`, not a bare import, which would fold the math bytes into the stylesheet every page links.
@@ -106,6 +94,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const hydrates = matches.some(
     (match) => (match.handle as { hydrate?: boolean } | undefined)?.hydrate === true,
   );
+  // The admin plane is Capsomer's shell, which brings its own skip link and none of the public CSS.
+  const adminPlane = matches.some((match) => match.id === "routes/admin");
 
   // Not React's `precedence` hoisting: it lifts the sheet above the color-scheme meta, which must
   // arrive before the first stylesheet request.
@@ -139,9 +129,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
         {linksMath ? <link rel="stylesheet" href={katexCssUrl} /> : null}
       </head>
       <body>
-        <a className="skip-link" href="#main">
-          Skip to content
-        </a>
+        {adminPlane ? null : (
+          <a className="skip-link" href="#main">
+            Skip to content
+          </a>
+        )}
         {children}
         {/* JSON-LD blocks carry no nonce: `script-src` does not gate application/ld+json. */}
         {hydrates ? (

@@ -24,6 +24,11 @@ export async function declaredRouteModules() {
   const out = new Map();
   const walk = (/** @type {any[]} */ entries, /** @type {string} */ prefix) => {
     for (const entry of entries) {
+      // A layout route has no path of its own (the public layout): its children are at its parent's.
+      if (!entry.index && entry.path === undefined) {
+        if (entry.children) walk(entry.children, prefix);
+        continue;
+      }
       const path = entry.index ? prefix || "/" : `${prefix}/${entry.path}`.replace(/\/+/g, "/");
       // An index child renders at its parent's path, so its module is the page there.
       if (entry.index || !out.has(path)) out.set(path, join(root, "app", entry.file));
@@ -41,6 +46,8 @@ export async function declaredRouteModules() {
   for (const [path, file] of out) {
     if (!path.endsWith("/*")) continue;
     const prefix = path.slice(0, -2);
+    // The bare catch-all (routes/not-found.tsx, which only answers 404) serves no page, and would claim every one.
+    if (prefix === "") continue;
     for (const page of CONTENT_PAGE_PATHS) {
       if (page === prefix || page.startsWith(`${prefix}/`)) out.set(page, file);
     }

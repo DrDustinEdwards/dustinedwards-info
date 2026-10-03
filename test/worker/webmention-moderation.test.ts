@@ -307,8 +307,8 @@ describe("the moderation queue", () => {
       renderMentionsPage(`/admin/mentions${query}`, (await runLoader(query)).data);
     const chipsOf = async (page: string) =>
       Object.fromEntries(
-        (await textsOf(page, ".mention-filters a")).map((chip) => {
-          const [, label, count] = /^(.*) (\d+)$/.exec(chip) ?? [];
+        (await textsOf(page, 'nav[aria-label="Filter mentions by status"] a')).map((chip) => {
+          const [, label, count] = /^(\D+?)\s*(\d+)$/.exec(chip) ?? [];
           return [label ?? chip, Number(count)];
         }),
       );
@@ -321,7 +321,7 @@ describe("the moderation queue", () => {
       Rejected: 0,
       All: 5,
     });
-    expect((await textsOf(pending, ".mention-source")).sort()).toEqual([
+    expect((await textsOf(pending, "[data-mention-source]")).sort()).toEqual([
       "https://elsewhere.example/p1",
       "https://elsewhere.example/p2",
     ]);
@@ -335,7 +335,7 @@ describe("the moderation queue", () => {
     ] as const) {
       const page = await renderAt(`?status=${filter}`);
       const chips = await chipsOf(page);
-      expect(await textsOf(page, ".mention-source"), filter).toHaveLength(chips[label] ?? -1);
+      expect(await textsOf(page, "[data-mention-source]"), filter).toHaveLength(chips[label] ?? -1);
     }
   });
 
