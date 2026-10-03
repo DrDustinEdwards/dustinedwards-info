@@ -18,9 +18,11 @@ There is no server behind this site. Ten years ago I put my first domain behind 
 
 So this is the post I wanted when I started: every developer product Cloudflare sells as of September 8, 2026, what each one does in plain words, and whether this site uses it, where, and why or why not. The refusals are in the table with everything else. A survey that only lists what worked is an advertisement. This post replaced an earlier version, published 2026-07-30, that surveyed the same rebuild before the table existed; its dated measurements are carried forward below.
 
+*Updated October 3, 2026: the site moved onto its own domain, the admin sign-in moved to Access, Cloudflare's Web Analytics replaced the site's own traffic counter, and Browser Run now renders the CV. The table and the entries below say so.*
+
 ## Which products this site runs on
 
-Used means a binding or a configured feature that production depends on today. Not used means considered and passed over; the reason is in the product's own entry below. The numbers are dated because every one of them moves.
+Used means a binding or a configured feature that production depends on today. Not used means considered and passed over; the reason is in the product's own entry below. Removed means it ran here and was taken out. The numbers are dated because every one of them moves.
 
 | Product | What it does | This site | Where |
 |---|---|---|---|
@@ -28,18 +30,21 @@ Used means a binding or a configured feature that production depends on today. N
 | Static Assets | Serves files from a Worker with no invocation | Used | `public/`, through the `ASSETS` binding |
 | Workers Cache | Caches a Worker's responses at the edge | Used | The renderer entrypoint; the gateway is deliberately uncached |
 | D1 | SQLite database, managed | Used | Posts, tags, search index, media index |
-| KV | Fast key-value store, eventually consistent | Used | Login sessions, the Ask answer cache, watchdog state |
+| KV | Fast key-value store, eventually consistent | Used | The Ask answer cache, watchdog state, draft preview tokens |
 | R2 | Object storage, no egress fees | Used | Three buckets: uploads, social cards, a mirror of uploads |
 | Queues | Message queue between Workers | Used | R2 upload events feeding the media index |
 | Durable Objects | A single-instance object with its own storage | Used | The rate limiter and daily budget for Ask |
-| Analytics Engine | Time-series data you write from a Worker | Used | Per-page traffic counts, no cookies, no IPs |
 | Images | Resize and convert images on request | Used | Every thumbnail and content width |
 | AI Search | Retrieval and cited answers over your content | Used | The Ask endpoint, above classic search |
 | Email Service | Send email from a Worker | Used | The watchdog's alert mail |
 | Email Routing | Receive mail on your domain and forward it | Used | Inbound mail on the domain |
 | Workers Observability | Logs and traces for Workers | Used, logs only | Traces are off on purpose (see the entry) |
 | Cron Triggers | Run a Worker on a schedule | Used | The watchdog, every 15 minutes |
+| Browser Run | Headless browser as a service | Used | Renders the CV PDF after each CV save |
+| Access | Login in front of an application | Used | The admin plane's sign-in |
+| Web Analytics | Client-side analytics beacon | Used | Visits and page speed, added at the edge |
 | Workers AI | Run AI models on Cloudflare GPUs | Indirect | Only through AI Search; no direct binding |
+| Analytics Engine | Time-series data you write from a Worker | Removed | Replaced by Web Analytics and AI Crawl Control |
 | Rate Limiting binding | A built-in per-key rate limiter | Refused | Measured: it sheds load, it does not count |
 | Vectorize | Vector database for embeddings | Refused | Two FTS5 indexes answer this corpus |
 | Pages | Hosting for static and framework sites | Not used | Workers with static assets does the same job |
@@ -48,20 +53,17 @@ Used means a binding or a configured feature that production depends on today. N
 | Workflows | Durable multi-step jobs with retries | Not used | Nothing here runs long enough |
 | Containers | Run any container next to a Worker | Not used | Nothing needs a runtime beyond V8 |
 | Sandboxes | Isolated code execution for agents | Not used | Agents write through an API, not by running code |
-| Browser Run | Headless browser as a service | Not used | Charts and diagrams render at build time |
 | Workers Agents SDK | Framework for stateful AI agents | Not used | The agent surface is an MCP server on plain Workers |
 | AI Gateway | Proxy and observability for model calls | Not used | Ask's one model call is metered by a Durable Object |
 | Stream | Video hosting and playback | Not used | No video |
 | RealtimeKit | Live audio and video | Not used | No live features |
-| Pipelines | Streaming ingestion into R2 | Not used | Analytics Engine covers the one stream |
+| Pipelines | Streaming ingestion into R2 | Not used | Nothing here streams data |
 | Data Platform | Catalog and query data in R2 | Not used | Nothing to catalog |
 | Artifacts | Git-native versioned storage | Not used | GitHub is the repository |
-| Secrets Store | Account-level secret storage | Not used | Nine `wrangler secret` values, gated |
+| Secrets Store | Account-level secret storage | Not used | Five `wrangler secret` values, gated |
 | Turnstile | Bot check without a captcha | Not yet | Planned for the newsletter form |
-| Web Analytics | Client-side analytics beacon | Refused | Blocked by this site's CSP, and not needed |
-| Zaraz | Third-party tag loading at the edge | Not used | There are no third-party tags |
-| Access | Login in front of an application | Not used | The admin plane uses Better Auth |
-| Cache Reserve | Persistent cache for static content | Not yet | Needs the zone; waits for DNS cutover |
+| Zaraz | Third-party tag loading at the edge | Not used | The only tag is Web Analytics, which Cloudflare adds itself |
+| Cache Reserve | Persistent cache for static content | Not yet | The zone exists now; not turned on |
 | Workers for Platforms | Run customers' Workers inside yours | Not used | One customer |
 
 ## What each one does, in the words I would use to a colleague
@@ -78,7 +80,7 @@ A Worker can serve a directory of files directly from the edge with no code runn
 
 ### Workers Cache
 
-Cloudflare can store a Worker's responses at the edge and answer repeat requests without running the code. This site turns it on for the renderer and off for the gateway that sits in front of it. The gateway does three things that must never be skipped, the HTTPS redirect, the theme cookie read, and the traffic count, and a cached gateway would skip all three. Every response without an explicit `Cache-Control` defaults to `private, no-store`, because the platform would otherwise cache a logged-in admin page for two hours under standard heuristics and serve it to anyone. That default is the one line of configuration I would tell every Workers user to check first.
+Cloudflare can store a Worker's responses at the edge and answer repeat requests without running the code. This site turns it on for the renderer and off for the gateway that sits in front of it. The gateway does two things that must never be skipped, the HTTPS redirect and the theme cookie read, and a cached gateway would skip both. Every response without an explicit `Cache-Control` defaults to `private, no-store`, because the platform would otherwise cache a logged-in admin page for two hours under standard heuristics and serve it to anyone. That default is the one line of configuration I would tell every Workers user to check first.
 
 ### D1
 
@@ -90,7 +92,7 @@ The constraint every D1 user should know: the platform's export command fails ou
 
 ### KV
 
-A key-value store that reads fast anywhere in the world and accepts that a write takes a moment to be seen everywhere. Right for configuration and caches, wrong for counters. This site keeps login sessions in it, the watchdog's alert state, and the Ask answer cache, keyed by a hash of the normalised question. The cache sits in front of the daily spending ceiling rather than behind it, so a repeated question reaches no model and costs nothing.
+A key-value store that reads fast anywhere in the world and accepts that a write takes a moment to be seen everywhere. Right for configuration and caches, wrong for counters. This site keeps the watchdog's alert state in it, draft preview tokens, and the Ask answer cache, keyed by a hash of the normalised question. The cache sits in front of the daily spending ceiling rather than behind it, so a repeated question reaches no model and costs nothing.
 
 ### R2
 
@@ -106,13 +108,13 @@ A single instance of a JavaScript class, addressed by name, with its own storage
 
 Building it taught me the one fact from this whole rebuild I repeat most often: single-threaded is not transactional. A Durable Object using the asynchronous storage API admitted eight requests through a ceiling of three, because a read and a write separated by an `await` are not atomic. The synchronous SQLite storage API is the fix; the same object rewritten on it admitted exactly three. The measurements are in [the AI answer layer article](/writing/ai-answer-mode-on-site-search).
 
-### Analytics Engine
+### Analytics Engine, removed
 
-A write-only time-series store you append to from a Worker and query later with SQL. This site writes one row per HTML response: path, referrer host, country, and a coarse mobile flag. No cookie, no IP address, no identifier of any kind, so nothing joins two requests together. It is here because the alternative, Cloudflare's own Web Analytics beacon, is a third-party script, and this site's Content Security Policy would have to be loosened to admit it.
+A write-only time-series store you append to from a Worker and query later with SQL. Until October 3, 2026 this site wrote one row per HTML response: path, referrer host, country, and a coarse mobile flag. No cookie, no IP address, no identifier of any kind, so nothing joined two requests together. It was here because the alternative, Cloudflare's own Web Analytics beacon, is a third-party script, and this site's Content Security Policy would have had to be loosened to admit it. Once the site moved onto its own domain, Web Analytics and AI Crawl Control covered what it counted, so the policy was loosened and the counter came out.
 
 ### Images
 
-Resize, crop and convert images on request, from an original you keep in R2. This site derives every thumbnail and every content width from one uploaded original through the binding, and the results are cached by the Workers Cache above. The binding rather than the URL syntax, and that is forced: the URL interface answers 404 on a workers.dev hostname because it needs a customer zone. A detail that stops mattering at DNS cutover.
+Resize, crop and convert images on request, from an original you keep in R2. This site derives every thumbnail and every content width from one uploaded original through the binding, and the results are cached by the Workers Cache above. The binding rather than the URL syntax, and that was forced: the URL interface answers 404 on a workers.dev hostname because it needs a customer zone. The site has had its zone since the October 3, 2026 cutover, so that constraint is gone; the binding has stayed.
 
 ### AI Search
 
@@ -134,6 +136,18 @@ Logs and traces from your Workers, kept in the dashboard and exportable elsewher
 
 Run a Worker on a schedule. The watchdog runs every fifteen minutes. The site Worker has no cron, and the empty array in its config is the statement: an hourly trigger that nothing handled sat on the platform for fifteen days in August, throwing 24 times a day, invisible to a gate that only read files. The gate now reads the platform too.
 
+### Browser Run
+
+A headless browser you can drive from a Worker through a binding. This site uses it for one job: after each CV save, the Worker renders the CV to a PDF and keeps one copy in R2, which is what /dustin-edwards-cv.pdf serves. Charts and diagrams still render to SVG at build time, on purpose, so the page carries no work.
+
+### Access
+
+Access puts a login page in front of an application. Since October 3, 2026 it is the only way into this site's admin plane, and the same sign-in my other tools use. Who may sign in is a policy in Access, not a secret in the Worker. The Worker still verifies the signed token Access attaches on every admin request instead of trusting that Access was in front, because the same Worker also answers on its workers.dev address, where Access is not. Before the cutover the admin plane ran its own login on Better Auth with Google.
+
+### Web Analytics
+
+Cloudflare's own analytics beacon, a small script that reports page views, referrers and how fast pages load for real visitors. On a site Cloudflare proxies, it is added at the edge. While this site lived on workers.dev it was refused: it is a third-party script, and this site's Content Security Policy would have had to be loosened to admit it. After the October 3, 2026 cutover the policy was changed to admit it, and it replaced the Analytics Engine counter above.
+
 ### Workers AI
 
 Run open models on Cloudflare's GPUs from a Worker. This site never calls it directly; AI Search does the model work for Ask on its own. If Ask ever needs a model the retrieval product does not offer, this is where it would come from.
@@ -150,9 +164,9 @@ A vector database for embeddings, the usual foundation for semantic search. Rank
 
 Pages hosts static and framework sites with a build on every push; Workers Builds does the same for Workers. Workers with static assets now does everything Pages did for this site, and Cloudflare's own direction has been to fold Pages into Workers. Deploys here go through a ship script that refuses unless the working tree is clean, CI is green for that exact commit, and every offline gate passes; a build on push would skip all of that.
 
-### Hyperdrive, Workflows, Containers, Sandboxes, Browser Run, not used
+### Hyperdrive, Workflows, Containers, Sandboxes, not used
 
-Hyperdrive pools connections to a Postgres or MySQL you already run somewhere; there is no such database here. Workflows runs multi-step jobs that survive failures and can wait for a human; nothing here runs longer than a request. Containers runs any Docker image next to a Worker; nothing here needs a runtime beyond V8. Sandboxes gives an agent an isolated place to execute code; this site's agents write through an API with policy enforced server-side, and never run code. Browser Run is a headless browser you can drive from a Worker; charts and diagrams here render to SVG at build time, on purpose, so the page carries no work.
+Hyperdrive pools connections to a Postgres or MySQL you already run somewhere; there is no such database here. Workflows runs multi-step jobs that survive failures and can wait for a human; nothing here runs longer than a request. Containers runs any Docker image next to a Worker; nothing here needs a runtime beyond V8. Sandboxes gives an agent an isolated place to execute code; this site's agents write through an API with policy enforced server-side, and never run code.
 
 ### Agents SDK and AI Gateway, not used
 
@@ -162,13 +176,13 @@ The Agents SDK is a framework for long-lived stateful agents on Durable Objects.
 
 Video hosting, live audio and video, streaming ingestion, data catalogs, and git-native storage. A text site with a media library of a few dozen images has no use for any of them, and I would rather say so than pad the used column.
 
-### Secrets Store, Access, Zaraz, Web Analytics, Workers for Platforms
+### Secrets Store, Zaraz, Workers for Platforms
 
-Secrets Store centralises secrets across Workers; this site's nine secrets live in `wrangler secret` and a gate asserts every one is set and none is in git. Access puts a login page in front of any application; the admin plane runs its own login on Better Auth because the policy it enforces lives in the application, not in front of it. Zaraz loads third-party tags at the edge; there are none. Web Analytics is the beacon the Analytics Engine entry above explains. Workers for Platforms runs other people's Workers inside yours; I have one customer.
+Secrets Store centralises secrets across Workers; this site's five secrets live in `wrangler secret` and a gate asserts every one is set and none is in git. Zaraz loads third-party tags at the edge; the only one here is the Web Analytics beacon, which Cloudflare adds itself. Workers for Platforms runs other people's Workers inside yours; I have one customer.
 
 ### Turnstile and Cache Reserve, not yet
 
-Turnstile is Cloudflare's bot check without a puzzle; it goes in front of the newsletter form when the newsletter exists. Cache Reserve keeps static content in a persistent cache; it needs a zone, and this site is still served from a workers.dev hostname while the old WordPress install answers at the apex. Both wait for DNS cutover.
+Turnstile is Cloudflare's bot check without a puzzle; it goes in front of the newsletter form when the newsletter exists. Cache Reserve keeps static content in a persistent cache; it needs a zone, which this site has had since the October 3, 2026 cutover, and it is not turned on yet.
 
 ## Where the platform pushed back
 
@@ -180,7 +194,7 @@ D1's export fails on FTS5 tables, as above. The rate limiting binding does not c
 
 This site treats AI agents as an audience in both directions. Inbound, every post serves a markdown twin at a predictable URL, an llms.txt file maps the site, the search endpoint answers in JSON to any client that asks, and the search engine is exposed over the Model Context Protocol. Outbound, the site is operated by agents: an authenticated publishing API whose rules are enforced server-side, an MCP layer over it, and the assistants that helped build this system draft and edit posts through it, including this one. One act is reserved for me by a policy they cannot alter. The trust model, the incident that shaped it, and the protocol server are in [the agent write access article](/writing/agent-write-access-to-a-live-site), [the API versus MCP article](/writing/policy-in-the-api-not-the-mcp), and [the MCP server article](/writing/mcp-server-on-workers-with-oauth).
 
-The economic half is happening at the CDN layer, which for a fifth of the web means it is happening at Cloudflare: managed robots.txt with machine-readable content signals, default blocking of AI training crawlers for new zones from September 15, 2026, and a pay-per-use marketplace for content that surfaces in AI answers. This site's own crawl settings get configured the day the DNS cutover lands, and that will be its own post once there is data in it.
+The economic half is happening at the CDN layer, which for a fifth of the web means it is happening at Cloudflare: managed robots.txt with machine-readable content signals, default blocking of AI training crawlers for new zones from September 15, 2026, and a pay-per-use marketplace for content that surfaces in AI answers. The DNS cutover landed on October 3, 2026, so this site's own crawl settings can now be configured, and that will be its own post once there is data in it.
 
 ## What August taught, kept from the first version
 
@@ -190,6 +204,6 @@ The one thing the audits asked for that this site refused, deliberately: switchi
 
 ## What I would use again
 
-All fourteen. The primitives are small enough to hold in your head. The billing has never surprised me, which I value more than any feature. A one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth, an edge-resident search engine, a hybrid AI answer layer with cost controls, external monitoring, restore drills, and a publishing path an agent can operate under enforced policy. Twenty-four products were considered and passed over for the reasons above, and every number here carries the date it was measured because every one of them will move.
+Every product in the used column. The primitives are small enough to hold in your head. The billing has never surprised me, which I value more than any feature. A one-person site now runs what would have been a small team's roadmap five years ago: a gated content pipeline where git is the source of truth, an edge-resident search engine, a hybrid AI answer layer with cost controls, external monitoring, restore drills, and a publishing path an agent can operate under enforced policy. The others were considered and passed over for the reasons above, Analytics Engine was retired when the site moved onto its own domain, and every number here carries the date it was measured because every one of them will move.
 
 The series, in reading order: [the color palette built and verified with code](/writing/color-palette-the-build-can-check), [the git-backed content pipeline](/writing/posts-in-git-served-from-d1), [the reading experience in a couple of kilobytes of JavaScript](/writing/blog-reading-without-javascript), [FTS5 search on D1](/writing/site-search-on-d1), [the AI answer layer](/writing/ai-answer-mode-on-site-search), [API versus MCP](/writing/policy-in-the-api-not-the-mcp), [the agent trust model](/writing/agent-write-access-to-a-live-site), and [the MCP server build](/writing/mcp-server-on-workers-with-oauth). Every quantitative claim in the series is reproducible from the site's repository.
