@@ -14,7 +14,7 @@ import { ok, root } from "./gate.mjs";
  * @type {Record<string, string>}
  */
 const RATIFIED = {
-  "Strict-Transport-Security": "max-age=31536000",
+  "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "DENY",
