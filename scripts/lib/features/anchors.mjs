@@ -46,6 +46,8 @@ export async function declaredRouteModules() {
   for (const [path, file] of out) {
     if (!path.endsWith("/*")) continue;
     const prefix = path.slice(0, -2);
+    // The bare catch-all (routes/not-found.tsx, which only answers 404) serves no page, and would claim every one.
+    if (prefix === "") continue;
     for (const page of CONTENT_PAGE_PATHS) {
       if (page === prefix || page.startsWith(`${prefix}/`)) out.set(page, file);
     }
