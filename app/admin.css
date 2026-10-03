@@ -1,8 +1,99 @@
-/* Import order is the cascade; do not reorder. No reset here: app.css loads it on every route. */
-@import "./styles/admin-shell.css";
-@import "./styles/admin-posts.css";
-@import "./styles/admin-editor.css";
-@import "./styles/admin-media.css";
-@import "./styles/admin-editor-feedback.css";
-@import "./styles/admin-history.css";
-@import "./styles/admin-media-later.css";
+/* The admin plane is Capsomer's: its tokens, its base and the CSS of each component the admin uses.
+   Nothing here repeats what Capsomer has; this file is the page frame inside the shell and nothing
+   else. The public plane's stylesheets are not loaded here (routes/public.tsx), because an unlayered
+   reset would beat Capsomer's layered rules. The admin's own rules are unlayered, so they win. */
+@import "capsomer/layers.css";
+@import "capsomer/tokens.css";
+@import "capsomer/base.css";
+
+/* Shared building blocks first, then the components built on them. */
+@import "capsomer/popover.css";
+@import "capsomer/listbox.css";
+@import "capsomer/dialog.css";
+@import "capsomer/meter.css";
+@import "capsomer/skeleton.css";
+
+@import "capsomer/button.css";
+@import "capsomer/field.css";
+@import "capsomer/select.css";
+@import "capsomer/segmented.css";
+@import "capsomer/switch.css";
+@import "capsomer/status.css";
+@import "capsomer/time.css";
+@import "capsomer/banner.css";
+@import "capsomer/message.css";
+@import "capsomer/empty.css";
+@import "capsomer/panel.css";
+@import "capsomer/table.css";
+@import "capsomer/row-list.css";
+@import "capsomer/disclosure.css";
+@import "capsomer/breadcrumb.css";
+@import "capsomer/tabs.css";
+@import "capsomer/tooltip.css";
+@import "capsomer/theme-switch.css";
+@import "capsomer/shell.css";
+@import "capsomer/confirm-dialog.css";
+@import "capsomer/stat-tile.css";
+
+/* The page inside the shell: a title, one line saying what the page is for, the page's actions at the
+   right, then panels. */
+.app-page {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-6) var(--space-6) var(--space-9);
+  max-width: 1320px;
+  min-width: 0;
+}
+
+.app-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+
+  & > div:first-child {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+  & h1 {
+    margin: 0;
+    font-size: var(--fs-h2);
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    overflow-wrap: anywhere;
+  }
+  & p {
+    margin: 0;
+    max-width: 75ch;
+    color: var(--muted);
+  }
+}
+
+.app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+@media (max-width: 820px) {
+  .app-page {
+    padding: var(--space-5) var(--space-5) var(--space-7);
+  }
+}
+
+/* The site's mark in the top bar: its own paths, painted in the accent. */
+.admin-brand-mark {
+  height: 24px;
+  width: auto;
+}
+
+.site-logo-brand {
+  fill: var(--accent);
+}
+
+.cap-table th .cap-status {
+  margin-inline-start: var(--space-3);
+}

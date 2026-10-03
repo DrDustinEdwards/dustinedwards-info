@@ -1,104 +1,109 @@
-import { type RouteConfig, index, route } from "@react-router/dev/routes";
+import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "./lib/content-pages.mjs";
 
 export default [
-  index("routes/home.tsx"),
-  // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
-  // blog.* names; only the addresses moved. Every other /blog address 301s in the gateway
-  // (app/lib/path-moves.mjs).
-  route("writing", "routes/blog._index.tsx"),
-  // Ordered before the :slug routes so the feed is not read as a post slug.
-  route("writing/rss.xml", "routes/blog.rss[.xml].ts"),
-  route("writing/feed.json", "routes/blog.feed[.json].ts"),
-  route("writing/atom.xml", "routes/blog.atom[.xml].ts"),
-  route("writing/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts"),
-  route("writing/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts"),
-  route("writing/tags/:tag", "routes/blog.tags.$tag.tsx"),
-  route("writing/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts"),
-  route("writing/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts"),
-  route("writing/series/:series", "routes/blog.series.$series.tsx"),
-  route("writing/:slug.md", "routes/blog.$slug[.md].ts"),
-  route("writing/:slug", "routes/blog.$slug.tsx"),
-  // The old feed addresses keep answering with the feed itself, not a redirect: a feed reader is
-  // told the address once and may never follow a 301. Same modules, their own route ids.
-  route("blog/rss.xml", "routes/blog.rss[.xml].ts", { id: "legacy-blog-rss" }),
-  route("blog/feed.json", "routes/blog.feed[.json].ts", { id: "legacy-blog-feed" }),
-  route("blog/atom.xml", "routes/blog.atom[.xml].ts", { id: "legacy-blog-atom" }),
-  route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts", { id: "legacy-tag-rss" }),
-  route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts", { id: "legacy-tag-feed" }),
-  route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts", { id: "legacy-series-rss" }),
-  route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", { id: "legacy-series-feed" }),
-  // Top level, never under the post route: that route sends public cache headers, Workers Cache
-  // does not key on cookies and a preview link is cookieless, so sharing it would cache a draft.
-  route("preview/:token", "routes/preview.$token.tsx"),
-  // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
-  route("research/publications", "routes/publications.tsx"),
-  // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages
-  // take a trailing slash: page and PDF in one directory is Scholar's condition for citation_pdf_url.
-  route("research/publications.bib", "routes/publications[.bib].ts"),
-  route("research/publications.ris", "routes/publications[.ris].ts"),
-  route("research/publications.json", "routes/publications[.json].ts"),
-  route("research/publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
-  route("research/publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
-  route("research/publications/:slug.md", "routes/publications.$slug[.md].ts"),
-  route("research/publications/:slug", "routes/publications.$slug.tsx"),
-  // The Research pages (app/lib/content-pages.mjs), drawn from D1 (docs/PAGES.md). A splat, so the
-  // more specific research/publications routes above still win; a path with no page answers 404.
-  // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
-  // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
-  // page so `.md` is not read as part of a slug.
-  ...[
-    ["research/protocols", "protocol"],
-    ["research/methods", "computational"],
-    ["recipes", "recipe"],
-  ].flatMap(([root, id]) => [
-    route(`${root}/:slug.md`, "routes/procedure[.md].ts", { id: `procedure-${id}-md` }),
-    route(`${root}/:slug/sheet`, "routes/procedure.sheet.tsx", { id: `procedure-${id}-sheet` }),
-    route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
-  ]),
-  // Each page's markdown twin, drawn from D1 like the page. One route per listed path, because a splat
-  // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin has its own route, below.
-  ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map((path) =>
-    route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", { id: `page-twin-${path.slice(1).replaceAll("/", "-")}` }),
-  ),
-  route("research/*", "routes/content-page.tsx"),
-  route("teaching/*", "routes/teaching.tsx"),
-  // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
-  // route's, which check:headers reads per file. /projects 301s here (app/lib/path-moves.mjs).
-  route("software/*", "routes/software.tsx"),
-  route("about", "routes/about.tsx"),
-  // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
-  route("cv", "routes/cv.tsx"),
-  // The CV twin, drawn from the same D1 rows as the page (docs/CV.md).
-  route("cv.md", "routes/cv[.md].ts"),
-  // The CV's charts for a filter state, which app/enhance/cv.ts swaps in so the page ships no renderer.
-  route("cv/charts.json", "routes/cv.charts[.json].ts"),
-  // The CV's PDF: one R2 object the Worker renders after each CV save (docs/CV.md). A static file at this
-  // address would win over the route, so there is none.
-  route("dustin-edwards-cv.pdf", "routes/cv-pdf.ts"),
-  // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
-  route("colophon", "routes/colophon.tsx"),
-  route("privacy", "routes/privacy.tsx"),
-  route("contact", "routes/contact.tsx"),
-  // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
-  route("gone", "routes/gone.tsx"),
-  // Before /search, and a resource route so it can stream a raw Response.
-  route("search/ask", "routes/search.ask.ts"),
-  route("search", "routes/search.tsx"),
-  route("sitemap.xml", "routes/sitemap.ts"),
-  route("robots.txt", "routes/robots.ts"),
-  route(".well-known/security.txt", "routes/security-txt.ts"),
-  route("llms.txt", "routes/llms.ts"),
-  route("llms-full.txt", "routes/llms-full[.txt].ts"),
-  route("media/*", "routes/media.$.ts"),
-  route("theme", "routes/theme.ts"),
-  // Unauthenticated because senders have no credential to offer; bounded in the route file. At the
-  // root, not under `/api`, because it is advertised in a `<link>` and is published surface.
-  route("webmention", "routes/webmention.ts"),
+  // Everything a visitor can see sits under one layout, which owns the public stylesheets.
+  layout("routes/public.tsx", [
+    index("routes/home.tsx"),
+    // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
+    // blog.* names; only the addresses moved. Every other /blog address 301s in the gateway
+    // (app/lib/path-moves.mjs).
+    route("writing", "routes/blog._index.tsx"),
+    // Ordered before the :slug routes so the feed is not read as a post slug.
+    route("writing/rss.xml", "routes/blog.rss[.xml].ts"),
+    route("writing/feed.json", "routes/blog.feed[.json].ts"),
+    route("writing/atom.xml", "routes/blog.atom[.xml].ts"),
+    route("writing/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts"),
+    route("writing/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts"),
+    route("writing/tags/:tag", "routes/blog.tags.$tag.tsx"),
+    route("writing/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts"),
+    route("writing/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts"),
+    route("writing/series/:series", "routes/blog.series.$series.tsx"),
+    route("writing/:slug.md", "routes/blog.$slug[.md].ts"),
+    route("writing/:slug", "routes/blog.$slug.tsx"),
+    // The old feed addresses keep answering with the feed itself, not a redirect: a feed reader is
+    // told the address once and may never follow a 301. Same modules, their own route ids.
+    route("blog/rss.xml", "routes/blog.rss[.xml].ts", { id: "legacy-blog-rss" }),
+    route("blog/feed.json", "routes/blog.feed[.json].ts", { id: "legacy-blog-feed" }),
+    route("blog/atom.xml", "routes/blog.atom[.xml].ts", { id: "legacy-blog-atom" }),
+    route("blog/tags/:tag/rss.xml", "routes/blog.tags.$tag.rss[.xml].ts", { id: "legacy-tag-rss" }),
+    route("blog/tags/:tag/feed.json", "routes/blog.tags.$tag.feed[.json].ts", { id: "legacy-tag-feed" }),
+    route("blog/series/:series/rss.xml", "routes/blog.series.$series.rss[.xml].ts", { id: "legacy-series-rss" }),
+    route("blog/series/:series/feed.json", "routes/blog.series.$series.feed[.json].ts", { id: "legacy-series-feed" }),
+    // Top level, never under the post route: that route sends public cache headers, Workers Cache
+    // does not key on cookies and a preview link is cookieless, so sharing it would cache a draft.
+    route("preview/:token", "routes/preview.$token.tsx"),
+    // Under Research since the 2026-09-27 site structure; the old /publications addresses 301.
+    route("research/publications", "routes/publications.tsx"),
+    // The citation exports precede the page routes so a slug ending in `.bib` cannot collide. Paper pages
+    // take a trailing slash: page and PDF in one directory is Scholar's condition for citation_pdf_url.
+    route("research/publications.bib", "routes/publications[.bib].ts"),
+    route("research/publications.ris", "routes/publications[.ris].ts"),
+    route("research/publications.json", "routes/publications[.json].ts"),
+    route("research/publications/:slug.bib", "routes/publications.$slug[.bib].ts"),
+    route("research/publications/:slug.ris", "routes/publications.$slug[.ris].ts"),
+    route("research/publications/:slug.md", "routes/publications.$slug[.md].ts"),
+    route("research/publications/:slug", "routes/publications.$slug.tsx"),
+    // The Research pages (app/lib/content-pages.mjs), drawn from D1 (docs/PAGES.md). A splat, so the
+    // more specific research/publications routes above still win; a path with no page answers 404.
+    // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
+    // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
+    // page so `.md` is not read as part of a slug.
+    ...[
+      ["research/protocols", "protocol"],
+      ["research/methods", "computational"],
+      ["recipes", "recipe"],
+    ].flatMap(([root, id]) => [
+      route(`${root}/:slug.md`, "routes/procedure[.md].ts", { id: `procedure-${id}-md` }),
+      route(`${root}/:slug/sheet`, "routes/procedure.sheet.tsx", { id: `procedure-${id}-sheet` }),
+      route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
+    ]),
+    // Each page's markdown twin, drawn from D1 like the page. One route per listed path, because a splat
+    // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin has its own route, below.
+    ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map((path) =>
+      route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", { id: `page-twin-${path.slice(1).replaceAll("/", "-")}` }),
+    ),
+    route("research/*", "routes/content-page.tsx"),
+    route("teaching/*", "routes/teaching.tsx"),
+    // Same markdown pages as Research and Teaching. The module is its own file so headers() is this
+    // route's, which check:headers reads per file. /projects 301s here (app/lib/path-moves.mjs).
+    route("software/*", "routes/software.tsx"),
+    route("about", "routes/about.tsx"),
+    // The CV, one of the markdown pages; the old 2019 CV PDF address 301s here on the apex host.
+    route("cv", "routes/cv.tsx"),
+    // The CV twin, drawn from the same D1 rows as the page (docs/CV.md).
+    route("cv.md", "routes/cv[.md].ts"),
+    // The CV's charts for a filter state, which app/enhance/cv.ts swaps in so the page ships no renderer.
+    route("cv/charts.json", "routes/cv.charts[.json].ts"),
+    // The CV's PDF: one R2 object the Worker renders after each CV save (docs/CV.md). A static file at this
+    // address would win over the route, so there is none.
+    route("dustin-edwards-cv.pdf", "routes/cv-pdf.ts"),
+    // `/colophon` is the IndieWeb convention tooling expects; the page title carries the legibility.
+    route("colophon", "routes/colophon.tsx"),
+    route("privacy", "routes/privacy.tsx"),
+    route("contact", "routes/contact.tsx"),
+    // 410 Gone for removed WordPress addresses; the gateway renders it in their place on the apex host.
+    route("gone", "routes/gone.tsx"),
+    // Before /search, and a resource route so it can stream a raw Response.
+    route("search/ask", "routes/search.ask.ts"),
+    route("search", "routes/search.tsx"),
+    route("sitemap.xml", "routes/sitemap.ts"),
+    route("robots.txt", "routes/robots.ts"),
+    route(".well-known/security.txt", "routes/security-txt.ts"),
+    route("llms.txt", "routes/llms.ts"),
+    route("llms-full.txt", "routes/llms-full[.txt].ts"),
+    route("media/*", "routes/media.$.ts"),
+    route("theme", "routes/theme.ts"),
+    // Unauthenticated because senders have no credential to offer; bounded in the route file. At the
+    // root, not under `/api`, because it is advertised in a `<link>` and is published surface.
+    route("webmention", "routes/webmention.ts"),
 
-  // The old sign-in page. Sign-in is Cloudflare Access on /admin, so this only forwards there.
-  route("login", "routes/login.ts"),
+    // The old sign-in page. Sign-in is Cloudflare Access on /admin, so this only forwards there.
+    route("login", "routes/login.ts"),
+    // Last, so a real route always wins; it only gives the 404 page the public layout.
+    route("*", "routes/not-found.tsx"),
+  ]),
 
   // Private: the admin layout gates every child via middleware.
   route("admin", "routes/admin.tsx", [

@@ -1,8 +1,15 @@
 import { Form, data } from "react-router";
 
+import { Banner } from "capsomer/react/banner";
+import { Button } from "capsomer/react/button";
+import { Disclosure } from "capsomer/react/disclosure";
+import { Panel } from "capsomer/react/panel";
+import { Row, RowList } from "capsomer/react/row-list";
+import { Pill, Status } from "capsomer/react/status";
+import { StatTile, StatTiles } from "capsomer/react/stat-tile";
+
+import { PageHead } from "~/components/admin/page-head";
 import { timed, timedLoader } from "~/lib/timing";
-import { AdminAlert } from "~/components/admin/alert";
-import { RowMenu } from "~/components/admin/row-menu";
 import { humanCheck, statusSentence } from "~/lib/admin/check-copy.mjs";
 import { runHealthChecks } from "~/lib/health/checks.server";
 import { syncStatus } from "~/lib/operator/api.server";
@@ -47,99 +54,87 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
   const worstCopy = worst ? humanCheck(worst) : null;
 
   const ordered = [...checks].sort((a, b) => Number(a.ok) - Number(b.ok));
+  const lag = stores.d1Posts === stores.artifactPosts;
 
   return (
-    <>
-      <div className="admin-page-head">
-        <h1>Overview</h1>
-        <p className="admin-page-status">{statusSentence(checks)}</p>
-      </div>
+    <div className="app-page">
+      <PageHead title="Overview" lead={statusSentence(checks)} />
 
-      {/* A named region, not a live one: a `role` would announce a standing condition on every load. */}
+      {/* A banner, not an alert: a standing condition is not announced on every load. */}
       {worst && worstCopy ? (
-        <AdminAlert
-          tone="error"
+        <Banner
+          tone="crit"
           title={`${worstCopy.name} needs attention`}
-          headingId="overview-worst"
-          action={
+          actions={
             worstCopy.repair ? (
               <Form method="post" action={worstCopy.repair.action}>
                 <input type="hidden" name="intent" value={worstCopy.repair.intent} />
-                <button type="submit" className="btn">
-                  {worstCopy.repair.label}
-                </button>
+                <Button type="submit">{worstCopy.repair.label}</Button>
               </Form>
             ) : null
           }
         >
-          <p>{worstCopy.finding}</p>
-        </AdminAlert>
+          {worstCopy.finding}
+        </Banner>
       ) : null}
 
-      <div className="admin-table-scroll" tabIndex={0} role="region" aria-label="Checks">
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th scope="col" className="admin-check-name">Check</th>
-              <th scope="col" className="admin-check-finding">What it found</th>
-              <th scope="col" className="admin-check-actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ordered.map((check) => {
-              const copy = humanCheck(check);
-              return (
-                <tr key={check.name}>
-                  <td className="admin-check-name">
-                    <span className="admin-check-title">
-                      <strong>{copy.name}</strong>
-                      {/* Word, color and border style: three channels, so it still reads under forced-colors. */}
-                      <span className="status-pill" data-state={check.ok ? "published" : "draft"}>
-                        {check.ok ? "passing" : "failing"}
-                      </span>
-                    </span>
-                  </td>
-                  <td className="admin-check-finding">{copy.finding}</td>
-                  <td className="admin-check-actions">
-                    {copy.repair ? (
-                      <RowMenu label={`Actions for ${copy.name}`}>
+      <Panel title="Checks" count={checks.length} flush>
+        <div className="cap-table-wrap" role="region" aria-label="Checks" tabIndex={0}>
+          <table className="cap-table">
+            <thead>
+              <tr>
+                <th scope="col">Check</th>
+                <th scope="col">What it found</th>
+                <th scope="col">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ordered.map((check) => {
+                const copy = humanCheck(check);
+                return (
+                  <tr key={check.name}>
+                    <th scope="row">
+                      {copy.name}
+                      {/* Word, shape and colour: three channels, so it still reads under forced-colors. */}
+                      <Status tone={check.ok ? "ok" : "crit"}>{check.ok ? "passing" : "failing"}</Status>
+                    </th>
+                    <td>{copy.finding}</td>
+                    <td>
+                      {copy.repair ? (
                         <Form method="post" action={copy.repair.action}>
                           <input type="hidden" name="intent" value={copy.repair.intent} />
-                          <button type="submit" className="row-menu-item" data-menu-item>
+                          <Button type="submit" size="sm" aria-label={`${copy.repair.label}: ${copy.name}`}>
                             {copy.repair.label}
-                          </button>
+                          </Button>
                         </Form>
-                      </RowMenu>
-                    ) : null}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <h2 className="admin-section-head">Content</h2>
-      <div className="admin-figures">
-        <div className="admin-figure">
-          <p className="admin-figure-label">In the repository</p>
-          <p className="admin-figure-value">{stores.artifactPosts}</p>
-          <p className="admin-figure-hint">posts written and committed</p>
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-        <div
-          className="admin-figure"
-          data-status={stores.d1Posts === stores.artifactPosts ? undefined : "warn"}
-        >
-          <p className="admin-figure-label">Live on the site</p>
-          <p className="admin-figure-value">{stores.d1Posts}</p>
-          <p className="admin-figure-hint">
-            {stores.d1PubliclyVisible} of them public to readers
-          </p>
-        </div>
-      </div>
+      </Panel>
 
-      <details className="admin-explain">
-        <summary>Everything else this page could show</summary>
+      <StatTiles label="Content">
+        <StatTile
+          label="In the repository"
+          figure={stores.artifactPosts}
+          unit="posts"
+          detail="posts written and committed"
+        />
+        <StatTile
+          label="Live on the site"
+          tone={lag ? "ok" : "warn"}
+          figure={stores.d1Posts}
+          unit="posts"
+          word={lag ? undefined : "Out of step"}
+          detail={`${stores.d1PubliclyVisible} of them public to readers`}
+        />
+      </StatTiles>
+
+      <Disclosure summary="Everything else this page could show">
         <dl>
           <dt>Search records</dt>
           <dd>{stores.searchIndexDocs} entries.</dd>
@@ -157,27 +152,27 @@ export default function AdminOverview({ loaderData }: Route.ComponentProps) {
           here rather than at the top because neither has ever been the answer to
           a question this page was opened with.
         </p>
-      </details>
+      </Disclosure>
 
       {/* No block is not evidence of health: `known: false` means unreadable, not empty. */}
       {stores.divergences.known && stores.divergences.entries.length > 0 ? (
-        <>
-          <h2 className="admin-section-head">Changes the site did not pick up</h2>
-          <ul className="tool-list">
+        <Panel title="Changes the site did not pick up" count={stores.divergences.entries.length} flush>
+          <RowList label="Changes the site did not pick up">
             {stores.divergences.entries.map((entry) => (
-              <li key={`${entry.slug}-${entry.commitSha}`} className="tool-row">
-                <div>
-                  <p className="tool-row-label">
-                    {entry.slug} <span className="chip">{entry.commitSha.slice(0, 7)}</span>
-                  </p>
-                  <p className="muted">{entry.error}</p>
-                </div>
-                <span className="chip chip-error">not updated</span>
-              </li>
+              <Row
+                key={`${entry.slug}-${entry.commitSha}`}
+                title={
+                  <>
+                    {entry.slug} <Pill variant="outline">{entry.commitSha.slice(0, 7)}</Pill>
+                  </>
+                }
+                detail={entry.error}
+                status={<Status tone="crit">not updated</Status>}
+              />
             ))}
-          </ul>
-        </>
+          </RowList>
+        </Panel>
       ) : null}
-    </>
+    </div>
   );
 }

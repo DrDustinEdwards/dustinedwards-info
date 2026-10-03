@@ -1,0 +1,8 @@
+/* Import order is the cascade; do not reorder. No reset here: app.css loads it on every route. */
+@import "./styles/admin-shell.css";
+@import "./styles/admin-posts.css";
+@import "./styles/admin-editor.css";
+@import "./styles/admin-media.css";
+@import "./styles/admin-editor-feedback.css";
+@import "./styles/admin-history.css";
+@import "./styles/admin-media-later.css";
