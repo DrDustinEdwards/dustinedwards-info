@@ -156,6 +156,7 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
     [
       "content-drift",
       "cv-drift",
+      "cv-pdf-drift",
       "dictionary-drift",
       "llms-drift",
       "media-index-drift",
@@ -165,7 +166,7 @@ test("THE OTHER HALF: the same body fails the post-repair assertion, by name", (
       "publications-drift",
       "roster-drift",
     ],
-    "the ten that did converge are reported converged, not silent",
+    "the eleven that did converge are reported converged, not silent",
   );
 });
 

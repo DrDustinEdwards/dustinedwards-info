@@ -172,6 +172,11 @@ PDF is a function of them.
 - **What does not trigger a render.** A cited paper changed through the publication save, or a CV file changed through
   git and `sync:content`, moves the CV's text without a CV save: `cv-pdf-drift` reports it, and `sync_cv_pdf` (the
   watchdog, or the operator) renders it.
+- **Ship converges it.** A deploy that changes the CV's text or the print document leaves the stored PDF stale until
+  the deployed Worker renders it, so `cv-pdf-drift` is a DEFERRED readiness check (`scripts/lib/readiness.mjs`) and
+  `npm run ship` calls `sync_cv_pdf` after the D1 sync and before the media converge (a first render adds a
+  `derived/` key the media index must count). A render that does not converge is a miss in the ship report, not a
+  refusal: the deploy stands.
 
 Offline, `npm run build:cv-pdf [-- --out <path>]` renders the same document with headless Chrome to
 `build/dustin-edwards-cv.pdf`, to look at a layout or font change without a save. It never writes under `public/`.
