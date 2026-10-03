@@ -10,6 +10,7 @@ Dustin Edwards's personal site and Cloudflare showcase. React Router 8 on Worker
 - A check earns its place by catching real mistakes; a check that has never caught one is removed, not defended.
 - Before writing new code, search the repo for code that already does the job, and extend or reuse it instead of adding a parallel version. Prefer changing existing code to adding new code.
 - Never swallow an error. A failure is returned or thrown to where it can be seen; it is never logged and ignored while the code carries on or reports success.
+- Every fact is stored once as structured data, and every page that shows it renders from that source. That covers names, numbers, dates, sequences, sizes, temperatures, citations, DOIs, people, places, IDs and links. Values that can be computed are computed, not typed. Prose around the facts stays prose.
 
 ## Hard rules
 
