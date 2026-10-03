@@ -1,6 +1,6 @@
 # CLAUDE.md - dustinedwards.info
 
-Dustin Edwards's personal site and Cloudflare showcase. React Router 8 on Workers, Drizzle on D1, Better Auth, R2. Also a Capsid CMS consumer.
+Dustin Edwards's personal site and Cloudflare showcase. React Router 8 on Workers, Drizzle on D1, Cloudflare Access, R2. Also a Capsid CMS consumer.
 
 **This file is the STANDING LAW and nothing else.** Procedure is `.claude/skills/`; the design follows the Capsid Portal's design, with paper elements returning only by Dustin's decision and the home page hero kept (ruling 152 in Capsid's `dustinedwards/decisions.md`); the history of what was built and retired, and why, is Capsid's `dustinedwards/build-history.md`, with git and the pull requests behind it.
 

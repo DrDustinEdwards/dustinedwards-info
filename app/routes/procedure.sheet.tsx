@@ -2,7 +2,7 @@ import { data } from "react-router";
 
 import { ProcedureSheet } from "~/components/procedure";
 import { getProcedureByPath } from "~/db/procedures";
-import { getAdminSession } from "~/lib/auth.server";
+import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { PROCEDURES_CACHE_TAG, readScale } from "~/lib/procedures/route";
 import { SITE_ORIGIN, publicHtmlHeaders } from "~/lib/seo";
@@ -27,7 +27,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const path = url.pathname.replace(/\/sheet\/?$/, "");
   const row = await getProcedureByPath(env, path);
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await getAdminSession(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const { count, factor } = readScale(row.record, url);
   return { record: row.record, count, factor };
 }

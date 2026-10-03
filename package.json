@@ -1,7 +1,7 @@
 {
   "name": "dustinedwards-info",
   "private": true,
-  "pinning": "VERSION RANGES, and the rule behind the two shapes below. EXACT-PINNED: the toolchain that builds and deploys this Worker, plus the auth runtime. wrangler, vite, @cloudflare/vite-plugin, react-router and @react-router/dev decide what the deployed bundle IS, so a caret on any of them means a deploy nobody can reproduce from the same commit, and the lockfile is not enough: it is the thing a fresh resolve is allowed to move. better-auth is pinned on a different ground, that a minor bump to session handling is a security change arriving as a patch note. katex is pinned on a THIRD ground, added 2026-09-06: the renderer, the stylesheet and the 20 font faces are one artifact split across three places, and scripts/build-katex.mjs derives the last two from the first, so a caret that moved the renderer under a committed stylesheet would put class names and font metrics out of step with the markup they style. rehype-katex depends on katex ^0.16.0, so the pin also has to stay inside that range or npm installs a second nested copy and the deduped one stops being the one that renders. remark-math and rehype-katex are pinned with it, because a plugin bump is what would move the renderer. CARETED: everything else, because a library that only affects rendered output is covered by the gates that compare renders, and pinning it buys nothing a re-render would not catch. Bump a pin deliberately, in its own commit, with the gates run after it.",
+  "pinning": "VERSION RANGES, and the rule behind the two shapes below. EXACT-PINNED: the toolchain that builds and deploys this Worker. wrangler, vite, @cloudflare/vite-plugin, react-router and @react-router/dev decide what the deployed bundle IS, so a caret on any of them means a deploy nobody can reproduce from the same commit, and the lockfile is not enough: it is the thing a fresh resolve is allowed to move. katex is pinned on a DIFFERENT ground, added 2026-09-06: the renderer, the stylesheet and the 20 font faces are one artifact split across three places, and scripts/build-katex.mjs derives the last two from the first, so a caret that moved the renderer under a committed stylesheet would put class names and font metrics out of step with the markup they style. rehype-katex depends on katex ^0.16.0, so the pin also has to stay inside that range or npm installs a second nested copy and the deduped one stops being the one that renders. remark-math and rehype-katex are pinned with it, because a plugin bump is what would move the renderer. CARETED: everything else, because a library that only affects rendered output is covered by the gates that compare renders, and pinning it buys nothing a re-render would not catch. Bump a pin deliberately, in its own commit, with the gates run after it.",
   "type": "module",
   "engines": {
     "node": ">=24.21.0",
@@ -78,7 +78,6 @@
     "@observablehq/plot": "0.6.17",
     "@shikijs/rehype": "4.3.1",
     "@shikijs/transformers": "4.3.1",
-    "better-auth": "1.7.6",
     "drizzle-orm": "0.45.2",
     "enarratio": "0.1.0-alpha.8",
     "github-slugger": "2.0.0",

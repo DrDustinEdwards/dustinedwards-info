@@ -2,7 +2,7 @@ import { data } from "react-router";
 
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
-import { getAdminSession } from "~/lib/auth.server";
+import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
@@ -33,7 +33,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const row = await getPageByPath(env, "/about");
   // No row: the content sync has not written it yet. A draft is the signed-in admin's alone, like any page.
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await getAdminSession(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const { title, seoTitle, description, html } = row.record;
   return { title, seoTitle, description, html, draft: row.status === "draft" };
 }

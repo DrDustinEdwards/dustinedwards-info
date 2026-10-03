@@ -5,16 +5,15 @@ import {
   NavLink,
   Outlet,
   data,
-  redirect,
   useRouteLoaderData,
 } from "react-router";
 
 import { OverflowMenu } from "~/components/admin/overflow-menu";
 import { SiteLogoHeader } from "~/components/site-logo";
-import { SITE } from "~/lib/seo";
+import { SITE, SITE_ORIGIN } from "~/lib/seo";
 import { adminNavCounts } from "~/db";
 import { accessIdentity } from "~/lib/access.server";
-import { adminActorContext, adminSessionContext, getAdminSession } from "~/lib/auth.server";
+import { adminActorContext, adminSessionContext } from "~/lib/admin-actor.server";
 import { authenticateSmoke } from "~/lib/smoke.server";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { getEnv, getExecutionContext } from "~/lib/context";
@@ -32,7 +31,7 @@ import type { loader as rootLoader } from "~/root";
 
 /*
  * This import keeps admin CSS off the public plane: every /admin/* child nests under this layout.
- * `/login` is the one other place that may import it.
+ * Sign-in is Cloudflare Access, in front of this layout, so no public route needs it.
  */
 import "~/admin.css";
 
@@ -44,10 +43,9 @@ export function meta() {
 export const handle = { hydrate: true };
 
 /**
- * Three ways in, only the first two may write: a person Cloudflare Access admitted (a verified signed
- * token, never the mere presence of a header), a Better Auth session (the Google fallback, retired
- * once the Access login is confirmed), or the read-only smoke bearer, which gets GET and HEAD and is
- * refused every other method before any child runs.
+ * Two ways in, only the first may write: a person Cloudflare Access admitted (a verified signed
+ * token, never the mere presence of a header), or the read-only smoke bearer, which gets GET and HEAD
+ * and is refused every other method before any child runs.
  */
 export const middleware: Route.MiddlewareFunction[] = [
   async ({ request, context }, next) => {
@@ -81,11 +79,9 @@ export const middleware: Route.MiddlewareFunction[] = [
         },
       });
     }
-    const session =
-      access.kind === "human" ? { user: { email: access.email } } : await getAdminSession(env, request, timings);
-    if (session) {
-      context.set(adminSessionContext, session);
-      context.set(adminActorContext, { kind: "admin", email: session.user.email });
+    if (access.kind === "human") {
+      context.set(adminSessionContext, { user: { email: access.email } });
+      context.set(adminActorContext, { kind: "admin", email: access.email });
     } else {
       /* A browser sends no `Authorization` header, so `authenticateSmoke` returns `absent` untouched. */
       const smoke = await authenticateSmoke(env, request);
@@ -101,7 +97,18 @@ export const middleware: Route.MiddlewareFunction[] = [
           },
         });
       }
-      if (smoke.kind !== "ok") throw redirect("/login");
+      if (smoke.kind !== "ok") {
+        /* Access vouches for a person only on the apex's /admin; a request that reached here without it
+           (workers.dev, a preview, or Access misconfigured) is told where the door is, never signed in. */
+        throw new Response(`Admin signs in at ${SITE_ORIGIN}/admin, through Cloudflare Access.`, {
+          status: 403,
+          headers: {
+            "content-type": "text/plain; charset=utf-8",
+            "cache-control": "private, no-store",
+            "x-robots-tag": "noindex, nofollow",
+          },
+        });
+      }
 
       /* An allowlist, not a denylist: a route answering PUT tomorrow is refused the day it is written. */
       if (request.method !== "GET" && request.method !== "HEAD") {
@@ -302,7 +309,7 @@ function SignOutForm({ menu = false }: { menu?: boolean }) {
         Sign out
         {menu ? (
           <span className="overflow-menu-item-hint" id="admin-signout-hint">
-            Ends this session. You will need to sign in again with Google.
+            Ends this session. You will need to sign in again through Cloudflare Access.
           </span>
         ) : null}
       </button>

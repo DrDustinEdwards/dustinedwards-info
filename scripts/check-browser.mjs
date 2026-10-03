@@ -1,5 +1,5 @@
 // Public cases drive a preview build because the dev server serves the page unstyled.
-// Admin cases always drive ADMIN_ORIGIN, because sessions live in production KV.
+// Admin cases always drive ADMIN_ORIGIN, because the Access login and the smoke token belong to the production deployment.
 //
 // This file is the orchestrator and the floor. The credential, the preview server, the seeds and
 // the shared helpers live in scripts/lib/browser/, and each case group in scripts/lib/browser/cases/.

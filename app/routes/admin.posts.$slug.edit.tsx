@@ -10,7 +10,7 @@ import {
   revokeFormId,
   type PreviewLinkView,
 } from "~/components/admin/preview-links";
-import { adminActorContext, adminSessionContext } from "~/lib/auth.server";
+import { adminActorContext, adminSessionContext } from "~/lib/admin-actor.server";
 import { getEnv } from "~/lib/context";
 import { listPreviewLinks } from "~/lib/preview-links.server";
 import { previewUrl } from "~/lib/preview-token.mjs";

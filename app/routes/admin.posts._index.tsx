@@ -7,7 +7,7 @@ import { PostsFilters } from "~/components/admin/posts-filters";
 import { PostsTable } from "~/components/admin/posts-table";
 import { PostsToolbar } from "~/components/admin/posts-toolbar";
 import { listAllPostsForAdmin, listAllPostTagsForAdmin } from "~/db";
-import { adminActorContext } from "~/lib/auth.server";
+import { adminActorContext } from "~/lib/admin-actor.server";
 import { getEnv } from "~/lib/context";
 import { timed, timedLoader } from "~/lib/timing";
 import { CONFIRM_FIELD, confirmationSatisfied } from "~/lib/destructive.mjs";

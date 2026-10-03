@@ -97,7 +97,8 @@ export default [
   // root, not under `/api`, because it is advertised in a `<link>` and is published surface.
   route("webmention", "routes/webmention.ts"),
 
-  route("login", "routes/login.tsx"),
+  // The old sign-in page. Sign-in is Cloudflare Access on /admin, so this only forwards there.
+  route("login", "routes/login.ts"),
 
   // Private: the admin layout gates every child via middleware.
   route("admin", "routes/admin.tsx", [
@@ -124,5 +125,4 @@ export default [
   route("api/operator", "routes/api.operator.ts"),
   // Carrel's key, not the session, and only this prefix: the site-api package guards it.
   route("api/carrel/v1/*", "routes/api.carrel.v1.$.ts"),
-  route("api/auth/*", "routes/api.auth.$.ts"),
 ] satisfies RouteConfig;

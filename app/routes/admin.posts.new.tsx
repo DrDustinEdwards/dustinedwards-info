@@ -10,7 +10,7 @@ import { handleEditorAction } from "~/lib/editor/action.server";
 import { savedRedirectPath } from "~/lib/editor/feedback";
 import { EMPTY_FIELDS } from "~/lib/editor/frontmatter";
 import { readHead } from "~/lib/editor/head.server";
-import { adminActorContext } from "~/lib/auth.server";
+import { adminActorContext } from "~/lib/admin-actor.server";
 import type { Route } from "./+types/admin.posts.new";
 import { errorMessage } from "~/lib/error-message.mjs";
 

@@ -212,7 +212,7 @@ ok(
 );
 
 // Asks git: reading the file back proves the line exists, not that it matches.
-console.log("\n  3. the admin session file is really ignored");
+console.log("\n  3. the smoke token file is really ignored");
 
 /** @param {string} path @returns {boolean} */
 function gitIgnores(path) {
@@ -231,36 +231,12 @@ function gitIgnores(path) {
 }
 
 ok(
-  "git itself ignores .admin-session",
-  gitIgnores(".admin-session"),
-  "the session file is NOT ignored, so a live admin session can be committed to a public " +
-    "repo by any `git add` that reaches it. A line in .gitignore is not the same as a " +
-    "matching rule.",
+  "git itself ignores .smoke-token",
+  gitIgnores(".smoke-token"),
+  "the smoke token file is NOT ignored, so a live read-only admin credential can be committed " +
+    "to a public repo by any `git add` that reaches it. A line in .gitignore is not the same as " +
+    "a matching rule.",
 );
-ok(
-  "git does NOT ignore .admin-session.example",
-  !gitIgnores(".admin-session.example"),
-  "the tracked example is being ignored, so the refill instructions would silently leave " +
-    "the repo and the next expired session has nothing to read.",
-);
-
-// The example is committed, so anything pasted into it is published; the placeholder is the tell.
-const examplePath = join(root, ".admin-session.example");
-ok(
-  ".admin-session.example exists to be checked",
-  existsSync(examplePath),
-  "the tracked example is gone, so the two assertions above and the refill instructions " +
-    "it carries are checking nothing",
-);
-if (existsSync(examplePath)) {
-  const example = readFileSync(examplePath, "utf8");
-  ok(
-    ".admin-session.example still carries its placeholder, not a session",
-    example.includes("PASTE_THE_VALUE_HERE"),
-    "the placeholder is gone from the TRACKED example, which is how a real session token " +
-      "gets committed: someone edits the example instead of copying it first.",
-  );
-}
 
 // The `.dev.vars` credentials are read by Node programs, never by deployed code, and must never reach
 // git. The shape scan runs everywhere; the exact-value scan only where the file exists.
@@ -363,7 +339,7 @@ console.log(
 );
 
 // Measured by running it, never summed; re-taken whenever a section or a secret lands.
-const MINIMUM_CHECKS = 39;
+const MINIMUM_CHECKS = 31;
 tally.floor("check:secrets", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {
