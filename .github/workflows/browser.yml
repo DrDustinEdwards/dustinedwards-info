@@ -220,15 +220,18 @@ jobs:
           # from a healthy one; useless to anyone reading the log.
           echo "Staged a $(wc -c < "$RUNNER_TEMP/smoke-token")-byte credential."
 
-      # BOTH ORIGINS ARE PASSED, and they are the same origin here. The gate
-      # keeps them separate because they answer to different things locally: the
-      # admin cases have always driven the deployment, and the public cases
-      # drive the preview build unless PUBLIC_ORIGIN says otherwise. Passing
-      # both is what makes this run speak about ONE build.
+      # BOTH ORIGINS ARE PASSED. The public cases drive the real domain. The
+      # admin cases drive the SAME deployed Worker through its workers.dev
+      # address, because Cloudflare Access guards /admin on the real domain and
+      # turns a bearer-only machine request into a redirect to the login (the
+      # smoke check reported 302 there from 2026-10-03). Access mints no token on
+      # workers.dev, and the Worker still verifies the smoke bearer itself, so
+      # this is one build, reached by the one door that takes a bearer. Read-only,
+      # as the credential always is.
       - name: check:browser against the deployed site
         env:
           PUBLIC_ORIGIN: ${{ steps.origin.outputs.origin }}
-          ADMIN_ORIGIN: ${{ steps.origin.outputs.origin }}
+          ADMIN_ORIGIN: https://dustinedwards.dustin-edwards.workers.dev
           SMOKE_TOKEN_FILE: ${{ runner.temp }}/smoke-token
         run: npm run check:browser
 
