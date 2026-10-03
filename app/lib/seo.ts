@@ -306,6 +306,7 @@ export const OWNER_SCOPUS = "https://www.scopus.com/authid/detail.uri?authorId=5
 export const OWNER_LOOP = "https://loop.frontiersin.org/people/2520780";
 export const OWNER_GITHUB = "https://github.com/DrDustinEdwards";
 export const OWNER_LINKEDIN = "https://www.linkedin.com/in/dustin-edwards-152235274/";
+export const OWNER_WIKIDATA = "https://www.wikidata.org/wiki/Q141630373";
 
 // The headshot (Dustin, 2026-09-28), uploaded to MEDIA from Tarleton's file so nothing here links to
 // another server. The square crop leads: search engines prefer it for a Person.
@@ -339,6 +340,7 @@ const OWNER_SAME_AS = [
   OWNER_LOOP,
   OWNER_GITHUB,
   OWNER_LINKEDIN,
+  OWNER_WIKIDATA,
   GERMOMICS_URL,
   GERMOMICS_X_URL,
 ];
