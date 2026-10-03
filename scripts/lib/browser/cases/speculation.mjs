@@ -199,9 +199,9 @@ export async function run({ browser }) {
         "for the slash-star reason given above.",
     },
     {
-      label: "the login door",
-      matches: (/** @type {string} */ href) => href === "/login",
-      why: "prerendering a door warms nothing, and it is linked from the header on every page.",
+      label: "the admin door",
+      matches: (/** @type {string} */ href) => href === "/admin",
+      why: "prerendering a door warms nothing, and it is linked from the footer on every page.",
     },
   ];
   for (const exclusion of EXCLUSIONS) {

@@ -59,9 +59,9 @@ test("the Workspace group lists Carrel, Admin and Portal, each with its icon", (
   assert.equal(portal?.hover, "Capsid Portal");
 });
 
-test("Admin, when the footer lists it, goes to this site's sign-in", () => {
+test("Admin, when the footer lists it, goes to the admin, where Cloudflare Access signs in", () => {
   const admin = PRIVATE_TOOLS.find((tool) => tool.label === "Admin");
-  if (admin) assert.equal(admin.to, "/login");
+  if (admin) assert.equal(admin.to, "/admin");
 });
 
 test("the copyright year is computed at render, never hard-coded", () => {

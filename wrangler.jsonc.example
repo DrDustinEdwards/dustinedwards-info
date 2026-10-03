@@ -247,9 +247,16 @@
 	// that any more, so do not paste it back.
 	// PREVIEW is empty here and "1" in `previews.vars`, so production never
 	// carries it set. workers/app.ts and routes/robots.ts read it for noindex.
+	//
+	// ACCESS_TEAM_DOMAIN and ACCESS_AUD name the Cloudflare Access application that guards
+	// /admin (dustinedwards-login). Neither is a credential: the AUD tag is public in every
+	// token Access issues. app/lib/access.server.ts verifies each request's signed token
+	// against them; a Worker without both treats every request as not coming through Access.
 	"vars": {
 		"CLOUDFLARE_ACCOUNT_ID": "00000000000000000000000000000000",
-		"PREVIEW": ""
+		"PREVIEW": "",
+		"ACCESS_TEAM_DOMAIN": "dustinedwards.cloudflareaccess.com",
+		"ACCESS_AUD": "8c6b7c7f4c10df60924047ddc1ef3c60054ebbda50609a1d246716f417f63a25"
 	},
 	// The media index write path. R2 emits a notification, this Worker's queue()
 	// handler derives the D1 row. An event notification rather than a dual write:

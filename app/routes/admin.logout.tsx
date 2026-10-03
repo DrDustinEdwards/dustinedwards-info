@@ -4,7 +4,20 @@ import { createAuth } from "~/lib/auth.server";
 import { getEnv } from "~/lib/context";
 import type { Route } from "./+types/admin.logout";
 
+/**
+ * A request Access let through carries its token header, and signing out of Access is its own
+ * endpoint on this host: it clears the Access cookie, which no code here can do. Presence is enough
+ * for this branch, because all it does is send the browser to that logout.
+ */
+export const ACCESS_LOGOUT_PATH = "/cdn-cgi/access/logout";
+
 export async function action({ request, context }: Route.ActionArgs) {
+  if (request.headers.has("cf-access-jwt-assertion")) {
+    return new Response(null, {
+      status: 303,
+      headers: { Location: ACCESS_LOGOUT_PATH, "Cache-Control": "no-store" },
+    });
+  }
   const auth = createAuth(getEnv(context));
   const res = await auth.api.signOut({
     headers: request.headers,

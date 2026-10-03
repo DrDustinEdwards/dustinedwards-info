@@ -88,16 +88,19 @@ export function createAuth(env: Env) {
 
 type Auth = ReturnType<typeof createAuth>;
 
-type AdminSession = NonNullable<
+type BetterAuthSession = NonNullable<
   Awaited<ReturnType<Auth["api"]["getSession"]>>
 >;
+
+/** The part of a session the admin plane reads: who. Cloudflare Access and Better Auth both fill it. */
+type AdminSession = { user: { email: string } };
 
 export async function getAdminSession(
   env: Env,
   request: Request,
   // Two marks because they are different costs: CPU building the instance, then KV IO.
   timings?: Timings,
-): Promise<AdminSession | null> {
+): Promise<BetterAuthSession | null> {
   const auth = timedSync(timings, "auth_create", () => createAuth(env));
   const session = await timed(timings, "auth_getsession", () =>
     auth.api.getSession({
