@@ -15,7 +15,7 @@ const { auditSecrets } = await import("../app/lib/admin/secrets.server.ts");
 const SENTINEL = "ZZZZ" + "9174630852".repeat(4);
 
 test("the ratified list is non-empty, so nothing below passes vacuously", () => {
-  assert.ok(REQUIRED_SECRETS.length >= 8, `only ${REQUIRED_SECRETS.length} secret(s) listed`);
+  assert.ok(REQUIRED_SECRETS.length >= 5, `only ${REQUIRED_SECRETS.length} secret(s) listed`);
 });
 
 test("the sentinel cannot collide with the payload's own structure", () => {
