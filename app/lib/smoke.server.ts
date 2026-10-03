@@ -15,6 +15,9 @@ const SMOKE_RATE_PERIOD_SECONDS = 60;
 
 const MIN_TOKEN_LENGTH = 32;
 
+/** A realistic length, because the topbar's width is what the smoke render measures. Not a real mailbox. */
+const SMOKE_ACTOR_EMAIL = "smoke-reader@dustinedwards.info";
+
 // `absent` is not a failure: most `/admin` requests are a browser and must fall through to the session gate.
 type SmokeResult =
   | { kind: "ok"; id: string; email: string }
@@ -65,5 +68,5 @@ export async function authenticateSmoke(env: Env, request: Request): Promise<Smo
   }
 
   // Resolved here, not in `admin.tsx`: the secrets boundary is a path rule and routes may not read secrets.
-  return { kind: "ok", id, email: env.ADMIN_EMAIL ?? "" };
+  return { kind: "ok", id, email: SMOKE_ACTOR_EMAIL };
 }

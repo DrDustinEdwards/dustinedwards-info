@@ -4,7 +4,7 @@ import { Breadcrumb } from "~/components/breadcrumb";
 import { PageShell } from "~/components/page-shell";
 import { ProcedureView } from "~/components/procedure";
 import { getProcedureByPath } from "~/db/procedures";
-import { getAdminSession } from "~/lib/auth.server";
+import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { procedureJsonLd } from "~/lib/procedures/json-ld.mjs";
@@ -33,7 +33,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const path = url.pathname.replace(/\/+$/, "");
   const row = await getProcedureByPath(env, path);
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await getAdminSession(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const { count, factor } = readScale(row.record, url);
   return { record: row.record, draft: row.status === "draft", count, factor };
 }

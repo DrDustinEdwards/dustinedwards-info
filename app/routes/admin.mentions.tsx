@@ -2,7 +2,7 @@ import { Form, Link, data } from "react-router";
 
 import { ConfirmDialog } from "~/components/admin/confirm-dialog";
 import { RowMenu } from "~/components/admin/row-menu";
-import { adminActorContext } from "~/lib/auth.server";
+import { adminActorContext } from "~/lib/admin-actor.server";
 import { getEnv } from "~/lib/context";
 import { PolicyError } from "~/lib/editor/publish-policy.mjs";
 import { timed, timedLoader } from "~/lib/timing";

@@ -96,8 +96,8 @@ export function run(code) {
   ok(
     "Cross-Origin-Opener-Policy allows popups",
     declared["Cross-Origin-Opener-Policy"] === "same-origin-allow-popups",
-    "plain same-origin would break Better Auth's Google flow if it uses a popup, " +
-      "which was deliberately not verified. allow-popups is correct either way.",
+    "plain same-origin would sever the opener of any cross-origin popup a sign-in or " +
+      "embed opens. allow-popups keeps that working and is the ratified value.",
   );
 
   /*

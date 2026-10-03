@@ -43,6 +43,23 @@ function localDevelopment(request: Request): boolean {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
 }
 
+function cookieValue(request: Request, name: string): string | null {
+  for (const part of (request.headers.get("cookie") ?? "").split(";")) {
+    const eq = part.indexOf("=");
+    if (eq !== -1 && part.slice(0, eq).trim() === name) return part.slice(eq + 1).trim();
+  }
+  return null;
+}
+
+/**
+ * True when Access vouches that an administrator is making this request. For a public page that
+ * shows a draft to the administrator only: a token that fails verification is simply not an
+ * administrator here, since the admin layout is where a bad token is answered.
+ */
+export async function isAdminViewer(env: Env, request: Request): Promise<boolean> {
+  return (await accessIdentity(env, request)).kind === "human";
+}
+
 export const LOCAL_DEV_EMAIL = "dev@localhost";
 
 export async function accessIdentity(
@@ -56,7 +73,10 @@ export async function accessIdentity(
   const audience = env.ACCESS_AUD;
   if (!teamDomain || !audience) return { kind: "absent" };
 
-  const token = request.headers.get("cf-access-jwt-assertion");
+  // The header is added only on paths the Access application covers (/admin). The same token also
+  // rides in the `CF_Authorization` cookie on every path of the host, which is how a public page
+  // tells the administrator is looking at it (a draft shows to them and 404s for everyone else).
+  const token = request.headers.get("cf-access-jwt-assertion") ?? cookieValue(request, "CF_Authorization");
   if (!token) return { kind: "absent" };
 
   const verdict = await verifyAccessJwt(token, await keys(teamDomain), {

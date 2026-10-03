@@ -323,11 +323,6 @@ Where each one lives, and what breaks if you rotate it and stop there:
 
 | Secret | Also lives in | Rotate it alone and... |
 | --- | --- | --- |
-| `GOOGLE_CLIENT_ID` | Google Cloud Console | Sign-in breaks. Must match the OAuth client. |
-| `GOOGLE_CLIENT_SECRET` | Google Cloud Console | Sign-in breaks until the console copy matches. |
-| `BETTER_AUTH_SECRET` | nowhere else | Every existing session is invalidated. You sign in again. Nothing else breaks. Safe to rotate. |
-| `BETTER_AUTH_URL` | must match Google's redirect URI | Sign-in redirects to the wrong origin and fails. Change both together. |
-| `ADMIN_EMAIL` | nowhere else | You lock yourself out of `/admin`. Nobody else gets in. |
 | `GITHUB_TOKEN` | GitHub fine-grained token | The editor and `sync_posts` stop committing. Reads still work, so it looks fine until you save a post. |
 | `OPERATOR_TOKEN` | **three holders, see below** | Silent partial failure. Read the box. |
 | `SMOKE_TOKEN` | `gh secret set SMOKE_TOKEN`, and `.smoke-token` locally | `check:browser`'s admin cases lose their credential and say so. Nothing public degrades. |
@@ -381,8 +376,8 @@ is never an administrator on its own.
 in there: no token is ever minted for those hosts, and the Worker refuses an unverified one.
 
 **If sign-in is broken:** the Access application's policy is the first place to look (Zero Trust >
-Logs > Access). To get back in while Google sign-in still exists, use the `/login` page on the
-workers.dev address. To switch the Access check off, remove `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` from
+Logs > Access). There is no other way in: the old Google sign-in is gone, and `/login` only forwards to
+`/admin`. To switch the Access check off, remove `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` from
 the vars and deploy: every request is then treated as not having come through Access.
 
 **Local development:** `vite dev` on localhost is admitted as `dev@localhost` (only when the build is a

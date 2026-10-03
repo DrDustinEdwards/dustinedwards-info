@@ -3,12 +3,11 @@
 import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
 import { and, eq, isNull, lte, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/d1";
-import * as authSchema from "./auth-schema";
 import * as schema from "./schema";
 import { media, posts } from "./schema";
 
 export function getDb(env: Env) {
-  return drizzle(env.DB, { schema: { ...schema, ...authSchema } });
+  return drizzle(env.DB, { schema: schema });
 }
 
 export type DB = ReturnType<typeof getDb>;

@@ -10,7 +10,7 @@ import {
 import { storeUpload } from "~/lib/media/upload.server";
 import type { Route } from "./+types/admin.media.upload";
 
-/** Under /admin so the Better Auth middleware gates it: there is no unauthenticated write path to the bucket. */
+/** Under /admin so the Cloudflare Access middleware gates it: there is no unauthenticated write path to the bucket. */
 
 
 export async function action({ request, context }: Route.ActionArgs) {

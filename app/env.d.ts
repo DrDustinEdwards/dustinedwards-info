@@ -4,11 +4,6 @@
  */
 declare global {
   interface Env {
-    GOOGLE_CLIENT_ID: string;
-    GOOGLE_CLIENT_SECRET: string;
-    BETTER_AUTH_SECRET: string;
-    BETTER_AUTH_URL: string;
-    ADMIN_EMAIL: string;
     /** Fine-grained PAT, Contents read/write. Used only by the admin editor. */
     GITHUB_TOKEN: string;
     /** Optional by contract: `POST /api/operator` returns 503 when it is absent or too short. */

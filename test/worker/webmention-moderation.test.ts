@@ -1,7 +1,7 @@
 import { createExecutionContext, env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { adminActorContext } from "~/lib/auth.server";
+import { adminActorContext } from "~/lib/admin-actor.server";
 import { CONFIRM_FIELD } from "~/lib/destructive.mjs";
 import { SMOKE_READ_ONLY_POLICY } from "~/lib/editor/publish-policy.mjs";
 import { SITE_ORIGIN } from "~/lib/seo";

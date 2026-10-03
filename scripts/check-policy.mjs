@@ -306,9 +306,9 @@ refuses(
     true,
   );
   eq(
-    "the smoke actor is declared in auth.server and constructed in the middleware, nowhere else",
+    "the smoke actor is declared in admin-actor.server and constructed in the middleware, nowhere else",
     constructors.sort().join(", "),
-    "app/lib/auth.server.ts, app/routes/admin.tsx",
+    "app/lib/admin-actor.server.ts, app/routes/admin.tsx",
   );
 }
 

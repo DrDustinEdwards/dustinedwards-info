@@ -9,7 +9,7 @@ import { PhageTools } from "~/components/phage-tool";
 import { getPublishedEntryByPath } from "~/db/dictionary";
 import { getPageByPath, getPublishedPageTitles } from "~/db/pages";
 import { listRoster } from "~/db/roster";
-import { getAdminSession } from "~/lib/auth.server";
+import { isAdminViewer } from "~/lib/access.server";
 import { getEnv } from "~/lib/context";
 import {
   contentPageCardPath,
@@ -120,7 +120,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const row = await getPageByPath(env, pathname);
   // A path with no row: not a page, or a page the content sync has not written yet.
   if (!row) throw data(null, { status: 404 });
-  if (row.status === "draft" && !(await getAdminSession(env, request))) throw data(null, { status: 404 });
+  if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   const page = row.record;
   // The page it sits under, by title, for the trail above it (the course above its FAQ).
   const parent = page.path.slice(0, page.path.lastIndexOf("/"));

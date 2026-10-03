@@ -5,11 +5,6 @@
  * @type {readonly string[]}
  */
 export const REQUIRED_SECRETS = [
-  "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
-  "BETTER_AUTH_SECRET",
-  "BETTER_AUTH_URL",
-  "ADMIN_EMAIL",
   "GITHUB_TOKEN",
   "OPERATOR_TOKEN",
   "CARREL_SITE_KEY",

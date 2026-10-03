@@ -92,30 +92,14 @@ wrangler.preview-migrations.jsonc
 # address in the example.
 wrangler.watchdog.jsonc
 
-# The admin session for check:browser, read by scripts/lib/browser/credential.mjs.
-#
-#   .admin-session          ignored. Holds a live Better Auth session cookie for
-#                           the single admin. A credential, so it never lands in
-#                           git; same footing as .dev.vars above.
-#   .admin-session.example  TRACKED, and it is where the instructions live: the
-#                           five clicks in Chrome, what to copy, what format.
-#                           When the session expires that file is the thing to
-#                           read, which is why it is committed and this is not.
-#
-# IGNORED rather than merely untracked, for the reason /og-samples/ is below:
-# `npm run ship` refuses on any dirty tree, untracked files included, so an
-# unignored session file would block every ship window until it was moved out of
-# the repo by hand.
-.admin-session
-
 # The smoke credential for check:browser, read by scripts/lib/browser/credential.mjs via
 # SMOKE_TOKEN_FILE. A bearer token, so it never lands in git, on the same
-# footing as .dev.vars and .admin-session above. Minted with
+# footing as .dev.vars above. Minted with
 # `node scripts/mint-smoke-token.mjs`; README.md carries the three places it
 # then has to be set.
 #
-# IGNORED rather than merely untracked, for the .admin-session reason: ship
-# refuses on any dirty tree, untracked files included.
+# IGNORED rather than merely untracked: ship refuses on any dirty tree, untracked
+# files included.
 .smoke-token
 
 # Session scratch space. A working directory an investigation leaves behind,

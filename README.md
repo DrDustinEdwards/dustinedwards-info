@@ -41,7 +41,7 @@ is the method behind the gates, written from the times it was got wrong.
 | Runtime | Cloudflare Workers, Node compatibility on by compatibility date |
 | Framework | React Router 8 (SSR), Vite |
 | Database | D1 (`dustinedwards`), Drizzle, hand-written migrations |
-| Auth | Better Auth, Google, single admin, sessions in KV |
+| Auth | Cloudflare Access in front of `/admin`; the Worker verifies the signed token; the Access policy is the list of administrators |
 | Storage | R2: `dustinedwards-media` (originals), `dustinedwards-og` (derived cards) |
 | Search | SQLite FTS5, two tokenizers fused by reciprocal rank |
 | AI | AI Search instance for the Ask layer, guarded by a Durable Object |
@@ -167,11 +167,6 @@ Seven, all set with `wrangler secret put`, never in a file:
 
 | Secret | Used for |
 | --- | --- |
-| `GOOGLE_CLIENT_ID` | Better Auth |
-| `GOOGLE_CLIENT_SECRET` | Better Auth |
-| `BETTER_AUTH_SECRET` | session signing |
-| `BETTER_AUTH_URL` | OAuth redirect origin |
-| `ADMIN_EMAIL` | the single account allowed to sign in |
 | `GITHUB_TOKEN` | the editor's commits (fine-grained, Contents read/write) |
 | `OPERATOR_TOKEN` | the agent publish API, minimum 32 characters |
 | `SMOKE_TOKEN` | the read-only credential `check:browser` renders the admin plane with, minimum 32 characters, optional |

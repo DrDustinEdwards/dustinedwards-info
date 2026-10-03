@@ -3,14 +3,10 @@
 
 import {
   ADMIN_ORIGIN,
-  COOKIE_SOURCE,
   CREDENTIAL,
   CREDENTIAL_ERROR,
   CREDENTIAL_PRESENT,
   CREDENTIAL_SOURCE,
-  REFILL_HINT,
-  SESSION_COOKIE_NAME,
-  SESSION_EXAMPLE,
   SMOKE_SOURCE,
   applyCredential,
   credentialAuthenticates,
@@ -36,17 +32,16 @@ export async function run({ browser }) {
     ok(
       "the admin plane has a credential to observe it with",
       false,
-      `no admin credential of either kind, so NONE of this ran: the 6 admin surfaces, the ` +
+      `no admin credential, so NONE of this ran: the 6 admin surfaces, the ` +
         `editor mount, the two mark fills, the four media interactions, and the ` +
         `sideways-scroll cases at 1280, 553, 480, 400 and 320.\n` +
         `        These cases need a REAL credential and are deliberately ` +
         `not stubbed: a fake auth path would not render what production renders, and the ` +
         `defects they exist to catch live in the authenticated render.\n` +
-        `        PREFERRED, and the one that runs unattended: mint a smoke token with ` +
+        `        Mint a smoke token with ` +
         `\`node scripts/mint-smoke-token.mjs > .smoke-token\`, set it on the Worker with ` +
-        `\`npx wrangler secret put SMOKE_TOKEN < .smoke-token\`, and set ADMIN_ORIGIN.\n` +
-        `        OR: copy ${SESSION_EXAMPLE} to .admin-session and paste a live session ` +
-        `cookie into it. That file carries the five Chrome clicks. Both are gitignored.`,
+        `\`npx wrangler secret put SMOKE_TOKEN < .smoke-token\`, and set ADMIN_ORIGIN. ` +
+        `The token file is gitignored.`,
     );
   } else if (CREDENTIAL_ERROR) {
     ok(
@@ -54,7 +49,7 @@ export async function run({ browser }) {
       false,
       `${CREDENTIAL_ERROR}\n` +
         `        This is a FORMAT or CONFIGURATION problem, not a rejected credential. ` +
-        `${CREDENTIAL === "smoke" ? "See RECOVERY.md for the three places the token goes." : `See ${SESSION_EXAMPLE}.`} ` +
+        `See RECOVERY.md for the three places the token goes. ` +
         `The admin cases below did not run.`,
     );
   } else if (!ADMIN_ORIGIN) {
@@ -62,14 +57,9 @@ export async function run({ browser }) {
       "the admin cases have an origin to drive",
       false,
       `a ${CREDENTIAL} credential was supplied in ${CREDENTIAL_SOURCE} and no origin was. ` +
-        `These cases CANNOT run against the preview server, and that is true of BOTH ` +
-        `credentials for the same underlying reason: neither one exists there. Sessions live ` +
-        `in the production KV namespace and the preview reads local miniflare storage; ` +
-        `SMOKE_TOKEN is a wrangler secret and this repo has no .dev.vars by design, so the ` +
-        `preview would answer 503 not-configured. Measured for the cookie, and structural ` +
-        `for the token.\n` +
-        `        Set ADMIN_ORIGIN, or add an \`origin =\` line to .admin-session. The admin ` +
-        `cases below did not run.`,
+        `These cases CANNOT run against the preview server: SMOKE_TOKEN is a wrangler secret and ` +
+        `this repo has no .dev.vars by design, so the preview would answer 503 not-configured.\n` +
+        `        Set ADMIN_ORIGIN. The admin cases below did not run.`,
     );
   } else if (!(AUTH_RESULT = await credentialAuthenticates(ADMIN_ORIGIN)).ok) {
     ok(
@@ -82,32 +72,17 @@ export async function run({ browser }) {
           `No credential was judged, so this is ${ADMIN_ORIGIN} being unreachable from here, ` +
           `not an expired session or a drifted token.\n` +
           `        The admin cases below did not run.`
-        : CREDENTIAL === "smoke"
-        ? `GET /admin with it did not return 200. The status NAMES the repair, which is why ` +
+        : `GET /admin with it did not return 200. The status NAMES the repair, which is why ` +
           `the smoke path reports one rather than guessing:\n` +
           `        ${smokeRepair(AUTH_RESULT.status)}\n` +
-          `        The admin cases below did not run.`
-        : `GET /admin with it did not return 200, so the session is almost certainly EXPIRED. ` +
-          `The format parsed fine and the cookie was named ${SESSION_COOKIE_NAME}, so this is ` +
-          `not a broken test and not a code defect.\n` +
-          `        TO FIX: ${REFILL_HINT}\n` +
-          `        The other possibility is that ${ADMIN_ORIGIN} does not share the production ` +
-          `KV namespace. The admin cases below did not run.`,
+          `        The admin cases below did not run.`,
     );
   } else {
-    /*
-     * State which credential ran: the smoke token is read-only, so its green says nothing about
-     * writes; the cookie is Dustin, so its green says nothing about CI.
-     */
+    /* State which credential ran: the smoke token is read-only, so its green says nothing about writes. */
     console.log(
-      CREDENTIAL === "smoke"
-        ? `\n  admin credential: THE SMOKE TOKEN, read from ${SMOKE_SOURCE}` +
-          `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)` +
-          `\n  the smoke actor is READ ONLY: every case below is a GET, and no write surface is exercised\n`
-        : `\n  admin credential: the pasted session cookie, read from ${COOKIE_SOURCE}` +
-          `\n  NO SMOKE TOKEN was found, so these cases needed a human to supply a session.` +
-          `\n  To run them unattended, see RECOVERY.md: node scripts/mint-smoke-token.mjs` +
-          `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)\n`,
+      `\n  admin credential: THE SMOKE TOKEN, read from ${SMOKE_SOURCE}` +
+        `\n  admin cases: observing ${ADMIN_ORIGIN} (DEPLOYED, not the preview build)` +
+        `\n  the smoke actor is READ ONLY: every case below is a GET, and no write surface is exercised\n`,
     );
     ok(`the supplied ${CREDENTIAL} credential authenticates against ${ADMIN_ORIGIN}`, true);
     adminCasesRan = true;

@@ -25,8 +25,7 @@ re-measure rather than cite.
 
 ## Before you start
 
-You need: the repo, a Cloudflare account, a Google Cloud project (for OAuth), and
-a GitHub account with access to this repo.
+You need: the repo, a Cloudflare account, and a GitHub account with access to this repo.
 
 ```sh
 npm ci               # postinstall copies wrangler.jsonc.example into place
@@ -66,8 +65,9 @@ The order matters. Each step below names what breaks if it is done early.
    `npm run deploy` runs a build that has never been type-checked.
 4. **D1 migrations.** *If run before step 1:* there is no database to apply to.
    *If skipped:* the first request that touches a table 500s.
-5. **Secrets.** *If set after deploy:* the Worker serves, but Better Auth fails
-   with `CLIENT_ID_AND_SECRET_REQUIRED` and nobody can sign in to `/admin`.
+5. **Secrets.** *If set after deploy:* the Worker serves, but the editor and the
+   operator API fail until `GITHUB_TOKEN` and `OPERATOR_TOKEN` exist. Admin
+   sign-in is not a secret: it is the Access application (section 7).
 6. **Deploy.** The Durable Object migration runs as part of this. *If the DO
    migration block is missing from the config:* the deploy is rejected, because a
    class cannot be bound without having been introduced by a migration.
@@ -140,8 +140,9 @@ npx wrangler kv namespace create "dustinedwards-app-kv"
 ```
 
 Put the returned `id` into `wrangler.jsonc` under `kv_namespaces[0]`. Binding
-`APP_KV`. It holds Better Auth sessions and the Ask answer cache. Both are
-regenerated on use, so an empty namespace is a correct starting state.
+`APP_KV`. It holds the Ask answer cache, the health snapshot, draft preview
+tokens and a few small counters. All are regenerated or reissued on use, so an
+empty namespace is a correct starting state.
 
 ---
 
@@ -473,11 +474,6 @@ already knew, because `check:secrets` reads it and a runbook prose count reads
 nothing. Set one `wrangler secret put` per name in that array:
 
 ```sh
-npx wrangler secret put GOOGLE_CLIENT_ID
-npx wrangler secret put GOOGLE_CLIENT_SECRET
-npx wrangler secret put BETTER_AUTH_SECRET
-npx wrangler secret put BETTER_AUTH_URL
-npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
 npx wrangler secret put SMOKE_TOKEN
@@ -485,14 +481,9 @@ npx wrangler secret put SMOKE_TOKEN
 
 | Secret | What it is for | Where a new one comes from |
 | --- | --- | --- |
-| `GOOGLE_CLIENT_ID` | Better Auth Google sign-in | Google Cloud Console, APIs and Services > Credentials > OAuth 2.0 Client ID (Web application) |
-| `GOOGLE_CLIENT_SECRET` | The same client's secret | Same screen as above |
-| `BETTER_AUTH_SECRET` | Signs session tokens | Generate one: `openssl rand -base64 32`. Rotating it invalidates every session |
-| `BETTER_AUTH_URL` | The origin Better Auth builds callbacks against | Not a credential. The deployed origin, e.g. the `workers.dev` URL. Must match the Google redirect URI |
-| `ADMIN_EMAIL` | The single address allowed into `/admin` | Your own address. Any other Google account authenticates and is then refused |
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
-| `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases fall back to the pasted session cookie and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
+| `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases of `check:browser` fail and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
 
 Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly
 the names in `REQUIRED_SECRETS` and no others, and **no secret has ever lived in
@@ -519,29 +510,25 @@ at **AI > AI Search > Tokens**. Without one, that create command refuses even
 though the CLI otherwise looks authenticated.
 
 **There is no `.dev.vars` in this repo.** A local `npm run dev` therefore has zero
-secrets and nobody can sign in to `/admin` locally. Admin work needs a deploy, or
-a `.dev.vars` you create yourself. `.dev.vars` stays gitignored, always.
+secrets. `vite dev` on localhost is admitted to `/admin` as `dev@localhost`
+without Access (a development build on a localhost host only), so admin work
+needs no secret. The editor still needs a `GITHUB_TOKEN` in a `.dev.vars` you
+create yourself. `.dev.vars` stays gitignored, always.
 
-### Google OAuth redirect URI
+### Admin sign-in (Cloudflare Access)
 
-In the same Google credential, set the authorized redirect URI to
-`<BETTER_AUTH_URL>/api/auth/callback/google`.
+There is no sign-in secret. `/admin` is guarded by a Cloudflare Access application, and the Worker
+verifies the signed token Access attaches (`app/lib/access.server.ts`). To recreate it on a new account:
 
-**The VALUE is derivable from this repo; the SETTING is not, and only the second
-half is a gap.** The path is not a convention to be remembered: `/api/auth` is
-Better Auth's default `basePath`, `app/lib/auth.server.ts` sets no override, and
-`app/routes/api.auth.$.ts` is the splat route that serves it, so the callback
-path follows from the code. Today `BETTER_AUTH_URL` is the `workers.dev` origin,
-which makes the live value
-`https://dustinedwards.dustin-edwards.workers.dev/api/auth/callback/google`;
-at cutover it becomes the apex and the Google credential must be edited in the
-same change or sign-in breaks with a redirect-URI mismatch.
+1. Zero Trust > Access > Applications > Add > Self-hosted. Name `dustinedwards-login`. Destinations
+   `<domain>/admin` and `<domain>/admin/*`.
+2. A policy (`dustinedwards-admin`) with action Allow and Include: Emails, one per administrator. That
+   policy is the only list of who may administer the site.
+3. Copy the application's AUD tag and the team domain (`<team>.cloudflareaccess.com`) into the
+   `ACCESS_AUD` and `ACCESS_TEAM_DOMAIN` vars in `wrangler.jsonc` (and the example), then deploy.
 
-What is genuinely unrecoverable is **which Google Cloud project holds the
-credential**. Nothing in this repo records it, `wrangler secret list` returns
-names only, and the client id is write-only once set. A rebuild that cannot find
-the existing project creates a new OAuth client, which is a supported path and
-costs only the consent screen being set up again.
+Neither value is a credential. If the application is lost, the site is still safe: with no valid Access
+token the admin refuses everyone, except the read-only smoke bearer. See docs/RUNBOOK.md 5b.
 
 ---
 
@@ -608,7 +595,7 @@ Then check by hand:
 - `/` renders and the mark is brand-colored in both themes
 - `/blog` lists posts and page 2 exists
 - `/search?q=cloudflare` returns results (D1, no AI involved)
-- `/admin` redirects to Google and then admits only `ADMIN_EMAIL`
+- `/admin` redirects to the Cloudflare Access login and then admits only the people in its policy
 - `/media/<some key>?w=320` returns `image/webp` with `x-media-thumb: w=320`
 - `/search/ask` answers, once the corpus is synced
 
@@ -751,19 +738,13 @@ stops holding.
 Alt already written into post markdown survives, because that copy lives in the
 post; the record's copy, which pre-fills future insertions, does not.
 
-**KV contents.** Sessions and cached Ask answers. Both regenerate on use, so this
-is a loss without consequence: everyone signs in again.
+**KV contents.** Cached Ask answers, the health snapshot, draft preview tokens and
+small counters. All regenerate or are reissued on use, so this is a loss without
+consequence (an outstanding draft preview link stops working).
 
-**Auth tables.** `user`, `account`, `session`, `verification`. Live: 1 user, 1
-account, 0 sessions. Better Auth recreates them on first sign-in, so this is also
-a loss without consequence at single-admin scale.
-
-**The Google OAuth client.** Client id and secret are configuration in a Google
-Cloud project, not in this repo, and **nothing here records which Google project
-the current one lives in**, which is the part that is genuinely lost. The
-redirect URI is NOT in that category: its value follows from the code and from
-`BETTER_AUTH_URL`, as section 7 now derives. A rebuild means creating a new OAuth
-client and setting that URI on it.
+**The Access application and its policy.** Account configuration, not in this repo.
+The team domain and AUD tag are in `wrangler.jsonc`, but the list of administrator
+emails lives only in the policy. Recreate it as in section 7.
 
 **Resource ids.** By design. The D1 `database_id` and KV namespace `id` are not in
 git, so a rebuild creates new resources with new ids. That is the intended
@@ -829,7 +810,5 @@ Verified on 2026-08-02 against the live account or the installed toolchain
   Cloudflare documentation for the binding states a paid Images plan is required
   for hosted-image operations; the transform path used here may differ. Untested
   on an account without it.
-- **Google Cloud Console menu paths** are from memory of that console, not
-  verified this session.
 - **`build:og` and `build:diagrams` as recovery steps** are listed from the
   project's own documented flow; they were not run during this session.
