@@ -101,12 +101,16 @@ describe("pattern rules, on the apex host", () => {
     );
   });
 
-  it("the 2019 CV PDF goes to /cv", async () => {
-    await expectMoved("/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/cv");
+  it("the 2019 CV PDF goes to the current CV PDF", async () => {
+    await expectMoved("/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/dustin-edwards-cv.pdf");
+  });
+
+  it("the two protocol scans that still earn traffic go to their protocol", async () => {
+    await expectMoved("/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols");
+    await expectMoved("/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf", "/research/protocols/phage-dna-extraction");
   });
 
   it("every other upload answers 410", async () => {
-    await expectGone("/wp-content/uploads/2023/11/Electrophoresis.pdf");
     await expectGone("/wp-content/uploads/2017/09/Spot-Titer.png");
   });
 
