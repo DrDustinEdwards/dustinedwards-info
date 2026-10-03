@@ -155,7 +155,7 @@ describe("the home page: no twin, so llms.txt and llms-full.txt are its agent pa
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
     expect(llms).toMatch(/^# dustinedwards\.info\n/);
     expect(llms).toContain("/llms-full.txt");
-    expect(llms).toMatch(/The other pages are \/, /);
+    expect(llms).toContain(`- [Home](${SITE_ORIGIN}/):`);
   });
 });
 
@@ -211,7 +211,7 @@ describe("a research page and a protocol: head, twin, and llms.txt", () => {
     expect(await twin.text()).toContain("# ");
 
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
-    expect(llms.split("\n")).toContain(`  ${PROTOCOL_PAGE}`);
+    expect(llms).toContain(`](${SITE_ORIGIN}${PROTOCOL_PAGE}):`);
   });
 
   it.each([RESEARCH_PAGE])("%s renders its text, links its twin, and llms.txt lists the page", async (path) => {
@@ -225,7 +225,7 @@ describe("a research page and a protocol: head, twin, and llms.txt", () => {
     ]);
 
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
-    expect(llms.split("\n")).toContain(`  ${path}`);
+    expect(llms).toContain(`](${SITE_ORIGIN}${path})`);
     expect(llms).toContain("/software/{name}");
   });
 });
@@ -237,7 +237,7 @@ describe("a paper: head declares the twin, llms.txt lists it", () => {
     expect(alternates.map((d) => d.href)).toEqual([`${SITE_ORIGIN}${paperMarkdownPath(PAPER_SLUG)}`]);
 
     const llms = await (await response(llmsLoader as Loader, "/llms.txt")).text();
-    expect(llms.split("\n")).toContain(`  ${paperMarkdownPath(PAPER_SLUG)}`);
+    expect(llms).toContain(`](${SITE_ORIGIN}${paperMarkdownPath(PAPER_SLUG)}):`);
   });
 
   it("the twin is markdown from D1 and names the paper page as canonical, noindex, tagged for the purge", async () => {

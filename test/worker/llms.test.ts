@@ -178,11 +178,17 @@ describe("a save is held to what CI holds", () => {
   });
 
   it("REFUSES a listed paper twin no paper produces, and a page the site does not have", async () => {
-    const response = await put(llmsFile.replace("  /research/publications/10-1128-mra-00888-24.md\n", "  /research/publications/10-1128-mra-00888-24.md\n  /research/publications/not-a-paper.md\n"));
+    /** The file with one more list item after the line that carries `marker`. */
+    const withLineAfter = (marker: string, item: string) => {
+      const next = llmsFile.replace(new RegExp(`^.*${marker}.*\\n`, "m"), (line) => `${line}${item}\n`);
+      expect(next).not.toBe(llmsFile);
+      return next;
+    };
+    const response = await put(withLineAfter("10-1128-mra-00888-24\\.md", "- [Not a paper](https://dustinedwards.info/research/publications/not-a-paper.md): 2020"));
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/advertised with no paper: \/research\/publications\/not-a-paper\.md/);
 
-    const stray = await put(llmsFile.replace("  /software/capsid\n", "  /software/capsid\n  /software/not-a-page\n"));
+    const stray = await put(withLineAfter("software/capsid\\)", "- [Not a page](https://dustinedwards.info/software/not-a-page): x"));
     expect(stray.status).toBe(422);
     expect(((await stray.json()) as { message: string }).message).toMatch(/listed but not a page: \/software\/not-a-page/);
     expect(commits()).toHaveLength(0);

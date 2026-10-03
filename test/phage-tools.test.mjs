@@ -407,8 +407,7 @@ test("lysate volume: refuses zero, empty, fractional and non-numeric inputs", ()
 test("llms.txt links every calculator page", () => {
   const llms = readFileSync(new URL("../content/llms.txt", import.meta.url), "utf8");
   for (const path of new Set(Object.values(TOOLS).map((tool) => tool.path))) {
-    assert.ok(llms.includes(`  ${path}
-`), `llms.txt lacks ${path}`);
+    assert.ok(llms.includes(`](https://dustinedwards.info${path})`), `llms.txt lacks ${path}`);
   }
 });
 

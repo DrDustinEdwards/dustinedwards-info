@@ -480,9 +480,14 @@ for (const item of NAV) {
   for (const href of hrefs) add("header menus", { where: `app/lib/nav.ts ${item.label}`, href, page: null, isPublic: true });
 }
 
-// llms.txt names paths in prose. A path written just before "301s" is documenting the redirect.
+// llms.txt names pages as markdown list links with absolute URLs, and paths in prose. A path written just
+// before "301s" is documenting the redirect.
 {
   const text = readFileSync(join(root, "content", "llms.txt"), "utf8");
+  for (const [, href] of text.matchAll(/\]\(([^)\s]+)\)/g)) {
+    if (!href || !(href.startsWith("/") || SITE_HOST.test(href)) || href.startsWith("//")) continue;
+    add("llms.txt", { where: "content/llms.txt", href, page: null, isPublic: true });
+  }
   const tokens = text.split(/\s+/);
   tokens.forEach((raw, i) => {
     const token = raw.replace(/^[("'`]+/, "").replace(/[)"'`,;:]+$/, "").replace(/\.$/, "");

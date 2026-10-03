@@ -29,7 +29,11 @@ A document has no draft state, so it is always published:
 and the save both call `llmsChecks`, so a file CI passes is the file a save accepts:
 
 - not empty, longer than 200 bytes (the retired seed was 247), at most 64 KiB, LF only, ends with a newline,
-  opens with the `# dustinedwards.info` title;
+  opens with the `# dustinedwards.info` title, followed by a `> ` blockquote summary (the llmstxt.org shape,
+  which PageSpeed's agent-discoverability audit reads);
+- every markdown link is absolute: a page is a list item `- [Title](https://dustinedwards.info/path): note`,
+  and a relative link is refused. The Contact section is a list link to `SITE_ORIGIN`. The long explanations
+  and the paper twin list sit under `## Optional`, as the spec allows;
 - no wide dash;
 - it documents each URL pattern and header an agent acts on (`LLMS_REQUIRED_MENTIONS`: the `/llms-full.txt`
   file, the feeds, the `.md` twin patterns, `Accept: text/markdown`, the paper page and export patterns,
@@ -42,8 +46,9 @@ and the save both call `llmsChecks`, so a file CI passes is the file a save acce
 
 `test/llms.test.mjs` shows each rule firing on the real file with one thing changed.
 
-A paper added later is NOT in the file until its line is written there: the list is by hand, and a missing
-line is not a rule (only an extra one is).
+A page or paper twin is read as listed only from a list-item link (`- [Title](https://host/path)`); a bare
+indented path no longer counts. A paper added later is NOT in the file until its line is written there: the
+list is by hand, and a missing line is not a rule (only an extra one is).
 
 ## The save
 

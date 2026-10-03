@@ -24,6 +24,9 @@ const pagePaths = [...CONTENT_PAGE_PATHS, ...publishedProcedurePaths()];
 /** Built from its code point, so this file carries no literal wide dash. */
 const WIDE_DASH = String.fromCharCode(0x2014);
 
+/** The Capsid list item: one page's line, which the cases below remove or change. */
+const CAPSID = /^- \[Capsid\]\(https:\/\/dustinedwards\.info\/software\/capsid\).*\n/m;
+
 const judge = (/** @type {string} */ text, /** @type {Iterable<string> | undefined} */ twinUrls = undefined) =>
   llmsErrors(llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls }));
 
@@ -70,12 +73,26 @@ test("each URL pattern and header the file must document is required", () => {
 });
 
 test("a page the site has but the file does not list, and a listed page the site has not, are refused", () => {
-  assert.match(refusal((t) => t.replace(/^ {2}\/software\/capsid\n/m, "")), /absent from content\/llms\.txt: \/software\/capsid/);
-  assert.match(refusal((t) => t.replace(/^ {2}\/software\/capsid\n/m, "  /software/capsid\n  /software/not-a-page\n")), /listed but not a page: \/software\/not-a-page/);
+  assert.match(file, CAPSID, "the committed file lists Capsid as a link, so the cases below change something real");
+  assert.match(refusal((t) => t.replace(CAPSID, "")), /absent from content\/llms\.txt: \/software\/capsid/);
+  assert.match(
+    refusal((t) => t.replace(CAPSID, (line) => `${line}- [Nope](https://dustinedwards.info/software/not-a-page): x\n`)),
+    /listed but not a page: \/software\/not-a-page/,
+  );
+});
+
+test("the llmstxt.org shape is required: a summary under the title, and absolute links", () => {
+  assert.match(refusal((t) => t.replace(/^> .*\n\n/m, "")), /blockquote summary/);
+  assert.match(
+    refusal((t) => t.replace("](https://dustinedwards.info/software/capsid)", "](/software/capsid)")),
+    /every markdown link in llms\.txt is absolute[\s\S]*\/software\/capsid/,
+  );
+  // A bare indented path, the old shape, is no longer a listing.
+  assert.match(refusal((t) => t.replace(CAPSID, "  /software/capsid\n")), /absent from content\/llms\.txt: \/software\/capsid/);
 });
 
 test("a contact URL that is not the site's origin is refused", () => {
-  const contact = (file.match(/## Contact\s*\n\s*\n(\S+)/) ?? [])[1] ?? "";
-  assert.ok(contact.startsWith("https://"));
-  assert.match(refusal((t) => t.replace(contact, "https://example.com")), /contact URL is SITE_ORIGIN/);
+  const inContact = /(## Contact\s*\n\s*\n- \[[^\]]*\]\()https?:\/\/[^\s)]+/;
+  assert.match(file, inContact, "the Contact section is a list link, so the case below changes the real one");
+  assert.match(refusal((t) => t.replace(inContact, "$1https://example.com")), /contact URL is SITE_ORIGIN/);
 });
