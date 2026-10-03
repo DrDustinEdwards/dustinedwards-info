@@ -12,6 +12,7 @@ import {
   PENDING_TARGETS,
   PROFILE_TARGET,
   isApexHost,
+  wwwRedirectTarget,
   wordpressDisposition,
 } from "../app/lib/wordpress-redirects.mjs";
 
@@ -29,6 +30,15 @@ test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("WWW.DustinEdwards.info"), true);
   assert.equal(isApexHost("dustinedwards.dustin-edwards.workers.dev"), false);
   assert.equal(isApexHost("localhost"), false);
+});
+
+test("www redirects to the apex in one hop, merging the old-address map, and no other host does", () => {
+  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/", ""), "https://dustinedwards.info/");
+  assert.equal(wwwRedirectTarget("WWW.DustinEdwards.info", "/research/phages", "?x=1"), "https://dustinedwards.info/research/phages?x=1");
+  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/virus-isolation/", "?et_blog"), "https://dustinedwards.info/teaching/virus-isolation");
+  assert.equal(wwwRedirectTarget("www.dustinedwards.info", "/user/", ""), "https://dustinedwards.info/user/");
+  assert.equal(wwwRedirectTarget("dustinedwards.info", "/", ""), null);
+  assert.equal(wwwRedirectTarget("dustinedwards.dustin-edwards.workers.dev", "/", ""), null);
 });
 
 test("every Search Console URL resolves: 200 kept, one 301, or 410, never unmapped", () => {

@@ -121,8 +121,27 @@ describe("pattern rules, on the apex host", () => {
 });
 
 describe("the map's edges", () => {
-  it("www answers the same map", async () => {
-    await expectMoved("/virus-isolation/", "/teaching/virus-isolation", "https://www.dustinedwards.info");
+  it("www sends an old address straight to its replacement on the apex, in one hop", async () => {
+    const response = await get("https://www.dustinedwards.info/virus-isolation/");
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(`${APEX}/teaching/virus-isolation`);
+  });
+
+  it("www sends every other path, with its query, to the same path on the apex", async () => {
+    for (const url of ["https://www.dustinedwards.info/", "http://www.dustinedwards.info/"]) {
+      const response = await get(url);
+      expect(response.status, url).toBe(301);
+      expect(response.headers.get("location"), url).toBe(`${APEX}/`);
+    }
+    const response = await get("http://www.dustinedwards.info/research/phages?x=1");
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(`${APEX}/research/phages?x=1`);
+  });
+
+  it("www sends a removed address to the apex, which answers 410", async () => {
+    const response = await get("https://www.dustinedwards.info/molarity-calculator/");
+    expect(response.status).toBe(301);
+    expect(response.headers.get("location")).toBe(`${APEX}/molarity-calculator/`);
   });
 
   it("NEVER applies on another host: workers.dev passes the path to the Renderer", async () => {
