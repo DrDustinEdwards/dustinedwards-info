@@ -29,6 +29,12 @@
 		{ "pattern": "dustinedwards.info", "custom_domain": true },
 		{ "pattern": "www.dustinedwards.info", "custom_domain": true }
 	],
+	// STATED BECAUSE THE DEFAULT BITES: Wrangler turns the workers.dev address OFF when `routes` is
+	// set and this key is absent (measured 2026-10-03: the first deploy with the Custom Domains
+	// answered 404 there). The address is still used: the browser check's admin cases reach the
+	// layout there, because Access guards /admin on the real domain; the Worker refuses a person
+	// there (no Access token is ever minted for it) and sends X-Robots-Tag: noindex.
+	"workers_dev": true,
 	// INVOCATION LOGS ARE OFF, and that is a PRIVACY setting rather than a cost
 	// one. An invocation log is "enriched with information available to
 	// Cloudflare in the context of the invocation", which measurably included
