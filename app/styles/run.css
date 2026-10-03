@@ -1,0 +1,224 @@
+/*
+ * Run mode (app/enhance/run.ts): the checklist a person works a procedure by, at the bench. Everything here is
+ * inert until the page enhancement adds it, so the procedure page reads exactly as it did. Phone first: the tap
+ * targets are 44px, the bar sits at the bottom where a thumb is, and a done step recedes without disappearing.
+ */
+
+.run-start {
+  font: inherit;
+  font-family: var(--font-sans);
+  min-height: 2.75rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--text);
+  background: var(--text);
+  color: var(--paper);
+  cursor: pointer;
+}
+.run-start:hover {
+  text-decoration: underline;
+}
+
+.run-live,
+.run-alert {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.run-bar {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin-block: 1.5rem 0;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--text);
+  background: var(--paper);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+.run-bar[hidden],
+.run-summary[hidden] {
+  display: none;
+}
+.run-progress {
+  flex: 1 1 10rem;
+  margin: 0;
+  font-weight: 600;
+}
+.run-bar button,
+.run-actions button,
+.run-confirm button {
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.375rem 0.875rem;
+  border: 1px solid var(--text);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.run-bar .run-next,
+.run-bar .run-finish {
+  background: var(--text);
+  color: var(--paper);
+}
+.run-warning {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--text-danger);
+  font-size: 0.875rem;
+}
+.run-confirm {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.procedure[data-run="on"] .procedure-step {
+  padding: 0.75rem 0.75rem 0.75rem 0.5rem;
+  border-inline-start: 4px solid transparent;
+}
+.procedure[data-run="on"] .procedure-step[aria-current="step"] {
+  border-inline-start-color: var(--brand);
+  background: var(--dust);
+}
+.procedure[data-run="on"] .procedure-step.run-done > .procedure-step-text {
+  color: var(--text-secondary);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+/* A critical step is marked before it is read: the flag stays open and the step's edge turns. */
+.procedure[data-run="on"] .procedure-step:has(.procedure-flag-critical):not(.run-done) {
+  border-inline-start-color: var(--text-danger);
+}
+
+.run-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-block-start: 0.625rem;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+.run-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-block-size: 2.75rem;
+  cursor: pointer;
+}
+.run-done input {
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  accent-color: var(--text);
+}
+
+.run-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.run-clock {
+  min-inline-size: 4.5ch;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 1.125rem;
+}
+.run-timer[data-state="done"] .run-clock {
+  color: var(--text-danger);
+}
+.run-timer button {
+  font: inherit;
+  min-height: 2.75rem;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.run-timer-reset[hidden] {
+  display: none;
+}
+
+.run-note {
+  flex-basis: 100%;
+}
+.run-note > summary {
+  min-block-size: 2.75rem;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+.run-note-text {
+  display: block;
+  inline-size: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--paper);
+  color: var(--text);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.run-summary {
+  margin-block-start: 1.5rem;
+  padding: 1rem;
+  border: 1px solid var(--text);
+  font-family: var(--font-sans);
+}
+.run-summary h2 {
+  margin-block-start: 0;
+}
+.run-summary label {
+  display: block;
+  margin-block: 0.75rem 0.25rem;
+  font-weight: 600;
+}
+.run-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-block-end: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-start,
+  .run-bar button {
+    transition: none;
+  }
+}
+
+/* A printed run is the record: the steps with their checks and notes, none of the controls. */
+@media print {
+  .run-start,
+  .run-bar,
+  .run-actions,
+  .run-timer-act,
+  .run-timer-reset {
+    display: none !important;
+  }
+  .run-note:not([open]) {
+    display: none;
+  }
+  .run-note > summary {
+    display: none;
+  }
+  .run-note-text {
+    border: 0;
+    padding: 0;
+    resize: none;
+  }
+  .procedure[data-run="on"] .procedure-step {
+    break-inside: avoid;
+  }
+  .procedure[data-run="on"] .procedure-step.run-done > .procedure-step-text {
+    text-decoration: none;
+  }
+}
