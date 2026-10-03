@@ -7,6 +7,10 @@ import { runHealthChecks } from "~/lib/health/checks.server";
 import { runTool } from "~/lib/operator/api.server";
 
 import phagesPage from "../../content/pages/research-phages.md?raw";
+// The pages that state a phage fact by token: a phage write re-derives each of them (PHAGE_FACT_PAGES).
+import researchPage from "../../content/pages/research.md?raw";
+import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?raw";
+import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
 import { stubGitHub, type GitHubStub } from "./github-stub";
 import { seedPages } from "./seed";
@@ -52,7 +56,14 @@ let gh: GitHubStub;
 beforeEach(async () => {
   await env.DB.prepare("DELETE FROM phages").run();
   await seedPages([PATH]);
-  gh = stubGitHub({ ...files, ...PAPERS, [PAGE_FILE]: phagesPage });
+  gh = stubGitHub({
+    ...files,
+    ...PAPERS,
+    [PAGE_FILE]: phagesPage,
+    "content/pages/research.md": researchPage,
+    "content/pages/research-bacteriophages.md": bacteriophagesPage,
+    "content/pages/research-science-education.md": scienceEducationPage,
+  });
   purge.mockClear();
 });
 

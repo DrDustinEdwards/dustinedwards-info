@@ -7,10 +7,12 @@ import { compilePage } from "../app/lib/pages/compile.mjs";
 import {
   HOSTS,
   PHAGES_PAGE_PATH,
+  PHAGE_FACT_PAGES,
   SECTIONS_MARKER,
   TABLE_MARKER,
   compilePhage,
   expandPhagePage,
+  expandPhageTokens,
   phageSection,
   phageSetErrors,
   phageTableMarkdown,
@@ -230,12 +232,61 @@ test("the table has a PhagesDB link for exactly the phages with a verified recor
   }
 });
 
-test("the page states the count and the span its rows give, so an edit that adds a phage reminds the writer", () => {
-  const text = pageRaw;
+test("the page states the count and the span its rows give, by token, so an added phage updates it", async () => {
+  assert.doesNotMatch(pageRaw, /\b\d+ phages\b/, "the intro types no count: a token reads it from the rows");
+  const result = await compilePhagePage(pageRaw);
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  const text = result.markdown;
   assert.match(text, new RegExp(`It has ${phages.length} phages found from ${phages[0]?.year} to ${phages[phages.length - 1]?.year}\\.`));
   assert.match(text, new RegExp(`The ${phages.filter((p) => p.year === 2017).length} phages from 2017`));
   assert.match(text, new RegExp(`${phages.filter((p) => p.host === "foliorum").length} of them`));
   assert.equal(phages.filter((p) => p.host === null).length, 0, "the intro no longer says any phage lacks a host");
+  assert.doesNotMatch(text, /\{\{/, "no token is left unexpanded");
+});
+
+test("every phage fact a page states is a token: no page types a count of phages, and the list of token pages is exact", () => {
+  const pagesDir = new URL("../content/pages/", import.meta.url);
+  const using = [];
+  for (const file of readdirSync(pagesDir).filter((name) => name.endsWith(".md"))) {
+    const raw = readFileSync(new URL(file, pagesDir), "utf8");
+    assert.doesNotMatch(raw, /\b[0-9][0-9,]*\s+(?:bacterio)?phages?\b/, `${file} types a count of phages; use {{phages.count}} or a host count`);
+    if (raw.includes("{{phage")) using.push(file);
+  }
+  const listed = PHAGE_FACT_PAGES.map((path) => `${path.slice(1).replaceAll("/", "-")}.md`);
+  const others = using.filter((file) => file !== "research-phages.md").sort();
+  assert.deepEqual(others, [...listed].sort(), "PHAGE_FACT_PAGES is every page that uses a token, besides the table's: a phage write refreshes exactly these");
+});
+
+test("phage tokens read the rows, format numbers, and refuse a name that names nothing", () => {
+  const rows = /** @type {any[]} */ (phages);
+  const ok = (/** @type {string} */ text) => {
+    const result = expandPhageTokens(text, rows);
+    assert.equal(result.ok, true, JSON.stringify(result));
+    return result.ok ? result.text : "";
+  };
+  assert.equal(ok("{{phages.count}}"), String(phages.length));
+  assert.equal(ok("{{ phages.firstYear }} to {{phages.lastYear}}"), `${phages[0]?.year} to ${phages[phages.length - 1]?.year}`);
+  assert.equal(ok("{{phages.host.smegmatis.years}}"), "2017");
+  assert.equal(ok("{{phage.loca.bp}} bp, {{phage.loca.genes}} genes in {{phage.loca.county}}"), "17,475 bp, 25 genes in Erath County");
+  assert.equal(ok("{{phages.commonCounty(godfather,fizzles,loca,indylu)}}"), "Erath County");
+  for (const bad of ["{{phages.count2}}", "{{phage.nobody.bp}}", "{{phage.acorn15.genes}}", "{{phages.host.nowhere.count}}", "{{phages.commonCounty(godfather,finny)}}"]) {
+    const result = expandPhageTokens(bad, rows);
+    assert.equal(result.ok, false, `${bad} was accepted`);
+  }
+  assert.equal(expandPhageTokens("{{phages.count}}", undefined).ok, false, "a token with no rows loaded is an error, not an empty string");
+  assert.deepEqual(expandPhageTokens("plain text", undefined), { ok: true, text: "plain text" });
+});
+
+test("the genome fields are whole numbers in range, or absent", async () => {
+  const bad = async (/** @type {string} */ line) => (await refusal("loca", (raw) => raw.replace("genes: 25", line)));
+  assert.match(await bad("genes: 0"), /genes is 0/);
+  assert.match(await bad("genes: 2.5"), /genes is 2\.5/);
+  assert.match(await bad("genes: many"), /genes is "many"/);
+  assert.match(await refusal("loca", (raw) => raw.replace("genome_bp: 17475", "genome_bp: 12")), /genome_bp is 12/);
+  const result = await compile("loca", read("loca"));
+  assert.equal(result.ok, true);
+  if (result.ok) assert.deepEqual([result.phage.genomeBp, result.phage.genes], [17475, 25]);
 });
 
 test("the hosts the table names are the two the page's prose names", () => {

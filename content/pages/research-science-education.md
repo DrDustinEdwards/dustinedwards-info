@@ -28,15 +28,15 @@ A CURE ends in results that others can use. In the Tarleton program, once a phag
 
 | Phage | Host | Notes | Paper |
 | --- | --- | --- | --- |
-| Godfather | *Microbacterium foliorum* | Erath County soil; 17,452 bp, 24 genes, cluster EE | [2025](/research/publications/10-1128-mra-00888-24/) |
-| Loca | *Microbacterium foliorum* | From a shopping-cart handle swab, Erath County; 17,475 bp, 25 genes | [2022](/research/publications/10-1128-mra-00783-22/) |
-| Fizzles | *Microbacterium foliorum* | Anthill soil, Erath County; 62,078 bp, 104 genes | [2022](/research/publications/10-1128-mra-01077-21/) |
-| IndyLu | *Microbacterium foliorum* | Erath County soil; 41,958 bp, 71 genes, one tRNA | [2021](/research/publications/10-1128-mra-01079-21/) |
+| Godfather | *Microbacterium foliorum* | {{phage.godfather.county}} soil; {{phage.godfather.bp}} bp, {{phage.godfather.genes}} genes, cluster EE | [2025](/research/publications/10-1128-mra-00888-24/) |
+| Loca | *Microbacterium foliorum* | From a shopping-cart handle swab, {{phage.loca.county}}; {{phage.loca.bp}} bp, {{phage.loca.genes}} genes | [2022](/research/publications/10-1128-mra-00783-22/) |
+| Fizzles | *Microbacterium foliorum* | Anthill soil, {{phage.fizzles.county}}; {{phage.fizzles.bp}} bp, {{phage.fizzles.genes}} genes | [2022](/research/publications/10-1128-mra-01077-21/) |
+| IndyLu | *Microbacterium foliorum* | {{phage.indylu.county}} soil; {{phage.indylu.bp}} bp, {{phage.indylu.genes}} genes, one tRNA | [2021](/research/publications/10-1128-mra-01079-21/) |
 | Joy99 | *Mycobacterium smegmatis* | Annotated by high school students at a partner school; 59,837 bp, 97 genes | [2021](/research/publications/10-1128-mra-00556-21/) |
 | Tripl3t and Zeuska | *Mycobacterium smegmatis* | Annotated by high school students at partner schools; about 53,600 bp each | [2021](/research/publications/10-1128-mra-00558-21/) |
-| Finny | *Microbacterium foliorum* | 40,313 bp, 63 genes | [2019](/research/publications/10-1128-mra-01039-19/) |
-| Ryadel | *Mycobacterium smegmatis* | Cluster O, elongated head; 72,658 bp, 132 genes | [2019](/research/publications/10-1128-mra-01594-18/) |
-| Arlo | *Mycobacterium smegmatis* | Erath County soil; 52,960 bp, 96 genes, cluster A1 | [2018](/research/publications/10-1128-mra-01242-18/) |
+| Finny | *Microbacterium foliorum* | {{phage.finny.bp}} bp, {{phage.finny.genes}} genes | [2019](/research/publications/10-1128-mra-01039-19/) |
+| Ryadel | *Mycobacterium smegmatis* | Cluster O, elongated head; {{phage.ryadel.bp}} bp, {{phage.ryadel.genes}} genes | [2019](/research/publications/10-1128-mra-01594-18/) |
+| Arlo | *Mycobacterium smegmatis* | {{phage.arlo.county}} soil; {{phage.arlo.bp}} bp, {{phage.arlo.genes}} genes, cluster A1 | [2018](/research/publications/10-1128-mra-01242-18/) |
 
 Every phage the program has found, published or not, is in the [phage table](/research/phages). The full list of papers is under [publications](/research/publications).
 
