@@ -20,6 +20,27 @@ export function isApexHost(hostname) {
   return APEX_HOSTS.has(hostname.toLowerCase());
 }
 
+const APEX_ORIGIN = "https://dustinedwards.info";
+
+/**
+ * Where a request to `www` goes: the apex, in ONE hop. The apex is the canonical host, so `www` serving the same
+ * pages would be a second copy of every URL. An old WordPress address goes straight to the page that replaces it
+ * (the map's own Location, which carries no query), so a `www` reader of an old URL is not sent through two
+ * redirects. Everything else keeps its path and query. A removed address (410) goes to the apex too, which
+ * answers it. Null for any host but `www`.
+ *
+ * @param {string} hostname
+ * @param {string} pathname
+ * @param {string} search the request's query string, with its `?`, or ""
+ * @returns {string | null} an absolute https URL on the apex
+ */
+export function wwwRedirectTarget(hostname, pathname, search) {
+  if (hostname.toLowerCase() !== "www.dustinedwards.info") return null;
+  const disposition = wordpressDisposition(pathname);
+  const target = disposition?.status === 301 ? disposition.location : `${pathname}${search}`;
+  return new URL(target, APEX_ORIGIN).toString();
+}
+
 /**
  * Not kept, and not put in R2: its protocol is rewritten as a page, so the old PDF address, which
  * still earns clicks, points there (Dustin, 2026-09-27).
