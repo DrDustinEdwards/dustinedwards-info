@@ -23,7 +23,6 @@ import {
 } from "~/lib/admin/posts-actions.server";
 import { deleteLeftBehind } from "~/lib/editor/delete-left.mjs";
 import { FILTER_KEYS, postsHref, readFilters } from "~/lib/admin/posts-filters";
-import { fetchPostReadership } from "~/lib/admin/traffic.server";
 import { askAvailable, askStatusContext } from "~/lib/search/ask.server";
 import { readAskBudget } from "~/lib/search/ask-guard.server";
 import type { Route } from "./+types/admin.posts._index";
@@ -82,10 +81,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         )
       : Promise.resolve({ budget: null, budgetError: null });
 
-    const readershipPromise = timed(timings, "ae_post_readership", () =>
-      fetchPostReadership(env),
-    );
-
     const [rows, tagRows] = await timed(timings, "d1_admin_posts", () =>
       Promise.all([listAllPostsForAdmin(env), listAllPostTagsForAdmin(env)]),
     );
@@ -128,8 +123,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 
     const { budget, budgetError } = await budgetPromise;
 
-    const readership = await readershipPromise;
-
     const payload = {
       posts,
       /* With Ask on, a null `ask` is a failed status read, never "up to date". */
@@ -149,8 +142,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
         scheduled: all.filter((post) => post.state === "scheduled").length,
       },
       tagOptions: [...new Set(tagRows.map((row) => row.tag))].sort(),
-      /** The whole report: only `complete` and the error arm tell a measured zero from an unasked question. */
-      readership,
     };
 
     return data(payload);
@@ -252,7 +243,6 @@ export default function AdminPosts({
     total,
     statusCounts,
     tagOptions,
-    readership,
   } = loaderData;
   const scheduledTotal = statusCounts.scheduled;
   const askUnread = askOn && !ask;
@@ -413,7 +403,6 @@ export default function AdminPosts({
           filtered={filtered}
           total={total}
           tagOptions={tagOptions}
-          readership={readership}
           askOn={askOn}
           ask={ask}
           askUnread={askUnread}

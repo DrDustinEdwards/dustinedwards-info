@@ -26,7 +26,7 @@ enhanceSearchTrigger();
 
 /**
  * A custom event rather than `import()`, because vite wraps every `import()` in a preload helper that
- * would be a large share of this bundle. `strict-dynamic` allows the inserted script with no nonce.
+ * would be a large share of this bundle. 'self' allows the inserted script with no nonce.
  */
 const PALETTE_OPEN = "palette:open";
 
@@ -44,7 +44,7 @@ function toSearch(reason: unknown) {
 function openPalette() {
   const trigger = document.querySelector<HTMLElement>("[data-palette]");
   // The URL is hashed by the app build; the `?url` import in `search-trigger.tsx` is its one statement.
-  // Held to the loader's rule, because the inserted script inherits 'strict-dynamic' trust. The
+  // Held to the loader's rule, because 'self' trusts whatever the loader inserts from this origin. The
   // element resolves and normalizes the URL, so `..` is gone before the check reads it, and the
   // origin is followed by the prefix's own `/`, so a longer host cannot match. Inline rather than a
   // shared function: every public page loads this bundle, and its budget has no room for one.

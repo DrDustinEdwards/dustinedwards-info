@@ -12,7 +12,7 @@ export type EnhanceModule = keyof typeof ENHANCE_URLS;
 
 // A marker, not a script: a `<template>` is never fetched or run. The loader app/root.tsx renders
 // at the end of <body> (app/lib/enhance-loader.mjs) inserts one module script per URL, which the
-// policy trusts through 'strict-dynamic', so a cached page needs no nonce.
+// policy allows as same-origin ('self'), so a cached page needs no nonce.
 export function Enhance({ module }: { module: EnhanceModule }) {
   return <template data-enhance={ENHANCE_URLS[module]} />;
 }

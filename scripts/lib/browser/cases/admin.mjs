@@ -136,7 +136,6 @@ export async function run({ browser }) {
       ["/admin/media?view=grid", "the media library, grid"],
       ["/admin/media?view=list", "the media library, list"],
       ["/admin/tools", "tools"],
-      ["/admin/origin-requests", "origin requests"],
       ["/admin/mentions", "the mentions queue"],
     ];
     for (const [path, what] of SURFACES) {

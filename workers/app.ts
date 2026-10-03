@@ -2,7 +2,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { createRequestHandler, RouterContextProvider } from "react-router";
 
-import { analyticsPath } from "~/lib/analytics-path.mjs";
 import { cloudflareContext, documentHandlerContext, nonceContext } from "~/lib/context";
 import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.mjs";
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
@@ -27,7 +26,6 @@ import {
 import { isUnpolicedType } from "./feed-types.mjs";
 import { applyHeaderSet } from "../packages/security-headers/headers.mjs";
 import { handleMediaEvents } from "./media-events";
-import { errorMessage } from "~/lib/error-message.mjs";
 import { isWorkerPreview } from "~/lib/worker-preview";
 
 export { AskBudget } from "./ask-budget";
@@ -94,49 +92,6 @@ function applySecurityHeaders(headers: Headers) {
   applyHeaderSet(headers, SECURITY_HEADERS);
 }
 
-// No client identifier: no cookie, IP, user agent or anything derived from them. Wrapped, because
-// "returns immediately" is not "never throws".
-function recordTraffic(request: Request, response: Response, env: Env, url: URL) {
-  try {
-    const type = response.headers.get("content-type") ?? "";
-    if (!type.includes("text/html")) return;
-    if (response.status !== 200) return;
-    if (isAdminPath(url.pathname)) return;
-
-    let refererHost = "";
-    const referer = request.headers.get("referer");
-    if (referer) {
-      try {
-        refererHost = new URL(referer).hostname;
-      } catch {
-        refererHost = "";
-      }
-    }
-
-    const mobile = request.headers.get("sec-ch-ua-mobile");
-    const device = mobile === "?1" ? "mobile" : mobile === "?0" ? "desktop" : "unknown";
-
-    // Redacted before the write, a security control: `/preview/<token>` carries a capability.
-    const path = analyticsPath(url.pathname);
-
-    env.ANALYTICS.writeDataPoint({
-      blobs: [path, refererHost, (request.cf?.country as string) ?? "", device],
-      doubles: [1],
-      // The index is the sampling key; the redacted path keeps per-path counts meaningful.
-      indexes: [path],
-    });
-  } catch (error) {
-    /* Analytics must never cost a reader their page, but a broken write is logged, or the traffic
-     * view reads a failing binding as a quiet day. */
-    console.error(
-      JSON.stringify({
-        alert: "traffic-write-failed",
-        detail: errorMessage(error),
-      }),
-    );
-  }
-}
-
 /**
  * Every header a rendered response leaves with, on both exits of the Renderer: timing, the security
  * set, the report endpoint, the policy (feeds excepted) and the uncached default.
@@ -156,8 +111,7 @@ function applyDocumentHeaders(
 }
 
 /**
- * The cacheable entrypoint; `default` has cache disabled. It must not write the traffic row, which
- * would then count only misses. Document headers belong here, or they are absent from every hit.
+ * The cacheable entrypoint; `default` has cache disabled. Document headers belong here, or they are absent from every hit.
  */
 export class Renderer extends WorkerEntrypoint<Env, RendererProps> {
   override async fetch(request: Request): Promise<Response> {
@@ -244,8 +198,7 @@ type FetchArgs = Parameters<NonNullable<ExportedHandler<Env>["fetch"]>>;
 
 /*
  * THE GATEWAY. Cache disabled, so it runs on every request (check:urls reads this phrase).
- * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme; the
- * traffic row last, so hits are counted too.
+ * Order is load-bearing: the HTTPS redirect first, because the cache key ignores the scheme.
  */
 export default {
   async fetch(request, env, ctx) {
@@ -265,7 +218,7 @@ export default {
 
 } satisfies ExportedHandler<Env>;
 
-async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
+async function gateway(...[request, , ctx]: FetchArgs): Promise<Response> {
   // First, so `http://www/x` is one hop to `https://apex/x` and not two.
   const requested = new URL(request.url);
   const apex = wwwRedirectTarget(requested.hostname, requested.pathname, requested.search);
@@ -324,8 +277,6 @@ async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
   const shared = response.headers.get("cache-control") === SHARED_CACHE_CONTROL;
   const out =
     shared && request.headers.has("cookie") ? withHeader(response, "cache-control", UNCACHED) : response;
-
-  recordTraffic(request, out, env, url);
 
   return out;
 }

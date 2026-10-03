@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { ENHANCE_LOADER } from "../../../app/lib/enhance-loader.mjs";
 import { buildSpeculationRules } from "../../../app/lib/speculation.mjs";
 import {
+  APPROVED_SCRIPTS,
   contentSecurityPolicy,
   enhanceLoaderHash,
   isAdminPath,
@@ -24,8 +25,9 @@ import { documentHeadersOf } from "./static-set-and-cache.mjs";
 /** @param {string} code workers/app.ts with its comments stripped */
 export async function run(code) {
   /*
-   * unsafe-inline IS THE ASSERTION THAT MATTERS: it silences the report, breaks nothing, and is
-   * what an injected script needs. strict-dynamic makes browsers ignore it until it is dropped.
+   * unsafe-inline IS THE ASSERTION THAT MATTERS: it silences the report and breaks nothing, so the
+   * policy keeps working on paper while protecting nothing. A script that is needed is approved by
+   * name in APPROVED_SCRIPTS instead.
    */
 
   console.log("\n  content security policy");
@@ -291,14 +293,46 @@ export async function run(code) {
       "every reader shares for the cache lifetime, which is what the loader hash replaced.",
   );
   ok(
-    "the PUBLIC script-src is exactly the loader hash, the page's rules hash and 'strict-dynamic'",
+    "the PUBLIC script-src is exactly the loader hash, the page's rules hash, 'self' and the approved files",
     JSON.stringify(sourcesOf(scriptSrc)) ===
-      JSON.stringify([`'${expectedHash}'`, `'${expectedRules}'`, "'strict-dynamic'"]),
+      JSON.stringify([`'${expectedHash}'`, `'${expectedRules}'`, "'self'", ...APPROVED_SCRIPTS]),
     "public script-src is " +
       JSON.stringify(scriptSrc) +
       ". A third hash is an inline script nobody reviewed; a missing loader hash refuses every " +
       "enhancement; a missing rules hash refuses the speculation block silently. " +
       "'inline-speculation-rules' is not a substitute: Chrome and WebKit refuse the block with it.",
+  );
+
+  /*
+   * THE APPROVAL LIST. A third-party script is allowed when Dustin approves it, and approving one is
+   * editing RATIFIED below in the same commit as APPROVED_SCRIPTS (and the privacy page). That is the
+   * whole mechanism: deliberate, one line, impossible to do by accident. It is not a ban.
+   */
+  const RATIFIED_SCRIPTS = ["https://static.cloudflareinsights.com/beacon.min.js"];
+  ok(
+    "the approved third-party scripts are exactly the ratified list",
+    JSON.stringify(APPROVED_SCRIPTS) === JSON.stringify(RATIFIED_SCRIPTS),
+    "APPROVED_SCRIPTS in workers/csp.mjs is " +
+      JSON.stringify(APPROVED_SCRIPTS) +
+      ". Change RATIFIED_SCRIPTS here, the privacy page and the Cloudflare-side setting in the " +
+      "same commit, with Dustin's approval of the line.",
+  );
+  ok(
+    "every approved script is one exact https file URL: no wildcard, no bare host, no scheme",
+    APPROVED_SCRIPTS.every((src) => {
+      try {
+        const u = new URL(src);
+        return u.protocol === "https:" && u.pathname.length > 1 && !src.includes("*") && !u.search;
+      } catch {
+        return false;
+      }
+    }),
+    "a host or a wildcard trusts everything served from it, not the one file that was approved",
+  );
+  ok(
+    "neither script-src carries 'strict-dynamic', which makes browsers ignore every host source",
+    !scriptSrc.includes("'strict-dynamic'") && !adminScriptSrc.includes("'strict-dynamic'"),
+    "with it present the approved files are silently refused and the beacon is reported as a violation",
   );
 
   /* ADMIN: the same sources plus this render's nonce, which <Scripts> and the sidebar script need. */
@@ -325,8 +359,7 @@ export async function run(code) {
       `the ${arm} script-src does NOT carry 'unsafe-inline'`,
       !directive.includes("'unsafe-inline'"),
       "adding it is the easy way to silence a violation report and it reduces the " +
-        "policy to decoration. 'strict-dynamic' makes browsers ignore it, so this " +
-        "change would look harmless and would not be.",
+        "policy to decoration: every inline script on the site is a hash, so it is never needed.",
     );
     ok(
       `the ${arm} script-src does NOT carry 'unsafe-eval'`,
@@ -342,7 +375,7 @@ export async function run(code) {
       `the ${arm} policy keeps object-src 'none' and base-uri 'none'`,
       directiveIn(csp, "object-src") === "object-src 'none'" &&
         directiveIn(csp, "base-uri") === "base-uri 'none'",
-      "a hash-and-strict-dynamic policy is strict only with both: a plugin object or an " +
+      "a hash-and-allowlist policy is strict only with both: a plugin object or an " +
         "injected <base> moves where the trusted scripts load from",
     );
   }

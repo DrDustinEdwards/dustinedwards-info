@@ -42,7 +42,6 @@ const ROUTES = [
   ["login", "/login", "public"],
   ["not-found", "/this-route-does-not-exist", "public"],
   ["admin", "/admin", "admin"],
-  ["admin-origin-requests", "/admin/origin-requests", "admin"],
   ["admin-mentions", "/admin/mentions", "admin"],
   ["admin-tools", "/admin/tools", "admin"],
   ["admin-media", "/admin/media", "admin"],

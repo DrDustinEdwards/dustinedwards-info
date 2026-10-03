@@ -4,7 +4,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import * as analyticsCapture from "./lib/headers/analytics-capture.mjs";
 import * as csp from "./lib/headers/csp.mjs";
 import * as entrypointCache from "./lib/headers/entrypoint-cache.mjs";
 import * as gatewayAndPublicRoutes from "./lib/headers/gateway-and-public-routes.mjs";
@@ -33,7 +32,6 @@ const { declared, applications } = staticSetAndCache.run(code);
 await csp.run(code);
 noncePropagation.run();
 runPreview();
-analyticsCapture.run(code);
 
 console.log(
   `\n  ${Object.keys(declared).length} static header(s) declared, ${applications - 1} application site(s)`,
