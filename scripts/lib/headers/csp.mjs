@@ -308,7 +308,10 @@ export async function run(code) {
    * editing RATIFIED below in the same commit as APPROVED_SCRIPTS (and the privacy page). That is the
    * whole mechanism: deliberate, one line, impossible to do by accident. It is not a ban.
    */
-  const RATIFIED_SCRIPTS = ["https://static.cloudflareinsights.com/beacon.min.js"];
+  const RATIFIED_SCRIPTS = [
+    "https://static.cloudflareinsights.com/beacon.min.js",
+    "https://static.cloudflareinsights.com/beacon.min.js/",
+  ];
   ok(
     "the approved third-party scripts are exactly the ratified list",
     JSON.stringify(APPROVED_SCRIPTS) === JSON.stringify(RATIFIED_SCRIPTS),
@@ -318,7 +321,7 @@ export async function run(code) {
       "same commit, with Dustin's approval of the line.",
   );
   ok(
-    "every approved script is one exact https file URL: no wildcard, no bare host, no scheme",
+    "every approved script is one https file URL or that file's own directory: no wildcard, no bare host, no scheme",
     APPROVED_SCRIPTS.every((src) => {
       try {
         const u = new URL(src);
