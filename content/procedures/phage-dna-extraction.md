@@ -44,7 +44,7 @@ materials:
     display: nuclease mix (DNase I plus RNase A)
     amount: 20 µl
     per: 5 ml
-    note: "20 µl per 5 ml of lysate. The lab's protocol names it only as DNase I plus RNase A. The Phage Discovery Guide gives a recipe in its [reagent recipes](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=231)."
+    note: "20 µl per 5 ml of lysate. The Phage Discovery Guide gives a recipe in its [reagent recipes](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=231)."
   - name: zinc chloride
     display: ZnCl2
     stock: [2 M]
@@ -56,13 +56,13 @@ materials:
     amount: 500 µl
     per: tube
     solution: tes-buffer
-    note: "0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS (the lab's protocol as copied into its notebooks from 2018 on)."
+    note: "0.1 M Tris-HCl, pH 8; 0.1 M EDTA; 0.5% SDS."
   - name: proteinase K
     stock: [10 mg/ml, 20 mg/ml]
     final: 50 to 100 µg/ml
     amount: 1.25 to 5 µl
     per: tube
-    note: "50 to 100 µg/ml final. The lab has used two stocks. Its protocol, as copied into notebooks in 2018, 2019 and 2021, lists 10 mg/ml. The [Finny genome announcement](/research/publications/10-1128-mra-01039-19/) (2019) reports 20 mg/ml, which is also the stock the Phage Discovery Guide lists, as a 2023 notebook copied it. Check the label on your tube, and use the volume for that stock in step 6."
+    note: "50 to 100 µg/ml final, from either a 10 mg/ml or a 20 mg/ml stock; the Phage Discovery Guide lists 20 mg/ml. Check the label on your tube, and use the volume for that stock in step 6."
   - name: potassium acetate
     display: potassium acetate (pH 5.2)
     stock: [3 M]
@@ -73,7 +73,7 @@ materials:
     stock: [100%, 80%]
     amount: 500 µl
     per: tube
-    note: "500 µl per tube, at room temperature. The lab has used both 100% and 80% isopropanol."
+    note: "500 µl per tube, at room temperature. Either 100% or 80% isopropanol works."
   - name: ethanol
     stock: [70%]
     amount: 250 µl
@@ -124,7 +124,7 @@ troubleshooting:
     step: "7"
     problem: "The mix sets solid on adding potassium acetate, and the preps come out salty."
     reason: "The acetate precipitate was not mixed to a fluffy consistency before the ice."
-    solution: "Shake it until the precipitate is gel-like and very white, then 15 minutes on ice. In one lab this fixed a run of salty preps (2,467.7 ng/µl, A260/280 2.06, A260/230 2.24)."
+    solution: "Shake it until the precipitate is gel-like and very white, then 15 minutes on ice."
   - id: precipitate-carryover
     step: "8"
     problem: "Salt in the final DNA: a large A230 peak and a low A260/230."
@@ -133,20 +133,20 @@ troubleshooting:
   - id: no-ethanol-wash
     step: "9 to 12"
     problem: "Very low yield and A260/230, with pellets too salty to dissolve."
-    reason: "No ethanol wash. One group failed five times running without it (5.7 to 21.5 ng/µl, A260/230 0.03 to 0.07)."
+    reason: "The ethanol washes were skipped, leaving salt in the pellet."
     solution: "Room-temperature isopropanol and two room-temperature 70% ethanol washes, as in steps 9 to 12."
   - id: phage-buffer
     step: "5"
     problem: "The zinc chloride pellet does not give DNA."
     reason: "It was resuspended in phage buffer instead of TES."
-    solution: "Use TES, not phage buffer. The notebook marks phage buffer as never to be done."
+    solution: "Use TES, not phage buffer."
   - id: salt-pellet
     step: "13 to 14"
-    problem: "A white, viscous \"pellet\" that soaks up the 50 µl of water. One read 100 ng/µl on the NanoDrop and failed PCR prep."
+    problem: "A white, viscous \"pellet\" that soaks up the 50 µl of water and reads high on the NanoDrop."
     reason: "It is salt, not DNA."
     solution: "Clean it up with the [rescue](#rescuing-salty-or-dilute-dna), or seed fresh webbed plates from the ~100 µl of lysate kept in reserve and make another prep."
-expected_results: "When it worked, the method gave 616 to 1,803 ng/µl with A260/280 of 1.88 to 2.10 and A260/230 of 1.07 to 1.71, and it recovered usable DNA from a 7.1 x 10^6 pfu/ml lysate that had given too little by the Guide's resin column. The lab's threshold for restriction digests was 100 ng/µl by Qubit."
-limitations: "Yield depends on the lysate's titer: in this lab, lysates of about 10^7 pfu/ml gave persistently low yields that more tubes did not fix. The method is written for 5 ml in 5 tubes, and a single 10 ml batch gelled at the potassium acetate step. The NanoDrop overreads these preps, so the concentration is read on the Qubit."
+expected_results: "Good preps gave 616 to 1,803 ng/µl with A260/280 of 1.88 to 2.10 and A260/230 of 1.07 to 1.71, and the method recovered usable DNA from a 7.1 x 10^6 pfu/ml lysate that had given too little by the Guide's resin column. The lab's threshold for restriction digests is 100 ng/µl by Qubit."
+limitations: "Yield depends on the lysate's titer: with lysates of about 10^7 pfu/ml, more tubes do not raise the yield, and a higher-titer lysate does. The method is written for 5 ml in 5 tubes; larger single batches can gel at the potassium acetate step. The NanoDrop overreads these preps when salt is present, so the concentration is read on the Qubit."
 references:
   - "Santos MA (1991). An improved method for the small scale preparation of bacteriophage DNA based on phage precipitation by zinc chloride. *Nucleic Acids Research* 19(19):5442. [doi:10.1093/nar/19.19.5442](https://doi.org/10.1093/nar/19.19.5442)"
   - "SEA-PHAGES. [Phage Discovery Guide](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf), July 2025 edition: Protocol 9.2a (PEG precipitation), Protocol 9.2b (zinc chloride precipitation) and the reagent recipes. Online at [discoveryguide.seaphages.org](https://discoveryguide.seaphages.org/)."
@@ -162,43 +162,43 @@ references:
 
 This is the lab's phage DNA extraction (also called phage DNA isolation, purification or preparation) from a high-titer bacteriophage lysate, as run in the Tarleton SEA-PHAGES lab. It is a column-free method: zinc chloride collects the phage, SDS and proteinase K open the capsids, potassium acetate takes out the protein and SDS, and isopropanol brings down the DNA. It needs no kit or column, and the lab has used it since 2018, in place of the resin column in the [SEA-PHAGES Phage Discovery Guide](https://discoveryguide.seaphages.org/). After the method come the checks for DNA quantity and quality before sequencing, and a rescue for salty or dilute DNA. It is written for students and instructors running phage DNA preparation in a teaching lab.
 
-The method is Santos's zinc chloride precipitation ([Santos 1991](#references)). The lab first ran it in the fall of 2018: the earliest lab notebooks that record it are from that course, with entries dated from late October 2018. The lab's published genome announcements describe it as "a modified zinc chloride precipitation method," citing Santos and the Phage Discovery Guide. Examples are the announcements for [Finny](/research/publications/10-1128-mra-01039-19/), [IndyLu](/research/publications/10-1128-mra-01079-21/), [Fizzles](/research/publications/10-1128-mra-01077-21/), [Loca](/research/publications/10-1128-mra-00783-22/) and [Godfather](/research/publications/10-1128-mra-00888-24/).
+The method is Santos's zinc chloride precipitation ([Santos 1991](#references)), which the lab has run since the fall of 2018. The lab's published genome announcements describe it as "a modified zinc chloride precipitation method," citing Santos and the Phage Discovery Guide. Examples are the announcements for [Finny](/research/publications/10-1128-mra-01039-19/), [IndyLu](/research/publications/10-1128-mra-01079-21/), [Fizzles](/research/publications/10-1128-mra-01077-21/), [Loca](/research/publications/10-1128-mra-00783-22/) and [Godfather](/research/publications/10-1128-mra-00888-24/).
 
-## Coming from the old Baylor PDF
+## Why zinc chloride instead of PEG
 
-The old site linked a two-page PDF, the "Phage DNA Extraction Procedure" the lab called the Baylor protocol, which precipitated phage with PEG and bound the DNA to a resin column. That PEG and resin method is the SEA-PHAGES Phage Discovery Guide's own protocol: see [Protocol 9.2a, Phage DNA Extraction Following Precipitation with PEG](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=139) in the July 2025 edition.
+The Phage Discovery Guide's own extraction precipitates phage with PEG and binds the DNA to a resin column: see [Protocol 9.2a, Phage DNA Extraction Following Precipitation with PEG](https://seaphages.org/media/docs/Phage_Discovery_Guide_July_2025.pdf#page=139) in the July 2025 edition.
 
-This lab uses the zinc chloride route instead because PEG pelleting needs a high-speed spin (the Guide gives 10,000 x g for 20 minutes at 4 °C), and the lab's swinging-bucket centrifuge tops out at about 4,000 rpm. Spins of 25 to 40 minutes at that speed gave no PEG pellet. A zinc chloride pellet comes down in a microcentrifuge in 1 minute.
+PEG pelleting needs a high-speed spin (the Guide gives 10,000 x g for 20 minutes at 4 °C). A zinc chloride pellet comes down in a microcentrifuge in 1 minute, so the method runs on the equipment of any teaching lab.
 
 ## Before you start: the lysate
 
 The method starts from a filter-sterilized, high-titer phage lysate. How to make one (webbed plates, flooding, filtering and titering) is on the [phage isolation protocol](/research/protocols/phage-isolation) page.
 
-- Titer the lysate first. In this lab, low-titer lysates (around 10^7 pfu/ml) gave persistently low DNA yields, and a higher titer is the first fix.
-- Keep about 100 µl of the lysate aside before any extraction. It is enough to re-seed up to ten plates if the extraction fails. Repeated extraction attempts over several weeks used up or degraded one lab's lysate until it could no longer make webbed plates, so make fresh webbed plates and lysate before the stock runs low.
+- Titer the lysate first. Low-titer lysates (around 10^7 pfu/ml) give low DNA yields, and a higher titer is the first fix.
+- Keep about 100 µl of the lysate aside before any extraction. It is enough to re-seed up to ten plates if the extraction fails. Repeated extractions can use up or degrade a lysate, so make fresh webbed plates and lysate before the stock runs low.
 - Nucleases are handled by one designated person. In this lab, a teaching assistant or staff member adds the nuclease mix to each group's lysate, which keeps nucleases in one pair of hands and off the shared benches.
 - To get more DNA, run more 1 ml tubes, not bigger batches. See [scaling up for low yield](#scaling-up-for-low-yield).
 
 ## Part A: collect the phage and open the capsids
 
-The first spins below are in rpm, as the lab's protocol gives them for its microcentrifuge. The notebooks do not name the rotor, so no g-force is given for those.
+The first spins below are given in rpm for a microcentrifuge.
 
 1. Add @nuclease mix{20%µl} to @high-titer lysate{5%ml}. Incubate at 37 °C for ~{10%minutes}.
 2. Split the lysate into 5 #microcentrifuge tubes{} of 1 ml each.
 3. Add @zinc chloride|2 M ZnCl2{20%µl} to each tube. Incubate at 37 °C for ~{5%minutes}.
-   > WHY: **Why zinc chloride and not PEG?** Both collect phage particles out of a large volume of lysate so the DNA can be extracted from a small pellet. Zinc chloride does it in minutes at 37 °C, and the phage pellet comes down in a 1 minute microcentrifuge spin. PEG needs a longer precipitation and a 10,000 x g spin for 20 minutes, which this lab's centrifuge cannot reach (see [coming from the old Baylor PDF](#coming-from-the-old-baylor-pdf)).
+   > WHY: **Why zinc chloride and not PEG?** Both collect phage particles out of a large volume of lysate so the DNA can be extracted from a small pellet. Zinc chloride does it in minutes at 37 °C, and the phage pellet comes down in a 1 minute microcentrifuge spin. PEG needs a longer precipitation and a 10,000 x g spin for 20 minutes (see [why zinc chloride instead of PEG](#why-zinc-chloride-instead-of-peg)).
 4. Spin at 10,000 rpm for ~{1%minute}. Remove the supernatant quickly and keep the pellet.
    > SPIN: MISSING: Waiting on Dustin: the ZnCl2 rotor (core.md). The lab's protocol gives rpm, and the notebooks do not name the rotor, so no g-force is given.
 5. Resuspend each pellet in @TES buffer|TES{500%µl}. Incubate at 60 °C for ~{15%minutes}.
    > TROUBLESHOOTING: phage-buffer
 6. Add @proteinase K{} to 50 to 100 µg/ml. Check the tube's label for the stock: 2.5 to 5 µl per tube of a 10 mg/ml stock, or 1.25 to 2.5 µl of a 20 mg/ml stock. Incubate at 55 to 60 °C for ~{30 to 60%minutes}.
    > PAUSE POINT: In this lab, the prep has been paused overnight at 4 °C after this step.
-   > WHY: **Why this much proteinase K, this warm, for this long?** Proteinase K digests the capsid proteins and the nucleases added in step 1, and the SDS in the TES buffer stimulates it (the Phage Discovery Guide says the same of its own proteinase K step). A typical working concentration is 50 to 100 µg/ml ([Promega](#references)), and a published zinc chloride phage DNA method digests for 1 hour at 60 °C ([Brauer et al. 2024](#references)). The lab's earlier step, 1 µl per tube at 37 °C for 10 minutes (about 20 to 40 µg/ml, depending on the stock), was below both.
+   > WHY: **Why this much proteinase K, this warm, for this long?** Proteinase K digests the capsid proteins and the nucleases added in step 1, and the SDS in the TES buffer stimulates it (the Phage Discovery Guide says the same of its own proteinase K step). A typical working concentration is 50 to 100 µg/ml ([Promega](#references)), and a published zinc chloride phage DNA method digests for 1 hour at 60 °C ([Brauer et al. 2024](#references)).
 
 ## Part B: remove the protein
 
 7. Add @potassium acetate|3 M potassium acetate (pH 5.2){60%µl}. Mix hard, until the precipitate is fluffy and very white, then put the tube on ice for ~{15%minutes}.
-   > CRITICAL: Mix until the precipitate is fluffy and very white before the ice. A mix that set solid gave a run of salty preps.
+   > CRITICAL: Mix until the precipitate is fluffy and very white before the ice. A mix that sets solid gives salty preps.
    > WHY: **Why potassium acetate after SDS?** The potassium salt of dodecyl sulfate is extremely insoluble ([Green and Sambrook 2020](#references)), so potassium swaps onto the SDS and it falls out of solution, taking the denatured capsid proteins with it. Alkaline lysis of bacteria for plasmid preps uses the same step: potassium dodecyl sulfate precipitates, and the denatured proteins come down with it ([QIAGEN, lysis of bacterial cells](#references)). Sodium would not do this: SDS is itself the sodium salt, and it stays dissolved.
    > TROUBLESHOOTING: mix-set-solid
 8. Spin at 12,000 rpm for ~{1%minute} at 4 °C. Move the supernatant to a fresh tube; the pellet is protein. Spin the supernatant again for ~{3%minutes} and move it again, so no precipitate is carried into the isopropanol.
@@ -208,8 +208,8 @@ The first spins below are in rpm, as the lab's protocol gives them for its micro
 ## Part C: precipitate and wash the DNA
 
 9. Add @isopropanol|room-temperature isopropanol{500%µl} to the supernatant and mix. Leave it at room temperature for about ~{10 to 30%minutes}. Do not put it on ice or leave it overnight.
-   > CRITICAL: Keep the isopropanol at room temperature. Salt also precipitates in isopropanol, and salt carried into the DNA was this method's most common failure.
-   > WHY: **Why isopropanol, and why at room temperature?** DNA precipitates in less isopropanol than ethanol, so one volume fits in the tube with the sample, where ethanol would need 2 to 2.5 volumes. The cost is that salt also precipitates in isopropanol ([Bitesize Bio](#references)). Salt carried into the DNA was this method's most common failure in the lab's notebooks. For too much salt in the pellet, QIAGEN's bench guide says to use the isopropanol at room temperature and to wash the pellet twice with room-temperature 70% ethanol, spun at 10,000 to 15,000 x g, which is top speed in a microcentrifuge ([QIAGEN](#references)). In one lab a second 250 µl wash raised A260/230 from 0.87 to 1.37. The short hold at room temperature before the spin is this lab's own step.
+   > CRITICAL: Keep the isopropanol at room temperature. Salt also precipitates in isopropanol, and salt carried into the DNA is the most common problem with this method.
+   > WHY: **Why isopropanol, and why at room temperature?** DNA precipitates in less isopropanol than ethanol, so one volume fits in the tube with the sample, where ethanol would need 2 to 2.5 volumes. The cost is that salt also precipitates in isopropanol ([Bitesize Bio](#references)). For too much salt in the pellet, QIAGEN's bench guide says to use the isopropanol at room temperature and to wash the pellet twice with room-temperature 70% ethanol, spun at 10,000 to 15,000 x g, which is top speed in a microcentrifuge ([QIAGEN](#references)). In one run a second 250 µl wash raised A260/230 from 0.87 to 1.37. The short hold at room temperature before the spin is this lab's own step.
 10. Spin at top speed for ~{15 to 30%minutes}. Discard the supernatant and keep the pellet.
    > SPIN: MISSING: The lab's protocol says top speed and names no rotor (core.md: the ZnCl2 rotor, waiting on Dustin).
 11. Wash the pellet with @ethanol|room-temperature 70% ethanol{250%µl} and spin at top speed in a #microcentrifuge for ~{5 to 15%minutes}. Discard the ethanol.
@@ -226,15 +226,15 @@ The first spins below are in rpm, as the lab's protocol gives them for its micro
 
 ## What goes wrong and what fixes it
 
-Salt carried into the final DNA is the most common failure of this method. It shows as a large A230 peak and a low A260/230 (values from 0.03 to 1.3 were recorded), oversized pellets, and NanoDrop readings far above the true concentration. The [troubleshooting table](#troubleshooting) lists what fixed it in this lab, step by step.
+Salt carried into the final DNA is the most common problem with this method. It shows as a large A230 peak and a low A260/230, oversized pellets, and NanoDrop readings far above the true concentration. The [troubleshooting table](#troubleshooting) gives the fix at each step.
 
 If the DNA is still salty or too dilute, the [rescue](#rescuing-salty-or-dilute-dna) below cleans it up, and the ~100 µl of lysate kept in reserve can seed fresh webbed plates for another prep.
 
 ## Scaling up for low yield
 
-- The method is written for 5 ml in 5 tubes. A single 10 ml batch in 10 tubes with 40 µl of nuclease mix gelled at the potassium acetate step into a final "salt block." Run parallel 5 ml preps instead: one group ran three in parallel (15 tubes) and pooled them.
+- The method is written for 5 ml in 5 tubes. Larger single batches can gel at the potassium acetate step, so run parallel 5 ml preps instead, for example three in parallel (15 tubes), and pool them.
 - To top up a low-yield prep, run a second 5 ml prep and dissolve its pellets in the first prep's 50 µl.
-- Where the lysate was only about 10^7 pfu/ml, more tubes did not fix the yield; a higher-titer lysate did.
+- With a lysate of only about 10^7 pfu/ml, more tubes do not raise the yield; a higher-titer lysate does.
 
 ## Checking DNA quantity and quality
 
@@ -242,7 +242,7 @@ Check every prep before it goes to restriction digests or sequencing. Quantify o
 
 ### Qubit
 
-The Qubit dsDNA assay measures the concentration. On these preps the NanoDrop overreads badly, because salt inflates A260. Paired readings from this lab: NanoDrop 407 against Qubit 27.4 ng/µl, 1,082.7 against 59.8, 1,174.7 against 25.9. Treat the Qubit value as the true concentration.
+The Qubit dsDNA assay measures the concentration. When salt is present, the NanoDrop reads far above the true concentration, because salt inflates A260. Treat the Qubit value as the true concentration.
 
 Qubit dsDNA assay as run on a Qubit 3.0:
 
@@ -255,22 +255,22 @@ Vortex, let the tubes stand 2 minutes at room temperature, and read the standard
 
 ### NanoDrop
 
-Select dsDNA, blank with 1 µl of nuclease-free water, then read 1 µl of sample. Record A260/280 and A260/230. Good preps from this lab read A260/280 of about 1.8 to 2.1. A260/230 is commonly expected in the range of 2.0 to 2.2, and a low value means a contaminant that absorbs at 230 nm or below is in the sample ([Thermo Scientific](#references)). Thermo's example is a sample in TE, the Tris and EDTA buffer, read against a water blank: it gives a low A260/230. The TES buffer here carries 0.1 M EDTA, and in this lab's notebooks the low ratios tracked salt carried over from the potassium acetate step. See the fixes above and the rescue below. A scan too poor to be worth a Qubit reading was taken as the sign to redo the extraction.
+Select dsDNA, blank with 1 µl of nuclease-free water, then read 1 µl of sample. Record A260/280 and A260/230. Good preps from this lab read A260/280 of about 1.8 to 2.1. A260/230 is commonly expected in the range of 2.0 to 2.2, and a low value means a contaminant that absorbs at 230 nm or below is in the sample ([Thermo Scientific](#references)). Thermo's example is a sample in TE, the Tris and EDTA buffer, read against a water blank: it gives a low A260/230. The TES buffer here carries 0.1 M EDTA, and with this method a low ratio usually means salt carried over from the potassium acetate step. See the fixes above and the rescue below. If the scan is too poor to be worth a Qubit reading, redo the extraction.
 
 ### Targets
 
-- The lab's threshold for restriction digests was 100 ng/µl by Qubit.
+- The lab's threshold for restriction digests is 100 ng/µl by Qubit.
 - To send DNA for sequencing at a set concentration, dilute it in nuclease-free water. For example, for 100 ng/µl in 50 µl from a 780 ng/µl prep, 6.4 µl of DNA plus 43.6 µl of water.
 - Once it is quantified, analyze the DNA by restriction digest and gel.
 
 ## Rescuing salty or dilute DNA
 
-Ethanol reprecipitation cleans salty DNA, concentrates dilute DNA and pools two weak preps into one tube. It raised A260/230 in most cases (from 0.74 to 1.67 in one), but not every time (0.66 to 0.63 in another), and it can cut the yield sharply, so use it when the prep would otherwise be redone.
+Ethanol reprecipitation cleans salty DNA, concentrates dilute DNA and pools two weak preps into one tube. It usually raises A260/230, but it can lower the yield, so use it when the prep would otherwise be redone.
 
 1. Measure the DNA volume with a pipette: dial it down until the air gap disappears. Base the volumes on this volume, not on the ng/µl reading.
 2. Add salt: @sodium acetate|3 M sodium acetate{0.1%volume} (0.3 M final). If SDS may still be in the sample, use @sodium chloride{} at 0.2 M final instead. Then add @ice-cold ethanol|ice-cold 100% ethanol{2.5 to 3%volumes}. For 44 µl of DNA, that is 4.4 µl of sodium acetate and 110 to 132 µl of ethanol. For a very small amount of DNA, @glycogen|20 mg/ml glycogen{1%µl} can be added as a carrier.
    > WHY: **Why sodium acetate, sodium chloride or ammonium acetate?** Sodium acetate at 0.3 M final is the routine salt for DNA. Sodium chloride at 0.2 M final keeps SDS dissolved in the ethanol, so it does not come down with the DNA. Ammonium acetate leaves free nucleotides (dNTPs) in the supernatant, but ammonium ions inhibit T4 polynucleotide kinase, so it is not used for DNA headed for a kinase reaction ([Bitesize Bio](#references)).
-3. Hold at -80 °C for ~{1%hour} to overnight, or at -20 °C overnight. One hour at about -16 °C did not work.
+3. Hold at -80 °C for ~{1%hour} to overnight, or at -20 °C overnight. A short hold in a freezer warmer than -20 °C is not enough.
 4. Spin at full speed at 4 °C for ~{30%minutes}.
    > SPIN: MISSING: The lab's protocol says full speed and names no centrifuge or rotor.
 5. Wash twice with @ice-cold ethanol wash|ice-cold 75% ethanol{0.5%ml}, with 10 minute spins at 4 °C.
@@ -278,6 +278,6 @@ Ethanol reprecipitation cleans salty DNA, concentrates dilute DNA and pools two 
 6. Air-dry until the pellet turns clear, as in step 13.
 7. Dissolve the DNA in @nuclease-free water{50%µl}, as in step 14.
 
-Pooling two weak extractions before reprecipitating gave 260.9 ng/µl at 2.01 / 2.01 in one lab, and a gel with strong banding in another.
+Pooling two weak extractions before reprecipitating gave 260.9 ng/µl at 2.01 / 2.01 in one run, and a gel with strong banding in another.
 
 For how these genomes go on to be sequenced and annotated, see [phage discovery](/teaching/phage-discovery) and [the lab's phages](/research/phages).
