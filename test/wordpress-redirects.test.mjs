@@ -22,7 +22,7 @@ const gsc = JSON.parse(readFileSync(new URL("../scripts/fixtures/wordpress-gsc-u
 const targetPath = (location) => location.split("#")[0];
 
 /** Paths the new site answers itself, now: the gateway passes these through and a route renders them. */
-const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/cv", "/research/publications"]);
+const ANSWERED_NOW = new Set(["/", "/login/", "/about", "/contact", "/cv", "/dustin-edwards-cv.pdf", "/research/publications"]);
 
 test("the apex host is dustinedwards.info and www, and nothing else", () => {
   assert.equal(isApexHost("dustinedwards.info"), true);
@@ -195,7 +195,10 @@ const CUTOVER_PATTERN_EXAMPLES = /** @type {Array<[string, string | null]>} */ (
   // the Baylor PDF -> 301 /research/protocols/phage-dna-extraction
   ["/wp-content/uploads/2017/09/DNA-Extraction-Protocol-Baylor.pdf", "/research/protocols/phage-dna-extraction"],
   // all other /wp-content/uploads/* -> 410
-  ["/wp-content/uploads/2023/11/Electrophoresis.pdf", GONE],
+  ["/wp-content/uploads/2023/11/Spot-Titer.png", GONE],
+  // the two lab-protocol scans that still earn clicks or impressions
+  ["/wp-content/uploads/2023/11/Electrophoresis.pdf", "/research/protocols"],
+  ["/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf", "/research/protocols/phage-dna-extraction"],
   // New-site renames: /blog/{slug} -> /writing/{slug}, /publications -> /research/publications
   ["/blog/a-post", "/writing/a-post"],
   ["/publications", "/research/publications"],
@@ -248,7 +251,7 @@ const CUTOVER_EXPLICIT_ROWS = /** @type {Array<[string, string | null]>} */ ([
   ["/rev-lpdv-genetic-studies/", "/research/retroviruses/avian"],
   ["/molarity-calculator/", GONE],
   ["/knowledge-base/metric-prefix/", GONE],
-  ["/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/cv"],
+  ["/wp-content/uploads/2019/02/Dustin-Edwards-Curriculum-Vitae-2019.pdf", "/dustin-edwards-cv.pdf"],
   ["/knowledge-base/", "/research/protocols"],
   ["/virus-isolation-reagent-request/", "/teaching/virus-isolation"],
 ]);

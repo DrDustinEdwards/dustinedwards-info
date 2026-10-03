@@ -116,7 +116,10 @@ const PATTERNS = [
   (p) => (/^\/knowledge-base\/category(?:\/.*)?$/.test(p) ? moved("/research/protocols") : null),
   (p) => (/^\/(?:category|tag)(?:\/.*)?$/.test(p) ? GONE : null),
   (p) => (p === BAYLOR_PDF ? moved("/research/protocols/phage-dna-extraction") : null),
-  (p) => (p === CV_PDF ? moved("/cv") : null),
+  (p) => (p === CV_PDF ? moved("/dustin-edwards-cv.pdf") : null),
+  // Both still earn clicks or impressions: a lab protocol goes to the page that carries it.
+  (p) => (p === "/wp-content/uploads/2023/11/Electrophoresis.pdf" ? moved("/research/protocols") : null),
+  (p) => (p === "/wp-content/uploads/2023/11/DNA-Extraction-Scan.pdf" ? moved("/research/protocols/phage-dna-extraction") : null),
   (p) => (p.startsWith("/wp-content/uploads/") ? GONE : null),
   // Nothing on the new site does these calculations (Dustin, 2026-09-27).
   (p) => (["/molarity-calculator", "/knowledge-base/metric-prefix"].includes(p) ? GONE : null),
