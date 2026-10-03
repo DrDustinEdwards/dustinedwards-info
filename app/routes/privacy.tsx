@@ -118,8 +118,8 @@ export default function Privacy() {
           OP3, the download counter the show uses.
         </p>
         <p>
-          <strong>Google</strong> is the sign-in provider for the administrator account. It
-          is reached only from the sign-in page, and only by the one person who can use it.
+          <strong>Cloudflare Access</strong> signs in the administrators of this site. It is
+          reached only from the admin address, and only by the people it is set up to let in.
         </p>
 
         <h2 id="checking">Checking any of this</h2>

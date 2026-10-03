@@ -46,9 +46,8 @@ export async function bundleRoutes(entries) {
   const stubServer = {
     name: "stub-server-only",
     setup(b) {
-      // Bounded and named, so a new `~/lib/authoring` or `~/dbx` is not stubbed by accident. The two
-      // auth-* modules were stubbed by the old unbounded prefix and still are, by name.
-      b.onResolve({ filter: /^~\/(db|lib\/context|lib\/auth|lib\/auth-client|lib\/auth-rate)(?:[/.]|$)/ }, (args) => ({
+      // Bounded and named, so a new `~/lib/authoring` or `~/dbx` is not stubbed by accident.
+      b.onResolve({ filter: /^~\/(db|lib\/context)(?:[/.]|$)/ }, (args) => ({
         path: args.path,
         namespace: "stub",
       }));

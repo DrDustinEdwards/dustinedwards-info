@@ -36,17 +36,6 @@ export function timedLoader<T>(
   return timed(timings, name, () => fn(timings));
 }
 
-// For synchronous calls like `createAuth()`: the async `timed` would add an await to the unmeasured path.
-export function timedSync<T>(into: Timings | undefined, name: string, fn: () => T): T {
-  if (!into) return fn();
-  const start = performance.now();
-  try {
-    return fn();
-  } finally {
-    into.push({ name, ms: performance.now() - start });
-  }
-}
-
 // Names must be tokens: one malformed name makes the browser silently discard the whole header.
 export function serverTiming(timings: Timings) {
   return timings

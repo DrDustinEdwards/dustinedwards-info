@@ -70,11 +70,10 @@ Orange-cloud the `A` record and `www`, then add the Worker route.
 everything else derives from it, including `DEFAULT_OG_IMAGE`, every canonical
 and every social URL.
 
-**3.2 `BETTER_AUTH_URL`.** A secret, so `wrangler secret put`. Better Auth pins
-to it, which is also why no admin session can be minted locally.
+**3.2 `BETTER_AUTH_URL`.** No longer applicable: Better Auth was removed, and the secret with it.
+Admin sign-in is Cloudflare Access (docs/RUNBOOK.md 5b).
 
-**3.3 The Google OAuth redirect URI.** Added in the Google Cloud console. Login
-breaks until this lands, and it breaks for the only account that can sign in.
+**3.3 The Google OAuth redirect URI.** No longer applicable: there is no Google sign-in.
 
 **3.4 AI Search Authorized hosts**, on the Public URL. Ask stops answering
 otherwise.

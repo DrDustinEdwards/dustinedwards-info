@@ -41,7 +41,7 @@ interface WatchdogEnv {
   CLOUDFLARE_API_TOKEN?: string;
 }
 
-// Namespaced because this KV is shared with Better Auth sessions and the Ask cache.
+// Namespaced because this KV is shared with the Ask cache and the site's other KV state.
 const STATE_KEY = "watchdog:alert-state";
 
 // Absent and unreadable differ: unreadable means the dedupe is blind, and it must not stay quiet.

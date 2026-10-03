@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { accessIdentity } from "~/lib/access.server";
-import { adminActorContext } from "~/lib/auth.server";
+import { adminActorContext } from "~/lib/admin-actor.server";
 import { SITE_ORIGIN } from "~/lib/seo";
 import { middleware as adminMiddleware } from "~/routes/admin";
 

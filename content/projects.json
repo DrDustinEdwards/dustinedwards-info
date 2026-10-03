@@ -14,7 +14,7 @@
     "TypeScript",
     "Drizzle",
     "SQLite FTS5",
-    "Better Auth",
+    "Cloudflare Access",
     "Stripe",
     "MCP"
   ],
@@ -34,7 +34,7 @@
       "status": "live",
       "url": "https://dustinedwards.info",
       "repo": null,
-      "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Durable Objects", "AI Search", "Drizzle", "SQLite FTS5", "Better Auth"],
+      "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Durable Objects", "AI Search", "Drizzle", "SQLite FTS5", "Cloudflare Access"],
       "metric": { "label": "verification gates in the build", "derived": "gate-count" },
       "evidence": [
         {
@@ -174,7 +174,7 @@
       "status": "live",
       "url": "https://germomics.com",
       "repo": null,
-      "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Drizzle", "Better Auth"],
+      "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Drizzle", "Cloudflare Access"],
       "metric": { "label": "pages in its published sitemap", "value": "24", "asOf": "2026-08-30" }
     }
   ]
