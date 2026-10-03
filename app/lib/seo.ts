@@ -343,7 +343,7 @@ const OWNER_SAME_AS = [
   GERMOMICS_X_URL,
 ];
 
-// What he is known for, so a reader of the markup can tell him from the other Dustin Edwardses.
+// What he is known for.
 const OWNER_KNOWS_ABOUT = [
   "Virology",
   "Bacteriophages",
@@ -357,10 +357,7 @@ export function personId(origin: string) {
   return `${origin}/#person`;
 }
 
-/**
- * Another academic shares this name and citation graphs have merged some of his work, so sameAs is
- * what disambiguates. Not a duplicate of `personJsonLd`: this `@id` joins papers to a person.
- */
+/** Not a duplicate of `personJsonLd`: this `@id` joins papers to a person. */
 export function personNode(origin: string) {
   return {
     "@context": "https://schema.org",
