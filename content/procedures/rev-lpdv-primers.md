@@ -36,18 +36,15 @@ materials:
     stock: [10 µM]
     amount: 1 µL
     per: reaction
-    note: "Cox et al. 2022 used primers at 200-400 nM final concentration."
   - name: reverse primer
     display: Reverse primer (10 µM stock)
     stock: [10 µM]
     amount: 1 µL
     per: reaction
-    note: "Cox et al. 2022 used primers at 200-400 nM final concentration."
   - name: eluted DNA
     display: Eluted DNA
     amount: 5 µL
     per: reaction
-    note: "Cox et al. 2022 used the same master mix in 25 µL reactions with 2 µL of eluted DNA."
 equipment:
   - NEB 100 bp ladder
   - 2% agarose gel in TBE
@@ -117,8 +114,8 @@ cycling:
           - { temperature_c: 68, time: 60 sec. }
       - { stage: extension, temperature_c: 68, time: 10 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-expected_results: "PCR REV 3′ LTR 8000-8297: 282 bp computed on DQ387450; 297 bp read from the gel. PCR REV pol 2500-3075: 574 bp computed on DQ387450; 575 bp read from the gel. PCR REV pol 4777-5575: 801 bp computed on DQ387450; 798 bp read from the gel. PCR LPDV p31/CA: 458 bp on U09568, positions 1041-1498, computed by placing both primers on the sequence. In the lab's gels, each set gave a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
-limitations: "A gel reading is an estimate, and field strains can differ from DQ387450, so the computed and gel sizes need not agree exactly. The touchdown in the two *pol* sets steps down from 60 to 50 °C over the first 15 cycles. Extension temperature is dependent on polymerase: the 68 °C extensions are for the One*Taq* mix."
+expected_results: "PCR REV 3′ LTR 8000-8297: 282 bp. PCR REV pol 2500-3075: 574 bp. PCR REV pol 4777-5575: 801 bp. PCR LPDV p31/CA: 458 bp. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
+limitations: "The touchdown in the two *pol* sets steps down from 60 to 50 °C over the first 15 cycles. Extension temperature is dependent on polymerase: the 68 °C extensions are for the One*Taq* mix."
 references:
   - "Stewart et al. 2019, *J Wildl Dis* 55(3). [doi:10.7589/2018-08-187](https://doi.org/10.7589/2018-08-187). On this site: [Stewart et al. 2019](/research/publications/10-7589-2018-08-187/)."
   - "Cox et al. 2022, *J Wildl Dis* 58(4). [doi:10.7589/JWD-D-22-00023](https://doi.org/10.7589/JWD-D-22-00023). On this site: [Cox et al. 2022](/research/publications/10-7589-jwd-d-22-00023/)."
@@ -134,19 +131,13 @@ The REV and GAPDH protocols are the ones published in [Stewart et al. 2019, J Wi
 
 The REV provirus has an LTR at each end, the primer binding site near the 5′ LTR, then *gag* (MA, R, CA, NC), *pol* (protease, reverse transcriptase, integrase) and *env* (SU, TM), over about 8 kb. The three amplicons sit as follows:
 
-| Primer set | Region | Product on DQ387450 (computed) | Position on DQ387450 | Product (from the gel) |
-| --- | --- | --- | --- | --- |
-| PCR REV 3′ LTR 8000-8297 | LTR | 282 bp | 8000-8280, and 258-538 in the 5′ LTR | 297 bp |
-| PCR REV pol 2500-3075 | *pol*: protease and reverse transcriptase | 574 bp | 2492-3065 | 575 bp |
-| PCR REV pol 4777-5575 | *pol*: reverse transcriptase and integrase | 801 bp | 4766-5566 | 798 bp |
+| Primer set | Region | Product |
+| --- | --- | --- |
+| PCR REV 3′ LTR 8000-8297 | LTR | 282 bp |
+| PCR REV pol 2500-3075 | *pol*: protease and reverse transcriptase | 574 bp |
+| PCR REV pol 4777-5575 | *pol*: reverse transcriptase and integrase | 801 bp |
 
-The computed sizes come from the published primer sequences placed on GenBank [DQ387450](https://www.ncbi.nlm.nih.gov/nuccore/DQ387450) (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019 compared their sequences against, measuring each product from one primer's 5′ end to the other's. Against DQ387450:
-
-- **3′ LTR set:** the forward primer has one base (a G) that the reference lacks, and the reverse primer one mismatch, so the product is one base longer than the 281 bases it spans. An LTR sits at each end of the provirus, so the same product can come from either one.
-- **pol 2500-3075:** both primers match exactly.
-- **pol 4777-5575:** the reverse primer has one mismatch.
-
-The set names are the lab's labels for each region; the table gives the exact positions. The gel sizes are read from the lab's gels beside a 100 bp ladder, where each set gave a band in the REV-positive lane and none in the negative lane. A gel reading is an estimate, and field strains can differ from DQ387450, so the two columns need not agree exactly.
+Product sizes are for GenBank [DQ387450](https://www.ncbi.nlm.nih.gov/nuccore/DQ387450) (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019 compared their sequences against. An LTR sits at each end of the provirus, so the LTR product can come from either one. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder.
 
 ## Materials
 
@@ -168,16 +159,14 @@ From Stewart et al. 2019, for each 25 µL reaction:
 | Reverse primer (10 µM stock) | 1 µL |
 | Eluted DNA | 5 µL |
 
-Cox et al. 2022 used the same master mix in 25 µL reactions with 2 µL of eluted DNA and primers at 200-400 nM final concentration.
-
 1. Set up each 25 µL reaction as in the table: @nuclease-free water|Nuclease-free water{5.5%µL}, @OneTaq Hot Start 2X Master Mix|One*Taq* Hot Start 2X Master Mix{12.5%µL} (New England Biolabs), @forward primer|Forward primer (10 µM stock){1%µL}, @reverse primer|Reverse primer (10 µM stock){1%µL} and @eluted DNA|Eluted DNA{5%µL}.
 2. Run the cycling program for the primer set, as in its table below.
 3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{}.
-   > EXPECT: A band at the set's product size: see [where the REV amplicons sit on the genome](#where-the-rev-amplicons-sit-on-the-genome) and, for LPDV, [PCR LPDV p31/CA](#pcr-lpdv-p31ca). In the lab's gels, each set gave a band in the REV-positive lane and none in the negative lane.
+   > EXPECT: A band at the set's product size: see [where the REV amplicons sit on the genome](#where-the-rev-amplicons-sit-on-the-genome) and, for LPDV, [PCR LPDV p31/CA](#pcr-lpdv-p31ca). The REV-positive lane shows the band and the negative lane none.
 
 ## PCR REV 3′ LTR 8000-8297
 
-Amplifies a region of the REV 3′ LTR. Product: 282 bp computed on DQ387450; 297 bp read from the gel.
+Amplifies a region of the REV 3′ LTR. Product: 282 bp.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -197,7 +186,7 @@ The extension in each cycle is 68 °C, 60 s + 1 s per cycle: it starts at 60 s a
 
 ## PCR REV pol 2500-3075 (protease and reverse transcriptase)
 
-Amplifies REV *pol* segment 2500-3075 (protease and reverse transcriptase). Product: 574 bp computed on DQ387450; 575 bp read from the gel.
+Amplifies REV *pol* segment 2500-3075 (protease and reverse transcriptase). Product: 574 bp.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -220,7 +209,7 @@ The first 15 cycles are a touchdown: the annealing temperature steps down from 6
 
 ## PCR REV pol 4777-5575 (reverse transcriptase and integrase)
 
-Amplifies REV *pol* segment 4777-5575 (reverse transcriptase and integrase). Product: 801 bp computed on DQ387450; 798 bp read from the gel.
+Amplifies REV *pol* segment 4777-5575 (reverse transcriptase and integrase). Product: 801 bp.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -250,7 +239,7 @@ Amplifies part of the LPDV gag polyprotein (partial p31/capsid). The primers are
 | Forward | `ATGAGGACTTGTTAGATTGGTTAC` | 24 nt |
 | Reverse | `TGATGGCGTCAGGGCTATTTG` | 21 nt |
 
-Product: 458 bp on U09568, positions 1041-1498, computed by placing both primers on the sequence (each matches exactly). The 413 nt between the primers is the partial p31/partial CA fragment Allison et al. 2014 analyzed.
+Product: 458 bp (U09568, positions 1041-1498), spanning the partial p31/partial CA fragment Allison et al. 2014 analyzed.
 
 | Step | Temperature (°C) | Time |
 | --- | --- | --- |
