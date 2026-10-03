@@ -275,6 +275,11 @@ export async function renderProcedure({ slug, parsed, gaps, renderBody, resolveI
     draft: d.draft === true,
     version: known(d.version),
     updated: known(d.updated),
+    // What the protocol library filters and lists by (taxonomy.mjs); ids, so the page draws the words.
+    methods: /** @type {string[]} */ (list(known(d.method))),
+    organisms: /** @type {string[]} */ (list(known(d.organism))),
+    targets: /** @type {string[]} */ (list(known(d.target))),
+    courses: /** @type {string[]} */ (list(known(d.course))),
     firstUsed: known(d.first_used),
     lastRun: known(d.last_run),
     status: known(d.status),

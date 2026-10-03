@@ -4,6 +4,9 @@ path: /research/protocols/rev-lpdv-primers
 title: "REV and LPDV PCR primers"
 seo_title: "REV and LPDV PCR primers: LTR, pol and p31/CA"
 description: "PCR primers for reticuloendotheliosis virus (REV) LTR and pol and for LPDV p31/CA: sequences, reaction mix, cycling tables and product sizes."
+method: [pcr]
+organism: [avian]
+target: ["REV 3′ LTR", "REV pol", "LPDV p31/CA"]
 version: "MISSING: No version has been assigned (protocols.md: printed sheets carry a version id and date)."
 updated: 2026-09-30
 status: "MISSING: No source in the repo states a status for this protocol."
