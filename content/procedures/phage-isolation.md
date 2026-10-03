@@ -250,7 +250,7 @@ Worked examples:
 | 40 | 10 µl | 10^-4 | 4 x 10^7 pfu/ml |
 | 23 | 10 µl | 10^-6 | 2.3 x 10^9 pfu/ml |
 | 42 | 10 µl | 10^-6 | 4.2 x 10^9 pfu/ml |
-| 111 | 10 µl | 10^-6 | 1.1 x 10^10 pfu/ml |
+| 111 | 10 µl | 10^-6 | 1.11 x 10^10 pfu/ml |
 | 10 | 10 µl | 10^-8 | 1.0 x 10^11 pfu/ml |
 | 376 | 10 µl | undiluted | 3.76 x 10^4 pfu/ml |
 | 6 | 3 µl (spot) | 10^-3 | 2 x 10^6 pfu/ml |
@@ -302,7 +302,7 @@ The calculation is:
 
     µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml
 
-A worked example: 111 plaques on the 10^-6 plate (10 µl) is a titer of 1.1 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1.01 x 10^-3 µl of lysate per plate. That was made as 1 µl lysate in 999 µl buffer, then 7 µl of that into 63 µl buffer, plating 10 µl per plate. Six of seven plates webbed in 24 hours, and the pooled HVL titered 2.2 x 10^11 pfu/ml.
+A worked example: 111 plaques on the 10^-6 plate (10 µl) is a titer of 1.11 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1 x 10^-3 µl of lysate per plate. That was made as 1 µl lysate in 999 µl buffer, then 7 µl of that into 63 µl buffer, plating 10 µl per plate. Six of seven plates webbed in 24 hours, and the pooled HVL titered 2.2 x 10^11 pfu/ml.
 
 The pfu a plate needs to web depends on plaque size, and is often higher than expected:
 

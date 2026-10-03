@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 
 import {
   LAB,
@@ -170,14 +170,24 @@ test("dilution: refuses a target at or above the start", () => {
 
 /* ------------------------------------------------------------ webbed plate, by hand */
 
-test("webbed plate: the FAQ's example, 11,100 pfu from a 1.1 x 10^10 lysate", () => {
-  // 11,100 / 1.1 x 10^10 x 1,000 = 1.009 x 10^-3 µl, which the FAQ and protocol print as 1.01 x 10^-3.
-  // The notebook's dilution (1/10^4, 10 µl per plate) delivered 10 x 10^-4 = 1 x 10^-3 µl of lysate
-  // per plate, which is that volume at the precision a pipette can hold.
-  sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.1e10, pfuPerPlate: 11100 }), "1.01", -3);
-  assert.ok(procedure("phage-isolation").includes("A target of about 11,100 pfu needs 1.01 x 10^-3 µl of lysate per plate."));
+test("webbed plate: the FAQ's example, 11,100 pfu from a 1.11 x 10^10 lysate", () => {
+  // 111 plaques in 10 ul of 10^-6 is 1.11 x 10^10 pfu/ml, and 11,100 / 1.11 x 10^10 x 1,000 = 1.00 x 10^-3 µl.
+  // The notebook's dilution (1/10^4, 10 µl per plate) delivered 10 x 10^-4 = 1 x 10^-3 µl of lysate per plate.
   sameAsStated(lysatePerPlate({ titerPfuPerMl: 1.11e10, pfuPerPlate: 11100 }), "1.00", -3);
+  const isolation = procedure("phage-isolation");
+  assert.ok(isolation.includes("is a titer of 1.11 x 10^10 pfu/ml. A target of about 11,100 pfu needs 1 x 10^-3 µl of lysate per plate."));
   assert.equal(10 * (1 / 1000) * (7 / 70), 1e-3);
+});
+
+test("the 111-plaque lysate is 1.11 x 10^10 on every page and procedure, never rounded to 1.1", () => {
+  const dirs = ["pages", "procedures"].map((name) => new URL(`../content/${name}/`, import.meta.url));
+  for (const dir of dirs) {
+    for (const file of readdirSync(dir).filter((name) => name.endsWith(".md"))) {
+      const text = readFileSync(new URL(file, dir), "utf8");
+      assert.doesNotMatch(text, /\b1\.1 x 10\^10\b/, `${file} writes the lysate as 1.1 x 10^10; it is 1.11 x 10^10 (titer(111, 10, 6))`);
+    }
+  }
+  assert.equal(titer({ plaques: 111, volumeUl: 10, dilutionExponent: 6 }).pfuPerMl, 1.11e10);
 });
 
 test("webbed plate: the protocol's bracketing and pfu-per-web numbers", () => {

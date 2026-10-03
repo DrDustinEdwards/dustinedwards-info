@@ -316,7 +316,7 @@ export function checkProjects(ctx) {
   const capsidPage = readPage("software-capsid.md");
   ok(
     "Capsid names the roster repository",
-    capsidPage.includes("https://github.com/DrDustinEdwards/capsid-mcp"),
+    capsidPage.includes("https://github.com/DrDustinEdwards/capsid"),
   );
   ok("Capsid does not link the console", !capsidPage.includes("/console"));
 
