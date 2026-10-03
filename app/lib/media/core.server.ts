@@ -12,7 +12,7 @@ export const MEDIA_PAGE_SIZE = 24;
 // A closed set: the width lands in a cache key, and each distinct transform is billed.
 type ThumbWidth = 160 | 320 | 640;
 
-type MediaObject = {
+export type MediaObject = {
   key: string;
   url: string;
   size: number;
@@ -51,6 +51,31 @@ export function isViewable(kind: string) {
 // silently, because spreads are exempt from excess-property checks.
 type ListMediaOptions = NonNullable<Parameters<typeof listMediaPage>[1]>;
 
+type MediaRow = Awaited<ReturnType<typeof listMediaPage>>["rows"][number];
+
+/** One index row as the library shows it; Carrel's media adapter reads the same shape. */
+export function mediaObjectOf(row: MediaRow): MediaObject {
+  return {
+    key: row.key,
+    // Static assets live on the assets host, not in the bucket, so `/media/` would 404.
+    url: row.storage === "static" ? row.key : `/media/${row.key}`,
+    size: row.bytes ?? 0,
+    uploaded: row.uploadedAt ?? "",
+    storage: row.storage,
+    kind: row.kind,
+    role: row.role,
+    mime: row.mime,
+    originalName: row.originalName,
+    width: row.width,
+    height: row.height,
+    alt: row.alt,
+    caption: row.caption,
+    tags: row.tags,
+    placeholder: row.placeholder,
+    deletable: row.storage !== "static",
+  };
+}
+
 export async function listMedia(
   env: Env,
   options: ListMediaOptions = {},
@@ -60,29 +85,7 @@ export async function listMedia(
     limit: options.limit ?? MEDIA_PAGE_SIZE,
   });
 
-  return {
-    objects: rows.map((row) => ({
-      key: row.key,
-      // Static assets live on the assets host, not in the bucket, so `/media/` would 404.
-      url: row.storage === "static" ? row.key : `/media/${row.key}`,
-      size: row.bytes ?? 0,
-      uploaded: row.uploadedAt ?? "",
-      storage: row.storage,
-      kind: row.kind,
-      role: row.role,
-      mime: row.mime,
-      originalName: row.originalName,
-      width: row.width,
-      height: row.height,
-      alt: row.alt,
-      caption: row.caption,
-      tags: row.tags,
-      placeholder: row.placeholder,
-      deletable: row.storage !== "static",
-    })),
-    page,
-    hasMore,
-  };
+  return { objects: rows.map(mediaObjectOf), page, hasMore };
 }
 
 // Measured before a key exists, because the key carries the dimensions. Null means the binding answered
