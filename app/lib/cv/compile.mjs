@@ -7,6 +7,7 @@ import { gitBlobSha } from "../content/hashes.mjs";
 import { compilePage } from "../pages/compile.mjs";
 import { buildCv } from "./entries.mjs";
 import { cvMarkdownDocument } from "./markdown.mjs";
+import { deriveIdentity } from "../identity.mjs";
 import { CV_DIR, CV_FILES, cvFileFor, cvSourcePath } from "./parse.mjs";
 import { orderErrors, paperRefErrors, parseCvFile } from "./validate.mjs";
 
@@ -77,16 +78,21 @@ export function assembleCvSource(records) {
   if (errors.length > 0) return { ok: false, errors };
   const profile = bySlug.get("profile");
   if (!profile || profile.type !== "profile") return { ok: false, errors: ["the profile record is not a profile"] };
+  const entries = CV_FILES.flatMap(({ slug }) => {
+    const record = bySlug.get(slug);
+    return record && record.type !== "profile" ? record.entries : [];
+  });
+  // The site's role, job title and headship are derived from the profile and the appointments (app/lib/identity.mjs),
+  // so a CV that could not give them is refused here, where it is edited, and not at the next build.
+  const identity = deriveIdentity(profile.person, entries);
+  if (!identity.ok) return { ok: false, errors: identity.errors };
   return {
     ok: true,
     source: {
       edition: profile.edition,
       person: profile.person,
       presentations: profile.presentations,
-      entries: CV_FILES.flatMap(({ slug }) => {
-        const record = bySlug.get(slug);
-        return record && record.type !== "profile" ? record.entries : [];
-      }),
+      entries,
     },
   };
 }

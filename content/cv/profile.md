@@ -4,7 +4,7 @@ edition: Fall 2026
 person:
   name: Dustin Edwards
   degree: Ph.D.
-  title: Professor and Virologist
+  discipline: Virologist
   department: Department of Biological Sciences
   org: 'Tarleton State University, Texas A&M University System'
 presentations:

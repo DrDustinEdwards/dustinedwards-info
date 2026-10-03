@@ -54,7 +54,7 @@ const PRIVACY = /** @type {const} */ ([
  * a trailing `?` makes it optional. The shared fields (year, endYear, areas, role, links) are checked apart.
  */
 const SHAPES = /** @type {const} */ ({
-  appointment: { section: "s", title: "s", org: "s", detail: "s?", duties: "duties?" },
+  appointment: { section: "s", title: "s", org: "s", detail: "s?", duties: "duties?", headline: "b?" },
   education: { title: "s", org: "s", detail: "s?" },
   grant: { amount: "money", title: "s", funder: "s?", note: "s?" },
   award: { title: "s", org: "s?", place: "s?" },
@@ -234,13 +234,19 @@ function checkProfile(data, errors) {
     errors.push('edition must be a season and a year, such as "Fall 2026"');
   }
   if (!isRecord(person)) {
-    errors.push("person must be a mapping of name, degree, title, department and org");
+    errors.push("person must be a mapping of name, degree, discipline, department and org");
   } else {
-    for (const key of ["name", "degree", "title", "department", "org"]) {
+    for (const key of ["name", "degree", "discipline", "department", "org"]) {
       if (!isText(person[key])) errors.push(`person.${key} must be non-empty text with no space at either end`);
     }
     for (const key of Object.keys(person)) {
-      if (!["name", "degree", "title", "department", "org"].includes(key)) errors.push(`person.${key} is not a field of the person`);
+      if (!["name", "degree", "discipline", "department", "org"].includes(key)) {
+        errors.push(
+          key === "title"
+            ? 'person.title is not a field of the person: the title is derived from the current appointment and the discipline (app/lib/identity.mjs)'
+            : `person.${key} is not a field of the person`,
+        );
+      }
     }
     if (person.name !== OWNER) errors.push(`person.name is "${String(person.name)}", the site's one name for him is "${OWNER}"`);
   }

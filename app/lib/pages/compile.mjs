@@ -15,10 +15,40 @@ import {
   contentPageSearchInputs,
   markdownTableFacts,
 } from "../content-pages.mjs";
+import { IDENTITY } from "../identity.generated.mjs";
 import { expandPhagePage, expandPhageTokens } from "../phages/compile.mjs";
 import { pageInvariantErrors } from "./invariants.mjs";
 
 export const PAGES_DIR = "content/pages";
+
+/** The identity facts a page may state by token ({{identity.role}}): text, from the CV (app/lib/identity.mjs). */
+export const IDENTITY_TOKEN_KEYS = /** @type {const} */ ([
+  "name", "degree", "discipline", "disciplineLower", "rank", "role", "adminTitle", "jobTitle", "cvTitle", "department", "departmentSubject", "affiliation",
+]);
+const IDENTITY_TOKEN = /\{\{\s*identity\.([A-Za-z]+)\s*\}\}/g;
+
+/**
+ * Every token a page can carry, filled: the owner's identity from the CV, then the phage facts from the rows. A
+ * title, a role or a headship a page states is read, never typed, so a CV change updates the page. A token that
+ * names nothing is an error, never an empty string.
+ *
+ * @param {string} text
+ * @param {import("../phages/compile.mjs").Phage[] | undefined} phages
+ * @returns {{ ok: true, text: string } | { ok: false, errors: string[] }}
+ */
+export function expandPageTokens(text, phages) {
+  /** @type {string[]} */
+  const errors = [];
+  const withIdentity = text.replace(IDENTITY_TOKEN, (whole, key) => {
+    if (!(/** @type {readonly string[]} */ (IDENTITY_TOKEN_KEYS).includes(key))) {
+      errors.push(`${whole} is not an identity fact (${IDENTITY_TOKEN_KEYS.join(", ")})`);
+      return whole;
+    }
+    return String(/** @type {Record<string, unknown>} */ (IDENTITY)[key]);
+  });
+  if (errors.length > 0) return { ok: false, errors };
+  return expandPhageTokens(withIdentity, phages);
+}
 
 /** The repository path of a page's file, from its file key (`research-phages`). */
 export function pageSourcePath(/** @type {string} */ slug) {
@@ -150,7 +180,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   // never typed, so the title and description fill the same way the body does.
   /** @param {unknown} value @returns {string} */
   const filled = (value) => {
-    const result = expandPhageTokens(String(value ?? ""), phages);
+    const result = expandPageTokens(String(value ?? ""), phages);
     if (!result.ok) {
       errors.push(...result.errors);
       return String(value ?? "");
@@ -186,7 +216,7 @@ export async function compilePage({ slug, raw, pipeline, sourcePath, generated =
   // from one text. Every other page passes through unchanged.
   const drawn = expandPhagePage(page.path, parsed.content, phages);
   if (!drawn.ok) errors.push(...drawn.errors);
-  const drawnBody = drawn.ok ? expandPhageTokens(drawn.markdown, phages) : /** @type {const} */ ({ ok: true, text: parsed.content });
+  const drawnBody = drawn.ok ? expandPageTokens(drawn.markdown, phages) : /** @type {const} */ ({ ok: true, text: parsed.content });
   if (!drawnBody.ok) errors.push(...drawnBody.errors);
   const body = drawnBody.ok ? drawnBody.text : parsed.content;
   const schema = pageSchema(fm, body, errors);
