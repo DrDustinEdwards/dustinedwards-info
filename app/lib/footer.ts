@@ -94,14 +94,14 @@ export type PrivateTool = FooterLink & { icon: "lamp" | "gear" | "capsid"; name:
 /**
  * The three logins, the Workspace group in the grid's sixth slot. The accessible names say what each one is
  * for, begin with the visible word so speech input still works, and end with SIGN_IN_NOTE so a link read
- * out of context still says it needs a sign-in (Dustin, 2026-09-28). Admin is this site's sign-in page.
+ * out of context still says it needs a sign-in (Dustin, 2026-09-28). Admin is this site's admin, behind Cloudflare Access.
  */
 export const TOOLS_HEADING = "Workspace";
 export const SIGN_IN_NOTE = "(requires sign-in)";
 export const PRIVATE_TOOLS: PrivateTool[] = [
   // Behind Cloudflare Access since 2026-09-26.
   { to: "https://carrel.dustinedwards.info", label: "Carrel", name: `Carrel, writing ${SIGN_IN_NOTE}`, icon: "lamp", external: true },
-  { to: "/login", label: "Admin", name: `Admin, this site ${SIGN_IN_NOTE}`, icon: "gear" },
+  { to: "/admin", label: "Admin", name: `Admin, this site ${SIGN_IN_NOTE}`, icon: "gear" },
   // Capsid's admin page, behind Cloudflare Access. It has its own address (portal.dustinedwards.info) since
   // 2026-10-01; the old capsid.dustin-edwards.workers.dev/portal/ answers 404.
   {

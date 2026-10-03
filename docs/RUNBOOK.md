@@ -342,6 +342,33 @@ and confirm the next scheduled watchdog run repairs rather than reports.
 
 ---
 
+## 5b. The admin login (Cloudflare Access)
+
+`/admin` is guarded by the Access application `dustinedwards-login` (team domain
+`dustinedwards.cloudflareaccess.com`). Access signs in the person; the Worker then verifies the signed
+token itself (`app/lib/access.server.ts`: signature against the team's published keys, `aud` equal to
+`ACCESS_AUD`, `iss` equal to the team domain, expiry). Both values are plain vars in `wrangler.jsonc`.
+
+**Who may administer the site is one list: the Access policy `dustinedwards-admin`.** Zero Trust >
+Access > Applications > `dustinedwards-login` > Policies > `dustinedwards-admin` > the Include rule
+"Emails". Add or remove an address there and save; no code, no deploy. Every edit is recorded under
+the email in that person's token.
+
+**Machines** (CI, smoke) cannot sign in, so they use an Access service token in a second policy of
+the same application (action Service Auth), plus the existing `SMOKE_TOKEN` bearer. A service token
+is never an administrator on its own.
+
+**workers.dev and preview URLs** are not covered by the Access application, so a person cannot sign
+in there: no token is ever minted for those hosts, and the Worker refuses an unverified one.
+
+**If sign-in is broken:** the Access application's policy is the first place to look (Zero Trust >
+Logs > Access). To get back in while Google sign-in still exists, use the `/login` page on the
+workers.dev address. To switch the Access check off, remove `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD` from
+the vars and deploy: every request is then treated as not having come through Access.
+
+**Local development:** `vite dev` on localhost is admitted as `dev@localhost` (only when the build is a
+development build and the host is localhost; a production build compiles that branch out).
+
 ## 6. Where the logs are
 
 **Workers Logs**, live tail, the first place to look:
