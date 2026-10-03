@@ -75,7 +75,7 @@ export async function run({ page }) {
   await page.click("li.procedure-step[data-step] .run-done-check");
   const afterCheck = await page.evaluate(() => ({
     progress: document.querySelector(".run-progress")?.textContent ?? "",
-    done: document.querySelectorAll("li.procedure-step.run-done").length,
+    done: document.querySelectorAll("li.procedure-step.run-step-done").length,
   }));
   ok(
     "checking a step updates the progress and marks the step done",
@@ -132,7 +132,7 @@ export async function run({ page }) {
       swapped !== beforeScale && state.marker === 1 && /[?&]n=9\b/.test(state.search),
       `materials changed ${swapped !== beforeScale}, the page marker ${state.marker === 1 ? "survived" : "was lost (the page reloaded)"}, search "${state.search}".`,
     );
-    const stillChecked = await page.evaluate(() => document.querySelectorAll("li.procedure-step.run-done").length);
+    const stillChecked = await page.evaluate(() => document.querySelectorAll("li.procedure-step.run-step-done").length);
     ok("a scale change keeps the steps already checked", stillChecked === 1, `${stillChecked} step(s) still marked done.`);
   } else {
     skip("run mode scale", `${path} has no scale form`);
@@ -145,7 +145,7 @@ export async function run({ page }) {
   ok("a run survives a reload and is offered as Resume, with its progress", /^Resume your run \(1 of \d+ done\)$/.test(resume), `the start button read "${resume}".`);
   await page.click(".run-start");
   const restored = await page.evaluate(() => ({
-    checked: document.querySelectorAll("li.procedure-step.run-done").length,
+    checked: document.querySelectorAll("li.procedure-step.run-step-done").length,
     note: /** @type {HTMLTextAreaElement | null} */ (document.querySelector(".run-note-text"))?.value ?? "",
   }));
   ok("a resumed run keeps its checked steps and its notes", restored.checked === 1 && restored.note === "tube 3 cloudy", `${restored.checked} step(s) done, first note "${restored.note}".`);

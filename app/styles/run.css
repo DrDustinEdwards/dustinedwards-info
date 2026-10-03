@@ -86,13 +86,13 @@
   border-inline-start-color: var(--brand);
   background: var(--dust);
 }
-.procedure[data-run="on"] .procedure-step.run-done > .procedure-step-text {
+.procedure[data-run="on"] .procedure-step.run-step-done > .procedure-step-text {
   color: var(--text-secondary);
   text-decoration: line-through;
   text-decoration-thickness: 1px;
 }
 /* A critical step is marked before it is read: the flag stays open and the step's edge turns. */
-.procedure[data-run="on"] .procedure-step:has(.procedure-flag-critical):not(.run-done) {
+.procedure[data-run="on"] .procedure-step:has(.procedure-flag-critical):not(.run-step-done) {
   border-inline-start-color: var(--text-danger);
 }
 
@@ -218,7 +218,7 @@
   .procedure[data-run="on"] .procedure-step {
     break-inside: avoid;
   }
-  .procedure[data-run="on"] .procedure-step.run-done > .procedure-step-text {
+  .procedure[data-run="on"] .procedure-step.run-step-done > .procedure-step-text {
     text-decoration: none;
   }
 }

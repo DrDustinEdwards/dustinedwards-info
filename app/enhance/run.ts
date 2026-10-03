@@ -147,7 +147,7 @@ function renderBar() {
     const isCurrent = li === current;
     if (isCurrent) li.setAttribute("aria-current", "step");
     else li.removeAttribute("aria-current");
-    li.classList.toggle("run-done", run.steps[keyOf(li)]?.done === true);
+    li.classList.toggle("run-step-done", run.steps[keyOf(li)]?.done === true);
   }
 }
 
@@ -242,7 +242,7 @@ function removeTools() {
   for (const tools of root!.querySelectorAll(".run-tools")) tools.remove();
   for (const li of stepItems) {
     li.removeAttribute("aria-current");
-    li.classList.remove("run-done");
+    li.classList.remove("run-step-done");
   }
 }
 
