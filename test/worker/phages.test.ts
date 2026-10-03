@@ -9,6 +9,10 @@ import { loader as twinLoader } from "~/routes/content-page[.md]";
 import acornPhage from "../../content/phages/acorn15.md?raw";
 import arloPhage from "../../content/phages/arlo.md?raw";
 import phagesPage from "../../content/pages/research-phages.md?raw";
+// The pages that state a phage fact by token: a phage write re-derives each of them (PHAGE_FACT_PAGES).
+import researchPage from "../../content/pages/research.md?raw";
+import bacteriophagesPage from "../../content/pages/research-bacteriophages.md?raw";
+import scienceEducationPage from "../../content/pages/research-science-education.md?raw";
 
 import { stubGitHub, type GitHubStub } from "./github-stub";
 import { renderRoute, routeContext } from "./route-helpers";
@@ -84,7 +88,15 @@ beforeEach(async () => {
   await testEnv.DB.prepare("DELETE FROM phages").run();
   await seedPages([PATH]);
   await seedPhages();
-  gh = stubGitHub({ [FILE]: acornPhage, "content/phages/arlo.md": arloPhage, [PAPER_FILE]: "x", [PAGE_FILE]: phagesPage });
+  gh = stubGitHub({
+    [FILE]: acornPhage,
+    "content/phages/arlo.md": arloPhage,
+    [PAPER_FILE]: "x",
+    [PAGE_FILE]: phagesPage,
+    "content/pages/research.md": researchPage,
+    "content/pages/research-bacteriophages.md": bacteriophagesPage,
+    "content/pages/research-science-education.md": scienceEducationPage,
+  });
 });
 
 afterEach(() => {
@@ -267,7 +279,8 @@ describe("the operator reads phages and cannot save one", () => {
     expect(data.count).toBe(75);
     expect(data.phages[0]).toMatchObject({ slug: "acorn15", name: "Acorn15", year: 2017, county: "Hood County" });
     // Only the table's own fields: nothing beyond the public shape reaches the operator.
-    expect(Object.keys(data.phages[0] ?? {}).sort()).toEqual(["county", "formerly", "host", "name", "note", "paper", "phagesdb", "slug", "year"]);
+    // The genome size and gene count are the genome announcement's own public numbers, which the pages state.
+    expect(Object.keys(data.phages[0] ?? {}).sort()).toEqual(["county", "formerly", "genes", "genomeBp", "host", "name", "note", "paper", "phagesdb", "slug", "year"]);
 
     const one = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_phage", { slug: SLUG });
     expect(one).toMatchObject({ ok: true, data: { slug: SLUG, raw: acornPhage, errors: [], phage: { name: "Acorn15" } } });

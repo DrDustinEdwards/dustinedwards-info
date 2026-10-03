@@ -24,7 +24,7 @@ import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { PUBLICATIONS_DIR } from "~/lib/publications/parse.mjs";
 import { compile as compilePageFile, writeRow as writePageRow } from "~/lib/pages/save.server";
 
-import { PHAGES_PAGE_PATH, compilePhage, phagePath, phageSetErrors, phageSlug, sortPhages, type Phage, type PhageHost } from "./compile.mjs";
+import { PHAGES_PAGE_PATH, PHAGE_FACT_PAGES, compilePhage, phagePath, phageSetErrors, phageSlug, sortPhages, type Phage, type PhageHost } from "./compile.mjs";
 
 type PhageEnv = Env & { GITHUB_TOKEN?: string };
 
@@ -85,14 +85,18 @@ async function otherPhages(env: PhageEnv, slug: string) {
  * skipped: the phage would otherwise read as converged while the page is stale.
  */
 export async function refreshPage(env: PhageEnv, phages: Phage[]) {
-  const slug = pageSlug(PHAGES_PAGE_PATH);
-  const file = await readFile(env, pageSourcePath(slug));
-  if (!file) throw new Error(`the page ${PHAGES_PAGE_PATH} has no file (${pageSourcePath(slug)}), so the phage table has nowhere to be drawn`);
-  const compiled = await compilePageFile(env, slug, file.content, undefined, sortPhages(phages));
-  if (!compiled.ok) {
-    throw new Error(`the page ${PHAGES_PAGE_PATH} does not compile with these phages, so its table, twin and search record were not refreshed: ${compiled.errors.join("; ")}`);
+  // The table's page, then every page that states a phage fact by token ({{phages.count}}): each is derived from
+  // the same rows, so a phage write leaves none of them stale.
+  for (const path of [PHAGES_PAGE_PATH, ...PHAGE_FACT_PAGES]) {
+    const slug = pageSlug(path);
+    const file = await readFile(env, pageSourcePath(slug));
+    if (!file) throw new Error(`the page ${path} has no file (${pageSourcePath(slug)}), so what it draws from the phages has nowhere to be drawn`);
+    const compiled = await compilePageFile(env, slug, file.content, undefined, sortPhages(phages));
+    if (!compiled.ok) {
+      throw new Error(`the page ${path} does not compile with these phages, so its table, twin and search record were not refreshed: ${compiled.errors.join("; ")}`);
+    }
+    await writePageRow(env, compiled);
   }
-  await writePageRow(env, compiled);
 }
 
 /** The phage's D1 row alone: the derived store the drift check reads. One row, in one statement. */
