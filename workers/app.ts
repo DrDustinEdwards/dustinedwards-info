@@ -8,7 +8,7 @@ import { httpsRedirectStatus, httpsRedirectTarget } from "~/lib/https-redirect.m
 import { negotiatesAwayFromHtml } from "~/lib/negotiate.mjs";
 import { EDGE_CACHE_CONTROL, EDGE_CACHE_HEADER, SHARED_CACHE_CONTROL } from "~/lib/seo";
 import { movedPathTarget } from "~/lib/path-moves.mjs";
-import { isApexHost, wordpressDisposition } from "~/lib/wordpress-redirects.mjs";
+import { isApexHost, wordpressDisposition, wwwRedirectTarget } from "~/lib/wordpress-redirects.mjs";
 import { postRedirectTarget } from "~/lib/slug-redirect.mjs";
 import {
   paperSlashTarget,
@@ -262,6 +262,11 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 async function gateway(...[request, env, ctx]: FetchArgs): Promise<Response> {
+  // First, so `http://www/x` is one hop to `https://apex/x` and not two.
+  const requested = new URL(request.url);
+  const apex = wwwRedirectTarget(requested.hostname, requested.pathname, requested.search);
+  if (apex !== null) return redirectTo(request, apex);
+
   const secure = httpsRedirectTarget(request.url);
   if (secure !== null) return redirectTo(request, secure);
 
