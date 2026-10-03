@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { Panel } from "capsomer/react/panel";
 
 import { toast } from "~/components/admin/toast";
 import { useMediaSearch } from "~/components/admin/use-media-search";
@@ -164,7 +165,7 @@ export function MediaPalette({
         ? count
         : "No matches";
   const status = (
-    <p className="sr-only" role="status">
+    <p className="cap-sr-only" role="status">
       {announcement}
     </p>
   );
@@ -174,70 +175,62 @@ export function MediaPalette({
   // One return, so the region keeps its place whether or not the list shows and is never remounted.
   return (
     <>
-    {status}
-    {showing ? (
-    <div className="media-palette">
-      {searchError ? (
-        <p className="media-palette-empty">
-          Search failed: {searchError}. Press Enter to search the full page.
-        </p>
-      ) : results.length === 0 ? (
-        <p className="media-palette-empty">
-          Nothing matches &ldquo;{query.trim()}&rdquo;. Searched paths, names, alt
-          text and tags.
-        </p>
-      ) : (
-        <ul className="media-palette-list" id={LIST_ID} role="listbox" aria-label="Matching files">
-          {results.map((r, i) => (
-            <li key={r.key} role="presentation">
-              {/* A link, not a button: clicking a row opens it, while Enter copies. Out of the tab
-                  order: the box keeps focus and points at the option. */}
-              <a
-                href={`/admin/media?key=${encodeURIComponent(r.key)}`}
-                id={optionId(i)}
-                role="option"
-                aria-selected={i === Math.min(cursor, results.length - 1)}
-                tabIndex={-1}
-                className="media-palette-row"
-                data-active={i === Math.min(cursor, results.length - 1) ? "yes" : undefined}
-                onMouseEnter={() => setCursor(i)}
-              >
-                <span className="media-palette-kind" aria-hidden="true">
-                  {r.viewable ? "" : r.key.split(".").pop()?.toUpperCase()}
-                </span>
-                <span className="media-palette-text">
-                  <span className="media-palette-name">{r.name}</span>
-                  <span className="media-palette-dir">{r.dir}</span>
-                </span>
-                <span className="media-palette-size">{byteSize(r.size)}</span>
-                {i === Math.min(cursor, results.length - 1) ? (
-                  <span className="media-palette-hint" aria-hidden="true">
-                    enter
-                  </span>
-                ) : null}
-              </a>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* The count says "6+" when the cap was hit, so six never reads as the whole answer. */}
-      <p className="media-palette-hints">
-        <span>
-          <b>up down</b> move
-        </span>
-        <span>
-          <b>enter</b> copies the address
-        </span>
-        <span>
-          <b>shift enter</b> opens details
-        </span>
-        <span className="media-palette-count" aria-hidden="true">
-          {copied ? "copied" : copyFailed ? "copy failed" : results.length ? count : ""}
-        </span>
-      </p>
-    </div>
-    ) : null}
+      {status}
+      {showing ? (
+        <Panel
+          title="Matching files"
+          src={
+            <span aria-hidden="true">
+              {copied ? "copied" : copyFailed ? "copy failed" : results.length ? count : ""}
+            </span>
+          }
+          flush
+          footer={
+            /* The count says "6+" when the cap was hit, so six never reads as the whole answer. */
+            <p className="cap-muted">
+              <kbd>up down</kbd> move · <kbd>enter</kbd> copies the address · <kbd>shift enter</kbd>{" "}
+              opens details
+            </p>
+          }
+        >
+          {searchError ? (
+            <p className="cap-panel-pad">
+              Search failed: {searchError}. Press Enter to search the full page.
+            </p>
+          ) : results.length === 0 ? (
+            <p className="cap-panel-pad">
+              Nothing matches &ldquo;{query.trim()}&rdquo;. Searched paths, names, alt text and tags.
+            </p>
+          ) : (
+            <ul className="cap-listbox" id={LIST_ID} role="listbox" aria-label="Matching files">
+              {results.map((r, i) => (
+                <li key={r.key} role="presentation">
+                  {/* A link, not a button: clicking a row opens it, while Enter copies. Out of the tab
+                      order: the box keeps focus and points at the option. */}
+                  <a
+                    href={`/admin/media?key=${encodeURIComponent(r.key)}`}
+                    id={optionId(i)}
+                    role="option"
+                    aria-selected={i === Math.min(cursor, results.length - 1)}
+                    tabIndex={-1}
+                    className="cap-option"
+                    data-active={i === Math.min(cursor, results.length - 1) ? "" : undefined}
+                    onMouseEnter={() => setCursor(i)}
+                  >
+                    <span className="cap-option-label">
+                      {r.name} <span className="cap-muted">{r.dir}</span>
+                    </span>
+                    <span className="cap-option-hint">
+                      {r.viewable ? "" : `${r.key.split(".").pop()?.toUpperCase()} · `}
+                      {byteSize(r.size)}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      ) : null}
     </>
   );
 }

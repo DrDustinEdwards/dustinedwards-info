@@ -190,6 +190,7 @@ const ICONS = {
   posts: <Icon d="M4 2.5h5l3 3v8H4zM9 2.5v3h3M6 8.5h4M6 11h4" />,
   mentions: <Icon d="M2.5 3.5h11v7h-6l-3 2.5v-2.5h-2z" />,
   media: <Icon d="M2.5 3.5h11v9h-11zM2.5 11l3.5-3.5 2.5 2.5 2-2 3 3M10.5 6.2h.01" />,
+  site: <Icon d="M8 2a6 6 0 1 0 0 12A6 6 0 0 0 8 2zM2 8h12M8 2c2 1.8 2 10.2 0 12M8 2c-2 1.8-2 10.2 0 12" />,
   tools: <Icon d="M2.5 4.5h6M11.5 4.5h2M2.5 8h2M7.5 8h6M2.5 11.5h6M11.5 11.5h2M10 3v3M5.5 6.5v3M10 10v3" />,
 };
 
@@ -209,8 +210,10 @@ function countNote(count: number | null, drift: number | null, maxAgeSeconds: nu
 }
 
 function RouterLink({ href, children, ...rest }: LinkProps) {
+  // A link out of the admin is a document navigation: the public pages bring their own stylesheets, which
+  // would otherwise be loaded beside Capsomer's.
   return (
-    <Link to={href} {...rest}>
+    <Link to={href} reloadDocument={!href.startsWith("/admin")} {...rest}>
       {children}
     </Link>
   );
@@ -263,7 +266,10 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         brandHref="/admin"
         nav={nav}
         tabs={nav.slice(0, 4)}
-        more={nav.slice(4)}
+        more={[
+          ...nav.slice(4),
+          { id: "site", label: "View site", href: "/", icon: ICONS.site },
+        ]}
         renderLink={RouterLink}
         status={
           <span className="cap-muted" data-hide="phone">
@@ -272,7 +278,7 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         }
         actions={
           <>
-            <a className="cap-btn" href="/" aria-label="View site, leaves the admin" data-hide="phone">
+            <a className="cap-btn" href="/" title="Leaves the admin" data-hide="phone">
               View site
             </a>
             <ThemeSwitch initial={theme === "light" || theme === "dark" ? theme : undefined} />

@@ -27,6 +27,7 @@ const PAGES = [
   ["posts-history", `/admin/posts/${slug}/history`],
   ["media-grid", "/admin/media?view=grid"],
   ["media-list", "/admin/media?view=list"],
+  ["media-inspector", "/admin/media?view=grid&key=posts%2Fa1b2c3d4e5f60718-phage-plaque-assay.webp"],
   ["mentions", "/admin/mentions"],
   ["tools", "/admin/tools"],
 ];

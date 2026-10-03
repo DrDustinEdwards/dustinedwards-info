@@ -14,6 +14,7 @@ export function TabLink({
   count?: number;
   children: ReactNode;
   "aria-label"?: string;
+  title?: string;
 }) {
   return (
     <Link to={to} className="cap-tab" aria-current={current ? "page" : undefined} {...rest}>

@@ -231,7 +231,7 @@ function MentionRow({
           <>
             {mention.excerpt ? <>{mention.excerpt}. </> : null}
             {/* Text, not a link: an unauthenticated POST chose this string. */}
-            {mention.sourceUrl}
+            <span data-mention-source="">{mention.sourceUrl}</span>
           </>
         }
         meta={
