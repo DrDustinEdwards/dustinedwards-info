@@ -17,7 +17,7 @@ test("reverseComplement, by hand, including the IUPAC ambiguity codes", () => {
   assert.equal(reverseComplement("ATGC"), "GCAT");
   // R<->Y, K<->M, B<->V, D<->H; S, W and N map to themselves.
   assert.equal(reverseComplement("RYKMBVDHSWN"), "NWSDHBVKMRY");
-  assert.equal(reverseComplement(reverseComplement("CATACTGGAGCCAATGGTT")), "CATACTGGAGCCAATGGTT");
+  assert.equal(reverseComplement(reverseComplement("CATACTGAGCCAATGGTT")), "CATACTGAGCCAATGGTT");
 });
 
 test("parseFasta reads the header and joins the sequence lines", () => {
@@ -77,9 +77,8 @@ test("a reference filed in the other orientation gives the same product", () => 
 
 /*
  * The real sets, on GenBank DQ387450 (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019
- * cite ("published REV proviral sequences from APC (GenBank DQ387450)"). Primers as the Stewart and Cox
- * supplements give them, except the 3' LTR forward primer: the published CATACTGGAGCCAATGGTT has a typo
- * (an extra G), and the corrected CATACTGAGCCAATGGTT is what the reference carries.
+ * cite ("published REV proviral sequences from APC (GenBank DQ387450)"). Primers are the ones the page
+ * gives, and they match DQ387450 as the tests below assert.
  */
 const REV = reference("DQ387450");
 
