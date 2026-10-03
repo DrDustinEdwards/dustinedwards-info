@@ -36,8 +36,6 @@ const DESTRUCTIVE = new Set([
   // No recovery path: a row came from a stranger's POST and has no derivation to rebuild it from.
   "admin.mentions.tsx:delete",
   "admin.mentions.tsx:sweep",
-  // A retention sweep like the mentions one: the rows have no derivation to rebuild them from.
-  "admin.tools.tsx:purge-zero-results",
 ]);
 
 /**
@@ -73,10 +71,6 @@ const REVERSIBLE = new Map([
       "the pair is a two-way door, and no column is removed either way",
   ],
   ["admin.mentions.tsx:reject", "the inverse of approve, on the same two-way door"],
-  [
-    "admin.tools.tsx:podcast-slot",
-    "overwrites which episode the home page features; the feed is untouched and the slot is re-pickable",
-  ],
 ]);
 
 // One upload path is selected by a shared predicate rather than an intent string, so this detector
@@ -188,7 +182,7 @@ console.log(`  ${actionFiles} action module(s), ${found.size} intent(s), ${DESTR
    * DESTRUCTIVE operator tools. Each removes something no derivation can
    * rebuild, and each must declare its policy in TOOL_DESCRIPTORS.
    */
-  const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention"]);
+  const OPERATOR_DESTRUCTIVE = new Set(["delete_post", "decide_mention", "purge_zero_results"]);
 
   /** REVERSIBLE, with the reason, because "not destructive" is a judgment. */
   const OPERATOR_REVERSIBLE = new Map([

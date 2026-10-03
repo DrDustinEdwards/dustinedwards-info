@@ -1,13 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import {
-  PODCAST_AUDIO_HOSTS,
-  chooseEpisode,
-  parseDuration,
-  parsePodcastFeed,
-  parsePodcastSlot,
-} from "../app/lib/podcast/feed.mjs";
+import { PODCAST_AUDIO_HOSTS, parseDuration, parsePodcastFeed } from "../app/lib/podcast/feed.mjs";
 import { clockTime } from "../app/lib/podcast/clock.mjs";
 import { contentSecurityPolicy } from "../workers/csp.mjs";
 
@@ -97,23 +91,12 @@ test("durations in all three itunes forms, and garbage is null", () => {
   assert.equal(clockTime(3849), "1:04:09");
 });
 
-test("an unreadable or incomplete slot setting defaults to latest", () => {
-  for (const bad of [null, "", "{", '{"mode":"featured"}', '{"mode":"other"}']) {
-    assert.deepEqual(parsePodcastSlot(bad), { mode: "latest" }, String(bad));
-  }
-});
-
-test("the chosen episode is the latest or the featured one, and a featured episode that left the feed falls back", () => {
+test("the home page's episode is episodes[0], which is always the newest: no picker, no stored choice", () => {
   const eps = parsePodcastFeed(
     feed(item({ guid: "b", pubDate: "Tue, 19 Nov 2019 09:00:30 GMT" }), item({ guid: "a", pubDate: "Tue, 03 Sep 2019 09:00:50 GMT" })),
   );
-  assert.deepEqual(chooseEpisode(eps, { mode: "latest" }), { episode: eps[0], fellBack: false });
-  assert.deepEqual(chooseEpisode(eps, parsePodcastSlot('{"mode":"featured","guid":"a"}')), {
-    episode: eps[1],
-    fellBack: false,
-  });
-  assert.deepEqual(chooseEpisode(eps, { mode: "featured", guid: "gone" }), { episode: eps[0], fellBack: true });
-  assert.deepEqual(chooseEpisode([], { mode: "latest" }), { episode: null, fellBack: false });
+  assert.equal(eps[0].guid, "b");
+  assert.deepEqual(parsePodcastFeed(feed()), []);
 });
 
 test("the CSP's media-src allows exactly the hosts the parser accepts", async () => {

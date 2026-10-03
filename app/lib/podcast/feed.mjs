@@ -13,8 +13,6 @@ export const PODCAST_AUDIO_HOSTS = ["op3.dev", "media.germomics.com"];
 
 const EPISODE_PAGE_HOSTS = ["germomics.com", "www.germomics.com"];
 
-export const PODCAST_SLOT_KEY = "home.podcast";
-
 /**
  * @typedef {{
  *   guid: string,
@@ -28,8 +26,6 @@ export const PODCAST_SLOT_KEY = "home.podcast";
  *   season: number | null,
  *   episode: number | null,
  * }} PodcastEpisode
- *
- * @typedef {{ mode: "latest" } | { mode: "featured", guid: string }} PodcastSlot
  */
 
 /**
@@ -117,36 +113,4 @@ export function parsePodcastFeed(xml) {
     });
   }
   return episodes.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
-}
-
-/**
- * @param {string | null} value
- * @returns {PodcastSlot}
- */
-export function parsePodcastSlot(value) {
-  if (!value) return { mode: "latest" };
-  try {
-    const parsed = JSON.parse(value);
-    if (parsed?.mode === "featured" && typeof parsed.guid === "string" && parsed.guid) {
-      return { mode: "featured", guid: parsed.guid };
-    }
-    if (parsed?.mode === "latest") return { mode: "latest" };
-  } catch {
-    // Falls through to the logged default below.
-  }
-  // Malformed reads as the default so the home page renders, but it is logged: a featured episode the
-  // owner chose has silently become "latest".
-  console.error(JSON.stringify({ alert: "podcast-slot-unreadable", value }));
-  return { mode: "latest" };
-}
-
-/**
- * @param {PodcastEpisode[]} episodes @param {PodcastSlot} slot
- * @returns {{ episode: PodcastEpisode | null, fellBack: boolean }}
- */
-export function chooseEpisode(episodes, slot) {
-  const latest = episodes[0] ?? null;
-  if (slot.mode !== "featured") return { episode: latest, fellBack: false };
-  const featured = episodes.find((e) => e.guid === slot.guid);
-  return featured ? { episode: featured, fellBack: false } : { episode: latest, fellBack: true };
 }
