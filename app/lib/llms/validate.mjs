@@ -35,15 +35,20 @@ export const LLMS_REQUIRED_MENTIONS = [
   "/colophon",
 ];
 
-const LISTED_PAGE = /^\s{2}(\/(?:research|teaching|software|cv)(?:\/[a-z0-9-]+)*)$/gm;
-const LISTED_TWIN = /^\s{2}(\/research\/publications\/[a-z0-9-]+\.md)$/gm;
+/*
+ * The llmstxt.org shape: a page is a list item whose link carries an absolute URL, `- [Title](https://host/path): note`.
+ * The collection hub /research/publications is a route and not a content page, so it is not read as one.
+ */
+const LISTED_PAGE =
+  /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(?!\/research\/publications)(\/(?:research|teaching|software|cv)(?:\/[a-z0-9-]+)*)\)/gm;
+const LISTED_TWIN = /^- \[[^\]]+\]\(https?:\/\/[^/\s)]+(\/research\/publications\/[a-z0-9-]+\.md)\)/gm;
 
-/** The page paths the file lists, one per indented line. @param {string} text */
+/** The page paths the file lists, one per list link. @param {string} text */
 function listedPagePaths(text) {
   return new Set([...text.matchAll(LISTED_PAGE)].map((m) => m[1] ?? ""));
 }
 
-/** The paper twin URLs the file lists, one per indented line. @param {string} text */
+/** The paper twin URLs the file lists, as paths, one per list link. @param {string} text */
 export function listedPaperTwins(text) {
   return new Set([...text.matchAll(LISTED_TWIN)].map((m) => m[1] ?? ""));
 }
@@ -104,6 +109,19 @@ export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls }
     'the first line must be "# dustinedwards.info", as agents read the first heading as the site name',
   );
 
+  // What PageSpeed's agent-discoverability audit reads: the summary, and links it can follow.
+  check(
+    "llms.txt has a blockquote summary under its title",
+    /^# [^\n]+\n\n> \S/.test(text),
+    'the llmstxt.org format puts a "> summary" line after the H1 and one blank line',
+  );
+  const relative = [...text.matchAll(/\]\((\/[^)\s]*)\)/g)].map((m) => m[1]);
+  check(
+    "every markdown link in llms.txt is absolute",
+    relative.length === 0,
+    `relative link(s): ${relative.slice(0, 5).join(", ")}. A crawler reading the file alone has no origin to resolve them against.`,
+  );
+
   const dashes = findWideDashes(text);
   check(
     "llms.txt has no wide dash",
@@ -149,7 +167,7 @@ export function llmsChecks(text, { pagePaths, origin, findWideDashes, twinUrls }
 
   // A tracked text file cannot import SITE_ORIGIN, so this binds its contact line to it. At DNS cutover
   // it goes red until llms.txt follows, which is the point.
-  const contact = (text.match(/## Contact\s*\n\s*\n(\S+)/) ?? [])[1] ?? "";
+  const contact = (text.match(/## Contact\s*\n\s*\n(?:- \[[^\]]*\]\()?(https?:\/\/[^\s)]+)/) ?? [])[1] ?? "";
   check(
     "llms.txt has a contact URL to compare",
     contact.startsWith("https://"),

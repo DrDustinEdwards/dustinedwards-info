@@ -70,7 +70,7 @@ test("each page has its markdown twin, led by its title, and is listed in llms.t
     const twin = contentPageMarkdownBody(page, entryFor(page.path));
     assert.ok(twin.startsWith(`# ${page.title}\n\n`), page.path);
     assert.ok(twin.length > page.title.length + 200, `${page.path}: a twin of ${twin.length} characters`);
-    assert.match(llms, new RegExp(`^ {2}${page.path.replaceAll("/", "\\/")}$`, "m"), `${page.path} is not in llms.txt`);
+    assert.match(llms, new RegExp(`^- \\[[^\\]]+\\]\\(https://dustinedwards\\.info${page.path}\\)`, "m"), `${page.path} is not in llms.txt`);
   }
 });
 
