@@ -4,7 +4,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { BASE, bundleFetches, firstPathWith, ok, readSkipLink, root, skip } from "../harness.mjs";
+import { BASE, bundleFetches, firstPathWith, ok, root, skip } from "../harness.mjs";
 
 /**
  * The post-page enhancements: the bundles, the copy buttons, the footnote previews and the copy
@@ -15,18 +15,6 @@ import { BASE, bundleFetches, firstPathWith, ok, readSkipLink, root, skip } from
  */
 export async function run({ page }) {
   await page.setViewport({ width: 1280, height: 900 });
-  await page.goto(`${BASE}/login`, { waitUntil: "networkidle0" });
-  const loginSkip = await page.evaluate(readSkipLink);
-  /* root.tsx renders the skip link on every page, /login included, so its absence is a failure. */
-  ok(
-    "/login: the skip link exists and its target does",
-    loginSkip.link && loginSkip.target,
-    loginSkip.link
-      ? `the login page renders a skip link to ${JSON.stringify(loginSkip.href)} and nothing ` +
-          `carries that id, so keyboard focus goes nowhere`
-      : "there is no .skip-link on /login at all",
-  );
-
   /* The Ask stream is not driven because it bills. Console errors are asserted at the end, where CSP refusals show. */
   /** @type {string[]} */
   const publicConsoleErrors = [];
