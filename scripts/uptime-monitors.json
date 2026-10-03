@@ -1,10 +1,10 @@
 {
   "health": {
-    "id": 803937608,
-    "url": "https://dustinedwards.dustin-edwards.workers.dev/api/health"
+    "id": 804160292,
+    "url": "https://dustinedwards.info/api/health"
   },
   "home": {
-    "id": 803937424,
-    "url": "https://dustinedwards.dustin-edwards.workers.dev"
+    "id": 804160291,
+    "url": "https://dustinedwards.info"
   }
 }
