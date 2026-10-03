@@ -27,6 +27,7 @@ import { SITE, SITE_ORIGIN, breadcrumbJsonLd, pageMeta, personId, publicHtmlHead
 import type { Route } from "./+types/content-page";
 
 // prose.css is route-scoped: a page using `.prose` without importing it renders unstyled.
+import "~/styles/enarratio.css";
 import "~/styles/prose.css";
 
 /**
