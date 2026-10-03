@@ -11,11 +11,11 @@
   padding: 0.5rem 1rem;
   border: 1px solid var(--text);
   background: var(--text);
-  color: var(--bg, #fff);
+  color: var(--paper);
   cursor: pointer;
 }
 .run-start:hover {
-  opacity: 0.9;
+  text-decoration: underline;
 }
 
 .run-live,
@@ -38,7 +38,7 @@
   margin-block: 1.5rem 0;
   padding: 0.75rem 1rem;
   border: 1px solid var(--text);
-  background: var(--bg, #fff);
+  background: var(--paper);
   font-family: var(--font-sans);
   font-size: 0.9375rem;
 }
@@ -65,7 +65,7 @@
 .run-bar .run-next,
 .run-bar .run-finish {
   background: var(--text);
-  color: var(--bg, #fff);
+  color: var(--paper);
 }
 .run-warning {
   flex-basis: 100%;
@@ -161,7 +161,7 @@
   box-sizing: border-box;
   padding: 0.5rem;
   border: 1px solid var(--border);
-  background: var(--bg, #fff);
+  background: var(--paper);
   color: var(--text);
   font: inherit;
   font-size: 1rem;
