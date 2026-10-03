@@ -34,24 +34,23 @@ export default function Privacy() {
       <div className="prose">
         <h2 id="page-views">Page views</h2>
         <p>
-          Every successful HTML page view writes one row to Cloudflare Analytics Engine. The
-          row holds four things: the path you visited, the hostname of the site that linked
-          you here if there was one, the country Cloudflare associates with the request, and
-          whether the browser said it was mobile, desktop, or did not say.
+          This site keeps no visitor record of its own. Page views are counted by{" "}
+          <strong>Cloudflare Web Analytics</strong>, which Cloudflare switches on for this
+          domain and which adds one small script to each page as it is delivered. The script
+          measures that the page was viewed and how fast it loaded, and reports back to this
+          site&rsquo;s own address. Cloudflare says Web Analytics does not collect
+          visitors&rsquo; personal data; the figures the site owner sees are totals by page, country and
+          browser type, never a list of people.
         </p>
         <p>
-          It does not hold an IP address, a user agent, a cookie, an identifier of any kind,
-          or anything that would let two visits be recognized as the same person.
+          That script is the one thing on a page that this repository does not write: the
+          site&rsquo;s security policy names that single file as the only outside script it
+          allows, so nothing else from another company can run. Cloudflare also counts
+          requests as they pass through its network, which is how it tells search crawlers
+          and AI crawlers apart from readers.
         </p>
         <p>
-          Two paths carry an identifier in the URL rather than in a parameter: a draft
-          preview link and a media key. Those are redacted to a fixed placeholder before the
-          row is written, so the token itself is never stored. Admin pages are skipped
-          entirely, and so is everything that is not an HTML page: images, feeds, the
-          markdown copies of posts, and the API.
-        </p>
-        <p>
-          How long Cloudflare keeps those rows is Cloudflare&rsquo;s retention policy, not a
+          How long Cloudflare keeps those figures is Cloudflare&rsquo;s retention policy, not a
           setting in this repository. This page does not quote a number it does not control.
         </p>
 
@@ -108,9 +107,10 @@ export default function Privacy() {
         <h2 id="processors">Who else is involved</h2>
         <p>
           <strong>Cloudflare</strong> runs everything: the Worker that serves these pages,
-          the database, the file storage, the analytics, and the model that answers Ask
-          questions. No page on this site loads anything from another company&rsquo;s server
-          on its own, which is why there are no third-party scripts to disclose.
+          the database, the file storage, the page-view analytics described above, and the
+          model that answers Ask questions. The one script a page runs that this site did not
+          write is Cloudflare&rsquo;s analytics script, served from Cloudflare&rsquo;s own
+          address; no other company&rsquo;s script runs on any page.
         </p>
         <p>
           <strong>The Germomics podcast host</strong> is reached only if you play the episode

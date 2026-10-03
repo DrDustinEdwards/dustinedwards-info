@@ -53,7 +53,7 @@ Every gate verifies DISK, not HEAD. `git diff <path>` before `git add <path>`; n
 
 Read off the request context via `getEnv(context)` from `app/lib/context.ts`. Never import bindings globally.
 
-    DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET  ANALYTICS
+    DB  APP_KV  MEDIA  MEDIA_BACKUP  OG  ASSETS  IMAGES  AI_SEARCH  ASK_BUDGET
 
 `ASK_BUDGET` IS THE WHOLE SITE'S RATE LIMITER, not an Ask-only budget, and is deliberately not renamed before the cutover. What each one is, with that ruling and the queue consumer, is `wrangler.jsonc.example`. That file is tracked and `wrangler.jsonc` is gitignored, a PORTFOLIO rule; a new binding is added to both in one commit. `workers/watchdog.ts` is a second Worker on the identical split, deployed by a `ship` step and never by `npm run deploy`. `OPERATOR_TOKEN` has three holders, the site Worker, the watchdog and the `gh` repository secret: rotate all three or none.
 

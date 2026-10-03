@@ -18,8 +18,6 @@ declare global {
      * the site-api package refuses every request. Two holders, this Worker and Carrel: rotate both.
      */
     CARREL_SITE_KEY?: string;
-    /** Optional by contract: absent, the origin-requests loader returns its error state. */
-    ANALYTICS_READ_TOKEN?: string;
     /** Optional by contract: absent or too short, the middleware refuses a presented token with 503. */
     SMOKE_TOKEN?: string;
     /**

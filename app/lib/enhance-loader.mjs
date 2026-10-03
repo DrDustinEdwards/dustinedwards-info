@@ -2,8 +2,8 @@
  * The one inline script a public page runs. <Enhance module> renders an inert
  * `<template data-enhance="/assets/x-HASH.js">` marker; this script, rendered once at the end of
  * <body> by app/root.tsx, turns every marker into a module script. The policy allows it by its
- * sha256 (workers/csp.mjs hashes THIS constant), and 'strict-dynamic' extends that trust to the
- * scripts it inserts, so a cached public page carries no nonce at all.
+ * sha256 (workers/csp.mjs hashes THIS constant), and 'self' allows the same-origin bundles it
+ * inserts, so a cached public page carries no nonce at all.
  *
  * Firefox and Safari do not match hashes against external scripts, which is why the bundles are
  * inserted by a hashed inline script instead of carrying hashes themselves.

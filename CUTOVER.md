@@ -44,11 +44,15 @@ routes with the config's. Deploying them needs the deploy token to carry Zone > 
 
 ## 1. Before the toggle, in this order
 
-**1.1 Disable or delete the existing Web Analytics site's `auto_install`.**
-This is the landmine. The site was created 2025-10-20 and is bound to the ZONE
-ruleset, so the moment the proxy is on it may inject a **nonce-less beacon
-straight into an ENFORCED CSP**. The CSP has blocked rather than reported since
-`20c27d6` on 2026-08-17, so the failure mode is a broken page, not a report.
+**1.1 Cloudflare Web Analytics, resolved 2026-10-03 by allowing it, not by switching it off.**
+This was written as a landmine: the site's Web Analytics setting is bound to the ZONE ruleset, so
+the moment the proxy was on it injected a **nonce-less beacon into an ENFORCED CSP** and the policy
+blocked it. Dustin's call was to keep the automatic injection and allow the one file
+(`APPROVED_SCRIPTS` in `workers/csp.mjs`; `strict-dynamic` was dropped for it, because browsers ignore
+every host source while it is present, and the beacon's `integrity` value moves whenever Cloudflare
+ships a new build, so a hash would silently expire). Its report goes to the site's own `/cdn-cgi/rum`,
+which `connect-src 'self'` already allowed. Adding any other outside script is the same one-line
+approval, and `check:headers` holds the list.
 
 **1.2 Enumerate the legacy WordPress pages**, so nothing that currently ranks
 disappears without a decision. `/phage-discovery/` specifically needs NO

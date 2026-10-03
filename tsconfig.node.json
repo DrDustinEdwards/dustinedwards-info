@@ -264,12 +264,6 @@
     // copy of this rule is what put five drafts into Ask in July, and a card
     // for an unpublished post is the same leak by a different road.
     "app/lib/search/visibility.mjs",
-    // The origin-requests panel constants, and CACHE_SENTENCE above all.
-    // The readership column renders that sentence from the CONSTANT rather
-    // than a copy of its text. That is the whole point: the sentence carries a
-    // measurement, and a paraphrase in a second file would be free
-    // to drift from it. Constants only, no Env and no DOM.
-    "app/lib/admin/origin-requests.mjs",
     // The ratified secret list. check:secrets imports its expectation from it
     // and the Worker audits against it, so this project has to reach it.
     "app/lib/secrets.mjs",
