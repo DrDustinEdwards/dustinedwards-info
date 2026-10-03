@@ -487,24 +487,6 @@
   font-size: 0.8125rem;
 }
 
-.posts-readership {
-  text-align: right;
-  white-space: nowrap;
-}
-
-.posts-readership-count {
-  font-variant-numeric: tabular-nums;
-}
-
-.posts-readership-absent {
-  display: inline-block;
-  max-width: 22ch;
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-  text-align: left;
-  white-space: normal;
-}
-
 .posts-filters {
   display: flex;
   flex-wrap: wrap;
@@ -609,24 +591,6 @@
 .posts-row-actions {
   width: 3rem;
   text-align: right;
-}
-
-.posts-explain {
-  margin-top: 1rem;
-  color: var(--text-secondary);
-  font-size: 0.8125rem;
-}
-
-.posts-explain > summary {
-  min-height: 1.5rem;
-  padding: 0.25rem 0;
-  color: var(--text);
-  cursor: pointer;
-}
-
-.posts-explain p {
-  margin: 0.5rem 0 0;
-  max-width: 72ch;
 }
 
 .row-menu {
@@ -850,8 +814,7 @@
     grid-row: 1;
   }
 
-  .posts-table td.posts-date,
-  .posts-table td.posts-readership {
+  .posts-table td.posts-date {
     grid-column: 2;
     color: var(--text-secondary);
     font-size: 0.8125rem;
@@ -862,7 +825,7 @@
     position: sticky;
     top: 0.75rem;
     grid-column: 3;
-    grid-row: 1 / span 3;
+    grid-row: 1 / span 2;
     width: auto;
     align-self: start;
     border-radius: var(--r-control);

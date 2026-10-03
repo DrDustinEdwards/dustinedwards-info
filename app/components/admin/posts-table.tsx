@@ -2,11 +2,6 @@ import { Form, Link } from "react-router";
 
 import { BulkTagControls } from "~/components/admin/bulk-tag-controls";
 import { RowMenu } from "~/components/admin/row-menu";
-import {
-  CACHE_SENTENCE,
-  READERSHIP_ABSENT,
-  postReadershipPath,
-} from "~/lib/admin/origin-requests.mjs";
 
 import type { Route } from "../../routes/+types/admin.posts._index";
 
@@ -17,7 +12,7 @@ function rowFormId(intent: "duplicate" | "unpublish", slug: string) {
   return `row-${intent}-${slug}`;
 }
 
-/** The bulk bar, the posts table, each row's own forms and the read-count and search notes under it. */
+/** The bulk bar, the posts table, each row's own forms and the search notes under it. */
 export function PostsTable({
   posts,
   visible,
@@ -30,7 +25,6 @@ export function PostsTable({
   filtered,
   total,
   tagOptions,
-  readership,
   askOn,
   ask,
   askUnread,
@@ -48,30 +42,12 @@ export function PostsTable({
   filtered: boolean;
   total: number;
   tagOptions: string[];
-  readership: Listing["readership"];
   askOn: boolean;
   ask: Listing["ask"];
   askUnread: boolean;
   budget: Listing["budget"];
   budgetError: Listing["budgetError"];
 }) {
-  /**
-   * Three outcomes: a number, a measured zero, or an absence with a sentence. Never a dash, which
-   * reads as zero.
-   */
-  const readershipFor = (slug: string): { count: number } | { absent: string } => {
-    if (readership.status === "error") {
-      return { absent: READERSHIP_ABSENT.source + readership.message };
-    }
-    const count = readership.data.byPath[postReadershipPath(slug)];
-    if (typeof count === "number") return { count };
-    // Absent from the result: under `complete` that is a measured zero; truncated means the query
-    // never asked about this path.
-    return readership.data.complete
-      ? { count: 0 }
-      : { absent: READERSHIP_ABSENT.truncated };
-  };
-
   return (
         <div className="posts-card">
           {/* One Form around the bar and the table: a form cannot nest inside another. */}
@@ -97,7 +73,6 @@ export function PostsTable({
             {/* `tabindex` and the region role make the scroll box reachable by keyboard. */}
             <div className="posts-table-scroll" tabIndex={0} role="region" aria-label="Posts table">
             <table className="posts-table" data-pending={pending || undefined} aria-busy={pending || undefined}>
-              {/* `CACHE_SENTENCE` verbatim, as one string: React SSR splices comment nodes between adjacent text. */}
               <thead>
                 <tr>
                   <th scope="col" className="posts-check">
@@ -116,8 +91,6 @@ export function PostsTable({
                   </th>
                   <th scope="col" className="posts-title-cell">Title</th>
                   <th scope="col">Published</th>
-                  {/* "Reads counted", never "views" or "traffic": a cached read never reaches the Worker. */}
-                  <th scope="col" className="posts-readership">Reads counted</th>
                   <th scope="col" className="posts-row-actions">Actions</th>
                 </tr>
               </thead>
@@ -158,19 +131,6 @@ export function PostsTable({
                         in {post.scheduledInDays} day{post.scheduledInDays === 1 ? "" : "s"}
                       </span>
                     ) : null}
-                  </td>
-                  <td className="posts-readership">
-                    {(() => {
-                      const value = readershipFor(post.slug);
-                      return "count" in value ? (
-                        <span className="posts-readership-count">
-                          {value.count.toLocaleString()}
-                        </span>
-                      ) : (
-                        // The reason is content, not a tooltip: a `title` is invisible to touch and to some screen readers.
-                        <span className="posts-readership-absent">{value.absent}</span>
-                      );
-                    })()}
                   </td>
                   <td className="posts-row-actions">
                     {/* Associated by the `form` attribute: this cell is inside the bulk form and forms cannot nest. */}
@@ -248,17 +208,6 @@ export function PostsTable({
                 <input type="hidden" name="slug" value={post.slug} />
               </Form>
             ))}
-
-          {/* A disclosure, not a `<caption>`, which screen readers announce before every row. */}
-          <details className="posts-explain">
-            <summary>What the read count includes, and what it misses</summary>
-            <p>
-              {readership.status === "live"
-                ? `Only reads that reached the server, over the last ${readership.data.windowDays} days, sampling weighted. ` +
-                  CACHE_SENTENCE
-                : `Read counts could not be loaded: ${readership.message} ` + CACHE_SENTENCE}
-            </p>
-          </details>
 
           {filtered || askOn ? (
             <p className="posts-meta">

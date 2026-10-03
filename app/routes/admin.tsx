@@ -197,7 +197,6 @@ const NAV = [
   { to: "/admin", label: "Overview", end: true, icon: ICONS.overview },
   { to: "/admin/posts", label: "Posts", icon: ICONS.posts, drift: true, count: "posts" },
   { to: "/admin/media", label: "Media", icon: ICONS.media, count: "media" },
-  { to: "/admin/origin-requests", label: "Origin requests", icon: ICONS.traffic },
   // No count badge: a pending mention is not worth a third query on every admin page.
   { to: "/admin/mentions", label: "Mentions", icon: ICONS.mentions },
   { to: "/admin/tools", label: "Tools", icon: ICONS.tools },

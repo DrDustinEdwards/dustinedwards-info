@@ -480,7 +480,6 @@ npx wrangler secret put BETTER_AUTH_URL
 npx wrangler secret put ADMIN_EMAIL
 npx wrangler secret put GITHUB_TOKEN
 npx wrangler secret put OPERATOR_TOKEN
-npx wrangler secret put ANALYTICS_READ_TOKEN
 npx wrangler secret put SMOKE_TOKEN
 ```
 
@@ -493,7 +492,6 @@ npx wrangler secret put SMOKE_TOKEN
 | `ADMIN_EMAIL` | The single address allowed into `/admin` | Your own address. Any other Google account authenticates and is then refused |
 | `GITHUB_TOKEN` | The editor and operator API commit posts | GitHub > Settings > Developer settings > Fine-grained token, **Contents: read and write** on this repo only |
 | `OPERATOR_TOKEN` | Bearer token for `POST /api/operator` | Generate one, minimum 32 characters. Compared in constant time after hashing, so neither contents nor length leak |
-| `ANALYTICS_READ_TOKEN` | The cockpit's origin-requests panel reads Analytics Engine with it | Cloudflare dashboard API token with Account Analytics read. Absent, the panel fails closed and says so; nothing else degrades |
 | `SMOKE_TOKEN` | Bearer token for the READ-ONLY smoke credential `check:browser` renders `/admin/*` with | `node scripts/mint-smoke-token.mjs`, piped straight into `wrangler secret put`. Absent, the admin cases fall back to the pasted session cookie and say so. Revocable on its own: `wrangler secret delete SMOKE_TOKEN` ends it and touches nothing else |
 
 Verified 2026-08-22 with `wrangler secret list`: the live Worker carries exactly

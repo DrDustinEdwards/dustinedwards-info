@@ -102,8 +102,6 @@ export default [
   // Private: the admin layout gates every child via middleware.
   route("admin", "routes/admin.tsx", [
     index("routes/admin._index.tsx"),
-    // Not "traffic": these are origin requests, not reads, and the URL must not claim otherwise.
-    route("origin-requests", "routes/admin.origin-requests.tsx"),
     route("mentions", "routes/admin.mentions.tsx"),
     route("tools", "routes/admin.tools.tsx"),
     route("logout", "routes/admin.logout.tsx"),

@@ -34,9 +34,7 @@
 	// `enabled` STAYS TRUE deliberately. Our own console output and thrown
 	// errors are not invocation logs and keep flowing, so visibility into
 	// anything the code says about itself is unchanged. What is traded is the
-	// automatic per-request record, which was also the only per-path source.
-	// Analytics Engine now owns that job, carrying no IP and no cookie by
-	// construction.
+	// automatic per-request record. Visit counts are Cloudflare Web Analytics.
 	//
 	// TRACES ARE OFF, AND THE `false` IS A RULING RATHER THAN A DEFAULT.
 	//
@@ -48,9 +46,9 @@
 	// span carries `url.full`, `url.path` and `url.query` as attributes. This
 	// site puts a 43-character CAPABILITY in a PATH at `/preview/<token>`, so
 	// enabling traces would ship preview tokens to a third party. That is the
-	// exact exposure `recordTraffic` was fixed for on 2026-08-15, when the same
-	// token was found written verbatim into Analytics Engine, and the fix there
-	// was to redact the path before the write.
+	// exact exposure the retired per-path traffic write was fixed for on
+	// 2026-08-15, when the same token was found written verbatim into Analytics
+	// Engine, and the fix there was to redact the path before the write.
 	//
 	// `redact_query_string` DOES NOT HELP, which is the trap worth writing down:
 	// the token is in the PATH, not the query string, so the one setting that
@@ -90,17 +88,16 @@
 	// Ruled 2026-09-05. `workers/app.ts` exports a
 	// GATEWAY as `default` and a `Renderer` class. The gateway runs on every
 	// request and does only what must not be skipped: the HTTPS redirect, the
-	// theme cookie read, and the Analytics Engine write. It then calls
+	// theme cookie read. It then calls
 	// `ctx.exports.Renderer` through a loopback with an explicit `cf.cacheKey`
 	// and `{ theme }` in props, and the RENDERER is the entrypoint whose
 	// responses are stored.
 	//
 	// **THE GATEWAY IS CACHE DISABLED, AND THAT IS THE WHOLE POINT.** If it were
-	// cacheable the platform could answer a request without running it, and the
-	// traffic row would go unwritten on every hit: exactly the blindness item G
-	// was about. Disabling it costs one Worker invocation per request and buys a
-	// count that is finally complete. A cache hit still costs no CPU time, per
-	// Cloudflare's pricing note.
+	// cacheable the platform could answer a request without running it, so the
+	// redirect and the cookie read would be skipped on every hit. Disabling it
+	// costs one Worker invocation per request. A cache hit still costs no CPU
+	// time, per Cloudflare's pricing note.
 	//
 	// **`cross_version_cache` IS DELIBERATELY ABSENT**, which means it is false
 	// and the Worker version stays in the cache key. That is what makes a deploy
@@ -206,28 +203,10 @@
 	// Carries no id, so this line is complete as written. Not restated under `previews`: a preview has no CV
 	// save, and quickAction has no local emulation.
 	"browser": { "binding": "BROWSER" },
-	// Per-path traffic, written from the response path in workers/app.ts.
-	//
-	// It is here rather than in Web Analytics because the beacon would have to
-	// pass a CSP carrying `strict-dynamic`, under which host allowlists are
-	// IGNORED: the third-party script would need the per-request nonce, and
-	// `connect-src` would need a new host. This costs the security boundary
-	// nothing, runs server-side, and ships no client JavaScript at all.
-	//
-	// 3-month retention, and free at this site's volume. Reads go through the
-	// SQL API; the write path returns immediately and is never awaited.
-	//
-	// No account-scoped id, so this line is complete as written.
-	"analytics_engine_datasets": [
-		{
-			"binding": "ANALYTICS",
-			"dataset": "dustinedwards_traffic"
-		}
-	],
-	// The account the Analytics Engine SQL API is queried against. The WRITE path
-	// above needs no account id, because the binding already knows where it lives;
-	// the READ path is plain HTTPS to api.cloudflare.com and the account is part of
-	// the URL.
+	// The account the GraphQL Analytics API is queried against (the watchdog's
+	// error-rate read). No dataset binding: the site keeps no traffic counter of
+	// its own. Visits are Cloudflare Web Analytics, crawlers are AI Crawl Control;
+	// the per-path Analytics Engine write was removed on 2026-10-03.
 	//
 	// A VAR RATHER THAN A SECRET, deliberately. An account id is an identifier, not
 	// a credential: it is already published in the Capsid core doc and it grants
@@ -353,8 +332,8 @@
 	// every secret (so admin and sign-in do not work), and the crons.
 	//
 	// The two ids are placeholders that scripts/build-preview.mjs fills by looking
-	// the resources up BY NAME, so no id is pasted anywhere. The R2 buckets and the
-	// Analytics Engine dataset are named, which is all they need. ASK_BUDGET gets a
+	// the resources up BY NAME, so no id is pasted anywhere. The R2 buckets are
+	// named, which is all they need. ASK_BUDGET gets a
 	// fresh Durable Object namespace per preview automatically; it is restated only
 	// because the code reads it from env.
 	"previews": {
@@ -390,12 +369,6 @@
 			}
 		],
 		"images": { "binding": "IMAGES" },
-		"analytics_engine_datasets": [
-			{
-				"binding": "ANALYTICS",
-				"dataset": "dustinedwards_preview_traffic"
-			}
-		],
 		"durable_objects": {
 			"bindings": [
 				{

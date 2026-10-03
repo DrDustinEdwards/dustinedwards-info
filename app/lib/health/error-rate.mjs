@@ -1,5 +1,5 @@
-// Reads Cloudflare's workersInvocationsAdaptive: the ANALYTICS dataset records only 200 HTML views and
-// invocation logs are off. It reports the outcome, not the HTTP status, so a deliberate 503 is success.
+// Reads Cloudflare's workersInvocationsAdaptive: invocation logs are off and the site keeps no request counter of its own.
+// It reports the outcome, not the HTTP status, so a deliberate 503 is success.
 
 /** The window the rate is measured over, in minutes. Matches the cron cadence. */
 export const ERROR_WINDOW_MINUTES = 15;

@@ -49,6 +49,21 @@ export const MEDIA_CSP = buildPolicy([
   "sandbox",
 ]);
 
+/**
+ * THE ONLY THIRD-PARTY SCRIPTS THE SITE RUNS, each an exact file URL and not a host, so nothing else
+ * on that host is trusted. A script that makes the site better can be added here deliberately:
+ * name the file, say what it is for and what it sends, and the gate (check:headers) and the privacy
+ * page change in the same commit. Dustin approves the line; a session does not add one on its own.
+ *
+ * Injected by Cloudflare's edge, not rendered by this code, so it carries no nonce and no hash, and
+ * its `integrity` value changes whenever Cloudflare ships a new beacon, so pinning that hash here would
+ * silently block it within weeks. That is why the policy names the file instead. It reports to this
+ * site's own /cdn-cgi/rum, which `connect-src 'self'` already allows.
+ */
+export const APPROVED_SCRIPTS = Object.freeze([
+  "https://static.cloudflareinsights.com/beacon.min.js", // Cloudflare Web Analytics, automatic setup
+]);
+
 /** @type {Promise<string> | undefined} */
 let loaderHash;
 
@@ -80,7 +95,7 @@ export function speculationRulesHash(pathname) {
 /**
  * Public pages get no nonce: header and body are edge-cached together, so a nonce there would be
  * one value shared by every reader for the cache lifetime. They are trusted by the loader's hash
- * instead, and the bundles it inserts by 'strict-dynamic'. The admin plane is `private, no-store`,
+ * instead, and the bundles it inserts by 'self'. The admin plane is `private, no-store`,
  * so its per-request nonce is sound, and it keeps it for <Scripts>, the sidebar script and
  * CodeMirror's inline <style>. The hash is on both, because the loader renders on every page.
  * A /media path gets MEDIA_CSP instead, chosen here so the Renderer keeps one place that sets the
@@ -97,7 +112,9 @@ export async function contentSecurityPolicy(pathname, adminNonce) {
   const nonce = adminNonce ? ` 'nonce-${adminNonce}'` : "";
   return buildPolicy([
     "default-src 'self'",
-    `script-src${nonce} '${loader}' '${rules}' 'strict-dynamic'`,
+    // No 'strict-dynamic': browsers ignore every host source while it is present, so an approved file
+    // could never run. 'self' covers the bundles the loader inserts; APPROVED_SCRIPTS is the rest.
+    `script-src${nonce} '${loader}' '${rules}' 'self' ${APPROVED_SCRIPTS.join(" ")}`,
     // Admin only: CodeMirror mounts an inline <style> that needs a nonce source, and it cannot be
     // turned off.
     `style-src 'self'${nonce}`,
