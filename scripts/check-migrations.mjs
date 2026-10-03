@@ -445,7 +445,7 @@ if (existsSync(SHIP)) {
   /* BOTH HALVES: deferring without the late assertion drops the check, and the reverse deadlocks. */
   const deferredAt = readinessSource.indexOf("DEFERRED_CHECKS = {");
   eq("ruling 56: the deferred checks are named in one place", deferredAt !== -1, true);
-  /* ALL ELEVEN, ENUMERATED: a regex for content-drift alone passes once the others are gone. */
+  /* ALL TWELVE, ENUMERATED: a regex for content-drift alone passes once the others are gone. */
   for (const name of [
     "content-drift",
     "procedures-drift",
@@ -456,6 +456,7 @@ if (existsSync(SHIP)) {
     "cv-drift",
     "roster-drift",
     "phage-drift",
+    "cv-pdf-drift",
     "ask-index-drift",
     "media-index-drift",
   ]) {
@@ -563,6 +564,21 @@ if (existsSync(SHIP)) {
   );
 
   const mediaAt = shipSource.indexOf("await convergeMedia(");
+
+  /* cv-pdf-drift is deferred, so something must repair it: the step exists, runs after the D1 sync and
+     before the media index (a first render adds a derived/ key), and reaches the exit code. */
+  const cvPdfAt = shipSource.indexOf("await convergeCvPdf(");
+  eq(
+    "cv pdf: SHIP CALLS sync_cv_pdf, through convergeCvPdf",
+    cvPdfAt !== -1 && /operatorSync\("sync_cv_pdf"/.test(syncSource),
+    true,
+  );
+  eq(
+    "cv pdf: THE RENDER RUNS AFTER THE D1 SYNC AND BEFORE THE MEDIA INDEX",
+    cvPdfAt !== -1 && syncAt !== -1 && cvPdfAt > syncAt && mediaAt !== -1 && cvPdfAt < mediaAt,
+    true,
+  );
+  eq("cv pdf: SHIP EXITS NONZERO WHEN THE PDF DID NOT CONVERGE", /\bcvPdfMiss\b/.test(missTable), true);
   eq(
     "media sync: THE REBUILD RUNS AFTER THE DEPLOY",
     mediaAt !== -1 && deployAt !== -1 && mediaAt > deployAt,

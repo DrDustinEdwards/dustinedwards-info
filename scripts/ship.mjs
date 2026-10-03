@@ -28,7 +28,7 @@ import {
 import { dirtyTree } from "./lib/git-tree.mjs";
 import { retryRead, spawnSyncBounded } from "./lib/retry.mjs";
 import { driftCount, searchCounts, standingRun } from "./lib/sync-verdict.mjs";
-import { convergeAsk, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
+import { convergeAsk, convergeCvPdf, convergeMedia, readAskDrift } from "./lib/operator-sync.mjs";
 import { ASK_POLL_WINDOW_MS, settleAskDrift } from "../app/lib/health/ask-converge.mjs";
 import { readOperatorToken } from "./lib/operator-token.mjs";
 import { missReport } from "./lib/ship-misses.mjs";
@@ -689,6 +689,15 @@ announce("Bring the Ask index into step");
 
 const askMiss = await convergeAsk({ origin: ORIGIN, token: OPERATOR_TOKEN });
 
+/*
+ * After the D1 sync (the PDF is drawn from the CV rows) and before the media index (a first render adds a
+ * `derived/` key). A miss leaves the deploy standing.
+ */
+
+announce("Bring the CV PDF into step");
+
+const cvPdfMiss = await convergeCvPdf({ origin: ORIGIN, token: OPERATOR_TOKEN });
+
 /* After the deploy, since the rebuild reads the serving build. No poll: D1 reads its own writes. */
 
 announce("Bring the media index into step");
@@ -775,6 +784,7 @@ console.log(`\n  NOT run by ship: verify-live (bills per Ask probe) and check:al
 /* Nonzero on any miss, after the record. Every miss is named: the faults are independent. */
 const misses = [
   { key: "ask", title: "THE ASK INDEX", text: askMiss },
+  { key: "cv-pdf", title: "THE CV PDF", text: cvPdfMiss },
   { key: "media", title: "THE MEDIA INDEX", text: mediaMiss },
   { key: "render", title: "THE RENDER", text: renderDriftMiss },
   { key: "watchdog", title: "THE WATCHDOG", text: watchdogMiss },
