@@ -37,6 +37,10 @@
 # CI, exactly where build:content does.
 /content/generated/stack.json
 
+# The owner's identity, derived from the CV (app/lib/identity.mjs). build:content and the install step write
+# it, so a CV change reaches the site through the next deploy and no copy of it is committed to go stale.
+/app/lib/identity.generated.mjs
+
 # The generated publication artifacts: the rows sync:content writes to D1 (twins and raw Crossref records
 # included). Derived from content/publications/ by build:content, so
 # committing them would make every corpus change a three-file change that only a machine could complete.

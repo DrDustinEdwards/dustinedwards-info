@@ -6,6 +6,8 @@
  * the PDF fingerprint are reproducible.
  */
 
+import { deriveIdentity } from "../identity.mjs";
+import { IDENTITY } from "../identity.generated.mjs";
 import { canonicalAuthor } from "../publications/authors.mjs";
 import { decodeEntities } from "../publications/entities.mjs";
 import { paperPath, paperPdfPath } from "../publications/paths.mjs";
@@ -68,9 +70,8 @@ export const CV_PDF_PATH = "/dustin-edwards-cv.pdf";
 export const CV_PAGE = {
   path: "/cv",
   title: "Curriculum Vitae",
-  seoTitle: "Dustin Edwards CV: Professor and Virologist, Tarleton",
-  description:
-    "Dustin Edwards's CV: Professor and Virologist at Tarleton State University. Appointments, education, publications, grants, teaching and service.",
+  seoTitle: `${IDENTITY.name} CV: ${IDENTITY.role}, Tarleton`,
+  description: `${IDENTITY.name}'s CV: ${IDENTITY.role} at ${IDENTITY.affiliation}. Appointments, education, publications, grants, teaching and service.`,
 };
 
 /** @type {Record<TopicId, CvArea>} */
@@ -377,9 +378,12 @@ function resolveAll(sources, publications) {
  *   (scripts/lib/publications.mjs)
  */
 export function buildCv(source, publications) {
+  // The header's title is derived from the current appointments and the discipline, never stated in the profile.
+  const derived = deriveIdentity(source.person, source.entries);
+  if (!derived.ok) throw new Error(`the CV cannot give a title: ${derived.errors.join("; ")}`);
   return {
     edition: source.edition,
-    person: source.person,
+    person: { ...source.person, title: derived.identity.cvTitle },
     presentations: source.presentations,
     entries: resolveAll(source.entries, publications),
   };

@@ -1,4 +1,5 @@
 // Relative, not `~/`: tsconfig.node.json also compiles this file and has no path mapping.
+import { IDENTITY } from "./identity.generated.mjs";
 import { canonicalAuthor } from "./publications/authors.mjs";
 import { schemaTypeFor } from "./publications/article-json-ld.mjs";
 import { decodeEntities } from "./publications/entities.mjs";
@@ -11,21 +12,24 @@ export const SITE_ORIGIN = "https://dustinedwards.info";
 
 const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/dustin-edwards-og-image.png`;
 
+// The person, the role, the headship, the department and the university are the CV's: derived from
+// content/cv/profile.md and appointments.md by app/lib/identity.mjs (written to identity.generated.mjs at build),
+// so a CV change reaches the site settings, the titles, the About text and the structured data. What stays typed
+// here is the one sentence about the work, which is prose and not a CV fact.
 // `role` is the visible identity line; `jobTitle` is the Person record's, which also names the headship
 // (Dustin, 2026-09-28). `affiliation` is structured data (worksFor), so it stays short and literal.
 // The description names the department in full. It is a few characters over the 155 SERP estimate;
 // the role and the university come first so a clip keeps them.
+const WORK = "Research in retroviruses and bacteriophages; builds software on Cloudflare.";
 export const SITE = {
-  name: "Dustin Edwards",
-  role: "Professor and Virologist",
-  jobTitle: "Virologist, Professor, and Department Head",
-  affiliation: "Tarleton State University",
-  department: "Department of Biological Sciences",
-  eyebrow: "Professor and Virologist",
-  tagline:
-    "Professor and Virologist, Department of Biological Sciences, Tarleton State University.",
-  description:
-    "Professor and Virologist, Department of Biological Sciences, Tarleton State University. Research in retroviruses and bacteriophages; builds software on Cloudflare.",
+  name: IDENTITY.name,
+  role: IDENTITY.role,
+  jobTitle: IDENTITY.jobTitle,
+  affiliation: IDENTITY.affiliation,
+  department: IDENTITY.department,
+  eyebrow: IDENTITY.role,
+  tagline: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}.`,
+  description: `${IDENTITY.role}, ${IDENTITY.department}, ${IDENTITY.affiliation}. ${WORK}`,
 } as const;
 
 // Shared by the public route and the admin preview, so the preview cannot silently disagree.
@@ -373,7 +377,7 @@ export function personNode(origin: string) {
 function personFacts(origin: string) {
   return {
     name: SITE.name,
-    honorificSuffix: "Ph.D.",
+    honorificSuffix: IDENTITY.degree,
     jobTitle: SITE.jobTitle,
     image: [photoObject(origin, OWNER_PHOTO_SQUARE), photoObject(origin, OWNER_PHOTO)],
     description: SITE.description,

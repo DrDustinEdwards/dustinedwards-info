@@ -1,12 +1,12 @@
 ---
 path: /about
 title: "About"
-seo_title: "Dustin Edwards | About the virologist at Tarleton State"
-description: "Dustin Edwards: Department Head of Biological Sciences at Tarleton State University, and the person who builds and runs this site."
+seo_title: "{{identity.name}} | About the {{identity.disciplineLower}} at Tarleton State"
+description: "{{identity.name}}: {{identity.adminTitle}} of {{identity.departmentSubject}} at {{identity.affiliation}}, and the person who builds and runs this site."
 ---
 
-I am Dustin Edwards. I am Department Head of Biological Sciences at Tarleton
-State University, in Stephenville, Texas, and I run the SEA-PHAGES program
+I am {{identity.name}}. I am {{identity.adminTitle}} of {{identity.departmentSubject}} at {{identity.affiliation}},
+in Stephenville, Texas, and I run the SEA-PHAGES program
 there: undergraduates dig bacteriophages out of local soil, sequence them, and
 annotate what they find.
 

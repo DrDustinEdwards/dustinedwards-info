@@ -5,7 +5,7 @@ seo_title: "SEA-PHAGES Tarleton: phage courses, undergraduate research"
 description: "Tarleton SEA-PHAGES teaching: the Phage Discovery Program, the Virus Isolation and Phage Bioinformatics courses, and undergraduate research in biology."
 ---
 
-Dustin Edwards leads the Department of Biological Sciences at Tarleton State University as Department Head, and teaches the two course-based research courses of the HHMI SEA-PHAGES program there, one per semester. In them, undergraduates isolate, name, sequence and analyze viruses that infect bacteria. This page gives his teaching philosophy, lists those courses and the tutorials, and explains how undergraduates join the lab for research. The earlier lecture-course pages (virology, genetics, vaccines, cell biology) have been retired and now point here.
+Dustin Edwards leads the {{identity.department}} at {{identity.affiliation}} as {{identity.adminTitle}}, and teaches the two course-based research courses of the HHMI SEA-PHAGES program there, one per semester. In them, undergraduates isolate, name, sequence and analyze viruses that infect bacteria. This page gives his teaching philosophy, lists those courses and the tutorials, and explains how undergraduates join the lab for research. The earlier lecture-course pages (virology, genetics, vaccines, cell biology) have been retired and now point here.
 
 ## Teaching philosophy
 
