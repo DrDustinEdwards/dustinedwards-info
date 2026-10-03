@@ -32,6 +32,10 @@ export async function run({ page, browser }) {
     /* The markdown pages: one research page for the research/* splat, and the teaching hub. */
     { path: "/research/phages", module: "content-page.tsx" },
     { path: "/teaching", module: "teaching.tsx" },
+    /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
+    { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
+    /* The bench sheet is a print page with no site shell, so it has no footer to compare. */
+    { path: "/research/protocols/phage-isolation/sheet", module: "procedure.sheet.tsx", noFooter: true },
   ];
 
   /* Shared-cached HTML with no corpus URL; a 404 would compare two error pages. */
@@ -129,7 +133,7 @@ export async function run({ page, browser }) {
   let footerOrderPath = "";
   let footerOrderCompared = 0;
 
-  for (const { path } of THEME_CACHED) {
+  for (const { path, noFooter } of THEME_CACHED) {
     const visited = await page.goto(`${BASE}${path}`, { waitUntil: "networkidle0" });
     ok(
       `${path}: the page answers 200 in the browser`,
@@ -138,36 +142,37 @@ export async function run({ page, browser }) {
         `be about an error page.`,
     );
 
-    // 3.2.6 asks for the same relative order on every page, never a fixed index. `/colophon`
-    // appears twice in the footer, as a nav link and as prose, and that is the markup.
-    const help = await page.evaluate(() => {
-      const links = [...document.querySelectorAll(".site-shell-footer a")].map(
-        (a) => a.getAttribute("href") ?? "",
-      );
-      return { links, at: links.indexOf("/privacy") };
-    });
-    ok(
-      `${path}: the footer carries the privacy link`,
-      help.at !== -1,
-      `footer links are [${help.links.join(", ")}]. 3.2.6 asks for the same help ` +
-        `mechanism on every page that has one, and every public page has this footer.`,
-    );
-    if (footerOrder === null) {
-      footerOrder = help.links;
-      footerOrderPath = path;
-    } else {
-      footerOrderCompared += 1;
-      const recorded = footerOrder;
+    if (!noFooter) {
+      // 3.2.6 asks for the same relative order on every page, never a fixed index. `/colophon`
+      // appears twice in the footer, as a nav link and as prose, and that is the markup.
+      const help = await page.evaluate(() => {
+        const links = [...document.querySelectorAll(".site-shell-footer a")].map(
+          (a) => a.getAttribute("href") ?? "",
+        );
+        return { links, at: links.indexOf("/privacy") };
+      });
       ok(
-        `${path}: the footer link order matches ${footerOrderPath}`,
-        help.links.length === recorded.length &&
-          help.links.every((href, i) => href === recorded[i]),
-        `this page lists [${help.links.join(", ")}] and ${footerOrderPath} listed ` +
-          `[${recorded.join(", ")}]. 3.2.6 is about the same relative ORDER, so a link ` +
-          `that moves between pages satisfies presence and fails the criterion.`,
+        `${path}: the footer carries the privacy link`,
+        help.at !== -1,
+        `footer links are [${help.links.join(", ")}]. 3.2.6 asks for the same help ` +
+          `mechanism on every page that has one, and every public page has this footer.`,
       );
+      if (footerOrder === null) {
+        footerOrder = help.links;
+        footerOrderPath = path;
+      } else {
+        footerOrderCompared += 1;
+        const recorded = footerOrder;
+        ok(
+          `${path}: the footer link order matches ${footerOrderPath}`,
+          help.links.length === recorded.length &&
+            help.links.every((href, i) => href === recorded[i]),
+          `this page lists [${help.links.join(", ")}] and ${footerOrderPath} listed ` +
+            `[${recorded.join(", ")}]. 3.2.6 is about the same relative ORDER, so a link ` +
+            `that moves between pages satisfies presence and fails the criterion.`,
+        );
+      }
     }
-
 
     const stranger = await fetchDoc(path, {});
     const credentialed = await fetchDoc(path, {
