@@ -294,8 +294,6 @@ export function carrelSiteAdapter(options: {
       }
       return response.text();
     },
-
-    media: carrelMediaAdapter(env),
   };
 
   const registry = contentRegistry([
@@ -313,5 +311,6 @@ export function carrelSiteAdapter(options: {
     site: { id: "dustinedwards-info", name: SITE.name, origin: SITE_ORIGIN },
     content: registry.adapter,
     preview: { render: registry.render },
+    media: carrelMediaAdapter(env),
   };
 }
