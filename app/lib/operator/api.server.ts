@@ -40,6 +40,7 @@ import {
 import { uploadMediaTool } from "./upload-media.server";
 import { errorMessage } from "~/lib/error-message.mjs";
 import { listProceduresForOperator } from "~/db/procedures";
+import { purgeZeroResults } from "~/lib/search/zero-result.server";
 import { listPublicationIdentities, listPublishedPublications } from "~/db/publications";
 import { refreshCitations } from "~/lib/citations.server";
 import { compilePublicationFor, fileIsDraft } from "~/lib/publications/save.server";
@@ -329,6 +330,11 @@ export async function runTool(
 
       case "get_phage":
         return await getPhageTool(env, args);
+
+      case "purge_zero_results": {
+        const purged = await purgeZeroResults(env);
+        return { ok: true, data: { purged } };
+      }
     }
   } catch (error) {
     return translate(error);

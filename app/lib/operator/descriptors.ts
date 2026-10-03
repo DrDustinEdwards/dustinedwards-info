@@ -44,6 +44,7 @@ const TOOLS = [
   "get_roster",
   "list_phages",
   "get_phage",
+  "purge_zero_results",
 ] as const;
 
 export type ToolName = (typeof TOOLS)[number];
@@ -359,6 +360,17 @@ export const TOOL_DESCRIPTORS: Readonly<
     returns:
       "The phage the committed file holds (the fields the public table shows), its raw file, the head sha, and any " +
       "validation errors the file has now. The format is docs/PHAGES.md. Read only: a phage is saved through Carrel.",
+  },
+  purge_zero_results: {
+    args: {},
+    returns:
+      "purged, the number of zero-result query rows removed: every row whose last_seen is older than " +
+      "ZERO_RESULT_RETENTION_SECONDS. The watchdog calls this daily; there used to be an admin button for it.",
+    policy:
+      "Takes no argument that names a row, so there is nothing to target beyond the fixed retention " +
+      "cutoff: a caller cannot choose what is removed. The rows have no derivation to rebuild them from, " +
+      "which is why this is destructive rather than a sync, but there is no identity-based refusal to " +
+      "document because every caller gets the same unconditional sweep.",
   },
   backup_media: {
     args: {},

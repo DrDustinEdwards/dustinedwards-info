@@ -642,13 +642,6 @@
   font-size: 0.9375rem;
 }
 
-.tool-fieldset {
-  min-inline-size: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
 .tool-row-label {
   display: flex;
   align-items: center;
@@ -1165,8 +1158,3 @@
   }
 }
 
-.tool-select {
-  max-inline-size: 60%;
-  font: inherit;
-  font-size: 0.875rem;
-}

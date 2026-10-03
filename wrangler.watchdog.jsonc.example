@@ -43,10 +43,13 @@
 	// decides when the colophon calls its health verdict stale, and
 	// the two must mean the same number of seconds: change them together.
 	//
-	// ONE FIRING A WEEK DOES A SECOND JOB: Sunday 03:00 to 03:14 UTC the same firing calls the
-	// operator API's refresh_citations (isCitationRefreshWindow, workers/watchdog.ts), so the
-	// publication citation counts stay current and the site Worker keeps `crons: []`. The window
-	// is in code, not in a second entry here, which would also fire the health poll twice.
+	// TWO FIRINGS DO EXTRA JOBS, each in its own quarter hour so neither collides with the health
+	// poll or with each other: Sunday 03:00 to 03:14 UTC calls the operator API's refresh_citations
+	// (isCitationRefreshWindow, workers/watchdog.ts), so the publication citation counts stay
+	// current; every day 04:00 to 04:14 UTC calls purge_zero_results (isZeroResultPurgeWindow,
+	// workers/watchdog.ts), so expired zero-result search queries are removed without the admin
+	// Tools page's old button. Both windows are in code, not a second or third entry here, which
+	// would also fire the health poll again. The site Worker keeps `crons: []` either way.
 	"triggers": {
 		"crons": ["*/15 * * * *"]
 	},
