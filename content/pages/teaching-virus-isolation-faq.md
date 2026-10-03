@@ -63,9 +63,9 @@ Divide the pfu you want on the plate by the lysate's titer in pfu/ml and multipl
 
     µl of lysate per plate = pfu wanted per plate / titer (pfu/ml) x 1,000 µl/ml
 
-Worked example: a lysate at 1.1 x 10^10 pfu/ml, aiming for about 11,100 pfu per plate.
+Worked example: a lysate at 1.11 x 10^10 pfu/ml, aiming for about 11,100 pfu per plate.
 
-11,100 / 1.1 x 10^10 x 1,000 = 1.01 x 10^-3 µl of lysate per plate.
+11,100 / 1.11 x 10^10 x 1,000 = 1 x 10^-3 µl of lysate per plate.
 
 That volume is too small to pipette, so it is made by dilution: 1 µl lysate in 999 µl buffer, then 7 µl of that into 63 µl buffer, and 10 µl of the second tube per plate. Six of seven plates webbed in 24 hours, and the pooled lysate titered 2.2 x 10^11 pfu/ml.
 

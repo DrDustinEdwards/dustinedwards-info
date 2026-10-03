@@ -97,7 +97,7 @@ function calculatorLinkErrors({ path, markdown }) {
     }
   }
   if (path === "/teaching/virus-isolation/faq") {
-    const sum = "11,100 / 1.1 x 10^10 x 1,000 = 1.01 x 10^-3 µl of lysate per plate.";
+    const sum = "11,100 / 1.11 x 10^10 x 1,000 = 1 x 10^-3 µl of lysate per plate.";
     if (!markdown.includes(sum)) errors.push(`the page lacks the lysate-per-plate sum the protocol and the calculator agree on: ${sum}`);
   }
   return errors;

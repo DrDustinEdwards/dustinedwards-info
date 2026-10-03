@@ -304,7 +304,7 @@ describe("the types each page states", () => {
     expect(enarratio?.codeRepository).toBe("https://github.com/DrDustinEdwards/enarratio");
     expect(ofType("/software/capsid", "SoftwareApplication")[0]?.codeRepository).toBeUndefined();
     const [source] = ofType("/software/capsid", "SoftwareSourceCode");
-    expect(source?.codeRepository).toBe("https://github.com/DrDustinEdwards/capsid-mcp");
+    expect(source?.codeRepository).toBe("https://github.com/DrDustinEdwards/capsid");
     expect((source?.targetProduct as Node | undefined)?.["@id"]).toBe(ofType("/software/capsid", "SoftwareApplication")[0]?.["@id"]);
   });
 
