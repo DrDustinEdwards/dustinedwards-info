@@ -61,7 +61,11 @@ export const MEDIA_CSP = buildPolicy([
  * site's own /cdn-cgi/rum, which `connect-src 'self'` already allows.
  */
 export const APPROVED_SCRIPTS = Object.freeze([
-  "https://static.cloudflareinsights.com/beacon.min.js", // Cloudflare Web Analytics, automatic setup
+  // Cloudflare Web Analytics, automatic setup. The edge injects it from a VERSIONED path
+  // (/beacon.min.js/v31edd..., measured in a browser 2026-10-03), which the bare file URL does not
+  // match; a source ending in "/" is a path prefix, so the second line covers that one directory.
+  "https://static.cloudflareinsights.com/beacon.min.js",
+  "https://static.cloudflareinsights.com/beacon.min.js/",
 ]);
 
 /** @type {Promise<string> | undefined} */
