@@ -49,16 +49,16 @@ equipment:
   - NEB 100 bp ladder
   - 2% agarose gel in TBE
 primers:
-  - { set: PCR REV 3′ LTR 8000-8297, direction: forward, sequence: CATACTGAGCCAATGGTT }
-  - { set: PCR REV 3′ LTR 8000-8297, direction: reverse, sequence: AATGTTGTACCGAAGTACT }
-  - { set: PCR REV pol 2500-3075, direction: forward, sequence: CAAATAATAGATTTTCTAGTAGATACGGGA }
-  - { set: PCR REV pol 2500-3075, direction: reverse, sequence: AGTGGACGGGTCTCAGGA }
-  - { set: PCR REV pol 4777-5575, direction: forward, sequence: CGAGAAGTAGCTATACGTCCTTTG }
-  - { set: PCR REV pol 4777-5575, direction: reverse, sequence: ACATCGTGCCCGGAGC }
+  - { set: PCR REV 3′ LTR, direction: forward, sequence: CATACTGAGCCAATGGTT }
+  - { set: PCR REV 3′ LTR, direction: reverse, sequence: AATGTTGTACCGAAGTACT }
+  - { set: PCR REV pol (protease and reverse transcriptase), direction: forward, sequence: CAAATAATAGATTTTCTAGTAGATACGGGA }
+  - { set: PCR REV pol (protease and reverse transcriptase), direction: reverse, sequence: AGTGGACGGGTCTCAGGA }
+  - { set: PCR REV pol (reverse transcriptase and integrase), direction: forward, sequence: CGAGAAGTAGCTATACGTCCTTTG }
+  - { set: PCR REV pol (reverse transcriptase and integrase), direction: reverse, sequence: ACATCGTGCCCGGAGC }
   - { set: PCR LPDV p31/CA, direction: forward, sequence: ATGAGGACTTGTTAGATTGGTTAC }
   - { set: PCR LPDV p31/CA, direction: reverse, sequence: TGATGGCGTCAGGGCTATTTG }
 cycling:
-  - set: PCR REV 3′ LTR 8000-8297
+  - set: PCR REV 3′ LTR
     program:
       - { stage: initial denaturation, temperature_c: 95, time: 5 min. }
       - stage: 35 cycles
@@ -69,7 +69,7 @@ cycling:
           - { temperature_c: 68, time: 60 sec. + 1 sec. per cycle }
       - { stage: extension, temperature_c: 68, time: 10 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-  - set: PCR REV pol 2500-3075
+  - set: PCR REV pol (protease and reverse transcriptase)
     program:
       - { stage: initial denaturation, temperature_c: 95, time: 10 min. }
       - stage: 15 cycles
@@ -86,14 +86,14 @@ cycling:
           - { temperature_c: 68, time: 120 sec. }
       - { stage: extension, temperature_c: 68, time: 9 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-  - set: PCR REV pol 4777-5575
+  - set: PCR REV pol (reverse transcriptase and integrase)
     program:
       - { stage: initial denaturation, temperature_c: 95, time: 10 min. }
       - stage: 15 cycles
         cycles: 15
         steps:
           - { temperature_c: 95, time: 30 sec. }
-          - { temperature_c: "60 to 50", touchdown_step_c: "MISSING: Waiting on Dustin: touchdown steps (core.md). The page: same cycling as pol 2500-3075, with no published step size.", time: 45 sec. }
+          - { temperature_c: "60 to 50", touchdown_step_c: "MISSING: Waiting on Dustin: touchdown steps (core.md). The page: same cycling as the protease and reverse transcriptase set, with no published step size.", time: 45 sec. }
           - { temperature_c: 68, time: 120 sec. }
       - stage: 20 cycles
         cycles: 20
@@ -114,7 +114,7 @@ cycling:
           - { temperature_c: 68, time: 60 sec. }
       - { stage: extension, temperature_c: 68, time: 10 min. }
       - { stage: hold, temperature_c: 10, time: "∞" }
-expected_results: "PCR REV 3′ LTR 8000-8297: 281 bp. PCR REV pol 2500-3075: 574 bp. PCR REV pol 4777-5575: 801 bp. PCR LPDV p31/CA: 458 bp. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
+expected_results: "PCR REV 3′ LTR: 281 bp. PCR REV pol (protease and reverse transcriptase): 574 bp. PCR REV pol (reverse transcriptase and integrase): 801 bp. PCR LPDV p31/CA: 458 bp. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder."
 limitations: "The touchdown in the two *pol* sets steps down from 60 to 50 °C over the first 15 cycles. Extension temperature is dependent on polymerase: the 68 °C extensions are for the One*Taq* mix."
 references:
   - "Stewart et al. 2019, *J Wildl Dis* 55(3). [doi:10.7589/2018-08-187](https://doi.org/10.7589/2018-08-187). On this site: [Stewart et al. 2019](/research/publications/10-7589-2018-08-187/)."
@@ -131,11 +131,11 @@ The REV and GAPDH protocols are the ones published in [Stewart et al. 2019, J Wi
 
 The REV provirus has an LTR at each end, the primer binding site near the 5′ LTR, then *gag* (MA, R, CA, NC), *pol* (protease, reverse transcriptase, integrase) and *env* (SU, TM), over about 8 kb. The three amplicons sit as follows:
 
-| Primer set | Region | Product |
-| --- | --- | --- |
-| PCR REV 3′ LTR 8000-8297 | LTR | 281 bp |
-| PCR REV pol 2500-3075 | *pol*: protease and reverse transcriptase | 574 bp |
-| PCR REV pol 4777-5575 | *pol*: reverse transcriptase and integrase | 801 bp |
+| Primer set | Product |
+| --- | --- |
+| PCR REV 3′ LTR | 281 bp |
+| PCR REV pol (protease and reverse transcriptase) | 574 bp |
+| PCR REV pol (reverse transcriptase and integrase) | 801 bp |
 
 Product sizes are for GenBank [DQ387450](https://www.ncbi.nlm.nih.gov/nuccore/DQ387450) (REV strain APC-566, 8,286 nt), the reference Stewart et al. 2019 compared their sequences against. An LTR sits at each end of the provirus, so the LTR product can come from either one. Each set gives a band in the REV-positive lane and none in the negative lane, beside a 100 bp ladder.
 
@@ -164,7 +164,7 @@ From Stewart et al. 2019, for each 25 µL reaction:
 3. Run the product on the #2% agarose gel in TBE{} beside the #NEB 100 bp ladder{}.
    > EXPECT: A band at the set's product size: see [where the REV amplicons sit on the genome](#where-the-rev-amplicons-sit-on-the-genome) and, for LPDV, [PCR LPDV p31/CA](#pcr-lpdv-p31ca). The REV-positive lane shows the band and the negative lane none.
 
-## PCR REV 3′ LTR 8000-8297
+## PCR REV 3′ LTR
 
 Amplifies a region of the REV 3′ LTR. Product: 281 bp.
 
@@ -184,9 +184,9 @@ Amplifies a region of the REV 3′ LTR. Product: 281 bp.
 
 The extension in each cycle is 68 °C, 60 s + 1 s per cycle: it starts at 60 s and grows by 1 s each cycle. This is the program in the supplements to Stewart et al. 2019 and Cox et al. 2022.
 
-## PCR REV pol 2500-3075 (protease and reverse transcriptase)
+## PCR REV pol (protease and reverse transcriptase)
 
-Amplifies REV *pol* segment 2500-3075 (protease and reverse transcriptase). Product: 574 bp.
+Amplifies the part of REV *pol* that spans protease and reverse transcriptase. Product: 574 bp.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -207,9 +207,9 @@ Amplifies REV *pol* segment 2500-3075 (protease and reverse transcriptase). Prod
 
 The first 15 cycles are a touchdown: the annealing temperature steps down from 60 to 50 °C over those cycles. Stewart et al. 2019 describe the program as a "touchdown PCR cycle (Barbosa et al. 2007)" and print the annealing as 60-50 °C in the supplement. The next 20 cycles anneal at 50 °C.
 
-## PCR REV pol 4777-5575 (reverse transcriptase and integrase)
+## PCR REV pol (reverse transcriptase and integrase)
 
-Amplifies REV *pol* segment 4777-5575 (reverse transcriptase and integrase). Product: 801 bp.
+Amplifies the part of REV *pol* that spans reverse transcriptase and integrase. Product: 801 bp.
 
 | Primer | Sequence (5′ to 3′) |
 | --- | --- |
@@ -228,7 +228,7 @@ Amplifies REV *pol* segment 4777-5575 (reverse transcriptase and integrase). Pro
 | extension | 68 | 9 min. |
 | hold | 10 | ∞ |
 
-The cycling is the same as for pol 2500-3075, as in the Stewart et al. 2019 supplement, including the touchdown from 60 to 50 °C over the first 15 cycles.
+The cycling is the same as for the protease and reverse transcriptase set, as in the Stewart et al. 2019 supplement, including the touchdown from 60 to 50 °C over the first 15 cycles.
 
 ## PCR LPDV p31/CA
 
