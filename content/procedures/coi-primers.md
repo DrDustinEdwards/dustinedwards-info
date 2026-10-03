@@ -54,7 +54,7 @@ equipment:
   - name: NEB 100 bp ladder
     note: "[NEB 100 bp ladder](https://www.neb.com/products/n3231-100-bp-dna-ladder)"
   - name: 1% agarose gel in TBE
-expected_results: "Folmer et al. (1994) report the product as about 710 bp. The gel shown on the original version of this page marked the product at 708 bp, next to a 100 bp ladder, in the positive (mtDNA) lane, with no band in the negative lane; that figure is read from the gel."
+expected_results: "Folmer et al. (1994) report the product as about 710 bp. In the lab's gels the product runs at about 708 bp beside a 100 bp ladder, with a band in the positive (mtDNA) lane and none in the negative lane."
 limitations: "MISSING: The page states no limitations of the method; it records only that extension temperature is dependent on polymerase and that the lab's reaction mix and touchdown step size are not recorded."
 references:
   - "Folmer, O., Black, M., Hoeh, W., Lutz, R. and Vrijenhoek, R. (1994). DNA primers for amplification of mitochondrial cytochrome c oxidase subunit I from diverse metazoan invertebrates. Molecular Marine Biology and Biotechnology 3: 294-299. [PDF](https://www.mbari.org/wp-content/uploads/2016/01/Folmer_94MMBB.pdf)"
@@ -64,7 +64,7 @@ This is the PCR protocol my lab uses to amplify the mitochondrial cytochrome c o
 
 ## What the primers amplify
 
-The primers amplify a region of the mitochondrial COI gene in metazoan invertebrates. Folmer et al. (1994) report the product as about 710 bp. The gel shown on the original version of this page marked the product at 708 bp, next to a 100 bp ladder, in the positive (mtDNA) lane, with no band in the negative lane; that figure is read from the gel.
+The primers amplify a region of the mitochondrial COI gene in metazoan invertebrates. Folmer et al. (1994) report the product as about 710 bp. In the lab's gels the product runs at about 708 bp beside a 100 bp ladder, with a band in the positive (mtDNA) lane and none in the negative lane.
 
 The primers come from Folmer et al. (1994), who designed them to amplify this region of COI from a wide range of invertebrate phyla.
 
@@ -77,13 +77,13 @@ The primers come from Folmer et al. (1994), who designed them to amplify this re
 
 ## Reaction mix
 
-1. Use your polymerase's recommended reaction mix. This page does not record the mix the lab used.
+1. Set up the reaction with the mix recommended for your polymerase. The lab uses Promega GoTaq® Flexi DNA polymerase.
 
 For reference, Folmer et al. (1994) published this 50 µL mix for Promega *Taq*: 1 µL template DNA, 4 U *Taq* polymerase, 5 µL 10x buffer, 5 µL MgCl2 (0.025 mol/L), 2.5 µL of each primer at 10 µmol/L, 5 µL dNTP mix as in Folmer, and 29 µL water.
 
 ## PCR conditions
 
-This cycling program is the lab's, not Folmer's. Folmer et al. (1994) used 35 cycles of one minute at 95 °C, one minute at 40 °C and one and a half minutes at 72 °C, followed by 72 °C for seven minutes.
+This is the lab's cycling program. Folmer et al. (1994) used 35 cycles of one minute at 95 °C, one minute at 40 °C and one and a half minutes at 72 °C, followed by 72 °C for seven minutes.
 
 Extension temperature is dependent on polymerase.
 
@@ -99,7 +99,7 @@ Extension temperature is dependent on polymerase.
 | extension | 72 | 10 min. |
 | hold | 10 | ∞ |
 
-The first 20 cycles are a touchdown: the annealing temperature steps down from 56 to 46 °C over those cycles. The lab's written protocol gives no step size, and no published source settles one, so none is stated here. The second block of 20 cycles anneals at 46 °C.
+The first 20 cycles are a touchdown: the annealing temperature steps down from 56 to 46 °C over those cycles. The second block of 20 cycles anneals at 46 °C.
 
 2. Run the product on the #1% agarose gel in TBE{} beside the 100 bp ladder and look for the band at 708 bp.
    > EXPECT: The product at 708 bp, next to the 100 bp ladder, in the positive (mtDNA) lane, with no band in the negative lane.
