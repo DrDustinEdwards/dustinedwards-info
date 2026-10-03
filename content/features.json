@@ -297,7 +297,7 @@
     {
       "component": "Media",
       "name": "Transforms are computed on request and never written back",
-      "what": "One object per image, every size derived from it, which keeps the bucket free of variant sprawl and is why it needs no lifecycle rules. It uses the Images binding and not the URL transform syntax, and that is forced rather than preferred: the URL interface answers 404 with error 1042 on this hostname, because transformations there require a zone and the site is served from a workers.dev address. Thumbnails serve one format unconditionally, after a negotiated version turned out to poison a cache whose key carried no headers.",
+      "what": "One object per image, every size derived from it, which keeps the bucket free of variant sprawl and is why it needs no lifecycle rules. It uses the Images binding and not the URL transform syntax, and that is forced rather than preferred: the URL interface answers 404 on both of the site's addresses, with error 1042 on the workers.dev address (which has no zone) and a plain 404 on dustinedwards.info, so the binding is the only route to resizing. Thumbnails serve one format unconditionally, after a negotiated version turned out to poison a cache whose key carried no headers.",
       "anchors": [
         {
           "kind": "route",

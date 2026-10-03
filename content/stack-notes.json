@@ -31,7 +31,7 @@
     },
     "images:IMAGES": {
       "what": "Thumbnail and content-width transforms, computed on request from the original. Nothing is written back.",
-      "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 with Cloudflare error 1042 on this hostname, because transformations there require a zone and this site is served from workers.dev."
+      "whyLoadBearing": "The BINDING and not the /cdn-cgi/image/ URL syntax, and that is forced rather than preferred: the URL interface answers 404 on both of this site's addresses, with Cloudflare error 1042 on the workers.dev address (which has no zone) and a plain 404 on dustinedwards.info, so the binding is the only route to resizing."
     },
     "browser:BROWSER": {
       "what": "A headless browser that prints the CV to PDF. The Worker calls it after each CV save and keeps one PDF in the derived bucket.",
