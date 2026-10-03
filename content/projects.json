@@ -33,7 +33,7 @@
       "schemaType": "SoftwareApplication",
       "role": "Sole author",
       "status": "live",
-      "url": "https://dustinedwards.dustin-edwards.workers.dev",
+      "url": "https://dustinedwards.info",
       "repo": null,
       "stack": ["Cloudflare Workers", "React Router", "TypeScript", "D1", "R2", "KV", "Durable Objects", "AI Search", "Analytics Engine", "Drizzle", "SQLite FTS5", "Better Auth"],
       "metric": { "label": "verification gates in the build", "derived": "gate-count" },
