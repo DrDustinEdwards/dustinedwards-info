@@ -19,7 +19,7 @@ export const CSS_PATH = join(root, "app", "app.css");
  * so it is not read here: these gates are about the site's palette. The order lives here, not in `@import`
  * lines at the bottom of the entry sheet: CSS drops a late `@import`.
  */
-const ROOT_MODULE_PATH = join(root, "app", "routes", "public.tsx");
+const ROOT_MODULE_PATH = join(root, "app", "routes", "legacy-public.tsx");
 
 /** The admin plane's one sheet: Capsomer's tokens and components, outside the site's palette gates. */
 const ADMIN_CSS_PATH = join(root, "app", "admin.css");

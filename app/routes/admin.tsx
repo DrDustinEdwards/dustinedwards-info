@@ -1,4 +1,5 @@
-import { Form, Link, Outlet, data, useLocation, useRouteLoaderData } from "react-router";
+import { Form, Link, Outlet, data, isRouteErrorResponse, useLocation, useRouteLoaderData } from "react-router";
+import { Empty } from "capsomer/react/empty";
 import { MessageProvider } from "capsomer/react/message";
 import { Shell, type LinkProps, type ShellEntry } from "capsomer/react/shell";
 import { ThemeSwitch } from "capsomer/react/theme-switch";
@@ -307,5 +308,29 @@ export default function AdminLayout({ loaderData }: Route.ComponentProps) {
         </MessageProvider>
       </Shell>
     </>
+  );
+}
+
+/*
+ * The admin's own error page, in Capsomer: root's error page is the public site's and, with the public CSS
+ * no longer loaded here, would show unstyled. It keeps the admin's link back to the Overview.
+ */
+export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
+  const known = isRouteErrorResponse(error);
+  const title = known ? `${error.status} ${error.statusText}` : "Something went wrong";
+  return (
+    <main className="app-page">
+      <Empty
+        kind="failed"
+        title={title}
+        action={
+          <a className="cap-btn" href="/admin">
+            Go to the Overview
+          </a>
+        }
+      >
+        {known && typeof error.data === "string" ? error.data : "Nothing you wrote is lost."}
+      </Empty>
+    </main>
   );
 }

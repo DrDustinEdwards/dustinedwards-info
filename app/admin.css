@@ -1,6 +1,6 @@
 /* The admin plane is Capsomer's: its tokens, its base and the CSS of each component the admin uses.
    Nothing here repeats what Capsomer has; this file is the page frame inside the shell and nothing
-   else. The public plane's stylesheets are not loaded here (routes/public.tsx), because an unlayered
+   else. The public plane's stylesheets are not loaded here (routes/legacy-public.tsx), because an unlayered
    reset would beat Capsomer's layered rules. The admin's own rules are unlayered, so they win. */
 @import "capsomer/layers.css";
 @import "capsomer/tokens.css";

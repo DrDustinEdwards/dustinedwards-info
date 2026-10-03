@@ -5,7 +5,7 @@ import puppeteer from "puppeteer";
 
 const OUT = new URL(`./${process.argv[2]}/`, import.meta.url).pathname;
 const only = process.argv.slice(3);
-const ORIGIN = "http://localhost:4173";
+const ORIGIN = process.env.ORIGIN ?? "http://localhost:4173";
 const TOKEN = readFileSync(new URL("../../.smoke-token", import.meta.url), "utf8").trim();
 const VIEWS = [
   ["desktop-light", 1280, 900, "light"],
@@ -38,7 +38,7 @@ for (const [name, path] of PAGES) {
     await page.setCookie({ name: "theme", value: theme, url: ORIGIN });
     const res = await page.goto(`${ORIGIN}${path}`, { waitUntil: "networkidle0" });
     await new Promise((r) => setTimeout(r, 400));
-    await page.screenshot({ path: `${OUT}${name}-${view}.jpg`, type: "jpeg", quality: 80, fullPage: true });
+    await page.screenshot({ path: `${OUT}${name}-${view}.jpg`, type: "jpeg", quality: 80, fullPage: !name.endsWith("inspector") });
     console.log(res?.status(), name, view);
   }
 }

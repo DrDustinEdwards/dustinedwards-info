@@ -29,8 +29,13 @@ export function MediaListHeader({
             {label}
           </th>
         ) : (
-          <th key={key} scope="col" data-num={num || undefined}>
-            <Link to={sortHref(view, key, { toggle: true })} data-sort={key}>
+          <th
+            key={key}
+            scope="col"
+            data-num={num || undefined}
+            aria-sort={view.sort === key ? (view.dir === "asc" ? "ascending" : "descending") : undefined}
+          >
+            <Link to={sortHref(view, key, { toggle: true })} className="cap-table-sort" data-sort={key}>
               {label}
               <span aria-hidden="true">{view.sort === key ? ` ${arrow}` : ""}</span>
               {/* The sorted column says so in words inside its link. */}

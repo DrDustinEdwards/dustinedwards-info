@@ -3,8 +3,9 @@ import { type RouteConfig, index, layout, route } from "@react-router/dev/routes
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "./lib/content-pages.mjs";
 
 export default [
-  // Everything a visitor can see sits under one layout, which owns the public stylesheets.
-  layout("routes/public.tsx", [
+  // TEMPORARY: everything a visitor can see sits under one layout, which owns the old public CSS. The public
+  // rebuild on Capsomer deletes it (routes/legacy-public.tsx says what goes with it).
+  layout("routes/legacy-public.tsx", [
     index("routes/home.tsx"),
     // Writing: the posts, at /writing since the 2026-09-27 site structure. The module files keep their
     // blog.* names; only the addresses moved. Every other /blog address 301s in the gateway
