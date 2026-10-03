@@ -155,6 +155,36 @@ export async function convergeAsk(target) {
 }
 
 /**
+ * sync_cv_pdf, which renders the CV PDF through the deployed Worker's Browser binding when the stored
+ * object is not the one for D1's CV, then reads back. Runs BEFORE the media converge: a first render
+ * adds a `derived/` key the media index must then count.
+ *
+ * @param {OperatorTarget} target
+ * @returns {Promise<string>} the miss, or "" when the stored PDF is current
+ */
+export async function convergeCvPdf(target) {
+  const { report, miss } = await operatorSync("sync_cv_pdf", target);
+  let cvPdfMiss = miss;
+
+  if (!cvPdfMiss && report.converged !== true) {
+    cvPdfMiss =
+      `the CV PDF did not converge: ${report.expected} expected, ${report.present} present ` +
+      `after ${report.action}. Re-run sync_cv_pdf once the cause clears`;
+  }
+
+  if (cvPdfMiss) {
+    console.log(`  MISSED: ${cvPdfMiss}`);
+  } else {
+    console.log(
+      `  converged: ${report.action}, fingerprint ${report.fingerprint}` +
+        (typeof report.bytes === "number" ? `, ${report.bytes} bytes` : "") +
+        `.`,
+    );
+  }
+  return cvPdfMiss;
+}
+
+/**
  * sync_media, which rebuilds the media index through its derivation and reports the reconciliation.
  *
  * @param {OperatorTarget} target

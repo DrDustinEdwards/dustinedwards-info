@@ -168,6 +168,9 @@ export const DEFERRED_CHECKS = {
   "cv-drift": "the D1 sync",
   "roster-drift": "the D1 sync",
   "phage-drift": "the D1 sync",
+  // A fresh PDF carries the fingerprint only once the DEPLOYED Worker renders it, so the check cannot be
+  // green at readiness on a deploy that changed the CV text or the print document.
+  "cv-pdf-drift": "the CV PDF converge",
   "ask-index-drift": "the Ask converge",
   "media-index-drift": "the media converge",
 };
