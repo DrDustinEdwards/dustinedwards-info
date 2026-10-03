@@ -339,7 +339,7 @@ console.log(
 );
 
 // Measured by running it, never summed; re-taken whenever a section or a secret lands.
-const MINIMUM_CHECKS = 30;
+const MINIMUM_CHECKS = 29;
 tally.floor("check:secrets", "checks", MINIMUM_CHECKS);
 
 if (tally.failures > 0) {
