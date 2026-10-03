@@ -1,8 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 
-import { getDb } from "~/db";
-import { zeroResultQueries } from "~/db/schema";
 import type { Actor } from "~/lib/editor/publish-policy.mjs";
 import { runTool } from "~/lib/operator/api.server";
 import { ZERO_RESULT_RETENTION_SECONDS } from "~/lib/search/zero-result.mjs";
@@ -23,6 +21,15 @@ async function seedZeroResult(query: string, lastSeen: number) {
     .run();
 }
 
+/* Raw D1 for the read too: testEnv's type is not the app's Env (it lacks OPENALEX_API_KEY), so it
+   cannot be handed to getDb, and no other worker test does. */
+async function remainingQueries(): Promise<string[]> {
+  const { results } = await testEnv.DB.prepare(`SELECT query FROM zero_result_queries ORDER BY query`).all<{
+    query: string;
+  }>();
+  return results.map((row) => row.query);
+}
+
 describe("the purge_zero_results operator tool", () => {
   it("removes exactly the rows past the retention cutoff, which is the button's old rule", async () => {
     const now = Math.floor(Date.now() / 1000);
@@ -32,8 +39,7 @@ describe("the purge_zero_results operator tool", () => {
     const result = await runTool(operatorEnv(), OPERATOR, "purge_zero_results", {});
     expect(result).toMatchObject({ ok: true, data: { purged: 1 } });
 
-    const remaining = await getDb(testEnv).select().from(zeroResultQueries);
-    expect(remaining.map((row) => row.query)).toEqual(["a recent unanswered question"]);
+    expect(await remainingQueries()).toEqual(["a recent unanswered question"]);
   });
 
   it("purges nothing, and reports 0, when every row is still live demand", async () => {
