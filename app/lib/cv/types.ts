@@ -79,6 +79,11 @@ export type CvAppointment = Dated &
     detail?: string;
     /** Duties, grouped as the CV groups them. */
     duties?: { heading: string; items: string[] }[];
+    /**
+     * A current leadership title the site states beside the role (the headship): in the Person record's job
+     * title, on the About page and on the CV's header. Other leadership entries stay on the CV alone.
+     */
+    headline?: boolean;
   };
 
 export type CvEducation = Dated &
@@ -156,13 +161,18 @@ export type CvSourceEntry =
   | CvDevelopment;
 
 /** The people the CV is about, as content/cv/profile.md states them. */
+/** What the profile states. The person's title is not stated: it is derived (CvPersonView). */
 export type CvPerson = {
   name: string;
   degree: string;
-  title: string;
+  /** The field he works in, "Virologist": the second half of the one-line role. */
+  discipline: string;
   department: string;
   org: string;
 };
+
+/** The person as every surface renders them: the profile's facts and the title the appointments give them. */
+export type CvPersonView = CvPerson & { title: string };
 
 /** The CV's own totals for presentations; only invited talks where Dustin leads are entries. */
 export type CvPresentations = { international: number; national: number; from: number; to: number };

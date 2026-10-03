@@ -18,6 +18,10 @@
     // healthy site nobody is looking at. It imports the constant rather than
     // restating it, so this project has to reach the module.
     "app/lib/seo.ts",
+    // The owner's identity, derived from the CV: `app/lib/seo.ts` and `app/lib/cv/entries.mjs` import both, so this
+    // project must reach them. The generated one is written by `build:identity` (build:content and install).
+    "app/lib/identity.mjs",
+    "app/lib/identity.generated.mjs",
     // Listed because `app/lib/seo.ts` IMPORTS it, not because a script here
     // calls it, which is the same reason `app/lib/media/byte-size.mjs` is
     // listed below. `publicationsJsonLd` decodes character references so the

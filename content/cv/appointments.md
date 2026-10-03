@@ -71,6 +71,7 @@ entries:
     org: 'Department of Biological Sciences, Tarleton State University'
     areas: []
     role: null
+    headline: true
     duties:
       - heading: Leadership and personnel management
         items:
