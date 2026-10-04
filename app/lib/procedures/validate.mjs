@@ -7,6 +7,7 @@
 // is an error: a forgotten field cannot pass as a recorded gap.
 
 import { allSteps, stepConditions } from "./parse.mjs";
+import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, ORGANISMS } from "./taxonomy.mjs";
 
 export const PROFILES = /** @type {const} */ (["protocol", "recipe", "computational"]);
@@ -180,6 +181,9 @@ export function validateProcedure(parsed, expect) {
   if (d.start_here !== undefined && !isGap(d.start_here)) {
     if (!Number.isInteger(d.start_here) || d.start_here < 1) errors.push("start_here must be a position in the Start here list: 1, 2, 3 ...");
   }
+
+  // Proof of use: the papers that used the method and the phages it produced, as slugs. Stated, never inferred.
+  if (!isGap(d.proof_of_use)) errors.push(...proofErrors(d.proof_of_use));
 
   // The shared core.
   required("version");

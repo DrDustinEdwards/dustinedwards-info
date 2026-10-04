@@ -438,3 +438,12 @@ test("start_here is a position in the Start here list: a positive whole number, 
   assertError(check("phage-isolation", base.replace("start_here: 1", "start_here: 1.5")).errors, /start_here must be a position/);
   assert.deepEqual(check("phage-isolation", base.replace("start_here: 1\n", "")).errors, [], "a procedure with none is simply off the list");
 });
+
+test("proof_of_use is checked by the validator: slugs only, the right shape, never empty", () => {
+  const base = readFileSync("content/procedures/phage-isolation.md", "utf8");
+  const withProof = (block) => base.replace(/^course: .*$/m, (line) => `${line}\n${block}`);
+  assert.deepEqual(check("phage-isolation", withProof("proof_of_use:\n  papers: [10-1128-mra-01242-18]\n  phages: [arlo]")).errors, []);
+  assertError(check("phage-isolation", withProof("proof_of_use: arlo")).errors, /proof_of_use must be a mapping/);
+  assertError(check("phage-isolation", withProof("proof_of_use:\n  phages: [Arlo]")).errors, /not a phage key/);
+  assertError(check("phage-isolation", withProof("proof_of_use:\n  papers: []")).errors, /non-empty list/);
+});
