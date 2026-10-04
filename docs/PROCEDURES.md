@@ -153,6 +153,16 @@ protocol saved is listed at the next request with no deploy, and no second list 
   library follows the light and dark themes with no second palette. The site's reset is imported into Capsomer's
   lowest layer (`cap.reset`, in `app.css`), because an unlayered reset would beat every layered component rule.
 
+## A protocol in the phage workflow
+
+A protocol's page says where it sits in the phage workflow (`workflowContext`, `ProtocolWorkflow`): its stage (the first
+`PHAGE_PIPELINE` stage whose methods it carries out), the protocols of the nearest earlier and later stage that has any
+("Before this", "After this"), and the calculators of its stage. None of it is stored on the protocol: it is read from the
+other published protocols and the stages, so a protocol saved changes its neighbours' links with no edit to them. A
+protocol outside the workflow (a primer set) shows nothing. The markdown twin ends with the same lines
+(`workflowMarkdown`), added when the twin is served because the neighbours are other rows. Links to a protocol's primers,
+reagents and strains wait for the lab registry, which gives them pages to link.
+
 ## Run mode
 
 Every procedure page offers "Run this procedure". The page is complete as served; run mode is an enhancement

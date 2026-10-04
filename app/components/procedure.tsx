@@ -1,3 +1,5 @@
+import { ProtocolWorkflow } from "~/components/protocol-workflow";
+import type { workflowContext } from "~/lib/procedures/library.mjs";
 import { fillQuantities, fixedSectionIds, type ProcedureRecord } from "~/lib/procedures/render.mjs";
 import { formatNumber, formatQuantity, parseNumber } from "~/lib/procedures/marks.mjs";
 
@@ -333,10 +335,12 @@ export function ProcedureView({
   record,
   count,
   factor,
+  workflow = null,
 }: {
   record: ProcedureRecord;
   count: number;
   factor: number;
+  workflow?: ReturnType<typeof workflowContext>;
 }) {
   const [materialsId, equipmentId, troubleId, expectedId, limitsId, referencesId] = fixedSectionIds(record.profile);
   return (
@@ -350,6 +354,7 @@ export function ProcedureView({
           Markdown
         </a>
       </p>
+      <ProtocolWorkflow context={workflow} />
       {record.image ? (
         <img
           className="procedure-image"

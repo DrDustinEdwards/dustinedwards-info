@@ -9,6 +9,7 @@ import { procedureSearchUid } from "~/lib/procedures/render.mjs";
 import { loader as pageLoader } from "~/routes/procedure";
 import { loader as twinLoader } from "~/routes/procedure[.md]";
 
+import isolation from "../../content/procedures/phage-isolation.md?raw";
 import zncl2 from "../../content/procedures/phage-dna-extraction.md?raw";
 
 import { routeContext } from "./route-helpers";
@@ -78,6 +79,24 @@ describe("save_procedure", () => {
       params: { slug: SLUG },
     } as never);
     expect(await twin.text()).toContain("Incubate at 60 °C for 45 minutes.");
+  });
+
+  it("places a protocol in the phage workflow from its neighbours, on the page and in the twin, with nothing stored on it", { timeout: 180_000 }, async () => {
+    gh.restore();
+    gh = stubGitHub({ [procedurePath(SLUG)]: zncl2, [procedurePath("phage-isolation")]: isolation });
+    for (const [slug, raw] of [[SLUG, zncl2], ["phage-isolation", isolation]] as const) {
+      expect((await runTool(operatorEnv(), operator, "save_procedure", { slug, raw })).ok).toBe(true);
+    }
+    const out = await pageLoader({ request: new Request(PAGE), context: routeContext(), params: { slug: SLUG } } as never);
+    expect(out.workflow).toMatchObject({
+      stage: "Extract DNA",
+      before: [{ title: expect.stringContaining("Phage Isolation"), href: "/research/protocols/phage-isolation" }],
+      after: [],
+    });
+    const twin = await twinLoader({ request: new Request(`${PAGE}.md`), context: routeContext(), params: { slug: SLUG } } as never);
+    const text = await twin.text();
+    expect(text).toContain("## In the phage workflow");
+    expect(text).toContain("Before this: [Phage Isolation");
   });
 
   it("REFUSES an invalid file with every validator message, and commits nothing", async () => {
