@@ -1,6 +1,7 @@
 import { type RouteConfig, index, layout, route } from "@react-router/dev/routes";
 
 import { CONTENT_PAGE_PATHS, CONTENT_PAGES_FROM_DATA } from "./lib/content-pages.mjs";
+import { LIBRARY_PATH } from "./lib/procedures/taxonomy.mjs";
 
 export default [
   // TEMPORARY: everything a visitor can see sits under one layout, which owns the old public CSS. The public
@@ -51,6 +52,11 @@ export default [
     // Procedures (docs/PROCEDURES.md): drawn from D1 at request time, so they precede the splat. Each
     // profile's root takes the page, its printable sheet and its markdown twin; the twin precedes the
     // page so `.md` is not read as part of a slug.
+    // The protocol library: the page, its twin and its downloads, drawn from the procedure rows (library.mjs).
+    route("research/protocols", "routes/protocols.tsx"),
+    route("research/protocols.md", "routes/protocols[.md].ts"),
+    route("research/protocols.json", "routes/protocols[.json].ts"),
+    route("research/protocols.csv", "routes/protocols[.csv].ts"),
     ...[
       ["research/protocols", "protocol"],
       ["research/methods", "computational"],
@@ -62,7 +68,7 @@ export default [
     ]),
     // Each page's markdown twin, drawn from D1 like the page. One route per listed path, because a splat
     // cannot end in `.md`; a path with no page answers through the splats below. /cv's twin has its own route, below.
-    ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path)).map((path) =>
+    ...CONTENT_PAGE_PATHS.filter((path) => !CONTENT_PAGES_FROM_DATA.includes(path) && path !== LIBRARY_PATH).map((path) =>
       route(`${path.slice(1)}.md`, "routes/content-page[.md].ts", { id: `page-twin-${path.slice(1).replaceAll("/", "-")}` }),
     ),
     route("research/*", "routes/content-page.tsx"),

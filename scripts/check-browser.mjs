@@ -18,6 +18,7 @@ import * as math from "./lib/browser/cases/math.mjs";
 import * as mediaSvg from "./lib/browser/cases/media-svg.mjs";
 import * as movedPaths from "./lib/browser/cases/moved-paths.mjs";
 import * as navigation from "./lib/browser/cases/navigation.mjs";
+import * as runMode from "./lib/browser/cases/run-mode.mjs";
 import * as postControls from "./lib/browser/cases/post-controls.mjs";
 import * as scriptSet from "./lib/browser/cases/script-set.mjs";
 import * as speculation from "./lib/browser/cases/speculation.mjs";
@@ -123,6 +124,7 @@ try {
   const { publicConsoleErrors, enhanceStems, codePost, probedPost } = await enhancements.run(ctx);
   const postForShape = await postControls.run(ctx, { codePost, probedPost });
   await lightbox.run(ctx);
+  await runMode.run(ctx);
   await mediaSvg.run(ctx);
   await cv.run(ctx);
   await scriptSet.run(ctx, { postForShape, enhanceStems, publicConsoleErrors });

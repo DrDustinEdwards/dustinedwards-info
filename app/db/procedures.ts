@@ -1,6 +1,6 @@
 // The procedures table: read by the procedure pages, the sitemap and the operator API. Written only by
 // writeProcedureRow, from a compile (app/lib/procedures/compile.mjs).
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 
 import { PUBLISHED_STATUS } from "~/lib/search/visibility.mjs";
 import type { ProcedureRecord } from "~/lib/procedures/render.mjs";
@@ -69,4 +69,14 @@ export async function listProceduresForOperator(env: Env) {
     draft: status === "draft",
     gaps: (JSON.parse(record) as ProcedureRecord).gaps.length,
   }));
+}
+
+/** For the protocol library: every published protocol and computational method, with its full record. */
+export async function listPublishedLibraryRecords(env: Env): Promise<ProcedureRecord[]> {
+  const rows = await getDb(env)
+    .select({ record: procedures.record })
+    .from(procedures)
+    .where(and(eq(procedures.status, PUBLISHED_STATUS), inArray(procedures.profile, ["protocol", "computational"])))
+    .orderBy(asc(procedures.path));
+  return rows.map((row) => JSON.parse(row.record) as ProcedureRecord);
 }
