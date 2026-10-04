@@ -49,6 +49,8 @@ export const CONTENT_PAGE_PATHS = /** @type {const} */ ([
   "/software/carrel",
   // The CV. Its entries are the files in content/cv/ (docs/CV.md), not a markdown page kept in content/pages/.
   "/cv",
+  // The terms the site's data is published under: the `license` of every Dataset (app/lib/license.mjs).
+  "/terms",
 ]);
 
 /**

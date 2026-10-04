@@ -1,3 +1,4 @@
+import { LICENSE_LINK } from "../license.mjs";
 import { ASSET_PREFIX } from "../media/classify.mjs";
 import { PUBLICATIONS_CACHE_TAG } from "./paths.mjs";
 
@@ -33,5 +34,6 @@ export function exportHeaders(type, cacheControl, filename) {
     "cache-tag": PUBLICATIONS_CACHE_TAG,
     "content-disposition": `inline; filename="${ASSET_PREFIX}${filename}"`,
     "x-robots-tag": "noindex",
+    link: LICENSE_LINK,
   };
 }

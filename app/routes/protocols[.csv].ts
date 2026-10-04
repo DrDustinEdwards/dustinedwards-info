@@ -1,5 +1,6 @@
 import { listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
+import { LICENSE_LINK } from "~/lib/license.mjs";
 import { canonicalLink } from "~/lib/markdown-twin";
 import { LIBRARY_PATH, libraryCsv, libraryItems, libraryRecords } from "~/lib/procedures/library.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
@@ -18,7 +19,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
       "cache-tag": PROCEDURES_CACHE_TAG,
       "x-robots-tag": "noindex",
       "content-disposition": 'attachment; filename="dustin-edwards-protocols.csv"',
-      link: canonicalLink(LIBRARY_PATH),
+      // A CSV has no place for a comment that every reader would ignore, so the terms travel in the header.
+      link: `${canonicalLink(LIBRARY_PATH)}, ${LICENSE_LINK}`,
     },
   });
 }
