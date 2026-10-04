@@ -41,7 +41,7 @@ export async function run({ page }) {
   );
 
   /** One check on opening the webbed plate calculator, typing in it, and the page it leaves behind. */
-  async function exercise(/** @type {string} */ when) {
+  async function exercise(/** @type {string} */ when, /** @type {string} */ typed) {
     const selector = 'details.phage-tool-step:has(form[data-tool="webbed-plate"])';
     await page.evaluate((sel) => document.querySelector(sel)?.setAttribute("open", ""), selector);
     const before = await page.$eval(`${selector} .phage-tool-answer`, (n) => n.textContent ?? "");
@@ -50,11 +50,13 @@ export async function run({ page }) {
       n.focus();
       /** @type {HTMLInputElement} */ (n).select();
     });
-    await page.type(`${selector} input[name="pfu"]`, "22200");
+    await page.type(`${selector} input[name="pfu"]`, typed);
+    // The answer prints the number with thousands separators ("22,200 pfu"), so it is that string the answer must come to carry.
+    const printed = Number(typed).toLocaleString("en-US");
     /** @type {string} */
     const after = await pollUntil(
       () => page.$eval(`${selector} .phage-tool-answer`, (n) => n.textContent ?? ""),
-      (now) => now !== before,
+      (now) => now !== before && now.includes(`${printed} pfu`),
       { tries: 20, everyMs: 150 },
     );
     const state = await page.evaluate(() => ({
@@ -63,7 +65,7 @@ export async function run({ page }) {
     }));
     ok(
       `the webbed plate calculator under its step recomputes as a number is typed ${when}, and leaves the address bar alone`,
-      after !== before && state.search === search,
+      after !== before && after.includes(`${printed} pfu`) && state.search === search,
       `the answer was "${before}" and became "${after}"; the address went from "${search}" to "${state.search}".`,
     );
     ok(
@@ -73,7 +75,9 @@ export async function run({ page }) {
     );
   }
 
-  await exercise("before a run is started");
+  // Two different numbers, neither the worked example's: the second pass starts from the field the first left,
+  // so typing the first number again changes nothing and no recompute could show (run 37231091128).
+  await exercise("before a run is started", "22200");
 
   await page.click(".run-start");
   const started = await page.evaluate(() => ({
@@ -85,7 +89,7 @@ export async function run({ page }) {
     started.mode === "on" && started.folded === shape.folded.length,
     `mode "${started.mode}", ${started.folded} of ${shape.folded.length} calculators still under their steps.`,
   );
-  await exercise("in run mode");
+  await exercise("in run mode", "33300");
 
   // Leave no run behind for the cases after this one.
   await page.evaluate(() => {
