@@ -47,6 +47,9 @@ export async function run({ page, browser }) {
     "blog.series.$series.tsx":
       "no post in the corpus carries a series, so every /writing/series/ URL is a " +
       "404 and a case here would compare two renders of the error page.",
+    "procedure.version.tsx":
+      "no procedure in the corpus has a version yet, so every <page>/v/<version> URL is a 404 and a case " +
+      "here would compare two renders of the error page. Add one when the first version is published.",
   };
 
   /* HTML only: the feeds and twins sharing the header have no `<html data-theme>` to reach. */

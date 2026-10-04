@@ -127,6 +127,56 @@ pages. When the lab registry holds host strains, `organism` reads from it.
 - **computational** adds `environment` and `prerequisites`. Its materials are software (with `version`),
   data and input files. Every command has its expected output. It does not scale.
 
+## Versions, history and citing
+
+`version` is the version the page is at; it stays `MISSING` until one is assigned, and when set it sits in a URL, so it
+is letters, digits, dots, hyphens and underscores (`2`, `1.1`). An optional `history` lists the versions newest first,
+each with `version`, `date`, `summary` and, once Zenodo has minted one, `doi`:
+
+```yaml
+version: "2"
+history:
+  - version: "2"
+    date: 2026-10-01
+    summary: Added the spin speed.
+    doi: 10.5281/zenodo.200
+  - version: "1"
+    date: 2026-09-01
+    summary: First version.
+```
+
+The first entry must be the current version, so a version is written once; dates may not rise going down the list. The
+page draws "Version history" from it, each version linked to its frozen copy, and, for any assigned version, "Cite this
+procedure": a citation line and BibTeX, derived in `app/lib/procedures/cite.mjs`. A procedure with no version has
+nothing to cite and draws neither. The DOI of a version is written once, on its history entry. A citation points at the
+version's DOI once it has one, and until then at the version's frozen copy.
+
+### Frozen copies
+
+Every published version keeps a rendered copy at `<page>/v/<version>` (and its twin at `<page>/v/<version>.md`), so the
+QR code on a printed sheet and a citation open the words they were made from (protocols.md; the 2026-10-04 ruling in
+dustinedwards/decisions.md). The newest version also answers at its `/v/` address and at the plain page. The page of an
+older version says which version is current and links to it, and every `/v/` page puts its canonical on the plain
+page, so the copies never compete with it in search.
+
+- **Stored once, then never changed.** The copy is the compiled record and twin the live row held, written into
+  `procedure_versions` (`drizzle/0027_procedure_versions.sql`) in the same batch as the live row by `writeRow`, and by
+  `sync:content` at ship (`freezeSql`, which appends a large copy in pieces under D1's statement cap and seals it last).
+  Two triggers make the database refuse an UPDATE or DELETE of a sealed row. The page for a version is drawn from the
+  frozen record by the shared components, so the words are frozen and the page chrome is not. This table is the one
+  store here that is not derived from the file (hard rule 18).
+- **A published version's words cannot change.** A file that changes the words of a version that already has a copy
+  does not compile: `save_procedure` refuses it before anything is committed, `get_procedure` shows the error, and
+  `sync_procedures` and `sync:content` name the file. The fix is a new `version` with a `history` entry that says what
+  changed. A draft, and a procedure with no version, are never frozen.
+- **Drift covers it.** A published, versioned row with no sealed copy reads as drifted, and the sync that repairs
+  drift freezes the copy.
+
+`npm run zenodo:metadata -- <slug>` prints the Zenodo deposit metadata for the current version (title, version, date,
+creator and affiliation from the CV, keywords from the method words, the frozen copy and the source DOIs as related
+identifiers) for `.zenodo.json` or the upload form. It leaves out the license, which is Dustin's to choose, and a DOI is
+minted only for a version being cited (protocols.md), never for the collection.
+
 ## The library
 
 `/research/protocols` is the protocol library (`app/routes/protocols.tsx`): the page's own introduction, then every

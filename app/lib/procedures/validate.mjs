@@ -6,6 +6,7 @@
 // the check can print it and the read tool can show it. A bare MISSING, or a required field left out,
 // is an error: a forgotten field cannot pass as a recorded gap.
 
+import { DOI_PATTERN, VERSION_PATTERN } from "./cite.mjs";
 import { allSteps, stepConditions } from "./parse.mjs";
 import { proofErrors } from "./proof.mjs";
 import { COURSES, METHODS, ORGANISMS } from "./taxonomy.mjs";
@@ -110,6 +111,42 @@ function nonEmptyString(value) {
 }
 
 /**
+ * The version history, newest first: each version with its date, what changed and, once Zenodo has minted
+ * one, its DOI. The first entry is the version the page is at, so the version is stored once in `version`
+ * and the history cannot disagree with it.
+ *
+ * @param {Record<string, any>} d
+ * @param {string[]} errors
+ */
+function validateHistory(d, errors) {
+  if (d.history === undefined || isGap(d.history)) return;
+  if (!Array.isArray(d.history) || d.history.length === 0) {
+    errors.push("history must be a list of versions, newest first");
+    return;
+  }
+  const seen = new Set();
+  let newer = "9999-12-31";
+  d.history.forEach((/** @type {any} */ h, /** @type {number} */ i) => {
+    const at = `history[${h?.version ?? i}]`;
+    if (!h || typeof h !== "object") return errors.push(`${at} must be a version`);
+    for (const k of Object.keys(h)) if (!["version", "date", "summary", "doi"].includes(k)) errors.push(`${at}.${k} is not a history field (version, date, summary, doi)`);
+    if (!VERSION_PATTERN.test(String(h.version ?? ""))) errors.push(`${at} needs a version of letters, digits, dots, hyphens and underscores`);
+    if (seen.has(String(h.version))) errors.push(`${at}: the version is listed twice`);
+    seen.add(String(h.version));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(h.date ?? ""))) errors.push(`${at}.date is ${JSON.stringify(h.date)}; write the date as YYYY-MM-DD`);
+    else if (String(h.date) > newer) errors.push(`${at}.date ${h.date} is later than the entry above it; the history is newest first`);
+    else newer = String(h.date);
+    if (!nonEmptyString(h.summary)) errors.push(`${at} needs a summary of what changed`);
+    if (h.doi !== undefined && !DOI_PATTERN.test(String(h.doi))) errors.push(`${at}.doi is ${JSON.stringify(h.doi)}; write the DOI as 10.xxxx/suffix, without the https://doi.org/ address`);
+  });
+  if (d.version === undefined || d.version === null || isGap(d.version)) {
+    errors.push("history needs a version: the first entry is the version the page is at, so set version to it");
+  } else if (String(d.history[0]?.version) !== String(d.version)) {
+    errors.push(`version is ${JSON.stringify(d.version)} but the first history entry is ${JSON.stringify(String(d.history[0]?.version))}; the newest entry is the current version`);
+  }
+}
+
+/**
  * Checks one parsed procedure.
  *
  * @param {import("./parse.mjs").ParsedProcedure} parsed
@@ -186,7 +223,10 @@ export function validateProcedure(parsed, expect) {
   if (!isGap(d.proof_of_use)) errors.push(...proofErrors(d.proof_of_use));
 
   // The shared core.
-  required("version");
+  if (required("version") && !isGap(d.version) && !VERSION_PATTERN.test(String(d.version))) {
+    errors.push(`version is ${JSON.stringify(d.version)}; it sits in a URL, so use letters, digits, dots, hyphens and underscores, such as "2" or "1.1"`);
+  }
+  validateHistory(d, errors);
   if (required("updated") && !isGap(d.updated) && !/^\d{4}-\d{2}-\d{2}$/.test(String(d.updated))) {
     errors.push(`updated is ${JSON.stringify(d.updated)}; write the date as YYYY-MM-DD`);
   }

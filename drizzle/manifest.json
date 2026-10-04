@@ -26,6 +26,7 @@
     "0023_dictionary.sql": "ba084c6c5caa4a0a937114c8eae1fe329d473229df261efb9e6ff889f49dc830",
     "0024_roster.sql": "826ed3830c4121d2a78887fadf68a6a9b48d0a7cac0dc0e77a0e28ebafe732b4",
     "0025_phages.sql": "ffef7f14958689af05f386d991e6b66df3c491cd32bed2433c0b2ef08d3ff515",
-    "0026_retire_better_auth.sql": "6a90aa503d4f121cb11343255dd17bb6dacf9c9633fcd868df2f4bb6db7ebb11"
+    "0026_retire_better_auth.sql": "6a90aa503d4f121cb11343255dd17bb6dacf9c9633fcd868df2f4bb6db7ebb11",
+    "0027_procedure_versions.sql": "90a2a8717e67c22d17226e0eebfabab8d2bc3635a30280205e85f10a97b7afe5"
   }
 }
