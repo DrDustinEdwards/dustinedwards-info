@@ -192,7 +192,7 @@ describe("the biosafety level", () => {
   const everywhere = async () => {
     const record = await page();
     const view = renderToStaticMarkup(createElement(ProcedureView, { record, count: 1, factor: 1 }));
-    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record, count: 1, factor: 1, url: PAGE }));
+    const sheet = renderToStaticMarkup(createElement(ProcedureSheet, { record, count: 1, factor: 1, address: PAGE }));
     return { record, view, sheet, twin: await twin(), ld: JSON.stringify(procedureJsonLd(record, "https://example.com", person)) };
   };
 

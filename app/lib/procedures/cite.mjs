@@ -44,6 +44,18 @@ export function needsFreeze(record) {
 }
 
 /**
+ * The address a printed sheet's QR code opens, and the sheet prints: the frozen copy of the version on it, so the code
+ * opens the words the sheet was printed from even after the page has moved on. A procedure with no published version
+ * has no copy, so its sheet points at the page.
+ *
+ * @param {{ draft: boolean, version: string | null, path: string }} record
+ * @param {string} origin
+ */
+export function sheetAddress(record, origin) {
+  return `${origin}${needsFreeze(record) ? versionPath(record.path, String(record.version)) : record.path}`;
+}
+
+/**
  * What a citation of the record's current version needs, or null when it has no version or no date to cite.
  * The date is the one the history gives the version, else the date the page was last updated.
  *

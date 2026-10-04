@@ -68,6 +68,7 @@ export default [
       // A frozen version (drizzle/0027_procedure_versions.sql): its page and its twin, the twin first as above.
       route(`${root}/:slug/v/:version.md`, "routes/procedure.version[.md].ts", { id: `procedure-${id}-version-md` }),
       route(`${root}/:slug/v/:version`, "routes/procedure.version.tsx", { id: `procedure-${id}-version` }),
+      route(`${root}/:slug/v/:version/sheet`, "routes/procedure.version.sheet.tsx", { id: `procedure-${id}-version-sheet` }),
       route(`${root}/:slug/sheet`, "routes/procedure.sheet.tsx", { id: `procedure-${id}-sheet` }),
       route(`${root}/:slug`, "routes/procedure.tsx", { id: `procedure-${id}` }),
     ]),

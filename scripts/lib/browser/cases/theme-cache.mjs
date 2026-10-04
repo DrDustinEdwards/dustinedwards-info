@@ -50,6 +50,8 @@ export async function run({ page, browser }) {
     "procedure.version.tsx":
       "no procedure in the corpus has a version yet, so every <page>/v/<version> URL is a 404 and a case " +
       "here would compare two renders of the error page. Add one when the first version is published.",
+    "procedure.version.sheet.tsx":
+      "the sheet of a frozen version has no corpus URL for the same reason as procedure.version.tsx.",
   };
 
   /* HTML only: the feeds and twins sharing the header have no `<html data-theme>` to reach. */

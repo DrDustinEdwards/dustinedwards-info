@@ -75,8 +75,7 @@ export default function ProcedureVersionRoute({ loaderData }: Route.ComponentPro
       <Breadcrumb trail={trail} />
       <h1 className="page-title">{record.title}</h1>
       <VersionNotice record={record} current={current} />
-      {/* The sheet of a frozen version is added with the QR code, which opens this page. */}
-      <ProcedureView record={record} count={count} factor={factor} basePath={basePath} sheetPath={null} frozen={frozen} />
+      <ProcedureView record={record} count={count} factor={factor} basePath={basePath} sheetPath={`${basePath}/sheet`} frozen={frozen} />
       <Enhance module="run" />
     </PageShell>
   );
