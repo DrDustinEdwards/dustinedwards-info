@@ -101,6 +101,8 @@ export function run(code) {
       // The procedure pages and their printable sheets (docs/PROCEDURES.md), drawn from D1.
       "procedure.tsx",
       "procedure.sheet.tsx",
+      // The protocol library (docs/PROCEDURES.md): its filters are GET parameters, as the publication index's are.
+      "protocols.tsx",
       "cv.tsx",
       "blog.tags.$tag.tsx",
       "blog.series.$series.tsx",

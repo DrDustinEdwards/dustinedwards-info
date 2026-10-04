@@ -10,6 +10,7 @@ declare module "virtual:enhance" {
   type EnhanceModuleName =
     | "ask"
     | "blog"
+    | "catalog"
     | "cv"
     | "header"
     | "login"

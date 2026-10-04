@@ -32,6 +32,8 @@ export async function run({ page, browser }) {
     /* The markdown pages: one research page for the research/* splat, and the teaching hub. */
     { path: "/research/phages", module: "content-page.tsx" },
     { path: "/teaching", module: "teaching.tsx" },
+    /* The protocol library: a research page of its own, with the catalog's form in it. */
+    { path: "/research/protocols", module: "protocols.tsx" },
     /* A published protocol and its bench sheet: both declare the shared headers (the procedure route). */
     { path: "/research/protocols/phage-isolation", module: "procedure.tsx" },
     /* The bench sheet is a print page with no site shell, so it has no footer to compare. */

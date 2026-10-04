@@ -1,4 +1,8 @@
-@import "./styles/reset.css";
+/* Capsomer's layer order, first: the reset sits in the lowest layer, so Capsomer's components (the protocol
+   library) and every unlayered rule here win over it. Every reset selector is an element or universal one, so
+   no site rule changes what it wins; only Capsomer's layered rules gain the ability to override it. */
+@layer cap.reset, cap.tokens, cap.base, cap.components, cap.utilities;
+@import "./styles/reset.css" layer(cap.reset);
 
 /* Built through Vite, not public/, so the hashed URL is cached immutable; never mark stable /fonts/
    paths immutable. */

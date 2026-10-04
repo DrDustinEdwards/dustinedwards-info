@@ -43,3 +43,6 @@ export function organismLabel(/** @type {string} */ id) {
 export function courseLabel(/** @type {string} */ id) {
   return /** @type {Record<string, { label: string }>} */ (COURSES)[id]?.label ?? id;
 }
+
+/** The protocol library's address; its filters are query parameters on it, so the canonical stays this path. */
+export const LIBRARY_PATH = "/research/protocols";
