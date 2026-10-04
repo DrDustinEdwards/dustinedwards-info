@@ -98,8 +98,8 @@ const MISSING: Missing[] = [
   {
     type: "SoftwareApplication",
     property: "applicationCategory",
-    page: /^\/software\/(capsid|carrel|foxing-edu)$/,
-    reason: "the frontmatter states no category for Capsid, Carrel or Foxing Edu",
+    page: /^\/software\/(capsid|carrel|capsomer|foxing-edu)$/,
+    reason: "the frontmatter states no category for Capsid, Carrel, Capsomer or Foxing Edu",
   },
   {
     type: "SoftwareSourceCode",

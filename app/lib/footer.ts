@@ -56,7 +56,8 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
   {
     id: "software",
     heading: "Software",
-    items: SOFTWARE_PRODUCTS.map(({ to, label }) => ({ to, label })),
+    // The header lists the three products only; the footer adds the design system the family is built from.
+    items: [...SOFTWARE_PRODUCTS.map(({ to, label }) => ({ to, label })), { to: "/software/capsomer", label: "Capsomer" }],
   },
   {
     id: "writing",

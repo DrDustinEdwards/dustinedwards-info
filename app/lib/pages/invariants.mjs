@@ -180,7 +180,7 @@ function phageTableErrors({ path, markdown, html }, phages) {
 function softwareNameErrors({ path, markdown }) {
   /** @type {string[]} */
   const errors = [];
-  if (["/software/capsid", "/software/enarratio", "/software/carrel"].includes(path)) {
+  if (["/software/capsid", "/software/enarratio", "/software/carrel", "/software/capsomer"].includes(path)) {
     const headings = [...markdown.matchAll(/^## (.+)$/gm)].map((m) => m[1]);
     if (!headings.includes("Why the name")) errors.push('the page has no "Why the name" section');
     else if (headings[0] === "Why the name") errors.push('the "Why the name" section belongs after what the software does, not first');

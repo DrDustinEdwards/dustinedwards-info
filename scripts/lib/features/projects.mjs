@@ -277,6 +277,7 @@ export function checkProjects(ctx) {
     "/software/capsid",
     "/software/enarratio",
     "/software/carrel",
+    "/software/capsomer",
   ];
   for (const softwarePath of SOFTWARE_PAGES) {
     ok(
@@ -336,6 +337,8 @@ export function checkProjects(ctx) {
   ok("the hub does not link the Carrel app", !hub.includes("carrel.dustinedwards.info"));
   ok("the hub links the Carrel page", hub.includes("](/software/carrel)"));
   ok("the hub links the Enarratio page", hub.includes("](/software/enarratio)"));
+  ok("the Capsomer page links its home", readPage("software-capsomer.md").includes("](https://capsomer.dustinedwards.info)"));
+  ok("the hub links the Capsomer page", hub.includes("](/software/capsomer)"));
 
   // The page's node is built in the module the content-page route and the phage page share.
   const contentPageSource = codeOf(join(root, "app", "lib", "pages", "page-json-ld.ts"));
