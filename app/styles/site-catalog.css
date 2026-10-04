@@ -29,3 +29,15 @@
   --shadow-xs: none;
   font-family: var(--font-sans);
 }
+
+/* The page's column is the prose measure, narrower than a table of facets and results wants. Wide enough, a wide
+   catalog breaks out of it and centres on the page; below that it keeps the column, and the catalog answers to its own
+   width (its filter tray on a phone). */
+@media (min-width: 60rem) {
+  .site-catalog-wide {
+    position: relative;
+    inline-size: min(72rem, calc(100vw - 4rem));
+    inset-inline-start: 50%;
+    translate: -50% 0;
+  }
+}
