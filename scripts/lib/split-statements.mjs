@@ -120,13 +120,35 @@ const quoteLiteral = (text) => `'${text.replace(/'/g, "''")}'`;
 const STRING_LITERAL = /^'(?:[^']|'')*'$/;
 
 /**
+ * `replace(<value>, '<a>', <b>)`: how `wrangler d1 export` writes a string holding a newline, as
+ * `replace('line\nline','\n',char(10))`. Null when the expression is not one.
+ * @param {string} expression
+ * @returns {{ inner: string, rest: string } | null} the first argument and the other two, ready to re-wrap a piece
+ */
+function replaceCall(expression) {
+  const t = expression.trim();
+  if (!/^replace\s*\(/i.test(t) || !t.endsWith(")")) return null;
+  const args = splitTopLevel(t.slice(t.indexOf("(") + 1, -1), ",");
+  if (args.length !== 3) return null;
+  return { inner: args[0].trim(), rest: `${args[1].trim()},${args[2].trim()}` };
+}
+
+/**
  * One long value as pieces whose concatenation is the value. A value is string literals and anything else
- * (`char(10)`, a call) joined by `||`; a literal is cut between code points, anything else must fit whole.
+ * (`char(10)`, a call) joined by `||`; a literal is cut between code points, anything else must fit whole,
+ * except a `replace(` of a long value, whose inner value is cut and each piece wrapped again. A piece of a
+ * replaced text never ends on a backslash, so the two-character escape the replace looks for is never split.
  *
  * @param {string} expression
+ * @param {boolean} [escaped] the text is under a replace(), so a cut may not follow a backslash
  * @returns {string[]} SQL expressions, each small
  */
-function pieces(expression) {
+function pieces(expression, escaped = false) {
+  const call = replaceCall(expression);
+  if (call && bytes(expression) > PIECE_BYTES) {
+    return pieces(call.inner, true).map((piece) => `replace(${piece},${call.rest})`);
+  }
+
   /** @type {string[]} */
   const out = [];
   /** @type {string[]} */
@@ -149,9 +171,14 @@ function pieces(expression) {
     const term = raw.trim();
     if (!STRING_LITERAL.test(term)) {
       if (bytes(term) > PIECE_BYTES) {
-        throw new Error(
-          `a ${bytes(term)}-byte value is not a plain string literal, so it cannot be cut into pieces: ${term.slice(0, 60)}...`,
-        );
+        if (replaceCall(term) === null) {
+          throw new Error(
+            `a ${bytes(term)}-byte value is not a plain string literal, so it cannot be cut into pieces: ${term.slice(0, 60)}...`,
+          );
+        }
+        flush();
+        out.push(...pieces(term, escaped));
+        continue;
       }
       add(term);
       continue;
@@ -161,7 +188,7 @@ function pieces(expression) {
     let runBytes = 2;
     for (const ch of text) {
       const cost = ch === "'" ? 2 : bytes(ch);
-      if (size + runBytes + cost > PIECE_BYTES && run !== "") {
+      if (size + runBytes + cost > PIECE_BYTES && run !== "" && !(escaped && run.endsWith("\\"))) {
         add(quoteLiteral(run));
         flush();
         run = "";

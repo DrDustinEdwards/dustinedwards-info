@@ -120,7 +120,7 @@ test("what cannot be cut stops the run and says so", () => {
     /not a plain INSERT/,
   );
   assert.throws(
-    () => splitOversizeStatements(`INSERT INTO notes (id, body) VALUES (1, replace(${literal(TEXT)}, 'a', 'b'));`),
+    () => splitOversizeStatements(`INSERT INTO notes (id, body) VALUES (1, upper(${literal(TEXT)}));`),
     /cannot be cut|still over/,
   );
 });
@@ -196,3 +196,22 @@ for (const [table, longColumns] of Object.entries(LONG_TEXT_COLUMNS)) {
     assert.deepEqual({ ...target.prepare(`SELECT * FROM ${table}`).get() }, { ...truth });
   });
 }
+
+// wrangler d1 export writes a string holding a newline as replace('a\nb','\n',char(10)), CR as a second replace
+// around it. The first real drill (run 37221582504) died on exactly this in phage-isolation.
+test("a value the export wrote with replace(..., '\\n', char(10)) is cut, and means what the original meant", () => {
+  const prose = Array.from({ length: 4000 }, (_, i) => `Step ${i}: C:\\lab\\ 5 µL at 37 °C, it's "done"; \\ trailing\\`).join("\n");
+  const body = prose.replace(/\n/g, "\\n");
+  /** @param {string} value */
+  const exported = (value) => `INSERT INTO "notes" ("id","body") VALUES(5,${value});\n`;
+  const single = exported(`replace(${literal(body)},'\\n',char(10))`);
+  const nested = exported(`replace(replace(${literal(body.replace(/\\n/g, "\\n\\r"))},'\\n',char(10)),'\\r',char(13))`);
+  for (const dump of [single, nested]) {
+    assert.ok(biggest(dump) > D1_STATEMENT_LIMIT);
+    const truth = load(dump).prepare("SELECT body FROM notes").get().body;
+    assert.ok(truth.includes("\n"));
+    const split = splitOversizeStatements(dump, { keyOf: () => ["id"] });
+    assert.ok(biggest(split) < D1_STATEMENT_LIMIT, `largest is ${biggest(split)}`);
+    assert.equal(load(split).prepare("SELECT body FROM notes").get().body, truth);
+  }
+});
