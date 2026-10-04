@@ -178,3 +178,18 @@ test("a workflow stage links the calculators it names, from the one registry, an
   const md = overviewMarkdown(o, "https://example.test");
   assert.ok(md.includes("  - [Titer calculator](https://example.test/research/tools/titer)"), "the twin lists the stage's calculators under it");
 });
+
+test("the library browses by method, by course and by organism, each tile an address of the filtered library", () => {
+  const o = libraryOverview(libraryItems(RECORDS));
+  assert.deepEqual(o.browse.map((g) => g.id), ["method", "course", "organism"]);
+  const course = o.browse.find((g) => g.id === "course");
+  assert.deepEqual(course.tiles.map((t) => [t.id, t.count, t.href, t.about]), [["phage-discovery", 1, "/research/protocols?course=phage-discovery", "/teaching/phage-discovery"]]);
+  const organism = o.browse.find((g) => g.id === "organism");
+  assert.deepEqual(organism.tiles.map((t) => [t.id, t.label, t.count]), [["smegmatis", "Mycobacterium smegmatis", 1], ["avian", "Birds", 1]]);
+  const hit = queryCatalog(LIBRARY, libraryItems(RECORDS), parseCatalogParams(LIBRARY, "course=phage-discovery"));
+  assert.deepEqual(hit.rows.map((r) => r.slug), ["isolation"], "the tile's address is the facet's");
+  assert.ok(libraryOverview(libraryItems([record({ slug: "a", methods: ["pcr"] })])).browse.every((g) => g.id === "method"), "a group with no tile is not drawn");
+  const md = overviewMarkdown(o, "https://example.test");
+  assert.ok(md.includes("### Browse by course") && md.includes("([about the course](https://example.test/teaching/phage-discovery))"));
+  assert.ok(md.includes("### Browse by organism") && md.includes("- [Birds](https://example.test/research/protocols?organism=avian): 1 protocol"));
+});
