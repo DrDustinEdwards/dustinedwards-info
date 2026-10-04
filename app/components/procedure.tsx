@@ -1,3 +1,5 @@
+import { Enhance } from "~/components/enhance";
+import { StepCalculators } from "~/components/phage-tool";
 import { ProtocolProof } from "~/components/protocol-proof";
 import { ProtocolWorkflow } from "~/components/protocol-workflow";
 import type { resolveProof } from "~/lib/procedures/proof.mjs";
@@ -221,11 +223,14 @@ export function StepItem({
   step,
   factor,
   troubleshooting,
+  scope = "",
   brief = false,
 }: {
   step: Step;
   factor: number;
   troubleshooting: ProcedureRecord["troubleshooting"];
+  /** Keys this step's calculators apart from the same tool under another list's step 1. */
+  scope?: string;
   brief?: boolean;
 }) {
   return (
@@ -277,6 +282,8 @@ export function StepItem({
           {...(p.width && p.height ? { width: p.width, height: p.height } : {})}
         />
       ))}
+      {/* A row compiled before calculators existed has no `calculators` until the next sync rewrites it. */}
+      {brief || !step.calculators?.length ? null : <StepCalculators calculators={step.calculators} scope={`${scope}s${step.number}`} />}
       {brief
         ? null
         : step.why.map((w, i) => <div key={`w${i}`} className="procedure-why" dangerouslySetInnerHTML={html(w)} />)}
@@ -298,11 +305,11 @@ export function StepItem({
   );
 }
 
-function Steps({ steps, factor, record }: { steps: Step[]; factor: number; record: ProcedureRecord }) {
+function Steps({ steps, factor, record, scope }: { steps: Step[]; factor: number; record: ProcedureRecord; scope: string }) {
   return (
     <ol className="procedure-steps" start={steps[0]?.number ?? 1}>
       {steps.map((step) => (
-        <StepItem key={step.number} step={step} factor={factor} troubleshooting={record.troubleshooting} />
+        <StepItem key={step.number} step={step} factor={factor} troubleshooting={record.troubleshooting} scope={scope} />
       ))}
     </ol>
   );
@@ -405,6 +412,12 @@ function CiteBlock({ record }: { record: ProcedureRecord }) {
         </pre>
       </details>
     </section>
+  );
+}
+
+function hasCalculators(record: ProcedureRecord) {
+  return record.sections.some((section) =>
+    section.blocks.some((block) => block.type === "steps" && block.steps.some((step) => step.calculators?.length)),
   );
 }
 
@@ -521,7 +534,7 @@ export function ProcedureView({
             block.type === "prose" ? (
               <div key={i} dangerouslySetInnerHTML={html(block.html)} />
             ) : (
-              <Steps key={i} steps={block.steps} factor={factor} record={record} />
+              <Steps key={i} steps={block.steps} factor={factor} record={record} scope={`${section.id}-${i}-`} />
             ),
           )}
         </section>
@@ -552,6 +565,7 @@ export function ProcedureView({
 
       <VersionHistory record={record} basePath={record.path} frozen={frozen} />
       <CiteBlock record={record} />
+      {hasCalculators(record) ? <Enhance module="tools" /> : null}
 
       <section aria-labelledby={referencesId}>
         <Heading id={referencesId!}>References</Heading>

@@ -16,9 +16,12 @@ function build(node: ViewNode | string): Node {
 
 for (const form of document.querySelectorAll<HTMLFormElement>("form[data-tool]")) {
   const id = form.dataset.tool ?? "";
+  const instance = form.dataset.toolInstance ?? id;
+  /* A calculator inside a procedure step: several share a page, so none writes the address bar. */
+  const embedded = form.hasAttribute("data-tool-embedded");
   const tool = TOOLS[id];
-  const status = document.querySelector(`[data-tool-status="${id}"]`);
-  const detail = document.querySelector(`[data-tool-detail="${id}"]`);
+  const status = document.querySelector(`[data-tool-status="${instance}"]`);
+  const detail = document.querySelector(`[data-tool-detail="${instance}"]`);
   if (!tool || !status || !detail) {
     throw new Error(`tools: the calculator "${id}" has no definition, status region or detail region.`);
   }
@@ -31,6 +34,7 @@ for (const form of document.querySelectorAll<HTMLFormElement>("form[data-tool]")
     status.replaceChildren(...view.summary.map(build));
     detail.replaceChildren(...view.detail.map(build));
 
+    if (embedded) return;
     const url = new URL(window.location.href);
     for (const [name, value] of Object.entries(values)) url.searchParams.set(name, value);
     window.history.replaceState(window.history.state, "", url);
