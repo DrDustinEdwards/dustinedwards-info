@@ -44,13 +44,6 @@ export function meta({ params }: Route.MetaArgs) {
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const timings = context.get(timingsContext).timings;
   const env = getEnv(context);
-  const file = await timed(timings, "gh_read_file", () => readFile(env, postPath(params.slug)));
-  if (!file) throw data("Not found", { status: 404 });
-
-  const fields = parsePost(file.content);
-  const state = stateOf(fields, Date.now());
-  const origin = new URL(request.url).origin;
-
   /* Each read below is non-fatal, so an outage cannot blank the editor, but its failure is shown, never an empty list. */
   const settled = <T,>(what: string, read: Promise<T[]>) =>
     read.then(
@@ -61,7 +54,24 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
       },
     );
 
-  const { headSha, headError } = await timed(timings, "gh_head", () => readHead(env));
+  /* The reads below do not depend on the file, only the preview links do (they wait on the post's state), so they start
+     with it and run together: the page takes as long as the slowest GitHub call, not the sum of all of them. */
+  const filePromise = timed(timings, "gh_read_file", () => readFile(env, postPath(params.slug)));
+  const headPromise = timed(timings, "gh_head", () => readHead(env));
+  const optionsPromise = loadEditorOptions(env, timings);
+  const revisionsPromise = timed(timings, "gh_commits", () =>
+    settled("revisions", listCommitsForPath(env, postPath(params.slug))),
+  );
+  const file = await filePromise;
+  if (!file) {
+    /* The others have nothing to show for a missing post; let them finish rather than leave them floating. */
+    await Promise.allSettled([headPromise, optionsPromise, revisionsPromise]);
+    throw data("Not found", { status: 404 });
+  }
+
+  const fields = parsePost(file.content);
+  const state = stateOf(fields, Date.now());
+  const origin = new URL(request.url).origin;
 
   const links =
     state === "draft"
@@ -70,11 +80,7 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         )
       : { value: [], error: null };
 
-  const options = await loadEditorOptions(env, timings);
-
-  const revisions = await timed(timings, "gh_commits", () =>
-    settled("revisions", listCommitsForPath(env, postPath(params.slug))),
-  );
+  const [{ headSha, headError }, options, revisions] = await Promise.all([headPromise, optionsPromise, revisionsPromise]);
 
   return {
     fields,
