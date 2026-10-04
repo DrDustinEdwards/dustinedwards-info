@@ -1,8 +1,9 @@
-import { getPublishedProcedureMarkdown } from "~/db/procedures";
+import { getPublishedProcedureMarkdown, listPublishedLibraryRecords } from "~/db/procedures";
 import { getEnv } from "~/lib/context";
 import { canonicalLink } from "~/lib/markdown-twin";
+import { libraryItems, workflowContext, workflowMarkdown } from "~/lib/procedures/library.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
-import { SHARED_CACHE_CONTROL } from "~/lib/seo";
+import { SHARED_CACHE_CONTROL, SITE_ORIGIN } from "~/lib/seo";
 
 import type { Route } from "./+types/procedure[.md]";
 
@@ -12,10 +13,17 @@ import type { Route } from "./+types/procedure[.md]";
  */
 export async function loader({ request, context }: Route.LoaderArgs) {
   const path = new URL(request.url).pathname.replace(/\.md$/, "");
-  const markdown = await getPublishedProcedureMarkdown(getEnv(context), path);
-  if (markdown === null) {
+  const env = getEnv(context);
+  const stored = await getPublishedProcedureMarkdown(env, path);
+  if (stored === null) {
     return new Response("Not found\n", { status: 404, headers: { "content-type": "text/plain; charset=utf-8" } });
   }
+  // A protocol's place in the phage workflow depends on the other protocols, so it is added here, not stored in the row.
+  const workflow = workflowMarkdown(workflowContext(libraryItems(await listPublishedLibraryRecords(env)), path), SITE_ORIGIN);
+  const markdown = workflow ? `${stored.trimEnd()}
+
+${workflow}
+` : stored;
   return new Response(markdown, {
     headers: {
       "content-type": "text/markdown; charset=utf-8",

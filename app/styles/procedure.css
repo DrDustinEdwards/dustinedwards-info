@@ -256,3 +256,30 @@
     display: none;
   }
 }
+
+/* Where a protocol sits in the phage workflow: the stage, then the neighbours and calculators as plain link rows. */
+.procedure-workflow {
+  margin-block: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+}
+.procedure-workflow-stage {
+  margin: 0 0 0.5rem;
+}
+.procedure-workflow-links {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
+.procedure-workflow-links dt {
+  color: var(--text-secondary);
+}
+.procedure-workflow-links dd {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+}
