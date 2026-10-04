@@ -8,6 +8,7 @@ import { loader as twinLoader } from "~/routes/content-page[.md]";
 
 import capsidEntry from "../../content/dictionary/capsid.md?raw";
 import capsidPage from "../../content/pages/software-capsid.md?raw";
+import dictionaryArtifact from "../../content/generated/dictionary.json";
 
 import { versionCases } from "./carrel-version-cases";
 import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
@@ -261,7 +262,8 @@ describe("the operator reads entries and cannot save one", () => {
     const list = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "list_dictionary", {});
     expect(list).toMatchObject({ ok: true });
     const data = (list as { data: { count: number; entries: Array<{ key: string; path: string; draft: boolean }> } }).data;
-    expect(data.count).toBe(3);
+    // One per file in content/dictionary/, counted from the build's own artifact rather than typed.
+    expect(data.count).toBe(dictionaryArtifact.dictionary.length);
     expect(data.entries.find((e) => e.key === KEY)).toMatchObject({ path: PATH, draft: false });
 
     const one = await runTool(operatorEnv(), { kind: "operator", id: "test" }, "get_dictionary", { key: KEY });
