@@ -1,0 +1,4 @@
+/* The phage table on /research/phages (app/routes/phages.tsx): Capsomer's catalog on the site's palette (site-catalog.css). */
+.phage-catalog {
+  margin-block: 1.5rem 2rem;
+}
