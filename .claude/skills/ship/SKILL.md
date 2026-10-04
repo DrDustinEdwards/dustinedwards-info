@@ -1,43 +1,39 @@
 ---
 name: ship
-description: How to get work from a clean gate run onto the deployed site on dustinedwards.info. Use whenever a change is ready to land: running the gate tiers, making scoped commits, pushing, waiting for CI on the exact sha, running npm run ship, and writing the report. Covers running the long steps detached on this host and what the ship report must contain.
+description: How to get work from a clean gate run onto the deployed site on dustinedwards.info. Use whenever a change is ready to land: running the gate tiers, opening the pull request, waiting for CI on the exact sha, the deploy that follows the merge, and writing the report. Covers running the long steps detached on this host and what the ship report must contain.
 ---
 
 # Shipping dustinedwards.info
 
 The deploy CONTRACT is hard rule 16 in `CLAUDE.md`, and it is not restated
 here: what ship refuses and why lives there. This is the PROCEDURE around it.
+Every change lands by pull request (portfolio rule 5.4); nothing is pushed to main.
 
-## From a pull request (the usual path)
+## The order
 
-1. Open the PR. If it changes anything a visitor would see (copy, layout, a page, a
+1. On a branch: `npm run check:changed`, the gates covering what the branch touched,
+   then `npm run lint` (a separate CI step no gate tier runs). Reach for a local
+   `check:all` only when the change touches a network gate's subject (ruling 129).
+2. Scoped commits, one concern each, named paths only. Push the branch.
+3. Open the PR. If it changes anything a visitor would see (copy, layout, a page, a
    color, a menu), label it `visual` (`gh pr edit <n> --add-label visual`) and stop:
    it waits for Dustin's yes on the Worker Preview link or on shots. Say so in the PR.
-2. Otherwise, stop there: a session never merges. Capsid's signed auto-merge
+4. Otherwise, stop there: a session never merges. Capsid's signed auto-merge
    policy merges the PR once CI is green on its exact head and the policy's checks
-   pass, or the seat merges it (capsid/decisions.md, 2026-10-04, one merge path).
-3. The merge deploys itself: after CI passes on main, `.github/workflows/deploy.yml`
+   pass, or the seat merges it (capsid/decisions.md, 2026-10-04).
+5. The merge deploys itself: after CI passes on main, `.github/workflows/deploy.yml`
    runs `npm run ship` on that exact sha. Watch that run (`gh run list --workflow
    deploy.yml`) and write the report below from its log. If Dustin has set the
    `AUTO_DEPLOY` variable to `off`, dispatch it by hand:
    `gh workflow run deploy.yml --ref main -f ref=<main tip sha>`.
-4. Run `npm run verify-live` against the deploy.
+6. Run `npm run verify-live` against the deploy.
 
-## The order, shipping from this machine
+## Shipping by hand (Dustin)
 
-1. `git pull --ff-only`. Ship deploys local HEAD, so a seat-side merge you do
-   not have is a deploy nobody asked for.
-2. `npm run check:changed`, the gates covering what the branch touched. Ship
-   runs the offline tier again itself and CI runs the full suite, so a local
-   `check:all` is a third derivation of the same answer: reach for it when the
-   change touches a network gate's subject, not by habit (ruling 129).
-3. `npm run lint`. It is a separate CI step and no gate tier runs it.
-4. Scoped commits, one concern each, named paths only.
-5. `git push origin main`.
-6. Wait for CI to conclude SUCCESS for the exact pushed sha. Ship refuses
-   otherwise and there is no override.
-7. `npm run ship`.
-8. Write the report below.
+When Dustin ships from this machine instead of the workflow: `git checkout main`,
+`git pull --ff-only` (ship deploys local HEAD, so a merge you do not have is a deploy
+nobody asked for), confirm CI concluded SUCCESS for that exact sha (ship refuses
+otherwise, with no override), then `npm run ship` and write the report below.
 
 ## Running the long steps detached on this host
 
