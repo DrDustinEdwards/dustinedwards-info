@@ -21,6 +21,8 @@ export async function run({ page, browser }) {
     { path: "/colophon", module: "colophon.tsx" },
     { path: "/search?q=cloudflare", module: "search.tsx" },
     { path: "/privacy", module: "privacy.tsx" },
+    /* A markdown page with a route module of its own, like /software: its row's HTML, no per-viewer bytes. */
+    { path: "/terms", module: "terms.tsx" },
     { path: "/contact", module: "contact.tsx" },
     /* The most-carried tag, so one post being retagged cannot remove the case. */
     { path: "/writing/tags/cloudflare", module: "blog.tags.$tag.tsx" },
