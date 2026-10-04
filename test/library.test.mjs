@@ -9,6 +9,10 @@ import {
   libraryCsv,
   libraryItems,
   libraryMarkdown,
+  libraryOverview,
+  methodHref,
+  overviewMarkdown,
+  overviewSentence,
   libraryRecords,
   stepCount,
 } from "../app/lib/procedures/library.mjs";
@@ -111,4 +115,30 @@ test("the twin's table links each protocol by its address and escapes a pipe in 
   assert.match(md, /\[COI primers\]\(https:\/\/example\.test\/research\/protocols\/coi\)/);
   assert.match(md, /a \\\| b/);
   assert.equal(md.split("\n").length, 2 + 3, "a header, a rule and a row for each protocol");
+});
+
+test("the overview is counted from the rows: a method with a protocol gets a tile, and the workflow counts each stage", () => {
+  const o = libraryOverview(libraryItems(RECORDS));
+  assert.deepEqual([o.total, o.methods, o.organisms, o.updated], [3, 3, 2, "2026-09-30"]);
+  assert.deepEqual(o.tiles.map((t) => [t.id, t.count]), [["pcr", 2], ["plating", 1], ["culture", 1]]);
+  const stage = Object.fromEntries(o.stages.map((s) => [s.id, s]));
+  assert.equal(stage.isolate.count, 1);
+  assert.equal(stage.isolate.href, "/research/protocols?method=plating&method=culture");
+  assert.equal(stage.extract.href, null, "a stage with no protocol is drawn without a link");
+  assert.equal(stage.sequence.count, 0);
+});
+
+test("a tile and a stage link to the address the facet itself would produce", () => {
+  assert.equal(methodHref(["pcr"]), "/research/protocols?method=pcr");
+  const hit = queryCatalog(LIBRARY, libraryItems(RECORDS), parseCatalogParams(LIBRARY, "method=plating&method=culture"));
+  assert.deepEqual(hit.rows.map((r) => r.slug), ["isolation"]);
+});
+
+test("the overview sentence and the twin say what the page shows, with the singular where there is one", () => {
+  const o = libraryOverview(libraryItems([record({ slug: "a", methods: ["pcr"], organisms: ["avian"] })]));
+  assert.equal(overviewSentence(o), "1 protocol across 1 method, 1 organism, newest updated 2026-09-30.");
+  const md = overviewMarkdown(o, "https://example.test");
+  assert.match(md, /^## In the library\n\n1 protocol across 1 method/);
+  assert.match(md, /- Extract DNA\n/);
+  assert.match(md, /- \[PCR\]\(https:\/\/example\.test\/research\/protocols\?method=pcr\): 1 protocol/);
 });

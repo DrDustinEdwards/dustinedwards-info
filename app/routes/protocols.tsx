@@ -4,6 +4,7 @@ import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
 import { Enhance } from "~/components/enhance";
+import { LibraryOverview } from "~/components/library-overview";
 import { PageShell } from "~/components/page-shell";
 import { getPageByPath } from "~/db/pages";
 import { listPublishedLibraryRecords } from "~/db/procedures";
@@ -12,7 +13,7 @@ import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { LIBRARY, LIBRARY_PATH, libraryItems, type LibraryItem } from "~/lib/procedures/library.mjs";
+import { LIBRARY, LIBRARY_PATH, libraryItems, libraryOverview, type LibraryItem } from "~/lib/procedures/library.mjs";
 import { methodLabel } from "~/lib/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -120,6 +121,7 @@ export default function ProtocolLibraryRoute({ loaderData }: Route.ComponentProp
       </h1>
       {draft ? <p>Draft: only you can see this page.</p> : null}
       <div className="prose" dangerouslySetInnerHTML={{ __html: intro }} />
+      <LibraryOverview overview={libraryOverview(items)} />
       <div className="library">
         <Catalog
           definition={LIBRARY}
