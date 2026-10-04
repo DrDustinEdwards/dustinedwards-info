@@ -286,12 +286,14 @@ export interface AskIndexStatus {
 /** Both directions: an item the corpus does not know is as much a defect as a missing one. */
 export async function askIndexStatus(env: Env, timings?: Timings): Promise<AskIndexStatus> {
   // publishableForAsk must stay in step with the SQL predicate here; check:ask-guards binds the two.
-  const [expectedUrls, listed] = await Promise.all([
+  // The papers are read with the rest, not after it: without them the badge would report them stale and the repair
+  // button would delete them, and a read that waited for the listing was a round trip of pure waiting.
+  const [expectedUrls, listed, paperKeys] = await Promise.all([
     askExpectedUrls(env),
     listAllAskItems(env, timings),
+    paperItemKeys(env),
   ]);
-  // Without the papers, the badge would report them stale and the repair button would delete them.
-  const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...(await paperItemKeys(env))]);
+  const expected = new Set([...expectedUrls.map((u) => keyForUrl(u)), ...paperKeys]);
   const present = new Set(listed.map((item) => item.key));
 
   const { extra, ...drift } = setDrift(expected, present);
