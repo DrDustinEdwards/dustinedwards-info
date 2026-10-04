@@ -1,6 +1,6 @@
 import { Catalog } from "capsomer/react/catalog";
 import { TabLink, TabsNav } from "capsomer/react/tabs";
-import { parseCatalogParams, queryCatalog, catalogRedirect } from "capsomer/behaviour/catalog";
+import { parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 import { data, redirect } from "react-router";
 
 import { Breadcrumb } from "~/components/breadcrumb";
@@ -14,7 +14,7 @@ import { getEnv } from "~/lib/context";
 import { contentPageMarkdownPath } from "~/lib/content-pages.mjs";
 import { jsonLd as serializeJsonLd } from "~/lib/json-ld.mjs";
 import { CONTENT_PAGE_HTML_TAGS } from "~/lib/pages/route";
-import { LIBRARY, LIBRARY_PATH, libraryItems, libraryOverview, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
+import { LIBRARY, LIBRARY_PATH, libraryItems, libraryOverview, libraryRedirect, libraryTabs, type LibraryItem } from "~/lib/procedures/library.mjs";
 import { methodLabel } from "~/lib/procedures/taxonomy.mjs";
 import { PROCEDURES_CACHE_TAG } from "~/lib/procedures/route";
 import { SITE_ORIGIN, breadcrumbJsonLd, pageMeta, publicHtmlHeaders } from "~/lib/seo";
@@ -52,7 +52,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (!row) throw data(null, { status: 404 });
   if (row.status === "draft" && !(await isAdminViewer(env, request))) throw data(null, { status: 404 });
   // A state written in another order, or with a default spelled out, goes to its one address.
-  const canonical = catalogRedirect(LIBRARY, url);
+  const canonical = libraryRedirect(url);
   if (canonical) throw redirect(canonical, 301);
   const items = libraryItems(await listPublishedLibraryRecords(env));
   return { page: row.record, draft: row.status === "draft", items, search: url.search };
