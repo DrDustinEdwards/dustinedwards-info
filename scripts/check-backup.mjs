@@ -4,6 +4,8 @@ import { retryRead } from "./lib/retry.mjs";
 import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler, wranglerTail as tail } from "./lib/wrangler-run.mjs";
 import { downloadAllObjects, listAllObjects } from "./lib/r2.mjs";
+import { migrationSchema } from "./lib/dump-schema.mjs";
+import { D1_STATEMENT_LIMIT, splitOversizeStatements, splitStatements } from "./lib/split-statements.mjs";
 import path from "node:path";
 import os from "node:os";
 
@@ -178,18 +180,27 @@ async function exportTables(target, dir, real) {
     // An export that wrote a file but no INSERTs is a pass that backed up
     // nothing. Count the statements, do not just check the file exists.
     const inserts = (body.match(/^INSERT INTO/gim) ?? []).length;
-    return { name, bytes, inserts };
+    // D1 refuses a statement over 100 KB and the export writes a row as one. A row that cannot be loaded
+    // back, even after the restore's split, is a backup that does not restore: fail here, not in a disaster.
+    const widest = (/** @type {string} */ text) =>
+      Math.max(0, ...splitStatements(text).map((st) => Buffer.byteLength(st) + 1));
+    const loadable = widest(splitOversizeStatements(body, migrationSchema(MIGRATIONS_DIR)));
+    if (loadable >= D1_STATEMENT_LIMIT) {
+      throw new Error(`${name}: a restored statement is ${loadable} bytes, over D1's ${D1_STATEMENT_LIMIT}`);
+    }
+    return { name, bytes, inserts, rawWidest: widest(body) };
   }
 
   // Serial, and said so: wrangler() is spawnSync, which blocks the event loop, so the four-worker
   // pool that stood here ran one export at a time anyway.
-  /** @type {Array<{ name: string, bytes: number, inserts: number }>} */
+  /** @type {Array<{ name: string, bytes: number, inserts: number, rawWidest: number }>} */
   const results = [];
   for (const name of sorted(real)) results.push(await exportTable(name));
 
   for (const result of results) {
     totalBytes += result.bytes;
-    console.log(`  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)`);
+    console.log(`  ${result.name}: ${result.bytes} bytes, ${result.inserts} INSERT statement(s)` +
+        (result.rawWidest >= D1_STATEMENT_LIMIT ? `, widest ${result.rawWidest} bytes (split on restore)` : ""));
     if (result.inserts === 0) empty.push(result.name);
   }
 

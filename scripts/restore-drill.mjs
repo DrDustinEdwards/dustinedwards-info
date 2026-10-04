@@ -10,6 +10,8 @@ import { runWrangler, wranglerTail as tail } from "./lib/wrangler-run.mjs";
 import { listAllObjects } from "./lib/r2.mjs";
 import { classifySqliteTables } from "./lib/sqlite-tables.mjs";
 import { createTally } from "./lib/tally.mjs";
+import { migrationSchema } from "./lib/dump-schema.mjs";
+import { D1_STATEMENT_LIMIT, splitOversizeStatements, splitStatements } from "./lib/split-statements.mjs";
 
 /** The database this drill READS and must never write to. */
 const PRODUCTION_DB = "dustinedwards";
@@ -388,7 +390,20 @@ async function restoreScratch(dir, tables, dumps, timings, state) {
     bodies.push(await readFile(path.join(dir, `${dump.name}.sql`), "utf8"));
     loaded += 1;
   }
-  await writeFile(combined, `${bodies.join("\n")}\n`, "utf8");
+  /* D1 refuses one statement over 100 KB and the export writes each row as one literal INSERT, so a row with
+     a paper's full text cannot load as exported. The load file is what RUNBOOK 4b step 3 builds. */
+  const raw = `${bodies.join("\n")}\n`;
+  const rewritten = splitOversizeStatements(raw, migrationSchema(MIGRATIONS_DIR));
+  const widest = (/** @type {string} */ text) =>
+    Math.max(0, ...splitStatements(text).map((st) => Buffer.byteLength(st) + 1));
+  console.log(`  widest statement: ${widest(raw)} bytes exported, ${widest(rewritten)} bytes as loaded`);
+  ok(
+    "[scope] NO STATEMENT IN THE LOAD FILE IS OVER D1'S CAP",
+    widest(rewritten) < D1_STATEMENT_LIMIT,
+    `the widest statement is ${widest(rewritten)} bytes against D1's ${D1_STATEMENT_LIMIT}. D1 would refuse it ` +
+      `with SQLITE_TOOBIG and the restored database would be missing the rows after it.`,
+  );
+  await writeFile(combined, rewritten, "utf8");
 
   const load = wrangler(`d1 execute ${scratch(SCRATCH_DB)} --remote --yes --file "${combined}"`);
   ok(

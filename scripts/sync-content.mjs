@@ -22,6 +22,7 @@ import { resolveD1Address } from "./lib/d1-address.mjs";
 import { runWrangler } from "./lib/wrangler-run.mjs";
 import { freezeSql } from "./lib/freeze-sql.mjs";
 import { sqlLiteral as sql } from "./lib/sql-literal.mjs";
+import { splitOversizeStatements } from "./lib/split-statements.mjs";
 import { deleteFloor, requirePosts, syncablePostProblems } from "./lib/delete-floor.mjs";
 
 // `--preview` converges the Worker Previews database instead (scripts/build-preview.mjs). It is
@@ -559,7 +560,10 @@ function readDrift(target, posts) {
  * @param {string} label @param {string} failure
  */
 async function applySql(target, file, body, label, failure) {
-  await writeFile(file, body, "utf8");
+  // D1 refuses a statement over 100 KB and these are literal rows, so a long procedure, paper or post is cut
+  // into an INSERT and appended pieces (scripts/lib/split-statements.mjs). A cut row is written with a blank
+  // blob sha and render hash and given the real ones last, so a run that stops half way reads as not current.
+  await writeFile(file, splitOversizeStatements(body, { lateColumns: ["source_blob_sha", "render_hash"] }), "utf8");
   const applied = await wranglerImport(
     `d1 execute ${resolveD1Address(DB_NAME, target)} ${target} --file "${file}" --yes`,
     label,
