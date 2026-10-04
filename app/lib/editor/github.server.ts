@@ -185,6 +185,13 @@ export async function commitFiles(
     changes: FileChange[];
     message: string;
     expectedHeadSha?: string | null;
+    /**
+     * Per path, the blob sha the caller loaded (null: the path must not exist). A path that holds anything
+     * else at the head this commit is built on is refused, so a writer is stopped by a change to ITS file
+     * and not by any other commit. Checked against the same head the commit is parented on, and the ref
+     * update below is never forced, so a change that lands in between still cannot be overwritten.
+     */
+    expectedBlobs?: Record<string, string | null>;
   },
 ) {
   const head = await getHead(env);
@@ -196,6 +203,18 @@ export async function commitFiles(
       409,
       true,
     );
+  }
+
+  for (const [path, expected] of Object.entries(options.expectedBlobs ?? {})) {
+    const current = (await readFile(env, path, head.commitSha))?.sha ?? null;
+    if (current !== expected) {
+      throw new GitHubError(
+        `${path} changed since it was opened (it is now ${current ? current.slice(0, 7) : "absent"}, ` +
+          `you loaded ${expected ? expected.slice(0, 7) : "none"}). Reload and reapply your edit.`,
+        409,
+        true,
+      );
+    }
   }
 
   // A tree entry with sha: null deletes the path.

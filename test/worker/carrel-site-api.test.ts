@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { getBlogPost } from "~/db";
 import { previewPost, withPublication } from "~/lib/carrel/site-adapter.server";
+import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { postPath } from "~/lib/content/pipeline.mjs";
 import { renderAndWrite, renderRecord } from "~/lib/editor/publish.server";
 import { ALLOWED, MAX_BYTES } from "~/lib/media/upload-contract.mjs";
@@ -101,7 +102,10 @@ describe("every write names the version it was loaded at", () => {
     });
 
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({
+      error: "version-conflict",
+      currentVersion: await gitBlobSha(before ?? ""),
+    });
     expect(gh.files.get(postPath("carrel-stale"))).toBe(before);
   });
 
@@ -127,12 +131,97 @@ describe("every write names the version it was loaded at", () => {
   });
 });
 
+/* A post's version identifies that post's file, not the repository's head, so saving one post must not make
+ * every other open post look changed (job_010ea9cff26c). */
+describe("a post's version is its own", () => {
+  const readVersion = async (id: string) => {
+    const response = await get(`${PREFIX}/content/${id}`);
+    expect(response.status).toBe(200);
+    return ((await response.json()) as { version: string }).version;
+  };
+  const save = (id: string, title: string, expectedVersion: string) =>
+    send("PUT", `${PREFIX}/content/${id}/draft`, {
+      source: post(id, { title }),
+      expectedVersion,
+      changeId: `chg-${id}-${title.replace(/\W+/g, "-")}`,
+    });
+
+  it("is the blob sha of the post's file at head", async () => {
+    const raw = post("own-sha");
+    gh.files.set(postPath("own-sha"), raw);
+    expect(await readVersion("own-sha")).toBe(await gitBlobSha(raw));
+  });
+
+  it("does not change when another post is committed", async () => {
+    gh.files.set(postPath("own-a"), post("own-a"));
+    gh.files.set(postPath("own-b"), post("own-b"));
+    const before = await readVersion("own-a");
+
+    const saved = await save("own-b", "B edited", await readVersion("own-b"));
+    expect(saved.status).toBe(200);
+
+    expect(await readVersion("own-a")).toBe(before);
+  });
+
+  it("changes when this post is committed, and the save answers the new version", async () => {
+    gh.files.set(postPath("own-c"), post("own-c"));
+    const before = await readVersion("own-c");
+
+    const saved = await save("own-c", "C edited", before);
+    expect(saved.status).toBe(200);
+    const answered = ((await saved.json()) as { version: string }).version;
+
+    expect(answered).not.toBe(before);
+    expect(await readVersion("own-c")).toBe(answered);
+    expect(answered).toBe(await gitBlobSha(gh.files.get(postPath("own-c")) ?? ""));
+  });
+
+  it("lets two posts be saved in one sitting without a false conflict", async () => {
+    gh.files.set(postPath("own-d"), post("own-d"));
+    gh.files.set(postPath("own-e"), post("own-e"));
+    const d = await readVersion("own-d");
+    const e = await readVersion("own-e");
+
+    expect((await save("own-d", "D edited", d)).status).toBe(200);
+    expect((await save("own-e", "E edited", e)).status).toBe(200);
+  });
+
+  it("still REFUSES a save made from a version this post has since moved past", async () => {
+    gh.files.set(postPath("own-f"), post("own-f"));
+    const opened = await readVersion("own-f");
+    expect((await save("own-f", "F first", opened)).status).toBe(200);
+    const afterFirst = gh.files.get(postPath("own-f"));
+
+    const stale = await save("own-f", "F second", opened);
+
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({
+      error: "version-conflict",
+      currentVersion: await gitBlobSha(afterFirst ?? ""),
+    });
+    expect(gh.files.get(postPath("own-f"))).toBe(afterFirst);
+  });
+
+  it("answers the post's own version when a create finds the id taken", async () => {
+    const raw = post("own-g");
+    gh.files.set(postPath("own-g"), raw);
+    const response = await send("PUT", `${PREFIX}/content/own-g/draft`, {
+      source: post("own-g", { title: "Other" }),
+      expectedVersion: null,
+      changeId: "chg-own-g",
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ currentVersion: await gitBlobSha(raw) });
+  });
+});
+
 describe("the first publication", () => {
   it("ALLOWS it from Carrel's key, and the commit records who published", async () => {
-    gh.files.set(postPath("carrel-first"), post("carrel-first", { draft: true }));
+    const draft = post("carrel-first", { draft: true });
+    gh.files.set(postPath("carrel-first"), draft);
 
     const response = await send("POST", `${PREFIX}/content/carrel-first/publish`, {
-      expectedVersion: HEAD,
+      expectedVersion: await gitBlobSha(draft),
       changeId: "chg-first",
     });
 
@@ -160,13 +249,11 @@ describe("the first publication", () => {
 
 describe("status belongs to the site", () => {
   it("keeps a live post live when Carrel saves its source", async () => {
-    gh.files.set(
-      postPath("carrel-live"),
-      post("carrel-live", { draft: false, first_published: "2026-07-01" }),
-    );
+    const live = post("carrel-live", { draft: false, first_published: "2026-07-01" });
+    gh.files.set(postPath("carrel-live"), live);
     const response = await send("PUT", `${PREFIX}/content/carrel-live/draft`, {
       source: post("carrel-live", { draft: true, title: "Edited live" }),
-      expectedVersion: HEAD,
+      expectedVersion: await gitBlobSha(live),
       changeId: "chg-live",
     });
     expect(response.status).toBe(200);
