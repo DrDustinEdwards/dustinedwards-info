@@ -9,6 +9,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { listD1Databases } from "./lib/d1-address.mjs";
+import { driftCount } from "./lib/sync-verdict.mjs";
 import { runWrangler, wranglerTail } from "./lib/wrangler-run.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -109,4 +110,36 @@ step("content build", "npm run build:content");
 step("app build", "npm run build");
 // Ship runs check:content before its sync for the same reason: the sync runs no gate of its own.
 step("content check", "npm run check:content");
-step(`content sync to ${PREVIEW_D1}`, "npm run sync:content -- --preview");
+/**
+ * One content sync, its output echoed and returned so the drift line can be read.
+ * @returns {{ code: number | null, text: string }}
+ */
+function syncPreview() {
+  const result = spawnSync("npm run sync:content -- --preview", { cwd: root, shell: true, encoding: "utf8" });
+  const text = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  process.stdout.write(text);
+  return { code: result.status, text };
+}
+
+/*
+ * The preview D1 outlives every push, so after a change to the renderer its rows still hold the old renderer's
+ * hashes and the first sync reports RENDER DRIFT (and exits 1, after converging every row). That is ruling 30's
+ * ordering artifact, not a defect, and ship tells them apart the same way: a second sync reads zero unless the
+ * converge write did not take. Only drift that SURVIVES the converge refuses the build.
+ */
+console.log(`\nbuild:preview: content sync to ${PREVIEW_D1}`);
+const first = syncPreview();
+if (first.code !== 0) {
+  const drift = driftCount(first.text);
+  if (drift === null || drift === 0) refuse(`content sync to ${PREVIEW_D1} failed (exited ${first.code ?? "on a signal"}).`);
+  console.log("\nbuild:preview: render drift on the first sync, converged; confirming with a second sync");
+  const confirm = syncPreview();
+  const after = driftCount(confirm.text);
+  if (confirm.code !== 0 || after !== 0) {
+    refuse(
+      `render drift SURVIVED a converge write (second sync: exit ${confirm.code ?? "signal"}, render-drift=${after ?? "unread"}). ` +
+        "This is not ruling 30's ordering artifact, which clears on the second run.",
+    );
+  }
+  console.log("build:preview: confirmed benign: the second sync reads render-drift=0.");
+}
