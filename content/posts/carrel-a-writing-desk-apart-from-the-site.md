@@ -10,7 +10,8 @@ key_takeaways:
   - "A site's admin is built around one site; a writer works across several."
   - "Carrel keeps the writing in one private place and talks to each site through the same small API."
   - "The site stays the owner of its own rules; Carrel only asks."
-draft: true
+draft: false
+first_published: 2026-10-04
 ---
 
 A carrel is the small private desk in a library stacks, the one with a shelf, a lamp and a door that does not quite close. I named my writing tool after it because that is the job it does: a quiet place to write that sits next to the collection without being part of it.
