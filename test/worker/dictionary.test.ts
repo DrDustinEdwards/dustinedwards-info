@@ -9,7 +9,8 @@ import { loader as twinLoader } from "~/routes/content-page[.md]";
 import capsidEntry from "../../content/dictionary/capsid.md?raw";
 import capsidPage from "../../content/pages/software-capsid.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedDictionary, seedPages } from "./seed";
 import { testEnv } from "./test-env";
@@ -96,7 +97,7 @@ describe("an entry edit through the adapter is live at the next request", () => 
 
     const edited = capsidEntry.replace(SENSE, ADDED);
     expect(edited).not.toBe(capsidEntry);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: HEAD, changeId: "chg-dict" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-dict" });
     expect(response.status, await response.clone().text()).toBe(200);
     expect(await response.json()).toMatchObject({ id: ID, status: "published", changeId: "chg-dict" });
 
@@ -132,7 +133,7 @@ describe("an entry edit through the adapter is live at the next request", () => 
   });
 
   it("an unchanged save commits nothing and says so", { timeout: 180_000 }, async () => {
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: HEAD, changeId: "chg-same" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: await versionOf(gh, FILE), changeId: "chg-same" });
     expect(response.status).toBe(200);
     expect(commits()).toHaveLength(0);
   });
@@ -140,12 +141,12 @@ describe("an entry edit through the adapter is live at the next request", () => 
 
 describe("an entry change purges the pages tag, because a page embeds its entry", () => {
   it("purges content-pages, the tag the page's HTML and its twin carry, and nothing is purged for an unchanged save", { timeout: 180_000 }, async () => {
-    await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: HEAD, changeId: "chg-none" });
+    await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: capsidEntry, expectedVersion: await versionOf(gh, FILE), changeId: "chg-none" });
     expect(purge).not.toHaveBeenCalled();
 
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace(SENSE, ADDED),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-purge",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -161,7 +162,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
     const wide = String.fromCharCode(0x2014);
     const bad = capsidEntry.replace(/^term: .*$/m, "term: ").concat(`\nA sentence ${wide} with a dash.\n`);
-    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: HEAD, changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, { source: bad, expectedVersion: await versionOf(gh, FILE), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     const body = (await response.json()) as { message: string };
     expect(body.message).toMatch(/wide dash/);
@@ -175,7 +176,7 @@ describe("a save is held to what CI holds", () => {
     gh.files.set("public/audio/other.mp3", "clip");
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace(SENSE, ADDED),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-clip",
     });
     expect(response.status).toBe(422);
@@ -186,7 +187,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a path no registered Software page names", async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: capsidEntry.replace("path: /software/capsid", "path: /research/phages"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, FILE),
       changeId: "chg-path",
     });
     expect(response.status).toBe(422);
@@ -201,7 +202,7 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, FILE) });
     expect(commits()).toHaveLength(0);
   });
 });
@@ -210,7 +211,7 @@ describe("a draft entry is not shown", () => {
   it("unpublish takes the lead off the page, its JSON-LD, its twin and its search record, and publish restores them", { timeout: 240_000 }, async () => {
     expect((await pageData()).entry).not.toBeNull();
 
-    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const down = await send("POST", `${PREFIX}/content/${ID}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-down" });
     expect(down.status, await down.clone().text()).toBe(200);
     const downBody = (await down.json()) as { status: string; version: string };
     expect(downBody.status).toBe("draft");
@@ -271,4 +272,15 @@ describe("the operator reads entries and cannot save one", () => {
     // Content is edited through Carrel and nowhere else (docs/DICTIONARY.md), so no save tool exists.
     expect(isToolName("save_dictionary")).toBe(false);
   });
+});
+
+versionCases({
+  name: "dictionary",
+  id: ID,
+  file: FILE,
+  edit: () => capsidEntry.replace(SENSE, ADDED),
+  gh: () => gh,
+  get,
+  send,
+  timeout: 240000,
 });

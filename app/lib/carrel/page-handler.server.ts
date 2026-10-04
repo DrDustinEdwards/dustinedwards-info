@@ -14,13 +14,12 @@ import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { withPublication } from "~/lib/carrel/front-matter-lines";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
 import { PAGES_DIR, pagePathForSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
 import { savePage } from "~/lib/pages/save.server";
 
 type PageEnv = Env & { GITHUB_TOKEN?: string };
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 const isDraft = (raw: string) => matter(raw).data.draft === true;
@@ -52,14 +51,14 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
       const saved = await savePage(env, {
         path,
         raw,
-        expectedHeadSha: expectedVersion,
+        expectedBlobSha: expectedVersion ?? undefined,
         isNew: false,
         actor: { kind: "carrel", changeId },
       });
-      return { id: slug, version: saved.commitSha, status: saved.draft ? "draft" : "published", changeId };
+      return { id: slug, version: saved.sourceBlobSha, status: saved.draft ? "draft" : "published", changeId };
     } catch (error) {
       // A PageInvalid carries every message the validator gave; asSiteApiError passes them on.
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, target(slug).file);
     }
   }
 
@@ -102,10 +101,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
       if (!found) return null;
       const file = await readFile(env, found.file);
       if (!file) return null;
-      const [version, row] = await Promise.all([
-        currentHead(env),
-        env.DB.prepare(`SELECT synced_at FROM pages WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>(),
-      ]);
+      const row = await env.DB.prepare(`SELECT synced_at FROM pages WHERE slug = ?1`).bind(slug).first<{ synced_at: number }>();
       const fields = matter(file.content).data;
       return {
         id: slug,
@@ -118,7 +114,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
         updatedAt: row ? new Date(row.synced_at * 1000).toISOString() : null,
         format: "markdown",
         source: file.content,
-        version,
+        version: file.sha,
       };
     },
 
@@ -127,7 +123,7 @@ export function pageHandler(env: PageEnv): ContentKindHandler {
     async saveDraft(slug, input) {
       const found = target(slug);
       const file = await readFile(env, found.file);
-      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       if (!file) throw new RefusedError(`The file for ${found.path} is missing from the repository, so it cannot be saved.`);
       return write(slug, input.changeId, withDraft(input.source, isDraft(file.content)), input.expectedVersion);

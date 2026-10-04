@@ -17,7 +17,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgePhages, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { pageSlug, pageSourcePath } from "~/lib/pages/compile.mjs";
@@ -140,6 +140,8 @@ async function rowIsCurrent(env: PhageEnv, slug: string, blobSha: string) {
 export type SavedPhage = {
   slug: string;
   commitSha: string;
+  /** The git blob sha of the committed file: Carrel's version of the item. */
+  sourceBlobSha: string;
   unchanged: boolean;
   created: boolean;
   purged: PurgeOutcome;
@@ -149,7 +151,9 @@ export type SavedPhage = {
 /** validate -> policy -> commitUnlessUnchanged -> blob verify -> derived writes (convergeWithRetry) -> purge by tag. */
 export async function savePhage(
   env: PhageEnv,
-  options: { slug: string; raw: string; expectedHeadSha: string | null; isNew: boolean; actor: Actor },
+  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
 ): Promise<SavedPhage> {
   const { raw, actor } = options;
   const { slug, file } = registered(options.slug);
@@ -174,12 +178,13 @@ export async function savePhage(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(file, options.expectedBlobSha),
         message: `${options.isNew ? "Add" : "Update"} phage: ${compiled.phage.name}${tag}`,
         changes: [{ path: file, content: raw }],
       }),
   });
   if (written.action === "noop") {
-    return { slug, commitSha: written.commitSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
+    return { slug, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
@@ -205,5 +210,5 @@ export async function savePhage(
     commitSha,
   });
 
-  return { slug, commitSha, unchanged: written.action === "repair", created: options.isNew, purged };
+  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action === "repair", created: options.isNew, purged };
 }

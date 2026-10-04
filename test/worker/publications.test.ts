@@ -18,7 +18,8 @@ import { isCitationRefreshWindow, refreshCitationsWeekly } from "../../workers/w
 
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedCitations, seedPublications } from "./seed";
 import { testEnv } from "./test-env";
@@ -34,7 +35,6 @@ import { testEnv } from "./test-env";
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
 /** The stub's fixed head: the version every write here must name to land. */
-const HEAD = "a".repeat(40);
 
 const SLUG = "10-1128-mra-00888-24";
 const ID = encodeContentId("publication", SLUG);
@@ -133,7 +133,7 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
 
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: edited,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, publicationPath(SLUG)),
       changeId: "chg-live-edit",
     });
     expect(response.status).toBe(200);
@@ -155,11 +155,11 @@ describe("an edit through the Carrel adapter reaches the page on the next reques
   it("does nothing for a save that is byte-identical to the committed file", async () => {
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: godfather,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, publicationPath(SLUG)),
       changeId: "chg-unchanged",
     });
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ id: ID, version: HEAD });
+    expect(await response.json()).toMatchObject({ id: ID, version: await versionOf(gh, publicationPath(SLUG)) });
     expect(gh.calls.some((c) => c.method === "POST" && c.path.endsWith("/git/commits"))).toBe(false);
     expect(gh.calls.some((c) => c.method === "POST" && c.path.endsWith("/git/blobs"))).toBe(false);
   });
@@ -254,7 +254,7 @@ describe("a file the validator refuses", () => {
     gh.files.delete(`public/research/publications/${SLUG}/dustin-edwards-${SLUG}.pdf`);
     const response = await send("PUT", `${PREFIX}/content/${ID}/draft`, {
       source: godfather.replace(/^summary: .*$/m, 'summary: "A different sentence."'),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, publicationPath(SLUG)),
       changeId: "chg-no-pdf",
     });
     expect(response.status).toBe(422);
@@ -420,4 +420,15 @@ describe("the watchdog's weekly citation refresh", () => {
     expect(failed).toContain("10.1/x (openalex-status)");
     expect(await refreshCitationsWeekly(site(200, {}), "", sunday)).toContain("OPERATOR_TOKEN");
   });
+});
+
+versionCases({
+  name: "publication",
+  id: ID,
+  file: publicationPath(SLUG),
+  edit: () => godfather.replace(/^summary: .*$/m, 'summary: "A sentence an edit through Carrel put on the paper."'),
+  gh: () => gh,
+  get,
+  send,
+  timeout: 240000,
 });

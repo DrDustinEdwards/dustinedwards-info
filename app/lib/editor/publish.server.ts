@@ -19,6 +19,7 @@ import {
   readFile,
   readBinaryFile,
   GitHubError,
+  blobGuard,
 } from "./github.server";
 import { convergeWithRetry } from "./converge.mjs";
 import { clearDivergence, recordDivergence } from "./divergence.server";
@@ -393,10 +394,7 @@ export async function savePost(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
-        expectedBlobs:
-          options.expectedBlobSha === undefined
-            ? undefined
-            : { [postPath(options.slug)]: options.expectedBlobSha },
+        expectedBlobs: blobGuard(postPath(options.slug), options.expectedBlobSha),
         message: commitMessage(actor, options.isNew ? "Add" : "Update", gated.title),
         changes: [{ path: postPath(options.slug), content: raw }],
       }),

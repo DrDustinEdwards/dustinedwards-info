@@ -13,7 +13,8 @@ import { loader as twinLoader } from "~/routes/cv[.md]";
 
 import godfather from "../../content/publications/10-1128-mra-00888-24.md?raw";
 
-import { stubGitHub, type GitHubStub } from "./github-stub";
+import { versionCases } from "./carrel-version-cases";
+import { stubGitHub, versionOf, type GitHubStub } from "./github-stub";
 import { collectingContext, fakeAssets, workingBrowser } from "./cv-pdf-fixtures";
 import { renderRoute, routeContext } from "./route-helpers";
 import { seedCv, seedPublications } from "./seed";
@@ -26,7 +27,6 @@ import { testEnv } from "./test-env";
 
 const ORIGIN = "https://example.com";
 const PREFIX = `${ORIGIN}/api/carrel/v1`;
-const HEAD = "a".repeat(40);
 
 const FILES = import.meta.glob("../../content/cv/*.md", { query: "?raw", import: "default", eager: true }) as Record<string, string>;
 const rawOf = (slug: string) => {
@@ -111,7 +111,7 @@ describe("an edit through the adapter is live at the next request", () => {
 
     const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, {
       source: editedGrants,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, "content/cv/grants.md"),
       changeId: "chg-cv",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -140,7 +140,7 @@ describe("an edit through the adapter is live at the next request", () => {
   it("an edit to the profile reaches the page note and the twin", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/cv.profile/draft`, {
       source: editedProfile,
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, "content/cv/profile.md"),
       changeId: "chg-profile",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -151,7 +151,7 @@ describe("an edit through the adapter is live at the next request", () => {
   it("an unchanged save commits nothing", { timeout: 240_000 }, async () => {
     const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, {
       source: rawOf("grants"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, "content/cv/grants.md"),
       changeId: "chg-same",
     });
     expect(response.status).toBe(200);
@@ -163,7 +163,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a file the validator fails, with every message, and commits nothing", async () => {
     const wide = String.fromCharCode(0x2014);
     const bad = grants.replace("amount: 3000", "amount: -1").replace("Student Research Grant", `Student ${wide} Research Grant`);
-    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, { source: bad, expectedVersion: HEAD, changeId: "chg-bad" });
+    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, { source: bad, expectedVersion: await versionOf(gh, "content/cv/grants.md"), changeId: "chg-bad" });
     expect(response.status).toBe(422);
     const message = ((await response.json()) as { message: string }).message;
     expect(message).toMatch(/wide dash/);
@@ -175,7 +175,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a paper no published record holds, naming the DOI", async () => {
     const response = await send("PUT", `${PREFIX}/content/cv.publications/draft`, {
       source: rawOf("publications").replace("entries:\n", "entries:\n  - doi: 10.9999/not-a-paper\n"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, "content/cv/publications.md"),
       changeId: "chg-doi",
     });
     expect(response.status).toBe(422);
@@ -186,7 +186,7 @@ describe("a save is held to what CI holds", () => {
   it("REFUSES a file the whole CV cannot hold: a section out of order", async () => {
     // Put a 1999 grant first: valid alone, but its section must read newest first.
     const out = grants.replace("entries:\n", "entries:\n  - year: 1999\n    amount: 1\n    title: Out Of Order\n    areas: []\n    role: recipient\n");
-    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, { source: out, expectedVersion: HEAD, changeId: "chg-order" });
+    const response = await send("PUT", `${PREFIX}/content/cv.grants/draft`, { source: out, expectedVersion: await versionOf(gh, "content/cv/grants.md"), changeId: "chg-order" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/newest first/);
     expect(commits()).toHaveLength(0);
@@ -206,12 +206,12 @@ describe("a save is held to what CI holds", () => {
       changeId: "chg-stale",
     });
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: HEAD });
+    expect(await response.json()).toMatchObject({ error: "version-conflict", currentVersion: await versionOf(gh, "content/cv/grants.md") });
     expect(commits()).toHaveLength(0);
   });
 
   it("has no draft state, so the CV cannot be unpublished", async () => {
-    const response = await send("POST", `${PREFIX}/content/cv.grants/unpublish`, { expectedVersion: HEAD, changeId: "chg-down" });
+    const response = await send("POST", `${PREFIX}/content/cv.grants/unpublish`, { expectedVersion: await versionOf(gh, "content/cv/grants.md"), changeId: "chg-down" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/no draft state/);
   });
@@ -299,7 +299,7 @@ describe("a lost row is repaired from the file, never the reverse", () => {
 
     const response = await send("PUT", `${PREFIX}/content/cv.honors/draft`, {
       source: rawOf("honors"),
-      expectedVersion: HEAD,
+      expectedVersion: await versionOf(gh, "content/cv/honors.md"),
       changeId: "chg-repair",
     });
     expect(response.status, await response.clone().text()).toBe(200);
@@ -343,7 +343,7 @@ describe("the CV and the papers it cites", () => {
 
   it("a paper the CV cites cannot be unpublished from under it, and nothing is committed", { timeout: 240_000 }, async () => {
     stubPaper();
-    const response = await send("POST", `${PREFIX}/content/publication.${SLUG}/unpublish`, { expectedVersion: HEAD, changeId: "chg-unpub" });
+    const response = await send("POST", `${PREFIX}/content/publication.${SLUG}/unpublish`, { expectedVersion: await versionOf(gh, FILE), changeId: "chg-unpub" });
     expect(response.status).toBe(422);
     expect(((await response.json()) as { message: string }).message).toMatch(/The CV cites this paper by DOI 10\.1128\/mra\.00888-24/);
     expect(commits()).toHaveLength(0);
@@ -355,10 +355,21 @@ describe("the CV and the papers it cites", () => {
     expect(before?.paper?.venue).toContain("14(2)");
     const edited = godfather.replace(/^issue: .*$/m, 'issue: "9"');
     expect(edited).not.toBe(godfather);
-    const response = await send("PUT", `${PREFIX}/content/publication.${SLUG}/draft`, { source: edited, expectedVersion: HEAD, changeId: "chg-paper" });
+    const response = await send("PUT", `${PREFIX}/content/publication.${SLUG}/draft`, { source: edited, expectedVersion: await versionOf(gh, FILE), changeId: "chg-paper" });
     expect(response.status, await response.clone().text()).toBe(200);
     const after = (await cvPage()).loaderData.cv.entries.find((e) => e.paper?.doi === "10.1128/mra.00888-24");
     expect(after?.paper?.venue).toContain("14(9)");
     expect(await (await twin()).text()).toContain("14(9)");
   });
+});
+
+versionCases({
+  name: "cv",
+  id: "cv.grants",
+  file: "content/cv/grants.md",
+  edit: () => editedGrants,
+  gh: () => gh,
+  get,
+  send,
+  timeout: 120000,
 });

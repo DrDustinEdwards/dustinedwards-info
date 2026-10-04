@@ -12,13 +12,12 @@ import { listPhageRows } from "~/db/phages";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
 import { PHAGES_PAGE_PATH, phagePath } from "~/lib/phages/compile.mjs";
 import { PHAGE_SLUG, savePhage } from "~/lib/phages/save.server";
 
 type PhageEnv = Env & { GITHUB_TOKEN?: string };
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 export function phageHandler(env: PhageEnv): ContentKindHandler {
@@ -28,14 +27,14 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
       const saved = await savePhage(env, {
         slug,
         raw,
-        expectedHeadSha: expectedVersion,
+        expectedBlobSha: expectedVersion ?? undefined,
         isNew: expectedVersion === null,
         actor: { kind: "carrel", changeId },
       });
-      return { id: slug, version: saved.commitSha, status: "published", changeId };
+      return { id: slug, version: saved.sourceBlobSha, status: "published", changeId };
     } catch (error) {
       // A PhageInvalid carries every message the validator gave; asSiteApiError passes them on.
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, phagePath(slug));
     }
   }
 
@@ -67,10 +66,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
       if (!owns(slug)) return null;
       const file = await readFile(env, phagePath(slug));
       if (!file) return null;
-      const [version, row] = await Promise.all([
-        currentHead(env),
-        env.DB.prepare(`SELECT name, synced_at FROM phages WHERE slug = ?1`).bind(slug).first<{ name: string; synced_at: number }>(),
-      ]);
+      const row = await env.DB.prepare(`SELECT name, synced_at FROM phages WHERE slug = ?1`).bind(slug).first<{ name: string; synced_at: number }>();
       return {
         id: slug,
         kind: "phage",
@@ -82,7 +78,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
         updatedAt: row ? new Date(row.synced_at * 1000).toISOString() : null,
         format: "markdown",
         source: file.content,
-        version,
+        version: file.sha,
       };
     },
 
@@ -90,7 +86,7 @@ export function phageHandler(env: PhageEnv): ContentKindHandler {
     async saveDraft(slug, input) {
       if (!owns(slug)) throw new RefusedError(`"${slug}" is not a phage file key; a phage is named for its name in lower case, such as acorn15.`);
       const file = await readFile(env, phagePath(slug));
-      if (input.expectedVersion === null && file) throw new VersionConflictError(await currentHead(env));
+      if (input.expectedVersion === null && file) throw new VersionConflictError(file.sha);
       if (input.expectedVersion !== null && !file) throw new VersionConflictError(null);
       return write(slug, input.changeId, input.source, input.expectedVersion);
     },

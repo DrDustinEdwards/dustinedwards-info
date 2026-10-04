@@ -11,7 +11,6 @@ import type { ContentSummary, WriteResult } from "@dustinedwards/site-api";
 import type { ContentKindHandler } from "~/lib/carrel/content-kinds.server";
 import { asSiteApiError } from "~/lib/carrel/errors.server";
 import { GitHubError, listCommitsForPath, readFile } from "~/lib/editor/github.server";
-import { currentHead } from "~/lib/editor/publish.server";
 import { saveLlms } from "~/lib/llms/save.server";
 import { LLMS_PATH } from "~/lib/llms/validate.mjs";
 
@@ -23,7 +22,7 @@ const LLMS_SLUG = "llms";
 const TITLE = "llms.txt";
 const PUBLIC_PATH = "/llms.txt";
 
-/** A version is a commit sha: the repository's head for a write, any commit for a revision. */
+/** A revision's version is a commit sha; an item's own version is the blob sha of its file. */
 const COMMIT_SHA = /^[0-9a-f]{7,40}$/i;
 
 export function documentHandler(env: DocumentEnv): ContentKindHandler {
@@ -37,10 +36,10 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
   /** One write through saveLlms as the Carrel actor, answered in the package's terms. */
   async function write(slug: string, changeId: string, raw: string, expectedVersion: string | null): Promise<WriteResult> {
     try {
-      const saved = await saveLlms(env, { raw, expectedHeadSha: expectedVersion, actor: { kind: "carrel", changeId } });
-      return { id: slug, version: saved.commitSha, status: "published", changeId };
+      const saved = await saveLlms(env, { raw, expectedBlobSha: expectedVersion ?? undefined, actor: { kind: "carrel", changeId } });
+      return { id: slug, version: saved.sourceBlobSha, status: "published", changeId };
     } catch (error) {
-      return asSiteApiError(env, error);
+      return asSiteApiError(env, error, LLMS_PATH);
     }
   }
 
@@ -56,7 +55,7 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
     target(slug);
     const stored = await readFile(env, LLMS_PATH);
     // The file always exists, so a save that names no version is a conflict, as a page's is.
-    if (input.expectedVersion === null && stored) throw new VersionConflictError(await currentHead(env));
+    if (input.expectedVersion === null && stored) throw new VersionConflictError(stored.sha);
     if (input.expectedVersion !== null && !stored) throw new VersionConflictError(null);
     if (!stored) throw new RefusedError(`${LLMS_PATH} is missing from the repository, so it cannot be saved.`);
     return write(slug, input.changeId, input.source ?? stored.content, input.expectedVersion);
@@ -97,7 +96,7 @@ export function documentHandler(env: DocumentEnv): ContentKindHandler {
         updatedAt: null,
         format: "markdown",
         source: file.content,
-        version: await currentHead(env),
+        version: file.sha,
       };
     },
 

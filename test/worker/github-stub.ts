@@ -194,3 +194,6 @@ export function stubGitHub(seed: Record<string, string> = {}): GitHubStub {
     restore: () => vi.unstubAllGlobals(),
   };
 }
+
+/** Carrel's version of a file-backed item: the blob sha of the file as the stub holds it now. */
+export const versionOf = (stub: GitHubStub, path: string) => gitBlobSha(stub.files.get(path) ?? "");

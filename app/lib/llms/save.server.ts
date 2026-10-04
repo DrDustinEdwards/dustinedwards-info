@@ -16,7 +16,7 @@ import { gitBlobSha } from "~/lib/content/hashes.mjs";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { CONTENT_PAGE_PATHS } from "~/lib/content-pages.mjs";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 import { paperMarkdownPath } from "~/lib/publications/paths.mjs";
@@ -96,7 +96,9 @@ async function rowIsCurrent(env: LlmsEnv, raw: string) {
 /** The llms.txt save. */
 export async function saveLlms(
   env: LlmsEnv,
-  options: { raw: string; expectedHeadSha: string | null; actor: Actor },
+  options: { raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; actor: Actor },
 ) {
   const { raw, actor } = options;
   const existing = await readFile(env, LLMS_PATH);
@@ -117,12 +119,13 @@ export async function saveLlms(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(LLMS_PATH, options.expectedBlobSha),
         message: `Update llms.txt${tag}`,
         changes: [{ path: LLMS_PATH, content: raw }],
       }),
   });
   if (written.action === "noop") {
-    return { commitSha: written.commitSha, unchanged: true, note: UNCHANGED_NOTE, purged: null as PurgeOutcome };
+    return { commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, note: UNCHANGED_NOTE, purged: null as PurgeOutcome };
   }
   const { commitSha, blobShas } = written;
   if (written.action === "commit" && blobShas[LLMS_PATH] && blobShas[LLMS_PATH] !== compiled.sourceBlobSha) {
@@ -146,5 +149,5 @@ export async function saveLlms(
     commitSha,
   });
 
-  return { commitSha, unchanged: written.action !== "commit", purged };
+  return { commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action !== "commit", purged };
 }

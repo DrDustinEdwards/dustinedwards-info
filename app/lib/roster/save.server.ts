@@ -10,7 +10,7 @@ import { ContentInvalid } from "~/lib/carrel/errors.server";
 import { purgeRoster, type PurgeOutcome } from "~/lib/cache-purge.server";
 import { loadPipeline } from "~/lib/content/load-pipeline.server";
 import { convergeWithRetry } from "~/lib/editor/converge.mjs";
-import { commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
+import { blobGuard, commitFiles, publicFileEntry, readFile } from "~/lib/editor/github.server";
 import { decideFileWrite, type Actor } from "~/lib/editor/publish-policy.mjs";
 import { commitUnlessUnchanged, UNCHANGED_NOTE } from "~/lib/editor/write-path.server";
 
@@ -89,6 +89,8 @@ async function rowIsCurrent(env: RosterEnv, slug: string, blobSha: string) {
 export type SavedCohort = {
   slug: string;
   commitSha: string;
+  /** The git blob sha of the committed file: Carrel's version of the item. */
+  sourceBlobSha: string;
   unchanged: boolean;
   created: boolean;
   purged: PurgeOutcome;
@@ -98,7 +100,9 @@ export type SavedCohort = {
 /** validate -> policy -> commitUnlessUnchanged -> blob verify -> D1 write (convergeWithRetry) -> purge by tag. */
 export async function saveRoster(
   env: RosterEnv,
-  options: { slug: string; raw: string; expectedHeadSha: string | null; isNew: boolean; actor: Actor },
+  options: { slug: string; raw: string; expectedHeadSha?: string | null;
+    /** The blob sha of this file as Carrel loaded it; undefined means no check. */
+    expectedBlobSha?: string | null; isNew: boolean; actor: Actor },
 ): Promise<SavedCohort> {
   const { raw, actor } = options;
   const { slug, file } = registered(options.slug);
@@ -120,12 +124,13 @@ export async function saveRoster(
     commit: () =>
       commitFiles(env, {
         expectedHeadSha: options.expectedHeadSha,
+        expectedBlobs: blobGuard(file, options.expectedBlobSha),
         message: `${options.isNew ? "Add" : "Update"} roster: ${slug} cohort${tag}`,
         changes: [{ path: file, content: raw }],
       }),
   });
   if (written.action === "noop") {
-    return { slug, commitSha: written.commitSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
+    return { slug, commitSha: written.commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: true, created: false, purged: null, note: UNCHANGED_NOTE };
   }
   const { commitSha } = written;
   const blobSha = written.blobShas[file];
@@ -150,5 +155,5 @@ export async function saveRoster(
     commitSha,
   });
 
-  return { slug, commitSha, unchanged: written.action === "repair", created: options.isNew, purged };
+  return { slug, commitSha, sourceBlobSha: compiled.sourceBlobSha, unchanged: written.action === "repair", created: options.isNew, purged };
 }

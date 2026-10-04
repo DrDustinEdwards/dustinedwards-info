@@ -176,6 +176,14 @@ type FileChange =
   | { path: string; content: null };
 
 /**
+ * `commitFiles`' expectedBlobs for one file, or undefined when the caller named no version. Carrel's version of
+ * a file-backed item is its blob sha, so a save is refused only when THAT file changed.
+ */
+export function blobGuard(path: string, expectedBlobSha: string | null | undefined) {
+  return expectedBlobSha === undefined ? undefined : { [path]: expectedBlobSha };
+}
+
+/**
  * expectedHeadSha is the conflict gate: if main moved since the editor loaded, the save is refused,
  * checked up front so it fails with a clean message before any blob exists.
  */
