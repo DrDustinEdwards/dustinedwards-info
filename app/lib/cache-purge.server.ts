@@ -5,6 +5,7 @@ import { LLMS_CACHE_TAG } from "~/lib/llms/validate.mjs";
 import { CV_CACHE_TAG } from "~/lib/cv/route";
 import { CONTENT_PAGES_CACHE_TAG } from "~/lib/pages/route";
 import { PUBLICATIONS_CACHE_TAG } from "~/lib/publications/paths.mjs";
+import { REGISTRY_CACHE_TAG } from "~/lib/registry/route";
 import { cacheTags } from "~/lib/seo";
 import { errorMessage } from "~/lib/error-message.mjs";
 
@@ -80,6 +81,14 @@ export async function purgePosts(why: string): Promise<PurgeOutcome> {
 /** Every procedure page, sheet and twin carries this one tag (app/lib/procedures/route.ts). */
 export async function purgeProcedures(why: string): Promise<PurgeOutcome> {
   return purgeTags(["procedures"], why);
+}
+
+/**
+ * Every registry page, listing and twin carries this one tag (app/lib/registry/route.ts). A protocol page links
+ * the registry's items by their own addresses and states none of their facts, so no other tag moves.
+ */
+export async function purgeRegistry(why: string): Promise<PurgeOutcome> {
+  return purgeTags([REGISTRY_CACHE_TAG], why);
 }
 
 /**

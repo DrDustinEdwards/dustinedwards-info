@@ -133,6 +133,13 @@ export const MAP = [
     gates: ["check:content", "check:links", RELATED],
   },
   {
+    /* check:content compiles every registry file with its kind's validator (app/lib/registry/compile.mjs); the
+       registry save runs the same compile, so a change here changes what a save accepts. */
+    what: "the lab registry",
+    test: /^(content\/registry\/.+|app\/lib\/registry\/.+|app\/db\/registry\.ts|scripts\/lib\/registry\.mjs)$/,
+    gates: ["check:content", "check:links", RELATED],
+  },
+  {
     what: "a served asset",
     test: /^public\/.+/,
     gates: ["check:urls", "check:fonts", "check:links"],

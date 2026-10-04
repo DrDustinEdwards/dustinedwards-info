@@ -34,6 +34,7 @@ import {
   syncProcedures,
   syncPublications,
   syncPhages,
+  syncRegistry,
   syncRoster,
   syncStatus,
 } from "./sync-tools.server";
@@ -56,6 +57,10 @@ import { PageInvalid, readPage } from "~/lib/pages/save.server";
 import { readLlms } from "~/lib/llms/save.server";
 import { listPhageRows } from "~/db/phages";
 import { PHAGE_SLUG, readPhage } from "~/lib/phages/save.server";
+import { listRegistryRows } from "~/db/registry";
+import { parseRegistrySlug } from "~/lib/registry/compile.mjs";
+import { KINDS } from "~/lib/registry/kinds.mjs";
+import { readRegistryItem } from "~/lib/registry/save.server";
 import { listRosterRows } from "~/db/roster";
 import { COHORT_SLUG, readRoster } from "~/lib/roster/save.server";
 
@@ -225,6 +230,9 @@ export async function runTool(
       case "sync_phages":
         return await syncPhages(env);
 
+      case "sync_registry":
+        return await syncRegistry(env);
+
       case "backup_media":
         return await backupMedia(env);
 
@@ -330,6 +338,25 @@ export async function runTool(
 
       case "get_phage":
         return await getPhageTool(env, args);
+
+      case "list_registry": {
+        const kind = String(args.kind ?? "").trim();
+        if (kind && !Object.hasOwn(KINDS, kind)) {
+          return { ok: false, status: 400, error: `"${kind}" is not a registry kind; the kinds are ${Object.keys(KINDS).join(", ") || "none yet"}.` };
+        }
+        const rows = (await listRegistryRows(env)).filter((row) => !kind || row.kind === kind);
+        return {
+          ok: true,
+          data: {
+            headSha: await currentHead(env),
+            count: rows.length,
+            items: rows.map(({ syncedAt: _syncedAt, ...item }) => ({ slug: `${item.kind}/${item.id}`, ...item })),
+          },
+        };
+      }
+
+      case "get_registry":
+        return await getRegistryTool(env, args);
 
       case "purge_zero_results": {
         const purged = await purgeZeroResults(env);
@@ -605,6 +632,20 @@ async function getPhageTool(env: OperatorEnv, args: Record<string, unknown>): Pr
   const phage = await readPhage(env, slug);
   if (!phage) return { ok: false, status: 404, error: `No file exists for the phage ${slug}.` };
   return { ok: true, data: { ...phage, headSha: await currentHead(env) } };
+}
+
+async function getRegistryTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {
+  const slug = String(args.slug ?? "").trim();
+  const address = parseRegistrySlug(slug);
+  if (!address) {
+    return { ok: false, status: 400, error: "get_registry requires a slug <kind>/<id> in lower-case letters, digits and hyphens, such as primer/m13-forward." };
+  }
+  if (!Object.hasOwn(KINDS, address.kind)) {
+    return { ok: false, status: 400, error: `"${address.kind}" is not a registry kind; the kinds are ${Object.keys(KINDS).join(", ") || "none yet"}.` };
+  }
+  const item = await readRegistryItem(env, slug);
+  if (!item) return { ok: false, status: 404, error: `No file exists for the registry item ${slug}.` };
+  return { ok: true, data: { ...item, headSha: await currentHead(env) } };
 }
 
 async function getRosterTool(env: OperatorEnv, args: Record<string, unknown>): Promise<ToolResult> {

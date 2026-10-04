@@ -16,6 +16,7 @@ import { DICTIONARY_ARTIFACT_PATH } from "./lib/dictionary.mjs";
 import { PROCEDURES_ARTIFACT_PATH } from "./lib/procedures.mjs";
 import { citationSeeds, PUBLICATIONS_ARTIFACT_PATH } from "./lib/publications.mjs";
 import { PHAGES_ARTIFACT_PATH } from "./lib/phages.mjs";
+import { REGISTRY_ARTIFACT_PATH } from "./lib/registry.mjs";
 import { ROSTER_ARTIFACT_PATH } from "./lib/roster.mjs";
 
 import { resolveD1Address } from "./lib/d1-address.mjs";
@@ -399,6 +400,32 @@ function buildPhagesSql(rows) {
       `INSERT INTO phages (slug, name, year, record, source_path, source_blob_sha, synced_at) VALUES (${sql(r.slug)}, ` +
         `${sql(r.name)}, ${num(r.year)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
         `ON CONFLICT(slug) DO UPDATE SET name = excluded.name, year = excluded.year, record = excluded.record, ` +
+        `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
+        `synced_at = excluded.synced_at;`,
+    );
+  }
+  return `${out.join("\n")}\n`;
+}
+
+/**
+ * The registry table converged to the repository's files (hard rule 18), on the phages' terms: every row whose file is
+ * gone is deleted, every other row is written from the build's compile, which is the compile the registry save runs.
+ * Scoped to the file-sourced rows, and never an unscoped delete. Unlike the phages, an empty set is valid (the registry
+ * has no records until a kind brings its own), and it deletes only the rows a file under content/registry/ once made.
+ *
+ * @param {any[]} rows content/generated/registry.json's rows
+ */
+function buildRegistrySql(rows) {
+  const out = [
+    rows.length === 0
+      ? `DELETE FROM registry WHERE source_path LIKE 'content/registry/%';`
+      : `DELETE FROM registry WHERE source_path NOT IN (${rows.map((r) => sql(r.sourcePath)).join(", ")});`,
+  ];
+  for (const r of rows) {
+    out.push(
+      `INSERT INTO registry (kind, id, name, status, record, source_path, source_blob_sha, synced_at) VALUES (${sql(r.kind)}, ` +
+        `${sql(r.id)}, ${sql(r.name)}, ${sql(r.status)}, ${sql(r.record)}, ${sql(r.sourcePath)}, ${sql(r.sourceBlobSha)}, unixepoch()) ` +
+        `ON CONFLICT(kind, id) DO UPDATE SET name = excluded.name, status = excluded.status, record = excluded.record, ` +
         `source_path = excluded.source_path, source_blob_sha = excluded.source_blob_sha, ` +
         `synced_at = excluded.synced_at;`,
     );
@@ -794,6 +821,22 @@ async function main() {
     buildPhagesSql(phageRows),
     `sync:content phages import (${target})`,
     "the phages import failed",
+  );
+
+  // The registry beside them: its own table, so a failure names the registry. Nothing is drawn from these rows into
+  // another store yet, so there is no page to write before it. An empty list is valid; a missing key is not, because
+  // that artifact was not built by this checkout's build:content.
+  const registryRows = JSON.parse(await readFile(REGISTRY_ARTIFACT_PATH, "utf8")).registry;
+  if (!Array.isArray(registryRows)) {
+    throw new Error(`${REGISTRY_ARTIFACT_PATH} has no registry list. Run npm run build:content first.`);
+  }
+  console.log(`sync:content applying ${registryRows.length} registry items`);
+  await applySql(
+    target,
+    path.join(dir, "sync-registry.sql"),
+    buildRegistrySql(registryRows),
+    `sync:content registry import (${target})`,
+    "the registry import failed",
   );
 
   // A separate statement file, so a failure here names the search index rather than the content.
