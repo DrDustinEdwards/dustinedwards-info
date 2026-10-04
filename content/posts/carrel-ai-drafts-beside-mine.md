@@ -10,7 +10,8 @@ key_takeaways:
   - "An AI draft is saved next to the writer's draft and never replaces it."
   - "Publishing publishes only what the writer saved, and only on the writer's instruction in that conversation."
   - "Open flags from checks hold publication until the writer fixes the text or dismisses the flag."
-draft: true
+draft: false
+first_published: 2026-10-04
 ---
 
 [Part one](/writing/carrel-a-writing-desk-apart-from-the-site) covered why Carrel exists and [part two](/writing/carrel-one-api-for-every-site) covered the small API each site exposes to it. This part covers the question I get most: what is AI allowed to do in there?
