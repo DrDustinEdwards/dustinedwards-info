@@ -145,6 +145,10 @@ protocol saved is listed at the next request with no deploy, and no second list 
 - **Machines get the same rows**: `/research/protocols.md` (the introduction and a table of every protocol),
   `.json` and `.csv` (every fact, ids with their words, for the filter state in the query string), and a
   `CollectionPage` with an `ItemList` in the page.
+- **Download and cite is generated** (`LibraryCite`, `libraryCitation`, `libraryDownloads`, `citeMarkdown`): the CSV and
+  JSON links carry the filter state of the view shown, the citation is built from the site's identity and the library's
+  address (the date of access is the reader's to add), and the twin ends with the same section. The page's own markdown
+  holds none of it, so no address or name is typed twice.
 - **Capsomer's colours are the site's**: `app/styles/library.css` maps each of its colour names onto a site token, so the
   library follows the light and dark themes with no second palette. The site's reset is imported into Capsomer's
   lowest layer (`cap.reset`, in `app.css`), because an unlayered reset would beat every layered component rule.

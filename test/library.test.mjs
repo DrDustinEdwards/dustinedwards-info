@@ -9,6 +9,9 @@ import {
   libraryCsv,
   libraryItems,
   libraryMarkdown,
+  citeMarkdown,
+  libraryCitation,
+  libraryDownloads,
   libraryOverview,
   libraryRedirect,
   libraryTabs,
@@ -212,4 +215,23 @@ test("Start here lists the protocols that state a position, in that order, with 
 test("the twin names the calculators page with its count", () => {
   const md = overviewMarkdown(libraryOverview(libraryItems(RECORDS)), "https://example.test");
   assert.ok(md.includes("### Calculators\n\n- [Phage Lab Calculators](https://example.test/research/tools): 6 calculators"));
+});
+
+test("the citation is built from the site's identity and the library's address, and the twin carries the same text", () => {
+  const citation = libraryCitation({ name: "Ada Lovelace", affiliation: "Analytical University", origin: "https://example.test" });
+  assert.equal(citation.library, "Ada Lovelace. Protocol library. Ada Lovelace Lab, Analytical University. https://example.test/research/protocols");
+  const md = citeMarkdown(citation, "https://example.test");
+  for (const text of [citation.library, citation.access, citation.protocol]) assert.ok(md.includes(text), text);
+  assert.ok(md.includes("[CSV](https://example.test/research/protocols.csv)") && md.includes("[JSON](https://example.test/research/protocols.json)"));
+});
+
+test("the downloads carry the view's filter state, so what is downloaded is what is shown; the markdown is always the library", () => {
+  const items = libraryItems(RECORDS);
+  const view = (query) => queryCatalog(LIBRARY, items, parseCatalogParams(LIBRARY, query));
+  assert.deepEqual(libraryDownloads(view("")), { csv: "/research/protocols.csv", json: "/research/protocols.json", markdown: "/research/protocols.md" });
+  assert.deepEqual(libraryDownloads(view("method=pcr&q=rev")), {
+    csv: "/research/protocols.csv?q=rev&method=pcr",
+    json: "/research/protocols.json?q=rev&method=pcr",
+    markdown: "/research/protocols.md",
+  });
 });
