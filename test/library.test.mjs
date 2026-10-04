@@ -10,6 +10,7 @@ import {
   libraryItems,
   libraryMarkdown,
   libraryOverview,
+  libraryTabs,
   methodHref,
   overviewMarkdown,
   overviewSentence,
@@ -141,4 +142,16 @@ test("the overview sentence and the twin say what the page shows, with the singu
   assert.match(md, /^## In the library\n\n1 protocol across 1 method/);
   assert.match(md, /- Extract DNA\n/);
   assert.match(md, /- \[PCR\]\(https:\/\/example\.test\/research\/protocols\?method=pcr\): 1 protocol/);
+});
+
+test("the tabs are All and each kind of work, counted from the rows; the current one is the method filter in the address", () => {
+  const items = libraryItems(RECORDS);
+  const tabs = libraryTabs(items, []);
+  assert.deepEqual(tabs.map((t) => [t.id, t.count, t.current]), [["all", 3, true], ["phage", 1, false], ["pcr", 2, false]]);
+  assert.equal(tabs[0].href, "/research/protocols");
+  assert.equal(tabs[2].href, "/research/protocols?method=pcr");
+  assert.deepEqual(libraryTabs(items, ["pcr"]).map((t) => t.current), [false, false, true]);
+  const phage = libraryTabs(items, ["plating", "culture", "extraction", "sequencing", "annotation"]);
+  assert.deepEqual(phage.map((t) => t.current), [false, true, false], "the phage tab is its methods exactly");
+  assert.deepEqual(libraryTabs(items, ["pcr", "plating"]).map((t) => t.current), [false, false, false], "a mixed filter is no tab's");
 });

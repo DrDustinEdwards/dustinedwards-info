@@ -149,3 +149,9 @@
   outline: 2px solid var(--brand);
   outline-offset: 2px;
 }
+
+/* The tabs sit above the catalog's form: room beneath them, and no scrollbar chrome on a list that fits. */
+.library > .cap-tabs-list {
+  margin-block-end: 1.25rem;
+  scrollbar-width: none;
+}

@@ -5,7 +5,7 @@
 
 import { defineCatalog, parseCatalogParams, queryCatalog } from "capsomer/behaviour/catalog";
 
-import { LIBRARY_PATH, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
+import { LIBRARY_PATH, LIBRARY_TABS, METHODS, PHAGE_PIPELINE, courseLabel, methodLabel, organismLabel } from "./taxonomy.mjs";
 
 export { LIBRARY_PATH };
 
@@ -264,4 +264,27 @@ export function libraryOverview(items) {
     tiles,
     stages,
   };
+}
+
+/**
+ * The tabs over the catalog: All, then each kind of work with the number of protocols in it. A tab is a link, so a
+ * tab, Back and a bookmark all work with no script. The current one is the tab whose methods are exactly the method
+ * filter in the address; All is current while no method is chosen.
+ *
+ * @param {LibraryItem[]} items
+ * @param {readonly string[]} chosen the method ids in the address
+ */
+export function libraryTabs(items, chosen) {
+  const same = (/** @type {readonly string[]} */ methods) =>
+    chosen.length === methods.length && methods.every((m) => chosen.includes(m));
+  return [
+    { id: "all", label: "All", count: items.length, href: LIBRARY_PATH, current: chosen.length === 0 },
+    ...LIBRARY_TABS.map((tab) => ({
+      id: tab.id,
+      label: tab.label,
+      count: items.filter((p) => p.methods.some((m) => tab.methods.includes(m))).length,
+      href: methodHref(tab.methods),
+      current: same(tab.methods),
+    })),
+  ];
 }
