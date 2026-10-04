@@ -129,6 +129,9 @@ protocol saved is listed at the next request with no deploy, and no second list 
   workflow (`PHAGE_PIPELINE` in `taxonomy.mjs`, each stage the methods that carry it out, linked to the library
   narrowed to them, and drawn without a link while it has no protocol), and a tile for each method that has one. Every
   tile is an address of the filtered library. The twin carries the same figures.
+- **Tabs are links** (`libraryTabs`, Capsomer's links form): All, then each kind of work in `LIBRARY_TABS` (`taxonomy.mjs`) with its count from the
+  rows. A tab is the library narrowed to its methods, so it is also what the method facet gives, and it is current when
+  the address's method filter is exactly its methods.
 - **Machines get the same rows**: `/research/protocols.md` (the introduction and a table of every protocol),
   `.json` and `.csv` (every fact, ids with their words, for the filter state in the query string), and a
   `CollectionPage` with an `ItemList` in the page.
