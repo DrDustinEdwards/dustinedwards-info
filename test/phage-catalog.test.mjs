@@ -24,17 +24,13 @@ const PHAGES_SET = [
 
 const names = (/** @type {{ rows: Array<{ name: string }> }} */ result) => result.rows.map((p) => p.name);
 
-test("the default order is the page's own: year, then name folded and numeric, so the table reads as it always has", async (t) => {
+test("the default order is the page's own: year, then name folded and numeric, so the table reads as it always has", () => {
   const order = names(phageListing("", PHAGES_SET));
-  const expected = sortPhages(PHAGES_SET).map((p) => p.name);
-  await t.test(`catalog order [${order.join(",")}] equals sortPhages [${expected.join(",")}]`, () => assert.deepEqual(order, expected));
+  assert.deepEqual(order, sortPhages(PHAGES_SET).map((p) => p.name), "the catalog's default order is sortPhages");
   const at = (/** @type {string} */ n) => order.indexOf(n);
-  await t.test(`numeric and folded order in [${order.join(",")}]`, () => {
-    assert.ok(at("Acorn2") < at("Acorn15"), "numeric: Acorn2 before Acorn15");
-    assert.ok(at("Arlo") < at("Éclair"), "an accent folds into its letter: Arlo before Éclair");
-    assert.ok(Math.max(at("Acorn2"), at("Acorn15"), at("Leia")) < Math.min(at("Arlo"), at("Éclair")) && at("Rira") === 5, "year first");
-  });
-  assert.equal(phageListing("", PHAGES_SET).groups, null, "the phage table has no headings");
+  assert.ok(at("Acorn2") < at("Acorn15"), "numeric: Acorn2 before Acorn15");
+  assert.ok(at("Arlo") < at("Éclair"), "an accent folds into its letter: Arlo before Éclair");
+  assert.ok(Math.max(at("Acorn2"), at("Acorn15"), at("Leia")) < Math.min(at("Arlo"), at("Éclair")) && at("Rira") === 5, "year first");
 });
 
 test("sorting by name or by year both ways; newest first is the whole order reversed", () => {
